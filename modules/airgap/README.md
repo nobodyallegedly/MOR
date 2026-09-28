@@ -68,9 +68,9 @@ Not in this step: a phone app with a camera (with the genesis client, step 5, pe
 2. **Seeds (Nobody, allegedly):** two seed Modules, words and hex, both defined and both supported, to test several Modules side by side.
 3. **F96 (Nobody, allegedly):** verifiable dealing stops sole control of a collective's key, not a copy; Pedersen dealing plus one rebuild check on a second device. Law draft 5, Module draft 4.
 
-## Readings, for confirmation
+## Readings, confirmed
 
-Where the Module was silent, the library takes the reading below; each is written into draft 4 and waits for confirmation.
+Where the Module was silent, the library takes the reading below; each is written into draft 4. Nobody, allegedly, confirmed all eleven (28 September 2026).
 
 1. **Key index** is the key's number in the identity's life: key n signs the rotation at position n + 1. The online device always knows it, even across a fresh seed.
 2. **The pending inside** carries spec, type and payload only, without salt and next commitment. The device refuses any other inside field, since it could not show it.
