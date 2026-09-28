@@ -121,9 +121,10 @@ After the first acts, Nobody, allegedly sets up a collective of developers on MO
 
 **His rules do not outlive his membership (decided by Nobody, allegedly).** "The act of me leaving forces the rewrite of the rules." Leaving is a member change, so it takes a rotation and a clone of the founding agreement (Law rule 37): the remaining members write the rules at that moment. His founding agreement stays on record, so anyone can see whether a later clone still meets it. No change to the Law MIP.
 
+**What it controls (decided by Nobody, allegedly).** "Collective controls a repo, nothing more, with core branches locked." A code repository, and nothing else; the branches holding the frozen core are locked. *Note (Claude): a lock on a hosted repository holds only as long as whoever administers the host keeps it; the frozen core itself cannot change in any case, since its texts and hashes are published as acts.*
+
 *Open, to settle with Nobody, allegedly:*
 - *What counts as proof of contribution, and what diversity and mass mean. Note (Claude): the protocol cannot count distinct people, since one person can hold many identities; diversity is the author's judgement, stated as such.*
-- *What the collective holds. F85 names no steward after V1, so the collective has no power over the frozen core. Suggested (Claude): it maintains code and founding cMIPs and Modules, competing like anyone else.*
 
 *People Nobody, allegedly has named as natural to ask segmented questions, each with their own angle: Semisol, JB (Damus), Kirian, UTXO, Fishcake (nostr.build), hazard (Blossom), the people behind nostr.wine, Rock (Stemstr). None has a role.*
 
