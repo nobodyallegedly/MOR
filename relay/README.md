@@ -37,10 +37,10 @@ Three things hold throughout:
 
 ## Readings, to confirm
 
-Where the texts are silent, the program takes the reading below. None changes a MIP; each is for Nobody, allegedly, to confirm. Confirmed so far: 1.
+Where the texts are silent, the program takes the reading below. None changes a MIP; each is for Nobody, allegedly, to confirm. Confirmed so far: 1, 2.
 
 1. **What a newly named home holds.** A home named for the first time in a rotation receives the earlier chain acts first, oldest first (cMIP, error 3). It holds them as the start of that identity's chain and checks each against the one before, but receipts only acts from the first one that names it: before that, it does not serve the identity. It adopts the chain the owner's client sends; it does not judge earlier positions by the other homes' receipts. *Confirmed by Nobody, allegedly, 28 September 2026.*
-2. **An outvoted home refuses the winner's everyday acts.** A home left holding a losing rotation (rule 22) cannot hold the winning one (rule 11), so it cannot check the binding of acts under the winning key, and answers error 3. The owner drops it at the next rotation, as rule 22 says.
+2. **An outvoted home refuses the winner's everyday acts.** A home left holding a losing rotation (rule 22) cannot hold the winning one (rule 11), so it cannot check the binding of acts under the winning key, and answers error 3. The owner drops it at the next rotation, as rule 22 says. *Stated cost:* until then it still accepts the thief's everyday acts under the losing rotation's key; readers judge them void from all the homes' receipts. *Confirmed by Nobody, allegedly, 28 September 2026 ("scenario is really rare"). Considered and not taken: accepting unchecked (it would weaken the cMIP's MUST), and learning the winner from other homes' receipts (kept in mind if the identity gauntlet, step 7, shows friction).*
 3. **A summary after every receipt.** Every log size has a summary, so auditors and readers can ask for any size.
 4. **The operator is self-hosted at its own home,** and its first act is a routes act whose outbox route for the Identity MIP names the home's base addresses (cMIP, "Addresses").
 5. **Evidence a home keeps** (objections, absence statements, cosignatures, other homes' receipts) is checked for shape and signature, and for binding only where the home holds the signer's chain. It does not resolve other operators' or auditors' chains; readers do.
