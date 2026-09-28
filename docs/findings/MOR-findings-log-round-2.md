@@ -762,3 +762,23 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Identity (receipt check 6). No change to the core document or the freeze test suite.
 
 **Applied:** the core library (`core/src/chain.rs`, `tally`; test `an_acknowledged_voided_receipt_is_never_support`); Identity draft 9 (roadmap step 3), approved by Nobody, allegedly, 28 September 2026.
+
+## F96. A collective's key survives the loss of any one key holder (found while planning roadmap step 5a, decided by Nobody, allegedly)
+
+**Pattern 3** (a rule that protects the owner also traps the owner).
+
+**Found while planning:** roadmap step 5a, the test collective. Law draft 4, rule 36, requires "a way to rotate that does not need every member". A grammar in which one holder keeps the safety key meets that wording, since it needs only one person, yet if that holder dies the key can never rotate again and the collective is frozen for good. Law's own reasoning says the opposite should hold: "every grammar leaves a way through that needs less than everyone, so a dead member never freezes the key: the rule is about the exit, not the number." A single custodian holding the key under grant has the same flaw.
+
+**Options weighed:** (a) reword the rule to survive the loss of any one key holder; (b) where one person holds the key, require a named successor and succession conditions for the agreement to be valid. (b) alone fails, since a successor with no key material cannot sign; with an escrowed share it is a case of (a).
+
+**Decided (Nobody, allegedly):** both, as one rule. "Ok for now, building will reveal if it holds."
+
+> A key grammar MUST leave a way to rotate that survives the loss of any one key holder. Where one person holds the safety key, the agreement MUST name a successor and an escrowed share released to them under its succession or abandonment clause; otherwise the agreement is invalid.
+
+*A key holder is anyone holding the whole key or a share of it: a member, a custodian, the holder of an escrowed share. For a single holder, one construction: the key is split so that any two of four shares rebuild it; the holder keeps two and signs alone, the successor and a keeper hold one each, useless alone. When the named authority declares the holder absent, the keeper releases its share and the successor rotates the collective to a new key; the succession clone passes the seat.*
+
+**Checkable:** a verifier checks the structure from the agreement alone (holders, threshold, recovery path). Whether the recovery works in practice stays the members' risk, as stated in F77. The succession and abandonment clauses are protected (rule 46a), so no majority removes them from the holder.
+
+**Checked against the principles:** it strengthens the right of exit; no conflict.
+
+**Core changes:** Law (rule 36; "Collectives are identities" commentary), at the next Law draft, written at roadmap step 5a, where the test collective first uses it. Freeze test suite: scenario 3's collective component gains a grammar with a single holder and no successor, rejected. No change to the core document.
