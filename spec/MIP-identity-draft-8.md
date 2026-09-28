@@ -1,6 +1,6 @@
 # MIP: Identity
 
-*Draft 8, 28 September 2026. Written against core v13 and findings F1 to F87. Draft 8 is draft 7 with the two findings of the relay transport cMIP written in: a homeless rotation's receipts come from the new homes it declares (F86); a homeless rotation accepted only on the verifier's own failed attempt is never made final by the next rotation, and an objection voids it whenever it surfaces (F87). Draft 7 applied review round 2: receipts and keeper records count only alongside the valid act they name; signature schemes by specification hash; dishonesty verdicts never reach backwards; closure by rotation; disowned acts void unless relied on; the majority rule as default; audit requirements removable by the safety key; self-hosting as a trust model; finality by the next rotation; an inbox route.*
+*Draft 8, 28 September 2026. Written against core v13 and findings F1 to F88. Draft 8 is draft 7 with the two findings of the relay transport cMIP written in: a homeless rotation's receipts come from the new homes it declares (F86); a homeless rotation accepted only on the verifier's own failed attempt is never made final by the next rotation, and an objection voids it whenever it surfaces (F87). It also fixes a loop found while writing them in: an escape endorsement is never judged by the rotation it endorses (F88). Draft 7 applied review round 2: receipts and keeper records count only alongside the valid act they name; signature schemes by specification hash; dishonesty verdicts never reach backwards; closure by rotation; disowned acts void unless relied on; the majority rule as default; audit requirements removable by the safety key; self-hosting as a trust model; finality by the next rotation; an inbox route.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -243,7 +243,7 @@ An objection and an absence statement name the homeless rotation in `objects`. *
 
 ### Escape endorsement (type 14)
 
-An escape endorsement names a homeless rotation in `objects`. Its payload may list, under key 0, earlier rotations at the same position that the owner abandons (for example one a home refused); an abandoned rotation can never count afterwards. It is signed by the owner's current signing key: the one bound by the identity-chain act just before the homeless rotation. A homeless rotation with an endorsement carries both of the owner's keys: the safety key in the rotation, the signing key in the endorsement.
+An escape endorsement names a homeless rotation in `objects`. Its payload may list, under key 0, earlier rotations at the same position that the owner abandons (for example one a home refused); an abandoned rotation can never count afterwards. It is signed by the owner's current signing key: the one bound by the identity-chain act just before the homeless rotation. A homeless rotation with an endorsement carries both of the owner's keys: the safety key in the rotation, the signing key in the endorsement. An escape endorsement is never judged by the rotation it endorses (validity rules 15 to 17): it cannot lie in that rotation's kept ancestry, since it names the rotation and so is made after it (F88).
 
 ## Verification procedures
 
@@ -396,7 +396,7 @@ A disputed act never counts when choosing the latest value of anything below. *A
 
 ### Status of an act after a rotation
 
-Each rotation judges only the acts signed with the key it replaces. For such an act:
+Each rotation judges only the acts signed with the key it replaces, except an escape endorsement naming that rotation, which it never judges (F88). For such an act:
 
 15. If it lies within the rotation's kept ancestry and is not listed as disowned, it is valid, however old.
 16. If it lies outside the kept ancestry, or within it but listed as disowned, it is void, unless another identity acknowledged it (Envelope) or a named keeper recorded it before recording the rotation (Law); then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelope, Law). *Disowning an act no longer costs the owner the genuine acts that followed it: later acts in the line stay valid, because their validity rests on being inside the kept ancestry, not on the disowned act's (F57).*
@@ -537,4 +537,4 @@ Suggested by Claude while writing the formats, and accepted by Nobody, allegedly
 9. **One normal rotation may follow a voided homeless rotation with the same safety key** (rule 8a exception).
 10. **Escape with both keys** (F20). A homeless rotation endorsed with the current signing key cannot be blocked by objections. Keep your keys separate, and backed up (F61).
 11. **Closure by rotation** (F56); **disowned acts void unless relied on** (F57); **majority by default** (F59); **self-hosting as a trust model** (F62); **finality by the next rotation** (F63).
-12. **A homeless rotation's receipts come from the new homes it declares** (F86); **a homeless rotation accepted only on the verifier's own failed attempt is never made final by the next rotation** (F87).
+12. **A homeless rotation's receipts come from the new homes it declares** (F86); **a homeless rotation accepted only on the verifier's own failed attempt is never made final by the next rotation** (F87); **an escape endorsement is never judged by the rotation it endorses** (F88).

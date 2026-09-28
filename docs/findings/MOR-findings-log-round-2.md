@@ -658,3 +658,15 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Identity (homeless rotation: Finality; rule 30 area; core document, "The way out"), at Identity draft 8 and the next core version (roadmap step 1a). Freeze test suite: 5.7c gains a censored reader and a thief's second rotation that does not make the first final (approved by Nobody, allegedly, 28 September 2026).
 
 **Applied:** Identity draft 8 (homeless rotation: Finality and "Re-homed without audit"; rule 32a; rule 35 and "Nobody dies with their home" commentary), core v13 ("The way out", glossary), freeze test suite v13 (5.7c, the homeless rotation component, pass criteria); roadmap step 1a, awaiting the author's approval.
+
+## F88. An escape endorsement is never judged by the rotation it endorses (found while writing Identity draft 8, decided by Nobody, allegedly)
+
+**Pattern 3** (a rule that protects the owner also traps the owner): the rule that judges what a rotation keeps defeated the owner's way out with both keys.
+
+**Found while writing:** Identity draft 8 (roadmap step 1a), checking the cost F87 states. An escape endorsement is signed by the owner's signing key bound just before the homeless rotation, which is the key that rotation replaces. Validity rules 15 to 17 say each rotation judges the acts signed with the key it replaces, and void those outside its kept ancestry unless acknowledged or recorded. The endorsement names the rotation, so it is made after it, and the rotation can never list it as kept. Read literally: if the endorsed rotation counts, it voids the endorsement; without the endorsement it does not count as an escape; so the endorsement is valid again. A loop, with no answer every verifier would agree on. The escape of F20, rule 36, and the way out F87 leaves an honest owner all rest on it. A drafting flaw since the escape was introduced, not a change of intent.
+
+**Decided (Nobody, allegedly):** "an escape endorsement is never judged by the rotation it endorses."
+
+**Core changes:** Identity draft 8 (escape endorsement; "Status of an act after a rotation"). No change to the core document or the freeze test suite: scenario 5.7c already runs an escape, and the loop would make it fail on the text.
+
+**Applied:** Identity draft 8 (roadmap step 1a, awaiting the author's approval).

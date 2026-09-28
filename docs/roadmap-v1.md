@@ -27,7 +27,7 @@ How a client publishes, fetches and follows acts, delivers to an inbox, finds de
 **1a. Identity draft 8** *(a document; inserted after step 1, can run alongside steps 0 and 2)*
 Write the findings from step 1 into the texts: F86 (receipt check 3 counts a homeless rotation's receipts from the new homes) and F87 (a homeless rotation accepted only on the verifier's own failed attempt is never final by the next rotation; an objection voids it whenever it surfaces). Identity draft 8, the matching lines of the core document (v13), and the freeze test suite (v13), including the addition to scenario 5.7c, a censored reader and a thief's second rotation that does not make the first final (approved by Nobody, allegedly, 28 September 2026).
 *Done when:* Nobody, allegedly approves the three texts, before step 3 begins, since the identity-chain checks are built from them.
-*Drafted, 28 September 2026:* `spec/MIP-identity-draft-8.md`, `spec/02-MOR-core-v13.md`, `spec/03-MOR-freeze-test-suite-v13.md`. Awaiting the author's approval.
+*Drafted, 28 September 2026:* `spec/MIP-identity-draft-8.md`, `spec/02-MOR-core-v13.md`, `spec/03-MOR-freeze-test-suite-v13.md`. Writing them in exposed F88 (an escape endorsement is never judged by the rotation it endorses), decided by Nobody, allegedly and written into Identity draft 8. Awaiting the author's approval.
 
 **2. Core library, part 1** *(Rust)*
 Deterministic CBOR, tagged hashes, act ids, locking and the inside commitment, canonical text, running summaries.
