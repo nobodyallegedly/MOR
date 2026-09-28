@@ -54,7 +54,7 @@ The harness (9) grows alongside everything else: every component is done only wh
 ## Open, to settle before or during the build
 
 1. **Draft hashes versus frozen hashes.** Settled by F83: Identity, Text and Envelope are frozen before the first acts (roadmap step 12), so the first acts are permanent. Still open: whether the specification format moves from Production to Envelope, since the first three hashes depend on it. *Nobody, allegedly to decide.*
-2. **Who publishes the repository on MOR.** the author's own identity, or a separate MOR identity (possibly a collective later). *Nobody, allegedly to decide.*
+2. **Who publishes the repository on MOR.** the author's own identity, or a separate MOR identity (possibly a collective later). The same identity is named as creator of the founding cMIPs and Modules, whose hashes are draft hashes until then. *Nobody, allegedly to decide, at step 13.*
 3. **The long-form format.** Which markup the long-form module uses, within the Text MIP's rules for formats. *To settle when writing its specification.*
 4. **Rust crates for the cryptography,** especially SLH-DSA and ML-KEM, whose libraries are young. Their audit status to be checked, with the Rust specialist.
 5. **Hosting for the public home relay** and the reader.
