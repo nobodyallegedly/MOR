@@ -44,6 +44,7 @@ SLH-DSA through the `fips205` crate (IntegrityChain), adopted by Nobody, alleged
 
 **4. Relays** *(Rust)*
 The basic relay and the home relay, sharing most of their code: storage, verification on arrival, receipts, log summaries. Three homes, so that the majority rule is tested for real (Nobody, allegedly): one at Infomaniak, one at 1984 Hosting if it checks out, and one on the author's own machine. The two public homes are open to anyone; the home on the author's machine is reachable only at an onion address (nothing opened on his router, his address hidden) and accepts only his identities. Majority is counted per operator, so the three homes run under three test operator identities, all the author's: the operators are simulated (Nobody, allegedly). *The mechanics of the majority rule are run; the independence of operators is not, and the freeze report says so.*
+*Order (Nobody, allegedly):* build and test the relays inside the build window first, since no host is needed for that; then deploy the home on the author's machine at its onion address; then Infomaniak and 1984 Hosting as their accounts are ready. *The step is done only when all three homes run.*
 *Done when:* acts go in and come back verified; homes sign receipts and summaries.
 
 **5. Genesis client** *(TypeScript)*
