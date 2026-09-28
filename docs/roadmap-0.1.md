@@ -93,6 +93,8 @@ Every component re-tested end to end; the door opened on devices it has never se
 
 The five who reviewed and froze v0.1 together — Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO, all people who wrapped their heads around Nostr and felt first-hand where its code and its funding broke down — are the seed circle, not a one-off review panel. From there the net widens through their own networks, organically: whoever stays engaged is who Finance, Law and the rest of Production get built and battle-tested with. Only once the MIPs feel battle-tested is V1 released and the universities contacted — and that migration is itself the first live test of MOR's right of exit.
 
+*Natural candidates for that wider net, each with their own angle on the media side (Nobody, allegedly, 28 September 2026): Fishcake (nostr.build), hazard (Blossom), the people behind nostr.wine, Rock (Stemstr) — and more not yet named. Not a commitment to invite them; a working sense of where the net is likely to catch.*
+
 ## If a step exposes a flaw in a MIP
 
 Stop, name it, resolve it with Nobody, allegedly, and record it in the findings log. Writing code is also a review.
