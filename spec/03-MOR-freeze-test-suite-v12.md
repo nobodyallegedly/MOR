@@ -1,18 +1,20 @@
 # MOR Freeze Test Suite
 
-*Version 11, 27 September 2026. Version 10 with review round 2 applied, matching core v12 and the MIP drafts (findings F1 to F82). Every critical and important attack of round 2 is now a scenario, so a later change cannot quietly bring one back.*
+*Version 12, 28 September 2026. Version 11 with F84 and F85 applied: the freeze rule and the freeze procedure. Scenarios and components are unchanged from version 11, which matched core v12 and the MIP drafts (findings F1 to F82); every critical and important attack of round 2 is a scenario, so a later change cannot quietly bring one back.*
 
 ## Purpose
 
 This is the end-game checklist for freezing the MOR core. It is for the founding team, not for readers of the protocol.
 
-**Freeze rule:** the MIPs are frozen once every core component has been exercised in the scenarios below and succeeded. The cMIPs and Modules used may be clunky; only the core has to hold. A failure that needs a core change is a finding, fixed before the freeze.
+**Freeze rule:** the six MIPs are frozen together, at the first release (F84). Before that, each scenario below is either **run**, exercised against the founding components and passed, or **reasoned**, walked through on paper against the texts without running code. Every scenario the founding components can run is run. The freeze publishes, with the six texts and their hashes, a **freeze report** marking each scenario and each core component run or reasoned. The cMIPs and Modules used may be clunky; only the core has to hold. A failure found before the freeze that needs a core change is a finding, fixed before the freeze.
+
+*A reasoned rule is frozen on argument, not evidence. The report says so, so nobody mistakes one for the other, and the next reviewer knows where to press first.*
 
 **Conformance versus validity.** Some pass criteria name rules only the signer's own client can honour (what you sign is what you saw; showing what a rule computes; never defaulting to a device-bound policy; keepers never holding content keys). They are tested by inspecting the founding clients, not by verifiers, and are marked *(conformance)*.
 
 ## Core components
 
-Each box is ticked only when the component has passed. Numbers show the scenarios that exercise it.
+Each box is ticked only when the component has passed. Numbers show the scenarios that exercise it. In the freeze report, each ticked box is marked run or reasoned.
 
 **Identity**
 
@@ -211,11 +213,12 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 
 ## Freeze procedure
 
-1. Settle the remaining technical parameters with reviewers: the RV32IM profile and vectors, the running-summary vector, the signature-scheme specification format, the pinned Unicode version, exact formats for Finance, Law and Production.
-2. Run adversarial review round 3: human reviewers, on the round 2 revision.
-3. Build the minimum cMIPs and Modules each scenario needs, starting with MOR 0.1: a home relay, a basic relay, the genesis client (with the air-gapped safety key Module), a read-only client and a basic client. Clunky is acceptable.
-4. Run all eight scenarios, ticking each component as it passes.
-5. Fix any failure requiring a core change, and rerun the affected scenarios.
-6. When every box is ticked, the MIPs are frozen.
+1. Settle the remaining technical parameters: the RV32IM profile and vectors, the running-summary vector, the signature-scheme specification format, the pinned Unicode version, exact formats for Finance, Law and Production.
+2. Build the founding cMIPs and Modules, starting with MOR V1: a home relay, a basic relay, the genesis client (with the air-gapped safety key Module), a read-only client and a basic client; and, so every layer meets friction, a Lightning integration module (Finance), a Split Module and a deal-assessment tool (Law). Clunky is acceptable.
+3. Run every scenario the founding components can run; reason through the rest against the texts. Mark each run or reasoned, ticking each component as it passes.
+4. Machine adversarial review: everything, the texts, the code and the draft freeze report, reviewed by a model given the budget to break things and propose fixes (Fable, F84).
+5. Specialist questions (F85): from the draft freeze report, each rule that is only reasoned becomes a targeted question to a specialist in its field, one person and one question at a time. Then human adversarial review (round 3): one reviewer attacks the whole, the running prototypes as well as the texts. Nobody outside decides the freeze.
+6. Fix any failure requiring a core change, and rerun or re-reason the affected scenarios.
+7. When every box is ticked, run or reasoned, the six MIPs are frozen: their texts, their hashes and the freeze report are published together.
 
 After the freeze, a flaw in the core is fixed only by a new protocol running alongside, with users migrating by choice.

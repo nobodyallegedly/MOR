@@ -592,19 +592,60 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes (pending the open point):** freeze test suite (freeze rule, procedure); Production (rule 20; possibly the specification format moves to Envelope); core (trust root; Open before freeze).
 
-## F84. Receipts for a homeless rotation come from the new homes (found while drafting the relay transport cMIP, decided by Nobody, allegedly)
+## F84. Freeze the lot at the first release; say what was run and what was only reasoned (build planning, decided by Nobody, allegedly)
 
-**Found while drafting:** relay transport cMIP, draft 1 (roadmap step 1). Identity draft 7, receipt check 3, counts a receipt only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts "receipts from the new homes", which the homeless rotation itself declares, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count, and scenario 5.7c would fail on the text. A drafting contradiction, not a change of intent.
+**Found while planning MOR 0.1:** the freeze test suite (v11) freezes the MIPs only once every scenario has passed, and several scenarios need Finance and Law running (splits, vaults, stakes, keepers, agreements). The build brief left Finance and Law out of 0.1, and F83 staged the freeze around that. The two cannot both hold if the first release freezes all six: either the build grows to every scenario, or the freeze rule gives way.
+
+**Decided (Nobody, allegedly):** "The freeze document is the problem." "Whatever we release is the first, however we wanna call it. So, we'll freeze the lot at presentation, some purely theoretically." Added to the build: "LN integration (probably the easiest module), that tests Finance. Split Module (for Law). Something to assess deals… Production is tested throughout." The order: "We build solutions that test each layer, so we experience friction. Only then, Fable gets a look at everything (will need a bigger budget), breaks things and fixes them. Then we freeze it." Confirmed: the freeze publication states, scenario by scenario, whether it was tested against running code or only reasoned. The story, in his words: "A man with a concept and a machine with code built MOR1."
+
+**Resolution:**
+- **All six MIPs freeze together, at the first release.** F83's staged freeze (three layers first, three later) is withdrawn. Its stage 2 was already replaced by the circle of five (build brief, 28 September).
+- **Run or reasoned.** Every scenario is either run against the founding components and passed, or reasoned through on paper against the texts. The freeze publishes a freeze report with the six texts and hashes, marking each scenario and component run or reasoned. *A reasoned rule is frozen on argument, not evidence; the report says so, so nobody mistakes one for the other.*
+- **Friction in every layer.** Three components join the build: a Lightning integration module (Finance), a Split Module (Law) and a deal-assessment tool (Law, to be defined with Nobody, allegedly at its step). Production needs none: every specification published runs through it.
+- **Review before freeze:** a machine review of everything, texts, code and freeze report, by Fable with a larger budget, breaking and fixing; then the five (the human round 3); then the freeze.
+
+**Consequences, stated for Nobody, allegedly:**
+1. **F83 point 1 dissolves.** The specification format stays in Production: it freezes with Envelope, so no frozen layer depends on a draft. F83 point 2 (Identity pointing up to Law) dissolves the same way.
+2. **The trust root stays as written.** Production rule 20 and the core's paragraph already say the six hashes are published together; F83's staged rewrite is not needed.
+3. **Exact formats for every Finance, Law and Production act** (core, "Open before freeze") become a hard prerequisite of the first release, as do the open parameters F83 listed, now for all six layers.
+4. **Checked against the principles.** Right of exit: the way out (identity, rotation, escape, succession) is the part run hardest, by the gauntlet, so the uneven freeze does not fall on the exit. Evolutionary design: what fails after the freeze is fixed by a successor protocol, as the core already says. Legible greed: the run-or-reasoned report is the same legibility applied to the protocol itself.
+5. **Naming is open.** The release is "the first, however we wanna call it"; the roadmap still calls the build 0.1 and the later battle-tested release V1. To settle with Nobody, allegedly.
+
+**Changes:** freeze test suite v12 (freeze rule and procedure; scenarios and components unchanged); build brief (scope, components, decisions, open items); roadmap (new steps, freeze step rewritten, renumbered). No change to the core or the MIPs.
+
+## F85. V1, frozen at inception, built by two (build planning, decided by Nobody, allegedly)
+
+**Found:** F84 and the brief of the same morning had the circle of five review and freeze the first release, then carry it forward. That gives five people a say over the freeze, and invites a debate about who decides the next step.
+
+**Decided (Nobody, allegedly):** "We'll test it in more details, no more five. You and me build V1, with help through questions in segmented fashion to other people. It's an ideological decision. Frozen at inception, no debate about who decides the next step. That is a problem they can deal with if they become curious and excited… and they can do so without me. I can move on to other things."
+
+**Resolution:**
+- **The first release is V1** (this settles F84's naming point). The build brief and roadmap are renamed accordingly.
+- **Nobody, allegedly and Claude build and freeze V1.** Others help by answering segmented questions and decide nothing. The circle of five is withdrawn.
+- **Questions come from the testing.** Nobody, allegedly: "By the time we're done testing we will know what is real and what only exists on paper. From that we can devise targeted questions to specialists." The draft freeze report (run or reasoned) is the source: each reasoned rule becomes a targeted question to a specialist in its field.
+- **Tested in more detail:** the run-or-reasoned freeze report of F84 stands; every scenario the components can run is run.
+- **The machine review (Fable) before the freeze stands.**
+- **No steward after V1.** What comes next is whoever takes it up, as a successor protocol users move to by choice.
+
+**Checked against the principles:** right of exit and evolutionary design are served: the core already says flaws after the freeze are fixed only by a new protocol running alongside, with users migrating by choice, and V1 names no one who could block that. Legible greed: no conflict.
+
+**Conflict, resolved:** the core (v12, "Open before freeze") lists "Human adversarial review (round 3)" before freeze. Nobody, allegedly: "Semisol gets to get a go at it. 'Yo Semi, can you help me break this?' He won't resist…" Semisol is round 3: he attacks the whole, texts and running prototypes, after the machine review and before the freeze. What he breaks becomes findings, resolved with Nobody, allegedly; he decides nothing. The core item stays as written; no core change.
+
+**Changes:** freeze test suite v12 (procedure step 5: human questions, not the five); build brief and roadmap renamed to V1, circle of five removed, "After V1" rewritten; README, CLAUDE.md, cMIP and Module READMEs and the project-lead prompt say V1. The air-gapped Module draft 3 still says "Tests for MOR 0.1" (a specification text, left for its next draft). Findings F83 and F84 keep their wording as history.
+
+## F86. Receipts for a homeless rotation come from the new homes (found while drafting the relay transport cMIP, decided by Nobody, allegedly)
+
+**Found while drafting:** relay transport cMIP, draft 1 (roadmap step 1; numbered F84 in the draft branch, renumbered at merge). Identity draft 7, receipt check 3, counts a receipt only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts "receipts from the new homes", which the homeless rotation itself declares, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count, and scenario 5.7c would fail on the text. A drafting contradiction, not a change of intent.
 
 **Decided (Nobody, allegedly):** receipt check 3 gains: "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)."
 
-**Core changes:** Identity (receipt check 3), at the next Identity draft. No change to the core document or the freeze test suite.
+**Core changes:** Identity (receipt check 3), at Identity draft 8 (roadmap step 1a). No change to the core document or the freeze test suite.
 
-## F85. An unaudited homeless rotation is never final by the next rotation (found while drafting the relay transport cMIP, decided by Nobody, allegedly)
+## F87. An unaudited homeless rotation is never final by the next rotation (found while drafting the relay transport cMIP, decided by Nobody, allegedly)
 
 **Pattern 1** (what decides is signed by the wrong party).
 
-**Found while drafting:** relay transport cMIP, Q4 (what "tried and failed to reach" means). Scenario: a journalist with one home abroad and no auditors; a state holding the stolen safety key makes a homeless rotation naming its own homes, and blocks the real home at its border. Clients inside fail to reach the home and accept the rotation as "re-homed without audit". Identity draft 7 then makes it final once a rotation at the next position counts under the home rule it declared; the thief holds the next safety key and chose those homes, so it rotates again at once, and the theft becomes final inside the country, beyond any later objection. The finality reasoning (F63: "anything surfacing after the next rotation is late by construction") holds for acts that did not exist yet, not for an objection that existed but was kept from arriving.
+**Found while drafting:** relay transport cMIP, Q4, what "tried and failed to reach" means (numbered F85 in the draft branch, renumbered at merge). Scenario: a journalist with one home abroad and no auditors; a state holding the stolen safety key makes a homeless rotation naming its own homes, and blocks the real home at its border. Clients inside fail to reach the home and accept the rotation as "re-homed without audit". Identity draft 7 then makes it final once a rotation at the next position counts under the home rule it declared; the thief holds the next safety key and chose those homes, so it rotates again at once, and the theft becomes final inside the country, beyond any later objection. The finality reasoning (F63: "anything surfacing after the next rotation is late by construction") holds for acts that did not exist yet, not for an objection that existed but was kept from arriving.
 
 **Decided (Nobody, allegedly):** a homeless rotation that counts only through the verifier's own failed attempt (homeless procedure, step 4, last case) never becomes final by the next rotation. A valid objection from a home of the old set voids it whenever it surfaces, and with it every rotation built on it. Homeless rotations that count through closure, auditors' absence statements, or an escape endorsement become final as before.
 
@@ -612,4 +653,4 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Isolation, stated:** no protocol beats a country that seals itself off completely; its readers see the thief's rotation, labelled, until evidence gets in. The relay transport cMIP makes evidence travel: an objection from any source counts, relays probe homes on a client's behalf, bundles carry acts by hand, operators may publish onion addresses, and clients do not send private content to an identity re-homed without audit without a plain warning.
 
-**Core changes:** Identity (homeless rotation: Finality; rule 30 area; core document, "The way out"), at the next Identity draft and core version. Freeze test suite: 5.7c gains a censored reader and a thief's second rotation that does not make the first final.
+**Core changes:** Identity (homeless rotation: Finality; rule 30 area; core document, "The way out"), at Identity draft 8 and the next core version (roadmap step 1a). Freeze test suite: 5.7c gains a censored reader and a thief's second rotation that does not make the first final.

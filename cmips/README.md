@@ -2,7 +2,7 @@
 
 Community specifications for the tasks the MIPs hand out, and for what no task foresaw. Not core: each is named by its hash, frozen at publication, and competes with any other cMIP for the same job.
 
-Planned for MOR 0.1:
+Planned for MOR V1:
 
 | cMIP | What it does |
 | --- | --- |

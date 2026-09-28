@@ -1,12 +1,12 @@
 # cMIP: Relay Transport
 
-*Draft 1, 28 September 2026. **Approved by Nobody, allegedly, 28 September 2026** (roadmap step 1); its hash stays a draft hash until its creator is named at step 13. Written against core v12, the Identity MIP draft 7, the Envelope MIP draft 4, the Text MIP draft 5, the Production MIP draft 4, freeze test suite v11 and findings F1 to F83. Not core: a founding cMIP, frozen at publication and competing with any other transport. It answers two open parameters of the drafts: how a home is queried (Identity), and how a client finds the key deliveries and sealed containers addressed to it (Envelope).*
+*Draft 1, 28 September 2026. **Approved by Nobody, allegedly, 28 September 2026** (roadmap step 1); its hash stays a draft hash until its creator is named at step 17. Written against core v12, the Identity MIP draft 7, the Envelope MIP draft 4, the Text MIP draft 5, the Production MIP draft 4, freeze test suite v11 and findings F1 to F83; merged against freeze test suite v12 and findings to F85, whose scenarios are unchanged. Not core: a founding cMIP, frozen at publication and competing with any other transport. It answers two open parameters of the drafts: how a home is queried (Identity), and how a client finds the key deliveries and sealed containers addressed to it (Envelope).*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples. Decisions taken with Nobody, allegedly are marked "(Nobody, allegedly, Q1)" and so on; the questions and their answers are listed at the end.*
 
 ## In plain words
 
-*The core says what an act is and when it counts. It deliberately says nothing about how acts travel between computers. This document fills that gap for MOR 0.1, and anyone may later write a better one.*
+*The core says what an act is and when it counts. It deliberately says nothing about how acts travel between computers. This document fills that gap for MOR V1, and anyone may later write a better one.*
 
 *A relay is a web server that keeps acts. This document fixes the handful of requests a client can make to it: "here is an act, keep it", "give me this act", "give me everything new from this identity, or addressed to this identity", "here are the locked bytes of a picture", "give me those bytes back". A home is a relay with a few more requests: "here is my genesis or rotation, give me your receipt", "give me everything you hold about this identity", and "show me your log, and prove this receipt is in it".*
 
@@ -256,7 +256,7 @@ Proofs are not acts and are not signed; they are checked against signed summarie
 
 ## When a home counts as unreachable
 
-The homeless procedure lets a verifier that requires no audit treat a home as gone when "the verifier itself has tried and failed to reach the home" (Identity, homeless rotation, step 4). Under F85, a homeless rotation accepted this way never becomes final by the next rotation: the old home's objection voids it whenever it surfaces. This section makes the attempt honest, and makes the objection hard to keep out.
+The homeless procedure lets a verifier that requires no audit treat a home as gone when "the verifier itself has tried and failed to reach the home" (Identity, homeless rotation, step 4). Under F87, a homeless rotation accepted this way never becomes final by the next rotation: the old home's objection voids it whenever it surfaces. This section makes the attempt honest, and makes the objection hard to keep out.
 
 *The case it is written for: a state holding a stolen safety key makes a homeless rotation, and blocks the owner's real home at its border, so that readers inside see the home as gone and the thief's rotation as the owner's. Censorship alone, without the safety key, can hide an owner's updates but never replace the owner.*
 
@@ -313,7 +313,7 @@ Its media type is `application/cbor`, and its file name ends in `.mor`. A client
 
 ### The owner's defence
 
-*Nothing above beats a country that seals itself off completely: its readers see the thief's rotation, labelled, until evidence gets in, and under F85 the first objection that does undoes it. The owner's own defence is already in the core: declared auditors, or several homes, ideally in other jurisdictions. A genesis client SHOULD recommend both to an owner who may face a hostile state (Identity rule 35).*
+*Nothing above beats a country that seals itself off completely: its readers see the thief's rotation, labelled, until evidence gets in, and under F87 the first objection that does undoes it. The owner's own defence is already in the core: declared auditors, or several homes, ideally in other jurisdictions. A genesis client SHOULD recommend both to an owner who may face a hostile state (Identity rule 35).*
 
 *Decided (Nobody, allegedly, Q4): the definition of the attempt, probes, bundles, onion addresses, the isolation rule and the client rule, as written here.*
 
@@ -366,18 +366,18 @@ error = {
 
 *What drafting this cMIP showed, for Nobody, allegedly.*
 
-1. **Found in Identity (a flaw; resolved as F84).** Receipt check 3 says a receipt counts only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts receipts "from the new homes", which are declared by the homeless rotation itself, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count. The intent is clear; the text contradicts it. *Decided (Nobody, allegedly, F84):* check 3 gains "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)", at the next Identity draft.
+1. **Found in Identity (a flaw; resolved as F86).** Receipt check 3 says a receipt counts only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts receipts "from the new homes", which are declared by the homeless rotation itself, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count. The intent is clear; the text contradicts it. *Decided (Nobody, allegedly, F86):* check 3 gains "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)", at the next Identity draft.
 2. **A gap in Identity, filled here.** Identity rule 13 asks a home to store the latest routes act; Identity's "Routes" rule needs the chain from version 1 to detect forks. This cMIP requires homes to serve the whole chain, and does the same for the encryption key, which Envelope defines "in spirit" as an Identity act but which rule 13 does not list. A stronger rule, not a relaxation.
-3. **Open parameters answered.** Identity: "how a home is queried" (the identity record, log requests). Envelope: "how a client finds the key deliveries and sealed containers addressed to it" (the feed by `to`, by pickup tag, or by scanning unaddressed containers). F83 lists the first as a condition of the stage-1 freeze.
+3. **Open parameters answered.** Identity: "how a home is queried" (the identity record, log requests). Envelope: "how a client finds the key deliveries and sealed containers addressed to it" (the feed by `to`, by pickup tag, or by scanning unaddressed containers). F83 listed the first as a condition of the freeze; under F84 it is a prerequisite of the freeze of all six MIPs.
 4. **No clock.** Arrival numbers and feed waits are local and never enter an act or a validity decision.
 5. **Untrusted relays** (Envelope). Every answer is a signed act, a hint, or a proof checked against a signed summary.
 6. **An act counts only where it is held; delivery is the signer's interest** (core, Envelope). Relays are never required to propagate; clients deliver.
 7. **Same bytes to every home** (Identity 8a). Relays store and serve items byte for byte.
 8. **Privacy as Envelope promises.** Relays index only outsides and public insides; sealed containers show recipients and pickup tags, never senders.
 9. **Signatures sign act ids only.** The transport asks for no other signature.
-10. **Found in Identity through this cMIP (a flaw; resolved as F85).** A homeless rotation accepted on the verifier's own failed attempt became final once the next rotation counted, and a thief holding the safety key controls that next rotation. Behind a censor's firewall a thief could make its own theft final, beyond any later objection. *Decided (Nobody, allegedly, F85):* such a rotation never becomes final by the next rotation; the old home's objection voids it whenever it surfaces. This cMIP adds the transport side: objections from anywhere, probes, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
+10. **Found in Identity through this cMIP (a flaw; resolved as F87).** A homeless rotation accepted on the verifier's own failed attempt became final once the next rotation counted, and a thief holding the safety key controls that next rotation. Behind a censor's firewall a thief could make its own theft final, beyond any later objection. *Decided (Nobody, allegedly, F87):* such a rotation never becomes final by the next rotation; the old home's objection voids it whenever it surfaces. This cMIP adds the transport side: objections from anywhere, probes, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
 11. **Where the core marks a weak or conformance rule, this cMIP does not smooth it over.** The "tried and failed to reach" case is defined as honestly as a transport can and still labelled the weakest; refusals stay unsigned, as the core says; "not held" proves nothing.
-12. **Its place in Production.** This cMIP fills no task and defines no act type (Production rule 8a allows this). No act names it: relays and clients adopt it by implementing it. Its spec hash covers its creator, who must publish it. The creator is named at roadmap step 13; any hash computed before then is a draft hash (Nobody, allegedly, Q6).
+12. **Its place in Production.** This cMIP fills no task and defines no act type (Production rule 8a allows this). No act names it: relays and clients adopt it by implementing it. Its spec hash covers its creator, who must publish it. The creator is named at roadmap step 17; any hash computed before then is a draft hash (Nobody, allegedly, Q6).
 
 ## Freeze scenarios
 
@@ -399,14 +399,14 @@ error = {
 
 Asked one at a time; each suggestion is Claude's, not yet decided.
 
-- **Q1.** The Identity flaw in receipt check 3. **Decided (Nobody, allegedly): the one-line fix, recorded as F84.**
+- **Q1.** The Identity flaw in receipt check 3. **Decided (Nobody, allegedly): the one-line fix, recorded as F86.**
 - **Q2.** How a recipient finds a sealed container sent to a bare key. **Decided (Nobody, allegedly): both.** The pickup tag for the simple path, scanning always possible for the private path, a fresh bare key per delivery as a client rule, a shortened tag left to a later cMIP. *A design decision of this cMIP, not a commitment of the core.*
 - **Q3.** Where an operator announces its home's current address. **Decided (Nobody, allegedly):** the operator's outbox route whose scope is the Identity MIP's hash. *A thief holding the operator's everyday key can list false addresses there; that only sends clients to a server that cannot produce valid receipts, and the operator corrects it with new routes, or by rotating.*
-- **Q4.** What counts as "tried and failed to reach" a home. Explored through the censorship scenario, which exposed F85 (decided). **Decided (Nobody, allegedly):** every known address, probes through two relays, an objection from anywhere counts as life, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
-- **Q5.** Following new acts by requests that wait, with no live connection in 0.1. **Decided (Nobody, allegedly):** yes; a live connection later, as its own cMIP.
-- **Q6.** Who is named as creator of this cMIP, and when its hash is fixed. The hash covers the creator's identity, and the author's real identity is born only at the first acts (roadmap step 13), so until then the hash is a draft hash. **Deferred (Nobody, allegedly) to step 13,** decided together with the build brief's open point 2: which identity signs MOR's founding record.
+- **Q4.** What counts as "tried and failed to reach" a home. Explored through the censorship scenario, which exposed F87 (decided). **Decided (Nobody, allegedly):** every known address, probes through two relays, an objection from anywhere counts as life, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
+- **Q5.** Following new acts by requests that wait, with no live connection in V1. **Decided (Nobody, allegedly):** yes; a live connection later, as its own cMIP.
+- **Q6.** Who is named as creator of this cMIP, and when its hash is fixed. The hash covers the creator's identity, and the author's real identity is born only at the first acts (roadmap step 17), so until then the hash is a draft hash. **Deferred (Nobody, allegedly) to step 17,** decided together with the build brief's open point 3: which identity signs MOR's founding record.
 - **Q7.** Whether homes should also hold and serve evidence (objections, absence statements, escape endorsements, cosignatures) and other homes' receipts for the identities they serve. **Decided (Nobody, allegedly):** evidence SHOULD, other homes' receipts MAY.
-- **Q8.** Whether reading an inbox is open to anyone. **Decided (Nobody, allegedly):** open in 0.1, with the cost stated; private inbox reading is set up for, and left to a later metadata-privacy cMIP (F70). *Recipient-only reading would need a signature on something other than an act, which the core does not allow.*
+- **Q8.** Whether reading an inbox is open to anyone. **Decided (Nobody, allegedly):** open in V1, with the cost stated; private inbox reading is set up for, and left to a later metadata-privacy cMIP (F70). *Recipient-only reading would need a signature on something other than an act, which the core does not allow.*
 
 ## Open technical parameters
 

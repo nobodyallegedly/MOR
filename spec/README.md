@@ -11,8 +11,8 @@ These are the current drafts of the core: the map, the six MIPs and the freeze t
 | `MIP-finance-draft-5.md` | Finance: receipts, obligations, payee pointers, the vault. |
 | `MIP-law-draft-4.md` | Law: agreements, keepers, stakes, splits, collectives, grants. |
 | `MIP-production-draft-4.md` | Production: specifications, tasks, verification rules, the trust root. |
-| `03-MOR-freeze-test-suite-v11.md` | The freeze test suite: what must pass before the core is frozen. For builders, the specification of what to test. |
+| `03-MOR-freeze-test-suite-v12.md` | The freeze test suite: what must pass, run or reasoned, before the core is frozen. For builders, the specification of what to test. |
 
-Why each rule exists is recorded in `docs/findings/` (F1 to F52, then F53 to F82).
+Why each rule exists is recorded in `docs/findings/` (F1 to F52, then F53 to F85).
 
 Reading convention: normal text is the protocol; italic text is commentary, reasoning and examples.
