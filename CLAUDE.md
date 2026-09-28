@@ -2,7 +2,7 @@
 
 Start with `docs/build-brief-0.1.md`. It records what Nobody, allegedly decided, the components in build order, what "done" means for each, and what is still open.
 
-- The protocol is defined by the MIP drafts, the core document and the freeze test suite. These live in the MOR project, not here yet. If you cannot read them, ask Nobody, allegedly before guessing at a rule.
+- The protocol is defined by the drafts in `spec/`: the core document, the six MIPs and the freeze test suite. `docs/findings/` records why each rule exists. Never guess at a rule: if the spec is silent or unclear, ask Nobody, allegedly.
 - The freeze test suite is the specification of what to test.
 - Rust for the core library, relays and homes; TypeScript for clients.
 - Nobody, allegedly has no coding background: explain in plain language first, then precisely. One question at a time on technical foundations.
