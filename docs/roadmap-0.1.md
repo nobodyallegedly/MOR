@@ -6,7 +6,7 @@
 
 **What we build is separate from what we show. Nothing is shown before every step below is built and tested.** The order therefore follows dependency and risk, not what is seen first: the riskiest part, identity under attack, comes early, so that flaws in the MIPs surface before anything is built on top of them.
 
-Until step 7, every identity is a **test identity**. the author's real identity is created only with the air-gapped safety key Module.
+Until step 12, every identity is a **test identity**, and every relay holds test acts only. When everything is ready to show, the relays are wiped and the first acts are made fresh: the author's real identity is born then, with the air-gapped safety key Module, so its genesis is itself one of the first acts.
 
 ## Steps
 
@@ -44,7 +44,7 @@ The offline signer: commitment export, pending and signed rotations, by file and
 
 **7. Freeze-suite harness and the identity gauntlet** *(Rust)*
 Scenario 5, steps 6 to 7d, against the real homes: majority and self-hosting, a stolen safety key, a forged receipt, closure by rotation, homeless rotation, escape with both keys, a genuine conflict settled by audit.
-*Done when:* the gauntlet passes. the author's real identity may then be created, with the Module.
+*Done when:* the gauntlet passes.
 
 ### Content
 
@@ -65,7 +65,7 @@ For the home relay and the basic relay.
 ### Publication
 
 **12. First acts and the repository on MOR**
-the author's identity publishes the first short post ("Thank you for the shower…" with the planet), the full text as the first long-form document, the specifications, and the code releases as read-only acts.
+The relays are wiped of every test act. the author's real identity is created with the air-gapped Module, and publishes the first short post ("Thank you for the shower…" with the planet), the full text as the first long-form document, the specifications, and the code releases as read-only acts.
 *Done when:* everything the reader shows is signed by the author's identity and fetched from a relay.
 
 **13. Final test pass**
