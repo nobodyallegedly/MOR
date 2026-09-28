@@ -38,7 +38,7 @@ Identity, Envelope and Text. It relies on the act format, act ids, sealed contai
 - **Item.** Anything a relay stores: an act, a sealed container, or a media object.
 - **Arrival number.** A counter a relay keeps, increasing by one with every item it stores. It is local to that relay, never a time, never compared across relays, and never used for any validity decision.
 - **Sealed id.** `tagged_hash("MOR/transport/sealed", bytes)`, over the encoded sealed container. *A sealed container is not an act and has no act id; relays and recipients still need a name for it.*
-- **Pickup tag.** `tagged_hash("MOR/transport/pickup", scheme || key)`, over a bare key in the form Identity defines (`scheme` as one byte or a 32-byte specification hash, `key` the public key). It lets a recipient find a sealed container addressed to a bare key. **[open, Q2]**
+- **Pickup tag.** `tagged_hash("MOR/transport/pickup", scheme || key)`, over a bare key in the form Identity defines (`scheme` as one byte or a 32-byte specification hash, `key` the public key). It lets a recipient find a sealed container addressed to a bare key without scanning (Nobody, allegedly, Q2).
 - **Hint.** Anything a relay says without signing it. A hint may guide a client; it never decides anything.
 
 ## Encoding
@@ -139,6 +139,7 @@ Items are immutable, so a relay SHOULD let them be cached indefinitely. A client
 | `signer` | only acts whose outside names this signer |
 | `to` | only acts and sealed containers whose `to` names this identity |
 | `pickup` | only sealed containers stored with this pickup tag |
+| `unaddressed` | if `1`, only sealed containers whose `to` is empty, whatever pickup tags they carry |
 | `spec`, `type` | only public acts whose inside names this spec hash, and this type within it (relays that open public acts; see below) |
 | `after` | only items with an arrival number greater than this; absent means from the start |
 | `limit` | at most this many items (never more than `limits.2`) |
@@ -173,7 +174,16 @@ To deliver an act addressed to an identity:
 2. It chooses the recipient's inbox route (kind 1) whose scope is the spec hash of the act being delivered; if there is none, the inbox route with a null scope. If the recipient declares no inbox, there is nowhere to deliver: the sender may publish the act on its own outbox and tell the recipient by other means. *An identity MAY declare no inbox (Identity).*
 3. It publishes the act, or the sealed container carrying it, to one or more of that route's hints.
 
-The recipient finds its deliveries with the feed: `to` set to its own identity, and `pickup` set to the tag of each bare key it has handed out and is still waiting on. *The sender of a delivery to a bare key computes the tag from the bare key the recipient supplied, and gives it with the container. Anyone who knows the bare key can see that something was delivered to it; the bare key is given only to the sender who needs it.* **[open, Q2]**
+The recipient finds its deliveries with the feed: `to` set to its own identity, and, for deliveries to a bare key, in one of two ways (Nobody, allegedly, Q2):
+
+1. **By pickup tag.** The sender of a delivery to a bare key computes the pickup tag from the bare key the recipient supplied, and gives it with the container. The recipient asks the feed with `pickup` set to the tag of each bare key it has handed out and is still waiting on. *One small request, whatever the size of the relay; it works in a browser and on a phone.*
+2. **By scanning.** The recipient asks the feed with `unaddressed=1` and tries to open every container it receives; only its own open. A relay that serves sealed containers MUST serve this filter, subject to the same policy as its other feeds, so that scanning is always possible. *The relay then cannot tell which container was whose; the cost grows with the relay's traffic.*
+
+A sender SHOULD always give the pickup tag; a recipient chooses which way to look.
+
+**Stated cost of the pickup tag.** A relay that serves a pickup request can connect the connection that asked with the container it collected. It learns neither the sender, nor the content, nor the recipient's identity. Anyone who knows the bare key can see that something was delivered to it, and deliveries to one bare key share one tag, so a relay can count them. *Client conformance:* a client SHOULD supply a fresh bare key for each purchase or delivery it expects, so that no tag links one to another; a client that reuses a bare key on purpose (for example an application key receiving many content keys, scenario 6) accepts that its deliveries are linkable by tag, and SHOULD say so to its user. A recipient who wants the relay to learn nothing scans instead.
+
+*A shortened tag, which returns a small batch the recipient then tries to open, sits between the two; it is left to a later cMIP, once real traffic shows what length makes sense.*
 
 Reading an inbox needs no login: acts addressed to an identity show their recipient anyway (public receiver, private sender), and their content is locked. **[open, Q8]**
 
@@ -303,7 +313,7 @@ error = {
 
 1. **Found in Identity (a flaw; resolved as F84).** Receipt check 3 says a receipt counts only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts receipts "from the new homes", which are declared by the homeless rotation itself, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count. The intent is clear; the text contradicts it. *Decided (Nobody, allegedly, F84):* check 3 gains "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)", at the next Identity draft.
 2. **A gap in Identity, filled here.** Identity rule 13 asks a home to store the latest routes act; Identity's "Routes" rule needs the chain from version 1 to detect forks. This cMIP requires homes to serve the whole chain, and does the same for the encryption key, which Envelope defines "in spirit" as an Identity act but which rule 13 does not list. A stronger rule, not a relaxation.
-3. **Open parameters answered.** Identity: "how a home is queried" (the identity record, log requests). Envelope: "how a client finds the key deliveries and sealed containers addressed to it" (the feed by `to` and by pickup tag). F83 lists the first as a condition of the stage-1 freeze.
+3. **Open parameters answered.** Identity: "how a home is queried" (the identity record, log requests). Envelope: "how a client finds the key deliveries and sealed containers addressed to it" (the feed by `to`, by pickup tag, or by scanning unaddressed containers). F83 lists the first as a condition of the stage-1 freeze.
 4. **No clock.** Arrival numbers and feed waits are local and never enter an act or a validity decision.
 5. **Untrusted relays** (Envelope). Every answer is a signed act, a hint, or a proof checked against a signed summary.
 6. **An act counts only where it is held; delivery is the signer's interest** (core, Envelope). Relays are never required to propagate; clients deliver.
@@ -318,7 +328,7 @@ error = {
 | Scenario | What this cMIP carries |
 | --- | --- |
 | 5.3 | Journalist and buyer share no relay: the buyer reads the home's identity record, finds the inbox route, delivers a sealed container; the relay sees the recipient, never the sender. |
-| 5.2, 6 | Key delivery to a bare key in a sealed container, found by pickup tag. |
+| 5.2, 6 | Key delivery to a bare key in a sealed container, found by pickup tag or by scanning; scenario 6's reused application key linkable by tag, as stated. |
 | 5.5 | A routine rotation submitted to every home; readers fetch the chain and prove kept history from the rotation and the acts' outsides. |
 | 5.6 | A rotation submitted to three homes, one not storing it: receipts from two, fetched per home. |
 | 5.7 | Homes refusing a thief's rotation (error 5) and holding the owner's; a thief's rotation arriving second (error 4, with the held rotation and receipt). |
@@ -334,7 +344,7 @@ error = {
 Asked one at a time; each suggestion is Claude's, not yet decided.
 
 - **Q1.** The Identity flaw in receipt check 3. **Decided (Nobody, allegedly): the one-line fix, recorded as F84.**
-- **Q2.** How a recipient finds a sealed container sent to a bare key, which carries no recipient. *Suggested:* the pickup tag, a hash of the bare key given alongside the container.
+- **Q2.** How a recipient finds a sealed container sent to a bare key. **Decided (Nobody, allegedly): both.** The pickup tag for the simple path, scanning always possible for the private path, a fresh bare key per delivery as a client rule, a shortened tag left to a later cMIP. *A design decision of this cMIP, not a commitment of the core.*
 - **Q3.** Where an operator announces its home's current address. *Suggested:* the operator's outbox route whose scope is the Identity MIP's hash.
 - **Q4.** What counts as "tried and failed to reach" a home. *Suggested:* every known address, no well-formed answer, twice.
 - **Q5.** Following new acts by requests that wait, with no live connection in 0.1. *Suggested:* yes; a live connection later, as its own cMIP.
