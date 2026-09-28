@@ -125,8 +125,7 @@ After the first acts, Nobody, allegedly sets up a collective of developers on MO
 
 **Contribution and diversity (decided by Nobody, allegedly).** A contributor implements a cMIP, a Module, a client, or a new type of relay ("new type of relay of course": running another instance of an existing one does not count). "Diverse enough is that there are contributors that cover all areas of development": cMIPs, Modules, clients and relays. *Note (Claude): the protocol cannot tell whether identities are distinct people, so one person could cover several areas; judging that is the author's call, stated as such.*
 
-*Open, to settle with Nobody, allegedly:*
-- *What "mass" means, if more than covering every area.*
+**Mass (decided by Nobody, allegedly):** no number. "It will be a feeling anyway. If ever… 'I can leave, the snowball is heading downhill.'"
 
 *People Nobody, allegedly has named as natural to ask segmented questions, each with their own angle: Semisol, JB (Damus), Kirian, UTXO, Fishcake (nostr.build), hazard (Blossom), the people behind nostr.wine, Rock (Stemstr). None has a role.*
 
