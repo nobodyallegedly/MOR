@@ -13,6 +13,9 @@ Two things, in this order:
 
 ## Decisions (Nobody, allegedly)
 
+- **Safety key in 0.1:** in software first, to open the door sooner; the air-gapped safety key Module before the identity gauntlet, as the freeze test suite requires.
+- **Repository layout:** `spec/` for the core, `modules/` and `cmips/` for founding specifications above it, `docs/` for the brief, overviews and findings.
+
 - **Languages:** Rust for the core library, relays and homes; TypeScript for the clients. A Rust specialist is available for tough calls.
 - **The first short post:** "Thank you for the shower…" with a JPEG of planet Earth.
 - **The first long-form post:** the full text of "Thank you for the shower" (written 2014), formatted. It is the long-form module's first real test and the first document in the reader.
@@ -27,7 +30,7 @@ In build order. *The order is suggested (Claude): the door first, then the gaunt
 | 0 | **Core library** | Rust | It builds, verifies and locks acts exactly as the MIPs define (deterministic CBOR, tagged hashes, act ids, XChaCha20-Poly1305, canonical text, running summaries, identity-chain checks), and passes published test vectors. It compiles to WebAssembly so the clients can use it. |
 | 1 | **Relay transport** (a founding cMIP, a document first) | — | Its specification is written and hashed: how a client publishes an act, fetches acts, follows new ones, delivers to an inbox route, and asks a home for a receipt. *The core deliberately does not define this (core v12, "Outside the core"), so 0.1 cannot start without a founding one.* |
 | 2 | **Home relay** and its management client | Rust / TypeScript | It stores and serves identity chains, routes and names, checks rotations, signs receipts and log summaries. Two deployments of the same software: one on a machine at home, one on a public server where others can set up their identities. The management client shows what the home holds and lets its operator run it. |
-| 3 | **Genesis client** | TypeScript (with the core via WebAssembly) | It creates an identity: signing key, committed safety key, genesis naming its homes; later a rotation. For 0.1 the safety key is held in software, labelled clearly as a prototype; the air-gapped Module comes later. |
+| 3 | **Genesis client** | TypeScript (with the core via WebAssembly) | It creates an identity: signing key, committed safety key, genesis naming its homes; later a rotation. For the door, the safety key is held in software, labelled clearly as a prototype; the air-gapped Module (`modules/`) is implemented before the identity gauntlet is run. |
 | 4 | **Basic relay** and its management client | Rust / TypeScript | It stores and serves acts and media, checks signatures and locked hashes, and publishes commitments. |
 | 5 | **Long-form module** (specification + code) | — / TypeScript | Its specification is written and hashed: a format for formatted text on top of the Text MIP's canonical text. Its code renders it. |
 | 6 | **Long-form web reader** | TypeScript | **The door.** It opens by link, fetches acts from a relay, verifies them with the core, and renders long-form documents. It shows who signed each one, with its fingerprint, and gives a way to reach Nobody, allegedly. It also serves as the read-only client of the original plan. |
