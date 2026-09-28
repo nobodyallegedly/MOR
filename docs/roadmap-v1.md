@@ -123,8 +123,10 @@ After the first acts, Nobody, allegedly sets up a collective of developers on MO
 
 **What it controls (decided by Nobody, allegedly).** "Collective controls a repo, nothing more, with core branches locked." A code repository, and nothing else; the branches holding the frozen core are locked. *Note (Claude): a lock on a hosted repository holds only as long as whoever administers the host keeps it; the frozen core itself cannot change in any case, since its texts and hashes are published as acts.*
 
+**Contribution and diversity (decided by Nobody, allegedly).** A contributor implements a cMIP, a Module, a client, or a new type of relay ("new type of relay of course": running another instance of an existing one does not count). "Diverse enough is that there are contributors that cover all areas of development": cMIPs, Modules, clients and relays. *Note (Claude): the protocol cannot tell whether identities are distinct people, so one person could cover several areas; judging that is the author's call, stated as such.*
+
 *Open, to settle with Nobody, allegedly:*
-- *What counts as proof of contribution, and what diversity and mass mean. Note (Claude): the protocol cannot count distinct people, since one person can hold many identities; diversity is the author's judgement, stated as such.*
+- *What "mass" means, if more than covering every area.*
 
 *People Nobody, allegedly has named as natural to ask segmented questions, each with their own angle: Semisol, JB (Damus), Kirian, UTXO, Fishcake (nostr.build), hazard (Blossom), the people behind nostr.wine, Rock (Stemstr). None has a role.*
 
