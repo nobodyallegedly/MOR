@@ -51,9 +51,10 @@ Building this exposed three places where the drafts do not fix the bytes. Each c
 
 1. **Bagging the running summary (Envelope, "Sequences"; F89, approved by Nobody, allegedly).** "The peaks are bagged right to left, each pair hashed as a node" did not say which side each goes on. Start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left. A single peak is its own root, with no extra hashing. To be written into the next Envelope draft.
 
+2. **No associated data in the lock (Envelope, "How it fits together"; F90, approved by Nobody, allegedly).** XChaCha20-Poly1305 can bind extra data to a lock; the draft did not say. None: the outside already commits to both the locked bytes and the unlocked inside. To be written into the next Envelope draft.
+
 **Awaiting the author's approval**
 
-2. **No associated data in the lock (Envelope, "How it fits together").** XChaCha20-Poly1305 can bind extra data to a lock; the draft does not say. Taken: none. The outside already commits to both the locked bytes and the unlocked inside.
 3. **Nesting depth.** The decoder stops at 128 levels of nesting to protect itself against hostile input, and reports this as a limit of its own, not as an invalid act. The core sets no bound, and leaves length limits to homes; no act in the MIPs comes near this depth.
 
 Also noted for the freeze, with no change now: an act's payload is `{ * any => any }`, so floats, tags and simple values are allowed wherever a type does not restrict them. The library handles them exactly as RFC 8949 §4.2.1 says, but they are extra surface on which implementations can disagree (NaN payloads, what a tag means). Whether the frozen core should forbid them is for step 16.

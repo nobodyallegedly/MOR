@@ -682,3 +682,15 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Envelope (Sequences: the bagging rule written out), at the next Envelope draft. No change to the core document or the freeze test suite.
 
 **Applied:** the core library (`core/src/mmr.rs`) and its published vectors (`core/vectors/running-summary.json`, `core/vectors/sequence-three-acts.json`), approved by Nobody, allegedly, 28 September 2026. Awaiting the next Envelope draft.
+
+## F90. The lock binds no associated data (found while building the core library, decided by Nobody, allegedly)
+
+**Pattern 4** (an encoding left to convention).
+
+**Found while building:** core library, part 1 (roadmap step 2). Envelope draft 4 locks an inside, or a media object, "with the content key using XChaCha20-Poly1305 and the nonce", but does not say whether the lock binds associated data. Any choice other than none changes the locked bytes of every act, so implementations must agree.
+
+**Decided (Nobody, allegedly):** none. The locked bytes are the ciphertext followed by the 16-byte Poly1305 tag, with empty associated data. *The outside already commits to both the locked bytes (locked hash) and the unlocked inside (inside commitment), so binding more would add nothing.*
+
+**Core changes:** Envelope ("How it fits together", step 1; media locking), at the next Envelope draft. No change to the core document or the freeze test suite.
+
+**Applied:** the core library (`core/src/lock.rs`) and its published vectors (`core/vectors/lock.json`, `core/vectors/sequence-three-acts.json`, `core/vectors/open-act.json`), approved by Nobody, allegedly, 28 September 2026. Awaiting the next Envelope draft.

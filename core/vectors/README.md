@@ -16,4 +16,4 @@ Made by `cargo run -p mor-core --example gen_vectors`, checked by the Rust libra
 
 No signatures appear: they are part 2 (roadmap step 3). The act id does not depend on the signature, so every id here is final for its outside.
 
-How the running summary's peaks are bagged is decided (F89). That the lock uses no associated data awaits the author's approval (see `core/README.md`).
+Both readings these vectors depend on are decided: how the running summary's peaks are bagged (F89), and that the lock uses no associated data (F90).
