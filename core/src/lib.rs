@@ -1,7 +1,9 @@
 //! # mor-core
 //!
-//! The MOR core library, part 1 (roadmap step 2): the building blocks every
-//! act is made of, exactly as the MIP drafts define them.
+//! The MOR core library: the building blocks every act is made of, and the
+//! identity-chain checks, exactly as the MIP drafts define them.
+//!
+//! Part 1 (roadmap step 2):
 //!
 //! - [`cbor`]: deterministic CBOR, strict both ways (Identity, "Encoding").
 //! - [`hash`]: SHA-256 and BIP-340 style tagged hashes (Identity, "Hashes").
@@ -11,15 +13,28 @@
 //! - [`text`]: canonical text, with Unicode 17.0 normalization (Text).
 //! - [`mmr`]: running summaries, a Merkle mountain range (Envelope, "Sequences").
 //!
-//! Part 2 (roadmap step 3) adds signatures and the identity-chain checks.
+//! Part 2 (roadmap step 3):
 //!
-//! Written against core v14, Identity draft 8, Envelope draft 5 and Text draft 5.
+//! - [`sig`]: signature schemes 1 to 3 (Schnorr, SLH-DSA 128s and 128f),
+//!   safety key commitments (Identity, "Signature schemes").
+//! - [`merkle`]: a home's receipt log, RFC 9162 trees and proofs (Identity,
+//!   "Log summary").
+//! - [`identity`]: the Identity MIP's act formats, home rules and the
+//!   checks that need no other act.
+//! - [`chain`]: which identity-chain act counts, and the standing of every
+//!   other act (Identity, "Verification procedures", "Validity rules").
+//!
+//! Written against core v15, Identity draft 9, Envelope draft 5 and Text draft 5.
 
 pub mod act;
 pub mod cbor;
+pub mod chain;
 pub mod hash;
+pub mod identity;
 pub mod lock;
+pub mod merkle;
 pub mod mmr;
+pub mod sig;
 pub mod text;
 
 pub use act::{Act, ActError, Inside, Outside};

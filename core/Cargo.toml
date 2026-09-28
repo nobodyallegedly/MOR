@@ -1,7 +1,7 @@
 [package]
 name = "mor-core"
 version = "0.1.0"
-description = "The MOR core library: deterministic CBOR, tagged hashes, acts, locking, canonical text, running summaries."
+description = "The MOR core library: deterministic CBOR, tagged hashes, acts, locking, canonical text, running summaries, signatures and the identity-chain checks."
 edition.workspace = true
 license.workspace = true
 
@@ -13,7 +13,18 @@ chacha20poly1305 = { version = "0.10", default-features = false, features = ["al
 # Pinned exactly: its tables must be Unicode 17.0, the version the Text MIP pins.
 # A newer release could carry newer tables; a test checks the version.
 unicode-normalization = "=0.1.25"
+# SLH-DSA, for safety keys (FIPS 205, SHA2-128s and SHA2-128f). Adopted by Nobody, allegedly
+# on condition that the tests check every signature against a second,
+# independent implementation (the `slh-dsa` dev-dependency). Pinned exactly.
+fips205 = { version = "=0.4.1", default-features = false, features = ["slh_dsa_sha2_128s", "slh_dsa_sha2_128f"] }
+# Only to hand fips205 the caller's bytes where it asks for randomness.
+rand_core = { version = "0.6.4", default-features = false }
+# Schnorr over secp256k1 (BIP-340), for signing keys.
+k256 = { version = "0.13.4", default-features = false, features = ["schnorr"] }
 
 [dev-dependencies]
 hex = "0.4"
 serde_json = "1"
+# The second, independent SLH-DSA implementation (RustCrypto) the tests check
+# every fips205 signature against.
+slh-dsa = "=0.2.0-rc.5"

@@ -569,6 +569,24 @@ pub fn seal(
     seal_encoded(&inside.encode(), key, nonce, addr)
 }
 
+/// Seal an inside and sign the act id: the whole act. `sign` is given the
+/// act id and returns the signature (see [`crate::sig`]).
+pub fn make(
+    inside: &Inside,
+    key: &ContentKey,
+    nonce: &Nonce,
+    addr: &Addressing,
+    sign: impl FnOnce(&Hash) -> Signature,
+) -> Act {
+    let (outside, locked) = seal(inside, key, nonce, addr);
+    let signature = sign(&outside.act_id());
+    Act {
+        outside,
+        locked,
+        signature,
+    }
+}
+
 /// [`seal`] for an inside already encoded. Nothing here checks the bytes;
 /// it exists so that tests can seal insides that [`open`] must reject.
 pub fn seal_encoded(

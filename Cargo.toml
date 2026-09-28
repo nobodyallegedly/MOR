@@ -5,3 +5,13 @@ resolver = "2"
 [workspace.package]
 edition = "2021"
 license = "MIT OR Apache-2.0"
+
+# SLH-DSA is slow unoptimised; the tests sign and verify many rotations.
+[profile.dev.package.fips205]
+opt-level = 3
+[profile.dev.package.slh-dsa]
+opt-level = 3
+[profile.dev.package.sha2]
+opt-level = 3
+[profile.dev.package.k256]
+opt-level = 3

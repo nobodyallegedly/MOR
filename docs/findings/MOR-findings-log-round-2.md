@@ -708,3 +708,57 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Envelope (validity rule 1a; Reasoning, "One depth for everyone"); core document ("Common conventions", encoding). No change to the freeze test suite.
 
 **Applied:** the core library (`core/src/cbor.rs`) and its published vectors (`core/vectors/cbor.json`: 128 levels accepted, 129 rejected); Envelope draft 5 and core v14, approved by Nobody, allegedly, 28 September 2026 (roadmap step 2).
+
+## F92. A rotation that counts under the old home rule beats even a final homeless rotation (found while building the core library, part 2, decided by Nobody, allegedly)
+
+**Pattern 2** (a rule that only works for a verifier with a memory): finality was argued for acts arriving late, and a verifier only ever holds acts, never when each arrived.
+
+**Found while building:** core library, part 2 (roadmap step 3), writing the resolver as a function of the acts a verifier holds. Identity draft 8 says a homeless rotation is final once the next rotation counts, and "no later objection or receipt can overturn it" (F63); homeless step 2 and rule 31 say a rotation that counts under the old home rule "always beats" a homeless rotation. On the same pile of acts the two give opposite answers, so one must be ordered first. With finality first, the library counted this attack, run as a test: a journalist rotates three times, each receipted by the one home; the home closes by rotation; a thief finds the journalist's first safety key, used years before, on an old backup, makes a homeless rotation at position 1 naming the thief's homes, and rotates again at once. The thief's chain became final and replaced the journalist's three genuine rotations. The same held after auditors' absence statements instead of a closure.
+
+**Decided (Nobody, allegedly):** the old-rule rotation wins. Rule 31 stays "always": a rotation that counts under the old home rule beats a homeless rotation at the same position, final or not. Finality makes a late objection powerless, never a rotation the old homes held.
+
+**Cost, stated:** a thief who holds a safety key, and whose rotation a home genuinely receipted at that position, still wins there, however late its receipts surface. That is first held wins, exactly as without any homeless rotation (rule 11). *F63's "late by construction" holds for an objection, which names the homeless rotation and so is made after it; a receipt names another rotation, which may be older.*
+
+**Core changes:** Identity (homeless rotation: Finality; rule 31); core document ("The way out"). Freeze test suite: 5.7c gains the thief with a used safety key found after a closure; the homeless rotation component and the pass criteria follow.
+
+**Applied:** the core library (`core/src/chain.rs`: the old rule is tallied before finality; `core/tests/chain.rs`: the attack above, and a final escape still beaten by a rotation the old home held); Identity draft 9, core v15, freeze test suite v14 (roadmap step 3), awaiting the author's approval of the texts.
+
+## F93. Absence statements are judged by the audit requirement in force before the homeless rotation (found while building the core library, part 2, decided by Nobody, allegedly)
+
+**Pattern 1** (what decides is signed by the wrong party).
+
+**Found while building:** core library, part 2 (roadmap step 3). Homeless step 4 counts a home as gone when "the identity requires audit, and at least the required number of its declared auditors have signed absence statements", and otherwise on the verifier's own failed attempt. The homeless rotation can itself declare a new audit requirement or drop it; F60 settled which requirement judges the new homes' receipts, not this step. Read as the rotation's own, a thief holding the safety key could drop auditing and fall back on each reader's failed attempt, or name auditors it controls, whose absence statements would make the rotation final.
+
+**Decided (Nobody, allegedly):** the requirement in effect before the homeless rotation, while the old homes served: its auditors, its threshold, and whether a reader's own failed attempt is allowed at all.
+
+**Cost, stated:** an owner whose declared auditors vanished together with the home leaves with both keys (escape), which needs no auditor.
+
+**Core changes:** Identity (homeless procedure, step 4). Freeze test suite: 5.7c gains a thief who drops auditing, and one who names an auditor of its own.
+
+**Applied:** the core library (`core/src/chain.rs`, `homeless_basis`; test `absence_statements_are_judged_by_the_auditors_in_force_before_the_homeless_rotation`); Identity draft 9, freeze test suite v14 (roadmap step 3), awaiting the author's approval of the texts.
+
+## F94. A home rule a rotation leaves in place must fit the homes it sets (found while building the core library, part 2, decided by Nobody, allegedly)
+
+**Pattern 4** (a case left to each implementation, where verifiers must agree).
+
+**Found while building:** core library, part 2 (roadmap step 3). Rotation check 5 validates "any new home rule" against the new home set, and is silent when a rotation changes the homes, leaves the rule in place, and the inherited rule no longer fits: an authoritative index past the end of the list, a threshold above the number of distinct operators, or fewer than two operators left.
+
+**Options weighed:** the rotation is invalid; or the inherited rule lapses and the default of rule 5 applies, which quietly changes a protection the owner chose.
+
+**Decided (Nobody, allegedly):** the rotation is invalid. The owner's client sends a rule that fits, or null for the default, whenever it changes the homes; a genesis client catches this before the safety key is spent.
+
+**Core changes:** Identity (rotation check 5). No change to the core document or the freeze test suite.
+
+**Applied:** the core library (`core/src/identity.rs`, `ChainState::apply`; test `a_new_home_set_must_still_fit_the_rule_in_effect`); Identity draft 9 (roadmap step 3), awaiting the author's approval of the text.
+
+## F95. A voided but acknowledged receipt contests a position visibly, without blocking it (found while building the core library, part 2, decided by Nobody, allegedly)
+
+**Pattern 3** (a rule that protects the owner also traps the owner).
+
+**Found while building:** core library, part 2 (roadmap step 3). Receipt check 6: a receipt voided by the operator's rotation that another identity acknowledged "makes that chain position contested" and "never counts as support". Elsewhere "contested" means no rotation counts there (conflicts 1, rule 19). Read that way, a thief holding the safety key and a home's stolen everyday key, plus one accomplice's acknowledgement, would keep the owner's genuinely receipted rotation from ever counting at a single home, since nothing removes an acknowledgement.
+
+**Decided (Nobody, allegedly):** a flag, not a block. The disputed receipt counts for nothing; the home's other receipts at that position are judged as before; the position is shown as contested. *An acknowledgement turns a thief's act into a visible dispute, never into a valid act, nor into a veto.*
+
+**Core changes:** Identity (receipt check 6). No change to the core document or the freeze test suite.
+
+**Applied:** the core library (`core/src/chain.rs`, `tally`; test `an_acknowledged_voided_receipt_is_never_support`); Identity draft 9 (roadmap step 3), awaiting the author's approval of the text.
