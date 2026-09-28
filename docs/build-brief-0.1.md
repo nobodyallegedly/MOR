@@ -1,6 +1,6 @@
 # MOR 0.1: Build Brief
 
-*28 September 2026. The starting point for building MOR 0.1, written against core v12, the MIP drafts (Identity 7, Text 5, Envelope 4, Finance 5, Law 4, Production 4), freeze test suite v11 and the findings log to F82. It records what Nobody, allegedly decided on 27 and 28 September, what is suggested, and what is still open.*
+*28 September 2026. The starting point for building MOR 0.1, written against core v12, the MIP drafts (Identity 7, Text 5, Envelope 4, Finance 5, Law 4, Production 4), freeze test suite v12 and the findings log to F84. It records what Nobody, allegedly decided on 27 and 28 September, what is suggested, and what is still open.*
 
 ## Purpose of 0.1
 
@@ -9,7 +9,7 @@ Two things. Nothing is shown before both are built and tested (Nobody, allegedly
 1. **The door.** A link Nobody, allegedly can send to one person at a time. It lands on a web reader, where everything is found: the statement, the documents, the links to the code. The documents are themselves MOR acts, signed by the author's identity and fetched from a relay. The protocol is shown by being used. *(Decided, Nobody, allegedly: "The pitch is… here is a link. That's it." "A small door to a big universe.")*
 2. **The proof.** The identity gauntlet (freeze test suite, scenario 5, steps 7 to 7d) passing against the home relay and the genesis client. That proves most of review round 2 in code, and it is what the first builders will want to see, or break.
 
-0.1 exercises Identity, Text, Envelope and Production. Finance and Law are not built in 0.1.
+0.1 exercises all six layers, so every one meets friction (F84): Identity, Text and Envelope through the door and the gauntlet; Finance through a Lightning integration module; Law through a Split Module and a deal-assessment tool; Production throughout, since every specification published runs through it. All six MIPs are frozen together at the first release. Scenarios the components can run are run; the rest are reasoned on paper, and the freeze report says which.
 
 ## Decisions (Nobody, allegedly)
 
@@ -21,11 +21,13 @@ Two things. Nothing is shown before both are built and tested (Nobody, allegedly
 - **The first short post:** "Thank you for the shower…" with a JPEG of planet Earth.
 - **The first long-form post:** the full text of "Thank you for the shower" (written 2014), formatted. It is the long-form module's first real test and the first document in the reader.
 - **The code repository:** on GitHub, under a new online identity Nobody, allegedly will create. The repository is also published on MOR as acts, read-only (see "The repository").
-- **The freeze circle and what happens after:** v0.1 is reviewed and frozen together with five people — Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO, all of whom wrapped their heads around Nostr and felt first-hand where its code and its funding broke down. This replaces the single named reviewer in roadmap step 12 and the "small invited group" of F83's stage 2. After the freeze, the net widens organically through their own networks rather than a separately invited group; V1 and the universities come only once the MIPs feel battle-tested by that wider use, with that migration itself standing as the first live test of MOR's right of exit. *(Decided, Nobody, allegedly, 28 September 2026.)*
+- **Freeze the lot (F84):** "Whatever we release is the first, however we wanna call it. So, we'll freeze the lot at presentation, some purely theoretically." All six MIPs freeze together; F83's staged freeze is withdrawn. The order: build solutions that test each layer, "so we experience friction"; then Fable reviews everything with a larger budget, "breaks things and fixes them"; then the five; then the freeze. The freeze report marks each scenario run or reasoned.
+- **The story:** "A man with a concept and a machine with code built MOR1, that's it, that is the story."
+- **The freeze circle and what happens after:** v0.1 is reviewed and frozen together with five people — Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO, all of whom wrapped their heads around Nostr and felt first-hand where its code and its funding broke down. This replaces the single named reviewer in the roadmap's freeze step and the "small invited group" of F83's stage 2. After the freeze, the net widens organically through their own networks rather than a separately invited group; V1 and the universities come only once the MIPs feel battle-tested by that wider use, with that migration itself standing as the first live test of MOR's right of exit. *(Decided, Nobody, allegedly, 28 September 2026.)*
 
 ## Components
 
-The components. *Their build order is in `docs/roadmap-0.1.md`: foundations, identity proven by the gauntlet, content, publication.*
+The components. *Their build order is in `docs/roadmap-0.1.md`: foundations, identity proven by the gauntlet, content, friction in Finance and Law, review and freeze, publication.*
 
 | # | Component | Language | Done when |
 | --- | --- | --- | --- |
@@ -40,8 +42,11 @@ The components. *Their build order is in `docs/roadmap-0.1.md`: foundations, ide
 | 8 | **Barebone client** | TypeScript | It posts text with a JPEG, and shows posts. It publishes the first short post. |
 | 9 | **Freeze-suite harness** | Rust | It runs scenarios from the freeze test suite against the real components, starting with scenario 5, steps 7 to 7d. |
 | 10 | **The repository on MOR** | — | See below. |
+| 11 | **Lightning integration module** (specification + code) | — / to settle | Its specification is written and hashed: how a Lightning payment becomes a Finance receipt and a payout. A test identity pays another over Lightning and both hold a verified receipt. *(Nobody, allegedly: "probably the easiest module".)* |
+| 12 | **Split Module** (specification + code) | — / to settle | Its specification is written and hashed: a Law split over stakes. A payment is split among test identities, the split balances exactly, and each share is paid and receipted. |
+| 13 | **Deal-assessment tool** | to settle | *What it assesses is to be defined with Nobody, allegedly at its step* ("something to assess deals"). Suggested (Claude): it reads an agreement and shows, in plain words, who signed, what each party is bound to, the shares and how the deal ends. |
 
-The harness (9) grows alongside everything else: every component is done only when its scenarios pass.
+The harness (9) grows alongside everything else: every component is done only when its scenarios pass, run or reasoned.
 
 ## The repository
 
@@ -54,11 +59,12 @@ The harness (9) grows alongside everything else: every component is done only wh
 
 ## Open, to settle before or during the build
 
-1. **Draft hashes versus frozen hashes.** Settled by F83: Identity, Text and Envelope are frozen before the first acts (roadmap step 12), so the first acts are permanent. Still open: whether the specification format moves from Production to Envelope, since the first three hashes depend on it. *Nobody, allegedly to decide.*
-2. **Who publishes the repository on MOR.** the author's own identity, or a separate MOR identity (possibly a collective later). *Nobody, allegedly to decide.*
-3. **The long-form format.** Which markup the long-form module uses, within the Text MIP's rules for formats. *To settle when writing its specification.*
-4. **Rust crates for the cryptography,** especially SLH-DSA and ML-KEM, whose libraries are young. Their audit status to be checked, with the Rust specialist.
-5. **Hosting for the public home relay** and the reader.
+1. **Draft hashes versus frozen hashes.** Settled by F84: all six MIPs freeze before the first acts, so the first acts are permanent. The specification format stays in Production, which freezes with the rest.
+2. **Naming.** The first release is "the first, however we wanna call it" (Nobody, allegedly), and he calls it MOR1; the roadmap still calls the build 0.1 and the later battle-tested release V1. *Nobody, allegedly to decide.*
+3. **Who publishes the repository on MOR.** the author's own identity, or a separate MOR identity (possibly a collective later). *Nobody, allegedly to decide.*
+4. **The long-form format.** Which markup the long-form module uses, within the Text MIP's rules for formats. *To settle when writing its specification.*
+5. **Rust crates for the cryptography,** especially SLH-DSA and ML-KEM, whose libraries are young. Their audit status to be checked, with the Rust specialist.
+6. **Hosting for the public home relay** and the reader.
 
 ## How the build chat works
 

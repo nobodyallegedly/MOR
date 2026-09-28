@@ -6,7 +6,7 @@
 
 **What we build is separate from what we show. Nothing is shown before every step below is built and tested.** The order therefore follows dependency and risk, not what is seen first: the riskiest part, identity under attack, comes early, so that flaws in the MIPs surface before anything is built on top of them.
 
-Until step 13, every identity is a **test identity**, and every relay holds test acts only. When everything is ready to show, the relays are wiped and the first acts are made fresh: the author's real identity is born then, with the air-gapped safety key Module, so its genesis is itself one of the first acts.
+Until step 17, every identity is a **test identity**, and every relay holds test acts only. When everything is ready to show, the relays are wiped and the first acts are made fresh: the author's real identity is born then, with the air-gapped safety key Module, so its genesis is itself one of the first acts.
 
 ## Steps
 
@@ -62,19 +62,39 @@ Opens by link, fetches acts from a relay, verifies them, renders long-form docum
 For the home relay and the basic relay.
 *Done when:* an operator can run each without a terminal.
 
-### The first freeze
+### Friction in Finance and Law *(F84)*
 
-**12. Freeze of the communication layers** *(F83)*
-Settle the open parameters of Identity, Text and Envelope (test vectors, pinned Unicode version, key-delivery format, commitment construction, private links), decide where the specification format lives, rewrite the freeze rule as staged, and freeze the three layers. **Human adversarial review of the three layers before they freeze, by the five: Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO** *(decided by Nobody, allegedly, 28 September 2026 — see the build brief)*. By this step everything is built and tested with test identities, so they can attack the running prototypes as well as the texts. This is the one planned exception to "nothing is shown": reviewers, not an audience.
-*Done when:* the three frozen texts and their hashes are published together, and the core library uses those hashes.
+Each of these is small on purpose: enough for every layer to meet real use before it freezes.
+
+**12. Lightning integration module** *(Module, then code; Finance)*
+How a Lightning payment becomes a Finance receipt and a payout. Nobody, allegedly: "probably the easiest module".
+*Done when:* the specification is approved, and a test identity pays another over Lightning and both hold a verified receipt.
+
+**13. Split Module** *(Module, then code; Law)*
+A split over stakes: a payment divided among test identities, exactly.
+*Done when:* the specification is approved, and a payment is split, balances to the unit, and each share is paid and receipted.
+
+**14. Deal-assessment tool** *(Law)*
+"Something to assess deals" (Nobody, allegedly). What it assesses is defined with Nobody, allegedly at the start of the step. *Suggested (Claude): it reads an agreement and shows, in plain words, who signed, what each party is bound to, the shares, and how the deal ends.*
+*Done when:* defined with Nobody, allegedly at the start of the step.
+
+### Review and freeze *(F84)*
+
+**15. Machine review** *(Fable, larger budget)*
+Every scenario the components can run is run; the rest are reasoned on paper; the draft freeze report marks each. Then Fable reviews everything, the texts, the code and the report: "breaks things and fixes them". A fix that changes a MIP is a finding.
+*Done when:* every finding from the review is resolved with Nobody, allegedly and recorded, and the affected scenarios are rerun or re-reasoned.
+
+**16. The five, and the freeze**
+Settle the remaining open parameters of all six MIPs (test vectors, pinned Unicode version, key-delivery format, commitment construction, private links, exact formats for Finance, Law and Production). **Human adversarial review by the five: Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO**, against the running prototypes as well as the texts. This is the one planned exception to "nothing is shown": reviewers, not an audience. Then the freeze, together: all six MIPs.
+*Done when:* the six frozen texts, their hashes and the freeze report are published together, and the core library uses those hashes.
 
 ### Publication
 
-**13. First acts and the repository on MOR**
+**17. First acts and the repository on MOR**
 The relays are wiped of every test act. the author's real identity is created with the air-gapped Module, and publishes the first short post ("Thank you for the shower…" with the planet), the full text as the first long-form document, the specifications, and the code releases as read-only acts.
 *Done when:* everything the reader shows is signed by the author's identity and fetched from a relay.
 
-**14. Final test pass**
+**18. Final test pass**
 Every component re-tested end to end; the door opened on devices it has never seen.
 *Done when:* all passes. **Only then is anything shown.**
 
@@ -84,14 +104,15 @@ Every component re-tested end to end; the door opened on devices it has never se
 | --- | --- |
 | Cryptography libraries; license | step 2 |
 | Domain and hosting | step 10 |
-| Where the specification format lives (F83) | step 12 |
-| Which identity publishes the repository on MOR | step 13 |
+| What the deal-assessment tool assesses | step 14 |
+| Naming: 0.1, MOR1, V1 | step 16 |
+| Which identity publishes the repository on MOR | step 17 |
 
 ## After 0.1
 
 *Decided by Nobody, allegedly, 28 September 2026, replacing the "small invited group" of F83's stage 2.*
 
-The five who reviewed and froze v0.1 together — Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO, all people who wrapped their heads around Nostr and felt first-hand where its code and its funding broke down — are the seed circle, not a one-off review panel. From there the net widens through their own networks, organically: whoever stays engaged is who Finance, Law and the rest of Production get built and battle-tested with. Only once the MIPs feel battle-tested is V1 released and the universities contacted — and that migration is itself the first live test of MOR's right of exit.
+The five who reviewed and froze v0.1 together — Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO, all people who wrapped their heads around Nostr and felt first-hand where its code and its funding broke down — are the seed circle, not a one-off review panel. From there the net widens through their own networks, organically: whoever stays engaged is who MOR gets battle-tested with, above all where the freeze report says "reasoned". Since nothing frozen is updated, whatever does not work informs V1, a successor (F84). Only once the MIPs feel battle-tested is V1 released and the universities contacted — and that migration is itself the first live test of MOR's right of exit.
 
 *Natural candidates for that wider net, each with their own angle on the media side (Nobody, allegedly, 28 September 2026): Fishcake (nostr.build), hazard (Blossom), the people behind nostr.wine, Rock (Stemstr) — and more not yet named. Not a commitment to invite them; a working sense of where the net is likely to catch.*
 

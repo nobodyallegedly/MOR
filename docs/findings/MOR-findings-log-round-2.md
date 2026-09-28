@@ -591,3 +591,24 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 4. **Rewrites:** the freeze test suite (freeze rule and procedure: staged, with which scenarios gate stage 1), Production rule 20 and the core's trust-root paragraph.
 
 **Core changes (pending the open point):** freeze test suite (freeze rule, procedure); Production (rule 20; possibly the specification format moves to Envelope); core (trust root; Open before freeze).
+
+## F84. Freeze the lot at the first release; say what was run and what was only reasoned (build planning, decided by Nobody, allegedly)
+
+**Found while planning MOR 0.1:** the freeze test suite (v11) freezes the MIPs only once every scenario has passed, and several scenarios need Finance and Law running (splits, vaults, stakes, keepers, agreements). The build brief left Finance and Law out of 0.1, and F83 staged the freeze around that. The two cannot both hold if the first release freezes all six: either the build grows to every scenario, or the freeze rule gives way.
+
+**Decided (Nobody, allegedly):** "The freeze document is the problem." "Whatever we release is the first, however we wanna call it. So, we'll freeze the lot at presentation, some purely theoretically." Added to the build: "LN integration (probably the easiest module), that tests Finance. Split Module (for Law). Something to assess deals… Production is tested throughout." The order: "We build solutions that test each layer, so we experience friction. Only then, Fable gets a look at everything (will need a bigger budget), breaks things and fixes them. Then we freeze it." Confirmed: the freeze publication states, scenario by scenario, whether it was tested against running code or only reasoned. The story, in his words: "A man with a concept and a machine with code built MOR1."
+
+**Resolution:**
+- **All six MIPs freeze together, at the first release.** F83's staged freeze (three layers first, three later) is withdrawn. Its stage 2 was already replaced by the circle of five (build brief, 28 September).
+- **Run or reasoned.** Every scenario is either run against the founding components and passed, or reasoned through on paper against the texts. The freeze publishes a freeze report with the six texts and hashes, marking each scenario and component run or reasoned. *A reasoned rule is frozen on argument, not evidence; the report says so, so nobody mistakes one for the other.*
+- **Friction in every layer.** Three components join the build: a Lightning integration module (Finance), a Split Module (Law) and a deal-assessment tool (Law, to be defined with Nobody, allegedly at its step). Production needs none: every specification published runs through it.
+- **Review before freeze:** a machine review of everything, texts, code and freeze report, by Fable with a larger budget, breaking and fixing; then the five (the human round 3); then the freeze.
+
+**Consequences, stated for Nobody, allegedly:**
+1. **F83 point 1 dissolves.** The specification format stays in Production: it freezes with Envelope, so no frozen layer depends on a draft. F83 point 2 (Identity pointing up to Law) dissolves the same way.
+2. **The trust root stays as written.** Production rule 20 and the core's paragraph already say the six hashes are published together; F83's staged rewrite is not needed.
+3. **Exact formats for every Finance, Law and Production act** (core, "Open before freeze") become a hard prerequisite of the first release, as do the open parameters F83 listed, now for all six layers.
+4. **Checked against the principles.** Right of exit: the way out (identity, rotation, escape, succession) is the part run hardest, by the gauntlet, so the uneven freeze does not fall on the exit. Evolutionary design: what fails after the freeze is fixed by a successor protocol, as the core already says. Legible greed: the run-or-reasoned report is the same legibility applied to the protocol itself.
+5. **Naming is open.** The release is "the first, however we wanna call it"; the roadmap still calls the build 0.1 and the later battle-tested release V1. To settle with Nobody, allegedly.
+
+**Changes:** freeze test suite v12 (freeze rule and procedure; scenarios and components unchanged); build brief (scope, components, decisions, open items); roadmap (new steps, freeze step rewritten, renumbered). No change to the core or the MIPs.
