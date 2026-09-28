@@ -762,3 +762,19 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Identity (receipt check 6). No change to the core document or the freeze test suite.
 
 **Applied:** the core library (`core/src/chain.rs`, `tally`; test `an_acknowledged_voided_receipt_is_never_support`); Identity draft 9 (roadmap step 3), approved by Nobody, allegedly, 28 September 2026.
+
+## F96. Verifiable dealing stops sole control of a collective's safety key, not a copy (found while building the air-gapped safety key Module, decided by Nobody, allegedly)
+
+**Pattern 4** (a rule rests on a fact nobody can check).
+
+**Found while building:** the air-gapped safety key Module (roadmap step 6). Law rule 36 said the Module rebuilding a collective's safety key "MUST deal the shares of the next key verifiably, or the device's holder ends up owning the collective's safety key"; Module 5.1 asked that each member verify their share "without the device retaining the whole key", and its attack test expected "a rotation device that tries to keep the collective's next key" to fail the members' share verification. It cannot. Whoever deals the next key sees it, and no check proves a device forgot something. What checking can stop is different: a device that commits to a key it keeps and hands the members shares of another seed, so that it alone could ever rotate. A second gap: shares can be checked against each other (verifiable secret sharing), but not against the hash commitment of an SLH-DSA key without either rebuilding the key or a zero-knowledge proof of SLH-DSA key generation, for which no established method exists.
+
+**Options weighed:** reword and build share checks plus one rebuild check on a second offline device; reword and leave split safety keys to paper for V1 (collectives hold their safety key with one holder or a custodian); a zero-knowledge proof of key generation (strongest, but young tooling, a large build and a new dependency before the freeze).
+
+**Decided (Nobody, allegedly):** reword, and build the checks. Verifiable dealing stops sole control, not a copy. The shares are dealt with Pedersen commitments, which hide the seed even from a quantum computer (Feldman's scheme would expose it, defeating a post-quantum safety key); every holder checks their share alone and compares the dealing's fingerprint with every other holder; right after dealing, k holders rebuild the key on a second offline device, compare it with the commitment, and forget it.
+
+**Cost, stated:** the dealing device, and the device that runs the rebuild check, each hold the key for a moment and could keep a copy, as the rotating device already could. A dealer with a quantum computer could deal inconsistent shares undetected (Pedersen binding rests on the discrete logarithm); the rebuild check would still catch shares that do not rebuild the committed key.
+
+**Core changes:** Law (rule 36's commentary and requirement). Air-gapped safety key Module (section 5 rewritten; the share message 2.4; the attack test becomes "a dealing device that deals shares not rebuilding the committed next key: the rebuild check fails"). No change to the core document or the freeze test suite.
+
+**Applied:** `modules/airgap/` (`shares.rs`; `tests/collective.rs`: the dishonest dealer caught by the rebuild check, tampered shares, different dealings shown by fingerprint, a rotation through an escrowed share); Law draft 5, air-gapped Module draft 4 (roadmap step 6), awaiting approval by Nobody, allegedly.

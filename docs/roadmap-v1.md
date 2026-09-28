@@ -60,6 +60,7 @@ A release manifest format (a founding cMIP or Module, a document first: every fi
 **6. Air-gapped safety key Module** *(`modules/`)*
 The offline signer: commitment export, pending and signed rotations, by file and animated QR, with the device rules of the Module.
 *Done when:* the Module's own functional and attack tests pass.
+*Built, 28 September 2026, awaiting approval by Nobody, allegedly:* `modules/airgap/` (crate `mor-airgap`), with `mor-signer`, a command-line signer for an offline laptop; the phone app with a camera comes with the genesis client (step 5) (Nobody, allegedly). Two competing seed Modules, words and hex, both supported, to test several Modules side by side (Nobody, allegedly). The Module's functional and attack tests pass (40 tests), except the real-camera tests, simulated only; every SLH-DSA signature is checked by the second implementation. Building it exposed F96, decided by Nobody, allegedly: dealing a collective's next key verifiably stops sole control, not a copy; Pedersen dealing and a rebuild check on a second device. Written into `modules/module-airgap-safety-signer-draft-4.md`, `modules/module-safety-seed-words-draft-1.md`, `modules/module-safety-seed-hex-draft-1.md` and `spec/MIP-law-draft-5.md`, with eleven readings listed in `modules/airgap/README.md` for confirmation. Built before steps 4, 5 and 5a, as asked: it needs only the core library.
 
 **7. Freeze-suite harness and the identity gauntlet** *(Rust)*
 Scenario 5, steps 6 to 7d, against the three real homes, with two test identities: A, with three homes under the three simulated operators, for majority (two of three, including with the author's machine switched off); B, self-hosted on the author's machine with the two public homes as backups, for self-hosting (Identity rule 22a). Then a stolen safety key, a forged receipt, closure by rotation, homeless rotation, escape with both keys, a genuine conflict settled by audit.
@@ -133,7 +134,7 @@ Every component re-tested end to end; the door opened on devices it has never se
 | Finance rule 14a: a payment in a unit the vault does not cover is undeliverable (fail closed); awaiting confirmation since the round 2 revision | step 12 |
 | What the deal-assessment tool assesses | step 14 |
 | Whether the frozen core forbids floats, tags and simple values in act payloads (extra surface where implementations can disagree; `core/README.md`) | step 16 |
-| Law rule 36 (possible F96): a single holder of a collective's safety key satisfies "a way to rotate that does not need every member", yet freezes the key if that holder dies, against Law's own reasoning. Reword as "a way to rotate that survives the loss of any one member"? | step 16 (the real collective at step 17 depends on it) |
+| Law rule 36 (possible F97): a single holder of a collective's safety key satisfies "a way to rotate that does not need every member", yet freezes the key if that holder dies, against Law's own reasoning. Reword as "a way to rotate that survives the loss of any one member"? | step 16 (the real collective at step 17 depends on it) |
 | Which identity publishes the specifications on MOR (the brainstorm proposal suggests: the collective publishes code, the author's identity the specifications he wrote) | step 17 |
 
 ## After V1

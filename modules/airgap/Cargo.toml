@@ -1,0 +1,38 @@
+[package]
+name = "mor-airgap"
+version = "0.1.0"
+description = "The air-gapped safety key Module: the offline signer's rules, the two seed Modules, split safety keys for collectives, and the file and animated-QR transports."
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mor-core = { path = "../../core" }
+# Pedersen commitments for split safety keys (secp256k1 group arithmetic).
+k256 = { version = "0.13.4", default-features = false, features = ["arithmetic"] }
+rand_core = { version = "0.6.4", default-features = false }
+# The words seed Module: BIP-39's English word list and checksum, over 256 bits.
+bip39 = { version = "2.2", default-features = false, features = ["alloc"] }
+# Animated QR codes: Blockchain Commons' Uniform Resources, with fountain codes.
+# No dependencies of its own. Pinned exactly: a transport every device must agree on.
+ur = { version = "=0.5.2", default-features = false }
+# QR codes, drawn in the terminal.
+qrcode = { version = "0.14", default-features = false }
+# Randomness for the command-line signer (the library takes it as a parameter).
+getrandom = { version = "0.2", optional = true }
+
+[features]
+default = ["cli"]
+cli = ["dep:getrandom", "rand_core/getrandom"]
+
+[[bin]]
+name = "mor-signer"
+path = "src/bin/mor-signer.rs"
+required-features = ["cli"]
+
+[dev-dependencies]
+hex = "0.4"
+serde_json = "1"
+# Reads QR codes back from images, to test the QR transport end to end.
+rqrr = "0.11"
+# The second, independent SLH-DSA implementation, as in the core's tests.
+slh-dsa = "=0.2.0-rc.5"
