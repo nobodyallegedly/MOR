@@ -106,6 +106,10 @@ Every scenario the components can run is run; the rest are reasoned on paper; th
 Settle the remaining open parameters of all six MIPs (test vectors, pinned Unicode version, key-delivery format, commitment construction, private links, exact formats for Finance, Law and Production). **Human adversarial review (round 3) by Semisol**, against the running prototypes as well as the texts: "Yo Semi, can you help me break this?" (Nobody, allegedly). What he breaks is resolved with Nobody, allegedly and recorded. Then freeze all six together, at inception (F85).
 *Done when:* the six frozen texts, their hashes and the freeze report are published together, and the core library uses those hashes.
 
+**16a. Name clean-up** *(inserted 28 September 2026, decided by Nobody, allegedly)*
+Before the repository is ported to MOR or shown anywhere, every personal name and nickname of the author is replaced with "Nobody, allegedly": in every current file, and in the commit history, which is rewritten. *Rewriting history replaces main and every branch on GitHub; it is done once, with explicit approval at the time, after all other branches are merged or deleted.*
+*Done when:* a search of every file and every commit finds no personal name of the author.
+
 ### Publication
 
 **17. First acts and the repository on MOR**
