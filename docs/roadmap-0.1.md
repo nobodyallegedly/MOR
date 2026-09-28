@@ -65,7 +65,7 @@ For the home relay and the basic relay.
 ### The first freeze
 
 **12. Freeze of the communication layers** *(F83)*
-Settle the open parameters of Identity, Text and Envelope (test vectors, pinned Unicode version, key-delivery format, commitment construction, private links), decide where the specification format lives, rewrite the freeze rule as staged, and freeze the three layers. **Human adversarial review of the three layers before they freeze, by Semisol (Nobody, allegedly).** By this step everything is built and tested with test identities, so he can attack the running prototypes as well as the texts. This is the one planned exception to "nothing is shown": a reviewer, not an audience.
+Settle the open parameters of Identity, Text and Envelope (test vectors, pinned Unicode version, key-delivery format, commitment construction, private links), decide where the specification format lives, rewrite the freeze rule as staged, and freeze the three layers. **Human adversarial review of the three layers before they freeze, by the five: Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO** *(decided by Nobody, allegedly, 28 September 2026 — see the build brief)*. By this step everything is built and tested with test identities, so they can attack the running prototypes as well as the texts. This is the one planned exception to "nothing is shown": reviewers, not an audience.
 *Done when:* the three frozen texts and their hashes are published together, and the core library uses those hashes.
 
 ### Publication
@@ -87,9 +87,11 @@ Every component re-tested end to end; the door opened on devices it has never se
 | Where the specification format lives (F83) | step 12 |
 | Which identity publishes the repository on MOR | step 13 |
 
-## After 0.1 (F83)
+## After 0.1
 
-Stage 2: a small invited group works on Finance, Law and the rest of Production. Stage 3: those layers are frozen, and the complete core is sent to universities.
+*Decided by Nobody, allegedly, 28 September 2026, replacing the "small invited group" of F83's stage 2.*
+
+The five who reviewed and froze v0.1 together — Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO, all people who wrapped their heads around Nostr and felt first-hand where its code and its funding broke down — are the seed circle, not a one-off review panel. From there the net widens through their own networks, organically: whoever stays engaged is who Finance, Law and the rest of Production get built and battle-tested with. Only once the MIPs feel battle-tested is V1 released and the universities contacted — and that migration is itself the first live test of MOR's right of exit.
 
 ## If a step exposes a flaw in a MIP
 

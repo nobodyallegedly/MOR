@@ -21,6 +21,7 @@ Two things. Nothing is shown before both are built and tested (Nobody, allegedly
 - **The first short post:** "Thank you for the shower…" with a JPEG of planet Earth.
 - **The first long-form post:** the full text of "Thank you for the shower" (written 2014), formatted. It is the long-form module's first real test and the first document in the reader.
 - **The code repository:** on GitHub, under a new online identity Nobody, allegedly will create. The repository is also published on MOR as acts, read-only (see "The repository").
+- **The freeze circle and what happens after:** v0.1 is reviewed and frozen together with five people — Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO, all of whom wrapped their heads around Nostr and felt first-hand where its code and its funding broke down. This replaces the single named reviewer in roadmap step 12 and the "small invited group" of F83's stage 2. After the freeze, the net widens organically through their own networks rather than a separately invited group; V1 and the universities come only once the MIPs feel battle-tested by that wider use, with that migration itself standing as the first live test of MOR's right of exit. *(Decided, Nobody, allegedly, 28 September 2026.)*
 
 ## Components
 
