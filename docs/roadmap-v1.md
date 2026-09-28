@@ -36,7 +36,8 @@ Deterministic CBOR, tagged hashes, act ids, locking and the inside commitment, c
 
 **3. Core library, part 2** *(Rust)*
 Identity-chain checks: genesis, rotation, receipts, conflicts, which rotation counts, homeless rotation, escape. Builds to WebAssembly.
-*Done when:* hand-made test chains give the answers the Identity MIP requires.
+SLH-DSA through the `fips205` crate (IntegrityChain), adopted by Nobody, allegedly on one testable condition: the tests check every SLH-DSA signature, both variants, against a second, independent implementation, and the two must agree.
+*Done when:* hand-made test chains give the answers the Identity MIP requires, and the two SLH-DSA implementations agree on every signature in the tests.
 
 ### Identity, proven
 
@@ -118,7 +119,6 @@ Every component re-tested end to end; the door opened on devices it has never se
 
 | Decision | Before |
 | --- | --- |
-| SLH-DSA library (Rust, audit status, builds to WebAssembly), from the Rust specialist | step 3 |
 | Hybrid X25519 + ML-KEM-768 library, from the Rust specialist | step 5 |
 | License of the specifications and documents | step 17 |
 | Hosting for the public home relay (step 4 deploys on a public server). Plan (Nobody, allegedly): three homes on three hosts, Infomaniak (known to him as solid), 1984 Hosting (Nobody, allegedly asking around) and his own machine at an onion address; three simulated operators. A test server only; the host for real identities is chosen again at step 17 | step 4 |
