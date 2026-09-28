@@ -65,7 +65,7 @@ For the home relay and the basic relay.
 ### The first freeze
 
 **12. Freeze of the communication layers** *(F83)*
-Settle the open parameters of Identity, Text and Envelope (test vectors, pinned Unicode version, key-delivery format, commitment construction, private links), decide where the specification format lives, rewrite the freeze rule as staged, and freeze the three layers. *Suggested (Claude):* a human adversarial review of the three layers before they freeze.
+Settle the open parameters of Identity, Text and Envelope (test vectors, pinned Unicode version, key-delivery format, commitment construction, private links), decide where the specification format lives, rewrite the freeze rule as staged, and freeze the three layers. **Human adversarial review of the three layers before they freeze, by Semisol (Nobody, allegedly).** By this step everything is built and tested with test identities, so he can attack the running prototypes as well as the texts. This is the one planned exception to "nothing is shown": a reviewer, not an audience.
 *Done when:* the three frozen texts and their hashes are published together, and the core library uses those hashes.
 
 ### Publication
