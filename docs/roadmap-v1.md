@@ -133,6 +133,9 @@ Every component re-tested end to end; the door opened on devices it has never se
 | Domain for the reader | step 10 |
 | Finance rule 14a: a payment in a unit the vault does not cover is undeliverable (fail closed); awaiting confirmation since the round 2 revision | step 12 |
 | What the deal-assessment tool assesses | step 14 |
+| On-chain module (decided as the second rail): placement and scope. Suggested (brainstorm): step 12a, next to Lightning, covering the vault as well | step 12 |
+| Pooled anchoring cMIP (idea of Nobody, allegedly, from the brainstorm): an anchoring service paid per hash over Lightning, committing each batch in one on-chain transaction. Whether to build it, its scope and placement. Suggested: step 14a, after Lightning and on-chain, before the machine review | step 14 |
+| Anchoring without OP_RETURN: pay-to-contract (the chain sees an ordinary payment; only holders of the hash and proof can verify). Suggested (brainstorm) as the target, and a specialist question (F85) | step 14a |
 | Whether the frozen core forbids floats, tags and simple values in act payloads (extra surface where implementations can disagree; `core/README.md`) | step 16 |
 | Which identity publishes the specifications on MOR (the brainstorm proposal suggests: the collective publishes code, the author's identity the specifications he wrote) | step 17 |
 
