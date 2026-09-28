@@ -1,12 +1,14 @@
-# MOR 0.1: Roadmap
+# MOR V1: Roadmap
 
-*28 September 2026. Each step is one working session ("window"), and ends with something that can be checked. Start each window with: read `CLAUDE.md`, `docs/build-brief-0.1.md` and this roadmap, then do step N.*
+*28 September 2026. Each step is one working session ("window"), and ends with something that can be checked. Start each window with: read `CLAUDE.md`, `docs/build-brief-v1.md` and this roadmap, then do step N.*
 
 ## The rule (Nobody, allegedly)
 
 **What we build is separate from what we show. Nothing is shown before every step below is built and tested.** The order therefore follows dependency and risk, not what is seen first: the riskiest part, identity under attack, comes early, so that flaws in the MIPs surface before anything is built on top of them.
 
 Until step 17, every identity is a **test identity**, and every relay holds test acts only. When everything is ready to show, the relays are wiped and the first acts are made fresh: the author's real identity is born then, with the air-gapped safety key Module, so its genesis is itself one of the first acts.
+
+**Help from others (F85).** Nobody, allegedly and Claude build and freeze V1. Others help through segmented questions: one person, one question on their own angle, at the step where it arises. They decide nothing, and no one is shown the whole before step 18.
 
 ## Steps
 
@@ -84,8 +86,8 @@ A split over stakes: a payment divided among test identities, exactly.
 Every scenario the components can run is run; the rest are reasoned on paper; the draft freeze report marks each. Then Fable reviews everything, the texts, the code and the report: "breaks things and fixes them". A fix that changes a MIP is a finding.
 *Done when:* every finding from the review is resolved with Nobody, allegedly and recorded, and the affected scenarios are rerun or re-reasoned.
 
-**16. The five, and the freeze**
-Settle the remaining open parameters of all six MIPs (test vectors, pinned Unicode version, key-delivery format, commitment construction, private links, exact formats for Finance, Law and Production). **Human adversarial review by the five: Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO**, against the running prototypes as well as the texts. This is the one planned exception to "nothing is shown": reviewers, not an audience. Then the freeze, together: all six MIPs.
+**16. The freeze**
+Settle the remaining open parameters of all six MIPs (test vectors, pinned Unicode version, key-delivery format, commitment construction, private links, exact formats for Finance, Law and Production). Then freeze all six together, at inception (F85).
 *Done when:* the six frozen texts, their hashes and the freeze report are published together, and the core library uses those hashes.
 
 ### Publication
@@ -105,16 +107,15 @@ Every component re-tested end to end; the door opened on devices it has never se
 | Cryptography libraries; license | step 2 |
 | Domain and hosting | step 10 |
 | What the deal-assessment tool assesses | step 14 |
-| Naming: 0.1, MOR1, V1 | step 16 |
 | Which identity publishes the repository on MOR | step 17 |
 
-## After 0.1
+## After V1
 
-*Decided by Nobody, allegedly, 28 September 2026, replacing the "small invited group" of F83's stage 2.*
+*Decided by Nobody, allegedly, 28 September 2026 (F85), replacing the circle of five decided earlier the same day.*
 
-The five who reviewed and froze v0.1 together — Nobody, allegedly, Semisol, JB (Damus), Kirian and UTXO, all people who wrapped their heads around Nostr and felt first-hand where its code and its funding broke down — are the seed circle, not a one-off review panel. From there the net widens through their own networks, organically: whoever stays engaged is who MOR gets battle-tested with, above all where the freeze report says "reasoned". Since nothing frozen is updated, whatever does not work informs V1, a successor (F84). Only once the MIPs feel battle-tested is V1 released and the universities contacted — and that migration is itself the first live test of MOR's right of exit.
+V1 is frozen at inception, and nobody is appointed to decide what comes next. "That is a problem they can deal with if they become curious and excited… and they can do so without me. I can move on to other things." A successor is anyone's to build, and users move to it by choice, as the core already provides.
 
-*Natural candidates for that wider net, each with their own angle on the media side (Nobody, allegedly, 28 September 2026): Fishcake (nostr.build), hazard (Blossom), the people behind nostr.wine, Rock (Stemstr) — and more not yet named. Not a commitment to invite them; a working sense of where the net is likely to catch.*
+*People Nobody, allegedly has named as natural to ask segmented questions, each with their own angle: Semisol, JB (Damus), Kirian, UTXO, Fishcake (nostr.build), hazard (Blossom), the people behind nostr.wine, Rock (Stemstr). None has a role.*
 
 ## If a step exposes a flaw in a MIP
 

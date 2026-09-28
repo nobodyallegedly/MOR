@@ -612,3 +612,22 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 5. **Naming is open.** The release is "the first, however we wanna call it"; the roadmap still calls the build 0.1 and the later battle-tested release V1. To settle with Nobody, allegedly.
 
 **Changes:** freeze test suite v12 (freeze rule and procedure; scenarios and components unchanged); build brief (scope, components, decisions, open items); roadmap (new steps, freeze step rewritten, renumbered). No change to the core or the MIPs.
+
+## F85. V1, frozen at inception, built by two (build planning, decided by Nobody, allegedly)
+
+**Found:** F84 and the brief of the same morning had the circle of five review and freeze the first release, then carry it forward. That gives five people a say over the freeze, and invites a debate about who decides the next step.
+
+**Decided (Nobody, allegedly):** "We'll test it in more details, no more five. You and me build V1, with help through questions in segmented fashion to other people. It's an ideological decision. Frozen at inception, no debate about who decides the next step. That is a problem they can deal with if they become curious and excited… and they can do so without me. I can move on to other things."
+
+**Resolution:**
+- **The first release is V1** (this settles F84's naming point). The build brief and roadmap are renamed accordingly.
+- **Nobody, allegedly and Claude build and freeze V1.** Others help by answering segmented questions: one person, one question on their angle, at the step where it arises. They decide nothing. The circle of five is withdrawn.
+- **Tested in more detail:** the run-or-reasoned freeze report of F84 stands; every scenario the components can run is run.
+- **The machine review (Fable) before the freeze stands.**
+- **No steward after V1.** What comes next is whoever takes it up, as a successor protocol users move to by choice.
+
+**Checked against the principles:** right of exit and evolutionary design are served: the core already says flaws after the freeze are fixed only by a new protocol running alongside, with users migrating by choice, and V1 names no one who could block that. Legible greed: no conflict.
+
+**Conflict, flagged for Nobody, allegedly:** the core (v12, "Open before freeze") lists "Human adversarial review (round 3)" before freeze. With the five withdrawn, either segmented questions count as that review, or the item changes, which is a core edit. *Open, Nobody, allegedly to decide.*
+
+**Changes:** freeze test suite v12 (procedure step 5: human questions, not the five); build brief and roadmap renamed to V1, circle of five removed, "After V1" rewritten; README, CLAUDE.md, cMIP and Module READMEs and the project-lead prompt say V1. The air-gapped Module draft 3 still says "Tests for MOR 0.1" (a specification text, left for its next draft). Findings F83 and F84 keep their wording as history.

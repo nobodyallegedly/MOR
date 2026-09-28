@@ -1,6 +1,6 @@
 # MOR Freeze Test Suite
 
-*Version 12, 28 September 2026. Version 11 with F84 applied: the freeze rule and the freeze procedure. Scenarios and components are unchanged from version 11, which matched core v12 and the MIP drafts (findings F1 to F82); every critical and important attack of round 2 is a scenario, so a later change cannot quietly bring one back.*
+*Version 12, 28 September 2026. Version 11 with F84 and F85 applied: the freeze rule and the freeze procedure. Scenarios and components are unchanged from version 11, which matched core v12 and the MIP drafts (findings F1 to F82); every critical and important attack of round 2 is a scenario, so a later change cannot quietly bring one back.*
 
 ## Purpose
 
@@ -214,10 +214,10 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 ## Freeze procedure
 
 1. Settle the remaining technical parameters: the RV32IM profile and vectors, the running-summary vector, the signature-scheme specification format, the pinned Unicode version, exact formats for Finance, Law and Production.
-2. Build the founding cMIPs and Modules, starting with MOR 0.1: a home relay, a basic relay, the genesis client (with the air-gapped safety key Module), a read-only client and a basic client; and, so every layer meets friction, a Lightning integration module (Finance), a Split Module and a deal-assessment tool (Law). Clunky is acceptable.
+2. Build the founding cMIPs and Modules, starting with MOR V1: a home relay, a basic relay, the genesis client (with the air-gapped safety key Module), a read-only client and a basic client; and, so every layer meets friction, a Lightning integration module (Finance), a Split Module and a deal-assessment tool (Law). Clunky is acceptable.
 3. Run every scenario the founding components can run; reason through the rest against the texts. Mark each run or reasoned, ticking each component as it passes.
 4. Machine adversarial review: everything, the texts, the code and the draft freeze report, reviewed by a model given the budget to break things and propose fixes (Fable, F84).
-5. Human adversarial review (round 3): the five (build brief), against the running prototypes as well as the texts.
+5. Human questions (F85): segmented questions to people with the relevant angle, asked during the build, one person and one question at a time. Nobody outside decides the freeze.
 6. Fix any failure requiring a core change, and rerun or re-reason the affected scenarios.
 7. When every box is ticked, run or reasoned, the six MIPs are frozen: their texts, their hashes and the freeze report are published together.
 
