@@ -19,6 +19,7 @@ Cryptography libraries (with the Rust specialist), especially SLH-DSA and ML-KEM
 **1. Relay transport cMIP** *(a document)*
 How a client publishes, fetches and follows acts, delivers to an inbox, finds deliveries addressed to it, and asks a home for a receipt; how a home is queried for chains, receipts, routes, names and links (open in Identity).
 *Done when:* Nobody, allegedly approves it, in `cmips/`.
+*Done, 28 September 2026:* `cmips/cmip-relay-transport-draft-1.md`, approved. It exposed F84 and F85 (Identity), to be written into the next Identity draft before step 3.
 
 **2. Core library, part 1** *(Rust)*
 Deterministic CBOR, tagged hashes, act ids, locking and the inside commitment, canonical text, running summaries.
@@ -83,6 +84,7 @@ Every component re-tested end to end; the door opened on devices it has never se
 | Decision | Before |
 | --- | --- |
 | Cryptography libraries; license | step 2 |
+| F84 and F85 written into Identity draft 8 (and core, freeze suite) | step 3 |
 | Domain and hosting | step 10 |
 | Where the specification format lives (F83) | step 12 |
 | Which identity publishes the repository on MOR | step 13 |
