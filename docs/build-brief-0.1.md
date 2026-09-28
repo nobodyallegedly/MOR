@@ -53,7 +53,7 @@ The harness (9) grows alongside everything else: every component is done only wh
 
 ## Open, to settle before or during the build
 
-1. **Draft hashes versus frozen hashes.** Every act names its specification by hash. The MIPs are drafts, and their hashes will change at freeze. Acts signed in 0.1 will therefore name draft specifications, and will not be acts of the frozen protocol. This matters most for the first posts. Either they are made in 0.1 as prototypes and signed again after freeze ("nothing is updated; it is published or signed again"), or they wait for freeze. *Nobody, allegedly to decide.*
+1. **Draft hashes versus frozen hashes.** Settled by F83: Identity, Text and Envelope are frozen before the first acts (roadmap step 12), so the first acts are permanent. Still open: whether the specification format moves from Production to Envelope, since the first three hashes depend on it. *Nobody, allegedly to decide.*
 2. **Who publishes the repository on MOR.** the author's own identity, or a separate MOR identity (possibly a collective later). *Nobody, allegedly to decide.*
 3. **The long-form format.** Which markup the long-form module uses, within the Text MIP's rules for formats. *To settle when writing its specification.*
 4. **Rust crates for the cryptography,** especially SLH-DSA and ML-KEM, whose libraries are young. Their audit status to be checked, with the Rust specialist.
