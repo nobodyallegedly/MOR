@@ -41,7 +41,7 @@ Identity-chain checks: genesis, rotation, receipts, conflicts, which rotation co
 ### Identity, proven
 
 **4. Relays** *(Rust)*
-The basic relay and the home relay, sharing most of their code: storage, verification on arrival, receipts, log summaries. One deployment on a public server, one on a home machine.
+The basic relay and the home relay, sharing most of their code: storage, verification on arrival, receipts, log summaries. Three homes, so that the majority rule is tested for real (Nobody, allegedly): one at Infomaniak, one at 1984 Hosting if it checks out, and one on the author's own machine. *A home on a home machine must be reachable from outside: port forwarding, a tunnel, or an onion address (relay transport cMIP).*
 *Done when:* acts go in and come back verified; homes sign receipts and summaries.
 
 **5. Genesis client** *(TypeScript)*
@@ -53,7 +53,7 @@ The offline signer: commitment export, pending and signed rotations, by file and
 *Done when:* the Module's own functional and attack tests pass.
 
 **7. Freeze-suite harness and the identity gauntlet** *(Rust)*
-Scenario 5, steps 6 to 7d, against the real homes: majority and self-hosting, a stolen safety key, a forged receipt, closure by rotation, homeless rotation, escape with both keys, a genuine conflict settled by audit.
+Scenario 5, steps 6 to 7d, against the three real homes: majority (two of three, including with the author's machine switched off) and self-hosting, a stolen safety key, a forged receipt, closure by rotation, homeless rotation, escape with both keys, a genuine conflict settled by audit.
 *Done when:* the gauntlet passes.
 
 ### Content
@@ -115,7 +115,7 @@ Every component re-tested end to end; the door opened on devices it has never se
 | SLH-DSA library (Rust, audit status, builds to WebAssembly), from the Rust specialist | step 3 |
 | Hybrid X25519 + ML-KEM-768 library, from the Rust specialist | step 5 |
 | License of the specifications and documents | step 17 |
-| Hosting for the public home relay (step 4 deploys on a public server). Shortlist (Nobody, allegedly): Infomaniak, known to him as solid; 1984 Hosting, Nobody, allegedly asking around. A test server only; the host for real identities is chosen again at step 17 | step 4 |
+| Hosting for the public home relay (step 4 deploys on a public server). Plan (Nobody, allegedly): three homes on three hosts, Infomaniak (known to him as solid), 1984 Hosting (Nobody, allegedly asking around) and his own machine. A test server only; the host for real identities is chosen again at step 17 | step 4 |
 | The long-form markup | step 8 |
 | Domain for the reader | step 10 |
 | Finance rule 14a: a payment in a unit the vault does not cover is undeliverable (fail closed); awaiting confirmation since the round 2 revision | step 12 |
