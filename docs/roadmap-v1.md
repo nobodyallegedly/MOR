@@ -8,7 +8,7 @@
 
 Until step 17, every identity is a **test identity**, and every relay holds test acts only. When everything is ready to show, the relays are wiped and the first acts are made fresh: the author's real identity is born then, with the air-gapped safety key Module, so its genesis is itself one of the first acts.
 
-**Help from others (F85).** Nobody, allegedly and Claude build and freeze V1. Others help through segmented questions: one person, one question on their own angle, at the step where it arises. They decide nothing, and no one is shown the whole before step 18.
+**Help from others (F85).** Nobody, allegedly and Claude build and freeze V1. Others help through targeted questions to specialists, drawn from the draft freeze report once testing shows what is real and what exists only on paper (step 15). One person, one question on their field. They decide nothing, and no one is shown the whole before step 18.
 
 ## Steps
 
@@ -83,7 +83,7 @@ A split over stakes: a payment divided among test identities, exactly.
 ### Review and freeze *(F84)*
 
 **15. Machine review** *(Fable, larger budget)*
-Every scenario the components can run is run; the rest are reasoned on paper; the draft freeze report marks each. Then Fable reviews everything, the texts, the code and the report: "breaks things and fixes them". A fix that changes a MIP is a finding.
+Every scenario the components can run is run; the rest are reasoned on paper; the draft freeze report marks each. Then Fable reviews everything, the texts, the code and the report: "breaks things and fixes them". A fix that changes a MIP is a finding. From the report's reasoned items, targeted questions go to specialists (F85).
 *Done when:* every finding from the review is resolved with Nobody, allegedly and recorded, and the affected scenarios are rerun or re-reasoned.
 
 **16. The freeze**

@@ -621,7 +621,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Resolution:**
 - **The first release is V1** (this settles F84's naming point). The build brief and roadmap are renamed accordingly.
-- **Nobody, allegedly and Claude build and freeze V1.** Others help by answering segmented questions: one person, one question on their angle, at the step where it arises. They decide nothing. The circle of five is withdrawn.
+- **Nobody, allegedly and Claude build and freeze V1.** Others help by answering segmented questions and decide nothing. The circle of five is withdrawn.
+- **Questions come from the testing.** Nobody, allegedly: "By the time we're done testing we will know what is real and what only exists on paper. From that we can devise targeted questions to specialists." The draft freeze report (run or reasoned) is the source: each reasoned rule becomes a targeted question to a specialist in its field.
 - **Tested in more detail:** the run-or-reasoned freeze report of F84 stands; every scenario the components can run is run.
 - **The machine review (Fable) before the freeze stands.**
 - **No steward after V1.** What comes next is whoever takes it up, as a successor protocol users move to by choice.
