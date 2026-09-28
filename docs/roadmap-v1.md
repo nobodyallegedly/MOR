@@ -32,6 +32,7 @@ Write the findings from step 1 into the texts: F86 (receipt check 3 counts a hom
 **2. Core library, part 1** *(Rust)*
 Deterministic CBOR, tagged hashes, act ids, locking and the inside commitment, canonical text, running summaries.
 *Done when:* published test vectors pass, including the three-act running summary.
+*Built, 28 September 2026:* `core/` (crate `mor-core`), with its test vectors published in `core/vectors/`, the three-act running summary among them. They pass in the library and in a second, independent implementation (`core/vectors/check.py`); rule 6 of canonical text passes Unicode's own 17.0 conformance file. It builds to WebAssembly. Building it exposed three readings the drafts leave open (`core/README.md`): which side each peak goes on when the running summary is bagged, no associated data in the lock, and the decoder's nesting limit. *Done once Nobody, allegedly approves them;* each is then written into the Envelope MIP's next draft.
 
 **3. Core library, part 2** *(Rust)*
 Identity-chain checks: genesis, rotation, receipts, conflicts, which rotation counts, homeless rotation, escape. Builds to WebAssembly.

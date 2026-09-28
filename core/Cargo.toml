@@ -1,0 +1,19 @@
+[package]
+name = "mor-core"
+version = "0.1.0"
+description = "The MOR core library: deterministic CBOR, tagged hashes, acts, locking, canonical text, running summaries."
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+sha2 = { version = "0.10", default-features = false }
+# No default features: the library never draws randomness itself (callers
+# supply keys, nonces and salts), and this keeps it building to WebAssembly.
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+# Pinned exactly: its tables must be Unicode 17.0, the version the Text MIP pins.
+# A newer release could carry newer tables; a test checks the version.
+unicode-normalization = "=0.1.25"
+
+[dev-dependencies]
+hex = "0.4"
+serde_json = "1"
