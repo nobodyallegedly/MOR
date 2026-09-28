@@ -13,6 +13,7 @@ use mor_core::mmr::Mmr;
 use mor_core::sig::{self, SchnorrKey, SlhKey};
 use mor_relay::client::Client;
 use mor_relay::http::{self, Net, Shared};
+use mor_relay::node::OperatorSetup;
 use mor_relay::operator::random;
 use mor_relay::wire::Limits;
 use mor_relay::{Config, Node, Policy, Role, Specs};
@@ -51,6 +52,16 @@ impl Running {
     }
 
     pub async fn start_with(role: Role, policy: Policy, limits: Limits) -> Self {
+        Self::start_as(role, policy, limits, OperatorSetup::NewTest).await
+    }
+
+    /// A home under a given operator.
+    pub async fn start_as(
+        role: Role,
+        policy: Policy,
+        limits: Limits,
+        operator: OperatorSetup,
+    ) -> Self {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let base = format!("http://{addr}");
@@ -61,7 +72,7 @@ impl Running {
             policy,
             limits,
         };
-        let operator = Node::init(&dir, cfg, specs()).unwrap();
+        let operator = Node::init(&dir, cfg, specs(), operator).unwrap();
         let mut r = Running {
             client: Client::new(&base),
             base,

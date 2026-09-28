@@ -222,6 +222,59 @@ enum Plan {
     Object { identity: Hash },
 }
 
+/// Who runs a home.
+pub enum OperatorSetup {
+    /// An identity made elsewhere, like anyone's: its key file (the everyday
+    /// signing key and the act that bound it), and its identity-chain acts
+    /// up to that act, oldest first.
+    Existing { keys: Keys, chain: Vec<Vec<u8>> },
+    /// The stopgap until the genesis client exists (roadmap step 5): a new
+    /// test identity, self-hosted at this home, its safety key in software.
+    NewTest,
+}
+
+/// That the key file belongs to the chain given: the chain starts at the
+/// identity's genesis, and the act the key file names as its binding is in
+/// it and set exactly this signing key.
+fn check_operator(keys: &Keys, chain: &[Vec<u8>], specs: &Specs) -> R<()> {
+    let bad = |why: &str| {
+        Err(Fail::Internal(format!(
+            "operator key file and chain: {why}"
+        )))
+    };
+    let mut acts = vec![];
+    for b in chain {
+        let Ok(a) = Act::decode(b) else {
+            return bad("an act in the chain does not decode");
+        };
+        let Ok(i) = a.open(None) else {
+            return bad("an act in the chain does not open");
+        };
+        if i.spec != specs.identity {
+            return bad("the chain holds an act that is not an Identity act");
+        }
+        let Ok(p) = Payload::decode(i.type_, &i.payload) else {
+            return bad("an act in the chain does not decode as an Identity act");
+        };
+        acts.push((a, p));
+    }
+    if acts.first().map(|(a, _)| a.id()) != Some(keys.identity) {
+        return bad("the chain does not start at the identity's genesis");
+    }
+    let Some((a, p)) = acts.iter().find(|(a, _)| a.id() == keys.binding) else {
+        return bad("the chain does not hold the act that bound the signing key");
+    };
+    let set = match p {
+        Payload::Genesis(g) => &g.signing_key,
+        Payload::Rotation(r) if a.outside.signer == Some(keys.identity) => &r.signing_key,
+        _ => return bad("the binding is not a genesis or rotation of the identity"),
+    };
+    if *set != keys.signing_key() {
+        return bad("the signing key is not the one its binding set");
+    }
+    Ok(())
+}
+
 /// A relay or home, over its data directory.
 pub struct Node {
     store: Store,
@@ -237,39 +290,61 @@ const KEYS: &str = "operator.key";
 const MEDIA: &str = "media";
 
 impl Node {
-    /// Set up a new data directory. A home also gets a new test operator
-    /// identity, self-hosted here, with a routes act pointing at `bases`.
-    /// Returns the operator's identity hash, for a home.
-    pub fn init(dir: &Path, cfg: Config, specs: Specs) -> R<Option<Hash>> {
-        std::fs::create_dir_all(dir.join(MEDIA))?;
+    /// Set up a new data directory. A home runs under `operator`; a basic
+    /// relay has none. Returns the operator's identity hash, for a home.
+    pub fn init(dir: &Path, cfg: Config, specs: Specs, operator: OperatorSetup) -> R<Option<Hash>> {
         if dir.join(DB).exists() {
             return Err(Fail::Internal(format!(
                 "{} already holds a relay",
                 dir.display()
             )));
         }
+        if cfg.role == Role::Home {
+            if let OperatorSetup::Existing { keys, chain } = &operator {
+                check_operator(keys, chain, &specs)?;
+            }
+        }
+        std::fs::create_dir_all(dir.join(MEDIA))?;
         let store = Store::open(&dir.join(DB))?;
         store.set_setting("config", &cfg.encode())?;
         drop(store);
         if cfg.role == Role::Relay {
             return Ok(None);
         }
-        let (keys, genesis) = operator::create(&specs.identity, &cfg.bases[0]);
-        keys.save(&dir.join(KEYS))?;
-        let mut node = Node::open(dir, specs)?;
-        let op = keys.identity;
-        node.store.begin()?;
-        let bytes = genesis.encode();
-        let inside = genesis
-            .open(None)
-            .map_err(|e| Fail::Internal(e.to_string()))?;
-        node.store_act(&bytes, &genesis, Some(&inside))?;
-        node.store.chain_insert(&op, 0, &op)?;
-        node.store.serve(&op)?;
-        let routes = operator::routes_payload(&specs.identity, &cfg.bases);
-        node.sign_and_store(specs.identity, types::ROUTES, routes, None)?;
-        node.store.commit()?;
-        Ok(Some(op))
+        match operator {
+            OperatorSetup::Existing { keys, chain } => {
+                keys.save(&dir.join(KEYS))?;
+                let mut node = Node::open(dir, specs)?;
+                // The operator's chain, oldest first, taken like any chain
+                // acts; this home also serves it, so readers checking its
+                // receipts find the operator's chain where they found them.
+                for a in &chain {
+                    node.put_act(a).map_err(|e| {
+                        Fail::Internal(format!("the operator's chain was refused: {e}"))
+                    })?;
+                }
+                node.store.serve(&keys.identity)?;
+                Ok(Some(keys.identity))
+            }
+            OperatorSetup::NewTest => {
+                let (keys, genesis) = operator::create(&specs.identity, &cfg.bases[0]);
+                keys.save(&dir.join(KEYS))?;
+                let mut node = Node::open(dir, specs)?;
+                let op = keys.identity;
+                node.store.begin()?;
+                let bytes = genesis.encode();
+                let inside = genesis
+                    .open(None)
+                    .map_err(|e| Fail::Internal(e.to_string()))?;
+                node.store_act(&bytes, &genesis, Some(&inside))?;
+                node.store.chain_insert(&op, 0, &op)?;
+                node.store.serve(&op)?;
+                let routes = operator::routes_payload(&specs.identity, &cfg.bases);
+                node.sign_and_store(specs.identity, types::ROUTES, routes, None)?;
+                node.store.commit()?;
+                Ok(Some(op))
+            }
+        }
     }
 
     /// Open an existing data directory.

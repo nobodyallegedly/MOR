@@ -583,3 +583,93 @@ async fn finding_an_inbox_through_the_home() {
     assert_eq!(rec.routes, vec![r.encode()]);
     assert!(rec.receipts.is_empty(), "only the parts asked for");
 }
+
+/// A home runs under an operator identity made elsewhere, like anyone's,
+/// holding only its everyday signing key: no class of operator identities,
+/// and no safety key on the server.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_home_runs_under_an_identity_made_elsewhere() {
+    use mor_core::hash::sha256;
+    use mor_relay::node::OperatorSetup;
+    use mor_relay::operator::Keys;
+    use mor_relay::wire::Limits;
+    // An ordinary identity, made elsewhere and self-hosted there, that has
+    // rotated once (a self-hosted rotation counts on its own signature).
+    let (g, op) = genesis(
+        "operator-main",
+        vec![Home {
+            operator: None,
+            hint: "https://elsewhere.example".into(),
+        }],
+        None,
+        None,
+    );
+    let (rot, op1) = rotation(&op, Rot::default());
+    let keys = Keys {
+        identity: op.id,
+        binding: rot.id(),
+        signing_secret: sha256(b"operator-main/sign/1"),
+        safety: None,
+    };
+    assert_eq!(keys.signing_key().key, op1.sign.public().to_vec());
+    // A key file that does not match the act it names is refused.
+    let wrong = Keys {
+        binding: op.id,
+        ..keys.clone()
+    };
+    let cfg = mor_relay::Config {
+        role: Role::Home,
+        bases: vec!["http://127.0.0.1:1".into()],
+        policy: Policy::Open,
+        limits: Limits::default(),
+    };
+    let dir = std::env::temp_dir()
+        .join("mor-relay-tests")
+        .join(mor_relay::wire::hex(&mor_relay::operator::random::<32>()));
+    let chain = vec![g.encode(), rot.encode()];
+    assert!(mor_relay::Node::init(
+        &dir,
+        cfg,
+        specs(),
+        OperatorSetup::Existing {
+            keys: wrong,
+            chain: chain.clone()
+        }
+    )
+    .is_err());
+
+    let h = Running::start_as(
+        Role::Home,
+        Policy::Open,
+        Limits::default(),
+        OperatorSetup::Existing {
+            keys: keys.clone(),
+            chain,
+        },
+    )
+    .await;
+    assert_eq!(h.op(), op.id);
+    assert!(
+        Keys::load(&h.dir.join("operator.key"))
+            .unwrap()
+            .safety
+            .is_none(),
+        "no safety key on the server"
+    );
+    // It serves its operator's chain, so readers find it beside the receipts.
+    let rec = h.client.identity(&op.id, None).await.unwrap();
+    assert_eq!(rec.chain, vec![g.encode(), rot.encode()]);
+
+    // An identity homed there: its receipts are signed under the rotated key,
+    // and a reader accepts them.
+    let (ga, alice) = genesis("alice", vec![h.home()], None, None);
+    let put = h.client.put_act(&ga.encode()).await.unwrap();
+    let receipt = decode(put.receipt.as_ref().unwrap());
+    assert_eq!(receipt.outside.signer, Some(op.id));
+    assert_eq!(receipt.outside.binding, Some(rot.id()));
+    let (ra, _) = rotation(&alice, Rot::default());
+    h.client.put_act(&ra.encode()).await.unwrap();
+    let v = verifier_from(&[&h], &alice.id).await;
+    let res = v.resolve(&alice.id);
+    assert_eq!(res.links.len(), 2, "{:?}", res.stop);
+}

@@ -12,7 +12,7 @@ Three things hold throughout:
 
 - **Nothing is trusted.** Everything that matters comes back as signed acts, which the reader checks with the core library. A relay that lies can only withhold. The tests never take a relay's word: every answer that matters is judged by the core library's verifier from what the relays hand back.
 - **The relay checks what it can on arrival.** An act must be in the exact shape, its locked bytes must match, its signature must be valid, and, where the relay holds the act that bound the signer's key, the key must be that one. A home checks a rotation fully before it keeps it, and keeps the first valid rotation it holds at each position.
-- **Test identities only.** A home's operator is a test identity created by this program, with its safety key in a file beside the database, labelled as a prototype in the file itself. Every relay says in its policy that everything on it will be wiped before the first real acts (roadmap step 17).
+- **An operator is an ordinary identity.** A home runs under an identity made elsewhere, like anyone's, and holds only its everyday signing key and the act that bound it: the safety key never goes on the server. Until the genesis client exists (step 5), `init --new-test-operator` can instead create a test identity for it, with its safety key in a file labelled as a prototype. Every relay says in its policy that everything on it will be wiped before the first real acts (roadmap step 17).
 
 ## Precisely
 
@@ -20,7 +20,7 @@ Three things hold throughout:
 | --- | --- |
 | `wire` | The cMIP's messages (`info`, `put-result`, `put-sealed`, `feed-page`, `identity-record`, `error`, `probe`, bundles, the summary answer, proofs), strict both ways: deterministic CBOR, closed maps, canonical text. Sealed ids and pickup tags. |
 | `store` | One SQLite file per relay. Items stored byte for byte with their arrival numbers; indexes on what a relay can read (the outside, and the inside of public acts). A home's chains, receipt log, summaries, objections and its operator's sequence. Every write is flushed before it is answered. |
-| `operator` | A home's operator: a test identity, self-hosted at its own home, whose receipts, log summaries, objections and routes are everyday acts in one sequence. |
+| `operator` | A home's operator: an ordinary identity whose receipts, log summaries and objections are everyday acts in a sequence of the home's own; its key file; and the stopgap test operator. |
 | `node` | What happens to each request, independent of HTTP. |
 | `http` | The requests over HTTP, with `Access-Control-Allow-Origin: *` on every answer, feeds that wait, media by range, probes, and forwarding homeless rotations to the old homes. |
 | `client` | A client for the cMIP that recomputes the id of everything it fetches. Used by relays to probe and forward, by the tests, and later by the freeze-suite harness (step 7). |
@@ -42,7 +42,7 @@ Where the texts are silent, the program takes the reading below. None changes a 
 1. **What a newly named home holds.** A home named for the first time in a rotation receives the earlier chain acts first, oldest first (cMIP, error 3). It holds them as the start of that identity's chain and checks each against the one before, but receipts only acts from the first one that names it: before that, it does not serve the identity. It adopts the chain the owner's client sends; it does not judge earlier positions by the other homes' receipts. *Confirmed by Nobody, allegedly, 28 September 2026.*
 2. **An outvoted home refuses the winner's everyday acts.** A home left holding a losing rotation (rule 22) cannot hold the winning one (rule 11), so it cannot check the binding of acts under the winning key, and answers error 3. The owner drops it at the next rotation, as rule 22 says. *Stated cost:* until then it still accepts the thief's everyday acts under the losing rotation's key; readers judge them void from all the homes' receipts. *Confirmed by Nobody, allegedly, 28 September 2026 ("scenario is really rare"). Considered and not taken: accepting unchecked (it would weaken the cMIP's MUST), and learning the winner from other homes' receipts (kept in mind if the identity gauntlet, step 7, shows friction).*
 3. **A summary after every receipt.** Every log size has a summary, so auditors and readers can ask for any size. *Costs, stated:* one more act per receipt; auditors may co-sign only some summaries, since a co-signed summary covers every receipt before it; a receipt is protected against the operator's rotation only once an auditor co-signs a summary covering it, as with any schedule; the program recomputes the whole tree each time, fine at V1's scale, to be made incremental if a home ever holds millions of receipts. *Confirmed by Nobody, allegedly, 28 September 2026.*
-4. **The operator is self-hosted at its own home,** and its first act is a routes act whose outbox route for the Identity MIP names the home's base addresses (cMIP, "Addresses"). The operator is an ordinary identity, created by `init` by default. *Cost, stated:* a self-hosted identity's rotation counts on its own signatures, so a thief holding the operator's safety key takes it over at once; acceptable for test homes under simulated operators. *Confirmed by Nobody, allegedly, 28 September 2026, noting that an operator can be linked to its owner's main identity (Identity link claim and confirmation; a link gives no authority, rule 25), which for the three simulated operators would make visible that one person runs them.*
+4. **An operator is an ordinary identity in a role.** Any identity becomes an operator when a genesis names it as a home's operator; the protocol has no class of operator identities, and neither has this program. A home runs under an identity made elsewhere: `init` takes its key file (the everyday signing key and the act that bound it) and its identity-chain acts as a bundle, checks that they match, and serves that chain beside its receipts. The safety key never goes on the server. Where the operator's own homes are is up to its genesis, like anyone's; the operator adds this home's addresses to its routes itself (cMIP, "Addresses"). *Cost, stated:* the everyday signing key sits on the server, since the home signs around the clock; someone running a home under their main identity puts that key there, so many will prefer a separate identity, which is their choice. *Stopgap until step 5:* `init --new-test-operator` creates a new test identity, self-hosted at the home, with its safety key in the key file and a routes act naming the home; for test homes only. *Decided by Nobody, allegedly, 28 September 2026, after challenging an earlier draft in which every home created its own self-hosted operator: that made operators a class in practice. An operator can be linked to its owner's main identity (Identity link claim and confirmation; a link gives no authority, rule 25), which for the three simulated operators would make visible that one person runs them.*
 5. **Evidence a home keeps** (objections, absence statements, cosignatures, other homes' receipts) is checked for shape and signature, and for binding only where the home holds the signer's chain. It does not resolve other operators' or auditors' chains; readers do.
 6. **Cosignatures in the identity record** are those of this home's summaries signed by the auditors the identity declared at any position of the chain the home holds.
 7. **No commitments yet.** Their Merkle construction is still open in Envelope; `GET /commitment` answers error 8.
@@ -56,7 +56,7 @@ Where the texts are silent, the program takes the reading below. None changes a 
 
 - **Operator rotation and closure.** A home's operator cannot yet rotate its keys or close its home by rotation. The identity gauntlet (step 7) needs both, for closure by rotation and a stolen operator key; they come then.
 - **Commitments** (reading 7), and the **management client** (step 11): until then, a home is run from the command line.
-- **Operator links and bringing an existing identity.** `mor-relay` cannot yet sign a link claim to its owner's main identity, nor run under an operator identity created elsewhere; both once the genesis client exists (step 5).
+- **Operator links, and operator rotation seen by the home.** `mor-relay` cannot yet sign a link claim to its owner's main identity (step 5, once the main identity can exist). After its operator rotates elsewhere, a home needs a new key file and the new rotation; that comes with operator rotation and closure (step 7).
 - **One home per operator** in this program: each home keeps its own log, so two homes of one operator would each count log positions from zero.
 
 ## Tests
@@ -68,11 +68,11 @@ cargo test -p mor-relay
 Real relays and homes on local ports, test identities built with the core library, and the core library's verifier judging what comes back (`tests/common/mod.rs`).
 
 - `tests/relay.rs`: acts in and back byte for byte, idempotent publishing, batch fetch, what a relay refuses on arrival (malformed, broken locked bytes, bad signatures, a key other than the binding's, a safety key signing anything but a rotation) and what it carries (private acts, unknown specifications, unknown everyday schemes where it cannot tell); limits; the feed by signer, recipient, spec and type, paged, unfiltered for mirroring, and waiting for new acts; sealed containers found by recipient, pickup tag and scanning; media by range; CORS for browsers; bundles.
-- `tests/home.rs`: three homes under three operators, the majority rule by default, a rotation that counts with one home switched off, and the home catching up when it comes back (the step's "done when", in the build window); one home of three is not a majority; first held wins, and the thief arriving second is shown the owner's rotation and receipt (5.7); a newly named home receiving the chain oldest first; invalid rotations and forged everyday acts refused; the log, summaries, inclusion and consistency proofs checked against signed summaries (5.7d's tools); a homeless rotation objected to by the live old home, the objection voiding it for a reader who could not reach the home, found through a relay's probe, and carried back by a relay that forwarded the rotation (5.7c); the allowlist home; a home surviving a restart with its operator's sequence unbroken; finding an inbox through the home (5.3).
+- `tests/home.rs`: three homes under three operators, the majority rule by default, a rotation that counts with one home switched off, and the home catching up when it comes back (the step's "done when", in the build window); one home of three is not a majority; first held wins, and the thief arriving second is shown the owner's rotation and receipt (5.7); a newly named home receiving the chain oldest first; invalid rotations and forged everyday acts refused; the log, summaries, inclusion and consistency proofs checked against signed summaries (5.7d's tools); a homeless rotation objected to by the live old home, the objection voiding it for a reader who could not reach the home, found through a relay's probe, and carried back by a relay that forwarded the rotation (5.7c); the allowlist home; a home running under an identity made elsewhere, with no safety key on the server, and a key file that does not match its chain refused; a home surviving a restart with its operator's sequence unbroken; finding an inbox through the home (5.3).
 
 ## Running a home
 
-*Three homes on three hosts, under three simulated operators, all test identities (roadmap step 4). Each home creates its own operator identity at `init`; its hash is printed, and is what a genesis names in its home list.*
+*Three homes on three hosts, under three simulated operators, all test identities (roadmap step 4). Each home runs under its own operator identity, whose hash is what a genesis names in its home list. Until the genesis client exists (step 5), `--new-test-operator` creates one at `init` and prints its hash; after that, give `--operator-key FILE --operator-chain FILE.mor` instead.*
 
 Build it (Rust from <https://rustup.rs>):
 
@@ -94,7 +94,7 @@ Nothing is opened on the router, and the machine's address stays hidden: Tor car
    Restart Tor. The file `hostname` in that folder now holds the onion address, `….onion`.
 3. Set up the home, for listed identities only:
    ```
-   mor-relay init --dir ~/mor-home --role home --base http://YOUR-ADDRESS.onion --allowlist
+   mor-relay init --dir ~/mor-home --role home --base http://YOUR-ADDRESS.onion --allowlist --new-test-operator
    ```
    Keep `~/mor-home/operator.key` secret and backed up: it holds the test operator's keys.
 4. Run it, reachable only through Tor:
@@ -119,7 +119,7 @@ A small Linux server, and a name for it (for example `home1.` under a domain) po
    ```
 3. Set up the home, open to anyone:
    ```
-   mor-relay init --dir /var/lib/mor-home --role home --base https://home1.example.org
+   mor-relay init --dir /var/lib/mor-home --role home --base https://home1.example.org --new-test-operator
    ```
 4. Run it, and keep it running (a systemd unit, `/etc/systemd/system/mor-home.service`):
    ```

@@ -9,6 +9,8 @@
 
 use clap::{Parser, Subcommand, ValueEnum};
 use mor_relay::http::{self, Net, Shared};
+use mor_relay::node::OperatorSetup;
+use mor_relay::operator::Keys;
 use mor_relay::wire::{self, Limits};
 use mor_relay::{Config, Node, Policy, Role, Specs};
 use std::path::{Path, PathBuf};
@@ -31,8 +33,9 @@ enum RoleArg {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// Set up a new data directory. A home also gets a new test operator
-    /// identity, self-hosted at its first base address.
+    /// Set up a new data directory. A home runs under an operator identity
+    /// made elsewhere (--operator-key and --operator-chain), or, until the
+    /// genesis client exists, a new test identity (--new-test-operator).
     Init {
         #[arg(long)]
         dir: PathBuf,
@@ -50,6 +53,18 @@ enum Cmd {
         /// then names: for a relay on this machine only, never published.
         #[arg(long)]
         local_test: bool,
+        /// Home: the operator's key file (its everyday signing key and the
+        /// act that bound it). The safety key never goes on the server.
+        #[arg(long, requires = "operator_chain")]
+        operator_key: Option<PathBuf>,
+        /// Home: the operator's identity-chain acts, oldest first, as a
+        /// bundle (.mor), up to the act that bound the signing key.
+        #[arg(long, requires = "operator_key")]
+        operator_chain: Option<PathBuf>,
+        /// Home, stopgap until the genesis client exists: create a new test
+        /// operator identity, self-hosted here, its safety key in software.
+        #[arg(long, conflicts_with = "operator_key")]
+        new_test_operator: bool,
         /// Largest act or sealed container accepted, in bytes.
         #[arg(long)]
         max_act: Option<u64>,
@@ -117,6 +132,9 @@ async fn main() {
             bases,
             allowlist,
             local_test,
+            operator_key,
+            operator_chain,
+            new_test_operator,
             max_act,
             max_media,
         } => {
@@ -152,13 +170,33 @@ async fn main() {
                 },
                 limits,
             };
-            match Node::init(&dir, cfg, Specs::test()) {
+            let operator = match (operator_key, operator_chain) {
+                (Some(k), Some(c)) => {
+                    let keys = Keys::load(&k).unwrap_or_else(|e| die(format!("{}: {e}", k.display())));
+                    let bytes = std::fs::read(&c).unwrap_or_else(|e| die(format!("{}: {e}", c.display())));
+                    let chain = wire::Bundle::decode(&bytes)
+                        .unwrap_or_else(|e| die(format!("{}: not a bundle: {e}", c.display())))
+                        .acts;
+                    OperatorSetup::Existing { keys, chain }
+                }
+                _ if new_test_operator => OperatorSetup::NewTest,
+                _ if matches!(role, RoleArg::Home) => die(
+                    "a home needs an operator: --operator-key and --operator-chain, or --new-test-operator",
+                ),
+                _ => OperatorSetup::NewTest,
+            };
+            let test = matches!(operator, OperatorSetup::NewTest);
+            match Node::init(&dir, cfg, Specs::test(), operator) {
                 Ok(Some(op)) => {
                     println!("Home set up in {}.", dir.display());
-                    println!(
-                        "Operator (a TEST identity, safety key in software): {}",
-                        wire::hex(&op)
-                    );
+                    if test {
+                        println!(
+                            "Operator (a new TEST identity, safety key in software): {}",
+                            wire::hex(&op)
+                        );
+                    } else {
+                        println!("Operator: {}", wire::hex(&op));
+                    }
                     println!(
                         "Keep {} secret and backed up.",
                         dir.join("operator.key").display()
