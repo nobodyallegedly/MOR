@@ -37,12 +37,12 @@ Three things hold throughout:
 
 ## Readings, to confirm
 
-Where the texts are silent, the program takes the reading below. None changes a MIP; each is for Nobody, allegedly, to confirm. Confirmed so far: 1 to 3.
+Where the texts are silent, the program takes the reading below. None changes a MIP; each is for Nobody, allegedly, to confirm. Confirmed so far: 1 to 4.
 
 1. **What a newly named home holds.** A home named for the first time in a rotation receives the earlier chain acts first, oldest first (cMIP, error 3). It holds them as the start of that identity's chain and checks each against the one before, but receipts only acts from the first one that names it: before that, it does not serve the identity. It adopts the chain the owner's client sends; it does not judge earlier positions by the other homes' receipts. *Confirmed by Nobody, allegedly, 28 September 2026.*
 2. **An outvoted home refuses the winner's everyday acts.** A home left holding a losing rotation (rule 22) cannot hold the winning one (rule 11), so it cannot check the binding of acts under the winning key, and answers error 3. The owner drops it at the next rotation, as rule 22 says. *Stated cost:* until then it still accepts the thief's everyday acts under the losing rotation's key; readers judge them void from all the homes' receipts. *Confirmed by Nobody, allegedly, 28 September 2026 ("scenario is really rare"). Considered and not taken: accepting unchecked (it would weaken the cMIP's MUST), and learning the winner from other homes' receipts (kept in mind if the identity gauntlet, step 7, shows friction).*
 3. **A summary after every receipt.** Every log size has a summary, so auditors and readers can ask for any size. *Costs, stated:* one more act per receipt; auditors may co-sign only some summaries, since a co-signed summary covers every receipt before it; a receipt is protected against the operator's rotation only once an auditor co-signs a summary covering it, as with any schedule; the program recomputes the whole tree each time, fine at V1's scale, to be made incremental if a home ever holds millions of receipts. *Confirmed by Nobody, allegedly, 28 September 2026.*
-4. **The operator is self-hosted at its own home,** and its first act is a routes act whose outbox route for the Identity MIP names the home's base addresses (cMIP, "Addresses").
+4. **The operator is self-hosted at its own home,** and its first act is a routes act whose outbox route for the Identity MIP names the home's base addresses (cMIP, "Addresses"). The operator is an ordinary identity, created by `init` by default. *Cost, stated:* a self-hosted identity's rotation counts on its own signatures, so a thief holding the operator's safety key takes it over at once; acceptable for test homes under simulated operators. *Confirmed by Nobody, allegedly, 28 September 2026, noting that an operator can be linked to its owner's main identity (Identity link claim and confirmation; a link gives no authority, rule 25), which for the three simulated operators would make visible that one person runs them.*
 5. **Evidence a home keeps** (objections, absence statements, cosignatures, other homes' receipts) is checked for shape and signature, and for binding only where the home holds the signer's chain. It does not resolve other operators' or auditors' chains; readers do.
 6. **Cosignatures in the identity record** are those of this home's summaries signed by the auditors the identity declared at any position of the chain the home holds.
 7. **No commitments yet.** Their Merkle construction is still open in Envelope; `GET /commitment` answers error 8.
@@ -56,6 +56,7 @@ Where the texts are silent, the program takes the reading below. None changes a 
 
 - **Operator rotation and closure.** A home's operator cannot yet rotate its keys or close its home by rotation. The identity gauntlet (step 7) needs both, for closure by rotation and a stolen operator key; they come then.
 - **Commitments** (reading 7), and the **management client** (step 11): until then, a home is run from the command line.
+- **Operator links and bringing an existing identity.** `mor-relay` cannot yet sign a link claim to its owner's main identity, nor run under an operator identity created elsewhere; both once the genesis client exists (step 5).
 - **One home per operator** in this program: each home keeps its own log, so two homes of one operator would each count log positions from zero.
 
 ## Tests
