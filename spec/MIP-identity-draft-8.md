@@ -1,6 +1,6 @@
 # MIP: Identity
 
-*Draft 7, 27 September 2026. Written against core v12 and findings F1 to F82. Draft 7 applies review round 2: receipts and keeper records count only alongside the valid act they name; signature schemes by specification hash; dishonesty verdicts never reach backwards; closure by rotation; disowned acts void unless relied on; the majority rule as default; audit requirements removable by the safety key; self-hosting as a trust model; finality by the next rotation; an inbox route.*
+*Draft 8, 28 September 2026. Written against core v13 and findings F1 to F87. Draft 8 is draft 7 with the two findings of the relay transport cMIP written in: a homeless rotation's receipts come from the new homes it declares (F86); a homeless rotation accepted only on the verifier's own failed attempt is never made final by the next rotation, and an objection voids it whenever it surfaces (F87). Draft 7 applied review round 2: receipts and keeper records count only alongside the valid act they name; signature schemes by specification hash; dishonesty verdicts never reach backwards; closure by rotation; disowned acts void unless relied on; the majority rule as default; audit requirements removable by the safety key; self-hosting as a trust model; finality by the next rotation; an inbox route.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -283,7 +283,7 @@ A verifier runs these checks in order. Any failure makes the act invalid.
 
 1. **The receipt names a real act.** The verifier holds the identity-chain act the receipt names; that act passes the checks for its type (genesis or rotation); its identity hash, or its signer, is the identity the receipt names; and its position is the position the receipt states. A receipt that fails this check is neither support nor conflict: it is ignored for every purpose below.
 2. The receipt is valid as an everyday act of the home's operator.
-3. The home is declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before.
+3. The home is declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before; or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5). *A homeless rotation leaves homes that are gone, so its receipts can only come from the homes it names (F86).*
 4. If audit is required: an inclusion proof shows the receipt at its log position under a log summary of the home carrying at least the required number of valid cosignatures from the declared auditors. Otherwise the receipt does not count. The audit requirement that applies is the one the named rotation itself declares, or, if it declares none, the one in effect before it.
 5. A receipt that lies outside the kept ancestry of a later counting rotation of the home's operator is void, unless it is included under a cosigned log summary: a receipt under a cosigned summary can never be voided by the operator's rotation.
 6. A receipt voided by the operator's rotation that another identity acknowledged makes that chain position contested. It never counts as support toward a home rule.
@@ -318,9 +318,9 @@ A homeless rotation at position n counts only if all of the following hold:
    A self-hosted home is never gone: the owner is the home, and re-homes by serving a rotation from anywhere.
 5. Receipts from the new homes meet the new home rule, judged under the audit requirement this rotation declares or inherits.
 
-**Finality.** A homeless rotation at position n is final once a rotation at position n plus one counts under the home rule the homeless rotation declared. After that, no later objection or receipt can overturn it. *Nobody can name an act before it exists, so anything surfacing after the next rotation is late by construction. No clock, no anchor, no higher layer (F63).* Until then it is provisional.
+**Finality.** A homeless rotation at position n is final once a rotation at position n plus one counts under the home rule the homeless rotation declared, unless it counts only through the verifier's own failed attempt (below). After that, no later objection or receipt can overturn it. *Nobody can name an act before it exists, so anything surfacing after the next rotation is late by construction. No clock, no anchor, no higher layer (F63).* Until then it is provisional.
 
-A homeless rotation accepted on the verifier's own failed attempt (the last case of step 4) is provisional in a stronger sense: it MUST be shown as "re-homed without audit", and keepers, vault payments and agreements MUST NOT rely on it; everyday acts may. It becomes final like any other once the next rotation counts.
+**Re-homed without audit.** A homeless rotation that counts only through the verifier's own failed attempt (the last case of step 4) MUST be shown as "re-homed without audit", and keepers, vault payments and agreements MUST NOT rely on it; everyday acts may. It is never made final by the next rotation: steps 2 and 3 keep applying, so a valid objection from a home of the old set voids it whenever it surfaces, and with it every rotation built on it. The latest act that counts is then the one at position n minus one. It is final like any other homeless rotation only once it counts through something other than the verifier's attempt: a closure by the old home's operator (step 4, first case), or an escape endorsement (below). *The finality reasoning above holds for acts that did not exist yet, not for an objection that existed but was kept from arriving. A thief holding the safety key controls the next rotation and chose the homes it counts under; if that rotation made the first final, a censor who blocks the real home could make a theft final inside its borders (F87).* *Cost, stated: an honest owner whose single home vanished without closing, with no auditors, stays re-homed without audit unless they endorse the homeless rotation with their current signing key. Only an owner who has also lost the signing key stays so for good: a rare case.*
 
 **Escape with both keys.** A homeless rotation that has a valid escape endorsement counts without steps 3 and 4: objections do not void it, and the old homes need not be gone. Steps 1, 2 and 5 still apply, so a rotation that counts under the old home rule at the same position still beats it, except a rotation the endorsement lists as abandoned. *This is the way out from a home that is alive but hostile: it can refuse the owner, but it cannot hold an owner who proves both keys.*
 
@@ -433,9 +433,10 @@ These rules are part of validity and MUST give the same answer to every conformi
 30. A homeless rotation lets an owner holding the current safety key leave homes that are gone, with no receipt from them. It counts only under the verification procedure above.
 31. A rotation that counts under the old home rule always beats a homeless rotation at the same position.
 32. A single valid objection from a live home of the old set voids a homeless rotation. *This is what stops a thief holding the safety key from using the homeless path to get past careful homes.*
+32a. A homeless rotation that counts only through the verifier's own failed attempt to reach an old home is never made final by the next rotation: a valid objection voids it, and every rotation built on it, whenever the objection surfaces (F87).
 33. A client meeting a homeless rotation MUST first try to reach the old homes and ask for an objection or a normal rotation.
 34. A home that closes SHOULD do so by a rotation of its operator declaring closure, so that its identities are provably homeless. An operator who has lost the safety key cannot close gracefully; its identities rely on auditors' absence statements or the verifier's own attempt.
-35. Clients SHOULD recommend declared auditors to owners with a single home. *Without auditors, an owner whose home vanishes without closing is re-homed only on each client's own failed attempt to reach it, and a thief able to cut a victim off from the home could exploit that.*
+35. Clients SHOULD recommend declared auditors to owners with a single home. *Without auditors, an owner whose home vanishes without closing is re-homed only on each client's own failed attempt to reach it, and a thief able to cut a victim off from the home could exploit that until the home's objection gets through; under rule 32a the thief can never make it final.*
 36. A homeless rotation endorsed with the owner's current signing key cannot be voided by an objection. An owner holding both keys can always leave homes that refuse them.
 37. Clients and key Modules SHOULD keep the signing key and the safety key separate, from separate seeds and on separate devices where possible, and SHOULD back up both seeds. *Holding both keys is the strongest proof of ownership the protocol sees, so a thief who steals both can also leave the owner's careful homes; and a backed-up signing seed is what makes a lost device survivable at a strict home.*
 
@@ -481,7 +482,7 @@ Key storage, backup and recovery are Modules built on this vocabulary; they need
 - **Succession rides on rotation.** *The safety key keeps its single use. Tying succession to it means a thief holding only the signing key can never redirect an identity's followers, agreements or money. Leaving is as protected as a rotation, and as rare.*
 - **One signer per act.** *Every act is signed by exactly one identity, so every act sits cleanly in one sequence and has one binding to check. Agreement between two identities is expressed as two acts, one naming the other, which is also how the second side stays free to refuse.*
 - **The signature is outside the act id.** *A signature can be recomputed in more than one valid way. Keeping it out of the act id means the id never changes, so every pointer to an act stays valid.*
-- **Nobody dies with their home.** *In a one-home setup, a vanished home would otherwise mean the death of the identity. Silence cannot be proven, but life can: a home that names the homeless rotation in an objection proves it was alive after the rotation was made. So the homeless path is closed whenever the home can answer, and open when it cannot. Three layers set how sure the rest of the network can be that a home is gone: its operator's closing rotation, the owner's declared auditors, or, weakest, each client's own attempt. And a homeless rotation is final once the owner's next rotation counts, which every Identity client can check.*
+- **Nobody dies with their home.** *In a one-home setup, a vanished home would otherwise mean the death of the identity. Silence cannot be proven, but life can: a home that names the homeless rotation in an objection proves it was alive after the rotation was made. So the homeless path is closed whenever the home can answer, and open when it cannot. Three layers set how sure the rest of the network can be that a home is gone: its operator's closing rotation, the owner's declared auditors, or, weakest, each client's own attempt. And a homeless rotation is final once the owner's next rotation counts, which every Identity client can check; except one accepted only on a client's own failed attempt, since a thief holding the safety key controls that next rotation and a censor can keep the objection from arriving. That one stays open to the objection for good, unless the owner endorses it with the signing key.*
 - **Anyone can find anyone.** *Without a standard place to deliver, the largest relays become the only meeting points, which is centralisation by default. A reserved inbox route is the right of exit applied to communication: it is shared language, an identity may declare none, and relay operators decide whom they accept deliveries from and at what price.*
 - **Losing the safety key is permanent.** *An owner who loses the safety key, and its seed, can never rotate, change homes or leave. The identity keeps working with its signing key until that is lost too. Back up the safety seed as carefully as the key itself.*
 - **Protected history.** *Once other operators have cosigned a log summary, the receipts under it are part of shared history: the operator can no longer erase them, by mistake or on purpose. Identities that do not require audits trust their home for this, as before.*
@@ -501,7 +502,7 @@ Still open:
 
 ## Freeze scenarios
 
-Components exercised (freeze test suite v11):
+Components exercised (freeze test suite v13):
 
 - Genesis, homes and routes, including an inbox route: all scenarios.
 - Rotation by safety key, delivered at the home; pending until the home rule is met: 1, 5.
@@ -513,7 +514,7 @@ Components exercised (freeze test suite v11):
 - Routine rotation keeps unacknowledged history: 5.
 - Audit requirement dropped by the rotation that drops it: 5.
 - Closure by rotation; a stolen operator key cannot close a home: 5.
-- Homeless rotation: closure, objection, auditor absence statements; final once the next rotation counts: 5.
+- Homeless rotation: closure, objection, auditor absence statements; receipts from the new homes; final once the next rotation counts; re-homed without audit never final by the next rotation, a censored reader, a thief's second rotation voided with the first: 5.
 - Escape with both keys past a hostile home, including after a refused normal rotation: 5.
 - Several unlinked identities; linking signed by both, ended by either; public or encrypted: 5.
 - Succession: 5.
@@ -521,7 +522,7 @@ Components exercised (freeze test suite v11):
 - Rotation to an everyday key of a new scheme; unknown to a client without it: 8.
 - Two identities on disjoint relays reaching each other through homes and routes: 5.
 
-## Choices introduced by drafts 2 to 7 (decided)
+## Choices introduced by drafts 2 to 8 (decided)
 
 Suggested by Claude while writing the formats, and accepted by Nobody, allegedly, directly or through the review reports and findings he stamped.
 
@@ -536,3 +537,4 @@ Suggested by Claude while writing the formats, and accepted by Nobody, allegedly
 9. **One normal rotation may follow a voided homeless rotation with the same safety key** (rule 8a exception).
 10. **Escape with both keys** (F20). A homeless rotation endorsed with the current signing key cannot be blocked by objections. Keep your keys separate, and backed up (F61).
 11. **Closure by rotation** (F56); **disowned acts void unless relied on** (F57); **majority by default** (F59); **self-hosting as a trust model** (F62); **finality by the next rotation** (F63).
+12. **A homeless rotation's receipts come from the new homes it declares** (F86); **a homeless rotation accepted only on the verifier's own failed attempt is never made final by the next rotation** (F87).
