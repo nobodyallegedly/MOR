@@ -90,6 +90,10 @@ Each of these is small on purpose: enough for every layer to meet real use befor
 How a Lightning payment becomes a Finance receipt and a payout. Nobody, allegedly: "probably the easiest module".
 *Done when:* the specification is approved, and a test identity pays another over Lightning and both hold a verified receipt.
 
+**12a. On-chain module** *(Module, then code; Finance; inserted 28 September 2026, placement decided by Nobody, allegedly)*
+The second payment rail: how an on-chain bitcoin payment becomes a Finance receipt and a payout, and how the vault holds large sums on-chain behind the safety key. A payment is not final until confirmed, so receipts must show "paid, not yet settled". *It forces Finance rule 14a (a unit the vault does not cover) and the settled state into the open.*
+*Done when:* the specification is approved; a test identity pays another on-chain and both hold a verified receipt, shown as pending until confirmed; a payment above the vault's limit goes to the vault.
+
 **13. Split Module** *(Module, then code; Law)*
 A split over stakes: a payment divided among test identities, exactly.
 *Done when:* the specification is approved, and a payment is split, balances to the unit, and each share is paid and receipted.
@@ -97,6 +101,10 @@ A split over stakes: a payment divided among test identities, exactly.
 **14. Deal-assessment tool** *(Law)*
 "Something to assess deals" (Nobody, allegedly). What it assesses is defined with Nobody, allegedly at the start of the step. *Suggested (Claude): it reads an agreement and shows, in plain words, who signed, what each party is bound to, the shares, and how the deal ends.*
 *Done when:* defined with Nobody, allegedly at the start of the step.
+
+**14a. Pooled anchoring cMIP** *(cMIP, then code; Identity, Finance, Law and Production at once; inserted 28 September 2026, placement decided by Nobody, allegedly: "a clusterfuck bound to reveal issues")*
+An anchoring service paid per hash over Lightning pools the requests and commits each batch (a Merkle root) in one on-chain transaction, by pay-to-contract rather than OP_RETURN where it holds in practice. A real service with real reasons to cheat. It must settle, in the specification or in findings: paid now, anchored later (a pending state with a deadline on a time reference); omission (the Lightning receipt names the hash, inclusion is checkable against the chain, a paid hash missing after the deadline is a provable default and a refund); pooled funds as visible custody, and the conversion to on-chain with receipts per hop; who pays when a batch costs more than the pool, stated in advance, and exact division of one fee among many payers; urgency tiers as levels of a standing offer; how many confirmations make an anchor count, and what a chain reorganisation does to one already relied on.
+*Done when:* the specification is approved; test identities pay for hashes, a batch is anchored on a test chain, anyone verifies inclusion from the chain; a hash paid for and left out becomes a provable default and is refunded.
 
 ### Review and freeze *(F84)*
 
@@ -133,8 +141,6 @@ Every component re-tested end to end; the door opened on devices it has never se
 | Domain for the reader | step 10 |
 | Finance rule 14a: a payment in a unit the vault does not cover is undeliverable (fail closed); awaiting confirmation since the round 2 revision | step 12 |
 | What the deal-assessment tool assesses | step 14 |
-| On-chain module (decided as the second rail): placement and scope. Suggested (brainstorm): step 12a, next to Lightning, covering the vault as well | step 12 |
-| Pooled anchoring cMIP (idea of Nobody, allegedly, from the brainstorm): an anchoring service paid per hash over Lightning, committing each batch in one on-chain transaction. Whether to build it, its scope and placement. Suggested: step 14a, after Lightning and on-chain, before the machine review | step 14 |
 | Anchoring without OP_RETURN: pay-to-contract (the chain sees an ordinary payment; only holders of the hash and proof can verify). Suggested (brainstorm) as the target, and a specialist question (F85) | step 14a |
 | Whether the frozen core forbids floats, tags and simple values in act payloads (extra surface where implementations can disagree; `core/README.md`) | step 16 |
 | Which identity publishes the specifications on MOR (the brainstorm proposal suggests: the collective publishes code, the author's identity the specifications he wrote) | step 17 |
