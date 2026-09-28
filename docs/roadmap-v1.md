@@ -111,7 +111,10 @@ Every component re-tested end to end; the door opened on devices it has never se
 | --- | --- |
 | Cryptography libraries; license | step 2 |
 | The scenario 5.7c addition proposed in F87 | step 1a |
-| Domain and hosting | step 10 |
+| Hosting for the public home relay (step 4 deploys on a public server) | step 4 |
+| The long-form markup | step 8 |
+| Domain for the reader | step 10 |
+| Finance rule 14a: a payment in a unit the vault does not cover is undeliverable (fail closed); awaiting confirmation since the round 2 revision | step 12 |
 | What the deal-assessment tool assesses | step 14 |
 | Which identity publishes the repository on MOR | step 17 |
 
