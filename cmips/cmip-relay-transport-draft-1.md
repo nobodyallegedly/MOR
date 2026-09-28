@@ -185,7 +185,9 @@ A sender SHOULD always give the pickup tag; a recipient chooses which way to loo
 
 *A shortened tag, which returns a small batch the recipient then tries to open, sits between the two; it is left to a later cMIP, once real traffic shows what length makes sense.*
 
-Reading an inbox needs no login: acts addressed to an identity show their recipient anyway (public receiver, private sender), and their content is locked. **[open, Q8]**
+Reading an inbox needs no login: acts addressed to an identity show their recipient anyway (public receiver, private sender), and their content is locked (Nobody, allegedly, Q8).
+
+**Stated cost.** Anyone can watch an inbox's traffic: when deliveries arrive, how large they are and how many. Never their content, and never the sender of a sealed container. *An owner who wants less exposure can have acts sent in sealed containers, receive bought keys at bare keys found by scanning (Q2), or declare several inboxes, or none. Private inbox reading belongs to a later metadata-privacy cMIP (F70); this cMIP leaves room for it and does not complete it.*
 
 After a rotation that voids a thief's routes act, a client that delivered into the window re-delivers to the inbox the current routes name (Identity rule 39, Envelope). *The transport needs nothing new for this; the client needs to remember what it delivered.*
 
@@ -404,7 +406,7 @@ Asked one at a time; each suggestion is Claude's, not yet decided.
 - **Q5.** Following new acts by requests that wait, with no live connection in 0.1. **Decided (Nobody, allegedly):** yes; a live connection later, as its own cMIP.
 - **Q6.** Who is named as creator of this cMIP, and when its hash is fixed. The hash covers the creator's identity, and the author's real identity is born only at the first acts (roadmap step 13), so until then the hash is a draft hash. **Deferred (Nobody, allegedly) to step 13,** decided together with the build brief's open point 2: which identity signs MOR's founding record.
 - **Q7.** Whether homes should also hold and serve evidence (objections, absence statements, escape endorsements, cosignatures) and other homes' receipts for the identities they serve. **Decided (Nobody, allegedly):** evidence SHOULD, other homes' receipts MAY.
-- **Q8.** Whether reading an inbox is open to anyone. *Suggested:* open in 0.1, since recipients are visible on the outside anyway; metadata privacy is a later cMIP (F70).
+- **Q8.** Whether reading an inbox is open to anyone. **Decided (Nobody, allegedly):** open in 0.1, with the cost stated; private inbox reading is set up for, and left to a later metadata-privacy cMIP (F70). *Recipient-only reading would need a signature on something other than an act, which the core does not allow.*
 
 ## Open technical parameters
 
