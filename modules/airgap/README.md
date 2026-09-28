@@ -12,7 +12,7 @@ Every MOR identity has two keys. The everyday key lives on your phone and signs 
 - **It chooses its own next key.** The next safety key is committed by the offline device, never by the phone. A phone that tries to slip one in is ignored, and you are told.
 - **It remembers.** It signs one rotation per safety key. Asked again for the same one, it gives the same answer; asked for a different one, it refuses, except in the two cases the Identity MIP allows once each, which you must confirm.
 - **Your backup.** The safety seed is written on paper, either as 24 words or as 72 characters: two competing seed Modules, both supported, so V1 shows several Modules living side by side. A device restored from paper finds its place in your chain by itself.
-- **Collectives.** A collective's safety key can be split among its members, any three of four, say. The device rebuilds it from shares, signs, and deals the next key as new shares that every member can check alone. What no check can do is prove a device forgot a key it held: that is said plainly (finding F96).
+- **Collectives.** A collective's safety key can be split among its members, any three of four, say. The device rebuilds it from shares, signs, and deals the next key as new shares that every member can check alone. What no check can do is prove a device forgot a key it held: that is said plainly (finding F97).
 - **A clean start.** If you fear your phone is compromised, the offline device can make your new everyday key itself, for a clean phone.
 
 ## Precisely
@@ -23,7 +23,7 @@ Every MOR identity has two keys. The everyday key lives on your phone and signs 
 | `msg` | The four messages (commitment export, pending rotation, signed rotation, share), strict: deterministic CBOR, closed maps, canonical text, 256 KiB at most, one kind at a time. | Module 2, 3.6 |
 | `device` | The signer. `review` checks the previous act (3.2), refuses anything but a rotation of the Identity MIP with spec, type and payload only (3.5), finds its key by commitment, applies the memory (3.4), inserts its own next commitment (3.3), optionally generates the signing key (section 4), builds the whole act, and summarises the exact bytes (3.1). `sign` signs (hedged SLH-DSA) and records. `review_collective` does the same from shares and deals the next key. State as CBOR. | Module 2 to 5 |
 | `summary` | The summary, prominent lines first; the key fingerprint (first 16 bytes of a tagged hash, 8 groups of 4). | Module 3.1 |
-| `shares` | Shamir over the secp256k1 order with Pedersen commitments; share check; rebuild; the rebuild check against the dealing's SLH-DSA commitment. | Module 5; Law 36 (F96) |
+| `shares` | Shamir over the secp256k1 order with Pedersen commitments; share check; rebuild; the rebuild check against the dealing's SLH-DSA commitment. | Module 5; Law 36 (F97) |
 | `online` | The phone's side: a genesis from a commitment export; a pending rotation; the check of a signed rotation before publishing (3.9). | Module 2, 3.9 |
 | `transport` | Animated QR codes as multi-part Uniform Resources (`ur` crate, pinned), upper case, level M, 120-byte fragments (QR version ≤ 11); files, bytes only. | Module 6 |
 
@@ -58,7 +58,7 @@ QR frames are drawn as images and read back by an independent decoder (`rqrr`), 
 | Retried rotation re-exported identically | Run |
 | Clean-device mode | Run |
 | Collective rotation from k shares, next shares verifiably dealt | Run |
-| All eight attack tests | Run; "a device keeps a copy" is not testable (F96) |
+| All eight attack tests | Run; "a device keeps a copy" is not testable (F97) |
 
 Not in this step: a phone app with a camera (with the genesis client, step 5, per Nobody, allegedly, 28 September 2026); how the key grammar names holders (Law formats, step 5a): the share message's holder is a role and an identity hash for now.
 
@@ -66,7 +66,7 @@ Not in this step: a phone app with a camera (with the genesis client, step 5, pe
 
 1. **The offline device's platform (Nobody, allegedly):** the rules in one Rust library, a command-line signer for an offline laptop now; the phone app with the genesis client.
 2. **Seeds (Nobody, allegedly):** two seed Modules, words and hex, both defined and both supported, to test several Modules side by side.
-3. **F96 (Nobody, allegedly):** verifiable dealing stops sole control of a collective's key, not a copy; Pedersen dealing plus one rebuild check on a second device. Law draft 5, Module draft 4.
+3. **F97 (Nobody, allegedly):** verifiable dealing stops sole control of a collective's key, not a copy; Pedersen dealing plus one rebuild check on a second device. Law draft 5, Module draft 4.
 
 ## Readings, confirmed
 

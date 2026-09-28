@@ -14,7 +14,7 @@
 //! What this stops: a dealing device that hands out shares that do not
 //! rebuild the committed key, so that it alone could rotate. What nothing can
 //! stop: the dealing device, or the checking device, keeping a copy of the
-//! key it held for a moment. That is the stated price (F96).
+//! key it held for a moment. That is the stated price (F97).
 //!
 //! The group is secp256k1. `G` is its generator; `H` is a point nobody knows
 //! the logarithm of, found by hashing ([`h`]). A seed is read as a scalar,

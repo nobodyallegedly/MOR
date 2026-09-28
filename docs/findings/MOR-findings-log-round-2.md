@@ -763,7 +763,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Applied:** the core library (`core/src/chain.rs`, `tally`; test `an_acknowledged_voided_receipt_is_never_support`); Identity draft 9 (roadmap step 3), approved by Nobody, allegedly, 28 September 2026.
 
-## F96. Verifiable dealing stops sole control of a collective's safety key, not a copy (found while building the air-gapped safety key Module, decided by Nobody, allegedly)
+## F97. Verifiable dealing stops sole control of a collective's safety key, not a copy (found while building the air-gapped safety key Module, decided by Nobody, allegedly)
 
 **Pattern 4** (a rule rests on a fact nobody can check).
 
