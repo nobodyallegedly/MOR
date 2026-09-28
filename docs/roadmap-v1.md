@@ -24,7 +24,7 @@ How a client publishes, fetches and follows acts, delivers to an inbox, finds de
 *Done, 28 September 2026:* `cmips/cmip-relay-transport-draft-1.md`, approved. It exposed F86 and F87 (Identity), written in by step 1a.
 
 **1a. Identity draft 8** *(a document; inserted after step 1, can run alongside steps 0 and 2)*
-Write the findings from step 1 into the texts: F86 (receipt check 3 counts a homeless rotation's receipts from the new homes) and F87 (a homeless rotation accepted only on the verifier's own failed attempt is never final by the next rotation; an objection voids it whenever it surfaces). Identity draft 8, the matching lines of the core document (v13), and the freeze test suite (v13), including the proposed addition to scenario 5.7c, a censored reader and a thief's second rotation that does not make the first final, once Nobody, allegedly approves it.
+Write the findings from step 1 into the texts: F86 (receipt check 3 counts a homeless rotation's receipts from the new homes) and F87 (a homeless rotation accepted only on the verifier's own failed attempt is never final by the next rotation; an objection voids it whenever it surfaces). Identity draft 8, the matching lines of the core document (v13), and the freeze test suite (v13), including the addition to scenario 5.7c, a censored reader and a thief's second rotation that does not make the first final (approved by Nobody, allegedly, 28 September 2026).
 *Done when:* Nobody, allegedly approves the three texts, before step 3 begins, since the identity-chain checks are built from them.
 
 **2. Core library, part 1** *(Rust)*
@@ -110,7 +110,6 @@ Every component re-tested end to end; the door opened on devices it has never se
 | Decision | Before |
 | --- | --- |
 | Cryptography libraries; license | step 2 |
-| The scenario 5.7c addition proposed in F87 | step 1a |
 | Hosting for the public home relay (step 4 deploys on a public server) | step 4 |
 | The long-form markup | step 8 |
 | Domain for the reader | step 10 |

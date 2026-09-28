@@ -653,4 +653,4 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Isolation, stated:** no protocol beats a country that seals itself off completely; its readers see the thief's rotation, labelled, until evidence gets in. The relay transport cMIP makes evidence travel: an objection from any source counts, relays probe homes on a client's behalf, bundles carry acts by hand, operators may publish onion addresses, and clients do not send private content to an identity re-homed without audit without a plain warning.
 
-**Core changes:** Identity (homeless rotation: Finality; rule 30 area; core document, "The way out"), at Identity draft 8 and the next core version (roadmap step 1a). Freeze test suite: 5.7c gains a censored reader and a thief's second rotation that does not make the first final.
+**Core changes:** Identity (homeless rotation: Finality; rule 30 area; core document, "The way out"), at Identity draft 8 and the next core version (roadmap step 1a). Freeze test suite: 5.7c gains a censored reader and a thief's second rotation that does not make the first final (approved by Nobody, allegedly, 28 September 2026).
