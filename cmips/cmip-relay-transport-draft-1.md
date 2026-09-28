@@ -53,7 +53,7 @@ Identity, Envelope and Text. It relies on the act format, act ids, sealed contai
 
 An address hint in a home entry or a route is, under this cMIP, a base address. A client that meets a hint whose scheme is not `https` does not use it under this cMIP; another transport may. *Plain `http` is allowed only for local testing and is never written into a published act.*
 
-**Where an operator says its home is.** A home entry names an operator and a hint. If the hint no longer answers, a client reads the operator's latest routes act (from the operator's own homes) and uses the hints of its outbox route whose scope is the Identity MIP's spec hash, `IDENTITY`: *an operator's Identity acts are its receipts and log summaries, so where they are found is where its home is.* This is how a home moves servers without any owner rotating (Identity). **[open, Q3]**
+**Where an operator says its home is.** A home entry names an operator and a hint. If the hint no longer answers, a client reads the operator's latest routes act (from the operator's own homes) and uses the hints of its outbox route whose scope is the Identity MIP's spec hash, `IDENTITY`: *an operator's Identity acts are its receipts and log summaries, so where they are found is where its home is.* This is how a home moves servers without any owner rotating (Identity). An operator that runs several homes lists them all there; a client tries each, and trusts only the signed acts it gets back (Nobody, allegedly, Q3).
 
 ## Discovery
 
@@ -345,7 +345,7 @@ Asked one at a time; each suggestion is Claude's, not yet decided.
 
 - **Q1.** The Identity flaw in receipt check 3. **Decided (Nobody, allegedly): the one-line fix, recorded as F84.**
 - **Q2.** How a recipient finds a sealed container sent to a bare key. **Decided (Nobody, allegedly): both.** The pickup tag for the simple path, scanning always possible for the private path, a fresh bare key per delivery as a client rule, a shortened tag left to a later cMIP. *A design decision of this cMIP, not a commitment of the core.*
-- **Q3.** Where an operator announces its home's current address. *Suggested:* the operator's outbox route whose scope is the Identity MIP's hash.
+- **Q3.** Where an operator announces its home's current address. **Decided (Nobody, allegedly):** the operator's outbox route whose scope is the Identity MIP's hash. *A thief holding the operator's everyday key can list false addresses there; that only sends clients to a server that cannot produce valid receipts, and the operator corrects it with new routes, or by rotating.*
 - **Q4.** What counts as "tried and failed to reach" a home. *Suggested:* every known address, no well-formed answer, twice.
 - **Q5.** Following new acts by requests that wait, with no live connection in 0.1. *Suggested:* yes; a live connection later, as its own cMIP.
 - **Q6.** Who is named as creator of this cMIP, and when its hash is fixed. The hash covers the creator's identity, and the author's real identity is born only at the first acts (roadmap step 13), so until then the hash is a draft hash. Linked to the build brief's open point 2.
