@@ -641,7 +641,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Identity (receipt check 3), at Identity draft 8 (roadmap step 1a). No change to the core document or the freeze test suite.
 
-**Applied:** Identity draft 8, receipt check 3 (roadmap step 1a, awaiting the author's approval). The freeze test suite v13 names "receipts from the new homes" in the homeless rotation component.
+**Applied:** Identity draft 8, receipt check 3 (roadmap step 1a, approved by Nobody, allegedly, 28 September 2026). The freeze test suite v13 names "receipts from the new homes" in the homeless rotation component.
 
 ## F87. An unaudited homeless rotation is never final by the next rotation (found while drafting the relay transport cMIP, decided by Nobody, allegedly)
 
@@ -657,7 +657,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Identity (homeless rotation: Finality; rule 30 area; core document, "The way out"), at Identity draft 8 and the next core version (roadmap step 1a). Freeze test suite: 5.7c gains a censored reader and a thief's second rotation that does not make the first final (approved by Nobody, allegedly, 28 September 2026).
 
-**Applied:** Identity draft 8 (homeless rotation: Finality and "Re-homed without audit"; rule 32a; rule 35 and "Nobody dies with their home" commentary), core v13 ("The way out", glossary), freeze test suite v13 (5.7c, the homeless rotation component, pass criteria); roadmap step 1a, awaiting the author's approval.
+**Applied:** Identity draft 8 (homeless rotation: Finality and "Re-homed without audit"; rule 32a; rule 35 and "Nobody dies with their home" commentary), core v13 ("The way out", glossary), freeze test suite v13 (5.7c, the homeless rotation component, pass criteria); roadmap step 1a, approved by Nobody, allegedly, 28 September 2026.
 
 ## F88. An escape endorsement is never judged by the rotation it endorses (found while writing Identity draft 8, decided by Nobody, allegedly)
 
@@ -669,4 +669,4 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Identity draft 8 (escape endorsement; "Status of an act after a rotation"). No change to the core document or the freeze test suite: scenario 5.7c already runs an escape, and the loop would make it fail on the text.
 
-**Applied:** Identity draft 8 (roadmap step 1a, awaiting the author's approval).
+**Applied:** Identity draft 8 (roadmap step 1a, approved by Nobody, allegedly, 28 September 2026).
