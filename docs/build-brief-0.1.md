@@ -4,7 +4,7 @@
 
 ## Purpose of 0.1
 
-Two things, in this order:
+Two things. Nothing is shown before both are built and tested (Nobody, allegedly): the build order is in `docs/roadmap-0.1.md`.
 
 1. **The door.** A link Nobody, allegedly can send to one person at a time. It lands on a web reader, where everything is found: the statement, the documents, the links to the code. The documents are themselves MOR acts, signed by the author's identity and fetched from a relay. The protocol is shown by being used. *(Decided, Nobody, allegedly: "The pitch is… here is a link. That's it." "A small door to a big universe.")*
 2. **The proof.** The identity gauntlet (freeze test suite, scenario 5, steps 7 to 7d) passing against the home relay and the genesis client. That proves most of review round 2 in code, and it is what the first builders will want to see, or break.
@@ -13,7 +13,8 @@ Two things, in this order:
 
 ## Decisions (Nobody, allegedly)
 
-- **Safety key in 0.1:** in software first, to open the door sooner; the air-gapped safety key Module before the identity gauntlet, as the freeze test suite requires.
+- **Build versus show:** what is built is separate from what is shown; nothing is shown before every step of the roadmap is built and tested.
+- **Safety key in 0.1:** in software for test identities; the air-gapped safety key Module before the identity gauntlet, as the freeze test suite requires. the author's real identity is created only with the Module.
 - **Repository layout:** `spec/` for the core, `modules/` and `cmips/` for founding specifications above it, `docs/` for the brief, overviews and findings.
 
 - **Languages:** Rust for the core library, relays and homes; TypeScript for the clients. A Rust specialist is available for tough calls.
@@ -23,14 +24,14 @@ Two things, in this order:
 
 ## Components
 
-In build order. *The order is suggested (Claude): the door first, then the gauntlet.*
+The components. *Their build order is in `docs/roadmap-0.1.md`: foundations, identity proven by the gauntlet, content, publication.*
 
 | # | Component | Language | Done when |
 | --- | --- | --- | --- |
 | 0 | **Core library** | Rust | It builds, verifies and locks acts exactly as the MIPs define (deterministic CBOR, tagged hashes, act ids, XChaCha20-Poly1305, canonical text, running summaries, identity-chain checks), and passes published test vectors. It compiles to WebAssembly so the clients can use it. |
 | 1 | **Relay transport** (a founding cMIP, a document first) | — | Its specification is written and hashed: how a client publishes an act, fetches acts, follows new ones, delivers to an inbox route, and asks a home for a receipt. *The core deliberately does not define this (core v12, "Outside the core"), so 0.1 cannot start without a founding one.* |
 | 2 | **Home relay** and its management client | Rust / TypeScript | It stores and serves identity chains, routes and names, checks rotations, signs receipts and log summaries. Two deployments of the same software: one on a machine at home, one on a public server where others can set up their identities. The management client shows what the home holds and lets its operator run it. |
-| 3 | **Genesis client** | TypeScript (with the core via WebAssembly) | It creates an identity: signing key, committed safety key, genesis naming its homes; later a rotation. For the door, the safety key is held in software, labelled clearly as a prototype; the air-gapped Module (`modules/`) is implemented before the identity gauntlet is run. |
+| 3 | **Genesis client** | TypeScript (with the core via WebAssembly) | It creates an identity: signing key, committed safety key, genesis naming its homes; later a rotation. Test identities hold the safety key in software, labelled clearly as a prototype; the air-gapped Module (`modules/`) is implemented before the identity gauntlet is run, and the author's real identity is created with it. |
 | 4 | **Basic relay** and its management client | Rust / TypeScript | It stores and serves acts and media, checks signatures and locked hashes, and publishes commitments. |
 | 5 | **Long-form module** (specification + code) | — / TypeScript | Its specification is written and hashed: a format for formatted text on top of the Text MIP's canonical text. Its code renders it. |
 | 6 | **Long-form web reader** | TypeScript | **The door.** It opens by link, fetches acts from a relay, verifies them with the core, and renders long-form documents. It shows who signed each one, with its fingerprint, and gives a way to reach Nobody, allegedly. It also serves as the read-only client of the original plan. |

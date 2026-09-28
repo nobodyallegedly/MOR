@@ -1,6 +1,6 @@
 # Working in this repository
 
-Start with `docs/build-brief-0.1.md`. It records what Nobody, allegedly decided, the components in build order, what "done" means for each, and what is still open.
+Start with `docs/build-brief-0.1.md` and `docs/roadmap-0.1.md`. Each working session does one roadmap step.
 
 - The protocol is defined by the drafts in `spec/`: the core document, the six MIPs and the freeze test suite. `docs/findings/` records why each rule exists. Never guess at a rule: if the spec is silent or unclear, ask Nobody, allegedly.
 - The freeze test suite is the specification of what to test.
