@@ -1,6 +1,6 @@
 # MOR 0.1: Roadmap
 
-*28 September 2026. Each step is one working session ("window"), and ends with something that can be checked. Start each window with: read `CLAUDE.md`, `docs/build-brief-0.1.md` and this roadmap, then do step N.*
+*28 September 2026. Each step is one working session ("window"), and ends with something that can be checked. Start each window with: read `CLAUDE.md`, `docs/build-brief-0.1.md` and this roadmap, then do step N. A step found necessary along the way is inserted with a letter (1a), so the numbers used elsewhere never change.*
 
 ## The rule (Nobody, allegedly)
 
@@ -19,7 +19,11 @@ Cryptography libraries (with the Rust specialist), especially SLH-DSA and ML-KEM
 **1. Relay transport cMIP** *(a document)*
 How a client publishes, fetches and follows acts, delivers to an inbox, finds deliveries addressed to it, and asks a home for a receipt; how a home is queried for chains, receipts, routes, names and links (open in Identity).
 *Done when:* Nobody, allegedly approves it, in `cmips/`.
-*Done, 28 September 2026:* `cmips/cmip-relay-transport-draft-1.md`, approved. It exposed F84 and F85 (Identity), to be written into the next Identity draft before step 3.
+*Done, 28 September 2026:* `cmips/cmip-relay-transport-draft-1.md`, approved. It exposed F84 and F85 (Identity), written in by step 1a.
+
+**1a. Identity draft 8** *(a document; inserted after step 1, can run alongside steps 0 and 2)*
+Write the findings from step 1 into the texts: F84 (receipt check 3 counts a homeless rotation's receipts from the new homes) and F85 (a homeless rotation accepted only on the verifier's own failed attempt is never final by the next rotation; an objection voids it whenever it surfaces). Identity draft 8, the matching lines of the core document (new version), and the freeze test suite (new version), including the proposed addition to scenario 5.7c, a censored reader and a thief's second rotation that does not make the first final, once Nobody, allegedly approves it.
+*Done when:* Nobody, allegedly approves the three texts, before step 3 begins, since the identity-chain checks are built from them.
 
 **2. Core library, part 1** *(Rust)*
 Deterministic CBOR, tagged hashes, act ids, locking and the inside commitment, canonical text, running summaries.
@@ -84,7 +88,7 @@ Every component re-tested end to end; the door opened on devices it has never se
 | Decision | Before |
 | --- | --- |
 | Cryptography libraries; license | step 2 |
-| F84 and F85 written into Identity draft 8 (and core, freeze suite) | step 3 |
+| The scenario 5.7c addition proposed in F85 | step 1a |
 | Domain and hosting | step 10 |
 | Where the specification format lives (F83) | step 12 |
 | Which identity publishes the repository on MOR | step 13 |
