@@ -313,7 +313,7 @@ Its media type is `application/cbor`, and its file name ends in `.mor`. A client
 
 *Nothing above beats a country that seals itself off completely: its readers see the thief's rotation, labelled, until evidence gets in, and under F85 the first objection that does undoes it. The owner's own defence is already in the core: declared auditors, or several homes, ideally in other jurisdictions. A genesis client SHOULD recommend both to an owner who may face a hostile state (Identity rule 35).*
 
-**[open, Q4: the definition of the attempt, probes, bundles, the isolation rule and the client rule, all as suggested]**
+*Decided (Nobody, allegedly, Q4): the definition of the attempt, probes, bundles, onion addresses, the isolation rule and the client rule, as written here.*
 
 ## Errors
 
@@ -400,7 +400,7 @@ Asked one at a time; each suggestion is Claude's, not yet decided.
 - **Q1.** The Identity flaw in receipt check 3. **Decided (Nobody, allegedly): the one-line fix, recorded as F84.**
 - **Q2.** How a recipient finds a sealed container sent to a bare key. **Decided (Nobody, allegedly): both.** The pickup tag for the simple path, scanning always possible for the private path, a fresh bare key per delivery as a client rule, a shortened tag left to a later cMIP. *A design decision of this cMIP, not a commitment of the core.*
 - **Q3.** Where an operator announces its home's current address. **Decided (Nobody, allegedly):** the operator's outbox route whose scope is the Identity MIP's hash. *A thief holding the operator's everyday key can list false addresses there; that only sends clients to a server that cannot produce valid receipts, and the operator corrects it with new routes, or by rotating.*
-- **Q4.** What counts as "tried and failed to reach" a home. Explored through the censorship scenario, which exposed F85 (decided). *Suggested, still to confirm:* every known address, probes through two relays, an objection from anywhere counts as life, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
+- **Q4.** What counts as "tried and failed to reach" a home. Explored through the censorship scenario, which exposed F85 (decided). **Decided (Nobody, allegedly):** every known address, probes through two relays, an objection from anywhere counts as life, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
 - **Q5.** Following new acts by requests that wait, with no live connection in 0.1. *Suggested:* yes; a live connection later, as its own cMIP.
 - **Q6.** Who is named as creator of this cMIP, and when its hash is fixed. The hash covers the creator's identity, and the author's real identity is born only at the first acts (roadmap step 13), so until then the hash is a draft hash. Linked to the build brief's open point 2.
 - **Q7.** Whether homes should also hold and serve evidence (objections, absence statements, escape endorsements, cosignatures) and other homes' receipts for the identities they serve. *Suggested:* evidence SHOULD, other homes' receipts MAY.
