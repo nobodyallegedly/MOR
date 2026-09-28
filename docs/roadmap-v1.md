@@ -109,7 +109,8 @@ Every component re-tested end to end; the door opened on devices it has never se
 
 | Decision | Before |
 | --- | --- |
-| Cryptography libraries; license | step 2 |
+| Cryptography libraries (license decided: MIT or Apache 2.0, for code) | step 2 |
+| License of the specifications and documents | step 17 |
 | Hosting for the public home relay (step 4 deploys on a public server) | step 4 |
 | The long-form markup | step 8 |
 | Domain for the reader | step 10 |

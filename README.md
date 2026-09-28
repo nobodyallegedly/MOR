@@ -24,4 +24,6 @@ This repository is the workshop, not the record. Each release and each specifica
 
 ## License
 
-To be decided before the repository goes public.
+The code is licensed under either of the [MIT license](LICENSE-MIT) or the [Apache License 2.0](LICENSE-APACHE), at your option. Unless you state otherwise, any contribution you submit is licensed the same way.
+
+The license of the specifications and documents (`spec/`, `cmips/`, `modules/`, `docs/`) is still to be decided.
