@@ -591,3 +591,11 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 4. **Rewrites:** the freeze test suite (freeze rule and procedure: staged, with which scenarios gate stage 1), Production rule 20 and the core's trust-root paragraph.
 
 **Core changes (pending the open point):** freeze test suite (freeze rule, procedure); Production (rule 20; possibly the specification format moves to Envelope); core (trust root; Open before freeze).
+
+## F84. Receipts for a homeless rotation come from the new homes (found while drafting the relay transport cMIP, decided by Nobody, allegedly)
+
+**Found while drafting:** relay transport cMIP, draft 1 (roadmap step 1). Identity draft 7, receipt check 3, counts a receipt only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts "receipts from the new homes", which the homeless rotation itself declares, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count, and scenario 5.7c would fail on the text. A drafting contradiction, not a change of intent.
+
+**Decided (Nobody, allegedly):** receipt check 3 gains: "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)."
+
+**Core changes:** Identity (receipt check 3), at the next Identity draft. No change to the core document or the freeze test suite.

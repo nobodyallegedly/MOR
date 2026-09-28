@@ -301,7 +301,7 @@ error = {
 
 *What drafting this cMIP showed, for Nobody, allegedly.*
 
-1. **Found in Identity (a flaw, to resolve before the transport is final).** Receipt check 3 says a receipt counts only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts receipts "from the new homes", which are declared by the homeless rotation itself, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count. The intent is clear; the text contradicts it. *Suggested fix:* check 3 gains "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)". **[open, Q1]**
+1. **Found in Identity (a flaw; resolved as F84).** Receipt check 3 says a receipt counts only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts receipts "from the new homes", which are declared by the homeless rotation itself, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count. The intent is clear; the text contradicts it. *Decided (Nobody, allegedly, F84):* check 3 gains "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)", at the next Identity draft.
 2. **A gap in Identity, filled here.** Identity rule 13 asks a home to store the latest routes act; Identity's "Routes" rule needs the chain from version 1 to detect forks. This cMIP requires homes to serve the whole chain, and does the same for the encryption key, which Envelope defines "in spirit" as an Identity act but which rule 13 does not list. A stronger rule, not a relaxation.
 3. **Open parameters answered.** Identity: "how a home is queried" (the identity record, log requests). Envelope: "how a client finds the key deliveries and sealed containers addressed to it" (the feed by `to` and by pickup tag). F83 lists the first as a condition of the stage-1 freeze.
 4. **No clock.** Arrival numbers and feed waits are local and never enter an act or a validity decision.
@@ -333,7 +333,7 @@ error = {
 
 Asked one at a time; each suggestion is Claude's, not yet decided.
 
-- **Q1.** The Identity flaw in receipt check 3 (see "Checked against the core", 1). *Suggested:* the one-line fix, recorded as a finding.
+- **Q1.** The Identity flaw in receipt check 3. **Decided (Nobody, allegedly): the one-line fix, recorded as F84.**
 - **Q2.** How a recipient finds a sealed container sent to a bare key, which carries no recipient. *Suggested:* the pickup tag, a hash of the bare key given alongside the container.
 - **Q3.** Where an operator announces its home's current address. *Suggested:* the operator's outbox route whose scope is the Identity MIP's hash.
 - **Q4.** What counts as "tried and failed to reach" a home. *Suggested:* every known address, no well-formed answer, twice.
