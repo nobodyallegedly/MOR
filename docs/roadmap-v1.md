@@ -136,7 +136,7 @@ Every component re-tested end to end; the door opened on devices it has never se
 | --- | --- |
 | Hybrid X25519 + ML-KEM-768 library, from the Rust specialist | step 5 |
 | License of the specifications and documents | step 17 |
-| Hosting for the public home relay (step 4 deploys on a public server). Plan (Nobody, allegedly): three homes on three hosts, Infomaniak (known to him as solid), 1984 Hosting (Nobody, allegedly asking around) and his own machine at an onion address; three simulated operators. A test server only; the host for real identities is chosen again at step 17 | step 4 |
+| Hosting for the public home relay (step 4 deploys on a public server). Plan: three homes on three hosts, Infomaniak, 1984 Hosting and the author's own machine at an onion address; three simulated operators. Both public hosts: an unmanaged VPS with root access, Debian 13, login by SSH key only. 1984 Hosting accepted and paid non-anonymously, which avoids the 24% Icelandic VAT charged on anonymous payment (decided by Nobody, allegedly: "no reasons to want to remain anonymous"). The host for real identities is chosen again at step 17. A test server only; the host for real identities is chosen again at step 17 | step 4 |
 | The long-form markup | step 8 |
 | Domain for the reader | step 10 |
 | Finance rule 14a: a payment in a unit the vault does not cover is undeliverable (fail closed); awaiting confirmation since the round 2 revision | step 12 |
