@@ -16,7 +16,7 @@ The core is in draft and has been through two independent reviews. This reposito
 - a JPEG module and a barebone client for text with a picture;
 - a long-form module and a long-form web reader.
 
-See [docs/build-brief-v1.md](docs/build-brief-v1.md) for the plan, the order of work and what is still open. The protocol itself is in [spec/](spec/), and a plain-language overview in [docs/07-MOR-in-one-page-v4.md](docs/07-MOR-in-one-page-v4.md).
+See [docs/build-brief-v1.md](docs/build-brief-v1.md) for the plan, the order of work and what is still open. The protocol itself is in [spec/](spec/), and a plain-language overview in [docs/07-MOR-in-one-page-v5.md](docs/07-MOR-in-one-page-v5.md).
 
 ## This repository and MOR
 
