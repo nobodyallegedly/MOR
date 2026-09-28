@@ -111,7 +111,8 @@ Every component re-tested end to end; the door opened on devices it has never se
 
 | Decision | Before |
 | --- | --- |
-| Cryptography libraries, especially SLH-DSA and ML-KEM | step 3 |
+| SLH-DSA library (Rust, audit status, builds to WebAssembly), from the Rust specialist | step 3 |
+| Hybrid X25519 + ML-KEM-768 library, from the Rust specialist | step 5 |
 | License of the specifications and documents | step 17 |
 | Hosting for the public home relay (step 4 deploys on a public server) | step 4 |
 | The long-form markup | step 8 |

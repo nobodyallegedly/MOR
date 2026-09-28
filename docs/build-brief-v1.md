@@ -65,7 +65,7 @@ The harness (9) grows alongside everything else: every component is done only wh
 2. **Naming.** Settled by F85: the first release, frozen at inception, is V1.
 3. **Who publishes the repository on MOR.** the author's own identity, or a separate MOR identity (possibly a collective later). The same identity is named as creator of the founding cMIPs and Modules, whose hashes are draft hashes until then. *Nobody, allegedly to decide, at step 17.*
 4. **The long-form format.** Which markup the long-form module uses, within the Text MIP's rules for formats. *To settle when writing its specification.*
-5. **Rust crates for the cryptography,** especially SLH-DSA and ML-KEM, whose libraries are young. Their audit status to be checked, with the Rust specialist. *Due before roadmap step 3 (Nobody, allegedly).*
+5. **Rust crates for the cryptography,** especially SLH-DSA and ML-KEM, whose libraries are young. Their audit status to be checked, with the Rust specialist. *SLH-DSA due before roadmap step 3, ML-KEM before step 5, asked one at a time (Nobody, allegedly). FROST, only if a collective's key grammar uses it, much later.*
 6. **Hosting for the public home relay** and the reader.
 
 ## How the build chat works
