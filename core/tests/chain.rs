@@ -217,6 +217,40 @@ fn majority_of_three_operators() {
     }
 }
 
+/// A reader fetches the same chain from every home, so it holds the same
+/// act more than once. The same act is one act: never a rival to itself
+/// (found while building the relays, roadmap step 4).
+#[test]
+fn the_same_act_from_several_homes_is_one_act() {
+    let mut w = World::new();
+    let mut h1 = w.operator("home-1");
+    let mut h2 = w.operator("home-2");
+    let h3 = w.operator("home-3");
+    let p = w.genesis("alice", vec![home(&h1), home(&h2), home(&h3)], None, None);
+    let (a, _) = w.rotation(&p, Rot::default());
+    // A copy with a broken signature arrives first; the good copy replaces it.
+    let mut broken = a.clone();
+    broken.signature.sig[0] ^= 1;
+    w.v.add(broken).unwrap();
+    let r = w.add(&a);
+    let r1 = w.receipt(&mut h1, &p.id, &r, 1);
+    let r2 = w.receipt(&mut h2, &p.id, &r, 1);
+    // Everything again, as served by the other homes.
+    for id in [p.id, r, r1, r2, h1.id, h2.id] {
+        let again = w.v.get(&id).unwrap().act.clone();
+        w.add(&again);
+    }
+    let broken_again = {
+        let mut b = a.clone();
+        b.signature.sig[0] ^= 1;
+        b
+    };
+    w.v.add(broken_again).unwrap();
+    assert_eq!(chain(&w, &p), vec![p.id, r]);
+    assert_eq!(w.v.resolve(&p.id).stop, Stop::End);
+    assert_eq!(w.v.status(&r), Status::Valid);
+}
+
 #[test]
 fn homes_count_per_operator() {
     let mut w = World::new();
