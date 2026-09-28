@@ -217,7 +217,7 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 2. Build the founding cMIPs and Modules, starting with MOR V1: a home relay, a basic relay, the genesis client (with the air-gapped safety key Module), a read-only client and a basic client; and, so every layer meets friction, a Lightning integration module (Finance), a Split Module and a deal-assessment tool (Law). Clunky is acceptable.
 3. Run every scenario the founding components can run; reason through the rest against the texts. Mark each run or reasoned, ticking each component as it passes.
 4. Machine adversarial review: everything, the texts, the code and the draft freeze report, reviewed by a model given the budget to break things and propose fixes (Fable, F84).
-5. Specialist questions (F85): from the draft freeze report, each rule that is only reasoned becomes a targeted question to a specialist in its field, one person and one question at a time. Nobody outside decides the freeze.
+5. Specialist questions (F85): from the draft freeze report, each rule that is only reasoned becomes a targeted question to a specialist in its field, one person and one question at a time. Then human adversarial review (round 3): one reviewer attacks the whole, the running prototypes as well as the texts. Nobody outside decides the freeze.
 6. Fix any failure requiring a core change, and rerun or re-reason the affected scenarios.
 7. When every box is ticked, run or reasoned, the six MIPs are frozen: their texts, their hashes and the freeze report are published together.
 

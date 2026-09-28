@@ -629,6 +629,6 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Checked against the principles:** right of exit and evolutionary design are served: the core already says flaws after the freeze are fixed only by a new protocol running alongside, with users migrating by choice, and V1 names no one who could block that. Legible greed: no conflict.
 
-**Conflict, flagged for Nobody, allegedly:** the core (v12, "Open before freeze") lists "Human adversarial review (round 3)" before freeze. With the five withdrawn, either segmented questions count as that review, or the item changes, which is a core edit. *Open, Nobody, allegedly to decide.*
+**Conflict, resolved:** the core (v12, "Open before freeze") lists "Human adversarial review (round 3)" before freeze. Nobody, allegedly: "Semisol gets to get a go at it. 'Yo Semi, can you help me break this?' He won't resist…" Semisol is round 3: he attacks the whole, texts and running prototypes, after the machine review and before the freeze. What he breaks becomes findings, resolved with Nobody, allegedly; he decides nothing. The core item stays as written; no core change.
 
 **Changes:** freeze test suite v12 (procedure step 5: human questions, not the five); build brief and roadmap renamed to V1, circle of five removed, "After V1" rewritten; README, CLAUDE.md, cMIP and Module READMEs and the project-lead prompt say V1. The air-gapped Module draft 3 still says "Tests for MOR 0.1" (a specification text, left for its next draft). Findings F83 and F84 keep their wording as history.
