@@ -76,9 +76,9 @@ Building the identity checks as a function of the acts a verifier holds exposed 
 3. **F94, home rules.** A home rule a rotation leaves in place must fit the new homes, or the rotation is invalid.
 4. **F95, receipt check 6.** A voided receipt someone acknowledged is shown as contesting its position, and blocks nothing.
 
-## Part 2: readings, not yet decided
+## Part 2: readings, confirmed
 
-Where the drafts are silent and the answer seemed forced, the library takes the reading below. Each is listed for Nobody, allegedly to confirm or change; none changes a MIP text yet.
+Where the drafts are silent and the answer seemed forced, the library takes the reading below. Nobody, allegedly confirmed all ten (28 September 2026); none changes a MIP text yet.
 
 1. **"Names X in `objects`."** An objection, absence statement or escape endorsement names the homeless rotation as `[identity hash, rotation]`: the chain is the identity chain, whose root act is the genesis. A cosignature is accepted with any chain whose predecessor is the log summary; which chain it should name (the summaries' own chain, rooted at the home's first summary) is left open.
 2. **Self-hosted "serves".** A self-hosted home's "rotation it serves" is the rotation the verifier holds at that position; two held there are a conflict (rule 22a, "Which rotation counts" step 2). A verifier cannot tell served from held.

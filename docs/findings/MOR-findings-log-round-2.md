@@ -721,7 +721,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Identity (homeless rotation: Finality; rule 31); core document ("The way out"). Freeze test suite: 5.7c gains the thief with a used safety key found after a closure; the homeless rotation component and the pass criteria follow.
 
-**Applied:** the core library (`core/src/chain.rs`: the old rule is tallied before finality; `core/tests/chain.rs`: the attack above, and a final escape still beaten by a rotation the old home held); Identity draft 9, core v15, freeze test suite v14 (roadmap step 3), awaiting the author's approval of the texts.
+**Applied:** the core library (`core/src/chain.rs`: the old rule is tallied before finality; `core/tests/chain.rs`: the attack above, and a final escape still beaten by a rotation the old home held); Identity draft 9, core v15, freeze test suite v14 (roadmap step 3), approved by Nobody, allegedly, 28 September 2026.
 
 ## F93. Absence statements are judged by the audit requirement in force before the homeless rotation (found while building the core library, part 2, decided by Nobody, allegedly)
 
@@ -735,7 +735,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Identity (homeless procedure, step 4). Freeze test suite: 5.7c gains a thief who drops auditing, and one who names an auditor of its own.
 
-**Applied:** the core library (`core/src/chain.rs`, `homeless_basis`; test `absence_statements_are_judged_by_the_auditors_in_force_before_the_homeless_rotation`); Identity draft 9, freeze test suite v14 (roadmap step 3), awaiting the author's approval of the texts.
+**Applied:** the core library (`core/src/chain.rs`, `homeless_basis`; test `absence_statements_are_judged_by_the_auditors_in_force_before_the_homeless_rotation`); Identity draft 9, freeze test suite v14 (roadmap step 3), approved by Nobody, allegedly, 28 September 2026.
 
 ## F94. A home rule a rotation leaves in place must fit the homes it sets (found while building the core library, part 2, decided by Nobody, allegedly)
 
@@ -749,7 +749,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Identity (rotation check 5). No change to the core document or the freeze test suite.
 
-**Applied:** the core library (`core/src/identity.rs`, `ChainState::apply`; test `a_new_home_set_must_still_fit_the_rule_in_effect`); Identity draft 9 (roadmap step 3), awaiting the author's approval of the text.
+**Applied:** the core library (`core/src/identity.rs`, `ChainState::apply`; test `a_new_home_set_must_still_fit_the_rule_in_effect`); Identity draft 9 (roadmap step 3), approved by Nobody, allegedly, 28 September 2026.
 
 ## F95. A voided but acknowledged receipt contests a position visibly, without blocking it (found while building the core library, part 2, decided by Nobody, allegedly)
 
@@ -761,4 +761,4 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Identity (receipt check 6). No change to the core document or the freeze test suite.
 
-**Applied:** the core library (`core/src/chain.rs`, `tally`; test `an_acknowledged_voided_receipt_is_never_support`); Identity draft 9 (roadmap step 3), awaiting the author's approval of the text.
+**Applied:** the core library (`core/src/chain.rs`, `tally`; test `an_acknowledged_voided_receipt_is_never_support`); Identity draft 9 (roadmap step 3), approved by Nobody, allegedly, 28 September 2026.
