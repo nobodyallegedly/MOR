@@ -681,7 +681,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Envelope (Sequences: the bagging rule written out). No change to the core document or the freeze test suite.
 
-**Applied:** the core library (`core/src/mmr.rs`) and its published vectors (`core/vectors/running-summary.json`, `core/vectors/sequence-three-acts.json`), approved by Nobody, allegedly, 28 September 2026. Written into Envelope draft 5 (Sequences).
+**Applied:** the core library (`core/src/mmr.rs`) and its published vectors (`core/vectors/running-summary.json`, `core/vectors/sequence-three-acts.json`), approved by Nobody, allegedly, 28 September 2026. Written into Envelope draft 5 (Sequences), approved by Nobody, allegedly, 28 September 2026.
 
 ## F90. The lock binds no associated data (found while building the core library, decided by Nobody, allegedly)
 
@@ -693,7 +693,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Envelope ("How it fits together", step 1; media locking). No change to the core document or the freeze test suite.
 
-**Applied:** the core library (`core/src/lock.rs`) and its published vectors (`core/vectors/lock.json`, `core/vectors/sequence-three-acts.json`, `core/vectors/open-act.json`), approved by Nobody, allegedly, 28 September 2026. Written into Envelope draft 5 ("How it fits together", step 1; Publication).
+**Applied:** the core library (`core/src/lock.rs`) and its published vectors (`core/vectors/lock.json`, `core/vectors/sequence-three-acts.json`, `core/vectors/open-act.json`), approved by Nobody, allegedly, 28 September 2026. Written into Envelope draft 5 ("How it fits together", step 1; Publication), approved by Nobody, allegedly, 28 September 2026.
 
 ## F91. No data item in an act is nested more than 128 levels deep (found while building the core library, decided by Nobody, allegedly)
 
@@ -707,4 +707,4 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Envelope (validity rule 1a; Reasoning, "One depth for everyone"); core document ("Common conventions", encoding). No change to the freeze test suite.
 
-**Applied:** the core library (`core/src/cbor.rs`) and its published vectors (`core/vectors/cbor.json`: 128 levels accepted, 129 rejected); Envelope draft 5 and core v14, 28 September 2026.
+**Applied:** the core library (`core/src/cbor.rs`) and its published vectors (`core/vectors/cbor.json`: 128 levels accepted, 129 rejected); Envelope draft 5 and core v14, approved by Nobody, allegedly, 28 September 2026 (roadmap step 2).
