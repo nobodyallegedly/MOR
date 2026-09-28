@@ -1,6 +1,6 @@
 # MIP: Envelope
 
-*Draft 4, 27 September 2026. Written against core v12, the Identity MIP draft 7, the Text MIP draft 5 and findings F1 to F82. Draft 4 applies review round 2: the `for` field on publications and withdrawal by signer or `for`; `objects` entries name their chain; the running summary's empty value and bagging order; signature schemes by specification hash; key delivery to a bare key; inbox delivery and the holding principle; reposts as references.*
+*Draft 5, 28 September 2026. Written against core v14, the Identity MIP draft 8, the Text MIP draft 5 and findings F1 to F91. Draft 5 is draft 4 with three findings from building the core library (roadmap step 2): the running summary's peaks are bagged with left kept on the left (F89); the lock binds no associated data (F90); no data item is nested more than 128 levels deep (F91). Draft 4 applied review round 2: the `for` field on publications and withdrawal by signer or `for`; `objects` entries name their chain; the running summary's empty value and bagging order; signature schemes by specification hash; key delivery to a bare key; inbox delivery and the holding principle; reposts as references.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -81,9 +81,11 @@ signature = [ scheme: 1 / 2 / 3 / hash, key: bstr, sig: bstr ]   ; scheme as Ide
 
 **How it fits together.**
 
-1. The inside is encoded in deterministic CBOR, then locked with the content key using XChaCha20-Poly1305 and the nonce. The result is `locked`.
+1. The inside is encoded in deterministic CBOR, then locked with the content key using XChaCha20-Poly1305 and the nonce, with no associated data. The result is `locked`: the ciphertext followed by the 16-byte authentication tag (F90).
 2. The outside commits to both: the hash of the locked bytes, so relays can check what they store, and the hash of the unlocked inside, so a reader can check that what they opened is exactly what was signed.
 3. The act id is `tagged_hash("MOR/act", outside)`. The signature signs the act id.
+
+*No associated data is bound to the lock: the outside already commits to both the locked bytes and the unlocked inside, so binding more would add nothing.*
 
 *The salt makes the inside commitment impossible to guess: without it, anyone could hash "yes" and "no" and learn a private one-word reply.*
 
@@ -127,7 +129,7 @@ Every everyday act carries, inside, its position in the signer's sequence and a 
 
 - **Single lines.** Within a sequence, every act names at most one predecessor. Parallel devices keep separate sequences.
 - **Position.** The first act of a sequence (empty `prev`) has position 1; every later act has its predecessor's position plus one.
-- **Running summary.** The root of a Merkle mountain range over the act ids of the sequence, in order, up to and including the previous act. The first act of a sequence carries the empty summary: 32 zero bytes. Leaves are `tagged_hash("MOR/mmr-leaf", act id)`; internal nodes `tagged_hash("MOR/mmr-node", left || right)`; the peaks of the range are bagged right to left, each pair hashed as a node, into one root. A test vector for a three-act sequence is published with this MIP before freeze (F78).
+- **Running summary.** The root of a Merkle mountain range over the act ids of the sequence, in order, up to and including the previous act. The first act of a sequence carries the empty summary: 32 zero bytes. Leaves are `tagged_hash("MOR/mmr-leaf", act id)`; internal nodes `tagged_hash("MOR/mmr-node", left || right)`. The range is a list of perfect binary trees, its peaks, highest on the left, as the binary digits of the number of acts. The peaks are bagged right to left into one root: start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left (F89). A single peak is its own root, with no further hashing. A test vector for a three-act sequence is published with this MIP before freeze (F78).
 
 *These make it cheap to prove that an act lies on the line leading to a later one, which is how a rotation's kept ancestry is checked (Identity).* Proving it for a private act needs that act's key, which its recipients and its signer hold.
 
@@ -169,7 +171,7 @@ media = {
 }
 ```
 
-Media bytes are always stored locked, with their own content key. For public media, the key sits in the publication's payload. For media on sale, the publication is public (anyone can see the offer) but the media key is absent, and is delivered to each buyer. After unlocking, a buyer checks the plaintext against the work hash.
+Media bytes are always stored locked, with their own content key, the same way as an inside: XChaCha20-Poly1305 with the nonce in the payload and no associated data. For public media, the key sits in the publication's payload. For media on sale, the publication is public (anyone can see the offer) but the media key is absent, and is delivered to each buyer. After unlocking, a buyer checks the plaintext against the work hash.
 
 **For whom.** Payment for a publication goes to the payee pointer of the identity named in `for` if present, otherwise of the signer (Finance). *A false `for` can only send money to the identity it names, never to whoever wrote it, so nobody gains by lying in it. Whether a grant backs a publication made for another identity is Law's business; a Law client may refuse a publication whose `for` is not backed by a grant it can check, and shows it so. A Finance-only wallet needs nothing beyond this field (F68).*
 
@@ -209,6 +211,7 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 ### Every act
 
 1. An act MUST decode as deterministic CBOR in the shape above; an unknown key, outside or inside, makes it invalid.
+1a. In an encoded act, and in an encoded inside, no data item is nested more than 128 levels below the outermost item (the outermost item is at level 0). An act that nests deeper is invalid, for every verifier (F91). *An application that needs deeper data carries it in a byte string, or as a media object, which the act does not decode.*
 2. The locked bytes MUST hash to the locked hash. Whoever unlocks the inside MUST check it against the inside commitment; an inside that does not match makes the act invalid.
 3. A public act's content key MUST open its inside.
 4. An everyday act MUST carry a position and a running summary consistent with its predecessor (the empty summary for the first act of a sequence), and at most one `prev`.
@@ -251,13 +254,14 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 - **Acknowledgements are cheap, on purpose, and never stand alone.** *A thief with an accomplice can turn their own acts into visible disputes, never into valid acts. In return, anyone who genuinely relied on an act is protected. An acknowledgement of an act nobody can produce changes nothing, so the noise a thief can make is bounded by the real acts the thief signed.*
 - **A layer's rules use only that layer's data.** *The `for` field exists so that a wallet with no Law can pay the right identity, and a client with no Law can judge a withdrawal. Pushing one small field down is always better than pulling a rule up.*
 - **Delivery is the signer's interest.** *An act counts only where it is held, so whoever wants an act to count carries it to those who must hold it. A reserved inbox gives that carrying a destination without making any relay the meeting point by default.*
+- **One depth for everyone.** *A decoder must stop somewhere, or hostile input can crash it. If each stopped at its own depth, one verifier could accept an act that another cannot read. A fixed limit, far above any act the MIPs define, gives every verifier the same answer.*
 - **Encryption for the long run.** *Content locked today may be stored and attacked for decades. A hybrid key exchange stays safe if either half holds.*
 
 ## Open technical parameters
 
 - The exact format of key deliveries under the hybrid scheme (F25), including the bare-key form.
 - Merkle construction for commitments (sorted set).
-- The running-summary test vector (F78).
+- The running-summary test vector (F78): published in draft with the core library (`core/vectors/sequence-three-acts.json`, and `running-summary.json` for longer sequences); final at freeze, when the spec hashes it names are fixed.
 - How a client finds the key deliveries and sealed containers addressed to it (inbox route and relay queries).
 
 ## Decided for this pass
@@ -271,6 +275,9 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 - **F70.** Inbox delivery; an act counts only where it is held.
 - **F78.** Empty summary and bagging order.
 - **F81.** `objects` entries name their chain.
+- **F89.** The running summary's peaks are bagged with left kept on the left; a single peak is its own root.
+- **F90.** The lock binds no associated data.
+- **F91.** No data item is nested more than 128 levels deep.
 
 ## Freeze scenarios
 

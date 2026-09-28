@@ -18,7 +18,7 @@ Signatures and the identity rules come next, in part 2 (roadmap step 3).
 
 | Module | What | Where it is defined |
 | --- | --- | --- |
-| `cbor` | RFC 8949 §4.2.1 core deterministic encoding. The decoder rejects non-shortest arguments, indefinite lengths, unsorted or duplicate map keys, non-preferred floats (NaN included), invalid UTF-8, malformed input and trailing bytes; a final round-trip check backs this up. | Identity, "Encoding" |
+| `cbor` | RFC 8949 §4.2.1 core deterministic encoding. The decoder rejects non-shortest arguments, indefinite lengths, unsorted or duplicate map keys, non-preferred floats (NaN included), invalid UTF-8, nesting deeper than 128 levels, malformed input and trailing bytes; a final round-trip check backs this up. | Identity, "Encoding"; Envelope rule 1a |
 | `hash` | SHA-256; `tagged_hash(tag, x) = SHA-256(SHA-256(tag) ‖ SHA-256(tag) ‖ x)`; work hash, spec hash. | Identity, "Hashes"; Envelope, "Media"; Production |
 | `act` | `Outside`, `Inside`, `Act` in the exact CDDL shape (an unknown key is invalid); act id `tagged_hash("MOR/act", outside)`; inside commitment `tagged_hash("MOR/inside", inside)`; `seal` and `open`; `Sequence`, which checks `prev`, position and running summary. | Envelope, "The act", "Sequences", validity rules 1–5 |
 | `lock` | XChaCha20-Poly1305, 32-byte key, 24-byte nonce, no associated data; locked bytes are ciphertext ‖ 16-byte tag. | Envelope, "How it fits together" |
@@ -43,18 +43,12 @@ python3 core/vectors/check.py                      # a second, independent imple
 - `tests/unicode.rs`: rule 6 against Unicode's own conformance file for the pinned version, `tests/data/NormalizationTest-17.0.0.txt` (© Unicode, Inc., distributed under the Unicode License v3), and every code point not listed in it.
 - `tests/act.rs`: act shape, opening, private acts, and every way an act can break its place in a sequence.
 
-## Readings the drafts left open
+## Readings the drafts left open, now decided
 
-Building this exposed three places where the drafts do not fix the bytes. Each changes every vector it touches if decided otherwise.
+Building this exposed three places where the drafts did not fix the bytes, or where verifiers could disagree. Nobody, allegedly decided each, and each is written into Envelope draft 5.
 
-**Decided**
-
-1. **Bagging the running summary (Envelope, "Sequences"; F89, approved by Nobody, allegedly).** "The peaks are bagged right to left, each pair hashed as a node" did not say which side each goes on. Start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left. A single peak is its own root, with no extra hashing. To be written into the next Envelope draft.
-
-2. **No associated data in the lock (Envelope, "How it fits together"; F90, approved by Nobody, allegedly).** XChaCha20-Poly1305 can bind extra data to a lock; the draft did not say. None: the outside already commits to both the locked bytes and the unlocked inside. To be written into the next Envelope draft.
-
-**Awaiting the author's approval**
-
-3. **Nesting depth.** The decoder stops at 128 levels of nesting to protect itself against hostile input, and reports this as a limit of its own, not as an invalid act. The core sets no bound, and leaves length limits to homes; no act in the MIPs comes near this depth.
+1. **Bagging the running summary (F89).** Start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left. A single peak is its own root, with no extra hashing.
+2. **No associated data in the lock (F90).** The outside already commits to both the locked bytes and the unlocked inside.
+3. **Nesting depth (F91).** No data item is nested more than 128 levels below the outermost one, in an act or in an inside; deeper is invalid for every verifier. An application that needs deeper data carries it in a byte string or a media object.
 
 Also noted for the freeze, with no change now: an act's payload is `{ * any => any }`, so floats, tags and simple values are allowed wherever a type does not restrict them. The library handles them exactly as RFC 8949 §4.2.1 says, but they are extra surface on which implementations can disagree (NaN payloads, what a tag means). Whether the frozen core should forbid them is for step 16.

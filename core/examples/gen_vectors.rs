@@ -89,6 +89,17 @@ fn cbor_vectors() -> J {
         assert_eq!(cbor::encode(&v), bytes);
         valid_j.push(json!({ "hex": hx(&bytes), "diagnostic": d }));
     }
+    // The nesting limit (Envelope rule 1a, F91): 128 levels below the outermost item.
+    let nested = |levels: usize| {
+        let mut b = vec![0x81u8; levels];
+        b.push(0x00);
+        b
+    };
+    assert!(cbor::decode(&nested(128)).is_ok());
+    valid_j.push(json!({
+        "hex": hx(&nested(128)),
+        "diagnostic": "[[[...[0]...]]]: 128 nested arrays; the 0 is 128 levels below the outermost item, the most allowed",
+    }));
     let invalid: &[(&str, &str)] = &[
         ("1817", "integer 23 not in shortest form"),
         ("190017", "integer 23 in two bytes"),
@@ -118,13 +129,19 @@ fn cbor_vectors() -> J {
         ("830102", "array ends early"),
         ("", "empty input"),
     ];
-    let invalid_j: Vec<J> = invalid
+    let mut invalid_j: Vec<J> = invalid
         .iter()
         .map(|(h, why)| {
             let e = cbor::decode(&hex::decode(h).unwrap()).expect_err(h);
             json!({ "hex": h, "why": why, "error": format!("{e:?}") })
         })
         .collect();
+    let e = cbor::decode(&nested(129)).expect_err("129 levels");
+    invalid_j.push(json!({
+        "hex": hx(&nested(129)),
+        "why": "129 nested arrays: the 0 is 129 levels below the outermost item (Envelope rule 1a)",
+        "error": format!("{e:?}"),
+    }));
     json!({
         "description": "Deterministic CBOR (RFC 8949, 4.2.1). Valid: accepted, and re-encoding gives the same bytes. Invalid: rejected. The `error` field is this library's error name, for information.",
         "valid": valid_j,

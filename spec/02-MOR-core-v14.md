@@ -1,6 +1,6 @@
 # MOR Core
 
-*Version 13, 28 September 2026. Version 12 with F87 applied: a homeless rotation accepted only on a client's own failed attempt is never made final by the next rotation ("The way out", glossary). Version 12 applied review round 2 (findings F53 to F82). The MIP drafts (Identity 8, Text 5, Envelope 4, Finance 5, Law 4, Production 4) hold the exact formats and rules; this document is the map, and must stand on its own.*
+*Version 14, 28 September 2026. Version 13 with F91 applied: no data item in an act is nested more than 128 levels deep ("Common conventions"), and naming Envelope draft 5, which also carries F89 and F90. Version 13 applied F87: a homeless rotation accepted only on a client's own failed attempt is never made final by the next rotation ("The way out", glossary). Version 12 applied review round 2 (findings F53 to F82). The MIP drafts (Identity 8, Text 5, Envelope 5, Finance 5, Law 4, Production 4) hold the exact formats and rules; this document is the map, and must stand on its own.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -46,7 +46,7 @@ The core is six MIPs, organised in layers, each depending on those beneath it. N
 
 ## Common conventions
 
-- **Encoding:** deterministic CBOR (RFC 8949, section 4.2.1); formats written in CDDL. Unknown fields make an act invalid.
+- **Encoding:** deterministic CBOR (RFC 8949, section 4.2.1); formats written in CDDL. Unknown fields make an act invalid, and so does a data item nested more than 128 levels deep.
 - **Hashes:** SHA-256, with tagged hashes in the style of BIP-340, so hashes of different kinds of object can never be confused. Every tag begins with `MOR/`; a successor protocol must use a different prefix.
 - **Signatures:** a scheme is a founding number or the hash of a signature-scheme specification. The founding schemes are schnorr over secp256k1 (BIP-340) for everyday keys and SLH-DSA (FIPS 205), a hash-based post-quantum scheme, for safety keys. A client that meets a scheme it does not implement treats the act as unknown. *New schemes, including a post-quantum everyday scheme, are added by publishing a specification, never by reopening the core.*
 - **Encryption:** XChaCha20-Poly1305 for content, with a new key per object; hybrid X25519 plus ML-KEM-768 (FIPS 203) for identities' encryption keys.

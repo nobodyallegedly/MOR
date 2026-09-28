@@ -7,7 +7,7 @@ Made by `cargo run -p mor-core --example gen_vectors`, checked by the Rust libra
 | File | What it pins | Defined in |
 | --- | --- | --- |
 | `tagged-hash.json` | `tagged_hash(tag, x)` for each tag the core uses. | Identity, "Hashes" |
-| `cbor.json` | Encodings that must be accepted (and re-encode to the same bytes), and encodings that must be rejected, one reason each. | Identity, "Encoding" (RFC 8949 §4.2.1) |
+| `cbor.json` | Encodings that must be accepted (and re-encode to the same bytes), and encodings that must be rejected, one reason each. | Identity, "Encoding" (RFC 8949 §4.2.1); Envelope rule 1a |
 | `canonical-text.json` | Strings as code points, whether each is canonical text, and the first rule it breaks. Includes a string using two marks new in Unicode 17.0 that only a verifier with the pinned tables rejects. | Text, "Canonical text" |
 | `lock.json` | XChaCha20-Poly1305 with no associated data, and the locked hash. | Envelope, "How it fits together" |
 | `running-summary.json` | The running summary over 0 to 11 stand-in act ids. | Envelope, "Sequences" |
@@ -16,4 +16,4 @@ Made by `cargo run -p mor-core --example gen_vectors`, checked by the Rust libra
 
 No signatures appear: they are part 2 (roadmap step 3). The act id does not depend on the signature, so every id here is final for its outside.
 
-Both readings these vectors depend on are decided: how the running summary's peaks are bagged (F89), and that the lock uses no associated data (F90).
+The readings these vectors depend on are decided and written into Envelope draft 5: how the running summary's peaks are bagged (F89), that the lock uses no associated data (F90), and the 128-level nesting limit (F91, in `cbor.json`).

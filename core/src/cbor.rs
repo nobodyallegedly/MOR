@@ -12,7 +12,9 @@
 //! - floating-point values not in the shortest form that preserves the
 //!   value (RFC 8949, section 4.1, preferred serialization, NaN included);
 //! - text strings that are not valid UTF-8;
-//! - anything that is not well-formed, and trailing bytes.
+//! - anything that is not well-formed, and trailing bytes;
+//! - any data item nested more than 128 levels below the outermost one
+//!   (Envelope validity rule 1a, F91).
 //!
 //! Tags and simple values are carried as they are: RFC 8949 section 4.2.1
 //! puts no further constraint on them, and nor does the core.
@@ -81,8 +83,8 @@ pub enum CborError {
     /// The bytes are not the one deterministic encoding of what they hold
     /// (a safety net behind the specific checks; not expected to fire).
     NotDeterministic,
-    /// Nesting deeper than this decoder's limit. This is a resource limit
-    /// of this implementation, not a verdict that the bytes are invalid.
+    /// A data item nested more than [`MAX_DEPTH`] levels below the
+    /// outermost one. Invalid for every verifier (Envelope rule 1a, F91).
     TooDeep,
 }
 
@@ -100,7 +102,7 @@ impl fmt::Display for CborError {
             CborError::DuplicateMapKey => "duplicate map key",
             CborError::NonPreferredFloat => "float is not in its shortest form",
             CborError::NotDeterministic => "not the deterministic encoding of its value",
-            CborError::TooDeep => "nesting exceeds this decoder's limit",
+            CborError::TooDeep => "a data item is nested more than 128 levels deep",
         };
         f.write_str(s)
     }
@@ -108,8 +110,10 @@ impl fmt::Display for CborError {
 
 impl std::error::Error for CborError {}
 
-/// How deeply items may nest before the decoder gives up. MOR acts nest a few
-/// levels; the limit only guards the decoder's stack against hostile input.
+/// How many levels below the outermost item a data item may be nested: the
+/// outermost item is at level 0, and nothing may be deeper than level 128.
+/// A core rule, the same for every verifier (Envelope rule 1a, F91); it also
+/// guards every decoder's stack against hostile input.
 pub const MAX_DEPTH: usize = 128;
 
 // ---------------------------------------------------------------- encoding
@@ -648,5 +652,23 @@ mod tests {
         let mut b = vec![0x81u8; 10_000];
         b.push(0x00);
         assert_eq!(decode(&b), Err(CborError::TooDeep));
+    }
+
+    #[test]
+    fn nesting_limit_is_exactly_128_levels() {
+        // 128 one-element arrays around a 0: the 0 is at level 128.
+        let mut b = vec![0x81u8; 128];
+        b.push(0x00);
+        assert!(decode(&b).is_ok());
+        // One more array: the 0 is at level 129.
+        let mut b = vec![0x81u8; 129];
+        b.push(0x00);
+        assert_eq!(decode(&b), Err(CborError::TooDeep));
+        // Deep data carried as a byte string is not decoded, so it is not nested.
+        let mut inner = vec![0x81u8; 1000];
+        inner.push(0x00);
+        let mut b = vec![0x59, 0x03, 0xe9];
+        b.extend_from_slice(&inner);
+        assert!(decode(&b).is_ok());
     }
 }

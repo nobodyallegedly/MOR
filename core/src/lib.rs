@@ -13,7 +13,7 @@
 //!
 //! Part 2 (roadmap step 3) adds signatures and the identity-chain checks.
 //!
-//! Written against core v13, Identity draft 8, Envelope draft 4 and Text draft 5.
+//! Written against core v14, Identity draft 8, Envelope draft 5 and Text draft 5.
 
 pub mod act;
 pub mod cbor;

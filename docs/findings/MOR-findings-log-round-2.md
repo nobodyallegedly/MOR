@@ -679,9 +679,9 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Decided (Nobody, allegedly):** start from the rightmost peak; each peak to its left is hashed as `node(peak, bagged so far)`, so left stays left. A single peak is its own root, with no extra hashing; no acts give the empty summary, 32 zero bytes.
 
-**Core changes:** Envelope (Sequences: the bagging rule written out), at the next Envelope draft. No change to the core document or the freeze test suite.
+**Core changes:** Envelope (Sequences: the bagging rule written out). No change to the core document or the freeze test suite.
 
-**Applied:** the core library (`core/src/mmr.rs`) and its published vectors (`core/vectors/running-summary.json`, `core/vectors/sequence-three-acts.json`), approved by Nobody, allegedly, 28 September 2026. Awaiting the next Envelope draft.
+**Applied:** the core library (`core/src/mmr.rs`) and its published vectors (`core/vectors/running-summary.json`, `core/vectors/sequence-three-acts.json`), approved by Nobody, allegedly, 28 September 2026. Written into Envelope draft 5 (Sequences).
 
 ## F90. The lock binds no associated data (found while building the core library, decided by Nobody, allegedly)
 
@@ -691,6 +691,20 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Decided (Nobody, allegedly):** none. The locked bytes are the ciphertext followed by the 16-byte Poly1305 tag, with empty associated data. *The outside already commits to both the locked bytes (locked hash) and the unlocked inside (inside commitment), so binding more would add nothing.*
 
-**Core changes:** Envelope ("How it fits together", step 1; media locking), at the next Envelope draft. No change to the core document or the freeze test suite.
+**Core changes:** Envelope ("How it fits together", step 1; media locking). No change to the core document or the freeze test suite.
 
-**Applied:** the core library (`core/src/lock.rs`) and its published vectors (`core/vectors/lock.json`, `core/vectors/sequence-three-acts.json`, `core/vectors/open-act.json`), approved by Nobody, allegedly, 28 September 2026. Awaiting the next Envelope draft.
+**Applied:** the core library (`core/src/lock.rs`) and its published vectors (`core/vectors/lock.json`, `core/vectors/sequence-three-acts.json`, `core/vectors/open-act.json`), approved by Nobody, allegedly, 28 September 2026. Written into Envelope draft 5 ("How it fits together", step 1; Publication).
+
+## F91. No data item in an act is nested more than 128 levels deep (found while building the core library, decided by Nobody, allegedly)
+
+**Pattern 4** (a rule left to each implementation, where verifiers must agree).
+
+**Found while building:** core library, part 1 (roadmap step 2). A decoder that follows every level of nesting can be crashed by an act nested thousands of levels deep, so every decoder stops somewhere. If each stops at its own depth, one verifier accepts an act another cannot read: two verdicts on one act, which the core otherwise never allows. Unlike length, which only decides what a home stores, nesting depth decides whether an act can be read at all.
+
+**Options weighed:** (a) each implementation's own limit, reported as "cannot process", not invalid; (b) one limit in the core, the same for every verifier.
+
+**Decided (Nobody, allegedly):** (b), at 128 levels. "If an application exceeds it a custom solution can be implemented." In an encoded act, and in an encoded inside, no data item is nested more than 128 levels below the outermost item (level 0); deeper is invalid. *An application that needs deeper data carries it in a byte string or as a media object, which the act does not decode; the acts the MIPs define nest a handful of levels.*
+
+**Core changes:** Envelope (validity rule 1a; Reasoning, "One depth for everyone"); core document ("Common conventions", encoding). No change to the freeze test suite.
+
+**Applied:** the core library (`core/src/cbor.rs`) and its published vectors (`core/vectors/cbor.json`: 128 levels accepted, 129 rejected); Envelope draft 5 and core v14, 28 September 2026.
