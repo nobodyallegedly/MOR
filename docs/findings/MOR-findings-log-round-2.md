@@ -670,3 +670,15 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Identity draft 8 (escape endorsement; "Status of an act after a rotation"). No change to the core document or the freeze test suite: scenario 5.7c already runs an escape, and the loop would make it fail on the text.
 
 **Applied:** Identity draft 8 (roadmap step 1a, approved by Nobody, allegedly, 28 September 2026).
+
+## F89. The running summary's peaks are bagged with left kept on the left (found while building the core library, decided by Nobody, allegedly)
+
+**Pattern 4** (an encoding left to convention).
+
+**Found while building:** core library, part 1 (roadmap step 2). Envelope draft 4 says the peaks of the mountain range "are bagged right to left, each pair hashed as a node", but not which side of each node the peak and the bag so far go on. Both orders are equally safe; two implementations choosing differently compute different running summaries for any sequence whose length is not a power of two, and so disagree on every kept ancestry.
+
+**Decided (Nobody, allegedly):** start from the rightmost peak; each peak to its left is hashed as `node(peak, bagged so far)`, so left stays left. A single peak is its own root, with no extra hashing; no acts give the empty summary, 32 zero bytes.
+
+**Core changes:** Envelope (Sequences: the bagging rule written out), at the next Envelope draft. No change to the core document or the freeze test suite.
+
+**Applied:** the core library (`core/src/mmr.rs`) and its published vectors (`core/vectors/running-summary.json`, `core/vectors/sequence-three-acts.json`), approved by Nobody, allegedly, 28 September 2026. Awaiting the next Envelope draft.

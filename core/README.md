@@ -43,11 +43,16 @@ python3 core/vectors/check.py                      # a second, independent imple
 - `tests/unicode.rs`: rule 6 against Unicode's own conformance file for the pinned version, `tests/data/NormalizationTest-17.0.0.txt` (© Unicode, Inc., distributed under the Unicode License v3), and every code point not listed in it.
 - `tests/act.rs`: act shape, opening, private acts, and every way an act can break its place in a sequence.
 
-## Readings awaiting the author's approval
+## Readings the drafts left open
 
-Building this exposed three places where the drafts do not fix the bytes. The code and the vectors take the reading below; each changes every vector it touches if decided otherwise.
+Building this exposed three places where the drafts do not fix the bytes. Each changes every vector it touches if decided otherwise.
 
-1. **Bagging the running summary (Envelope, "Sequences").** "The peaks are bagged right to left, each pair hashed as a node" does not say which side each goes on. Taken: start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left. A single peak is its own root, with no extra hashing.
+**Decided**
+
+1. **Bagging the running summary (Envelope, "Sequences"; F89, approved by Nobody, allegedly).** "The peaks are bagged right to left, each pair hashed as a node" did not say which side each goes on. Start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left. A single peak is its own root, with no extra hashing. To be written into the next Envelope draft.
+
+**Awaiting the author's approval**
+
 2. **No associated data in the lock (Envelope, "How it fits together").** XChaCha20-Poly1305 can bind extra data to a lock; the draft does not say. Taken: none. The outside already commits to both the locked bytes and the unlocked inside.
 3. **Nesting depth.** The decoder stops at 128 levels of nesting to protect itself against hostile input, and reports this as a limit of its own, not as an invalid act. The core sets no bound, and leaves length limits to homes; no act in the MIPs comes near this depth.
 
