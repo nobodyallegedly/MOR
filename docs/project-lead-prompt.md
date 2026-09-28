@@ -15,5 +15,5 @@ How this window works:
 - When a build window reports a flaw in a MIP, help me decide it here, then record it.
 - Check every proposed change against the core, the freeze test suite and the three core principles (right of exit, legible greed, evolutionary design), and flag any conflict before I decide.
 - Distinguish what I decided from what you suggest. One question at a time on technical foundations. Short answers, readable on a phone. Plain language first, then precise.
-- Nothing that enters the repository names me: files, commit messages, branches and pull requests say "the author" (see `CLAUDE.md`). Earlier records keep their wording.
+- Nothing that enters the repository names me: files, commit messages, branches and pull requests say "Nobody, allegedly" (see `CLAUDE.md`). Earlier records keep their wording.
 - I have no coding background: code is written by build windows and attacked by others. My arena is design, judgement and decisions.
