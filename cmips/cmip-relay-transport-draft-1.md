@@ -354,7 +354,7 @@ error = {
 
 - **A relay is a dumb store with an index.** *Everything that decides anything is a signed act, checked by the client. The transport can therefore be simple and untrusted, and a relay that lies can only withhold, never forge.*
 - **The web's own plumbing.** *Plain HTTPS requests with CBOR bodies work from every language, every browser, behind every firewall, and through ordinary caches. Acts never change, so a fetched act can be cached forever.*
-- **Following without a live connection.** *A feed request that waits a little before answering gives new acts within moments, with nothing more than ordinary requests. A live connection can be a later cMIP.* **[open, Q5]**
+- **Following without a live connection.** *A feed request that waits a little before answering gives new acts within moments, with nothing more than ordinary requests. A live connection can be a later cMIP, competing like any other (Nobody, allegedly, Q5).*
 - **Numbers, not times.** *A relay's arrival number orders what it holds, for paging only. It is never compared across relays and never enters an act.*
 - **No logins.** *Acts are signed; that is enough for a relay to choose whose acts it keeps. Nothing else is ever signed.*
 - **Homes serve whole chains.** *A verifier cannot tell which routes act counts, or see a fork, from the latest act alone.*
@@ -401,7 +401,7 @@ Asked one at a time; each suggestion is Claude's, not yet decided.
 - **Q2.** How a recipient finds a sealed container sent to a bare key. **Decided (Nobody, allegedly): both.** The pickup tag for the simple path, scanning always possible for the private path, a fresh bare key per delivery as a client rule, a shortened tag left to a later cMIP. *A design decision of this cMIP, not a commitment of the core.*
 - **Q3.** Where an operator announces its home's current address. **Decided (Nobody, allegedly):** the operator's outbox route whose scope is the Identity MIP's hash. *A thief holding the operator's everyday key can list false addresses there; that only sends clients to a server that cannot produce valid receipts, and the operator corrects it with new routes, or by rotating.*
 - **Q4.** What counts as "tried and failed to reach" a home. Explored through the censorship scenario, which exposed F85 (decided). **Decided (Nobody, allegedly):** every known address, probes through two relays, an objection from anywhere counts as life, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
-- **Q5.** Following new acts by requests that wait, with no live connection in 0.1. *Suggested:* yes; a live connection later, as its own cMIP.
+- **Q5.** Following new acts by requests that wait, with no live connection in 0.1. **Decided (Nobody, allegedly):** yes; a live connection later, as its own cMIP.
 - **Q6.** Who is named as creator of this cMIP, and when its hash is fixed. The hash covers the creator's identity, and the author's real identity is born only at the first acts (roadmap step 13), so until then the hash is a draft hash. Linked to the build brief's open point 2.
 - **Q7.** Whether homes should also hold and serve evidence (objections, absence statements, escape endorsements, cosignatures) and other homes' receipts for the identities they serve. *Suggested:* evidence SHOULD, other homes' receipts MAY.
 - **Q8.** Whether reading an inbox is open to anyone. *Suggested:* open in 0.1, since recipients are visible on the outside anyway; metadata privacy is a later cMIP (F70).
