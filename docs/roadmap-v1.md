@@ -119,8 +119,9 @@ V1 is frozen at inception, and nobody is appointed to decide what comes next. "T
 
 After the first acts, Nobody, allegedly sets up a collective of developers on MOR, gives it its rules in a founding agreement, and leaves. "I show that I can set up a collective, give it rules, and leave. They can change the rules if the agreement meets mine. I add people when they show proof of contribution to the project; once the collective meets a certain diversity and mass, I exit." It is the first live use of Law's collectives: a founding agreement with its key grammar, members joining by clone and rotation, and the founder leaving (Law rules 35 to 37, 45 to 46a).
 
+**His rules do not outlive his membership (decided by Nobody, allegedly).** "The act of me leaving forces the rewrite of the rules." Leaving is a member change, so it takes a rotation and a clone of the founding agreement (Law rule 37): the remaining members write the rules at that moment. His founding agreement stays on record, so anyone can see whether a later clone still meets it. No change to the Law MIP.
+
 *Open, to settle with Nobody, allegedly:*
-- *Whether his rules still bind after he leaves. As Law draft 4 stands, they do not: a protected clause protects only a party who has not signed the clone, and once he has left he is no longer a party. What remains is legibility: his founding agreement stays on record, and anyone can see whether a later clone still meets it.*
 - *What counts as proof of contribution, and what diversity and mass mean. Note (Claude): the protocol cannot count distinct people, since one person can hold many identities; diversity is the author's judgement, stated as such.*
 - *What the collective holds. F85 names no steward after V1, so the collective has no power over the frozen core. Suggested (Claude): it maintains code and founding cMIPs and Modules, competing like anyone else.*
 
