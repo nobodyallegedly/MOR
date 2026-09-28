@@ -48,6 +48,12 @@ The basic relay and the home relay, sharing most of their code: storage, verific
 Creates test identities with the safety key in software, clearly labelled; publishes genesis, routes and encryption key; signs rotations.
 *Done when:* a test identity exists, rotates, and its homes serve it.
 
+**5a. MOR governs its own code** *(cMIP or Module, then code; inserted 28 September 2026, from the brainstorm proposal, decided by Nobody, allegedly)*
+A release manifest format (a founding cMIP or Module, a document first: every file with its hash, the previous release, the libraries it depends on); a repo client that publishes a release and fetches and verifies one (the signature, then every file against its hash); and a **test collective** of the author's simulated identities with a real founding agreement: key grammar, recovery path, abandonment clause, and a release rule requiring visible member signature acts, k of n (Law rule 36). From here on, every release of the code is published through it, in every window; GitHub stays the workshop and the mirror. This pulls the exact formats of the founding agreement, signature, clone and member change forward from step 16, on purpose, to give Law friction.
+*Choices (Claude, accepted by Nobody, allegedly):* visible member signatures, not threshold signing, so no new cryptography library; the collective's keys held under a grammar with a recovery path. A manifest is a plain Envelope publication made for the collective (`for`); what counts as a release is defined by the manifest cMIP, so no lower layer depends on Law.
+*Run and not run:* every simulated member's key is held by a build window, so the mechanics are run (release rule, visible signatures, clone, rotation) but independent consent is not, as with the simulated home operators of step 4. The freeze report says so.
+*Done when:* a release signed under the collective's release rule is published on the test relays, and a fresh machine fetches it and verifies every file; a simulated member joins and another leaves by clone and rotation, and the next release is signed under the new rules.
+
 **6. Air-gapped safety key Module** *(`modules/`)*
 The offline signer: commitment export, pending and signed rotations, by file and animated QR, with the device rules of the Module.
 *Done when:* the Module's own functional and attack tests pass.
@@ -101,7 +107,7 @@ Settle the remaining open parameters of all six MIPs (test vectors, pinned Unico
 ### Publication
 
 **17. First acts and the repository on MOR**
-The relays are wiped of every test act. the author's real identity is created with the air-gapped Module, and publishes the first short post ("Thank you for the shower…" with the planet), the full text as the first long-form document, the specifications, and the code releases as read-only acts.
+The relays are wiped of every test act. the author's real identity is created with the air-gapped Module, and publishes the first short post ("Thank you for the shower…" with the planet), the full text as the first long-form document, the specifications, and the code releases as read-only acts. The real collective is created the same way as the test collective of step 5a, with its founding agreement, and the first real release is published through it.
 *Done when:* everything the reader shows is signed by the author's identity and fetched from a relay.
 
 **18. Final test pass**
@@ -120,7 +126,8 @@ Every component re-tested end to end; the door opened on devices it has never se
 | Domain for the reader | step 10 |
 | Finance rule 14a: a payment in a unit the vault does not cover is undeliverable (fail closed); awaiting confirmation since the round 2 revision | step 12 |
 | What the deal-assessment tool assesses | step 14 |
-| Which identity publishes the repository on MOR | step 17 |
+| Law rule 36 (possible F92): a single holder of a collective's safety key satisfies "a way to rotate that does not need every member", yet freezes the key if that holder dies, against Law's own reasoning. Reword as "a way to rotate that survives the loss of any one member"? | step 16 (the real collective at step 17 depends on it) |
+| Which identity publishes the specifications on MOR (the brainstorm proposal suggests: the collective publishes code, the author's identity the specifications he wrote) | step 17 |
 
 ## After V1
 

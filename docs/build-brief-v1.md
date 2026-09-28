@@ -44,6 +44,7 @@ The components. *Their build order is in `docs/roadmap-v1.md`: foundations, iden
 | 8 | **Barebone client** | TypeScript | It posts text with a JPEG, and shows posts. It publishes the first short post. |
 | 9 | **Freeze-suite harness** | Rust | It runs scenarios from the freeze test suite against the real components, starting with scenario 5, steps 7 to 7d. |
 | 10 | **The repository on MOR** | — | See below. |
+| 10a | **Release manifest and repo client**, with a test collective | — / to settle | Roadmap step 5a: a manifest format (a founding cMIP or Module), a client that publishes and verifies releases, and a test collective under a real founding agreement whose release rule requires visible member signatures. Every release of the code is published through it from then on. |
 | 11 | **Lightning integration module** (specification + code) | — / to settle | Its specification is written and hashed: how a Lightning payment becomes a Finance receipt and a payout. A test identity pays another over Lightning and both hold a verified receipt. *(Nobody, allegedly: "probably the easiest module".)* |
 | 12 | **Split Module** (specification + code) | — / to settle | Its specification is written and hashed: a Law split over stakes. A payment is split among test identities, the split balances exactly, and each share is paid and receipted. |
 | 13 | **Deal-assessment tool** | to settle | *What it assesses is to be defined with Nobody, allegedly at its step* ("something to assess deals"). Suggested (Claude): it reads an agreement and shows, in plain words, who signed, what each party is bound to, the shares and how the deal ends. |
@@ -57,13 +58,15 @@ The harness (9) grows alongside everything else: every component is done only wh
 - **The code repository** (GitHub). Where the code is written, reviewed and attacked. It is a workshop, not the record.
 - **The repository on MOR** (read-only). Where it is recorded. Each release of the code, and each specification (the six MIPs, the founding cMIPs and Modules), is published as an act, named by its hash. Nothing is updated: a new release is a new act naming the one before. This is where the six MIP hashes are published together, the one trust root below the MIPs (Production rule 20).
 
+**MOR governs its own code (roadmap step 5a, decided by Nobody, allegedly).** From step 5a, every release is published on the test relays as a manifest signed under a test collective's release rule; at step 17 the real collective is created the same way. A release the collective did not sign is not a release.
+
 *The door links to both: GitHub for those who want to build, MOR for the record anyone can verify.*
 
 ## Open, to settle before or during the build
 
 1. **Draft hashes versus frozen hashes.** Settled by F84: all six MIPs freeze before the first acts, so the first acts are permanent. The specification format stays in Production, which freezes with the rest.
 2. **Naming.** Settled by F85: the first release, frozen at inception, is V1.
-3. **Who publishes the repository on MOR.** the author's own identity, or a separate MOR identity (possibly a collective later). The same identity is named as creator of the founding cMIPs and Modules, whose hashes are draft hashes until then. *Nobody, allegedly to decide, at step 17.*
+3. **Who publishes the repository on MOR.** Code releases: the collective (step 5a, decided). Specifications: the author's own identity or the collective (the brainstorm proposal suggests Nobody, allegedly signs the MIPs he wrote). The same identity is named as creator of the founding cMIPs and Modules, whose hashes are draft hashes until then. *Nobody, allegedly to decide, at step 17.*
 4. **The long-form format.** Which markup the long-form module uses, within the Text MIP's rules for formats. *To settle when writing its specification.*
 5. **Rust crates for the cryptography,** especially SLH-DSA and ML-KEM, whose libraries are young. Their audit status to be checked, with the Rust specialist. *SLH-DSA due before roadmap step 3, ML-KEM before step 5, asked one at a time (Nobody, allegedly). FROST, only if a collective's key grammar uses it, much later.*
 6. **Hosting for the public home relay** and the reader.
