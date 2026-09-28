@@ -599,3 +599,17 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Decided (Nobody, allegedly):** receipt check 3 gains: "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)."
 
 **Core changes:** Identity (receipt check 3), at the next Identity draft. No change to the core document or the freeze test suite.
+
+## F85. An unaudited homeless rotation is never final by the next rotation (found while drafting the relay transport cMIP, decided by Nobody, allegedly)
+
+**Pattern 1** (what decides is signed by the wrong party).
+
+**Found while drafting:** relay transport cMIP, Q4 (what "tried and failed to reach" means). Scenario: a journalist with one home abroad and no auditors; a state holding the stolen safety key makes a homeless rotation naming its own homes, and blocks the real home at its border. Clients inside fail to reach the home and accept the rotation as "re-homed without audit". Identity draft 7 then makes it final once a rotation at the next position counts under the home rule it declared; the thief holds the next safety key and chose those homes, so it rotates again at once, and the theft becomes final inside the country, beyond any later objection. The finality reasoning (F63: "anything surfacing after the next rotation is late by construction") holds for acts that did not exist yet, not for an objection that existed but was kept from arriving.
+
+**Decided (Nobody, allegedly):** a homeless rotation that counts only through the verifier's own failed attempt (homeless procedure, step 4, last case) never becomes final by the next rotation. A valid objection from a home of the old set voids it whenever it surfaces, and with it every rotation built on it. Homeless rotations that count through closure, auditors' absence statements, or an escape endorsement become final as before.
+
+**Cost, stated:** an honest owner whose single home vanished without closing, with no auditors, stays provisional unless they endorse the homeless rotation with their current signing key (escape), which objections cannot void. Only an owner who has also lost the signing key stays "re-homed without audit" for good: a rare case, and the core accepts costs on rare cases.
+
+**Isolation, stated:** no protocol beats a country that seals itself off completely; its readers see the thief's rotation, labelled, until evidence gets in. The relay transport cMIP makes evidence travel: an objection from any source counts, relays probe homes on a client's behalf, bundles carry acts by hand, operators may publish onion addresses, and clients do not send private content to an identity re-homed without audit without a plain warning.
+
+**Core changes:** Identity (homeless rotation: Finality; rule 30 area; core document, "The way out"), at the next Identity draft and core version. Freeze test suite: 5.7c gains a censored reader and a thief's second rotation that does not make the first final.

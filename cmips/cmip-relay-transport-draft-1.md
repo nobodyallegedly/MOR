@@ -51,7 +51,7 @@ Identity, Envelope and Text. It relies on the act format, act ids, sealed contai
 
 ## Addresses
 
-An address hint in a home entry or a route is, under this cMIP, a base address. A client that meets a hint whose scheme is not `https` does not use it under this cMIP; another transport may. *Plain `http` is allowed only for local testing and is never written into a published act.*
+An address hint in a home entry or a route is, under this cMIP, a base address. A client that meets a hint whose scheme is not `https` does not use it under this cMIP; another transport may. An onion address (`http://….onion`) is also a base address: the Tor network encrypts and authenticates it. *Plain `http` to any other address is allowed only for local testing and is never written into a published act. Onion addresses let an operator stay reachable from behind a censor's firewall.*
 
 **Where an operator says its home is.** A home entry names an operator and a hint. If the hint no longer answers, a client reads the operator's latest routes act (from the operator's own homes) and uses the hints of its outbox route whose scope is the Identity MIP's spec hash, `IDENTITY`: *an operator's Identity acts are its receipts and log summaries, so where they are found is where its home is.* This is how a home moves servers without any owner rotating (Identity). An operator that runs several homes lists them all there; a client tries each, and trusts only the signed acts it gets back (Nobody, allegedly, Q3).
 
@@ -254,13 +254,66 @@ Proofs are not acts and are not signed; they are checked against signed summarie
 
 ## When a home counts as unreachable
 
-The homeless procedure lets a verifier that requires no audit treat a home as gone when "the verifier itself has tried and failed to reach the home" (Identity, homeless rotation, step 4). Under this cMIP:
+The homeless procedure lets a verifier that requires no audit treat a home as gone when "the verifier itself has tried and failed to reach the home" (Identity, homeless rotation, step 4). Under F85, a homeless rotation accepted this way never becomes final by the next rotation: the old home's objection voids it whenever it surfaces. This section makes the attempt honest, and makes the objection hard to keep out.
 
-1. The verifier MUST try every base address it knows for that home: the hint in the home entry, and the hints of the operator's routes described under "Addresses".
-2. The home is reached if any address answers `GET {base}/identity/{identity}` with a well-formed identity record, or error 2. Either answer is life: the verifier then asks it for an objection or a normal rotation (Identity rule 33) and decides from the signed acts it gets.
-3. The home is unreachable only if every address fails to answer at all, or answers only malformed messages, on at least two attempts.
+*The case it is written for: a state holding a stolen safety key makes a homeless rotation, and blocks the owner's real home at its border, so that readers inside see the home as gone and the thief's rotation as the owner's. Censorship alone, without the safety key, can hide an owner's updates but never replace the owner.*
 
-*This is the weakest of the three ways a home can be gone, and the core already says so: such a rotation is shown as "re-homed without audit", and keepers, vault payments and agreements must not rely on it. A thief who can cut one verifier off from a home can make that verifier see it as gone; the rule above cannot prevent that, only make the attempt honest. How long a client waits before an attempt fails is its own choice and never enters any act.* **[open, Q4]**
+### Proof of life travels
+
+An objection is a signed act. It proves the home was alive after the homeless rotation was made, wherever it comes from.
+
+1. **Evidence from anywhere.** A verifier that holds a valid objection by an old home naming the homeless rotation treats that home as reached, however the objection reached it: from the home, from any relay, from a probe (below), or from a bundle (below). It then applies the homeless procedure's step 3 as the MIP says.
+2. **Relays carry it.** A relay that is given a homeless rotation SHOULD submit it to the old homes it can reach, and SHOULD store and serve any objection it gets back. A home SHOULD serve its objections to anyone (identity record, part 7).
+
+### Trying to reach the home
+
+Before treating a home as unreachable, a verifier:
+
+1. MUST try every base address it knows for the home: the hint in the home entry, and the hints of the operator's routes (see "Addresses"), including onion addresses.
+2. SHOULD ask at least two relays of different operators to probe the home on its behalf (below), preferring relays its user chose or that stand in other jurisdictions.
+3. SHOULD look for an objection naming the homeless rotation at every relay it can reach.
+
+The home is reached if any address or any probe returns a well-formed identity record, error 2, or an objection naming the rotation. *Any of these is life.* The verifier then asks it for an objection or a normal rotation (Identity rule 33), and decides from the signed acts it gets.
+
+The home is unreachable only if every direct attempt fails to answer at all, or answers only malformed messages, on at least two attempts, and no probe and no relay produced an objection. *How long a client waits before an attempt fails is its own choice and never enters any act.*
+
+**Isolation.** If the verifier can reach no relay outside those the rotation itself names, it SHOULD NOT treat the home as unreachable: it shows the identity as "cannot be checked from here" instead. *A verifier that can reach only the thief's own servers has learned nothing about the home.*
+
+### Probes
+
+`POST {base}/probe`, body:
+
+```cddl
+probe = {
+  0 => bstr,             ; the homeless rotation
+  1 => [+ tstr]          ; the base addresses of the old home to try
+}
+```
+
+The relay submits the rotation to each address (`POST {addr}/acts`) and asks each for the identity record, and answers `[* bstr]`: every signed act it got back (objections, receipts, the chain), which the verifier checks itself. If nothing answered, it answers error 8. *A relay's "no answer" is a hint; a relay's signed acts from the home are proof. A censor must block every relay that could carry one small signed act, not just one server.* A relay MAY refuse probes (policy), and MUST contact only base addresses under this cMIP's own paths, so a probe cannot be used to reach anything else.
+
+### Bundles
+
+A **bundle** is a file holding acts, so evidence can cross a border by any means: a USB stick, a messaging app, an animated QR code.
+
+```cddl
+bundle = {
+  0 => [+ bstr],         ; acts, each exactly as a relay would serve it
+  ? 1 => [+ bstr]        ; sealed containers
+}
+```
+
+Its media type is `application/cbor`, and its file name ends in `.mor`. A client MUST be able to import a bundle and treat each item exactly as if fetched from a relay: checked, never trusted for where it came from. *An owner, a friend abroad or a protection service can hand anyone inside the identity record and the objection that voids a thief's rotation.*
+
+### While re-homed without audit
+
+*Client conformance.* While an identity's current state rests on a homeless rotation accepted on the client's own failed attempt, the client MUST show it as "re-homed without audit" (Identity), and SHOULD NOT deliver private content, content keys or payments to it, nor to its inbox, without telling the user plainly what that label means. *This limits what the thief gains in the window, before the objection arrives. No verifier can check it; it is the sender's own client that protects the sender.*
+
+### The owner's defence
+
+*Nothing above beats a country that seals itself off completely: its readers see the thief's rotation, labelled, until evidence gets in, and under F85 the first objection that does undoes it. The owner's own defence is already in the core: declared auditors, or several homes, ideally in other jurisdictions. A genesis client SHOULD recommend both to an owner who may face a hostile state (Identity rule 35).*
+
+**[open, Q4: the definition of the attempt, probes, bundles, the isolation rule and the client rule, all as suggested]**
 
 ## Errors
 
@@ -285,7 +338,7 @@ error = {
 | 6 | too large |
 | 7 | not accepted from this signer, or payment required |
 | 8 | not held |
-| 9 | not supported by this relay |
+| 9 | not supported by this relay (including a probe it refuses) |
 | 10 | slow down |
 
 **Silence is not evidence.** "Not held", an absent part and an empty feed say only what this relay answered once. A client MUST NOT treat any of them as proof that an act does not exist, was never made, or was withdrawn. *The core can prove life (an objection names an act that existed), never absence.*
@@ -320,8 +373,9 @@ error = {
 7. **Same bytes to every home** (Identity 8a). Relays store and serve items byte for byte.
 8. **Privacy as Envelope promises.** Relays index only outsides and public insides; sealed containers show recipients and pickup tags, never senders.
 9. **Signatures sign act ids only.** The transport asks for no other signature.
-10. **Where the core marks a weak or conformance rule, this cMIP does not smooth it over.** The "tried and failed to reach" case is defined as honestly as a transport can and still labelled the weakest; refusals stay unsigned, as the core says; "not held" proves nothing.
-11. **Its place in Production.** This cMIP fills no task and defines no act type (Production rule 8a allows this). No act names it: relays and clients adopt it by implementing it. Its spec hash covers its creator, who must publish it; see Q6.
+10. **Found in Identity through this cMIP (a flaw; resolved as F85).** A homeless rotation accepted on the verifier's own failed attempt became final once the next rotation counted, and a thief holding the safety key controls that next rotation. Behind a censor's firewall a thief could make its own theft final, beyond any later objection. *Decided (Nobody, allegedly, F85):* such a rotation never becomes final by the next rotation; the old home's objection voids it whenever it surfaces. This cMIP adds the transport side: objections from anywhere, probes, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
+11. **Where the core marks a weak or conformance rule, this cMIP does not smooth it over.** The "tried and failed to reach" case is defined as honestly as a transport can and still labelled the weakest; refusals stay unsigned, as the core says; "not held" proves nothing.
+12. **Its place in Production.** This cMIP fills no task and defines no act type (Production rule 8a allows this). No act names it: relays and clients adopt it by implementing it. Its spec hash covers its creator, who must publish it; see Q6.
 
 ## Freeze scenarios
 
@@ -346,7 +400,7 @@ Asked one at a time; each suggestion is Claude's, not yet decided.
 - **Q1.** The Identity flaw in receipt check 3. **Decided (Nobody, allegedly): the one-line fix, recorded as F84.**
 - **Q2.** How a recipient finds a sealed container sent to a bare key. **Decided (Nobody, allegedly): both.** The pickup tag for the simple path, scanning always possible for the private path, a fresh bare key per delivery as a client rule, a shortened tag left to a later cMIP. *A design decision of this cMIP, not a commitment of the core.*
 - **Q3.** Where an operator announces its home's current address. **Decided (Nobody, allegedly):** the operator's outbox route whose scope is the Identity MIP's hash. *A thief holding the operator's everyday key can list false addresses there; that only sends clients to a server that cannot produce valid receipts, and the operator corrects it with new routes, or by rotating.*
-- **Q4.** What counts as "tried and failed to reach" a home. *Suggested:* every known address, no well-formed answer, twice.
+- **Q4.** What counts as "tried and failed to reach" a home. Explored through the censorship scenario, which exposed F85 (decided). *Suggested, still to confirm:* every known address, probes through two relays, an objection from anywhere counts as life, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
 - **Q5.** Following new acts by requests that wait, with no live connection in 0.1. *Suggested:* yes; a live connection later, as its own cMIP.
 - **Q6.** Who is named as creator of this cMIP, and when its hash is fixed. The hash covers the creator's identity, and the author's real identity is born only at the first acts (roadmap step 13), so until then the hash is a draft hash. Linked to the build brief's open point 2.
 - **Q7.** Whether homes should also hold and serve evidence (objections, absence statements, escape endorsements, cosignatures) and other homes' receipts for the identities they serve. *Suggested:* evidence SHOULD, other homes' receipts MAY.
