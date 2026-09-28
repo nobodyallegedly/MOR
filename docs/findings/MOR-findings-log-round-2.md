@@ -571,3 +571,23 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Envelope: the running-summary tag names stay as draft 3 wrote them (`MOR/mmr-leaf`, `MOR/mmr-node`); F78's contribution is the empty summary, the bagging order and the test vector.
 
 **Next:** technical review of the profiles and vectors named in "Open before freeze"; human adversarial review (round 3) on this revision; then MOR 0.1.
+
+## F83. A staged freeze: communication first, then the rest (build planning, decided by Nobody, allegedly)
+
+**Found while planning MOR 0.1:** every act names its specification by hash, and the MIP hashes change until freeze. The first acts would otherwise name draft specifications. The freeze test suite and Production (rule 20) assume one freeze of all six MIPs, once every scenario passes.
+
+**Decided (Nobody, allegedly):** "We freeze what is needed to communicate and share media. We invite a small group to fidget with the other layers. We freeze those and send to unis."
+
+**Resolution (Claude, accepted in principle; details open):**
+- **Stage 1:** Identity, Text and Envelope are frozen before the first acts, once the identity gauntlet and the scenarios that exercise them pass. The first acts then name frozen specifications and are permanent.
+- **Stage 2:** a small invited group works on Finance, Law and the rest of Production, which stay drafts meanwhile.
+- **Stage 3:** those are frozen; the complete core is then sent to universities.
+- The trust root becomes staged: three hashes first, the remaining three added at stage 3, each set published together with its texts.
+
+**Consequences found while resolving, stated for Nobody, allegedly:**
+1. **The specification format must freeze in stage 1.** A MIP's hash is computed over its content in the format Production defines (`spec` map, `MOR/spec` tag). The first three hashes cannot be fixed while that format can change. *Suggested (Claude):* move the specification format and spec-hash rule into Envelope, which already says every act names its specification by hash; Production keeps tasks, extensions, verification rules, adoption and earning. **Open, Nobody, allegedly to decide.**
+2. **Identity points up to Law once:** a keeper record can make a voided act a visible dispute (Identity rule 16). Freezing Identity fixes that promise before Law is final; Law must be written to honour it.
+3. **Open parameters of the three layers must be settled before stage 1:** the running-summary test vector, the pinned Unicode version, the hybrid key-delivery format (including the bare-key form), the Merkle construction for commitments, the encrypted form of private links, and how a home is queried (the relay transport cMIP answers the last).
+4. **Rewrites:** the freeze test suite (freeze rule and procedure: staged, with which scenarios gate stage 1), Production rule 20 and the core's trust-root paragraph.
+
+**Core changes (pending the open point):** freeze test suite (freeze rule, procedure); Production (rule 20; possibly the specification format moves to Envelope); core (trust root; Open before freeze).
