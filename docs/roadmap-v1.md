@@ -17,6 +17,7 @@ Until step 17, every identity is a **test identity**, and every relay holds test
 **0. Decisions** *(short, can run alongside steps 1 and 2)*
 Cryptography libraries (with the Rust specialist), especially SLH-DSA and ML-KEM; the license.
 *Done when:* both are recorded in the build brief.
+*License done, 28 September 2026:* MIT or Apache 2.0, for code. *The libraries are needed before step 3, not step 2 (Nobody, allegedly): step 2 uses only established cryptography (SHA-256, XChaCha20-Poly1305, deterministic CBOR); the young libraries serve the signatures and key delivery of step 3.*
 
 **1. Relay transport cMIP** *(a document)*
 How a client publishes, fetches and follows acts, delivers to an inbox, finds deliveries addressed to it, and asks a home for a receipt; how a home is queried for chains, receipts, routes, names and links (open in Identity).
@@ -109,7 +110,7 @@ Every component re-tested end to end; the door opened on devices it has never se
 
 | Decision | Before |
 | --- | --- |
-| Cryptography libraries (license decided: MIT or Apache 2.0, for code) | step 2 |
+| Cryptography libraries, especially SLH-DSA and ML-KEM | step 3 |
 | License of the specifications and documents | step 17 |
 | Hosting for the public home relay (step 4 deploys on a public server) | step 4 |
 | The long-form markup | step 8 |
