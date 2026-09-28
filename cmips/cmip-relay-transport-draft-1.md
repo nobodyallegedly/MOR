@@ -2,7 +2,7 @@
 
 *Draft 1, 28 September 2026. Written against core v12, the Identity MIP draft 7, the Envelope MIP draft 4, the Text MIP draft 5, the Production MIP draft 4, freeze test suite v11 and findings F1 to F83. Not core: a founding cMIP, frozen at publication and competing with any other transport. It answers two open parameters of the drafts: how a home is queried (Identity), and how a client finds the key deliveries and sealed containers addressed to it (Envelope).*
 
-*Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples. Points marked **[open, Q1]** and so on are suggestions waiting for the author's decision; the questions are listed at the end.*
+*Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples. Decisions taken with Nobody, allegedly are marked "(Nobody, allegedly, Q1)" and so on; the questions and their answers are listed at the end.*
 
 ## In plain words
 
