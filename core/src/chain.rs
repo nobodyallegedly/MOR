@@ -302,6 +302,25 @@ impl Verifier {
             }
             Ok(p)
         });
+        let held = Held {
+            id,
+            act,
+            inside,
+            verdict,
+            identity,
+        };
+        if let Some(old) = self.acts.get_mut(&id) {
+            // The same act again, from another home or relay. Its outside,
+            // and so its inside, are the same; only the signature can differ,
+            // since it is not part of the act id. It is indexed once, and a
+            // copy with a valid signature is kept over one without.
+            if old.verdict != Verdict::Valid && held.verdict == Verdict::Valid {
+                *old = held;
+                self.changed();
+            }
+            return Ok(id);
+        }
+        let (act, inside) = (&held.act, &held.inside);
         if inside.spec == self.identity_spec {
             self.by_type.entry(inside.type_).or_default().push(id);
         }
@@ -311,16 +330,7 @@ impl Verifier {
         for a in inside.acks.iter().flatten() {
             self.acked_by.entry(*a).or_default().push(id);
         }
-        self.acts.insert(
-            id,
-            Held {
-                id,
-                act,
-                inside,
-                verdict,
-                identity,
-            },
-        );
+        self.acts.insert(id, held);
         self.changed();
         Ok(id)
     }

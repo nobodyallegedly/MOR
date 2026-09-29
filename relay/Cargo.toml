@@ -1,0 +1,24 @@
+[package]
+name = "mor-relay"
+version = "0.1.0"
+description = "MOR relays and homes, speaking the relay transport cMIP: storage, verification on arrival, receipts and log summaries."
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mor-core = { path = "../core" }
+# The web server: plain HTTP requests with CBOR bodies (relay transport cMIP).
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.7", features = ["cors"] }
+# Storage: one SQLite file per relay, compiled in, so nothing needs installing.
+rusqlite = { version = "0.40", features = ["bundled"] }
+# The client side: probes, forwarding homeless rotations, tests and the
+# freeze-suite harness. `socks` reaches onion addresses through Tor.
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "socks"] }
+# The relay signs receipts and summaries, so it draws its own salts, nonces
+# and content keys (the core library never draws randomness).
+getrandom = "0.4"
+clap = { version = "4", features = ["derive"] }
+
+[dev-dependencies]
