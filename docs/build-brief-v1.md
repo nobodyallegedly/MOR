@@ -61,7 +61,7 @@ The harness (9) grows alongside everything else: every component is done only wh
 - **The code repository** (GitHub). Where the code is written, reviewed and attacked. It is a workshop, not the record.
 - **The repository on MOR** (read-only). Where it is recorded. Each release of the code, and each specification (the six MIPs, the founding cMIPs and Modules), is published as an act, named by its hash. Nothing is updated: a new release is a new act naming the one before. This is where the six MIP hashes are published together, the one trust root below the MIPs (Production rule 20).
 
-**MOR governs its own code (roadmap step 5a, decided by Nobody, allegedly).** From step 5a, every release is published on the test relays as a manifest signed under a test collective's release rule; at step 17 the real collective is created the same way. A release the collective did not sign is not a release.
+**MOR governs its own code (roadmap step 5a, decided by Nobody, allegedly).** From step 5a, every release is published on the test relays as a manifest signed under a test collective's release rule; at step 17 the real collective is created the same way. A release the collective did not sign is not a release. *Consequence (step 5a):* build windows keep no keys and cannot reach the public homes, so each window prepares the code, and the release is published and signed from the author's machine, where the test collective's files live.
 
 *The door links to both: GitHub for those who want to build, MOR for the record anyone can verify.*
 

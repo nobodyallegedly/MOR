@@ -79,7 +79,7 @@ H='--home https://home1.dubsar.org --home https://home2.dubsar.org --home http:/
 
 Keep `~/mor-test/*.json` secret: `collective.json` holds the collective's everyday key and every share of its safety key.
 
-## Readings, for confirmation by Nobody, allegedly
+## Readings, confirmed by Nobody, allegedly (29 September 2026)
 
 Where the texts are silent, the program and Law draft 6 take the reading below.
 

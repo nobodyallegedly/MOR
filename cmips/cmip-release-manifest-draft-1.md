@@ -1,6 +1,6 @@
 # cMIP: Release Manifest
 
-*Draft 1, 29 September 2026 (roadmap step 5a). **For approval by Nobody, allegedly.** Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v16, the Identity MIP draft 9, the Envelope MIP draft 6, the Text MIP draft 5, the Law MIP draft 6, the Production MIP draft 4, the relay transport cMIP draft 1, freeze test suite v15 and findings F1 to F100. Not core: a founding cMIP, frozen at publication, competing with any other way to publish software.*
+*Draft 1, 29 September 2026 (roadmap step 5a). **Approved by Nobody, allegedly, 29 September 2026.** Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v16, the Identity MIP draft 9, the Envelope MIP draft 6, the Text MIP draft 5, the Law MIP draft 6, the Production MIP draft 4, the relay transport cMIP draft 1, freeze test suite v15 and findings F1 to F100. Not core: a founding cMIP, frozen at publication, competing with any other way to publish software.*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 
@@ -103,6 +103,6 @@ The release verifies only if every step passes. A verifier writes the files out 
 - **Every file on its own.** *A file is checked by its own fingerprint, so a checkout from anywhere, a mirror or a stranger's disk, can be compared with the release one file at a time, and an unchanged file is never uploaded twice.*
 - **Law decides, this cMIP asks.** *What a release is, is defined here, so no lower layer depends on Law. Whether members consented is Law's answer, the same for a release as for any act a collective's grammar lists.*
 
-## Readings to confirm
+## Readings, confirmed
 
-Where the texts were silent, this draft takes the readings listed in `clients/repo/README.md`, for confirmation by Nobody, allegedly.
+Where the texts were silent, this draft takes the readings listed in `clients/repo/README.md`, confirmed by Nobody, allegedly (29 September 2026).

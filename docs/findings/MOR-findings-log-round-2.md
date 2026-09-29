@@ -847,4 +847,4 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Law draft 6 (rule 36, rule 37, the collectives' declaration, the key grammar's listed types gaining a rule). Freeze test suite v15 (scenario 3, step 7). No change to the core document.
 
-**Applied:** `core/src/law.rs` (`LawView::consent`); `core/tests/law.rs` (`members_change_by_clone_and_rotation`: the old key's act after the rotation is void; a former member's signature does not count under the clone); the release manifest cMIP draft 1; `clients/repo/` (a "release" by the old key after the member change is refused).
+**Applied:** `core/src/law.rs` (`LawView::consent`); `core/tests/law.rs` (`members_change_by_clone_and_rotation`: the old key's act after the rotation is void; a former member's signature does not count under the clone); the release manifest cMIP draft 1; `clients/repo/` (a "release" by the old key after the member change is refused). Law draft 6, freeze test suite v15 and the release manifest cMIP approved by Nobody, allegedly, 29 September 2026.
