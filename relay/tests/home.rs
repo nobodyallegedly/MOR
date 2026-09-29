@@ -673,3 +673,128 @@ async fn a_home_runs_under_an_identity_made_elsewhere() {
     let res = v.resolve(&alice.id);
     assert_eq!(res.links.len(), 2, "{:?}", res.stop);
 }
+
+/// Identity rule 12: a home's own acceptance condition. For an identity
+/// whose owner chose it, the home accepts a rotation only once its operator
+/// has approved it (a registered-device check, simulated); the refusal is
+/// error 5, unsigned.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_strict_home_accepts_a_rotation_only_once_approved() {
+    let hs = homes(1).await;
+    let (g, alice) = genesis("alice", vec![hs[0].home()], None, None);
+    hs[0].client.put_act(&g.encode()).await.unwrap();
+    hs[0].with_node(|n| n.set_strict(&alice.id)).unwrap();
+    let (rot, _) = rotation(&alice, Rot::default());
+    let e = wire_err(hs[0].client.put_act(&rot.encode()).await);
+    assert_eq!(e.code, code::REFUSED);
+    hs[0].with_node(|n| n.approve(&rot.id())).unwrap();
+    let put = hs[0].client.put_act(&rot.encode()).await.unwrap();
+    assert!(put.receipt.is_some());
+}
+
+/// A home's operator rotates: the home keeps its own acts, signs on under
+/// the new key, and every receipt it signed before still counts.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_home_signs_on_after_its_operator_rotates() {
+    let hs = homes(1).await;
+    let (g, alice) = genesis("alice", vec![hs[0].home()], None, None);
+    hs[0].client.put_act(&g.encode()).await.unwrap();
+    let (r1, alice1) = rotation(&alice, Rot::default());
+    hs[0].client.put_act(&r1.encode()).await.unwrap();
+    let op_rot = hs[0].with_node(|n| n.rotate_operator(false)).unwrap();
+    let (r2, _) = rotation(&alice1, Rot::default());
+    let put = hs[0].client.put_act(&r2.encode()).await.unwrap();
+    let rc = decode(put.receipt.as_ref().unwrap());
+    assert_eq!(rc.outside.binding, Some(op_rot), "signed under the new key");
+    let v = verifier_from(&[&hs[0]], &alice.id).await;
+    assert_eq!(v.resolve(&hs[0].op()).links.len(), 2);
+    let res = v.resolve(&alice.id);
+    let chain: Vec<Hash> = res.links.iter().map(|l| l.act).collect();
+    assert_eq!(chain, vec![alice.id, r1.id(), r2.id()], "{:?}", res.stop);
+}
+
+/// Closure by rotation (Identity rule 8c, scenario 5.7c): the closed home
+/// holds nothing new and signs nothing more, but still serves what it held,
+/// so a reader finds the closure; a homeless rotation then counts on the
+/// new home's receipt.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_closed_home_is_gone_and_the_owner_leaves_homeless() {
+    let hs = homes(2).await;
+    let (g, alice) = genesis("alice", vec![hs[0].home()], None, None);
+    hs[0].client.put_act(&g.encode()).await.unwrap();
+    hs[0].with_node(|n| n.rotate_operator(true)).unwrap();
+    assert!(hs[0].with_node(|n| n.closed()).unwrap());
+    let (g2, _) = genesis("bob", vec![hs[0].home()], None, None);
+    assert_eq!(
+        wire_err(hs[0].client.put_act(&g2.encode()).await).code,
+        code::REFUSED
+    );
+    let (hr, _) = rotation(
+        &alice,
+        Rot {
+            homeless: true,
+            homes: Some(vec![hs[1].home()]),
+            ..Default::default()
+        },
+    );
+    assert_eq!(
+        wire_err(hs[0].client.put_act(&hr.encode()).await).code,
+        code::REFUSED,
+        "a closed home signs no objection"
+    );
+    hs[1].client.put_act(&g.encode()).await.unwrap();
+    hs[1].client.put_act(&hr.encode()).await.unwrap();
+    let v = verifier_from(&[&hs[0], &hs[1]], &alice.id).await;
+    let res = v.resolve(&alice.id);
+    assert_eq!(res.links.len(), 2, "{:?}", res.stop);
+    assert!(matches!(res.links[1].how, How::Homeless { .. }));
+}
+
+/// F101: inclusion proofs travel. A home keeps a carried proof for an
+/// identity it serves only if it leads from the receipt to the signed
+/// summary's root, and serves it with the acts it rests on.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_home_keeps_and_serves_carried_proofs() {
+    let hs = homes(2).await;
+    let (g, alice) = genesis("alice", vec![hs[0].home(), hs[1].home()], None, None);
+    let put = hs[0].client.put_act(&g.encode()).await.unwrap();
+    hs[1].client.put_act(&g.encode()).await.unwrap();
+    let receipt = decode(put.receipt.as_ref().unwrap());
+    let (summary, _) = hs[0].client.log_summary(None).await.unwrap();
+    let s = decode(&summary);
+    let path = hs[0].client.log_inclusion(0, 1).await.unwrap();
+    // The acts the proof rests on: the old home's operator, its summary, its receipt.
+    let op = hs[0]
+        .client
+        .identity(&hs[0].op(), Some(&[1]))
+        .await
+        .unwrap();
+    for a in op
+        .chain
+        .iter()
+        .chain([&summary, put.receipt.as_ref().unwrap()])
+    {
+        hs[1].client.put_act(a).await.unwrap();
+    }
+    let good = mor_relay::wire::Inclusion {
+        summary: s.id(),
+        receipt: receipt.id(),
+        index: 0,
+        path,
+    };
+    let mut bad = good.clone();
+    bad.index = 1;
+    assert_eq!(hs[1].client.put_proofs(&[bad]).await.unwrap(), 0);
+    assert_eq!(
+        hs[1]
+            .client
+            .put_proofs(std::slice::from_ref(&good))
+            .await
+            .unwrap(),
+        1
+    );
+    let rec = hs[1].client.identity(&alice.id, None).await.unwrap();
+    assert_eq!(rec.proofs, vec![good]);
+    assert!(rec.carried.contains(&summary));
+    assert!(rec.carried.contains(&op.chain[0]));
+}

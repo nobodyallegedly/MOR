@@ -848,3 +848,19 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Law draft 6 (rule 36, rule 37, the collectives' declaration, the key grammar's listed types gaining a rule). Freeze test suite v15 (scenario 3, step 7). No change to the core document.
 
 **Applied:** `core/src/law.rs` (`LawView::consent`); `core/tests/law.rs` (`members_change_by_clone_and_rotation`: the old key's act after the rotation is void; a former member's signature does not count under the clone); the release manifest cMIP draft 1; `clients/repo/` (a "release" by the old key after the member change is refused). Law draft 6, freeze test suite v15 and the release manifest cMIP approved by Nobody, allegedly, 29 September 2026.
+
+## F101. Inclusion proofs travel, so an audited identity's history outlives a vanished home (found while building roadmap step 7, decided by Nobody, allegedly)
+
+**Found while building:** the identity gauntlet (roadmap step 7), scenario 5.7c, "declared auditors attest absence where a home vanished without closing", run for the first time with an audited rotation before the home vanished. Identity said inclusion proofs are not acts and "a home serves them on request". An identity that requires audit counts a rotation only with an inclusion proof of its receipt under a cosigned log summary (receipt check 4). Once the home vanished, a reader who had never reached it could prove no receipt it signed: the chain stopped at genesis for that reader, and the homeless rotation that both auditors' absence statements should let count could not count either. A reader who had read the identity before the home vanished still counted it. Two readers, two answers, from what they happened to have fetched earlier.
+
+**Options weighed:** (1) proofs travel: anyone may carry them, since each is checked against a signed summary; the owner's client keeps the proofs of its own audited receipts and hands them to its new homes, which serve them; bundles carry them. (2) Auditors keep the logs they audit and serve proofs: more robust, but a new duty and storage for every auditor. (3) No rule change, the cost stated: an audited identity whose only home vanishes can be followed only by readers who read it before.
+
+**Decided (Nobody, allegedly):** option 1.
+
+**Checked against the principles:** nothing is trusted that was not before: a carried proof is checked against the signed, cosigned summary it names, as a proof from the home is. It follows "proof of life travels" (objections from anywhere). No clock, no new act type.
+
+**Cost, stated:** proofs the owner's client never kept are lost with the home; an owner whose client kept nothing is back to option 3.
+
+**Core changes:** Identity draft 10 (the log summary section: anyone may carry proofs; an owner's client SHOULD keep its own). Relay transport cMIP draft 2 (identity record parts 9 and 10, `POST /proofs`, bundle key 2, clients rule 5). Freeze test suite v16 (scenario 5.7c). No change to the core document.
+
+**Applied:** `relay/` (the home keeps and serves carried proofs; `a_home_keeps_and_serves_carried_proofs`); `harness/src/carry.rs` (the owner keeps and delivers); the gauntlet's 5.7c check "(F101) a new reader cannot prove the audited rotation of a vanished home until the owner carries its inclusion proofs to the new home". Awaiting approval of the three texts.

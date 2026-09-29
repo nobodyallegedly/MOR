@@ -646,7 +646,57 @@ pub mod part {
     pub const LINKS: u64 = 6;
     pub const EVIDENCE: u64 = 7;
     pub const OTHER_RECEIPTS: u64 = 8;
-    pub const ALL: [u64; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
+    pub const PROOFS: u64 = 9;
+    pub const CARRIED: u64 = 10;
+    pub const ALL: [u64; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+}
+
+/// `inclusion = [ summary: hash, receipt: hash, index: uint, path: [* hash] ]`:
+/// an inclusion proof that anyone may carry (F101). It is checked against
+/// the signed log summary it names, so it needs no trust.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Inclusion {
+    pub summary: Hash,
+    pub receipt: Hash,
+    pub index: u64,
+    pub path: Vec<Hash>,
+}
+
+impl Inclusion {
+    pub fn to_value(&self) -> Value {
+        Value::Array(vec![
+            Value::Bytes(self.summary.to_vec()),
+            Value::Bytes(self.receipt.to_vec()),
+            Value::Uint(self.index),
+            hashes(&self.path),
+        ])
+    }
+
+    pub fn from_value(v: &Value) -> R<Self> {
+        let a = array(v, true)?;
+        if a.len() != 4 {
+            return bad("an inclusion proof is [summary, receipt, index, path]");
+        }
+        Ok(Inclusion {
+            summary: hash(&a[0])?,
+            receipt: hash(&a[1])?,
+            index: uint(&a[2])?,
+            path: hash_list(&a[3], false)?,
+        })
+    }
+
+    fn list(v: &Value) -> R<Vec<Self>> {
+        array(v, false)?.iter().map(Self::from_value).collect()
+    }
+
+    /// `[* inclusion]`, the body of `POST /proofs`.
+    pub fn encode_list(items: &[Inclusion]) -> Vec<u8> {
+        cbor::encode(&Value::Array(items.iter().map(|i| i.to_value()).collect()))
+    }
+
+    pub fn decode_list(bytes: &[u8]) -> R<Vec<Self>> {
+        Self::list(&decode(bytes)?)
+    }
 }
 
 /// `identity-record`. An empty part is absent: the home holds nothing of
@@ -671,10 +721,15 @@ pub struct IdentityRecord {
     pub evidence: Vec<Vec<u8>>,
     /// Other homes' receipts for this identity's chain acts.
     pub other_receipts: Vec<Vec<u8>>,
+    /// Carried inclusion proofs for other homes' receipts (F101).
+    pub proofs: Vec<Inclusion>,
+    /// The acts those proofs rest on: the log summaries they name, the
+    /// cosignatures of those summaries, and their signers' chain acts.
+    pub carried: Vec<Vec<u8>>,
 }
 
 impl IdentityRecord {
-    fn parts(&self) -> [(u64, &Vec<Vec<u8>>); 8] {
+    fn parts(&self) -> [(u64, &Vec<Vec<u8>>); 9] {
         [
             (1, &self.chain),
             (2, &self.receipts),
@@ -684,6 +739,7 @@ impl IdentityRecord {
             (6, &self.links),
             (7, &self.evidence),
             (8, &self.other_receipts),
+            (10, &self.carried),
         ]
     }
 
@@ -694,12 +750,24 @@ impl IdentityRecord {
                 put(&mut m, k, bstrs(items));
             }
         }
+        if !self.proofs.is_empty() {
+            put(
+                &mut m,
+                9,
+                Value::Array(self.proofs.iter().map(|i| i.to_value()).collect()),
+            );
+        }
+        // Keys in ascending order, as deterministic CBOR requires.
+        m.sort_by_key(|(k, _)| match k {
+            Value::Uint(n) => *n,
+            _ => u64::MAX,
+        });
         cbor::encode(&Value::Map(m))
     }
 
     pub fn decode(bytes: &[u8]) -> R<Self> {
         let v = decode(bytes)?;
-        let f = fields(&v, 9)?;
+        let f = fields(&v, 11)?;
         let part = |k: u64| -> R<Vec<Vec<u8>>> {
             // Part 1 is `[+ bstr]`; the others `[* bstr]`.
             get(&f, k)
@@ -717,6 +785,11 @@ impl IdentityRecord {
             links: part(6)?,
             evidence: part(7)?,
             other_receipts: part(8)?,
+            proofs: get(&f, 9)
+                .map(Inclusion::list)
+                .transpose()?
+                .unwrap_or_default(),
+            carried: part(10)?,
         })
     }
 
@@ -782,6 +855,8 @@ impl Probe {
 pub struct Bundle {
     pub acts: Vec<Vec<u8>>,
     pub sealed: Vec<Vec<u8>>,
+    /// Carried inclusion proofs (F101).
+    pub proofs: Vec<Inclusion>,
 }
 
 impl Bundle {
@@ -790,13 +865,24 @@ impl Bundle {
         if !self.sealed.is_empty() {
             put(&mut m, 1, bstrs(&self.sealed));
         }
+        if !self.proofs.is_empty() {
+            put(
+                &mut m,
+                2,
+                Value::Array(self.proofs.iter().map(|i| i.to_value()).collect()),
+            );
+        }
         cbor::encode(&Value::Map(m))
     }
 
     pub fn decode(bytes: &[u8]) -> R<Self> {
         let v = decode(bytes)?;
-        let f = fields(&v, 2)?;
+        let f = fields(&v, 3)?;
         Ok(Bundle {
+            proofs: get(&f, 2)
+                .map(Inclusion::list)
+                .transpose()?
+                .unwrap_or_default(),
             acts: bytes_list(req(&f, 0)?, true)?,
             sealed: get(&f, 1)
                 .map(|v| bytes_list(v, true))

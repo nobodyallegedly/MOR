@@ -46,6 +46,10 @@ CREATE TABLE IF NOT EXISTS summaries(size INTEGER PRIMARY KEY, act BLOB NOT NULL
 CREATE TABLE IF NOT EXISTS objections(rotation BLOB PRIMARY KEY, objection BLOB NOT NULL);
 CREATE TABLE IF NOT EXISTS own(position INTEGER PRIMARY KEY, act BLOB NOT NULL);
 CREATE TABLE IF NOT EXISTS allow(identity BLOB PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS proofs(identity BLOB NOT NULL, summary BLOB NOT NULL, receipt BLOB NOT NULL, idx INTEGER NOT NULL, path BLOB NOT NULL, PRIMARY KEY(summary, receipt));
+CREATE INDEX IF NOT EXISTS proofs_identity ON proofs(identity);
+CREATE TABLE IF NOT EXISTS strict(identity BLOB PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS approved(rotation BLOB PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value BLOB NOT NULL);
 ";
 
@@ -90,6 +94,9 @@ fn h(v: Vec<u8>) -> Hash {
 }
 
 type R<T> = Result<T, DbError>;
+
+/// A carried inclusion proof as kept: summary, receipt, index, path.
+pub type CarriedProof = (Hash, Hash, u64, Vec<Hash>);
 
 /// A feed row: arrival number, kind, bytes.
 pub type Row = (u64, i64, Vec<u8>);
@@ -511,6 +518,85 @@ impl Store {
             .prepare("SELECT identity FROM allow ORDER BY identity")?;
         let rows = st.query_map([], |r| Ok(h(r.get(0)?)))?;
         rows.collect()
+    }
+
+    // ------------------------------------------------------------ carried proofs (F101)
+
+    /// Keep a carried inclusion proof, for the identity its receipt names.
+    pub fn proof_insert(
+        &self,
+        identity: &Hash,
+        summary: &Hash,
+        receipt: &Hash,
+        index: u64,
+        path: &[Hash],
+    ) -> R<()> {
+        let p: Vec<u8> = path.iter().flat_map(|h| h.iter().copied()).collect();
+        self.conn.execute(
+            "INSERT OR IGNORE INTO proofs(identity, summary, receipt, idx, path) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                identity.as_slice(),
+                summary.as_slice(),
+                receipt.as_slice(),
+                index as i64,
+                p
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// The carried proofs kept for an identity: summary, receipt, index, path.
+    pub fn proofs_for(&self, identity: &Hash) -> R<Vec<CarriedProof>> {
+        let mut st = self.conn.prepare(
+            "SELECT summary, receipt, idx, path FROM proofs WHERE identity = ?1 ORDER BY summary, idx",
+        )?;
+        let rows = st.query_map([identity.as_slice()], |r| {
+            let path: Vec<u8> = r.get(3)?;
+            Ok((
+                h(r.get(0)?),
+                h(r.get(1)?),
+                r.get::<_, i64>(2)? as u64,
+                path.chunks(32).map(|c| h(c.to_vec())).collect(),
+            ))
+        })?;
+        rows.collect()
+    }
+
+    /// Identities whose rotations this home accepts only once its operator
+    /// has approved them (a registered-device check, simulated).
+    pub fn is_strict(&self, identity: &Hash) -> R<bool> {
+        self.has("strict", "identity", identity)
+    }
+
+    pub fn set_strict(&self, identity: &Hash) -> R<()> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO strict(identity) VALUES (?1)",
+            [identity.as_slice()],
+        )?;
+        Ok(())
+    }
+
+    pub fn is_approved(&self, rotation: &Hash) -> R<bool> {
+        self.has("approved", "rotation", rotation)
+    }
+
+    pub fn approve(&self, rotation: &Hash) -> R<()> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO approved(rotation) VALUES (?1)",
+            [rotation.as_slice()],
+        )?;
+        Ok(())
+    }
+
+    fn has(&self, table: &str, column: &str, key: &Hash) -> R<bool> {
+        self.conn
+            .query_row(
+                &format!("SELECT 1 FROM {table} WHERE {column} = ?1"),
+                [key.as_slice()],
+                |_| Ok(()),
+            )
+            .optional()
+            .map(|o| o.is_some())
     }
 
     pub fn setting(&self, key: &str) -> R<Option<Vec<u8>>> {
