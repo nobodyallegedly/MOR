@@ -117,23 +117,36 @@ A small Linux server, and a name for it (for example `home1.` under a domain) po
        reverse_proxy 127.0.0.1:8080
    }
    ```
-3. Set up the home, open to anyone:
+3. Set up the home, open to anyone, under an account of its own that can write only its own folder (not `root`, so that a flaw in the program cannot reach the rest of the server):
    ```
-   mor-relay init --dir /var/lib/mor-home --role home --base https://home1.example.org --new-test-operator
+   useradd --system --home-dir /var/lib/mor-home --no-create-home --shell /usr/sbin/nologin mor
+   install -d -o mor -g mor -m 700 /var/lib/mor-home
+   sudo -u mor mor-relay init --dir /var/lib/mor-home --role home --base https://home1.example.org --new-test-operator
    ```
 4. Run it, and keep it running (a systemd unit, `/etc/systemd/system/mor-home.service`):
    ```
    [Unit]
    Description=MOR test home
-   After=network-online.target
+   After=network-online.target tor.service
+   Wants=network-online.target
 
    [Service]
+   User=mor
+   Group=mor
    ExecStart=/usr/local/bin/mor-relay run --dir /var/lib/mor-home --listen 127.0.0.1:8080 --tor-proxy socks5h://127.0.0.1:9050
    Restart=always
+   RestartSec=5
+   NoNewPrivileges=yes
+   ProtectSystem=strict
+   ProtectHome=yes
+   ReadWritePaths=/var/lib/mor-home
+   PrivateTmp=yes
 
    [Install]
    WantedBy=multi-user.target
    ```
    Then `systemctl enable --now mor-home`.
+
+If the server cannot fetch the private repository, build from a copy sent from a checkout (`git archive`, then `scp`), and compare its hash on both sides. The build needs Rust, a C compiler (`build-essential` on Debian) and, on a server with 2 GB of memory or less, a temporary swap file.
 
 `mor-relay show --dir …` prints a home's settings and its operator. A basic relay is set up the same way with `--role relay`.
