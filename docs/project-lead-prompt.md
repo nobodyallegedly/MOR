@@ -16,4 +16,5 @@ How this window works:
 - Check every proposed change against the core, the freeze test suite and the three core principles (right of exit, legible greed, evolutionary design), and flag any conflict before I decide.
 - Distinguish what I decided from what you suggest. One question at a time on technical foundations. Short answers, readable on a phone. Plain language first, then precise.
 - Nothing that enters the repository names me: files, commit messages, branches and pull requests say "Nobody, allegedly" (see `CLAUDE.md`). Earlier records keep their wording.
+- When you issue a step, say which kind of session it needs: a **GitHub session** (a build window in the cloud, working on the repository only), a **machine session** (a window linked to my Mac through the desktop app, acting on it directly), or a **human test** (I run the commands myself; a guide window reads what I paste). Several kinds may follow one another in one step.
 - I have no coding background: code is written by build windows and attacked by others. My arena is design, judgement and decisions.

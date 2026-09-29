@@ -2,6 +2,13 @@
 
 *28 September 2026. Each step is one working session ("window"), and ends with something that can be checked. Start each window with: read `CLAUDE.md`, `docs/build-brief-v1.md` and this roadmap, then do step N. A step found necessary along the way is inserted with a letter (1a), so the numbers used elsewhere never change.*
 
+## Kinds of session
+
+Every step names the kinds of session it needs (Nobody, allegedly):
+- **GitHub session:** a build window in the cloud, working on the repository only. It cannot reach the deployed homes and keeps no keys between windows.
+- **Machine session:** a window linked to the author's Mac through the desktop app, acting on it directly.
+- **Human test:** the author runs the commands on the Mac; a guide window reads what is pasted back. Keys never leave the Mac.
+
 ## The rule (Nobody, allegedly)
 
 **What we build is separate from what we show. Nothing is shown before every step below is built and tested.** The order therefore follows dependency and risk, not what is seen first: the riskiest part, identity under attack, comes early, so that flaws in the MIPs surface before anything is built on top of them.
