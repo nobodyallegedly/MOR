@@ -13,6 +13,6 @@ These are the current drafts of the core: the map, the six MIPs and the freeze t
 | `MIP-production-draft-4.md` | Production: specifications, tasks, verification rules, the trust root. |
 | `03-MOR-freeze-test-suite-v14.md` | The freeze test suite: what must pass, run or reasoned, before the core is frozen. For builders, the specification of what to test. |
 
-Why each rule exists is recorded in `docs/findings/` (F1 to F52, then F53 to F97).
+Why each rule exists is recorded in `docs/findings/` (F1 to F52, then F53 to F98).
 
 Reading convention: normal text is the protocol; italic text is commentary, reasoning and examples.

@@ -798,3 +798,15 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Law (rule 36's commentary and requirement). Air-gapped safety key Module (section 5 rewritten; the share message 2.4; the attack test becomes "a dealing device that deals shares not rebuilding the committed next key: the rebuild check fails"). No change to the core document or the freeze test suite.
 
 **Applied:** `modules/airgap/` (`shares.rs`; `tests/collective.rs`: the dishonest dealer caught by the rebuild check, tampered shares, different dealings shown by fingerprint, a rotation through an escrowed share); Law draft 5, air-gapped Module draft 4 (roadmap step 6), approved by Nobody, allegedly, 28 September 2026.
+
+## F98. Key delivery uses X-Wing (settling an open parameter of the Envelope MIP, decided by Nobody, allegedly)
+
+**Found while choosing the libraries for roadmap step 5:** Envelope draft 5 recommends a hybrid X25519 plus ML-KEM-768 encryption key and leaves "the exact format of key deliveries under the hybrid scheme" open. The two libraries each yield a shared secret; how the two are combined into one key is a design choice, and a home-made combiner is where hybrid schemes usually go wrong.
+
+**Decided (Nobody, allegedly):** "Adopt." Key delivery uses X-Wing, the general-purpose hybrid KEM for exactly this pair, specified in the IETF CFRG draft (draft-connolly-cfrg-xwing-kem). ML-KEM-768 through the `fips203` crate, X25519 through `x25519-dalek` (with `curve25519-dalek` 4.1.3 or later). Adopted, as for SLH-DSA, on the condition that the tests check every key exchange against a second, independent implementation.
+
+**Checked against the principles:** content locked today stays locked if either half holds, which protects anchored history and private records for the long run; no conflict. *The draft may change before it is final; the version MOR names is fixed by hash at the freeze, like any specification.*
+
+**Cost, stated:** neither ML-KEM crate is audited; `fips203` is called experimental by its authors. Their audit status is a specialist question before the freeze (F85).
+
+**Core changes:** Envelope (encryption keys and key delivery; the open parameter closed, including the bare-key form), written at roadmap step 5. No change to the core document or the freeze test suite.
