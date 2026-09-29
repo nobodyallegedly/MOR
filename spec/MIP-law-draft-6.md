@@ -1,6 +1,6 @@
 # MIP: Law
 
-*Draft 5, 28 September 2026. Written against core v15, Identity MIP draft 9, Envelope MIP draft 5, Text MIP draft 5, Finance MIP draft 5 and findings F1 to F97. Draft 5 is draft 4 with one finding of the air-gapped safety key Module (roadmap step 6) written in: dealing the shares of a collective's next safety key verifiably stops a device from keeping sole control of it, never from keeping a copy (F97). F96, on the same rule (a key grammar survives the loss of any one key holder), is written in at roadmap step 5a, where the test collective first uses it. Draft 4 applied review round 2: contests instead of disputes; a party bound only by its own signature; protected clauses a clone cannot change for a party who did not sign it; shares that refer to stakes; role-share evidence signed by a third party; keeper records that count only alongside the act they name; a seal that cannot predate a deal the grantor paid on; key grammars that always leave a way to rotate; a sale tied to the seller's agreement, said plainly; refunds claimable by proof.*
+*Draft 6, 29 September 2026. Written against core v16, Identity MIP draft 9, Envelope MIP draft 6, Text MIP draft 5, Finance MIP draft 5 and findings F1 to F100. Draft 6 is draft 5 with the first exact formats, those a collective needs (roadmap step 5a, where the test collective first uses them): terms, including the key grammar and the abandonment clause; signature acts; clones; the Law declaration a collective's chain carries. It writes in F96 (a key grammar survives the loss of any one key holder) and F100 (an act of a collective that needs member signatures is judged under the agreement the collective's own chain declares at the act's binding, so a member change fences the old rules off). Draft 5 was draft 4 with one finding of the air-gapped safety key Module (roadmap step 6) written in: dealing the shares of a collective's next safety key verifiably stops a device from keeping sole control of it, never from keeping a copy (F97). Draft 4 applied review round 2: contests instead of disputes; a party bound only by its own signature; protected clauses a clone cannot change for a party who did not sign it; shares that refer to stakes; role-share evidence signed by a third party; keeper records that count only alongside the act they name; a seal that cannot predate a deal the grantor paid on; key grammars that always leave a way to rotate; a sale tied to the seller's agreement, said plainly; refunds claimable by proof.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -50,7 +50,7 @@ Identity, Envelope, Text and Finance. Law is optional per client, but all or not
 
 ## Act formats
 
-All acts are Envelope MIP acts, private by default, visible to the agreement's parties and keepers unless they choose otherwise. The acts below are sketched; exact formats follow once the structure is settled.
+All acts are Envelope MIP acts, private by default, visible to the agreement's parties and keepers unless they choose otherwise. Terms (type 0) and signatures (type 1) have exact formats, in the fields a collective needs (draft 6); the fields still marked open, and the other acts, are sketched, and exact formats follow once the structure is settled. *A client that meets terms using a field whose format is still open refuses them rather than accepting them unchecked (Envelope rule 11, fail closed).*
 
 | Type | Name | Signed by |
 | --- | --- | --- |
@@ -77,28 +77,28 @@ All acts are Envelope MIP acts, private by default, visible to the agreement's p
 terms-payload = {
   0 => [+ hash],            ; parties: identity or collective hashes
   1 => tstr,                ; the terms, as canonical text
-  2 => { + uint => hash },  ; cMIPs, at most one per task (task number => cMIP hash)
+  2 => { * uint => hash },  ; cMIPs, at most one per task (task number => cMIP hash); empty if it uses no task
   ? 15 => [+ hash],         ; extensions: cMIPs outside the listed tasks, which add rules and never relax the core's
   ? 16 => [+ succession-plan] ; succession plans of parties, part of the signed terms
   ? 3 => keepers,           ; named keepers and the rule for what counts as recorded
   4 => rule,                ; signing rule: which signatures make the agreement exist (default: all parties)
   5 => rule,                ; clone rule: which signatures make a clone complete
   ? 6 => [ hash, any ],     ; time reference: the task cMIP and its parameters
-  ? 7 => stakes,            ; stakes defined, in works or publications
-  ? 8 => split-plan,        ; how incoming payments are divided
+  ? 7 => stakes,            ; stakes defined, in works or publications (format open)
+  ? 8 => split-plan,        ; how incoming payments are divided (format open)
   ? 9 => abandonment,       ; the abandonment clause
-  ? 10 => fork-rule,        ; how forks are settled, where parties may act independently
+  ? 10 => fork-rule,        ; how forks are settled, where parties may act independently (format open)
   ? 11 => hash,             ; parent: the agreement this one clones (with its latest act in objects)
   ? 12 => key-grammar,      ; present if this agreement founds a collective
   ? 13 => [+ hash],         ; arbitrators or verifiers named, who receive keys to judge content
   ? 14 => hash,             ; the split service's grant, where incoming payments go to one
-  ? 17 => refund-terms      ; for standing offers: how long a refund stays claimable, on the time reference
+  ? 17 => refund-terms      ; for standing offers: how long a refund stays claimable, on the time reference (format open)
 }
 
 key-grammar = {
   0 => holding,             ; how the signing key is held
   1 => holding,             ; how the safety key is held, usually stricter
-  ? 2 => [+ [ hash, uint ]],; act types (spec, type) that also require visible member signature acts
+  ? 2 => [+ [ hash, uint, rule ]], ; act types (spec, type) that also require visible member signature acts, and which parties' (rule)
   ? 3 => recovery           ; a way to rotate that needs less than every member, required when holding 1 names every member
 }
 holding  = [ 0, holder: hash ]                        ; one holder
@@ -114,10 +114,36 @@ succession-plan = {
   ? 3 => uint                              ; seat entry: 0 automatic, 1 with the members' approval under the clone rule
 }
 
+abandonment = {
+  0 => [ 0, hash ]          ; the authority: a named identity (a keeper's operator, or a third party)
+     / [ 1, uint ],         ;   or a threshold of the other parties
+  1 => [+ uint],            ; outcomes allowed (rule 53), ascending: 0 voice removed from the clone rule, 1 stake redistributed,
+                            ;   2 stake transferred to parties named or defined by role, 3 obligations redirected or held, 4 agreement closed
+  ? 2 => uint               ; the period of absence, on the agreement's time reference (only with one)
+}
+
 keepers   = [ [+ hash], rule ]                      ; keeper operators, and any one / threshold / all
 rule      = [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ]   ; all parties / threshold / named parties
 stakes    = [+ [ object: hash, [+ [ holder: hash, share: uint ]] ] ]   ; shares in millionths, summing to 1,000,000; leftovers to the first party listed; each stake is identified by its index here
 ```
+
+*A rule's threshold is between 1 and the number of parties; named parties are parties. In a key grammar, members of a holding are parties, and each act type is listed once.*
+
+**A clone** is terms with a parent (field 11). Its inside names, in `objects`, the parent's chain and the act of that chain it follows: `[[parent, act]]`. Founding terms name no chain.
+
+### Signature (type 1)
+
+```cddl
+signature-payload = {
+  0 => hash                 ; the act signed: terms, a clone, or an act a key grammar lists
+}
+```
+
+The inside names, in `objects`, the act signed as both chain and predecessor: `[[signed, signed]]`. *A signature follows the act it signs.* Signatures naming one act are parallel consents to it, never a fork among themselves: rule 5's forks are between acts that change an agreement. A signature counts only while valid under Identity's rules (rule 5).
+
+### Collectives in the identity chain
+
+A collective's genesis declares its founding agreement in the declarations slot (Identity): `[LAW, 0, agreement]`, where kind 0 is **the agreement the collective lives under** and the value its id. A rotation that changes members declares the complete clone the same way (rule 37). The latest declaration of kind 0 at a chain act is the agreement in force for every act that act's key signs.
 
 ### Split plan and split (type 8)
 
@@ -169,7 +195,7 @@ A publication made under a scope-2 grant carries the grantor in its `for` field 
 3. **Commitments of identities.** An agreement names identity hashes, not keys. After a rotation, the party's new key signs for the same agreement.
 4. **Positions** are agreements that confer income without ownership.
 4a. **What you sign is what you saw.** *Client conformance.* Before any terms, clone or grant is signed, the client MUST be able to show its text as plain text, SHOULD do so by default, and MUST show every bidirectional control visibly in that view (Text MIP, rule 5a).
-5. **Agreement chains.** Every act on an agreement names the chain and the act it follows. Two acts naming the same predecessor are a fork; where the agreement lets parties act independently, its fork rule settles it; otherwise the status quo stands. An act on an agreement chain that is void or disputed under Identity's rotation rules confers nothing: no stake, no obligation, no consent (F57).
+5. **Agreement chains.** Every act on an agreement names the chain and the act it follows. Two acts naming the same predecessor are a fork, except signatures naming the act they sign, which are parallel consents; where the agreement lets parties act independently, its fork rule settles it; otherwise the status quo stands. An act on an agreement chain that is void or disputed under Identity's rotation rules confers nothing: no stake, no obligation, no consent (F57).
 
 ## Keepers
 
@@ -233,8 +259,8 @@ How a split service runs is defined by the split cMIP its owners' agreement name
 ## Grants and collectives
 
 35. **A collective is a full identity,** with its own genesis, homes, signing key and safety key. It uses the Identity MIP unchanged: it signs its own receipts, sets its own payee pointers, and rotates. Its genesis declares its founding agreement (a Law declaration in the declarations slot), and the agreement carries its key grammar.
-36. **Key grammar.** The founding agreement says how the collective's keys are held and activated, according to the members' taste: one holder, a threshold (any k of n members jointly produce one ordinary signature, for example with FROST threshold schnorr), or a custodian holding the key under the collective's grant. The safety key is held by one holder, a custodian, or as shares: split so that any k of n members can rebuild it. At rotation, k members bring their shares to one offline device, which rebuilds the key, signs once and forgets it. *For that moment one device holds the whole key; that is the price, and it holds the next key too, before dealing its shares. Nothing can prove a device forgot a key.* The Module that does it MUST deal the shares of the next key verifiably, and have them checked against the committed key before that key is relied on, so that the members' shares rebuild it: otherwise the device's holder could end up the only one able to rotate the collective (F97). *Verifiable dealing stops sole control, not a copy; a copy kept is the price above, stated.* **A key grammar MUST leave a way to rotate that does not need every member:** a threshold below the member count, or a named recovery path (a custodian holding a share under grant, or an escrowed share released by the abandonment authority). A grammar without one is invalid. Two partners may choose "both", provided they name where a further share sits and who releases it; whether the path works is the members' risk, stated (F77). Where members want individual consent to show, the grammar lists act types that also require visible member signature acts.
-37. **Changing members** means a rotation to new keys plus a clone of the founding agreement. A departing member hands over nothing: the remaining members rotate to keys the departing member never held, and re-split the safety key among the members who stay or join.
+36. **Key grammar.** The founding agreement says how the collective's keys are held and activated, according to the members' taste: one holder, a threshold (any k of n members jointly produce one ordinary signature, for example with FROST threshold schnorr), or a custodian holding the key under the collective's grant. The safety key is held by one holder, a custodian, or as shares: split so that any k of n members can rebuild it. At rotation, k members bring their shares to one offline device, which rebuilds the key, signs once and forgets it. *For that moment one device holds the whole key; that is the price, and it holds the next key too, before dealing its shares. Nothing can prove a device forgot a key.* The Module that does it MUST deal the shares of the next key verifiably, and have them checked against the committed key before that key is relied on, so that the members' shares rebuild it: otherwise the device's holder could end up the only one able to rotate the collective (F97). *Verifiable dealing stops sole control, not a copy; a copy kept is the price above, stated.* **A key grammar MUST leave a way to rotate that survives the loss of any one key holder** (F96): a threshold below the member count, or a named recovery path (a custodian holding a share under grant, or an escrowed share released by the abandonment authority, which the abandonment clause names). A key holder is anyone holding the whole key or a share of it: a member, a custodian, the holder of an escrowed share. **Where one person holds the safety key, the agreement MUST name a successor (a seat successor in that holder's succession plan) and an escrowed share released to them under its succession or abandonment clause;** a single custodian likewise needs a recovery path held by another. A grammar without such a way is invalid. Two partners may choose "both", provided they name where a further share sits and who releases it; whether the path works is the members' risk, stated (F77). *For a single holder, one construction: the key is split so that any two of four shares rebuild it; the holder keeps two and signs alone, the successor and a keeper hold one each, useless alone. When the named authority declares the holder absent, the keeper releases its share and the successor rotates the collective to a new key; the succession clone passes the seat.* Where members want individual consent to show, the grammar lists act types that also require visible member signature acts, and which: all members, any k of them, or named ones. **An act of the collective of a listed type counts only with valid signature acts naming it, by parties who signed the agreement in force, meeting that rule; the agreement in force is the one the collective's chain declares at the act's binding** (F100). *So when members change, the rotation that declares the clone also fences off the old rules: whatever the old key signs afterwards is void under Identity, whoever signs it. Members' own identities do not rotate when they leave a collective; without this, former members could sign under the old rules at any later time, and no one could tell.*
+37. **Changing members** means a rotation to new keys plus a clone of the founding agreement; the rotation declares the complete clone as the agreement the collective lives under. Each agreement the chain declares after the founding one MUST be a complete clone of the one declared before it; otherwise the collective's acts that need member signatures count for nothing. A departing member hands over nothing: the remaining members rotate to keys the departing member never held, and re-split the safety key among the members who stay or join.
 38. **Grants** delegate authority with limits: signing new deals, managing specific existing ones, or acting for an identity or collective (posting, publishing, spending up to a limit). An agent acting for a collective works under a grant, without holding the collective's keys; members import what they approve. A grant is its own act; acts under it name it in `refs`, and a publication under it names the grantor in `for` (Envelope). Grants are revocable at any time.
 39. **Branches.** A collective's chain is a tree; each grant opens a branch the grantee appends to.
 40. **Seal.** Revoking a grant seals its branch at the act the revocation names. The seal act MUST be at or after the last act on the branch that the grantor itself acknowledged or paid on: a receipt or split signed by the grantor that names a deal on that branch counts as payment. A revocation naming an earlier seal is invalid (F76). *A grantor who took the money cannot later say the deal never happened.*
@@ -245,7 +271,7 @@ How a split service runs is defined by the split cMIP its owners' agreement name
 
 ## Changing agreements
 
-45. **Clone, never modify.** A clone is new terms naming the parent and the parent's latest act. It is a draft until signatures meet the parent's clone rule; a draft changes nothing. A complete clone closes the parent; obligations before that point settle under the parent.
+45. **Clone, never modify.** A clone is new terms naming the parent and the parent's latest act. It is a draft until signatures meet the parent's clone rule, counted among the parent's parties; a draft changes nothing. A party the clone adds is bound only once it signs the clone (rule 1). A complete clone closes the parent; obligations before that point settle under the parent.
 46. A clone can never reduce a stake without its holder's signature, unless the agreement pre-authorised it.
 46a. **Protected clauses.** A clone that a party has not signed cannot change, for that party, any protected clause: the abandonment clause, the succession plan, the fork rule, the keepers, the split service and the time reference. For that party, each such clause keeps the last version that party signed. An abandonment declaration against a party is judged under the clause version that party signed (F71). *A majority may change the keeper for themselves; the minority's stake is judged under the keeper and clause they agreed to. Per party, not blanket, so that one member cannot freeze every governance change forever.*
 47. **Forks.** Where a clone rule lets parties act independently, the agreement must define how forks are settled. If it does not, the parent stays in force until a clone naming both branches resolves it.
@@ -292,7 +318,7 @@ How a split service runs is defined by the split cMIP its owners' agreement name
 - **Terms plus signatures.** *One signer per act (F17) makes every consent a separate, visible act. An agreement is complete exactly when its rule is met, a party refuses simply by not signing, and nobody owes anything they did not sign for.*
 - **Identities, not keys.** *Keys change; promises should not. Naming identities means a rotation never breaks a deal.*
 - **Stakes and seats can go to different people.** *A stake is property: passing it changes only who is paid. A seat is trust: the other members chose to share control with that person. A plan can give the stake to an heir and the seat to someone trusted for the job, paid through a position.*
-- **Collectives are identities.** *A collective that receives money must sign receipts and rotate like anyone else. Giving it its own keys, held as its members choose, keeps one Identity MIP for everyone. The price is that a threshold signature looks like one signature; where individual consent matters, the key grammar can require visible member signatures. And every grammar leaves a way through that needs less than everyone, so a dead member never freezes the key: the rule is about the exit, not the number.*
+- **Collectives are identities.** *A collective that receives money must sign receipts and rotate like anyone else. Giving it its own keys, held as its members choose, keeps one Identity MIP for everyone. The price is that a threshold signature looks like one signature; where individual consent matters, the key grammar can require visible member signatures. And every grammar leaves a way through that survives the loss of any one key holder, so a dead member never freezes the key, not even a sole holder, whose successor holds an escrowed share: the rule is about the exit, not the number (F96). A collective's member signatures are judged under the rules its own chain declared when the key signed, so leaving is final: a former member's signature never again counts for it (F100).*
 - **Keepers stamp sealed envelopes, and only real ones.** *Proving an act existed before a rotation needs its id and signer, not its content. Keepers that never read keep private deals private; judging content is left to arbitrators and verifiers the parties choose and deliver keys to. A record counts only alongside the act it names, so a bought record of nothing changes nothing.*
 - **Protected clauses.** *A stake cannot be reduced without its holder's signature; but the clause that decides absence, the keeper who judges it, the fork rule and the split service could move the stake in two steps. So for each party, those clauses stay as that party signed them, whatever a majority clones for itself.*
 - **A split service holds authority, not discretion.** *It is named by grant, bound to the plan, and every incoming receipt or payer's claim must be matched by a split. It can still steal, but never invisibly, and never by naming its own sybil as the referrer: role-share evidence is signed by someone on the other side.*
@@ -310,8 +336,8 @@ How a split service runs is defined by the split cMIP its owners' agreement name
 
 ## Open technical parameters
 
-- Exact formats for every act type.
-- Encoding of rules, conditions and grant limits.
+- Exact formats for every act type other than terms and signatures, and for terms fields 7, 8, 10 and 17 (stakes, split plan, fork rule, refund terms).
+- Encoding of conditions and grant limits.
 
 ## Decided in this draft
 
@@ -322,6 +348,9 @@ How a split service runs is defined by the split cMIP its owners' agreement name
 - **F39.** The split service: authority by grant, duties, limits, batching, failure and switching.
 - **Round 2:** F57, F58, F64, F68, F69, F71 to F78, F80 to F82.
 - **F97.** Verifiable dealing of a collective's next safety key stops sole control, not a copy.
+- **F96.** A key grammar survives the loss of any one key holder; a sole holder names a successor and an escrowed share.
+- **F100.** An act of a collective that needs member signatures is judged under the agreement its own chain declares at the act's binding.
+- **Draft 6 formats (roadmap step 5a):** terms (fields 7, 8, 10 and 17 still open), the key grammar's listed act types with their rule, the abandonment clause, signatures, clones, and the Law declaration of kind 0.
 
 ## Freeze scenarios
 
@@ -334,7 +363,7 @@ How a split service runs is defined by the split cMIP its owners' agreement name
 - Standing offers; key delivery or confirmation as the binding moment; refund claimable by proof: 2, 5.
 - Named time reference: 1, 7.
 - Recurring obligation; lapse shown as past its terms: 7.
-- Collective born from its founding agreement, with a grammar that leaves a way to rotate; a dead member's share released by the recovery path: 3.
+- Collective born from its founding agreement, with a grammar that leaves a way to rotate; a grammar with a single holder and no successor rejected (F96); a dead member's share released by the recovery path: 3.
 - Grant branches, seal at a named act, not before a deal the grantor paid on, import, handover; a publication under a grant with `for`: 3.
 - Acknowledgement recorded by the collective: 3.
 - Keepers named by the agreement; keepers check homes; recorded acts survive rotation as disputes; a record of an act nobody holds confers nothing: 1.
@@ -345,5 +374,5 @@ How a split service runs is defined by the split cMIP its owners' agreement name
 - Conservation and remainder rule; module fees and an omitted fee visible; maximum fee per payout; split by an attention metric evidenced by the module: 1, 2, 7.
 - A role share filled by a reposter, with the payer's signed referral; a referral named by the service alone earning nothing; an unfilled role share following the chosen option: 2.
 - A split service that receives a payment and fails to publish a split, or under-reports against the payer's claim, shown as an open obligation; the owners switch services: 2, 7.
-- A collective with a threshold key grammar signs a receipt; a member leaves and the others rotate: 3.
+- A collective with a threshold key grammar signs a receipt; a member leaves and the others rotate; the member who left, with another, signs an act of a listed type, and it does not count (F100): 3.
 - Terms with a bidirectional override shown visibly before signing: 1.

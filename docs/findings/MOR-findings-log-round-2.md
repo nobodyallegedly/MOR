@@ -783,6 +783,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes:** Law (rule 36; "Collectives are identities" commentary), at the next Law draft, written at roadmap step 5a, where the test collective first uses it. Freeze test suite: scenario 3's collective component gains a grammar with a single holder and no successor, rejected. No change to the core document.
 
+**Applied (roadmap step 5a):** Law draft 6 (rule 36 and the "Collectives are identities" reasoning); freeze test suite v15 (scenario 3, step 7a, and the collective component). The core library checks the structure from the agreement alone (`core/src/law.rs`, `Terms::check`): a safety key held by every member needs a recovery path; a sole holder needs an escrowed share, released by the authority the abandonment clause names, and a seat successor in the holder's succession plan; a sole custodian needs a recovery path held by another. Tests: `core/tests/law.rs` (`a_grammar_leaves_a_way_to_rotate_that_survives_any_one_loss`) and `clients/repo/test/repo.test.ts`.
+
 ## F97. Verifiable dealing stops sole control of a collective's safety key, not a copy (found while building the air-gapped safety key Module, decided by Nobody, allegedly)
 
 **Pattern 4** (a rule rests on a fact nobody can check).
@@ -828,3 +830,21 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Envelope draft 6 (definitions; "Public and private"; "Encryption keys and key delivery"; "Sealed containers", now with the exact format; validity rules 10 and 10a; reasoning); core v16 ("Everything encrypted by default", "Public receiver, private sender"). No change to the freeze test suite: its sealed-container and key-delivery scenarios read the same.
 
 **Applied:** `core/src/envelope.rs` (sealed containers, key deliveries, encryption keys, and which version of a routes or encryption-key chain counts); `core/tests/envelope.rs`; the genesis client (`clients/genesis/`) delivers keys this way to identities and to bare keys, over real relays.
+
+## F100. A collective signs its own releases, and its member signatures are judged under the agreement its chain declared (found while building roadmap step 5a, decided by Nobody, allegedly)
+
+**Pattern 1** (what decides is signed by the wrong party).
+
+**Found while building:** the release manifest and the test collective (roadmap step 5a). The step's choices said a manifest is "a plain Envelope publication made for the collective (`for`)", which reads as: a member publishes it for the collective, and k members' visible signatures make it a release. But MOR has no clock, and members' own identities do not rotate when they leave a collective. After a member change, two former members could sign a new manifest under the old rules at any later time, and nobody could tell it was made after they left. Law draft 5 also left open which agreement judges an act of a collective when members have changed.
+
+**Options weighed:** (1) the collective signs each release with its own everyday key, and k members add visible signature acts; the collective's rotation at a member change fences the old rules off, since whatever the old key signs afterwards is void under Identity's existing rules. (2) A member publishes for the collective, and the flaw is kept as a stated cost.
+
+**Decided (Nobody, allegedly):** option 1. An act of a collective of a type its key grammar lists counts only with valid signature acts naming it, by parties who signed the agreement in force, meeting the grammar's rule for that type; the agreement in force is the one the collective's chain declares (Law declaration of kind 0) at the chain act that bound the act's key. A member change's rotation declares the complete clone, and each declared agreement must be a complete clone of the one declared before it. A release is a publication signed by the collective; it needs no `for`.
+
+**Checked against the principles:** it uses Identity's rotation, unchanged, as the fence; nothing new below Law. It strengthens exit: leaving a collective is final.
+
+**Cost, stated:** the collective's everyday key is used for every release, so whoever holds it (one member, in the test collective) can sign acts the grammar does not list without the others. The grammar lists what needs the members; listing every publication covers releases.
+
+**Core changes:** Law draft 6 (rule 36, rule 37, the collectives' declaration, the key grammar's listed types gaining a rule). Freeze test suite v15 (scenario 3, step 7). No change to the core document.
+
+**Applied:** `core/src/law.rs` (`LawView::consent`); `core/tests/law.rs` (`members_change_by_clone_and_rotation`: the old key's act after the rotation is void; a former member's signature does not count under the clone); the release manifest cMIP draft 1; `clients/repo/` (a "release" by the old key after the member change is refused).

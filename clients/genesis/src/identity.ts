@@ -216,7 +216,12 @@ export class TestIdentity {
 
   // ------------------------------------------------------------ everyday acts
 
-  private everyday(spec: string, type: number, payload: Uint8Array, opts: { public: boolean; to?: string[] }) {
+  private everyday(
+    spec: string,
+    type: number,
+    payload: Uint8Array,
+    opts: { public: boolean; to?: string[]; objects?: [string, string][] },
+  ) {
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -227,6 +232,7 @@ export class TestIdentity {
       sequence: this.f.sequence,
       public: opts.public,
       to: opts.to,
+      objects: opts.objects,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
     this.f.sequence.push(made.id);
     return made;
@@ -441,8 +447,13 @@ export class TestIdentity {
    * Publish an act on this identity's own relays, for example a private
    * post whose key it will deliver. Returns the act id and its content key.
    */
-  async publish(spec: string, type: number, payload: Uint8Array, opts: { public: boolean; relays: string[]; to?: string[] }) {
-    const made = this.everyday(spec, type, payload, { public: opts.public, to: opts.to });
+  async publish(
+    spec: string,
+    type: number,
+    payload: Uint8Array,
+    opts: { public: boolean; relays: string[]; to?: string[]; objects?: [string, string][] },
+  ) {
+    const made = this.everyday(spec, type, payload, { public: opts.public, to: opts.to, objects: opts.objects });
     for (const hint of opts.relays) await relayAt(hint, this.via).putAct(made.act);
     return made;
   }
@@ -599,10 +610,11 @@ export interface Lookup {
  * the identity record from every home its chain names (and each home's
  * operator's own chain, to check the receipts), and let the core library
  * decide which rotation counts and which routes and encryption key count.
- * Nothing unsigned is trusted.
+ * Nothing unsigned is trusted. With `into`, the acts are added to that
+ * verifier, so several identities can be judged together.
  */
-export async function lookUp(identity: string, hints: string[], via: Via = {}): Promise<Lookup> {
-  const v = new Verifier(SPECS.identity);
+export async function lookUp(identity: string, hints: string[], via: Via = {}, into?: Verifier): Promise<Lookup> {
+  const v = into ?? new Verifier(SPECS.identity);
   const tried = new Set<string>();
   const unreachable: string[] = [];
   const operatorActs = new Map<string, Uint8Array[]>();

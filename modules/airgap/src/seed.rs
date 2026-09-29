@@ -185,17 +185,27 @@ impl Seed {
     /// `tagged_hash(tag, seed ‖ scheme ‖ index ‖ 0) ‖ tagged_hash(tag, seed ‖ scheme ‖ index ‖ 1)`,
     /// with the index as 8 bytes, big-endian, in the order sk_seed, sk_prf, pk_seed.
     pub fn key(&self, scheme: u8, index: u64) -> SlhKey {
+        let s = self.key_seeds(scheme, index);
+        SlhKey::from_seeds(
+            scheme,
+            s[..16].try_into().unwrap(),
+            s[16..32].try_into().unwrap(),
+            s[32..].try_into().unwrap(),
+        )
+    }
+
+    /// The 48 bytes of FIPS 205 seeds [`Seed::key`] derives (sk_seed,
+    /// sk_prf, pk_seed), for a signer that takes seeds rather than a key.
+    pub fn key_seeds(&self, scheme: u8, index: u64) -> [u8; 48] {
         assert!(scheme == 2 || scheme == 3, "safety schemes are 2 and 3");
         let t = self.module.key_tag();
         let i = index.to_be_bytes();
         let a = tagged_hash_parts(t, &[&self.entropy, &[scheme], &i, &[0]]);
         let b = tagged_hash_parts(t, &[&self.entropy, &[scheme], &i, &[1]]);
-        SlhKey::from_seeds(
-            scheme,
-            a[..16].try_into().unwrap(),
-            a[16..].try_into().unwrap(),
-            b[..16].try_into().unwrap(),
-        )
+        let mut out = [0u8; 48];
+        out[..32].copy_from_slice(&a);
+        out[32..].copy_from_slice(&b[..16]);
+        out
     }
 
     /// A short name for this seed, never secret: the hash of the commitment

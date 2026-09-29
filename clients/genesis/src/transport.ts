@@ -139,6 +139,27 @@ export class Relay {
     }
   }
 
+  /** `POST /media`: the relay's answer is checked against the bytes sent. */
+  async putMedia(locked: Uint8Array): Promise<{ lockedHash: string; size: number }> {
+    const m = cborDecode(await this.post('/media', locked, 'application/octet-stream')) as unknown[];
+    const lockedHash = hex(m[0] as Uint8Array);
+    if (lockedHash !== createHash('sha256').update(locked).digest('hex') || m[1] !== locked.length) {
+      throw new RelayError(-1, 'the relay answered for other media');
+    }
+    return { lockedHash, size: m[1] as number };
+  }
+
+  /** `GET /media/{locked hash}`, checked: `null` when not held or not matching. */
+  async getMedia(lockedHash: string): Promise<Uint8Array | null> {
+    try {
+      const b = await this.call(`/media/${lockedHash}`);
+      return createHash('sha256').update(b).digest('hex') === lockedHash ? b : null;
+    } catch (e) {
+      if (e instanceof RelayError && e.code === CODE.notHeld) return null;
+      throw e;
+    }
+  }
+
   async feed(q: {
     signer?: string;
     to?: string;

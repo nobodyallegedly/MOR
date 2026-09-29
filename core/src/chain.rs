@@ -361,6 +361,15 @@ impl Verifier {
         self.acts.get(id)
     }
 
+    /// The acts this verifier holds whose outside names `signer`.
+    pub fn signed_by(&self, signer: &Hash) -> impl Iterator<Item = &Held> {
+        self.by_signer
+            .get(signer)
+            .into_iter()
+            .flatten()
+            .filter_map(|id| self.acts.get(id))
+    }
+
     /// Resolve an identity chain: which act counts at each position.
     pub fn resolve(&self, identity: &Hash) -> Rc<Resolution> {
         self.resolve_cx(&mut Cx::default(), identity)

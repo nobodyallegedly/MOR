@@ -24,6 +24,13 @@
 //! - [`chain`]: which identity-chain act counts, and the standing of every
 //!   other act (Identity, "Verification procedures", "Validity rules").
 //!
+//! Law (roadmap step 5a):
+//!
+//! - [`law`]: the first exact formats of the Law MIP (terms, signatures,
+//!   clones, key grammars) and the checks a collective needs: which
+//!   agreement is in force, and the visible member signatures its grammar
+//!   requires (Law draft 6).
+//!
 //! Written against core v15, Identity draft 9, Envelope draft 5 and Text draft 5.
 
 pub mod act;
@@ -32,6 +39,7 @@ pub mod chain;
 pub mod envelope;
 pub mod hash;
 pub mod identity;
+pub mod law;
 pub mod lock;
 pub mod merkle;
 pub mod mmr;

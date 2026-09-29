@@ -1,6 +1,6 @@
 # MOR Freeze Test Suite
 
-*Version 14, 28 September 2026. Version 13 with F92 and F93 applied: scenario 5.7c gains a thief who finds a used safety key after the home closes and cannot rewrite the history the home receipted, and a thief who drops auditing in a homeless rotation (approved with the step 3 findings, 28 September 2026). It matches core v15 and Identity draft 9 (findings F1 to F95). Version 13 applied F86 and F87: scenario 5.7c gains a censored reader and a thief's second rotation that does not make the first final (approved by Nobody, allegedly, 28 September 2026), and the homeless rotation component follows. It matches core v13 and the MIP drafts (Identity 8; findings F1 to F87). Version 12 applied F84 and F85: the freeze rule and the freeze procedure. Every critical and important attack of round 2 is a scenario, so a later change cannot quietly bring one back.*
+*Version 15, 29 September 2026. Version 14 with F96 and F100 applied (roadmap step 5a): scenario 3's collective gains a key grammar with a single holder and no successor, rejected, and a member who left whose signature no longer counts. It matches core v16 and the MIP drafts (Identity 9, Envelope 6, Law 6; findings F1 to F100). Version 14 was version 13 with F92 and F93 applied: scenario 5.7c gains a thief who finds a used safety key after the home closes and cannot rewrite the history the home receipted, and a thief who drops auditing in a homeless rotation (approved with the step 3 findings, 28 September 2026). It matches core v15 and Identity draft 9 (findings F1 to F95). Version 13 applied F86 and F87: scenario 5.7c gains a censored reader and a thief's second rotation that does not make the first final (approved by Nobody, allegedly, 28 September 2026), and the homeless rotation component follows. It matches core v13 and the MIP drafts (Identity 8; findings F1 to F87). Version 12 applied F84 and F85: the freeze rule and the freeze procedure. Every critical and important attack of round 2 is a scenario, so a later change cannot quietly bring one back.*
 
 ## Purpose
 
@@ -86,7 +86,7 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 - [ ] Split service failing to split, or under-reporting against a payer's claim, shown as an open obligation; owners switching services (2, 7)
 - [ ] Standing offers; key delivery or delivery confirmation as the binding moment; refund owed otherwise, claimable by proof (2, 5)
 - [ ] Named time reference; recurring obligation; lapse shown as past its terms; a missed deadline shown only with an anchor or keeper, otherwise undetermined (1, 7)
-- [ ] Collective founded with a key grammar that leaves a way to rotate; member leaving by rotation plus clone; a dead member's share released by the recovery path (3)
+- [ ] Collective founded with a key grammar that leaves a way to rotate, surviving the loss of any one key holder; a single holder with no successor rejected; member leaving by rotation plus clone, the rotation declaring the clone; a former member's signature no longer counting; a dead member's share released by the recovery path (3)
 - [ ] Grant branches, seal at a named act, never before a deal the grantor paid on, import, handover; a publication under a grant with `for` (3)
 - [ ] Acknowledgement recorded by the collective (3)
 - [ ] Clone drafts; fork rule; status quo default; protected clauses unchanged for a party who did not sign; exit by cloning onto another cMIP (1, 3)
@@ -150,10 +150,11 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 4. The label had signed a split on deal 3. It revokes Marco's grant; a revocation sealing before deal 3 is invalid; it seals at deal 3.
 5. It imports deals 1 and 5, hands deal 4 to Sofia's branch, and leaves deal 2 unimported. Deal 3 stands by rule 40.
 6. The label sells part of its catalogue stakes; the split service pays the buyer thereafter.
-7. A member leaves: the remaining members rotate to keys the departing member never held, re-split the safety key, and clone the founding agreement.
+7. A member leaves: the remaining members rotate to keys the departing member never held, re-split the safety key, and clone the founding agreement; the rotation declares the clone. The departing member and another sign an act of a type the grammar lists, made with the label's old key after the rotation: it is void, and their signatures count for nothing under the clone (F100).
+7a. A founding agreement is proposed whose grammar gives the safety key to one holder and names no successor and no escrowed share: every client rejects it as invalid (F96).
 8. Another member dies. Their succession plan gives their stake to two children in equal shares and their seat to a trusted colleague, with a position paying for the job. The abandonment authority declares the absence, the plan executes as a clone, the escrowed share is released, and the members rotate and re-split the safety key to include the colleague.
 
-**Passes if:** deals 1, 3 and 5 bind the label, deal 4 is managed by Sofia while keeping its origin, deal 2 is void, the fork resolves by the stated rule, the sale changes no other holder's stake and pays the buyer, the departing member can no longer sign for the label, every rotation had a way through that needed less than every member, the unsigned debt binds nobody, and the succession gives stakes and seat exactly as planned.
+**Passes if:** deals 1, 3 and 5 bind the label, deal 4 is managed by Sofia while keeping its origin, deal 2 is void, the fork resolves by the stated rule, the sale changes no other holder's stake and pays the buyer, the departing member can no longer sign for the label, every rotation had a way through that survived the loss of any one key holder, the grammar with a single holder and no successor is rejected, the former member's late signatures count for nothing, the unsigned debt binds nobody, and the succession gives stakes and seat exactly as planned.
 
 ### 4. A democracy round
 

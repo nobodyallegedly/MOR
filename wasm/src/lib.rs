@@ -27,6 +27,7 @@ use mor_core::hash::Hash;
 use mor_core::identity::{
     self, Genesis, Home, HomeRule, KeptTip, Payload, Rotation, SafetyCommit, SigningKey,
 };
+use mor_core::law;
 use mor_core::mmr;
 use mor_core::sig::{self, SchnorrKey, SlhKey};
 use mor_core::xwing;
@@ -417,6 +418,38 @@ struct GenesisIn {
     safety_commit: String,
     homes: Vec<HomeIn>,
     rule: Option<Vec<u64>>,
+    /// High-risk settings of higher MIPs (Identity, declarations slot).
+    declarations: Option<Vec<DeclIn>>,
+}
+
+/// `declaration = [ spec, kind, value ]`, with a hash as its value (a
+/// collective's founding agreement, Law), or null to remove the kind.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DeclIn {
+    spec: String,
+    kind: u64,
+    value: Option<String>,
+}
+
+fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaration>>> {
+    d.as_ref()
+        .map(|v| {
+            v.iter()
+                .map(|x| {
+                    Ok(identity::Declaration {
+                        spec: unhex(&x.spec)?,
+                        kind: x.kind,
+                        value: x
+                            .value
+                            .as_deref()
+                            .map(|h| Ok::<_, JsError>(Value::Bytes(unhex(h)?.to_vec())))
+                            .transpose()?,
+                    })
+                })
+                .collect()
+        })
+        .transpose()
 }
 
 /// A genesis (Identity type 0), signed by its first signing key, and checked
@@ -436,7 +469,7 @@ pub fn make_genesis(input: JsValue) -> R<Vec<u8>> {
         },
         homes: homes_of(&g.homes)?,
         rule: g.rule.as_deref().map(rule_of).transpose()?,
-        declarations: None,
+        declarations: declarations_of(&g.declarations)?,
         audit: None,
     };
     let inside = identity_inside(
@@ -482,6 +515,8 @@ struct RotationIn {
     homes: Option<Vec<HomeIn>>,
     /// Absent: left in place. `[]`: back to the default (null). Otherwise a rule.
     rule: Option<Vec<u64>>,
+    /// New high-risk settings, replacing those of the same kind.
+    declarations: Option<Vec<DeclIn>>,
 }
 
 /// A rotation (Identity type 1), signed by the revealed safety key.
@@ -523,7 +558,7 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
             Some([]) => Some(None),
             Some(x) => Some(Some(rule_of(x)?)),
         },
-        declarations: None,
+        declarations: declarations_of(&r.declarations)?,
         successor: None,
         audit: None,
         homeless: false,
@@ -1118,4 +1153,364 @@ impl Verifier {
     pub fn held(&self) -> Vec<String> {
         self.held.iter().map(hx).collect()
     }
+}
+
+// ---------------------------------------------------------------- Law (roadmap step 5a)
+
+/// Check a terms payload (Law type 0), given as CBOR: its format and every
+/// check that needs no other act, key grammar included (rule 36, F96).
+/// Throws the reason it fails.
+#[wasm_bindgen(js_name = checkTerms)]
+pub fn check_terms(payload: &[u8]) -> R<()> {
+    let t = law::Terms::decode(&payload_of(payload)?).map_err(err)?;
+    t.check().map_err(err)
+}
+
+/// A signature payload (Law type 1), as CBOR. The act carries, in
+/// `objects`, `[signed, signed]`: a signature follows the act it signs.
+#[wasm_bindgen(js_name = signaturePayload)]
+pub fn signature_payload(signed: &str) -> R<Vec<u8>> {
+    Ok(cbor::encode(&Value::Map(law::signature_payload(&unhex(
+        signed,
+    )?))))
+}
+
+#[derive(Serialize)]
+struct RuleOut {
+    form: String,
+    threshold: Option<u64>,
+    named: Option<Vec<String>>,
+}
+
+fn rule_out(r: &law::Rule) -> RuleOut {
+    match r {
+        law::Rule::All => RuleOut {
+            form: "all".into(),
+            threshold: None,
+            named: None,
+        },
+        law::Rule::Threshold(k) => RuleOut {
+            form: "threshold".into(),
+            threshold: Some(*k),
+            named: None,
+        },
+        law::Rule::Named(n) => RuleOut {
+            form: "named".into(),
+            threshold: None,
+            named: Some(n.iter().map(hx).collect()),
+        },
+    }
+}
+
+#[derive(Serialize)]
+struct AgreementOut {
+    id: String,
+    parties: Vec<String>,
+    signed: Vec<String>,
+    exists: bool,
+    parent: Option<String>,
+    text: String,
+    collective: bool,
+}
+
+#[derive(Serialize)]
+struct ConsentOut {
+    /// "not-collective", "not-listed" or "listed".
+    kind: String,
+    agreement: Option<String>,
+    rule: Option<RuleOut>,
+    signers: Vec<String>,
+    met: bool,
+}
+
+#[wasm_bindgen]
+impl Verifier {
+    /// An agreement as held: its parties, who signed, whether it exists
+    /// (Law rules 1 and 45). `law` is the Law spec hash (`LAW`).
+    #[wasm_bindgen(js_name = lawAgreement)]
+    pub fn law_agreement(&self, law_spec: &str, id: &str) -> R<JsValue> {
+        let view = law::LawView::new(&self.inner, unhex(law_spec)?);
+        let a = view.agreement(&unhex(id)?).map_err(err)?;
+        to_js(&AgreementOut {
+            id: hx(&a.id),
+            parties: a.terms.parties.iter().map(hx).collect(),
+            signed: a.signed.iter().map(hx).collect(),
+            exists: a.exists,
+            parent: a.terms.parent.as_ref().map(hx),
+            text: a.terms.text.clone(),
+            collective: a.terms.grammar.is_some(),
+        })
+    }
+
+    /// The agreement an identity declares in force at the chain act
+    /// `binding`, if any.
+    #[wasm_bindgen(js_name = lawDeclared)]
+    pub fn law_declared(&self, law_spec: &str, identity: &str, binding: &str) -> R<Option<String>> {
+        let view = law::LawView::new(&self.inner, unhex(law_spec)?);
+        Ok(view
+            .declared(&unhex(identity)?, &unhex(binding)?)
+            .map(|h| hx(&h)))
+    }
+
+    /// Law's answer for an act of a collective: the visible member
+    /// signatures its grammar requires, under the agreement in force at the
+    /// act's binding (rule 36; F100). Throws if that agreement is broken.
+    #[wasm_bindgen(js_name = lawConsent)]
+    pub fn law_consent(&self, law_spec: &str, act: &str) -> R<JsValue> {
+        let view = law::LawView::new(&self.inner, unhex(law_spec)?);
+        let c = view.consent(&unhex(act)?).map_err(err)?;
+        to_js(&match c {
+            law::Consent::NotCollective => ConsentOut {
+                kind: "not-collective".into(),
+                agreement: None,
+                rule: None,
+                signers: vec![],
+                met: true,
+            },
+            law::Consent::NotListed { agreement } => ConsentOut {
+                kind: "not-listed".into(),
+                agreement: Some(hx(&agreement)),
+                rule: None,
+                signers: vec![],
+                met: true,
+            },
+            law::Consent::Listed {
+                agreement,
+                rule,
+                signers,
+                met,
+            } => ConsentOut {
+                kind: "listed".into(),
+                agreement: Some(hx(&agreement)),
+                rule: Some(rule_out(&rule)),
+                signers: signers.iter().map(hx).collect(),
+                met,
+            },
+        })
+    }
+}
+
+// ---------------------------------------------------------------- split safety keys
+
+/// Randomness from the platform, for the share dealing's polynomials.
+struct PlatformRng;
+
+impl rand_core::RngCore for PlatformRng {
+    fn next_u32(&mut self) -> u32 {
+        u32::from_le_bytes(random::<4>())
+    }
+    fn next_u64(&mut self) -> u64 {
+        u64::from_le_bytes(random::<8>())
+    }
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        getrandom::getrandom(dest).expect("crypto.getRandomValues");
+    }
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
+        self.fill_bytes(dest);
+        Ok(())
+    }
+}
+
+impl rand_core::CryptoRng for PlatformRng {}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HolderIn {
+    /// 0 a member, 1 a custodian, 2 an escrow.
+    role: u8,
+    identity: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DealIn {
+    /// "words" or "hex": the seed Module that derives the key.
+    seed_module: String,
+    scheme: u8,
+    index: u64,
+    threshold: u64,
+    holders: Vec<HolderIn>,
+}
+
+#[derive(Serialize)]
+struct DealOut {
+    /// One encoded share message (air-gapped Module 2.4) per holder, in order.
+    shares: Vec<serde_bytes::ByteBuf>,
+    scheme: u8,
+    commit: String,
+    fingerprint: String,
+}
+
+/// Deal a fresh safety key of a collective as shares, any `threshold` of
+/// which rebuild it, with Pedersen commitments (air-gapped Module, section
+/// 5; Law rule 36; F97). The key itself is never returned: only the
+/// shares, its commitment and the dealing's fingerprint. **Test
+/// collectives only**: here the dealing device is this program, in
+/// software; a real collective deals on an offline device.
+#[wasm_bindgen(js_name = dealSafety)]
+pub fn deal_safety(input: JsValue) -> R<JsValue> {
+    use mor_airgap::msg::{Holder, Message, Role};
+    use mor_airgap::seed::SeedModule;
+    use mor_airgap::shares;
+    let d: DealIn = from_js(input)?;
+    if !(2..=3).contains(&d.scheme) {
+        return Err(err("safety schemes are 2 and 3"));
+    }
+    if d.threshold == 0 || d.threshold > d.holders.len() as u64 {
+        return Err(err("1 ≤ threshold ≤ holders"));
+    }
+    let module =
+        SeedModule::from_name(&d.seed_module).ok_or_else(|| err("seed Module: words or hex"))?;
+    let holders = d
+        .holders
+        .iter()
+        .map(|h| {
+            Ok(Holder {
+                role: match h.role {
+                    0 => Role::Member,
+                    1 => Role::Custodian,
+                    2 => Role::Escrow,
+                    _ => return Err(err("a holder's role is 0, 1 or 2")),
+                },
+                identity: h.identity.as_deref().map(unhex).transpose()?,
+            })
+        })
+        .collect::<R<Vec<_>>>()?;
+    let mut rng = PlatformRng;
+    let seed = shares::fresh_dealable_seed(module, &mut rng);
+    let dealt = shares::deal(&seed, d.scheme, d.index, d.threshold, holders, &mut rng);
+    let dealing = dealt[0].dealing.clone();
+    to_js(&DealOut {
+        shares: dealt
+            .into_iter()
+            .map(|s| serde_bytes::ByteBuf::from(Message::Share(s).encode()))
+            .collect(),
+        scheme: d.scheme,
+        commit: hx(&dealing.safety.commit),
+        fingerprint: hx(&dealing.fingerprint()),
+    })
+}
+
+fn share_of(bytes: &[u8]) -> R<mor_airgap::msg::Share> {
+    use mor_airgap::msg::{kind, Message};
+    match Message::decode_kind(bytes, kind::SHARE).map_err(err)? {
+        Message::Share(s) => Ok(s),
+        _ => Err(err("not a share")),
+    }
+}
+
+#[derive(Serialize)]
+struct ShareOut {
+    x: u64,
+    threshold: u64,
+    holders: usize,
+    index: u64,
+    scheme: u8,
+    commit: String,
+    fingerprint: String,
+}
+
+/// A holder's own check of their share against the dealing's commitments
+/// (Module 5.1). Throws if it does not lie on them. Returns what the holder
+/// compares with every other holder: the dealing's fingerprint.
+#[wasm_bindgen(js_name = verifyShare)]
+pub fn verify_share(bytes: &[u8]) -> R<JsValue> {
+    let s = share_of(bytes)?;
+    mor_airgap::shares::verify_share(&s).map_err(err)?;
+    let d = &s.dealing;
+    to_js(&ShareOut {
+        x: s.x,
+        threshold: d.threshold,
+        holders: d.holders.len(),
+        index: d.index,
+        scheme: match d.safety.scheme {
+            Scheme::Founding(n) => n,
+            _ => 0,
+        },
+        commit: hx(&d.safety.commit),
+        fingerprint: hx(&d.fingerprint()),
+    })
+}
+
+#[derive(Serialize)]
+struct RebuiltOut {
+    scheme: u8,
+    #[serde(with = "serde_bytes")]
+    seeds: Vec<u8>,
+    commit: String,
+}
+
+/// Rebuild a collective's safety key from `threshold` shares, each checked,
+/// and check it against the dealing's commitment (Module 5.1: the rebuild
+/// check; at a rotation, the rotating device). Returns the FIPS 205 seeds to
+/// sign one rotation with. **Test collectives only.**
+#[wasm_bindgen(js_name = rebuildSafety)]
+pub fn rebuild_safety(shares: Vec<js_sys::Uint8Array>) -> R<JsValue> {
+    let shares = shares
+        .iter()
+        .map(|b| share_of(&b.to_vec()))
+        .collect::<R<Vec<_>>>()?;
+    let (seed, d) = mor_airgap::shares::rebuild(&shares).map_err(err)?;
+    let scheme = match d.safety.scheme {
+        Scheme::Founding(n @ (2 | 3)) => n,
+        _ => return Err(err("the dealing's safety scheme")),
+    };
+    let key = seed.key(scheme, d.index);
+    if key.commitment() != d.safety.commit {
+        return Err(err(mor_airgap::shares::ShareError::WrongKey));
+    }
+    to_js(&RebuiltOut {
+        scheme,
+        seeds: seed.key_seeds(scheme, d.index).to_vec(),
+        commit: hx(&d.safety.commit),
+    })
+}
+
+// ---------------------------------------------------------------- media
+
+/// The work hash of a plaintext, `tagged_hash("MOR/work", plaintext)` (Envelope, "Media").
+#[wasm_bindgen(js_name = workHash)]
+pub fn work_hash(plaintext: &[u8]) -> String {
+    hx(&mor_core::hash::work_hash(plaintext))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LockedOut {
+    #[serde(with = "serde_bytes")]
+    locked: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    key: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    nonce: Vec<u8>,
+    locked_hash: String,
+    work_hash: String,
+}
+
+/// Lock a media object with a fresh content key and nonce (Envelope,
+/// "Media": XChaCha20-Poly1305, no associated data).
+#[wasm_bindgen(js_name = lockMedia)]
+pub fn lock_media(plaintext: &[u8]) -> R<JsValue> {
+    let key = random::<32>();
+    let nonce = random::<24>();
+    let locked = mor_core::lock::lock(plaintext, &key, &nonce);
+    to_js(&LockedOut {
+        locked_hash: hx(&mor_core::hash::sha256(&locked)),
+        work_hash: work_hash(plaintext),
+        locked,
+        key: key.to_vec(),
+        nonce: nonce.to_vec(),
+    })
+}
+
+/// Open a locked media object. Throws if the key and nonce do not open it.
+/// The caller checks the plaintext against the work hash (Envelope rule 14).
+#[wasm_bindgen(js_name = openMedia)]
+pub fn open_media(locked: &[u8], key: &[u8], nonce: &[u8]) -> R<Vec<u8>> {
+    mor_core::lock::unlock(
+        locked,
+        &arr::<32>(key, "a content key")?,
+        &arr::<24>(nonce, "a nonce")?,
+    )
+    .map_err(|_| err("the key does not open these bytes"))
 }

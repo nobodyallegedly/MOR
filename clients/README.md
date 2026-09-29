@@ -5,6 +5,7 @@ The TypeScript clients (build brief: "Rust for the core library, relays and home
 | Folder | What | Roadmap |
 | --- | --- | --- |
 | `genesis/` | The genesis client: test identities, routes, encryption keys, rotations, key delivery. | step 5 |
+| `repo/` | The repo client: a test collective under a founding agreement, releases of the code as signed manifests, verification of every file. | step 5a |
 
 Building any of them needs Node 22 or later, Rust with the `wasm32-unknown-unknown` target, and `wasm-bindgen-cli` of the version the `mor-wasm` crate pins:
 

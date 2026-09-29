@@ -67,6 +67,8 @@ alias mg='npm run -s cli --'
 
 Keep `~/mor-test/*.json` secret: each holds every key of its test identity.
 
+Added for the repo client (step 5a): `publish` takes `objects` (the chains an act belongs to); `lookUp` can add what it fetches to a verifier it is given, so several identities are judged together; the transport publishes and fetches media (`putMedia`, `getMedia`, checked by their SHA-256); the bindings make genesis and rotations with declarations, check Law terms and member signatures, lock media, and deal, check and rebuild split safety keys.
+
 ## Readings, confirmed by Nobody, allegedly (29 September 2026)
 
 Where the texts are silent, the program takes the reading below.
