@@ -29,6 +29,7 @@
 pub mod act;
 pub mod cbor;
 pub mod chain;
+pub mod envelope;
 pub mod hash;
 pub mod identity;
 pub mod lock;
@@ -36,6 +37,7 @@ pub mod merkle;
 pub mod mmr;
 pub mod sig;
 pub mod text;
+pub mod xwing;
 
 pub use act::{Act, ActError, Inside, Outside};
 pub use hash::{tagged_hash, Hash};

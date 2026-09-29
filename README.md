@@ -16,7 +16,7 @@ The core is in draft and has been through two independent reviews. This reposito
 - a JPEG module and a barebone client for text with a picture;
 - a long-form module and a long-form web reader.
 
-The code so far: [core/](core/), the core library; [relay/](relay/), the relays and homes; and [modules/airgap/](modules/airgap/), the air-gapped safety key signer.
+The code so far: [core/](core/), the core library; [relay/](relay/), the relays and homes; [modules/airgap/](modules/airgap/), the air-gapped safety key signer; [wasm/](wasm/), the core library for TypeScript through WebAssembly; and [clients/genesis/](clients/genesis/), the genesis client.
 
 See [docs/build-brief-v1.md](docs/build-brief-v1.md) for the plan, the order of work and what is still open. The protocol itself is in [spec/](spec/), and a plain-language overview in [docs/07-MOR-in-one-page-v5.md](docs/07-MOR-in-one-page-v5.md).
 

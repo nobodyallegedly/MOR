@@ -1,6 +1,6 @@
 # MIP: Envelope
 
-*Draft 5, 28 September 2026. Written against core v14, the Identity MIP draft 8, the Text MIP draft 5 and findings F1 to F91. Draft 5 is draft 4 with three findings from building the core library (roadmap step 2): the running summary's peaks are bagged with left kept on the left (F89); the lock binds no associated data (F90); no data item is nested more than 128 levels deep (F91). Draft 4 applied review round 2: the `for` field on publications and withdrawal by signer or `for`; `objects` entries name their chain; the running summary's empty value and bagging order; signature schemes by specification hash; key delivery to a bare key; inbox delivery and the holding principle; reposts as references.*
+*Draft 6, 29 September 2026. Written against core v16, the Identity MIP draft 9, the Text MIP draft 5 and findings F1 to F99. Draft 6 is draft 5 with two findings of the genesis client (roadmap step 5): encryption keys and key delivery use X-Wing, and their formats are fixed (F98); a private act, a key delivery included, reaches its recipients inside a sealed container that carries its key, since a key delivery that was itself private could never be opened (F99). Draft 5 was draft 4 with three findings from building the core library (roadmap step 2): the running summary's peaks are bagged with left kept on the left (F89); the lock binds no associated data (F90); no data item is nested more than 128 levels deep (F91). Draft 4 applied review round 2: the `for` field on publications and withdrawal by signer or `for`; `objects` entries name their chain; the running summary's empty value and bagging order; signature schemes by specification hash; key delivery to a bare key; inbox delivery and the holding principle; reposts as references.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -28,9 +28,9 @@ Identity (signers, keys, bindings, sequences, routes) and Text (canonical text i
 - **Content key.** The key that locks one inside or one media object. A new one for every object.
 - **Public act.** An act whose content key travels with it, on its outside. Anyone can open it.
 - **Private act.** An act whose content key is delivered only to chosen recipients.
-- **Key delivery.** An act that locks a content key to one recipient's encryption key, or to a bare key the recipient supplied.
+- **Key delivery.** An act that says which key opens which act or media object. Sent privately, it travels in a sealed container locked to the recipient's encryption key, or to a bare key the recipient supplied; published openly, it makes that act or media public.
 - **Encryption key.** A public key an identity publishes so others can deliver content keys to it (F25).
-- **Sealed container.** A wrapper that hides the sender of a private act from relays. Not an act.
+- **Sealed container.** A wrapper that carries a private act and its content key to its recipients, locked to their encryption keys, and hides the sender from relays. Not an act.
 - **Specification.** The MIP or cMIP that defines an act's type, named by its hash.
 - **Chain.** The acts on one object, each naming the act or acts it follows. Each MIP that defines an object defines its chain rules; this MIP defines only what all chains share.
 - **Fork.** Two acts naming the same predecessor in the same chain.
@@ -96,7 +96,7 @@ signature = [ scheme: 1 / 2 / 3 / hash, key: bstr, sig: bstr ]   ; scheme as Ide
 ### Public and private
 
 - **Public:** the content key sits on the outside (key 5). Anyone can open the act. The locked bytes and their key travel together.
-- **Private:** no key on the outside. The key is delivered to each recipient by a key delivery, itself a private act addressed to them.
+- **Private:** no key on the outside. The key reaches each recipient in a sealed container: either with the act itself, or in a key delivery for an act the recipient fetches elsewhere (F99).
 - **Going public later:** the signer publishes a key delivery addressed to no one, with the key on its outside. *One act turns a private act public, for an embargo, a timed release, or disclosing a negotiation record (Law).*
 
 ### Identity acts are public
@@ -105,19 +105,50 @@ Identity acts are the public face of an identity (F29): genesis, rotations, rece
 
 ### Encryption keys and key delivery
 
-- **Encryption key.** An identity that wants to receive private content publishes an encryption key: a public act, versioned in its own chain like routes, changed with the signing key. Recommended scheme: hybrid X25519 plus ML-KEM-768 (FIPS 203), so what is locked today cannot be opened later by a quantum computer. A fork in the chain is contested from that point, as for routes; a fork behind an act the owner's later rotation kept is settled by that rotation.
-- **Key delivery.** A private act addressed (`to`) to one recipient. Its payload names the act or media object whose key it delivers, and holds that key locked to the recipient's current encryption key, or to a bare key the recipient supplied (a device or application key, given as `[scheme, key]` in the form Identity defines). A delivery to a bare key carries no `to` and travels in a sealed container. Key release may be delegated to a service through a grant (Law). Group keys, subscriptions and rights management are access modules.
+- **Encryption key.** An identity that wants to receive private content publishes an encryption key: a public act (type 4), versioned in its own chain like routes, changed with the signing key. A fork in the chain is contested from that point, as for routes; a fork behind an act the owner's later rotation kept is settled by that rotation.
+- **The scheme: X-Wing (F98).** An encryption key, and a bare key, is `[scheme, key]`, in the form Identity defines for keys, in the same number space: founding number 4 is X-Wing, the hybrid of ML-KEM-768 (FIPS 203) and X25519, as specified in draft-connolly-cfrg-xwing-kem-11 ("X-Wing Construction"): a 1216-byte public key, a 1120-byte ciphertext, a 32-byte shared secret. Numbers 1 to 3 are signature schemes and are never encryption keys. A scheme may also be named by the hash of a key-exchange specification (Production); a client that does not implement it cannot seal to that key. *What is locked today stays locked if either half holds. The draft may change before it is final; the version MOR names is fixed by hash at the freeze, like any specification.*
+- **Key delivery.** An act (type 1) whose payload names the act whose content key it carries, or the publication whose media key it carries, and the key itself. Sent privately, it is a private act, addressed (`to`) to its recipient, and travels in a sealed container locked to the recipient's current encryption key; sent to a bare key the recipient supplied (a device or application key), it carries no `to`, and its container is locked to that bare key. Published openly, addressed to no one, it makes the act or media it names public. Key release may be delegated to a service through a grant (Law). Group keys, subscriptions and rights management are access modules.
 - **The hijack window.** A thief holding the signing key can publish a new encryption key, and every private delivery until the owner rotates goes to the thief. The rotation voids the thief's act. *The consequence for a purchase is stated plainly: a seller who delivered a bought key into that window did nothing wrong, and still owes the buyer a new delivery once the owner has rotated, since the buyer paid and did not receive (Law). The window is the price of changing the encryption key with the everyday key, and the same window applies to the inbox route (Identity).*
 
-### Sealed containers: private sender
-
-Following the privacy principle, public receiver and private sender, a private act may travel inside a sealed container:
-
 ```cddl
-sealed = [ to: [* hash], one-time-key: bstr, locked-act: bstr, sig: bstr ]
+enc-key = [ scheme: 4 / hash, key: bstr ]   ; 4: X-Wing, a 1216-byte public key
+
+encryption-key-payload = {     ; type 4
+  0 => uint,                   ; version: 1 for the first, then the previous version plus one
+  ? 1 => hash,                 ; the encryption-key act it replaces (absent only for version 1)
+  2 => enc-key
+}
+
+key-delivery-payload = {       ; type 1
+  0 => hash,                   ; the act whose content key this is; with 2, the publication whose media key it is
+  1 => bstr .size 32,          ; the key
+  ? 2 => true                  ; the key of the media the publication describes
+}
 ```
 
-The inner act, encoded whole, is locked to the recipients; the container is signed by a one-time key that belongs to no identity. Relays see only the recipients, which may be none for a delivery to a bare key. A sealed container is not an act, and relays carry it as opaque bytes.
+*Why a key delivery cannot simply be a private act that carries its key locked inside (F99): its payload is locked with its own content key, which would need a delivery of its own, and that one another, without end. The recipient could never open the first. The key exchange therefore lives in one place, the sealed container, which carries an act and the key that opens it; the key delivery's payload is then plain, and the same payload, published openly, is "going public later".*
+
+### Sealed containers: private delivery, private sender
+
+Following the privacy principle, public receiver and private sender, a private act reaches its recipients inside a sealed container, with its content key:
+
+```cddl
+sealed = [ to: [* hash], one-time-key: bstr .size 32, locked-act: bstr, sig: bstr .size 64 ]
+
+; locked-act holds, encoded:
+locked-act-content = [ capsules: [+ capsule], nonce: bstr .size 24, locked: bstr ]
+capsule = [ ct: bstr .size 1120, wrapped: bstr .size 48 ]
+; locked opens to, encoded:
+contents = [ act: bstr, ? key: bstr .size 32 ]   ; the inner act, encoded whole, and its content key if it is private
+```
+
+1. **Recipients.** `to` lists the recipients' identity hashes, and `capsules` holds one capsule per entry, in the same order. A container for a bare key has an empty `to` and exactly one capsule; a bare key is never combined with other recipients.
+2. **Locking.** A fresh 32-byte container key locks `contents` with XChaCha20-Poly1305 under the nonce, with no associated data (F90). For each recipient, X-Wing encapsulates to its key (the identity's current encryption key, or the bare key) with fresh randomness: `ct` is the X-Wing ciphertext, and `wrapped` is the container key locked with XChaCha20-Poly1305 under the key `tagged_hash("MOR/sealed/wrap", shared secret)` and a nonce of 24 zero bytes. *The zero nonce is safe because every shared secret is fresh.*
+3. **Signature.** The one-time key is a Schnorr key (scheme 1) that belongs to no identity and is used once. It signs `tagged_hash("MOR/sealed", [to, one-time-key, locked-act])`, the three encoded as a CBOR array. *It keeps a relay from re-addressing the container; it says nothing about the sender, who is known only from the inner act.*
+4. **Opening.** A recipient checks the signature, decapsulates its own capsule, unwraps the container key, opens `contents`, and opens the inner act with the key given (or its own, for a public act), checked against its outside as for any act. A key given for a public act makes the container invalid.
+5. **Addressing (rule 10).** An inner act sent to an identity names that identity in its own `to`; one sent to a bare key names no one.
+
+A sealed container is not an act, and relays carry it as opaque bytes. Relays see only the recipients, which are none for a delivery to a bare key, and the size. *The inner act is signed by its sender as any act; its recipient may later show it to anyone, and a private inner act stays locked unless its key is shown too.*
 
 ## Types and specifications
 
@@ -201,7 +232,7 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 | Type | Name | Public or private |
 | --- | --- | --- |
 | 0 | Publication | public (the offer); its media may be locked |
-| 1 | Key delivery | private, addressed to its recipient; or public, addressed to no one, to make something public |
+| 1 | Key delivery | private, addressed to its recipient, in a sealed container; or public, addressed to no one, to make something public |
 | 2 | Commitment | public |
 | 3 | Withdrawal | public |
 | 4 | Encryption key | public (an Identity act in spirit, defined here) |
@@ -224,7 +255,8 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 
 8. Identity acts MUST be public.
 9. A content key MUST NOT be reused for two objects.
-10. A key delivery MUST name the act or media object whose key it delivers, and be addressed to the recipient whose encryption key it locks to, or, for a bare key, travel in a sealed container with no `to`.
+10. A private act MUST reach its recipients in a sealed container that carries its content key, or have its content key delivered by a key delivery that does (F99). A key delivery MUST name the act or publication whose key it carries; a private one MUST be addressed to the recipient whose encryption key its container is locked to, or, for a bare key, carry no `to`.
+10a. A sealed container MUST follow the format above; a container whose signature, capsule or contents fail the checks of "Opening" is invalid, and a client MUST NOT treat its inner act as delivered.
 
 ### Fail closed
 
@@ -255,11 +287,11 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 - **A layer's rules use only that layer's data.** *The `for` field exists so that a wallet with no Law can pay the right identity, and a client with no Law can judge a withdrawal. Pushing one small field down is always better than pulling a rule up.*
 - **Delivery is the signer's interest.** *An act counts only where it is held, so whoever wants an act to count carries it to those who must hold it. A reserved inbox gives that carrying a destination without making any relay the meeting point by default.*
 - **One depth for everyone.** *A decoder must stop somewhere, or hostile input can crash it. If each stopped at its own depth, one verifier could accept an act that another cannot read. A fixed limit, far above any act the MIPs define, gives every verifier the same answer.*
-- **Encryption for the long run.** *Content locked today may be stored and attacked for decades. A hybrid key exchange stays safe if either half holds.*
+- **Encryption for the long run.** *Content locked today may be stored and attacked for decades. A hybrid key exchange stays safe if either half holds. X-Wing combines the two halves with a combiner designed and reviewed for exactly this pair, rather than one made here (F98).*
+- **One place for the key exchange.** *A key that must be delivered privately cannot sit inside the act that delivers it. The sealed container is where every private act meets its recipient's key, so the key delivery can stay a plain statement, and the same statement, published, makes something public (F99).*
 
 ## Open technical parameters
 
-- The exact format of key deliveries under the hybrid scheme (F25), including the bare-key form.
 - Merkle construction for commitments (sorted set).
 - The running-summary test vector (F78): published in draft with the core library (`core/vectors/sequence-three-acts.json`, and `running-summary.json` for longer sequences); final at freeze, when the spec hashes it names are fixed.
 - How a client finds the key deliveries and sealed containers addressed to it (inbox route and relay queries).
@@ -278,6 +310,8 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 - **F89.** The running summary's peaks are bagged with left kept on the left; a single peak is its own root.
 - **F90.** The lock binds no associated data.
 - **F91.** No data item is nested more than 128 levels deep.
+- **F98.** Encryption keys and key delivery use X-Wing, founding scheme number 4.
+- **F99.** A private act reaches its recipients in a sealed container that carries its key; a key delivery's payload is the key itself, private inside a container or public to make something public.
 
 ## Freeze scenarios
 

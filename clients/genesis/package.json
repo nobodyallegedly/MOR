@@ -1,0 +1,27 @@
+{
+  "name": "mor-genesis",
+  "version": "0.1.0",
+  "description": "The MOR genesis client: creates test identities (safety key in software, a prototype), publishes genesis, routes and encryption key, signs rotations, delivers keys in sealed containers.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-genesis": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh scripts/build-wasm.sh",
+    "relay": "cargo build --manifest-path ../../Cargo.toml -p mor-relay",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "cli": "node --import tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@noble/post-quantum": "0.7.1",
+    "@types/node": "^22.20.4",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

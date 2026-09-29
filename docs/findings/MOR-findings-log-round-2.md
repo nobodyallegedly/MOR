@@ -810,3 +810,21 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Cost, stated:** neither ML-KEM crate is audited; `fips203` is called experimental by its authors. Their audit status is a specialist question before the freeze (F85).
 
 **Core changes:** Envelope (encryption keys and key delivery; the open parameter closed, including the bare-key form), written at roadmap step 5. No change to the core document or the freeze test suite.
+
+**Applied (roadmap step 5):** Envelope draft 6 ("Encryption keys and key delivery": founding scheme number 4, the `enc-key`, encryption-key and key-delivery formats). `core/src/xwing.rs` implements draft-connolly-cfrg-xwing-kem-11; its three test vectors pass, and every key exchange in the tests is checked against a second, independent implementation: libcrux (Cryspen's formally verified ML-KEM-768 and X25519) in the Rust tests, noble (`@noble/post-quantum`) in the TypeScript tests. The two agree on every exchange.
+
+## F99. A private act reaches its recipients in a sealed container that carries its key (found while building the genesis client, decided by Nobody, allegedly)
+
+**Pattern:** none of the four; a rule that depends on itself (the key delivery needed a key delivery), so it could not be carried out as written.
+
+**Found while building:** the key delivery (roadmap step 5). Envelope draft 5 made a key delivery "a private act addressed to one recipient", whose payload "holds that key locked to the recipient's current encryption key". But a private act's payload sits in its locked inside, and a private act's content key is itself delivered by a key delivery. The first delivery's own key would need a second delivery, and that one a third, without end: the recipient could never open the first. Nothing on the outside carried the X-Wing ciphertext that would break the loop.
+
+**Options weighed:** (1) the key exchange lives only in the sealed container, which already exists (F26: "the encrypted act plus key deliveries"): the container carries an act and the key that opens it, locked to each recipient; the act's shape does not change. (2) A new outside field carrying each act's content key locked to every recipient in `to`: any addressed private act opens by itself, but the act's shape changes in the core document, the core library and the relays. (3) A public key delivery whose payload holds the locked key: the smallest change, but every relay would then see that it is a key delivery, which act's key it carries and for whom, against "a private message does not stand out".
+
+**Decided (Nobody, allegedly):** option 1. A private act reaches its recipients in a sealed container that carries its content key, or its key is delivered by a key delivery that travels in one. A key delivery's payload is plain: the act (or publication) and the key. Private, it travels sealed, addressed to its recipient or to no one for a bare key; public, addressed to no one, it is "going public later", the same payload.
+
+**Cost, stated:** a private delivery always hides its sender from relays; a delivery that shows its sender to relays no longer exists. *Nothing relied on it: the recipient still sees the sender, and may show the signed inner act to anyone.*
+
+**Core changes:** Envelope draft 6 (definitions; "Public and private"; "Encryption keys and key delivery"; "Sealed containers", now with the exact format; validity rules 10 and 10a; reasoning); core v16 ("Everything encrypted by default", "Public receiver, private sender"). No change to the freeze test suite: its sealed-container and key-delivery scenarios read the same.
+
+**Applied:** `core/src/envelope.rs` (sealed containers, key deliveries, encryption keys, and which version of a routes or encryption-key chain counts); `core/tests/envelope.rs`; the genesis client (`clients/genesis/`) delivers keys this way to identities and to bare keys, over real relays.

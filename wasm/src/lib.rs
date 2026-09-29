@@ -1,0 +1,1121 @@
+//! # mor-wasm
+//!
+//! The core library for the TypeScript clients, through WebAssembly
+//! (build brief, component 3: "TypeScript, with the core via WebAssembly").
+//! Everything that makes or judges an act is the core library's own code:
+//! the clients never re-implement CBOR, hashes, signatures, the identity
+//! checks or X-Wing. They only fetch, store and show.
+//!
+//! Conventions across the boundary: hashes (act ids, identity hashes, spec
+//! hashes) are lowercase hex strings, as in the relay transport's URLs;
+//! everything larger (acts, keys, containers) is a `Uint8Array`. Errors are
+//! thrown as plain-text strings.
+//!
+//! Unlike the core library, these bindings draw fresh randomness (keys,
+//! salts, nonces, content keys) from the platform (`crypto.getRandomValues`),
+//! except where the caller passes it, which the tests do so that a second
+//! X-Wing implementation can re-make every key exchange.
+
+use mor_core::act::{self, Act, Addressing, Inside, Object, Scheme};
+use mor_core::cbor::{self, Value};
+use mor_core::chain::{self, How, Status, Stop};
+use mor_core::envelope::{
+    self, DecKey, EncKey, EncryptionKey, KeyDelivery, Recipient, Route, Routes, SealRandom, Sealed,
+    Version,
+};
+use mor_core::hash::Hash;
+use mor_core::identity::{
+    self, Genesis, Home, HomeRule, KeptTip, Payload, Rotation, SafetyCommit, SigningKey,
+};
+use mor_core::mmr;
+use mor_core::sig::{self, SchnorrKey, SlhKey};
+use mor_core::xwing;
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+
+type R<T> = Result<T, JsError>;
+
+fn err(s: impl std::fmt::Display) -> JsError {
+    JsError::new(&s.to_string())
+}
+
+// ---------------------------------------------------------------- helpers
+
+fn random<const N: usize>() -> [u8; N] {
+    let mut b = [0u8; N];
+    getrandom::getrandom(&mut b).expect("crypto.getRandomValues");
+    b
+}
+
+fn hx(h: &Hash) -> String {
+    hex::encode(h)
+}
+
+fn unhex(s: &str) -> R<Hash> {
+    let v = hex::decode(s).map_err(|_| err(format!("not a hex hash: {s}")))?;
+    v.try_into()
+        .map_err(|_| err(format!("a hash is 32 bytes: {s}")))
+}
+
+fn arr<const N: usize>(b: &[u8], what: &str) -> R<[u8; N]> {
+    b.try_into()
+        .map_err(|_| err(format!("{what} must be {N} bytes")))
+}
+
+fn from_js<T: for<'de> Deserialize<'de>>(v: JsValue) -> R<T> {
+    serde_wasm_bindgen::from_value(v).map_err(err)
+}
+
+fn to_js<T: Serialize>(v: &T) -> R<JsValue> {
+    v.serialize(&serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true))
+        .map_err(err)
+}
+
+/// A valid Schnorr secret, fresh.
+fn schnorr_secret() -> [u8; 32] {
+    loop {
+        let s = random::<32>();
+        if SchnorrKey::from_secret(&s).is_some() {
+            return s;
+        }
+    }
+}
+
+fn schnorr(secret: &[u8]) -> R<SchnorrKey> {
+    SchnorrKey::from_secret(&arr::<32>(secret, "a signing secret")?)
+        .ok_or_else(|| err("not a valid signing secret"))
+}
+
+fn slh(scheme: u8, seeds: &[u8]) -> R<SlhKey> {
+    if !(2..=3).contains(&scheme) {
+        return Err(err("safety schemes are 2 (SLH-DSA-SHA2-128s) and 3 (128f)"));
+    }
+    let s = arr::<48>(seeds, "safety seeds")?;
+    Ok(SlhKey::from_seeds(
+        scheme,
+        s[..16].try_into().unwrap(),
+        s[16..32].try_into().unwrap(),
+        s[32..].try_into().unwrap(),
+    ))
+}
+
+fn salt() -> [u8; 16] {
+    random::<16>()
+}
+
+fn payload_of(bytes: &[u8]) -> R<Vec<(Value, Value)>> {
+    match cbor::decode(bytes).map_err(err)? {
+        Value::Map(m) => Ok(m),
+        _ => Err(err("a payload is a map")),
+    }
+}
+
+// ---------------------------------------------------------------- CBOR <-> JS
+
+/// Decode deterministic CBOR into JavaScript values: maps become `Map`s
+/// (keys kept as numbers), byte strings `Uint8Array`s, integers numbers (or
+/// `BigInt` beyond 2^53), text strings, arrays, booleans and null. Used for
+/// the relay transport's messages.
+#[wasm_bindgen(js_name = cborDecode)]
+pub fn cbor_decode(bytes: &[u8]) -> R<JsValue> {
+    let v = cbor::decode(bytes).map_err(err)?;
+    value_to_js(&v)
+}
+
+fn value_to_js(v: &Value) -> R<JsValue> {
+    Ok(match v {
+        Value::Uint(n) if *n <= (1u64 << 53) => JsValue::from_f64(*n as f64),
+        Value::Uint(n) => js_sys::BigInt::from(*n).into(),
+        Value::Nint(n) => {
+            // -1 - n
+            let x = -1i128 - *n as i128;
+            if x >= -(1i128 << 53) {
+                JsValue::from_f64(x as f64)
+            } else {
+                js_sys::BigInt::from(x as i64).into()
+            }
+        }
+        Value::Bytes(b) => js_sys::Uint8Array::from(b.as_slice()).into(),
+        Value::Text(t) => JsValue::from_str(t),
+        Value::Array(a) => {
+            let out = js_sys::Array::new();
+            for x in a {
+                out.push(&value_to_js(x)?);
+            }
+            out.into()
+        }
+        Value::Map(m) => {
+            let out = js_sys::Map::new();
+            for (k, x) in m {
+                out.set(&value_to_js(k)?, &value_to_js(x)?);
+            }
+            out.into()
+        }
+        Value::Bool(b) => JsValue::from_bool(*b),
+        Value::Null => JsValue::NULL,
+        other => return Err(err(format!("not carried to JavaScript: {other:?}"))),
+    })
+}
+
+/// Encode JavaScript values as deterministic CBOR: the inverse of
+/// [`cbor_decode`], for non-negative integers, `Uint8Array`, strings,
+/// arrays, `Map`s, booleans and null.
+#[wasm_bindgen(js_name = cborEncode)]
+pub fn cbor_encode(v: JsValue) -> R<Vec<u8>> {
+    Ok(cbor::encode(&js_to_value(&v)?))
+}
+
+fn js_to_value(v: &JsValue) -> R<Value> {
+    if v.is_null() {
+        return Ok(Value::Null);
+    }
+    if let Some(b) = v.as_bool() {
+        return Ok(Value::Bool(b));
+    }
+    if let Some(n) = v.as_f64() {
+        if n >= 0.0 && n.fract() == 0.0 && n <= (1u64 << 53) as f64 {
+            return Ok(Value::Uint(n as u64));
+        }
+        return Err(err("only non-negative integers are encoded"));
+    }
+    if v.is_bigint() {
+        let n = u64::try_from(js_sys::BigInt::from(v.clone()))
+            .map_err(|_| err("a BigInt out of range"))?;
+        return Ok(Value::Uint(n));
+    }
+    if let Some(s) = v.as_string() {
+        return Ok(Value::Text(s));
+    }
+    if v.is_instance_of::<js_sys::Uint8Array>() {
+        return Ok(Value::Bytes(js_sys::Uint8Array::from(v.clone()).to_vec()));
+    }
+    if js_sys::Array::is_array(v) {
+        return js_sys::Array::from(v)
+            .iter()
+            .map(|x| js_to_value(&x))
+            .collect::<R<Vec<_>>>()
+            .map(Value::Array);
+    }
+    if v.is_instance_of::<js_sys::Map>() {
+        let m = js_sys::Map::from(v.clone());
+        let mut out = Vec::new();
+        for e in m.entries() {
+            let e = js_sys::Array::from(&e.map_err(|_| err("a map entry"))?);
+            out.push((js_to_value(&e.get(0))?, js_to_value(&e.get(1))?));
+        }
+        return Ok(Value::Map(out));
+    }
+    Err(err("a JavaScript value CBOR cannot carry"))
+}
+
+// ---------------------------------------------------------------- keys
+
+#[wasm_bindgen(js_name = randomBytes)]
+pub fn random_bytes(n: usize) -> Vec<u8> {
+    let mut b = vec![0u8; n];
+    getrandom::getrandom(&mut b).expect("crypto.getRandomValues");
+    b
+}
+
+/// A fresh everyday signing secret (Schnorr, scheme 1).
+#[wasm_bindgen(js_name = newSigningSecret)]
+pub fn new_signing_secret() -> Vec<u8> {
+    schnorr_secret().to_vec()
+}
+
+#[wasm_bindgen(js_name = signingPublic)]
+pub fn signing_public(secret: &[u8]) -> R<Vec<u8>> {
+    Ok(schnorr(secret)?.public().to_vec())
+}
+
+#[derive(Serialize)]
+struct SafetyOut {
+    scheme: u8,
+    #[serde(with = "serde_bytes")]
+    seeds: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    public: Vec<u8>,
+    commit: String,
+}
+
+/// A fresh safety key held in software: its FIPS 205 seeds (48 bytes), its
+/// public key and its commitment. **For test identities only** (build
+/// brief: the real identity's safety key is made by the air-gapped Module).
+#[wasm_bindgen(js_name = newTestSafetyKey)]
+pub fn new_test_safety_key(scheme: u8) -> R<JsValue> {
+    safety_from_seeds(scheme, &random::<48>())
+}
+
+#[wasm_bindgen(js_name = safetyFromSeeds)]
+pub fn safety_from_seeds(scheme: u8, seeds: &[u8]) -> R<JsValue> {
+    let k = slh(scheme, seeds)?;
+    to_js(&SafetyOut {
+        scheme,
+        seeds: seeds.to_vec(),
+        public: k.public(),
+        commit: hx(&k.commitment()),
+    })
+}
+
+/// A fresh X-Wing private key (32 bytes).
+#[wasm_bindgen(js_name = newEncryptionSecret)]
+pub fn new_encryption_secret() -> Vec<u8> {
+    random::<32>().to_vec()
+}
+
+#[wasm_bindgen(js_name = xwingPublic)]
+pub fn xwing_public(secret: &[u8]) -> R<Vec<u8>> {
+    Ok(xwing::public_key(&arr::<32>(secret, "an X-Wing secret")?))
+}
+
+#[derive(Serialize)]
+struct Encapsulated {
+    #[serde(with = "serde_bytes")]
+    ss: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    ct: Vec<u8>,
+}
+
+#[wasm_bindgen(js_name = xwingEncapsulate)]
+pub fn xwing_encapsulate(public: &[u8], eseed: &[u8]) -> R<JsValue> {
+    let (ss, ct) = xwing::encapsulate(public, &arr::<64>(eseed, "an eseed")?).map_err(err)?;
+    to_js(&Encapsulated {
+        ss: ss.to_vec(),
+        ct,
+    })
+}
+
+#[wasm_bindgen(js_name = xwingDecapsulate)]
+pub fn xwing_decapsulate(secret: &[u8], ct: &[u8]) -> R<Vec<u8>> {
+    Ok(
+        xwing::decapsulate(&arr::<32>(secret, "an X-Wing secret")?, ct)
+            .map_err(err)?
+            .to_vec(),
+    )
+}
+
+/// The pickup tag of an X-Wing public key used as a bare key.
+#[wasm_bindgen(js_name = pickupTag)]
+pub fn pickup_tag(public: &[u8]) -> String {
+    hx(&EncKey::xwing(public.to_vec()).pickup_tag())
+}
+
+// ---------------------------------------------------------------- reading acts
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Described {
+    id: String,
+    signer: Option<String>,
+    binding: Option<String>,
+    public: bool,
+    to: Option<Vec<String>>,
+    /// Present when the inside could be opened (a public act).
+    spec: Option<String>,
+    #[serde(rename = "type")]
+    type_: Option<u64>,
+    position: Option<u64>,
+    #[serde(with = "serde_bytes")]
+    payload: Option<Vec<u8>>,
+}
+
+fn describe_act(a: &Act, key: Option<&[u8; 32]>) -> Described {
+    let inside = a.open(key).ok();
+    Described {
+        id: hx(&a.id()),
+        signer: a.outside.signer.as_ref().map(hx),
+        binding: a.outside.binding.as_ref().map(hx),
+        public: a.outside.is_public(),
+        to: a.outside.to.as_ref().map(|t| t.iter().map(hx).collect()),
+        spec: inside.as_ref().map(|i| hx(&i.spec)),
+        type_: inside.as_ref().map(|i| i.type_),
+        position: inside.as_ref().and_then(|i| i.position),
+        payload: inside.map(|i| cbor::encode(&Value::Map(i.payload))),
+    }
+}
+
+/// Decode an act (strictly) and describe it. A public act is opened and
+/// checked against its outside; its payload is returned as CBOR.
+#[wasm_bindgen(js_name = describeAct)]
+pub fn describe(bytes: &[u8]) -> R<JsValue> {
+    let a = Act::decode(bytes).map_err(err)?;
+    to_js(&describe_act(&a, None))
+}
+
+#[wasm_bindgen(js_name = actId)]
+pub fn act_id(bytes: &[u8]) -> R<String> {
+    Ok(hx(&Act::decode(bytes).map_err(err)?.id()))
+}
+
+/// The running summary of a sequence of act ids (Envelope, "Sequences").
+#[wasm_bindgen(js_name = runningSummary)]
+pub fn running_summary(ids: Vec<String>) -> R<String> {
+    let ids = ids.iter().map(|s| unhex(s)).collect::<R<Vec<_>>>()?;
+    Ok(hx(&mmr::summary(ids.iter())))
+}
+
+// ---------------------------------------------------------------- making acts
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HomeIn {
+    operator: Option<String>,
+    hint: String,
+}
+
+fn homes_of(h: &[HomeIn]) -> R<Vec<Home>> {
+    h.iter()
+        .map(|h| {
+            Ok(Home {
+                operator: h.operator.as_deref().map(unhex).transpose()?,
+                hint: h.hint.clone(),
+            })
+        })
+        .collect()
+}
+
+fn rule_of(r: &[u64]) -> R<HomeRule> {
+    match r {
+        [0, i] => Ok(HomeRule::Authoritative(*i)),
+        [1, k] => Ok(HomeRule::Threshold(*k)),
+        _ => Err(err("a home rule is [0, index] or [1, threshold]")),
+    }
+}
+
+fn identity_inside(spec: Hash, type_: u64, payload: Vec<(Value, Value)>) -> Inside {
+    Inside {
+        spec,
+        type_,
+        prev: None,
+        objects: None,
+        payload,
+        position: None,
+        summary: None,
+        acks: None,
+        refs: None,
+        hint: None,
+        salt: salt(),
+    }
+}
+
+fn public_addr(signer: Option<Hash>) -> Addressing {
+    Addressing {
+        signer,
+        binding: None,
+        public: true,
+        to: None,
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GenesisIn {
+    identity_spec: String,
+    #[serde(with = "serde_bytes")]
+    signing_secret: Vec<u8>,
+    safety_scheme: u8,
+    safety_commit: String,
+    homes: Vec<HomeIn>,
+    rule: Option<Vec<u64>>,
+}
+
+/// A genesis (Identity type 0), signed by its first signing key, and checked
+/// with the core's genesis checks before it is returned.
+#[wasm_bindgen(js_name = makeGenesis)]
+pub fn make_genesis(input: JsValue) -> R<Vec<u8>> {
+    let g: GenesisIn = from_js(input)?;
+    let key = schnorr(&g.signing_secret)?;
+    let payload = Genesis {
+        signing_key: SigningKey {
+            scheme: sig::SCHNORR,
+            key: key.public().to_vec(),
+        },
+        safety: SafetyCommit {
+            scheme: Scheme::Founding(g.safety_scheme),
+            commit: unhex(&g.safety_commit)?,
+        },
+        homes: homes_of(&g.homes)?,
+        rule: g.rule.as_deref().map(rule_of).transpose()?,
+        declarations: None,
+        audit: None,
+    };
+    let inside = identity_inside(
+        unhex(&g.identity_spec)?,
+        identity::types::GENESIS,
+        Payload::Genesis(payload.clone()).to_map(),
+    );
+    let a = act::make(
+        &inside,
+        &random::<32>(),
+        &random::<24>(),
+        &public_addr(None),
+        |id| key.sign(id, &random::<32>()),
+    );
+    identity::check_genesis(&a, &inside, &payload).map_err(err)?;
+    Ok(a.encode())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TipIn {
+    act: String,
+    position: u64,
+    summary: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RotationIn {
+    identity_spec: String,
+    identity: String,
+    previous: String,
+    position: u64,
+    /// The safety key the previous act committed, revealed now.
+    safety_scheme: u8,
+    #[serde(with = "serde_bytes")]
+    safety_seeds: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    new_signing_public: Vec<u8>,
+    next_safety_scheme: u8,
+    next_safety_commit: String,
+    kept: Vec<TipIn>,
+    homes: Option<Vec<HomeIn>>,
+    /// Absent: left in place. `[]`: back to the default (null). Otherwise a rule.
+    rule: Option<Vec<u64>>,
+}
+
+/// A rotation (Identity type 1), signed by the revealed safety key.
+///
+/// The safety key here is held in software: **test identities only**. The
+/// signature is hedged (fresh randomness), as the air-gapped Module signs;
+/// the caller keeps the returned bytes and sends exactly them to every home
+/// (Identity rule 8a).
+#[wasm_bindgen(js_name = makeRotation)]
+pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
+    let r: RotationIn = from_js(input)?;
+    let safety = slh(r.safety_scheme, &r.safety_seeds)?;
+    let payload = Rotation {
+        prev: unhex(&r.previous)?,
+        position: r.position,
+        signing_key: SigningKey {
+            scheme: sig::SCHNORR,
+            key: arr::<32>(&r.new_signing_public, "a signing public key")?.to_vec(),
+        },
+        safety: SafetyCommit {
+            scheme: Scheme::Founding(r.next_safety_scheme),
+            commit: unhex(&r.next_safety_commit)?,
+        },
+        kept: r
+            .kept
+            .iter()
+            .map(|t| {
+                Ok(KeptTip {
+                    act: unhex(&t.act)?,
+                    position: t.position,
+                    summary: unhex(&t.summary)?,
+                })
+            })
+            .collect::<R<Vec<_>>>()?,
+        disowned: None,
+        homes: r.homes.as_deref().map(homes_of).transpose()?,
+        rule: match r.rule.as_deref() {
+            None => None,
+            Some([]) => Some(None),
+            Some(x) => Some(Some(rule_of(x)?)),
+        },
+        declarations: None,
+        successor: None,
+        audit: None,
+        homeless: false,
+        closure: false,
+    };
+    let inside = identity_inside(
+        unhex(&r.identity_spec)?,
+        identity::types::ROTATION,
+        Payload::Rotation(payload.clone()).to_map(),
+    );
+    let a = act::make(
+        &inside,
+        &random::<32>(),
+        &random::<24>(),
+        &public_addr(Some(unhex(&r.identity)?)),
+        |id| safety.sign(id, Some(&random::<16>())),
+    );
+    identity::check_rotation_shape(&a, &inside, &payload).map_err(err)?;
+    Ok(a.encode())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EverydayIn {
+    #[serde(with = "serde_bytes")]
+    signing_secret: Vec<u8>,
+    signer: String,
+    binding: String,
+    spec: String,
+    #[serde(rename = "type")]
+    type_: u64,
+    #[serde(with = "serde_bytes")]
+    payload: Vec<u8>,
+    /// The signer's sequence so far, as act ids, oldest first.
+    sequence: Vec<String>,
+    public: bool,
+    to: Option<Vec<String>>,
+    /// `[chain, predecessor]` pairs.
+    objects: Option<Vec<(String, String)>>,
+}
+
+#[derive(Serialize)]
+struct Made {
+    #[serde(with = "serde_bytes")]
+    act: Vec<u8>,
+    id: String,
+    /// The content key: kept by the signer of a private act, to deliver.
+    #[serde(with = "serde_bytes")]
+    key: Vec<u8>,
+}
+
+/// An everyday act, next in the signer's sequence: position and running
+/// summary computed from the sequence given (Envelope rule 4).
+#[wasm_bindgen(js_name = makeEveryday)]
+pub fn make_everyday(input: JsValue) -> R<JsValue> {
+    let e: EverydayIn = from_js(input)?;
+    let key = schnorr(&e.signing_secret)?;
+    let seq = e.sequence.iter().map(|s| unhex(s)).collect::<R<Vec<_>>>()?;
+    let inside = Inside {
+        spec: unhex(&e.spec)?,
+        type_: e.type_,
+        prev: Some(seq.last().copied().into_iter().collect()),
+        objects: e
+            .objects
+            .map(|o| {
+                o.iter()
+                    .map(|(c, p)| {
+                        Ok(Object {
+                            chain: unhex(c)?,
+                            predecessor: unhex(p)?,
+                        })
+                    })
+                    .collect::<R<Vec<_>>>()
+            })
+            .transpose()?,
+        payload: payload_of(&e.payload)?,
+        position: Some(seq.len() as u64 + 1),
+        summary: Some(mmr::summary(seq.iter())),
+        acks: None,
+        refs: None,
+        hint: None,
+        salt: salt(),
+    };
+    let content_key = random::<32>();
+    let addr = Addressing {
+        signer: Some(unhex(&e.signer)?),
+        binding: Some(unhex(&e.binding)?),
+        public: e.public,
+        to: e
+            .to
+            .map(|t| t.iter().map(|s| unhex(s)).collect::<R<Vec<_>>>())
+            .transpose()?,
+    };
+    let a = act::make(&inside, &content_key, &random::<24>(), &addr, |id| {
+        key.sign(id, &random::<32>())
+    });
+    to_js(&Made {
+        id: hx(&a.id()),
+        act: a.encode(),
+        key: content_key.to_vec(),
+    })
+}
+
+// ---------------------------------------------------------------- payloads
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RouteIn {
+    scope: Option<String>,
+    hints: Vec<String>,
+    #[serde(default)]
+    kind: u64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RoutesIn {
+    version: u64,
+    previous: Option<String>,
+    routes: Vec<RouteIn>,
+}
+
+/// A routes payload (Identity type 3), as CBOR.
+#[wasm_bindgen(js_name = routesPayload)]
+pub fn routes_payload(input: JsValue) -> R<Vec<u8>> {
+    let r: RoutesIn = from_js(input)?;
+    let routes = Routes {
+        version: Version {
+            version: r.version,
+            previous: r.previous.as_deref().map(unhex).transpose()?,
+        },
+        routes: r
+            .routes
+            .iter()
+            .map(|x| {
+                Ok(Route {
+                    scope: x.scope.as_deref().map(unhex).transpose()?,
+                    hints: x.hints.clone(),
+                    kind: x.kind,
+                })
+            })
+            .collect::<R<Vec<_>>>()?,
+    };
+    let m = routes.to_map();
+    Routes::decode(&m).map_err(err)?;
+    Ok(cbor::encode(&Value::Map(m)))
+}
+
+/// An encryption-key payload (Envelope type 4), for an X-Wing public key, as CBOR.
+#[wasm_bindgen(js_name = encryptionKeyPayload)]
+pub fn encryption_key_payload(version: u32, previous: Option<String>, public: &[u8]) -> R<Vec<u8>> {
+    let e = EncryptionKey {
+        version: Version {
+            version: version as u64,
+            previous: previous.as_deref().map(unhex).transpose()?,
+        },
+        key: EncKey::xwing(public.to_vec()),
+    };
+    let m = e.to_map();
+    EncryptionKey::decode(&m).map_err(err)?;
+    Ok(cbor::encode(&Value::Map(m)))
+}
+
+/// A key-delivery payload (Envelope type 1), as CBOR.
+#[wasm_bindgen(js_name = keyDeliveryPayload)]
+pub fn key_delivery_payload(target: &str, key: &[u8], media: bool) -> R<Vec<u8>> {
+    let d = KeyDelivery {
+        target: unhex(target)?,
+        key: arr::<32>(key, "a content key")?,
+        media,
+    };
+    Ok(cbor::encode(&Value::Map(d.to_map())))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeliveryOut {
+    target: String,
+    #[serde(with = "serde_bytes")]
+    key: Vec<u8>,
+    media: bool,
+}
+
+#[wasm_bindgen(js_name = readKeyDelivery)]
+pub fn read_key_delivery(payload: &[u8]) -> R<JsValue> {
+    let d = KeyDelivery::decode(&payload_of(payload)?).map_err(err)?;
+    to_js(&DeliveryOut {
+        target: hx(&d.target),
+        key: d.key.to_vec(),
+        media: d.media,
+    })
+}
+
+/// Open a private act with a delivered key, and describe it.
+#[wasm_bindgen(js_name = openWithKey)]
+pub fn open_with_key(act: &[u8], key: &[u8]) -> R<JsValue> {
+    let a = Act::decode(act).map_err(err)?;
+    let k = arr::<32>(key, "a content key")?;
+    a.open(Some(&k)).map_err(err)?;
+    to_js(&describe_act(&a, Some(&k)))
+}
+
+// ---------------------------------------------------------------- sealed containers
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RecipientIn {
+    /// The recipient identity; absent for a bare key.
+    id: Option<String>,
+    #[serde(with = "serde_bytes")]
+    key: Vec<u8>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RandomIn {
+    #[serde(with = "serde_bytes")]
+    container_key: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    nonce: Vec<u8>,
+    eseeds: Vec<serde_bytes::ByteBuf>,
+    #[serde(with = "serde_bytes")]
+    one_time_secret: Vec<u8>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SealIn {
+    #[serde(with = "serde_bytes")]
+    act: Vec<u8>,
+    #[serde(default, with = "serde_bytes")]
+    key: Option<Vec<u8>>,
+    recipients: Vec<RecipientIn>,
+    random: Option<RandomIn>,
+}
+
+/// Seal an act, with its content key if private, for its recipients
+/// (Envelope, "Sealed containers"). Randomness is drawn fresh unless given.
+#[wasm_bindgen(js_name = seal)]
+pub fn seal(input: JsValue) -> R<Vec<u8>> {
+    let s: SealIn = from_js(input)?;
+    let a = Act::decode(&s.act).map_err(err)?;
+    let key = s
+        .key
+        .as_deref()
+        .map(|k| arr::<32>(k, "a content key"))
+        .transpose()?;
+    let recipients = s
+        .recipients
+        .iter()
+        .map(|r| {
+            let key = EncKey::xwing(r.key.clone());
+            Ok(match &r.id {
+                Some(id) => Recipient::Identity {
+                    id: unhex(id)?,
+                    key,
+                },
+                None => Recipient::Bare(key),
+            })
+        })
+        .collect::<R<Vec<_>>>()?;
+    let rnd = match s.random {
+        Some(r) => SealRandom {
+            container_key: arr::<32>(&r.container_key, "a container key")?,
+            nonce: arr::<24>(&r.nonce, "a nonce")?,
+            eseeds: r
+                .eseeds
+                .iter()
+                .map(|e| arr::<64>(e, "an eseed"))
+                .collect::<R<Vec<_>>>()?,
+            one_time_secret: arr::<32>(&r.one_time_secret, "a one-time secret")?,
+            aux: random::<32>(),
+        },
+        None => SealRandom {
+            container_key: random::<32>(),
+            nonce: random::<24>(),
+            eseeds: recipients.iter().map(|_| random::<64>()).collect(),
+            one_time_secret: schnorr_secret(),
+            aux: random::<32>(),
+        },
+    };
+    Ok(envelope::seal(&a, key.as_ref(), &recipients, &rnd)
+        .map_err(err)?
+        .encode())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SealedParts {
+    to: Vec<String>,
+    capsules: Vec<serde_bytes::ByteBuf>,
+}
+
+/// What anyone can read of a sealed container: its recipients, and the
+/// X-Wing ciphertext of each capsule.
+#[wasm_bindgen(js_name = sealedParts)]
+pub fn sealed_parts(bytes: &[u8]) -> R<JsValue> {
+    let s = Sealed::decode(bytes).map_err(err)?;
+    s.check_signature().map_err(err)?;
+    let (capsules, _, _) = s.parts().map_err(err)?;
+    to_js(&SealedParts {
+        to: s.to.iter().map(hx).collect(),
+        capsules: capsules
+            .into_iter()
+            .map(|c| serde_bytes::ByteBuf::from(c.ct))
+            .collect(),
+    })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OpenedOut {
+    #[serde(with = "serde_bytes")]
+    act: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    key: Option<Vec<u8>>,
+    described: Described,
+}
+
+/// Open a sealed container with an X-Wing private key, as the identity `me`
+/// (hex), or as a bare key when `me` is absent.
+#[wasm_bindgen(js_name = openSealed)]
+pub fn open_sealed(bytes: &[u8], me: Option<String>, secret: &[u8]) -> R<JsValue> {
+    let s = Sealed::decode(bytes).map_err(err)?;
+    let me = me.as_deref().map(unhex).transpose()?;
+    let dk = DecKey::from_secret(arr::<32>(secret, "an X-Wing secret")?);
+    let o = envelope::open(&s, me.as_ref(), &dk).map_err(err)?;
+    let described = describe_act(&o.act, o.key.as_ref());
+    to_js(&OpenedOut {
+        act: o.act.encode(),
+        key: o.key.map(|k| k.to_vec()),
+        described,
+    })
+}
+
+// ---------------------------------------------------------------- the verifier
+
+/// The core library's verifier: holds the acts a client fetched, and judges
+/// identity chains and acts from them alone (Identity, "Verification
+/// procedures"). Nothing a relay says unsigned enters it.
+#[wasm_bindgen]
+pub struct Verifier {
+    inner: chain::Verifier,
+    held: Vec<Hash>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LinkOut {
+    act: String,
+    position: usize,
+    how: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HomeOut {
+    operator: Option<String>,
+    hint: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ResolutionOut {
+    identity: String,
+    links: Vec<LinkOut>,
+    /// Why the chain ends: "no-genesis", "unknown", "invalid", "end",
+    /// "pending", "contested".
+    stop: String,
+    waiting: Vec<String>,
+    contested: Vec<u64>,
+    /// The state the latest counting act leaves.
+    signing_key: Option<serde_bytes::ByteBuf>,
+    safety_scheme: Option<u8>,
+    safety_commit: Option<String>,
+    homes: Vec<HomeOut>,
+    rule: Option<Vec<u64>>,
+    /// The effective rule, in words.
+    effective: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LatestOut {
+    act: Option<String>,
+    contested: bool,
+    #[serde(with = "serde_bytes")]
+    payload: Option<Vec<u8>>,
+}
+
+fn how(h: &How) -> String {
+    match h {
+        How::Genesis => "genesis".into(),
+        How::Homes => "homes".into(),
+        How::OwnSignatures => "own signatures".into(),
+        How::Homeless { basis, final_ } => format!(
+            "homeless ({}{})",
+            match basis {
+                chain::Basis::Escape => "escape",
+                chain::Basis::Gone => "old homes gone",
+                chain::Basis::OwnAttempt => "re-homed without audit",
+            },
+            if *final_ { ", final" } else { "" }
+        ),
+    }
+}
+
+#[wasm_bindgen]
+impl Verifier {
+    /// A verifier for the given Identity spec hash (`IDENTITY`; a test value
+    /// until the freeze).
+    #[wasm_bindgen(constructor)]
+    pub fn new(identity_spec: &str) -> R<Verifier> {
+        Ok(Verifier {
+            inner: chain::Verifier::new(unhex(identity_spec)?),
+            held: vec![],
+        })
+    }
+
+    /// Hold an act. Returns its id. A malformed act is refused; a validly
+    /// shaped act with a bad signature is held and judged invalid.
+    pub fn add(&mut self, bytes: &[u8]) -> R<String> {
+        let a = Act::decode(bytes).map_err(err)?;
+        let id = self.inner.add(a).map_err(err)?;
+        if !self.held.contains(&id) {
+            self.held.push(id);
+        }
+        Ok(hx(&id))
+    }
+
+    /// Hold a private act, opened with its content key.
+    #[wasm_bindgen(js_name = addWithKey)]
+    pub fn add_with_key(&mut self, bytes: &[u8], key: &[u8]) -> R<String> {
+        let a = Act::decode(bytes).map_err(err)?;
+        let k = arr::<32>(key, "a content key")?;
+        let id = self.inner.add_with_key(a, Some(&k)).map_err(err)?;
+        if !self.held.contains(&id) {
+            self.held.push(id);
+        }
+        Ok(hx(&id))
+    }
+
+    /// Record that this client itself tried and failed to reach an operator's home.
+    #[wasm_bindgen(js_name = failedToReach)]
+    pub fn failed_to_reach(&mut self, operator: &str) -> R<()> {
+        self.inner.failed_to_reach(unhex(operator)?);
+        Ok(())
+    }
+
+    /// Which act counts at each position of an identity chain.
+    pub fn resolve(&self, identity: &str) -> R<JsValue> {
+        let res = self.inner.resolve(&unhex(identity)?);
+        let (stop, waiting) = match &res.stop {
+            Stop::NoGenesis => ("no-genesis", vec![]),
+            Stop::Unknown => ("unknown", vec![]),
+            Stop::Invalid => ("invalid", vec![]),
+            Stop::End => ("end", vec![]),
+            Stop::Pending(w) => ("pending", w.clone()),
+            Stop::Contested(w) => ("contested", w.clone()),
+        };
+        let latest = res.latest().map(|(_, s)| s.clone());
+        to_js(&ResolutionOut {
+            identity: hx(&res.identity),
+            links: res
+                .links
+                .iter()
+                .enumerate()
+                .map(|(i, l)| LinkOut {
+                    act: hx(&l.act),
+                    position: i,
+                    how: how(&l.how),
+                })
+                .collect(),
+            stop: stop.into(),
+            waiting: waiting.iter().map(hx).collect(),
+            contested: res.contested.clone(),
+            signing_key: latest
+                .as_ref()
+                .map(|s| serde_bytes::ByteBuf::from(s.signing_key.key.clone())),
+            safety_scheme: latest.as_ref().map(|s| match s.safety.scheme {
+                Scheme::Founding(n) => n,
+                Scheme::Spec(_) => 0,
+            }),
+            safety_commit: latest.as_ref().map(|s| hx(&s.safety.commit)),
+            homes: latest
+                .as_ref()
+                .map(|s| {
+                    s.homes
+                        .iter()
+                        .map(|h| HomeOut {
+                            operator: h.operator.as_ref().map(hx),
+                            hint: h.hint.clone(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+            rule: latest.as_ref().and_then(|s| {
+                s.rule.map(|r| match r {
+                    HomeRule::Authoritative(i) => vec![0, i],
+                    HomeRule::Threshold(k) => vec![1, k],
+                })
+            }),
+            effective: latest.as_ref().map(|s| format!("{:?}", s.effective())),
+        })
+    }
+
+    /// The standing of an act held: "valid", "disputed", "void", "pending",
+    /// "invalid" or "unknown".
+    pub fn status(&self, act: &str) -> R<String> {
+        Ok(match self.inner.status(&unhex(act)?) {
+            Status::Valid => "valid",
+            Status::Disputed => "disputed",
+            Status::Void => "void",
+            Status::Pending => "pending",
+            Status::Invalid => "invalid",
+            Status::Unknown => "unknown",
+        }
+        .into())
+    }
+
+    /// The routes act (Identity type 3) or encryption-key act (Envelope type
+    /// 4) that counts for an identity: its valid acts of that spec and type,
+    /// followed from version 1 (Identity, "Routes"; Envelope, "Encryption
+    /// key"). Returns the act, whether the chain is contested past it, and
+    /// its payload as CBOR.
+    pub fn latest(&self, identity: &str, spec: &str, type_: u32) -> R<JsValue> {
+        let id = unhex(identity)?;
+        let spec = unhex(spec)?;
+        let mut entries = vec![];
+        for h in &self.held {
+            let Some(held) = self.inner.get(h) else {
+                continue;
+            };
+            if held.act.outside.signer != Some(id)
+                || held.inside.spec != spec
+                || held.inside.type_ != type_ as u64
+            {
+                continue;
+            }
+            if self.inner.status(h) != Status::Valid {
+                continue;
+            }
+            let fields: Vec<(u64, &Value)> = held
+                .inside
+                .payload
+                .iter()
+                .filter_map(|(k, v)| match k {
+                    Value::Uint(n) => Some((*n, v)),
+                    _ => None,
+                })
+                .collect();
+            let version = match (
+                fields.iter().find(|f| f.0 == 0),
+                fields.iter().find(|f| f.0 == 1),
+            ) {
+                (Some((_, Value::Uint(n))), prev) => Version {
+                    version: *n,
+                    previous: match prev {
+                        Some((_, Value::Bytes(b))) => b.as_slice().try_into().ok(),
+                        _ => None,
+                    },
+                },
+                _ => continue,
+            };
+            // Only acts whose payload decodes in the type's shape take part.
+            let ok = match type_ {
+                3 => Routes::decode(&held.inside.payload).is_ok(),
+                4 => EncryptionKey::decode(&held.inside.payload).is_ok(),
+                _ => {
+                    return Err(err(
+                        "versioned chains are routes (3) and encryption keys (4)",
+                    ))
+                }
+            };
+            if ok {
+                entries.push((*h, version));
+            }
+        }
+        let l = envelope::latest(&entries);
+        let payload = l
+            .act
+            .and_then(|a| self.inner.get(&a))
+            .map(|h| cbor::encode(&Value::Map(h.inside.payload.clone())));
+        to_js(&LatestOut {
+            act: l.act.as_ref().map(hx),
+            contested: l.contested,
+            payload,
+        })
+    }
+
+    /// Every act held, by id.
+    pub fn held(&self) -> Vec<String> {
+        self.held.iter().map(hx).collect()
+    }
+}
