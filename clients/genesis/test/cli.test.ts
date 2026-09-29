@@ -8,10 +8,11 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { start, type Running } from './world.ts';
 
-const cli = new URL('../src/cli.ts', import.meta.url).pathname;
-const bin = new URL('../../../target/debug/mor-relay', import.meta.url).pathname;
+const cli = fileURLToPath(new URL('../src/cli.ts', import.meta.url));
+const bin = fileURLToPath(new URL('../../../target/debug/mor-relay', import.meta.url));
 let homes: Running[] = [];
 let inbox: Running;
 const dir = mkdtempSync(join(tmpdir(), 'mor-genesis-cli-'));
