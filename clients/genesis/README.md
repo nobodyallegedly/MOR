@@ -67,7 +67,7 @@ alias mg='npm run -s cli --'
 
 Keep `~/mor-test/*.json` secret: each holds every key of its test identity.
 
-## Readings, for Nobody, allegedly, to confirm
+## Readings, confirmed by Nobody, allegedly (29 September 2026)
 
 Where the texts are silent, the program takes the reading below.
 
