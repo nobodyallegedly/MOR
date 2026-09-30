@@ -4,15 +4,17 @@ These are the current drafts of the core: the map, the six MIPs and the freeze t
 
 | File | What it is |
 | --- | --- |
-| `02-MOR-core-v17.md` | The core document: the map of all six MIPs. Start here. |
+| `02-MOR-core-v18.md` | The core document: the map of all six MIPs. Start here. |
 | `MIP-identity-draft-10.md` | Identity: the identity hash, keys, rotation, homes and receipts. |
 | `MIP-text-draft-6.md` | Text: canonical text, the text act, and the bound on formats. |
 | `MIP-envelope-draft-6.md` | Envelope: the act, locking, encryption keys and sealed containers, chains, media, relays. |
 | `MIP-finance-draft-5.md` | Finance: receipts, obligations, payee pointers, the vault. |
-| `MIP-law-draft-6.md` | Law: agreements, keepers, stakes, splits, collectives, grants; the first exact formats (terms, signatures, clones, key grammars). |
+| `MIP-law-draft-7.md` | Law: agreements, keepers, stakes, splits, collectives, grants; tiers, areas and clones' marks (F103, F104); the first exact formats (terms, signatures, clones, key grammars, areas). Its pending decisions are listed at its end. |
 | `MIP-production-draft-4.md` | Production: specifications, tasks, verification rules, the trust root. |
-| `03-MOR-freeze-test-suite-v17.md` | The freeze test suite: what must pass, run or reasoned, before the core is frozen. For builders, the specification of what to test. |
+| `03-MOR-freeze-test-suite-v18.md` | The freeze test suite: what must pass, run or reasoned, before the core is frozen. For builders, the specification of what to test. |
 
-Why each rule exists is recorded in `docs/findings/` (F1 to F52, then F53 to F102).
+Why each rule exists is recorded in `docs/findings/` (F1 to F52, then F53 to F104).
 
 Reading convention: normal text is the protocol; italic text is commentary, reasoning and examples.
+
+*Awaiting approval:* Law draft 7, core v18 and freeze test suite v18 apply F103 and F104. Until Nobody, allegedly, approves them, the drafts they replace are kept beside them: `MIP-law-draft-6.md`, `02-MOR-core-v17.md` and `03-MOR-freeze-test-suite-v17.md`, which the core library and clients still implement.
