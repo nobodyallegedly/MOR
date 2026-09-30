@@ -1,0 +1,186 @@
+{
+  "module": "modules/module-jpeg-draft-1.md",
+  "fixtures": "test/fixtures/",
+  "vectors": [
+    {
+      "file": "aspect.jpg",
+      "sha256": "25c9d8bda0c5da9e47e47cc0a795c03f6ce88dfa8cc8e336d2c51b540e2e7ce1",
+      "picture": {
+        "width": 64,
+        "height": 48,
+        "orientation": 8,
+        "shown": [
+          48,
+          64
+        ],
+        "components": 3,
+        "process": "baseline",
+        "colourProfile": false
+      },
+      "carries": [
+        "exif"
+      ],
+      "stripped": {
+        "file": "stripped/aspect.jpg",
+        "sha256": "876fc7e61e56e18392d6e01ca1aeaba7358d22b4c6cd1f291bb1b40c40798f52",
+        "size": 1276
+      }
+    },
+    {
+      "file": "cmyk.jpg",
+      "sha256": "e689c904901d908196cc08b54da47773053f1c10e260b9ad32a08fd8c99d11cf",
+      "picture": {
+        "width": 64,
+        "height": 48,
+        "orientation": 1,
+        "shown": [
+          64,
+          48
+        ],
+        "components": 4,
+        "process": "baseline",
+        "colourProfile": false
+      },
+      "carries": [],
+      "stripped": {
+        "file": "stripped/cmyk.jpg",
+        "sha256": "e689c904901d908196cc08b54da47773053f1c10e260b9ad32a08fd8c99d11cf",
+        "size": 1880
+      }
+    },
+    {
+      "file": "grey.jpg",
+      "sha256": "df43fededcfe04bf69b2fc32eb2b8405905527b267651df666d276fe1c1cf9ca",
+      "picture": {
+        "width": 64,
+        "height": 48,
+        "orientation": 1,
+        "shown": [
+          64,
+          48
+        ],
+        "components": 1,
+        "process": "baseline",
+        "colourProfile": false
+      },
+      "carries": [],
+      "stripped": {
+        "file": "stripped/grey.jpg",
+        "sha256": "df43fededcfe04bf69b2fc32eb2b8405905527b267651df666d276fe1c1cf9ca",
+        "size": 795
+      }
+    },
+    {
+      "file": "hidden.jpg",
+      "sha256": "fb6dcfd7850210cd892753589e7e7b79fe723cf760cf29b8e04243fb49a58c5d",
+      "picture": {
+        "width": 64,
+        "height": 48,
+        "orientation": 1,
+        "shown": [
+          64,
+          48
+        ],
+        "components": 3,
+        "process": "baseline",
+        "colourProfile": false
+      },
+      "carries": [
+        "bytes-after-end",
+        "multi-picture"
+      ],
+      "stripped": {
+        "file": "stripped/hidden.jpg",
+        "sha256": "c33cbe40088d1ed598f7301b7c0359c4f4078be97eec7d8fade497e57b8bafa1",
+        "size": 1240
+      }
+    },
+    {
+      "file": "jfif-thumbnail.jpg",
+      "sha256": "11847b6ba1019501403a81032622916bd5675b683f36c67133b21b2ad7c84f0b",
+      "picture": {
+        "width": 64,
+        "height": 48,
+        "orientation": 1,
+        "shown": [
+          64,
+          48
+        ],
+        "components": 3,
+        "process": "baseline",
+        "colourProfile": false
+      },
+      "carries": [
+        "iptc",
+        "jfif-thumbnail",
+        "jfxx-thumbnail"
+      ],
+      "stripped": {
+        "file": "stripped/jfif-thumbnail.jpg",
+        "sha256": "7febb10e1afaab56495238de66f2763f2146fc8462190b95ad39a824e30d4d24",
+        "size": 1240
+      }
+    },
+    {
+      "file": "not-a-jpeg.jpg",
+      "sha256": "629f4275ec7728373546c2565e62bc8bfa5577c1d8aa82a340c0436aa5c4eccf",
+      "notJpeg": "it does not begin with a JPEG start marker"
+    },
+    {
+      "file": "phone.jpg",
+      "sha256": "f66c1c973ef7d611fe30313486a07fdfca8b6cca1a6d633b8659017c0624137c",
+      "picture": {
+        "width": 64,
+        "height": 48,
+        "orientation": 6,
+        "shown": [
+          48,
+          64
+        ],
+        "components": 3,
+        "process": "baseline",
+        "colourProfile": false
+      },
+      "carries": [
+        "exif",
+        "exif-thumbnail",
+        "location"
+      ],
+      "stripped": {
+        "file": "stripped/phone.jpg",
+        "sha256": "138018dea9b31cfc775c1d97de2f33cd109f628658baf0e9cc53ca43ed2c15f7",
+        "size": 1276
+      }
+    },
+    {
+      "file": "progressive.jpg",
+      "sha256": "fc6052da27cbee6e7fc4fc5f4226d729de8bee0f3e28673d117ce47a0c0a6a6a",
+      "picture": {
+        "width": 80,
+        "height": 60,
+        "orientation": 1,
+        "shown": [
+          80,
+          60
+        ],
+        "components": 3,
+        "process": "progressive",
+        "colourProfile": true
+      },
+      "carries": [
+        "comment",
+        "xmp"
+      ],
+      "stripped": {
+        "file": "stripped/progressive.jpg",
+        "sha256": "f3bf17c3b3be313b1420c30debcb6b9d7a0df6fb82647913800464df1b55db4b",
+        "size": 1778
+      }
+    },
+    {
+      "file": "truncated.jpg",
+      "sha256": "9db023ae950b2a26343f0a2199e78906ad7d2dae77971792e10738d0d0aa341f",
+      "notJpeg": "a segment runs past the end of the file at 609"
+    }
+  ]
+}

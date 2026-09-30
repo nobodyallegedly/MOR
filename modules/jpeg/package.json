@@ -1,0 +1,26 @@
+{
+  "name": "mor-jpeg",
+  "version": "0.1.0",
+  "description": "The MOR JPEG Module: a JPEG read as a picture, and stripped to the picture alone before it is posted.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-jpeg": "./src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "cli": "node --import tsx src/cli.ts",
+    "vectors": "node --import tsx scripts/vectors.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "jpeg-js": "^0.4.4",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

@@ -220,7 +220,7 @@ export class TestIdentity {
     spec: string,
     type: number,
     payload: Uint8Array,
-    opts: { public: boolean; to?: string[]; objects?: [string, string][] },
+    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: string[] },
   ) {
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
@@ -233,6 +233,7 @@ export class TestIdentity {
       public: opts.public,
       to: opts.to,
       objects: opts.objects,
+      refs: opts.refs,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
     this.f.sequence.push(made.id);
     return made;
@@ -451,9 +452,14 @@ export class TestIdentity {
     spec: string,
     type: number,
     payload: Uint8Array,
-    opts: { public: boolean; relays: string[]; to?: string[]; objects?: [string, string][] },
+    opts: { public: boolean; relays: string[]; to?: string[]; objects?: [string, string][]; refs?: string[] },
   ) {
-    const made = this.everyday(spec, type, payload, { public: opts.public, to: opts.to, objects: opts.objects });
+    const made = this.everyday(spec, type, payload, {
+      public: opts.public,
+      to: opts.to,
+      objects: opts.objects,
+      refs: opts.refs,
+    });
     for (const hint of opts.relays) await relayAt(hint, this.via).putAct(made.act);
     return made;
   }

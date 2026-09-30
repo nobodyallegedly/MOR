@@ -16,7 +16,7 @@
 //! except where the caller passes it, which the tests do so that a second
 //! X-Wing implementation can re-make every key exchange.
 
-use mor_core::act::{self, Act, Addressing, Inside, Object, Scheme};
+use mor_core::act::{self, Act, Addressing, Inside, Object, Ref, Scheme};
 use mor_core::cbor::{self, Value};
 use mor_core::chain::{self, How, Status, Stop};
 use mor_core::envelope::{
@@ -316,6 +316,12 @@ struct Described {
     #[serde(rename = "type")]
     type_: Option<u64>,
     position: Option<u64>,
+    /// `[chain, predecessor]` pairs, when opened.
+    objects: Option<Vec<(String, String)>>,
+    /// Acts it refers to, by id, when opened.
+    refs: Option<Vec<String>>,
+    /// Web resources it refers to, `[address, hash or null]`, when opened.
+    web_refs: Option<Vec<(String, Option<String>)>>,
     #[serde(with = "serde_bytes")]
     payload: Option<Vec<u8>>,
 }
@@ -331,6 +337,33 @@ fn describe_act(a: &Act, key: Option<&[u8; 32]>) -> Described {
         spec: inside.as_ref().map(|i| hx(&i.spec)),
         type_: inside.as_ref().map(|i| i.type_),
         position: inside.as_ref().and_then(|i| i.position),
+        objects: inside.as_ref().map(|i| {
+            i.objects
+                .iter()
+                .flatten()
+                .map(|o| (hx(&o.chain), hx(&o.predecessor)))
+                .collect()
+        }),
+        refs: inside.as_ref().map(|i| {
+            i.refs
+                .iter()
+                .flatten()
+                .filter_map(|r| match r {
+                    Ref::Act(h) => Some(hx(h)),
+                    Ref::Web { .. } => None,
+                })
+                .collect()
+        }),
+        web_refs: inside.as_ref().map(|i| {
+            i.refs
+                .iter()
+                .flatten()
+                .filter_map(|r| match r {
+                    Ref::Web { address, hash } => Some((address.clone(), hash.as_ref().map(hx))),
+                    Ref::Act(_) => None,
+                })
+                .collect()
+        }),
         payload: inside.map(|i| cbor::encode(&Value::Map(i.payload))),
     }
 }
@@ -605,6 +638,8 @@ struct EverydayIn {
     to: Option<Vec<String>>,
     /// `[chain, predecessor]` pairs.
     objects: Option<Vec<(String, String)>>,
+    /// Acts this one refers to, by id (Envelope, "References").
+    refs: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
@@ -645,7 +680,14 @@ pub fn make_everyday(input: JsValue) -> R<JsValue> {
         position: Some(seq.len() as u64 + 1),
         summary: Some(mmr::summary(seq.iter())),
         acks: None,
-        refs: None,
+        refs: e
+            .refs
+            .map(|r| {
+                r.iter()
+                    .map(|s| Ok(Ref::Act(unhex(s)?)))
+                    .collect::<R<Vec<_>>>()
+            })
+            .transpose()?,
         hint: None,
         salt: salt(),
     };
