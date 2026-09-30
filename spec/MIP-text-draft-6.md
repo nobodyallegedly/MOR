@@ -1,6 +1,6 @@
 # MIP: Text
 
-*Draft 5, 27 September 2026. Written against core v12, the Identity MIP draft 7, the Envelope MIP draft 4 and findings F1 to F82. Draft 5 applies review round 2: bidirectional controls shown visibly before signing (a MUST for the Law act types), and a bound on what a format may hide.*
+*Draft 6, 30 September 2026. Draft 5 with F102 applied (roadmap step 8, the long-form text format): a format shows what it does not hide in the order of the bytes, and never makes it invisible by styling. Written against core v17, the Identity MIP draft 10, the Envelope MIP draft 6 and findings F1 to F102. Draft 5 applied review round 2: bidirectional controls shown visibly before signing (a MUST for the Law act types), and a bound on what a format may hide.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -59,14 +59,14 @@ A text act is an Envelope MIP act. Outside: `signer` and `binding`. Inside: `spe
 
 ## Tasks
 
-- **Text format.** A cMIP accepts a canonical text and produces a rendering for display. It must accept every canonical text. It may change how text looks, including hiding its own markup, but it may hide only characters that are not letters or digits, and it must never add text that is not in the bytes. Plain display is always the fallback, and before signing, the plain text is always available (rule 5a). *A format that could hide letters could hide a clause from readers of an offer; bounding what it may hide keeps readers, not only signers, protected (F82, M7).*
+- **Text format.** A cMIP accepts a canonical text and produces a rendering for display. It must accept every canonical text. It may change how text looks, including hiding its own markup, but it may hide only characters that are not letters or digits, and it must never add text that is not in the bytes. It shows the characters it does not hide in the order of the bytes, and it never makes one of them invisible or unreadable by styling: no colour, size or position hides one (F102). Plain display is always the fallback, and before signing, the plain text is always available (rule 5a). *A format that could hide letters could hide a clause from readers of an offer; bounding what it may hide keeps readers, not only signers, protected (F82, M7). A format that could move text, a clause to a footnote at the end, a "not" to another column, could make a reader see an order the bytes do not say, as a bidirectional override can; a format that could shrink or colour text to nothing could hide it without "hiding" it. So a format keeps the order and keeps what it shows readable (F102).*
 
 ## Reasoning
 
 - **One form, one hash.** *Agreements, names and text works are compared and hashed as bytes. If the same words could be written in two byte forms, two people could sign "the same" terms with different hashes, or claim "the same" work twice. Canonical text removes that.*
 - **One final form.** *Editors often add a final line break without the writer noticing. Banning it removes the most common way the same words end up with two hashes.*
 - **Noncharacters and U+FEFF are out.** *Unicode reserves noncharacters for internal use, and U+FEFF is an invisible leftover of file encodings. Neither belongs in text people exchange.*
-- **What you sign is what you saw.** *Formats may hide markup, as a Markdown renderer hides the asterisks around bold words. That is fine for reading, but not for signing: before anything is signed, the plain text is always one tap away, and it is the default for terms. Bidirectional controls are the one case where even plain text can lie about its order, so for the acts that bind people they are shown as what they are.*
+- **What you sign is what you saw.** *Formats may hide markup, as a Markdown renderer hides the asterisks around bold words; they may not move words or make them vanish by styling. That is fine for reading, but not for signing: before anything is signed, the plain text is always one tap away, and it is the default for terms. Bidirectional controls are the one case where even plain text can lie about its order, so for the acts that bind people they are shown as what they are.*
 - **The rules are fixed, not borrowed.** *Unicode grows every year. Rules that follow whatever version a machine has would let two verifiers disagree on whether an act is valid. So the space list is written out, control characters are defined by range, and normalization uses one pinned version. New characters, such as new emoji, remain usable. One rare edge remains: a combining mark added to Unicode after the pinned version is treated as unassigned, so two orders of such marks could both pass. Every verifier still agrees, which matters more. Unicode's stability policy guarantees that text in NFC under one version stays in NFC under every later one, so pinning never shuts out future text.*
 - **No TAB.** *A tab displays at different widths in different places, and can hide alignment tricks in terms. Text that needs layout uses a format.*
 - **Warnings, not rules, for lookalikes.** *Banning mixed scripts would exclude real people writing real languages. Deciding what looks alike is judgement, so it belongs to clients.*
@@ -85,3 +85,4 @@ A text act is an Envelope MIP act. Outside: `signer` and `binding`. Inside: `spe
 - Canonical text in every act: all scenarios, since terms, names and messages are text.
 - A text act with a format the receiving client lacks, displayed as plain text: scenario 5.
 - Terms containing a bidirectional override, shown with the control visible before signing: scenario 1.
+- A formatted text act whose rendering hides only markup, adds nothing, and shows the rest in the order of the bytes: scenario 5 (F102).

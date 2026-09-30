@@ -343,6 +343,13 @@ pub fn describe(bytes: &[u8]) -> R<JsValue> {
     to_js(&describe_act(&a, None))
 }
 
+/// Check that a string is canonical text (Text MIP), with the pinned Unicode
+/// tables; throws naming the rule broken.
+#[wasm_bindgen(js_name = checkText)]
+pub fn check_text(s: &str) -> R<()> {
+    mor_core::text::check(s).map_err(|e| err(format!("not canonical text: {e}")))
+}
+
 #[wasm_bindgen(js_name = actId)]
 pub fn act_id(bytes: &[u8]) -> R<String> {
     Ok(hx(&Act::decode(bytes).map_err(err)?.id()))

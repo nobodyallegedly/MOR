@@ -864,3 +864,21 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Identity draft 10 (the log summary section: anyone may carry proofs; an owner's client SHOULD keep its own). Relay transport cMIP draft 2 (identity record parts 9 and 10, `POST /proofs`, bundle key 2, clients rule 5). Freeze test suite v16 (scenario 5.7c). No change to the core document.
 
 **Applied:** `relay/` (the home keeps and serves carried proofs; `a_home_keeps_and_serves_carried_proofs`); `harness/src/carry.rs` (the owner keeps and delivers); the gauntlet's 5.7c check "(F101) a new reader cannot prove the audited rotation of a vanished home until the owner carries its inclusion proofs to the new home". Identity draft 10, relay transport cMIP draft 2 and freeze test suite v16 approved by Nobody, allegedly, 30 September 2026.
+
+## F102. A format shows what it does not hide in the order of the bytes, and never hides it by styling (found while building roadmap step 8, decided by Nobody, allegedly)
+
+**Pattern:** 4, in part: a rule rested on a word ("hide") that did not cover every way a reader can be shown something other than the bytes.
+
+**Found while building:** the long-form text format (roadmap step 8), the first cMIP for task 4. The Text MIP bounds a format twice: it may hide only characters that are not letters or digits, and it may never add text (F82, M7). Nothing bounded the order. A format keeping both limits could still show the same words in another order than the bytes: a clause moved to a footnote at the end, text set in columns, a "not" placed elsewhere on the screen. A reader of an offer would see an order the signer's bytes do not say, the harm rule 5a guards against for bidirectional controls, reached through the format instead. Nor did "hide" plainly cover styling: a format could shrink or colour a clause to nothing without "hiding" a character.
+
+**Options weighed:** (1) add both to the bound: a format shows what it does not hide in the order of the bytes, and never makes it invisible or unreadable by styling; (2) order only, styling left to client warnings, since "invisible" is a judgement; (3) no change: the founding format keeps order anyway, and other formats would be the reader's client's problem.
+
+**Decided (Nobody, allegedly, 30 September 2026):** option 1.
+
+**Checked against the principles:** it narrows what a cMIP may do and relaxes nothing. Order is checkable by a machine for any format that can say which character it shows where, as the founding format does (`clients/longform`, `checkBound`). Styling is judged as the bound on hiding already was.
+
+**Cost, stated:** no format may move text: no footnotes gathered at the end, no side-by-side layout that changes the reading order. A format with such features shows them where they stand in the bytes.
+
+**Core changes:** Text MIP draft 6 (task 4; reasoning; freeze scenarios). Core v17 ("MIP: Text"; its header now names the current drafts, Identity 10, Text 6 and Law 6). Freeze test suite v17 (the Envelope and Text checklist; scenario 5.9 and its pass condition).
+
+**Applied:** the long-form text format cMIP, draft 1 (`cmips/cmip-long-form-draft-1.md`, rendering rules 12 and 13), and its founding implementation, whose tests check the bound on every rendering, 20,000 generated texts among them (`clients/longform`).

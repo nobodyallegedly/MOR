@@ -1,0 +1,222 @@
+{
+  "cmip": "cmips/cmip-long-form-draft-1.md",
+  "note": "html is this implementation's rendering (inside <div class=\"mor-lf\">); shown is the text the rendering shows, which every implementation must match",
+  "cases": [
+    {
+      "name": "empty text",
+      "text": "",
+      "html": "<div class=\"mor-lf\"></div>",
+      "shown": ""
+    },
+    {
+      "name": "plain paragraph",
+      "text": "Thank you for the shower",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">Thank you for the shower</p></div>",
+      "shown": "Thank you for the shower"
+    },
+    {
+      "name": "line break and paragraphs",
+      "text": "one\ntwo\n\nthree",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">one<br>two</p><p dir=\"auto\">three</p></div>",
+      "shown": "one\ntwothree"
+    },
+    {
+      "name": "headings, levels 1 to 6; seven is text",
+      "text": "# one\n## two\n###### six\n####### seven",
+      "html": "<div class=\"mor-lf\"><h1 dir=\"auto\">one</h1><h2 dir=\"auto\">two</h2><h6 dir=\"auto\">six</h6><p dir=\"auto\">####### seven</p></div>",
+      "shown": "onetwosix####### seven"
+    },
+    {
+      "name": "heading needs a space",
+      "text": "#hashtag",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">#hashtag</p></div>",
+      "shown": "#hashtag"
+    },
+    {
+      "name": "emphasis",
+      "text": "*a* **b** ***c***",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\"><em>a</em> <strong>b</strong> <strong><em>c</em></strong></p></div>",
+      "shown": "a b c"
+    },
+    {
+      "name": "runs pair only with their own length",
+      "text": "**bold *and italic***",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">**bold *and italic***</p></div>",
+      "shown": "**bold *and italic***"
+    },
+    {
+      "name": "closer takes the nearest opener of its length",
+      "text": "*a **b* c**",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\"><em>a **b</em> c**</p></div>",
+      "shown": "a **b c**"
+    },
+    {
+      "name": "emphasis stays within a line",
+      "text": "*one\ntwo*",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">*one<br>two*</p></div>",
+      "shown": "*one\ntwo*"
+    },
+    {
+      "name": "no emphasis around spaces",
+      "text": "2 * 3 * 4",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">2 * 3 * 4</p></div>",
+      "shown": "2 * 3 * 4"
+    },
+    {
+      "name": "four or more stars are text",
+      "text": "****four****",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">****four****</p></div>",
+      "shown": "****four****"
+    },
+    {
+      "name": "code span",
+      "text": "a `*not*` b",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">a <code>*not*</code> b</p></div>",
+      "shown": "a *not* b"
+    },
+    {
+      "name": "code span of two backticks",
+      "text": "``a ` b``",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\"><code>a ` b</code></p></div>",
+      "shown": "a ` b"
+    },
+    {
+      "name": "unclosed backtick",
+      "text": "`open",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">`open</p></div>",
+      "shown": "`open"
+    },
+    {
+      "name": "escapes",
+      "text": "\\*literal\\* and a\\b",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">*literal* and a\\b</p></div>",
+      "shown": "*literal* and a\\b"
+    },
+    {
+      "name": "autolinks",
+      "text": "<https://dubsar.org> <mailto:x@example.org>",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\"><a href=\"https://dubsar.org\" rel=\"nofollow noopener noreferrer\">https://dubsar.org</a> <a href=\"mailto:x@example.org\" rel=\"nofollow noopener noreferrer\">mailto:x@example.org</a></p></div>",
+      "shown": "https://dubsar.org mailto:x@example.org"
+    },
+    {
+      "name": "other schemes are text",
+      "text": "<javascript:alert(1)>",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">&lt;javascript:alert(1)&gt;</p></div>",
+      "shown": "<javascript:alert(1)>"
+    },
+    {
+      "name": "bracket links are text",
+      "text": "[text](https://x.org)",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">[text](https://x.org)</p></div>",
+      "shown": "[text](https://x.org)"
+    },
+    {
+      "name": "HTML and entities are text",
+      "text": "<b>html</b> &amp;",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">&lt;b&gt;html&lt;/b&gt; &amp;amp;</p></div>",
+      "shown": "<b>html</b> &amp;"
+    },
+    {
+      "name": "quote with a paragraph break",
+      "text": "> a\n> b\n>\n> c",
+      "html": "<div class=\"mor-lf\"><blockquote><p dir=\"auto\">a<br>b</p><p dir=\"auto\">c</p></blockquote></div>",
+      "shown": "a\nbc"
+    },
+    {
+      "name": "nested quote",
+      "text": "> > deep",
+      "html": "<div class=\"mor-lf\"><blockquote><blockquote><p dir=\"auto\">deep</p></blockquote></blockquote></div>",
+      "shown": "deep"
+    },
+    {
+      "name": "rules",
+      "text": "---\n***",
+      "html": "<div class=\"mor-lf\"><hr><hr></div>",
+      "shown": ""
+    },
+    {
+      "name": "two dashes are text",
+      "text": "--",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">--</p></div>",
+      "shown": "--"
+    },
+    {
+      "name": "code block",
+      "text": "```\n# not\n*x*\n```\nafter",
+      "html": "<div class=\"mor-lf\"><pre dir=\"auto\"><code># not\n*x*</code></pre><p dir=\"auto\">after</p></div>",
+      "shown": "# not\n*x*after"
+    },
+    {
+      "name": "code block with a label, unclosed",
+      "text": "```rust\nfn main() {}",
+      "html": "<div class=\"mor-lf\"><pre dir=\"auto\"><span class=\"mor-lf-label\">rust</span><code>fn main() {}</code></pre></div>",
+      "shown": "rustfn main() {}"
+    },
+    {
+      "name": "fence line with a backtick in its label is a code span",
+      "text": "```a```",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\"><code>a</code></p></div>",
+      "shown": "a"
+    },
+    {
+      "name": "bullet list",
+      "text": "- one\n- two",
+      "html": "<div class=\"mor-lf\"><ul><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">one</p></div></li><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">two</p></div></li></ul></div>",
+      "shown": "-one-two"
+    },
+    {
+      "name": "numbers shown as written",
+      "text": "1. a\n1. b",
+      "html": "<div class=\"mor-lf\"><ol><li><span class=\"mor-lf-marker\">1.</span><div><p dir=\"auto\">a</p></div></li><li><span class=\"mor-lf-marker\">1.</span><div><p dir=\"auto\">b</p></div></li></ol></div>",
+      "shown": "1.a1.b"
+    },
+    {
+      "name": "item continuation and nested list",
+      "text": "- a\n  more\n\n  second\n  - inner\n- b",
+      "html": "<div class=\"mor-lf\"><ul><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">a<br>more</p><p dir=\"auto\">second</p><ul><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">inner</p></div></li></ul></div></li><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">b</p></div></li></ul></div>",
+      "shown": "-a\nmoresecond-inner-b"
+    },
+    {
+      "name": "a new marker starts a new list",
+      "text": "- a\n+ b",
+      "html": "<div class=\"mor-lf\"><ul><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">a</p></div></li></ul><ul><li><span class=\"mor-lf-marker\">+</span><div><p dir=\"auto\">b</p></div></li></ul></div>",
+      "shown": "-a+b"
+    },
+    {
+      "name": "no lazy continuation",
+      "text": "- a\nb",
+      "html": "<div class=\"mor-lf\"><ul><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">a</p></div></li></ul><p dir=\"auto\">b</p></div>",
+      "shown": "-ab"
+    },
+    {
+      "name": "a year at the start of a line is a list item",
+      "text": "1984. A year",
+      "html": "<div class=\"mor-lf\"><ol><li><span class=\"mor-lf-marker\">1984.</span><div><p dir=\"auto\">A year</p></div></li></ol></div>",
+      "shown": "1984.A year"
+    },
+    {
+      "name": "unless escaped",
+      "text": "1984\\. A year",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">1984. A year</p></div>",
+      "shown": "1984. A year"
+    },
+    {
+      "name": "nesting stops at 16 levels",
+      "text": "> > > > > > > > > > > > > > > > > > > > x",
+      "html": "<div class=\"mor-lf\"><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><p dir=\"auto\">&gt; &gt; &gt; &gt; x</p></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></div>",
+      "shown": "> > > > x"
+    },
+    {
+      "name": "bidirectional override kept, block isolated",
+      "text": "I agree to pay ‮001‬ euros\n\nnext",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\">I agree to pay ‮001‬ euros</p><p dir=\"auto\">next</p></div>",
+      "shown": "I agree to pay ‮001‬ eurosnext"
+    },
+    {
+      "name": "the sample document",
+      "text": "# A long-form test document\n\nThis is a test document for the long-form text format, not a real post. Every line of it is canonical text, and the plain text below the rendering is exactly the bytes that were signed.\n\n## What the format does\n\nA paragraph is one or more lines; a line break stays a line break.\nThis line follows the one above without a blank line between them.\n\nWords can be *in italic*, **in bold**, or ***both***. A sign that closes nothing stays as typed: 2 * 3 = 6.\n\nCode is shown exactly as written: `**not bold**`. A backslash shows a sign as itself: \\*not italic\\*.\n\nA link always shows its address: <https://dubsar.org>.\n\n> A quote is marked with a sign at the start of each line.\n>\n> > And quotes can hold quotes.\n\n## Lists\n\n- A list item begins with a dash.\n- Its marker is shown as written.\n  An indented line continues the item.\n\n  - and an indented list is a list inside it.\n\n1. Numbers are shown as written,\n1. never renumbered, so this says 1 twice.\n\n---\n\n```text\nA code block keeps every sign: # * > - ` \\\n```\n\n## What it never does\n\nIt never hides a letter or a digit, never adds a character, and never moves one: what a reader sees is the text, in the order of its bytes, minus a few signs. HTML such as <b>this</b> and codes such as &amp; are shown as typed.",
+      "html": "<div class=\"mor-lf\"><h1 dir=\"auto\">A long-form test document</h1><p dir=\"auto\">This is a test document for the long-form text format, not a real post. Every line of it is canonical text, and the plain text below the rendering is exactly the bytes that were signed.</p><h2 dir=\"auto\">What the format does</h2><p dir=\"auto\">A paragraph is one or more lines; a line break stays a line break.<br>This line follows the one above without a blank line between them.</p><p dir=\"auto\">Words can be <em>in italic</em>, <strong>in bold</strong>, or <strong><em>both</em></strong>. A sign that closes nothing stays as typed: 2 * 3 = 6.</p><p dir=\"auto\">Code is shown exactly as written: <code>**not bold**</code>. A backslash shows a sign as itself: *not italic*.</p><p dir=\"auto\">A link always shows its address: <a href=\"https://dubsar.org\" rel=\"nofollow noopener noreferrer\">https://dubsar.org</a>.</p><blockquote><p dir=\"auto\">A quote is marked with a sign at the start of each line.</p><blockquote><p dir=\"auto\">And quotes can hold quotes.</p></blockquote></blockquote><h2 dir=\"auto\">Lists</h2><ul><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">A list item begins with a dash.</p></div></li><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">Its marker is shown as written.<br>An indented line continues the item.</p><ul><li><span class=\"mor-lf-marker\">-</span><div><p dir=\"auto\">and an indented list is a list inside it.</p></div></li></ul></div></li></ul><ol><li><span class=\"mor-lf-marker\">1.</span><div><p dir=\"auto\">Numbers are shown as written,</p></div></li><li><span class=\"mor-lf-marker\">1.</span><div><p dir=\"auto\">never renumbered, so this says 1 twice.</p></div></li></ol><hr><pre dir=\"auto\"><span class=\"mor-lf-label\">text</span><code>A code block keeps every sign: # * &gt; - ` \\</code></pre><h2 dir=\"auto\">What it never does</h2><p dir=\"auto\">It never hides a letter or a digit, never adds a character, and never moves one: what a reader sees is the text, in the order of its bytes, minus a few signs. HTML such as &lt;b&gt;this&lt;/b&gt; and codes such as &amp;amp; are shown as typed.</p></div>",
+      "shown": "A long-form test documentThis is a test document for the long-form text format, not a real post. Every line of it is canonical text, and the plain text below the rendering is exactly the bytes that were signed.What the format doesA paragraph is one or more lines; a line break stays a line break.\nThis line follows the one above without a blank line between them.Words can be in italic, in bold, or both. A sign that closes nothing stays as typed: 2 * 3 = 6.Code is shown exactly as written: **not bold**. A backslash shows a sign as itself: *not italic*.A link always shows its address: https://dubsar.org.A quote is marked with a sign at the start of each line.And quotes can hold quotes.Lists-A list item begins with a dash.-Its marker is shown as written.\nAn indented line continues the item.-and an indented list is a list inside it.1.Numbers are shown as written,1.never renumbered, so this says 1 twice.textA code block keeps every sign: # * > - ` \\What it never doesIt never hides a letter or a digit, never adds a character, and never moves one: what a reader sees is the text, in the order of its bytes, minus a few signs. HTML such as <b>this</b> and codes such as &amp; are shown as typed."
+    }
+  ]
+}

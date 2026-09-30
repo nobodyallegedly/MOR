@@ -1,0 +1,26 @@
+{
+  "name": "mor-longform",
+  "version": "0.1.0",
+  "description": "The MOR long-form text format: a strict subset of Markdown on top of canonical text, rendered with the plain text always one tap away.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-longform": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "cli": "node --import tsx src/cli.ts",
+    "vectors": "node --import tsx scripts/vectors.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}
