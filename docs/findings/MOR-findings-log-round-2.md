@@ -884,3 +884,27 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Applied:** the long-form text format cMIP, draft 1 (`cmips/cmip-long-form-draft-1.md`, rendering rules 12 and 13), and its founding implementation, whose tests check the bound on every rendering, 20,000 generated texts among them (`clients/longform`).
 
 *F102, the long-form cMIP draft 1, Text MIP draft 6, core v17 and freeze test suite v17 approved by Nobody, allegedly, 30 September 2026.*
+
+## F103. A collective's rules follow the layers, and Law's in three tiers; nobody loses their say by default (found while building roadmap step 11b, decided by Nobody, allegedly)
+
+**Pattern:** 1, a guard with a side door: the protection sat on one route to an outcome, and another route reached the same outcome unguarded.
+
+**Found while building:** the collective client (roadmap step 11b), while reading a clone's own signing rule (terms field 4, which for a clone plays no part; F104). Removing a party's voice from the clone rule is an outcome of the abandonment clause, and that clause is protected: it cannot change for a party who did not sign (rule 46a). But the clone rule itself (terms field 5) is not protected. Any clone meeting the current clone rule may rewrite it, so two members of three can, in one clone, write the third out of every later decision. Her stake and her protected clauses hold; her say in everything else is gone, without absence, a contest or her signature.
+
+**Options weighed:** (1) keep it, and have clients say before signing that a majority can later decide without the minority; (2) let founders set a separate rule for changing the rules, defaulting to today's behaviour; (3) make the clone rule a protected clause, so nobody can ever be voted out; and, arising from the discussion, a structure in which each kind of act has its own rule.
+
+**Decided (Nobody, allegedly, 30 September 2026):**
+- **Rules follow MOR's layers.** Every act names its layer and type, so a collective's rules can say who may act on each layer (Identity, Envelope and Text, Finance, Law, Production) with nothing to interpret.
+- **Within Law, three tiers.** *Constitutional:* who decides: the signing rule, the clone rule, the key grammar, membership. *Judicial:* who judges and by what: the protected clauses of rule 46a (abandonment clause, succession plan, fork rule, keepers, time reference), given a name and a place; the split service stays protected as a stated exception, operational in kind but able to move money. *Operational:* everything else, divided further.
+- **Operational areas are powers of members,** written into the constitution: a member given power over an area decides there, and may grant within it. Grants stay what they are: authority to act in the collective's name without a stake, the employer-and-employee kind. A grant never reaches beyond the power of whoever issued it.
+- **The constitutional tier has its own change rule.** If none was agreed at founding, the default is everyone: nobody loses their say without signing.
+
+**Checked against the principles:** right of exit: nobody is written out by default; a group that wants expulsion writes it in at founding, where every founder signs it. Legible greed: every tier and area is stated in the terms and shown in plain words before signing (Law rule 4a). Evolutionary design: the core gives the language for tiers and areas; the constitutions themselves are the parties' choice and can be offered as cMIPs.
+
+**Cost, stated:** by default a member who is present but unwanted cannot be removed; the others can leave, or use the abandonment clause where it applies. The exact format of the key grammar changes, which the repo client (step 5a) and the collective client (step 11b) already use.
+
+**Core changes, to be made:** Law MIP draft 7 (definitions; terms fields; the key grammar's format; rules 45 to 46a; reasoning; freeze scenarios). Core v18 ("MIP: Law"). Freeze test suite v18 (scenario 3: a majority clone that rewrites the clone rule without the minority is incomplete under the default; an area power and a grant within it; a grant beyond its issuer's area is invalid).
+
+**Applied:** not yet. The Law redraft comes before step 12, then the two clients.
+
+*F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
