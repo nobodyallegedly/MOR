@@ -38,6 +38,13 @@ export interface CollectiveTerms {
 
 /** The terms payload, as CBOR, checked by the core library. */
 export function termsPayload(t: CollectiveTerms): Uint8Array {
+  const payload = encodeTerms(t);
+  checkTerms(payload);
+  return payload;
+}
+
+/** The terms payload, as CBOR, not yet checked: for showing why Law would refuse it. */
+export function encodeTerms(t: CollectiveTerms): Uint8Array {
   const grammar = new Map<number, unknown>([
     [0, [0, unhex(t.signingHolder)]],
     [1, [1, t.safety.threshold, t.safety.members.map(unhex)]],
@@ -57,9 +64,7 @@ export function termsPayload(t: CollectiveTerms): Uint8Array {
     [15, t.extensions.map(unhex)],
   ]);
   if (t.parent) m.set(11, unhex(t.parent));
-  const payload = cborEncode(m);
-  checkTerms(payload);
-  return payload;
+  return cborEncode(m);
 }
 
 /**
@@ -82,9 +87,18 @@ export async function carryChain(by: TestIdentity, relays: string[]): Promise<vo
 
 /** Propose terms: an act of the proposer, public so anyone can check the collective. */
 export async function propose(by: TestIdentity, t: CollectiveTerms, relays: string[]) {
-  const objects: [string, string][] | undefined = t.parent ? [[t.parent, t.parent]] : undefined;
+  return proposePayload(by, termsPayload(t), t.parent, relays);
+}
+
+/**
+ * Propose terms given as their exact payload, already checked and shown to
+ * the proposer (Law rule 4a): a clone names its parent in `objects`.
+ */
+export async function proposePayload(by: TestIdentity, payload: Uint8Array, parent: string | undefined, relays: string[]) {
+  checkTerms(payload);
+  const objects: [string, string][] | undefined = parent ? [[parent, parent]] : undefined;
   await carryChain(by, relays);
-  return by.publish(REPO_SPECS.law, LAW_TYPES.terms, termsPayload(t), { public: true, relays, objects });
+  return by.publish(REPO_SPECS.law, LAW_TYPES.terms, payload, { public: true, relays, objects });
 }
 
 /** Sign an act: a Law signature act that follows the act it signs. */

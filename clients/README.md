@@ -10,6 +10,7 @@ The TypeScript clients (build brief: "Rust for the core library, relays and home
 | `barebone/` | The barebone client: a post with a picture (a text act referring to a JPEG publication, stripped to the picture alone), shown verified; withdrawal. | step 9 |
 | `reader/` | The web reader, the door: opens by link, verifies in the browser, renders documents and posts, shows the signer's fingerprint; reach the owner by email or by a message sealed over MOR. | step 10 |
 | `manage/` | The management page for relays and homes, served by the relay itself at `/manage/`: a browser paired once with a one-time code signs every request; approvals, lists, a limit on new identities, the operator's rotation. | step 11 |
+| `collective/` | The collective client: a program on the author's machine with a page in the browser, no command line; releases under one's own name, founding a collective, adding and removing members, signing and verifying releases, leaving; every step read back in plain words from the exact bytes before it is signed. | step 11b |
 
 Building any of them needs Node 22 or later, Rust with the `wasm32-unknown-unknown` target, and `wasm-bindgen-cli` of the version the `mor-wasm` crate pins:
 

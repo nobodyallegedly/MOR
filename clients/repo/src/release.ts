@@ -222,22 +222,43 @@ export interface Published {
   refused: string[];
 }
 
+/** Whoever publishes releases: a collective (`TestCollective.publisher`), or one identity under its own name (as at step 17). */
+export interface Publisher {
+  id: TestIdentity;
+  /** Where the release and its files go. */
+  relays: string[];
+  /** Releases already published, newest last; a new one is pushed here. */
+  releases: { id: string; version: string; manifest: string }[];
+}
+
+/** A release made and locked, not yet signed: what is shown before signing. */
+export interface Prepared {
+  manifest: Manifest;
+  /** The manifest's exact bytes. */
+  encoded: Uint8Array;
+  /** The publication's exact payload: the manifest's hashes, key and relays. */
+  payload: Uint8Array;
+  /** The manifest's locked bytes. */
+  lockedManifest: Uint8Array;
+  /** The locked bytes of each file new since the previous release. */
+  upload: Uint8Array[];
+  /** The previous release's manifest, if any (to show what changed). */
+  before: Manifest | null;
+}
+
 /**
- * Publish a release: every file locked as a media object (a file unchanged
- * since the previous release is the same object, not a new one), the
- * manifest as the media of a public publication signed by the collective,
- * all on the collective's relays. It is not a release until the members
- * sign it (`signRelease`). Save the collective's file after.
+ * Make a release without signing anything: every file locked as a media
+ * object (a file unchanged since the previous release is the same object,
+ * not a new one), the manifest, and the publication's payload.
  */
-export async function publishRelease(
-  c: TestCollective,
-  opts: { name: string; version: string; files: FileIn[]; source?: string; via?: Via },
-): Promise<Published> {
-  const via = opts.via ?? {};
-  const relays = c.f.relays;
-  const last = c.f.releases.at(-1);
+export function prepareRelease(
+  p: Publisher,
+  opts: { name: string; version: string; files: FileIn[]; source?: string },
+): Prepared {
+  const last = p.releases.at(-1);
+  const beforeManifest = last ? decodeManifest(unb64(last.manifest)) : null;
   const before = new Map<string, FileEntry>();
-  if (last) for (const f of decodeManifest(unb64(last.manifest)).files) before.set(`${f.path}\0${f.work}`, f);
+  for (const f of beforeManifest?.files ?? []) before.set(`${f.path}\0${f.work}`, f);
 
   const files = [...opts.files].sort((a, b) => byBytes(a.path, b.path));
   const entries: FileEntry[] = [];
@@ -273,16 +294,41 @@ export async function publishRelease(
       [3, encoded.length],
       [4, lm.nonce],
       [5, lm.key],
-      [6, relays],
+      [6, p.relays],
     ]),
   );
-  await carryChain(c.id, relays);
+  return { manifest, encoded, payload, lockedManifest: lm.locked, upload, before: beforeManifest };
+}
+
+/**
+ * Sign and publish a prepared release, exactly as prepared: the manifest as
+ * the media of a public publication signed by the publisher, all on its
+ * relays. A collective's release is not a release until the members sign it
+ * (`signRelease`). Save the publisher's file after.
+ */
+export async function publishPrepared(p: Publisher, r: Prepared, via: Via = {}): Promise<Published> {
+  const last = p.releases.at(-1);
+  if ((last?.id ?? null) !== r.manifest.previous) throw new Error('another release was published since this one was made: make it again');
+  await carryChain(p.id, p.relays);
   // The publication first: a relay that keeps media only for publications it holds then takes the manifest.
-  const made = await c.id.publish(SPECS.envelope, 0, payload, { public: true, relays });
-  const refused = await toRelays(relays, via, (r) => r.putMedia(lm.locked));
-  for (const u of upload) refused.push(...(await toRelays(relays, via, (r) => r.putMedia(u))));
-  c.f.releases.push({ id: made.id, version: opts.version, manifest: b64(encoded) });
-  return { id: made.id, manifest, uploaded: upload.length, refused: [...new Set(refused)] };
+  const made = await p.id.publish(SPECS.envelope, 0, r.payload, { public: true, relays: p.relays });
+  const refused = await toRelays(p.relays, via, (x) => x.putMedia(r.lockedManifest));
+  for (const u of r.upload) refused.push(...(await toRelays(p.relays, via, (x) => x.putMedia(u))));
+  p.releases.push({ id: made.id, version: r.manifest.version, manifest: b64(r.encoded) });
+  return { id: made.id, manifest: r.manifest, uploaded: r.upload.length, refused: [...new Set(refused)] };
+}
+
+/**
+ * Publish a release of a collective: prepared and published at once, as the
+ * command line does. It is not a release until the members sign it. Save
+ * the collective's file after.
+ */
+export async function publishRelease(
+  c: TestCollective,
+  opts: { name: string; version: string; files: FileIn[]; source?: string; via?: Via },
+): Promise<Published> {
+  const p: Publisher = { id: c.id, relays: c.f.relays, releases: c.f.releases };
+  return publishPrepared(p, prepareRelease(p, opts), opts.via);
 }
 
 /** A member signs a release: a Law signature act naming it. Save the member's file after. */

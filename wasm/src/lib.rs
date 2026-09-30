@@ -1215,6 +1215,197 @@ pub fn check_terms(payload: &[u8]) -> R<()> {
     t.check().map_err(err)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HoldingOut {
+    /// "one", "shares" or "custodian".
+    form: String,
+    holder: Option<String>,
+    threshold: Option<u64>,
+    members: Option<Vec<String>>,
+    custodian: Option<String>,
+    grant: Option<String>,
+}
+
+fn holding_out(h: &law::Holding) -> HoldingOut {
+    let mut o = HoldingOut {
+        form: String::new(),
+        holder: None,
+        threshold: None,
+        members: None,
+        custodian: None,
+        grant: None,
+    };
+    match h {
+        law::Holding::One(x) => {
+            o.form = "one".into();
+            o.holder = Some(hx(x));
+        }
+        law::Holding::Shares { threshold, members } => {
+            o.form = "shares".into();
+            o.threshold = Some(*threshold);
+            o.members = Some(members.iter().map(hx).collect());
+        }
+        law::Holding::Custodian { custodian, grant } => {
+            o.form = "custodian".into();
+            o.custodian = Some(hx(custodian));
+            o.grant = Some(hx(grant));
+        }
+    }
+    o
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RecoveryOut {
+    /// "custodian" or "escrow".
+    form: String,
+    custodian: Option<String>,
+    grant: Option<String>,
+    authority: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ListedOut {
+    spec: String,
+    #[serde(rename = "type")]
+    type_: u64,
+    rule: RuleOut,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GrammarOut {
+    signing: HoldingOut,
+    safety: HoldingOut,
+    listed: Option<Vec<ListedOut>>,
+    recovery: Option<RecoveryOut>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AbandonmentOut {
+    /// "named" (an identity) or "others" (a threshold of the other parties).
+    authority: String,
+    identity: Option<String>,
+    threshold: Option<u64>,
+    outcomes: Vec<u64>,
+    period: Option<u64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SuccessionOut {
+    party: String,
+    stakes: Option<Vec<(String, u64)>>,
+    seats: Option<Vec<(String, u64)>>,
+    entry: Option<u64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TermsOut {
+    parties: Vec<String>,
+    text: String,
+    cmips: Vec<(u64, String)>,
+    keepers: Option<(Vec<String>, RuleOut)>,
+    signing: RuleOut,
+    clone: RuleOut,
+    /// The time reference's cMIP; its parameters are that cMIP's to read.
+    time: Option<String>,
+    abandonment: Option<AbandonmentOut>,
+    parent: Option<String>,
+    grammar: Option<GrammarOut>,
+    arbitrators: Option<Vec<String>>,
+    split_grant: Option<String>,
+    extensions: Option<Vec<String>>,
+    succession: Option<Vec<SuccessionOut>>,
+    /// Why the terms fail the checks that need no other act (rules 1, 2,
+    /// 36, 48a, 49; F96), or null if they pass.
+    problem: Option<String>,
+}
+
+/// Read a terms payload (Law type 0) as the core library decodes it, field
+/// by field, so a client can say in plain words what signing it means from
+/// the exact bytes that are signed (Law rule 4a: what you sign is what you
+/// saw). Throws if the payload is not terms in Law's format, or uses a field
+/// whose format is still open; `problem` says why terms in the format still
+/// fail Law's checks.
+#[wasm_bindgen(js_name = readTerms)]
+pub fn read_terms(payload: &[u8]) -> R<JsValue> {
+    let t = law::Terms::decode(&payload_of(payload)?).map_err(err)?;
+    let hs = |v: &Vec<Hash>| v.iter().map(hx).collect::<Vec<_>>();
+    let pairs = |v: &Vec<(Hash, u64)>| v.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>();
+    to_js(&TermsOut {
+        parties: hs(&t.parties),
+        text: t.text.clone(),
+        cmips: t.cmips.iter().map(|(n, h)| (*n, hx(h))).collect(),
+        keepers: t
+            .keepers
+            .as_ref()
+            .map(|k| (hs(&k.operators), rule_out(&k.rule))),
+        signing: rule_out(&t.signing),
+        clone: rule_out(&t.clone),
+        time: t.time.as_ref().map(|(h, _)| hx(h)),
+        abandonment: t.abandonment.as_ref().map(|a| {
+            let (authority, identity, threshold) = match &a.authority {
+                law::Authority::Named(h) => ("named", Some(hx(h)), None),
+                law::Authority::Others(k) => ("others", None, Some(*k)),
+            };
+            AbandonmentOut {
+                authority: authority.into(),
+                identity,
+                threshold,
+                outcomes: a.outcomes.clone(),
+                period: a.period,
+            }
+        }),
+        parent: t.parent.as_ref().map(hx),
+        grammar: t.grammar.as_ref().map(|g| GrammarOut {
+            signing: holding_out(&g.signing),
+            safety: holding_out(&g.safety),
+            listed: g.listed.as_ref().map(|l| {
+                l.iter()
+                    .map(|x| ListedOut {
+                        spec: hx(&x.spec),
+                        type_: x.type_,
+                        rule: rule_out(&x.rule),
+                    })
+                    .collect()
+            }),
+            recovery: g.recovery.as_ref().map(|r| match r {
+                law::Recovery::Custodian { custodian, grant } => RecoveryOut {
+                    form: "custodian".into(),
+                    custodian: Some(hx(custodian)),
+                    grant: Some(hx(grant)),
+                    authority: None,
+                },
+                law::Recovery::Escrow { authority } => RecoveryOut {
+                    form: "escrow".into(),
+                    custodian: None,
+                    grant: None,
+                    authority: Some(hx(authority)),
+                },
+            }),
+        }),
+        arbitrators: t.arbitrators.as_ref().map(hs),
+        split_grant: t.split_grant.as_ref().map(hx),
+        extensions: t.extensions.as_ref().map(hs),
+        succession: t.succession.as_ref().map(|s| {
+            s.iter()
+                .map(|p| SuccessionOut {
+                    party: hx(&p.party),
+                    stakes: p.stakes.as_ref().map(pairs),
+                    seats: p.seats.as_ref().map(pairs),
+                    entry: p.entry,
+                })
+                .collect()
+        }),
+        problem: t.check().err().map(|e| e.to_string()),
+    })
+}
+
 /// A signature payload (Law type 1), as CBOR. The act carries, in
 /// `objects`, `[signed, signed]`: a signature follows the act it signs.
 #[wasm_bindgen(js_name = signaturePayload)]
