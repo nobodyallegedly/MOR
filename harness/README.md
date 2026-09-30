@@ -68,7 +68,7 @@ target/release/mor-gauntlet live \
 
 **Friction: proving receipts after an operator rotates.** A receipt signed before a home operator's rotation counts only if it lies in the rotation's kept ancestry, and the verifier proves that from every act id of the operator's line. The identity record does not carry them, so the reader fetches the operator's whole sequence through the feed. It works; it grows with the home. The cMIP's open parameter (an inclusion proof for a kept ancestry) would shrink it.
 
-## Readings, for Nobody, allegedly, to confirm
+## Readings, confirmed by Nobody, allegedly (30 September 2026)
 
 Where the texts are silent, the harness takes the reading below. None changes a MIP.
 
