@@ -1,6 +1,6 @@
 # Module: JPEG
 
-*Draft 1, 30 September 2026 (roadmap step 9). Awaiting approval by Nobody, allegedly. Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v17, the Envelope MIP draft 6, the Text MIP draft 6, the Production MIP draft 4, the relay transport cMIP draft 2 and findings F1 to F102. Not core: a founding media type for task 5 (media interpretation), frozen at publication, competing with any other.*
+*Draft 1, 30 September 2026 (roadmap step 9). Approved by Nobody, allegedly, 30 September 2026. Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v17, the Envelope MIP draft 6, the Text MIP draft 6, the Production MIP draft 4, the relay transport cMIP draft 2 and findings F1 to F102. Not core: a founding media type for task 5 (media interpretation), frozen at publication, competing with any other.*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 

@@ -42,7 +42,7 @@ Checked once in headless Chromium, not in the tests: the page shows the stripped
 
 ## Readings
 
-Where the texts are silent, this client and the JPEG Module take these readings. *To confirm by Nobody, allegedly.*
+Where the texts are silent, this client and the JPEG Module take these readings. *Confirmed by Nobody, allegedly, 30 September 2026.*
 
 1. **A post is a text act that refers to its picture** (F27): no new act type and no post cMIP. A client without the JPEG Module still shows the text, and the reference as a reference.
 2. **A referenced picture is shown under its own signer.** A picture published by another identity is labelled "not by the poster": a repost is a reference (Envelope), never a claim.
