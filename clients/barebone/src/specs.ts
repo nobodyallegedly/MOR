@@ -2,11 +2,10 @@
 // fixed at the freeze, and the JPEG Module's once its creator is named at the
 // first acts (step 17).
 
-import { createHash } from 'node:crypto';
-import { SPECS } from '../../genesis/src/core.ts';
+import { SPECS, sha256 } from '../../genesis/src/core.ts';
 import { LONGFORM_SPECS } from '../../longform/src/specs.ts';
 
-const test = (s: string) => createHash('sha256').update(s).digest('hex');
+const test = (s: string) => sha256(s);
 
 export const POST_SPECS = {
   /** The Text MIP (`TEXT`). */

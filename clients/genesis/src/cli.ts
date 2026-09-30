@@ -32,7 +32,8 @@ never for a real identity. Keep the file secret: it holds every key.
   deliver --file F --to ID --at URL --target ACT --key HEX [--media]
         Deliver a content key to an identity's inbox, sealed with X-Wing.
   inbox --file F [--at URL ...]
-        Open what was delivered to this identity; --at: where to find senders.
+        Open what was delivered to this identity (key deliveries, and messages, their
+        text with invisible characters shown as escapes); --at: where to find senders.
   export-operator --file F --out DIR
         Write operator.key (the everyday signing key and its binding, no safety
         key) and operator-chain.mor, for \`mor-relay init --operator-key ...\`.
@@ -76,6 +77,15 @@ async function homesOf(urls: string[], via: Via): Promise<Home[]> {
     out.push({ operator: hex(op), hint: u });
   }
   return out;
+}
+
+/**
+ * A message's text for a terminal: control and bidirectional characters are
+ * written as visible escapes (Text MIP, rule 5a), so a sender cannot reach the
+ * terminal or reorder what it shows. Line breaks stay.
+ */
+export function shownPlain(t: string): string {
+  return t.replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, (c) => `\\u{${c.codePointAt(0)!.toString(16)}}`);
 }
 
 function report(what: string, sent: Submitted[]) {
@@ -190,7 +200,8 @@ async function main() {
         else
           console.log(
             `${g.sealed}: from ${g.from}, ${g.status}` +
-              (g.delivery ? `, key for ${g.delivery.target}${g.delivery.media ? ' (media)' : ''}: ${hex(g.delivery.key)}` : ''),
+              (g.delivery ? `, key for ${g.delivery.target}${g.delivery.media ? ' (media)' : ''}: ${hex(g.delivery.key)}` : '') +
+              (g.text !== undefined ? `, a message:\n${shownPlain(g.text).replace(/^/gm, '  | ')}` : ''),
           );
       }
       break;

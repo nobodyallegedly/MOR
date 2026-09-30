@@ -8,6 +8,7 @@ import { parse } from '../../longform/src/format.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import type { ShownPicture, ShownPost } from './post.ts';
 import { POST_SPECS } from './specs.ts';
+import { base64 } from '../../genesis/src/core.ts';
 
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
 
@@ -31,7 +32,7 @@ function picture(p: ShownPicture, poster: string): string {
   if (!p.bytes || !p.picture) {
     return `<figure><div class="mor-post-missing">Picture not shown: ${escapeHtml(p.problem ?? 'unknown')}.${by}</div></figure>`;
   }
-  const src = `data:image/jpeg;base64,${Buffer.from(p.bytes).toString('base64')}`;
+  const src = `data:image/jpeg;base64,${base64(p.bytes)}`;
   const still = p.picture.carries.length
     ? ` It still carries ${p.picture.carries.map((c) => CARRIED_WORDS[c]).join('; ')}, not shown.`
     : '';

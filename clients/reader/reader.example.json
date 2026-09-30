@@ -1,0 +1,8 @@
+{
+  "identity": "REPLACE WITH THE IDENTITY HASH (64 hex digits)",
+  "name": "Nobody, allegedly",
+  "relays": ["https://home1.dubsar.org", "https://home2.dubsar.org"],
+  "email": "nobodyallegedly@proton.me",
+  "links": [{ "label": "The code, on GitHub", "href": "https://github.com/nobodyallegedly/mor" }],
+  "messageHomes": ["https://home1.dubsar.org", "https://home2.dubsar.org"]
+}

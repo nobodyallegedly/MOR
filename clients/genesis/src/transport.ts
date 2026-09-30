@@ -2,8 +2,7 @@
 // Everything a relay says unsigned is a hint: the client recomputes the id of
 // everything it fetches, and judges acts only with the core library.
 
-import { actId, cborDecode, cborEncode, hex, unhex } from './core.ts';
-import { createHash } from 'node:crypto';
+import { actId, cborDecode, cborEncode, hex, sha256, unhex } from './core.ts';
 
 export class RelayError extends Error {
   constructor(
@@ -62,8 +61,12 @@ type M = Map<number, unknown>;
 const bytesList = (v: unknown): Uint8Array[] => (Array.isArray(v) ? (v as Uint8Array[]) : []);
 
 export const sealedId = (bytes: Uint8Array): string => {
-  const t = createHash('sha256').update('MOR/transport/sealed').digest();
-  return createHash('sha256').update(t).update(t).update(bytes).digest('hex');
+  const t = unhex(sha256('MOR/transport/sealed'));
+  const all = new Uint8Array(64 + bytes.length);
+  all.set(t, 0);
+  all.set(t, 32);
+  all.set(bytes, 64);
+  return sha256(all);
 };
 
 /**
@@ -143,7 +146,7 @@ export class Relay {
   async putMedia(locked: Uint8Array): Promise<{ lockedHash: string; size: number }> {
     const m = cborDecode(await this.post('/media', locked, 'application/octet-stream')) as unknown[];
     const lockedHash = hex(m[0] as Uint8Array);
-    if (lockedHash !== createHash('sha256').update(locked).digest('hex') || m[1] !== locked.length) {
+    if (lockedHash !== sha256(locked) || m[1] !== locked.length) {
       throw new RelayError(-1, 'the relay answered for other media');
     }
     return { lockedHash, size: m[1] as number };
@@ -153,7 +156,7 @@ export class Relay {
   async getMedia(lockedHash: string): Promise<Uint8Array | null> {
     try {
       const b = await this.call(`/media/${lockedHash}`);
-      return createHash('sha256').update(b).digest('hex') === lockedHash ? b : null;
+      return sha256(b) === lockedHash ? b : null;
     } catch (e) {
       if (e instanceof RelayError && e.code === CODE.notHeld) return null;
       throw e;

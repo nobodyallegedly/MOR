@@ -12,12 +12,20 @@ export * from '../wasm/mor_wasm.js';
 
 export const hex = (b: Uint8Array): string => Buffer.from(b).toString('hex');
 export const unhex = (s: string): Uint8Array => Uint8Array.from(Buffer.from(s, 'hex'));
+export const base64 = (b: Uint8Array): string => Buffer.from(b).toString('base64');
+/** SHA-256 of bytes, or of a string's UTF-8, in hex. */
+export const sha256 = (data: Uint8Array | string): string => createHash('sha256').update(data).digest('hex');
+
+// Everything above that needs Node is here, in this file alone: the web
+// reader (clients/reader) builds the other client modules for a browser with
+// its own copy of this file, `clients/reader/src/web/core.ts`.
 
 /** The spec hashes a test identity names. The real ones are fixed at the
  * freeze; until then, the same test values as the relays and the core's tests. */
 export const SPECS = {
-  identity: createHash('sha256').update('IDENTITY, test value until the freeze').digest('hex'),
-  envelope: createHash('sha256').update('ENVELOPE, test value until the freeze').digest('hex'),
+  identity: sha256('IDENTITY, test value until the freeze'),
+  envelope: sha256('ENVELOPE, test value until the freeze'),
+  text: sha256('TEXT, test value until the freeze'),
 };
 
 export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3 } as const;

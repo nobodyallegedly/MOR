@@ -17,7 +17,8 @@ import {
   unhex,
   workHash,
 } from '../../genesis/src/core.ts';
-import { lookUp, type TestIdentity } from '../../genesis/src/identity.ts';
+import type { TestIdentity } from '../../genesis/src/identity.ts';
+import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { NotJpeg, read, strip, type Carried, type Picture } from '../../../modules/jpeg/src/jpeg.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from './specs.ts';
