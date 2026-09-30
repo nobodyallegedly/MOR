@@ -46,7 +46,7 @@ The browser test uses the Chromium at `/opt/pw-browsers` or the one `MOR_CHROMIU
 
 ## Readings
 
-Where the texts are silent, the reader takes these readings. *To be confirmed by Nobody, allegedly.*
+Where the texts are silent, the reader takes these readings. *Confirmed by Nobody, allegedly, 30 September 2026.*
 
 1. **The act id travels in the fragment.** `#ACT_ID` is never sent to the server that serves the page, so it learns that someone opened the reader, not what they read. The relays asked do learn which act is fetched: they serve it.
 2. **The reader's own relays first,** then those the link names (`?r=`, https only). The act id is checked on arrival wherever it comes from, so the order is about privacy, not trust.
