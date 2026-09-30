@@ -8,7 +8,13 @@
 //! mor-relay strict  --dir DIR IDENTITY    (approve --dir DIR ROTATION)
 //! mor-relay rotate  --dir DIR [--closure]
 //! mor-relay rotated --dir DIR --operator-key FILE --rotation FILE.mor
+//! mor-relay pair    --dir DIR             (managers, unpair --dir DIR KEY)
+//! mor-relay limit   --dir DIR [N]         (new identities per 24 hours)
 //! ```
+//!
+//! Day to day, the operator runs it from the management page instead, at
+//! `/manage/` on the relay's own address, after pairing a browser once with
+//! the code `init` or `pair` prints.
 
 use clap::{Parser, Subcommand, ValueEnum};
 use mor_relay::http::{self, Net, Shared};
@@ -135,6 +141,30 @@ enum Cmd {
         #[arg(long)]
         closure: bool,
     },
+    /// Print a one-time code that pairs a browser with this relay's
+    /// management page (/manage/), valid for an hour.
+    Pair {
+        #[arg(long)]
+        dir: PathBuf,
+    },
+    /// List the browsers paired with the management page.
+    Managers {
+        #[arg(long)]
+        dir: PathBuf,
+    },
+    /// Unpair a browser, by its management key.
+    Unpair {
+        #[arg(long)]
+        dir: PathBuf,
+        key: String,
+    },
+    /// Home: take at most N new identities in any 24 hours; without N, no
+    /// limit.
+    Limit {
+        #[arg(long)]
+        dir: PathBuf,
+        per_day: Option<u64>,
+    },
     /// The operator rotated where its safety key is kept: hold the rotation
     /// (a bundle holding that one act) and take the new key file. Stop the
     /// home first.
@@ -155,6 +185,11 @@ fn die(msg: impl std::fmt::Display) -> ! {
 
 fn open(dir: &Path) -> Node {
     Node::open(dir, Specs::test()).unwrap_or_else(|e| die(e))
+}
+
+fn print_code(node: &Node) {
+    let code = mor_relay::manage::new_code(node).unwrap_or_else(|e| die(e));
+    println!("Pairing code for the management page (/manage/), valid for an hour, once: {code}");
 }
 
 fn identity(s: &str) -> [u8; 32] {
@@ -224,7 +259,11 @@ async fn main() {
                 _ => OperatorSetup::NewTest,
             };
             let test = matches!(operator, OperatorSetup::NewTest);
-            match Node::init(&dir, cfg, Specs::test(), operator) {
+            let made = Node::init(&dir, cfg, Specs::test(), operator);
+            if made.is_ok() {
+                print_code(&open(&dir));
+            }
+            match made {
                 Ok(Some(op)) => {
                     println!("Home set up in {}.", dir.display());
                     if test {
@@ -313,6 +352,23 @@ async fn main() {
                 .unwrap_or_else(|e| die(e));
             println!("Operator rotation held: {}", wire::hex(&id));
         }
+        Cmd::Pair { dir } => print_code(&open(&dir)),
+        Cmd::Managers { dir } => {
+            for m in open(&dir).managers().unwrap_or_else(|e| die(e)) {
+                println!("{}  {}", wire::hex(&m.key), m.label);
+            }
+        }
+        Cmd::Unpair { dir, key } => {
+            if !open(&dir)
+                .unpair(&identity(&key))
+                .unwrap_or_else(|e| die(e))
+            {
+                die("that key is not paired");
+            }
+        }
+        Cmd::Limit { dir, per_day } => open(&dir)
+            .set_newcomer_limit(per_day)
+            .unwrap_or_else(|e| die(e)),
         Cmd::Show { dir } => {
             let n = open(&dir);
             let c = n.config();
@@ -325,6 +381,11 @@ async fn main() {
             );
             if let Some(op) = n.operator() {
                 println!("operator: {} (TEST identity)", wire::hex(&op));
+            }
+            match n.newcomer_limit().unwrap_or(None) {
+                Some(l) => println!("new identities: at most {l} in 24 hours"),
+                None if c.role == Role::Home => println!("new identities: no limit"),
+                None => {}
             }
             if n.closed().unwrap_or(false) {
                 println!("closed: yes, by its operator's rotation");

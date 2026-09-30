@@ -59,9 +59,13 @@ Where the texts are silent, the program takes the reading below. None changes a 
 - **Carried inclusion proofs (F101).** `POST /proofs` keeps inclusion proofs for other homes' receipts, for identities this home serves, each checked against the signed summary it names; the identity record serves them (part 9) with the acts they rest on (part 10). Bundles carry them (key 2).
 - **The operator's whole sequence.** `Client::acts_by` pages through the feed by signer. A reader needs a home operator's whole sequence to prove that receipts signed before the operator's rotation lie in its kept ancestry (cMIP draft 2, "Checked against the core", 14).
 
+## The management page (roadmap step 11)
+
+Every relay and home serves a page at `/manage/` on its own address, where its operator runs it from a browser without a terminal: what it holds, rotations waiting for approval, approval per identity, the list of identities, a limit on new identities (for a public home), the latest arrivals, the operator's rotation and closure, and paired browsers. A browser pairs once with a one-time code (`init` prints one; `mor-relay pair --dir DIR` makes another, valid for an hour), then signs every request with a key it keeps. The page is built from `clients/manage/` into `relay/manage/` and served by the program itself (`src/manage.rs`); its readings and tests are in `clients/manage/README.md`. From the command line too: `mor-relay managers`, `unpair --dir DIR KEY`, `limit --dir DIR [N]`.
+
 ## Not yet
 
-- **Commitments** (reading 7), and the **management client** (step 11): until then, a home is run from the command line.
+- **Commitments** (reading 7).
 - **Operator links.** `mor-relay` cannot yet sign a link claim to its owner's main identity (step 5, once the main identity can exist).
 - **One home per operator** in this program: each home keeps its own log, so two homes of one operator would each count log positions from zero.
 
@@ -74,6 +78,7 @@ cargo test -p mor-relay
 Real relays and homes on local ports, test identities built with the core library, and the core library's verifier judging what comes back (`tests/common/mod.rs`).
 
 - `tests/relay.rs`: acts in and back byte for byte, idempotent publishing, batch fetch, what a relay refuses on arrival (malformed, broken locked bytes, bad signatures, a key other than the binding's, a safety key signing anything but a rotation) and what it carries (private acts, unknown specifications, unknown everyday schemes where it cannot tell); limits; the feed by signer, recipient, spec and type, paged, unfiltered for mirroring, and waiting for new acts; sealed containers found by recipient, pickup tag and scanning; media by range; CORS for browsers; bundles.
+- `tests/manage.rs`: the management page's requests (step 11), listed in `clients/manage/README.md`.
 - `tests/home.rs`: three homes under three operators, the majority rule by default, a rotation that counts with one home switched off, and the home catching up when it comes back (the step's "done when", in the build window); one home of three is not a majority; first held wins, and the thief arriving second is shown the owner's rotation and receipt (5.7); a newly named home receiving the chain oldest first; invalid rotations and forged everyday acts refused; the log, summaries, inclusion and consistency proofs checked against signed summaries (5.7d's tools); a homeless rotation objected to by the live old home, the objection voiding it for a reader who could not reach the home, found through a relay's probe, and carried back by a relay that forwarded the rotation (5.7c); the allowlist home; a home running under an identity made elsewhere, with no safety key on the server, and a key file that does not match its chain refused; a home surviving a restart with its operator's sequence unbroken; finding an inbox through the home (5.3); a strict home accepting a rotation only once its operator approves it; a home signing on under its operator's new key, its earlier receipts still counting; a closed home refusing everything new while its identities leave homeless; a home keeping and serving carried inclusion proofs (F101).
 
 ## Running a home
@@ -156,3 +161,5 @@ A small Linux server, and a name for it (for example `home1.` under a domain) po
 If the server cannot fetch the private repository, build from a copy sent from a checkout (`git archive`, then `scp`), and compare its hash on both sides. The build needs Rust, a C compiler (`build-essential` on Debian) and, on a server with 2 GB of memory or less, a temporary swap file.
 
 `mor-relay show --dir …` prints a home's settings and its operator. A basic relay is set up the same way with `--role relay`.
+
+Once it runs, open `/manage/` at its address (on the author's machine, `http://127.0.0.1:8080/manage/`) and pair the browser with the code `init` printed, or a new one from `mor-relay pair --dir …` (on a server, `sudo -u mor mor-relay pair --dir /var/lib/mor-home`). From then on it is run from the page.

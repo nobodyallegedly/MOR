@@ -51,7 +51,18 @@ CREATE INDEX IF NOT EXISTS proofs_identity ON proofs(identity);
 CREATE TABLE IF NOT EXISTS strict(identity BLOB PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS approved(rotation BLOB PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value BLOB NOT NULL);
+CREATE TABLE IF NOT EXISTS pending(rotation BLOB PRIMARY KEY, identity BLOB NOT NULL, position INTEGER NOT NULL, bytes BLOB NOT NULL, at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS pending_identity ON pending(identity, at);
+CREATE TABLE IF NOT EXISTS newcomers(identity BLOB PRIMARY KEY, at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS newcomers_at ON newcomers(at);
+CREATE TABLE IF NOT EXISTS managers(key BLOB PRIMARY KEY, label TEXT NOT NULL, added INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS pairing(code BLOB PRIMARY KEY, expires INTEGER NOT NULL);
 ";
+
+/// Rotations awaiting the operator's approval kept per identity: the
+/// oldest go first. A stranger can send rotations of a strict identity,
+/// but can only push older ones off this list, never onto the chain.
+const PENDING_PER_IDENTITY: i64 = 8;
 
 /// What is stored with an item, besides its bytes.
 #[derive(Clone, Debug, Default)]
@@ -100,6 +111,49 @@ pub type CarriedProof = (Hash, Hash, u64, Vec<Hash>);
 
 /// A feed row: arrival number, kind, bytes.
 pub type Row = (u64, i64, Vec<u8>);
+
+/// An item as the management page lists it: what the relay can read.
+#[derive(Clone, Debug)]
+pub struct Listed {
+    pub arrival: u64,
+    pub kind: i64,
+    pub id: Hash,
+    pub size: u64,
+    pub signer: Option<Hash>,
+    pub spec: Option<Hash>,
+    pub type_: Option<u64>,
+}
+
+/// How much a relay holds.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Counts {
+    pub acts: u64,
+    pub sealed: u64,
+    pub media: u64,
+    /// Bytes of acts, sealed containers and media together.
+    pub bytes: u64,
+}
+
+/// A rotation refused for want of the operator's approval.
+#[derive(Clone, Debug)]
+pub struct Pending {
+    pub rotation: Hash,
+    pub identity: Hash,
+    pub position: u64,
+    pub bytes: Vec<u8>,
+    /// Unix seconds, when it was last sent.
+    pub at: i64,
+    pub approved: bool,
+}
+
+/// A browser paired to manage this relay.
+#[derive(Clone, Debug)]
+pub struct Manager {
+    pub key: [u8; 32],
+    pub label: String,
+    /// Unix seconds.
+    pub added: i64,
+}
 
 impl Store {
     pub fn open(path: &Path) -> R<Self> {
@@ -588,11 +642,219 @@ impl Store {
         Ok(())
     }
 
-    fn has(&self, table: &str, column: &str, key: &Hash) -> R<bool> {
+    pub fn unset_strict(&self, identity: &Hash) -> R<()> {
+        self.conn.execute(
+            "DELETE FROM strict WHERE identity = ?1",
+            [identity.as_slice()],
+        )?;
+        Ok(())
+    }
+
+    pub fn strict_list(&self) -> R<Vec<Hash>> {
+        let mut st = self
+            .conn
+            .prepare("SELECT identity FROM strict ORDER BY identity")?;
+        let rows = st.query_map([], |r| Ok(h(r.get(0)?)))?;
+        rows.collect()
+    }
+
+    // ------------------------------------------------------------ what the management page shows
+
+    pub fn counts(&self) -> R<Counts> {
+        let mut c = Counts::default();
+        let mut st = self
+            .conn
+            .prepare("SELECT kind, COUNT(*), COALESCE(SUM(size), 0) FROM items GROUP BY kind")?;
+        let rows = st.query_map([], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, i64>(1)? as u64,
+                r.get::<_, i64>(2)? as u64,
+            ))
+        })?;
+        for row in rows {
+            let (k, n, bytes) = row?;
+            match k {
+                kind::ACT => c.acts = n,
+                kind::SEALED => c.sealed = n,
+                _ => c.media = n,
+            }
+            c.bytes += bytes;
+        }
+        Ok(c)
+    }
+
+    /// The latest items, newest first, below arrival `before` if given.
+    pub fn recent(&self, before: Option<u64>, limit: u64) -> R<Vec<Listed>> {
+        let mut st = self.conn.prepare(
+            "SELECT arrival, kind, id, size, signer, spec, type FROM items WHERE arrival < ?1 ORDER BY arrival DESC LIMIT ?2",
+        )?;
+        let rows = st.query_map(
+            params![before.map(|b| b as i64).unwrap_or(i64::MAX), limit as i64],
+            |r| {
+                Ok(Listed {
+                    arrival: r.get::<_, i64>(0)? as u64,
+                    kind: r.get(1)?,
+                    id: h(r.get(2)?),
+                    size: r.get::<_, i64>(3)? as u64,
+                    signer: r.get::<_, Option<Vec<u8>>>(4)?.map(h),
+                    spec: r.get::<_, Option<Vec<u8>>>(5)?.map(h),
+                    type_: r.get::<_, Option<i64>>(6)?.map(|t| t as u64),
+                })
+            },
+        )?;
+        rows.collect()
+    }
+
+    /// The identities this home serves.
+    pub fn served(&self) -> R<Vec<Hash>> {
+        let mut st = self
+            .conn
+            .prepare("SELECT identity FROM served ORDER BY identity")?;
+        let rows = st.query_map([], |r| Ok(h(r.get(0)?)))?;
+        rows.collect()
+    }
+
+    // ------------------------------------------------------------ rotations awaiting approval
+
+    /// Keep a rotation refused for want of approval, or note that it came again.
+    pub fn pending_insert(
+        &self,
+        rotation: &Hash,
+        identity: &Hash,
+        position: u64,
+        bytes: &[u8],
+        at: i64,
+    ) -> R<()> {
+        self.conn.execute(
+            "INSERT INTO pending(rotation, identity, position, bytes, at) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(rotation) DO UPDATE SET at = excluded.at",
+            params![rotation.as_slice(), identity.as_slice(), position as i64, bytes, at],
+        )?;
+        self.conn.execute(
+            "DELETE FROM pending WHERE identity = ?1 AND rotation NOT IN (SELECT rotation FROM pending WHERE identity = ?1 ORDER BY at DESC, rotation LIMIT ?2)",
+            params![identity.as_slice(), PENDING_PER_IDENTITY],
+        )?;
+        Ok(())
+    }
+
+    /// A chain act is held at `position`: rotations awaiting approval at
+    /// that position or before are settled, one way or the other.
+    pub fn pending_settle(&self, identity: &Hash, position: u64) -> R<()> {
+        self.conn.execute(
+            "DELETE FROM pending WHERE identity = ?1 AND position <= ?2",
+            params![identity.as_slice(), position as i64],
+        )?;
+        Ok(())
+    }
+
+    pub fn pending(&self) -> R<Vec<Pending>> {
+        let mut st = self.conn.prepare(
+            "SELECT p.rotation, p.identity, p.position, p.bytes, p.at, a.rotation IS NOT NULL FROM pending p LEFT JOIN approved a ON a.rotation = p.rotation ORDER BY p.at DESC, p.rotation",
+        )?;
+        let rows = st.query_map([], |r| {
+            Ok(Pending {
+                rotation: h(r.get(0)?),
+                identity: h(r.get(1)?),
+                position: r.get::<_, i64>(2)? as u64,
+                bytes: r.get(3)?,
+                at: r.get(4)?,
+                approved: r.get(5)?,
+            })
+        })?;
+        rows.collect()
+    }
+
+    // ------------------------------------------------------------ new identities
+
+    pub fn newcomer(&self, identity: &Hash, at: i64) -> R<()> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO newcomers(identity, at) VALUES (?1, ?2)",
+            params![identity.as_slice(), at],
+        )?;
+        Ok(())
+    }
+
+    /// How many new identities this home took since `since` (Unix seconds).
+    pub fn newcomers_since(&self, since: i64) -> R<u64> {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*) FROM newcomers WHERE at >= ?1",
+                [since],
+                |r| r.get::<_, i64>(0),
+            )
+            .map(|n| n as u64)
+    }
+
+    // ------------------------------------------------------------ management keys and pairing codes
+
+    pub fn managers(&self) -> R<Vec<Manager>> {
+        let mut st = self
+            .conn
+            .prepare("SELECT key, label, added FROM managers ORDER BY added, rowid")?;
+        let rows = st.query_map([], |r| {
+            let k: Vec<u8> = r.get(0)?;
+            Ok(Manager {
+                key: k.try_into().expect("a stored key is 32 bytes"),
+                label: r.get(1)?,
+                added: r.get(2)?,
+            })
+        })?;
+        rows.collect()
+    }
+
+    pub fn is_manager(&self, key: &[u8; 32]) -> R<bool> {
+        self.has("managers", "key", key)
+    }
+
+    pub fn manager_insert(&self, key: &[u8; 32], label: &str, at: i64) -> R<()> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO managers(key, label, added) VALUES (?1, ?2, ?3)",
+            params![key.as_slice(), label, at],
+        )?;
+        Ok(())
+    }
+
+    /// Returns whether the key was paired.
+    pub fn manager_remove(&self, key: &[u8; 32]) -> R<bool> {
+        Ok(self
+            .conn
+            .execute("DELETE FROM managers WHERE key = ?1", [key.as_slice()])?
+            > 0)
+    }
+
+    /// Keep a pairing code, by its hash, until `expires` (Unix seconds).
+    pub fn pairing_insert(&self, code: &Hash, expires: i64) -> R<()> {
+        self.conn.execute(
+            "INSERT OR REPLACE INTO pairing(code, expires) VALUES (?1, ?2)",
+            params![code.as_slice(), expires],
+        )?;
+        Ok(())
+    }
+
+    /// Use a pairing code: true if it was there and unexpired. It is gone
+    /// either way, and so is every expired one.
+    pub fn pairing_take(&self, code: &Hash, now: i64) -> R<bool> {
+        let live = self
+            .conn
+            .query_row(
+                "SELECT expires FROM pairing WHERE code = ?1",
+                [code.as_slice()],
+                |r| r.get::<_, i64>(0),
+            )
+            .optional()?
+            .is_some_and(|e| e > now);
+        self.conn.execute(
+            "DELETE FROM pairing WHERE code = ?1 OR expires <= ?2",
+            params![code.as_slice(), now],
+        )?;
+        Ok(live)
+    }
+
+    fn has(&self, table: &str, column: &str, key: &[u8]) -> R<bool> {
         self.conn
             .query_row(
                 &format!("SELECT 1 FROM {table} WHERE {column} = ?1"),
-                [key.as_slice()],
+                [key],
                 |_| Ok(()),
             )
             .optional()
@@ -605,6 +867,12 @@ impl Store {
                 r.get(0)
             })
             .optional()
+    }
+
+    pub fn remove_setting(&self, key: &str) -> R<()> {
+        self.conn
+            .execute("DELETE FROM settings WHERE key = ?1", [key])?;
+        Ok(())
     }
 
     pub fn set_setting(&self, key: &str, value: &[u8]) -> R<()> {

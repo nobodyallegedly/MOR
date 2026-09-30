@@ -1,0 +1,23 @@
+{
+  "name": "mor-manage",
+  "version": "0.1.0",
+  "description": "The MOR management page: an operator runs a relay or home from a browser, paired once with a one-time code, every request signed with a key the browser keeps. Served by the relay itself.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node --import tsx scripts/build.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "esbuild": "^0.25",
+    "playwright-core": "1.56",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

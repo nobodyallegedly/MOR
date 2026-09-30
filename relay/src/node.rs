@@ -289,6 +289,21 @@ const DB: &str = "relay.db";
 const KEYS: &str = "operator.key";
 const MEDIA: &str = "media";
 
+/// An identity-chain act a home holds: `(position, act, receipt)`.
+pub type ChainRow = (u64, Hash, Option<Hash>);
+
+const NEWCOMER_LIMIT: &str = "new-identities-per-day";
+const DAY: i64 = 24 * 60 * 60;
+
+/// Unix seconds, for the relay's own records (never for the protocol,
+/// whose arrival numbers are counters).
+pub fn now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
 const CLOSED: &str =
     "this home has closed by its operator's rotation: it holds no new identity-chain acts";
 
@@ -445,6 +460,104 @@ impl Node {
     /// The operator approves one rotation, by its act id.
     pub fn approve(&self, rotation: &Hash) -> R<()> {
         Ok(self.store.approve(rotation)?)
+    }
+
+    /// Accept rotations of `identity` without the operator's approval again.
+    pub fn unset_strict(&self, identity: &Hash) -> R<()> {
+        Ok(self.store.unset_strict(identity)?)
+    }
+
+    pub fn strict_list(&self) -> R<Vec<Hash>> {
+        Ok(self.store.strict_list()?)
+    }
+
+    /// Rotations refused for want of the operator's approval, newest first.
+    pub fn pending(&self) -> R<Vec<crate::store::Pending>> {
+        Ok(self.store.pending()?)
+    }
+
+    // ------------------------------------------------------------ new identities
+
+    /// The most new identities this home takes in any 24 hours, if limited.
+    pub fn newcomer_limit(&self) -> R<Option<u64>> {
+        Ok(self
+            .store
+            .setting(NEWCOMER_LIMIT)?
+            .and_then(|b| <[u8; 8]>::try_from(b.as_slice()).ok())
+            .map(u64::from_be_bytes))
+    }
+
+    pub fn set_newcomer_limit(&self, limit: Option<u64>) -> R<()> {
+        match limit {
+            Some(n) => self.store.set_setting(NEWCOMER_LIMIT, &n.to_be_bytes())?,
+            None => self.store.remove_setting(NEWCOMER_LIMIT)?,
+        }
+        Ok(())
+    }
+
+    /// How many new identities this home took in the last 24 hours.
+    pub fn newcomers_today(&self) -> R<u64> {
+        Ok(self.store.newcomers_since(now() - DAY)?)
+    }
+
+    /// A home's own policy on new identities (cMIP, "Homes": a genesis is
+    /// accepted subject to the home's own acceptance conditions): past its
+    /// operator's limit, a genesis is refused for now, and can be sent again
+    /// later or to another home.
+    fn check_newcomers(&self) -> R<()> {
+        if let Some(limit) = self.newcomer_limit()? {
+            if self.newcomers_today()? >= limit {
+                return wire(
+                    code::SLOW_DOWN,
+                    format!("this home takes at most {limit} new identities in 24 hours; try again later, or another home"),
+                );
+            }
+        }
+        Ok(())
+    }
+
+    // ------------------------------------------------------------ what the management page shows
+
+    pub fn counts(&self) -> R<crate::store::Counts> {
+        Ok(self.store.counts()?)
+    }
+
+    pub fn recent(&self, before: Option<u64>, limit: u64) -> R<Vec<crate::store::Listed>> {
+        Ok(self.store.recent(before, limit)?)
+    }
+
+    /// The identities this home serves, each with the chain it holds.
+    pub fn served(&self) -> R<Vec<(Hash, Vec<ChainRow>)>> {
+        let mut out = vec![];
+        for i in self.store.served()? {
+            out.push((i, self.store.chain(&i)?));
+        }
+        Ok(out)
+    }
+
+    pub fn log_len(&self) -> R<u64> {
+        Ok(self.store.log_len()?)
+    }
+
+    /// Whether the key file holds the operator's safety key (a test operator),
+    /// so that the home can rotate its operator by itself.
+    pub fn holds_safety_key(&self) -> bool {
+        self.keys.as_ref().is_some_and(|k| k.safety.is_some())
+    }
+
+    /// The browsers paired with the management page.
+    pub fn managers(&self) -> R<Vec<crate::store::Manager>> {
+        Ok(self.store.managers()?)
+    }
+
+    /// Unpair a browser; false if its key was not paired.
+    pub fn unpair(&self, key: &[u8; 32]) -> R<bool> {
+        Ok(self.store.manager_remove(key)?)
+    }
+
+    /// The store, for the management page's own records (keys, pairing codes).
+    pub(crate) fn store(&self) -> &Store {
+        &self.store
     }
 
     fn allowed(&self, identity: &Hash) -> R<bool> {
@@ -673,13 +786,18 @@ impl Node {
                 if serve && self.closed()? {
                     return wire(code::REFUSED, CLOSED);
                 }
+                if serve && Some(id) != self.operator() {
+                    self.check_newcomers()?;
+                }
                 Some(Plan::Hold {
                     identity: id,
                     position: 0,
                     serve,
                 })
             }
-            (Some(Payload::Rotation(r)), true) => Some(self.plan_rotation(&act, r, verdict)?),
+            (Some(Payload::Rotation(r)), true) => {
+                Some(self.plan_rotation(&act, bytes, r, verdict)?)
+            }
             _ => None,
         };
         let forward = match &payload {
@@ -726,7 +844,11 @@ impl Node {
                 serve,
             }) => {
                 self.store.chain_insert(&identity, position, &id)?;
+                self.store.pending_settle(&identity, position)?;
                 if serve {
+                    if position == 0 && Some(identity) != self.operator() {
+                        self.store.newcomer(&identity, now())?;
+                    }
                     self.store.serve(&identity)?;
                     if Some(identity) != self.operator() {
                         let r = self.sign_receipt(&identity, &id, position)?;
@@ -794,7 +916,7 @@ impl Node {
     }
 
     /// Identity rules 9, 11 and 11a, and the cMIP's "Asking for a receipt".
-    fn plan_rotation(&self, act: &Act, r: &Rotation, verdict: Verdict) -> R<Plan> {
+    fn plan_rotation(&self, act: &Act, bytes: &[u8], r: &Rotation, verdict: Verdict) -> R<Plan> {
         let identity = act.outside.signer.expect("checked by the rotation's shape");
         let states = self.chain_states(&identity)?;
         let p = r.position as usize;
@@ -866,6 +988,10 @@ impl Node {
             && self.store.is_strict(&identity)?
             && !self.store.is_approved(&act.id())?
         {
+            // Kept for the operator to see and approve (management page);
+            // the owner's client then sends the same rotation again.
+            self.store
+                .pending_insert(&act.id(), &identity, r.position, bytes, now())?;
             return wire(
                 code::REFUSED,
                 "this home accepts a rotation of that identity only once its operator has approved it (a registered-device check, simulated)",

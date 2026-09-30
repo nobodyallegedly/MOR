@@ -59,6 +59,7 @@ pub struct Shared {
     node: Mutex<Node>,
     arrivals: watch::Sender<u64>,
     net: Net,
+    pub(crate) manage: crate::manage::Guard,
 }
 
 impl Shared {
@@ -68,6 +69,7 @@ impl Shared {
             node: Mutex::new(node),
             arrivals: watch::channel(max).0,
             net,
+            manage: Default::default(),
         })
     }
 
@@ -648,6 +650,9 @@ pub fn router(shared: Arc<Shared>) -> Router {
         })
         .layer(DefaultBodyLimit::max(body_limit))
         .layer(cors)
+        // The management page, without CORS: only the page this relay
+        // serves may call it from a browser.
+        .merge(crate::manage::routes())
         .with_state(shared)
 }
 

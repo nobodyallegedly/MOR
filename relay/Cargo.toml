@@ -20,5 +20,9 @@ reqwest = { version = "0.13", default-features = false, features = ["rustls", "s
 # and content keys (the core library never draws randomness).
 getrandom = "0.4"
 clap = { version = "4", features = ["derive"] }
+# The management page (roadmap step 11): requests signed with a key the
+# operator's browser made (Ed25519, WebCrypto), answered in JSON.
+ed25519-dalek = "2"
+serde_json = "1"
 
 [dev-dependencies]
