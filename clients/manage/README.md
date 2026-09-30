@@ -37,7 +37,7 @@ The command line gained `mor-relay pair`, `managers`, `unpair KEY` and `limit [N
 
 ## Readings
 
-Where the texts are silent (here, where nothing is specified: running a relay is outside the protocol), the page and the relay take these readings. *To be confirmed by Nobody, allegedly.*
+Where the texts are silent (here, where nothing is specified: running a relay is outside the protocol), the page and the relay take these readings. *Confirmed by Nobody, allegedly, 30 September 2026.*
 
 1. **The page is served by the relay itself,** built into the program, so there is nothing else to deploy and nothing else to trust: a server that could alter the page is the server being managed. The built files are committed in `relay/manage/`, so building the relay needs no Node; a test checks they are the build of this source.
 2. **Pairing codes:** 20 characters (100 random bits), one browser each, for an hour; read leniently (case, dashes, I and L for 1, O for 0). A relay keeps only their hashes. Wrong codes are answered at most 10 times a minute, to spare the relay, not to protect the codes.
