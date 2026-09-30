@@ -909,24 +909,6 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
-## F104. A clone states the rule that brought it into force (found while building roadmap step 11b, decided by Nobody, allegedly)
-
-**Pattern:** 4, in part: a field every implementation writes and none reads, so two programs, or a program and a reader, can disagree about what it means.
-
-**Found while building:** the collective client (roadmap step 11b). Every set of terms carries a signing rule (terms field 4): which signatures make the agreement exist. For founding terms it does that work. A clone comes into force when signatures meet the parent's clone rule (rule 45; under F103, the rule of the tier it changes), so a clone's own field 4 plays no part, yet it can say anything. A clone copied from its parent may read "all parties must sign" while standing complete on fewer signatures.
-
-**Options weighed:** (1) Law says a clone's field 4 is ignored; (2) a clone's field 4 MUST state the rule that brought it into force, and verifiers check it; (3) clones carry no field 4, only founding terms do.
-
-**Decided (Nobody, allegedly, 30 September 2026):** option 2, the truth.
-
-**Checked against the principles:** it relaxes nothing and adds one mechanical check: a clone whose field 4 differs from the rule it comes into force under is invalid. Legible greed: a clone read on its own says truly how it became binding.
-
-**Cost, stated:** the rule appears twice, in the parent and in the clone, and a client writing a clone must copy it exactly.
-
-**Core changes, to be made:** Law MIP draft 7 (terms field 4; rule 45), with F103. Freeze test suite v18 (scenario 3: a clone whose field 4 misstates its rule is invalid).
-
-*F104 decided by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
-
 ## F104. A clone's signing rule states truthfully what brought it into force (found while building roadmap step 11b, decided by Nobody, allegedly)
 
 **Pattern:** 4, in part: a field every agreement carries, whose meaning the text gave only for founding terms.
