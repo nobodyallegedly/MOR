@@ -926,3 +926,23 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes, to be made:** Law MIP draft 7 (terms field 4; rule 45), with F103. Freeze test suite v18 (scenario 3: a clone whose field 4 misstates its rule is invalid).
 
 *F104 decided by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
+
+## F104. A clone's signing rule states truthfully what brought it into force (found while building roadmap step 11b, decided by Nobody, allegedly)
+
+**Pattern:** 4, in part: a field every agreement carries, whose meaning the text gave only for founding terms.
+
+**Found while building:** the collective client (roadmap step 11b). Terms field 4, the signing rule, says which signatures make an agreement exist. For founding terms it does. For a clone it plays no part: a clone comes into force when the parent's rule is met (rule 45). The field was written but unused, free to say anything: a line that looks binding, isn't, and can mislead a reader or split two implementations.
+
+**Options weighed:** (1) ignored, whatever it says; (2) the truth: it states the rule that actually brought the clone into force, and verifiers check it; (3) absent: only founding terms carry it.
+
+**Decided (Nobody, allegedly, 30 September 2026):** option 2, "which means simply a mark of who triggered it". With F103, a clone may come into force under different rules depending on what it changes: the constitutional tier's change rule (everyone by default), or the power of the members who hold an operational area. A clone's field 4 names which of the parent's rules it claims to meet, and the signatures that met it. A verifier checks that the named rule is the one what the clone changes requires, and that it was met; a clone whose mark is false is invalid.
+
+**Checked against the principles:** it relaxes nothing: a clone still needs the parent's rule met. Legible greed: every version says, on its face, who brought it into force and under which power, checkable by a machine. It gives field 4 a use in every version, so no field is dead text.
+
+**Cost, stated:** a verifier must decide which tier and area a clone touches before it can check the mark, so the Law redraft must define that mechanically from the fields a clone changes.
+
+**Core changes, to be made:** with F103: Law MIP draft 7 (terms field 4; rule 45), core v18, freeze test suite v18 (scenario 3: a clone whose mark names a rule it did not meet, or a rule weaker than what it changes requires, is invalid).
+
+**Applied:** not yet.
+
+*F104 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
