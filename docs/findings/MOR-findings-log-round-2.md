@@ -926,23 +926,3 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes, to be made:** Law MIP draft 7 (terms field 4; rule 45), with F103. Freeze test suite v18 (scenario 3: a clone whose field 4 misstates its rule is invalid).
 
 *F104 decided by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
-
-## F104. A clone states the rule that brought it into force (found while building roadmap step 11b, decided by Nobody, allegedly)
-
-**Pattern:** 4, a field with no effect: text that looks binding, which two readers could take two ways.
-
-**Found while building:** the collective client (roadmap step 11b). Every set of terms carries a signing rule (terms field 4): which signatures make the agreement exist. For founding terms it does exactly that. A clone, though, comes into force when the parent's clone rule is met (rule 45; under F103, the rule of the tier the clone changes), so the clone's own field 4 plays no part and could say anything. A client trusting the words would call a complete clone incomplete, or the reverse.
-
-**Options weighed:** (1) Law says a clone's field 4 is ignored; (2) a clone's field 4 MUST state the rule that brought it into force, and verifiers check it against the parent; (3) clones carry no field 4 at all.
-
-**Decided (Nobody, allegedly, 30 September 2026):** option 2, the truth.
-
-**Checked against the principles:** legible: every version reads truthfully on its own, saying what made it binding, and a mismatch is mechanically detectable. It relaxes nothing: a clone whose field 4 does not match is invalid.
-
-**Cost, stated:** redundant bytes in every clone, and one more check for every verifier; a client that writes a clone must copy the right rule.
-
-**Core changes, to be made:** Law MIP draft 7 (terms field 4; rule 45; reasoning). Freeze test suite v18 (scenario 3: a clone whose field 4 does not state the rule that brought it into force is invalid in every client).
-
-**Applied:** not yet; with F103, in the Law redraft before step 12, then the repo and collective clients.
-
-*F104 decided by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
