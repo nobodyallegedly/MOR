@@ -166,6 +166,7 @@ Every component re-tested end to end; the door opened on devices it has never se
 | The core document's header names Law draft 4 (since core v16): corrected in the next core version (decided by Nobody, allegedly) | next core version |
 | Anchoring without OP_RETURN: pay-to-contract (the chain sees an ordinary payment; only holders of the hash and proof can verify). Suggested (brainstorm) as the target, and a specialist question (F85) | step 14a |
 | Whether the frozen core forbids floats, tags and simple values in act payloads (extra surface where implementations can disagree; `core/README.md`) | step 16 |
+| The real collective at step 17 has one member, the author: F96 requires a named successor and a share of its safety key in escrow. Who the successor is, and who holds the escrowed share (raised by case study 21, agreed by Nobody, allegedly) | step 17 |
 | Which identity publishes the specifications on MOR (the brainstorm proposal suggests: the collective publishes code, the author's identity the specifications he wrote) | step 17 |
 
 ## After V1
