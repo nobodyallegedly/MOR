@@ -100,6 +100,10 @@ Opens by link, fetches acts from a relay, verifies them, renders long-form docum
 For the home relay and the basic relay.
 *Done when:* an operator can run each without a terminal.
 
+**11a. Claude integration** *(GitHub session; inserted 30 September 2026, decided by Nobody, allegedly)*
+A MOR connector (an MCP server), so that anyone's Claude can work with MOR: fetch acts from a relay by id or link, verify them with the core library, and say in plain words who signed what and whether it counts; and prepare an act for its owner to sign. Keys stay with their owner: the connector never holds one, and signing happens on the owner's own signer. *An identity of its own for the machine was weighed and set aside: it keeps no keys between sessions, so someone else would hold them, and an identity named after Claude would read as Anthropic's own presence. The machine's part in building MOR stays on record in every commit.*
+*Done when:* a Claude session with the connector, given only a release id or a link, verifies it and explains it in plain words, and prepares an act that the owner's signer signs and a relay accepts.
+
 ### Friction in Finance and Law *(F84)*
 
 Each of these is small on purpose: enough for every layer to meet real use before it freezes.
