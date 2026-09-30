@@ -36,7 +36,7 @@ npm run cli -- render examples/sample.md --out sample.html
 
 ## Readings
 
-Where the texts are silent, this implementation takes these readings. *To confirm, Nobody, allegedly.*
+Where the texts are silent, this implementation takes these readings. *Confirmed by Nobody, allegedly, 30 September 2026.*
 
 1. **A document is a text act.** A long-form document is a text act (Text MIP, type 0) whose format field names this cMIP, not a publication with the text as media. *Task 4 is about text acts; a text act is readable by every client. The cost is the act size limit (the cMIP's stated costs).*
 2. **"Adds no text" is read strictly.** A list marker is shown as written. A bullet glyph or a number of the browser's own would be a character not in the bytes, so the stylesheet turns the browser's markers off.

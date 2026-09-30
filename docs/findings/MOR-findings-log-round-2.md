@@ -882,3 +882,5 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes:** Text MIP draft 6 (task 4; reasoning; freeze scenarios). Core v17 ("MIP: Text"; its header now names the current drafts, Identity 10, Text 6 and Law 6). Freeze test suite v17 (the Envelope and Text checklist; scenario 5.9 and its pass condition).
 
 **Applied:** the long-form text format cMIP, draft 1 (`cmips/cmip-long-form-draft-1.md`, rendering rules 12 and 13), and its founding implementation, whose tests check the bound on every rendering, 20,000 generated texts among them (`clients/longform`).
+
+*F102, the long-form cMIP draft 1, Text MIP draft 6, core v17 and freeze test suite v17 approved by Nobody, allegedly, 30 September 2026.*
