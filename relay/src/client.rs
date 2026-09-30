@@ -296,6 +296,53 @@ impl Client {
         Ok(wire::FeedPage::decode(&self.get(&path).await?)?)
     }
 
+    /// `POST /proofs` (F101): carried inclusion proofs. How many were kept.
+    pub async fn put_proofs(&self, proofs: &[wire::Inclusion]) -> R<u64> {
+        let b = self
+            .post(
+                "/proofs",
+                wire::Inclusion::encode_list(proofs),
+                "application/cbor",
+            )
+            .await?;
+        match wire::decode(&b)? {
+            mor_core::cbor::Value::Uint(n) => Ok(n),
+            _ => Err(ClientError::Malformed("expected a count".into())),
+        }
+    }
+
+    /// Every act this relay holds signed by `signer`, page by page, in
+    /// arrival order. A reader uses it to rebuild a home operator's whole
+    /// sequence, which proving that a receipt lies in the kept ancestry of
+    /// the operator's rotation needs (cMIP, open parameter on kept-ancestry
+    /// proofs).
+    pub async fn acts_by(&self, signer: &Hash) -> R<Vec<Vec<u8>>> {
+        let mut out = vec![];
+        let mut after = 0;
+        loop {
+            let page = self
+                .feed(&FeedQuery {
+                    filter: Filter {
+                        signer: Some(*signer),
+                        ..Default::default()
+                    },
+                    after: Some(after),
+                    ..Default::default()
+                })
+                .await?;
+            if page.items.is_empty() {
+                return Ok(out);
+            }
+            after = page.next;
+            out.extend(
+                page.items
+                    .into_iter()
+                    .filter(|i| i.kind == 0)
+                    .map(|i| i.item),
+            );
+        }
+    }
+
     /// `GET /identity/{id}`, all parts or some.
     pub async fn identity(&self, id: &Hash, parts: Option<&[u64]>) -> R<IdentityRecord> {
         let mut path = format!("/identity/{}", wire::hex(id));

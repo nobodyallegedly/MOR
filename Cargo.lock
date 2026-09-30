@@ -1614,6 +1614,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mor-harness"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "clap",
+ "mor-core",
+ "mor-relay",
+ "reqwest",
+ "slh-dsa",
+ "tokio",
+]
+
+[[package]]
 name = "mor-relay"
 version = "0.1.0"
 dependencies = [

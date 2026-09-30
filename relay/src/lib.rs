@@ -10,8 +10,8 @@
 //! - [`http`]: the requests over HTTP.
 //! - [`client`]: a client for the cMIP, checking what it fetches.
 //!
-//! Written against the relay transport cMIP draft 1, core v15, Identity
-//! draft 9, Envelope draft 5 and Text draft 5.
+//! Written against the relay transport cMIP draft 2, core v16, Identity
+//! draft 10, Envelope draft 6 and Text draft 5.
 
 pub mod client;
 pub mod http;

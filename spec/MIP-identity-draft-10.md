@@ -1,6 +1,6 @@
 # MIP: Identity
 
-*Draft 9, 28 September 2026. Written against core v15 and findings F1 to F95. Draft 9 is draft 8 with the four findings of the core library, part 2 (roadmap step 3): a rotation that counts under the old home rule beats a homeless rotation even once it is final (F92); absence statements are judged by the audit requirement in force before the homeless rotation (F93); a home rule a rotation leaves in place must fit the homes it sets (F94); a voided but acknowledged receipt shows its position as contested without blocking it (F95). Draft 8 was draft 7 with the two findings of the relay transport cMIP written in: a homeless rotation's receipts come from the new homes it declares (F86); a homeless rotation accepted only on the verifier's own failed attempt is never made final by the next rotation, and an objection voids it whenever it surfaces (F87). It also fixes a loop found while writing them in: an escape endorsement is never judged by the rotation it endorses (F88). Draft 7 applied review round 2: receipts and keeper records count only alongside the valid act they name; signature schemes by specification hash; dishonesty verdicts never reach backwards; closure by rotation; disowned acts void unless relied on; the majority rule as default; audit requirements removable by the safety key; self-hosting as a trust model; finality by the next rotation; an inbox route.*
+*Draft 10, 29 September 2026. Written against core v16 and findings F1 to F101. Draft 10 is draft 9 with the finding of the identity gauntlet (roadmap step 7): inclusion proofs may be carried by anyone, and an owner's client keeps those of its own audited receipts, so its history stays provable after a home vanishes (F101). Draft 9 was draft 8 with the four findings of the core library, part 2 (roadmap step 3): a rotation that counts under the old home rule beats a homeless rotation even once it is final (F92); absence statements are judged by the audit requirement in force before the homeless rotation (F93); a home rule a rotation leaves in place must fit the homes it sets (F94); a voided but acknowledged receipt shows its position as contested without blocking it (F95). Draft 8 was draft 7 with the two findings of the relay transport cMIP written in: a homeless rotation's receipts come from the new homes it declares (F86); a homeless rotation accepted only on the verifier's own failed attempt is never made final by the next rotation, and an objection voids it whenever it surfaces (F87). It also fixes a loop found while writing them in: an escape endorsement is never judged by the rotation it endorses (F88). Draft 7 applied review round 2: receipts and keeper records count only alongside the valid act they name; signature schemes by specification hash; dishonesty verdicts never reach backwards; closure by rotation; disowned acts void unless relied on; the majority rule as default; audit requirements removable by the safety key; self-hosting as a trust model; finality by the next rotation; an inbox route.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -220,7 +220,7 @@ log-summary-payload = {
 }
 ```
 
-The Merkle tree is built as in RFC 9162, section 2.1, with SHA-256. A receipt's log position is its index in that tree. Proofs are not acts: a home serves them on request, alongside the summary. An inclusion proof shows that a receipt sits at its position under a root; a consistency proof shows that a later summary extends an earlier one.
+The Merkle tree is built as in RFC 9162, section 2.1, with SHA-256. A receipt's log position is its index in that tree. Proofs are not acts: a home serves them on request, alongside the summary, and anyone may carry them, since each is checked against a signed summary. An owner's client SHOULD keep the inclusion proofs of its own receipts under cosigned summaries, and hand them to its new homes when it re-homes (F101). *Otherwise, once a home vanishes, a reader who never read it before cannot prove any receipt it signed, and an audited identity's chain would stop at genesis for that reader, homeless rotation included.* *Cost, stated: proofs the owner never kept are lost with the home.* An inclusion proof shows that a receipt sits at its position under a root; a consistency proof shows that a later summary extends an earlier one.
 
 A cosignature names the log summary in `objects` and has an empty payload. It is signed by the auditing identity.
 
@@ -503,7 +503,7 @@ Still open:
 
 ## Freeze scenarios
 
-Components exercised (freeze test suite v14):
+Components exercised (freeze test suite v16):
 
 - Genesis, homes and routes, including an inbox route: all scenarios.
 - Rotation by safety key, delivered at the home; pending until the home rule is met: 1, 5.
@@ -515,7 +515,7 @@ Components exercised (freeze test suite v14):
 - Routine rotation keeps unacknowledged history: 5.
 - Audit requirement dropped by the rotation that drops it: 5.
 - Closure by rotation; a stolen operator key cannot close a home: 5.
-- Homeless rotation: closure, objection, auditor absence statements judged by the auditors in force before it; receipts from the new homes; final once the next rotation counts, yet still beaten by a rotation the old homes held, so a used safety key found after a closure rewrites nothing; re-homed without audit never final by the next rotation, a censored reader, a thief's second rotation voided with the first: 5.
+- Homeless rotation: closure, objection, auditor absence statements judged by the auditors in force before it, the vanished home's audited history proved by the proofs the owner carried; receipts from the new homes; final once the next rotation counts, yet still beaten by a rotation the old homes held, so a used safety key found after a closure rewrites nothing; re-homed without audit never final by the next rotation, a censored reader, a thief's second rotation voided with the first: 5.
 - Escape with both keys past a hostile home, including after a refused normal rotation: 5.
 - Several unlinked identities; linking signed by both, ended by either; public or encrypted: 5.
 - Succession: 5.
@@ -525,7 +525,7 @@ Components exercised (freeze test suite v14):
 
 ## Choices introduced by drafts 2 to 9 (decided)
 
-Suggested by Claude while writing the formats, and accepted by Nobody, allegedly, directly or through the review reports and findings he stamped.
+Suggested by Claude while writing the formats, and accepted by Nobody, allegedly, directly or through the review reports and findings they stamped.
 
 1. **One signer per act.** Links become a claim plus a confirmation, and receipts, summaries and cosignatures are acts of the home's or auditor's own identity.
 2. **Homes are relays run by operators** (F18). Receipts and other home acts are signed by the operator's identity; homes are counted per operator; a null entry means self-hosting.
@@ -540,3 +540,4 @@ Suggested by Claude while writing the formats, and accepted by Nobody, allegedly
 11. **Closure by rotation** (F56); **disowned acts void unless relied on** (F57); **majority by default** (F59); **self-hosting as a trust model** (F62); **finality by the next rotation** (F63).
 12. **A homeless rotation's receipts come from the new homes it declares** (F86); **a homeless rotation accepted only on the verifier's own failed attempt is never made final by the next rotation** (F87); **an escape endorsement is never judged by the rotation it endorses** (F88).
 13. **A rotation counting under the old home rule beats even a final homeless rotation** (F92); **absence statements are judged by the audit requirement in force before the homeless rotation** (F93); **a home rule left in place must fit the new homes** (F94); **an acknowledged voided receipt contests a position visibly, without blocking it** (F95). Found while building the core library, part 2 (roadmap step 3).
+14. **Inclusion proofs travel** (F101): anyone may carry them; an owner's client keeps those of its own audited receipts and hands them to its new homes. Found while building the identity gauntlet (roadmap step 7).

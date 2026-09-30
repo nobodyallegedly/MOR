@@ -600,6 +600,18 @@ async fn probe(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>) -
     cbor(wire::encode_items(&acts))
 }
 
+/// `POST /proofs` (F101): carried inclusion proofs; answers how many were kept.
+async fn put_proofs(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>) -> Response {
+    let body = match body(b) {
+        Ok(b) => b,
+        Err(e) => return error(e),
+    };
+    let r = s.node().put_proofs(&body);
+    answer(r, |n| {
+        cbor(mor_core::cbor::encode(&mor_core::cbor::Value::Uint(n)))
+    })
+}
+
 // ---------------------------------------------------------------- the router
 
 pub fn router(shared: Arc<Shared>) -> Router {
@@ -627,6 +639,7 @@ pub fn router(shared: Arc<Shared>) -> Router {
         .route("/log/inclusion", get(log_inclusion))
         .route("/log/consistency", get(log_consistency))
         .route("/probe", post(probe))
+        .route("/proofs", post(put_proofs))
         .fallback(|| async {
             error(WireError::new(
                 code::NOT_SUPPORTED,

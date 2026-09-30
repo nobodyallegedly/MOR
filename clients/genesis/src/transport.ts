@@ -1,4 +1,4 @@
-// A client for the relay transport cMIP (cmips/cmip-relay-transport-draft-1.md).
+// A client for the relay transport cMIP (cmips/cmip-relay-transport-draft-2.md).
 // Everything a relay says unsigned is a hint: the client recomputes the id of
 // everything it fetches, and judges acts only with the core library.
 

@@ -591,6 +591,7 @@ async fn bundles_carry_acts_across_any_border() {
     let b = wire::Bundle {
         acts: vec![g.encode(), p.encode()],
         sealed: vec![],
+        proofs: vec![],
     };
     let file = b.encode();
     let back = wire::Bundle::decode(&file).unwrap();

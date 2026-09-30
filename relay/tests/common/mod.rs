@@ -33,6 +33,7 @@ pub struct Running {
     pub dir: PathBuf,
     pub client: Client,
     pub operator: Option<Hash>,
+    shared: Option<std::sync::Arc<Shared>>,
     stop: Option<oneshot::Sender<()>>,
     task: Option<JoinHandle<()>>,
 }
@@ -79,6 +80,7 @@ impl Running {
             addr,
             dir,
             operator,
+            shared: None,
             stop: None,
             task: None,
         };
@@ -89,6 +91,7 @@ impl Running {
     fn serve(&mut self, listener: tokio::net::TcpListener) {
         let node = Node::open(&self.dir, specs()).unwrap();
         let shared = Shared::new(node, Net::new(None, true));
+        self.shared = Some(shared.clone());
         let (tx, rx) = oneshot::channel();
         self.stop = Some(tx);
         self.task = Some(tokio::spawn(async move {
@@ -128,6 +131,12 @@ impl Running {
             operator: Some(self.op()),
             hint: self.base.clone(),
         }
+    }
+
+    /// Act on the running relay's node, as its operator would.
+    pub fn with_node<T>(&self, f: impl FnOnce(&mut Node) -> T) -> T {
+        let shared = self.shared.as_ref().expect("the relay is running");
+        f(&mut shared.node())
     }
 
     /// Open this relay's data directory directly (while it is stopped).
@@ -394,6 +403,11 @@ pub async fn verifier_from(homes: &[&Running], identity: &Hash) -> Verifier {
         }
         let op = h.client.identity(&h.op(), None).await.unwrap();
         for a in op.all_acts() {
+            v.add(Act::decode(&a).unwrap()).unwrap();
+        }
+        // The operator's whole sequence, to prove its receipts were kept
+        // by any rotation of the operator.
+        for a in h.client.acts_by(&h.op()).await.unwrap() {
             v.add(Act::decode(&a).unwrap()).unwrap();
         }
     }

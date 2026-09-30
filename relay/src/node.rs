@@ -289,6 +289,9 @@ const DB: &str = "relay.db";
 const KEYS: &str = "operator.key";
 const MEDIA: &str = "media";
 
+const CLOSED: &str =
+    "this home has closed by its operator's rotation: it holds no new identity-chain acts";
+
 impl Node {
     /// Set up a new data directory. A home runs under `operator`; a basic
     /// relay has none. Returns the operator's identity hash, for a home.
@@ -401,6 +404,11 @@ impl Node {
             (Role::Relay, Policy::Open) => "Test relay, open to anyone. Test acts only: everything here will be wiped before the first real acts.",
             (Role::Relay, Policy::Allowlist) => "Test relay for listed identities only. Test acts only: everything here will be wiped before the first real acts.",
         };
+        let policy = if self.closed().unwrap_or(false) {
+            "Closed by its operator's rotation: it holds no new identity-chain acts and signs nothing more. What it held is still served, so the closure can be checked."
+        } else {
+            policy
+        };
         Info {
             operator: self.operator(),
             bases: self.cfg.bases.clone(),
@@ -427,8 +435,183 @@ impl Node {
         Ok(self.store.allow_list()?)
     }
 
+    /// Require the operator's approval for every rotation of `identity`
+    /// (a registered-device check, simulated; Identity rule 12). The owner
+    /// chooses it; the operator sets it.
+    pub fn set_strict(&self, identity: &Hash) -> R<()> {
+        Ok(self.store.set_strict(identity)?)
+    }
+
+    /// The operator approves one rotation, by its act id.
+    pub fn approve(&self, rotation: &Hash) -> R<()> {
+        Ok(self.store.approve(rotation)?)
+    }
+
     fn allowed(&self, identity: &Hash) -> R<bool> {
         Ok(self.operator().as_ref() == Some(identity) || self.store.allowed(identity)?)
+    }
+
+    // ------------------------------------------------------------ the operator's rotation
+
+    /// Whether a rotation of this home's operator that it holds declares
+    /// closure (Identity rule 8c).
+    pub fn closed(&self) -> R<bool> {
+        let Some(op) = self.operator() else {
+            return Ok(false);
+        };
+        for (pos, act, _) in self.store.chain(&op)? {
+            if pos > 0 {
+                if let Payload::Rotation(r) = self.held_identity_payload(&act)? {
+                    if r.closure {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+        Ok(false)
+    }
+
+    /// Rotate the operator of a home whose key file holds the safety key
+    /// (the test operator): a new signing key and safety key, keeping the
+    /// home's own sequence; with `closure`, the home closes for good. The
+    /// rotation is held here, where the operator is self-hosted, and the key
+    /// file is replaced. Stop the running home first, or call this on the
+    /// running node.
+    pub fn rotate_operator(&mut self, closure: bool) -> R<Hash> {
+        use mor_core::identity::{KeptTip, SafetyCommit, SigningKey};
+        use mor_core::sig::{SchnorrKey, SlhKey};
+        let keys = self
+            .keys
+            .clone()
+            .ok_or_else(|| Fail::Internal("a relay has no operator".into()))?;
+        let safety = keys.safety().ok_or_else(|| {
+            Fail::Internal("the operator's safety key is not on this server: rotate where it is kept, then give this home the rotation and the new key file (mor-relay rotated)".into())
+        })?;
+        let op = keys.identity;
+        let states = self.chain_states(&op)?;
+        let Some((prev, before)) = states.last() else {
+            return Err(Fail::Internal(
+                "this home holds no chain for its operator".into(),
+            ));
+        };
+        if *prev != keys.binding {
+            return Err(Fail::Internal(
+                "the key file is not bound by the operator's latest chain act".into(),
+            ));
+        }
+        let scheme = match before.safety.scheme {
+            mor_core::act::Scheme::Founding(n @ 2..=3) => n,
+            _ => {
+                return Err(Fail::Internal(
+                    "the operator's safety scheme is not SLH-DSA".into(),
+                ))
+            }
+        };
+        let own = self.store.own()?;
+        let kept = own
+            .last()
+            .map(|t| {
+                vec![KeptTip {
+                    act: *t,
+                    position: own.len() as u64,
+                    summary: mor_core::mmr::Mmr::from_ids(&own).root(),
+                }]
+            })
+            .unwrap_or_default();
+        let (secret, key) = loop {
+            let s = operator::random::<32>();
+            if let Some(k) = SchnorrKey::from_secret(&s) {
+                break (s, k);
+            }
+        };
+        let seeds = operator::random::<48>();
+        let next = SlhKey::from_seeds(
+            scheme,
+            seeds[..16].try_into().unwrap(),
+            seeds[16..32].try_into().unwrap(),
+            seeds[32..].try_into().unwrap(),
+        );
+        let r = Payload::Rotation(Rotation {
+            prev: *prev,
+            position: states.len() as u64,
+            signing_key: SigningKey {
+                scheme: sig::SCHNORR,
+                key: key.public().to_vec(),
+            },
+            safety: SafetyCommit {
+                scheme: next.scheme(),
+                commit: next.commitment(),
+            },
+            kept,
+            disowned: None,
+            homes: None,
+            rule: None,
+            declarations: None,
+            successor: None,
+            audit: None,
+            homeless: false,
+            closure,
+        });
+        let inside = Inside {
+            spec: self.specs.identity,
+            type_: types::ROTATION,
+            prev: None,
+            objects: None,
+            payload: r.to_map(),
+            position: None,
+            summary: None,
+            acks: None,
+            refs: None,
+            hint: None,
+            salt: operator::random::<16>(),
+        };
+        let act = operator::seal_public(&inside, Some(op), None, |id| {
+            safety.sign(id, Some(&operator::random::<16>()))
+        });
+        self.put_act(&act.encode())?;
+        self.replace_keys(Keys {
+            identity: op,
+            binding: act.id(),
+            signing_secret: secret,
+            safety: Some((scheme, seeds)),
+        })?;
+        Ok(act.id())
+    }
+
+    /// The operator rotated elsewhere, where its safety key is kept: hold
+    /// the rotation and take the new key file (its signing key and the
+    /// rotation that bound it).
+    pub fn operator_rotated(&mut self, rotation: &[u8], keys: Keys) -> R<Hash> {
+        let op = self
+            .operator()
+            .ok_or_else(|| Fail::Internal("a relay has no operator".into()))?;
+        let act = Act::decode(rotation).map_err(|e| Fail::Internal(e.to_string()))?;
+        if keys.identity != op || act.outside.signer != Some(op) || keys.binding != act.id() {
+            return Err(Fail::Internal(
+                "the key file and the rotation must both be the operator's, the key bound by that rotation".into(),
+            ));
+        }
+        self.put_act(rotation)?;
+        match self.held_identity_payload(&act.id())? {
+            Payload::Rotation(r) if r.signing_key == keys.signing_key() => {}
+            _ => {
+                return Err(Fail::Internal(
+                    "the key file's signing key is not the one the rotation set".into(),
+                ))
+            }
+        }
+        self.replace_keys(keys)?;
+        Ok(act.id())
+    }
+
+    fn replace_keys(&mut self, keys: Keys) -> R<()> {
+        let path = self.dir.join(KEYS);
+        let tmp = self.dir.join("operator.key.new");
+        let _ = std::fs::remove_file(&tmp);
+        keys.save(&tmp)?;
+        std::fs::rename(&tmp, &path)?;
+        self.keys = Some(keys);
+        self.reload_operator()
     }
 
     // ------------------------------------------------------------ publishing an act
@@ -485,11 +668,17 @@ impl Node {
         self.check_binding(&act)?;
         self.check_policy(&act, id, inside.as_ref(), payload.as_ref())?;
         let plan = match (&payload, self.is_home()) {
-            (Some(Payload::Genesis(g)), true) => Some(Plan::Hold {
-                identity: id,
-                position: 0,
-                serve: self.names_us(&g.homes),
-            }),
+            (Some(Payload::Genesis(g)), true) => {
+                let serve = self.names_us(&g.homes);
+                if serve && self.closed()? {
+                    return wire(code::REFUSED, CLOSED);
+                }
+                Some(Plan::Hold {
+                    identity: id,
+                    position: 0,
+                    serve,
+                })
+            }
             (Some(Payload::Rotation(r)), true) => Some(self.plan_rotation(&act, r, verdict)?),
             _ => None,
         };
@@ -644,6 +833,13 @@ impl Node {
             .apply(r)
             .map_err(|e| WireError::invalid(e.to_string()))?;
         let old_names_us = self.names_us(&before.homes);
+        let own = Some(identity) == self.operator();
+        // A closed home holds no new chain acts, signs no receipts and no
+        // objections: its operator's closure already makes it gone for
+        // every identity it served (Identity, homeless procedure, step 4).
+        if !own && self.closed()? && (old_names_us || self.names_us(&after.homes)) {
+            return wire(code::REFUSED, CLOSED);
+        }
         if r.homeless && old_names_us {
             return Ok(Plan::Object { identity });
         }
@@ -661,6 +857,20 @@ impl Node {
             return Err(Fail::Wire(e));
         }
         let serve = self.store.is_served(&identity)? || old_names_us || self.names_us(&after.homes);
+        // The home's own acceptance condition (Identity rule 12), for the
+        // identities whose owners chose it: a rotation is accepted only once
+        // the operator has approved it, standing in for proof from a
+        // registered device. The refusal is unsigned, as the core says.
+        if serve
+            && !own
+            && self.store.is_strict(&identity)?
+            && !self.store.is_approved(&act.id())?
+        {
+            return wire(
+                code::REFUSED,
+                "this home accepts a rotation of that identity only once its operator has approved it (a registered-device check, simulated)",
+            );
+        }
         Ok(Plan::Hold {
             identity,
             position: r.position,
@@ -960,6 +1170,14 @@ impl Node {
             .op
             .as_ref()
             .ok_or_else(|| Fail::Internal("a relay without an operator signs nothing".into()))?;
+        // After its operator rotates, a home signs nothing under the old key:
+        // such an act would lie outside the rotation's kept ancestry.
+        if self.store.chain(&op.id)?.last().map(|(_, a, _)| *a) != Some(op.binding) {
+            return Err(Fail::Internal(
+                "the operator has rotated: give this home its new key file (mor-relay rotated)"
+                    .into(),
+            ));
+        }
         let act = op.sign(&spec, type_, payload, objects);
         let position = op.next_position();
         let inside = act.open(None).map_err(|e| Fail::Internal(e.to_string()))?;
@@ -1286,6 +1504,48 @@ impl Node {
             }
             rec.evidence = ev;
         }
+        if want(part::PROOFS) || want(part::CARRIED) {
+            let proofs = self.store.proofs_for(identity)?;
+            if want(part::PROOFS) {
+                rec.proofs = proofs
+                    .iter()
+                    .map(|(summary, receipt, index, path)| wire::Inclusion {
+                        summary: *summary,
+                        receipt: *receipt,
+                        index: *index,
+                        path: path.clone(),
+                    })
+                    .collect();
+            }
+            if want(part::CARRIED) {
+                let mut seen = BTreeSet::new();
+                let mut carried = vec![];
+                let mut add = |h: Hash, b: Vec<u8>| {
+                    if seen.insert(h) {
+                        carried.push(b);
+                    }
+                };
+                for (summary, _, _, _) in &proofs {
+                    let Some(b) = self.store.item(summary, kind::ACT)? else {
+                        continue;
+                    };
+                    let signer = Self::signer_of(&b);
+                    add(*summary, b);
+                    for (h, b) in self
+                        .store
+                        .acts_about(summary, &ids, &[types::COSIGNATURE])?
+                    {
+                        add(h, b);
+                    }
+                    if let Some(s) = signer {
+                        for (_, a, _) in self.store.chain(&s)? {
+                            add(a, self.item_bytes(&a)?);
+                        }
+                    }
+                }
+                rec.carried = carried;
+            }
+        }
         if want(part::OTHER_RECEIPTS) {
             let op = self.operator();
             rec.other_receipts = self
@@ -1300,6 +1560,47 @@ impl Node {
                 .collect();
         }
         Ok(rec)
+    }
+
+    // ------------------------------------------------------------ homes: carried proofs
+
+    /// `POST /proofs` (F101): inclusion proofs for other homes' receipts,
+    /// carried by the owner's client. Each is kept if this home serves the
+    /// identity its receipt names, holds the summary and the receipt (both
+    /// signed by the same operator), the receipt claims the proof's index,
+    /// and the proof leads from the receipt to the summary's root. Answers
+    /// how many were kept.
+    pub fn put_proofs(&mut self, body: &[u8]) -> R<u64> {
+        self.home_only()?;
+        let list = wire::Inclusion::decode_list(body).map_err(WireError::from)?;
+        let ids = self.specs.identity;
+        let mut kept = 0;
+        for p in list {
+            let (Some((sa, si)), Some((ra, ri))) =
+                (self.held_opened(&p.summary)?, self.held_opened(&p.receipt)?)
+            else {
+                continue;
+            };
+            if si.spec != ids || ri.spec != ids || sa.outside.signer != ra.outside.signer {
+                continue;
+            }
+            let (Ok(Payload::LogSummary(ls)), Ok(Payload::Receipt(rc))) = (
+                Payload::decode(si.type_, &si.payload),
+                Payload::decode(ri.type_, &ri.payload),
+            ) else {
+                continue;
+            };
+            if rc.log_position != p.index
+                || !self.store.is_served(&rc.identity)?
+                || !merkle::verify_inclusion(&p.receipt, p.index, ls.size, &ls.root, &p.path)
+            {
+                continue;
+            }
+            self.store
+                .proof_insert(&rc.identity, &p.summary, &p.receipt, p.index, &p.path)?;
+            kept += 1;
+        }
+        Ok(kept)
     }
 
     // ------------------------------------------------------------ homes: the log

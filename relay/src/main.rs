@@ -5,6 +5,9 @@
 //! mor-relay run   --dir DIR --listen 127.0.0.1:8080 [--tor-proxy socks5h://127.0.0.1:9050]
 //! mor-relay allow --dir DIR IDENTITY      (and disallow, list)
 //! mor-relay show  --dir DIR
+//! mor-relay strict  --dir DIR IDENTITY    (approve --dir DIR ROTATION)
+//! mor-relay rotate  --dir DIR [--closure]
+//! mor-relay rotated --dir DIR --operator-key FILE --rotation FILE.mor
 //! ```
 
 use clap::{Parser, Subcommand, ValueEnum};
@@ -107,6 +110,41 @@ enum Cmd {
     Show {
         #[arg(long)]
         dir: PathBuf,
+    },
+    /// Accept rotations of this identity only once approved with `approve`
+    /// (the owner's choice of a device policy; the device check itself is
+    /// simulated by the operator's approval).
+    Strict {
+        #[arg(long)]
+        dir: PathBuf,
+        identity: String,
+    },
+    /// Approve one rotation of a strict identity, by its act id.
+    Approve {
+        #[arg(long)]
+        dir: PathBuf,
+        rotation: String,
+    },
+    /// Rotate this home's test operator, whose safety key is in the key
+    /// file: new keys, the home's own acts kept. Stop the home first.
+    Rotate {
+        #[arg(long)]
+        dir: PathBuf,
+        /// Close the home for good (Identity rule 8c): it holds no new
+        /// identity-chain acts and signs nothing more.
+        #[arg(long)]
+        closure: bool,
+    },
+    /// The operator rotated where its safety key is kept: hold the rotation
+    /// (a bundle holding that one act) and take the new key file. Stop the
+    /// home first.
+    Rotated {
+        #[arg(long)]
+        dir: PathBuf,
+        #[arg(long)]
+        operator_key: PathBuf,
+        #[arg(long)]
+        rotation: PathBuf,
     },
 }
 
@@ -240,6 +278,41 @@ async fn main() {
                 println!("{}", wire::hex(&i));
             }
         }
+        Cmd::Strict { dir, identity: i } => open(&dir)
+            .set_strict(&identity(&i))
+            .unwrap_or_else(|e| die(e)),
+        Cmd::Approve { dir, rotation } => open(&dir)
+            .approve(&identity(&rotation))
+            .unwrap_or_else(|e| die(e)),
+        Cmd::Rotate { dir, closure } => {
+            let id = open(&dir)
+                .rotate_operator(closure)
+                .unwrap_or_else(|e| die(e));
+            println!("Operator rotated: {}", wire::hex(&id));
+            if closure {
+                println!("The home is closed for good.");
+            }
+        }
+        Cmd::Rotated {
+            dir,
+            operator_key,
+            rotation,
+        } => {
+            let keys = Keys::load(&operator_key)
+                .unwrap_or_else(|e| die(format!("{}: {e}", operator_key.display())));
+            let bytes = std::fs::read(&rotation)
+                .unwrap_or_else(|e| die(format!("{}: {e}", rotation.display())));
+            let acts = wire::Bundle::decode(&bytes)
+                .unwrap_or_else(|e| die(format!("{}: not a bundle: {e}", rotation.display())))
+                .acts;
+            let [act] = acts.as_slice() else {
+                die("the bundle must hold the rotation alone")
+            };
+            let id = open(&dir)
+                .operator_rotated(act, keys)
+                .unwrap_or_else(|e| die(e));
+            println!("Operator rotation held: {}", wire::hex(&id));
+        }
         Cmd::Show { dir } => {
             let n = open(&dir);
             let c = n.config();
@@ -252,6 +325,9 @@ async fn main() {
             );
             if let Some(op) = n.operator() {
                 println!("operator: {} (TEST identity)", wire::hex(&op));
+            }
+            if n.closed().unwrap_or(false) {
+                println!("closed: yes, by its operator's rotation");
             }
         }
     }

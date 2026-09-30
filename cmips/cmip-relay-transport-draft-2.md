@@ -1,6 +1,6 @@
 # cMIP: Relay Transport
 
-*Draft 1, 28 September 2026. **Approved by Nobody, allegedly, 28 September 2026** (roadmap step 1); its hash stays a draft hash until its creator is named at step 17. Written against core v12, the Identity MIP draft 7, the Envelope MIP draft 4, the Text MIP draft 5, the Production MIP draft 4, freeze test suite v11 and findings F1 to F83; merged against freeze test suite v12 and findings to F85, whose scenarios are unchanged. Not core: a founding cMIP, frozen at publication and competing with any other transport. It answers two open parameters of the drafts: how a home is queried (Identity), and how a client finds the key deliveries and sealed containers addressed to it (Envelope).*
+*Draft 2, 29 September 2026, awaiting approval. Draft 1 with F101 written in (roadmap step 7, the identity gauntlet): inclusion proofs travel. A home keeps and serves carried inclusion proofs for the identities it serves, with the acts they rest on (identity record parts 9 and 10, `POST {base}/proofs`); a bundle can carry them (key 2); and an owner's client keeps the proofs of its own audited receipts and hands them to its new homes. Draft 1 was approved by Nobody, allegedly, 28 September 2026 (roadmap step 1); its hash stays a draft hash until its creator is named at step 17. Written against core v12, the Identity MIP draft 7, the Envelope MIP draft 4, the Text MIP draft 5, the Production MIP draft 4, freeze test suite v11 and findings F1 to F83; merged against freeze test suite v12 and findings to F85, whose scenarios are unchanged. Not core: a founding cMIP, frozen at publication and competing with any other transport. It answers two open parameters of the drafts: how a home is queried (Identity), and how a client finds the key deliveries and sealed containers addressed to it (Envelope).*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples. Decisions taken with Nobody, allegedly are marked "(Nobody, allegedly, Q1)" and so on; the questions and their answers are listed at the end.*
 
@@ -227,8 +227,12 @@ identity-record = {
   ? 5 => [* bstr],        ; names and name withdrawals
   ? 6 => [* bstr],        ; links: public claims, confirmations and terminations naming or signed by this identity
   ? 7 => [* bstr],        ; evidence: see below
-  ? 8 => [* bstr]         ; receipts of other homes for this identity's chain acts, as delivered to this home
+  ? 8 => [* bstr],        ; receipts of other homes for this identity's chain acts, as delivered to this home
+  ? 9 => [* inclusion],   ; carried inclusion proofs for those receipts (F101)
+  ? 10 => [* bstr]        ; the acts they rest on: the summaries they name, cosignatures of those, their signers' chain acts
 }
+
+inclusion = [ summary: hash, receipt: hash, index: uint, path: [* hash] ]
 ```
 
 A home that does not serve the identity answers error 2. An absent part means the home holds nothing of that kind; it proves nothing.
@@ -238,6 +242,7 @@ A home that does not serve the identity answers error 2. An absent part means th
 3. **Names and links.** A home SHOULD serve them (Identity rule 13), and MAY serve encrypted private links, which appear only as opaque acts by their signer.
 4. **Evidence.** A home SHOULD accept and serve, for each identity it serves, the acts the homeless and audit procedures need: its own objections; homeless rotations it refused, as evidence; escape endorsements; absence statements by the identity's declared auditors; and cosignatures of its log summaries. Any client may deliver such an act to the home with `POST {base}/acts`. A home keeps only acts that are valid and name an identity it serves, and may refuse the rest. *A home can still hide evidence by leaving it out, so clients look elsewhere when it matters (see "When a home counts as unreachable")* (Nobody, allegedly, Q7).
 5. **Other homes' receipts.** A home MAY serve receipts signed by other operators for the identity's chain acts, delivered to it by the owner's client. They are signed, so they need no trust (Nobody, allegedly, Q7).
+6. **Carried proofs (F101).** A home SHOULD accept, for an identity it serves, inclusion proofs for other homes' receipts, with `POST {base}/proofs`, body `[* inclusion]`, answering `uint`: how many it kept. It keeps a proof only if it holds the log summary and the receipt the proof names, both signed by the same operator, the receipt names an identity it serves and claims the proof's index as its log position, and the path leads from the receipt to the summary's root (RFC 9162, 2.1.3.2). It serves the proofs it kept in part 9, and in part 10 the acts they rest on that it holds: each summary named, the cosignatures of it, and its signer's identity-chain acts. The owner's client delivers those acts first, with `POST {base}/acts`. *Inclusion proofs are checked against signed summaries, so, like objections, they need no trust and may come from anywhere. Without them, once a home vanishes, a reader who never reached it cannot prove any receipt it signed, and an audited identity's chain stops at genesis for that reader.*
 
 *Every part is signed acts. A client checks them all itself and trusts nothing the home says without signing (Identity rule 10c).*
 
@@ -252,7 +257,7 @@ A home that does not serve the identity answers error 2. An absent part means th
 - `GET {base}/log/inclusion?position=n&size=m` returns the inclusion proof for the receipt at position `n` in the tree of size `m`: `[* hash]`, as RFC 9162, section 2.1.3.
 - `GET {base}/log/consistency?from=m&to=k` returns the consistency proof between the trees of sizes `m` and `k`: `[* hash]`, as RFC 9162, section 2.1.4.
 
-Proofs are not acts and are not signed; they are checked against signed summaries, so they need no trust. An auditor fetches the consistency proof from the last summary it cosigned before cosigning a new one (Identity, "Log summaries and audits"), and delivers its cosignature to the home.
+Proofs are not acts and are not signed; they are checked against signed summaries, so they need no trust, and anyone may carry them (part 9, bundles key 2). An auditor fetches the consistency proof from the last summary it cosigned before cosigning a new one (Identity, "Log summaries and audits"), and delivers its cosignature to the home.
 
 ## When a home counts as unreachable
 
@@ -301,7 +306,8 @@ A **bundle** is a file holding acts, so evidence can cross a border by any means
 ```cddl
 bundle = {
   0 => [+ bstr],         ; acts, each exactly as a relay would serve it
-  ? 1 => [+ bstr]        ; sealed containers
+  ? 1 => [+ bstr],       ; sealed containers
+  ? 2 => [+ inclusion]   ; carried inclusion proofs (F101)
 }
 ```
 
@@ -351,6 +357,7 @@ error = {
 2. A client SHOULD fetch an identity's chain from more than one of its homes where several are declared, and MUST judge which rotation counts from receipts, never from which home answered.
 3. A client never signs anything for the transport. *Every signature in MOR signs an act id (Identity). A relay decides whether to keep an act by its signer, which the act already proves; a login would add a second kind of signature and a way to trick a key into signing something that is not an act.*
 4. Relays MUST answer every request with the header `Access-Control-Allow-Origin: *`, so that a client running in a web browser, such as the web reader, can reach any relay directly.
+5. **Keeping proofs (F101).** An owner's client SHOULD keep, while each home answers, the inclusion proofs of its receipts under cosigned summaries, with the summaries, their cosignatures and the operator's chain acts, and deliver them to its new homes when it re-homes (Homes, "Querying an identity", 6). *Cost, stated: proofs the owner never kept are lost with the home.*
 
 ## Reasoning
 
@@ -379,6 +386,9 @@ error = {
 11. **Where the core marks a weak or conformance rule, this cMIP does not smooth it over.** The "tried and failed to reach" case is defined as honestly as a transport can and still labelled the weakest; refusals stay unsigned, as the core says; "not held" proves nothing.
 12. **Its place in Production.** This cMIP fills no task and defines no act type (Production rule 8a allows this). No act names it: relays and clients adopt it by implementing it. Its spec hash covers its creator, who must publish it. The creator is named at roadmap step 17; any hash computed before then is a draft hash (Nobody, allegedly, Q6).
 
+13. **Found in Identity through the identity gauntlet (a flaw; resolved as F101).** Identity said a home serves inclusion proofs on request, and nothing else did. An identity that requires audit counts a rotation only with an inclusion proof of its receipt under a cosigned summary. Once its home vanished, a reader who had never reached that home could prove no receipt it signed, so the chain stopped at genesis for that reader, and the homeless rotation that auditors' absence statements should let count could not count either. *Decided (Nobody, allegedly, F101):* proofs travel, as objections do: homes keep and serve carried proofs, bundles carry them, and the owner's client keeps its own.
+14. **Friction, not a flaw: proving a home's receipts after its operator rotates.** A receipt signed before an operator's rotation counts only if it lies in the rotation's kept ancestry, and a verifier proves that from every act id of the operator's line up to the kept tip. The identity record carries none of the operator's receipts and summaries for other identities, so a reader fetches the operator's whole sequence with the feed (`signer=`). It works, and grows with the home's size; the open parameter below (an inclusion proof for a kept ancestry) would make it small.
+
 ## Freeze scenarios
 
 | Scenario | What this cMIP carries |
@@ -391,6 +401,7 @@ error = {
 | 5.7b | A forged receipt and non-extending summaries served: the client checks them and changes nothing. |
 | 5.7c | Closure by rotation, fetched from the operator's homes; absence statements and objections as evidence; the "tried and failed" attempt; escape endorsement delivered to the new homes; redirected inbox and re-delivery. |
 | 5.7d | Inclusion and consistency proofs settle a contested position. |
+| 5.7c (F101) | Inclusion proofs of a vanished home, carried by the owner's client to the new home and served there. |
 | 4 | Sealed ballots published, mirrored through the unfiltered feed, compared with a commitment. |
 | 2.5 | An act of an unknown specification carried by a relay that cannot read it. |
 | 8.1 | The MIPs fetched as publications by a read-only client. |
