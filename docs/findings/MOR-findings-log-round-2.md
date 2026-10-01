@@ -912,6 +912,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Answers to the Law redraft's questions (Nobody, allegedly):**
 - Q2 (1 October 2026): a collective's words are split like its rules: the constitution's words are constitutional, and each area carries its own words, which its holders change with it.
 - Q3 (1 October 2026): arbitrators, the condition cMIP and the anchoring cMIP are judicial and protected, beside the keepers and the time reference: each can decide who wins a dispute, so a majority cannot pick a friendlier judge after the fact.
+- Q4 (1 October 2026): adopting an extension changes the terms and is constitutional; holding the Production lane lets a member act under adopted extensions, never adopt new ones (F106).
+- Q5 (1 October 2026): an area's power is exclusive. "The area is to her, or to the narrower collective rule that governs it." The collective's clone rule cannot reach into it; its holders, and the rule they act by, change only by a constitutional change.
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
