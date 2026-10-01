@@ -1063,7 +1063,10 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Costs, stated:** a departure takes effect for the collective's acts when the collective draws its line, not when the member signs; an act on a branch the collective's own line left out counts as made after it. Not reached by the rule: a member's own key rotation still judges their signatures through Identity (choice C5).
 
-**Open:** choices C1 to C8, and A3 (the collective's keepers for its own left-out acts), in `docs/law-ordering-rule-test.md` section 5.
+**Choices (Nobody, allegedly, 1 October 2026):**
+- C1: a member's signature on an everyday act of the collective is placed at the act it signs: a member who left can still complete an act the collective signed before its line, and it counts ("the act was drafted with her in it"). *Cost, stated:* a pending act stays completable by whoever held the area when it was made.
+
+**Open:** choices C2 to C8, and A3 (the collective's keepers for its own left-out acts), in `docs/law-ordering-rule-test.md` section 5.
 
 **Core changes, to be made:** Law draft 7 (the "Made before, made after" section; rules 37, 37c, 40, 42, 44, 44d; the record act's fields); freeze suite v18 (scenario 3 and the stories of the test).
 
