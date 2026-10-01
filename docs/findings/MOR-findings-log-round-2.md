@@ -915,6 +915,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Q4 (1 October 2026): adopting an extension changes the terms and is constitutional; holding the Production lane lets a member act under adopted extensions, never adopt new ones (F106).
 - Q5 (1 October 2026): an area's power is exclusive. "The area is to her, or to the narrower collective rule that governs it." The collective's clone rule cannot reach into it; its holders, and the rule they act by, change only by a constitutional change.
 - Q6 (1 October 2026): a member can always leave alone, by an act that gives up their voice without anyone else's signature; they keep their stake, and the remaining members rotate the collective's keys (F100), a resignation counting like a loss (F96, F105). And where a constitution allows removing a member, removal takes the voice only, never the stake: "Kicked from the board does not mean being forced to give up shares." (Absence remains the abandonment clause's business, under the clause the member signed.)
+- Q7 (1 October 2026): a clone that changes several areas at once is valid when each area's rule is met; its mark (F104) names every rule it met, and it comes into force all at once or not at all.
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
