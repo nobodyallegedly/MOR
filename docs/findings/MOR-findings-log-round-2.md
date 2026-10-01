@@ -921,6 +921,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Q10 (1 October 2026): lanes by layer and areas are one construct: an area may be defined by whole layers, by act types or by fields, with one set of rules for holding it, granting within it, leaving it and changing it.
 - Q11 (1 October 2026): a collective's founding agreement exists only when every identity in its first version has signed. "A person should not be added to a collective without their approval": a member added later is bound only by their own signature (rule 45).
 - Q12 (1 October 2026): a clone that changes an area and something outside every area is valid when both rules are met, its mark naming both, as Q7.
+- Q13 (1 October 2026): giving up an area changes the constitution at that level. Three ways: the holder leaving nominates a replacement, and the constitutional rule approves or not; or the constitutional rule proposes a replacement, and the holder leaving approves; or the constitutional rule redraws that area's rules entirely. The replacement signs too (Q11). Until one of them completes, the holder keeps the area. *Cost, stated:* a holder cannot simply step down from one area; their unconditional way out is leaving the collective (Q6), and absence is the abandonment clause's.
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
