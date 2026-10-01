@@ -1046,3 +1046,25 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Applied:** already followed by the JPEG Module, the barebone client, the reader, the desk and the connector.
 
 *F108 decided by Nobody, allegedly, 1 October 2026.*
+
+## F109. In a collective, "before" and "after" are judged on the collective's own sequence (found while drafting Law draft 7, decided by Nobody, allegedly)
+
+**Pattern:** a root cause behind several findings: flaws E to L, Q23, Q28 and Q30 of the Law redraft each ordered a member's personal sequences against a collective event (a resignation, a stepping-down, a freeze, a declaration of absence, a record), and each patch opened another gap.
+
+**Found while drafting:** Law draft 7, after its final pass found flaws I to L. Suggested by the project lead; tested on branch `claude/law-ordering-test-buw632` (`docs/law-ordering-rule-test.md`, simulation crate `mor-ordering-sim`). Replayed without draft 7's patches, every story kept its good outcome and lost its harm; over 20,000 simulated collectives (862,000 acts, forks, offline devices, backdating, late signatures) the rule gave no wrong answer, where draft 7 as written gave one in 8,490 worlds.
+
+**Decided (Nobody, allegedly, 1 October 2026):** for anything done in a collective's name, "before" and "after" are judged only on the collective's own sequence, never on members' personal sequences. It replaces most of draft 7's "Made before, made after" section (the personal device list in resignations, the keeper and record exceptions for members' signatures, the separate line drawn by a declaration, "the last act known to precede the freeze", the seal's place in rule 42, the two exceptions in rule 44d), with four additions:
+- **A1.** The collective draws its own line for each departure, as a field of its record act, written at once.
+- **A2.** A record lists the signatures that put its clone in force (which also closes a flaw in draft 7: a record completed late could knock a later clone out of force, or count a member who had already left).
+- **A4.** Two lines of the collective that do not name each other are concurrent, and records on them are a fork of the agreement; the earlier version stays in force.
+- **A6.** A grantee's deal is settled by whether the collective itself acknowledged, paid or imported it.
+
+**Checked against the principles:** right of exit: leaving still needs no one's permission; a collective that delays drawing a departing member's line only delays itself. Legible greed: one rule, checkable on one sequence the collective publishes. Evolutionary design: the core keeps one ordering rule instead of many patches.
+
+**Costs, stated:** a departure takes effect for the collective's acts when the collective draws its line, not when the member signs; an act on a branch the collective's own line left out counts as made after it. Not reached by the rule: a member's own key rotation still judges their signatures through Identity (choice C5).
+
+**Open:** choices C1 to C8, and A3 (the collective's keepers for its own left-out acts), in `docs/law-ordering-rule-test.md` section 5.
+
+**Core changes, to be made:** Law draft 7 (the "Made before, made after" section; rules 37, 37c, 40, 42, 44, 44d; the record act's fields); freeze suite v18 (scenario 3 and the stories of the test).
+
+*F109 decided by Nobody, allegedly, 1 October 2026.*
