@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(cargo *)",
+      "Bash(rustup *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(python3 *)",
+      "Bash(sh scripts/*)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git fetch*)",
+      "Bash(git pull*)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git branch*)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git stash*)",
+      "Bash(git mv *)",
+      "Bash(git rm *)",
+      "Bash(git remote *)"
+    ]
+  }
+}
