@@ -1694,6 +1694,25 @@ pub fn resignation_payload(agreement: &str, area: Option<u32>) -> R<Vec<u8>> {
     )))
 }
 
+/// An abandonment declaration payload (Law type 13, B12): the agreement,
+/// the version whose clause it applies (the last the party signed), the
+/// party, and the outcomes, ascending. The act carries, in `objects`,
+/// `[agreement, agreement]`.
+#[wasm_bindgen(js_name = declarationPayload)]
+pub fn declaration_payload(agreement: &str, clause: &str, party: &str, outcomes: Vec<u32>) -> R<Vec<u8>> {
+    let d = law::AbsenceDeclaration {
+        agreement: unhex(agreement)?,
+        clause: unhex(clause)?,
+        party: unhex(party)?,
+        outcomes: outcomes.into_iter().map(u64::from).collect(),
+    };
+    if d.outcomes.is_empty() || d.outcomes.iter().any(|o| *o > 4) || d.outcomes.windows(2).any(|w| w[0] >= w[1]) {
+        return Err(err("a declaration's outcomes are known ones, ascending, none twice"));
+    }
+    let bytes = cbor::encode(&Value::Map(d.to_map()));
+    Ok(bytes)
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RecordIn {
@@ -1815,7 +1834,8 @@ struct ConsentOut {
 struct DepartureOut {
     act: String,
     party: String,
-    /// "resigned", "stepped-down" or "rotated".
+    /// "resigned", "stepped-down", "rotated" or "declared" (an abandonment
+    /// declaration removing the voice).
     kind: String,
     agreement: Option<String>,
     area: Option<u64>,
@@ -1828,6 +1848,7 @@ fn departure_out(d: &law::Departure) -> DepartureOut {
             ("stepped-down", Some(hx(agreement)), Some(*area))
         }
         law::DepartureKind::Rotated { .. } => ("rotated", None, None),
+        law::DepartureKind::Declared { agreement } => ("declared", Some(hx(agreement)), None),
     };
     DepartureOut {
         act: hx(&d.act),
@@ -1850,6 +1871,8 @@ struct RecordOut {
     clone_state: Option<String>,
     clone_why: Option<String>,
     puts: Option<String>,
+    /// Whether its clone, of one branch of a fork, resolves the fork (B11).
+    resolves: bool,
     registers: Vec<DepartureOut>,
 }
 
@@ -1869,6 +1892,7 @@ fn record_out(e: &law::RecordEval) -> RecordOut {
         clone_state: state.map(String::from),
         clone_why: why,
         puts: e.puts.as_ref().map(hx),
+        resolves: e.resolves,
         registers: e.registers.iter().map(departure_out).collect(),
     }
 }

@@ -526,6 +526,16 @@ export class Actions {
   async prepareChange(a: { collective: string; join?: string[]; leave?: string[]; rules?: Rules; words?: string }) {
     const names = this.store.names();
     const c = this.store.collective(a.collective);
+    // Only who judges absence changes: a judicial change, under the clone
+    // rule, recorded at once (Law draft 8, B13), not a constitutional one.
+    if (!a.join?.length && !a.leave?.length && a.rules && !a.words?.trim()) {
+      const cur = toRules(c.f.governance);
+      const r = a.rules;
+      const same = (x: keyof Rules) => r[x] === cur[x];
+      if (!same('others') && same('safety') && same('release') && same('clone') && same('constitution')) {
+        return this.prepareAbsenceRule({ collective: a.collective, others: r.others });
+      }
+    }
     const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
     const join = [...new Set(a.join ?? [])];
     const leave = new Set(a.leave ?? []);
@@ -992,6 +1002,102 @@ export class Actions {
         for (const i of ids) this.store.saveIdentity(i);
         return {
           title: `The Releases area of “${cname}” has new words`,
+          lines: [
+            { text: `Clone ${got.clone}, signed by ${got.signed.length}.` },
+            { text: `Record ${got.record}: written on the collective's record at once; no rotation.`, tone: 'ok' },
+          ],
+          acts: [got.clone, ...got.signed.map((s) => s.act), got.record],
+        };
+      },
+    });
+  }
+
+  /**
+   * A judicial change (Law draft 8, B13): only who judges absence changes,
+   * the abandonment clause, a protected clause of the judicial tier (Law
+   * rules 44a, 46a). Marked with the clone rule, signed by enough members
+   * whose voice remains, and written on the collective's record at once
+   * with its everyday key: no rotation (rule 37c, Q8). For a member who
+   * does not sign it, absence stays judged by the clause they signed.
+   */
+  async prepareAbsenceRule(a: { collective: string; others: number; signers?: string[] }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const blocking: string[] = [];
+    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
+    const old = c.f.governance.abandonmentOthers;
+    const others = whole(a.others, 'who judges absence');
+    if (others === old) blocking.push('Nothing changes: this is who judges absence already.');
+    const voices = voicesOf(c);
+    const k = needed(c.f.governance.cloneThreshold, voices.length);
+    const signers = a.signers?.length ? [...new Set(a.signers)] : voices.filter((m) => this.store.holds(m)).slice(0, k);
+    for (const s of signers) {
+      if (!voices.includes(s)) blocking.push(`${names(s)} is not a member whose voice remains, so their signature cannot meet the clone rule.`);
+      else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
+    }
+    if (voices.length && signers.length < k) blocking.push(`A judicial change needs ${anyOf(k, voices, names)} (the clone rule); only ${signers.length} sign here.`);
+    const g: Governance = { ...c.f.governance, abandonmentOthers: others };
+    const hints = rulesHints(toRules(g), c.f.members.length);
+    const mark: MarkEntry[] = [{ power: { clone: true }, signers }];
+    const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
+    let changes: Line[] = [];
+    if (signers.length && !hints.length) {
+      const after = this.read(payload);
+      const at = this.hintsOf(c);
+      const before = await this.termsAct(c.f.agreement, at);
+      if (!before) blocking.push(`The agreement in force (${short(c.f.agreement)}) could not be fetched from ${at.join(', ')}, so what changes cannot be shown.`);
+      changes = before ? readChanges(before.payload, payload, names) : [];
+      if (changes.some((l) => l.tone === 'bad')) blocking.push('Its mark does not name exactly the powers its changes need (F104).');
+      blocking.push(...withLaw([], readAgreement(after, names, before?.t).blocking));
+    } else if (!signers.length && !blocking.length) blocking.push('Nobody here can sign it.');
+    blocking.unshift(...hints);
+    const unsigned = voices.filter((v) => !signers.includes(v));
+    const notes: Line[] = [];
+    if (c.f.governance.text === standardWords(cname, c.f.governance)) {
+      notes.push({
+        text: `The constitution's words say “any ${old} of the other members together decide whether a member is absent”. The words are constitutional, so this judicial change cannot rewrite them: they will describe the old number. Rewrite them with a change of the rules, which is constitutional.`,
+        tone: 'warn',
+      });
+    }
+    const reading: Reading = {
+      title: `Who judges absence in “${cname}”`,
+      summary: [
+        'A judicial change: only who judges absence changes. The abandonment clause is a protected clause, in the judicial tier (Law rules 44a, 46a).',
+        `Today any ${old} of the other members together decide whether a member is absent; after the change, any ${others}. The outcome stays the same: the member loses their voice, never what they own (F105).`,
+        `The clone is marked with the clone rule and signed by ${list(signers.map(names))}: enough members (${anyOf(k, voices, names)}) (Law rules 44c, 45a).`,
+        unsigned.length
+          ? `For ${list(unsigned.map(names))}, who ${unsigned.length === 1 ? 'does' : 'do'} not sign it, absence stays judged by the clause they signed: any ${old} of the other members (Law rule 46a). A protected clause changes for a member only with that member's signature.`
+          : 'Every member whose voice remains signs it, so the new clause judges each of them.',
+        "The collective writes it on its record at once, signed with its everyday key: no rotation, no new keys (Law rule 37c, Q8).",
+      ],
+      sections: [
+        { heading: 'What changes', lines: [...changes, ...notes, ...(await this.unheard(c))] },
+        {
+          heading: 'Signed on this device',
+          lines: [
+            { text: `${list(signers.map(names))} sign the clone; the collective's everyday key, kept in this program's folder, signs the record.` },
+            { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
+          ],
+        },
+      ],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'absence',
+      digest: digestOf('absence', a.collective, payload),
+      reading,
+      depends: [a.collective, ...signers.filter((s) => this.store.holds(s))],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const ids = signers.map((s) => this.store.identity(s));
+        const got = await col.changeAbsenceRule({ others, proposer: ids[0], signers: ids, expect: payload });
+        col.f.records = [...(col.f.records ?? []), got.record];
+        this.store.saveCollective(col);
+        for (const i of ids) this.store.saveIdentity(i);
+        return {
+          title: `Who judges absence in “${cname}” has changed`,
           lines: [
             { text: `Clone ${got.clone}, signed by ${got.signed.length}.` },
             { text: `Record ${got.record}: written on the collective's record at once; no rotation.`, tone: 'ok' },

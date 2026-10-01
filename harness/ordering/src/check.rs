@@ -9,18 +9,21 @@ pub const ALPHA: Rule = Rule::Root {
     keepers: Keepers::None,
     named_sigs: true,
     c5: false,
+    b11: false,
 };
 pub const ALPHA_K: Rule = Rule::Root {
     placement: Placement::ActSigned,
     keepers: Keepers::AllActs,
     named_sigs: true,
     c5: false,
+    b11: false,
 };
 pub const ALPHA_KC: Rule = Rule::Root {
     placement: Placement::ActSigned,
     keepers: Keepers::CollectiveActs,
     named_sigs: true,
     c5: false,
+    b11: false,
 };
 /// α with records acknowledging signatures implicitly, as draft 7 writes them.
 pub const ALPHA_IMPLICIT: Rule = Rule::Root {
@@ -28,12 +31,14 @@ pub const ALPHA_IMPLICIT: Rule = Rule::Root {
     keepers: Keepers::None,
     named_sigs: false,
     c5: false,
+    b11: false,
 };
 pub const BETA: Rule = Rule::Root {
     placement: Placement::AckOnly,
     keepers: Keepers::None,
     named_sigs: true,
     c5: false,
+    b11: false,
 };
 
 pub fn verdict(w: &World, rule: Rule, clock: Clock) -> Verdict {
@@ -503,7 +508,8 @@ pub fn explain_unstable(seed: u64, rule: Rule) {
 // line, and old-key signatures placed before it stay valid for the collective (C5); deals
 // are settled by the collective's acknowledgement, payment or import (A6, C6, C8);
 // declarations take effect at the collective's line (C7); concurrent records leave their
-// parent in force (A4).
+// parent in force (A4), until a clone of either branch recorded after both lines resolves
+// the fork (Law draft 8, B11).
 // ---------------------------------------------------------------------------------------
 
 /// The rules as written.
@@ -512,6 +518,7 @@ pub const WRITTEN: Rule = Rule::Root {
     keepers: Keepers::CollectiveActs,
     named_sigs: true,
     c5: true,
+    b11: true,
 };
 /// The same, without the keepers, to tell the window C4 states (a keeper recording a line
 /// late) from anything else.
@@ -520,6 +527,7 @@ pub const WRITTEN_NO_KEEPERS: Rule = Rule::Root {
     keepers: Keepers::None,
     named_sigs: true,
     c5: true,
+    b11: true,
 };
 
 /// Counts for the rules as written, over all runs. A `fail_*` field above zero is a wrong
@@ -562,6 +570,9 @@ pub struct WrittenTally {
     pub losses_by_omission: u64,
     pub keeper_rescues: u64,
     pub late_completions: u64,
+    /// Records resolving a fork of records, a clone of one branch recorded after both
+    /// lines (Law draft 8, B11).
+    pub fork_resolutions: u64,
 }
 
 impl WrittenTally {
@@ -579,6 +590,16 @@ impl WrittenTally {
 
 pub fn check_written(seed: u64, t: &mut WrittenTally) {
     let Run { world: w, .. } = gen::world_opts(seed, true);
+    check_written_on(w, seed, t);
+}
+
+/// The same checks on a world built elsewhere (the targeted sweep of forks, B11); `seed`
+/// re-threads members' sequences for check 5.
+pub fn check_written_world(w: World, seed: u64, t: &mut WrittenTally) {
+    check_written_on(w, seed, t);
+}
+
+fn check_written_on(w: World, seed: u64, t: &mut WrittenTally) {
     t.runs += 1;
     let honest = w.honest();
     t.honest_runs += honest as u64;
@@ -664,6 +685,12 @@ pub fn check_written(seed: u64, t: &mut WrittenTally) {
             }
         }
     }
+
+    t.fork_resolutions += s
+        .records
+        .iter()
+        .filter(|&&(r, v)| v && ev.resolves_fork(r))
+        .count() as u64;
 
     // 4. Friends' acknowledgements change nothing.
     if verdict(&w.without_friend_acks(), WRITTEN, Clock::Structure) != s {

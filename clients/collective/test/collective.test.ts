@@ -312,3 +312,42 @@ test('before drawing a record, a warning when the relays hold acts of the collec
   const plainChange = await prepare(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 1, clone: 2, others: 2 } });
   assert.doesNotMatch(words(plainChange.reading), /not in this device's sequence/, 'no record, no warning');
 });
+
+test('a judicial change: who judges absence, under the clone rule, recorded at once, no rotation (Law draft 8, B13)', async () => {
+  const c = w.client;
+  let s = await state(c);
+  const [ada, two, three] = ['Ada', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
+  await sign(c, { kind: 'found', name: 'Judges', members: [ada, two, three], rules: {} });
+  s = await state(c);
+  const col = s.collectives.find((x) => x.name === 'Judges')!;
+  const j = await sign(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 2, clone: 2, others: 1 } });
+  const jw = words(j.review.reading);
+  assert.match(j.review.reading.title, /Who judges absence in “Judges”/);
+  assert.match(jw, /A judicial change: only who judges absence changes\. The abandonment clause is a protected clause, in the judicial tier/);
+  assert.match(jw, /Today any 2 of the other members together decide whether a member is absent; after the change, any 1\./);
+  assert.match(jw, /The clone is marked with the clone rule and signed by .*: enough members \(any 2 of /);
+  assert.match(jw, /who does not sign it, absence stays judged by the clause they signed: any 2 of the other members \(Law rule 46a\)/);
+  assert.match(jw, /Absence is now judged by any 1 of the other parties \(was any 2 of the other parties\)/);
+  assert.match(jw, /A change to .*: judicial, a protected clause/);
+  assert.match(jw, /Its mark names exactly that/);
+  assert.match(jw, /no rotation, no new keys \(Law rule 37c, Q8\)/);
+  assert.match(jw, /The words are constitutional, so this judicial change cannot rewrite them/);
+  assert.ok(j.done.lines.some((l) => /written on the collective's record at once; no rotation/.test(l.text)), JSON.stringify(j.done));
+  s = await state(c);
+  const after = s.collectives.find((x) => x.name === 'Judges')!;
+  assert.equal(after.agreements, col.agreements + 1);
+  assert.equal(after.records, col.records + 1);
+  assert.equal(after.pending, false, 'no rotation');
+  assert.notEqual(after.agreement, col.agreement);
+  // A release under the recorded clone is judged under it, by a fresh verifier.
+  commit(w.checkout, 'src/lib.rs', 'pub fn judged() -> u8 { 7 }\n');
+  const rel = await sign(c, { kind: 'release', publisher: col.id, version: 'j.1' });
+  await sign(c, { kind: 'sign', member: two, release: rel.done.acts[0] });
+  await sign(c, { kind: 'sign', member: three, release: rel.done.acts[0] });
+  const v = await verifyRelease(rel.done.acts[0], [w.relay.base]);
+  assert.equal(v.ok, true, v.problems.join('; '));
+  assert.equal(v.agreement, after.agreement, 'judged under the clone the record put in force');
+  // Unchanged: nothing to sign.
+  const same = await prepare(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 2, clone: 2, others: 1 } });
+  assert.match(same.reading.blocking.join(' '), /Nothing changes/);
+});

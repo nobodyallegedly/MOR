@@ -37,6 +37,7 @@ import {
   termsPayload,
   type CollectiveTerms,
   type MarkEntry,
+  type Power,
   type Rule,
 } from './law.ts';
 import { FOUNDING_AGREEMENT, REPO_SPECS } from './specs.ts';
@@ -399,19 +400,52 @@ export class TestCollective {
     /** The exact clone payload shown to the holders: refused if the clone made now differs. */
     expect?: Uint8Array;
   }): Promise<{ clone: string; record: string; signed: Signed[] }> {
-    if (this.f.pending) throw new Error('a member change is pending: settle it first');
     const governance = { ...this.f.governance, releaseWords: opts.words };
-    const mark: MarkEntry[] = [{ power: { area: 1 }, signers: opts.signers.map((m) => m.id) }];
+    return this.recordChange({ ...opts, governance, power: { area: 1 }, what: 'not an ordinary change of the release area' });
+  }
+
+  /**
+   * A judicial change (Law rules 44a, 46a; Law draft 8, B13): only who
+   * judges absence, the abandonment clause's number of the other members.
+   * A clone marked with the clone rule and the members who sign it,
+   * recorded at once (rule 37c, Q8). For a member who does not sign it, the
+   * clause stays the one they signed (rule 46a).
+   */
+  async changeAbsenceRule(opts: {
+    others: number;
+    proposer: TestIdentity;
+    signers: TestIdentity[];
+    expect?: Uint8Array;
+  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+    const governance = { ...this.f.governance, abandonmentOthers: opts.others };
+    return this.recordChange({ ...opts, governance, power: { clone: true }, what: 'not a judicial change of who judges absence' });
+  }
+
+  /**
+   * A change written on the collective's record at once (rule 37c): a
+   * clone marked with the one power its changes need, signed by `signers`,
+   * recorded with their signature acts (A2) and the everyday key.
+   */
+  private async recordChange(opts: {
+    governance: Governance;
+    power: Power;
+    what: string;
+    proposer: TestIdentity;
+    signers: TestIdentity[];
+    expect?: Uint8Array;
+  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+    if (this.f.pending) throw new Error('a member change is pending: settle it first');
+    const mark: MarkEntry[] = [{ power: opts.power, signers: opts.signers.map((m) => m.id) }];
     const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
-    const next = collectiveTerms(governance, this.f.members, this.f.signingHolder, this.f.agreement, mark);
-    if (!markMatches(mark, clonePlan(parent, next).needs)) throw new Error('not an ordinary change of the release area');
+    const next = collectiveTerms(opts.governance, this.f.members, this.f.signingHolder, this.f.agreement, mark);
+    if (!markMatches(mark, clonePlan(parent, next).needs)) throw new Error(opts.what);
     const payload = termsPayload(next);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
     const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
     const signed: Signed[] = [];
     for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
     const r = await record(this.id, { clone: proposed.id, signatures: signed.map((s) => s.act), inForce: this.f.agreement }, this.f.relays);
-    this.f.governance = governance;
+    this.f.governance = opts.governance;
     this.f.agreement = proposed.id;
     this.f.agreements.push(proposed.id);
     return { clone: proposed.id, record: r.id, signed };

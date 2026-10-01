@@ -109,7 +109,11 @@ fn clone_of(parent: &Terms, mark: Vec<(Power, Vec<Hash>)>) -> Terms {
     t.parent = Some(sha256(b"the parent's id"));
     t.field4 = Field4::Mark(
         mark.into_iter()
-            .map(|(power, signers)| MarkEntry { power, signers })
+            .map(|(power, mut signers)| {
+                // Ascending by hash (B8).
+                signers.sort();
+                MarkEntry { power, signers }
+            })
             .collect(),
     );
     t
@@ -189,6 +193,16 @@ fn field_4_is_a_rule_in_founding_terms_and_a_mark_in_a_clone() {
     }]);
     assert!(check(&t).is_err(), "founding terms carry no mark");
 
+    // B8: a mark's signers are ascending by hash, none twice.
+    let mut c = clone_of(&label(), vec![(Power::Clone, vec![h(1), h(2)])]);
+    if let Field4::Mark(m) = &mut c.field4 {
+        m[0].signers.reverse();
+    }
+    assert!(check(&c).is_err(), "descending signers");
+    if let Field4::Mark(m) = &mut c.field4 {
+        m[0].signers = vec![h(1), h(1)];
+    }
+    assert!(check(&c).is_err(), "a signer twice");
     let mut c = clone_of(&label(), vec![(Power::Clone, vec![h(1), h(2)])]);
     check(&c).unwrap();
     c.field4 = Field4::Rule(Rule::All);

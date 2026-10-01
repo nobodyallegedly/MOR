@@ -1,4 +1,4 @@
-//! The Law MIP's exact formats (Law draft 7, "Act formats"), and the checks
+//! The Law MIP's exact formats (Law draft 8, "Act formats"), and the checks
 //! that need no other act.
 //!
 //! In plain words: terms (an agreement's proposal), with the fields draft 7
@@ -6,7 +6,8 @@
 //! words); the key grammar, which no longer lists act types; signatures;
 //! resignations (leaving, or stepping down from one area); records (the
 //! collective's everyday line); grants, which a collective may issue within
-//! an area, and which may reinstate an ended grant.
+//! an area, and which may reinstate an ended grant; abandonment declarations
+//! (draft 8, B12).
 //!
 //! Terms fields whose formats are still open (stakes, the split plan, the
 //! fork rule, refund terms) are refused as unsupported: a client never signs
@@ -1213,8 +1214,12 @@ fn check_mark_shape(m: &[MarkEntry]) -> R<()> {
         }
     }
     for e in m {
-        if !distinct(&e.signers) {
-            return Err(LawError::Check("a mark names a signer twice for one power"));
+        // Ascending by hash, so one meaning has one encoding (B8); that
+        // also names no signer twice.
+        if e.signers.is_empty() || e.signers.windows(2).any(|w| w[0] >= w[1]) {
+            return Err(LawError::Check(
+                "a mark's signers for a power are ascending by hash, none twice (B8)",
+            ));
         }
     }
     Ok(())
@@ -1300,6 +1305,75 @@ impl Resignation {
         let agreement = agreement.ok_or(LawError::Shape("resignation: the agreement"))?;
         check_objects_self(inside, &agreement, "resignation: objects must name the agreement")?;
         Ok(Resignation { agreement, area })
+    }
+}
+
+// ---------------------------------------------------------------- abandonment declaration
+
+/// Abandonment declaration (type 13, B12): the authority the clause names
+/// declares a party absent, under the clause the party signed (rules 46a,
+/// 51), with outcomes the clause allows.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AbsenceDeclaration {
+    /// 0: the agreement in which the party is declared absent.
+    pub agreement: Hash,
+    /// 1: the version of the agreement whose abandonment clause it applies:
+    /// the last version, back from field 0, that the party signed.
+    pub clause: Hash,
+    /// 2: the party declared absent.
+    pub party: Hash,
+    /// 3: the outcomes, ascending, each one the clause allows.
+    pub outcomes: Vec<u64>,
+}
+
+impl AbsenceDeclaration {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        vec![
+            (Value::Uint(0), b(&self.agreement)),
+            (Value::Uint(1), b(&self.clause)),
+            (Value::Uint(2), b(&self.party)),
+            (
+                Value::Uint(3),
+                Value::Array(self.outcomes.iter().map(|o| Value::Uint(*o)).collect()),
+            ),
+        ]
+    }
+
+    /// Decode, and check the inside names the agreement as chain and
+    /// predecessor, as a resignation does.
+    pub fn decode(inside: &Inside) -> R<AbsenceDeclaration> {
+        let (mut agreement, mut clause, mut party, mut outs) = (None, None, None, None);
+        for (k, v) in &inside.payload {
+            match k {
+                Value::Uint(0) => agreement = Some(hash(v, "declaration: the agreement")?),
+                Value::Uint(1) => clause = Some(hash(v, "declaration: the clause's version")?),
+                Value::Uint(2) => party = Some(hash(v, "declaration: the party")?),
+                Value::Uint(3) => {
+                    outs = Some(
+                        nonempty(v, "declaration: outcomes")?
+                            .iter()
+                            .map(|x| uint(x, "declaration: outcome"))
+                            .collect::<R<Vec<u64>>>()?,
+                    )
+                }
+                _ => return Err(LawError::Shape("declaration: unknown field")),
+            }
+        }
+        let d = AbsenceDeclaration {
+            agreement: agreement.ok_or(LawError::Shape("declaration: the agreement"))?,
+            clause: clause.ok_or(LawError::Shape("declaration: the clause's version"))?,
+            party: party.ok_or(LawError::Shape("declaration: the party"))?,
+            outcomes: outs.ok_or(LawError::Shape("declaration: outcomes"))?,
+        };
+        if d.outcomes.iter().any(|o| *o > outcomes::AGREEMENT_CLOSED)
+            || d.outcomes.windows(2).any(|w| w[0] >= w[1])
+        {
+            return Err(LawError::Check(
+                "a declaration's outcomes are known ones, ascending, none twice",
+            ));
+        }
+        check_objects_self(inside, &d.agreement, "declaration: objects must name the agreement")?;
+        Ok(d)
     }
 }
 

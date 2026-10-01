@@ -30,7 +30,7 @@ fn main() {
     );
     println!("{wt:#?}");
     println!(
-        "wrong answers of the rules as Law draft 7 now writes them: {}",
+        "wrong answers of the rules as Law draft 8 now writes them: {}",
         wt.failures()
     );
     if t.failures() > 0 || wt.failures() > 0 {

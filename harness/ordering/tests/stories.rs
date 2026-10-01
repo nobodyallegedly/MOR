@@ -619,3 +619,114 @@ fn written_rules_random_sweep() {
     assert_eq!(t.failures(), 0, "{t:#?}");
     assert!(t.member_rotation_runs > 0 && t.member_rotations_registered > 0);
 }
+
+/// Law draft 8, B11 (rule 47): a clone of one branch of the fork, recorded after both
+/// lines, resolves it under the rules as written; the rule tested alone (no B11) leaves
+/// the parent in force.
+#[test]
+fn b11_a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
+    let mut b = label();
+    b.lag = vec![100, 100];
+    let c1 = b.clone_def(0, 1);
+    let c2 = b.clone_def(0, 1);
+    let s1 = b.member(1, 0, Kind::Sig { on: On::Clone(c1) });
+    let s2 = b.member(2, 0, Kind::Sig { on: On::Clone(c2) });
+    let r1 = b.line(Kind::Record { clone: c1, sigs: vec![s1] }, 0, Tips::Lagging, None);
+    let r2 = b.line(Kind::Record { clone: c2, sigs: vec![s2] }, 1, Tips::Lagging, None);
+    let c3 = b.clone_def(c1, 1);
+    let s3 = b.member(1, 0, Kind::Sig { on: On::Clone(c3) });
+    let r3 = b.line(Kind::Record { clone: c3, sigs: vec![s3] }, 0, Tips::Complete, None);
+    let x = b.col(Kind::AreaAct, 0);
+    let w = b.finish();
+    let ev = mor_ordering_sim::rule::Eval::new(&w, WRITTEN, Clock::Structure);
+    assert!(ev.record_valid(r1) && ev.record_valid(r2) && ev.record_valid(r3));
+    assert_eq!(ev.in_force_at(x), c3, "resolved");
+    let old = mor_ordering_sim::rule::Eval::new(&w, ALPHA, Clock::Structure);
+    assert!(!old.record_valid(r3), "without B11 the clone of a branch puts nothing in force");
+    assert_eq!(old.in_force_at(x), 0);
+}
+
+/// Law draft 8, B11: a sweep of worlds that each start from a fork of the agreement (two
+/// sibling clones recorded on two devices that do not hear of each other), then run on at
+/// random: clones of any earlier clone, recorded after both lines, after one, or
+/// concurrently; area acts; departures and their registration; acknowledgements. Every
+/// check of the rules as written runs on each world; none may fail, and some worlds must
+/// resolve their fork.
+#[test]
+fn b11_sweep_of_worlds_starting_from_a_fork() {
+    use mor_ordering_sim::check::check_written_world;
+    use mor_ordering_sim::gen::Rng;
+    use mor_ordering_sim::model::Id;
+    let mut t = WrittenTally::default();
+    let (mut resolved, mut unresolved) = (0u64, 0u64);
+    for seed in 1..=3000u64 {
+        let mut r = Rng::new(seed);
+        let mut b = label();
+        b.lag = vec![1 + r.below(200), 1 + r.below(200)];
+        let mut clones: Vec<u8> = vec![b.clone_def(0, 1), b.clone_def(0, 1)];
+        for (i, &c) in clones.clone().iter().enumerate() {
+            let s = b.member(1 + i as u8, 0, Kind::Sig { on: On::Clone(c) });
+            b.line(Kind::Record { clone: c, sigs: vec![s] }, i as u8, Tips::Lagging, None);
+        }
+        let mut sigs: Vec<Id> = vec![];
+        let mut left: Vec<u8> = vec![];
+        for _ in 0..10 + r.below(30) {
+            let dev = r.below(2) as u8;
+            match r.below(10) {
+                0..=3 => {
+                    let parent = if r.chance(0.2) { 0 } else { r.pick(&clones).unwrap() };
+                    let c = b.clone_def(parent, 1);
+                    clones.push(c);
+                    let m = r.below(3) as u8;
+                    let s = b.member(m, r.below(3) as u8, Kind::Sig { on: On::Clone(c) });
+                    let tips = match r.below(3) {
+                        0 => Tips::Complete,
+                        1 => Tips::Lagging,
+                        _ => Tips::Omitting,
+                    };
+                    let omit = if tips == Tips::Omitting { r.pick(&b.leaves()) } else { None };
+                    b.line(Kind::Record { clone: c, sigs: vec![s] }, dev, tips, omit);
+                }
+                4..=6 => {
+                    let x = b.col(Kind::AreaAct, dev);
+                    if r.chance(0.8) {
+                        sigs.push(b.member(0, r.below(3) as u8, Kind::Sig { on: On::Act(x) }));
+                    }
+                }
+                7 => {
+                    let m = r.below(3) as u8;
+                    if !left.contains(&m) {
+                        left.push(m);
+                        let d = if r.chance(0.5) {
+                            b.leave(m, 0, Kind::Resign, None)
+                        } else {
+                            b.other(Who::Authority, Kind::Declare { member: m })
+                        };
+                        b.line(Kind::Register { departures: vec![d] }, dev, Tips::Lagging, None);
+                    }
+                }
+                _ => {
+                    if let Some(s) = r.pick(&sigs) {
+                        b.col(Kind::Ack { of: vec![s] }, dev);
+                    }
+                }
+            }
+        }
+        b.col(Kind::AreaAct, 0);
+        let w = b.finish();
+        let ev = mor_ordering_sim::rule::Eval::new(&w, WRITTEN, Clock::Structure);
+        let rs: Vec<Id> = (0..w.acts.len())
+            .filter(|&i| matches!(w.acts[i].kind, Kind::Record { .. }))
+            .collect();
+        if rs.iter().any(|&r| ev.resolves_fork(r)) {
+            resolved += 1;
+        } else {
+            unresolved += 1;
+        }
+        check_written_world(w, seed, &mut t);
+    }
+    eprintln!("B11 sweep: {resolved} worlds resolved their fork, {unresolved} did not; {t:#?}");
+    assert_eq!(t.failures(), 0, "{t:#?}");
+    assert!(resolved > 100 && unresolved > 100, "both kinds of world: {resolved} / {unresolved}");
+    assert!(t.fork_resolutions > 0);
+}

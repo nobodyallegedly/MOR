@@ -1,4 +1,4 @@
-//! Law read from what a verifier holds (Law draft 7): agreements and their
+//! Law read from what a verifier holds (Law draft 8): agreements and their
 //! clones, the collective's own lines, which agreement is in force for an
 //! act of a collective, and whether that act has the consent its areas
 //! require.
@@ -18,15 +18,16 @@
 //!    tip the line names; every other act counts as after it. A member's
 //!    signature is placed by the collective's acts: the act it signs, a
 //!    record or rotation naming it, an act acknowledging it.
-//! 4. A departure (resignation, stepping down) takes effect at the line
-//!    registering it (record field 3). Each rule is counted among the
+//! 4. A departure (resignation, stepping down, a declaration of absence)
+//!    takes effect at the line registering it (record field 3); in a deal,
+//!    a declaration draws its own line, the deal's keepers ordering it. Each rule is counted among the
 //!    voices that remain, all of them meeting it where fewer remain than
 //!    its number (flaw C); an area with no voice left is frozen.
 //! 5. An act of the collective that an area reaches counts only with its
 //!    holders' signature acts, meeting the area's number.
 
 use super::formats::*;
-use super::tiers::{changes, powers_needed, Tier};
+use super::tiers::{changes, powers_needed, Change, Tier};
 use crate::act::Ref;
 use crate::chain::{Resolution, Status, Verifier, Held};
 use crate::hash::Hash;
@@ -92,6 +93,9 @@ pub enum DepartureKind {
     SteppedDown { agreement: Hash, area: u64 },
     /// The member's own rotation (C5).
     Rotated { rotation: Hash },
+    /// An abandonment declaration removing the whole voice (outcome 0,
+    /// rule 53), in this agreement and its descendants.
+    Declared { agreement: Hash },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -116,6 +120,9 @@ pub struct RecordEval {
     pub clone: Option<(Hash, CloneState)>,
     /// The clone it puts in force, if any.
     pub puts: Option<Hash>,
+    /// Whether that clone, a clone of one branch of a fork, resolves the
+    /// fork, the record coming after both lines (rule 47, B11).
+    pub resolves: bool,
     /// What it registers.
     pub registers: Vec<Departure>,
 }
@@ -236,6 +243,8 @@ impl Col {
 struct InForce {
     agreement: Hash,
     fork: bool,
+    /// In a fork: the sibling clones whose records are concurrent.
+    branches: Vec<Hash>,
 }
 
 impl<'a> LawView<'a> {
@@ -331,9 +340,10 @@ impl<'a> LawView<'a> {
             return Ok(Err("a clone carries a mark".into()));
         };
         if mark.iter().any(|e| matches!(e.power, Power::Plan(_))) {
-            return Err(LawError::Unsupported(
-                "a mark naming a succession plan: its trigger needs the abandonment declaration (type 13), whose format is open",
-            ));
+            if !parent.is_collective() {
+                return Ok(Err("a deal's clone names the clone rule (rule 45b)".into()));
+            }
+            return Ok(Self::plan_static(parent, clone, mark));
         }
         let needs = powers_needed(parent, clone, &self.mips, &self.ext())?;
         let named: Vec<Power> = mark.iter().map(|e| e.power.clone()).collect();
@@ -343,14 +353,11 @@ impl<'a> LawView<'a> {
             ));
         }
         if !parent.is_collective() {
-            let m = &mark[0];
-            let mut a = m.signers.clone();
-            let mut b = parent.parties.clone();
-            a.sort();
-            b.sort();
-            if a != b {
+            // Every party whose voice remains: checked with the
+            // declarations held ([`Self::deal_voices`]).
+            if !mark[0].signers.iter().all(|s| parent.parties.contains(s)) {
                 return Ok(Err(
-                    "a deal's clone names the clone rule and every party in its mark (rule 45b)".into(),
+                    "a deal's clone names the clone rule and every party whose voice remains in its mark (rule 45b)".into(),
                 ));
             }
             return Ok(Ok(needs));
@@ -459,9 +466,21 @@ impl<'a> LawView<'a> {
         let all_sigs: Vec<Hash> = self.signers(id, &union(&terms.parties, &parent.parties));
         if !terms.is_collective() {
             let parent_exists = self.agreement(&pid)?.exists == Some(true);
+            let voices = self.deal_voices(id, &lineage)?;
+            if invalid.is_none() {
+                let mut a = terms.field4.mark().map(|m| m[0].signers.clone()).unwrap_or_default();
+                let mut b = voices.clone();
+                a.sort();
+                b.sort();
+                if a != b {
+                    invalid = Some(
+                        "a deal's clone names the clone rule and every party whose voice remains in its mark (rule 45b)".into(),
+                    );
+                }
+            }
             let complete = invalid.is_none()
                 && parent_exists
-                && parent.parties.iter().all(|p| parent_signers.contains(p))
+                && voices.iter().all(|p| parent_signers.contains(p))
                 && Self::newcomers(parent, &terms).iter().all(|p| all_sigs.contains(p));
             return Ok(Agreement {
                 id: *id,
@@ -489,6 +508,101 @@ impl<'a> LawView<'a> {
             exists: None,
             ready,
         })
+    }
+
+    /// The parties of a deal's parent whose voice remains for its clone
+    /// `id` (rule 45b, Q28): in a deal a declaration draws its own line, so
+    /// a valid declaration with outcome 0 removes a party's voice from then
+    /// on, and that party's signature act on the clone still counts only
+    /// where the deal's keepers recorded it before recording the
+    /// declaration (rules 8, 11, 11a; B9).
+    fn deal_voices(&self, id: &Hash, lineage: &[(Hash, Terms)]) -> R<Vec<Hash>> {
+        let up = &lineage[1..];
+        let parent = &up[0].1;
+        let mut out = vec![];
+        for p in &parent.parties {
+            let mut gone = false;
+            for (x, d, clause, signer) in self.declarations_against(p, up, &parent.parties)? {
+                if !self.deal_authority(&x, &d, &clause, &signer, up, 0)? {
+                    continue;
+                }
+                let placed = self
+                    .valid_sigs(id, &[*p])
+                    .iter()
+                    .any(|(_, s)| self.keepers_before(parent, s, &x));
+                if !placed {
+                    gone = true;
+                    break;
+                }
+            }
+            if !gone {
+                out.push(*p);
+            }
+        }
+        Ok(out)
+    }
+
+    /// Whether the keepers `t` names recorded `x` before recording `y`,
+    /// as the keepers' own rule counts it (rule 8, B9).
+    fn keepers_before(&self, t: &Terms, x: &Hash, y: &Hash) -> bool {
+        let Some(k) = &t.keepers else { return false };
+        let placed: Vec<Hash> = k
+            .operators
+            .iter()
+            .filter(|op| {
+                self.keeper_logs.get(*op).is_some_and(|log| {
+                    let a = log.iter().position(|z| z == x);
+                    let b = log.iter().position(|z| z == y);
+                    matches!((a, b), (Some(a), Some(b)) if a < b)
+                })
+            })
+            .copied()
+            .collect();
+        !placed.is_empty() && k.rule.met(&k.operators, &placed)
+    }
+
+    /// A deal's threshold authority (rule 49, flaw C), counted at the
+    /// declaration, its own line: among the other parties, less those an
+    /// earlier declaration removed, as the deal's keepers recorded it.
+    fn deal_authority(
+        &self,
+        x: &Hash,
+        d: &AbsenceDeclaration,
+        clause: &Abandonment,
+        signer: &Hash,
+        up: &[(Hash, Terms)],
+        depth: usize,
+    ) -> R<bool> {
+        let Authority::Others(k) = clause.authority else {
+            return Ok(true);
+        };
+        if depth > 16 {
+            return Err(LawError::Check("declarations nested deeper than 16"));
+        }
+        let parent = &up[0].1;
+        let mut remaining = vec![];
+        for o in parent.parties.iter().filter(|o| **o != d.party) {
+            let mut gone = false;
+            for (y, dy, cy, sy) in self.declarations_against(o, up, &parent.parties)? {
+                if self.keepers_before(parent, &y, x) && self.deal_authority(&y, &dy, &cy, &sy, up, depth + 1)? {
+                    gone = true;
+                    break;
+                }
+            }
+            if !gone {
+                remaining.push(*o);
+            }
+        }
+        if !remaining.contains(signer) {
+            return Ok(false);
+        }
+        match Rule::Threshold(k).needed(remaining.len()) {
+            Some(1) => Ok(true),
+            Some(_) => Err(LawError::Unsettled(
+                "a declaration by a threshold of the other parties needing more than one of them: how the others sign it is not written (question B15)",
+            )),
+            None => Ok(false),
+        }
     }
 
     /// The powers a clone needs (rule 44c).
@@ -541,17 +655,10 @@ impl<'a> LawView<'a> {
                     .as_ref()
                     != Some(&d);
             if !changed {
-                // A rotation that declares nothing new: the texts say the
-                // agreement in force is the one declared, which drops any
-                // clone recorded under the previous key (build question B1).
-                if let (true, Some(c)) = (j > 0, cur) {
-                    let at = self.in_force_at_rotation(col, j, c)?;
-                    if at.agreement != c {
-                        return Err(LawError::Unsettled(
-                            "a rotation of the collective declares nothing new after a clone was recorded under the key it replaces (build question B1)",
-                        ));
-                    }
-                }
+                // A rotation that declares nothing new changes keys, not
+                // rules: the agreement in force carries forward, records
+                // included (Flaw B1), since the records made since the last
+                // declaration keep counting ([`Self::records_since`]).
                 continue;
             }
             match (cur, &d.signatures) {
@@ -589,10 +696,11 @@ impl<'a> LawView<'a> {
                         .any(|c| c.tier() == Tier::Constitutional)
                     {
                         return Ok(Err(
-                            "a rotation declares a clone that changes the constitutional tier (rule 37; build question B5)".into(),
+                            "a rotation declares only a clone that changes the constitutional tier (rule 37, B5)".into(),
                         ));
                     }
-                    match self.clone_at(col, &d.agreement, sigs, Line::Rotation(j), &[])? {
+                    let own = self.recovery_departures(col, j, &at.agreement, &d.agreement)?;
+                    match self.clone_at(col, &d.agreement, sigs, Line::Rotation(j), &own)? {
                         CloneState::Complete => cur = Some(d.agreement),
                         CloneState::Draft(w) | CloneState::Invalid(w) => {
                             return Ok(Err(format!(
@@ -606,19 +714,45 @@ impl<'a> LawView<'a> {
         Ok(cur.ok_or_else(|| "no agreement declared".to_string()))
     }
 
-    /// The agreement in force just before rotation `j`: the one declared at
-    /// `j - 1` (`base`), and the clones recorded under that key before it.
+    /// The agreement in force just before rotation `j`: the one declared
+    /// last before it (`base`), and the clones recorded since, before it.
     fn in_force_at_rotation(&self, col: &Col, j: usize, base: Hash) -> R<InForce> {
         let mut puts = vec![];
-        for r in self.records_at(col, j - 1) {
+        for r in self.records_since(col, j - 1) {
             if self.before_struct(col, r, Line::Rotation(j)) {
                 let e = self.record_eval(col, r)?;
                 if let Some(k) = e.puts {
-                    puts.push(k);
+                    puts.push((k, e.resolves));
                 }
             }
         }
         self.fold(base, &puts)
+    }
+
+    /// The link at which the agreement the chain declares at link `k` was
+    /// declared: the genesis, or the latest rotation up to `k` whose Law
+    /// declaration differs from the one before it.
+    fn declared_at(&self, col: &Col, k: usize) -> usize {
+        let law = self.law();
+        let mut d = 0;
+        for j in 1..=k.min(col.res.states.len().saturating_sub(1)) {
+            let a = declared_in(&col.res.states[j - 1].declarations, &law).and_then(|x| x.ok());
+            let b = declared_in(&col.res.states[j].declarations, &law).and_then(|x| x.ok());
+            if a != b {
+                d = j;
+            }
+        }
+        d
+    }
+
+    /// The records that can bear on the agreement in force at link `k`:
+    /// those bound at every link since the agreement the chain declares
+    /// there was declared. A rotation that declares nothing new carries
+    /// them forward (Flaw B1); one that declares a clone supersedes them.
+    fn records_since(&self, col: &Col, k: usize) -> Vec<&'a Held> {
+        (self.declared_at(col, k)..=k)
+            .flat_map(|j| self.records_at(col, j))
+            .collect()
     }
 
     /// The collective's record acts bound at link `k`, valid under Identity.
@@ -639,27 +773,77 @@ impl<'a> LawView<'a> {
     /// Follow the agreement chain through the clones these records put in
     /// force: one clone at a time; two different clones of one parent on
     /// records neither before the other are a fork, and the parent stays
-    /// in force (A4; the fork rule's format is open, Q38).
-    fn fold(&self, base: Hash, puts: &[Hash]) -> R<InForce> {
+    /// in force (A4; the fork rule's format is open, Q38), until a clone of
+    /// the latest clone of one branch, recorded after both lines, resolves
+    /// it (rule 47, B11). Each put carries whether its record resolved a
+    /// fork; a fork's `branches` are its branches' latest clones.
+    fn fold(&self, base: Hash, puts: &[(Hash, bool)]) -> R<InForce> {
         let mut cur = base;
-        let mut fork = false;
         for _ in 0..=puts.len() {
-            let mut next: Vec<Hash> = vec![];
-            for k in puts {
-                if self.terms(k)?.parent == Some(cur) && !next.contains(k) {
-                    next.push(*k);
-                }
-            }
+            let next = self.children(&cur, puts, true)?;
             match next.len() {
                 0 => break,
                 1 => cur = next[0],
                 _ => {
-                    fork = true;
-                    break;
+                    let mut tips = vec![];
+                    for n in &next {
+                        if let Some(t) = self.branch_tip(n, puts)? {
+                            tips.push(t);
+                        }
+                    }
+                    let mut res: Vec<Hash> = vec![];
+                    for (k, r) in puts {
+                        if *r
+                            && self.terms(k)?.parent.is_some_and(|p| tips.contains(&p))
+                            && !res.contains(k)
+                        {
+                            res.push(*k);
+                        }
+                    }
+                    if res.len() == 1 {
+                        cur = res[0];
+                        continue;
+                    }
+                    return Ok(InForce {
+                        agreement: cur,
+                        fork: true,
+                        branches: tips,
+                    });
                 }
             }
         }
-        Ok(InForce { agreement: cur, fork })
+        Ok(InForce {
+            agreement: cur,
+            fork: false,
+            branches: vec![],
+        })
+    }
+
+    /// The distinct clones put in force whose parent is `of`; with
+    /// `resolvers` false, leaving out those whose record resolved a fork.
+    fn children(&self, of: &Hash, puts: &[(Hash, bool)], resolvers: bool) -> R<Vec<Hash>> {
+        let mut out: Vec<Hash> = vec![];
+        for (k, r) in puts {
+            if (resolvers || !*r) && self.terms(k)?.parent.as_ref() == Some(of) && !out.contains(k) {
+                out.push(*k);
+            }
+        }
+        Ok(out)
+    }
+
+    /// The latest clone of a fork's branch starting at `n`, followed one
+    /// clone at a time; `None` where the branch forks again.
+    fn branch_tip(&self, n: &Hash, puts: &[(Hash, bool)]) -> R<Option<Hash>> {
+        let mut cur = *n;
+        for _ in 0..=puts.len() {
+            let kids = self.children(&cur, puts, false)?;
+            match kids.len() {
+                0 => return Ok(Some(cur)),
+                1 => cur = kids[0],
+                _ => return Ok(None),
+            }
+        }
+        Ok(Some(cur))
     }
 
     // ------------------------------------------------------------ before and after
@@ -863,6 +1047,7 @@ impl<'a> LawView<'a> {
             in_force_at: None,
             clone: None,
             puts: None,
+            resolves: false,
             registers: vec![],
         };
         let no = |mut e: RecordEval, w: &str| {
@@ -887,32 +1072,36 @@ impl<'a> LawView<'a> {
             Err(w) => return no(e, &w),
         };
         let mut puts = vec![];
-        for r in self.records_at(col, b) {
+        for r in self.records_since(col, b) {
             if self.before_struct(col, r, Line::Record(h)) {
-                if let Some(k) = self.record_eval(col, r)?.puts {
-                    puts.push(k);
+                let x = self.record_eval(col, r)?;
+                if let Some(k) = x.puts {
+                    puts.push((k, x.resolves));
                 }
             }
         }
-        let at = self.fold(base, &puts)?.agreement;
+        let f = self.fold(base, &puts)?;
+        let at = f.agreement;
         e.in_force_at = Some(at);
         if rec.clone.is_none() && Record::named(&h.inside) != Some(at) {
             return no(e, "a record naming no clone names the agreement in force for it");
         }
         let at_terms = self.terms(&at)?;
         let at_lineage: Vec<Hash> = self.lineage(&at)?.into_iter().map(|(i, _)| i).collect();
+        let mut declarations: Vec<(Hash, Hash)> = vec![];
         for x in rec.registers.iter().flatten() {
             let a = self.held(x)?;
             let Some(p) = a.act.outside.signer else {
                 return no(e, "it registers an act with no signer");
             };
+            if self.is_law(a, types::DECLARATION) {
+                // Signed by the authority, judged once the record's other
+                // registrations are known.
+                declarations.push((*x, p));
+                continue;
+            }
             if !at_terms.parties.contains(&p) {
                 return no(e, "it registers an act of someone who is not a party of the agreement in force");
-            }
-            if self.is_law(a, types::DECLARATION) {
-                return Err(LawError::Unsupported(
-                    "registering an abandonment declaration (type 13): its format is open",
-                ));
             }
             if self.is_law(a, types::RESIGNATION) {
                 if self.v.status(&a.id) != Status::Valid {
@@ -960,14 +1149,48 @@ impl<'a> LawView<'a> {
             }
             return no(e, "it registers an act that is no departure or rotation");
         }
+        // Declarations removing a voice (rule 53, B12), their authority
+        // counted at this line (Q37), with the record's resignations and
+        // steppings down in effect, other declarations not.
+        let others = e.registers.clone();
+        for (x, p) in declarations {
+            let (d, clause) = match self.declaration(&x)? {
+                Ok(v) => v,
+                Err(w) => return no(e, &format!("it registers a declaration that fails: {w}")),
+            };
+            if !at_terms.parties.contains(&d.party) {
+                return no(e, "it registers a declaration against someone who is not a party of the agreement in force");
+            }
+            if !d.outcomes.contains(&outcomes::VOICE_REMOVED) {
+                return no(e, "it registers a declaration that removes no voice (outcome 0)");
+            }
+            if !at_lineage.contains(&d.agreement) {
+                return no(e, "it registers a declaration in an agreement not in force for it");
+            }
+            if let Err(w) = self.authority_at(col, Point::Line(Line::Record(h)), &at, &clause, &d, &p, &others)? {
+                return no(e, &w);
+            }
+            e.registers.push(Departure {
+                act: x,
+                party: d.party,
+                kind: DepartureKind::Declared { agreement: d.agreement },
+            });
+        }
         e.line = true;
         if let (Some(k), Some(sigs)) = (&rec.clone, &rec.signatures) {
             let kt = self.terms(k)?;
-            let state = if kt.parent != Some(at) {
+            // A clone of the latest clone of one branch of a fork, recorded
+            // after both lines, resolves it (rule 47, B11).
+            let resolves = f.fork && kt.parent.is_some_and(|p| f.branches.contains(&p));
+            let parent_terms = match kt.parent {
+                Some(pp) if resolves => self.terms(&pp)?,
+                _ => at_terms.clone(),
+            };
+            let state = if kt.parent != Some(at) && !resolves {
                 CloneState::Invalid(
                     "its parent is not the agreement in force for the record (rule 37c)".into(),
                 )
-            } else if changes(&at_terms, &kt)
+            } else if changes(&parent_terms, &kt)
                 .iter()
                 .any(|c| c.tier() == Tier::Constitutional)
             {
@@ -979,6 +1202,7 @@ impl<'a> LawView<'a> {
             };
             if state == CloneState::Complete {
                 e.puts = Some(*k);
+                e.resolves = resolves;
             }
             e.clone = Some((*k, state));
         }
@@ -987,10 +1211,11 @@ impl<'a> LawView<'a> {
 
     /// The lines that may register a departure in effect at a point, and
     /// what each registers: records under earlier keys, and records under
-    /// the point's key that can precede it. A record point adds its own
-    /// registrations (`own`): the record is not before itself, and judges
-    /// its clone with them in effect.
-    fn departure_lines(&self, col: &Col, point: Point<'a>, own: &[Departure]) -> R<Vec<(&'a Held, Departure)>> {
+    /// the point's key that can precede it. A line point adds its own
+    /// registrations (`own`): a record is not before itself, and judges its
+    /// clone with them in effect; a recovery rotation's declarations take
+    /// effect at it (C7).
+    fn departure_lines(&self, col: &Col, point: Point<'a>, own: &[Departure]) -> R<Vec<(Line<'a>, Departure)>> {
         let mut out = vec![];
         let (limit, me): (usize, Option<&'a Held>) = match point {
             Point::Act(x) => (col.pos(x).unwrap_or(0), None),
@@ -999,13 +1224,8 @@ impl<'a> LawView<'a> {
         };
         for k in 0..=limit.min(col.res.links.len().saturating_sub(1)) {
             for r in self.records_at(col, k) {
-                if let Some(m) = me {
-                    if r.id == m.id {
-                        for d in own {
-                            out.push((r, d.clone()));
-                        }
-                        continue;
-                    }
+                if me.is_some_and(|m| m.id == r.id) {
+                    continue;
                 }
                 if k == limit && !self.applies(col, r, point)? {
                     continue;
@@ -1013,9 +1233,14 @@ impl<'a> LawView<'a> {
                 let e = self.record_eval(col, r)?;
                 if e.line {
                     for d in &e.registers {
-                        out.push((r, d.clone()));
+                        out.push((Line::Record(r), d.clone()));
                     }
                 }
+            }
+        }
+        if let Point::Line(l) = point {
+            for d in own {
+                out.push((l, d.clone()));
             }
         }
         Ok(out)
@@ -1068,13 +1293,13 @@ impl<'a> LawView<'a> {
         let mut voices = vec![];
         let mut remaining = vec![];
         for p in base {
-            let mut regs: Vec<&'a Held> = vec![];
+            let mut regs: Vec<Line<'a>> = vec![];
             for (l, d) in &lines {
                 if &d.party != p {
                     continue;
                 }
                 let (from, hits) = match &d.kind {
-                    DepartureKind::Resigned { agreement } => (*agreement, true),
+                    DepartureKind::Resigned { agreement } | DepartureKind::Declared { agreement } => (*agreement, true),
                     DepartureKind::SteppedDown { agreement, area: a } => (*agreement, area == Some(*a)),
                     DepartureKind::Rotated { .. } => (*ag, false),
                 };
@@ -1082,10 +1307,10 @@ impl<'a> LawView<'a> {
                     continue;
                 }
                 // Named again by a later version they signed, after the line.
-                if self.restored(col, p, &lineage, &from, area, l)? {
+                if self.restored(col, p, &lineage, &from, area, *l)? {
                     continue;
                 }
-                regs.push(l);
+                regs.push(*l);
             }
             if regs.is_empty() {
                 voices.push(*p);
@@ -1096,7 +1321,7 @@ impl<'a> LawView<'a> {
                 let s = self.held(s)?;
                 let mut all = true;
                 for l in &regs {
-                    all &= self.sig_before(col, s, Line::Record(l))?;
+                    all &= self.sig_before(col, s, *l)?;
                 }
                 if all {
                     voices.push(*p);
@@ -1111,7 +1336,7 @@ impl<'a> LawView<'a> {
     /// again by a version between `from` (excluded) and the agreement
     /// counted (lineage[0]) that `p` signed by a signature not placed before
     /// that line (third pass reading).
-    fn restored(&self, col: &Col, p: &Hash, lineage: &[Hash], from: &Hash, area: Option<u64>, l: &'a Held) -> R<bool> {
+    fn restored(&self, col: &Col, p: &Hash, lineage: &[Hash], from: &Hash, area: Option<u64>, l: Line<'a>) -> R<bool> {
         let Some(i) = lineage.iter().position(|x| x == from) else {
             return Ok(false);
         };
@@ -1133,7 +1358,7 @@ impl<'a> LawView<'a> {
                 continue;
             }
             for (_, s) in self.valid_sigs(v, &[*p]) {
-                if !self.sig_before(col, self.held(&s)?, Line::Record(l))? {
+                if !self.sig_before(col, self.held(&s)?, l)? {
                     return Ok(true);
                 }
             }
@@ -1221,6 +1446,17 @@ impl<'a> LawView<'a> {
             }
         }
         let mark = clone.field4.mark().unwrap_or(&[]);
+        if let [MarkEntry { power: Power::Plan(party), signers }] = mark {
+            if !Self::newcomers(parent, clone).iter().all(|p| by.contains_key(p)) {
+                return Ok(CloneState::Draft(
+                    "a party it adds, or makes a holder, has not signed it (Q11)".into(),
+                ));
+            }
+            if let Some(w) = self.coverage(clone, &lineage, &|p| by.contains_key(p)) {
+                return Ok(CloneState::Invalid(w));
+            }
+            return self.plan_at(col, at, &lineage, party, signers, &by, own);
+        }
         let mut missing = false;
         for e in mark {
             let (base, rule) = power_base(parent, &e.power).expect("checked by clone_static");
@@ -1260,19 +1496,314 @@ impl<'a> LawView<'a> {
         Ok(CloneState::Complete)
     }
 
+
+    // ------------------------------------------------------------ abandonment
+
+    /// An abandonment declaration's own checks (rules 46a, 49, 51; B12):
+    /// valid under Identity; the party is a party of the agreement it names;
+    /// the clause it applies is the last version of that agreement, back
+    /// from it, that the party signed; every outcome is one that clause
+    /// allows; and its signer can be that clause's authority: the identity
+    /// it names, or one of the other parties, whose number is counted where
+    /// the declaration takes effect ([`Self::authority_at`]). Returns the
+    /// declaration and the clause, or why it fails.
+    pub fn declaration(&self, id: &Hash) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
+        let h = self.held(id)?;
+        if !self.is_law(h, types::DECLARATION) {
+            return Ok(Err("not an abandonment declaration (type 13)".into()));
+        }
+        if self.v.status(&h.id) != Status::Valid {
+            return Ok(Err("the declaration is not valid under Identity".into()));
+        }
+        let d = match AbsenceDeclaration::decode(&h.inside) {
+            Ok(d) => d,
+            Err(e) => return Ok(Err(e.to_string())),
+        };
+        let lineage = self.lineage(&d.agreement)?;
+        if !lineage[0].1.parties.contains(&d.party) {
+            return Ok(Err("the party declared absent is not a party of the agreement it names".into()));
+        }
+        let Some((version, vt)) = lineage
+            .iter()
+            .find(|(v, _)| !self.signers(v, &[d.party]).is_empty())
+        else {
+            return Ok(Err("the party signed no version of the agreement it names".into()));
+        };
+        if version != &d.clause {
+            return Ok(Err(
+                "the clause it applies is not the last version of the agreement the party signed (rule 46a)".into(),
+            ));
+        }
+        let Some(clause) = vt.abandonment.clone() else {
+            return Ok(Err("the version the party signed carries no abandonment clause".into()));
+        };
+        if !d.outcomes.iter().all(|o| clause.outcomes.contains(o)) {
+            return Ok(Err("an outcome the clause does not allow (rule 51)".into()));
+        }
+        let signer = h.act.outside.signer.ok_or(LawError::Check("a declaration with no signer"))?;
+        let ok = match clause.authority {
+            Authority::Named(a) => signer == a,
+            Authority::Others(_) => signer != d.party,
+        };
+        if !ok {
+            return Ok(Err("it is not signed by the authority the clause names (rule 51)".into()));
+        }
+        Ok(Ok((d, clause)))
+    }
+
+    /// A threshold authority, counted where the declaration takes effect
+    /// (rule 49, Q37, flaw C): among the other parties of the agreement in
+    /// force whose voice remains there, the signer among them. A
+    /// declaration whose number asks for more than its own signer is
+    /// refused: how the others would sign it is not written (question B15).
+    #[allow(clippy::too_many_arguments)]
+    fn authority_at(
+        &self,
+        col: &Col,
+        point: Point<'a>,
+        ag: &Hash,
+        clause: &Abandonment,
+        d: &AbsenceDeclaration,
+        signer: &Hash,
+        own: &[Departure],
+    ) -> R<Result<(), String>> {
+        let Authority::Others(k) = clause.authority else {
+            return Ok(Ok(()));
+        };
+        let t = self.terms(ag)?;
+        let others: Vec<Hash> = t.parties.iter().filter(|p| **p != d.party).copied().collect();
+        let (_, remaining) = self.voices(col, point, ag, &others, None, &BTreeMap::new(), own)?;
+        if !remaining.contains(signer) {
+            return Ok(Err(
+                "its signer is not among the other parties whose voice remains at the line (rule 49, Q37)".into(),
+            ));
+        }
+        match Rule::Threshold(k).needed(remaining.len()) {
+            Some(1) => Ok(Ok(())),
+            Some(_) => Err(LawError::Unsettled(
+                "a declaration by a threshold of the other parties needing more than one of them: how the others sign it is not written (question B15)",
+            )),
+            None => Ok(Err("no other voice remains to declare absence".into())),
+        }
+    }
+
+    /// The declarations against `party` that its possible authorities
+    /// signed, under the clauses of `lineage`: the identities they name, or
+    /// the other parties of `parties`. Checked on their own only.
+    fn declarations_against(&self, party: &Hash, lineage: &[(Hash, Terms)], parties: &[Hash]) -> R<Vec<(Hash, AbsenceDeclaration, Abandonment, Hash)>> {
+        let mut who: Vec<Hash> = vec![];
+        for (_, t) in lineage {
+            match t.abandonment.as_ref().map(|a| &a.authority) {
+                Some(Authority::Named(a)) => who.push(*a),
+                Some(Authority::Others(_)) => who.extend(parties.iter().filter(|p| *p != party)),
+                None => {}
+            }
+        }
+        let ids: Vec<Hash> = lineage.iter().map(|(i, _)| *i).collect();
+        let mut out = vec![];
+        let mut seen = BTreeSet::new();
+        for w in who {
+            for h in self.v.signed_by(&w) {
+                if !self.is_law(h, types::DECLARATION) || !seen.insert(h.id) {
+                    continue;
+                }
+                if let Ok((d, c)) = self.declaration(&h.id)? {
+                    if &d.party == party
+                        && d.outcomes.contains(&outcomes::VOICE_REMOVED)
+                        && ids.contains(&d.agreement)
+                    {
+                        out.push((h.id, d, c, w));
+                    }
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// C7: where the declared party is one the collective's signing key
+    /// cannot be produced without, under the agreement in force at rotation
+    /// `j`, its declaration takes effect at the rotation the recovery path
+    /// makes, a line by its kept tips. Read here as the rotation declaring
+    /// the clone `k` that takes that party out (question B16).
+    fn recovery_departures(&self, col: &Col, j: usize, at: &Hash, k: &Hash) -> R<Vec<Departure>> {
+        let t = self.terms(at)?;
+        let kt = self.terms(k)?;
+        let Some(g) = &t.grammar else { return Ok(vec![]) };
+        let lineage = self.lineage(at)?;
+        let mut out = vec![];
+        for p in &t.parties {
+            if kt.parties.contains(p) || !needed_to_sign(&g.signing, p) {
+                continue;
+            }
+            for (x, d, clause, signer) in self.declarations_against(p, &lineage, &t.parties)? {
+                if self
+                    .authority_at(col, Point::Line(Line::Rotation(j)), at, &clause, &d, &signer, &[])?
+                    .is_ok()
+                {
+                    out.push(Departure {
+                        act: x,
+                        party: *p,
+                        kind: DepartureKind::Declared { agreement: d.agreement },
+                    });
+                    break;
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    // ------------------------------------------------------------ succession
+
+    /// A clone whose mark names a party's succession plan, `[3, party]`
+    /// (rules 44c, 48c), checked against its parent alone: the mark names
+    /// nothing else; the parent carries an automatic plan for that party;
+    /// the signers are its seat successors; and the clone takes the party
+    /// out of the parties and every area, brings the successors in, and
+    /// changes nothing else an area or the words could hold. What else it
+    /// must change (the key grammar's holdings, the executed plan) is Flaw
+    /// B14, refused at the line ([`Self::plan_at`]).
+    fn plan_static(parent: &Terms, clone: &Terms, mark: &[MarkEntry]) -> Result<Vec<Power>, String> {
+        let [MarkEntry { power: Power::Plan(p), signers }] = mark else {
+            return Err("a mark naming a succession plan names it alone (rule 44c)".into());
+        };
+        let Some(plan) = parent.succession.iter().flatten().find(|s| &s.party == p) else {
+            return Err("the parent carries no succession plan for that party".into());
+        };
+        if plan.entry != Some(0) {
+            return Err(
+                "the plan's seat does not enter automatically: its successor is a nomination (rule 48c, Q14)".into(),
+            );
+        }
+        let seats: Vec<Hash> = plan.seats.iter().flatten().map(|(h, _)| *h).collect();
+        if seats.is_empty() {
+            return Err("the plan names no seat successor".into());
+        }
+        let mut a = signers.clone();
+        let mut b = seats.clone();
+        a.sort();
+        b.sort();
+        if a != b {
+            return Err("its signers are the seat successors entering, all of them (rule 48c)".into());
+        }
+        let mut want: Vec<Hash> = parent.parties.iter().filter(|x| *x != p).copied().collect();
+        for x in &seats {
+            if !want.contains(x) {
+                want.push(*x);
+            }
+        }
+        let mut got = clone.parties.clone();
+        want.sort();
+        got.sort();
+        if want != got {
+            return Err("it changes the parties beyond what the plan gives (rule 48c)".into());
+        }
+        if clone.areas().iter().any(|x| x.holders.contains(p)) {
+            return Err("it leaves the party among an area's holders (Q21)".into());
+        }
+        let ids = |t: &Terms| t.areas().iter().map(|x| x.id).collect::<Vec<_>>();
+        if ids(parent) != ids(clone) {
+            return Err("it changes the areas beyond taking the party off them (rule 44c)".into());
+        }
+        for x in parent.areas() {
+            let mut y = x.clone();
+            y.holders.retain(|h| h != p);
+            if clone.area(x.id) != Some(&y) {
+                return Err("it changes an area beyond taking the party off it (rule 44c, Q26)".into());
+            }
+        }
+        for c in changes(parent, clone) {
+            if !matches!(c, Change::Field(0 | 12 | 16 | 19)) {
+                return Err("it changes more than the plan gives (rule 44c)".into());
+            }
+        }
+        let others = |t: &Terms| {
+            t.succession
+                .iter()
+                .flatten()
+                .filter(|s| &s.party != p)
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        if others(parent) != others(clone) {
+            return Err("it changes another party's succession plan (rule 44c)".into());
+        }
+        Ok(vec![Power::Plan(*p)])
+    }
+
+    /// A clone marked with a succession plan, at a line (rules 48b, 48c,
+    /// Q14): every seat successor named signed it; the plan's trigger, a
+    /// declaration removing the party's voice, is in effect there; and
+    /// every party whose voice remains signed a version, up to the parent,
+    /// carrying that plan exactly. Where all of that holds, what the clone
+    /// may change besides the parties and the areas is not settled (Flaw
+    /// B14): refused, never guessed.
+    #[allow(clippy::too_many_arguments)]
+    fn plan_at(
+        &self,
+        col: &Col,
+        at: Line<'a>,
+        lineage: &[(Hash, Terms)],
+        party: &Hash,
+        signers: &[Hash],
+        by: &BTreeMap<Hash, Hash>,
+        own: &[Departure],
+    ) -> R<CloneState> {
+        let parent = &lineage[1].1;
+        let pid = lineage[1].0;
+        let plan = parent
+            .succession
+            .iter()
+            .flatten()
+            .find(|s| &s.party == party)
+            .expect("checked by plan_static");
+        if !signers.iter().all(|s| by.contains_key(s)) {
+            return Ok(CloneState::Draft(
+                "a seat successor its mark names has no signature act among those named".into(),
+            ));
+        }
+        let up: Vec<Hash> = lineage[1..].iter().map(|(i, _)| *i).collect();
+        let triggered = self
+            .departure_lines(col, Point::Line(at), own)?
+            .iter()
+            .any(|(_, d)| {
+                &d.party == party
+                    && matches!(&d.kind, DepartureKind::Declared { agreement } if up.contains(agreement))
+            });
+        if !triggered {
+            return Ok(CloneState::Draft(
+                "the plan's trigger, a declaration removing the party's voice, is not in effect at this line (rule 48b)".into(),
+            ));
+        }
+        let (_, remaining) = self.voices(col, Point::Line(at), &pid, &parent.parties, None, &BTreeMap::new(), own)?;
+        for v in remaining.iter().filter(|v| *v != party) {
+            let signed = lineage[1..].iter().any(|(id, t)| {
+                t.succession.iter().flatten().any(|s| s == plan) && !self.signers(id, &[*v]).is_empty()
+            });
+            if !signed {
+                return Ok(CloneState::Invalid(
+                    "a party whose voice remains never signed a version carrying this plan: the seat is a nomination (rule 48c, Q14)".into(),
+                ));
+            }
+        }
+        Err(LawError::Unsettled(
+            "a clone executing a succession plan must also change what the plan does not give (the key grammar's holdings, the executed plan itself): Flaw B14",
+        ))
+    }
+
     // ------------------------------------------------------------ acts of the collective
 
     /// The agreement in force for an act of the collective, and whether
     /// records of sibling clones leave it at their parent (rule 37c).
     fn in_force_act(&self, col: &Col, x: &'a Held, b: usize, base: Hash) -> R<InForce> {
         let mut puts = vec![];
-        for r in self.records_at(col, b) {
+        for r in self.records_since(col, b) {
             if r.id == x.id {
                 continue;
             }
             if !self.before(col, x, Line::Record(r))? {
-                if let Some(k) = self.record_eval(col, r)?.puts {
-                    puts.push(k);
+                let e = self.record_eval(col, r)?;
+                if let Some(k) = e.puts {
+                    puts.push((k, e.resolves));
                 }
             }
         }
@@ -1628,10 +2159,10 @@ impl<'a> LawView<'a> {
         };
         let mut puts = vec![];
         let mut records = vec![];
-        for r in self.records_at(&col, b) {
+        for r in self.records_since(&col, b) {
             let e = self.record_eval(&col, r)?;
             if let Some(k) = e.puts {
-                puts.push(k);
+                puts.push((k, e.resolves));
             }
             records.push((*e).clone());
         }
@@ -1651,7 +2182,9 @@ impl<'a> LawView<'a> {
         }
         for d in all {
             match d.kind {
-                DepartureKind::Resigned { agreement } if lineage.contains(&agreement) => {
+                DepartureKind::Resigned { agreement } | DepartureKind::Declared { agreement }
+                    if lineage.contains(&agreement) =>
+                {
                     if t.parties.contains(&d.party) && !departed.contains(&d.party) {
                         departed.push(d.party);
                     }
@@ -1692,6 +2225,19 @@ impl<'a> LawView<'a> {
 enum Point<'h> {
     Act(&'h Held),
     Line(Line<'h>),
+}
+
+/// Whether the collective's signing key cannot be produced without `p`
+/// under this holding: its sole holder or custodian, or a share too few
+/// others hold to meet the threshold without it (C7).
+fn needed_to_sign(h: &Holding, p: &Hash) -> bool {
+    match h {
+        Holding::One(x) => x == p,
+        Holding::Custodian { custodian, .. } => custodian == p,
+        Holding::Shares { threshold, members } => {
+            members.contains(p) && ((members.len() - 1) as u64) < *threshold
+        }
+    }
 }
 
 /// The parties a power is counted among in the parent, and its rule.

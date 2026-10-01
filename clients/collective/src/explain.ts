@@ -324,8 +324,14 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     const areas = parent?.areas ?? t.areas;
     const lines: Line[] = [];
     if (!t.mark?.length) lines.push({ text: 'It carries no mark: it does not say by which power it comes in.', tone: 'bad' });
+    // The mark lists signers by hash (Law draft 8, B8); read them in the
+    // order the parties are listed, which means something to a reader.
+    const order = (ids: string[]) => {
+      const at = (x: string) => (t.parties.indexOf(x) + 1 || Infinity);
+      return [...ids].sort((x, y) => at(x) - at(y));
+    };
     for (const e of t.mark ?? []) {
-      lines.push({ text: `It says it comes in by ${powerWords(e.power, areas, names)} of that agreement, signed by ${list(e.signers.map(names))}.` });
+      lines.push({ text: `It says it comes in by ${powerWords(e.power, areas, names)} of that agreement, signed by ${list(order(e.signers).map(names))}.` });
     }
     lines.push({
       text: 'Law checks that these are exactly the powers its changes need, and that those named meet them, counted among the voices that remain. A false mark sinks the clone, whatever signatures it gathers (F104).',

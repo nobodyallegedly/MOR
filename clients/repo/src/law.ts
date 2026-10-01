@@ -1,4 +1,4 @@
-// Law acts as the test collective makes them (Law draft 7): terms, whether a
+// Law acts as the test collective makes them (Law draft 8): terms, whether a
 // founding agreement or a clone of one (with its mark), signature acts,
 // resignations and records. The payloads are built here and checked by the
 // core library (`checkTerms`, `lawClonePlan`) before anything is signed;
@@ -90,8 +90,10 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
     [3, [[1, unhex(MIPS.envelope), 0]]],
     [5, RELEASE_AREA],
   ]);
+  // A mark's signers are ascending by hash (Law draft 8, B8): lowercase
+  // hex sorts as the bytes do.
   const field4 = t.parent
-    ? (t.mark ?? []).map((e) => [powerValue(e.power), e.signers.map(unhex)])
+    ? (t.mark ?? []).map((e) => [powerValue(e.power), [...e.signers].sort().map(unhex)])
     : [0];
   const m = new Map<number, unknown>([
     [0, t.parties.map(unhex)],

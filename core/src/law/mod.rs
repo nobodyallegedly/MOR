@@ -1,4 +1,4 @@
-//! The Law MIP (Law draft 7): exact formats, tiers, and the checks a
+//! The Law MIP (Law draft 8): exact formats, tiers, and the checks a
 //! collective needs, judged on the collective's own sequence (F109).
 //!
 //! - [`formats`]: terms, areas, marks, signatures, resignations, records,
