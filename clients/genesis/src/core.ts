@@ -28,5 +28,14 @@ export const SPECS = {
   text: sha256('TEXT, test value until the freeze'),
 };
 
+/** The six MIPs' spec hashes, as the core library's Law calls take them
+ * (Law draft 7 reads an act's layer from its spec hash). Test values. */
+export const MIPS = {
+  ...SPECS,
+  finance: sha256('FINANCE, test value until the freeze'),
+  law: sha256('LAW, test value until the freeze'),
+  production: sha256('PRODUCTION, test value until the freeze'),
+};
+
 export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3 } as const;
 export const ENVELOPE_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 } as const;

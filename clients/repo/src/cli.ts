@@ -20,17 +20,31 @@ collective. Keep the file secret. Members are test identities made with the
 genesis client (clients/genesis: mor-genesis new).
 
   found --file C --member M.json [--member M.json ...] --home URL [--home URL ...]
-        --relay URL [--relay URL ...] [--safety K] [--release K] [--clone K] [--scheme 2|3]
+        --relay URL [--relay URL ...] [--safety K] [--release K] [--clone K]
+        [--constitution K] [--scheme 2|3]
         Found a collective: the first member proposes the founding agreement,
-        every member signs it, the safety key is dealt as shares (any K of the
-        members; default 2), and the collective's genesis declares the
-        agreement. A release needs --release K members' signatures (default 2).
-  change --file C --stay M.json [--stay M.json ...] [--join M.json ...] [--leave ID ...]
-        Members leave and join: a clone of the agreement, proposed by the first
-        --stay member and signed by every --stay and --join member, then a
-        rotation of the collective declaring it, signed with the safety key
-        rebuilt from the staying members' shares, the next key dealt to the new
-        members only. If one is pending, resend it.
+        every member signs it (a collective exists only once every founder
+        has), the safety key is dealt as shares (any K of the members;
+        default 2), and the collective's genesis declares the agreement.
+        Releases are an area every member holds: a release needs --release K
+        members' signatures (default 2). Changing members or these rules
+        needs every member whose voice remains, or --constitution K of them.
+  change --file C --stay M.json [--stay M.json ...] [--join M.json ...]
+        [--leave M.json ...] [--remove ID ...]
+        Members leave and join. Each --leave member resigns alone, and the
+        collective registers it at once by a record. Then a clone of the
+        agreement, proposed by the first --stay member and signed by every
+        --stay and --join member, marked with the constitutional change rule,
+        and a rotation of the collective declaring it with those signatures,
+        signed with the safety key rebuilt from the staying members' shares,
+        the next key dealt to the new members only. A member removed without
+        resigning (--remove) is counted unless the founders agreed otherwise
+        (--constitution at founding): by default nobody loses their say
+        without signing. If one is pending, resend it.
+  words --file C --text T --member M.json [--member M.json ...]
+        An ordinary change: the release area's own words, changed by its
+        holders (enough of them to meet the release rule) and recorded by the
+        collective at once, with no rotation.
   release --file C --version V [--name N] [--root DIR]
         Publish every file git tracks under DIR (default: this repository) as a
         release of the collective. It counts once enough members sign it.
@@ -99,6 +113,7 @@ async function main() {
         safetyThreshold: k,
         releaseThreshold: num('release', 2),
         cloneThreshold: num('clone', 2),
+        constitutionalThreshold: one('constitution') ? Number(one('constitution')) : undefined,
         abandonmentOthers: members.length - 1,
       };
       const governance: Governance = { ...rules, text: governanceText(rules) };
@@ -128,18 +143,24 @@ async function main() {
         const joinPaths = opts.join ?? [];
         const stay = stayPaths.map(member);
         const join = joinPaths.map(member);
-        const leave = new Set(opts.leave ?? []);
-        const members = [...c.f.members.filter((x) => !leave.has(x)), ...join.map((j) => j.id)];
+        const leavePaths = opts.leave ?? [];
+        const leaving = leavePaths.map(member);
+        const out = new Set([...(opts.remove ?? []), ...leaving.map((l) => l.id)]);
+        const members = [...c.f.members.filter((x) => !out.has(x)), ...join.map((j) => j.id)];
         for (const s of stay) if (!c.f.members.includes(s.id)) throw new Error(`${s.id} is not a member`);
         const got = await c.changeMembers({
           members,
           proposer: stay[0],
           signers: [...stay, ...join],
           rebuilders: stay.map((s) => s.id),
+          leaving,
         });
         c.save(file);
         stayPaths.forEach((p, i) => stay[i].save(p));
         joinPaths.forEach((p, i) => join[i].save(p));
+        leavePaths.forEach((p, i) => leaving[i].save(p));
+        for (const r of got.resigned) console.log(`resignation ${r.act} by ${r.member}`);
+        if (got.record) console.log(`record ${got.record} (the collective's line for the departures)`);
         console.log(`clone ${got.clone}\nrotation ${got.rotation}`);
       } else {
         await c.id.submitRotation();
@@ -147,6 +168,17 @@ async function main() {
       const counts = await c.settle();
       c.save(file);
       console.log(counts ? `the change counts; members: ${c.f.members.join(', ')}` : 'pending: run the same command again once the homes are back');
+      break;
+    }
+    case 'words': {
+      const file = need('file');
+      const c = TestCollective.load(file, via);
+      const paths = opts.member ?? [];
+      const signers = paths.map(member);
+      const got = await c.changeReleaseWords({ words: need('text'), proposer: signers[0], signers });
+      c.save(file);
+      paths.forEach((p, i) => signers[i].save(p));
+      console.log(`clone ${got.clone}\nrecord ${got.record} (in force at once, no rotation)`);
       break;
     }
     case 'release': {

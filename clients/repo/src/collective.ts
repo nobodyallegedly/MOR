@@ -26,7 +26,19 @@ import {
 } from '../../genesis/src/core.ts';
 import { TestIdentity, type Home, type IdentityFile, type Submitted } from '../../genesis/src/identity.ts';
 import type { Via } from '../../genesis/src/transport.ts';
-import { proposePayload, sign, termsPayload, type CollectiveTerms, type Rule } from './law.ts';
+import {
+  LAW_SPECS,
+  clonePlan,
+  markMatches,
+  proposePayload,
+  record,
+  resign,
+  sign,
+  termsPayload,
+  type CollectiveTerms,
+  type MarkEntry,
+  type Rule,
+} from './law.ts';
 import { FOUNDING_AGREEMENT, REPO_SPECS } from './specs.ts';
 
 export const COLLECTIVE_LABEL =
@@ -52,10 +64,18 @@ export interface Dealt {
 export interface Governance {
   /** Any k members rebuild the safety key (a way to rotate below the member count). */
   safetyThreshold: number;
-  /** Any k members' visible signatures make a publication of the collective count. */
+  /** The release rule, an area held by every member: any k members' own
+   * signature acts make a publication of the collective count. */
   releaseThreshold: number;
-  /** Any k of the parties complete a clone. */
+  /** Any k of the parties complete a clone under the clone rule: the
+   * judicial tier and matters outside every area (Law draft 7). */
   cloneThreshold: number;
+  /** The constitutional change rule (members, the rules, the key grammar,
+   * the areas): any k of the parties. Absent: every party whose voice
+   * remains (F103), the default nobody loses their say under. */
+  constitutionalThreshold?: number;
+  /** The release area's own words (terms field 20), changed by its holders. */
+  releaseWords?: string;
   /** A threshold of the other parties decides absence. */
   abandonmentOthers: number;
   text: string;
@@ -93,24 +113,31 @@ export interface Signed {
  * them. Members may write other words; the rules are what MOR enforces.
  */
 export function governanceText(g: Omit<Governance, 'text'>): string {
-  return `The MOR test collective. It publishes releases of the MOR code and nothing else. Test acts only, wiped before the first real acts. Its everyday key is held by its first member; its safety key is split among the members, any ${g.safetyThreshold} of whom rebuild it. A release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any ${g.cloneThreshold} members and by each member who joins, and a rotation of the collective declaring it. The other members together decide whether a member is absent; the outcome is that member losing their voice.`;
+  const constitution = g.constitutionalThreshold
+    ? `any ${g.constitutionalThreshold} members`
+    : 'every member whose voice remains';
+  return `The MOR test collective. It publishes releases of the MOR code and nothing else. Test acts only, wiped before the first real acts. Its everyday key is held by its first member; its safety key is split among the members, any ${g.safetyThreshold} of whom rebuild it. Releases are an area held by every member: a release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members, these rules and the release area change by a clone signed by ${constitution} and by each member who joins, and a rotation of the collective declaring it. Other changes need any ${g.cloneThreshold} members, and are recorded by the collective at once. A member may leave alone at any time, keeping what they own. The other members together decide whether a member is absent; the outcome is that member losing their voice.`;
 }
 
 /** The terms of a founding agreement (no parent) or of a clone, from its rules. */
-export function collectiveTerms(g: Governance, members: string[], holder: string, parent?: string): CollectiveTerms {
+export function collectiveTerms(g: Governance, members: string[], holder: string, parent?: string, mark?: MarkEntry[]): CollectiveTerms {
   const rule = (k: number): Rule => ({ threshold: k });
   return {
     parties: members,
     text: g.text,
     clone: rule(g.cloneThreshold),
+    constitutional: g.constitutionalThreshold ? rule(g.constitutionalThreshold) : undefined,
     signingHolder: holder,
     safety: { threshold: g.safetyThreshold, members },
-    // A release is a publication of the collective (Envelope type 0): it
-    // needs this many members' visible signatures (F100).
-    listed: [{ spec: SPECS.envelope, type: 0, rule: rule(g.releaseThreshold) }],
+    // A release is a publication of the collective (Envelope type 0): an
+    // area held by every member, counting with this many members' own
+    // signature acts (F100, F103).
+    releases: { holders: members, threshold: g.releaseThreshold, words: g.releaseWords },
+    // Outcome 0, a voice removed: every member is covered (F105).
     abandonment: { others: g.abandonmentOthers, outcomes: [0] },
     extensions: [REPO_SPECS.manifest],
     parent,
+    mark,
   };
 }
 
@@ -250,29 +277,55 @@ export class TestCollective {
   }
 
   /**
-   * Change members (Law rule 37): a clone of the agreement in force naming
-   * the new members, proposed by `proposer`, signed by `signers` (the
-   * parent's clone rule counts the parent's parties; each joining member
-   * signs to be bound); then a rotation of the collective declaring the
-   * clone, signed by the safety key rebuilt from the shares of `rebuilders`
-   * (members who stay: a leaving member hands over nothing), and committing
-   * to a next key dealt to the new members only. A leaving member never held
-   * the next key. With `governance`, the clone also rewrites the rules (a
-   * founder's rules do not outlive their membership). Save every file after.
+   * Change members (Law rules 37, 37a): members who leave alone sign a
+   * resignation (`leaving`), and the collective registers it at once by a
+   * record, its line (A1); then a clone of the agreement in force naming
+   * the new members, its mark naming the constitutional change rule and
+   * the members who sign it (F104), proposed by `proposer`, signed by
+   * `signers` (members whose voice remains, and each joining member, to be
+   * bound); then a rotation of the collective declaring the clone with
+   * those signature acts (Flaw M), signed by the safety key rebuilt from
+   * the shares of `rebuilders` (members who stay: a leaving member hands
+   * over nothing), and committing to a next key dealt to the new members
+   * only. A member removed without resigning (`members` leaving them out)
+   * must still sign, unless the constitutional change rule needs fewer.
+   * With `governance`, the clone also rewrites the rules. Save every file
+   * after.
    */
   async changeMembers(opts: {
     members: string[];
     proposer: TestIdentity;
     signers: TestIdentity[];
     rebuilders: string[];
+    leaving?: TestIdentity[];
     governance?: Governance;
     /** The exact clone payload shown to the members: refused if the clone made now differs. */
     expect?: Uint8Array;
-  }): Promise<{ clone: string; rotation: string; signed: Signed[]; sent: Submitted[] }> {
+  }): Promise<{ clone: string; rotation: string; record?: string; resigned: Signed[]; signed: Signed[]; sent: Submitted[] }> {
     if (this.f.pending || this.f.identity.pending) throw new Error('a member change is already pending: resend it');
     const governance = opts.governance ?? this.f.governance;
     const holder = this.nextHolder(opts.members);
-    const payload = termsPayload(collectiveTerms(governance, opts.members, holder, this.f.agreement));
+    const resigned: Signed[] = [];
+    let line: string | undefined;
+    for (const m of opts.leaving ?? []) {
+      resigned.push({ member: m.id, act: (await resign(m, this.f.agreement, this.f.relays)).id });
+    }
+    if (resigned.length) {
+      line = (await record(this.id, { registers: resigned.map((r) => r.act), inForce: this.f.agreement }, this.f.relays)).id;
+    }
+    const left = new Set(resigned.map((r) => r.member));
+    const mark: MarkEntry[] = [
+      {
+        power: { constitutional: true },
+        signers: opts.signers.map((m) => m.id).filter((id) => this.f.members.includes(id) && !left.has(id)),
+      },
+    ];
+    const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+    const next = collectiveTerms(governance, opts.members, holder, this.f.agreement, mark);
+    if (!markMatches(mark, clonePlan(parent, next).needs)) {
+      throw new Error('a member change is constitutional: its mark names the constitutional change rule');
+    }
+    const payload = termsPayload(next);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
     const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
     const signed: Signed[] = [];
@@ -284,7 +337,7 @@ export class TestCollective {
       .slice(0, this.f.safety.threshold)
       .map((s) => unb64(s.share));
     const current = rebuildSafety(shares) as { scheme: number; seeds: Uint8Array; commit: string };
-    const next = deal(opts.members, governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
+    const dealt = deal(opts.members, governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
 
     const f = this.f.identity;
     const newSigning = newSigningSecret();
@@ -300,24 +353,52 @@ export class TestCollective {
       safetyScheme: current.scheme,
       safetySeeds: current.seeds,
       newSigningPublic: signingPublic(newSigning),
-      nextSafetyScheme: next.scheme,
-      nextSafetyCommit: next.commit,
+      nextSafetyScheme: dealt.scheme,
+      nextSafetyCommit: dealt.commit,
       kept,
-      declarations: [{ spec: REPO_SPECS.law, kind: FOUNDING_AGREEMENT, value: proposed.id }],
+      // The clone, and the signature acts that complete it (Flaw M).
+      declarations: [{ spec: LAW_SPECS.law, kind: FOUNDING_AGREEMENT, value: proposed.id, signatures: signed.map((s) => s.act) }],
     });
     const id = actId(rotation);
     f.pending = {
       rotation: b64(rotation),
       id,
       signingSecret: hex(newSigning),
-      safety: { scheme: next.scheme, seeds: '' },
+      safety: { scheme: dealt.scheme, seeds: '' },
       homes: f.homes,
       rule: f.rule,
     };
-    this.f.pending = { safety: next, agreement: proposed.id, members: opts.members, governance: opts.governance };
+    this.f.pending = { safety: dealt, agreement: proposed.id, members: opts.members, governance: opts.governance };
     this.f.signingHolder = holder;
     const sent = await this.id.submitRotation();
-    return { clone: proposed.id, rotation: id, signed, sent };
+    return { clone: proposed.id, rotation: id, record: line, resigned, signed, sent };
+  }
+
+  /**
+   * An ordinary change (Law rule 37c): the release area's own words, which
+   * its holders change alone. A clone marked with the release area's power
+   * and the members who sign it; the collective records it at once with
+   * their signature acts (A2), with its everyday key: no rotation (Q8).
+   */
+  async changeReleaseWords(opts: {
+    words: string;
+    proposer: TestIdentity;
+    signers: TestIdentity[];
+  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+    if (this.f.pending) throw new Error('a member change is pending: settle it first');
+    const governance = { ...this.f.governance, releaseWords: opts.words };
+    const mark: MarkEntry[] = [{ power: { area: 1 }, signers: opts.signers.map((m) => m.id) }];
+    const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+    const next = collectiveTerms(governance, this.f.members, this.f.signingHolder, this.f.agreement, mark);
+    if (!markMatches(mark, clonePlan(parent, next).needs)) throw new Error('not an ordinary change of the release area');
+    const proposed = await proposePayload(opts.proposer, termsPayload(next), this.f.agreement, this.f.relays);
+    const signed: Signed[] = [];
+    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
+    const r = await record(this.id, { clone: proposed.id, signatures: signed.map((s) => s.act), inForce: this.f.agreement }, this.f.relays);
+    this.f.governance = governance;
+    this.f.agreement = proposed.id;
+    this.f.agreements.push(proposed.id);
+    return { clone: proposed.id, record: r.id, signed };
   }
 
   /** Once the member change's rotation counts, the new shares and agreement take over. */

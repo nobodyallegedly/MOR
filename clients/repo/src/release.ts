@@ -22,7 +22,7 @@ import {
 import { lookUp, type TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import type { TestCollective } from './collective.ts';
-import { carryChain, sign } from './law.ts';
+import { LAW_SPECS, carryChain, sign } from './law.ts';
 import { REPO_SPECS } from './specs.ts';
 
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
@@ -455,7 +455,7 @@ export async function verifyRelease(
   const res = v.resolve(d.signer) as { links: { act: string }[] };
   const agreements = new Set<string>();
   for (const link of res.links) {
-    const a = v.lawDeclared(REPO_SPECS.law, d.signer, link.act);
+    const a = v.lawDeclared(LAW_SPECS, d.signer, link.act);
     if (a) agreements.add(a);
   }
   const parties = new Set<string>();
@@ -491,26 +491,43 @@ export async function verifyRelease(
       }
     }
   }
-  let consent: { kind: string; agreement?: string; rule?: { form: string; threshold?: number; named?: string[] }; signers: string[]; met: boolean };
+  // The collective's own acts: its records (its everyday line, which writes
+  // its ordinary clones and registers departures, Law draft 7, F109), and
+  // the clones they name with their signature acts.
+  for (const a of await allBy(d.signer, places, via)) {
+    try {
+      v.add(a);
+    } catch {
+      // a private act, or malformed
+    }
+  }
+  let consent: {
+    kind: string;
+    agreement?: string;
+    reason?: string;
+    areas: { area: number; name: string; frozen: boolean; voices: string[]; needed: number; signers: string[]; met: boolean }[];
+    met: boolean;
+  };
   try {
-    consent = v.lawConsent(REPO_SPECS.law, release);
+    consent = v.lawConsent(LAW_SPECS, release);
   } catch (e) {
     return fail(`Law: ${e instanceof Error ? e.message : e}`);
   }
   r.agreement = consent.agreement;
-  r.signers = consent.signers;
+  r.signers = consent.areas.flatMap((a) => a.signers);
+  const area = consent.areas[0];
   r.rule =
-    consent.kind === 'listed'
-      ? consent.rule!.form === 'threshold'
-        ? `any ${consent.rule!.threshold} of the members`
-        : consent.rule!.form === 'all'
-          ? 'every member'
-          : `these members: ${consent.rule!.named!.join(', ')}`
-      : consent.kind === 'not-listed'
-        ? "the collective's own signature (its grammar lists no member signatures for publications)"
-        : "its signer's own signature (not a collective)";
+    consent.kind === 'areas'
+      ? area.frozen
+        ? `the ${area.name} area, which has no holder left: frozen until the members refit it`
+        : `any ${area.needed} of the ${area.name} area's holders`
+      : consent.kind === 'no-area'
+        ? "the collective's own signature (no area of its agreement reaches publications)"
+        : consent.kind === 'not-collective'
+          ? "its signer's own signature (not a collective)"
+          : `nothing: ${consent.reason ?? consent.kind}`;
   if (!consent.met) {
-    fail(`not a release: ${r.rule} must sign it; ${consent.signers.length} did (${consent.signers.join(', ') || 'none'})`);
+    fail(`not a release: ${r.rule} must sign it; ${r.signers.length} did (${r.signers.join(', ') || 'none'})`);
   }
 
   // 4. The manifest.

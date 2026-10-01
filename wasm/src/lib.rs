@@ -470,6 +470,9 @@ struct DeclIn {
     spec: String,
     kind: u64,
     value: Option<String>,
+    /// For a rotation's Law declaration of a clone: the signature acts that
+    /// complete it (Law draft 7, Flaw M): the value is `[clone, [+ hash]]`.
+    signatures: Option<Vec<String>>,
 }
 
 fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaration>>> {
@@ -480,11 +483,18 @@ fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaratio
                     Ok(identity::Declaration {
                         spec: unhex(&x.spec)?,
                         kind: x.kind,
-                        value: x
-                            .value
-                            .as_deref()
-                            .map(|h| Ok::<_, JsError>(Value::Bytes(unhex(h)?.to_vec())))
-                            .transpose()?,
+                        value: match (&x.value, &x.signatures) {
+                            (None, _) => None,
+                            (Some(h), None) => Some(Value::Bytes(unhex(h)?.to_vec())),
+                            (Some(h), Some(sigs)) => Some(Value::Array(vec![
+                                Value::Bytes(unhex(h)?.to_vec()),
+                                Value::Array(
+                                    sigs.iter()
+                                        .map(|x| Ok(Value::Bytes(unhex(x)?.to_vec())))
+                                        .collect::<R<_>>()?,
+                                ),
+                            ])),
+                        },
                     })
                 })
                 .collect()
@@ -1204,15 +1214,75 @@ impl Verifier {
     }
 }
 
-// ---------------------------------------------------------------- Law (roadmap step 5a)
+// ---------------------------------------------------------------- Law (Law draft 7)
+
+/// A Law error, with a stable code before its words (`law/check: ...`), so
+/// that clients read the code and never match the wording.
+fn lerr(e: law::LawError) -> JsError {
+    JsError::new(&format!("law/{}: {e}", e.code()))
+}
+
+/// The six MIPs' spec hashes, the layers each extension declares
+/// (Production field 10, read by the caller from the specifications it
+/// holds), and each keeper operator's records in order (Law type 2 is still
+/// open, so a client states what it holds).
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SpecsIn {
+    identity: String,
+    envelope: String,
+    text: String,
+    finance: String,
+    law: String,
+    production: String,
+    #[serde(default)]
+    ext_layers: std::collections::BTreeMap<String, Vec<u64>>,
+    #[serde(default)]
+    keeper_logs: std::collections::BTreeMap<String, Vec<String>>,
+}
+
+impl SpecsIn {
+    fn mips(&self) -> R<law::Mips> {
+        Ok(law::Mips {
+            identity: unhex(&self.identity)?,
+            envelope: unhex(&self.envelope)?,
+            text: unhex(&self.text)?,
+            finance: unhex(&self.finance)?,
+            law: unhex(&self.law)?,
+            production: unhex(&self.production)?,
+        })
+    }
+
+    fn ext(&self) -> R<std::collections::BTreeMap<Hash, Vec<u64>>> {
+        self.ext_layers
+            .iter()
+            .map(|(k, v)| Ok((unhex(k)?, v.clone())))
+            .collect()
+    }
+
+    fn view<'a>(&self, v: &'a chain::Verifier) -> R<law::LawView<'a>> {
+        let mut view = law::LawView::new(v, self.mips()?);
+        view.ext_layers = self.ext()?;
+        for (k, log) in &self.keeper_logs {
+            view.keeper_logs
+                .insert(unhex(k)?, log.iter().map(|x| unhex(x)).collect::<R<_>>()?);
+        }
+        Ok(view)
+    }
+}
+
+fn specs_of(v: JsValue) -> R<SpecsIn> {
+    from_js(v)
+}
 
 /// Check a terms payload (Law type 0), given as CBOR: its format and every
-/// check that needs no other act, key grammar included (rule 36, F96).
-/// Throws the reason it fails.
+/// check that needs no other act (key grammar, areas, judges, F105 for
+/// founding terms). Throws `law/<code>: <why>`.
 #[wasm_bindgen(js_name = checkTerms)]
-pub fn check_terms(payload: &[u8]) -> R<()> {
-    let t = law::Terms::decode(&payload_of(payload)?).map_err(err)?;
-    t.check().map_err(err)
+pub fn check_terms(payload: &[u8], specs: JsValue) -> R<()> {
+    let s = specs_of(specs)?;
+    let t = law::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
+    t.check(&s.mips()?).map_err(lerr)
 }
 
 #[derive(Serialize)]
@@ -1267,19 +1337,9 @@ struct RecoveryOut {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ListedOut {
-    spec: String,
-    #[serde(rename = "type")]
-    type_: u64,
-    rule: RuleOut,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 struct GrammarOut {
     signing: HoldingOut,
     safety: HoldingOut,
-    listed: Option<Vec<ListedOut>>,
     recovery: Option<RecoveryOut>,
 }
 
@@ -1305,13 +1365,113 @@ struct SuccessionOut {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct KindOut {
+    /// "layer" or "type".
+    form: String,
+    layer: Option<u64>,
+    spec: Option<String>,
+    #[serde(rename = "type")]
+    type_: Option<u64>,
+}
+
+fn kind_out(k: &law::Kind) -> KindOut {
+    match k {
+        law::Kind::Layer(l) => KindOut {
+            form: "layer".into(),
+            layer: Some(*l),
+            spec: None,
+            type_: None,
+        },
+        law::Kind::Type { spec, type_ } => KindOut {
+            form: "type".into(),
+            layer: None,
+            spec: Some(hx(spec)),
+            type_: Some(*type_),
+        },
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FieldRefOut {
+    /// "field" or "task".
+    form: String,
+    number: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AreaOut {
+    id: u64,
+    name: String,
+    holders: Vec<String>,
+    threshold: u64,
+    kinds: Vec<KindOut>,
+    fields: Vec<FieldRefOut>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PowerOut {
+    /// "constitutional", "clone", "area" or "plan".
+    form: String,
+    area: Option<u64>,
+    party: Option<String>,
+}
+
+fn power_out(p: &law::Power) -> PowerOut {
+    let (form, area, party) = match p {
+        law::Power::Constitutional => ("constitutional", None, None),
+        law::Power::Clone => ("clone", None, None),
+        law::Power::Area(a) => ("area", Some(*a), None),
+        law::Power::Plan(h) => ("plan", None, Some(hx(h))),
+    };
+    PowerOut {
+        form: form.into(),
+        area,
+        party,
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MarkOut {
+    power: PowerOut,
+    signers: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ProblemOut {
+    /// "shape", "unsupported", "check", "missing" or "unsettled".
+    code: String,
+    text: String,
+}
+
+fn problem(e: &law::LawError) -> ProblemOut {
+    ProblemOut {
+        code: e.code().into(),
+        text: e.to_string(),
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct TermsOut {
     parties: Vec<String>,
     text: String,
     cmips: Vec<(u64, String)>,
     keepers: Option<(Vec<String>, RuleOut)>,
-    signing: RuleOut,
+    /// Founding terms: the signing rule (field 4).
+    signing: Option<RuleOut>,
+    /// A clone: its mark (field 4), each power claimed and its signers.
+    mark: Option<Vec<MarkOut>>,
     clone: RuleOut,
+    /// The constitutional change rule (field 18); null: every party.
+    constitutional: Option<RuleOut>,
+    areas: Vec<AreaOut>,
+    /// Each area's own words, by id.
+    area_words: Vec<(u64, String)>,
     /// The time reference's cMIP; its parameters are that cMIP's to read.
     time: Option<String>,
     abandonment: Option<AbandonmentOut>,
@@ -1321,20 +1481,19 @@ struct TermsOut {
     split_grant: Option<String>,
     extensions: Option<Vec<String>>,
     succession: Option<Vec<SuccessionOut>>,
-    /// Why the terms fail the checks that need no other act (rules 1, 2,
-    /// 36, 48a, 49; F96), or null if they pass.
-    problem: Option<String>,
+    /// Why the terms fail the checks that need no other act, or null.
+    problem: Option<ProblemOut>,
 }
 
 /// Read a terms payload (Law type 0) as the core library decodes it, field
 /// by field, so a client can say in plain words what signing it means from
-/// the exact bytes that are signed (Law rule 4a: what you sign is what you
-/// saw). Throws if the payload is not terms in Law's format, or uses a field
-/// whose format is still open; `problem` says why terms in the format still
-/// fail Law's checks.
+/// the exact bytes that are signed (Law rule 4a). Throws if the payload is
+/// not terms in Law's format, or uses a field whose format is still open;
+/// `problem` says why terms in the format still fail Law's checks.
 #[wasm_bindgen(js_name = readTerms)]
-pub fn read_terms(payload: &[u8]) -> R<JsValue> {
-    let t = law::Terms::decode(&payload_of(payload)?).map_err(err)?;
+pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
+    let s = specs_of(specs)?;
+    let t = law::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
     let hs = |v: &Vec<Hash>| v.iter().map(hx).collect::<Vec<_>>();
     let pairs = |v: &Vec<(Hash, u64)>| v.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>();
     to_js(&TermsOut {
@@ -1345,8 +1504,47 @@ pub fn read_terms(payload: &[u8]) -> R<JsValue> {
             .keepers
             .as_ref()
             .map(|k| (hs(&k.operators), rule_out(&k.rule))),
-        signing: rule_out(&t.signing),
+        signing: match &t.field4 {
+            law::Field4::Rule(r) => Some(rule_out(r)),
+            _ => None,
+        },
+        mark: t.field4.mark().map(|m| {
+            m.iter()
+                .map(|e| MarkOut {
+                    power: power_out(&e.power),
+                    signers: hs(&e.signers),
+                })
+                .collect()
+        }),
         clone: rule_out(&t.clone),
+        constitutional: t.constitutional.as_ref().map(rule_out),
+        areas: t
+            .areas()
+            .iter()
+            .map(|a| AreaOut {
+                id: a.id,
+                name: a.name.clone(),
+                holders: hs(&a.holders),
+                threshold: a.threshold,
+                kinds: a.kinds.iter().flatten().map(kind_out).collect(),
+                fields: a
+                    .fields
+                    .iter()
+                    .flatten()
+                    .map(|f| match f {
+                        law::FieldRef::Field(n) => FieldRefOut {
+                            form: "field".into(),
+                            number: *n,
+                        },
+                        law::FieldRef::Task(n) => FieldRefOut {
+                            form: "task".into(),
+                            number: *n,
+                        },
+                    })
+                    .collect(),
+            })
+            .collect(),
+        area_words: t.area_words.clone().unwrap_or_default(),
         time: t.time.as_ref().map(|(h, _)| hx(h)),
         abandonment: t.abandonment.as_ref().map(|a| {
             let (authority, identity, threshold) = match &a.authority {
@@ -1365,15 +1563,6 @@ pub fn read_terms(payload: &[u8]) -> R<JsValue> {
         grammar: t.grammar.as_ref().map(|g| GrammarOut {
             signing: holding_out(&g.signing),
             safety: holding_out(&g.safety),
-            listed: g.listed.as_ref().map(|l| {
-                l.iter()
-                    .map(|x| ListedOut {
-                        spec: hx(&x.spec),
-                        type_: x.type_,
-                        rule: rule_out(&x.rule),
-                    })
-                    .collect()
-            }),
             recovery: g.recovery.as_ref().map(|r| match r {
                 law::Recovery::Custodian { custodian, grant } => RecoveryOut {
                     form: "custodian".into(),
@@ -1402,7 +1591,83 @@ pub fn read_terms(payload: &[u8]) -> R<JsValue> {
                 })
                 .collect()
         }),
-        problem: t.check().err().map(|e| e.to_string()),
+        problem: t.check(&s.mips()?).err().map(|e| problem(&e)),
+    })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChangeOut {
+    /// "field", "task", "extension" or "words".
+    form: String,
+    field: Option<u64>,
+    task: Option<u64>,
+    extension: Option<String>,
+    area: Option<u64>,
+    /// "constitutional", "judicial" or "operational".
+    tier: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ClonePlanOut {
+    changes: Vec<ChangeOut>,
+    /// The powers the clone's mark must name (rule 44c), ascending.
+    needs: Vec<PowerOut>,
+}
+
+/// What a clone changes from its parent, each change's tier, and the powers
+/// its mark must name (rules 44a to 44c), from the two terms payloads. For
+/// a client preparing a clone's mark, and showing what it changes.
+#[wasm_bindgen(js_name = lawClonePlan)]
+pub fn law_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<JsValue> {
+    let s = specs_of(specs)?;
+    let p = law::Terms::decode(&payload_of(parent)?).map_err(lerr)?;
+    let c = law::Terms::decode(&payload_of(clone)?).map_err(lerr)?;
+    let ext = s.ext()?;
+    let needs = law::powers_needed(&p, &c, &s.mips()?, &|e: &Hash| {
+        ext.get(e).cloned().ok_or(law::LawError::Missing(*e))
+    })
+    .map_err(lerr)?;
+    let tier = |t: law::Tier| match t {
+        law::Tier::Constitutional => "constitutional",
+        law::Tier::Judicial => "judicial",
+        law::Tier::Operational => "operational",
+    };
+    to_js(&ClonePlanOut {
+        changes: law::changes(&p, &c)
+            .iter()
+            .map(|ch| {
+                let mut o = ChangeOut {
+                    form: String::new(),
+                    field: None,
+                    task: None,
+                    extension: None,
+                    area: None,
+                    tier: tier(ch.tier()).into(),
+                };
+                match ch {
+                    law::Change::Field(f) => {
+                        o.form = "field".into();
+                        o.field = Some(*f);
+                    }
+                    law::Change::Task(t) => {
+                        o.form = "task".into();
+                        o.task = Some(*t);
+                    }
+                    law::Change::Extension(e) => {
+                        o.form = "extension".into();
+                        o.extension = Some(hx(e));
+                    }
+                    law::Change::Words(a) => {
+                        o.form = "words".into();
+                        o.area = Some(*a);
+                    }
+                }
+                o
+            })
+            .collect(),
+        needs: needs.iter().map(power_out).collect(),
     })
 }
 
@@ -1413,6 +1678,65 @@ pub fn signature_payload(signed: &str) -> R<Vec<u8>> {
     Ok(cbor::encode(&Value::Map(law::signature_payload(&unhex(
         signed,
     )?))))
+}
+
+/// A resignation payload (Law type 16): the whole voice, or, with `area`,
+/// stepping down from that area (by id). The act carries, in `objects`,
+/// `[agreement, agreement]`.
+#[wasm_bindgen(js_name = resignationPayload)]
+pub fn resignation_payload(agreement: &str, area: Option<u32>) -> R<Vec<u8>> {
+    Ok(cbor::encode(&Value::Map(
+        law::Resignation {
+            agreement: unhex(agreement)?,
+            area: area.map(u64::from),
+        }
+        .to_map(),
+    )))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RecordIn {
+    clone: Option<String>,
+    signatures: Option<Vec<String>>,
+    kept: Vec<TipIn>,
+    registers: Option<Vec<String>>,
+}
+
+/// A record payload (Law type 17): the collective's everyday line. Its act
+/// carries, in `objects`, `[clone, clone]`, or, naming no clone, the
+/// agreement in force. Checked by the core's decoder before it is returned.
+#[wasm_bindgen(js_name = recordPayload)]
+pub fn record_payload(input: JsValue) -> R<Vec<u8>> {
+    let r: RecordIn = from_js(input)?;
+    let hs = |v: &Option<Vec<String>>| {
+        v.as_ref()
+            .map(|v| v.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>())
+            .transpose()
+    };
+    let rec = law::Record {
+        clone: r.clone.as_deref().map(unhex).transpose()?,
+        signatures: hs(&r.signatures)?,
+        kept: r
+            .kept
+            .iter()
+            .map(|t| {
+                Ok(KeptTip {
+                    act: unhex(&t.act)?,
+                    position: t.position,
+                    summary: unhex(&t.summary)?,
+                })
+            })
+            .collect::<R<_>>()?,
+        registers: hs(&r.registers)?,
+    };
+    if rec.clone.is_some() != rec.signatures.is_some() {
+        return Err(err("a record names its clone's signature acts exactly when it names a clone"));
+    }
+    if rec.clone.is_none() && rec.registers.is_none() {
+        return Err(err("a record writes a clone or registers something"));
+    }
+    Ok(cbor::encode(&Value::Map(rec.to_map())))
 }
 
 #[derive(Serialize)]
@@ -1443,89 +1767,294 @@ fn rule_out(r: &law::Rule) -> RuleOut {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct AgreementOut {
     id: String,
     parties: Vec<String>,
     signed: Vec<String>,
-    exists: bool,
+    /// Founding terms and deals: whether it exists. A collective's clone:
+    /// null, put in force only by a record or rotation.
+    exists: Option<bool>,
+    /// A collective's clone: everyone its mark names, and everyone it adds,
+    /// has signed it.
+    ready: bool,
+    needs: Option<Vec<PowerOut>>,
+    invalid: Option<String>,
     parent: Option<String>,
     text: String,
     collective: bool,
 }
 
 #[derive(Serialize)]
-struct ConsentOut {
-    /// "not-collective", "not-listed" or "listed".
-    kind: String,
-    agreement: Option<String>,
-    rule: Option<RuleOut>,
+#[serde(rename_all = "camelCase")]
+struct AreaCountOut {
+    area: u64,
+    name: String,
+    frozen: bool,
+    voices: Vec<String>,
+    needed: usize,
     signers: Vec<String>,
     met: bool,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ConsentOut {
+    /// "not-collective", "broken", "line", "no-area", "unadopted",
+    /// "invalid" or "areas".
+    kind: String,
+    agreement: Option<String>,
+    reason: Option<String>,
+    areas: Vec<AreaCountOut>,
+    /// Whether the act counts, as far as Law goes.
+    met: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DepartureOut {
+    act: String,
+    party: String,
+    /// "resigned", "stepped-down" or "rotated".
+    kind: String,
+    agreement: Option<String>,
+    area: Option<u64>,
+}
+
+fn departure_out(d: &law::Departure) -> DepartureOut {
+    let (kind, agreement, area) = match &d.kind {
+        law::DepartureKind::Resigned { agreement } => ("resigned", Some(hx(agreement)), None),
+        law::DepartureKind::SteppedDown { agreement, area } => {
+            ("stepped-down", Some(hx(agreement)), Some(*area))
+        }
+        law::DepartureKind::Rotated { .. } => ("rotated", None, None),
+    };
+    DepartureOut {
+        act: hx(&d.act),
+        party: hx(&d.party),
+        kind: kind.into(),
+        agreement,
+        area,
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RecordOut {
+    id: String,
+    line: bool,
+    not_a_line: Option<String>,
+    in_force_at: Option<String>,
+    clone: Option<String>,
+    /// "complete", "draft" or "invalid", with why.
+    clone_state: Option<String>,
+    clone_why: Option<String>,
+    puts: Option<String>,
+    registers: Vec<DepartureOut>,
+}
+
+fn record_out(e: &law::RecordEval) -> RecordOut {
+    let (state, why) = match e.clone.as_ref().map(|c| &c.1) {
+        Some(law::CloneState::Complete) => (Some("complete"), None),
+        Some(law::CloneState::Draft(w)) => (Some("draft"), Some(w.clone())),
+        Some(law::CloneState::Invalid(w)) => (Some("invalid"), Some(w.clone())),
+        None => (None, None),
+    };
+    RecordOut {
+        id: hx(&e.id),
+        line: e.line,
+        not_a_line: e.not_a_line.clone(),
+        in_force_at: e.in_force_at.as_ref().map(hx),
+        clone: e.clone.as_ref().map(|c| hx(&c.0)),
+        clone_state: state.map(String::from),
+        clone_why: why,
+        puts: e.puts.as_ref().map(hx),
+        registers: e.registers.iter().map(departure_out).collect(),
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CurrentOut {
+    agreement: String,
+    departed: Vec<String>,
+    stepped_down: Vec<(u64, String)>,
+    frozen: Vec<u64>,
+    records: Vec<RecordOut>,
+    fork: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BackingOut {
+    /// "not-under-grant", "backed", "not-backed", "binds" or "undetermined".
+    kind: String,
+    grant: Option<String>,
+    reason: Option<String>,
+}
+
 #[wasm_bindgen]
 impl Verifier {
-    /// An agreement as held: its parties, who signed, whether it exists
-    /// (Law rules 1 and 45). `law` is the Law spec hash (`LAW`).
+    /// An agreement as held: its parties, who signed, whether it exists (a
+    /// deal, founding terms) or is ready to be recorded (a collective's
+    /// clone), and the powers its mark must name. `specs`: the six MIP
+    /// hashes, and the layers of extensions it adds or drops.
     #[wasm_bindgen(js_name = lawAgreement)]
-    pub fn law_agreement(&self, law_spec: &str, id: &str) -> R<JsValue> {
-        let view = law::LawView::new(&self.inner, unhex(law_spec)?);
-        let a = view.agreement(&unhex(id)?).map_err(err)?;
+    pub fn law_agreement(&self, specs: JsValue, id: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let a = view.agreement(&unhex(id)?).map_err(lerr)?;
         to_js(&AgreementOut {
             id: hx(&a.id),
             parties: a.terms.parties.iter().map(hx).collect(),
             signed: a.signed.iter().map(hx).collect(),
             exists: a.exists,
+            ready: a.ready,
+            needs: a.needs.as_ref().map(|n| n.iter().map(power_out).collect()),
+            invalid: a.invalid.clone(),
             parent: a.terms.parent.as_ref().map(hx),
             text: a.terms.text.clone(),
-            collective: a.terms.grammar.is_some(),
+            collective: a.terms.is_collective(),
         })
     }
 
-    /// The agreement an identity declares in force at the chain act
-    /// `binding`, if any.
+    /// The agreement an identity's chain declares at the chain act
+    /// `binding`, if any (for a rotation: the clone it declares).
     #[wasm_bindgen(js_name = lawDeclared)]
-    pub fn law_declared(&self, law_spec: &str, identity: &str, binding: &str) -> R<Option<String>> {
-        let view = law::LawView::new(&self.inner, unhex(law_spec)?);
+    pub fn law_declared(&self, specs: JsValue, identity: &str, binding: &str) -> R<Option<String>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
         Ok(view
             .declared(&unhex(identity)?, &unhex(binding)?)
             .map(|h| hx(&h)))
     }
 
-    /// Law's answer for an act of a collective: the visible member
-    /// signatures its grammar requires, under the agreement in force at the
-    /// act's binding (rule 36; F100). Throws if that agreement is broken.
+    /// The agreement in force for an act of a collective (rule 37c, F109),
+    /// or null if its signer is not a collective.
+    #[wasm_bindgen(js_name = lawInForce)]
+    pub fn law_in_force(&self, specs: JsValue, act: &str) -> R<Option<String>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        Ok(view.in_force(&unhex(act)?).map_err(lerr)?.map(|h| hx(&h)))
+    }
+
+    /// Law's answer for an act of a collective: which areas reach it, and
+    /// whether their holders' signature acts meet each (rule 36a, 44d).
     #[wasm_bindgen(js_name = lawConsent)]
-    pub fn law_consent(&self, law_spec: &str, act: &str) -> R<JsValue> {
-        let view = law::LawView::new(&self.inner, unhex(law_spec)?);
-        let c = view.consent(&unhex(act)?).map_err(err)?;
-        to_js(&match c {
-            law::Consent::NotCollective => ConsentOut {
-                kind: "not-collective".into(),
-                agreement: None,
-                rule: None,
-                signers: vec![],
-                met: true,
-            },
-            law::Consent::NotListed { agreement } => ConsentOut {
-                kind: "not-listed".into(),
-                agreement: Some(hx(&agreement)),
-                rule: None,
-                signers: vec![],
-                met: true,
-            },
-            law::Consent::Listed {
-                agreement,
-                rule,
-                signers,
-                met,
-            } => ConsentOut {
-                kind: "listed".into(),
-                agreement: Some(hx(&agreement)),
-                rule: Some(rule_out(&rule)),
-                signers: signers.iter().map(hx).collect(),
-                met,
-            },
+    pub fn law_consent(&self, specs: JsValue, act: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let c = view.consent(&unhex(act)?).map_err(lerr)?;
+        let met = c.counts();
+        let mut o = ConsentOut {
+            kind: String::new(),
+            agreement: None,
+            reason: None,
+            areas: vec![],
+            met,
+        };
+        match c {
+            law::Consent::NotCollective => o.kind = "not-collective".into(),
+            law::Consent::Broken { reason } => {
+                o.kind = "broken".into();
+                o.reason = Some(reason);
+            }
+            law::Consent::Line { agreement } => {
+                o.kind = "line".into();
+                o.agreement = Some(hx(&agreement));
+            }
+            law::Consent::NoArea { agreement } => {
+                o.kind = "no-area".into();
+                o.agreement = Some(hx(&agreement));
+            }
+            law::Consent::Unadopted { agreement } => {
+                o.kind = "unadopted".into();
+                o.agreement = Some(hx(&agreement));
+            }
+            law::Consent::Invalid { agreement, reason } => {
+                o.kind = "invalid".into();
+                o.agreement = Some(hx(&agreement));
+                o.reason = Some(reason);
+            }
+            law::Consent::Areas { agreement, areas, .. } => {
+                o.kind = "areas".into();
+                o.agreement = Some(hx(&agreement));
+                o.areas = areas
+                    .iter()
+                    .map(|a| AreaCountOut {
+                        area: a.area,
+                        name: a.name.clone(),
+                        frozen: a.frozen,
+                        voices: a.voices.iter().map(hx).collect(),
+                        needed: a.needed,
+                        signers: a.signers.iter().map(hx).collect(),
+                        met: a.met,
+                    })
+                    .collect();
+            }
+        }
+        to_js(&o)
+    }
+
+    /// A record act of a collective, judged: whether it is a line, the
+    /// clone it names and whether it puts it in force, and what it registers.
+    #[wasm_bindgen(js_name = lawRecord)]
+    pub fn law_record(&self, specs: JsValue, collective: &str, record: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let e = view
+            .record(&unhex(collective)?, &unhex(record)?)
+            .map_err(lerr)?;
+        to_js(&record_out(&e))
+    }
+
+    /// The collective's state after everything held under its latest key:
+    /// the agreement in force, who left, who stepped down from which area,
+    /// which areas are frozen, its records. Null if it is not a collective.
+    #[wasm_bindgen(js_name = lawCurrent)]
+    pub fn law_current(&self, specs: JsValue, collective: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let c = view.current(&unhex(collective)?).map_err(lerr)?;
+        match c {
+            None => Ok(JsValue::NULL),
+            Some(c) => to_js(&CurrentOut {
+                agreement: hx(&c.agreement),
+                departed: c.departed.iter().map(hx).collect(),
+                stepped_down: c.stepped_down.iter().map(|(a, p)| (*a, hx(p))).collect(),
+                frozen: c.frozen.clone(),
+                records: c.records.iter().map(record_out).collect(),
+                fork: c.fork,
+            }),
+        }
+    }
+
+    /// Whether the collective's act `x` counts as made before the line
+    /// `line` (a record or a rotation of it), on its own sequences (F109).
+    #[wasm_bindgen(js_name = lawBefore)]
+    pub fn law_before(&self, specs: JsValue, x: &str, line: &str) -> R<bool> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        view.counts_before(&unhex(x)?, &unhex(line)?).map_err(lerr)
+    }
+
+    /// Whether an act under a grant binds the collective that issued it.
+    #[wasm_bindgen(js_name = lawBacking)]
+    pub fn law_backing(&self, specs: JsValue, act: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let b = view.backing(&unhex(act)?).map_err(lerr)?;
+        let (kind, grant, reason) = match b {
+            law::Backing::NotUnderGrant => ("not-under-grant", None, None),
+            law::Backing::Backed { grant } => ("backed", Some(grant), None),
+            law::Backing::NotBacked { grant, reason } => ("not-backed", Some(grant), Some(reason)),
+            law::Backing::Binds { grant } => ("binds", Some(grant), None),
+            law::Backing::Undetermined { grant } => ("undetermined", Some(grant), None),
+        };
+        to_js(&BackingOut {
+            kind: kind.into(),
+            grant: grant.as_ref().map(hx),
+            reason,
         })
     }
 }
