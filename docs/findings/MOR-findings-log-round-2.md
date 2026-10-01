@@ -939,6 +939,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Flaw H (1 October 2026, fifth pass): nothing ordered a frozen area's grant branches against the freeze. At the refit, the new holders either seal each ended grant by a revocation naming the last act that counts (the existing seal rule, never before a deal the collective acknowledged or was paid on), or reinstate it (Q22). Until then, the grantee's acts after the last one known to precede the freeze are undetermined.
 - Q24 and Q25 (1 October 2026, fifth pass): Q20 applies to deals too, and covers every way a specification can be named: a task, an extension, or the separate time-reference field.
 - Q26 and Q27 (1 October 2026, fifth pass): when removing a holder leaves an area's number above its holders, a clone may say so, and it is counted by the flaw C rule (all remaining holders meet it). Reinstating a grant needs the area's own rule.
+- Q28 (1 October 2026, fifth pass): an abandonment declaration removes a voice from then on; it never undoes a clone completed and recorded before it, whatever version of the clause it names, as for a resignation (flaw F, Q23).
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
