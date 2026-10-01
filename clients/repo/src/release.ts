@@ -366,7 +366,7 @@ async function fetchFirst<T>(hints: string[], via: Via, get: (r: ReturnType<type
 }
 
 /** Every act a relay holds signed by `signer`, page by page. */
-async function allBy(signer: string, hints: string[], via: Via): Promise<Uint8Array[]> {
+export async function allBy(signer: string, hints: string[], via: Via): Promise<Uint8Array[]> {
   const out: Uint8Array[] = [];
   for (const h of hints) {
     let after: number | undefined;
