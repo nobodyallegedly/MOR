@@ -948,3 +948,23 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Applied:** not yet; on the branch `claude/law-draft-7` with the rest of the redraft's answers.
 
 *F105 decided by Nobody, allegedly, 1 October 2026.*
+
+## F106. A cMIP's act belongs to the layer of the task it fills; Production has no lane of its own (found while drafting Law draft 7, decided by Nobody, allegedly)
+
+**Pattern:** 4, in part: F103 named lanes by layer, while an act names the specification that defines it, not a layer.
+
+**Found while drafting:** Law draft 7 (flaw B of the redraft for F103 and F104). For the six MIPs' own acts, the layer follows from the specification. Two cases did not: acts defined by cMIPs, which name the cMIP; and Production, which has no acts of its own, since specifications and releases are Envelope publications.
+
+**Decided (Nobody, allegedly, 1 October 2026):** a cMIP defines how a task is done, and what the core sees is that task's result, which belongs to the layer of the MIP that defines the task (Production, table of tasks). So a cMIP's act belongs to the layer of the task the collective's own terms assign that cMIP to (terms field 2): a collective that gives Finance to some members gives them the acts of every payment and conversion cMIP it adopted, by its own list, never by a label the cMIP's author chose. Production defines no tasks, so there is nothing for it to define as a lane: specifications and releases are publications, in the Envelope lane.
+
+**Checked against the principles:** evolutionary design: a new rail module needs no constitutional change to fall in the right lane, only the collective's adoption of it, which is already in its terms. Legible greed: which lane an act falls in is computed from the collective's own terms, so every verifier agrees and the client can show it before signing.
+
+**Cost, stated:** a collective cannot give releases to one member and other publications to another by lane alone: both are Envelope publications.
+
+**Still open:** acts of cMIPs that fill no task (extensions, and new act types under Production rule 8a).
+
+**Core changes, to be made:** Law draft 7 (the lanes; rule 36a), core v18, freeze test suite v18 (scenario 3: a receipt from the collective's payment cMIP falls in its Finance lane; the same cMIP not named in its terms falls in no lane).
+
+**Applied:** not yet; on the branch `claude/law-draft-7`.
+
+*F106 decided by Nobody, allegedly, 1 October 2026.*
