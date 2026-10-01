@@ -917,6 +917,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Q6 (1 October 2026): a member can always leave alone, by an act that gives up their voice without anyone else's signature; they keep their stake, and the remaining members rotate the collective's keys (F100), a resignation counting like a loss (F96, F105). And where a constitution allows removing a member, removal takes the voice only, never the stake: "Kicked from the board does not mean being forced to give up shares." (Absence remains the abandonment clause's business, under the clause the member signed.)
 - Q7 (1 October 2026): a clone that changes several areas at once is valid when each area's rule is met; its mark (F104) names every rule it met, and it comes into force all at once or not at all.
 - Q8 (1 October 2026): only constitutional clones need the collective's keys to rotate; operational clones leave the signers unchanged. "The collective key resembles more a safety key than a signing key in that regard."
+- Q9 (1 October 2026): terms field 4 belongs to no tier. In a clone it is a mark of fact (F104), written fresh each time; founding terms are signed by everyone, and the tiers govern only later changes.
+- Q10 (1 October 2026): lanes by layer and areas are one construct: an area may be defined by whole layers, by act types or by fields, with one set of rules for holding it, granting within it, leaving it and changing it.
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
