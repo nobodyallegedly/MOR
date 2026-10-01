@@ -933,6 +933,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Flaw F (1 October 2026, fourth pass): a sequence left out of a resignation, a stepping-down or a record could undo what others relied on (a completed clone falling back to a draft, a paid publication un-signed). As for rotations, an act another identity acknowledged, or a named keeper recorded, still counts as made before, shown as disputed; and the record or rotation that puts a clone in force counts as acknowledging the signatures that completed it.
 - Q20 (1 October 2026, fourth pass): a specification adopted for a judicial task (condition evaluation, time reference, anchoring) cannot also be adopted for any other task; terms that do so are invalid. A judge never handles what it judges: "it removes a slight conflict of interest."
 - Q21 (1 October 2026, fourth pass): the clone that completes a succession also removes the departed member from every area they held; an area may then have no holder, which means it is frozen until refitted (Q13, Q19). An empty holder list is allowed only in a clone, never in founding terms.
+- Q22 (1 October 2026, fourth pass): grants within an area end for good when it freezes. A new holder may, on taking the area, reinstate any of the ended grants as their own, each by their own signature, never automatically.
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
