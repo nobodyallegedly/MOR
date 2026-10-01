@@ -6,8 +6,12 @@
 
 import {
   MIPS,
+  cborDecode,
   cborEncode,
   checkTerms,
+  declarationPayload,
+  describeAct,
+  hex,
   lawClonePlan,
   recordPayload,
   resignationPayload,
@@ -15,7 +19,7 @@ import {
   unhex,
 } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
-import { relayAt } from '../../genesis/src/transport.ts';
+import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { LAW_TYPES, REPO_SPECS } from './specs.ts';
 
 /** `rule`: every party, any k of them, or named ones. */
@@ -189,14 +193,72 @@ export async function resign(by: TestIdentity, agreement: string, relays: string
 }
 
 /**
+ * An abandonment declaration (Law type 13, B12): the agreement, the version
+ * whose clause it applies (the last the party signed), the party and the
+ * outcomes. Signed by the authority, here one of the other members, with
+ * their own key; where the clause asks for more of them, the others add
+ * signature acts naming it (B15).
+ */
+export async function declare(
+  by: TestIdentity,
+  d: { agreement: string; clause: string; party: string; outcomes: number[] },
+  relays: string[],
+) {
+  await carryChain(by, relays);
+  return by.publish(REPO_SPECS.law, LAW_TYPES.declaration, declarationPayload(d.agreement, d.clause, d.party, Uint32Array.from(d.outcomes)), {
+    public: true,
+    relays,
+    objects: [[d.agreement, d.agreement]],
+  });
+}
+
+/**
+ * The agreements of `chain` (oldest first) that `member` signed, by a Law
+ * signature act its relays hold: the newest of them is the clause version
+ * a declaration against that member applies (Law rule 51, B12). The core
+ * library checks it again when it judges the declaration.
+ */
+export async function signedVersions(member: string, chain: string[], relays: string[], via: Via = {}): Promise<string[]> {
+  const signed = new Set<string>();
+  for (const h of relays) {
+    let after: number | undefined;
+    try {
+      for (;;) {
+        const page = await relayAt(h, via).feed({ signer: member, after });
+        for (const it of page.items) {
+          if (it.kind !== 'act') continue;
+          try {
+            const d = describeAct(it.item) as { spec?: string; type?: number; payload?: Uint8Array };
+            if (d.spec !== REPO_SPECS.law || d.type !== LAW_TYPES.signature || !d.payload) continue;
+            const m = cborDecode(d.payload) as Map<number, unknown>;
+            const x = m.get(0);
+            if (x instanceof Uint8Array) signed.add(hex(x));
+          } catch {
+            // not one of ours, or malformed
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+      // that relay is away: the others may hold them
+    }
+  }
+  return chain.filter((a) => signed.has(a));
+}
+
+/**
  * The collective's record (Law type 17), its everyday line: it writes a
  * complete clone with the signature acts that complete it (A2), and
  * registers departures (A1). Signed with the collective's everyday key.
- * A test collective keeps one sequence, so it names no other.
+ * A test collective keeps one sequence, so it names no other. `acks`:
+ * acts it acknowledges (Envelope), which places members' signature acts at
+ * this line ("Made before, made after", 2): the signatures completing a
+ * declaration it registers (B15).
  */
 export async function record(
   collective: TestIdentity,
-  r: { clone?: string; signatures?: string[]; registers?: string[]; inForce: string },
+  r: { clone?: string; signatures?: string[]; registers?: string[]; inForce: string; acks?: string[] },
   relays: string[],
 ) {
   const payload = recordPayload({
@@ -210,5 +272,6 @@ export async function record(
     public: true,
     relays,
     objects: [[named, named]],
+    acks: r.acks?.length ? r.acks : undefined,
   });
 }

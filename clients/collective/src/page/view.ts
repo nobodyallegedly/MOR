@@ -178,6 +178,7 @@ ${c.pending ? note('warn', `A member change is waiting for the homes. <button da
 <h4>Releases</h4>${releases ? `<ul class="plain">${releases}</ul>` : '<p class="small">None yet.</p>'}
 <form class="release row" data-collective="${e(c.id)}"><input name="version" type="text" placeholder="Version, e.g. 11b.1" required><button type="submit">Review a release</button></form>
 ${mine.map((m) => `<button class="quiet" data-action="leave" data-collective="${e(c.id)}" data-member="${e(m.id)}">Leave as ${e(nameOf(s, m.id))}</button>`).join(' ')}
+${c.members.filter((m) => !m.left).length > 1 ? `<details class="absence"><summary>Declare a member absent</summary><p class="small">The other members judge it, under the clause that member signed; the outcome is that member losing their voice, never what they own.</p>${c.members.filter((m) => !m.left).map((m) => `<button class="quiet" data-action="declare" data-collective="${e(c.id)}" data-member="${e(m.id)}">${e(nameOf(s, m.id))} is absent</button>`).join(' ')}</details>` : ''}
 <details class="change"><summary>Change members or rules</summary>
 <form class="change" data-collective="${e(c.id)}">
 <fieldset><legend>Add</legend>${others.map((i) => `<label class="check"><input type="checkbox" name="join" value="${e(i.id)}"> ${e(nameOf(s, i.id))}</label>`).join('') || '<span class="small">Make a test identity first.</span>'}</fieldset>

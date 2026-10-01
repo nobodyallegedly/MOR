@@ -136,6 +136,10 @@ app.addEventListener('click', async (ev) => {
     case 'stepdown':
       await prepare({ kind: 'stepdown', collective: d.collective, member: d.member });
       break;
+    case 'declare':
+      // Absence, judged by the other members under the clause the member signed (Law rules 49, 53; B15).
+      await prepare({ kind: 'declare', collective: d.collective, member: d.member });
+      break;
     case 'resend':
       await after(await busy('Sending the member change again…', () => c.ask<Done>('resend', { collective: d.collective })));
       break;

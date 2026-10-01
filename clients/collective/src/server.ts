@@ -134,6 +134,8 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
             return actions.prepareLeave({ collective: text(a.collective), member: text(a.member) });
           case 'stepdown':
             return actions.prepareStepDown({ collective: text(a.collective), member: text(a.member) });
+          case 'declare':
+            return actions.prepareDeclare({ collective: text(a.collective), member: text(a.member), signers: list(a.signers) });
           case 'words':
             return actions.prepareWords({ collective: text(a.collective), text: text(a.text), signers: list(a.signers) });
           default:

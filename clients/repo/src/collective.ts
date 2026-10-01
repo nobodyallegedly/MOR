@@ -15,6 +15,7 @@ import {
   SPECS,
   actId,
   dealSafety,
+  declarationPayload,
   hex,
   makeGenesis,
   makeRotation,
@@ -29,11 +30,13 @@ import type { Via } from '../../genesis/src/transport.ts';
 import {
   LAW_SPECS,
   clonePlan,
+  declare,
   markMatches,
   proposePayload,
   record,
   resign,
   sign,
+  signedVersions,
   termsPayload,
   type CollectiveTerms,
   type MarkEntry,
@@ -104,11 +107,12 @@ export interface CollectiveFile {
   /**
    * Kept by the collective client (Law draft 7), absent in older files:
    * members who left alone, each by a resignation the collective
-   * registered at once by a record, its line (rule 37a). They stay parties
+   * registered at once by a record, its line (rule 37a), or who were
+   * declared absent, by a declaration it registered the same way (rule 53). They stay parties
    * of the agreement in force until the members refit the collective
    * without them; the list stays as history after.
    */
-  departed?: { member: string; resignation: string; record: string }[];
+  departed?: { member: string; resignation?: string; declaration?: string; record: string }[];
   /** Kept by the collective client: holders who stepped down from an area (rule 37b), each registered at once by a record. */
   steppedDown?: { member: string; area: number; resignation: string; record: string }[];
   /** Kept by the collective client: the records the collective drew, its everyday lines (Law type 17), oldest first. */
@@ -449,6 +453,51 @@ export class TestCollective {
     this.f.agreement = proposed.id;
     this.f.agreements.push(proposed.id);
     return { clone: proposed.id, record: r.id, signed };
+  }
+
+  /**
+   * The clause version a declaration against `member` applies: the newest
+   * version of the agreement chain, up to the agreement in force, that the
+   * member signed (Law rule 51, B12).
+   */
+  async clauseOf(member: string, via: Via = {}): Promise<string | null> {
+    const chain = this.f.agreements.slice(0, this.f.agreements.indexOf(this.f.agreement) + 1);
+    return (await signedVersions(member, chain, this.f.relays, via)).at(-1) ?? null;
+  }
+
+  /** A declaration's payload against `member`, outcome 0, under the clause they signed last. */
+  async declarationFor(member: string, via: Via = {}): Promise<Uint8Array> {
+    const clause = await this.clauseOf(member, via);
+    if (!clause) throw new Error('that member signed no version of the agreement');
+    return declarationPayload(this.f.agreement, clause, member, Uint32Array.from([0]));
+  }
+
+  /**
+   * Declare a member absent (Law rules 49, 51, 53; B12, B15), with outcome
+   * 0, their voice removed: one of the other members signs the declaration,
+   * under the clause the absent member signed last; the others add
+   * signature acts naming it, as for terms; the collective registers it at
+   * once by a record that acknowledges those signatures, placing them at
+   * its line. From that line the member's voice counts for nothing (F109).
+   */
+  async declareAbsent(opts: {
+    member: string;
+    by: TestIdentity;
+    cosigners: TestIdentity[];
+    expect?: Uint8Array;
+    via?: Via;
+  }): Promise<{ declaration: string; signed: Signed[]; record: string }> {
+    if (this.f.pending) throw new Error('a member change is pending: settle it first');
+    const payload = await this.declarationFor(opts.member, opts.via);
+    if (opts.expect && !same(opts.expect, payload)) throw new Error('the declaration is not the one shown: nothing signed');
+    const clause = await this.clauseOf(opts.member, opts.via);
+    const d = await declare(opts.by, { agreement: this.f.agreement, clause: clause!, party: opts.member, outcomes: [0] }, this.f.relays);
+    const signed: Signed[] = [];
+    for (const m of opts.cosigners) signed.push({ member: m.id, act: (await sign(m, d.id, this.f.relays)).id });
+    const r = await record(this.id, { registers: [d.id], inForce: this.f.agreement, acks: signed.map((s) => s.act) }, this.f.relays);
+    this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, record: r.id }];
+    this.f.records = [...(this.f.records ?? []), r.id];
+    return { declaration: d.id, signed, record: r.id };
   }
 
   /** Once the member change's rotation counts, the new shares and agreement take over. */

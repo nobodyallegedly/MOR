@@ -625,7 +625,7 @@ export class Actions {
       );
     }
     const gone = [...leave].filter((l) => departed.has(l));
-    if (gone.length) summary.push(`${list(gone.map(names))} already left: their resignation is on the collective's record, so nothing more is asked of them.`);
+    if (gone.length) summary.push(`${list(gone.map(names))} already left: their resignation, or the declaration of their absence, is on the collective's record, so nothing more is asked of them.`);
     summary.push(
       `The members whose voice remains sign a clone of the agreement in force: a new version naming it, with ${members.length} members, marked with the constitutional change rule (Law rules 44c, 45a).`,
       `Then the collective rotates: its safety key, rebuilt from the shares of ${list(usedRebuilders.map(names)) || 'nobody'}, signs a rotation declaring the clone, and a new safety key is dealt to the new members only.`,
@@ -1108,6 +1108,113 @@ export class Actions {
     });
   }
 
+  /**
+   * Declare a member absent (Law rules 49, 51, 53; F105, B12, B15), under
+   * the collective's own rule: any k of the other members judge absence.
+   * One of them signs the declaration, applying the clause the absent
+   * member signed last, with outcome 0, their voice removed; the others
+   * add signature acts naming it, as for terms; the collective registers it
+   * at once by a record that acknowledges those signatures, its line. The
+   * member keeps what they own. The members who remain then refit the
+   * collective (Change members), as after a resignation.
+   */
+  async prepareDeclare(a: { collective: string; member: string; signers?: string[] }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const who = names(a.member);
+    const blocking: string[] = [];
+    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first. A record signed with the old everyday key would be void once it counts.');
+    if (!c.f.members.includes(a.member)) blocking.push(`${who} is not a member of “${cname}”.`);
+    if (departedOf(c).some((d) => d.member === a.member)) blocking.push(`${who} has already left “${cname}”, or was already declared absent.`);
+    if (c.f.signingHolder === a.member) {
+      blocking.push(
+        `${who} holds the collective's everyday key, so the collective cannot draw its line without them: their absence would take effect only at a recovery rotation (Law, “Made before, made after”, C7, B16), which this client does not make. Where more than one member must sign the declaration, Law does not yet say how their signatures count there (Law draft 8, Flaw B18).`,
+      );
+    }
+    const at = this.hintsOf(c);
+    const clause = c.f.members.includes(a.member) ? await c.clauseOf(a.member, this.via) : null;
+    const version = clause ? await this.termsAct(clause, at) : null;
+    if (c.f.members.includes(a.member) && !clause) blocking.push(`${who} signed no version of the agreement that this program can find on ${at.join(', ')}.`);
+    else if (clause && !version) blocking.push(`The version ${who} signed last (${short(clause)}) could not be fetched from ${at.join(', ')}, so its clause cannot be read.`);
+    const ab = version?.t.abandonment;
+    if (version && (!ab || ab.authority !== 'others' || !ab.threshold || !ab.outcomes.includes(0))) {
+      blocking.push(`The clause ${who} signed does not let the other members remove a voice, so this client cannot declare it.`);
+    }
+    const k = ab?.threshold ?? c.f.governance.abandonmentOthers;
+    const others = voicesOf(c).filter((m) => m !== a.member);
+    const need = needed(k, others.length);
+    if (!others.length) blocking.push('No other member whose voice remains can judge absence.');
+    const signers = a.signers?.length ? [...new Set(a.signers)] : others.filter((m) => this.store.holds(m)).slice(0, need);
+    for (const s of signers) {
+      if (!others.includes(s)) blocking.push(`${names(s)} is not one of the other members whose voice remains, so their signature cannot count toward the declaration.`);
+      else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
+    }
+    if (others.length && signers.length < need) blocking.push(`The declaration needs ${anyOf(need, others, names)} (the clause ${who} signed); only ${signers.length} sign here.`);
+    const payload: Uint8Array = clause ? await c.declarationFor(a.member, this.via) : new Uint8Array();
+    const [by, ...cosigners] = signers;
+    const voices = others;
+    const releaseVoices = releaseVoicesOf(c).filter((m) => m !== a.member);
+    const reading: Reading = {
+      title: `${who} is declared absent from “${cname}”`,
+      summary: [
+        `${by ? names(by) : 'One of the other members'} signs a declaration that ${who} is absent, with one outcome: ${who}'s voice removed (Law rules 49, 51, 53; F105). It applies the clause ${who} signed last (${clause ? short(clause) : 'none'}), and names the agreement in force (${short(c.f.agreement)}): a declaration can never pick a friendlier clause (Law rule 46a).`,
+        need > 1
+          ? `The clause asks for ${anyOf(need, others, names)}: ${list(cosigners.map(names)) || 'nobody else'} add${cosigners.length === 1 ? 's' : ''} a signature act naming it, as for terms. It counts once ${need} have signed (Law draft 8, B15).`
+          : `The clause asks for one of the other members${k > need ? ` (it names ${k}, and when fewer remain all of them together meet it, Law rule 44d)` : ''}: ${by ? names(by) : 'one of them'} alone.`,
+        `The collective registers it at once by a record, its line, signed with its everyday key${cosigners.length ? ', acknowledging those signatures so that they count at the line' : ''}. From that line on, ${who}'s signature counts toward no rule and no area (F109).`,
+        `${who} keeps what they own: outcome 0 removes the voice, never the stake. ${who} may contest it (Law rule 52); a contest is shown alongside it and changes nothing by itself.`,
+      ],
+      sections: [
+        {
+          heading: 'What stands',
+          lines: [
+            { text: `A signature of ${who}'s placed before the line still counts for what it signed: a release made before the line can still be completed with it (Law, “Made before, made after”, C1).` },
+            { text: `${who}'s share of the current safety key exists until the refit; the rotation that follows fences it off (F100).`, tone: 'warn' },
+          ],
+        },
+        { heading: 'Who decides from the line on', lines: this.decidersAfter(c, voices, releaseVoices, names) },
+        {
+          heading: 'Then',
+          lines: [{ text: `The members who remain refit the collective: Change members, removing ${who}, rotates it to keys ${who} never held (Law rules 37, 53).` }],
+        },
+        {
+          heading: 'Signed on this device',
+          lines: [
+            { text: `${list(signers.map(names)) || 'Nobody'} sign${signers.length === 1 ? 's' : ''} here; the collective's everyday key, kept in this program's folder, signs the record.` },
+            { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
+            ...(await this.unheard(c)),
+          ],
+        },
+      ],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'declare',
+      digest: digestOf('declare', a.collective, a.member, ...signers, payload),
+      reading,
+      depends: [a.collective, ...signers.filter((s) => this.store.holds(s))],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const ids = signers.map((s) => this.store.identity(s));
+        const got = await col.declareAbsent({ member: a.member, by: ids[0], cosigners: ids.slice(1), expect: payload, via: this.via });
+        this.store.saveCollective(col);
+        for (const i of ids) this.store.saveIdentity(i);
+        return {
+          title: `${who} was declared absent from “${cname}”`,
+          lines: [
+            { text: `Declaration ${got.declaration}, signed by ${names(signers[0])}.` },
+            ...got.signed.map((x) => ({ text: `Signature ${x.act}, by ${names(x.member)}, naming the declaration.` })),
+            { text: `Record ${got.record}: the collective's line, from which ${who}'s signature counts for nothing.`, tone: 'ok' as const },
+            { text: `Next: the members who remain refit the collective (Change members: remove ${who}).` },
+          ],
+          acts: [got.declaration, ...got.signed.map((x) => x.act), got.record],
+        };
+      },
+    });
+  }
+
   /** Send a waiting member change again: the same bytes, nothing new signed (Identity rule 8a). */
   async resend(collective: string): Promise<Done> {
     const c = this.store.collective(collective);
@@ -1186,7 +1293,7 @@ export class Actions {
         const left = departedOf(col).find((d) => d.member === member.id);
         const down = steppedDownOf(col).find((d) => d.member === member.id && d.area === RELEASE_AREA);
         for (const [d, words, rule] of [
-          [left, 'left the collective', '37a'],
+          [left, left?.declaration ? 'was declared absent' : 'left the collective', left?.declaration ? '53' : '37a'],
           [down, 'stepped down from the Releases area', '37b'],
         ] as const) {
           if (!d) continue;

@@ -650,6 +650,9 @@ struct EverydayIn {
     objects: Option<Vec<(String, String)>>,
     /// Acts this one refers to, by id (Envelope, "References").
     refs: Option<Vec<String>>,
+    /// Acts this one acknowledges, by id (Envelope, `acks`).
+    #[serde(default)]
+    acks: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
@@ -689,7 +692,10 @@ pub fn make_everyday(input: JsValue) -> R<JsValue> {
         payload: payload_of(&e.payload)?,
         position: Some(seq.len() as u64 + 1),
         summary: Some(mmr::summary(seq.iter())),
-        acks: None,
+        acks: e
+            .acks
+            .map(|a| a.iter().map(|s| unhex(s)).collect::<R<Vec<_>>>())
+            .transpose()?,
         refs: e
             .refs
             .map(|r| {

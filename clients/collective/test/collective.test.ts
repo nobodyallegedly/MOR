@@ -13,6 +13,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { signaturePayload } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
+import { sign as lawSign } from '../../repo/src/law.ts';
 import { verifyRelease } from '../../repo/src/release.ts';
 import { REPO_SPECS, LAW_TYPES } from '../../repo/src/specs.ts';
 import type { Done, State } from '../src/page/api.ts';
@@ -168,7 +169,7 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.equal(stuck.reading.blocking.length, 3);
   const refit = await sign(c, { kind: 'change', collective: col.id, leave: [ada], rules: { safety: 1, release: 2, clone: 2, others: 1 } });
   const fw2 = words(refit.review.reading);
-  assert.match(fw2, /Ada \(you\) .* already left: their resignation is on the collective's record, so nothing more is asked of them/);
+  assert.match(fw2, /Ada \(you\) .* already left: their resignation, or the declaration of their absence, is on the collective's record, so nothing more is asked of them/);
   assert.doesNotMatch(fw2, /signs a resignation, alone/);
   assert.match(fw2, /Ada \(you\) \[[^\]]+\] leaves\. They hand over nothing/);
   assert.match(fw2, /The everyday key passes to Sim Two/);
@@ -350,4 +351,65 @@ test('a judicial change: who judges absence, under the clone rule, recorded at o
   // Unchanged: nothing to sign.
   const same = await prepare(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 2, clone: 2, others: 1 } });
   assert.match(same.reading.blocking.join(' '), /Nothing changes/);
+});
+
+test("declaring absence under the collective's own rule: one signs, the others add signature acts, the record places them (Law draft 8, B15)", async () => {
+  const c = w.client;
+  let s = await state(c);
+  const [ada, one, two, three] = ['Ada', 'Sim One', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
+  // Four members; absence judged by all the other members, any 3 of them (the default).
+  await sign(c, { kind: 'found', name: 'Absences', members: [ada, one, two, three], rules: {} });
+  s = await state(c);
+  const col = s.collectives.find((x) => x.name === 'Absences')!;
+
+  // The holder of the everyday key cannot be declared absent here (C7, B16, Flaw B18).
+  const holder = await prepare(c, { kind: 'declare', collective: col.id, member: ada });
+  assert.match(holder.reading.blocking.join(' '), /holds the collective's everyday key.*recovery rotation.*Flaw B18/);
+  await c.ask('cancel', { plan: holder.plan });
+  // Too few signers: refused, nothing signed.
+  const few = await prepare(c, { kind: 'declare', collective: col.id, member: three, signers: [ada, one] });
+  assert.match(few.reading.blocking.join(' '), /The declaration needs all of .*; only 2 sign here/);
+  await c.ask('cancel', { plan: few.plan });
+
+  const d = await sign(c, { kind: 'declare', collective: col.id, member: three });
+  const dw = words(d.review.reading);
+  assert.match(d.review.reading.title, /Sim Three .* is declared absent from “Absences”/);
+  assert.match(dw, /Ada \(you\) .* signs a declaration that Sim Three .* is absent, with one outcome: Sim Three .*'s voice removed/);
+  assert.match(dw, /It applies the clause Sim Three .* signed last/);
+  assert.match(dw, /The clause asks for all of .*: Sim One .* and Sim Two .* add a signature act naming it, as for terms\. It counts once 3 have signed \(Law draft 8, B15\)/);
+  assert.match(dw, /acknowledging those signatures so that they count at the line/);
+  assert.match(dw, /keeps what they own: outcome 0 removes the voice, never the stake/);
+  assert.match(dw, /A release needs any 2 of Ada \(you\).*, Sim One.* and Sim Two/);
+  assert.equal(d.done.acts.length, 4, 'the declaration, two signature acts, the record');
+  assert.match(d.done.lines.map((l) => l.text).join(' '), /Record [0-9a-f]{64}: the collective's line/);
+  s = await state(c);
+  const after = s.collectives.find((x) => x.name === 'Absences')!;
+  assert.deepEqual(after.members.map((m) => [m.id, m.left]), [[ada, false], [one, false], [two, false], [three, true]]);
+  assert.equal(after.records, col.records + 1);
+  const again = await prepare(c, { kind: 'declare', collective: col.id, member: three });
+  assert.match(again.reading.blocking.join(' '), /already left .*, or was already declared absent/);
+  await c.ask('cancel', { plan: again.plan });
+
+  // Judged by a fresh verifier: from the line, the absent member's signature counts for nothing.
+  commit(w.checkout, 'src/lib.rs', 'pub fn absent() -> u8 { 13 }\n');
+  const rel = await sign(c, { kind: 'release', publisher: col.id, version: 'a.1' });
+  const relId = rel.done.acts[0];
+  const absent = await prepare(c, { kind: 'sign', member: three, release: relId });
+  assert.match(absent.reading.blocking.join(' '), /Sim Three .* was declared absent: from the collective's line .* their signature counts for nothing there/);
+  await c.ask('cancel', { plan: absent.plan });
+  // Signed with the core's own act, bypassing the client: it still counts for nothing.
+  const t3 = w.app.store.identity(three);
+  await lawSign(t3, relId, w.app.store.collective(col.id).f.relays);
+  await sign(c, { kind: 'sign', member: one, release: relId });
+  const half = await verifyRelease(relId, [w.relay.base]);
+  assert.equal(half.ok, false, 'Sim One and the absent Sim Three do not make two');
+  await sign(c, { kind: 'sign', member: two, release: relId });
+  const v = await verifyRelease(relId, [w.relay.base]);
+  assert.equal(v.ok, true, v.problems.join('; '));
+  assert.deepEqual(new Set(v.signers), new Set([one, two]));
+
+  // The refit asks nothing more of the absent member.
+  const refit = await prepare(c, { kind: 'change', collective: col.id, leave: [three] });
+  assert.match(words(refit.reading), /Sim Three .* already left: their resignation, or the declaration of their absence, is on the collective's record/);
+  await c.ask('cancel', { plan: refit.plan });
 });
