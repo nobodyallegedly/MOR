@@ -1074,7 +1074,9 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 - C5: a member's own rotation is registered by the collective on its line, like a departure; that member's signatures on acts of the collective placed before that line stay valid for the collective. If the member's key was stolen, the thief's signatures placed before the line count too, but only on acts the collective's key holders also signed: a stolen member key can finish an act the collective signed, never start one. "In the event of theft, the band reorganizes around it." *Cost, stated:* within a collective, Identity's theft protection is softened to this extent.
 
-**Open:** choices C6 to C8, in `docs/law-ordering-rule-test.md` section 5.
+- C6: a revocation seals a grant's branch without naming a place on it; deals the collective acknowledged, paid or imported bind (rule 40); nothing is ordered on the grantee's own sequence.
+- C7: a declaration of absence takes effect at the collective's line, or at the recovery rotation where the declared member is the one who would draw it; the authority draws no line for the collective.
+- C8: between a freeze and the refit, a grantee's deal the collective has not placed is undetermined; the refit decides.
 
 **Core changes, to be made:** Law draft 7 (the "Made before, made after" section; rules 37, 37c, 40, 42, 44, 44d; the record act's fields); freeze suite v18 (scenario 3 and the stories of the test).
 
