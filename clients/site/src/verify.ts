@@ -99,7 +99,7 @@ export async function openVersion(version: string, expected: string, hints: stri
   const res = v.resolve(d.signer) as { links: { act: string }[] };
   for (const link of res.links) {
     if (v.lawDeclared(SITE_SPECS.law, d.signer, link.act)) {
-      fail("the signer is a collective (its chain declares an agreement): a collective's site is not defined by draft 1");
+      fail("the signer is a collective (its chain declares an agreement): a collective's site counts only once Law draft 7 is approved, under its Envelope lane (website cMIP, rule 3)");
       break;
     }
   }

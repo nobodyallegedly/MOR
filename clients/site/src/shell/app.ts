@@ -10,7 +10,8 @@ import { readPost } from '../../../barebone/src/post.ts';
 import { renderPost } from '../../../barebone/src/html.ts';
 import { kindOf, pathFor, type FileEntry } from '../manifest.ts';
 import { parseSiteSettings, type SiteSettings } from '../settings.ts';
-import { matches, openVersion } from '../verify.ts';
+import { findLater } from '../latest.ts';
+import { matches, openVersion, type Version } from '../verify.ts';
 import { preparePage } from './page.ts';
 import { ACT_STYLE, bar, failingWords, verifiedWords, type BarState } from './view.ts';
 
@@ -27,6 +28,7 @@ const state: BarState = {
   work: null,
   acts: [],
   reasons: [],
+  newer: null,
 };
 
 function paint(): void {
@@ -84,6 +86,18 @@ async function showActs(frame: HTMLIFrameElement, settings: SiteSettings): Promi
     }
     paint();
   }
+}
+
+/**
+ * Look for later versions of the site, whatever the gateway's setting, and
+ * say when a newer one exists (cMIP rule 24). The page is already shown:
+ * this never holds it back.
+ */
+async function lookForLater(version: Version): Promise<void> {
+  const later = await findLater(version);
+  state.newer = { latest: later.latest.version === version.version ? null : later.latest.version, fork: later.fork };
+  paint();
+  barEl.dataset.looked = '';
 }
 
 async function main(): Promise<void> {
@@ -159,6 +173,7 @@ async function main(): Promise<void> {
     frame.addEventListener('load', () => void showActs(frame, settings), { once: true });
     frame.srcdoc = prepared.html;
     view.replaceChildren(frame);
+    void lookForLater(version);
     return;
   }
 
@@ -179,6 +194,7 @@ async function main(): Promise<void> {
     box.append(pre);
   }
   view.replaceChildren(box);
+  void lookForLater(version);
 }
 
 void main();

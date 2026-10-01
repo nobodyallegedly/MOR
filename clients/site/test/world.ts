@@ -12,6 +12,7 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { post } from '../../barebone/src/post.ts';
 import { publishSite, readFolder, type Published } from '../src/publish.ts';
+import { parseGatewaySettings, type GatewaySettings, type Serve } from '../src/settings.ts';
 
 export const SITE_DIR = fileURLToPath(new URL('../../../docs/dubsar.org', import.meta.url));
 export const phone = new Uint8Array(readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url)));
@@ -55,4 +56,23 @@ export async function world(): Promise<World> {
       for (const r of [...homes, relay]) await r.stop();
     },
   };
+}
+
+/**
+ * A gateway's settings carrying one site, at 127.0.0.1 (as the tests reach
+ * it), from the world's relay; by default the owner's, following its latest.
+ */
+export function gatewayFor(
+  w: World,
+  version: string,
+  o: { identity?: string; serve?: Serve; hosts?: string[]; more?: Record<string, unknown>[] } = {},
+): GatewaySettings {
+  return parseGatewaySettings({
+    listen: '127.0.0.1:0',
+    look: 0,
+    sites: [
+      { hosts: o.hosts ?? ['127.0.0.1'], version, identity: o.identity ?? w.owner.id, name: 'Nobody, allegedly', relays: [w.relay.base], serve: o.serve ?? 'latest' },
+      ...(o.more ?? []),
+    ],
+  });
 }

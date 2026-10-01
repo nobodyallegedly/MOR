@@ -1,4 +1,4 @@
-// Websites on MOR (website cMIP, draft 1), in Node: the manifest's rules,
+// Websites on MOR (website cMIP, draft 2), in Node: the manifest's rules,
 // publishing, what counts as a version, the gateway's server, and the
 // command line (verify with no gateway; check a gateway from elsewhere).
 // Real homes and a relay on local ports; the browser is browser.test.ts.
@@ -7,6 +7,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,11 +19,13 @@ import { parse, title } from '../../longform/src/format.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { TestCollective } from '../../repo/src/collective.ts';
 import { Gateway } from '../src/gateway.ts';
+import { findLater } from '../src/latest.ts';
 import { addressOf, decodeSite, encodeSite, kindOf, pathFor, resolveRef, type SiteManifest } from '../src/manifest.ts';
 import { checkFiles, publishSite, readFolder, type FileIn } from '../src/publish.ts';
-import { parseGatewaySettings, parseSiteSettings } from '../src/settings.ts';
+import { BUILT, DISPLAY_FILES } from '../src/released.ts';
+import { hostOf, parseGatewaySettings, parseSiteSettings } from '../src/settings.ts';
 import { fetchFile, openVersion } from '../src/verify.ts';
-import { phone, siteCopy, world, type World } from './world.ts';
+import { gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const run = promisify(execFile);
@@ -40,8 +43,24 @@ after(async () => {
   await w?.stop();
 });
 
-const settingsFor = (version: string, identity = w.owner.id) =>
-  parseSiteSettings({ version, identity, name: 'Nobody, allegedly', relays: [w.relay.base] });
+/** A gateway carrying the owner's site at 127.0.0.1, pinned to `version` unless told otherwise. */
+const pinnedAt = (version: string, identity = w.owner.id) => gatewayFor(w, version, { identity, serve: 'pinned' });
+const loadedOk = async (g: Gateway) => (await g.load()).every((s) => s.loaded.ok);
+const at = (g: Gateway) => g.sites.get('127.0.0.1')!;
+
+/** A GET with the Host header a browser would send for `host`. */
+function getAs(base: string, path: string, host: string): Promise<{ status: number; body: string }> {
+  return new Promise((done, fail) => {
+    const req = request(base + path, { headers: { host } }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (c) => (body += c));
+      res.on('end', () => done({ status: res.statusCode!, body }));
+    });
+    req.on('error', fail);
+    req.end();
+  });
+}
 
 test('paths: lower-case, four kinds, addresses both ways', () => {
   for (const p of ['index.html', 'a/b-c_d.e.css', 'earth.jpg', 'notes.txt']) assert.ok(kindOf(p), p);
@@ -152,7 +171,7 @@ test('what is not a version of the expected site is refused, with the reason', a
   assert.equal(after.withdrawn, wd.id);
 });
 
-test("a collective's site is refused in draft 1, rather than accepted unjudged", async () => {
+test("a collective's site is refused until Law draft 7 is approved, rather than accepted unjudged", async () => {
   const members: TestIdentity[] = [];
   for (let i = 0; i < 3; i++) {
     const t = TestIdentity.create({ homes: w.homes.map((h) => h.home) });
@@ -169,12 +188,12 @@ test("a collective's site is refused in draft 1, rather than accepted unjudged",
   const v = await openVersion(s.id, collective.identity, [w.relay.base]);
   assert.equal(v.ok, false);
   assert.equal(v.standing, 'valid', 'validly signed, and still not a version');
-  assert.match(v.problems.join(), /collective/);
+  assert.match(v.problems.join(), /collective.*Law draft 7/);
 });
 
 test('the gateway checks before it serves, serves its display client at every address, and the files only as bytes', async () => {
-  const g = new Gateway(settingsFor(w.site.id), join(here, 'dist'));
-  const l = await g.load();
+  const g = new Gateway(pinnedAt(w.site.id), join(here, 'dist'));
+  const [{ loaded: l }] = await g.load();
   assert.ok(l.ok, [...l.version.problems, ...l.problems].join('; '));
   const base = await g.listen('127.0.0.1', 0);
   try {
@@ -190,7 +209,7 @@ test('the gateway checks before it serves, serves its display client at every ad
     assert.equal(missing.status, 404);
     assert.equal(await missing.text(), shell, 'the display client says what is missing');
     const s = await (await fetch(base + '/_mor/site.json')).json();
-    assert.deepEqual(s, { version: w.site.id, identity: w.owner.id, name: 'Nobody, allegedly', relays: [w.relay.base], release: null });
+    assert.deepEqual(s, { version: w.site.id, identity: w.owner.id, name: 'Nobody, allegedly', relays: [w.relay.base], release: null, serve: 'pinned' });
     const f = await fetch(base + '/_mor/file/run.html');
     assert.equal(f.headers.get('content-type'), 'application/octet-stream');
     assert.equal(f.headers.get('content-disposition'), 'attachment');
@@ -203,7 +222,7 @@ test('the gateway checks before it serves, serves its display client at every ad
     const other = TestIdentity.create({ homes: w.homes.map((h) => h.home) });
     await other.publishGenesis();
     const copy = await publishSite(other, { name: 'dubsar.org', files: readFolder(w.dir), relays: [w.relay.base] });
-    const bad = await g.load(settingsFor(copy.id));
+    const [{ loaded: bad }] = await g.load(pinnedAt(copy.id));
     assert.equal(bad.ok, false);
     assert.equal((await (await fetch(base + '/_mor/site.json')).json()).version, w.site.id);
   } finally {
@@ -211,13 +230,13 @@ test('the gateway checks before it serves, serves its display client at every ad
   }
 
   // A gateway whose version never verified serves nothing of the site.
-  const none = new Gateway(settingsFor(w.firstAct), join(here, 'dist'));
-  assert.equal((await none.load()).ok, false);
+  const none = new Gateway(pinnedAt(w.firstAct), join(here, 'dist'));
+  assert.equal(await loadedOk(none), false);
   const nb = await none.listen('127.0.0.1', 0);
   try {
     const r = await fetch(nb + '/');
     assert.equal(r.status, 503);
-    assert.match(await r.text(), /no version of its site that verifies/);
+    assert.match(await r.text(), /no version of this site that verifies/);
   } finally {
     none.close();
   }
@@ -226,12 +245,127 @@ test('the gateway checks before it serves, serves its display client at every ad
 test('the settings are checked, never guessed', () => {
   const good = { version: 'ab'.repeat(32), identity: 'cd'.repeat(32), relays: ['https://relay.example.org/'] };
   assert.deepEqual(parseSiteSettings(good).relays, ['https://relay.example.org']);
-  assert.equal(parseGatewaySettings(good).listen, '127.0.0.1:8090');
+  assert.equal(parseSiteSettings(good).serve, 'latest', "by default, the publisher's latest version");
   assert.throws(() => parseSiteSettings({ ...good, version: 'x' }), /version/);
   assert.throws(() => parseSiteSettings({ ...good, identity: 'x' }), /identity/);
   assert.throws(() => parseSiteSettings({ ...good, relays: ['http://relay.example.org'] }), /relays/, 'plain http only on this machine');
   assert.throws(() => parseSiteSettings({ ...good, release: 'x' }), /release/);
-  assert.throws(() => parseGatewaySettings({ ...good, listen: 'everywhere' }), /listen/);
+  assert.throws(() => parseSiteSettings({ ...good, serve: 'newest' }), /serve/);
+  const site = { ...good, hosts: ['dubsar.org', 'abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrstuvwx.onion'] };
+  const g = parseGatewaySettings({ sites: [site] });
+  assert.equal(g.listen, '127.0.0.1:8090');
+  assert.equal(g.look, 600);
+  assert.equal(g.sites[0].serve, 'latest');
+  assert.throws(() => parseGatewaySettings({ sites: [site], listen: 'everywhere' }), /listen/);
+  assert.throws(() => parseGatewaySettings({ sites: [] }), /sites/, 'a gateway carries the sites listed, and none is not a guess');
+  assert.throws(() => parseGatewaySettings({ sites: [{ ...good, hosts: [] }] }), /hosts/);
+  assert.throws(() => parseGatewaySettings({ sites: [{ ...good, hosts: ['Dubsar.org'] }] }), /not a host name/);
+  assert.throws(() => parseGatewaySettings({ sites: [{ ...good, hosts: ['dubsar.org:443'] }] }), /not a host name/);
+  assert.throws(() => parseGatewaySettings({ sites: [site, { ...good, hosts: ['dubsar.org'] }] }), /two sites/);
+  assert.throws(() => parseGatewaySettings({ sites: [site], look: -1 }), /look/);
+  assert.equal(hostOf('Dubsar.org:443'), 'dubsar.org');
+  assert.equal(hostOf('127.0.0.1:8090'), '127.0.0.1');
+  assert.equal(hostOf('[::1]:8090'), null);
+  assert.equal(hostOf(undefined), null);
+});
+
+test('a gateway carries only the sites its operator lists, each at its own addresses', async () => {
+  const other = TestIdentity.create({ homes: w.homes.map((h) => h.home) });
+  await other.publishGenesis();
+  const theirs = await publishSite(other, { name: 'their site', files: readFolder(w.dir), relays: [w.relay.base] });
+  const g = new Gateway(
+    gatewayFor(w, w.site.id, {
+      serve: 'pinned',
+      more: [{ hosts: ['their.example', 'their2.example'], version: theirs.id, identity: other.id, name: 'Someone else', relays: [w.relay.base] }],
+    }),
+    join(here, 'dist'),
+  );
+  assert.ok(await loadedOk(g));
+  assert.equal(g.carried().length, 2);
+  const base = await g.listen('127.0.0.1', 0);
+  try {
+    const mine = JSON.parse((await getAs(base, '/_mor/site.json', '127.0.0.1')).body);
+    assert.equal(mine.identity, w.owner.id);
+    for (const host of ['their.example', 'THEIR2.example:443']) {
+      const s = JSON.parse((await getAs(base, '/_mor/site.json', host)).body);
+      assert.deepEqual([s.identity, s.version, s.serve], [other.id, theirs.id, 'latest'], host);
+    }
+    const stranger = await getAs(base, '/', 'stranger.example');
+    assert.equal(stranger.status, 404);
+    assert.equal(stranger.body, 'This gateway carries no site at this address.\n');
+    assert.equal((await getAs(base, '/_mor/site.json', 'stranger.example')).status, 404);
+  } finally {
+    g.close();
+  }
+});
+
+test("following: a gateway serves the publisher's latest version; pinned, the one named; forks stop it", async () => {
+  const pub = TestIdentity.create({ homes: w.homes.map((h) => h.home) });
+  await pub.publishGenesis();
+  const relays = [w.relay.base];
+  const dir = siteCopy(w.firstAct);
+  const edit = (words: string) => writeFileSync(join(dir, 'run.html'), readFileSync(join(w.dir, 'run.html'), 'utf8').replace('<h1>Run</h1>', `<h1>${words}</h1>`));
+  const v1 = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays });
+  edit('Run 2');
+  const v2 = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v1.id });
+  edit('Run 3');
+  const v3 = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v2.id });
+  // Another site of theirs, a line of versions of its own, is not followed.
+  await publishSite(pub, { name: 'another site', files: readFolder(dir), relays });
+
+  const first = await openVersion(v1.id, pub.id, relays);
+  const later = await findLater(first);
+  assert.deepEqual(later.after.map((v) => v.version), [v2.id, v3.id]);
+  assert.equal(later.latest.version, v3.id);
+  assert.deepEqual(later.fork, []);
+
+  const following = new Gateway(gatewayFor(w, v1.id, { identity: pub.id }), join(here, 'dist'));
+  const [{ loaded }] = await following.load();
+  assert.ok(loaded.ok);
+  assert.equal(at(following).served, v3.id);
+  assert.match(new TextDecoder().decode(at(following).files.get('run.html')), /<h1>Run 3<\/h1>/);
+  const pinned = new Gateway(gatewayFor(w, v1.id, { identity: pub.id, serve: 'pinned' }), join(here, 'dist'));
+  assert.ok(await loadedOk(pinned));
+  assert.equal(at(pinned).served, v1.id);
+
+  // The check from elsewhere says a newer version exists.
+  const pb = await pinned.listen('127.0.0.1', 0);
+  try {
+    const r = await run('node', ['--import', 'tsx', 'src/cli.ts', 'check', pb, '--against', join(here, 'dist')], { cwd: here });
+    assert.match(r.stdout, new RegExp(`a newer version exists: ${v3.id}`));
+    assert.match(r.stdout, /^SAME: /m);
+  } finally {
+    pinned.close();
+  }
+
+  // Withdrawn: v3 is no longer a version, and the latest is v2.
+  await withdraw(pub, v3.id, relays);
+  assert.equal((await findLater(first)).latest.version, v2.id);
+  await following.load();
+  assert.equal(at(following).served, v2.id);
+
+  // Two versions naming v2: a fork. Following stops before it, and says so.
+  edit('Run 3a');
+  const a = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v2.id });
+  edit('Run 3b');
+  const b = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v2.id });
+  const forked = await findLater(first);
+  assert.equal(forked.latest.version, v2.id);
+  assert.deepEqual(forked.fork, [a.id, b.id].sort());
+  const [{ loaded: l }] = await following.load();
+  assert.ok(l.ok);
+  assert.deepEqual(l.fork, [a.id, b.id].sort());
+  assert.equal(at(following).served, v2.id);
+});
+
+test('the display client a gateway serves by default is the copy published in the release', () => {
+  for (const f of DISPLAY_FILES) assert.ok(readFileSync(join(BUILT, f)).length > 0, f);
+  const record = readFileSync(join(BUILT, 'BUILT-WITH.txt'), 'utf8');
+  assert.match(record, /^rustc: rustc \d/m);
+  assert.match(record, /^wasm-bindgen: wasm-bindgen 0\.2\.129$/m);
+  assert.ok(!readFileSync(join(BUILT, 'mor_wasm_bg.wasm')).toString('latin1').includes('/home/'), 'no build-machine folder');
+  const g = new Gateway(pinnedAt(w.site.id), BUILT);
+  assert.ok(g, 'a gateway runs from it');
 });
 
 test('from the command line, with no gateway: verify a version and write its files out', async () => {
@@ -246,16 +380,16 @@ test('from the command line, with no gateway: verify a version and write its fil
 });
 
 test('from elsewhere, check a gateway: the same as signed and released, or where it differs', async () => {
-  const g = new Gateway(settingsFor(w.site.id), join(here, 'dist'));
-  assert.ok((await g.load()).ok);
+  const g = new Gateway(pinnedAt(w.site.id), join(here, 'dist'));
+  assert.ok(await loadedOk(g));
   const base = await g.listen('127.0.0.1', 0);
   try {
-    const ok = await run('node', ['--import', 'tsx', 'src/cli.ts', 'check', base], { cwd: here });
+    const ok = await run('node', ['--import', 'tsx', 'src/cli.ts', 'check', base, '--against', join(here, 'dist')], { cwd: here });
     assert.match(ok.stdout, /^SAME: /m);
     assert.doesNotMatch(ok.stdout, /DIFFERS/);
 
     // The gateway alters a page, keeping the honest display client.
-    g.files.set('run.html', utf8(readFileSync(join(w.dir, 'run.html'), 'utf8').replace('<h1>Run</h1>', '<h1>Run (altered)</h1>')));
+    at(g).files.set('run.html', utf8(readFileSync(join(w.dir, 'run.html'), 'utf8').replace('<h1>Run</h1>', '<h1>Run (altered)</h1>')));
     await assert.rejects(
       run('node', ['--import', 'tsx', 'src/cli.ts', 'check', base, '--at', w.relay.base], { cwd: here }),
       (e: { code: number; stdout: string }) => e.code === 1 && /DIFFERS {2}run\.html/.test(e.stdout) && /same {2}index\.html/.test(e.stdout),
@@ -268,12 +402,12 @@ test('from elsewhere, check a gateway: the same as signed and released, or where
   const doctored = mkdtempSync(join(tmpdir(), 'mor-site-dist-'));
   for (const f of ['index.html', 'gateway.css', 'mor_wasm_bg.wasm']) writeFileSync(join(doctored, f), readFileSync(join(here, 'dist', f)));
   writeFileSync(join(doctored, 'gateway.js'), readFileSync(join(here, 'dist/gateway.js'), 'utf8').replace('Verified:', 'Verified (trust me):'));
-  const h = new Gateway(settingsFor(w.site.id), doctored);
-  assert.ok((await h.load()).ok);
+  const h = new Gateway(pinnedAt(w.site.id), doctored);
+  assert.ok(await loadedOk(h));
   const hb = await h.listen('127.0.0.1', 0);
   try {
     await assert.rejects(
-      run('node', ['--import', 'tsx', 'src/cli.ts', 'check', hb], { cwd: here }),
+      run('node', ['--import', 'tsx', 'src/cli.ts', 'check', hb, '--against', join(here, 'dist')], { cwd: here }),
       (e: { code: number; stdout: string }) => e.code === 1 && /DIFFERS {2}display client: gateway\.js/.test(e.stdout),
     );
   } finally {

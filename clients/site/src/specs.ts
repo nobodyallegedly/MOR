@@ -12,8 +12,8 @@ export const SITE_SPECS = {
   envelope: SPECS.envelope,
   /** The Law MIP (`LAW`): only to tell that a signer is a collective. */
   law: test('LAW, test value until the freeze'),
-  /** The website cMIP (cmips/cmip-website-draft-1.md). */
-  site: test('website cMIP, draft 1, test value until publication'),
+  /** The website cMIP (cmips/cmip-website-draft-2.md). */
+  site: test('website cMIP, draft 2, test value until publication'),
 };
 
 /** Envelope types: a publication and a withdrawal. */

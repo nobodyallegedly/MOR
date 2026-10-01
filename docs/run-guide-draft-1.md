@@ -121,6 +121,16 @@ A second home on the same server needs its own operator, its own account and fol
 
 The home answers only while the computer is on. Identities that name it should name other homes too.
 
+## 3c. A second address for a home already running
+
+A home on a public server can also answer at an onion address, so that visitors can reach it privately. Add an onion service to Tor on the server as in 3b, pointing at the home's port (Tor as an onion service only, never a relay or an exit), then, with the home stopped:
+
+```
+sudo -u mor mor-relay address --dir /var/lib/mor-home --add http://YOUR-ONION-ADDRESS.onion
+```
+
+and start it again. `mor-relay address --dir DIR` lists its addresses. A home whose operator identity it holds itself (set up with `--new-test-operator`) also publishes the operator's next routes naming the new address, so that clients find it there; a home whose operator was made with the genesis client says so, and the operator's routes are then published from where its identity is kept.
+
 ## 4. Run it from the management page
 
 Every relay serves a page at `/manage/` on its own address. Open it in a browser (for the home at an onion address, at `http://127.0.0.1:8080/manage/` on the computer itself) and pair the browser with the code `init` printed. A new code: `mor-relay pair --dir DIR` (on a server, `sudo -u mor mor-relay pair --dir /var/lib/mor-home`). The browser keeps a key of its own for that address, and signs every request with it.

@@ -17,8 +17,7 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { Gateway } from '../src/gateway.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
-import { parseSiteSettings } from '../src/settings.ts';
-import { phone, world, type World } from './world.ts';
+import { gatewayFor, phone, world, type World } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -61,14 +60,14 @@ const HOSTILE = `<!doctype html>
 <noscript><img src="https://example.org/noscript.jpg"></noscript>
 </body></html>`;
 
-const settingsFor = (version: string, identity = w.owner.id) =>
-  parseSiteSettings({ version, identity, name: 'Nobody, allegedly', relays: [w.relay.base] });
+const ok = async (g: Gateway) => (await g.load()).every((s) => s.loaded.ok);
+const at = (g: Gateway) => g.sites.get('127.0.0.1')!;
 
 before(async () => {
   execFileSync('node', ['--import', 'tsx', 'scripts/build.ts'], { cwd: here, stdio: 'ignore' });
   w = await world();
-  honest = new Gateway(settingsFor(w.site.id), join(here, 'dist'), { extraConnect: LOCAL });
-  assert.ok((await honest.load()).ok);
+  honest = new Gateway(gatewayFor(w, w.site.id), join(here, 'dist'), { extraConnect: LOCAL });
+  assert.ok(await ok(honest));
   base = await honest.listen('127.0.0.1', 0);
 
   const dir = mkdtempSync(join(tmpdir(), 'mor-site-hostile-'));
@@ -77,8 +76,8 @@ before(async () => {
   writeFileSync(join(dir, 'photo.jpg'), strip(phone).bytes);
   writeFileSync(join(dir, 'notes.txt'), 'Plain text, shown as it is.\n<b>not bold</b>\n');
   const v = await publishSite(w.owner, { name: 'a hostile test site', files: readFolder(dir), relays: [w.relay.base] });
-  hostile = new Gateway(settingsFor(v.id), join(here, 'dist'), { extraConnect: LOCAL });
-  assert.ok((await hostile.load()).ok);
+  hostile = new Gateway(gatewayFor(w, v.id), join(here, 'dist'), { extraConnect: LOCAL });
+  assert.ok(await ok(hostile));
   hostileBase = await hostile.listen('127.0.0.1', 0);
 
   browser = await chromium.launch({ executablePath: CHROMIUM });
@@ -181,9 +180,9 @@ test("a door opens its page through the display client, checked again", async ()
 });
 
 test('an altered page is shown as failing, and not shown', async () => {
-  const original = honest.files.get('run.html')!;
+  const original = at(honest).files.get('run.html')!;
   const altered = new TextDecoder().decode(original).replace('<h1>Run</h1>', '<h1>Run: send your keys to the gateway</h1>');
-  honest.files.set('run.html', new TextEncoder().encode(altered));
+  at(honest).files.set('run.html', new TextEncoder().encode(altered));
   try {
     const { page, ctx } = await open(base + '/run.html');
     assert.match((await standing(page))!, /^Failing: what this gateway served for run\.html is not what was signed\. Not shown\./);
@@ -194,7 +193,7 @@ test('an altered page is shown as failing, and not shown', async () => {
     await shot(page, 'altered-page');
     await ctx.close();
   } finally {
-    honest.files.set('run.html', original);
+    at(honest).files.set('run.html', original);
   }
   // The other pages still verify.
   const { page, ctx } = await open(base + '/read.html');
@@ -203,8 +202,8 @@ test('an altered page is shown as failing, and not shown', async () => {
 });
 
 test('an altered stylesheet fails every page that uses it', async () => {
-  const original = honest.files.get('site.css')!;
-  honest.files.set('site.css', new TextEncoder().encode('.placeholder{display:none}\n'));
+  const original = at(honest).files.get('site.css')!;
+  at(honest).files.set('site.css', new TextEncoder().encode('.placeholder{display:none}\n'));
   try {
     const { page, ctx } = await open(base + '/read.html');
     assert.match((await standing(page))!, /^Failing: a file this page uses is not what was signed/);
@@ -212,7 +211,7 @@ test('an altered stylesheet fails every page that uses it', async () => {
     assert.equal(await page.locator('#mor-page').count(), 0);
     await ctx.close();
   } finally {
-    honest.files.set('site.css', original);
+    at(honest).files.set('site.css', original);
   }
 });
 
@@ -221,9 +220,9 @@ test("a version signed by someone else is shown as failing, naming who did sign 
   await other.publishGenesis();
   const copy = await publishSite(other, { name: 'dubsar.org', files: readFolder(w.dir), relays: [w.relay.base] });
   // A gateway whose settings are wrong (or lying): it names the owner, and a version by another.
-  const g = new Gateway(settingsFor(w.site.id), join(here, 'dist'), { extraConnect: LOCAL });
-  assert.ok((await g.load()).ok);
-  g.settings = settingsFor(copy.id);
+  const g = new Gateway(gatewayFor(w, w.site.id), join(here, 'dist'), { extraConnect: LOCAL });
+  assert.ok(await ok(g));
+  at(g).served = copy.id;
   const b = await g.listen('127.0.0.1', 0);
   try {
     const { page, ctx } = await open(b + '/');
@@ -281,6 +280,43 @@ test('a page runs no code and loads nothing from elsewhere, whatever it tries; w
   assert.match((await standing(txt.page))!, /^Verified: this file/);
   assert.equal(await txt.page.textContent('#mor-view pre'), 'Plain text, shown as it is.\n<b>not bold</b>\n');
   await txt.ctx.close();
+});
+
+test('the display client always looks for later versions, and says when a newer one exists', async () => {
+  // Pinned by its operator to the first version.
+  const pinned = new Gateway(gatewayFor(w, w.site.id, { serve: 'pinned' }), join(here, 'dist'), { extraConnect: LOCAL });
+  assert.ok(await ok(pinned));
+  const pb = await pinned.listen('127.0.0.1', 0);
+  try {
+    let { page, ctx } = await open(pb + '/');
+    await page.waitForSelector('#mor-bar[data-looked]', { timeout: 60_000 });
+    assert.equal(await page.locator('#mor-newer').count(), 0, 'nothing newer yet');
+    assert.match((await page.textContent('#mor-bar'))!, /This gateway's operator chose this version, and serves no other/);
+    await ctx.close();
+
+    // The owner publishes a second version, naming the first.
+    const next = await publishSite(w.owner, { name: 'dubsar.org', files: readFolder(w.dir), relays: [w.relay.base], previous: w.site.id });
+    ({ page, ctx } = await open(pb + '/'));
+    assert.match((await standing(page))!, /^Verified/, 'the version served still verifies');
+    assert.equal(await page.textContent('#mor-version'), w.site.id);
+    await page.waitForSelector('#mor-newer', { timeout: 60_000 });
+    assert.match((await page.textContent('#mor-newer'))!, /^A newer version of this site exists, signed by the same identity: [0-9a-f]{64}\. This gateway serves an earlier one\.$/);
+    assert.equal(await page.textContent('#mor-latest'), next.id);
+    await shot(page, 'newer-version');
+    await ctx.close();
+
+    // A gateway following the owner's latest moves to it once it looks again.
+    assert.ok(await ok(honest));
+    assert.equal(at(honest).served, next.id);
+    ({ page, ctx } = await open(base + '/'));
+    assert.equal(await page.textContent('#mor-version'), next.id);
+    await page.waitForSelector('#mor-bar[data-looked]', { timeout: 60_000 });
+    assert.equal(await page.locator('#mor-newer').count(), 0);
+    assert.match((await page.textContent('#mor-bar'))!, /This gateway follows the owner's latest version/);
+    await ctx.close();
+  } finally {
+    pinned.close();
+  }
 });
 
 test('everything ran under the content security policy, with nothing refused', () => {

@@ -20,6 +20,7 @@ body{margin:0;display:flex;flex-direction:column;background:Canvas;color:CanvasT
 #mor-bar .standing{font-weight:600}
 #mor-bar.ok .standing{color:var(--ok)}
 #mor-bar.bad .standing{color:var(--bad)}
+#mor-bar .newer{margin-top:4px;font-weight:600}
 #mor-bar details{margin-top:4px;font-size:13px}
 #mor-bar summary{cursor:pointer;color:var(--soft)}
 #mor-bar dl{margin:6px 0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px}
@@ -54,6 +55,14 @@ export interface ActLine {
   problem: string | null;
 }
 
+/** What the display client found after the version shown (cMIP rule 24). */
+export interface Newer {
+  /** The latest version found, if later than the one shown. */
+  latest: string | null;
+  /** Versions naming the same one, where following stopped. */
+  fork: string[];
+}
+
 export interface BarState {
   phase: 'checking' | 'ok' | 'bad';
   /** The sentence on top, in plain words. */
@@ -64,6 +73,8 @@ export interface BarState {
   work: string | null;
   acts: ActLine[];
   reasons: string[];
+  /** Null while looking for later versions, or before. */
+  newer: Newer | null;
 }
 
 function actItem(a: ActLine): string {
@@ -90,7 +101,16 @@ export function bar(s: BarState): string {
   } else if (set) {
     rows.push(`<dt>Expected from</dt><dd><span class="fp">${fingerprint(set.identity)}</span>, named by this gateway as ${e(set.name)}</dd>`);
   }
-  if (set) rows.push(`<dt>Version</dt><dd><code id="mor-version">${e(set.version)}</code>${v?.manifest ? `, the site “${e(v.manifest.name)}”` : ''}</dd>`);
+  if (set) {
+    rows.push(`<dt>Version</dt><dd><code id="mor-version">${e(set.version)}</code>${v?.manifest ? `, the site “${e(v.manifest.name)}”` : ''}</dd>`);
+    rows.push(
+      `<dt>Why this version</dt><dd>${
+        set.serve === 'latest'
+          ? "This gateway follows the owner's latest version, as far as it last looked."
+          : "This gateway's operator chose this version, and serves no other."
+      } That is the gateway's setting; this browser looks for later versions itself.</dd>`,
+    );
+  }
   if (s.path) rows.push(`<dt>This file</dt><dd><code>${e(s.path)}</code>${s.work ? `, work hash <code>${e(s.work)}</code>` : ''}</dd>`);
   if (s.acts.length) rows.push(`<dt>Acts shown</dt><dd><ul id="mor-acts">${s.acts.map(actItem).join('')}</ul></dd>`);
   if (s.reasons.length) rows.push(`<dt>Why</dt><dd><ul id="mor-reasons">${s.reasons.map((r) => `<li>${e(r)}</li>`).join('')}</ul></dd>`);
@@ -98,8 +118,20 @@ export function bar(s: BarState): string {
     `<dt>Checked by</dt><dd>This gateway's display client${set?.release ? `, release <code>${e(set.release)}</code>` : ''}, running in this browser with MOR's core library. It is served by the gateway, so it is as honest as the gateway: to check without trusting it, verify the version from a relay with your own copy of MOR (<code>mor-site verify</code>), or compare what this gateway serves with the release (<code>mor-site check</code>).</dd>`,
   );
   const open = s.phase === 'bad' ? ' open' : '';
-  return `<div class="standing" id="mor-standing">${e(s.words)}</div>
+  const newer = s.newer && newerWords(s.newer);
+  return `<div class="standing" id="mor-standing">${e(s.words)}</div>${newer ? `\n<div class="newer" id="mor-newer">${newer}</div>` : ''}
 <details${open}><summary>Who signed it, and how to check</summary><dl>${rows.join('')}</dl></details>`;
+}
+
+/** What the bar says about later versions, under the top sentence; empty when there is nothing to say. */
+export function newerWords(n: Newer): string {
+  const fork = n.fork.length
+    ? `Later versions split: ${n.fork.length} versions, each signed by the same identity, name the same version before them (${n.fork.map((f) => `<code>${e(f)}</code>`).join(', ')}). The owner's key may be in someone else's hands; none of them is shown here.`
+    : '';
+  const later = n.latest
+    ? `A newer version of this site exists, signed by the same identity: <code id="mor-latest">${e(n.latest)}</code>. This gateway serves an earlier one.`
+    : '';
+  return [later, fork].filter(Boolean).join(' ');
 }
 
 /** What the bar says on top, in plain words. */

@@ -1,4 +1,4 @@
-// The site manifest (website cMIP, draft 1): one version of a site, file by
+// The site manifest (website cMIP, draft 2): one version of a site, file by
 // file, each named by its hash, in the same file entries as a release of the
 // code. Written for both Node and a browser: no Buffer here.
 
