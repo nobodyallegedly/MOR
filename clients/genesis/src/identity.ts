@@ -433,6 +433,20 @@ export class TestIdentity {
   }
 
   /**
+   * Sign an everyday act, next in this identity's sequence, without sending
+   * it: for a signer that hands the act to someone else to submit. Save the
+   * file before handing the act out, so the next act follows it.
+   */
+  sign(
+    spec: string,
+    type: number,
+    payload: Uint8Array,
+    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: string[] },
+  ): { act: Uint8Array; id: string; key: Uint8Array } {
+    return this.everyday(spec, type, payload, opts);
+  }
+
+  /**
    * Publish an act on this identity's own relays, for example a private
    * post whose key it will deliver. Returns the act id and its content key.
    */
