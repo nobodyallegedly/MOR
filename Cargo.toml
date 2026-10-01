@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "harness", "modules/airgap", "relay", "wasm"]
+members = ["core", "harness", "harness/ordering", "modules/airgap", "relay", "wasm"]
 resolver = "2"
 
 [workspace.package]
