@@ -931,6 +931,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Q18 (1 October 2026): the specification format gains a field in which an extension declares the layers it acts on (Production MIP draft 5). Dropping an extension needs the same approvals as adopting it: Production and every layer it acts on.
 - Q19 (1 October 2026): a seat passed by succession carries membership, never the areas its holder held; those are refitted as in Q13, frozen meanwhile unless co-holders carry on (Q17).
 - Flaw F (1 October 2026, fourth pass): a sequence left out of a resignation, a stepping-down or a record could undo what others relied on (a completed clone falling back to a draft, a paid publication un-signed). As for rotations, an act another identity acknowledged, or a named keeper recorded, still counts as made before, shown as disputed; and the record or rotation that puts a clone in force counts as acknowledging the signatures that completed it.
+- Q20 (1 October 2026, fourth pass): a specification adopted for a judicial task (condition evaluation, time reference, anchoring) cannot also be adopted for any other task; terms that do so are invalid. A judge never handles what it judges: "it removes a slight conflict of interest."
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
