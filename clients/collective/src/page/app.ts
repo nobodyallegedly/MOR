@@ -88,7 +88,13 @@ async function after(d: Done | undefined) {
 const words = (s: FormDataEntryValue | null) => (typeof s === 'string' ? s.trim() : '');
 const linesOf = (s: FormDataEntryValue | null) => words(s).split(/\s+/).filter(Boolean);
 const numberOf = (s: FormDataEntryValue | null) => (words(s) === '' ? undefined : Number(words(s)));
-const rulesOf = (d: FormData) => ({ safety: numberOf(d.get('safety')), release: numberOf(d.get('release')), clone: numberOf(d.get('clone')), others: numberOf(d.get('others')) });
+const rulesOf = (d: FormData) => ({
+  safety: numberOf(d.get('safety')),
+  release: numberOf(d.get('release')),
+  clone: numberOf(d.get('clone')),
+  others: numberOf(d.get('others')),
+  constitution: numberOf(d.get('constitution')),
+});
 
 // ---------------------------------------------------------------- clicks
 
@@ -123,20 +129,13 @@ app.addEventListener('click', async (ev) => {
     case 'sign':
       await prepare({ kind: 'sign', member: d.member, release: d.release });
       break;
-    case 'leave': {
-      const col = state.collectives.find((x) => x.id === d.collective)!;
-      const n = col.members.length - 1;
-      // The members who stay write the rules; the numbers must fit the members left.
-      const fit = (k: number) => Math.max(1, Math.min(k, n));
-      const rules = {
-        safety: n > 1 ? Math.min(col.rules.safety, n - 1) : 1,
-        release: fit(col.rules.release),
-        clone: fit(col.rules.clone),
-        others: Math.max(1, Math.min(col.rules.others, n - 1)),
-      };
-      await prepare({ kind: 'change', collective: d.collective, leave: [d.member], rules });
+    case 'leave':
+      // Leaving is not a member change: a resignation, registered by the collective's record (Law rule 37a).
+      await prepare({ kind: 'leave', collective: d.collective, member: d.member });
       break;
-    }
+    case 'stepdown':
+      await prepare({ kind: 'stepdown', collective: d.collective, member: d.member });
+      break;
     case 'resend':
       await after(await busy('Sending the member change again…', () => c.ask<Done>('resend', { collective: d.collective })));
       break;
@@ -210,6 +209,7 @@ app.addEventListener('submit', async (ev) => {
   }
   const collective = form.dataset.collective;
   if (form.classList.contains('release')) return prepare({ kind: 'release', publisher: collective, version: words(d.get('version')) });
+  if (form.classList.contains('words')) return prepare({ kind: 'words', collective, text: words(d.get('text')) });
   if (form.classList.contains('change')) {
     return prepare({ kind: 'change', collective, join: d.getAll('join').map(String), leave: d.getAll('leave').map(String), rules: rulesOf(d), words: words(d.get('words')) });
   }

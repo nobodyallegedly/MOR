@@ -1121,7 +1121,15 @@ impl<'a> LawView<'a> {
                 None => t.parties.contains(p),
                 Some(a) => t.area(a).is_some_and(|ar| ar.holders.contains(p)),
             };
-            if !named {
+            // Named again: by a constitutional clone (rule 37b's refit), never
+            // by an ordinary clone that only copies the list (build question B10).
+            let constitutional = match &t.parent {
+                Some(pp) => changes(&self.terms(pp)?, &t)
+                    .iter()
+                    .any(|c| c.tier() == Tier::Constitutional),
+                None => false,
+            };
+            if !named || !constitutional {
                 continue;
             }
             for (_, s) in self.valid_sigs(v, &[*p]) {

@@ -114,15 +114,40 @@ export function identities(s: State): string {
 <p class="small">A test identity is born at the homes named in Settings. Make yourself, then the simulated members a test collective needs.</p>`;
 }
 
-function rulesFields(r: { safety: number | ''; release: number | ''; clone: number | ''; others: number | '' }): string {
+function rulesFields(r: { safety: number | ''; release: number | ''; clone: number | ''; others: number | ''; constitution?: number | '' }): string {
   const f = (name: string, v: number | '', words: string, placeholder = '') =>
     `<label>${words}</label><input name="${name}" type="number" min="1" value="${e(v)}" placeholder="${e(placeholder)}">`;
   return `<fieldset><legend>Rules</legend><div class="grid">
 ${f('safety', r.safety, 'Shares needed to rebuild the safety key')}
 ${f('release', r.release, 'Members who must sign a release')}
-${f('clone', r.clone, 'Members who must sign a change')}
+${f('constitution', r.constitution ?? '', 'Members who must sign a change of members or rules', 'every member')}
+${f('clone', r.clone, 'Members who must sign any other change')}
 ${f('others', r.others, 'Other members who together judge absence', 'all the others')}
 </div></fieldset>`;
+}
+
+type Col = State['collectives'][number];
+
+/** The release area, in plain words: who holds it, how many decide, whether it is frozen; stepping down; its words. */
+function releaseArea(s: State, c: Col): string {
+  return c.areas
+    .map((a) => {
+      const holders = a.holders
+        .map((h) => `${e(h.name)}${h.steppedDown ? ' <span class="tag">stepped down</span>' : !h.voice ? ' <span class="tag">left</span>' : ''}`)
+        .join('<br>');
+      const down = a.holders
+        .filter((h) => h.held && h.voice)
+        .map((h) => `<button class="quiet" data-action="stepdown" data-collective="${e(c.id)}" data-member="${e(h.id)}">Step down as ${e(nameOf(s, h.id))}</button>`)
+        .join(' ');
+      return `<div class="area" data-area="${a.id}"><h4>The ${e(a.name)} area</h4>
+<dl class="facts"><dt>Holders</dt><dd>${holders}</dd>
+<dt>Who decides</dt><dd>${a.frozen ? '<strong>Frozen</strong>: nobody holds it any more. A release counts for nothing until the members refit it (a change of members or rules).' : `Any ${a.needed} of the holders who remain${a.needed < a.threshold ? ` (the rule asks for ${a.threshold}; fewer remain, so all of them)` : ''}`}</dd>
+<dt>Its own words</dt><dd>${a.words ? e(a.words) : '<span class="small">none</span>'}</dd></dl>
+${down ? `<div class="row">${down}</div><p class="small">A holder may step down at once, alone; the other holders carry on. With nobody left, the area is frozen until the members refit it.</p>` : ''}
+${a.frozen ? '' : `<form class="words row" data-collective="${e(c.id)}"><input name="text" type="text" class="wide" placeholder="New words for the ${e(a.name)} area" required><button type="submit">Review the new words</button></form>
+<p class="small">An ordinary change: signed by enough holders and written on the collective's record at once, with no rotation.</p>`}</div>`;
+    })
+    .join('');
 }
 
 export function collectives(s: State): string {
@@ -137,24 +162,26 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
         )
         .join('');
       const others = s.identities.filter((i) => !c.members.some((m) => m.id === i.id));
-      const mine = c.members.filter((m) => s.identities.find((i) => i.id === m.id)?.mine);
+      const mine = c.members.filter((m) => !m.left && s.identities.find((i) => i.id === m.id)?.mine);
       return `<div class="card" data-collective="${e(c.id)}"><h3>${e(c.name)}</h3>
 <dl class="facts"><dt>Collective</dt><dd>${fp(c.id)}</dd>
-<dt>Members</dt><dd>${c.members.map((m) => e(m.name)).join('<br>')}</dd>
+<dt>Members</dt><dd>${c.members.map((m) => `${e(m.name)}${m.left ? ' <span class="tag">left: a party until the members refit the collective</span>' : ''}`).join('<br>')}</dd>
 <dt>Everyday key</dt><dd>${e(c.holder)}</dd>
 <dt>Safety key</dt><dd>${c.shares.of} shares, any ${c.shares.threshold} rebuild it</dd>
-<dt>A release needs</dt><dd>${c.rules.release} members' signatures</dd>
-<dt>A change needs</dt><dd>${c.rules.clone} members' signatures</dd>
+<dt>A change of members or rules needs</dt><dd>${c.rules.constitution ? `any ${c.rules.constitution} members` : 'every member whose voice remains'}</dd>
+<dt>Any other change needs</dt><dd>${c.rules.clone} members' signatures</dd>
 <dt>Agreement in force</dt><dd>${fp(c.agreement)} (${c.agreements === 1 ? 'the founding agreement' : `clone ${c.agreements - 1}`})</dd>
+<dt>Records drawn</dt><dd>${c.records}${c.departed.length ? `; left: ${c.departed.map((d) => e(d.name)).join(', ')}` : ''}${c.steppedDown.length ? `; stepped down: ${c.steppedDown.map((d) => e(d.name)).join(', ')}` : ''}</dd>
 <dt>Relays</dt><dd>${c.relays.map(e).join('<br>')}</dd></dl>
+${releaseArea(s, c)}
 ${c.pending ? note('warn', `A member change is waiting for the homes. <button data-action="resend" data-collective="${e(c.id)}">Send it again</button> <span class="small">(the same bytes: nothing new is signed)</span>`) : ''}
 <h4>Releases</h4>${releases ? `<ul class="plain">${releases}</ul>` : '<p class="small">None yet.</p>'}
 <form class="release row" data-collective="${e(c.id)}"><input name="version" type="text" placeholder="Version, e.g. 11b.1" required><button type="submit">Review a release</button></form>
 ${mine.map((m) => `<button class="quiet" data-action="leave" data-collective="${e(c.id)}" data-member="${e(m.id)}">Leave as ${e(nameOf(s, m.id))}</button>`).join(' ')}
-<details class="change"${c.pending ? '' : ''}><summary>Change members or rules</summary>
+<details class="change"><summary>Change members or rules</summary>
 <form class="change" data-collective="${e(c.id)}">
 <fieldset><legend>Add</legend>${others.map((i) => `<label class="check"><input type="checkbox" name="join" value="${e(i.id)}"> ${e(nameOf(s, i.id))}</label>`).join('') || '<span class="small">Make a test identity first.</span>'}</fieldset>
-<fieldset><legend>Remove or leave</legend>${c.members.map((m) => `<label class="check"><input type="checkbox" name="leave" value="${e(m.id)}"> ${e(nameOf(s, m.id))}</label>`).join('')}</fieldset>
+<fieldset><legend>Remove</legend>${c.members.map((m) => `<label class="check"><input type="checkbox" name="leave" value="${e(m.id)}"> ${e(nameOf(s, m.id))}</label>`).join('')}</fieldset>
 ${rulesFields(c.rules)}
 <label>The words (empty: the standard words, if the words were standard)</label><textarea name="words">${e(c.words)}</textarea>
 <div class="row"><button type="submit">Review the change</button></div></form></details></div>`;

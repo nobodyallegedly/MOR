@@ -130,6 +130,12 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
           }
           case 'sign':
             return actions.prepareSign({ member: text(a.member), release: text(a.release).trim().toLowerCase(), at: list(a.at) });
+          case 'leave':
+            return actions.prepareLeave({ collective: text(a.collective), member: text(a.member) });
+          case 'stepdown':
+            return actions.prepareStepDown({ collective: text(a.collective), member: text(a.member) });
+          case 'words':
+            return actions.prepareWords({ collective: text(a.collective), text: text(a.text), signers: list(a.signers) });
           default:
             throw new Error('unknown kind');
         }
@@ -210,14 +216,20 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
   };
 }
 
-/** The numbers of a collective's rules, with the defaults: any 2, and absence judged by all the other members. */
+/**
+ * The numbers of a collective's rules, with the defaults: any 2, absence
+ * judged by all the other members, and the constitution changed by every
+ * member whose voice remains (no number: F103).
+ */
 function rulesOf(v: unknown, members: number) {
   const r = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
-  const n = (x: unknown, d: number) => (x === undefined || x === null || x === '' ? d : Number(x));
+  const empty = (x: unknown) => x === undefined || x === null || x === '';
+  const n = (x: unknown, d: number) => (empty(x) ? d : Number(x));
   return {
     safety: n(r.safety, 2),
     release: n(r.release, 2),
     clone: n(r.clone, 2),
     others: n(r.others, Math.max(members - 1, 1)),
+    ...(empty(r.constitution) ? {} : { constitution: Number(r.constitution) }),
   };
 }

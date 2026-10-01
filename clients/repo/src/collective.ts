@@ -100,6 +100,18 @@ export interface CollectiveFile {
   pending: { safety: Dealt; agreement: string; members: string[]; governance?: Governance } | null;
   /** Releases published, newest last, with their manifests (for the next one to reuse unchanged files). */
   releases: { id: string; version: string; manifest: string }[];
+  /**
+   * Kept by the collective client (Law draft 7), absent in older files:
+   * members who left alone, each by a resignation the collective
+   * registered at once by a record, its line (rule 37a). They stay parties
+   * of the agreement in force until the members refit the collective
+   * without them; the list stays as history after.
+   */
+  departed?: { member: string; resignation: string; record: string }[];
+  /** Kept by the collective client: holders who stepped down from an area (rule 37b), each registered at once by a record. */
+  steppedDown?: { member: string; area: number; resignation: string; record: string }[];
+  /** Kept by the collective client: the records the collective drew, its everyday lines (Law type 17), oldest first. */
+  records?: string[];
 }
 
 /** What happened to one act the members signed. */
@@ -384,6 +396,8 @@ export class TestCollective {
     words: string;
     proposer: TestIdentity;
     signers: TestIdentity[];
+    /** The exact clone payload shown to the holders: refused if the clone made now differs. */
+    expect?: Uint8Array;
   }): Promise<{ clone: string; record: string; signed: Signed[] }> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
     const governance = { ...this.f.governance, releaseWords: opts.words };
@@ -391,7 +405,9 @@ export class TestCollective {
     const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
     const next = collectiveTerms(governance, this.f.members, this.f.signingHolder, this.f.agreement, mark);
     if (!markMatches(mark, clonePlan(parent, next).needs)) throw new Error('not an ordinary change of the release area');
-    const proposed = await proposePayload(opts.proposer, termsPayload(next), this.f.agreement, this.f.relays);
+    const payload = termsPayload(next);
+    if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
+    const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
     const signed: Signed[] = [];
     for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
     const r = await record(this.id, { clone: proposed.id, signatures: signed.map((s) => s.act), inForce: this.f.agreement }, this.f.relays);

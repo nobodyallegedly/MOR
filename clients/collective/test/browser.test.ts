@@ -105,7 +105,9 @@ test('the author, without a terminal, from the page alone', async () => {
   await review(page, 'Found the collective “Makers”', '3-found', [
     'Hidden characters',
     'Who is bound',
-    'any 2 of the 3 parties have signed it',
+    'nobody is founded into a collective without signing',
+    'Who decides what',
+    'any 2 of them decide together',
     'Their consent is simulated',
   ]);
   await done(page, '“Makers” is founded');
@@ -119,10 +121,10 @@ test('the author, without a terminal, from the page alone', async () => {
 
   // Add one, remove one.
   await change('Sim Three', 'join');
-  await review(page, /Add Sim Three .* to “Makers”/, '4-add', ['joins, bound once they sign the clone', 'The words stay the same']);
+  await review(page, /Add Sim Three .* to “Makers”/, '4-add', ['joins, bound once they sign the clone', "The constitution's words stay the same"]);
   await done(page, ': done');
   await change('Sim One', 'leave');
-  await review(page, /Remove Sim One .* from “Makers”/, '5-remove', ['They hand over nothing']);
+  await review(page, /Remove Sim One .* from “Makers”/, '5-remove', ['signs a resignation, alone', 'They hand over nothing']);
   await done(page, ': done');
 
   // A release under the new rules, signed by two members.
@@ -139,27 +141,48 @@ test('the author, without a terminal, from the page alone', async () => {
   await review(page, /Sign MOR 11b\.1 as Sim Three/, '8-sign', ['Signed so far by Ada (you)']);
   await page.locator('#status .note.done', { hasText: 'It is now a release: VERIFIED' }).waitFor({ timeout: 60_000 });
 
-  // Leave: the numbers are fitted to the two who stay, and the review says so.
+  // Leave: a resignation alone, registered by the collective's record. No rule is rewritten.
   await card.locator('[data-action=leave]').click();
   await review(page, /Ada \(you\) .* leaves “Makers”/, '9-leave', [
-    'They hand over nothing',
-    'yours end with your membership',
+    'signs a resignation',
+    'nobody can stop it',
+    'Nothing else changes now',
+    'The members who stay then refit the collective',
+  ]);
+  await done(page, 'left “Makers”');
+  assert.equal(await card.locator('[data-action=leave]').count(), 0, 'no longer a member with a voice');
+  assert.match((await card.locator('dt:text-is("Members") + dd').textContent())!, /Ada \(you\).*left/);
+
+  // The refit: remove the member who left, with numbers that fit the two who stay (F96).
+  await card.locator('details.change summary').click();
+  await card.locator('form.change label.check:has(input[name=leave])', { hasText: 'Ada' }).locator('input').check();
+  await card.locator('form.change input[name=safety]').fill('1');
+  await card.locator('form.change input[name=others]').fill('1');
+  await card.locator('form.change button[type=submit]').click();
+  await review(page, /Remove Ada \(you\) .* from “Makers”/, '10-refit', [
+    'already left',
     'The everyday key passes to Sim Two',
     'Any one member alone can rebuild the safety key',
   ]);
   await done(page, ': done');
-  assert.equal(await card.locator('[data-action=leave]').count(), 0, 'no longer a member');
-  assert.equal(await card.locator('dt:text("Members") + dd').textContent().then((t) => /Ada/.test(t!)), false);
+  assert.equal(/Ada/.test((await card.locator('dt:text-is("Members") + dd').textContent())!), false);
+
+  // An ordinary change: the release area's own words, recorded at once.
+  await card.locator('form.words input[name=text]').fill('We release only what we both checked.');
+  await card.locator('form.words button').click();
+  await review(page, /New words for the Releases area of “Makers”/, '11-words', ['An ordinary change', 'no rotation']);
+  await done(page, 'has new words');
+  assert.match((await card.locator('.area dt:text-is("Its own words") + dd').textContent())!, /We release only what we both checked/);
 
   // Anyone can check the release; a fresh verifier agrees.
   await card.locator('li', { hasText: '11b.1' }).locator('[data-action=verify]').click();
   await page.locator('#reading h2', { hasText: 'VERIFIED: MOR 11b.1' }).waitFor({ timeout: 60_000 });
-  await shot(page, '10-verified');
+  await shot(page, '12-verified');
   const v = await verifyRelease(rel, [relay.base]);
   assert.equal(v.ok, true, v.problems.join('; '));
 
   // Everything signed is listed.
-  assert.equal(await page.locator('#history li').count(), 12);
+  assert.equal(await page.locator('#history li').count(), 14);
   assert.deepEqual(problems, []);
   await context.close();
 });

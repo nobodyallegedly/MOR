@@ -447,6 +447,17 @@ export async function verifyRelease(
     return fail(`the collective's identity was not found: ${e}`);
   }
   v.add(act);
+  // The signer's other acts first: a release that is no longer the latest
+  // act a rotation kept is valid only through the acts after it, which link
+  // it to the kept tip (Identity, kept ancestry). A collective's records
+  // (Law draft 7) put such acts after a release before the next rotation.
+  for (const a of await allBy(d.signer, [...new Set([...hints, ...homes])], via)) {
+    try {
+      v.add(a);
+    } catch {
+      // a private act, or malformed
+    }
+  }
   const standing = v.status(release);
   if (standing !== 'valid') return fail(`the publication is ${standing}, not valid, for its signer's identity chain`);
 

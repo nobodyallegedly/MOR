@@ -119,6 +119,8 @@ export interface Rules {
   release: number;
   clone: number;
   others: number;
+  /** The constitutional change rule: any k members; absent, every member whose voice remains. */
+  constitution?: number;
 }
 
 export interface State {
@@ -133,7 +135,19 @@ export interface State {
   collectives: {
     id: string;
     name: string;
-    members: { id: string; name: string; held: boolean }[];
+    members: { id: string; name: string; held: boolean; left: boolean }[];
+    areas: {
+      id: number;
+      name: string;
+      holders: { id: string; name: string; held: boolean; voice: boolean; steppedDown: boolean }[];
+      threshold: number;
+      needed: number;
+      frozen: boolean;
+      words: string;
+    }[];
+    departed: { id: string; name: string; record: string; stillParty: boolean }[];
+    steppedDown: { id: string; name: string; area: number; record: string }[];
+    records: number;
     holder: string;
     agreement: string;
     agreements: number;

@@ -7,12 +7,13 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { describeAct } from '../../genesis/src/core.ts';
+import { SPECS, describeAct, resignationPayload } from '../../genesis/src/core.ts';
 import { TestIdentity, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestCollective, collectiveTerms, type Governance } from '../../repo/src/collective.ts';
-import { encodeTerms } from '../../repo/src/law.ts';
+import { RELEASE_AREA, encodeTerms, record, resign, type MarkEntry } from '../../repo/src/law.ts';
 import {
+  allBy,
   compareWithTree,
   decodeManifest,
   gitFiles,
@@ -26,7 +27,23 @@ import {
   type Verified,
 } from '../../repo/src/release.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
-import { count, readAgreement, readChanges, readRelease, rulesHints, short, termsOf, withLaw, type Line, type Reading, type Section, type TermsRead } from './explain.ts';
+import {
+  count,
+  lawThrown,
+  list,
+  problemWords,
+  readAgreement,
+  readChanges,
+  readRelease,
+  rulesHints,
+  short,
+  termsOf,
+  withLaw,
+  type Line,
+  type Reading,
+  type Section,
+  type TermsRead,
+} from './explain.ts';
 import type { Store } from './store.ts';
 
 /** The MOR repository this program is part of: what a release publishes unless another folder is set. */
@@ -67,7 +84,8 @@ interface Plan {
 
 /** The standard words for a test collective's rules. Members may write their own. */
 export function standardWords(name: string, g: Omit<Governance, 'text'>): string {
-  return `“${name}”, a MOR test collective. Test acts only, wiped before the first real acts. Its everyday key is held by its first member; its safety key is split among the members, any ${g.safetyThreshold} of whom rebuild it. A release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any ${g.cloneThreshold} members and by each member who joins, and a rotation of the collective declaring it. Any ${g.abandonmentOthers} of the other members together decide whether a member is absent; the outcome is that member losing their voice.`;
+  const constitution = g.constitutionalThreshold ? `any ${g.constitutionalThreshold} members` : 'every member whose voice remains';
+  return `“${name}”, a MOR test collective. Test acts only, wiped before the first real acts. Its everyday key is held by its first member; its safety key is split among the members, any ${g.safetyThreshold} of whom rebuild it. Releases are an area held by every member: a release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members, the change rules, the keys and the areas change by a clone signed by ${constitution} and by each member who joins, and a rotation of the collective declaring it. Other changes need any ${g.cloneThreshold} members, and are recorded by the collective at once. A member may leave alone at any time, keeping what they own. Any ${g.abandonmentOthers} of the other members together decide whether a member is absent; the outcome is that member losing their voice.`;
 }
 
 export interface Rules {
@@ -75,6 +93,8 @@ export interface Rules {
   release: number;
   clone: number;
   others: number;
+  /** The constitutional change rule: any k members. Absent: every member whose voice remains (F103). */
+  constitution?: number;
 }
 
 const toRules = (g: Governance): Rules => ({
@@ -82,7 +102,35 @@ const toRules = (g: Governance): Rules => ({
   release: g.releaseThreshold,
   clone: g.cloneThreshold,
   others: g.abandonmentOthers,
+  ...(g.constitutionalThreshold ? { constitution: g.constitutionalThreshold } : {}),
 });
+
+/** The numbers of a Governance from the rules typed on the page. */
+const fromRules = (r: Rules) => ({
+  safetyThreshold: whole(r.safety, 'the shares needed'),
+  releaseThreshold: whole(r.release, 'the signatures a release needs'),
+  cloneThreshold: whole(r.clone, 'the signatures a change needs'),
+  abandonmentOthers: whole(r.others, 'who judges absence'),
+  ...(r.constitution !== undefined ? { constitutionalThreshold: whole(r.constitution, 'the signatures a change of the constitution needs') } : {}),
+});
+
+/** The departures a collective file keeps (Law draft 7), with defaults for older files. */
+const departedOf = (c: TestCollective) => c.f.departed ?? [];
+const steppedDownOf = (c: TestCollective) => c.f.steppedDown ?? [];
+
+/** Members whose voice remains: not departed (rule 37a). */
+export const voicesOf = (c: TestCollective): string[] => c.f.members.filter((m) => !departedOf(c).some((d) => d.member === m));
+
+/** The release area's holders whose voice there remains: not departed, not stepped down (rules 37a, 37b). */
+export const releaseVoicesOf = (c: TestCollective): string[] =>
+  voicesOf(c).filter((m) => !steppedDownOf(c).some((d) => d.member === m && d.area === RELEASE_AREA));
+
+/** How many must sign: the number as written, or all who remain when fewer do (rule 44d). */
+const needed = (k: number, voices: number) => Math.min(k, voices);
+
+/** Plain words for how many of whom: "any 2 of A, B and C", "all of A and B", "A alone". */
+const anyOf = (k: number, ids: string[], names: (id: string) => string): string =>
+  !ids.length ? 'nobody' : ids.length === 1 ? `${names(ids[0])} alone` : k >= ids.length ? `all of ${list(ids.map(names))}` : `any ${k} of ${list(ids.map(names))}`;
 
 function whole(n: unknown, what: string): number {
   if (typeof n !== 'number' || !Number.isSafeInteger(n) || n < 0) throw new Error(`${what}: a whole number`);
@@ -260,14 +308,23 @@ export class Actions {
     if (!version) blocking.push('Give the release a version, for example 11b.1.');
     if (!p.relays.length) blocking.push('Name at least one relay first, under Settings: the files go there.');
     if (collective?.f.pending) blocking.push('A member change of this collective is still waiting for its homes. Send it again first: a release signed with the old key would be void once the change counts.');
+    const voices = collective ? releaseVoicesOf(collective) : [];
+    if (collective && !voices.length) {
+      blocking.push(
+        'The Releases area has no holder left whose voice remains: it is frozen, and a release would count for nothing until the members refit it, by a change of members or rules that gives the area a holder again (Law rule 37b).',
+      );
+    }
     if (p.releases.some((r) => r.version === version)) blocking.push(`A release ${version} was already published by ${names(a.publisher)}. Choose another version.`);
     const dir = this.checkout();
     const prepared = prepareRelease(p, { name, version, files: gitFiles(dir), source: gitSource(dir) });
     const who: Line[] = collective
       ? [
           {
-            text: `It is published by ${names(a.publisher)}, signed with its everyday key. It is not a release yet: it counts once any ${collective.f.governance.releaseThreshold} of its ${collective.f.members.length} members have signed it, each with an act of their own (agreement in force ${short(collective.f.agreement)}).`,
+            text: `It is published by ${names(a.publisher)}, signed with its everyday key. It is not a release yet: it counts once ${anyOf(needed(collective.f.governance.releaseThreshold, voices.length), voices, names)}, the holders of its Releases area whose voice remains, have signed it, each with an act of their own (agreement in force ${short(collective.f.agreement)}).`,
           },
+          ...(voices.length < collective.f.governance.releaseThreshold && voices.length
+            ? [{ text: `The area asks for ${collective.f.governance.releaseThreshold}; fewer holders remain, so all of them together meet it (Law rule 44d).` }]
+            : []),
         ]
       : [
           {
@@ -299,7 +356,7 @@ export class Actions {
             { text: `Release ${out.id}.`, tone: 'ok' },
             { text: `${count(out.manifest.files.length, 'file')}, ${out.uploaded} uploaded new.` },
             ...out.refused.map((r) => ({ text: `Refused by ${r}`, tone: 'warn' as const })),
-            ...(collective ? [{ text: `It counts once ${collective.f.governance.releaseThreshold} members sign it.` }] : []),
+            ...(collective ? [{ text: `It counts once ${anyOf(needed(collective.f.governance.releaseThreshold, voices.length), voices, names)} sign it.` }] : []),
           ],
           acts: [out.id],
         };
@@ -320,13 +377,60 @@ export class Actions {
     return null;
   }
 
-  /** The terms payload of a public terms act, fetched. */
-  private async termsAct(id: string, hints: string[]): Promise<TermsRead | null> {
+  /** A public terms act, fetched: its exact payload, and the core's reading of it. */
+  private async termsAct(id: string, hints: string[]): Promise<{ payload: Uint8Array; t: TermsRead } | null> {
     const a = await this.fetchAct(id, hints);
     if (!a) return null;
     const d = describeAct(a) as { public: boolean; spec?: string; type?: number; payload?: Uint8Array };
     if (!d.public || d.spec !== REPO_SPECS.law || d.type !== 0 || !d.payload) return null;
-    return termsOf(d.payload);
+    return { payload: d.payload, t: termsOf(d.payload) };
+  }
+
+  /** Read terms this client made, or say plainly why Law cannot. */
+  private read(payload: Uint8Array): TermsRead {
+    try {
+      return termsOf(payload);
+    } catch (e) {
+      const p = lawThrown(e);
+      throw new Error(p ? problemWords(p) : `Law cannot read these terms: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  private hintsOf(c: TestCollective): string[] {
+    return [...new Set([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)])];
+  }
+
+  /**
+   * Before drawing a record: acts of the collective its relays hold that
+   * this device's sequence does not. A record names no other sequence, so
+   * they would count as made after its line (Law, "Made before, made
+   * after"). Client conformance: the collective's devices share their tips
+   * before a line is drawn, and a client warns before drawing one with a
+   * device not heard from.
+   */
+  private async unheard(c: TestCollective): Promise<Line[]> {
+    const mine = new Set(c.f.identity.sequence);
+    const found = new Map<string, number>();
+    for (const a of await allBy(c.identity, this.hintsOf(c), this.via)) {
+      let d: { id: string; signer?: string; spec?: string; type?: number; position?: number };
+      try {
+        d = describeAct(a);
+      } catch {
+        continue;
+      }
+      if (d.signer !== c.identity || !d.spec) continue;
+      if (d.spec === SPECS.identity && (d.type === 0 || d.type === 1)) continue; // genesis and rotations: the chain
+      if (!mine.has(d.id)) found.set(d.id, d.position ?? 0);
+    }
+    if (!found.size) return [];
+    const latest = [...found].sort((x, y) => y[1] - x[1])[0][0];
+    const n = found.size;
+    return [
+      {
+        text: `${count(n, 'act')} signed by the collective ${n === 1 ? 'is' : 'are'} at its relays but not in this device's sequence (latest ${short(latest)}): another device made ${n === 1 ? 'it' : 'them'}. The record names no other sequence, so ${n === 1 ? 'it' : 'they'} will count as made after its line (Law, “Made before, made after”). Client conformance: the collective's devices share their tips before a line is drawn.`,
+        tone: 'warn',
+      },
+    ];
   }
 
   // ------------------------------------------------------------ founding
@@ -346,26 +450,16 @@ export class Actions {
     );
     for (const m of members) if (!this.store.holds(m)) blocking.push(`${names(m)} is not held by this program, so it cannot sign here.`);
     if (members.length < 2) blocking.push('A collective has at least two members.');
-    const rules = {
-      safetyThreshold: whole(a.rules.safety, 'the shares needed'),
-      releaseThreshold: whole(a.rules.release, 'the signatures a release needs'),
-      cloneThreshold: whole(a.rules.clone, 'the signatures a change needs'),
-      abandonmentOthers: whole(a.rules.others, 'who judges absence'),
-    };
+    const rules = fromRules(a.rules);
     const g: Governance = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules) };
     const payload = encodeTerms(collectiveTerms(g, members, members[0]));
-    let t: TermsRead;
-    try {
-      t = termsOf(payload);
-    } catch (e) {
-      throw new Error(`Law cannot read these terms: ${e instanceof Error ? e.message : e}`);
-    }
+    const t = this.read(payload);
     const read = readAgreement(t, names);
     blocking.push(...withLaw(rulesHints(toRules(g), members.length), read.blocking));
     const reading: Reading = {
       title: `Found the collective “${name}”`,
       summary: [
-        `Each of the ${members.length} members signs the founding agreement below, each with a visible act of their own.`,
+        `Each of the ${members.length} members signs the founding agreement below, each with a visible act of their own. It exists only once every one has signed: nobody is founded into a collective without signing (Q11).`,
         `Then the collective is born: an identity of its own, whose genesis declares this agreement. Its safety key is dealt as ${members.length} shares, and each member checks theirs; any ${rules.safetyThreshold} rebuild it.`,
         `${names(members[0])} proposes it and holds the collective's everyday key.`,
       ],
@@ -387,7 +481,7 @@ export class Actions {
           ],
         },
       ],
-      plain: [{ heading: 'The words everyone signs', text: t.text }],
+      plain: [{ heading: 'The words everyone signs', text: t.text }, ...read.plain],
       blocking,
     };
     return this.plan({
@@ -422,6 +516,13 @@ export class Actions {
 
   // ------------------------------------------------------------ changing members and rules
 
+  /**
+   * A constitutional change (Law rules 37, 44c): members join or are
+   * removed, the rules may be rewritten. Members removed who have not left
+   * yet first sign a resignation each, registered at once by a record; the
+   * clone's mark names the constitutional change rule and the members whose
+   * voice remains who sign it; a rotation of the collective declares it.
+   */
   async prepareChange(a: { collective: string; join?: string[]; leave?: string[]; rules?: Rules; words?: string }) {
     const names = this.store.names();
     const c = this.store.collective(a.collective);
@@ -435,19 +536,36 @@ export class Actions {
       if (c.f.members.includes(j)) blocking.push(`${names(j)} is already a member.`);
       if (!this.store.holds(j)) blocking.push(`${names(j)} is not held by this program, so it cannot sign the clone here.`);
     }
+    const departed = new Set(departedOf(c).map((d) => d.member));
+    for (const d of departed) {
+      if (c.f.members.includes(d) && !leave.has(d)) {
+        blocking.push(`${names(d)} left the collective. A change that keeps them as a member would deal them a share of the new safety key: remove them in the same change.`);
+      }
+    }
     const members = [...c.f.members.filter((m) => !leave.has(m)), ...join.filter((j) => !c.f.members.includes(j))];
     const staying = c.f.members.filter((m) => !leave.has(m));
-    const signersStaying = staying.filter((m) => this.store.holds(m));
+    // Removed members who have not left yet: held here, they resign first; otherwise they keep their voice for this clone.
+    const resigning = [...leave].filter((l) => c.f.members.includes(l) && !departed.has(l) && this.store.holds(l));
+    const removedUnheld = [...leave].filter((l) => c.f.members.includes(l) && !departed.has(l) && !this.store.holds(l));
+    const signersStaying = staying.filter((m) => this.store.holds(m) && !departed.has(m));
+    // The constitutional change rule, counted among the voices that remain at the rotation (rule 44d).
+    const voices = c.f.members.filter((m) => !departed.has(m) && !resigning.includes(m));
+    const k = c.f.governance.constitutionalThreshold;
+    if (!k) {
+      const missing = voices.filter((v) => !signersStaying.includes(v));
+      if (missing.length) {
+        blocking.push(
+          `A change of members needs every member whose voice remains (the constitutional change rule); ${list(missing.map(names))} cannot sign here: not held by this program${removedUnheld.length ? ', and removed without resigning' : ''}.`,
+        );
+      }
+    } else {
+      const need = needed(k, voices.length);
+      const have = signersStaying.filter((m) => voices.includes(m)).length;
+      if (have < need) blocking.push(`A change of members needs any ${need} of the ${voices.length} members whose voice remains (the constitutional change rule); only ${have} sign here.`);
+    }
 
     const current = c.f.governance;
-    const rules = a.rules
-      ? {
-          safetyThreshold: whole(a.rules.safety, 'the shares needed'),
-          releaseThreshold: whole(a.rules.release, 'the signatures a release needs'),
-          cloneThreshold: whole(a.rules.clone, 'the signatures a change needs'),
-          abandonmentOthers: whole(a.rules.others, 'who judges absence'),
-        }
-      : { ...current };
+    const rules = fromRules(a.rules ?? toRules(current));
     const rulesChanged = JSON.stringify(toRules({ ...rules, text: '' })) !== JSON.stringify(toRules(current));
     let text = a.words?.trim() || current.text;
     const notes: Line[] = [];
@@ -456,103 +574,124 @@ export class Actions {
       else notes.push({ text: 'The rules change but the words stay as they were: check they still say what the rules do.', tone: 'warn' });
     }
     const changedGovernance = rulesChanged || text !== current.text;
-    const g: Governance = { ...rules, text };
+    const g: Governance = { ...rules, releaseWords: current.releaseWords, text };
 
     const holder = c.nextHolder(members);
-    const payload = encodeTerms(collectiveTerms(g, members, holder, c.f.agreement));
-    let after: TermsRead;
-    try {
-      after = termsOf(payload);
-    } catch (e) {
-      throw new Error(`Law cannot read these terms: ${e instanceof Error ? e.message : e}`);
-    }
-    const hints = [...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)];
+    const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: signersStaying }];
+    const payload = encodeTerms(collectiveTerms(g, members, holder, c.f.agreement, mark));
+    const after = this.read(payload);
+    const hints = this.hintsOf(c);
     const before = await this.termsAct(c.f.agreement, hints);
     if (!before) blocking.push(`The agreement in force (${short(c.f.agreement)}) could not be fetched from ${hints.join(', ')}, so what changes cannot be shown.`);
-
-    // Law: the parent's clone rule, counted among the parent's parties who sign here.
-    const cloneRule = before?.clone;
-    if (before && cloneRule) {
-      const k = cloneRule.form === 'all' ? before.parties.length : cloneRule.form === 'threshold' ? cloneRule.threshold! : 0;
-      if (cloneRule.form === 'named') {
-        const missing = (cloneRule.named ?? []).filter((n) => !signersStaying.includes(n));
-        if (missing.length) blocking.push(`The clone needs ${missing.map(names).join(', ')} to sign it, and they do not stay here.`);
-      } else if (signersStaying.length < k) {
-        blocking.push(`A change needs ${k} of the current members to sign it; only ${signersStaying.length} stay and are held here.`);
-      }
+    const changes = before ? readChanges(before.payload, payload, names) : [];
+    if (changes.some((l) => l.tone === 'bad')) {
+      blocking.push('This change needs other powers than the constitutional change rule its mark names; this client makes member and rules changes as constitutional changes only (F104).');
     }
-    const rebuilders = c.f.safety.shares.filter((x) => staying.includes(x.holder) && this.store.holds(x.holder)).map((x) => x.holder);
+
+    const rebuilders = c.f.safety.shares
+      .filter((x) => staying.includes(x.holder) && !departed.has(x.holder) && this.store.holds(x.holder))
+      .map((x) => x.holder);
     if (rebuilders.length < c.f.safety.threshold) {
       blocking.push(`Rotating the collective needs ${c.f.safety.threshold} shares of its safety key from members who stay; only ${rebuilders.length} are here.`);
     }
     if (!members.length) blocking.push('Nobody would be left.');
     if (!join.length && !leave.size && !changedGovernance) blocking.push('Nothing changes.');
 
-    const read = readAgreement(after, names, before);
+    const read = readAgreement(after, names, before?.t);
     blocking.push(...withLaw(members.length ? rulesHints(toRules(g), members.length) : [], read.blocking));
     const usedRebuilders = rebuilders.slice(0, c.f.safety.threshold);
-    const mineLeaving = [...leave].filter((l) => this.store.book().identities.find((i) => i.id === l)?.mine);
     const title =
-      mineLeaving.length && leave.size === 1 && !join.length
-        ? `${names(mineLeaving[0])} leaves “${cname}”`
-        : join.length && !leave.size
-          ? `Add ${join.map(names).join(', ')} to “${cname}”`
-          : leave.size && !join.length
-            ? `Remove ${[...leave].map(names).join(', ')} from “${cname}”`
-            : join.length || leave.size
-              ? `Change the members of “${cname}”`
-              : `Change the rules of “${cname}”`;
-    const summary = [
-      `The members sign a clone of the agreement in force: a new version naming it, with ${members.length} members.`,
-      `Then the collective rotates: its safety key, rebuilt from the shares of ${usedRebuilders.map(names).join(' and ') || 'nobody'}, signs a rotation declaring the clone, and a new safety key is dealt to the new members only.`,
+      join.length && !leave.size
+        ? `Add ${join.map(names).join(', ')} to “${cname}”`
+        : leave.size && !join.length
+          ? `Remove ${[...leave].map(names).join(', ')} from “${cname}”`
+          : join.length || leave.size
+            ? `Change the members of “${cname}”`
+            : `Change the rules of “${cname}”`;
+    const summary: string[] = [];
+    if (resigning.length) {
+      summary.push(
+        `First ${list(resigning.map(names))} ${resigning.length === 1 ? 'signs a resignation' : 'each sign a resignation'}, alone, and the collective registers ${resigning.length === 1 ? 'it' : 'them'} at once by a record, its line (Law rule 37a). ${resigning.length === 1 ? 'It is a simulated member' : 'They are simulated members'} held here, so this program signs for ${resigning.length === 1 ? 'it' : 'them'}.`,
+      );
+    }
+    const gone = [...leave].filter((l) => departed.has(l));
+    if (gone.length) summary.push(`${list(gone.map(names))} already left: their resignation is on the collective's record, so nothing more is asked of them.`);
+    summary.push(
+      `The members whose voice remains sign a clone of the agreement in force: a new version naming it, with ${members.length} members, marked with the constitutional change rule (Law rules 44c, 45a).`,
+      `Then the collective rotates: its safety key, rebuilt from the shares of ${list(usedRebuilders.map(names)) || 'nobody'}, signs a rotation declaring the clone, and a new safety key is dealt to the new members only.`,
       'Once the homes count the rotation, the new rules apply, and anything the old key signs is void (F100).',
-    ];
-    if (mineLeaving.length) summary.push('The members who stay write the rules from here on: yours end with your membership.');
+    );
+    // The release area: who stepped down, and whether this change refits it (rule 37b).
+    const releaseArea = (t: TermsRead) => t.areas.find((x) => x.id === RELEASE_AREA);
+    const areaChanged = !!before && JSON.stringify(releaseArea(before.t)) !== JSON.stringify(releaseArea(after));
+    const down = steppedDownOf(c).filter((d) => d.area === RELEASE_AREA && members.includes(d.member));
+    if (down.length) {
+      notes.push(
+        areaChanged
+          ? { text: `${list(down.map((d) => names(d.member)))} stepped down from the Releases area. This change redraws the area, so whoever it names as a holder and signs it holds the area again (Law rules 37b, 44d).` }
+          : {
+              text: `${list(down.map((d) => names(d.member)))} stepped down from the Releases area. This change leaves the area's entry as it is, so it does not refit the area (Law rule 37b): they stay stepped down${releaseVoicesOf(c).length ? '' : ', and the area stays frozen'}. Change the number of members a release needs, or its holders, to refit it.`,
+              tone: 'warn',
+            },
+      );
+    }
+    const warnings = resigning.length ? await this.unheard(c) : [];
     const reading: Reading = {
       title,
       summary,
       sections: [
-        { heading: 'What changes', lines: [...(before ? readChanges(before, after, names) : []), ...notes] },
-        ...read.sections.map((s) => ({ ...s, heading: `After the change: ${s.heading.toLowerCase()}` })),
+        { heading: 'What changes', lines: [...changes, ...notes, ...warnings] },
+        ...read.sections.map((s) => ({ ...s, heading: `After the change: ${s.heading.charAt(0).toLowerCase()}${s.heading.slice(1)}` })),
         {
           heading: 'Signed on this device',
           lines: [
-            { text: `The clone is proposed by ${names(signersStaying[0] ?? staying[0] ?? '')} and signed by ${[...signersStaying, ...join].map(names).join(', ')}.` },
-            { text: `The shares of ${usedRebuilders.map(names).join(' and ')} rebuild the safety key for the rotation. Members who leave hand over nothing.` },
+            ...(resigning.length ? [{ text: `${list(resigning.map(names))} sign${resigning.length === 1 ? 's' : ''} a resignation; the collective's everyday key, held here, signs the record.` }] : []),
+            { text: `The clone is proposed by ${names(signersStaying[0] ?? staying[0] ?? '')} and signed by ${list([...signersStaying, ...join].map(names))}.` },
+            { text: `The shares of ${list(usedRebuilders.map(names))} rebuild the safety key for the rotation. Members who leave hand over nothing.` },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
           ],
         },
       ],
       plain: [
         { heading: 'The words after the change', text: after.text },
-        ...(before && before.text !== after.text ? [{ heading: 'The words before', text: before.text }] : []),
+        ...(before && before.t.text !== after.text ? [{ heading: 'The words before', text: before.t.text }] : []),
+        ...read.plain,
       ],
       blocking,
     };
     return this.plan({
       kind: 'change',
-      digest: digestOf('change', a.collective, payload, JSON.stringify({ members, rebuilders: usedRebuilders })),
+      digest: digestOf('change', a.collective, payload, JSON.stringify({ members, rebuilders: usedRebuilders, resigning })),
       reading,
       depends: [a.collective, ...new Set([...c.f.members, ...join].filter((m) => this.store.holds(m)))],
       run: async () => {
         const col = this.store.collective(a.collective);
         const stay = signersStaying.map((m) => this.store.identity(m));
         const joining = join.map((m) => this.store.identity(m));
+        const leaving = resigning.map((m) => this.store.identity(m));
         const got = await col.changeMembers({
           members,
           proposer: stay[0],
           signers: [...stay, ...joining],
           rebuilders: usedRebuilders,
+          leaving,
           governance: changedGovernance ? g : undefined,
           expect: payload,
         });
+        if (got.record) {
+          col.f.records = [...(col.f.records ?? []), got.record];
+          col.f.departed = [...departedOf(col), ...got.resigned.map((r) => ({ member: r.member, resignation: r.act, record: got.record! }))];
+        }
         this.store.saveCollective(col);
-        for (const i of [...stay, ...joining]) this.store.saveIdentity(i);
+        for (const i of [...stay, ...joining, ...leaving]) this.store.saveIdentity(i);
         const counts = await col.settle();
+        if (counts) this.afterRefit(col, areaChanged ? signersStaying.concat(join) : []);
         this.store.saveCollective(col);
         return {
           title: counts ? `${title}: done` : `${title}: waiting for the homes`,
           lines: [
+            ...got.resigned.map((r) => ({ text: `Resignation ${r.act} by ${names(r.member)}.` })),
+            ...(got.record ? [{ text: `Record ${got.record}: the line from which ${list(got.resigned.map((r) => names(r.member)))} no longer count.` }] : []),
             { text: `Clone ${got.clone}, signed by ${got.signed.length}.` },
             { text: `Rotation ${got.rotation}.` },
             ...got.sent.map((x) => ({
@@ -563,7 +702,301 @@ export class Actions {
               ? { text: `The change counts. Members now: ${col.f.members.map(names).join(', ')}.`, tone: 'ok' }
               : { text: 'Not counted yet: too few homes took the rotation. Send it again once they are back (the same bytes; nothing new is signed).', tone: 'warn' },
           ],
-          acts: [got.clone, ...got.signed.map((x) => x.act), got.rotation],
+          acts: [...got.resigned.map((r) => r.act), ...(got.record ? [got.record] : []), got.clone, ...got.signed.map((x) => x.act), got.rotation],
+        };
+      },
+    });
+  }
+
+  /**
+   * Once a constitutional change counts: holders it names again in a
+   * redrawn release area, who signed it, hold that area again (rules 37b,
+   * 44d); steppings down of members no longer members are history.
+   */
+  private afterRefit(col: TestCollective, signedRedrawn: string[]): void {
+    const down = steppedDownOf(col).filter((d) => col.f.members.includes(d.member) && !(d.area === RELEASE_AREA && signedRedrawn.includes(d.member)));
+    col.f.steppedDown = down;
+  }
+
+  // ------------------------------------------------------------ leaving, stepping down, an ordinary change
+
+  /** The collective, its name here, and a member it holds, for the actions below. */
+  private memberOf(collective: string, member: string, blocking: string[]) {
+    const names = this.store.names();
+    const c = this.store.collective(collective);
+    const cname = this.store.book().collectives.find((x) => x.id === collective)?.name ?? short(collective);
+    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first. A record signed with the old everyday key would be void once it counts.');
+    if (!c.f.members.includes(member)) blocking.push(`${names(member)} is not a member of “${cname}”.`);
+    if (!this.store.holds(member)) blocking.push(`${names(member)} is not held by this program, so it cannot sign here.`);
+    if (departedOf(c).some((d) => d.member === member)) blocking.push(`${names(member)} already left “${cname}”.`);
+    return { c, cname, names };
+  }
+
+  /** Who decides, from a line on, in plain words: the constitution, the Releases area, other changes (rule 44d). */
+  private decidersAfter(c: TestCollective, voices: string[], releaseVoices: string[], names: (id: string) => string): Line[] {
+    const g = c.f.governance;
+    const out: Line[] = [
+      {
+        text: g.constitutionalThreshold
+          ? `A change of the constitution (members, rules, keys, areas) needs ${anyOf(needed(g.constitutionalThreshold, voices.length), voices, names)}.`
+          : `A change of the constitution (members, rules, keys, areas) needs every member whose voice remains: ${list(voices.map(names)) || 'nobody'}.`,
+      },
+    ];
+    if (releaseVoices.length) {
+      out.push({ text: `A release needs ${anyOf(needed(g.releaseThreshold, releaseVoices.length), releaseVoices, names)}${releaseVoices.length < g.releaseThreshold ? `: the area asks for ${g.releaseThreshold}, and when fewer holders remain all of them together meet it (Law rule 44d)` : ''}.` });
+    } else {
+      out.push({
+        text: 'Nobody would hold the Releases area: it is frozen from the line. A release counts for nothing until the members refit the area by a change of the constitution (Law rule 37b).',
+        tone: 'bad',
+      });
+    }
+    out.push({ text: `Other changes need ${anyOf(needed(g.cloneThreshold, voices.length), voices, names)}.` });
+    return out;
+  }
+
+  /**
+   * Leave a collective alone (Law rule 37a): the member signs a resignation
+   * nobody else signs, and the collective registers it at once by a record,
+   * its line. Nothing else changes: the members who stay refit the
+   * collective afterwards (Change members), rotating to keys the member
+   * who left never held.
+   */
+  async prepareLeave(a: { collective: string; member: string }) {
+    const blocking: string[] = [];
+    const { c, cname, names } = this.memberOf(a.collective, a.member, blocking);
+    const who = names(a.member);
+    const voices = voicesOf(c).filter((m) => m !== a.member);
+    const releaseVoices = releaseVoicesOf(c).filter((m) => m !== a.member);
+    const mine = !!this.store.book().identities.find((i) => i.id === a.member)?.mine;
+    const what: Line[] = [
+      { text: `${who} keeps what they own, and stays bound by what they signed (Law rule 37a).` },
+      { text: `A signature of theirs placed before the line still counts for what it signed: a release made before the line can still be completed with it (Law, “Made before, made after”, C1).` },
+    ];
+    if (c.f.signingHolder === a.member) {
+      what.push({ text: `${who} holds the collective's everyday key under its key grammar until the refit; here this program draws the line with it.`, tone: 'warn' });
+    }
+    what.push({ text: `${who}'s share of the current safety key exists until the refit; the rotation that follows fences it off (F100).`, tone: 'warn' });
+    const then: Line[] = [
+      {
+        text: `The members who stay then refit the collective: Change members, removing ${who}, rotates it to keys ${who} never held, and deals the safety key afresh among those who stay (Law rule 37).`,
+      },
+    ];
+    if (voices.length && c.f.governance.safetyThreshold >= voices.length) {
+      then.push({
+        text: `With ${voices.length} member${voices.length === 1 ? '' : 's'} left, a safety key needing ${c.f.governance.safetyThreshold} of them would be lost with any one of them: the refit must ask fewer to rebuild it (F96).`,
+        tone: 'warn',
+      });
+    }
+    const payload = resignationPayload(c.f.agreement);
+    const reading: Reading = {
+      title: `${who} leaves “${cname}”`,
+      summary: [
+        `${who} signs a resignation from the agreement in force (${short(c.f.agreement)}), alone: nobody else's signature is asked for, and nobody can stop it (Law rule 37a).`,
+        `The collective then registers it at once by a record, its line, signed with its everyday key. From that line on, ${who}'s signature counts toward no rule and no area of the collective (F109).`,
+        'Nothing else changes now: no rule is rewritten, no key rotates.',
+      ],
+      sections: [
+        { heading: 'What leaving means', lines: what },
+        { heading: 'Who decides from the line on', lines: this.decidersAfter(c, voices, releaseVoices, names) },
+        { heading: 'Then', lines: then },
+        {
+          heading: 'Signed on this device',
+          lines: [
+            { text: `${who} signs the resignation here: a test identity this program holds.` },
+            { text: "The collective's everyday key, kept in this program's folder, signs the record." },
+            ...(mine ? [] : [{ text: `${who} is a simulated member: their consent is simulated (test only).`, tone: 'warn' as const }]),
+            ...(await this.unheard(c)),
+          ],
+        },
+      ],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'leave',
+      digest: digestOf('leave', a.collective, a.member, payload),
+      reading,
+      depends: [a.collective, a.member],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const m = this.store.identity(a.member);
+        const r = await resign(m, col.f.agreement, col.f.relays);
+        this.store.saveIdentity(m);
+        const line = await record(col.id, { registers: [r.id], inForce: col.f.agreement }, col.f.relays);
+        col.f.departed = [...departedOf(col), { member: a.member, resignation: r.id, record: line.id }];
+        col.f.records = [...(col.f.records ?? []), line.id];
+        this.store.saveCollective(col);
+        return {
+          title: `${who} left “${cname}”`,
+          lines: [
+            { text: `Resignation ${r.id}, signed by ${who} alone.` },
+            { text: `Record ${line.id}: the collective's line, from which ${who}'s signature counts for nothing.`, tone: 'ok' },
+            { text: `Next: the members who stay refit the collective (Change members: remove ${who}).` },
+          ],
+          acts: [r.id, line.id],
+        };
+      },
+    });
+  }
+
+  /**
+   * Step down from the release area at once, alone (Law rule 37b,
+   * "Stepping down at once"): a resignation naming the area, registered at
+   * once by a record. The other holders carry on; with none left, the area
+   * is frozen until the members refit it.
+   */
+  async prepareStepDown(a: { collective: string; member: string }) {
+    const blocking: string[] = [];
+    const { c, cname, names } = this.memberOf(a.collective, a.member, blocking);
+    const who = names(a.member);
+    if (steppedDownOf(c).some((d) => d.member === a.member && d.area === RELEASE_AREA)) blocking.push(`${who} already stepped down from the Releases area.`);
+    const releaseVoices = releaseVoicesOf(c).filter((m) => m !== a.member);
+    const payload = resignationPayload(c.f.agreement, RELEASE_AREA);
+    const area: Line[] = releaseVoices.length
+      ? [
+          {
+            text: `The other holders carry on: a release needs ${anyOf(needed(c.f.governance.releaseThreshold, releaseVoices.length), releaseVoices, names)}${releaseVoices.length < c.f.governance.releaseThreshold ? `; the area asks for ${c.f.governance.releaseThreshold}, and when fewer remain all of them together meet it (Law rule 44d)` : ''}.`,
+          },
+        ]
+      : [
+          {
+            text: 'Nobody would hold the Releases area: it is frozen from the line. A release counts for nothing until the members refit the area, by a change of the constitution that gives it a holder again (Law rule 37b).',
+            tone: 'bad',
+          },
+        ];
+    area.push({ text: `A signature of ${who}'s on a release made before the line still counts for it (Law, “Made before, made after”, C1).` });
+    const reading: Reading = {
+      title: `${who} steps down from the Releases area of “${cname}”`,
+      summary: [
+        `${who} signs a resignation naming the Releases area (area ${RELEASE_AREA}), alone: nobody else's signature is asked for (Law rule 37b, “Stepping down at once”).`,
+        `The collective registers it at once by a record, its line. From that line on, ${who}'s signature counts for nothing in the Releases area.`,
+        `${who} keeps the rest of their voice, as a member, and what they own.`,
+      ],
+      sections: [
+        { heading: 'The Releases area from the line on', lines: area },
+        {
+          heading: 'Signed on this device',
+          lines: [
+            { text: `${who} signs the stepping down here; the collective's everyday key, kept in this program's folder, signs the record.` },
+            { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
+            ...(await this.unheard(c)),
+          ],
+        },
+      ],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'stepdown',
+      digest: digestOf('stepdown', a.collective, a.member, payload),
+      reading,
+      depends: [a.collective, a.member],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const m = this.store.identity(a.member);
+        const r = await resign(m, col.f.agreement, col.f.relays, RELEASE_AREA);
+        this.store.saveIdentity(m);
+        const line = await record(col.id, { registers: [r.id], inForce: col.f.agreement }, col.f.relays);
+        col.f.steppedDown = [...steppedDownOf(col), { member: a.member, area: RELEASE_AREA, resignation: r.id, record: line.id }];
+        col.f.records = [...(col.f.records ?? []), line.id];
+        this.store.saveCollective(col);
+        const frozen = !releaseVoicesOf(col).length;
+        return {
+          title: `${who} stepped down from the Releases area`,
+          lines: [
+            { text: `Stepping down ${r.id}, signed by ${who} alone.` },
+            { text: `Record ${line.id}: the collective's line.`, tone: 'ok' },
+            frozen
+              ? { text: 'The Releases area has no holder left: it is frozen until the members refit it.', tone: 'warn' }
+              : { text: `A release now needs ${anyOf(needed(col.f.governance.releaseThreshold, releaseVoicesOf(col).length), releaseVoicesOf(col), names)}.` },
+          ],
+          acts: [r.id, line.id],
+        };
+      },
+    });
+  }
+
+  /**
+   * An ordinary change (Law rule 37c, Q8): the release area's own words,
+   * changed by enough of its holders, marked with the area's power, and
+   * written on the collective's record at once with its everyday key. No
+   * rotation.
+   */
+  async prepareWords(a: { collective: string; text: string; signers?: string[] }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const text = a.text.trim();
+    const blocking: string[] = [];
+    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
+    if (!text) blocking.push('Write the words.');
+    if (text && text === (c.f.governance.releaseWords ?? '')) blocking.push('Nothing changes: these are the area’s words already.');
+    const voices = releaseVoicesOf(c);
+    const k = needed(c.f.governance.releaseThreshold, voices.length);
+    if (!voices.length) blocking.push('The Releases area is frozen: nobody holds it, so nobody can change its words until the members refit it (Law rule 37b).');
+    const signers = a.signers?.length ? [...new Set(a.signers)] : voices.filter((m) => this.store.holds(m)).slice(0, k);
+    for (const s of signers) {
+      if (!voices.includes(s)) blocking.push(`${names(s)} does not hold the Releases area with a voice that remains, so their signature cannot meet its power.`);
+      else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
+    }
+    if (voices.length && signers.length < k) blocking.push(`Its words change with ${anyOf(k, voices, names)}; only ${signers.length} sign here.`);
+    const mark: MarkEntry[] = [{ power: { area: RELEASE_AREA }, signers }];
+    const g: Governance = { ...c.f.governance, releaseWords: text };
+    const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
+    let changes: Line[] = [];
+    if (signers.length && text) {
+      // Terms with nobody in the mark are not even in Law's format: read only what could be signed.
+      const after = this.read(payload);
+      const hints = this.hintsOf(c);
+      const before = await this.termsAct(c.f.agreement, hints);
+      if (!before) blocking.push(`The agreement in force (${short(c.f.agreement)}) could not be fetched from ${hints.join(', ')}, so what changes cannot be shown.`);
+      changes = before ? readChanges(before.payload, payload, names) : [];
+      if (changes.some((l) => l.tone === 'bad')) blocking.push('Its mark does not name exactly the powers its changes need (F104).');
+      blocking.push(...withLaw([], readAgreement(after, names, before?.t).blocking));
+    } else if (!blocking.length) blocking.push('Nobody here can sign it.');
+    const oldWords = c.f.governance.releaseWords;
+    const reading: Reading = {
+      title: `New words for the Releases area of “${cname}”`,
+      summary: [
+        "An ordinary change: it changes only the Releases area's own words, an operational matter in that area (Law rules 44a, 44b).",
+        `The clone is marked with the Releases area's power and signed by ${list(signers.map(names))}: enough of the area's holders (${anyOf(k, voices, names)}) (Law rules 44c, 45a).`,
+        "The collective writes it on its record at once, signed with its everyday key: no rotation, no new keys (Law rule 37c, Q8).",
+      ],
+      sections: [
+        { heading: 'What changes', lines: [...changes, ...(await this.unheard(c))] },
+        {
+          heading: 'Signed on this device',
+          lines: [
+            { text: `${list(signers.map(names))} sign the clone; the collective's everyday key, kept in this program's folder, signs the record.` },
+            { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
+          ],
+        },
+      ],
+      plain: [
+        { heading: "The Releases area's new words", text },
+        ...(oldWords ? [{ heading: 'Its words before', text: oldWords }] : []),
+      ],
+      blocking,
+    };
+    return this.plan({
+      kind: 'words',
+      digest: digestOf('words', a.collective, payload),
+      reading,
+      depends: [a.collective, ...signers.filter((s) => this.store.holds(s))],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const ids = signers.map((s) => this.store.identity(s));
+        const got = await col.changeReleaseWords({ words: text, proposer: ids[0], signers: ids, expect: payload });
+        col.f.records = [...(col.f.records ?? []), got.record];
+        this.store.saveCollective(col);
+        for (const i of ids) this.store.saveIdentity(i);
+        return {
+          title: `The Releases area of “${cname}” has new words`,
+          lines: [
+            { text: `Clone ${got.clone}, signed by ${got.signed.length}.` },
+            { text: `Record ${got.record}: written on the collective's record at once; no rotation.`, tone: 'ok' },
+          ],
+          acts: [got.clone, ...got.signed.map((s) => s.act), got.record],
         };
       },
     });
@@ -575,6 +1008,7 @@ export class Actions {
     if (!c.f.pending) throw new Error('No member change is waiting.');
     const sent = await c.id.submitRotation();
     const counts = await c.settle();
+    if (counts) this.afterRefit(c, []);
     this.store.saveCollective(c);
     return {
       title: counts ? 'The member change counts' : 'Still waiting for the homes',
@@ -633,16 +1067,34 @@ export class Actions {
     const blocking: string[] = [];
     const onlyUnsigned = v.problems.every((p) => p.startsWith('not a release:'));
     if (!v.manifest || !onlyUnsigned) blocking.push(`The release does not check: ${v.problems.join('; ')}`);
+    const checks: Line[] = [];
     if (v.agreement) {
       const t = await this.termsAct(v.agreement, at);
-      if (t && !t.parties.includes(member.id)) {
+      if (t && !t.t.parties.includes(member.id)) {
         blocking.push(`${names(member.id)} is not a member under the agreement in force when it was signed: their signature would not count.`);
+      } else if (v.collective && this.store.isCollective(v.collective)) {
+        // Left, or stepped down, on the collective's line: counted only for an act made before it (F109, C1).
+        const col = this.store.collective(v.collective);
+        const seq = col.f.identity.sequence;
+        const before = (line: string) => seq.includes(a.release) && seq.indexOf(a.release) < seq.indexOf(line);
+        const left = departedOf(col).find((d) => d.member === member.id);
+        const down = steppedDownOf(col).find((d) => d.member === member.id && d.area === RELEASE_AREA);
+        for (const [d, words, rule] of [
+          [left, 'left the collective', '37a'],
+          [down, 'stepped down from the Releases area', '37b'],
+        ] as const) {
+          if (!d) continue;
+          if (before(d.record)) {
+            checks.push({ text: `${names(member.id)} ${words} after this release was made: their signature still counts for it (Law, “Made before, made after”, C1).` });
+          } else {
+            blocking.push(`${names(member.id)} ${words}: from the collective's line (record ${short(d.record)}) their signature counts for nothing there, and this release comes after that line (Law rule ${rule}, F109).`);
+          }
+        }
       }
     } else if (v.manifest) {
       blocking.push('It is not a collective’s release: nobody else’s signature is asked for.');
     }
     if (v.signers.includes(member.id)) blocking.push(`${names(member.id)} has already signed it.`);
-    const checks: Line[] = [];
     if (v.manifest) {
       const dir = this.checkout();
       const cmp = compareWithTree(v.manifest, dir);
@@ -730,10 +1182,33 @@ export class Actions {
       })),
       collectives: b.collectives.map((x) => {
         const c = this.store.collective(x.id);
+        const departed = departedOf(c);
+        const down = steppedDownOf(c);
+        const voices = releaseVoicesOf(c);
         return {
           id: x.id,
           name: x.name,
-          members: c.f.members.map((m) => ({ id: m, name: names(m), held: this.store.holds(m) })),
+          members: c.f.members.map((m) => ({ id: m, name: names(m), held: this.store.holds(m), left: departed.some((d) => d.member === m) })),
+          areas: [
+            {
+              id: RELEASE_AREA,
+              name: 'Releases',
+              holders: c.f.members.map((m) => ({
+                id: m,
+                name: names(m),
+                held: this.store.holds(m),
+                voice: voices.includes(m),
+                steppedDown: down.some((d) => d.member === m && d.area === RELEASE_AREA),
+              })),
+              threshold: c.f.governance.releaseThreshold,
+              needed: needed(c.f.governance.releaseThreshold, voices.length),
+              frozen: !voices.length,
+              words: c.f.governance.releaseWords ?? '',
+            },
+          ],
+          departed: departed.map((d) => ({ id: d.member, name: names(d.member), record: d.record, stillParty: c.f.members.includes(d.member) })),
+          steppedDown: down.map((d) => ({ id: d.member, name: names(d.member), area: d.area, record: d.record })),
+          records: (c.f.records ?? []).length,
           holder: names(c.f.signingHolder),
           agreement: c.f.agreement,
           agreements: c.f.agreements.length,
