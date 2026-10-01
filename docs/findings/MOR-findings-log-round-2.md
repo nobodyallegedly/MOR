@@ -929,6 +929,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Q16 (1 October 2026): in a collective with areas, an act under a specification the collective never adopted counts for nothing; otherwise an unlisted specification would be a way around every lane.
 - Q17 (1 October 2026): when one of several holders steps down, the others carry on under the flaw C rule; an area is frozen only when no holder remains. Grants within a frozen area stop; grants within an area that keeps running carry on.
 - Q18 (1 October 2026): the specification format gains a field in which an extension declares the layers it acts on (Production MIP draft 5). Dropping an extension needs the same approvals as adopting it: Production and every layer it acts on.
+- Q19 (1 October 2026): a seat passed by succession carries membership, never the areas its holder held; those are refitted as in Q13, frozen meanwhile unless co-holders carry on (Q17).
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
