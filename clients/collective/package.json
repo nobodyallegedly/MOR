@@ -1,0 +1,29 @@
+{
+  "name": "mor-collective",
+  "version": "0.1.0",
+  "description": "The MOR collective client: publish releases, found a collective, change its members, sign and verify releases, and leave, from a page in the browser, each step shown in plain words before it is signed. Test identities only.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-collective": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "start": "node --import tsx src/cli.ts open"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "esbuild": "^0.25",
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "playwright-core": "1.56",
+    "typescript": "^5"
+  }
+}

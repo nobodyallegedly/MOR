@@ -8,7 +8,7 @@ import { resolve } from 'node:path';
 import { TestIdentity, type Home } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { hex } from '../../genesis/src/core.ts';
-import { TestCollective, type Governance } from './collective.ts';
+import { TestCollective, governanceText, type Governance } from './collective.ts';
 import { compareWithTree, gitFiles, gitSource, publishRelease, signRelease, verifyRelease, type Verified } from './release.ts';
 
 const HELP = `mor-repo: MOR governs its own code. A test collective publishes releases
@@ -95,13 +95,13 @@ async function main() {
       if (!homes.length) throw new Error('--home is required');
       const relays = opts.relay ?? homes.map((h) => h.hint);
       const k = num('safety', 2);
-      const governance: Governance = {
+      const rules = {
         safetyThreshold: k,
         releaseThreshold: num('release', 2),
         cloneThreshold: num('clone', 2),
         abandonmentOthers: members.length - 1,
-        text: `The MOR test collective. It publishes releases of the MOR code and nothing else. Test acts only, wiped before the first real acts. Its everyday key is held by its first member; its safety key is split among the members, any ${k} of whom rebuild it. A release counts only when ${num('release', 2)} members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any ${num('clone', 2)} members and by each member who joins, and a rotation of the collective declaring it. The other members together decide whether a member is absent; the outcome is that member losing their voice.`,
       };
+      const governance: Governance = { ...rules, text: governanceText(rules) };
       console.log('The founding agreement, as every member signs it:\n');
       console.log(governance.text + '\n');
       const got = await TestCollective.found({

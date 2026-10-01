@@ -26,13 +26,14 @@ import {
 } from '../../genesis/src/core.ts';
 import { TestIdentity, type Home, type IdentityFile, type Submitted } from '../../genesis/src/identity.ts';
 import type { Via } from '../../genesis/src/transport.ts';
-import { propose, sign, type CollectiveTerms, type Rule } from './law.ts';
+import { proposePayload, sign, termsPayload, type CollectiveTerms, type Rule } from './law.ts';
 import { FOUNDING_AGREEMENT, REPO_SPECS } from './specs.ts';
 
 export const COLLECTIVE_LABEL =
   'MOR TEST COLLECTIVE. Its everyday key and every member share are held in software, in this file: a prototype, never for a real collective.';
 
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
+const same = (a: Uint8Array, b: Uint8Array) => Buffer.from(a).equals(Buffer.from(b));
 const unb64 = (s: string) => Uint8Array.from(Buffer.from(s, 'base64'));
 
 /** A dealing of the collective's safety key: one share per holder. */
@@ -75,7 +76,8 @@ export interface CollectiveFile {
   agreement: string;
   agreements: string[];
   safety: Dealt;
-  pending: { safety: Dealt; agreement: string; members: string[] } | null;
+  /** A member change sent and not yet counted. `governance`: the clone's rules, when they changed. */
+  pending: { safety: Dealt; agreement: string; members: string[]; governance?: Governance } | null;
   /** Releases published, newest last, with their manifests (for the next one to reuse unchanged files). */
   releases: { id: string; version: string; manifest: string }[];
 }
@@ -86,7 +88,16 @@ export interface Signed {
   act: string;
 }
 
-function terms(g: Governance, members: string[], holder: string, parent?: string): CollectiveTerms {
+/**
+ * The words of an agreement with these rules, as the command line writes
+ * them. Members may write other words; the rules are what MOR enforces.
+ */
+export function governanceText(g: Omit<Governance, 'text'>): string {
+  return `The MOR test collective. It publishes releases of the MOR code and nothing else. Test acts only, wiped before the first real acts. Its everyday key is held by its first member; its safety key is split among the members, any ${g.safetyThreshold} of whom rebuild it. A release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any ${g.cloneThreshold} members and by each member who joins, and a rotation of the collective declaring it. The other members together decide whether a member is absent; the outcome is that member losing their voice.`;
+}
+
+/** The terms of a founding agreement (no parent) or of a clone, from its rules. */
+export function collectiveTerms(g: Governance, members: string[], holder: string, parent?: string): CollectiveTerms {
   const rule = (k: number): Rule => ({ threshold: k });
   return {
     parties: members,
@@ -147,6 +158,11 @@ export class TestCollective {
     return this.f.identity.identity;
   }
 
+  /** Who holds the everyday key after a member change: the holder if they stay, else the first member. */
+  nextHolder(members: string[]): string {
+    return members.includes(this.f.signingHolder) ? this.f.signingHolder : members[0];
+  }
+
   static load(path: string, via: Via = {}): TestCollective {
     const f = JSON.parse(readFileSync(path, 'utf8')) as CollectiveFile;
     if (f.label !== COLLECTIVE_LABEL) throw new Error(`${path} is not a MOR test collective file`);
@@ -173,11 +189,14 @@ export class TestCollective {
     governance: Governance;
     scheme?: 2 | 3;
     via?: Via;
+    /** The exact terms payload shown to the members: refused if the terms made now differ. */
+    expect?: Uint8Array;
   }): Promise<{ collective: TestCollective; agreement: string; signed: Signed[]; sent: Submitted[] }> {
     const ids = opts.members.map((m) => m.id);
     const holder = ids[0];
-    const t = terms(opts.governance, ids, holder);
-    const proposed = await propose(opts.members[0], t, opts.relays);
+    const payload = termsPayload(collectiveTerms(opts.governance, ids, holder));
+    if (opts.expect && !same(opts.expect, payload)) throw new Error('the founding agreement is not the one shown: nothing signed');
+    const proposed = await proposePayload(opts.members[0], payload, undefined, opts.relays);
     const signed: Signed[] = [];
     for (const m of opts.members) signed.push({ member: m.id, act: (await sign(m, proposed.id, opts.relays)).id });
 
@@ -238,18 +257,24 @@ export class TestCollective {
    * clone, signed by the safety key rebuilt from the shares of `rebuilders`
    * (members who stay: a leaving member hands over nothing), and committing
    * to a next key dealt to the new members only. A leaving member never held
-   * the next key. Save every file after.
+   * the next key. With `governance`, the clone also rewrites the rules (a
+   * founder's rules do not outlive their membership). Save every file after.
    */
   async changeMembers(opts: {
     members: string[];
     proposer: TestIdentity;
     signers: TestIdentity[];
     rebuilders: string[];
+    governance?: Governance;
+    /** The exact clone payload shown to the members: refused if the clone made now differs. */
+    expect?: Uint8Array;
   }): Promise<{ clone: string; rotation: string; signed: Signed[]; sent: Submitted[] }> {
     if (this.f.pending || this.f.identity.pending) throw new Error('a member change is already pending: resend it');
-    const holder = opts.members.includes(this.f.signingHolder) ? this.f.signingHolder : opts.members[0];
-    const t = terms(this.f.governance, opts.members, holder, this.f.agreement);
-    const proposed = await propose(opts.proposer, t, this.f.relays);
+    const governance = opts.governance ?? this.f.governance;
+    const holder = this.nextHolder(opts.members);
+    const payload = termsPayload(collectiveTerms(governance, opts.members, holder, this.f.agreement));
+    if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
+    const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
     const signed: Signed[] = [];
     for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
 
@@ -259,7 +284,7 @@ export class TestCollective {
       .slice(0, this.f.safety.threshold)
       .map((s) => unb64(s.share));
     const current = rebuildSafety(shares) as { scheme: number; seeds: Uint8Array; commit: string };
-    const next = deal(opts.members, this.f.governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
+    const next = deal(opts.members, governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
 
     const f = this.f.identity;
     const newSigning = newSigningSecret();
@@ -289,7 +314,7 @@ export class TestCollective {
       homes: f.homes,
       rule: f.rule,
     };
-    this.f.pending = { safety: next, agreement: proposed.id, members: opts.members };
+    this.f.pending = { safety: next, agreement: proposed.id, members: opts.members, governance: opts.governance };
     this.f.signingHolder = holder;
     const sent = await this.id.submitRotation();
     return { clone: proposed.id, rotation: id, signed, sent };
@@ -305,6 +330,7 @@ export class TestCollective {
       this.f.agreement = p.agreement;
       this.f.agreements.push(p.agreement);
       this.f.members = p.members;
+      if (p.governance) this.f.governance = p.governance;
       this.f.pending = null;
     }
     return counts;
