@@ -907,6 +907,19 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Applied:** not yet. The Law redraft comes before step 12, then the two clients.
 
+**Scope (Nobody, allegedly, 1 October 2026, question Q1 of the Law redraft):** the tiers and lanes apply to collectives only. "Deals should be as simple as possible while remaining rich. Collectives is for when things get complicated." Two people who end up doing many deals together can found a collective.
+
+**Answers to the Law redraft's questions (Nobody, allegedly):**
+- Q2 (1 October 2026): a collective's words are split like its rules: the constitution's words are constitutional, and each area carries its own words, which its holders change with it.
+- Q3 (1 October 2026): arbitrators, the condition cMIP and the anchoring cMIP are judicial and protected, beside the keepers and the time reference: each can decide who wins a dispute, so a majority cannot pick a friendlier judge after the fact.
+- Q4 (1 October 2026): adopting an extension changes the terms and is constitutional; holding the Production lane lets a member act under adopted extensions, never adopt new ones (F106).
+- Q5 (1 October 2026): an area's power is exclusive. "The area is to her, or to the narrower collective rule that governs it." The collective's clone rule cannot reach into it; its holders, and the rule they act by, change only by a constitutional change.
+- Q6 (1 October 2026): a member can always leave alone, by an act that gives up their voice without anyone else's signature; they keep their stake, and the remaining members rotate the collective's keys (F100), a resignation counting like a loss (F96, F105). And where a constitution allows removing a member, removal takes the voice only, never the stake: "Kicked from the board does not mean being forced to give up shares." (Absence remains the abandonment clause's business, under the clause the member signed.)
+- Q7 (1 October 2026): a clone that changes several areas at once is valid when each area's rule is met; its mark (F104) names every rule it met, and it comes into force all at once or not at all.
+- Q8 (1 October 2026): only constitutional clones need the collective's keys to rotate; operational clones leave the signers unchanged. "The collective key resembles more a safety key than a signing key in that regard."
+- Q9 (1 October 2026): terms field 4 belongs to no tier. In a clone it is a mark of fact (F104), written fresh each time; founding terms are signed by everyone, and the tiers govern only later changes.
+- Q10 (1 October 2026): lanes by layer and areas are one construct: an area may be defined by whole layers, by act types or by fields, with one set of rules for holding it, granting within it, leaving it and changing it.
+
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
 ## F104. A clone's signing rule states truthfully what brought it into force (found while building roadmap step 11b, decided by Nobody, allegedly)
@@ -928,3 +941,63 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Applied:** not yet.
 
 *F104 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
+
+## F105. Every identity with constitutional power in a collective is covered by an abandonment clause (found while drafting Law draft 7, decided by Nobody, allegedly)
+
+**Pattern:** 1, the F96 hole again, one tier up: a promise kept for the keys and not for the rules.
+
+**Found while drafting:** Law draft 7 (flaw A of the redraft for F103 and F104). Under F103, changing a collective's constitution needs everyone unless the founders agreed otherwise. If a member whose signature that rule needs dies, every later change to members, rules or keys waits for a signature that can never come. The collective's constitution is frozen for good, and F96's promise that the loss of any one member never freezes a collective holds for the keys only.
+
+**Options weighed:** (1) every collective must carry an abandonment clause able to remove an absent member's voice from every rule; (2) required only where the change rule is "everyone"; (3) not required, stated as a cost; and the option decided, proposed by Nobody, allegedly: required for each identity holding constitutional power.
+
+**Decided (Nobody, allegedly, 1 October 2026):** every identity whose signature a collective's constitutional change rule can require MUST be covered by an abandonment clause whose outcomes include removing that identity's voice. A founding agreement or clone of a collective that leaves such an identity uncovered is invalid. Collectives only: in an agreement that founds no collective, a party's death leaves the agreement running as written, with succession plans to step in, and locks nobody out of an identity.
+
+**Checked against the principles:** right of exit and the good ancestor: the constitution is the tier that can repair every other (it can reassign an area, revoke a grant, refit the key grammar), so it alone must never freeze, and it freezes only through the loss of someone whose signature it needs. Members without constitutional power need no clause: their loss is repaired from above. The clause is judicial and protected (rule 46a), so every covered member signed it, and its authority and outcomes stay as each signed them.
+
+**Cost, stated:** every collective names an abandonment authority from the start, and a founding agreement without one is refused, as the single-holder grammar is (scenario 3.7a).
+
+**Core changes, to be made:** Law draft 7 (collectives; abandonment; the validity of founding terms and clones), core v18, freeze test suite v18 (scenario 3: a founding agreement leaving a constitutional member uncovered is rejected; a member with constitutional power dies, is declared absent, loses their voice, and the others change the constitution).
+
+**Applied:** not yet; on the branch `claude/law-draft-7` with the rest of the redraft's answers.
+
+*F105 decided by Nobody, allegedly, 1 October 2026.*
+
+## F106. A cMIP's act belongs to the layer of the task it fills; extensions travel in the Production lane (found while drafting Law draft 7, decided by Nobody, allegedly)
+
+**Pattern:** 4, in part: F103 named lanes by layer, while an act names the specification that defines it, not a layer.
+
+**Found while drafting:** Law draft 7 (flaw B of the redraft for F103 and F104). For the six MIPs' own acts, the layer follows from the specification. Two cases did not: acts defined by cMIPs, which name the cMIP; and Production, which has no acts of its own, since specifications and releases are Envelope publications.
+
+**Decided (Nobody, allegedly, 1 October 2026):** a cMIP defines how a task is done, and what the core sees is that task's result, which belongs to the layer of the MIP that defines the task (Production, table of tasks). So a cMIP's act belongs to the layer of the task the collective's own terms assign that cMIP to (terms field 2): a collective that gives Finance to some members gives them the acts of every payment and conversion cMIP it adopted, by its own list, never by a label the cMIP's author chose. Production defines no tasks: specifications and releases are publications, in the Envelope lane.
+
+**Checked against the principles:** evolutionary design: a new rail module needs no constitutional change to fall in the right lane, only the collective's adoption of it, which is already in its terms. Legible greed: which lane an act falls in is computed from the collective's own terms, so every verifier agrees and the client can show it before signing.
+
+**Cost, stated:** a collective cannot give releases to one member and other publications to another by lane alone: both are Envelope publications.
+
+**Then decided (Nobody, allegedly, 1 October 2026): extensions travel in the Production lane.** Production is the MIP that defines extensions and how specifications are adopted, and it has no tasks, so its lane was empty. The acts of extensions, and new act types that fill no task (Production rule 8a), belong to the Production lane. Adopting an extension stays a change to the agreement's terms (field 15), so holding the Production lane lets a member act under the extensions the collective adopted, never adopt new ones. Nothing an extension does relaxes the core (Production 8c): the MIPs' own acts stay in their own lanes, whatever an extension adds around them.
+
+**Core changes, to be made:** Law draft 7 (the lanes; rule 36a), core v18, freeze test suite v18 (scenario 3: a receipt from the collective's payment cMIP falls in its Finance lane; the same cMIP not named in its terms falls in no lane; an act of an adopted extension falls in the Production lane, and its holder cannot adopt a new extension).
+
+**Applied:** not yet; on the branch `claude/law-draft-7`.
+
+*F106 decided by Nobody, allegedly, 1 October 2026.*
+
+## F107. A deal changes only with everyone's signature (found while drafting Law draft 7, decided by Nobody, allegedly)
+
+**Pattern:** 1, the side door of F103, left open in deals once the tiers were scoped to collectives (F103, scope).
+
+**Found while drafting:** Law draft 7, after question Q1. With tiers and lanes for collectives only, a deal of three or more parties whose clone rule was "any two" could still be cloned by two of them into a clone rule that leaves the third out of every later change.
+
+**Options weighed:** (1) make a deal's clone rule a protected clause, so only everyone can change it, majorities kept for the rest; (2) every change to a deal needs every party.
+
+**Decided (Nobody, allegedly, 1 October 2026):** option 2, "deals should always be an everyone must agree scenario". In an agreement that founds no collective, the signing rule and the clone rule are every party: a deal exists when all its parties have signed, and a clone of it completes only when all the parent's parties have signed. Majorities, areas and tiers belong to collectives.
+
+**Checked against the principles:** right of exit and legible greed: in a deal nobody's terms change without their signature, so a party never has to read a rule to know whether they can be outvoted. It simplifies Law: for deals, the per-party protected clauses (rule 46a) and forks among independent clones (rule 47) no longer arise, since no clone completes without everyone.
+
+**Cost, stated and accepted ("one person can force everything until all agree. That's deal making in everyday life"):** one silent party blocks every change to a deal, however large. The ways out: the abandonment clause, whose declaration is not a clone, can remove an absent party's voice where the deal provides it; succession plans; and, for many parties or a long relationship, a collective.
+
+**Core changes, to be made:** Law draft 7 (terms fields 4 and 5 for deals; rules 45 to 47), core v18, freeze test suite v18: scenario 1 step 9b becomes a clone of the abandonment clause signed by two of three, which stays a draft; step 7's "required signatures" are every party's.
+
+**Applied:** not yet; on the branch `claude/law-draft-7`.
+
+*F107 decided by Nobody, allegedly, 1 October 2026.*
