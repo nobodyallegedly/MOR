@@ -1106,3 +1106,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Decision (in principle).** The separation is a core guarantee, not a client or cMIP rule: no module may give a reaction, or any act like it, an acknowledgement's weight. Clients additionally never sign an acknowledgement as a side effect of another gesture, and say plainly what one means.
 
 **Open, for Nobody, allegedly.** The first wording, "only an act whose purpose is receipt may carry acknowledgements", conflicts with the core: Law's negotiation messages, a collective's acts and a buyer's acts carry acknowledgements inside acts whose purpose is something else. The guarantee must be drawn by layer or by type instead; its exact line is to be decided before the next core version.
+
+**Options (2 October 2026):** (1) by layer: acknowledgements count only on acts in the Identity, Finance and Law layers, cMIP acts placed there by F106 included; (2) by type: only act types the Identity, Finance and Law MIPs themselves define may carry them, never a cMIP's or Module's act. The project lead leans to (2), the simplest check; its cost is that a cMIP needing to acknowledge signs a core act alongside its own.
+
+**Deferred (Nobody, allegedly, 2 October 2026):** "Reserve it for after we work on Lightning rail." The Lightning integration (roadmap step 12) will show whether a rail cMIP needs to acknowledge.
