@@ -970,3 +970,23 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Applied:** not yet; on the branch `claude/law-draft-7`.
 
 *F106 decided by Nobody, allegedly, 1 October 2026.*
+
+## F107. A deal changes only with everyone's signature (found while drafting Law draft 7, decided by Nobody, allegedly)
+
+**Pattern:** 1, the side door of F103, left open in deals once the tiers were scoped to collectives (F103, scope).
+
+**Found while drafting:** Law draft 7, after question Q1. With tiers and lanes for collectives only, a deal of three or more parties whose clone rule was "any two" could still be cloned by two of them into a clone rule that leaves the third out of every later change.
+
+**Options weighed:** (1) make a deal's clone rule a protected clause, so only everyone can change it, majorities kept for the rest; (2) every change to a deal needs every party.
+
+**Decided (Nobody, allegedly, 1 October 2026):** option 2, "deals should always be an everyone must agree scenario". In an agreement that founds no collective, the signing rule and the clone rule are every party: a deal exists when all its parties have signed, and a clone of it completes only when all the parent's parties have signed. Majorities, areas and tiers belong to collectives.
+
+**Checked against the principles:** right of exit and legible greed: in a deal nobody's terms change without their signature, so a party never has to read a rule to know whether they can be outvoted. It simplifies Law: for deals, the per-party protected clauses (rule 46a) and forks among independent clones (rule 47) no longer arise, since no clone completes without everyone.
+
+**Cost, stated:** one silent party blocks every change to a deal, however large. The ways out: the abandonment clause, whose declaration is not a clone, can remove an absent party's voice where the deal provides it; succession plans; and, for many parties or a long relationship, a collective.
+
+**Core changes, to be made:** Law draft 7 (terms fields 4 and 5 for deals; rules 45 to 47), core v18, freeze test suite v18: scenario 1 step 9b becomes a clone of the abandonment clause signed by two of three, which stays a draft; step 7's "required signatures" are every party's.
+
+**Applied:** not yet; on the branch `claude/law-draft-7`.
+
+*F107 decided by Nobody, allegedly, 1 October 2026.*
