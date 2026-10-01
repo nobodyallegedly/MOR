@@ -928,6 +928,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Q15 (1 October 2026): the judicial tasks (condition evaluation, time reference, anchoring) stay judicial: the Law lane's holder cannot change them; for each member they change only with that member's signature (Q3). The Law lane adopts the other Law tasks' specifications.
 - Q16 (1 October 2026): in a collective with areas, an act under a specification the collective never adopted counts for nothing; otherwise an unlisted specification would be a way around every lane.
 - Q17 (1 October 2026): when one of several holders steps down, the others carry on under the flaw C rule; an area is frozen only when no holder remains. Grants within a frozen area stop; grants within an area that keeps running carry on.
+- Q18 (1 October 2026): the specification format gains a field in which an extension declares the layers it acts on (Production MIP draft 5). Dropping an extension needs the same approvals as adopting it: Production and every layer it acts on.
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
