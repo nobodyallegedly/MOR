@@ -17,4 +17,4 @@ Why each rule exists is recorded in `docs/findings/` (F1 to F52, then F53 to F10
 
 Reading convention: normal text is the protocol; italic text is commentary, reasoning and examples.
 
-*Awaiting approval:* Law draft 7, Production draft 5, core v18 and freeze test suite v18 apply F103 to F107 and the answers to the redraft's questions Q1 to Q19. Until Nobody, allegedly, approves them, the drafts they replace are kept beside them: `MIP-law-draft-6.md`, `MIP-production-draft-4.md`, `02-MOR-core-v17.md` and `03-MOR-freeze-test-suite-v17.md`, which the core library and clients still implement.
+*Awaiting approval:* Law draft 7, Production draft 5, core v18 and freeze test suite v18 apply F103 to F107, the answers to the redraft's questions Q1 to Q28 and its Flaws A to H. Writing them in left four flaws and four questions open (Flaws I to L, Q29 to Q32), listed at the end of Law draft 7. Until Nobody, allegedly, approves them, the drafts they replace are kept beside them: `MIP-law-draft-6.md`, `MIP-production-draft-4.md`, `02-MOR-core-v17.md` and `03-MOR-freeze-test-suite-v17.md`, which the core library and clients still implement.
