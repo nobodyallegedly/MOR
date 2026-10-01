@@ -926,6 +926,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Flaw E (1 October 2026, third pass): an identity may keep several sequences, so "after" a resignation, a stepping-down or a record act was undefined across them. Like a rotation, each of these acts names the latest act of every sequence its signer keeps; anything outside those counts as made after it.
 - R4 (1 October 2026): a specification adopted for tasks in two layers does not make the terms invalid. Adopting it for the second layer needs both lanes in one change, and its acts need both lanes' holders.
 - Q15 (1 October 2026): the judicial tasks (condition evaluation, time reference, anchoring) stay judicial: the Law lane's holder cannot change them; for each member they change only with that member's signature (Q3). The Law lane adopts the other Law tasks' specifications.
+- Q16 (1 October 2026): in a collective with areas, an act under a specification the collective never adopted counts for nothing; otherwise an unlisted specification would be a way around every lane.
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
