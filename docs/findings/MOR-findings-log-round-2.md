@@ -1066,7 +1066,9 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Choices (Nobody, allegedly, 1 October 2026):**
 - C1: a member's signature on an everyday act of the collective is placed at the act it signs: a member who left can still complete an act the collective signed before its line, and it counts ("the act was drafted with her in it"). *Cost, stated:* a pending act stays completable by whoever held the area when it was made.
 
-**Open:** choices C2 to C8, and A3 (the collective's keepers for its own left-out acts), in `docs/law-ordering-rule-test.md` section 5.
+- C2: Q23 under F109: a signature counts for a clone after its signer leaves when the collective placed it before its line: the record came first, or the collective acknowledged it as it arrived. *Stated:* a signature the collective never acknowledged before the line no longer counts; a collective's client SHOULD acknowledge members' signatures as they arrive, which keeps Q23's outcome.
+
+**Open:** choices C3 to C8, and A3 (the collective's keepers for its own left-out acts), in `docs/law-ordering-rule-test.md` section 5.
 
 **Core changes, to be made:** Law draft 7 (the "Made before, made after" section; rules 37, 37c, 40, 42, 44, 44d; the record act's fields); freeze suite v18 (scenario 3 and the stories of the test).
 
