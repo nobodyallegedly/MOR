@@ -370,6 +370,25 @@ impl Verifier {
             .filter_map(|id| self.acts.get(id))
     }
 
+    /// The acts this verifier holds whose `acks` name `id` (Envelope), in
+    /// the order they were added. Law places a member's signature at an act
+    /// of the collective acknowledging it ("Made before, made after").
+    pub fn acknowledgements(&self, id: &Hash) -> impl Iterator<Item = &Held> {
+        self.acked_by
+            .get(id)
+            .into_iter()
+            .flatten()
+            .filter_map(|a| self.acts.get(a))
+    }
+
+    /// The act ids of `signer`'s line ending in the tip `t`, in order, if the
+    /// verifier can rebuild it and the tip's running summary matches: the
+    /// same proof a rotation's kept ancestry uses. Law uses it for the tips a
+    /// collective's record names (record field 1).
+    pub fn tip_line(&self, signer: &Hash, t: &identity::KeptTip) -> Option<Vec<Hash>> {
+        self.line(signer, t)
+    }
+
     /// Resolve an identity chain: which act counts at each position.
     pub fn resolve(&self, identity: &Hash) -> Rc<Resolution> {
         self.resolve_cx(&mut Cx::default(), identity)

@@ -325,6 +325,22 @@ impl World {
         objects: Option<Vec<Object>>,
         acks: Option<Vec<Hash>>,
     ) -> Act {
+        self.everyday_act_refs(p, spec, type_, payload, objects, acks, None)
+    }
+
+    /// An everyday act of `p` naming other acts in `refs` (an act under a
+    /// grant names the grant). Not held yet.
+    #[allow(clippy::too_many_arguments)]
+    pub fn everyday_act_refs(
+        &mut self,
+        p: &mut Person,
+        spec: Hash,
+        type_: u64,
+        payload: Vec<(Value, Value)>,
+        objects: Option<Vec<Object>>,
+        acks: Option<Vec<Hash>>,
+        refs: Option<Vec<act::Ref>>,
+    ) -> Act {
         let salt = self.fresh().2;
         let inside = Inside {
             spec,
@@ -339,7 +355,7 @@ impl World {
                 Mmr::from_ids(&p.seq).root()
             }),
             acks,
-            refs: None,
+            refs,
             hint: None,
             salt,
         };

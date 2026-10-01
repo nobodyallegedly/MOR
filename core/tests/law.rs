@@ -1,93 +1,153 @@
-//! Law draft 6 (roadmap step 5a): the formats of terms, signatures, clones
-//! and key grammars, the key grammar's way to rotate (rule 36, F96), and a
-//! collective whose publications need visible member signatures, judged
-//! under the agreement its own chain declares at each act's binding (F100).
+//! Law draft 7: formats, the checks that need no other act, and the powers
+//! a clone needs (rules 44a to 44c). Each test names the freeze suite v18
+//! step it follows. The flows on a collective's own sequence are in
+//! `law_collective.rs`.
 
-mod common;
-
-use common::{own_home, Person, Rot, World};
-use mor_core::act::Object;
-use mor_core::cbor::Value;
-use mor_core::chain::Status;
+use mor_core::cbor::{self, Value};
 use mor_core::hash::{sha256, Hash};
 use mor_core::law::{
-    self, outcomes, Abandonment, Authority, Consent, Holding, KeyGrammar, LawError, LawView,
-    Listed, Recovery, Rule, SuccessionPlan, Terms,
+    self, outcomes, powers_needed, Abandonment, Area, Authority, Field4, FieldRef, Holding,
+    KeyGrammar, Kind, LawError, MarkEntry, Mips, Power, Recovery, Rule, SuccessionPlan, Terms,
 };
 
-fn law_spec() -> Hash {
-    sha256(b"LAW, test value until the freeze")
-}
-
-fn envelope_spec() -> Hash {
-    sha256(b"ENVELOPE, test value until the freeze")
-}
-
-fn manifest_spec() -> Hash {
-    sha256(b"a release manifest cMIP")
+pub fn mips() -> Mips {
+    let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
+    Mips {
+        identity: t("IDENTITY"),
+        envelope: t("ENVELOPE"),
+        text: t("TEXT"),
+        finance: t("FINANCE"),
+        law: t("LAW"),
+        production: t("PRODUCTION"),
+    }
 }
 
 fn h(n: u8) -> Hash {
     [n; 32]
 }
 
-/// A founding agreement for three members: the signing key with the first,
-/// the safety key as shares, any two of three; publications need any two
-/// members' visible signatures.
-fn founding(parties: &[Hash]) -> Terms {
+const PAY: u8 = 60;
+const PAY2: u8 = 61;
+const ANCHOR: u8 = 62;
+const CLOCK: u8 = 63;
+const EXT: u8 = 70;
+const EXT_FIN: u8 = 71;
+const AUTHORITY: u8 = 90;
+const ARBITRATOR: u8 = 91;
+
+/// The label of scenario 3.1: three members; the release manager (1)
+/// holds publications and the Production lane (area 1); the treasurer (2)
+/// holds the Finance lane (area 2). The safety key needs all three, with an
+/// escrowed share released by a third-party authority.
+fn label() -> Terms {
+    let m = mips();
     Terms {
-        parties: parties.to_vec(),
-        text: "The test collective publishes releases of the MOR code.".into(),
-        cmips: vec![],
+        parties: vec![h(1), h(2), h(3)],
+        text: "The label publishes its members' records.".into(),
+        cmips: vec![(6, h(PAY)), (11, h(ANCHOR))],
         keepers: None,
-        signing: Rule::All,
+        field4: Field4::Rule(Rule::All),
         clone: Rule::Threshold(2),
         time: None,
         abandonment: Some(Abandonment {
-            authority: Authority::Others(2),
+            authority: Authority::Named(h(AUTHORITY)),
             outcomes: vec![outcomes::VOICE_REMOVED],
             period: None,
         }),
         parent: None,
         grammar: Some(KeyGrammar {
-            signing: Holding::One(parties[0]),
-            safety: Holding::Shares {
+            signing: Holding::Shares {
                 threshold: 2,
-                members: parties.to_vec(),
+                members: vec![h(1), h(2), h(3)],
             },
-            listed: Some(vec![Listed {
-                spec: envelope_spec(),
-                type_: 0,
-                rule: Rule::Threshold(2),
-            }]),
-            recovery: None,
+            safety: Holding::Shares {
+                threshold: 3,
+                members: vec![h(1), h(2), h(3)],
+            },
+            recovery: Some(Recovery::Escrow {
+                authority: h(AUTHORITY),
+            }),
         }),
-        arbitrators: None,
+        arbitrators: Some(vec![h(ARBITRATOR)]),
         split_grant: None,
-        extensions: Some(vec![manifest_spec()]),
+        extensions: Some(vec![h(EXT)]),
         succession: None,
+        constitutional: None,
+        areas: Some(vec![
+            Area {
+                name: "Releases".into(),
+                holders: vec![h(1)],
+                threshold: 1,
+                kinds: Some(vec![
+                    Kind::Type {
+                        spec: m.envelope,
+                        type_: 0,
+                    },
+                    Kind::Layer(law::layers::PRODUCTION),
+                ]),
+                fields: None,
+                id: 1,
+            },
+            Area {
+                name: "Finance".into(),
+                holders: vec![h(2)],
+                threshold: 1,
+                kinds: Some(vec![Kind::Layer(law::layers::FINANCE)]),
+                fields: None,
+                id: 2,
+            },
+        ]),
+        area_words: Some(vec![
+            (1, "Releases go out on Fridays.".into()),
+            (2, "Receipts are signed within a week.".into()),
+        ]),
     }
 }
 
+fn clone_of(parent: &Terms, mark: Vec<(Power, Vec<Hash>)>) -> Terms {
+    let mut t = parent.clone();
+    t.parent = Some(sha256(b"the parent's id"));
+    t.field4 = Field4::Mark(
+        mark.into_iter()
+            .map(|(power, signers)| MarkEntry { power, signers })
+            .collect(),
+    );
+    t
+}
+
+fn ext_layers(e: &Hash) -> Result<Vec<u64>, LawError> {
+    match e[0] {
+        EXT => Ok(vec![]),
+        EXT_FIN => Ok(vec![law::layers::FINANCE]),
+        _ => Err(LawError::Missing(*e)),
+    }
+}
+
+fn needs(parent: &Terms, clone: &Terms) -> Vec<Power> {
+    powers_needed(parent, clone, &mips(), &ext_layers).unwrap()
+}
+
 fn roundtrip(t: &Terms) -> Terms {
-    let bytes = mor_core::cbor::encode(&Value::Map(t.to_map()));
-    let Value::Map(m) = mor_core::cbor::decode(&bytes).unwrap() else {
+    let bytes = cbor::encode(&Value::Map(t.to_map()));
+    let Value::Map(m) = cbor::decode(&bytes).unwrap() else {
         panic!()
     };
     Terms::decode(&m).unwrap()
+}
+
+fn check(t: &Terms) -> Result<(), LawError> {
+    t.check(&mips())
 }
 
 // ---------------------------------------------------------------- formats
 
 #[test]
 fn terms_round_trip_and_decode_strictly() {
-    let t = founding(&[h(1), h(2), h(3)]);
+    let t = label();
     assert_eq!(roundtrip(&t), t);
-    t.check().unwrap();
-
-    let mut m = t.to_map();
-    m.push((Value::Uint(18), Value::Uint(0)));
-    assert!(matches!(Terms::decode(&m), Err(LawError::Shape(_))));
+    check(&t).unwrap();
+    let c = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
+    assert_eq!(roundtrip(&c), c, "a mark round-trips");
 
     for (k, what) in [
         (7, "stakes"),
@@ -98,491 +158,352 @@ fn terms_round_trip_and_decode_strictly() {
         let mut m = t.to_map();
         m.push((Value::Uint(k), Value::Array(vec![])));
         let e = Terms::decode(&m).unwrap_err();
-        assert!(
-            matches!(e, LawError::Unsupported(w) if w.contains(what)),
-            "{e}"
-        );
+        assert!(matches!(e, LawError::Unsupported(w) if w.contains(what)), "{e}");
     }
 
     let mut m = t.to_map();
-    m.retain(|(k, _)| *k != Value::Uint(5));
-    assert!(
-        matches!(Terms::decode(&m), Err(LawError::Shape(_))),
-        "the clone rule is required"
-    );
+    m.push((Value::Uint(21), Value::Uint(0)));
+    assert!(matches!(Terms::decode(&m), Err(LawError::Shape(_))));
+
+    // Draft 6's listed act types (key grammar key 2) are retired.
+    let mut m = t.to_map();
+    for (k, v) in m.iter_mut() {
+        if *k == Value::Uint(12) {
+            if let Value::Map(g) = v {
+                g.push((Value::Uint(2), Value::Array(vec![])));
+            }
+        }
+    }
+    assert!(matches!(Terms::decode(&m), Err(LawError::Shape(w)) if w.contains("retired")));
 }
 
 #[test]
-fn rules_fit_the_parties() {
-    let p = [h(1), h(2), h(3)];
-    let mut t = founding(&p);
-    t.clone = Rule::Threshold(4);
-    assert!(t.check().is_err());
-    t.clone = Rule::Threshold(0);
-    assert!(t.check().is_err());
-    t.clone = Rule::Named(vec![h(1), h(9)]);
-    assert!(t.check().is_err(), "a named party must be a party");
-    t.clone = Rule::Named(vec![h(1), h(3)]);
-    t.check().unwrap();
+fn field_4_is_a_rule_in_founding_terms_and_a_mark_in_a_clone() {
+    // F107, Q11: founding terms' field 4 is every party (3.2).
+    let mut t = label();
+    t.field4 = Field4::Rule(Rule::Threshold(2));
+    assert!(check(&t).is_err(), "founded on two of three: invalid");
+    t.field4 = Field4::Mark(vec![MarkEntry {
+        power: Power::Clone,
+        signers: vec![h(1)],
+    }]);
+    assert!(check(&t).is_err(), "founding terms carry no mark");
 
-    let mut t = founding(&p);
-    t.parties = vec![h(1), h(2), h(1)];
-    assert!(t.check().is_err(), "a party twice");
+    let mut c = clone_of(&label(), vec![(Power::Clone, vec![h(1), h(2)])]);
+    check(&c).unwrap();
+    c.field4 = Field4::Rule(Rule::All);
+    assert!(check(&c).is_err(), "a clone carries a mark");
 
-    let mut t = founding(&p);
-    t.cmips = vec![(8, h(8)), (8, h(9))];
-    assert!(t.check().is_err(), "one cMIP per task");
-    t.cmips = vec![(14, h(8))];
-    assert!(t.check().is_err(), "no task 14");
-    t.cmips = vec![(8, h(8)), (10, h(9))];
-    t.check().unwrap();
-
-    assert!(Rule::Threshold(2).met(&p, &[h(3), h(1)]));
-    assert!(
-        !Rule::Threshold(2).met(&p, &[h(3), h(9)]),
-        "a non-party never counts"
+    // A mark lists its powers ascending, never twice (F104).
+    let c = clone_of(
+        &label(),
+        vec![(Power::Area(1), vec![h(1)]), (Power::Clone, vec![h(1), h(2)])],
     );
-    assert!(!Rule::All.met(&p, &[h(1), h(2)]));
-    assert!(Rule::Named(vec![h(2)]).met(&p, &[h(2)]));
+    assert!(check(&c).is_err(), "not ascending");
+    let c = clone_of(
+        &label(),
+        vec![(Power::Clone, vec![h(1), h(2)]), (Power::Area(1), vec![h(1)])],
+    );
+    check(&c).unwrap();
+    let c = clone_of(&label(), vec![(Power::Clone, vec![h(1), h(1)])]);
+    assert!(check(&c).is_err(), "a signer twice");
 }
 
 #[test]
-fn a_grammar_leaves_a_way_to_rotate_that_survives_any_one_loss() {
-    let p = [h(1), h(2), h(3)];
-    let with = |safety: Holding, recovery: Option<Recovery>| {
-        let mut t = founding(&p);
-        let g = t.grammar.as_mut().unwrap();
-        g.safety = safety;
-        g.recovery = recovery;
-        t
-    };
+fn a_deal_has_everyone_as_its_rules() {
+    // F107: a deal is terms without a key grammar.
+    let mut d = label();
+    d.grammar = None;
+    d.areas = None;
+    d.area_words = None;
+    assert!(check(&d).is_err(), "a deal's clone rule of two of three is invalid");
+    d.clone = Rule::All;
+    check(&d).unwrap();
+    d.constitutional = Some(Rule::All);
+    assert!(check(&d).is_err(), "no field 18 in a deal");
+    d.constitutional = None;
+    d.areas = label().areas;
+    assert!(check(&d).is_err(), "no areas in a deal");
+}
 
-    // Two of three: any one lost, two remain.
-    with(
-        Holding::Shares {
-            threshold: 2,
-            members: p.to_vec(),
-        },
-        None,
-    )
-    .check()
-    .unwrap();
+#[test]
+fn a_judge_never_handles_what_it_judges() {
+    // 3.7n, Q20: one specification for anchoring and payments.
+    let mut t = label();
+    t.cmips = vec![(6, h(ANCHOR)), (11, h(ANCHOR))];
+    assert!(check(&t).is_err());
+    // For time reference and anchoring.
+    t.cmips = vec![(6, h(PAY)), (10, h(CLOCK)), (11, h(CLOCK))];
+    assert!(check(&t).is_err());
+    // Q25: a judge named as an extension.
+    let mut t = label();
+    t.extensions = Some(vec![h(ANCHOR)]);
+    assert!(check(&t).is_err());
+    // Field 6 also named for payments, or as an extension.
+    let mut t = label();
+    t.time = Some((h(CLOCK), Value::Uint(0)));
+    check(&t).unwrap();
+    t.cmips = vec![(6, h(CLOCK)), (11, h(ANCHOR))];
+    assert!(check(&t).is_err());
+    let mut t = label();
+    t.time = Some((h(CLOCK), Value::Uint(0)));
+    t.extensions = Some(vec![h(CLOCK)]);
+    assert!(check(&t).is_err());
+    // Q31: field 6 and task 10 name one specification.
+    let mut t = label();
+    t.time = Some((h(CLOCK), Value::Uint(0)));
+    t.cmips = vec![(6, h(PAY)), (10, h(ANCHOR + 10)), (11, h(ANCHOR))];
+    assert!(check(&t).is_err(), "two time references");
+    t.cmips = vec![(6, h(PAY)), (10, h(CLOCK)), (11, h(ANCHOR))];
+    check(&t).unwrap();
+    // Q24 and scenario 1.7: in a deal too.
+    let mut d = label();
+    d.grammar = None;
+    d.areas = None;
+    d.area_words = None;
+    d.clone = Rule::All;
+    d.cmips = vec![(6, h(ANCHOR)), (11, h(ANCHOR))];
+    assert!(check(&d).is_err());
+    d.cmips = vec![(6, h(PAY)), (11, h(ANCHOR))];
+    d.time = Some((h(CLOCK), Value::Uint(0)));
+    check(&d).unwrap();
+    d.extensions = Some(vec![h(CLOCK)]);
+    assert!(check(&d).is_err(), "1.7: the block-height cMIP as an extension");
+}
 
-    // Every member needed and no recovery path: invalid (rule 36).
-    let e = with(
-        Holding::Shares {
-            threshold: 3,
-            members: p.to_vec(),
-        },
-        None,
-    )
-    .check()
-    .unwrap_err();
-    assert!(e.to_string().contains("recovery"), "{e}");
-
-    // Every member, with an escrowed share released by the named authority (scenario 3).
-    let mut t = with(
-        Holding::Shares {
-            threshold: 3,
-            members: p.to_vec(),
-        },
-        Some(Recovery::Escrow { authority: h(7) }),
-    );
-    assert!(t.check().is_err(), "the clause must name that authority");
-    t.abandonment = Some(Abandonment {
-        authority: Authority::Named(h(7)),
-        outcomes: vec![outcomes::VOICE_REMOVED],
-        period: None,
+#[test]
+fn areas_are_checked() {
+    let m = mips();
+    // Q21: founding terms never list an area without holders.
+    let mut t = label();
+    t.areas.as_mut().unwrap()[1].holders = vec![];
+    assert!(check(&t).is_err());
+    // A clone may.
+    let mut c = clone_of(&label(), vec![(Power::Constitutional, vec![h(1), h(2), h(3)])]);
+    c.areas.as_mut().unwrap()[1].holders = vec![];
+    check(&c).unwrap();
+    // Holders are parties.
+    let mut t = label();
+    t.areas.as_mut().unwrap()[1].holders = vec![h(9)];
+    assert!(check(&t).is_err());
+    // Q5: no two areas reach the same acts: a Finance lane and the
+    // payment cMIP's receipts.
+    let mut t = label();
+    t.areas.as_mut().unwrap()[0].kinds.as_mut().unwrap().push(Kind::Type {
+        spec: h(PAY),
+        type_: 0,
     });
-    t.check().unwrap();
-
-    // F96, freeze test suite v15 scenario 3: one holder, no successor: rejected.
-    let e = with(Holding::One(h(1)), None).check().unwrap_err();
-    assert!(e.to_string().contains("F96"), "{e}");
-    let mut t = with(
-        Holding::One(h(1)),
-        Some(Recovery::Escrow { authority: h(7) }),
-    );
-    t.abandonment = Some(Abandonment {
-        authority: Authority::Named(h(7)),
-        outcomes: vec![outcomes::VOICE_REMOVED],
-        period: None,
+    assert!(check(&t).is_err());
+    // A lane and a field reference to a task of its layer.
+    let mut t = label();
+    t.areas.as_mut().unwrap()[0].fields = Some(vec![FieldRef::Task(6)]);
+    assert!(check(&t).is_err());
+    // A field reference to a judicial task.
+    let mut t = label();
+    t.areas.as_mut().unwrap()[0].fields = Some(vec![FieldRef::Task(11)]);
+    assert!(check(&t).is_err());
+    // Q32: ids are distinct.
+    let mut t = label();
+    t.areas.as_mut().unwrap()[1].id = 1;
+    assert!(check(&t).is_err());
+    // Area words only for an area that exists.
+    let mut t = label();
+    t.area_words = Some(vec![(3, "none".into())]);
+    assert!(check(&t).is_err());
+    // Genesis, rotations and records are never in an area's reach.
+    let mut t = label();
+    t.areas.as_mut().unwrap()[0].kinds.as_mut().unwrap().push(Kind::Type {
+        spec: m.identity,
+        type_: 1,
     });
-    let e = t.check().unwrap_err();
-    assert!(e.to_string().contains("successor"), "{e}");
-    // …with a seat successor and the escrowed share: valid.
+    assert!(check(&t).is_err());
+    // R4: one specification for a Finance and a Law task, two lanes: valid.
+    let mut t = label();
+    t.cmips = vec![(6, h(PAY)), (7, h(PAY2)), (8, h(PAY2)), (11, h(ANCHOR))];
+    t.areas.as_mut().unwrap().push(Area {
+        name: "Law".into(),
+        holders: vec![h(3)],
+        threshold: 1,
+        kinds: Some(vec![Kind::Layer(law::layers::LAW)]),
+        fields: None,
+        id: 3,
+    });
+    check(&t).unwrap();
+}
+
+#[test]
+fn every_constitutional_voice_is_covered() {
+    // F105, 3.7h.
+    let mut t = label();
+    t.abandonment.as_mut().unwrap().outcomes = vec![outcomes::STAKE_REDISTRIBUTED];
+    assert!(check(&t).is_err(), "no outcome 0");
+    let mut t = label();
+    t.abandonment.as_mut().unwrap().authority = Authority::Named(h(1));
+    t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow { authority: h(1) });
+    assert!(check(&t).is_err(), "a member as the only authority covers everyone but themselves");
+    // Under a constitutional rule naming parties 2 and 3 only, the
+    // authority may be member 1.
+    t.constitutional = Some(Rule::Named(vec![h(2), h(3)]));
+    check(&t).unwrap();
+    // A deal needs no clause (rule 49).
+    let mut d = label();
+    d.grammar = None;
+    d.areas = None;
+    d.area_words = None;
+    d.clone = Rule::All;
+    d.abandonment = None;
+    check(&d).unwrap();
+}
+
+#[test]
+fn a_grammar_leaves_a_way_to_rotate() {
+    // 3.7a, F96: a single holder of the safety key, no successor, no escrow.
+    let mut t = label();
+    t.grammar.as_mut().unwrap().safety = Holding::One(h(1));
+    t.grammar.as_mut().unwrap().recovery = None;
+    assert!(check(&t).is_err());
+    t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow {
+        authority: h(AUTHORITY),
+    });
+    assert!(check(&t).is_err(), "still no successor");
     t.succession = Some(vec![SuccessionPlan {
         party: h(1),
         stakes: None,
-        seats: Some(vec![(h(2), 1)]),
-        entry: Some(0),
+        seats: Some(vec![(h(3), 1)]),
+        entry: Some(1),
     }]);
-    t.check().unwrap();
+    check(&t).unwrap();
+    // Every member to rotate, and no recovery path.
+    let mut t = label();
+    t.grammar.as_mut().unwrap().recovery = None;
+    assert!(check(&t).is_err());
+}
 
-    // A single custodian has the same flaw.
-    let c = Holding::Custodian {
-        custodian: h(5),
-        grant: h(6),
+// ---------------------------------------------------------------- powers
+
+#[test]
+fn the_powers_a_clone_needs_are_read_from_its_changes() {
+    let p = label();
+    let c = |f: &dyn Fn(&mut Terms)| {
+        let mut t = clone_of(&p, vec![(Power::Clone, vec![h(1)])]);
+        f(&mut t);
+        t
     };
-    assert!(with(c.clone(), None).check().is_err());
-    assert!(with(
-        c.clone(),
-        Some(Recovery::Custodian {
-            custodian: h(5),
-            grant: h(6)
-        })
-    )
-    .check()
-    .is_err());
-    with(
-        c,
-        Some(Recovery::Custodian {
-            custodian: h(8),
-            grant: h(9),
-        }),
-    )
-    .check()
-    .unwrap();
+    // Nothing changed: the clone rule.
+    assert_eq!(needs(&p, &c(&|_| {})), vec![Power::Clone]);
+    // 3.7b: rewriting the clone rule is constitutional.
+    assert_eq!(
+        needs(&p, &c(&|t| t.clone = Rule::Named(vec![h(1), h(2)]))),
+        vec![Power::Constitutional]
+    );
+    // Membership, the key grammar, areas: constitutional.
+    assert_eq!(
+        needs(&p, &c(&|t| t.areas.as_mut().unwrap()[0].name = "Records".into())),
+        vec![Power::Constitutional]
+    );
+    // 3.7d: keepers are judicial: the clone rule.
+    assert_eq!(
+        needs(&p, &c(&|t| t.keepers = Some(law::Keepers {
+            operators: vec![h(80)],
+            rule: Rule::All
+        }))),
+        vec![Power::Clone]
+    );
+    // 3.7c: an area's words are its holders'.
+    assert_eq!(
+        needs(&p, &c(&|t| t.area_words.as_mut().unwrap()[0].1 = "Releases on Mondays.".into())),
+        vec![Power::Area(1)]
+    );
+    // 3.7e: two areas' words: both powers.
+    assert_eq!(
+        needs(&p, &c(&|t| {
+            t.area_words = Some(vec![(1, "a".into()), (2, "b".into())]);
+        })),
+        vec![Power::Area(1), Power::Area(2)]
+    );
+    // 3.7l, Q12: an area and a judicial clause: both.
+    assert_eq!(
+        needs(&p, &c(&|t| {
+            t.area_words.as_mut().unwrap()[0].1 = "a".into();
+            t.arbitrators = Some(vec![h(92)]);
+        })),
+        vec![Power::Clone, Power::Area(1)]
+    );
+    // 3.7g: the payment cMIP is the Finance lane's.
+    assert_eq!(
+        needs(&p, &c(&|t| t.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))])),
+        vec![Power::Area(2)]
+    );
+    // 3.7n, Q15: the anchoring cMIP stays judicial.
+    assert_eq!(
+        needs(&p, &c(&|t| t.cmips = vec![(6, h(PAY)), (11, h(ANCHOR + 5))])),
+        vec![Power::Clone]
+    );
+    // A task no area holds: the clone rule (third pass reading).
+    assert_eq!(
+        needs(&p, &c(&|t| t.cmips = vec![(5, h(50)), (6, h(PAY)), (11, h(ANCHOR))])),
+        vec![Power::Clone]
+    );
+    // 3.7j: dropping an extension declaring only Production: the release
+    // manager alone.
+    assert_eq!(needs(&p, &c(&|t| t.extensions = None)), vec![Power::Area(1)]);
 }
 
 #[test]
-fn abandonment_clause_and_succession_are_checked() {
-    let p = [h(1), h(2), h(3)];
-    let mut t = founding(&p);
-    t.abandonment.as_mut().unwrap().authority = Authority::Others(3);
-    assert!(t.check().is_err(), "at most the other parties");
-    let mut t = founding(&p);
-    t.abandonment.as_mut().unwrap().outcomes = vec![4, 0];
-    assert!(t.check().is_err(), "outcomes ascending");
-    let mut t = founding(&p);
-    t.abandonment.as_mut().unwrap().period = Some(1000);
-    assert!(t.check().is_err(), "a period needs a time reference");
-    t.time = Some((h(10), Value::Uint(0)));
-    t.check().unwrap();
-
-    let mut t = founding(&p);
-    t.succession = Some(vec![SuccessionPlan {
-        party: h(2),
-        stakes: Some(vec![(h(8), 500_000), (h(9), 499_999)]),
-        seats: None,
-        entry: None,
-    }]);
-    assert!(t.check().is_err(), "stake shares sum exactly");
-    t.succession.as_mut().unwrap()[0].stakes = Some(vec![(h(8), 500_000), (h(9), 500_000)]);
-    t.check().unwrap();
-    let back = roundtrip(&t);
-    assert_eq!(back, t);
+fn extensions_need_every_lane_they_declare() {
+    let p = label();
+    let mut t = clone_of(&p, vec![(Power::Area(1), vec![h(1)])]);
+    // An extension whose specification is not held: asked for, never guessed.
+    t.extensions = Some(vec![h(EXT), h(99)]);
+    assert!(matches!(
+        powers_needed(&p, &t, &mips(), &ext_layers),
+        Err(LawError::Missing(_))
+    ));
+    // 3.7j: one declaring Finance needs the treasurer too.
+    t.extensions = Some(vec![h(EXT), h(EXT_FIN)]);
+    assert_eq!(needs(&p, &t), vec![Power::Area(1), Power::Area(2)]);
+    // Q18: dropping it needs the same.
+    let mut with = p.clone();
+    with.extensions = Some(vec![h(EXT), h(EXT_FIN)]);
+    let mut drop = clone_of(&with, vec![(Power::Area(1), vec![h(1)])]);
+    drop.extensions = Some(vec![h(EXT)]);
+    assert_eq!(needs(&with, &drop), vec![Power::Area(1), Power::Area(2)]);
 }
 
-// ---------------------------------------------------------------- a collective
-
-struct Collective {
-    w: World,
-    members: Vec<Person>,
-    c: Person,
-    founding: Hash,
-}
-
-fn self_hosted(w: &mut World, name: &str) -> Person {
-    w.genesis(name, vec![own_home()], None, None)
-}
-
-fn law_act(
-    w: &mut World,
-    p: &mut Person,
-    type_: u64,
-    payload: Vec<(Value, Value)>,
-    objects: Option<Vec<Object>>,
-) -> Hash {
-    let a = w.everyday_act(p, law_spec(), type_, payload, objects, None);
-    w.add(&a)
-}
-
-fn propose(w: &mut World, p: &mut Person, t: &Terms) -> Hash {
-    let objects = t.parent.map(|parent| {
-        vec![Object {
-            chain: parent,
-            predecessor: parent,
-        }]
+#[test]
+fn r4_a_specification_serving_two_layers_answers_to_both_lanes() {
+    // 3.7n: the Finance lane to member 2, the Law lane to member 3.
+    let mut p = label();
+    p.cmips = vec![(6, h(PAY)), (7, h(PAY2)), (8, h(PAY2)), (11, h(ANCHOR))];
+    p.areas.as_mut().unwrap().push(Area {
+        name: "Law".into(),
+        holders: vec![h(3)],
+        threshold: 1,
+        kinds: Some(vec![Kind::Layer(law::layers::LAW)]),
+        fields: None,
+        id: 3,
     });
-    law_act(w, p, law::types::TERMS, t.to_map(), objects)
-}
-
-fn sign(w: &mut World, p: &mut Person, act: &Hash) -> Hash {
-    law_act(
-        w,
-        p,
-        law::types::SIGNATURE,
-        law::signature_payload(act),
-        Some(vec![Object {
-            chain: *act,
-            predecessor: *act,
-        }]),
-    )
-}
-
-/// A publication by the collective (the act a release manifest is).
-fn publish(w: &mut World, c: &mut Person, what: &str) -> Hash {
-    let a = w.everyday_act(
-        c,
-        envelope_spec(),
-        0,
-        vec![(Value::Uint(0), Value::Text(what.into()))],
-        None,
-        None,
-    );
-    w.add(&a)
-}
-
-fn setup(sign_all: bool) -> Collective {
-    let mut w = World::new();
-    let mut members: Vec<Person> = ["m1", "m2", "m3"]
-        .iter()
-        .map(|n| self_hosted(&mut w, n))
-        .collect();
-    let ids: Vec<Hash> = members.iter().map(|m| m.id).collect();
-    let founding = propose(&mut w, &mut members[0], &founding(&ids));
-    let signing = if sign_all { 3 } else { 2 };
-    for m in members.iter_mut().take(signing) {
-        sign(&mut w, m, &founding);
-    }
-    let c = w.genesis_with(
-        "collective",
-        vec![own_home()],
-        None,
-        None,
-        Some(vec![law::founding_declaration(&law_spec(), &founding)]),
-        3,
-    );
-    Collective {
-        w,
-        members,
-        c,
-        founding,
-    }
-}
-
-fn consent(k: &Collective, act: &Hash) -> Result<Consent, LawError> {
-    LawView::new(&k.w.v, law_spec()).consent(act)
-}
-
-fn signers(c: &Consent) -> (Vec<Hash>, bool) {
-    match c {
-        Consent::Listed { signers, met, .. } => (signers.clone(), *met),
-        other => panic!("not listed: {other:?}"),
-    }
+    check(&p).unwrap();
+    // Naming that specification for another Finance task needs both lanes.
+    let mut t = clone_of(&p, vec![(Power::Area(2), vec![h(2)])]);
+    t.cmips = vec![(6, h(PAY2)), (7, h(PAY2)), (8, h(PAY2)), (11, h(ANCHOR))];
+    assert_eq!(needs(&p, &t), vec![Power::Area(2), Power::Area(3)]);
+    // The Law lane alone adopts a grant-limits cMIP (task 12).
+    let mut t = clone_of(&p, vec![(Power::Area(3), vec![h(3)])]);
+    t.cmips.push((12, h(55)));
+    t.cmips.sort();
+    assert_eq!(needs(&p, &t), vec![Power::Area(3)]);
 }
 
 #[test]
-fn a_founding_agreement_exists_once_every_party_signed() {
-    let k = setup(false);
-    let view = LawView::new(&k.w.v, law_spec());
-    let a = view.agreement(&k.founding).unwrap();
-    assert!(!a.exists, "two of three signed; the signing rule is all");
-    assert_eq!(a.signed.len(), 2);
-    assert_eq!(view.declared(&k.c.id, &k.c.id), Some(k.founding));
-
-    let mut k = setup(true);
-    let view = LawView::new(&k.w.v, law_spec());
-    assert!(view.agreement(&k.founding).unwrap().exists);
-    let mut c = k.c.clone();
-    let r = publish(&mut k.w, &mut c, "release 1");
-    k.c = c;
-    assert_eq!(k.w.v.status(&r), Status::Valid);
-}
-
-#[test]
-fn an_incomplete_founding_agreement_backs_nothing() {
-    let mut k = setup(false);
-    let mut c = k.c.clone();
-    let r = publish(&mut k.w, &mut c, "release 1");
-    let (m0, m1) = (k.members[0].clone(), k.members[1].clone());
-    let (mut m0, mut m1) = (m0, m1);
-    sign(&mut k.w, &mut m0, &r);
-    sign(&mut k.w, &mut m1, &r);
-    let e = consent(&k, &r).unwrap_err();
-    assert!(e.to_string().contains("not complete"), "{e}");
-}
-
-#[test]
-fn a_publication_of_the_collective_needs_two_member_signatures() {
-    let mut k = setup(true);
-    let mut c = k.c.clone();
-    let r = publish(&mut k.w, &mut c, "release 1");
-    k.c = c;
-    assert_eq!(signers(&consent(&k, &r).unwrap()), (vec![], false));
-
-    let mut m1 = k.members[0].clone();
-    sign(&mut k.w, &mut m1, &r);
-    assert_eq!(
-        signers(&consent(&k, &r).unwrap()),
-        (vec![m1.id], false),
-        "one of three"
-    );
-
-    // Someone outside the collective signs: never counted.
-    let mut outsider = self_hosted(&mut k.w, "outsider");
-    sign(&mut k.w, &mut outsider, &r);
-    assert!(!signers(&consent(&k, &r).unwrap()).1);
-
-    // A signature act whose objects do not name the act it signs is not one.
-    let mut m3 = k.members[2].clone();
-    law_act(
-        &mut k.w,
-        &mut m3,
-        law::types::SIGNATURE,
-        law::signature_payload(&r),
-        Some(vec![Object {
-            chain: k.founding,
-            predecessor: k.founding,
-        }]),
-    );
-    assert!(!signers(&consent(&k, &r).unwrap()).1);
-
-    let mut m2 = k.members[1].clone();
-    sign(&mut k.w, &mut m2, &r);
-    assert_eq!(
-        signers(&consent(&k, &r).unwrap()),
-        (vec![m1.id, m2.id], true)
-    );
-
-    // An act type the grammar does not list needs nothing more.
-    let mut c = k.c.clone();
-    let a = k.w.everyday_act(
-        &mut c,
-        law_spec(),
-        law::types::SIGNATURE,
-        law::signature_payload(&r),
-        Some(vec![Object {
-            chain: r,
-            predecessor: r,
-        }]),
-        None,
-    );
-    let a = k.w.add(&a);
-    assert_eq!(
-        consent(&k, &a).unwrap(),
-        Consent::NotListed {
-            agreement: k.founding
-        }
-    );
-
-    // An identity that declares no founding agreement is not a collective.
-    let mut solo = self_hosted(&mut k.w, "solo");
-    let p = publish(&mut k.w, &mut solo, "a release by one person");
-    assert_eq!(consent(&k, &p).unwrap(), Consent::NotCollective);
-}
-
-/// A member leaves and another joins: a clone of the founding agreement,
-/// then the collective's rotation declaring it (rule 37). The old rules
-/// are fenced off by the rotation (F100).
-#[test]
-fn members_change_by_clone_and_rotation() {
-    let mut k = setup(true);
-    let mut c = k.c.clone();
-    let before = publish(&mut k.w, &mut c, "release 1");
-    let (mut m1, mut m2, mut m3) = (
-        k.members[0].clone(),
-        k.members[1].clone(),
-        k.members[2].clone(),
-    );
-    sign(&mut k.w, &mut m1, &before);
-    sign(&mut k.w, &mut m2, &before);
-
-    // m3 leaves, m4 joins.
-    let mut m4 = self_hosted(&mut k.w, "m4");
-    let mut t = founding(&[m1.id, m2.id, m4.id]);
-    t.parent = Some(k.founding);
-    let clone = propose(&mut k.w, &mut m1, &t);
-    let view = LawView::new(&k.w.v, law_spec());
-    assert!(
-        !view.agreement(&clone).unwrap().exists,
-        "a draft until the parent's clone rule is met"
-    );
-    sign(&mut k.w, &mut m1, &clone);
-    sign(&mut k.w, &mut m2, &clone);
-    sign(&mut k.w, &mut m4, &clone);
-    let view = LawView::new(&k.w.v, law_spec());
-    let a = view.agreement(&clone).unwrap();
-    assert!(a.exists, "two of the parent's three parties signed");
-    assert_eq!(a.signed, vec![m1.id, m2.id, m4.id]);
-
-    let (_, mut c2) = k.w.rotate(
-        &c,
-        Rot {
-            declarations: Some(vec![law::founding_declaration(&law_spec(), &clone)]),
-            ..Default::default()
-        },
-    );
-
-    // The release made before the change stands, under the founding agreement.
-    assert_eq!(k.w.v.status(&before), Status::Valid);
-    let got = consent(&k, &before).unwrap();
-    assert!(
-        matches!(&got, Consent::Listed { agreement, met: true, .. } if *agreement == k.founding)
-    );
-
-    // The next release is judged under the clone: m3's signature no longer counts.
-    let after = publish(&mut k.w, &mut c2, "release 2");
-    sign(&mut k.w, &mut m1, &after);
-    sign(&mut k.w, &mut m3, &after);
-    let got = consent(&k, &after).unwrap();
-    assert!(matches!(&got, Consent::Listed { agreement, .. } if *agreement == clone));
-    assert_eq!(signers(&got), (vec![m1.id], false));
-    sign(&mut k.w, &mut m4, &after);
-    assert_eq!(
-        signers(&consent(&k, &after).unwrap()),
-        (vec![m1.id, m4.id], true)
-    );
-
-    // The old key signs after the rotation: void, whatever members sign (F100).
-    let late = publish(&mut k.w, &mut c, "a release under the old rules");
-    sign(&mut k.w, &mut m1, &late);
-    sign(&mut k.w, &mut m3, &late);
-    assert_eq!(k.w.v.status(&late), Status::Void);
-}
-
-#[test]
-fn a_declared_agreement_must_be_a_complete_clone_of_the_one_before() {
-    // An incomplete clone.
-    let mut k = setup(true);
-    let (mut m1, mut m4) = (k.members[0].clone(), self_hosted(&mut k.w, "m4"));
-    let mut t = founding(&[k.members[0].id, k.members[1].id, m4.id]);
-    t.parent = Some(k.founding);
-    let clone = propose(&mut k.w, &mut m1, &t);
-    sign(&mut k.w, &mut m1, &clone);
-    sign(&mut k.w, &mut m4, &clone);
-    let (_, mut c2) = k.w.rotate(
-        &k.c,
-        Rot {
-            declarations: Some(vec![law::founding_declaration(&law_spec(), &clone)]),
-            ..Default::default()
-        },
-    );
-    let r = publish(&mut k.w, &mut c2, "release");
-    let e = consent(&k, &r).unwrap_err();
-    assert!(e.to_string().contains("not complete"), "{e}");
-
-    // Fresh terms that do not descend from the founding agreement.
-    let mut k = setup(true);
-    let (mut m1, mut m2, mut m3) = (
-        k.members[0].clone(),
-        k.members[1].clone(),
-        k.members[2].clone(),
-    );
-    let ids = [m1.id, m2.id, m3.id];
-    let other = propose(&mut k.w, &mut m1, &founding(&ids));
-    for m in [&mut m1, &mut m2, &mut m3] {
-        sign(&mut k.w, m, &other);
-    }
-    let (_, mut c2) = k.w.rotate(
-        &k.c,
-        Rot {
-            declarations: Some(vec![law::founding_declaration(&law_spec(), &other)]),
-            ..Default::default()
-        },
-    );
-    let r = publish(&mut k.w, &mut c2, "release");
-    let e = consent(&k, &r).unwrap_err();
-    assert!(e.to_string().contains("not a clone"), "{e}");
+fn a_deals_clone_needs_every_party() {
+    let mut d = label();
+    d.grammar = None;
+    d.areas = None;
+    d.area_words = None;
+    d.clone = Rule::All;
+    let mut c = clone_of(&d, vec![(Power::Clone, vec![h(1), h(2), h(3)])]);
+    c.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))];
+    assert_eq!(needs(&d, &c), vec![Power::Clone]);
+    check(&c).unwrap();
 }
