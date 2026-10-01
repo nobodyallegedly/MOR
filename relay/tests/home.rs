@@ -672,6 +672,29 @@ async fn a_home_runs_under_an_identity_made_elsewhere() {
     let v = verifier_from(&[&h], &alice.id).await;
     let res = v.resolve(&alice.id);
     assert_eq!(res.links.len(), 2, "{:?}", res.stop);
+
+    // An address added later (roadmap step 10a): the operator's routes are
+    // signed where its identity is kept, so this home signs none, which
+    // could fork them; it only answers under the new address.
+    let mut h = h;
+    let before = h.client.acts_by(&op.id).await.unwrap().len();
+    h.stop().await;
+    let onion = "http://mor2y3bd5wfm4uqzxl3kmsv6b6j7x5c2qmojbqrl3ddcrm6m6hrf7gad.onion";
+    assert_eq!(
+        h.node().add_base(onion).unwrap(),
+        mor_relay::AddedBase::OperatorElsewhere(op.id)
+    );
+    h.restart().await;
+    assert_eq!(h.client.acts_by(&op.id).await.unwrap().len(), before);
+    let info = h.client.info().await.unwrap();
+    assert_eq!(info.bases.last().map(String::as_str), Some(onion));
+    assert!(h
+        .client
+        .identity(&op.id, None)
+        .await
+        .unwrap()
+        .routes
+        .is_empty());
 }
 
 /// Identity rule 12: a home's own acceptance condition. For an identity

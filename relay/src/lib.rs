@@ -23,4 +23,4 @@ pub mod operator;
 pub mod store;
 pub mod wire;
 
-pub use node::{Config, Node, Policy, Role, Specs};
+pub use node::{AddedBase, Config, Node, Policy, Role, Specs};
