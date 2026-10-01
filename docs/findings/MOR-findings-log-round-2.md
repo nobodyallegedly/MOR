@@ -928,3 +928,23 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Applied:** not yet.
 
 *F104 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
+
+## F105. Every identity with constitutional power in a collective is covered by an abandonment clause (found while drafting Law draft 7, decided by Nobody, allegedly)
+
+**Pattern:** 1, the F96 hole again, one tier up: a promise kept for the keys and not for the rules.
+
+**Found while drafting:** Law draft 7 (flaw A of the redraft for F103 and F104). Under F103, changing a collective's constitution needs everyone unless the founders agreed otherwise. If a member whose signature that rule needs dies, every later change to members, rules or keys waits for a signature that can never come. The collective's constitution is frozen for good, and F96's promise that the loss of any one member never freezes a collective holds for the keys only.
+
+**Options weighed:** (1) every collective must carry an abandonment clause able to remove an absent member's voice from every rule; (2) required only where the change rule is "everyone"; (3) not required, stated as a cost; and the option decided, proposed by Nobody, allegedly: required for each identity holding constitutional power.
+
+**Decided (Nobody, allegedly, 1 October 2026):** every identity whose signature a collective's constitutional change rule can require MUST be covered by an abandonment clause whose outcomes include removing that identity's voice. A founding agreement or clone of a collective that leaves such an identity uncovered is invalid. Collectives only: in an agreement that founds no collective, a party's death leaves the agreement running as written, with succession plans to step in, and locks nobody out of an identity.
+
+**Checked against the principles:** right of exit and the good ancestor: the constitution is the tier that can repair every other (it can reassign an area, revoke a grant, refit the key grammar), so it alone must never freeze, and it freezes only through the loss of someone whose signature it needs. Members without constitutional power need no clause: their loss is repaired from above. The clause is judicial and protected (rule 46a), so every covered member signed it, and its authority and outcomes stay as each signed them.
+
+**Cost, stated:** every collective names an abandonment authority from the start, and a founding agreement without one is refused, as the single-holder grammar is (scenario 3.7a).
+
+**Core changes, to be made:** Law draft 7 (collectives; abandonment; the validity of founding terms and clones), core v18, freeze test suite v18 (scenario 3: a founding agreement leaving a constitutional member uncovered is rejected; a member with constitutional power dies, is declared absent, loses their voice, and the others change the constitution).
+
+**Applied:** not yet; on the branch `claude/law-draft-7` with the rest of the redraft's answers.
+
+*F105 decided by Nobody, allegedly, 1 October 2026.*
