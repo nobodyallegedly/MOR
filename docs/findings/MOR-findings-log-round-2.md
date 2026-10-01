@@ -1070,7 +1070,9 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 - C3: the line for a departure is drawn by the collective's record act, with a new field naming the departures it registers, written at once with the everyday key (A1); the rotation still follows to fence off the departed member's key share (F100).
 
-**Open:** choices C4 to C8, and A3 (the collective's keepers for its own left-out acts), in `docs/law-ordering-rule-test.md` section 5.
+- C4 (A3 adopted): the collective's keepers, named by its agreement in force, may place the collective's own acts that its line left out: such an act counts as made before the line when a keeper recorded it before recording the line. Members' signatures and deals are not placed by keepers. *Stated:* a keeper that records a line late opens a window, the trust in keepers rule 11a already states.
+
+**Open:** choices C5 to C8 (the collective's keepers for its own left-out acts), in `docs/law-ordering-rule-test.md` section 5.
 
 **Core changes, to be made:** Law draft 7 (the "Made before, made after" section; rules 37, 37c, 40, 42, 44, 44d; the record act's fields); freeze suite v18 (scenario 3 and the stories of the test).
 
