@@ -1028,3 +1028,21 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Applied:** not yet; on the branch `claude/law-draft-7`.
 
 *F107 decided by Nobody, allegedly, 1 October 2026.*
+
+## F108. A publication's size field is the size of the unlocked media (found while building roadmap step 11c, decided by Nobody, allegedly)
+
+**Pattern:** 4: one field, two readings.
+
+**Found while building:** the owner's desk (roadmap step 11c). Envelope's publication payload (field 3) is "size of those bytes", following field 2, the locked bytes as stored. The JPEG Module, the deployed barebone client and the reader all write and read the size of the unlocked picture. Two conforming programs read the same field differently.
+
+**Options weighed:** (1) Envelope's wording changes to the unlocked size, matching what is deployed; (2) the Module and the two clients change to the locked size.
+
+**Decided (Nobody, allegedly, 1 October 2026):** option 1. Field 3 is the size of the media once unlocked: what a reader and a media module need to know. A relay measures the locked bytes it stores for itself.
+
+**Checked against the principles:** it relaxes nothing; it removes a reading two implementations could differ on, and matches the code already deployed.
+
+**Core changes, to be made:** Envelope MIP draft 7 (publication payload, field 3); freeze test suite (a publication whose size is not the unlocked media's is shown as inconsistent).
+
+**Applied:** already followed by the JPEG Module, the barebone client, the reader, the desk and the connector.
+
+*F108 decided by Nobody, allegedly, 1 October 2026.*
