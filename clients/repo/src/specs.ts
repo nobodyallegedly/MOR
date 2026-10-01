@@ -13,7 +13,7 @@ export const REPO_SPECS = {
   manifest: test('release manifest cMIP, draft 1, test value until publication'),
 };
 
-export const LAW_TYPES = { terms: 0, signature: 1 } as const;
+export const LAW_TYPES = { terms: 0, signature: 1, declaration: 13, resignation: 16, record: 17 } as const;
 
 /** Law's declaration kind 0: the agreement a collective lives under. */
 export const FOUNDING_AGREEMENT = 0;

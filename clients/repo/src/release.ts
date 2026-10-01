@@ -22,7 +22,7 @@ import {
 import { lookUp, type TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import type { TestCollective } from './collective.ts';
-import { carryChain, sign } from './law.ts';
+import { LAW_SPECS, carryChain, sign } from './law.ts';
 import { REPO_SPECS } from './specs.ts';
 
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
@@ -222,22 +222,43 @@ export interface Published {
   refused: string[];
 }
 
+/** Whoever publishes releases: a collective (`TestCollective.publisher`), or one identity under its own name (as at step 17). */
+export interface Publisher {
+  id: TestIdentity;
+  /** Where the release and its files go. */
+  relays: string[];
+  /** Releases already published, newest last; a new one is pushed here. */
+  releases: { id: string; version: string; manifest: string }[];
+}
+
+/** A release made and locked, not yet signed: what is shown before signing. */
+export interface Prepared {
+  manifest: Manifest;
+  /** The manifest's exact bytes. */
+  encoded: Uint8Array;
+  /** The publication's exact payload: the manifest's hashes, key and relays. */
+  payload: Uint8Array;
+  /** The manifest's locked bytes. */
+  lockedManifest: Uint8Array;
+  /** The locked bytes of each file new since the previous release. */
+  upload: Uint8Array[];
+  /** The previous release's manifest, if any (to show what changed). */
+  before: Manifest | null;
+}
+
 /**
- * Publish a release: every file locked as a media object (a file unchanged
- * since the previous release is the same object, not a new one), the
- * manifest as the media of a public publication signed by the collective,
- * all on the collective's relays. It is not a release until the members
- * sign it (`signRelease`). Save the collective's file after.
+ * Make a release without signing anything: every file locked as a media
+ * object (a file unchanged since the previous release is the same object,
+ * not a new one), the manifest, and the publication's payload.
  */
-export async function publishRelease(
-  c: TestCollective,
-  opts: { name: string; version: string; files: FileIn[]; source?: string; via?: Via },
-): Promise<Published> {
-  const via = opts.via ?? {};
-  const relays = c.f.relays;
-  const last = c.f.releases.at(-1);
+export function prepareRelease(
+  p: Publisher,
+  opts: { name: string; version: string; files: FileIn[]; source?: string },
+): Prepared {
+  const last = p.releases.at(-1);
+  const beforeManifest = last ? decodeManifest(unb64(last.manifest)) : null;
   const before = new Map<string, FileEntry>();
-  if (last) for (const f of decodeManifest(unb64(last.manifest)).files) before.set(`${f.path}\0${f.work}`, f);
+  for (const f of beforeManifest?.files ?? []) before.set(`${f.path}\0${f.work}`, f);
 
   const files = [...opts.files].sort((a, b) => byBytes(a.path, b.path));
   const entries: FileEntry[] = [];
@@ -273,16 +294,41 @@ export async function publishRelease(
       [3, encoded.length],
       [4, lm.nonce],
       [5, lm.key],
-      [6, relays],
+      [6, p.relays],
     ]),
   );
-  await carryChain(c.id, relays);
+  return { manifest, encoded, payload, lockedManifest: lm.locked, upload, before: beforeManifest };
+}
+
+/**
+ * Sign and publish a prepared release, exactly as prepared: the manifest as
+ * the media of a public publication signed by the publisher, all on its
+ * relays. A collective's release is not a release until the members sign it
+ * (`signRelease`). Save the publisher's file after.
+ */
+export async function publishPrepared(p: Publisher, r: Prepared, via: Via = {}): Promise<Published> {
+  const last = p.releases.at(-1);
+  if ((last?.id ?? null) !== r.manifest.previous) throw new Error('another release was published since this one was made: make it again');
+  await carryChain(p.id, p.relays);
   // The publication first: a relay that keeps media only for publications it holds then takes the manifest.
-  const made = await c.id.publish(SPECS.envelope, 0, payload, { public: true, relays });
-  const refused = await toRelays(relays, via, (r) => r.putMedia(lm.locked));
-  for (const u of upload) refused.push(...(await toRelays(relays, via, (r) => r.putMedia(u))));
-  c.f.releases.push({ id: made.id, version: opts.version, manifest: b64(encoded) });
-  return { id: made.id, manifest, uploaded: upload.length, refused: [...new Set(refused)] };
+  const made = await p.id.publish(SPECS.envelope, 0, r.payload, { public: true, relays: p.relays });
+  const refused = await toRelays(p.relays, via, (x) => x.putMedia(r.lockedManifest));
+  for (const u of r.upload) refused.push(...(await toRelays(p.relays, via, (x) => x.putMedia(u))));
+  p.releases.push({ id: made.id, version: r.manifest.version, manifest: b64(r.encoded) });
+  return { id: made.id, manifest: r.manifest, uploaded: r.upload.length, refused: [...new Set(refused)] };
+}
+
+/**
+ * Publish a release of a collective: prepared and published at once, as the
+ * command line does. It is not a release until the members sign it. Save
+ * the collective's file after.
+ */
+export async function publishRelease(
+  c: TestCollective,
+  opts: { name: string; version: string; files: FileIn[]; source?: string; via?: Via },
+): Promise<Published> {
+  const p: Publisher = { id: c.id, relays: c.f.relays, releases: c.f.releases };
+  return publishPrepared(p, prepareRelease(p, opts), opts.via);
 }
 
 /** A member signs a release: a Law signature act naming it. Save the member's file after. */
@@ -320,7 +366,7 @@ async function fetchFirst<T>(hints: string[], via: Via, get: (r: ReturnType<type
 }
 
 /** Every act a relay holds signed by `signer`, page by page. */
-async function allBy(signer: string, hints: string[], via: Via): Promise<Uint8Array[]> {
+export async function allBy(signer: string, hints: string[], via: Via): Promise<Uint8Array[]> {
   const out: Uint8Array[] = [];
   for (const h of hints) {
     let after: number | undefined;
@@ -401,6 +447,17 @@ export async function verifyRelease(
     return fail(`the collective's identity was not found: ${e}`);
   }
   v.add(act);
+  // The signer's other acts first: a release that is no longer the latest
+  // act a rotation kept is valid only through the acts after it, which link
+  // it to the kept tip (Identity, kept ancestry). A collective's records
+  // (Law draft 7) put such acts after a release before the next rotation.
+  for (const a of await allBy(d.signer, [...new Set([...hints, ...homes])], via)) {
+    try {
+      v.add(a);
+    } catch {
+      // a private act, or malformed
+    }
+  }
   const standing = v.status(release);
   if (standing !== 'valid') return fail(`the publication is ${standing}, not valid, for its signer's identity chain`);
 
@@ -409,7 +466,7 @@ export async function verifyRelease(
   const res = v.resolve(d.signer) as { links: { act: string }[] };
   const agreements = new Set<string>();
   for (const link of res.links) {
-    const a = v.lawDeclared(REPO_SPECS.law, d.signer, link.act);
+    const a = v.lawDeclared(LAW_SPECS, d.signer, link.act);
     if (a) agreements.add(a);
   }
   const parties = new Set<string>();
@@ -445,26 +502,43 @@ export async function verifyRelease(
       }
     }
   }
-  let consent: { kind: string; agreement?: string; rule?: { form: string; threshold?: number; named?: string[] }; signers: string[]; met: boolean };
+  // The collective's own acts: its records (its everyday line, which writes
+  // its ordinary clones and registers departures, Law draft 7, F109), and
+  // the clones they name with their signature acts.
+  for (const a of await allBy(d.signer, places, via)) {
+    try {
+      v.add(a);
+    } catch {
+      // a private act, or malformed
+    }
+  }
+  let consent: {
+    kind: string;
+    agreement?: string;
+    reason?: string;
+    areas: { area: number; name: string; frozen: boolean; voices: string[]; needed: number; signers: string[]; met: boolean }[];
+    met: boolean;
+  };
   try {
-    consent = v.lawConsent(REPO_SPECS.law, release);
+    consent = v.lawConsent(LAW_SPECS, release);
   } catch (e) {
     return fail(`Law: ${e instanceof Error ? e.message : e}`);
   }
   r.agreement = consent.agreement;
-  r.signers = consent.signers;
+  r.signers = consent.areas.flatMap((a) => a.signers);
+  const area = consent.areas[0];
   r.rule =
-    consent.kind === 'listed'
-      ? consent.rule!.form === 'threshold'
-        ? `any ${consent.rule!.threshold} of the members`
-        : consent.rule!.form === 'all'
-          ? 'every member'
-          : `these members: ${consent.rule!.named!.join(', ')}`
-      : consent.kind === 'not-listed'
-        ? "the collective's own signature (its grammar lists no member signatures for publications)"
-        : "its signer's own signature (not a collective)";
+    consent.kind === 'areas'
+      ? area.frozen
+        ? `the ${area.name} area, which has no holder left: frozen until the members refit it`
+        : `any ${area.needed} of the ${area.name} area's holders`
+      : consent.kind === 'no-area'
+        ? "the collective's own signature (no area of its agreement reaches publications)"
+        : consent.kind === 'not-collective'
+          ? "its signer's own signature (not a collective)"
+          : `nothing: ${consent.reason ?? consent.kind}`;
   if (!consent.met) {
-    fail(`not a release: ${r.rule} must sign it; ${consent.signers.length} did (${consent.signers.join(', ') || 'none'})`);
+    fail(`not a release: ${r.rule} must sign it; ${r.signers.length} did (${r.signers.join(', ') || 'none'})`);
   }
 
   // 4. The manifest.

@@ -16,6 +16,7 @@ import { cborEncode, checkTerms, rebuildSafety, verifyShare } from '../../genesi
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { TestCollective, type Governance } from '../src/collective.ts';
+import { LAW_SPECS } from '../src/law.ts';
 import {
   compareWithTree,
   decodeManifest,
@@ -102,7 +103,7 @@ test('a release counts only once two members have signed it', async () => {
 
   let v = await verifyRelease(first, [relay.base]);
   assert.equal(v.ok, false);
-  assert.match(v.problems[0], /not a release: any 2 of the members must sign it; 0 did/);
+  assert.match(v.problems[0], /not a release: any 2 of the Releases area's holders must sign it; 0 did/);
 
   await signRelease(m[0], first, c.f.relays);
   v = await verifyRelease(first, [relay.base]);
@@ -140,7 +141,7 @@ test('a checkout that differs from the release shows where', async () => {
   assert.equal(compareWithTree(v.manifest!, empty).missing.length, 3);
 });
 
-test('a member leaves and another joins, by clone and rotation', async () => {
+test('a member leaves alone and another joins, by record, clone and rotation', async () => {
   const [m1, m2, m3, m4] = m;
   const old = JSON.parse(JSON.stringify(c.f.identity));
   const got = await c.changeMembers({
@@ -148,7 +149,10 @@ test('a member leaves and another joins, by clone and rotation', async () => {
     proposer: m1,
     signers: [m1, m2, m4],
     rebuilders: [m1.id, m2.id],
+    leaving: [m3],
   });
+  assert.equal(got.resigned.length, 1, 'the member who leaves resigns alone');
+  assert.ok(got.record, 'the collective registers the resignation at once, its line');
   assert.equal(got.sent.filter((s) => s.result?.receipt).length, 3);
   assert.equal(await c.settle(), true, 'the rotation counts');
   assert.deepEqual(c.f.members, [m1.id, m2.id, m4.id]);
@@ -191,6 +195,27 @@ test('the next release is signed under the new rules', async () => {
   v = await verifyRelease(second, [relay.base]);
   assert.ok(v.ok, v.problems.join('; '));
   assert.deepEqual(v.signers, [m1.id, m4.id]);
+});
+
+test('an ordinary change is recorded at once, without a rotation', async () => {
+  const [m1, , , m4] = m;
+  const before = c.f.agreement;
+  const position = c.f.identity.position;
+  const got = await c.changeReleaseWords({ words: 'Releases are signed after a fresh checkout.', proposer: m1, signers: [m1, m4] });
+  assert.equal(c.f.identity.position, position, 'no rotation');
+  assert.equal(c.f.agreement, got.clone);
+  assert.notEqual(got.clone, before);
+  // A release made after the record is judged under the recorded clone.
+  const p = await publishRelease(c, { name: 'MOR test tree', version: '3', files: small });
+  await signRelease(m1, p.id, c.f.relays);
+  await signRelease(m4, p.id, c.f.relays);
+  const v = await verifyRelease(p.id, [relay.base]);
+  assert.ok(v.ok, v.problems.join('; '));
+  assert.equal(v.agreement, got.clone);
+  // The second release, made before the record, still stands under the clone before.
+  const v2 = await verifyRelease(second, [relay.base]);
+  assert.ok(v2.ok, v2.problems.join('; '));
+  assert.equal(v2.agreement, before);
 });
 
 test('the MOR repository itself, published and verified file by file', async () => {
@@ -236,13 +261,25 @@ test('a key grammar that one lost holder would freeze is refused (F96)', () => {
         [2, new Map()],
         [4, [0]],
         [5, [1, 2]],
+        [9, new Map<number, unknown>([[0, [1, 2]], [1, [0]]])],
         [12, new Map<number, unknown>([[0, [0, h(1)]], [1, safety]])],
         ...extra,
       ]),
     );
-  checkTerms(terms([1, 2, [h(1), h(2), h(3)]]));
-  assert.throws(() => checkTerms(terms([1, 3, [h(1), h(2), h(3)]])), /recovery/);
-  assert.throws(() => checkTerms(terms([0, h(1)])), /F96/);
+  checkTerms(terms([1, 2, [h(1), h(2), h(3)]]), LAW_SPECS);
+  assert.throws(() => checkTerms(terms([1, 3, [h(1), h(2), h(3)]]), LAW_SPECS), /^Error: law\/check:.*recovery/);
+  assert.throws(() => checkTerms(terms([0, h(1)]), LAW_SPECS), /^Error: law\/check:.*F96/);
+  // Every member with constitutional power is covered by an abandonment
+  // clause able to remove their voice (F105).
+  assert.throws(
+    () => checkTerms(terms([1, 2, [h(1), h(2), h(3)]], [[9, new Map<number, unknown>([[0, [1, 2]], [1, [1]]])]]), LAW_SPECS),
+    /^Error: law\/check:.*F105/,
+  );
+  // Draft 6's listed act types are retired: areas reach acts.
+  assert.throws(
+    () => checkTerms(terms([1, 2, [h(1), h(2), h(3)]], [[12, new Map<number, unknown>([[0, [0, h(1)]], [1, [1, 2, [h(1), h(2), h(3)]]], [2, []]])]]), LAW_SPECS),
+    /^Error: law\/shape:/,
+  );
 });
 
 test('shares check alone, and fewer than the threshold rebuild nothing', () => {

@@ -37,12 +37,15 @@ pub enum Rule {
     /// signature acts it names (addition A2); otherwise every signature on its clone.
     /// `c5`: a member's own rotation is registered on the collective's line, and that
     /// member's old-key signatures placed before it stay valid for the collective (F109,
-    /// choice C5); otherwise Identity alone judges them.
+    /// choice C5); otherwise Identity alone judges them. `b11`: a clone of one branch of a
+    /// fork of records, recorded after both lines, resolves it (Law draft 8, B11);
+    /// otherwise the parent stays in force.
     Root {
         placement: Placement,
         keepers: Keepers,
         named_sigs: bool,
         c5: bool,
+        b11: bool,
     },
     /// Law draft 7 as written, simplified: a departure draws its line in the departing
     /// member's personal sequences (Flaw E), a keeper places only signatures on clones
@@ -120,6 +123,8 @@ pub struct Eval<'w> {
     /// Position of each act in the keeper's own sequence.
     kpos: Vec<Option<usize>>,
     rec_memo: std::cell::RefCell<Vec<Option<bool>>>,
+    /// Records whose clone resolves a fork (B11), once judged valid.
+    resolves: std::cell::RefCell<Vec<bool>>,
 }
 
 impl<'w> Eval<'w> {
@@ -155,11 +160,21 @@ impl<'w> Eval<'w> {
             anc,
             kpos,
             rec_memo: std::cell::RefCell::new(vec![None; n]),
+            resolves: std::cell::RefCell::new(vec![false; n]),
         }
     }
 
     fn acts(&self) -> impl Iterator<Item = Id> + '_ {
         0..self.w.acts.len()
+    }
+
+    /// Whether record `r` is valid as the resolution of a fork (B11).
+    pub fn resolves_fork(&self, r: Id) -> bool {
+        self.record_valid(r) && self.resolves.borrow()[r]
+    }
+
+    fn b11(&self) -> bool {
+        matches!(self.rule, Rule::Root { b11: true, .. })
     }
 
     fn named_sigs(&self) -> bool {
@@ -450,9 +465,77 @@ impl<'w> Eval<'w> {
                     && self.col_before(q, r)
             })
             .collect();
-        let v = complete && self.resolve(&earlier) == def.parent;
+        let (at, branches) = self.resolve_fork(&earlier);
+        let resolves = self.b11() && branches.contains(&def.parent);
+        let v = complete && (at == def.parent || resolves);
         self.rec_memo.borrow_mut()[r] = Some(v);
+        self.resolves.borrow_mut()[r] = v && resolves;
         v
+    }
+
+    /// The agreement in force from a set of records, and, where they leave a fork, its
+    /// branches' latest clones. Without B11: as [`Self::resolve`], with no branches. With
+    /// B11: follow the agreement chain one clone at a time; two clones of one parent on
+    /// concurrent records are a fork, the parent in force, unless exactly one clone of a
+    /// branch's latest clone was recorded after both lines (rule 47).
+    fn resolve_fork(&self, recs: &[Id]) -> (u8, Vec<u8>) {
+        if !self.b11() {
+            return (self.resolve(recs), vec![]);
+        }
+        let cs: Vec<(u8, bool)> = recs
+            .iter()
+            .filter(|&&q| self.record_valid(q))
+            .map(|&q| match self.w.acts[q].kind {
+                Kind::Record { clone, .. } => (clone, self.resolves.borrow()[q]),
+                _ => unreachable!(),
+            })
+            .collect();
+        let parent = |c: u8| self.w.clones[c as usize].parent;
+        let children = |of: u8, resolvers: bool| {
+            let mut out: Vec<u8> = vec![];
+            for &(c, f) in &cs {
+                if c != 0 && (resolvers || !f) && parent(c) == of && !out.contains(&c) {
+                    out.push(c);
+                }
+            }
+            out
+        };
+        // A branch's latest clone, one clone at a time; none where it forks again.
+        let tip = |n: u8| {
+            let mut cur = n;
+            for _ in 0..=cs.len() {
+                let kids = children(cur, false);
+                match kids.len() {
+                    0 => return Some(cur),
+                    1 => cur = kids[0],
+                    _ => return None,
+                }
+            }
+            Some(cur)
+        };
+        let mut cur = 0u8;
+        for _ in 0..=cs.len() {
+            let next = children(cur, true);
+            match next.len() {
+                0 => break,
+                1 => cur = next[0],
+                _ => {
+                    let tips: Vec<u8> = next.iter().filter_map(|&n| tip(n)).collect();
+                    let mut res: Vec<u8> = vec![];
+                    for &(c, f) in &cs {
+                        if f && tips.contains(&parent(c)) && !res.contains(&c) {
+                            res.push(c);
+                        }
+                    }
+                    if res.len() == 1 {
+                        cur = res[0];
+                        continue;
+                    }
+                    return (cur, tips);
+                }
+            }
+        }
+        (cur, vec![])
     }
 
     /// The agreement in force from a set of records: the furthest clone when they form one
@@ -500,7 +583,7 @@ impl<'w> Eval<'w> {
                 matches!(self.w.acts[r].kind, Kind::Record { .. }) && r != x && !self.before(x, r)
             })
             .collect();
-        self.resolve(&after)
+        self.resolve_fork(&after).0
     }
 
     /// The fate of a grantee's deal. Placed (acknowledged, paid on or imported by the

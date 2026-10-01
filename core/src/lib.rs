@@ -24,14 +24,16 @@
 //! - [`chain`]: which identity-chain act counts, and the standing of every
 //!   other act (Identity, "Verification procedures", "Validity rules").
 //!
-//! Law (roadmap step 5a):
+//! Law (roadmap step 5a, reworked to Law draft 7):
 //!
-//! - [`law`]: the first exact formats of the Law MIP (terms, signatures,
-//!   clones, key grammars) and the checks a collective needs: which
-//!   agreement is in force, and the visible member signatures its grammar
-//!   requires (Law draft 6).
+//! - [`law`]: the Law MIP's exact formats (terms with marks, areas and the
+//!   constitutional change rule; signatures; resignations; records; grants
+//!   within areas), the powers a clone needs (tiers), and the checks a
+//!   collective needs, judged on its own sequence (F109): which agreement
+//!   is in force for an act, and whether its areas' holders consented.
 //!
-//! Written against core v15, Identity draft 9, Envelope draft 5 and Text draft 5.
+//! Written against core v18, Identity draft 10, Envelope draft 6, Text
+//! draft 6, Law draft 7 and Production draft 5.
 
 pub mod act;
 pub mod cbor;

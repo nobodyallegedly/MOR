@@ -73,7 +73,7 @@ test('found, release, sign, verify from the command line', async () => {
   // A separate process, knowing only the release's id and one relay.
   const out = join(dir, 'out');
   const v = await cli('verify', id, '--at', relay.base, '--out', out);
-  assert.match(v, /any 2 of the members/);
+  assert.match(v, /any 2 of the Releases area's holders/);
   assert.match(v, /2 files checked against their hashes/);
   assert.match(v, /\nVERIFIED/);
   assert.equal(readFileSync(join(out, 'src/main.rs'), 'utf8'), 'fn main() {}\n');

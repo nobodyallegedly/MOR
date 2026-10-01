@@ -1,11 +1,25 @@
-// Law acts as the test collective makes them (Law draft 6): terms, whether a
-// founding agreement or a clone of one, and signature acts. The payloads are
-// built here and checked by the core library (`checkTerms`) before anything
-// is signed; the core library alone judges them afterwards.
+// Law acts as the test collective makes them (Law draft 8): terms, whether a
+// founding agreement or a clone of one (with its mark), signature acts,
+// resignations and records. The payloads are built here and checked by the
+// core library (`checkTerms`, `lawClonePlan`) before anything is signed;
+// the core library alone judges them afterwards.
 
-import { cborEncode, checkTerms, signaturePayload, unhex } from '../../genesis/src/core.ts';
+import {
+  MIPS,
+  cborDecode,
+  cborEncode,
+  checkTerms,
+  declarationPayload,
+  describeAct,
+  hex,
+  lawClonePlan,
+  recordPayload,
+  resignationPayload,
+  signaturePayload,
+  unhex,
+} from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
-import { relayAt } from '../../genesis/src/transport.ts';
+import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { LAW_TYPES, REPO_SPECS } from './specs.ts';
 
 /** `rule`: every party, any k of them, or named ones. */
@@ -14,40 +28,82 @@ export type Rule = { all: true } | { threshold: number } | { named: string[] };
 const ruleValue = (r: Rule): unknown[] =>
   'all' in r ? [0] : 'threshold' in r ? [1, r.threshold] : [2, r.named.map(unhex)];
 
-/** A founding agreement for a collective, or a clone of one (Law draft 6). */
+/** A power a clone's mark claims (Law draft 7, F104). */
+export type Power = { constitutional: true } | { clone: true } | { area: number };
+
+const powerValue = (p: Power): unknown[] => ('constitutional' in p ? [0] : 'clone' in p ? [1] : [2, p.area]);
+
+/** One entry of a mark: the power, and the parties whose signatures meet it. */
+export interface MarkEntry {
+  power: Power;
+  signers: string[];
+}
+
+/** The release area's id: permanent, never reused (Law draft 7, Q32). */
+export const RELEASE_AREA = 1;
+
+/** The spec hashes the core library's Law calls take: the six MIPs, and the
+ * layers each extension the collective names declares (the release manifest
+ * cMIP declares none beyond Production). */
+export const LAW_SPECS = { ...MIPS, law: REPO_SPECS.law, extLayers: { [REPO_SPECS.manifest]: [] as number[] } };
+
+/** A founding agreement for a collective, or a clone of one (Law draft 7). */
 export interface CollectiveTerms {
   /** The members, in order: the parties. */
   parties: string[];
-  /** The terms in words, as canonical text. What every member reads before signing. */
+  /** The constitution's words, as canonical text. What every member reads before signing. */
   text: string;
-  /** Which signatures make a clone complete (member changes). */
+  /** The clone rule: the judicial tier, and operational matters outside every area. */
   clone: Rule;
+  /** The constitutional change rule (field 18); absent: every party. */
+  constitutional?: Rule;
   /** Who holds the collective's everyday signing key. */
   signingHolder: string;
   /** The safety key as shares: any `threshold` of these members rebuild it. */
   safety: { threshold: number; members: string[] };
-  /** Act types that also require visible member signature acts, and which. */
-  listed: { spec: string; type: number; rule: Rule }[];
-  /** Who decides absence: a threshold of the other parties. */
+  /** The release rule, as an area: publications of the collective (Envelope
+   * type 0) count only with this many of its holders' signature acts. */
+  releases: { holders: string[]; threshold: number; words?: string };
+  /** Who decides absence: a threshold of the other parties; the outcomes
+   * include 0, a voice removed, so every member is covered (F105). */
   abandonment: { others: number; outcomes: number[] };
   /** Extensions: cMIPs outside the listed tasks (the release manifest cMIP). */
   extensions: string[];
-  /** For a clone: the agreement it replaces. */
+  /** For a clone: the agreement it replaces, and its mark. */
   parent?: string;
+  mark?: MarkEntry[];
 }
 
 /** The terms payload, as CBOR, checked by the core library. */
 export function termsPayload(t: CollectiveTerms): Uint8Array {
+  const payload = encodeTerms(t);
+  checkTerms(payload, LAW_SPECS);
+  return payload;
+}
+
+/** The terms payload, as CBOR, not yet checked: for showing why Law would refuse it. */
+export function encodeTerms(t: CollectiveTerms): Uint8Array {
   const grammar = new Map<number, unknown>([
     [0, [0, unhex(t.signingHolder)]],
     [1, [1, t.safety.threshold, t.safety.members.map(unhex)]],
-    [2, t.listed.map((l) => [unhex(l.spec), l.type, ruleValue(l.rule)])],
   ]);
+  const area = new Map<number, unknown>([
+    [0, 'Releases'],
+    [1, t.releases.holders.map(unhex)],
+    [2, t.releases.threshold],
+    [3, [[1, unhex(MIPS.envelope), 0]]],
+    [5, RELEASE_AREA],
+  ]);
+  // A mark's signers are ascending by hash (Law draft 8, B8): lowercase
+  // hex sorts as the bytes do.
+  const field4 = t.parent
+    ? (t.mark ?? []).map((e) => [powerValue(e.power), [...e.signers].sort().map(unhex)])
+    : [0];
   const m = new Map<number, unknown>([
     [0, t.parties.map(unhex)],
     [1, t.text],
     [2, new Map()],
-    [4, [0]],
+    [4, field4],
     [5, ruleValue(t.clone)],
     [9, new Map<number, unknown>([
       [0, [1, t.abandonment.others]],
@@ -55,11 +111,27 @@ export function termsPayload(t: CollectiveTerms): Uint8Array {
     ])],
     [12, grammar],
     [15, t.extensions.map(unhex)],
+    [19, [area]],
   ]);
+  if (t.constitutional) m.set(18, ruleValue(t.constitutional));
+  if (t.releases.words) m.set(20, new Map([[RELEASE_AREA, t.releases.words]]));
   if (t.parent) m.set(11, unhex(t.parent));
-  const payload = cborEncode(m);
-  checkTerms(payload);
-  return payload;
+  return cborEncode(m);
+}
+
+/** What a clone changes, and the powers its mark must name (Law rule 44c). */
+export function clonePlan(parent: CollectiveTerms, clone: CollectiveTerms): {
+  changes: { form: string; tier: string; field?: number; task?: number; area?: number }[];
+  needs: { form: string; area?: number }[];
+} {
+  return lawClonePlan(encodeTerms(parent), encodeTerms({ ...clone, mark: [{ power: { clone: true }, signers: [clone.parties[0]] }] }), LAW_SPECS);
+}
+
+/** Whether the powers a mark names are exactly those a plan needs. */
+export function markMatches(mark: MarkEntry[], needs: { form: string; area?: number }[]): boolean {
+  const key = (p: Power) => ('constitutional' in p ? 'constitutional' : 'clone' in p ? 'clone' : `area ${p.area}`);
+  const want = needs.map((n) => (n.form === 'area' ? `area ${n.area}` : n.form));
+  return JSON.stringify(mark.map((e) => key(e.power))) === JSON.stringify(want);
 }
 
 /**
@@ -82,9 +154,18 @@ export async function carryChain(by: TestIdentity, relays: string[]): Promise<vo
 
 /** Propose terms: an act of the proposer, public so anyone can check the collective. */
 export async function propose(by: TestIdentity, t: CollectiveTerms, relays: string[]) {
-  const objects: [string, string][] | undefined = t.parent ? [[t.parent, t.parent]] : undefined;
+  return proposePayload(by, termsPayload(t), t.parent, relays);
+}
+
+/**
+ * Propose terms given as their exact payload, already checked and shown to
+ * the proposer (Law rule 4a): a clone names its parent in `objects`.
+ */
+export async function proposePayload(by: TestIdentity, payload: Uint8Array, parent: string | undefined, relays: string[]) {
+  checkTerms(payload, LAW_SPECS);
+  const objects: [string, string][] | undefined = parent ? [[parent, parent]] : undefined;
   await carryChain(by, relays);
-  return by.publish(REPO_SPECS.law, LAW_TYPES.terms, termsPayload(t), { public: true, relays, objects });
+  return by.publish(REPO_SPECS.law, LAW_TYPES.terms, payload, { public: true, relays, objects });
 }
 
 /** Sign an act: a Law signature act that follows the act it signs. */
@@ -94,5 +175,103 @@ export async function sign(by: TestIdentity, act: string, relays: string[]) {
     public: true,
     relays,
     objects: [[act, act]],
+  });
+}
+
+/**
+ * Leave the collective alone (Law rule 37a): a resignation act naming the
+ * agreement, signed by the member with their own key, no one else's. It
+ * takes effect for the collective at the line its record draws.
+ */
+export async function resign(by: TestIdentity, agreement: string, relays: string[], area?: number) {
+  await carryChain(by, relays);
+  return by.publish(REPO_SPECS.law, LAW_TYPES.resignation, resignationPayload(agreement, area), {
+    public: true,
+    relays,
+    objects: [[agreement, agreement]],
+  });
+}
+
+/**
+ * An abandonment declaration (Law type 13, B12): the agreement, the version
+ * whose clause it applies (the last the party signed), the party and the
+ * outcomes. Signed by the authority, here one of the other members, with
+ * their own key; where the clause asks for more of them, the others add
+ * signature acts naming it (B15).
+ */
+export async function declare(
+  by: TestIdentity,
+  d: { agreement: string; clause: string; party: string; outcomes: number[] },
+  relays: string[],
+) {
+  await carryChain(by, relays);
+  return by.publish(REPO_SPECS.law, LAW_TYPES.declaration, declarationPayload(d.agreement, d.clause, d.party, Uint32Array.from(d.outcomes)), {
+    public: true,
+    relays,
+    objects: [[d.agreement, d.agreement]],
+  });
+}
+
+/**
+ * The agreements of `chain` (oldest first) that `member` signed, by a Law
+ * signature act its relays hold: the newest of them is the clause version
+ * a declaration against that member applies (Law rule 51, B12). The core
+ * library checks it again when it judges the declaration.
+ */
+export async function signedVersions(member: string, chain: string[], relays: string[], via: Via = {}): Promise<string[]> {
+  const signed = new Set<string>();
+  for (const h of relays) {
+    let after: number | undefined;
+    try {
+      for (;;) {
+        const page = await relayAt(h, via).feed({ signer: member, after });
+        for (const it of page.items) {
+          if (it.kind !== 'act') continue;
+          try {
+            const d = describeAct(it.item) as { spec?: string; type?: number; payload?: Uint8Array };
+            if (d.spec !== REPO_SPECS.law || d.type !== LAW_TYPES.signature || !d.payload) continue;
+            const m = cborDecode(d.payload) as Map<number, unknown>;
+            const x = m.get(0);
+            if (x instanceof Uint8Array) signed.add(hex(x));
+          } catch {
+            // not one of ours, or malformed
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+      // that relay is away: the others may hold them
+    }
+  }
+  return chain.filter((a) => signed.has(a));
+}
+
+/**
+ * The collective's record (Law type 17), its everyday line: it writes a
+ * complete clone with the signature acts that complete it (A2), and
+ * registers departures (A1). Signed with the collective's everyday key.
+ * A test collective keeps one sequence, so it names no other. `acks`:
+ * acts it acknowledges (Envelope), which places members' signature acts at
+ * this line ("Made before, made after", 2): the signatures completing a
+ * declaration it registers (B15).
+ */
+export async function record(
+  collective: TestIdentity,
+  r: { clone?: string; signatures?: string[]; registers?: string[]; inForce: string; acks?: string[] },
+  relays: string[],
+) {
+  const payload = recordPayload({
+    clone: r.clone ?? null,
+    signatures: r.signatures ?? null,
+    kept: [],
+    registers: r.registers?.length ? r.registers : null,
+  });
+  const named = r.clone ?? r.inForce;
+  return collective.publish(REPO_SPECS.law, LAW_TYPES.record, payload, {
+    public: true,
+    relays,
+    objects: [[named, named]],
+    acks: r.acks?.length ? r.acks : undefined,
   });
 }
