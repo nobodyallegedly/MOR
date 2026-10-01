@@ -1072,7 +1072,9 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 - C4 (A3 adopted): the collective's keepers, named by its agreement in force, may place the collective's own acts that its line left out: such an act counts as made before the line when a keeper recorded it before recording the line. Members' signatures and deals are not placed by keepers. *Stated:* a keeper that records a line late opens a window, the trust in keepers rule 11a already states.
 
-**Open:** choices C5 to C8, in `docs/law-ordering-rule-test.md` section 5.
+- C5: a member's own rotation is registered by the collective on its line, like a departure; that member's signatures on acts of the collective placed before that line stay valid for the collective. If the member's key was stolen, the thief's signatures placed before the line count too, but only on acts the collective's key holders also signed: a stolen member key can finish an act the collective signed, never start one. "In the event of theft, the band reorganizes around it." *Cost, stated:* within a collective, Identity's theft protection is softened to this extent.
+
+**Open:** choices C6 to C8, in `docs/law-ordering-rule-test.md` section 5.
 
 **Core changes, to be made:** Law draft 7 (the "Made before, made after" section; rules 37, 37c, 40, 42, 44, 44d; the record act's fields); freeze suite v18 (scenario 3 and the stories of the test).
 
