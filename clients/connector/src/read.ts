@@ -279,7 +279,7 @@ export async function release(id: string, hints: string[], via: Via): Promise<To
   const st = releaseStanding(v);
   if (st) who.push(standingLine(st));
   if (v.agreement) {
-    who.push({ text: `It is a collective's release, under its agreement ${short(v.agreement)}: a release counts only once ${v.rule} have signed it.` });
+    who.push({ text: `It is a collective's release, under its agreement ${short(v.agreement)}, the one the collective's record named as in force when the release was made: a release counts only once ${v.rule} have signed it.` });
     who.push({
       text: v.signers.length ? `Signed by ${v.signers.length} member${v.signers.length > 1 ? 's' : ''}: ${v.signers.map(names).join(', ')}.` : 'No member has signed it.',
       tone: v.signers.length ? undefined : 'warn',
@@ -442,6 +442,9 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
     if (missing.length) signedLines.push({ text: `Not signed by ${missing.map(names).join(', ')}: none of it binds them (Law rule 1).`, tone: 'warn' });
   }
   signedLines.push({ text: `Proposed by the identity ${d.signer}.` }, standingLine(standing));
+  if (t.grammar || t.parent) {
+    signedLines.push({ text: "If a collective lives under it, the agreement in force for that collective is the one the collective's own record names, whatever is found here: read the collective's identity to know." });
+  }
   const pending = clones.filter((c) => c !== replaced);
   if (pending.length) signedLines.push({ text: `A clone that would replace it is proposed and not yet in force: ${pending.map(short).join(', ')}.` });
 
@@ -561,7 +564,10 @@ export async function identity(id: string, hints: string[], via: Via = {}, judge
       declared = null;
     }
   }
-  if (declared) lines.push({ text: `It is a collective: it declares that it lives under the agreement ${declared} (Law).` });
+  if (declared) {
+    lines.push({ text: `It is a collective: it declares that it lives under the agreement ${declared} (Law).` });
+    lines.push({ text: 'That is the agreement in force for it: for a collective, the one its record names, as far as the relays asked show.' });
+  }
   return told(id, {
     kind: 'identity',
     title: declared ? 'A collective' : 'An identity',

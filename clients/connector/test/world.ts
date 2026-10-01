@@ -3,7 +3,7 @@
 // run as its own process, spoken to over stdio by an MCP client exactly as
 // Claude's app speaks to it. Nothing is mocked.
 
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,8 +41,6 @@ export interface World {
   /** A release signed by one member of the two it needs. */
   release: string;
   drafts: string;
-  /** A member's checkout of the test tree: the release's files, byte for byte. */
-  checkout: string;
   stop(): Promise<void>;
 }
 
@@ -70,15 +68,9 @@ export async function world(): Promise<World> {
     paths.push(join(keys, `m${i}.json`));
     m.save(paths[i]);
   });
-  const checkout = mkdtempSync(join(tmpdir(), 'mor-connector-checkout-'));
-  for (const f of files) {
-    mkdirSync(join(checkout, f.path, '..'), { recursive: true });
-    writeFileSync(join(checkout, f.path), f.bytes);
-  }
   return {
     homes,
     relay,
-    checkout,
     members,
     files: paths,
     collective,

@@ -1,0 +1,31 @@
+{
+  "name": "mor-desk",
+  "version": "0.1.0",
+  "description": "The owner's desk: a client for several MOR test identities, with no command line. An inbox of drafts from the Claude connector, each read in plain words with its digest, to approve, decline or send back with a note; and each identity's received messages, replies, acknowledgements and payments, sorted into to answer, answered and ignored. Test identities only.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-desk": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "start": "node --import tsx src/cli.ts open"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "esbuild": "^0.25",
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "@types/node": "^22.20.4",
+    "playwright-core": "1.56",
+    "typescript": "^5",
+    "zod": "4.6.5"
+  }
+}

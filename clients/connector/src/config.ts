@@ -1,10 +1,9 @@
 // The connector's settings, from its environment: where to look for acts,
-// how to reach an address another way, and the folder where drafts wait for
-// their owner's signature. Nothing here is secret: the connector holds no key.
+// how to reach an address another way, and the drafts folder it shares with
+// the desk (DRAFTS.md). Nothing here is secret: the connector holds no key.
 
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { Via } from '../../genesis/src/transport.ts';
 
 export interface Config {
@@ -12,21 +11,15 @@ export interface Config {
   relays: string[];
   /** Addresses reached another way: an onion home through its local port. */
   via: Via;
-  /** Drafts waiting for a signature, and the acts their owner signed. */
+  /** The drafts folder: drafts for the desk, and the desk's answers. */
   drafts: string;
-  /**
-   * The member's own checkout of the code: a release is compared with it,
-   * file by file, before a member signs it (release manifest cMIP, rule 4,
-   * client conformance). By default the MOR repository this connector is part of.
-   */
-  checkout: string;
 }
-
-/** The MOR repository this connector is part of. */
-export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 
 /** The deployed homes, which also serve acts (roadmap step 4). */
 export const DEFAULT_RELAYS = ['https://home1.dubsar.org', 'https://home2.dubsar.org'];
+
+/** The drafts folder both programs use unless told otherwise. */
+export const DEFAULT_DRAFTS = join(homedir(), 'mor-drafts');
 
 const list = (s: string | undefined) =>
   (s ?? '')
@@ -34,10 +27,7 @@ const list = (s: string | undefined) =>
     .map((x) => x.trim().replace(/\/$/, ''))
     .filter(Boolean);
 
-/**
- * `MOR_RELAYS` (comma or space separated), `MOR_VIA` (`ADDRESS=LOCAL`, comma
- * separated), `MOR_DRAFTS` (default `~/mor-connector`), `MOR_CHECKOUT` (default: this repository).
- */
+/** `MOR_RELAYS` (comma or space separated), `MOR_VIA` (`ADDRESS=LOCAL`, comma separated), `MOR_DRAFTS` (default `~/mor-drafts`). */
 export function fromEnv(env: NodeJS.ProcessEnv = process.env): Config {
   const relays = list(env.MOR_RELAYS);
   const via: Via = {};
@@ -48,8 +38,7 @@ export function fromEnv(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     relays: relays.length ? relays : DEFAULT_RELAYS,
     via,
-    drafts: env.MOR_DRAFTS || join(homedir(), 'mor-connector'),
-    checkout: env.MOR_CHECKOUT || ROOT,
+    drafts: env.MOR_DRAFTS || DEFAULT_DRAFTS,
   };
 }
 

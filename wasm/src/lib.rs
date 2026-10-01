@@ -322,6 +322,8 @@ struct Described {
     refs: Option<Vec<String>>,
     /// Web resources it refers to, `[address, hash or null]`, when opened.
     web_refs: Option<Vec<(String, Option<String>)>>,
+    /// Acts by other identities it acknowledges (Envelope, "Acknowledgements"), when opened.
+    acks: Option<Vec<String>>,
     #[serde(with = "serde_bytes")]
     payload: Option<Vec<u8>>,
 }
@@ -364,6 +366,9 @@ fn describe_act(a: &Act, key: Option<&[u8; 32]>) -> Described {
                 })
                 .collect()
         }),
+        acks: inside
+            .as_ref()
+            .map(|i| i.acks.iter().flatten().map(hx).collect()),
         payload: inside.map(|i| cbor::encode(&Value::Map(i.payload))),
     }
 }
@@ -640,6 +645,8 @@ struct EverydayIn {
     objects: Option<Vec<(String, String)>>,
     /// Acts this one refers to, by id (Envelope, "References").
     refs: Option<Vec<String>>,
+    /// Acts by other identities this one acknowledges (Envelope, "Acknowledgements").
+    acks: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
@@ -679,7 +686,10 @@ pub fn make_everyday(input: JsValue) -> R<JsValue> {
         payload: payload_of(&e.payload)?,
         position: Some(seq.len() as u64 + 1),
         summary: Some(mmr::summary(seq.iter())),
-        acks: None,
+        acks: e
+            .acks
+            .map(|r| r.iter().map(|s| unhex(s)).collect::<R<Vec<_>>>())
+            .transpose()?,
         refs: e
             .refs
             .map(|r| {

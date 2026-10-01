@@ -1,20 +1,18 @@
 {
   "name": "mor-connector",
-  "version": "0.1.0",
-  "description": "The MOR connector for Claude, an MCP server: fetch acts from relays and verify them, say in plain words who signed what and whether it counts, prepare acts for their owner to sign on their own signer, and submit them once signed. It never holds a key.",
+  "version": "0.2.0",
+  "description": "The MOR connector for Claude, an MCP server: fetch acts from relays and verify them, say in plain words who signed what and whether it counts, and prepare posts, pictures, withdrawals and messages as drafts for the owner's desk. It never holds a key.",
   "license": "MIT OR Apache-2.0",
   "private": true,
   "type": "module",
   "bin": {
-    "mor-connector": "./src/server.ts",
-    "mor-sign": "./signer/cli.ts"
+    "mor-connector": "./src/server.ts"
   },
   "scripts": {
     "wasm": "sh ../genesis/scripts/build-wasm.sh",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
     "start": "node --import tsx src/server.ts",
-    "sign": "node --import tsx signer/cli.ts",
     "add-to-claude": "node --import tsx scripts/add-to-claude.ts"
   },
   "engines": {

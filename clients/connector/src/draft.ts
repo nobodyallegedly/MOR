@@ -1,17 +1,17 @@
-// Drafts: an act prepared for its owner to sign on their own signer, and
-// submitted once signed. The connector never holds a key, so it never makes
-// an act: it writes down what the act will say (its spec, type, payload,
-// references), and the owner's signer, which keeps the owner's sequence,
-// makes the act from it and signs it. Then the connector checks that the act
-// says exactly what the draft said, and sends it to the relays.
+// Drafts: an act prepared by Claude, through the connector, for the owner to
+// approve at the desk (roadmap step 11c). The connector never holds a key,
+// so it never makes an act: it writes down what the act will say, and the
+// desk, which holds the owner's test identities and keeps their sequences,
+// makes the act from it, signs it on the owner's word and sends it.
 //
 // A draft is not an act and not part of the protocol: it is a handoff
-// between two programs on the owner's machine (reading 1 in the README). It
-// is deterministic CBOR, so its digest names it exactly, and both programs
-// show that digest to compare by eye:
+// between two programs on the owner's Mac, through a folder (decided by
+// Nobody, allegedly, 1 October 2026: "no inbox, no cMIP"; the folder is
+// documented in DRAFTS.md). It is deterministic CBOR, so its digest names
+// it exactly, and both programs show that digest to compare by eye:
 //
 //   draft = {
-//     0: "MOR connector draft, version 1",
+//     0: "MOR draft, version 2",
 //     1: signer,          ; the identity that is to sign it (32 bytes)
 //     2: spec,            ; the act's spec hash
 //     3: type,
@@ -19,30 +19,39 @@
 //     5: public,          ; true: the act carries its key
 //     ? 6: [* act id],    ; refs
 //     ? 7: [* [chain, predecessor]],   ; objects
-//     8: [* relay],       ; where the connector sends it once signed
+//     8: [* relay],       ; where a public act is sent once signed
+//     ? 9: [recipient],   ; a message: the one identity it is sealed to and delivered to
+//     ? 10: [* bstr],     ; media: locked bytes put on the relays after the act (a publication)
+//     ? 11: tstr,         ; Claude's note to the owner: not signed, never part of the act
+//     ? 12: digest,       ; the draft this one reworks (32 bytes)
 //   }
+//
+// What can be drafted is decided (Nobody, allegedly, 1 October 2026): acts
+// of the Text and Envelope layers only, namely posts, publications,
+// withdrawals and messages. Anything else, a Law act above all, is refused
+// by the connector before any draft is written, and by the desk again.
 //
 // The reading of a draft (`readDraft`) is made from these bytes alone, by
 // whichever program reads them: the connector before handing it over, the
-// signer again before signing. Neither trusts the other's words.
+// desk again before showing it to the owner. Neither trusts the other's words.
 
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { checkText, cborDecode, cborEncode, describeAct, hex, signaturePayload, unhex } from '../../genesis/src/core.ts';
+import { SPECS, checkText, cborDecode, cborEncode, describeAct, hex, lockMedia, openMedia, unhex, workHash } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
-import { relayAt, type Via } from '../../genesis/src/transport.ts';
+import type { Via } from '../../genesis/src/transport.ts';
 import { textPayload } from '../../barebone/src/post.ts';
-import { POST_SPECS } from '../../barebone/src/specs.ts';
+import { POST_SPECS, PUBLICATION, WITHDRAWAL } from '../../barebone/src/specs.ts';
 import { parse, checkBound } from '../../longform/src/format.ts';
 import { compose } from '../../longform/src/text.ts';
-import { compareWithTree } from '../../repo/src/release.ts';
-import { LAW_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
+import { read as readJpeg, strip, CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
+import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { short, type Line, type Section } from '../../collective/src/explain.ts';
 import { readAct, fetchFirst, describeChecked, type Told } from './read.ts';
 import { countControls, escapeControls, groups } from './words.ts';
 
-export const DRAFT_LABEL = 'MOR connector draft, version 1';
+export const DRAFT_LABEL = 'MOR draft, version 2';
 
 export interface Draft {
   signer: string;
@@ -53,11 +62,24 @@ export interface Draft {
   refs: string[];
   objects: [string, string][];
   relays: string[];
+  /** A message: the one identity it is sealed to. */
+  to: string[];
+  /** Locked media bytes to put on the relays after the act. */
+  media: Uint8Array[];
+  /** Claude's note to the owner, about the draft: never signed. */
+  note: string | null;
+  /** The digest of the draft this one reworks. */
+  reworks: string | null;
 }
 
 const HEX64 = /^[0-9a-f]{64}$/;
 const same = (a: Uint8Array, b: Uint8Array) => Buffer.from(a).equals(Buffer.from(b));
 const err = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const sha256 = (b: Uint8Array) => createHash('sha256').update(b).digest('hex');
+
+/** The longest note Claude may attach, and the largest picture, so a draft stays a small file. */
+export const MAX_NOTE = 2000;
+export const MAX_MEDIA = 8 << 20;
 
 export function encodeDraft(d: Draft): Uint8Array {
   const m = new Map<number, unknown>([
@@ -71,6 +93,10 @@ export function encodeDraft(d: Draft): Uint8Array {
   if (d.refs.length) m.set(6, d.refs.map(unhex));
   if (d.objects.length) m.set(7, d.objects.map(([c, p]) => [unhex(c), unhex(p)]));
   m.set(8, d.relays);
+  if (d.to.length) m.set(9, d.to.map(unhex));
+  if (d.media.length) m.set(10, d.media);
+  if (d.note !== null) m.set(11, d.note);
+  if (d.reworks !== null) m.set(12, unhex(d.reworks));
   return cborEncode(m);
 }
 
@@ -82,81 +108,106 @@ export function decodeDraft(bytes: Uint8Array): Draft {
   } catch (e) {
     throw new Error(`not a draft: ${err(e)}`);
   }
-  if (!(m instanceof Map) || m.get(0) !== DRAFT_LABEL) throw new Error('not a MOR connector draft');
-  for (const k of m.keys()) if (![0, 1, 2, 3, 4, 5, 6, 7, 8].includes(k)) throw new Error(`a draft with an unknown field ${k}`);
+  if (!(m instanceof Map) || m.get(0) !== DRAFT_LABEL) throw new Error(`not a ${DRAFT_LABEL}`);
+  for (const k of m.keys()) if (typeof k !== 'number' || k < 0 || k > 12) throw new Error(`a draft with an unknown field ${String(k)}`);
   const h = (v: unknown, what: string) => {
     if (!(v instanceof Uint8Array) || v.length !== 32) throw new Error(`a draft whose ${what} is not a hash`);
     return hex(v);
+  };
+  const list = (k: number, what: string): unknown[] => {
+    if (!m.has(k)) return [];
+    const v = m.get(k);
+    if (!Array.isArray(v)) throw new Error(`a draft whose ${what} is not a list`);
+    return v;
   };
   const type = m.get(3);
   const payload = m.get(4);
   const pub = m.get(5);
   const relays = m.get(8);
+  const note = m.has(11) ? m.get(11) : null;
   if (typeof type !== 'number') throw new Error('a draft whose type is not a number');
   if (!(payload instanceof Uint8Array)) throw new Error('a draft without a payload');
   if (typeof pub !== 'boolean') throw new Error('a draft that does not say whether the act is public');
-  if (!Array.isArray(relays) || !relays.length || !relays.every((r) => typeof r === 'string')) throw new Error('a draft that names no relay');
-  const refs = m.has(6) ? (m.get(6) as unknown[]) : [];
-  const objects = m.has(7) ? (m.get(7) as unknown[]) : [];
-  if (!Array.isArray(refs) || !Array.isArray(objects)) throw new Error('a draft whose refs or objects are not lists');
+  if (!Array.isArray(relays) || !relays.every((r) => typeof r === 'string')) throw new Error('a draft whose relays are not addresses');
+  if (note !== null && typeof note !== 'string') throw new Error('a draft whose note is not text');
+  const media = list(10, 'media');
+  if (!media.every((x) => x instanceof Uint8Array)) throw new Error('a draft whose media are not bytes');
   const d: Draft = {
     signer: h(m.get(1), 'signer'),
     spec: h(m.get(2), 'spec'),
     type,
     payload,
     public: pub,
-    refs: refs.map((r) => h(r, 'reference')),
-    objects: objects.map((o) => {
+    refs: list(6, 'refs').map((r) => h(r, 'reference')),
+    objects: list(7, 'objects').map((o) => {
       if (!Array.isArray(o) || o.length !== 2) throw new Error('a draft whose objects are not pairs');
       return [h(o[0], 'object'), h(o[1], 'object')] as [string, string];
     }),
     relays: relays as string[],
+    to: list(9, 'recipients').map((r) => h(r, 'recipient')),
+    media: media as Uint8Array[],
+    note: note as string | null,
+    reworks: m.has(12) ? h(m.get(12), 'reworked draft') : null,
   };
   if (!same(encodeDraft(d), bytes)) throw new Error('a draft not in its one deterministic encoding');
   return d;
 }
 
 /** The draft's digest: SHA-256 of its exact bytes. */
-export const draftDigest = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
+export const draftDigest = (bytes: Uint8Array): string => sha256(bytes);
 
 // ---------------------------------------------------------------- reading a draft
 
+/** The kinds Claude may prepare (decided by Nobody, allegedly, 1 October 2026). */
+export type DraftKind = 'post' | 'message' | 'picture' | 'withdrawal' | 'refused';
+
 /** What signing a draft means, in plain words, from its bytes alone. */
 export interface DraftReading {
+  kind: DraftKind;
   title: string;
   summary: string[];
   sections: Section[];
-  /** Words to be signed or signed on, quoted as plain text, invisible controls as escapes. */
+  /** Words to be signed, quoted as plain text, invisible controls as escapes. */
   quoted: { heading: string; text: string }[];
-  /** Reasons not to sign it. While any remains, a signer refuses. */
+  /** Reasons not to sign it. While any remains, the desk refuses. */
   blocking: string[];
-  /** The act it signs or refers to, as read now. */
-  target?: Told;
+  /** A picture to be published: the exact JPEG, once unlocked, to show before signing. */
+  picture?: { jpeg: Uint8Array; width: number; height: number };
+  /** The text to be signed, for comparing a rework with the draft it replaces. */
+  text?: string;
+}
+
+/** Words for an act outside what Claude may prepare. */
+export function notPreparable(spec: string, type: number): string {
+  if (spec === REPO_SPECS.law) {
+    return 'It is a Law act (a signature, an agreement, a clone or the like). Claude prepares acts of the Text and Envelope layers only: posts, publications, withdrawals and messages (decided by Nobody, allegedly, 1 October 2026). A Law act is signed in the collective client, never from a draft.';
+  }
+  if (spec === SPECS.identity) return 'It is an Identity act. Claude prepares acts of the Text and Envelope layers only: posts, publications, withdrawals and messages.';
+  if (spec === SPECS.envelope) return `It is an Envelope act of type ${type}. Of the Envelope layer, Claude prepares publications and withdrawals only.`;
+  return `It is an act of a specification Claude does not prepare (${short(spec)}). Claude prepares acts of the Text and Envelope layers only: posts, publications, withdrawals and messages.`;
 }
 
 /**
- * Read a draft. What can be prepared here is small on purpose: a public
- * text act (Text MIP), and a Law signature on a release or an agreement.
- * Anything else is refused (fail closed).
+ * Read a draft. Fail closed: what is not a public text, a private message
+ * to one identity, a publication of a picture or a withdrawal is refused.
  */
-export async function readDraft(d: Draft, hints: string[], via: Via = {}, opts: { checkout: string }): Promise<DraftReading> {
-  const who: Line[] = [
-    { text: `The identity ${d.signer} signs it, with its own signer, as the next act in its own sequence.` },
-    { text: `Once signed, it is sent to ${d.relays.join(', ')}.` },
-  ];
-  if (d.spec === POST_SPECS.text && d.type === 0) return readTextDraft(d, who, hints, via);
-  if (d.spec === REPO_SPECS.law && d.type === LAW_TYPES.signature) return readSignatureDraft(d, who, hints, via, opts.checkout);
-  return {
-    title: 'An act this connector does not prepare',
-    summary: [],
-    sections: [{ heading: 'Who signs', lines: who }],
-    quoted: [],
-    blocking: ['This connector prepares only public text acts and Law signatures on a release or an agreement; it does not sign anything else (fail closed).'],
-  };
+export async function readDraft(d: Draft, hints: string[], via: Via = {}): Promise<DraftReading> {
+  const who: Line[] = [{ text: `The identity ${d.signer} signs it, at the desk, as the next act in its own sequence.` }];
+  const extra: string[] = [];
+  if (d.note !== null && d.note.length > MAX_NOTE) extra.push(`Claude's note is longer than ${MAX_NOTE} characters.`);
+  let r: DraftReading;
+  if (d.spec === POST_SPECS.text && d.type === 0) r = d.public ? await readPost(d, who, hints, via) : await readMessage(d, who, hints, via);
+  else if (d.spec === POST_SPECS.envelope && d.type === PUBLICATION) r = await readPicture(d, who);
+  else if (d.spec === POST_SPECS.envelope && d.type === WITHDRAWAL) r = await readWithdrawal(d, who, hints, via);
+  else r = { kind: 'refused', title: 'An act Claude does not prepare', summary: [], sections: [{ heading: 'Who signs', lines: who }], quoted: [], blocking: [notPreparable(d.spec, d.type)] };
+  r.blocking.push(...extra);
+  if (r.kind !== 'message' && d.to.length) r.blocking.push('Only a message names a recipient.');
+  if (r.kind !== 'picture' && d.media.length) r.blocking.push('Only a publication carries media.');
+  if (r.kind !== 'message' && r.kind !== 'refused' && !d.relays.length) r.blocking.push('It names no relay to send it to.');
+  return r;
 }
 
-async function readTextDraft(d: Draft, who: Line[], hints: string[], via: Via): Promise<DraftReading> {
-  const blocking: string[] = [];
+function textOf(d: Draft, blocking: string[]): { text: string | null; format: unknown; what: Line[] } {
   let p: Map<number, unknown> | null = null;
   try {
     p = cborDecode(d.payload) as Map<number, unknown>;
@@ -165,90 +216,201 @@ async function readTextDraft(d: Draft, who: Line[], hints: string[], via: Via): 
   }
   const text = p?.get(0);
   const format = p?.get(1);
-  if (typeof text !== 'string') blocking.push('It has no text.');
-  if (p && [...p.keys()].some((k) => k !== 0 && k !== 1)) blocking.push('Its payload has fields the Text MIP does not define.');
-  if (!d.public) blocking.push('It is private: this connector prepares public texts only, since a private one needs its key delivered.');
-  if (d.objects.length) blocking.push('A text act names no objects.');
   const what: Line[] = [];
-  if (typeof text === 'string') {
-    try {
-      checkText(text);
-    } catch (e) {
-      blocking.push(`Its text is not canonical text (Text MIP, rule 1): ${err(e)}.`);
-    }
-    if (format === undefined) what.push({ text: 'Plain text: what you read below is exactly what is published.' });
-    else if (format instanceof Uint8Array && hex(format) === POST_SPECS.longform) {
-      what.push({ text: 'Written in the long-form text format: readers render headings, emphasis and links from it; the plain text below is exactly what is signed.' });
-      const breach = checkBound(parse(text));
-      if (breach) blocking.push(`The long-form format would show it differently from its bytes (${breach}).`);
-    } else blocking.push('It names a format this connector does not implement.');
-    const n = countControls(text);
-    if (n) what.push({ text: `It contains ${n} invisible character${n > 1 ? 's' : ''} that can make it display in another order than it is written, shown below as <U+…>.`, tone: 'warn' });
+  if (typeof text !== 'string') {
+    blocking.push('It has no text.');
+    return { text: null, format, what };
   }
+  if (p && [...p.keys()].some((k) => k !== 0 && k !== 1)) blocking.push('Its payload has fields the Text MIP does not define.');
+  if (d.objects.length) blocking.push('A text act names no objects.');
+  try {
+    checkText(text);
+  } catch (e) {
+    blocking.push(`Its text is not canonical text (Text MIP, rule 1): ${err(e)}.`);
+  }
+  if (format === undefined) what.push({ text: 'Plain text: what you read below is exactly what is signed.' });
+  else if (format instanceof Uint8Array && hex(format) === POST_SPECS.longform) {
+    what.push({ text: 'Written in the long-form text format: readers render headings, emphasis and links from it; the plain text below is exactly what is signed.' });
+    const breach = checkBound(parse(text));
+    if (breach) blocking.push(`The long-form format would show it differently from its bytes (${breach}).`);
+  } else blocking.push('It names a format the desk does not implement.');
+  const n = countControls(text);
+  if (n) what.push({ text: `It contains ${n} invisible character${n > 1 ? 's' : ''} that can make it display in another order than it is written, shown below as <U+…>.`, tone: 'warn' });
+  return { text, format, what };
+}
+
+async function refLines(d: Draft, hints: string[], via: Via): Promise<Line[]> {
+  const out: Line[] = [];
   for (const r of d.refs) {
     const t = await readAct(r, hints, via, 0);
-    what.push({ text: `It refers to ${t.title.replace(/^A /, 'a ').replace(/^An /, 'an ')} (${short(r)}): ${t.verdict}`, tone: t.counts === false ? 'warn' : undefined });
+    out.push({ text: `It refers to ${t.title.replace(/^A /, 'a ').replace(/^An /, 'an ')} (${short(r)}): ${t.verdict}`, tone: t.counts === false ? 'warn' : undefined });
   }
+  return out;
+}
+
+async function readPost(d: Draft, who: Line[], hints: string[], via: Via): Promise<DraftReading> {
+  const blocking: string[] = [];
+  const { text, what } = textOf(d, blocking);
+  what.push(...(await refLines(d, hints, via)));
   what.push({ text: 'It is public: anyone who fetches it can read it, and it cannot be unpublished; a later withdrawal only asks readers not to show it.' });
   return {
-    title: 'A text, to be published',
+    kind: 'post',
+    title: 'A post, to be published',
     summary: [`Signing publishes this text, publicly, as the identity ${short(d.signer)}.`],
     sections: [
-      { heading: 'Who signs', lines: who },
+      { heading: 'Who signs', lines: [...who, { text: `Once signed, it is sent to ${d.relays.join(', ')}.` }] },
       { heading: 'What it is', lines: what },
     ],
-    quoted: typeof text === 'string' ? [{ heading: 'The text, character for character', text: escapeControls(text) }] : [],
+    quoted: text !== null ? [{ heading: 'The text, character for character', text: escapeControls(text) }] : [],
     blocking,
+    text: text ?? undefined,
   };
 }
 
-async function readSignatureDraft(d: Draft, who: Line[], hints: string[], via: Via, checkout: string): Promise<DraftReading> {
-  const blocking: string[] = [];
-  const signed = d.objects[0]?.[0];
-  if (d.objects.length !== 1 || !signed || d.objects[0][1] !== signed) {
-    return { title: 'A signature', summary: [], sections: [{ heading: 'Who signs', lines: who }], quoted: [], blocking: ['A Law signature names exactly one act, as both chain and predecessor (Law, "Signatures").'] };
-  }
-  if (!same(d.payload, signaturePayload(signed))) blocking.push('Its payload is not the Law signature of the act it names.');
-  if (!d.public) blocking.push('A signature on a release or an agreement must be visible: it is private.');
-  if (d.refs.length) blocking.push('A signature refers to nothing else.');
+/** The recipient's current encryption key and inbox, as the core library counts them. */
+export async function recipientOf(to: string, hints: string[], via: Via): Promise<{ key: Uint8Array; inbox: string[]; homes: string[] }> {
+  const l = await lookUp(to, hints, via);
+  if (!l.encryptionKey) throw new Error(`the identity ${to} has published no encryption key that counts, so it cannot receive a message`);
+  const inbox = l.inbox(SPECS.text);
+  if (!inbox?.length) throw new Error(`the identity ${to} declares no inbox, so it cannot receive a message`);
+  return { key: l.encryptionKey, inbox, homes: l.resolution.homes.map((h) => h.hint) };
+}
 
-  const t = await readAct(signed, [...new Set([...hints, ...d.relays])], via, 0);
-  const sections: Section[] = [{ heading: 'Who signs', lines: who }];
-  const lines: Line[] = [{ text: t.verdict }];
-  let title = `A signature on act ${short(signed)}`;
-  let summary: string[] = [];
-  if (t.kind === 'release') {
-    title = 'A signature on a release';
-    summary = [`Signing says that the identity ${short(d.signer)}, as a member, agrees to this release: it counts towards the signatures its collective's agreement asks for.`];
-    if (!t.agreement) blocking.push('It was released under one identity’s own name: no member signatures are asked for, so this signature would play no part.');
-    else if (!t.parties?.includes(d.signer)) blocking.push(`The identity ${short(d.signer)} is not a member under the agreement the release was made under, so its signature would not count.`);
-    if (t.signedBy?.includes(d.signer)) blocking.push('This identity has already signed this release.');
-    const other = t.problems.filter((p) => !/^not a release: .* must sign it/.test(p));
-    if (other.length) blocking.push(`The release does not verify, apart from its signatures: ${other.join('; ')}.`);
-    // Release manifest cMIP, rule 4 (client conformance): every file checked, and compared with the member's own checkout.
-    if (t.manifest) {
-      if (!existsSync(checkout)) blocking.push(`The checkout to compare it with, ${checkout}, does not exist.`);
-      else {
-        const c = compareWithTree(t.manifest, checkout);
-        if (c.differ.length || c.missing.length) {
-          blocking.push(
-            `It is not the code in your checkout at ${checkout}: ${c.differ.length} file${c.differ.length === 1 ? '' : 's'} differ, ${c.missing.length} ${c.missing.length === 1 ? 'is' : 'are'} missing (${[...c.differ, ...c.missing].slice(0, 10).join(', ')}). Bring the checkout to the commit the release was made from, or set MOR_CHECKOUT, and look again.`,
-          );
-        } else lines.push({ text: `Every one of its ${c.same} files is the same as in your checkout at ${checkout}.`, tone: 'ok' });
+async function readMessage(d: Draft, who: Line[], hints: string[], via: Via): Promise<DraftReading> {
+  const blocking: string[] = [];
+  const { text, what } = textOf(d, blocking);
+  const lines: Line[] = [...who];
+  if (d.to.length !== 1) blocking.push('A message is sealed to exactly one recipient.');
+  else {
+    try {
+      const r = await recipientOf(d.to[0], hints, via);
+      lines.push({ text: `It is sealed to the current encryption key of the identity ${d.to[0]}, and left in its inbox at ${r.inbox.join(', ')}.` });
+    } catch (e) {
+      blocking.push(`It cannot be delivered: ${err(e)}.`);
+    }
+  }
+  what.push(...(await refLines(d, hints, via)));
+  what.push({ text: 'It is private: relays see a sealed container for the recipient and its size, never the text, nor who sent it. The recipient can read it, and can show it, signed, to anyone.' });
+  return {
+    kind: 'message',
+    title: 'A message, to be sent',
+    summary: [`Signing sends this text, privately, from the identity ${short(d.signer)} to the identity ${d.to[0] ? short(d.to[0]) : 'no one'}.`],
+    sections: [
+      { heading: 'Who signs, and who receives it', lines },
+      { heading: 'What it is', lines: what },
+    ],
+    quoted: text !== null ? [{ heading: 'The message, character for character', text: escapeControls(text) }] : [],
+    blocking,
+    text: text ?? undefined,
+  };
+}
+
+async function readPicture(d: Draft, who: Line[]): Promise<DraftReading> {
+  const blocking: string[] = [];
+  const lines: Line[] = [];
+  let picture: DraftReading['picture'];
+  let m: Map<number, unknown> | null = null;
+  try {
+    m = cborDecode(d.payload) as Map<number, unknown>;
+  } catch (e) {
+    blocking.push(`Its payload is not deterministic CBOR: ${err(e)}.`);
+  }
+  if (!d.public) blocking.push('A publication is public: the offer is seen by all.');
+  if (d.refs.length || d.objects.length) blocking.push('A publication of a picture refers to nothing and names no chain.');
+  const b = (k: number) => m?.get(k);
+  const spec = b(0);
+  const lockedHash = b(2);
+  const size = b(3);
+  const nonce = b(4);
+  const key = b(5);
+  if (m) {
+    for (const k of m.keys()) if (![0, 1, 2, 3, 4, 5, 6].includes(k as number)) blocking.push(`Its publication has field ${String(k)}, which a picture prepared here never has (a price or a "for" are not prepared by Claude).`);
+    if (!(spec instanceof Uint8Array) || hex(spec) !== POST_SPECS.jpeg) blocking.push('It publishes media of a kind other than a JPEG picture.');
+    if (!(key instanceof Uint8Array)) blocking.push('Its media key is absent: the desk publishes public pictures only.');
+  }
+  if (d.media.length !== 1) blocking.push('It carries no picture, or more than one.');
+  else if (m && key instanceof Uint8Array && nonce instanceof Uint8Array && lockedHash instanceof Uint8Array) {
+    const locked = d.media[0];
+    if (locked.length > MAX_MEDIA) blocking.push('The picture is larger than the desk accepts.');
+    if (sha256(locked) !== hex(lockedHash)) blocking.push('The picture carried is not the one the publication names: its fingerprint differs.');
+    try {
+      const jpeg = new Uint8Array(openMedia(locked, key, nonce));
+      // The size of the stripped picture, as the JPEG Module and the barebone client have it (Envelope says "of those bytes": see the README, flaw 1).
+      if (size !== jpeg.length) blocking.push('The publication states another size than the picture carried.');
+      const work = b(1);
+      const p = readJpeg(jpeg);
+      if (p.carries.length) blocking.push(`The picture still carries ${p.carries.map((c) => CARRIED_WORDS[c]).join(', ')}: it was not stripped to the picture alone (JPEG Module, rule 6).`);
+      picture = { jpeg, width: p.width, height: p.height };
+      lines.push({ text: `A JPEG picture, ${p.width}×${p.height}, stripped to the picture alone: no location, camera data, preview or hidden picture.`, tone: p.carries.length ? 'bad' : 'ok' });
+      if (!(work instanceof Uint8Array) || hex(work) !== workHash(jpeg)) blocking.push("The publication's work hash is not the picture's.");
+    } catch (e) {
+      blocking.push(`The picture does not open with the key in the publication, or is not a JPEG: ${err(e)}.`);
+    }
+  }
+  lines.push({ text: 'It is public: anyone who fetches it can see the picture, and it cannot be unpublished; a later withdrawal only asks readers not to show it.' });
+  const hints = b(6);
+  return {
+    kind: 'picture',
+    title: 'A picture, to be published',
+    summary: [`Signing publishes this picture, publicly, as the identity ${short(d.signer)}. A post can then show it by referring to the publication.`],
+    sections: [
+      { heading: 'Who signs', lines: [...who, { text: `Once signed, it is sent to ${d.relays.join(', ')}, then the picture's locked bytes${Array.isArray(hints) ? `; the publication says they are found at ${hints.join(', ')}` : ''}.` }] },
+      { heading: 'What it is', lines },
+    ],
+    quoted: [],
+    blocking,
+    picture,
+  };
+}
+
+async function readWithdrawal(d: Draft, who: Line[], hints: string[], via: Via): Promise<DraftReading> {
+  const blocking: string[] = [];
+  const lines: Line[] = [];
+  if (!d.public) blocking.push('A withdrawal is public.');
+  if (d.refs.length) blocking.push('A withdrawal refers to nothing else.');
+  let p: Map<number, unknown> | null = null;
+  try {
+    p = cborDecode(d.payload) as Map<number, unknown>;
+  } catch (e) {
+    blocking.push(`Its payload is not deterministic CBOR: ${err(e)}.`);
+  }
+  if (p && p.size) blocking.push('A withdrawal carries an empty payload.');
+  const pub = d.objects[0]?.[0];
+  if (d.objects.length !== 1 || !pub || d.objects[0][1] !== pub) {
+    blocking.push('A withdrawal names exactly one publication, as both chain and predecessor (Envelope, "Withdrawal").');
+  } else {
+    const t = await readAct(pub, [...new Set([...hints, ...d.relays])], via, 0);
+    const act = await fetchFirst(pub, [...new Set([...hints, ...d.relays])], via);
+    let authority = false;
+    let isPublication = false;
+    if (act) {
+      try {
+        const x = describeChecked(act, pub);
+        isPublication = x.spec === SPECS.envelope && x.type === PUBLICATION;
+        const media = x.payload ? (cborDecode(x.payload) as Map<number, unknown>) : null;
+        const forWhom = media?.get(8);
+        authority = x.signer === d.signer || (forWhom instanceof Uint8Array && hex(forWhom) === d.signer);
+      } catch {
+        // judged below as not a publication
       }
     }
-  } else if (t.kind === 'agreement') {
-    title = `A signature on ${t.title.replace(/^An /, 'an ')}`;
-    summary = [`Signing binds the identity ${short(d.signer)} to this agreement, as written (Law rule 1). It cannot be taken back: only a clone the parties sign changes it.`];
-    if (!t.parties?.includes(d.signer)) blocking.push(`The identity ${short(d.signer)} is not a party to this agreement, so its signature would bind it to nothing.`);
-    if (t.signedBy?.includes(d.signer)) blocking.push('This identity has already signed this agreement.');
-    if (/^(REPLACED|NOT IN FORCE\.)/.test(t.verdict)) blocking.push(`The agreement cannot come into force: ${t.verdict}`);
-    for (const p of t.problems) if (!blocking.some((b) => b.includes(p))) blocking.push(p);
-  } else {
-    blocking.push(`It signs ${t.title.toLowerCase()}: this connector prepares signatures on releases and agreements only.`);
+    lines.push({ text: `It withdraws ${t.title.replace(/^A /, 'a ').replace(/^An /, 'an ')} (${short(pub)}): ${t.verdict}` });
+    if (!act) blocking.push('The publication it withdraws was not found at the relays asked.');
+    else if (!isPublication) blocking.push('What it names is not a publication: only a publication can be withdrawn (Envelope, "Withdrawal"). To stop showing a post, withdraw the picture it shows; a text act itself is not withdrawn.');
+    else if (!authority) blocking.push(`The identity ${short(d.signer)} did not sign that publication and is not the one it was made for, so its withdrawal has no authority.`);
   }
-  sections.push({ heading: 'What it signs', lines }, ...t.sections.map((s) => ({ ...s, heading: `${s.heading} (of the act signed)` })));
-  return { title, summary, sections, quoted: t.quoted, blocking, target: t };
+  lines.push({ text: 'Readers stop presenting the publication as available, and relays are asked, not forced, to stop serving it. Copies already taken remain.' });
+  return {
+    kind: 'withdrawal',
+    title: 'A withdrawal',
+    summary: [`Signing withdraws a publication of the identity ${short(d.signer)}: it is no longer offered.`],
+    sections: [
+      { heading: 'Who signs', lines: [...who, { text: `Once signed, it is sent to ${d.relays.join(', ')}.` }] },
+      { heading: 'What it does', lines },
+    ],
+    quoted: [],
+    blocking,
+  };
 }
 
 // ---------------------------------------------------------------- making drafts
@@ -263,74 +425,169 @@ async function checkSigner(signer: string, hints: string[], via: Via): Promise<v
   }
 }
 
+interface Common {
+  signer: string;
+  relays: string[];
+  note?: string;
+  reworks?: string | null;
+}
+
+const base = (o: Common) => ({ signer: o.signer, refs: [] as string[], objects: [] as [string, string][], relays: o.relays, to: [] as string[], media: [] as Uint8Array[], note: o.note?.trim() ? o.note.trim() : null, reworks: o.reworks ?? null });
+
+function composed(t: string): { text: string; changes: string[] } {
+  const { text, changes } = compose(t);
+  if (!text) throw new Error('the text is empty');
+  return { text, changes };
+}
+
+const checkRefs = (refs: string[] | undefined) => {
+  for (const r of refs ?? []) if (!HEX64.test(r)) throw new Error(`a reference is an act id, 64 hex digits: ${r}`);
+  return refs ?? [];
+};
+
 /**
  * A public text, as the barebone client posts it (Text MIP type 0), in plain
  * text or the long-form format. The text is composed first (Text rule 6),
  * and what composing changed is said.
  */
-export async function postDraft(
-  opts: { signer: string; text: string; format: 'plain' | 'long-form'; refs?: string[]; relays: string[] },
-  hints: string[],
-  via: Via = {},
-): Promise<{ draft: Draft; changes: string[] }> {
-  await checkSigner(opts.signer, hints, via);
-  const { text, changes } = compose(opts.text);
-  if (!text) throw new Error('the text is empty');
-  for (const r of opts.refs ?? []) if (!HEX64.test(r)) throw new Error(`a reference is an act id, 64 hex digits: ${r}`);
-  const payload = textPayload(text, opts.format === 'long-form' ? POST_SPECS.longform : null);
-  return {
-    draft: { signer: opts.signer, spec: POST_SPECS.text, type: 0, payload, public: true, refs: opts.refs ?? [], objects: [], relays: opts.relays },
-    changes,
-  };
+export async function postDraft(o: Common & { text: string; format: 'plain' | 'long-form'; refs?: string[] }, hints: string[], via: Via = {}): Promise<{ draft: Draft; changes: string[] }> {
+  await checkSigner(o.signer, hints, via);
+  const { text, changes } = composed(o.text);
+  const payload = textPayload(text, o.format === 'long-form' ? POST_SPECS.longform : null);
+  return { draft: { ...base(o), spec: POST_SPECS.text, type: 0, payload, public: true, refs: checkRefs(o.refs) }, changes };
 }
 
-/** A Law signature on a release or an agreement: an act of the signer following the act it signs. */
-export async function signatureDraft(opts: { signer: string; act: string; relays: string[] }, hints: string[], via: Via = {}): Promise<Draft> {
-  await checkSigner(opts.signer, hints, via);
-  if (!HEX64.test(opts.act)) throw new Error('the act to sign is an act id: 64 hex digits');
-  return {
-    signer: opts.signer,
-    spec: REPO_SPECS.law,
-    type: LAW_TYPES.signature,
-    payload: signaturePayload(opts.act),
-    public: true,
-    refs: [],
-    objects: [[opts.act, opts.act]],
-    relays: opts.relays,
-  };
+/** A private message (a text act) to one identity, sealed to its encryption key at the desk. */
+export async function messageDraft(o: Common & { to: string; text: string; refs?: string[] }, hints: string[], via: Via = {}): Promise<{ draft: Draft; changes: string[] }> {
+  await checkSigner(o.signer, hints, via);
+  if (!HEX64.test(o.to)) throw new Error('the recipient is an identity hash: 64 hex digits');
+  await recipientOf(o.to, hints, via);
+  const { text, changes } = composed(o.text);
+  return { draft: { ...base(o), relays: [], spec: POST_SPECS.text, type: 0, payload: textPayload(text), public: false, refs: checkRefs(o.refs), to: [o.to] }, changes };
 }
 
-// ---------------------------------------------------------------- the drafts folder
+/**
+ * A picture (the JPEG Module), stripped to the picture alone and locked with
+ * its own key, as the barebone client publishes it; the key is public, in
+ * the publication. Its locked bytes travel in the draft.
+ */
+export async function pictureDraft(o: Common & { jpeg: Uint8Array }, hints: string[], via: Via = {}): Promise<{ draft: Draft; removed: string[] }> {
+  await checkSigner(o.signer, hints, via);
+  const s = strip(o.jpeg);
+  if (s.bytes.length > MAX_MEDIA) throw new Error('the picture is larger than the desk accepts (8 MB)');
+  const l = lockMedia(s.bytes) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
+  const payload = cborEncode(
+    new Map<number, unknown>([
+      [0, unhex(POST_SPECS.jpeg)],
+      [1, unhex(l.workHash)],
+      [2, unhex(l.lockedHash)],
+      // The stripped picture's size, as the JPEG Module and the barebone client have it (README, flaw 1).
+      [3, s.bytes.length],
+      [4, l.nonce],
+      [5, l.key],
+      [6, o.relays],
+    ]),
+  );
+  return { draft: { ...base(o), spec: POST_SPECS.envelope, type: PUBLICATION, payload, public: true, media: [l.locked] }, removed: s.removed.map((c) => CARRIED_WORDS[c]) };
+}
+
+/** A withdrawal of one of the signer's publications (Envelope type 3). */
+export async function withdrawalDraft(o: Common & { publication: string }, hints: string[], via: Via = {}): Promise<Draft> {
+  await checkSigner(o.signer, hints, via);
+  if (!HEX64.test(o.publication)) throw new Error('the publication is an act id: 64 hex digits');
+  return { ...base(o), spec: POST_SPECS.envelope, type: WITHDRAWAL, payload: cborEncode(new Map()), public: true, objects: [[o.publication, o.publication]] };
+}
+
+// ---------------------------------------------------------------- the drafts folder (DRAFTS.md)
 
 export const draftFile = (dir: string, digest: string) => join(dir, `${digest}.mor-draft`);
-/** Where a signer puts the act it signed from a draft. */
-export const signedFile = (dir: string, digest: string) => join(dir, `${digest}.mor-act`);
+export const answerFile = (dir: string, digest: string) => join(dir, `${digest}.mor-answer`);
+export const LINKED_FILE = 'linked.json';
+export const ANSWER_LABEL = 'MOR desk answer, version 1';
+export const LINKED_LABEL = 'MOR desk, identities linked to Claude, version 1';
+
+/** The desk's answer to a draft. */
+export interface Answer {
+  format: typeof ANSWER_LABEL;
+  draft: string;
+  verdict: 'approved' | 'declined' | 'sent back';
+  /** The owner's note: why, or what to change. */
+  note: string;
+  /** Approved: the act made, and what each relay or inbox answered. */
+  act?: string;
+  sent?: { to: string; accepted: boolean; answer: string }[];
+  time: number;
+}
+
+/** Write a file whole, then rename it into place, so a reader never sees half of it. */
+function writeWhole(path: string, bytes: Uint8Array | string) {
+  writeFileSync(`${path}.tmp`, bytes, { mode: 0o600 });
+  renameSync(`${path}.tmp`, path);
+}
 
 export function saveDraft(dir: string, d: Draft): { digest: string; path: string; bytes: Uint8Array } {
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   const bytes = encodeDraft(d);
   const digest = draftDigest(bytes);
   const path = draftFile(dir, digest);
-  writeFileSync(path, bytes);
+  writeWhole(path, bytes);
   return { digest, path, bytes };
 }
 
-/** A draft by its digest, or the first characters of it (at least 8), or by its file's path. */
+/** A draft by its digest, or the first characters of it (at least 8). Its bytes are checked against the digest. */
 export function loadDraft(dir: string, which: string): { digest: string; path: string; draft: Draft; bytes: Uint8Array } {
-  let path = which;
-  if (!existsSync(path)) {
-    const w = which.replace(/\s+/g, '').toLowerCase();
-    if (!/^[0-9a-f]{8,64}$/.test(w)) throw new Error(`no draft ${which}`);
-    const hits = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.mor-draft') && f.startsWith(w)) : [];
-    if (hits.length !== 1) throw new Error(hits.length ? `more than one draft starts with ${w}` : `no draft ${w} in ${dir}`);
-    path = join(dir, hits[0]);
-  }
+  const w = which.replace(/\s+/g, '').toLowerCase();
+  if (!/^[0-9a-f]{8,64}$/.test(w)) throw new Error(`no draft ${which}: give its digest`);
+  const hits = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.mor-draft') && f.startsWith(w)) : [];
+  if (hits.length !== 1) throw new Error(hits.length ? `more than one draft starts with ${w}` : `no draft ${w} in ${dir}`);
+  const path = join(dir, hits[0]);
   const bytes = new Uint8Array(readFileSync(path));
   const digest = draftDigest(bytes);
+  if (`${digest}.mor-draft` !== hits[0]) throw new Error(`the file ${hits[0]} is not the draft its name says: its bytes have another digest`);
   return { digest, path, draft: decodeDraft(bytes), bytes };
 }
 
-// ---------------------------------------------------------------- submitting
+/** Every draft in the folder, newest first, by digest. */
+export function listDrafts(dir: string): { digest: string; time: number }[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => /^[0-9a-f]{64}\.mor-draft$/.test(f))
+    .map((f) => ({ digest: f.slice(0, 64), time: statSync(join(dir, f)).mtimeMs }))
+    .sort((a, b) => b.time - a.time);
+}
+
+export function saveAnswer(dir: string, a: Answer): void {
+  writeWhole(answerFile(dir, a.draft), JSON.stringify(a, null, 2) + '\n');
+}
+
+export function loadAnswer(dir: string, digest: string): Answer | null {
+  const p = answerFile(dir, digest);
+  if (!existsSync(p)) return null;
+  const a = JSON.parse(readFileSync(p, 'utf8')) as Answer;
+  if (a.format !== ANSWER_LABEL || a.draft !== digest) throw new Error(`${p} is not the desk's answer to draft ${digest}`);
+  return a;
+}
+
+/** The identities the owner linked to Claude at the desk, with the names given there. */
+export interface Linked {
+  format: typeof LINKED_LABEL;
+  identities: { id: string; name: string }[];
+}
+
+export function saveLinked(dir: string, identities: { id: string; name: string }[]): void {
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  writeWhole(join(dir, LINKED_FILE), JSON.stringify({ format: LINKED_LABEL, identities } satisfies Linked, null, 2) + '\n');
+}
+
+export function loadLinked(dir: string): Linked['identities'] | null {
+  const p = join(dir, LINKED_FILE);
+  if (!existsSync(p)) return null;
+  const l = JSON.parse(readFileSync(p, 'utf8')) as Linked;
+  if (l.format !== LINKED_LABEL) throw new Error(`${p} is not the desk's list of linked identities`);
+  return l.identities;
+}
+
+// ---------------------------------------------------------------- checking an act against its draft
 
 interface Described {
   id: string;
@@ -341,14 +598,15 @@ interface Described {
   type?: number;
   objects?: [string, string][];
   refs?: string[];
+  acks?: string[];
   payload?: Uint8Array;
 }
 
 /**
- * Check that a signed act says exactly what its draft said: the same
- * signer, spec, type, payload, references and objects, public, addressed
- * to no one. Returns the act's id. What the signer adds (its sequence, the
- * key that binds it, the salt, the lock) is the signer's.
+ * Check that a public act says exactly what its draft said: the same
+ * signer, spec, type, payload, references and objects, public, addressed to
+ * no one, acknowledging nothing. Returns the act's id. What the desk adds
+ * (its sequence, the key that binds it, the salt, the lock) is the signer's.
  */
 export function matchDraft(d: Draft, act: Uint8Array): string {
   let x: Described;
@@ -359,73 +617,16 @@ export function matchDraft(d: Draft, act: Uint8Array): string {
   }
   const differ: string[] = [];
   if (x.signer !== d.signer) differ.push(`it is signed by ${x.signer ?? 'no one'}, not ${d.signer}`);
-  if (x.public !== d.public || (d.public && !x.payload)) differ.push('it is not public as drafted');
+  if (!x.public || !x.payload) differ.push('it is not public as drafted');
   if (x.to?.length) differ.push('it is addressed to someone');
   if (x.spec !== d.spec || x.type !== d.type) differ.push('it is of another kind');
   if (!x.payload || !same(x.payload, d.payload)) differ.push('its payload differs');
   if (JSON.stringify(x.refs ?? []) !== JSON.stringify(d.refs)) differ.push('its references differ');
   if (JSON.stringify(x.objects ?? []) !== JSON.stringify(d.objects)) differ.push('its objects differ');
-  if (differ.length) throw new Error(`the signed act is not the act drafted: ${differ.join('; ')}. Nothing was sent.`);
+  if (x.acks?.length) differ.push('it acknowledges acts the draft did not');
+  if (differ.length) throw new Error(`the act is not the act drafted: ${differ.join('; ')}`);
   return x.id;
 }
 
-export interface Sent {
-  id: string;
-  standing: string;
-  /** What each relay answered. */
-  relays: { relay: string; accepted: boolean; answer: string }[];
-  /** The act as read back from a relay that accepted it. */
-  readBack: Told | null;
-}
-
-/**
- * Submit a signed act: check it against its draft, judge it through its
- * signer's identity chain (it must be valid: a relay may hold what does not
- * count, but the connector does not send it), carry the signer's chain acts
- * to each relay so a reader who knows only that relay finds them, send the
- * act, and read it back from a relay that took it.
- */
-export async function submit(d: Draft, act: Uint8Array, hints: string[], via: Via = {}): Promise<Sent> {
-  const id = matchDraft(d, act);
-  const places = [...new Set([...hints, ...d.relays])];
-  const l = await lookUp(d.signer, places, via);
-  try {
-    l.verifier.add(act);
-  } catch (e) {
-    throw new Error(`the signed act does not check: ${err(e)}. Nothing was sent.`);
-  }
-  const standing = l.verifier.status(id);
-  if (standing !== 'valid') throw new Error(`the signed act is ${standing}, not valid, for its signer's identity chain. Nothing was sent.`);
-
-  const chain: Uint8Array[] = [];
-  for (const link of l.resolution.links) {
-    const a = await fetchFirst(link.act, [...l.resolution.homes.map((h) => h.hint), ...places], via);
-    if (a) chain.push(a);
-  }
-  const out: Sent = { id, standing, relays: [], readBack: null };
-  for (const r of d.relays) {
-    const relay = relayAt(r, via);
-    for (const c of chain) {
-      try {
-        await relay.putAct(c);
-      } catch {
-        // that relay's policy, or it holds it already
-      }
-    }
-    try {
-      const got = await relay.putAct(act);
-      out.relays.push({ relay: r, accepted: true, answer: got.id === id ? 'accepted' : `answered with another id, ${got.id}` });
-    } catch (e) {
-      out.relays.push({ relay: r, accepted: false, answer: `refused; the relay said “${err(e).replace(/[\r\n]+/g, ' ').slice(0, 200)}”` });
-    }
-  }
-  const took = out.relays.filter((x) => x.accepted).map((x) => x.relay);
-  if (took.length) {
-    const back = await fetchFirst(id, took, via);
-    if (back) describeChecked(back, id);
-    out.readBack = await readAct(id, [...took, ...places.filter((p) => !took.includes(p))], via);
-  }
-  return out;
-}
-
+export type { Told };
 export { groups };
