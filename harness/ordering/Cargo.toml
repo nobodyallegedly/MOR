@@ -1,0 +1,12 @@
+[package]
+name = "mor-ordering-sim"
+version = "0.1.0"
+description = "A model of members, devices, sequences and collective events, testing one ordering rule for collectives (the Law redraft): before and after judged only on the collective's own sequence."
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "mor-ordering-sim"
+path = "src/main.rs"
+
+[dependencies]
