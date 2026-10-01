@@ -1,0 +1,8 @@
+{
+  "version": "REPLACE WITH THE VERSION'S ACT ID (64 hex digits), as mor-site publish prints it",
+  "identity": "REPLACE WITH THE SITE OWNER'S IDENTITY HASH (64 hex digits)",
+  "name": "Nobody, allegedly",
+  "relays": ["https://relay1.example.org", "https://relay2.example.org"],
+  "release": null,
+  "listen": "127.0.0.1:8090"
+}

@@ -9,5 +9,6 @@ Planned for MOR V1:
 | Relay transport (`cmip-relay-transport-draft-2.md`, draft 2, approved by Nobody, allegedly) | How a client publishes, fetches and follows acts, delivers to an inbox, and asks a home for a receipt. The core deliberately leaves this open. |
 | Release manifest (`cmip-release-manifest-draft-1.md`, draft 1, approved by Nobody, allegedly) | How the collective that governs the code publishes a release, file by file, with its members' visible signatures, and how anyone verifies it (roadmap step 5a). No task: a new kind of thing, named as an extension. |
 | Long-form text format (`cmip-long-form-draft-1.md`, draft 1, approved by Nobody, allegedly) | Task 4 (text format): a strict subset of Markdown on top of canonical text, hiding only markup, never letters or digits, adding nothing and keeping the order of the bytes (roadmap step 8). |
+| Website (`cmip-website-draft-1.md`, draft 1, **not yet approved**) | A site as a signed manifest naming each page and file by hash, published on relays; a gateway serving it at an address, with a display client that checks every page in the visitor's browser; the hostile gateway as a stated cost (roadmap step 10a). No task: a new kind of thing. |
 
 Media types such as JPEG are Modules and live in `modules/`.
