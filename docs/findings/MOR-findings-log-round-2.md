@@ -1077,6 +1077,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - C6: a revocation seals a grant's branch without naming a place on it; deals the collective acknowledged, paid or imported bind (rule 40); nothing is ordered on the grantee's own sequence.
 - C7: a declaration of absence takes effect at the collective's line, or at the recovery rotation where the declared member is the one who would draw it; the authority draws no line for the collective.
 - C8: between a freeze and the refit, a grantee's deal the collective has not placed is undetermined; the refit decides.
+- Flaw M (seventh pass): the rotation that brings in a constitutional change lists the signatures that completed it, as a record does (A2), so no later signature can complete it late.
+- Flaw N (seventh pass): a reinstatement (Q22) is an act of the collective completed by the new holders, placed after they took the area, not a signature on the old grant.
 
 **Core changes, to be made:** Law draft 7 (the "Made before, made after" section; rules 37, 37c, 40, 42, 44, 44d; the record act's fields); freeze suite v18 (scenario 3 and the stories of the test).
 
