@@ -1,6 +1,6 @@
 # mor-ordering-sim
 
-A simulation testing one ordering rule for collectives, proposed for Law draft 7's flaws E to L: **for anything done in a collective's name, "before" and "after" are judged only on the collective's own sequence, never on members' personal sequences.** The rule, the replay of each flaw, the attacks and the choices are in `docs/law-ordering-rule-test.md`. The rule was adopted as F109 and written into Law draft 7 (seventh pass); the program now also runs the rules exactly as written there (section 8 of the write-up).
+A simulation testing one ordering rule for collectives, proposed for Law draft 7's flaws E to L: **for anything done in a collective's name, "before" and "after" are judged only on the collective's own sequence, never on members' personal sequences.** The rule, the replay of each flaw, the attacks and the choices are in `docs/law-ordering-rule-test.md`. The rule was adopted as F109 and written into Law draft 7 (seventh pass); the program now also runs the rules exactly as written there (section 8 of the write-up), and was rerun unchanged against the eighth pass, whose answers it already modelled where it reaches them (section 8, last paragraph).
 
 ## In plain words
 

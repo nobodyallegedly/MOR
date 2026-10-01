@@ -58,7 +58,7 @@ pub enum Kind {
     Import {
         deals: Vec<Id>,
     },
-    /// A revocation sealing a grant (counts like an area act, Q29's lean).
+    /// A revocation sealing a grant (counts like an area act: the area that issued the grant alone judges it, Law draft 7, Q29).
     Revoke {
         grant: Id,
     },
