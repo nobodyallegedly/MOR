@@ -934,6 +934,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Q20 (1 October 2026, fourth pass): a specification adopted for a judicial task (condition evaluation, time reference, anchoring) cannot also be adopted for any other task; terms that do so are invalid. A judge never handles what it judges: "it removes a slight conflict of interest."
 - Q21 (1 October 2026, fourth pass): the clone that completes a succession also removes the departed member from every area they held; an area may then have no holder, which means it is frozen until refitted (Q13, Q19). An empty holder list is allowed only in a clone, never in founding terms.
 - Q22 (1 October 2026, fourth pass): grants within an area end for good when it freezes. A new holder may, on taking the area, reinstate any of the ended grants as their own, each by their own signature, never automatically.
+- Q23 (1 October 2026, fourth pass): a signature made before its signer resigned or stepped down is valid: "her position at time of signing is valid. She was still acting. Whether it gets approved now depends on collective rules." For that clone or act, the signer still counts as a voice; the rule it needs is met or not as written, never lowered by the departure.
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
