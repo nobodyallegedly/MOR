@@ -907,6 +907,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Applied:** not yet. The Law redraft comes before step 12, then the two clients.
 
+**Scope (Nobody, allegedly, 1 October 2026, question Q1 of the Law redraft):** the tiers and lanes apply to collectives only. "Deals should be as simple as possible while remaining rich. Collectives is for when things get complicated." Two people who end up doing many deals together can found a collective.
+
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
 ## F104. A clone's signing rule states truthfully what brought it into force (found while building roadmap step 11b, decided by Nobody, allegedly)
