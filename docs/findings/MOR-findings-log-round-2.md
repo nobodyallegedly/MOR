@@ -1028,3 +1028,56 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Applied:** not yet; on the branch `claude/law-draft-7`.
 
 *F107 decided by Nobody, allegedly, 1 October 2026.*
+
+## F108. A publication's size field is the size of the unlocked media (found while building roadmap step 11c, decided by Nobody, allegedly)
+
+**Pattern:** 4: one field, two readings.
+
+**Found while building:** the owner's desk (roadmap step 11c). Envelope's publication payload (field 3) is "size of those bytes", following field 2, the locked bytes as stored. The JPEG Module, the deployed barebone client and the reader all write and read the size of the unlocked picture. Two conforming programs read the same field differently.
+
+**Options weighed:** (1) Envelope's wording changes to the unlocked size, matching what is deployed; (2) the Module and the two clients change to the locked size.
+
+**Decided (Nobody, allegedly, 1 October 2026):** option 1. Field 3 is the size of the media once unlocked: what a reader and a media module need to know. A relay measures the locked bytes it stores for itself.
+
+**Checked against the principles:** it relaxes nothing; it removes a reading two implementations could differ on, and matches the code already deployed.
+
+**Core changes, to be made:** Envelope MIP draft 7 (publication payload, field 3); freeze test suite (a publication whose size is not the unlocked media's is shown as inconsistent).
+
+**Applied:** already followed by the JPEG Module, the barebone client, the reader, the desk and the connector.
+
+*F108 decided by Nobody, allegedly, 1 October 2026.*
+
+## F109. In a collective, "before" and "after" are judged on the collective's own sequence (found while drafting Law draft 7, decided by Nobody, allegedly)
+
+**Pattern:** a root cause behind several findings: flaws E to L, Q23, Q28 and Q30 of the Law redraft each ordered a member's personal sequences against a collective event (a resignation, a stepping-down, a freeze, a declaration of absence, a record), and each patch opened another gap.
+
+**Found while drafting:** Law draft 7, after its final pass found flaws I to L. Suggested by the project lead; tested on branch `claude/law-ordering-test-buw632` (`docs/law-ordering-rule-test.md`, simulation crate `mor-ordering-sim`). Replayed without draft 7's patches, every story kept its good outcome and lost its harm; over 20,000 simulated collectives (862,000 acts, forks, offline devices, backdating, late signatures) the rule gave no wrong answer, where draft 7 as written gave one in 8,490 worlds.
+
+**Decided (Nobody, allegedly, 1 October 2026):** for anything done in a collective's name, "before" and "after" are judged only on the collective's own sequence, never on members' personal sequences. It replaces most of draft 7's "Made before, made after" section (the personal device list in resignations, the keeper and record exceptions for members' signatures, the separate line drawn by a declaration, "the last act known to precede the freeze", the seal's place in rule 42, the two exceptions in rule 44d), with four additions:
+- **A1.** The collective draws its own line for each departure, as a field of its record act, written at once.
+- **A2.** A record lists the signatures that put its clone in force (which also closes a flaw in draft 7: a record completed late could knock a later clone out of force, or count a member who had already left).
+- **A4.** Two lines of the collective that do not name each other are concurrent, and records on them are a fork of the agreement; the earlier version stays in force.
+- **A6.** A grantee's deal is settled by whether the collective itself acknowledged, paid or imported it.
+
+**Checked against the principles:** right of exit: leaving still needs no one's permission; a collective that delays drawing a departing member's line only delays itself. Legible greed: one rule, checkable on one sequence the collective publishes. Evolutionary design: the core keeps one ordering rule instead of many patches.
+
+**Costs, stated:** a departure takes effect for the collective's acts when the collective draws its line, not when the member signs; an act on a branch the collective's own line left out counts as made after it. Not reached by the rule: a member's own key rotation still judges their signatures through Identity (choice C5).
+
+**Choices (Nobody, allegedly, 1 October 2026):**
+- C1: a member's signature on an everyday act of the collective is placed at the act it signs: a member who left can still complete an act the collective signed before its line, and it counts ("the act was drafted with her in it"). *Cost, stated:* a pending act stays completable by whoever held the area when it was made.
+
+- C2: Q23 under F109: a signature counts for a clone after its signer leaves when the collective placed it before its line: the record came first, or the collective acknowledged it as it arrived. *Stated:* a signature the collective never acknowledged before the line no longer counts; a collective's client SHOULD acknowledge members' signatures as they arrive, which keeps Q23's outcome.
+
+- C3: the line for a departure is drawn by the collective's record act, with a new field naming the departures it registers, written at once with the everyday key (A1); the rotation still follows to fence off the departed member's key share (F100).
+
+- C4 (A3 adopted): the collective's keepers, named by its agreement in force, may place the collective's own acts that its line left out: such an act counts as made before the line when a keeper recorded it before recording the line. Members' signatures and deals are not placed by keepers. *Stated:* a keeper that records a line late opens a window, the trust in keepers rule 11a already states.
+
+- C5: a member's own rotation is registered by the collective on its line, like a departure; that member's signatures on acts of the collective placed before that line stay valid for the collective. If the member's key was stolen, the thief's signatures placed before the line count too, but only on acts the collective's key holders also signed: a stolen member key can finish an act the collective signed, never start one. "In the event of theft, the band reorganizes around it." *Cost, stated:* within a collective, Identity's theft protection is softened to this extent.
+
+- C6: a revocation seals a grant's branch without naming a place on it; deals the collective acknowledged, paid or imported bind (rule 40); nothing is ordered on the grantee's own sequence.
+- C7: a declaration of absence takes effect at the collective's line, or at the recovery rotation where the declared member is the one who would draw it; the authority draws no line for the collective.
+- C8: between a freeze and the refit, a grantee's deal the collective has not placed is undetermined; the refit decides.
+
+**Core changes, to be made:** Law draft 7 (the "Made before, made after" section; rules 37, 37c, 40, 42, 44, 44d; the record act's fields); freeze suite v18 (scenario 3 and the stories of the test).
+
+*F109 decided by Nobody, allegedly, 1 October 2026.*
