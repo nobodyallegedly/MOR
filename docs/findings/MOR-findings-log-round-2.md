@@ -960,6 +960,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Applied:** not yet; on the branch `claude/law-draft-7` with the rest of the redraft's answers.
 
+**Then decided (Nobody, allegedly, 1 October 2026; flaw C of the Law redraft's second pass):** a number can outlast the voices it counts: "three of three" still asks for three after one voice is removed, and F105 would unfreeze nothing. So when fewer voices remain than a rule's number asks for, all the remaining voices together meet it; where enough remain, the number stands as written. A lone survivor still holds the keys and the constitution only under F96 and F105.
+
 *F105 decided by Nobody, allegedly, 1 October 2026.*
 
 ## F106. A cMIP's act belongs to the layer of the task it fills; extensions travel in the Production lane (found while drafting Law draft 7, decided by Nobody, allegedly)
