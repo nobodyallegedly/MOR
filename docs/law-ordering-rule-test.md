@@ -185,3 +185,23 @@ The same as 3.1: lines name every sequence. **Must add:** nothing beyond A1's ti
 **Found in passing.** Draft 7's record, by acknowledging every signature on its clone whenever made, can be completed late and knock a later clone out of force, and lets a member who already left be counted on a clone. A2 closes both.
 
 **Eight choices** are listed in section 5 (C1 to C8), each with a lean.
+
+## 8. Against the rules as Law draft 7 now writes them
+
+*Added 1 October 2026, after F109 was adopted and written into Law draft 7 (seventh pass), on branch `claude/law-draft-7`.* The simulation gained a configuration for the text as written: option α (C1, C2), records naming their signatures (A2), the collective's keepers placing only its own acts (C4), and a member's own rotation registered on the collective's line, old-key signatures placed before it staying valid for the collective (C5); deals, declarations, concurrent lines and the freeze as in section 4 (A4, A6, C6 to C8). The worlds are the same 20,000, except that a member's rotation is now registered on the collective's next registration line (`gen::world_opts(seed, true)`); the tallies of sections 6 and 7 are unchanged and still reproduce exactly.
+
+| Check (the rules as written) | Result |
+| --- | --- |
+| With complete tips and no keeper, the structure gives the real-time answer | 0 differences (10,914 worlds) |
+| Nothing that counted stops counting, member rotations included | 0 failures (the 21 losses of section 3.4 are gone) |
+| No signature counts that real time places after its signer's line, without keepers | 0 failures |
+| Friends' acknowledgements change nothing | 0 failures |
+| Re-threading members' devices changes nothing, in worlds without a member's rotation | 0 failures |
+| A placed deal binds; nothing undetermined after a seal or reinstatement; concurrent sibling records leave their parent in force | 0 failures |
+| **Stated costs, reported:** the keeper window (C4): honest worlds whose verdict differs from real time because a keeper recorded a line late; worlds where it made something stop counting; signatures counted through it | 16; 1; 5 |
+| Losses from lines drawn without every branch; rescued by the collective's keepers | 206; 106 |
+| Late completions (C1) | 5,908 |
+| Worlds with a member's rotation (2,211, of which 1,479 registered) where re-threading devices changes a verdict | 12, each a signature on a clone that no act of the collective placed before the line registering its signer's rotation, judged by Identity alone as the text says (Law draft 7, Q33) |
+
+`cargo run --release -p mor-ordering-sim -- 20000` prints both tallies and exits with an error if either has a wrong answer; `cargo test --release -p mor-ordering-sim` adds the C5 story (`c5_member_rotation_registered_on_the_line`) and a sweep of the written rules. *Not modelled, as before:* the rotation that declares a constitutional clone placing signatures (Law draft 7, Flaw M), a reinstatement as a signature on the old grant (Flaw N: the simulation models a reinstatement as an act of the collective, Flaw N's lean), a record that both writes a clone and registers departures, a declaration taking effect at a recovery rotation (C7), and thieves as distinct from forgotten devices (C5 treats them alike).
+

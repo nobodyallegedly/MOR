@@ -51,6 +51,13 @@ pub struct Run {
 pub const NEWCOMER: M = 3;
 
 pub fn world(seed: u64) -> Run {
+    world_opts(seed, false)
+}
+
+/// As `world`, and, with `register_rotations`, a member's own rotation is registered on the
+/// collective's next registration line like a departure (Law draft 7, seventh pass, C5).
+/// Without it the worlds are exactly those of the ordering test's write-up.
+pub fn world_opts(seed: u64, register_rotations: bool) -> Run {
     let mut r = Rng::new(seed);
     let members: M = 3;
     let mut holders0: Vec<M> = (0..members).filter(|_| r.chance(0.5)).collect();
@@ -311,7 +318,10 @@ pub fn world(seed: u64) -> Run {
                     } else {
                         None
                     };
-                    b.rotate_member(m, forget);
+                    let x = b.rotate_member(m, forget);
+                    if register_rotations {
+                        unregistered.push(x);
+                    }
                     rotated = true;
                 }
             }

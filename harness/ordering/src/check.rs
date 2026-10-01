@@ -8,27 +8,32 @@ pub const ALPHA: Rule = Rule::Root {
     placement: Placement::ActSigned,
     keepers: Keepers::None,
     named_sigs: true,
+    c5: false,
 };
 pub const ALPHA_K: Rule = Rule::Root {
     placement: Placement::ActSigned,
     keepers: Keepers::AllActs,
     named_sigs: true,
+    c5: false,
 };
 pub const ALPHA_KC: Rule = Rule::Root {
     placement: Placement::ActSigned,
     keepers: Keepers::CollectiveActs,
     named_sigs: true,
+    c5: false,
 };
 /// α with records acknowledging signatures implicitly, as draft 7 writes them.
 pub const ALPHA_IMPLICIT: Rule = Rule::Root {
     placement: Placement::ActSigned,
     keepers: Keepers::None,
     named_sigs: false,
+    c5: false,
 };
 pub const BETA: Rule = Rule::Root {
     placement: Placement::AckOnly,
     keepers: Keepers::None,
     named_sigs: true,
+    c5: false,
 };
 
 pub fn verdict(w: &World, rule: Rule, clock: Clock) -> Verdict {
@@ -487,5 +492,242 @@ pub fn explain_unstable(seed: u64, rule: Rule) {
             }
         }
         prev = Some((tau, v));
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// The rules as Law draft 7's seventh pass writes them (F109 with C1 to C8): a signature is
+// placed at the act it signs or where the collective acknowledged it (C1, C2); a record
+// counts only with the signature acts it names (A2); the collective's keepers place only its
+// own acts a line left out (C4); a member's own rotation is registered on the collective's
+// line, and old-key signatures placed before it stay valid for the collective (C5); deals
+// are settled by the collective's acknowledgement, payment or import (A6, C6, C8);
+// declarations take effect at the collective's line (C7); concurrent records leave their
+// parent in force (A4).
+// ---------------------------------------------------------------------------------------
+
+/// The rules as written.
+pub const WRITTEN: Rule = Rule::Root {
+    placement: Placement::ActSigned,
+    keepers: Keepers::CollectiveActs,
+    named_sigs: true,
+    c5: true,
+};
+/// The same, without the keepers, to tell the window C4 states (a keeper recording a line
+/// late) from anything else.
+pub const WRITTEN_NO_KEEPERS: Rule = Rule::Root {
+    placement: Placement::ActSigned,
+    keepers: Keepers::None,
+    named_sigs: true,
+    c5: true,
+};
+
+/// Counts for the rules as written, over all runs. A `fail_*` field above zero is a wrong
+/// answer of the written text against its own intent.
+#[derive(Debug, Default, Clone)]
+pub struct WrittenTally {
+    pub runs: u64,
+    pub honest_runs: u64,
+    pub member_rotation_runs: u64,
+    pub member_rotations_registered: u64,
+    pub acts: u64,
+    pub sigs: u64,
+
+    /// With complete tips and no keeper, the structure gives the real-time verdict.
+    pub fail_honest_mismatch: u64,
+    /// Something that counted stops counting (complete tips; member rotations included,
+    /// which C5 is meant to cover).
+    pub fail_unstable: u64,
+    /// A signature counts that real time places after its signer's line (no keeper).
+    pub fail_unsafe: u64,
+    pub fail_friend_ack: u64,
+    /// Re-threading members' devices changes a verdict (worlds without a member rotation).
+    pub fail_personal_sequences: u64,
+    pub fail_placed_deal: u64,
+    pub fail_undetermined_after_refit: u64,
+    pub fail_status_quo: u64,
+
+    // Stated costs, reported, not failures.
+    /// Worlds with a member rotation where re-threading changes a verdict: an old-key
+    /// signature placed after the line that registers the rotation (on a branch a line left
+    /// out) is judged by Identity alone, as the text says.
+    pub rotation_personal_sequence_runs: u64,
+    /// Worlds where a member's rotation made something stop counting, without keepers.
+    pub rotation_unstable_runs: u64,
+    /// The keeper window (C4, stated): verdicts in honest worlds that differ from real time
+    /// only because a keeper recorded a line late.
+    pub keeper_window_honest_runs: u64,
+    pub keeper_window_unstable_runs: u64,
+    pub keeper_misplaced_sigs: u64,
+    pub losses_by_omission: u64,
+    pub keeper_rescues: u64,
+    pub late_completions: u64,
+}
+
+impl WrittenTally {
+    pub fn failures(&self) -> u64 {
+        self.fail_honest_mismatch
+            + self.fail_unstable
+            + self.fail_unsafe
+            + self.fail_friend_ack
+            + self.fail_personal_sequences
+            + self.fail_placed_deal
+            + self.fail_undetermined_after_refit
+            + self.fail_status_quo
+    }
+}
+
+pub fn check_written(seed: u64, t: &mut WrittenTally) {
+    let Run { world: w, .. } = gen::world_opts(seed, true);
+    t.runs += 1;
+    let honest = w.honest();
+    t.honest_runs += honest as u64;
+    let rot = w.has_member_rotation();
+    t.member_rotation_runs += rot as u64;
+    t.acts += w.acts.len() as u64;
+    t.member_rotations_registered += w
+        .acts
+        .iter()
+        .filter(|a| matches!(&a.kind, Kind::Register { departures } if departures.iter().any(|&d| w.acts[d].kind == Kind::MemberRotate)))
+        .count() as u64;
+
+    let s = verdict(&w, WRITTEN, Clock::Structure);
+    let n = verdict(&w, WRITTEN_NO_KEEPERS, Clock::Structure);
+    let o = verdict(&w, WRITTEN_NO_KEEPERS, Clock::RealTime);
+    t.sigs += s.sigs.len() as u64;
+    let ev = Eval::new(&w, WRITTEN, Clock::Structure);
+
+    // 1. Complete tips: the structure gives the real-time answer; with keepers, any
+    //    difference is the stated window.
+    if honest && n != o {
+        t.fail_honest_mismatch += 1;
+        if std::env::var("SIM_DEBUG").is_ok() {
+            eprintln!("seed {seed}: written, honest mismatch");
+        }
+    }
+    if honest && s != o {
+        t.keeper_window_honest_runs += 1;
+    }
+
+    // 2. Stability, member rotations included (C5).
+    if honest && unstable(&w, WRITTEN_NO_KEEPERS, false) {
+        t.fail_unstable += 1;
+        if rot {
+            t.rotation_unstable_runs += 1;
+        }
+        if std::env::var("SIM_DEBUG").is_ok() {
+            eprintln!("seed {seed}: written, unstable");
+        }
+    }
+    if honest && unstable(&w, WRITTEN, false) && !unstable(&w, WRITTEN_NO_KEEPERS, false) {
+        t.keeper_window_unstable_runs += 1;
+        if std::env::var("SIM_DEBUG").is_ok() {
+            eprintln!("seed {seed}: written, keeper window unstable");
+        }
+    }
+
+    // 3. Safety in every world.
+    for &(x, c) in &n.sigs {
+        if c && !o.sig_of(x) {
+            t.fail_unsafe += 1;
+        }
+    }
+    for &(x, c) in &s.sigs {
+        if c && !o.sig_of(x) {
+            t.keeper_misplaced_sigs += 1;
+        }
+    }
+    if !honest {
+        for &(x, c) in &o.area {
+            if c && !n.area_of(x) {
+                t.losses_by_omission += 1;
+                if s.area_of(x) {
+                    t.keeper_rescues += 1;
+                }
+            }
+        }
+        for &(x, c) in &o.records {
+            if c && !n.record_of(x) {
+                t.losses_by_omission += 1;
+                if s.record_of(x) {
+                    t.keeper_rescues += 1;
+                }
+            }
+        }
+    }
+    for &(x, c) in &s.sigs {
+        if c {
+            if let Some(line_t) = ev.first_line_time(x) {
+                if w.t[x] > line_t {
+                    t.late_completions += 1;
+                }
+            }
+        }
+    }
+
+    // 4. Friends' acknowledgements change nothing.
+    if verdict(&w.without_friend_acks(), WRITTEN, Clock::Structure) != s {
+        t.fail_friend_ack += 1;
+    }
+
+    // 5. Members' personal sequences change nothing; with a member rotation, only through
+    //    an old-key signature placed after the registering line (reported).
+    let r = gen::rethread(&w, seed ^ 0x5EED);
+    if verdict(&r, WRITTEN, Clock::Structure) != s {
+        if rot {
+            t.rotation_personal_sequence_runs += 1;
+            if std::env::var("SIM_DEBUG").is_ok() {
+                eprintln!(
+                    "seed {seed}: written, rotation world re-threaded differs (honest {honest})"
+                );
+            }
+        } else {
+            t.fail_personal_sequences += 1;
+        }
+    }
+
+    // 6. Deals.
+    for &(d, st) in &s.deals {
+        let Kind::Deal { grant } = w.acts[d].kind else {
+            continue;
+        };
+        if placed(&w, d) && ev.area_counts(grant) && st != Deal::Binds {
+            t.fail_placed_deal += 1;
+        }
+        let refitted = w.acts.iter().enumerate().any(|(y, ya)| matches!(ya.kind, Kind::Reinstate { grant: g } | Kind::Revoke { grant: g } if g == grant) && s.area_of(y));
+        if refitted && st == Deal::Undetermined {
+            t.fail_undetermined_after_refit += 1;
+        }
+    }
+
+    // 7. Concurrent records of sibling clones leave their parent in force (A4).
+    let recs: Vec<usize> = s
+        .records
+        .iter()
+        .filter(|&&(_, c)| c)
+        .map(|&(x, _)| x)
+        .collect();
+    for x in 0..w.acts.len() {
+        if !w.is_col(x) || w.is_line(x) {
+            continue;
+        }
+        let after: Vec<u8> = recs
+            .iter()
+            .filter(|&&r| !ev.before(x, r))
+            .map(|&r| match w.acts[r].kind {
+                Kind::Record { clone, .. } => clone,
+                _ => 0,
+            })
+            .collect();
+        for &a in &after {
+            for &b in &after {
+                if a != b && w.clones[a as usize].parent == w.clones[b as usize].parent {
+                    let f = ev.in_force_at(x);
+                    if f == a || f == b {
+                        t.fail_status_quo += 1;
+                    }
+                }
+            }
+        }
     }
 }

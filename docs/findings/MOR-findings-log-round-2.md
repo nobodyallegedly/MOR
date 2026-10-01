@@ -1080,4 +1080,6 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Core changes, to be made:** Law draft 7 (the "Made before, made after" section; rules 37, 37c, 40, 42, 44, 44d; the record act's fields); freeze suite v18 (scenario 3 and the stories of the test).
 
+**Applied:** written into Law draft 7 (seventh pass), core v18 and freeze suite v18 on the branch `claude/law-draft-7`, not merged (1 October 2026). Flaws I to L and Q30 settled by it. Writing it in exposed Flaws M and N and questions Q33 to Q38, listed at the end of Law draft 7. Simulated against the text as written (`docs/law-ordering-rule-test.md`, section 8): no wrong answer over 20,000 worlds.
+
 *F109 decided by Nobody, allegedly, 1 October 2026.*

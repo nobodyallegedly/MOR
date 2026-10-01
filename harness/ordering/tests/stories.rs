@@ -2,7 +2,8 @@
 //! claims. Then a short random sweep.
 
 use mor_ordering_sim::check::{
-    check, verdict, Tally, ALPHA, ALPHA_IMPLICIT, ALPHA_K, ALPHA_KC, BETA,
+    check, check_written, verdict, Tally, WrittenTally, ALPHA, ALPHA_IMPLICIT, ALPHA_K, ALPHA_KC,
+    BETA, WRITTEN,
 };
 use mor_ordering_sim::model::{Builder, Kind, On, Tips, Who, World};
 use mor_ordering_sim::rule::{Clock, Deal, Rule};
@@ -546,4 +547,75 @@ fn random_sweep() {
     }
     assert_eq!(t.failures(), 0, "{t:#?}");
     assert!(t.honest_runs > 0 && t.omitting_runs > 0 && t.lagging_runs > 0);
+}
+
+/// Law draft 7, seventh pass, C5: the treasurer's own rotation forgets the tablet, and the
+/// collective registers the rotation on its line. Receipts the collective signed before that
+/// line keep the tablet's signature; an old-key signature on a receipt after it does not
+/// count. (Under the rule as first tested, `boundary_member_rotation` above, they were lost.)
+#[test]
+fn c5_member_rotation_registered_on_the_line() {
+    let mut b = label();
+    let x = b.col(Kind::AreaAct, 0);
+    b.member(0, 2, Kind::Sig { on: On::Act(x) }); // tablet, forgotten by the rotation
+    let y = b.col(Kind::AreaAct, 0); // pending: signed only after the rotation, old key
+    let rot = b.rotate_member(0, Some(2));
+    b.line(
+        Kind::Register {
+            departures: vec![rot],
+        },
+        0,
+        Tips::Complete,
+        None,
+    );
+    let z = b.col(Kind::AreaAct, 0);
+    // A thief holding the old key signs y (before the line) and z (after it).
+    b.w.acts.push(mor_ordering_sim::model::Act {
+        who: Who::Member(0),
+        kind: Kind::Sig { on: On::Act(y) },
+        dev: 2,
+        prev: None,
+        tips: vec![],
+        epoch: 0,
+    });
+    b.w.t.push(b.now + 1);
+    b.w.keeper_at.push(None);
+    b.w.tips_quality.push(None);
+    b.w.acts.push(mor_ordering_sim::model::Act {
+        who: Who::Member(0),
+        kind: Kind::Sig { on: On::Act(z) },
+        dev: 2,
+        prev: None,
+        tips: vec![],
+        epoch: 0,
+    });
+    b.w.t.push(b.now + 2);
+    b.w.keeper_at.push(None);
+    b.w.tips_quality.push(None);
+    let w = b.finish();
+    let v = verdict(&w, WRITTEN, Clock::Structure);
+    assert!(
+        v.area_of(x),
+        "a receipt before the line keeps the tablet's signature"
+    );
+    assert!(
+        v.area_of(y),
+        "an old-key signature completes an act the collective signed before the line"
+    );
+    assert!(
+        !v.area_of(z),
+        "an old-key signature on an act after the line counts for nothing"
+    );
+    assert!(!root(&w).area_of(x), "without C5, Identity takes it back");
+}
+
+/// The rules as Law draft 7's seventh pass writes them, over a sweep of random worlds.
+#[test]
+fn written_rules_random_sweep() {
+    let mut t = WrittenTally::default();
+    for seed in 1..=600 {
+        check_written(seed, &mut t);
+    }
+    assert_eq!(t.failures(), 0, "{t:#?}");
+    assert!(t.member_rotation_runs > 0 && t.member_rotations_registered > 0);
 }

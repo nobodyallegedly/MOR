@@ -2,7 +2,7 @@
 //!
 //! `cargo run --release -p mor-ordering-sim -- [runs] [first-seed]`
 
-use mor_ordering_sim::check::{check, Tally};
+use mor_ordering_sim::check::{check, check_written, Tally, WrittenTally};
 
 fn main() {
     if let Ok(s) = std::env::var("SIM_EXPLAIN") {
@@ -19,12 +19,21 @@ fn main() {
     for seed in first..first + runs {
         check(seed, &mut t);
     }
+    let mut wt = WrittenTally::default();
+    for seed in first..first + runs {
+        check_written(seed, &mut wt);
+    }
     println!("{t:#?}");
     println!(
         "wrong answers of the rule tested (option α): {}",
         t.failures()
     );
-    if t.failures() > 0 {
+    println!("{wt:#?}");
+    println!(
+        "wrong answers of the rules as Law draft 7 now writes them: {}",
+        wt.failures()
+    );
+    if t.failures() > 0 || wt.failures() > 0 {
         std::process::exit(1);
     }
 }

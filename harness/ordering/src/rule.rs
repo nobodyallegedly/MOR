@@ -35,10 +35,14 @@ pub enum Rule {
     /// `keepers`: the collective's own keepers may also place an act that is not a line
     /// against a line (addition A3 of the write-up). `named_sigs`: a record counts only the
     /// signature acts it names (addition A2); otherwise every signature on its clone.
+    /// `c5`: a member's own rotation is registered on the collective's line, and that
+    /// member's old-key signatures placed before it stay valid for the collective (F109,
+    /// choice C5); otherwise Identity alone judges them.
     Root {
         placement: Placement,
         keepers: Keepers,
         named_sigs: bool,
+        c5: bool,
     },
     /// Law draft 7 as written, simplified: a departure draws its line in the departing
     /// member's personal sequences (Flaw E), a keeper places only signatures on clones
@@ -289,7 +293,10 @@ impl<'w> Eval<'w> {
 
     /// The signature act is valid under Identity: a member's own rotation voids a signature
     /// made with the old key outside its kept ancestry (Identity rules 15 to 17; an
-    /// acknowledged one is disputed and confers nothing, Law rule 5).
+    /// acknowledged one is disputed and confers nothing, Law rule 5). Under C5 (Law draft 7,
+    /// seventh pass, "Made before, made after" point 4), a signature placed before every line
+    /// of the collective registering that rotation stays valid for the collective, whatever
+    /// the rotation kept; one placed after is judged by Identity alone.
     fn sig_valid(&self, s: Id) -> bool {
         let m = self.w.signer(s).unwrap();
         let e = self.w.acts[s].epoch;
@@ -298,10 +305,24 @@ impl<'w> Eval<'w> {
                 && self.w.signer(r) == Some(m)
                 && self.w.acts[r].epoch == e
             {
+                if self.c5() && self.rot_lines(r).into_iter().all(|l| self.before(s, l)) {
+                    return true;
+                }
                 return self.anc[r][s];
             }
         }
         true
+    }
+
+    fn c5(&self) -> bool {
+        matches!(self.rule, Rule::Root { c5: true, .. })
+    }
+
+    /// The collective's lines registering member rotation `r` (C5).
+    fn rot_lines(&self, r: Id) -> Vec<Id> {
+        self.acts()
+            .filter(|&l| matches!(&self.w.acts[l].kind, Kind::Register { departures } if departures.contains(&r)))
+            .collect()
     }
 
     /// Whether a member's signature counts for what it signs, judged against its signer's

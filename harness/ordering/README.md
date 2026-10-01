@@ -1,6 +1,6 @@
 # mor-ordering-sim
 
-A simulation testing one ordering rule for collectives, proposed for Law draft 7's flaws E to L: **for anything done in a collective's name, "before" and "after" are judged only on the collective's own sequence, never on members' personal sequences.** The rule, the replay of each flaw, the attacks and the choices left open are in `docs/law-ordering-rule-test.md`. Law draft 7 itself is unchanged.
+A simulation testing one ordering rule for collectives, proposed for Law draft 7's flaws E to L: **for anything done in a collective's name, "before" and "after" are judged only on the collective's own sequence, never on members' personal sequences.** The rule, the replay of each flaw, the attacks and the choices are in `docs/law-ordering-rule-test.md`. The rule was adopted as F109 and written into Law draft 7 (seventh pass); the program now also runs the rules exactly as written there (section 8 of the write-up).
 
 ## In plain words
 
@@ -18,14 +18,14 @@ cargo test --release -p mor-ordering-sim              # each flaw's story by han
 SIM_EXPLAIN=<seed> cargo run --release -p mor-ordering-sim   # print the first thing a world loses
 ```
 
-The program exits with an error if the rule tested gives any wrong answer.
+The program exits with an error if the rule tested, or the rules as Law draft 7 now writes them, give any wrong answer.
 
 ## What is modelled
 
 - `src/model.rs`: acts, their signers' sequences (one per device), forks, the collective's lines and the tips they name (complete, lagging behind slow or offline devices, or leaving a fork out on purpose), the keeper's own order, the real time.
-- `src/rule.rs`: one evaluator for every rule. The rule tested (option α: a member's signature is placed at the act of the collective it signs; option β: only where the collective acknowledges it), with or without keepers (none, the collective's own acts only, everything), with records naming their signatures or not; and Law draft 7 as written. A `Clock::RealTime` evaluator is the oracle.
+- `src/rule.rs`: one evaluator for every rule. The rule tested (option α: a member's signature is placed at the act of the collective it signs; option β: only where the collective acknowledges it), with or without keepers (none, the collective's own acts only, everything), with records naming their signatures or not, with a member's rotation registered on the collective's line or not (C5); and Law draft 7 as its sixth pass wrote it, before F109 (`Rule::Draft7`). A `Clock::RealTime` evaluator is the oracle.
 - `src/gen.rs`: random worlds, deterministic from their seed.
-- `src/check.rs`: the checks and the tally.
+- `src/check.rs`: the checks and the tally; `check_written` and `WrittenTally` for the rules as Law draft 7's seventh pass writes them (keepers for the collective's own acts, C4; a member's rotation registered on the collective's line, C5).
 - `tests/stories.rs`: flaws E, F, G, H, I, J, K, L, Q23, Q28 and Q30 by hand, and the attacks.
 
 ## Not modelled
