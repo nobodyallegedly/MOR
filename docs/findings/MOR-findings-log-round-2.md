@@ -909,6 +909,9 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Scope (Nobody, allegedly, 1 October 2026, question Q1 of the Law redraft):** the tiers and lanes apply to collectives only. "Deals should be as simple as possible while remaining rich. Collectives is for when things get complicated." Two people who end up doing many deals together can found a collective.
 
+**Answers to the Law redraft's questions (Nobody, allegedly):**
+- Q2 (1 October 2026): a collective's words are split like its rules: the constitution's words are constitutional, and each area carries its own words, which its holders change with it.
+
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
 ## F104. A clone's signing rule states truthfully what brought it into force (found while building roadmap step 11b, decided by Nobody, allegedly)
@@ -983,7 +986,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Checked against the principles:** right of exit and legible greed: in a deal nobody's terms change without their signature, so a party never has to read a rule to know whether they can be outvoted. It simplifies Law: for deals, the per-party protected clauses (rule 46a) and forks among independent clones (rule 47) no longer arise, since no clone completes without everyone.
 
-**Cost, stated:** one silent party blocks every change to a deal, however large. The ways out: the abandonment clause, whose declaration is not a clone, can remove an absent party's voice where the deal provides it; succession plans; and, for many parties or a long relationship, a collective.
+**Cost, stated and accepted ("one person can force everything until all agree. That's deal making in everyday life"):** one silent party blocks every change to a deal, however large. The ways out: the abandonment clause, whose declaration is not a clone, can remove an absent party's voice where the deal provides it; succession plans; and, for many parties or a long relationship, a collective.
 
 **Core changes, to be made:** Law draft 7 (terms fields 4 and 5 for deals; rules 45 to 47), core v18, freeze test suite v18: scenario 1 step 9b becomes a clone of the abandonment clause signed by two of three, which stays a draft; step 7's "required signatures" are every party's.
 
