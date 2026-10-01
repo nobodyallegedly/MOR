@@ -920,6 +920,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - Q9 (1 October 2026): terms field 4 belongs to no tier. In a clone it is a mark of fact (F104), written fresh each time; founding terms are signed by everyone, and the tiers govern only later changes.
 - Q10 (1 October 2026): lanes by layer and areas are one construct: an area may be defined by whole layers, by act types or by fields, with one set of rules for holding it, granting within it, leaving it and changing it.
 - Q11 (1 October 2026): a collective's founding agreement exists only when every identity in its first version has signed. "A person should not be added to a collective without their approval": a member added later is bound only by their own signature (rule 45).
+- Q12 (1 October 2026): a clone that changes an area and something outside every area is valid when both rules are met, its mark naming both, as Q7.
 
 *F103 decided in principle by Nobody, allegedly, 30 September 2026; the exact wording awaits the Law redraft.*
 
