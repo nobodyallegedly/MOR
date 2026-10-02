@@ -174,8 +174,12 @@ enum Cmd {
         #[arg(long)]
         dir: PathBuf,
         /// The address to add (https, or an onion address).
-        #[arg(long)]
+        #[arg(long, conflicts_with = "remove")]
         add: Option<String>,
+        /// The address to remove: the reverse of --add, the operator's next
+        /// routes no longer naming it.
+        #[arg(long)]
+        remove: Option<String>,
         /// Allow a plain http address: for a relay on this machine only.
         #[arg(long)]
         local_test: bool,
@@ -390,9 +394,24 @@ async fn main() {
         Cmd::Address {
             dir,
             add,
+            remove,
             local_test,
         } => {
             let mut n = open(&dir);
+            if let Some(b) = remove {
+                match n.remove_base(&b).unwrap_or_else(|e| die(e)) {
+                    AddedBase::Relay => println!("Removed {b}."),
+                    AddedBase::Routes(id) => println!(
+                        "Removed {b}. The operator's routes no longer name it (act {}).",
+                        wire::hex(&id)
+                    ),
+                    AddedBase::OperatorElsewhere(op) => println!(
+                        "Removed {b} from this home's settings. Its operator ({}) is kept elsewhere: from there, publish the operator's next routes without it.",
+                        wire::hex(&op)
+                    ),
+                }
+                println!("Start the relay again to stop answering under it.");
+            }
             if let Some(b) = add {
                 check_base(&b, local_test);
                 match n.add_base(&b).unwrap_or_else(|e| die(e)) {

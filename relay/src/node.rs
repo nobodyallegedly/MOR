@@ -615,18 +615,41 @@ impl Node {
                 "{base} is already one of this relay's addresses"
             )));
         }
+        let mut cfg = self.cfg.clone();
+        cfg.bases.push(base.to_string());
+        self.change_bases(cfg, None)
+    }
+
+    /// Remove a base address, the reverse of `add_base`: taken out of the
+    /// settings and, where the operator is held here, out of the next
+    /// version of the operator's routes. A relay keeps at least one address.
+    pub fn remove_base(&mut self, base: &str) -> R<AddedBase> {
+        if !self.cfg.bases.iter().any(|b| b == base) {
+            return Err(Fail::Internal(format!(
+                "{base} is not one of this relay's addresses"
+            )));
+        }
+        if self.cfg.bases.len() == 1 {
+            return Err(Fail::Internal(
+                "that is this relay's only address: it keeps at least one".into(),
+            ));
+        }
+        let mut cfg = self.cfg.clone();
+        cfg.bases.retain(|b| b != base);
+        self.change_bases(cfg, Some(base))
+    }
+
+    fn change_bases(&mut self, cfg: Config, drop: Option<&str>) -> R<AddedBase> {
         if self.closed()? {
             return Err(Fail::Internal(
                 "this home is closed for good: it signs nothing more".into(),
             ));
         }
         let signs_routes = self.keys.as_ref().is_some_and(|k| k.safety.is_some());
-        let mut cfg = self.cfg.clone();
-        cfg.bases.push(base.to_string());
         self.store.begin()?;
         let done = (|| {
             let routes = if signs_routes {
-                Some(self.next_routes(&cfg.bases)?)
+                Some(self.next_routes(&cfg.bases, drop)?)
             } else {
                 None
             };
@@ -653,7 +676,7 @@ impl Node {
     /// Sign the next version of the operator's routes (Identity type 3),
     /// naming every base address in its outbox route for `IDENTITY`, and
     /// keeping every other route as it was.
-    fn next_routes(&mut self, bases: &[String]) -> R<Hash> {
+    fn next_routes(&mut self, bases: &[String], drop: Option<&str>) -> R<Hash> {
         use mor_core::envelope::{latest, Route, Routes, Version};
         let op = self
             .operator()
@@ -698,6 +721,9 @@ impl Node {
             .find(|r| r.kind == 0 && r.scope == Some(spec))
         {
             Some(r) => {
+                if let Some(d) = drop {
+                    r.hints.retain(|h| h != d);
+                }
                 for b in bases {
                     if !r.hints.contains(b) {
                         r.hints.push(b.clone());
