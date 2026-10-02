@@ -1206,3 +1206,13 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Production's next draft (rule 17 and its freeze scenario line); the role-share evidence rule (Law rule 19, F75) reads alike.
 
 *F116 decided by Nobody, allegedly, 2 October 2026.*
+
+## F117. The first Lightning rail Module names the payee's node; its costs are stated, and it ships as experimental (roadmap step 12, questions a and b, decided by Nobody, allegedly)
+
+**Found while building:** the Lightning rail (roadmap step 12, question a). To check later that a payment went to the payee, a verifier needs the key that signed the invoice; on Lightning there is no address in the on-chain sense. The Module as built names the payee's node key in its pointer or vault (a), and a Lightning vault entry names the vault's own node, which issues each invoice (b).
+
+**Costs, stated (2 October 2026):** a public node exposes its channels and the on-chain coins behind them, possibly its network address, links identities that share it, and makes a visible target; a Lightning vault stops a thief with the everyday key, not one who takes the node, which must stay online. Mitigations are the payee's choice: an unannounced node, one node per identity, a hosted node, Tor. A Lightning Address (name@domain) was set aside: its invoices cannot be tied to the payee by a later verifier. A BOLT 12 offer would give a reusable, checkable address that hides the node, but lnd does not support it yet.
+
+**Decided (Nobody, allegedly, 2 October 2026):** "I'm fine with presenting experimental stuff with plenty of disclaimers. The purpose is to throw stuff at the MIPs." a and b confirmed as built; the Module is presented as experimental, its costs stated plainly in its text and shown by clients. *Suggested (project lead):* a BOLT 12 rail Module later, as a second Module under the same payment cMIP, which also exercises F115 (a payee choosing between rails).
+
+*F117 decided by Nobody, allegedly, 2 October 2026.*
