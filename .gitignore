@@ -1,2 +1,4 @@
 /target
 gauntlet-report.txt
+.DS_Store
+node_modules/
