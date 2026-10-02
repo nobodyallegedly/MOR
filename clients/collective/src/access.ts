@@ -49,7 +49,7 @@ export class Refusal extends Error {
 const now = () => Math.floor(Date.now() / 1000);
 
 /** A code as typed or linked, read leniently (case, dashes, I and L for 1, O for 0), hashed. */
-export function codeHash(typed: string): string | null {
+export function codeHash(typed: string, label = 'MOR collective client pairing code'): string | null {
   let s = '';
   for (const ch of typed.toUpperCase()) {
     if (ch === '-' || ch === ' ') continue;
@@ -58,14 +58,22 @@ export function codeHash(typed: string): string | null {
     s += c;
   }
   if (s.length !== 20) return null;
-  return createHash('sha256').update(`MOR collective client pairing code\n${s}`).digest('hex');
+  return createHash('sha256').update(`${label}\n${s}`).digest('hex');
 }
 
 export class Access {
   private nonces = new Map<string, number>();
   private wrong: number[] = [];
 
-  constructor(private readonly dir: string) {
+  /**
+   * `domain` and `label` name the program a key signs for and a code is
+   * made for; another program built on this one (the desk, step 11c) gives
+   * its own, so a request or code for one is never good for the other.
+   */
+  constructor(
+    private readonly dir: string,
+    private readonly names: { domain: string; label: string } = { domain: DOMAIN, label: 'MOR collective client pairing code' },
+  ) {
     if (!existsSync(this.path)) this.save({ app: randomBytes(16).toString('hex'), paired: [], codes: [] });
   }
 
@@ -100,7 +108,7 @@ export class Access {
     const code = `${chars.slice(0, 5)}-${chars.slice(5, 10)}-${chars.slice(10, 15)}-${chars.slice(15)}`;
     const f = this.load();
     f.codes = f.codes.filter((c) => c.expires > now());
-    f.codes.push({ hash: codeHash(code)!, expires: now() + CODE_LIFE });
+    f.codes.push({ hash: codeHash(code, this.names.label)!, expires: now() + CODE_LIFE });
     this.save(f);
     return code;
   }
@@ -110,7 +118,7 @@ export class Access {
     const t = now();
     this.wrong = this.wrong.filter((x) => x > t - 60);
     if (this.wrong.length >= 10) throw new Refusal(429, 'Too many wrong codes: wait a minute.');
-    const h = codeHash(code);
+    const h = codeHash(code, this.names.label);
     const f = this.load();
     const i = f.codes.findIndex((c) => c.hash === h && c.expires > t);
     if (!h || i < 0) {
@@ -136,7 +144,7 @@ export class Access {
   check(body: Buffer, key: string | undefined, sig: string | undefined): { op: string; args: Record<string, unknown>; key: string } {
     if (!key || !/^[0-9a-f]{64}$/.test(key) || !sig || !/^[0-9a-f]{128}$/.test(sig)) throw new Refusal(401, 'The request is not signed.');
     const pub = createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: Buffer.from(key, 'hex').toString('base64url') }, format: 'jwk' });
-    if (!verify(null, Buffer.concat([Buffer.from(DOMAIN), body]), pub, Buffer.from(sig, 'hex'))) {
+    if (!verify(null, Buffer.concat([Buffer.from(this.names.domain), body]), pub, Buffer.from(sig, 'hex'))) {
       throw new Refusal(401, 'The signature does not match the request.');
     }
     let r: { app?: unknown; time?: unknown; nonce?: unknown; op?: unknown; args?: unknown };

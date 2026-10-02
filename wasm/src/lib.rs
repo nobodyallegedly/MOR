@@ -322,6 +322,8 @@ struct Described {
     refs: Option<Vec<String>>,
     /// Web resources it refers to, `[address, hash or null]`, when opened.
     web_refs: Option<Vec<(String, Option<String>)>>,
+    /// Acts by other identities it acknowledges (Envelope, "Acknowledgements"), when opened.
+    acks: Option<Vec<String>>,
     #[serde(with = "serde_bytes")]
     payload: Option<Vec<u8>>,
 }
@@ -364,6 +366,9 @@ fn describe_act(a: &Act, key: Option<&[u8; 32]>) -> Described {
                 })
                 .collect()
         }),
+        acks: inside
+            .as_ref()
+            .map(|i| i.acks.iter().flatten().map(hx).collect()),
         payload: inside.map(|i| cbor::encode(&Value::Map(i.payload))),
     }
 }
