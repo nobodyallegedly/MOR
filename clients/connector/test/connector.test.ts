@@ -7,14 +7,15 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { collectiveTerms } from '../../repo/src/collective.ts';
 import { proposePayload, termsPayload } from '../../repo/src/law.ts';
 import { POST_SPECS } from '../../barebone/src/specs.ts';
 import { decodeDraft, draftDigest, saveLinked } from '../src/draft.ts';
-import { addTo } from '../scripts/add-to-claude.ts';
+import { addTo, addToClaude, installDir } from '../scripts/add-to-claude.ts';
 import { connect, governance, world, type World } from './world.ts';
 
 let w: World;
@@ -56,6 +57,11 @@ test('the connector offers its tools, none takes a key, and none prepares a Law 
       assert.doesNotMatch(k, /key|secret|seed|identity_file|password/i, `${t.name} takes ${k}`);
     }
   }
+  // Each tool that prepares or lists drafts says plainly where drafts are written.
+  for (const t of tools.filter((t) => /^mor_(prepare_|drafts)/.test(t.name))) {
+    assert.ok(t.description?.includes(`the drafts folder on this machine, ${w.drafts}`), `${t.name} does not say where drafts go`);
+  }
+  assert.match(tools.find((t) => t.name === 'mor_prepare_post')!.description!, /not into DRAFTS\.md, which only documents the format/);
   // Started by its launcher from another folder, as Claude's app starts it.
   const launched = await connect({ MOR_RELAYS: w.relay.base, MOR_DRAFTS: w.drafts }, { launcher: true });
   assert.equal((await launched.client.listTools()).tools.length, 7);
@@ -72,13 +78,13 @@ test('given only a release id, it verifies it and says it does not count yet, un
   assert.equal(r.isError, false, r.text);
   assert.match(r.text, /# A release\n/);
   assert.match(r.text, /BEGIN WORDS SIGNED BY OTHERS[^\n]*\nConnector test tree 1, from a test\n/);
-  assert.match(r.text, /NOT A RELEASE YET\. Its publisher.s signature and all 2 of its files check, but its collective.s agreement asks for any 2 of the members to sign it, and 1 signature was found at the relays asked\./);
+  assert.match(r.text, /NOT A RELEASE YET\. Its publisher.s signature and all 2 of its files check, but its collective.s agreement asks for any 2 of the Releases area.s holders to sign it, and 1 signature was found at the relays asked\./);
   assert.match(r.text, /the one the collective's record named as in force when the release was made/);
   assert.match(r.text, /Signed by 1 member: /);
   assert.match(r.text, /Members who have not signed it: [0-9a-f]{8}…[0-9a-f]{4}, [0-9a-f]{8}…[0-9a-f]{4}\./);
   assert.match(r.text, new RegExp(`Published by the identity ${w.collective.identity}`));
   assert.match(r.text, /2 of 2 files fetched and checked against their fingerprints/);
-  assert.match(r.text, /counts only once any 2 of the 3 parties have signed it/);
+  assert.match(r.text, /“Releases” \(area 1\): held by .*; any 2 of them decide together\./);
   assert.match(r.text, /BEGIN WORDS SIGNED BY OTHERS[^\n]*\nThe connector test collective\./);
   assert.doesNotMatch(outside(r.text), /Connector test tree|from a test|The connector test collective/, 'the release’s own words stay fenced');
 });
@@ -179,10 +185,40 @@ test('the connector holds no key and sends nothing: its code never loads an iden
 
 test('adding the connector to Claude keeps every other setting', () => {
   const before = JSON.stringify({ mcpServers: { other: { command: 'x' } }, theme: 'dark' });
-  const after = JSON.parse(addTo(before, { MOR_RELAYS: 'https://home1.dubsar.org' }));
+  const launcher = '/Users/someone/Library/Application Support/MOR/connector/mor-connector.sh';
+  const after = JSON.parse(addTo(before, launcher, { MOR_RELAYS: 'https://home1.dubsar.org' }));
   assert.equal(after.theme, 'dark');
   assert.deepEqual(after.mcpServers.other, { command: 'x' });
-  assert.match(after.mcpServers.mor.command, /clients\/connector\/scripts\/mor-connector\.sh$/);
+  assert.equal(after.mcpServers.mor.command, launcher);
   assert.deepEqual(after.mcpServers.mor.env, { MOR_RELAYS: 'https://home1.dubsar.org' });
-  assert.ok(JSON.parse(addTo(null, {})).mcpServers.mor);
+  assert.ok(JSON.parse(addTo(null, launcher, {})).mcpServers.mor);
+  assert.match(installDir('/Users/someone'), /^\/Users\/someone\/Library\/Application Support\/MOR\/connector$/);
+});
+
+test('add-to-claude installs a copy that runs outside the repository, and run twice keeps the first original of the settings', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'mor-add-to-claude-'));
+  const file = join(home, 'Claude', 'claude_desktop_config.json');
+  mkdirSync(join(home, 'Claude'));
+  const original = JSON.stringify({ mcpServers: { other: { command: 'x' } } });
+  writeFileSync(file, original);
+  const dir = join(home, 'Application Support', 'MOR', 'connector');
+  const first = await addToClaude({ file, dir, env: { MOR_RELAYS: w.relay.base } });
+  assert.equal(first.launcher, join(dir, 'mor-connector.sh'));
+  assert.equal(readFileSync(`${file}.before-mor`, 'utf8'), original);
+  // A second run: the settings now hold MOR, and the copy of the original is not overwritten.
+  const second = await addToClaude({ file, dir, env: { MOR_RELAYS: w.relay.base } });
+  assert.equal(second.original, `${file}.before-mor`);
+  assert.equal(readFileSync(`${file}.before-mor`, 'utf8'), original);
+  assert.equal(JSON.parse(readFileSync(file, 'utf8')).mcpServers.mor.command, join(dir, 'mor-connector.sh'));
+
+  // The installed copy is whole by itself: moved elsewhere, away from the
+  // repository and its node_modules, started from another folder, it serves its tools.
+  const moved = join(mkdtempSync(join(tmpdir(), 'mor-elsewhere-')), 'connector');
+  renameSync(dir, moved);
+  assert.deepEqual(readdirSync(moved).sort(), ['bin', 'mor-connector.sh', 'wasm']);
+  const installed = await connect({ MOR_RELAYS: w.relay.base, MOR_DRAFTS: w.drafts }, { command: join(moved, 'mor-connector.sh') });
+  assert.equal((await installed.client.listTools()).tools.length, 7);
+  const r = await installed.ask('mor_identity', { identity: w.members[0].id });
+  assert.equal(r.isError, false, r.text);
+  await installed.close();
 });

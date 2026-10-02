@@ -18,6 +18,7 @@ import { POST_SPECS } from '../../barebone/src/specs.ts';
 import { titleOf, standingWords } from '../../reader/src/read.ts';
 import { verifyRelease, type Manifest } from '../../repo/src/release.ts';
 import { LAW_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
+import { LAW_SPECS } from '../../repo/src/law.ts';
 import { count, readAgreement, ruleWords, short, termsOf, type Line, type Section, type TermsRead } from '../../collective/src/explain.ts';
 import { escapeControls } from './words.ts';
 
@@ -358,15 +359,23 @@ interface AgreementOut {
   id: string;
   parties: string[];
   signed: string[];
-  exists: boolean;
+  /** Founding terms and deals: whether it exists. A collective's clone: null, put in force only by the collective's record. */
+  exists: boolean | null;
+  /** A collective's clone: everyone its mark names, and everyone it adds, has signed it. */
+  ready: boolean;
+  /** Why Law finds it invalid against its parent and lineage, if it does. */
+  invalid: string | null;
   parent: string | null;
+  collective: boolean;
 }
 
 /**
- * An agreement (Law terms), as far as Law draft 6 goes: who is bound, what
- * each rule does (the collective client's reading, from the core's own
- * decoding of the bytes), who signed, whether it exists (rules 1 and 45),
- * and whether a clone found among its parties' acts replaced it.
+ * An agreement (Law terms, draft 8): who is bound, what each rule does (the
+ * collective client's reading, from the core's own decoding of the bytes),
+ * who signed, whether it exists (rules 1 and 45) or, for a collective's
+ * clone, whether it is ready for the collective's record to put it in force
+ * (rule 37c, F109), and whether a clone found among its parties' acts
+ * replaced it.
  */
 async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<Told> {
   let t: TermsRead;
@@ -378,7 +387,7 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
       title: 'An agreement',
       signer: d.signer ?? null,
       counts: false,
-      verdict: `An agreement that cannot be read here: ${err(e)}. Law draft 6 leaves some fields' formats open; terms that use them are not read.`,
+      verdict: `An agreement that cannot be read here: ${err(e)}. Law leaves some fields' formats open; terms that use them are not read.`,
       problems: [err(e)],
     });
   }
@@ -421,14 +430,21 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
   let law: AgreementOut | null = null;
   const problems: string[] = [];
   try {
-    law = judge.v.lawAgreement(REPO_SPECS.law, d.id) as AgreementOut;
+    law = judge.v.lawAgreement(LAW_SPECS, d.id) as AgreementOut;
+    if (law.invalid) problems.push(`Law finds it invalid: ${law.invalid}`);
   } catch (e) {
     problems.push(`Law: ${err(e)}`);
   }
+  // A clone replaces it once the clone exists. A collective's clone never
+  // exists by signatures alone: the collective's record puts it in force
+  // (F109), so it is only said to be ready.
   let replaced: string | null = null;
+  const ready: string[] = [];
   for (const c of clones) {
     try {
-      if ((judge.v.lawAgreement(REPO_SPECS.law, c) as AgreementOut).exists) replaced = c;
+      const x = judge.v.lawAgreement(LAW_SPECS, c) as AgreementOut;
+      if (x.exists === true) replaced = c;
+      else if (x.exists === null && x.ready && !x.invalid) ready.push(c);
     } catch {
       // a broken clone replaces nothing
     }
@@ -445,12 +461,19 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
   if (t.grammar || t.parent) {
     signedLines.push({ text: "If a collective lives under it, the agreement in force for that collective is the one the collective's own record names, whatever is found here: read the collective's identity to know." });
   }
-  const pending = clones.filter((c) => c !== replaced);
+  if (ready.length) {
+    signedLines.push({
+      text: `A clone signed by everyone it needs, ready for the collective's record to put it in force: ${ready.map(short).join(', ')}. Until a record names it, this one stays in force (Law rule 37c, F109).`,
+    });
+  }
+  const pending = clones.filter((c) => c !== replaced && !ready.includes(c));
   if (pending.length) signedLines.push({ text: `A clone that would replace it is proposed and not yet in force: ${pending.map(short).join(', ')}.` });
 
+  const all = t.parties.length === 1 ? 'its one party' : `all ${t.parties.length} parties`;
   const how = t.parent
-    ? `once ${parent ? ruleWords(parent.clone, parent.parties, names) + ' of the agreement it replaces' : "the parties its parent's clone rule asks for"} have signed it (Law rule 45)`
-    : `once ${ruleWords(t.signing, t.parties, names)} have signed it`;
+    ? `once the parties its mark names, and every party it adds, have signed it (Law rule 45)`
+    : `once ${t.signing ? ruleWords(t.signing, t.parties, names) : all} have signed it`;
+  const collectiveClone = law?.exists === null;
   let verdict: string;
   let counts: boolean;
   if (problems.length) {
@@ -459,6 +482,11 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
   } else if (replaced) {
     counts = false;
     verdict = `REPLACED. It came into force, and has since been replaced by the clone ${replaced}, which its parties signed (Law rule 45).`;
+  } else if (collectiveClone) {
+    counts = false;
+    verdict = law!.ready
+      ? `NOT IN FORCE YET: READY TO BE RECORDED, as far as the relays asked show. Everyone it needs has signed it; a collective's clone comes into force only when the collective's own record names it (Law rule 37c, F109). Read the collective's identity to know which agreement its record names.`
+      : `NOT IN FORCE YET, as far as the relays asked show. It is a collective's clone: it comes into force ${how}, and then only when the collective's own record names it (Law rule 37c, F109).`;
   } else if (law?.exists) {
     counts = true;
     verdict = `IN FORCE, as far as the relays asked show. It exists ${how.replace(/^once/, 'since')}, and no clone replacing it was found among its parties' acts there (a relay's silence proves nothing).`;
@@ -559,7 +587,7 @@ export async function identity(id: string, hints: string[], via: Via = {}, judge
   let declared: string | null = null;
   if (latest) {
     try {
-      declared = judge.v.lawDeclared(REPO_SPECS.law, id, latest.act) ?? null;
+      declared = judge.v.lawDeclared(LAW_SPECS, id, latest.act) ?? null;
     } catch {
       declared = null;
     }

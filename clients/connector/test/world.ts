@@ -83,12 +83,17 @@ export async function world(): Promise<World> {
 }
 
 /** The connector, started as Claude's app starts it, and a client speaking MCP to it. */
-export async function connect(env: Record<string, string>, opts: { launcher?: boolean } = {}): Promise<{ client: Client; ask: (tool: string, args: object) => Promise<{ text: string; isError: boolean }>; close: () => Promise<void> }> {
+export async function connect(
+  env: Record<string, string>,
+  opts: { launcher?: boolean; command?: string } = {},
+): Promise<{ client: Client; ask: (tool: string, args: object) => Promise<{ text: string; isError: boolean }>; close: () => Promise<void> }> {
+  // A launcher is what Claude's app starts, from whatever folder it likes:
+  // this folder's own, or `command`, an installed copy's.
+  const launcher = opts.command ?? (opts.launcher ? join(here, 'scripts/mor-connector.sh') : null);
   const transport = new StdioClientTransport({
-    // The launcher is what Claude's app starts, from whatever folder it likes.
-    command: opts.launcher ? join(here, 'scripts/mor-connector.sh') : process.execPath,
-    args: opts.launcher ? [] : ['--import', 'tsx', join(here, 'src/server.ts')],
-    cwd: opts.launcher ? '/' : here,
+    command: launcher ?? process.execPath,
+    args: launcher ? [] : ['--import', 'tsx', join(here, 'src/server.ts')],
+    cwd: launcher ? '/' : here,
     env: { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', ...env },
     stderr: 'inherit',
   });
