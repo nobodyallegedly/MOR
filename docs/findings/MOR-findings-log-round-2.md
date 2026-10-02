@@ -1176,3 +1176,19 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Finance draft 6 (rule 14a); the code's refusal of payments between the smallest and largest limits as unsettled is replaced by the rule.
 
 *F114 decided by Nobody, allegedly, 2 October 2026.*
+
+## F115. The payee decides which rails it accepts (found while building roadmap step 12, question c and flaw L4, decided by Nobody, allegedly)
+
+**Pattern:** 4: two clients could disagree on whether a receipt on a given rail counts, and a collective's lanes (F106, Q16) had no reading for receipts once rails became Modules (F112).
+
+**Found while building:** the Lightning rail (roadmap step 12, question c). A receipt is a Finance act naming its rail Module in field 0; an agreement names one payment cMIP. Nothing said which rail Modules count. Freeze suite step 3.7g and its core test treat a receipt as the payment cMIP's own act, which F112 ends (L4).
+
+**Walked through (2 October 2026):** a band's offer names the payment cMIP; a fan pays over a Lightning Module. Two things surfaced: not every payment has a drafter (a tip follows only the payee's pointer); and rail Modules change (a fix, a new Lightning feature) far more often than agreements, so terms pinning a Module's hash would need a clone, every party signing in a deal (F107), for each upgrade.
+
+**Decided (Nobody, allegedly, 2 October 2026):** "If I wish to pay in bitcoin in a shop that does not accept it, I cannot." Acts always name the cMIPs and Modules they rely on. The receiver decides how it is paid: an agreement names its payment cMIP; the payee's pointer or vault names the rail Modules, implementing that cMIP, it accepts. A receipt counts only if its rail Module is one the payee's pointer or vault in force for that payment named. A payer whose rail the payee does not accept cannot pay on it, except through a conversion service paying the payee on a rail it accepts.
+
+**Consequences:** a new rail Module needs a new pointer (signing key) or vault (safety key), never a clone of an agreement. In a collective, the pointer is a Finance act, so the holders of the Finance lane choose the rails. Q16 reads mechanically: a receipt naming a Module the payee never published, or one not implementing the adopted payment cMIP, counts for nothing.
+
+**Changes, to be made:** Finance draft 6 (payee pointers and vault entries name rail Modules; receipt validity); the payment cMIP; freeze suite step 3.7g and its core test (a receipt on a rail the collective's pointer names counts with the treasurer; one on a rail it never named counts for nothing).
+
+*F115 decided by Nobody, allegedly, 2 October 2026.*
