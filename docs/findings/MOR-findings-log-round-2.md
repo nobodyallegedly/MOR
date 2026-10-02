@@ -1191,4 +1191,18 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Changes, to be made:** Finance draft 6 (payee pointers and vault entries name rail Modules; receipt validity); the payment cMIP; freeze suite step 3.7g and its core test (a receipt on a rail the collective's pointer names counts with the treasurer; one on a rail it never named counts for nothing).
 
+**And (Nobody, allegedly, 2 October 2026):** cross-rail services charging a fee are expected to appear; a client can build them in, giving its users free choice of currency and rail while delivering to the payee what the payee can receive. *Consistent with rule 14a and F111, which treated an unaccepted unit the same way: the payer cannot pay there directly, and the debt stays open (rule 16).*
+
 *F115 decided by Nobody, allegedly, 2 October 2026.*
+
+## F116. Evidence that a Module was used comes from a party, never from the Module (found while building roadmap step 12, flaw L3, decided by Nobody, allegedly)
+
+**Pattern:** 1, after F112: a specification cannot sign.
+
+**Found while building:** the Lightning rail (roadmap step 12, flaw L3). Production rule 17 has a Module's use record "signed by the module", the evidence a Module's author needs to earn a share. After F112 a Module is a text or code, and signs nothing.
+
+**Decided (Nobody, allegedly, 2 October 2026):** both, by case. For a rail Module, the receipt (and the payer's claim) naming it in field 0 is the evidence of use; nothing new is needed. For a service someone runs, the evidence is a record signed by the identity running the service. Either way, a party signs, never a specification.
+
+**Changes, to be made:** Production's next draft (rule 17 and its freeze scenario line); the role-share evidence rule (Law rule 19, F75) reads alike.
+
+*F116 decided by Nobody, allegedly, 2 October 2026.*
