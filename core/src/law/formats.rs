@@ -1,4 +1,4 @@
-//! The Law MIP's exact formats (Law draft 8, "Act formats"), and the checks
+//! The Law MIP's exact formats (Law draft 9, "Act formats"), and the checks
 //! that need no other act.
 //!
 //! In plain words: terms (an agreement's proposal), with the fields draft 7
@@ -344,14 +344,16 @@ impl SuccessionPlan {
     }
 }
 
-/// Who decides absence (Law rule 49): always an identity, or a threshold of
-/// the other parties, each of whom is one.
+/// Who decides absence (Law rule 49): always an identity, or, in a
+/// collective only (B19), a threshold of the other parties, each of whom is
+/// one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Authority {
-    /// `[ 0, identity ]`: a named identity (a keeper's operator, or a third
-    /// party).
+    /// `[ 0, identity ]`: a named identity (a keeper's operator, a party, a
+    /// collective, or a third party).
     Named(Hash),
-    /// `[ 1, threshold ]`: this many of the other parties.
+    /// `[ 1, threshold ]`: this many of the other parties; in a collective
+    /// only (B19).
     Others(u64),
 }
 
@@ -907,6 +909,12 @@ impl Terms {
             if self.constitutional.is_some() || self.areas.is_some() || self.area_words.is_some() {
                 return Err(LawError::Check(
                     "tiers and areas belong to collectives: a deal carries no field 18, 19 or 20",
+                ));
+            }
+            // B19: in a deal, the absence authority is one identity.
+            if matches!(&self.abandonment, Some(Abandonment { authority: Authority::Others(_), .. })) {
+                return Err(LawError::Check(
+                    "in a deal, the absence authority is one identity, never a threshold of the other parties (B19)",
                 ));
             }
         }
@@ -1583,11 +1591,13 @@ impl Grant {
 
 /// A collective's Law declaration of kind 0: at genesis, the founding terms;
 /// at a rotation, a constitutional clone and the signature acts completing
-/// it (Flaw M).
+/// it (Flaw M), and, at a recovery rotation, the signature acts on the
+/// declaration taking effect there (Flaw B18).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Declared {
     pub agreement: Hash,
     pub signatures: Option<Vec<Hash>>,
+    pub absence: Option<Vec<Hash>>,
 }
 
 /// The Law declaration of kind 0 among these declarations, decoded. `None`
@@ -1602,10 +1612,15 @@ pub fn declared_in(ds: &[Declaration], law: &Hash) -> Option<R<Declared>> {
                     .try_into()
                     .map_err(|_| LawError::Shape("Law declaration"))?,
                 signatures: None,
+                absence: None,
             }),
-            Some(Value::Array(a)) if a.len() == 2 => Ok(Declared {
+            Some(Value::Array(a)) if a.len() == 2 || a.len() == 3 => Ok(Declared {
                 agreement: hash(&a[0], "Law declaration: the clone")?,
                 signatures: Some(hashes(&a[1], "Law declaration: signatures")?),
+                absence: a
+                    .get(2)
+                    .map(|x| hashes(x, "Law declaration: signatures on a declaration"))
+                    .transpose()?,
             }),
             _ => Err(LawError::Shape("Law declaration")),
         })
@@ -1627,6 +1642,18 @@ pub fn clone_declaration(law: &Hash, clone: &Hash, signatures: &[Hash]) -> Decla
         spec: *law,
         kind: kinds::FOUNDING_AGREEMENT,
         value: Some(Value::Array(vec![b(clone), hashes_value(signatures)])),
+    }
+}
+
+/// The declaration a recovery rotation carries (C7, B16): the clone that
+/// takes the declared party out, the signature acts that complete it, and
+/// the signature acts on the declaration that takes effect there, which
+/// the rotation places (Flaw B18).
+pub fn recovery_declaration(law: &Hash, clone: &Hash, signatures: &[Hash], absence: &[Hash]) -> Declaration {
+    Declaration {
+        spec: *law,
+        kind: kinds::FOUNDING_AGREEMENT,
+        value: Some(Value::Array(vec![b(clone), hashes_value(signatures), hashes_value(absence)])),
     }
 }
 

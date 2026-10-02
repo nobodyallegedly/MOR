@@ -624,8 +624,15 @@ export class Actions {
         `First ${list(resigning.map(names))} ${resigning.length === 1 ? 'signs a resignation' : 'each sign a resignation'}, alone, and the collective registers ${resigning.length === 1 ? 'it' : 'them'} at once by a record, its line (Law rule 37a). ${resigning.length === 1 ? 'It is a simulated member' : 'They are simulated members'} held here, so this program signs for ${resigning.length === 1 ? 'it' : 'them'}.`,
       );
     }
-    const gone = [...leave].filter((l) => departed.has(l));
+    const recovering = c.recovering().filter((d) => leave.has(d.member));
+    const gone = [...leave].filter((l) => departed.has(l) && !recovering.some((d) => d.member === l));
     if (gone.length) summary.push(`${list(gone.map(names))} already left: their resignation, or the declaration of their absence, is on the collective's record, so nothing more is asked of them.`);
+    for (const d of recovering) {
+      const n = d.signatures?.length ?? 0;
+      summary.push(
+        `${names(d.member)} was declared absent while holding the everyday key: this rotation is where the declaration takes effect (Law, “Made before, made after”, C7, B16). ${n ? `It names the ${n === 1 ? 'other member’s signature act' : `${n} other members’ signature acts`} on the declaration beside the clone’s, so that they count there (Law draft 9, B18).` : 'Its signer alone met the number, so the rotation names no signature on it.'} The clone is counted without ${names(d.member)}.`,
+      );
+    }
     summary.push(
       `The members whose voice remains sign a clone of the agreement in force: a new version naming it, with ${members.length} members, marked with the constitutional change rule (Law rules 44c, 45a).`,
       `Then the collective rotates: its safety key, rebuilt from the shares of ${list(usedRebuilders.map(names)) || 'nobody'}, signs a rotation declaring the clone, and a new safety key is dealt to the new members only.`,
@@ -730,12 +737,27 @@ export class Actions {
 
   // ------------------------------------------------------------ leaving, stepping down, an ordinary change
 
+  /**
+   * While the everyday key's holder is declared absent and not yet removed,
+   * the collective draws no line with their key: the refit, the recovery
+   * rotation, comes first (Law, “Made before, made after”, C7, B16, B18).
+   */
+  private awaitingRecovery(c: TestCollective, names: (id: string) => string): string[] {
+    return c
+      .recovering()
+      .map(
+        (d) =>
+          `${names(d.member)}, who holds the collective's everyday key, was declared absent: the collective draws no line with their key. Refit it first (Change members: remove ${names(d.member)}); that rotation is where the declaration takes effect (Law, “Made before, made after”, C7, B16).`,
+      );
+  }
+
   /** The collective, its name here, and a member it holds, for the actions below. */
   private memberOf(collective: string, member: string, blocking: string[]) {
     const names = this.store.names();
     const c = this.store.collective(collective);
     const cname = this.store.book().collectives.find((x) => x.id === collective)?.name ?? short(collective);
     if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first. A record signed with the old everyday key would be void once it counts.');
+    blocking.push(...this.awaitingRecovery(c, names));
     if (!c.f.members.includes(member)) blocking.push(`${names(member)} is not a member of “${cname}”.`);
     if (!this.store.holds(member)) blocking.push(`${names(member)} is not held by this program, so it cannot sign here.`);
     if (departedOf(c).some((d) => d.member === member)) blocking.push(`${names(member)} already left “${cname}”.`);
@@ -939,6 +961,7 @@ export class Actions {
     const text = a.text.trim();
     const blocking: string[] = [];
     if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
+    blocking.push(...this.awaitingRecovery(c, names));
     if (!text) blocking.push('Write the words.');
     if (text && text === (c.f.governance.releaseWords ?? '')) blocking.push('Nothing changes: these are the area’s words already.');
     const voices = releaseVoicesOf(c);
@@ -1026,6 +1049,7 @@ export class Actions {
     const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
     const blocking: string[] = [];
     if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
+    blocking.push(...this.awaitingRecovery(c, names));
     const old = c.f.governance.abandonmentOthers;
     const others = whole(a.others, 'who judges absence');
     if (others === old) blocking.push('Nothing changes: this is who judges absence already.');
@@ -1127,11 +1151,11 @@ export class Actions {
     if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first. A record signed with the old everyday key would be void once it counts.');
     if (!c.f.members.includes(a.member)) blocking.push(`${who} is not a member of “${cname}”.`);
     if (departedOf(c).some((d) => d.member === a.member)) blocking.push(`${who} has already left “${cname}”, or was already declared absent.`);
-    if (c.f.signingHolder === a.member) {
-      blocking.push(
-        `${who} holds the collective's everyday key, so the collective cannot draw its line without them: their absence would take effect only at a recovery rotation (Law, “Made before, made after”, C7, B16), which this client does not make. Where more than one member must sign the declaration, Law does not yet say how their signatures count there (Law draft 8, Flaw B18).`,
-      );
-    }
+    blocking.push(...this.awaitingRecovery(c, names));
+    // C7, B16, B18: the collective cannot draw its line without the holder
+    // of its everyday key; the declaration takes effect at the recovery
+    // rotation, which names the others' signature acts on it.
+    const holder = c.f.signingHolder === a.member;
     const at = this.hintsOf(c);
     const clause = c.f.members.includes(a.member) ? await c.clauseOf(a.member, this.via) : null;
     const version = clause ? await this.termsAct(clause, at) : null;
@@ -1162,7 +1186,9 @@ export class Actions {
         need > 1
           ? `The clause asks for ${anyOf(need, others, names)}: ${list(cosigners.map(names)) || 'nobody else'} add${cosigners.length === 1 ? 's' : ''} a signature act naming it, as for terms. It counts once ${need} have signed (Law draft 8, B15).`
           : `The clause asks for one of the other members${k > need ? ` (it names ${k}, and when fewer remain all of them together meet it, Law rule 44d)` : ''}: ${by ? names(by) : 'one of them'} alone.`,
-        `The collective registers it at once by a record, its line, signed with its everyday key${cosigners.length ? ', acknowledging those signatures so that they count at the line' : ''}. From that line on, ${who}'s signature counts toward no rule and no area (F109).`,
+        holder
+          ? `${who} holds the collective's everyday key, so the collective cannot draw its line without them: no record is made now. The declaration takes effect at the recovery rotation, the member change that removes ${who} (Change members), which rotates the collective to keys ${who} never held${cosigners.length ? ' and names those signature acts beside the clone’s, so that they count there' : ''} (Law, “Made before, made after”, C7, B16; Law draft 9, B18). From that rotation on, ${who}'s signature counts toward no rule and no area.`
+          : `The collective registers it at once by a record, its line, signed with its everyday key${cosigners.length ? ', acknowledging those signatures so that they count at the line' : ''}. From that line on, ${who}'s signature counts toward no rule and no area (F109).`,
         `${who} keeps what they own: outcome 0 removes the voice, never the stake. ${who} may contest it (Law rule 52); a contest is shown alongside it and changes nothing by itself.`,
       ],
       sections: [
@@ -1181,7 +1207,11 @@ export class Actions {
         {
           heading: 'Signed on this device',
           lines: [
-            { text: `${list(signers.map(names)) || 'Nobody'} sign${signers.length === 1 ? 's' : ''} here; the collective's everyday key, kept in this program's folder, signs the record.` },
+            {
+              text: holder
+                ? `${list(signers.map(names)) || 'Nobody'} sign${signers.length === 1 ? 's' : ''} here; the collective's everyday key signs nothing now.`
+                : `${list(signers.map(names)) || 'Nobody'} sign${signers.length === 1 ? 's' : ''} here; the collective's everyday key, kept in this program's folder, signs the record.`,
+            },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
             ...(await this.unheard(c)),
           ],
@@ -1206,10 +1236,16 @@ export class Actions {
           lines: [
             { text: `Declaration ${got.declaration}, signed by ${names(signers[0])}.` },
             ...got.signed.map((x) => ({ text: `Signature ${x.act}, by ${names(x.member)}, naming the declaration.` })),
-            { text: `Record ${got.record}: the collective's line, from which ${who}'s signature counts for nothing.`, tone: 'ok' as const },
-            { text: `Next: the members who remain refit the collective (Change members: remove ${who}).` },
+            got.record
+              ? { text: `Record ${got.record}: the collective's line, from which ${who}'s signature counts for nothing.`, tone: 'ok' as const }
+              : { text: `No record: ${who} holds the everyday key. The declaration takes effect at the recovery rotation.`, tone: 'warn' as const },
+            {
+              text: got.record
+                ? `Next: the members who remain refit the collective (Change members: remove ${who}).`
+                : `Next: the members who remain refit the collective (Change members: remove ${who}); that rotation names the signatures on the declaration (Law draft 9, B18).`,
+            },
           ],
-          acts: [got.declaration, ...got.signed.map((x) => x.act), got.record],
+          acts: [got.declaration, ...got.signed.map((x) => x.act), ...(got.record ? [got.record] : [])],
         };
       },
     });
@@ -1289,7 +1325,9 @@ export class Actions {
         // Left, or stepped down, on the collective's line: counted only for an act made before it (F109, C1).
         const col = this.store.collective(v.collective);
         const seq = col.f.identity.sequence;
-        const before = (line: string) => seq.includes(a.release) && seq.indexOf(a.release) < seq.indexOf(line);
+        const before = (d: { record?: string; at?: number }) =>
+          seq.includes(a.release) &&
+          (d.record ? seq.indexOf(a.release) < seq.indexOf(d.record) : d.at === undefined || seq.indexOf(a.release) < d.at);
         const left = departedOf(col).find((d) => d.member === member.id);
         const down = steppedDownOf(col).find((d) => d.member === member.id && d.area === RELEASE_AREA);
         for (const [d, words, rule] of [
@@ -1297,10 +1335,11 @@ export class Actions {
           [down, 'stepped down from the Releases area', '37b'],
         ] as const) {
           if (!d) continue;
-          if (before(d.record)) {
+          if (before(d)) {
             checks.push({ text: `${names(member.id)} ${words} after this release was made: their signature still counts for it (Law, “Made before, made after”, C1).` });
           } else {
-            blocking.push(`${names(member.id)} ${words}: from the collective's line (record ${short(d.record)}) their signature counts for nothing there, and this release comes after that line (Law rule ${rule}, F109).`);
+            const line = d.record ? `record ${short(d.record)}` : `the recovery rotation${'rotation' in d && d.rotation ? ` ${short(d.rotation)}` : ''}`;
+            blocking.push(`${names(member.id)} ${words}: from the collective's line (${line}) their signature counts for nothing there, and this release comes after that line (Law rule ${rule}, F109).`);
           }
         }
       }

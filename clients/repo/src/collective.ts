@@ -110,9 +110,22 @@ export interface CollectiveFile {
    * registered at once by a record, its line (rule 37a), or who were
    * declared absent, by a declaration it registered the same way (rule 53). They stay parties
    * of the agreement in force until the members refit the collective
-   * without them; the list stays as history after.
+   * without them; the list stays as history after. A member declared
+   * absent while holding the everyday key has no record (Law draft 9, C7,
+   * B16, B18): the declaration takes effect at the recovery rotation, the
+   * member change removing them, which names `signatures`, the other
+   * members' signature acts on it; `rotation` is that rotation once made,
+   * and `at` the length of the collective's sequence it kept.
    */
-  departed?: { member: string; resignation?: string; declaration?: string; record: string }[];
+  departed?: {
+    member: string;
+    resignation?: string;
+    declaration?: string;
+    record?: string;
+    signatures?: string[];
+    rotation?: string;
+    at?: number;
+  }[];
   /** Kept by the collective client: holders who stepped down from an area (rule 37b), each registered at once by a record. */
   steppedDown?: { member: string; area: number; resignation: string; record: string }[];
   /** Kept by the collective client: the records the collective drew, its everyday lines (Law type 17), oldest first. */
@@ -331,6 +344,11 @@ export class TestCollective {
       line = (await record(this.id, { registers: resigned.map((r) => r.act), inForce: this.f.agreement }, this.f.relays)).id;
     }
     const left = new Set(resigned.map((r) => r.member));
+    // C7, B16, Flaw B18: a declared holder of the everyday key, removed by
+    // this change, is removed at this rotation, which names the other
+    // members' signature acts on the declaration.
+    const recovered = this.recovering().filter((d) => !opts.members.includes(d.member));
+    const absence = recovered.flatMap((d) => d.signatures ?? []);
     const mark: MarkEntry[] = [
       {
         power: { constitutional: true },
@@ -374,9 +392,22 @@ export class TestCollective {
       nextSafetyCommit: dealt.commit,
       kept,
       // The clone, and the signature acts that complete it (Flaw M).
-      declarations: [{ spec: LAW_SPECS.law, kind: FOUNDING_AGREEMENT, value: proposed.id, signatures: signed.map((s) => s.act) }],
+      // At a recovery rotation, also the signature acts on the declaration (Flaw B18).
+      declarations: [
+        {
+          spec: LAW_SPECS.law,
+          kind: FOUNDING_AGREEMENT,
+          value: proposed.id,
+          signatures: signed.map((s) => s.act),
+          ...(absence.length ? { absence } : {}),
+        },
+      ],
     });
     const id = actId(rotation);
+    for (const d of recovered) {
+      d.rotation = id;
+      d.at = seq.length;
+    }
     f.pending = {
       rotation: b64(rotation),
       id,
@@ -479,6 +510,10 @@ export class TestCollective {
    * signature acts naming it, as for terms; the collective registers it at
    * once by a record that acknowledges those signatures, placing them at
    * its line. From that line the member's voice counts for nothing (F109).
+   * Where the member holds the everyday key, the collective cannot draw
+   * its line without them: no record is made, and the declaration takes
+   * effect at the recovery rotation, the member change removing them,
+   * which names those signature acts (Law draft 9, C7, B16, B18).
    */
   async declareAbsent(opts: {
     member: string;
@@ -486,18 +521,32 @@ export class TestCollective {
     cosigners: TestIdentity[];
     expect?: Uint8Array;
     via?: Via;
-  }): Promise<{ declaration: string; signed: Signed[]; record: string }> {
+  }): Promise<{ declaration: string; signed: Signed[]; record?: string }> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
+    if (this.recovering().length) throw new Error('the everyday key\'s holder was declared absent: refit the collective first');
     const payload = await this.declarationFor(opts.member, opts.via);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the declaration is not the one shown: nothing signed');
     const clause = await this.clauseOf(opts.member, opts.via);
     const d = await declare(opts.by, { agreement: this.f.agreement, clause: clause!, party: opts.member, outcomes: [0] }, this.f.relays);
     const signed: Signed[] = [];
     for (const m of opts.cosigners) signed.push({ member: m.id, act: (await sign(m, d.id, this.f.relays)).id });
+    if (opts.member === this.f.signingHolder) {
+      this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, signatures: signed.map((s) => s.act) }];
+      return { declaration: d.id, signed };
+    }
     const r = await record(this.id, { registers: [d.id], inForce: this.f.agreement, acks: signed.map((s) => s.act) }, this.f.relays);
     this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, record: r.id }];
     this.f.records = [...(this.f.records ?? []), r.id];
     return { declaration: d.id, signed, record: r.id };
+  }
+
+  /**
+   * Declarations against the everyday key's holder waiting for the
+   * recovery rotation (C7, B16): no record could register them, since the
+   * collective cannot draw its line without the declared holder.
+   */
+  recovering(): NonNullable<CollectiveFile['departed']> {
+    return (this.f.departed ?? []).filter((d) => d.declaration && !d.record && !d.rotation && this.f.members.includes(d.member));
   }
 
   /** Once the member change's rotation counts, the new shares and agreement take over. */

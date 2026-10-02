@@ -362,10 +362,6 @@ test("declaring absence under the collective's own rule: one signs, the others a
   s = await state(c);
   const col = s.collectives.find((x) => x.name === 'Absences')!;
 
-  // The holder of the everyday key cannot be declared absent here (C7, B16, Flaw B18).
-  const holder = await prepare(c, { kind: 'declare', collective: col.id, member: ada });
-  assert.match(holder.reading.blocking.join(' '), /holds the collective's everyday key.*recovery rotation.*Flaw B18/);
-  await c.ask('cancel', { plan: holder.plan });
   // Too few signers: refused, nothing signed.
   const few = await prepare(c, { kind: 'declare', collective: col.id, member: three, signers: [ada, one] });
   assert.match(few.reading.blocking.join(' '), /The declaration needs all of .*; only 2 sign here/);
@@ -412,4 +408,54 @@ test("declaring absence under the collective's own rule: one signs, the others a
   const refit = await prepare(c, { kind: 'change', collective: col.id, leave: [three] });
   assert.match(words(refit.reading), /Sim Three .* already left: their resignation, or the declaration of their absence, is on the collective's record/);
   await c.ask('cancel', { plan: refit.plan });
+});
+
+test("declaring the everyday key's holder absent: no record, and the recovery rotation names the others' signatures (Law draft 9, C7, B16, B18)", async () => {
+  const c = w.client;
+  let s = await state(c);
+  const [ada, one, two, three] = ['Ada', 'Sim One', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
+  // Four members; Ada, the first founder, holds the everyday key; absence is judged by any 3 of the others.
+  await sign(c, { kind: 'found', name: 'Recovery', members: [ada, one, two, three], rules: {} });
+  s = await state(c);
+  const col = s.collectives.find((x) => x.name === 'Recovery')!;
+
+  const d = await sign(c, { kind: 'declare', collective: col.id, member: ada });
+  const dw = words(d.review.reading);
+  assert.match(d.review.reading.title, /Ada .* is declared absent from “Recovery”/);
+  assert.match(dw, /Ada .* holds the collective's everyday key, so the collective cannot draw its line without them: no record is made now/);
+  assert.match(dw, /takes effect at the recovery rotation, the member change that removes Ada .*names those signature acts beside the clone’s, so that they count there/);
+  assert.match(dw, /the collective's everyday key signs nothing now/);
+  assert.equal(d.done.acts.length, 3, 'the declaration and two signature acts; no record');
+  s = await state(c);
+  let now = s.collectives.find((x) => x.name === 'Recovery')!;
+  assert.equal(now.records, col.records, 'no line drawn with the declared holder’s key');
+  assert.deepEqual(now.members.map((m) => [m.id, m.left]), [[ada, true], [one, false], [two, false], [three, false]]);
+
+  // Meanwhile nothing draws a line with Ada's key.
+  for (const x of [
+    { kind: 'leave', collective: col.id, member: three },
+    { kind: 'declare', collective: col.id, member: three },
+  ]) {
+    const p = await prepare(c, x);
+    assert.match(p.reading.blocking.join(' '), /who holds the collective's everyday key, was declared absent: the collective draws no line with their key\. Refit it first/, x.kind);
+    await c.ask('cancel', { plan: p.plan });
+  }
+
+  // The refit removing Ada is the recovery rotation: it names the two others' signature acts on the declaration.
+  // Three remain: absence then judged by any 2 of the other members.
+  const r = await sign(c, { kind: 'change', collective: col.id, leave: [ada], rules: { safety: 2, release: 2, clone: 2, others: 2 } });
+  assert.match(words(r.review.reading), /Ada .* was declared absent while holding the everyday key: this rotation is where the declaration takes effect .* It names the 2 other members’ signature acts on the declaration beside the clone’s, so that they count there \(Law draft 9, B18\)\. The clone is counted without Ada/);
+  s = await state(c);
+  now = s.collectives.find((x) => x.name === 'Recovery')!;
+  assert.equal(now.pending, false, 'the rotation counts');
+  assert.deepEqual(now.members.map((m) => m.id), [one, two, three]);
+
+  // Judged by a fresh verifier: the clone the recovery rotation declared is in force, without Ada.
+  commit(w.checkout, 'src/lib.rs', 'pub fn recovered() -> u8 { 17 }\n');
+  const rel = await sign(c, { kind: 'release', publisher: col.id, version: 'r.1' });
+  await sign(c, { kind: 'sign', member: one, release: rel.done.acts[0] });
+  await sign(c, { kind: 'sign', member: two, release: rel.done.acts[0] });
+  const v = await verifyRelease(rel.done.acts[0], [w.relay.base]);
+  assert.equal(v.ok, true, v.problems.join('; '));
+  assert.equal(v.agreement, now.agreement, 'judged under the clone the recovery rotation put in force');
 });

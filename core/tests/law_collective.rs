@@ -1,8 +1,8 @@
-//! Law draft 8 on a collective's own sequences (F109): freeze suite v19,
+//! Law draft 9 on a collective's own sequences (F109): freeze suite v20,
 //! scenario 3 (the label), its step 7o (the ordering stories, each named
 //! after its test in `harness/ordering/tests/stories.rs`), steps 7k, 8 and
-//! 8b with the abandonment declaration (B12), Flaw B1 and B11, and scenario 1
-//! (the film, a deal).
+//! 8b with the abandonment declaration (B12), Flaw B1 and B11, Flaws B17
+//! and B18, and scenario 1 (the film, a deal, with Flaw B19).
 //!
 //! The label: Ana holds the releases area (publications and the Production
 //! lane, id 1); Ben, the treasurer, holds the Finance lane (id 2); Cy holds
@@ -337,6 +337,19 @@ impl Lab {
     /// signature acts named, keeping the tips of the devices given. Every
     /// device then signs with the new key.
     fn rotate(&mut self, decl: Option<(Hash, Vec<Hash>)>, tips_of: &[usize]) -> Hash {
+        let ds = decl.map(|(k, s)| vec![law::clone_declaration(&mips().law, &k, &s)]);
+        self.rotate_with(ds, tips_of)
+    }
+
+    /// C7's recovery rotation (B16): it declares the clone taking the
+    /// declared party out, with its signature acts, and names the signature
+    /// acts on the declaration that it places (Flaw B18).
+    fn recover(&mut self, k: Hash, sigs: Vec<Hash>, absence: Vec<Hash>, tips_of: &[usize]) -> Hash {
+        let ds = vec![law::recovery_declaration(&mips().law, &k, &sigs, &absence)];
+        self.rotate_with(Some(ds), tips_of)
+    }
+
+    fn rotate_with(&mut self, declarations: Option<Vec<mor_core::identity::Declaration>>, tips_of: &[usize]) -> Hash {
         let kept: Vec<KeptTip> = tips_of
             .iter()
             .filter(|i| !self.c[**i].seq.is_empty())
@@ -346,8 +359,7 @@ impl Lab {
             &self.c[0],
             Rot {
                 kept: Some(kept),
-                declarations: decl
-                    .map(|(k, s)| vec![law::clone_declaration(&mips().law, &k, &s)]),
+                declarations,
                 ..Default::default()
             },
         );
@@ -1630,11 +1642,14 @@ fn a_declaration_against_the_key_holder_takes_effect_at_the_recovery_rotation() 
 
 /// B15 at C7's recovery rotation (B16): the rotation removing the declared
 /// key holder is the declaration's line. A co-signature the label placed
-/// before it counts; one it could not place leaves the case unsettled,
-/// since the label cannot act without the declared holder (Flaw B18).
+/// before it counts; one it could not place counts where the recovery
+/// rotation names it beside its clone's (Flaw B18). Named nowhere, it
+/// completes nothing there, Ana stays counted and the clone she did not
+/// sign is not complete; a rotation naming another act there puts nothing
+/// in force (freeze suite v20, step 7k).
 #[test]
 fn a_threshold_declaration_at_the_recovery_rotation() {
-    for placed in [true, false] {
+    for case in ["placed before", "named by the rotation", "nowhere", "another act named"] {
         let mut lab = Lab::new(&|t| {
             let ids = t.parties.clone();
             t.abandonment = Some(Abandonment {
@@ -1650,7 +1665,7 @@ fn a_threshold_declaration_at_the_recovery_rotation() {
         let f = lab.founding;
         let d = lab.declare(Some(BEN), f, f, ANA, vec![outcomes::VOICE_REMOVED]);
         let sc = lab.sign(CY, &d);
-        if placed {
+        if case == "placed before" {
             lab.ack(0, sc);
         }
         let ids = lab.ids();
@@ -1666,16 +1681,68 @@ fn a_threshold_declaration_at_the_recovery_rotation() {
         let k = lab.propose(BEN, &t);
         let s1 = lab.sign(BEN, &k);
         let s2 = lab.sign(CY, &k);
-        lab.rotate(Some((k, vec![s1, s2])), &[0]);
+        match case {
+            "named by the rotation" => lab.recover(k, vec![s1, s2], vec![sc], &[0]),
+            "another act named" => lab.recover(k, vec![s1, s2], vec![s1], &[0]),
+            _ => lab.rotate(Some((k, vec![s1, s2])), &[0]),
+        };
         let y = lab.publish(0);
         lab.sign(CY, &y);
         let got = lab.view().consent(&y);
-        if placed {
-            assert!(matches!(&got, Ok(c) if c.counts()), "{got:?}");
-        } else {
-            assert!(matches!(&got, Err(LawError::Unsettled(w)) if w.contains("B18")), "{got:?}");
+        match case {
+            "placed before" | "named by the rotation" => {
+                assert!(matches!(&got, Ok(c) if c.counts()), "{case}: {got:?}");
+                assert_eq!(lab.in_force(&y), k, "{case}");
+            }
+            "nowhere" => assert!(
+                matches!(&got, Ok(Consent::Broken { reason }) if reason.contains("not complete")),
+                "{case}: Ana is still counted at the rotation: {got:?}"
+            ),
+            _ => assert!(
+                matches!(&got, Ok(Consent::Broken { reason }) if reason.contains("B18")),
+                "{case}: {got:?}"
+            ),
         }
     }
+}
+
+/// Flaw B18's third element belongs to the recovery rotation alone: a
+/// rotation naming a signature on a declaration against a party it does
+/// not take out as C7 says puts nothing in force.
+#[test]
+fn only_the_recovery_rotation_names_a_declarations_signatures() {
+    let mut lab = Lab::new(&|t| {
+        let ids = t.parties.clone();
+        t.abandonment = Some(Abandonment {
+            authority: Authority::Others(2),
+            outcomes: vec![outcomes::VOICE_REMOVED],
+            period: None,
+        });
+        let g = t.grammar.as_mut().unwrap();
+        g.safety = Holding::Shares { threshold: 2, members: ids };
+        g.recovery = None;
+    });
+    let f = lab.founding;
+    // Signing key 2 of 3: the label can draw its line without Cy.
+    let d = lab.declare(Some(ANA), f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    let sb = lab.sign(BEN, &d);
+    let ids = lab.ids();
+    let keep = vec![ids[ANA], ids[BEN]];
+    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN])], &|t| {
+        t.parties = keep.clone();
+        t.abandonment.as_mut().unwrap().authority = Authority::Others(1);
+        let g = t.grammar.as_mut().unwrap();
+        g.signing = Holding::Shares { threshold: 2, members: keep.clone() };
+        g.safety = Holding::Shares { threshold: 1, members: keep.clone() };
+    });
+    let k = lab.propose(ANA, &t);
+    let s1 = lab.sign(ANA, &k);
+    let s2 = lab.sign(BEN, &k);
+    lab.recover(k, vec![s1, s2], vec![sb], &[0]);
+    let y = lab.publish(0);
+    lab.sign(ANA, &y);
+    let got = lab.view().consent(&y);
+    assert!(matches!(&got, Ok(Consent::Broken { reason }) if reason.contains("B18")), "{got:?}");
 }
 
 /// 3.8 (F105, Q19, Q21, rule 37b): a dead member's seat passes by
@@ -1912,37 +1979,118 @@ fn what_b14_leaves_open_is_refused() {
     }
 }
 
-/// Flaw B17, found writing B14: where one person holds the safety key, the
-/// succession clone puts the successor in that place and drops the plan, so
-/// the successor holds the safety key with no successor named, which rule
-/// 36 (F96) makes invalid; the plan's power cannot add a plan.
+/// Flaw B17 (freeze suite v20, step 8b, the sixth collective): where Ben
+/// holds the safety key alone, the succession clone that passes his seat to
+/// Dee also carries Dee's own plan, naming her successor, in the executed
+/// plan's place, signed by Dee in that clone; it comes into force, and Dee
+/// holds the key with a successor named (rule 36, F96). Without that plan,
+/// or with it for someone else, out of place, or where the party did not
+/// hold the safety key alone, the clone is invalid.
 #[test]
-fn a_sole_safety_holders_succession_clone_breaks_f96() {
-    let lab = Lab::new(&|t| {
+fn a_sole_safety_holders_successor_names_their_own_successor() {
+    // Founded with a first successor named for Ben (rule 36); the members
+    // then name Dee instead, all three signing, so Ben's seat passes
+    // automatically (Q14).
+    let mut lab = Lab::new(&|t| {
         let ids = t.parties.clone();
-        let g = t.grammar.as_mut().unwrap();
-        g.safety = Holding::One(ids[BEN]);
+        t.grammar.as_mut().unwrap().safety = Holding::One(ids[BEN]);
         t.succession = Some(vec![SuccessionPlan {
             party: ids[BEN],
             stakes: None,
-            seats: Some(vec![(spec("a successor"), 1)]),
-            entry: Some(0),
+            seats: Some(vec![(spec("a first successor"), 1)]),
+            entry: Some(1),
         }]);
     });
+    let mut dee = lab.w.genesis("dee", vec![own_home()], None, None);
     let ids = lab.ids();
+    let deesucc = spec("Dee's successor");
+    let ben_plan = SuccessionPlan {
+        party: ids[BEN],
+        stakes: None,
+        seats: Some(vec![(dee.id, 1)]),
+        entry: Some(0),
+    };
+    let ana_plan = SuccessionPlan { party: ids[ANA], stakes: None, seats: Some(vec![(spec("Ana's heir"), 1)]), entry: Some(1) };
+    let dee_plan = SuccessionPlan { party: dee.id, stakes: None, seats: Some(vec![(deesucc, 1)]), entry: Some(1) };
     let f = lab.founding;
-    let mut t = lab.clone_terms(&f, vec![], &|t| {
-        let s = spec("a successor");
-        t.parties = vec![ids[ANA], s, ids[CY]];
-        t.succession = None;
+    let t0 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN, CY])], &|t| {
+        t.succession = Some(vec![ben_plan.clone(), ana_plan.clone()]);
+    });
+    let k0 = lab.propose(ANA, &t0);
+    let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k0)).collect();
+    lab.record(0, Some((k0, sigs)), &[], vec![], k0);
+    let d = lab.declare(None, k0, k0, BEN, vec![outcomes::VOICE_REMOVED]);
+    lab.record(0, None, &[], vec![d], k0);
+    let new = vec![ids[ANA], dee.id, ids[CY]];
+    let planned = |lab: &Lab, plans: Vec<SuccessionPlan>| {
+        let mut t = lab.clone_terms(&k0, vec![], &|t| {
+            t.parties = new.clone();
+            t.succession = Some(plans.clone());
+            let g = t.grammar.as_mut().unwrap();
+            g.signing = Holding::Shares { threshold: 2, members: new.clone() };
+            g.safety = Holding::One(dee.id);
+            t.areas.as_mut().unwrap()[1].holders = vec![];
+        });
+        t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Plan(ids[BEN]), signers: vec![dee.id] }]);
+        t
+    };
+    let mut for_cy = dee_plan.clone();
+    for_cy.party = ids[CY];
+    for (why, plans) in [
+        ("no plan for Dee: the key has no successor named", vec![ana_plan.clone()]),
+        ("the plan is not Dee's", vec![for_cy, ana_plan.clone()]),
+        ("Dee's plan out of the executed plan's place", vec![ana_plan.clone(), dee_plan.clone()]),
+        ("Dee's plan names no successor", vec![SuccessionPlan { seats: None, ..dee_plan.clone() }, ana_plan.clone()]),
+    ] {
+        let t = planned(&lab, plans);
+        let k = lab.propose(ANA, &t);
+        // Invalid by rule 36 on its own terms, or against its parent (rule 44c).
+        let bad = match lab.view().agreement(&k) {
+            Err(LawError::Check(_)) => true,
+            Ok(a) => a.invalid.is_some(),
+            Err(e) => panic!("{why}: {e:?}"),
+        };
+        assert!(bad, "{why}");
+    }
+    let t = planned(&lab, vec![dee_plan.clone(), ana_plan.clone()]);
+    let k = lab.propose(ANA, &t);
+    assert_eq!(lab.view().agreement(&k).unwrap().invalid, None);
+    let sd = sign(&mut lab.w, &mut dee, &k);
+    lab.rotate(Some((k, vec![sd])), &[0]);
+    let y = lab.publish(0);
+    lab.sign(ANA, &y);
+    let got = lab.view().consent(&y);
+    assert!(matches!(&got, Ok(c) if c.counts()), "{got:?}");
+    assert_eq!(lab.in_force(&y), k);
+    let cur = lab.view().terms(&k).unwrap();
+    assert_eq!(cur.grammar.unwrap().safety, Holding::One(dee.id));
+    assert!(cur.succession.unwrap().iter().any(|p| p.party == dee.id && p.seats.as_ref().is_some_and(|s| s[0].0 == deesucc)));
+}
+
+/// Flaw B17 adds a plan only where the party held the safety key alone: in
+/// the label, whose safety key all three hold, a succession clone adding
+/// one for the successor changes more than the plan gives.
+#[test]
+fn a_succession_clone_adds_no_plan_where_the_key_is_shared() {
+    let mut lab = Lab::new(&|_| {});
+    let dee = lab.w.genesis("dee", vec![own_home()], None, None);
+    let ids = lab.ids();
+    let plan = SuccessionPlan { party: ids[BEN], stakes: None, seats: Some(vec![(dee.id, 1)]), entry: Some(0) };
+    let f = lab.founding;
+    let k0 = lab.add_plan(&f, &[ANA, BEN, CY], plan);
+    let new = vec![ids[ANA], dee.id, ids[CY]];
+    let mut t = lab.clone_terms(&k0, vec![], &|t| {
+        t.parties = new.clone();
+        t.succession = Some(vec![SuccessionPlan { party: dee.id, stakes: None, seats: Some(vec![(spec("Dee's successor"), 1)]), entry: Some(1) }]);
         let g = t.grammar.as_mut().unwrap();
-        g.signing = Holding::Shares { threshold: 2, members: t.parties.clone() };
-        g.safety = Holding::One(s);
+        g.signing = Holding::Shares { threshold: 2, members: new.clone() };
+        g.safety = Holding::Shares { threshold: 3, members: new.clone() };
         t.areas.as_mut().unwrap()[1].holders = vec![];
     });
-    t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Plan(ids[BEN]), signers: vec![spec("a successor")] }]);
-    let got = t.check(&mips());
-    assert!(matches!(&got, Err(LawError::Check(w)) if w.contains("no successor")), "{got:?}");
+    t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Plan(ids[BEN]), signers: vec![dee.id] }]);
+    let k = lab.propose(ANA, &t);
+    let got = lab.view().agreement(&k).unwrap().invalid;
+    assert!(got.as_deref().is_some_and(|w| w.contains("B14")), "{got:?}");
 }
 
 // ---------------------------------------------------------------- scenario 1: a deal
@@ -2098,30 +2246,31 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
     }
 }
 
-/// B15 in a deal: a declaration by a threshold of the other parties that
-/// needs more than its own signer. Where the deal's keepers place it once
-/// the others have signed is not written: refused (Flaw B19).
+/// Flaw B19 (freeze suite v20, scenario 1, step 9c): in a deal the
+/// absence authority is one identity. Terms naming a threshold of the other
+/// parties, whatever its number, are invalid; terms naming a collective the
+/// contributors formed are valid, and its declaration, signed with its own
+/// key, removes a voice from its own place, as the deal's keepers record it.
 #[test]
-fn in_a_deal_a_threshold_declaration_is_unsettled() {
+fn in_a_deal_the_absence_authority_is_one_identity() {
     let mut w = World::new();
     let mut m: Vec<Person> = ["p1", "p2", "p3"]
         .iter()
         .map(|n| w.genesis(n, vec![own_home()], None, None))
         .collect();
+    let keeper = w.genesis("keeper", vec![own_home()], None, None);
+    // The collective the contributors formed, as the authority.
+    let mut board = w.genesis("the contributors' collective", vec![own_home()], None, None);
     let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
-    let deal = Terms {
+    let deal = |authority: Authority| Terms {
         parties: ids.clone(),
-        text: "The film's contributors share its revenue.".into(),
+        text: "The second film's contributors share its revenue.".into(),
         cmips: vec![(6, pay()), (11, anchor())],
-        keepers: None,
+        keepers: Some(Keepers { operators: vec![keeper.id], rule: Rule::All }),
         field4: Field4::Rule(Rule::All),
         clone: Rule::All,
         time: None,
-        abandonment: Some(Abandonment {
-            authority: Authority::Others(2),
-            outcomes: vec![outcomes::VOICE_REMOVED],
-            period: None,
-        }),
+        abandonment: Some(Abandonment { authority, outcomes: vec![outcomes::VOICE_REMOVED], period: None }),
         parent: None,
         grammar: None,
         arbitrators: None,
@@ -2132,20 +2281,36 @@ fn in_a_deal_a_threshold_declaration_is_unsettled() {
         areas: None,
         area_words: None,
     };
-    let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
+    for k in [1, 2] {
+        let got = deal(Authority::Others(k)).check(&mips());
+        assert!(matches!(&got, Err(LawError::Check(w)) if w.contains("B19")), "{k}: {got:?}");
+        // Signed by every party, still no deal.
+        let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal(Authority::Others(k)).to_map(), None);
+        for p in m.iter_mut() {
+            sign(&mut w, p, &d);
+        }
+        assert!(view(&w).agreement(&d).is_err(), "{k}");
+    }
+    let t = deal(Authority::Named(board.id));
+    assert_eq!(t.check(&mips()), Ok(()));
+    let d = law_act(&mut w, &mut m[0], law::types::TERMS, t.to_map(), None);
     for p in m.iter_mut() {
         sign(&mut w, p, &d);
     }
-    let mut c = deal.clone();
+    let mut c = t.clone();
     c.parent = Some(d);
     c.cmips = vec![(6, pay2()), (11, anchor())];
     c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ids[0], ids[1]]) }]);
     let two = law_act(&mut w, &mut m[0], law::types::TERMS, c.to_map(), obj(d));
+    sign(&mut w, &mut m[0], &two);
+    sign(&mut w, &mut m[1], &two);
+    assert!(view(&w).agreement(&two).unwrap().invalid.is_some(), "p3 still counts");
     let decl = AbsenceDeclaration { agreement: d, clause: d, party: ids[2], outcomes: vec![outcomes::VOICE_REMOVED] };
-    let x = law_act(&mut w, &mut m[0], law::types::DECLARATION, decl.to_map(), obj(d));
-    sign(&mut w, &mut m[1], &x);
-    let got = view(&w).agreement(&two);
-    assert!(matches!(&got, Err(LawError::Unsettled(w)) if w.contains("B19")), "{got:?}");
+    let x = law_act(&mut w, &mut board, law::types::DECLARATION, decl.to_map(), obj(d));
+    let mut v = view(&w);
+    v.keeper_logs.insert(keeper.id, vec![x]);
+    let a2 = v.agreement(&two).unwrap();
+    assert_eq!(a2.exists, Some(true), "{:?}", a2.invalid);
 }
 
 /// 3.7n, R4: one cMIP for conversion (Finance) and splitting (Law), the

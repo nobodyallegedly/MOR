@@ -1,4 +1,4 @@
-//! Law read from what a verifier holds (Law draft 8): agreements and their
+//! Law read from what a verifier holds (Law draft 9): agreements and their
 //! clones, the collective's own lines, which agreement is in force for an
 //! act of a collective, and whether that act has the consent its areas
 //! require.
@@ -522,10 +522,9 @@ impl<'a> LawView<'a> {
         let mut out = vec![];
         for p in &parent.parties {
             let mut gone = false;
-            for (x, d, clause, signer) in self.declarations_against(p, up, &parent.parties)? {
-                if !self.deal_authority(&x, &d, &clause, &signer, up, 0)? {
-                    continue;
-                }
+            // B19: the authority is one identity, which signs alone; terms
+            // naming a threshold of the parties are invalid in a deal.
+            for (x, _, _, _) in self.declarations_against(p, up, &parent.parties)? {
                 let placed = self
                     .valid_sigs(id, &[*p])
                     .iter()
@@ -559,50 +558,6 @@ impl<'a> LawView<'a> {
             .copied()
             .collect();
         !placed.is_empty() && k.rule.met(&k.operators, &placed)
-    }
-
-    /// A deal's threshold authority (rule 49, flaw C), counted at the
-    /// declaration, its own line: among the other parties, less those an
-    /// earlier declaration removed, as the deal's keepers recorded it.
-    fn deal_authority(
-        &self,
-        x: &Hash,
-        d: &AbsenceDeclaration,
-        clause: &Abandonment,
-        signer: &Hash,
-        up: &[(Hash, Terms)],
-        depth: usize,
-    ) -> R<bool> {
-        let Authority::Others(k) = clause.authority else {
-            return Ok(true);
-        };
-        if depth > 16 {
-            return Err(LawError::Check("declarations nested deeper than 16"));
-        }
-        let parent = &up[0].1;
-        let mut remaining = vec![];
-        for o in parent.parties.iter().filter(|o| **o != d.party) {
-            let mut gone = false;
-            for (y, dy, cy, sy) in self.declarations_against(o, up, &parent.parties)? {
-                if self.keepers_before(parent, &y, x) && self.deal_authority(&y, &dy, &cy, &sy, up, depth + 1)? {
-                    gone = true;
-                    break;
-                }
-            }
-            if !gone {
-                remaining.push(*o);
-            }
-        }
-        if !remaining.contains(signer) {
-            return Ok(false);
-        }
-        match Rule::Threshold(k).needed(remaining.len()) {
-            Some(1) => Ok(true),
-            Some(_) => Err(LawError::Unsettled(
-                "in a deal, a declaration needing more than one of the other parties: where the deal's keepers place it once the others have signed is not written (Flaw B19)",
-            )),
-            None => Ok(false),
-        }
     }
 
     /// The powers a clone needs (rule 44c).
@@ -698,6 +653,9 @@ impl<'a> LawView<'a> {
                         return Ok(Err(
                             "a rotation declares only a clone that changes the constitutional tier (rule 37, B5)".into(),
                         ));
+                    }
+                    if let Some(w) = self.recovery_signatures(&at.agreement, &d.agreement, d.absence.as_deref())? {
+                        return Ok(Err(w));
                     }
                     let own = self.recovery_departures(col, j, &at.agreement, &d.agreement)?;
                     match self.clone_at(col, &d.agreement, sigs, Line::Rotation(j), &own)? {
@@ -1007,7 +965,7 @@ impl<'a> LawView<'a> {
         }
         for j in 1..col.res.links.len() {
             if let Some(Ok(d)) = declared_in(&col.res.states[j].declarations, &self.law()) {
-                if d.signatures.iter().flatten().any(|x| x == &s.id) {
+                if d.signatures.iter().chain(d.absence.iter()).flatten().any(|x| x == &s.id) {
                     out.push((Line::Rotation(j), true));
                 }
             }
@@ -1571,10 +1529,10 @@ impl<'a> LawView<'a> {
     /// collective placed them at or before that line: an act of the
     /// collective before it acknowledges them, or the record registering the
     /// declaration does ("Made before, made after", 2). It counts once the
-    /// required number have signed. At a recovery rotation (C7) only
-    /// signatures placed before it can count, and the collective cannot
-    /// place any without the declared party: a number asking for more is
-    /// refused, unsettled (Flaw B18).
+    /// required number have signed. At a recovery rotation (C7), which the
+    /// collective cannot precede with any act of its own without the
+    /// declared party, the rotation places the signature acts its Law
+    /// declaration names (Flaw B18).
     #[allow(clippy::too_many_arguments)]
     fn authority_at(
         &self,
@@ -1614,6 +1572,7 @@ impl<'a> LawView<'a> {
             for (p, is_line) in self.placements(col, h) {
                 placed |= match (p, l) {
                     (Line::Record(a), Line::Record(b)) if a.id == b.id => true,
+                    (Line::Rotation(i), Line::Rotation(j)) if i == j => true,
                     (Line::Record(a), _) if !is_line => self.keepers_place(col, a, l, Some(*ag))?,
                     _ => self.line_before(col, p, l),
                 };
@@ -1627,11 +1586,6 @@ impl<'a> LawView<'a> {
         }
         if signed.len() >= need {
             return Ok(Ok(()));
-        }
-        if matches!(l, Line::Rotation(_)) {
-            return Err(LawError::Unsettled(
-                "a declaration at a recovery rotation needing more of the other parties than signed it before: the collective cannot place their signatures without the declared party (Flaw B18)",
-            ));
         }
         Ok(Err(format!(
             "it has {} of the {need} signatures of the other parties its number needs, placed at or before the line (rule 49, B15)",
@@ -1711,6 +1665,48 @@ impl<'a> LawView<'a> {
         Ok(out)
     }
 
+    /// The third element of a recovery rotation's Law declaration (Flaw
+    /// B18): each act it names is a valid signature act on an abandonment
+    /// declaration against a party the declared clone `k` takes out and
+    /// the collective's signing key cannot be produced without under the
+    /// agreement in force `at` (C7, B16). Naming any other act puts nothing
+    /// in force, as for the clone's own signatures (Flaw M).
+    fn recovery_signatures(&self, at: &Hash, k: &Hash, absence: Option<&[Hash]>) -> R<Option<String>> {
+        let Some(absence) = absence else { return Ok(None) };
+        let t = self.terms(at)?;
+        let kt = self.terms(k)?;
+        let removed: Vec<Hash> = match &t.grammar {
+            Some(g) => t
+                .parties
+                .iter()
+                .filter(|p| !kt.parties.contains(p) && needed_to_sign(&g.signing, p))
+                .copied()
+                .collect(),
+            None => vec![],
+        };
+        for s in absence {
+            let h = self.held(s)?;
+            let on = if self.is_law(h, types::SIGNATURE) && self.v.status(&h.id) == Status::Valid {
+                decode_signature(&h.inside).ok()
+            } else {
+                None
+            };
+            let ok = match on {
+                Some(x) => match self.declaration(&x) {
+                    Ok(Ok((d, _))) => removed.contains(&d.party),
+                    _ => false,
+                },
+                None => false,
+            };
+            if !ok {
+                return Ok(Some(
+                    "the rotation names, beside its clone's, an act that is not a valid signature act on a declaration taking effect at it (C7, Flaw B18)".into(),
+                ));
+            }
+        }
+        Ok(None)
+    }
+
     // ------------------------------------------------------------ succession
 
     /// A clone whose mark names a party's succession plan, `[3, party]`
@@ -1720,7 +1716,9 @@ impl<'a> LawView<'a> {
     /// but what the plan gives (Flaw B14): the party out of the parties and
     /// every area, its seat successors in; the successors in the party's
     /// place in every holding of the key grammar, every threshold
-    /// unchanged; the executed plan dropped from field 16. What the texts
+    /// unchanged; the executed plan dropped from field 16, and, where the
+    /// party held the safety key alone, a plan for the successor in its
+    /// place (Flaw B17). What the texts
     /// leave open ([`plan_open`]) is refused at the line
     /// ([`Self::plan_at`]), never guessed.
     fn plan_static(parent: &Terms, clone: &Terms, mark: &[MarkEntry]) -> Result<Vec<Power>, String> {
@@ -1774,9 +1772,25 @@ impl<'a> LawView<'a> {
                 "it does not put the seat successors in the party's place in the key grammar, every threshold unchanged (B14)".into(),
             );
         }
-        // Field 16: the executed plan dropped, every other plan as it was.
-        let rest: Vec<SuccessionPlan> = parent.succession.iter().flatten().filter(|s| &s.party != p).cloned().collect();
-        if clone.succession.clone().unwrap_or_default() != rest {
+        // Field 16: the executed plan dropped, every other plan as it was;
+        // where the party held the safety key alone, a plan for the
+        // successor in its place, naming their own successor (Flaw B17,
+        // rule 36), signed by the successor as the mark's signer.
+        let plans: Vec<SuccessionPlan> = parent.succession.clone().unwrap_or_default();
+        let rest: Vec<SuccessionPlan> = plans.iter().filter(|s| &s.party != p).cloned().collect();
+        let got = clone.succession.clone().unwrap_or_default();
+        let sole = matches!(parent.grammar.as_ref().map(|g| &g.safety), Some(Holding::One(x)) if x == p);
+        if sole && plan_open(parent, plan).is_none() {
+            let i = plans.iter().position(|s| &s.party == p).expect("found above");
+            let theirs = (got.len() == plans.len()).then(|| &got[i]);
+            let others: Vec<SuccessionPlan> = got.iter().enumerate().filter(|(j, _)| *j != i).map(|(_, x)| x.clone()).collect();
+            let named = theirs.is_some_and(|x| x.party == seats[0] && x.seats.as_ref().is_some_and(|v| !v.is_empty()));
+            if !named || others != rest {
+                return Err(
+                    "the party held the safety key alone: it drops the executed plan and carries, in its place, a plan for the successor naming their own successor (rule 36, B17)".into(),
+                );
+            }
+        } else if got != rest {
             return Err("it does not drop the executed plan alone from the succession plans (B14)".into());
         }
         for c in changes(parent, clone) {

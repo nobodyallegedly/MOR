@@ -478,6 +478,10 @@ struct DeclIn {
     /// For a rotation's Law declaration of a clone: the signature acts that
     /// complete it (Law draft 7, Flaw M): the value is `[clone, [+ hash]]`.
     signatures: Option<Vec<String>>,
+    /// For a recovery rotation (C7): the signature acts on the declaration
+    /// taking effect there, which it places (Law draft 9, Flaw B18): the
+    /// value is `[clone, [+ hash], [+ hash]]`.
+    absence: Option<Vec<String>>,
 }
 
 fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaration>>> {
@@ -488,17 +492,28 @@ fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaratio
                     Ok(identity::Declaration {
                         spec: unhex(&x.spec)?,
                         kind: x.kind,
-                        value: match (&x.value, &x.signatures) {
-                            (None, _) => None,
-                            (Some(h), None) => Some(Value::Bytes(unhex(h)?.to_vec())),
-                            (Some(h), Some(sigs)) => Some(Value::Array(vec![
-                                Value::Bytes(unhex(h)?.to_vec()),
-                                Value::Array(
-                                    sigs.iter()
-                                        .map(|x| Ok(Value::Bytes(unhex(x)?.to_vec())))
-                                        .collect::<R<_>>()?,
-                                ),
-                            ])),
+                        value: match (&x.value, &x.signatures, &x.absence) {
+                            (None, _, _) => None,
+                            (Some(h), None, None) => Some(Value::Bytes(unhex(h)?.to_vec())),
+                            (Some(_), None, Some(_)) => {
+                                return Err(JsError::new(
+                                    "a declaration's signatures are named only beside a clone's (Flaw B18)",
+                                ))
+                            }
+                            (Some(h), Some(sigs), absence) => {
+                                let list = |v: &[String]| -> R<Value> {
+                                    Ok(Value::Array(
+                                        v.iter()
+                                            .map(|x| Ok(Value::Bytes(unhex(x)?.to_vec())))
+                                            .collect::<R<_>>()?,
+                                    ))
+                                };
+                                let mut a = vec![Value::Bytes(unhex(h)?.to_vec()), list(sigs)?];
+                                if let Some(ab) = absence {
+                                    a.push(list(ab)?);
+                                }
+                                Some(Value::Array(a))
+                            }
                         },
                     })
                 })
