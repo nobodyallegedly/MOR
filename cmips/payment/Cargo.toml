@@ -1,0 +1,9 @@
+[package]
+name = "mor-payment"
+version = "0.1.0"
+description = "The payment cMIP (task 6): the payment commitment, the proof a receipt or claim carries, how rail Modules plug in, and how a receipt or claim is verified."
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mor-core = { path = "../../core" }

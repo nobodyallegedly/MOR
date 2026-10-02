@@ -11,7 +11,7 @@ use mor_core::cbor::Value;
 use mor_core::envelope::{DecKey, EncKey, EncryptionKey, Route, Routes, Version};
 use mor_core::hash::{sha256, Hash, ZERO_HASH};
 use mor_core::identity::{
-    Absence, Audit, Endorsement, Genesis, Home, HomeRule, KeptTip, Objection, Payload, Receipt,
+    Absence, Audit, Declaration, Endorsement, Genesis, Home, HomeRule, KeptTip, Objection, Payload, Receipt,
     Rotation, SafetyCommit, SigningKey,
 };
 use mor_core::mmr::Mmr;
@@ -136,6 +136,8 @@ pub struct Person {
     pub seq: Vec<Hash>,
     seed: [u8; 32],
     specs: Specs,
+    /// The content key of every everyday act this person signed.
+    keys: std::collections::BTreeMap<Hash, [u8; 32]>,
 }
 
 /// The objects field naming an act of an identity chain.
@@ -155,6 +157,18 @@ impl Person {
         rule: Option<HomeRule>,
         audit: Option<Audit>,
     ) -> (Act, Person) {
+        Self::genesis_declaring(seed, name, homes, rule, audit, None)
+    }
+
+    /// A new identity whose genesis makes declarations (a Finance vault).
+    pub fn genesis_declaring(
+        seed: &[u8; 32],
+        name: &str,
+        homes: Vec<Home>,
+        rule: Option<HomeRule>,
+        audit: Option<Audit>,
+        declarations: Option<Vec<Declaration>>,
+    ) -> (Act, Person) {
         let specs = Specs::test();
         let sign = schnorr(seed, &format!("{name}/0"));
         let safety = slh(seed, &format!("{name}/0"));
@@ -163,7 +177,7 @@ impl Person {
             safety: commit(&safety),
             homes,
             rule,
-            declarations: None,
+            declarations,
             audit,
         });
         let i = inside(specs.identity, 0, g.to_map());
@@ -184,6 +198,7 @@ impl Person {
                 seq: vec![],
                 seed: *seed,
                 specs,
+                keys: Default::default(),
             },
         )
     }
@@ -315,7 +330,13 @@ impl Person {
             sign.sign(id, &random::<32>())
         });
         self.seq.push(a.id());
+        self.keys.insert(a.id(), *key);
         a
+    }
+
+    /// The content key of an everyday act this person signed.
+    pub fn key_of(&self, act: &Hash) -> Option<[u8; 32]> {
+        self.keys.get(act).copied()
     }
 
     pub fn identity_act(&mut self, p: Payload, objects: Option<Vec<Object>>) -> Act {
@@ -431,6 +452,7 @@ impl Person {
             seq,
             seed: random::<32>(),
             specs: Specs::test(),
+            keys: Default::default(),
         }
     }
 }

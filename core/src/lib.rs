@@ -24,6 +24,12 @@
 //! - [`chain`]: which identity-chain act counts, and the standing of every
 //!   other act (Identity, "Verification procedures", "Validity rules").
 //!
+//! Finance (roadmap step 12):
+//!
+//! - [`finance`]: the Finance MIP's exact formats (payee pointers, the vault,
+//!   obligations, receipts, claims), which pointer counts, and where a
+//!   payment may go under the vault (rules 12 to 14a, 16).
+//!
 //! Law (roadmap step 5a, reworked to Law draft 7):
 //!
 //! - [`law`]: the Law MIP's exact formats (terms with marks, areas and the
@@ -39,6 +45,7 @@ pub mod act;
 pub mod cbor;
 pub mod chain;
 pub mod envelope;
+pub mod finance;
 pub mod hash;
 pub mod identity;
 pub mod law;
