@@ -1146,3 +1146,17 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Roadmap:** step 12 builds the Lightning rail Module, and the payment cMIP it plugs into if none exists yet.
 
 *F112 decided by Nobody, allegedly, 2 October 2026.*
+
+## F113. An anonymous payer's refund goes to a key the payer put in the commitment (found while building roadmap step 12, flaw L1, decided by Nobody, allegedly)
+
+**Pattern:** 1: the record that decides who is refunded could be produced by others than the party it protects.
+
+**Found while building:** the Lightning rail (roadmap step 12, `docs/lightning-rail-step-12.md`, flaw L1). Finance rule 10a (F80) owes a refund on an anonymous payment "to whoever presents the rail proof", because "only the payer holds it". On Lightning the proof includes the preimage, which the payee and every node on the route learn; any of them could claim the refund. Named payers are unaffected: the payment commitment names them.
+
+**Decided (Nobody, allegedly, 2 October 2026):** option 1, "if doable". An anonymous payer puts a bare key of its own (Finance rule 18's form, used once) into the payment commitment; a refund owed on that payment goes to whoever signs with that key. *Doable:* the payer's wallet supplies the key when asking for the invoice, and recomputes the commitment from the signed invoice before paying, so the payee's side cannot swap it.
+
+**Set aside:** keeping rule 10a and stating the cost; a committed secret's hash; leaving it to each rail Module.
+
+**Changes, to be made:** Finance draft 6 (rule 10a; the commitment's payer field accepts a bare key); the payment cMIP; freeze suite scenario 2 step 6 (the anonymous refund is claimed by a signature with the committed key, and a routing node holding the preimage cannot claim it).
+
+*F113 decided by Nobody, allegedly, 2 October 2026.*
