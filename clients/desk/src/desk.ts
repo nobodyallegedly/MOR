@@ -236,6 +236,14 @@ export class Desk {
   }
 
   /** The drafts waiting for an answer, newest first, each read now from its bytes. */
+  /** The digests of the drafts waiting, from the folder alone: cheap enough to ask every few seconds. */
+  waiting(): string[] {
+    const dir = this.store.settings().drafts;
+    return listDrafts(dir)
+      .filter(({ digest }) => !loadAnswer(dir, digest))
+      .map(({ digest }) => digest);
+  }
+
   async drafts(): Promise<DraftView[]> {
     const dir = this.store.settings().drafts;
     const out: DraftView[] = [];

@@ -13,19 +13,26 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 let c: Client;
 let state: State;
 
-function say(kind: 'error' | 'done' | 'warn' | '', html: string) {
-  const s = $('status');
+/**
+ * Say something where the person is looking: in the place given (beside
+ * what they clicked), or at the top of the page.
+ */
+function say(kind: 'error' | 'done' | 'warn' | '', html: string, where?: HTMLElement | null) {
+  const s = where ?? $('status');
   if (s) s.innerHTML = html ? v.note(kind, html) : '';
   if (html) s?.scrollIntoView({ block: 'nearest' });
 }
 
-function fail(err: unknown) {
+function fail(err: unknown, where?: HTMLElement | null) {
   if (err instanceof Refused && err.status === 401 && /not paired/.test(err.message)) {
     void start();
     return;
   }
-  say('error', v.e(err instanceof Error ? err.message : String(err)));
+  say('error', v.e(err instanceof Error ? err.message : String(err)), where);
 }
+
+/** The status place on an identity's card. */
+const hereFor = (id: string | undefined) => (id ? app.querySelector<HTMLElement>(`.here[data-here="${CSS.escape(id)}"]`) : null);
 
 const fill = (id: string, html: string) => {
   const el = $(id);
@@ -40,22 +47,82 @@ async function refresh() {
   fill('browsers', v.browsers(state));
 }
 
+/** The drafts on the page, by digest, to see when the folder has others. */
+let shown = '';
+
 async function drafts() {
-  fill('drafts', v.drafts(await c.ask<DraftView[]>('drafts')));
+  const ds = await c.ask<DraftView[]>('drafts');
+  // A note being written to send a draft back is kept across the redraw.
+  const notes = new Map<string, string>();
+  app.querySelectorAll<HTMLFormElement>('form.send-back').forEach((f) => {
+    const t = f.querySelector('textarea');
+    if (t?.value) notes.set(f.dataset.digest ?? '', t.value);
+  });
+  fill('drafts', v.drafts(ds));
+  for (const [digest, note] of notes) {
+    const t = app.querySelector<HTMLTextAreaElement>(`form.send-back[data-digest="${CSS.escape(digest)}"] textarea`);
+    if (t) t.value = note;
+  }
+  shown = ds.map((d) => d.digest).join(',');
+  fill('drafts-watch', v.WATCHING);
+}
+
+let working = false;
+
+/**
+ * New drafts appear by themselves: every few seconds, while the page is
+ * in view and nothing else is under way, the program is asked which
+ * drafts wait (the folder alone, no relay), and the drafts are read again
+ * only when that list changed.
+ */
+async function watch() {
+  if (working || !c || document.visibilityState !== 'visible' || !$('drafts')) return;
+  try {
+    const waiting = await c.ask<string[]>('waiting');
+    if (working || waiting.join(',') === shown) return;
+    const before = new Set(shown.split(','));
+    await drafts();
+    const fresh = waiting.filter((d) => !before.has(d)).length;
+    if (fresh) fill('drafts-watch', fresh === 1 ? 'A new draft from Claude arrived, below.' : `${fresh} new drafts from Claude arrived, below.`);
+  } catch (err) {
+    if (err instanceof Refused && err.status === 401 && /not paired/.test(err.message)) fail(err);
+    // Otherwise, the next look tries again.
+  }
 }
 
 /** Busy: the buttons wait, so nothing is sent twice. */
-async function busy<T>(words: string, f: () => Promise<T>): Promise<T | undefined> {
-  say('', `<span class="small">${v.e(words)}</span>`);
+async function busy<T>(words: string, f: () => Promise<T>, where?: HTMLElement | null): Promise<T | undefined> {
+  say('', `<span class="small">${v.e(words)}</span>`, where);
+  working = true;
   const was = [...app.querySelectorAll('button')].map((b) => [b, b.disabled] as const);
   app.querySelectorAll('button').forEach((b) => (b.disabled = true));
   try {
     return await f();
   } catch (err) {
-    fail(err);
+    fail(err, where);
     return undefined;
   } finally {
     for (const [b, d] of was) b.disabled = d;
+    working = false;
+  }
+}
+
+/** Copy text, with the clipboard where the browser allows it, else by a selection. */
+async function copy(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const t = document.createElement('textarea');
+    t.value = text;
+    t.setAttribute('readonly', '');
+    t.style.position = 'fixed';
+    t.style.opacity = '0';
+    document.body.append(t);
+    t.select();
+    const ok = document.execCommand('copy');
+    t.remove();
+    return ok;
   }
 }
 
@@ -87,10 +154,32 @@ app.addEventListener('click', async (ev) => {
       await after(await busy('Sending the same act again…', () => c.ask<Done>('resend', { digest: d.digest })));
       break;
     case 'refresh': {
-      const r = await busy('Opening the inbox…', () => c.ask<{ added: number; problems: string[] }>('refresh', { identity: d.identity }));
+      const r = await busy('Opening the inbox…', () => c.ask<{ added: number; problems: string[] }>('refresh', { identity: d.identity }), hereFor(d.identity));
       if (r) {
         await refresh();
-        say(r.problems.length ? 'warn' : 'done', `${r.added === 1 ? '1 new item' : `${r.added} new items`}.${r.problems.map((p) => `<br>${v.e(p)}`).join('')}`);
+        say(r.problems.length ? 'warn' : 'done', `${r.added === 1 ? '1 new item' : `${r.added} new items`}.${r.problems.map((p) => `<br>${v.e(p)}`).join('')}`, hereFor(d.identity));
+      }
+      break;
+    }
+    case 'copy': {
+      const id = d.id ?? '';
+      const ok = await copy(id);
+      b.textContent = ok ? 'Copied' : 'Copy failed: select the fingerprint';
+      setTimeout(() => (b.textContent = 'Copy ID'), 2000);
+      break;
+    }
+    case 'link': {
+      const on = d.on === 'true';
+      try {
+        await c.ask('link', { id: d.identity, on });
+        await refresh();
+        say(
+          'done',
+          on ? 'Saved: Claude may now prepare drafts for this identity.' : 'Saved: Claude may no longer prepare drafts for this identity; drafts for it are refused.',
+          hereFor(d.identity),
+        );
+      } catch (err) {
+        fail(err, hereFor(d.identity));
       }
       break;
     }
@@ -125,18 +214,6 @@ app.addEventListener('click', async (ev) => {
   }
 });
 
-app.addEventListener('change', async (ev) => {
-  const t = ev.target as HTMLInputElement;
-  if (t.dataset.action !== 'link') return;
-  try {
-    await c.ask('link', { id: t.dataset.identity, on: t.checked });
-    await refresh();
-    say('done', t.checked ? 'Linked to Claude.' : 'No longer linked to Claude: drafts for it are refused.');
-  } catch (err) {
-    fail(err);
-  }
-});
-
 // ---------------------------------------------------------------- forms
 
 const words = (s: FormDataEntryValue | null) => (typeof s === 'string' ? s.trim() : '');
@@ -165,17 +242,20 @@ app.addEventListener('submit', async (ev) => {
     return after(r);
   }
   if (form.id === 'settings') {
-    const r = await busy('Asking each home who runs it…', () =>
+    const r = await busy(
+      'Asking each home who runs it…',
+      () =>
       c.ask('settings', {
         homes: linesOf(d.get('homes')),
         relays: linesOf(d.get('relays')),
         via: words(d.get('via')).split('\n').map((s) => s.trim()).filter(Boolean),
         drafts: words(d.get('drafts')),
       }),
+      $('settings-status'),
     );
     if (r) {
       await refresh();
-      say('done', 'Settings saved.');
+      say('done', 'Settings saved.', $('settings-status'));
     }
   }
 });
@@ -230,4 +310,6 @@ async function start() {
   }
 }
 
+setInterval(() => void watch(), 4000);
+document.addEventListener('visibilitychange', () => void watch());
 void start();

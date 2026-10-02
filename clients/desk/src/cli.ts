@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node --import tsx
-// mor-desk: start the desk and open its page. Used once
+// mor-desk: start MOR Identities (the owner's desk) and open its page. Used once
 // from a terminal to set up the launcher (scripts/make-app.sh), and then by
 // the launcher itself: after that, nothing is typed.
 
@@ -10,7 +10,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve, type RunFile } from './server.ts';
 
-const HELP = `mor-desk: the owner's desk, a client with no command line for several test identities.
+const HELP = `mor-desk: MOR Identities, the owner's desk: a client with no command line for several test identities.
 TEST IDENTITIES ONLY: every key is held in software, in its folder.
 
   open [--dir DIR] [--port N]   Start the program if it is not running, and open

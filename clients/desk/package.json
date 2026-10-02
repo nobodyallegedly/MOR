@@ -1,7 +1,7 @@
 {
   "name": "mor-desk",
   "version": "0.1.0",
-  "description": "The owner's desk: a client for several MOR test identities, with no command line. An inbox of drafts from the Claude connector, each read in plain words with its digest, to approve, decline or send back with a note; and each identity's received messages, replies, acknowledgements and payments, sorted into to answer, answered and ignored. Test identities only.",
+  "description": "MOR Identities, the owner's desk: a client for several MOR test identities, with no command line. An inbox of drafts from the Claude connector, each read in plain words with its digest, to approve, decline or send back with a note; and each identity's received messages, replies, acknowledgements and payments, sorted into to answer, answered and ignored. Test identities only.",
   "license": "MIT OR Apache-2.0",
   "private": true,
   "type": "module",

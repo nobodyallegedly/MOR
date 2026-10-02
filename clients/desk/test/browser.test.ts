@@ -61,7 +61,8 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
 
   // The launcher's link pairs this browser by itself; the code leaves the address bar.
   await page.goto(`${app.base}/#pair=${app.access.newCode()}`);
-  await page.locator('h1', { hasText: 'MOR desk' }).waitFor();
+  await page.locator('h1', { hasText: 'MOR Identities' }).waitFor();
+  assert.equal(await page.title(), 'MOR Identities');
   await page.locator('#settings form').waitFor();
   assert.equal(new URL(page.url()).hash, '');
 
@@ -69,7 +70,8 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   await page.fill('#settings textarea[name=homes]', homes.map((h) => h.base).join('\n'));
   await page.fill('#settings textarea[name=relays]', relay.base);
   await page.click('#settings button[type=submit]');
-  await done(page, 'Settings saved');
+  // Said beside the button that was pressed, not only at the top of the page.
+  await page.locator('#settings-status .note.done', { hasText: 'Settings saved' }).waitFor({ timeout: 60_000 });
 
   // Two identities: the author's, and "Machine, allegedly", linked to Claude.
   await page.fill('#new-identity input[name=name]', 'Me');
@@ -82,16 +84,34 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   const book = app.store.book().identities;
   const me = book.find((i) => i.name === 'Me')!.id;
   const machine = book.find((i) => i.name === 'Machine, allegedly')!.id;
-  // The author links their own identity too, with a click.
-  await page.locator(`[data-identity="${me}"] input[data-action=link]`).check();
-  await done(page, 'Linked to Claude');
+  // The question on each card, answered on or off; the author's own stays off (decided 1 October 2026).
+  const meCard = page.locator(`.card[data-identity="${me}"]`);
+  const machineCard = page.locator(`.card[data-identity="${machine}"]`);
+  assert.match((await meCard.textContent())!, /Claude may prepare drafts for this identity:/);
+  assert.equal(await meCard.locator('[data-action=link][data-on=false]').getAttribute('aria-pressed'), 'true');
+  assert.equal(await machineCard.locator('[data-action=link][data-on=true]').getAttribute('aria-pressed'), 'true');
+  // Turned on, then off again, by clicks; the answer is said on the card.
+  await meCard.locator('[data-action=link][data-on=true]').click();
+  await meCard.locator('.here .note.done', { hasText: 'Claude may now prepare drafts' }).waitFor();
+  assert.equal((app.store.book().identities.find((i) => i.id === me))!.linked, true);
+  await page.locator(`.card[data-identity="${me}"] [data-action=link][data-on=false]`).click();
+  await page.locator(`.card[data-identity="${me}"] .here .note.done`, { hasText: 'may no longer prepare' }).waitFor();
+  assert.equal((app.store.book().identities.find((i) => i.id === me))!.linked, false);
+  const refused = await claude.ask('mor_prepare_post', { signer: 'Me', text: 'Not for Claude.' });
+  assert.equal(refused.isError, true);
 
-  // Claude prepares a post for Machine, allegedly.
+  // Copy ID: the whole ID, without the spaces the fingerprint is shown with.
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: app.base });
+  await meCard.locator('[data-action=copy]').click();
+  await meCard.locator('[data-action=copy]', { hasText: 'Copied' }).waitFor();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), me);
+
+  // Claude prepares a post for Machine, allegedly; it appears without a click or a reload.
   const first = await claude.ask('mor_prepare_post', { signer: 'Machine, allegedly', text: 'Hello, word.', note: 'A first post.' });
   const d1 = handed(first.text);
-  await page.click('[data-action=drafts]');
   const card = page.locator(`.draft[data-draft="${d1}"]`);
-  await card.waitFor();
+  await card.waitFor({ timeout: 15_000 });
+  await page.locator('#drafts-watch', { hasText: 'A new draft from Claude arrived' }).waitFor();
   const shown = (await card.textContent())!;
   assert.match(shown, /A post, to be published/);
   assert.match(shown, /For Machine, allegedly \[/);
@@ -123,11 +143,17 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   assert.equal((await readPost(post, [relay.base])).standing, 'valid');
   assert.match((await claude.ask('mor_drafts', { draft: d2 })).text, /APPROVED by the owner/);
 
-  // A message from the author to the machine, prepared by Claude and approved by a click.
-  const msg = await claude.ask('mor_prepare_message', { signer: 'Me', to: machine, text: 'A private word.' });
+  // A message from the machine to the author's own identity, which is not
+  // linked: Claude reaches it by its copied ID. Approved by a click.
+  const msg = await claude.ask('mor_prepare_message', { signer: 'Machine, allegedly', to: me, text: 'A private word.' });
   await page.click('[data-action=drafts]');
   await page.locator(`.draft[data-draft="${handed(msg.text)}"] [data-action=approve]`).click();
   await done(page, 'Approved and signed');
+  await meCard.locator('[data-action=refresh]').click();
+  await meCard.locator('.here .note.done', { hasText: '1 new item' }).waitFor({ timeout: 60_000 });
+  assert.match((await meCard.locator('[data-pile="new"] .item').textContent())!, /A message.*A private word\./s);
+  await meCard.locator('[data-pile="new"] .item [data-sorted="to answer"]').click();
+  await page.locator(`.card[data-identity="${me}"] [data-pile="to answer"] .item`).waitFor();
 
   // Someone else replies to the post, publicly, to the machine's inbox.
   const other = TestIdentity.create({ homes: homes.map((h) => h.home), scheme: 3 });
@@ -139,18 +165,15 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   // What the machine received, then sorted by clicks.
   const id = page.locator(`.card[data-identity="${machine}"]`);
   await id.locator('[data-action=refresh]').click();
-  await done(page, '3 new items');
+  await id.locator('.here .note.done', { hasText: '2 new items' }).waitFor({ timeout: 60_000 });
   const pile = (p: string) => id.locator(`[data-pile="${p}"] .item`);
-  assert.equal(await pile('new').count(), 3);
+  assert.equal(await pile('new').count(), 2);
   await shot(page, '3-received');
-  await pile('new').filter({ hasText: 'A message' }).locator('[data-sorted="to answer"]').click();
-  await id.locator('[data-pile="to answer"] .item').first().waitFor();
   await pile('new').filter({ hasText: 'A reply' }).locator('[data-sorted="answered"]').click();
   await id.locator('[data-pile="answered"] .item').first().waitFor();
   await pile('new').filter({ hasText: 'An acknowledgement' }).locator('[data-sorted="ignored"]').click();
   await id.locator('[data-pile="ignored"] .item').first().waitFor();
   assert.equal(await pile('new').count(), 0);
-  assert.match((await pile('to answer').textContent())!, /A private word\./);
   assert.match((await pile('answered').textContent())!, /Nice post\./);
   assert.match((await pile('ignored').textContent())!, /Got it\./);
   await shot(page, '4-sorted');

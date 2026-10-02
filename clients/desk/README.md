@@ -1,19 +1,21 @@
-# mor-desk
+# MOR Identities (mor-desk)
 
-The owner's desk: a client for several identities, in TypeScript, with the core library through WebAssembly. Roadmap step 11c: "a way for me to approve and direct" (Nobody, allegedly). Kept separate from the collective client for now ("can always be combined in a single app later").
+**MOR Identities**, the owner's desk: a client for several identities, in TypeScript, with the core library through WebAssembly. Roadmap step 11c: "a way for me to approve and direct" (Nobody, allegedly). Kept separate from the collective client for now ("can always be combined in a single app later").
 
 **Test identities only.** Every key is held in software in the program's folder. The real identity's signer plugs in at step 16b.
 
 ## In plain words
 
-A small program runs on your Mac and holds your test identities: yours, "Machine, allegedly", and any other. You use it from a page in your browser, on that Mac only. Double-click **MOR Desk** and the page opens, already paired with the program; nothing is typed in a terminal.
+A small program runs on your Mac and holds your test identities: yours, "Machine, allegedly", and any other. You use it from a page in your browser, on that Mac only. Double-click **MOR Identities** and the page opens, already paired with the program; nothing is typed in a terminal.
 
 - **Drafts waiting for you.** When Claude prepares something for an identity you linked to it (a post, a picture, a withdrawal, a message), it lands here. Each draft is read again by the desk, from its own bytes, and shown in plain words: who signs, what it does, the text character for character, the picture exactly as it will be published, and its digest, the same one Claude showed. Claude's note to you is shown apart, as Claude's words. Then you choose:
   - **Approve and sign:** the desk signs it as the next act of that identity and sends it: to the relays, or sealed into the recipient's inbox for a message. What each relay answered is shown.
   - **Send back,** with a note saying what to change: nothing is signed; Claude reads your note and prepares a new draft, which the desk shows beside your note and the earlier text.
   - **Decline:** nothing is signed.
 - **Identities, and what they received.** For each identity, **Look for what it received** opens its inbox: messages, replies to its acts, acknowledgements that its acts were received, and payments. Each is checked with the core library and shown with who sent it. You sort each one into **To answer**, **Answered** or **Ignored**; new ones wait under **New**.
-- **Linked to Claude:** a tick per identity. Claude can prepare drafts only for identities you ticked; untick one, and its drafts are refused.
+- **Claude may prepare drafts for this identity: On / Off.** A question on each identity's card, answered on or off. Claude can prepare drafts only for identities set to On; set one to Off, and its drafts are refused. The answer is said on the card, where you clicked.
+- **Copy ID**, beside each fingerprint: copies the whole ID, without the spaces it is shown with, to paste where an identity is asked for (for example, to tell Claude whom to write to).
+- **New drafts appear by themselves:** the page looks in the drafts folder every few seconds while it is in view (the folder only; relays are asked only when a new draft is there to read). **Look for new drafts now** does the same at once.
 - **What you answered:** every approval, decline and note, newest first.
 
 Claude prepares acts of the Text and Envelope layers only: posts, publications, withdrawals and messages. A Law act (a signature on a release, an agreement) is never prepared by Claude, and the desk refuses one if a draft of it appears; those are signed in the collective client.
@@ -28,7 +30,9 @@ Claude prepares acts of the Text and Envelope layers only: posts, publications, 
 | `src/server.ts` | The program: `127.0.0.1` only, the page built at start, not minified, under a content security policy; requests signed by a paired browser (the collective client's `access.ts`, with the desk's own domain line `MOR desk, version 1`). |
 | `src/cli.ts` | `open` (start the program if needed, open the page with a one-time pairing link), `run`, `stop`. Port 8471. |
 | `src/page/` | The page. |
-| `scripts/make-app.sh` | Makes `~/Applications/MOR Desk.app` on macOS, which runs `open`. |
+| `scripts/make-app.sh` | Makes `~/Applications/MOR Identities.app` on macOS, which runs `open` (and removes the same app made under its earlier name, `MOR Desk.app`). |
+
+*Renamed 2 October 2026 (Nobody, allegedly):* the app, the page and its headings say "MOR Identities". The program's folder stays `~/mor-desk` and the code stays in `clients/desk`, so existing test identities and pairings carry over; the local format labels (`MOR desk, version 1` and the drafts folder's) are unchanged for the same reason.
 
 The drafts folder it shares with the connector is documented in `clients/connector/DRAFTS.md`. The collective client's `access.ts` gained a parameter for another program's domain line and code label; the genesis client's `TestIdentity` can now acknowledge acts (`acks`), and the WebAssembly bindings make and describe `acks`.
 
@@ -62,7 +66,7 @@ Where the texts are silent, the desk takes these readings. *To be confirmed by N
 ```
 cd ../genesis && npm install && npm run wasm && cd ../connector && npm install && cd ../desk
 npm install
-npm test            # real homes and a relay from target/debug/mor-relay (built if needed); Chromium at /opt/pw-browsers or MOR_CHROMIUM
+npm test            # real homes and a relay from target/debug/mor-relay (built if needed); Chromium at /opt/pw-browsers or MOR_CHROMIUM (on a Mac: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 ```
 
 - `test/desk.test.ts`, against three homes and a relay on local ports, the desk's program, and the connector run as its own process, driven over MCP as Claude's app drives it:
@@ -73,7 +77,7 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
   - a picture (location and camera data stripped), a post showing it, verified by the barebone reader, and its withdrawal; a withdrawal of someone else's publication refused before any draft;
   - **received interactions:** a message from one desk identity to another (prepared by Claude, sealed at approval), and from an outsider a reply, an acknowledgement and a payment claim; each read, verified and told apart; **sorted** into to answer, answered and ignored; looking again finds nothing new and keeps the sorting;
   - unlinking stops Claude preparing for an identity, and the desk refuses its drafts.
-- `test/browser.test.ts`: the step's "done when" in headless Chromium on a fresh profile, from the launcher's link, by clicks and typing alone, with the connector beside it: identities made and linked; a draft sent back with a note, reworked, approved and accepted by the relay; a message approved; what the machine received sorted into the three piles by clicks; no console error. `MOR_SCREENSHOTS=DIR` keeps a picture of each step.
+- `test/browser.test.ts`: the step's "done when" in headless Chromium on a fresh profile, from the launcher's link, by clicks and typing alone, with the connector beside it: the page named MOR Identities; "Settings saved" said beside the button; identities made, the Claude question answered On and Off by clicks and said on the card; Copy ID copying the whole ID without spaces; a draft from Claude appearing without a click or a reload, sent back with a note, reworked, approved and accepted by the relay; a message from "Machine, allegedly" to the author's unlinked identity, by its ID, approved and found in that identity's inbox; what each received sorted into the piles by clicks; no console error. `MOR_SCREENSHOTS=DIR` keeps a picture of each step.
 
 ## Using it (a human test, on the author's Mac)
 
@@ -81,18 +85,18 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
 
 1. Once, in Terminal, from the MOR folder:
    ```
-   git fetch origin && git checkout claude/step-11c-desk
+   git fetch origin && git checkout main && git pull
    cd clients/genesis && npm install && npm run wasm
    cd ../desk && npm install && sh scripts/make-app.sh
    cd ../connector && npm install && npm run add-to-claude
    ```
-   With the onion home, the last line: `npm run add-to-claude -- --via http://ONION.onion=http://127.0.0.1:8080`.
-2. From then on, double-click **MOR Desk** in `~/Applications`. The page opens, paired.
-3. Under **Settings**: homes `https://home1.dubsar.org` and `https://home2.dubsar.org` (and the onion address); relays `https://home1.dubsar.org` and `https://home2.dubsar.org`; the onion address's local port as `ONION.onion=http://127.0.0.1:8080`. Leave the drafts folder as it is (`~/mor-drafts`).
-4. Under **A new test identity**: yourself, then "Machine, allegedly" with **link it to Claude** ticked. (Each new identity is allowed on the onion home from its management page, as before.)
+   The last line installs the connector outside Documents, where Claude's app may start it (`clients/connector/README.md`).
+2. From then on, double-click **MOR Identities** in `~/Applications`. The page opens, paired.
+3. Under **Settings**: homes `https://home1.dubsar.org` and `https://home2.dubsar.org`; relays the same two. Leave the drafts folder as it is (`~/mor-drafts`).
+4. Under **A new test identity**: yourself, with "Claude may prepare drafts for it" left unticked; then "Machine, allegedly", with it ticked. Claude prepares for "Machine, allegedly" only (decided by Nobody, allegedly, 1 October 2026).
 5. Quit Claude completely and open it again. Ask: "Prepare a post for Machine, allegedly, saying …". Claude shows a digest.
-6. At the desk, **Look for new drafts**: the same digest. Write a note and **Send back**. Tell Claude "see what the desk said, and rework it". **Look for new drafts** again, read it beside your note, **Approve and sign**: the relays answer "accepted".
-7. Ask Claude for a message from yourself to "Machine, allegedly" (tick **linked** on yourself first), approve it; then under "Machine, allegedly", **Look for what it received**, and sort what came in.
+6. In MOR Identities the draft appears by itself, with the same digest. Write a note and **Send back**. Tell Claude "see what the desk said, and rework it". The new draft appears beside your note; **Approve and sign**: the relays answer "accepted".
+7. On your own identity's card, press **Copy ID**. Ask Claude for a message from "Machine, allegedly" to that ID (paste it). Approve it; then on your own card, **Look for what it received**, and sort what came in. Your identity stays Off: Claude writes to it by its ID, never for it.
 
 ## Not yet
 

@@ -33,7 +33,19 @@ label.check{display:inline-flex;gap:6px;align-items:center;margin-right:16px}
 .item:first-child{border-top:0}
 .sorts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .sorts button[aria-pressed=true]{outline:2px solid var(--ok)}
-h4.pile{margin:14px 0 4px;font-size:14px}`;
+h4.pile{margin:14px 0 4px;font-size:14px}
+.switch{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.switch button[aria-pressed=true]{background:CanvasText;color:Canvas;border-color:CanvasText}
+.switch button[aria-pressed=false]{background:transparent;color:var(--soft);border-color:var(--line);font-weight:400}
+.here:empty{display:none}
+.here .note{margin:8px 0 0}
+.copy{font-size:12px;padding:2px 8px;margin-left:8px;vertical-align:baseline}`;
+
+/** The app's name, as the person sees it (decided by Nobody, allegedly, 2 October 2026). */
+export const NAME = 'MOR Identities';
+
+/** Said beside the drafts, while the page watches for new ones. */
+export const WATCHING = 'New drafts from Claude appear here by themselves, every few seconds.';
 
 /** A fingerprint, shortened on screen, whole on hover. */
 export function fp(h: string): string {
@@ -43,7 +55,7 @@ export function fp(h: string): string {
 export const note = (kind: 'error' | 'done' | 'warn' | '', html: string) => `<div class="note ${kind}">${html}</div>`;
 
 export function top(): string {
-  return `<header class="top"><h1>MOR desk</h1><span class="small">this machine only · ${e(location.host)}</span></header>
+  return `<header class="top"><h1>${NAME}</h1><span class="small">this machine only · ${e(location.host)}</span></header>
 <div class="banner">TEST IDENTITIES ONLY. Every key is held in software in this program's folder. A prototype, never for a real identity.</div>`;
 }
 
@@ -59,7 +71,8 @@ export function pairing(): string {
 export function frame(): string {
   return `${top()}
 <div id="status"></div>
-<section><h2>Drafts waiting for you</h2><div class="row"><button class="quiet" data-action="drafts">Look for new drafts</button></div><div id="drafts"></div></section>
+<section><h2>Drafts waiting for you</h2><div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button>
+<span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div><div id="drafts"></div></section>
 <section><h2>Identities, and what they received</h2><div id="identities"></div></section>
 <section><h2>A new test identity</h2><div id="new"></div></section>
 <section><h2>What you answered</h2><div id="history"></div></section>
@@ -161,19 +174,28 @@ export function identities(s: State): string {
         return `<div data-pile="${e(k)}"><h4 class="pile">${e(w)} (${xs.length})</h4>${xs.map((x) => item(i.id, x)).join('') || '<p class="small">None.</p>'}</div>`;
       }).join('');
       return `<div class="card" data-identity="${e(i.id)}"><h3>${e(i.name)}</h3>
-<dl class="facts"><dt>Fingerprint</dt><dd><code>${e(i.id.match(/.{1,4}/g)!.join(' '))}</code></dd>
-<dt>Claude</dt><dd><label class="check"><input type="checkbox" data-action="link" data-identity="${e(i.id)}" ${i.linked ? 'checked' : ''}> linked: Claude may prepare drafts for it, which you approve here</label></dd></dl>
+<dl class="facts"><dt>Fingerprint</dt><dd><code>${e(i.id.match(/.{1,4}/g)!.join(' '))}</code><button class="quiet copy" data-action="copy" data-id="${e(i.id)}" title="Copies the whole ID, without spaces, to paste where an identity is asked for">Copy ID</button></dd>
+<dt>Claude</dt><dd>${linkSwitch(i.id, i.linked)}</dd></dl>
+<div class="here" data-here="${e(i.id)}" role="status" aria-live="polite"></div>
 <div class="row"><button class="quiet" data-action="refresh" data-identity="${e(i.id)}">Look for what it received</button></div>
 ${piles}</div>`;
     })
     .join('');
 }
 
+/** The question, and its answer as a clear on or off. */
+function linkSwitch(id: string, on: boolean): string {
+  const b = (value: boolean, words: string) =>
+    `<button type="button" class="quiet" data-action="link" data-identity="${e(id)}" data-on="${value}" aria-pressed="${on === value}">${words}</button>`;
+  return `<div class="switch" role="group" aria-label="Claude may prepare drafts for this identity"><span>Claude may prepare drafts for this identity:</span> ${b(true, 'On')}${b(false, 'Off')}</div>
+<p class="small">${on ? 'On: Claude can prepare posts, pictures, withdrawals and messages for it. Nothing is signed until you approve it here.' : 'Off: Claude cannot prepare anything for it, and drafts for it are refused.'}</p>`;
+}
+
 export function newIdentity(): string {
   return `<form id="new-identity" class="row"><input name="name" type="text" placeholder="A name, kept on this device" required>
-<label class="check"><input name="linked" type="checkbox"> link it to Claude</label>
+<label class="check"><input name="linked" type="checkbox"> Claude may prepare drafts for it</label>
 <button type="submit">Make it</button></form>
-<p class="small">A test identity is born at the homes named in Settings, with its acts and its inbox at the relays, and a key to receive messages. Linked to Claude, its name and fingerprint are written to the drafts folder, so Claude can name it.</p>`;
+<p class="small">A test identity is born at the homes named in Settings, with its acts and its inbox at the relays, and a key to receive messages. If Claude may prepare drafts for it, its name and fingerprint are written to the drafts folder, so Claude can name it. You can change this later on its card.</p>`;
 }
 
 export function settings(s: State): string {
@@ -183,7 +205,8 @@ export function settings(s: State): string {
 <label>Relays, one per line: where acts are published, and the inbox of new identities (empty: the homes)</label><textarea name="relays">${e(s.settings.relays.join('\n'))}</textarea>
 <label>Other ways to reach an address, one per line, as address=where (for example the onion home at its local port)</label><textarea name="via">${e(via)}</textarea>
 <label>The drafts folder, shared with the Claude connector</label><input name="drafts" type="text" class="wide" value="${e(s.settings.drafts)}">
-<div class="row"><button type="submit">Save settings</button></div></form>`;
+<div class="row"><button type="submit">Save settings</button></div>
+<div class="here" id="settings-status" role="status" aria-live="polite"></div></form>`;
 }
 
 export function history(s: State): string {

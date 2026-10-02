@@ -121,6 +121,8 @@ export async function serve(opts: { dir: string; port: number; drafts?: string }
         return {};
       case 'drafts':
         return desk.drafts();
+      case 'waiting':
+        return desk.waiting();
       case 'approve':
         return desk.approve(text(a.digest));
       case 'decline':

@@ -4,6 +4,8 @@ How a draft passes from the MOR connector (Claude's side) to the desk (the owner
 
 *Decided (Nobody, allegedly, 1 October 2026):* drafts reach the desk on the Mac only, by a local format documented in the repository: no inbox, no cMIP. "I see and control the ID Claude speaks through." So this is not part of the protocol. It is a handoff between two programs run by one person under one account, and it can change with them.
 
+This file only documents the format. Drafts are never written here: they are files in the drafts folder on the owner's Mac, `~/mor-drafts` by default.
+
 ## In plain words
 
 Claude never signs and never sends. When you ask it to post, publish a picture, withdraw one or send a message, the connector writes a **draft** into a folder: exactly what the act will say, and for which identity. The desk finds it there, reads it again for itself from the file's own bytes, and shows it to you with a short fingerprint, its **digest**, which Claude shows too. You approve it, decline it, or send it back with a note. The desk writes its **answer** into the same folder, and Claude reads it there: an approval with the act it made, or your note saying what to change. The desk also writes which identities you **linked** to Claude, so Claude can name them and prepares nothing for the others.
