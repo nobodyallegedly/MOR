@@ -219,6 +219,10 @@ Every component re-tested end to end; the door opened on devices it has never se
 
 V1 is frozen at inception, and nobody is appointed to decide what comes next. "That is a problem they can deal with if they become curious and excited… and they can do so without me. I can move on to other things." A successor is anyone's to build, and users move to it by choice, as the core already provides.
 
+### Ideas above the core, for builders
+
+- **Knot evidence: shrinking "undetermined" without anchoring** (Nobody, allegedly, 3 October 2026; not a core thing). Every identity has a chain; where one identity's act names another's (references, acknowledgements, objects, witness acts), the chains knot. An act that names another was provably made after it, since nobody can name a hash that does not exist yet; through knots the order carries across identities. In a dispute between two identities that the core leaves undetermined, their knots with others can settle before or after. *Limit (project lead):* a knot proves "not earlier than" for free, and "not later than" only once someone else named the act; an act nobody named can still be made late, naming only old acts. So it shrinks the undetermined to acts nobody else named in time. A natural cMIP for arbitrators and condition evaluation (judicial tasks), as evidence, never validity. It is Lamport's happened-before relation (1978) built from MOR's own hash links.
+
 ### The collective, and the author's exit *(decided by Nobody, allegedly, 28 September 2026)*
 
 After the first acts, once the first builders have joined, Nobody, allegedly sets up a collective of developers on MOR, gives it its rules in a founding agreement, and leaves. "I show that I can set up a collective, give it rules, and leave. They can change the rules if the agreement meets mine. I add people when they show proof of contribution to the project; once the collective meets a certain diversity and mass, I exit." It is the first live use of Law's collectives: a founding agreement with its key grammar, members joining by clone and rotation, and the founder leaving (Law rules 35 to 37, 45 to 46a).
