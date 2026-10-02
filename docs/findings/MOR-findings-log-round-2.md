@@ -1160,3 +1160,19 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Finance draft 6 (rule 10a; the commitment's payer field accepts a bare key); the payment cMIP; freeze suite scenario 2 step 6 (the anonymous refund is claimed by a signature with the committed key, and a routing node holding the preimage cannot claim it).
 
 *F113 decided by Nobody, allegedly, 2 October 2026.*
+
+## F114. Several vault entries for one unit: the smallest limit applies (found while building roadmap step 12, flaw L2, decided by Nobody, allegedly)
+
+**Pattern:** 4: a rule naming "that entry's limit" where several entries can apply.
+
+**Found while building:** the Lightning rail (roadmap step 12, flaw L2). A vault may list one unit on several rails (F79), each entry with its own limit; rule 14a sends a payment above "that entry's limit" to the vault, which names no entry when there are several.
+
+**Decided (Nobody, allegedly, 2 October 2026):** option 1, "the safest". Where a vault has several entries for a unit, the smallest of their limits applies to every payment in that unit: no larger single payment counts as paid to the flow. A limit of zero on any entry turns the flow off for that unit.
+
+**Set aside:** the largest limit; one limit per unit, a vault with two being malformed; a limit per rail, which lets the payer's or a thief's choice of rail pick the laxer limit.
+
+**Why:** fail closed, as rule 14a; no existing vault becomes invalid.
+
+**Changes, to be made:** Finance draft 6 (rule 14a); the code's refusal of payments between the smallest and largest limits as unsettled is replaced by the rule.
+
+*F114 decided by Nobody, allegedly, 2 October 2026.*
