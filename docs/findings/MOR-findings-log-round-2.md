@@ -1127,3 +1127,22 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes, to be made:** Finance MIP's next draft (client conformance under rule 14a; reasoning). No change to the core document or the freeze test suite beyond a line in scenario 5's flow-off step (the payer's wallet notifies the payee).
 
 *F111 decided by Nobody, allegedly, 2 October 2026.*
+
+## F112. A rail is a Module under the payment cMIP; parties are not specifications (found while reading Finance, decided by Nobody, allegedly)
+
+**Pattern:** 4, in part: one word meaning two things across the MIPs, and a task text that mixes specifications with the parties who act under them.
+
+**Found (Nobody, allegedly, reading Finance draft 5, 2 October 2026):** "something feels off" in Finance's Tasks. Walked through together:
+- *A text cannot sign.* "A cMIP … produces a settlement receipt", while Finance defines the receipt as signed by its receiver; the payer's side can produce only the payer's claim.
+- *Parties are not specifications.* A conversion service, which receives and forwards, is an identity: it signs a receipt as receiver and pays onward at the rate of its own offer. A custodial flow service is an identity the owner points the flow at, which may run a Module; it is not a Module.
+- *What a rail is.* Finance calls a rail a module throughout (receipt field 0, vault entries, "every rail module emits the same receipt"); its Tasks call payment "per rail" a cMIP; Law and the freeze suite adopt "a payment cMIP"; Production rule 8 has "several payment modules for different rails, each implementing a cMIP".
+
+**Decided (Nobody, allegedly, 2 October 2026):** "It cannot be a cMIP as only one cMIP per task; rails need to be modules." An agreement names at most one cMIP per task (Law rule 2, terms field 2), so a rail as a cMIP would confine every agreement to one rail. The payment task is filled by one payment cMIP; each rail is a Module under it, with its own verification rule for its proof.
+
+**To write (Finance's next draft):** the Payment task rewritten: the payment cMIP defines how rail Modules plug in, how the receiver's receipt and the payer's claim carry a rail's proof, and how the proof is checked; receipts are signed by receivers, claims by payers. Conversion and custodial flow services described as identities (parties), not cMIPs or Modules. "Rail module" kept, and made consistent across Finance, the core document (glossary and the cMIP table), Production rule 8 and the freeze suite.
+
+**Open, for step 12:** how an agreement, or the payment cMIP it adopts, says which rail Modules count for it, so that a collective's lanes (F106, Q16) and two clients agree on a receipt naming a Module.
+
+**Roadmap:** step 12 builds the Lightning rail Module, and the payment cMIP it plugs into if none exists yet.
+
+*F112 decided by Nobody, allegedly, 2 October 2026.*

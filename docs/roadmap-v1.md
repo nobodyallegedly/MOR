@@ -138,7 +138,7 @@ A client of its own, kept separate from the collective client for now ("can alwa
 Each of these is small on purpose: enough for every layer to meet real use before it freezes.
 
 **12. Lightning integration module** *(Module, then code; Finance)*
-How a Lightning payment becomes a Finance receipt and a payout. Nobody, allegedly: "probably the easiest module".
+How a Lightning payment becomes a Finance receipt and a payout. Nobody, allegedly: "probably the easiest module". *F112 (Nobody, allegedly, 2 October 2026): a rail is a Module under the one payment cMIP an agreement adopts; this step builds the Lightning rail Module, and the payment cMIP it plugs into if none exists yet, and settles how an agreement says which rail Modules count.*
 *Done when:* the specification is approved, and a test identity pays another over Lightning and both hold a verified receipt.
 
 **12a. On-chain module** *(Module, then code; Finance; inserted 28 September 2026, placement decided by Nobody, allegedly)*
