@@ -1110,3 +1110,20 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Options (2 October 2026):** (1) by layer: acknowledgements count only on acts in the Identity, Finance and Law layers, cMIP acts placed there by F106 included; (2) by type: only act types the Identity, Finance and Law MIPs themselves define may carry them, never a cMIP's or Module's act. The project lead leans to (2), the simplest check; its cost is that a cMIP needing to acknowledge signs a core act alongside its own.
 
 **Deferred (Nobody, allegedly, 2 October 2026):** "Reserve it for after we work on Lightning rail." The Lightning integration (roadmap step 12) will show whether a rail cMIP needs to acknowledge.
+
+## F111. An owner learns of payments the vault leaves undeliverable (found while confirming Finance rule 14a, decided by Nobody, allegedly)
+
+**Pattern:** 4: a payment that fails leaves no act behind, so nothing can make its absence a validity rule.
+
+**Found:** confirming rule 14a (fail closed) on 2 October 2026. Nobody, allegedly: missing payments because a currency is not set up is fine as long as the debt can be honored later, "however, there needs to be a way of being informed of such payments". As drafted, a payer's wallet refuses a payment in a unit the vault does not cover, and the owner may never hear of it.
+
+**Decided (Nobody, allegedly, 2 October 2026):** client conformance in Finance's next draft, no new act type and no new validity rule:
+1. **Before signing.** The owner's client SHOULD warn before the owner publishes a standing offer, or signs terms, priced in a unit the owner's declared vault does not cover: nobody could pay it.
+2. **Debts.** The owner's client SHOULD show an obligation owed to the owner in a unit the vault does not cover as "owed in a unit your vault cannot receive", with the way to add it (a rotation).
+3. **Spontaneous payers.** A payer's wallet that refuses a payment under rule 14a SHOULD send the payee an ordinary message to its inbox route (F70), saying what it tried to pay, in which unit, and why it could not.
+
+**Why client conformance:** whether a notice arrived can never be checked, so it cannot be a validity rule; the inbox already carries it.
+
+**Core changes, to be made:** Finance MIP's next draft (client conformance under rule 14a; reasoning). No change to the core document or the freeze test suite beyond a line in scenario 5's flow-off step (the payer's wallet notifies the payee).
+
+*F111 decided by Nobody, allegedly, 2 October 2026.*
