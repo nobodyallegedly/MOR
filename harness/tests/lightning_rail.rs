@@ -15,7 +15,7 @@
 use mor_core::act::{Act, Inside};
 use mor_core::chain::Status;
 use mor_core::envelope::{self, DecKey, EncryptionKey, Recipient, Routes, SealRandom, Sealed};
-use mor_core::finance::{
+use mor_core::finance::{Payer, 
     self, choose, Amount, Choice, Claim, PayeePointer, Payload, Rail, Receipt, VaultEntry,
 };
 use mor_core::hash::{sha256, Hash};
@@ -394,7 +394,7 @@ impl Payment<'_> {
             payee: view.id,
             amount,
             fulfils,
-            payer: Some(self.payer.p.id),
+            payer: Some(Payer::Identity(self.payer.p.id)),
             paid_to,
             salt: random::<16>(),
         };
@@ -446,6 +446,7 @@ impl Payment<'_> {
             disagrees: None,
             referral: None,
             refund: None,
+            anonymous: None,
         });
         let claim_act = self.payer.finance_act(&claim, Some(view.id));
         deliver(view, &claim_act, &key_of(&claim_act, &self.payer.p)).await;
@@ -459,7 +460,7 @@ impl Payment<'_> {
         let receipt = Payload::Receipt(Receipt {
             rail: mor_lightning::spec(),
             proof: proof(settled),
-            payer: Some(self.payer.p.id),
+            payer: Some(Payer::Identity(self.payer.p.id)),
             payee: view.id,
             amount,
             fulfils,

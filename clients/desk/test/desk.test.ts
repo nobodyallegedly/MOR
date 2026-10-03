@@ -9,7 +9,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { SPECS, cborEncode, signaturePayload, unhex } from '../../genesis/src/core.ts';
+import { IDENTITY_TYPES, SPECS, WITNESS_EXPLANATION, cborEncode, signaturePayload, unhex } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { textPayload } from '../../barebone/src/post.ts';
@@ -249,7 +249,9 @@ test("an identity's received interactions: messages, replies, acknowledgements a
   await other.publishGenesis();
   for (const a of other.chainActs()) await relayAt(w.relay.base).putAct(a);
   await other.publish(POST_SPECS.text, 0, textPayload('A fine first post.'), { public: true, relays: inbox, to: [machine], refs: [post] });
-  await other.publish(POST_SPECS.text, 0, textPayload('Received.'), { public: true, relays: inbox, to: [machine], acks: [post] });
+  // F110: a text act may not acknowledge; the genesis client refuses to sign one. Reliance is a witness act.
+  await assert.rejects(other.publish(POST_SPECS.text, 0, textPayload('Received.'), { public: true, relays: inbox, to: [machine], acks: [post] }), /witness act/);
+  await other.publish(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(new Map()), { public: true, relays: inbox, to: [machine], acks: [post] });
   await other.publish(DESK_SPECS.finance, 3, cborEncode(new Map<number, unknown>([[2, unhex(machine)]])), { public: true, relays: inbox, to: [machine] });
 
   const r = await w.client.ask<{ added: number; problems: string[] }>('refresh', { identity: machine });
@@ -264,6 +266,8 @@ test("an identity's received interactions: messages, replies, acknowledgements a
   assert.equal(kind('reply').text, 'A fine first post.');
   assert.deepEqual(kind('reply').answers, [post]);
   assert.deepEqual(kind('acknowledgement').acknowledges, [post]);
+  assert.equal(kind('acknowledgement').witness, true);
+  assert.equal(kind('acknowledgement').standing, 'valid');
   assert.equal(kind('payment').from, other.id);
   assert.match(kind('payment').problem!, /does not read Finance yet/);
   assert.ok(got.every((x) => x.sorted === 'new'));
@@ -284,6 +288,11 @@ test("an identity's received interactions: messages, replies, acknowledgements a
     Object.fromEntries(got.map((x) => [x.kind, x.sorted])),
     { message: 'to answer', reply: 'answered', acknowledgement: 'ignored', payment: 'to answer' },
   );
+  // Machine relies on the reply it received: a witness act, only once the explanation was shown (F110).
+  await assert.rejects(w.client.ask('witness', { identity: machine, act: kind('reply').act, shown: 'Like' }), /shown what it does/);
+  const wit = await w.client.ask<{ id: string }>('witness', { identity: machine, act: kind('reply').act, shown: WITNESS_EXPLANATION });
+  assert.match(wit.id, /^[0-9a-f]{64}$/);
+
   // The author's own identity received nothing.
   assert.equal((await w.client.ask<{ added: number }>('refresh', { identity: me })).added, 0);
 });

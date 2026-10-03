@@ -3,7 +3,7 @@
 // genesis client's identity and transport, and every judgement through the
 // core library.
 
-import { SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, openWithKey, unhex } from '../../genesis/src/core.ts';
+import { MIPS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, openWithKey, unhex } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -89,7 +89,7 @@ export async function readDocument(id: string, hints: string[], via: Via = {}): 
   const f = p.get(1);
   const format = f instanceof Uint8Array ? hex(f) : null;
 
-  const v = new Verifier(SPECS.identity);
+  const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
   await lookUp(d.signer, hints, via, v);
   v.add(act);
   return {

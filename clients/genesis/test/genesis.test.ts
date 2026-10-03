@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { ml_kem768_x25519 as noble } from '@noble/post-quantum/hybrid.js';
 import { start, type Running } from './world.ts';
 import { TestIdentity, lookUp, receive, TEST_LABEL } from '../src/identity.ts';
-import { SPECS, cborEncode, openWithKey, xwingDecapsulate, xwingEncapsulate } from '../src/core.ts';
+import { SPECS, WITNESS_EXPLANATION, cborEncode, openWithKey, xwingDecapsulate, xwingEncapsulate } from '../src/core.ts';
 import { kexLog } from '../src/kex.ts';
 import { relayAt } from '../src/transport.ts';
 
@@ -242,6 +242,26 @@ test('a key delivered to a bare key is found by its pickup tag and opens only wi
   assert.ok(scan.items.some((i) => Buffer.compare(Buffer.from(i.item), Buffer.from(page.items[0].item)) === 0));
   const other = TestIdentity.newBareKey();
   assert.equal((await receive(page.items[0].item, null, [other.secret], [])).opened, false);
+});
+
+test('only Identity, Finance and Law acts acknowledge; reliance is a witness act, explained first (F110)', async () => {
+  const text = (t: string) => cborEncode(new Map([[0, t]]));
+  const post = await bob.publish(SPECS.text, 0, text('I will repay you on Friday.'), { public: true, relays: [inbox.base] });
+  // A reply that acknowledges: refused, never signed.
+  await assert.rejects(
+    alice.publish(SPECS.text, 0, text('+1'), { public: true, relays: [inbox.base], acks: [post.id] }),
+    /witness act/,
+  );
+  // A witness act the owner was not shown: refused.
+  await assert.rejects(alice.witness([post.id], { shown: 'Like' }), /shown/);
+  // Explained, then signed: public, held by Alice's homes, valid for a reader.
+  const w = await alice.witness([post.id], { shown: WITNESS_EXPLANATION, relays: [inbox.base] });
+  for (const s of w.sent) assert.ok(s.result, `${s.home}: ${s.error}`);
+  const l = await lookUp(alice.id, hints());
+  l.verifier.add(w.act);
+  assert.equal(l.verifier.status(w.id), 'valid');
+  // Signing for someone else to submit is held to the same rule.
+  assert.throws(() => alice.sign(SPECS.envelope, 0, text('a publication'), { public: true, acks: [post.id] }), /witness act/);
 });
 
 test('every key exchange in these tests agrees with a second implementation (noble)', () => {

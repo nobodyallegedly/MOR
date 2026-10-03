@@ -1,6 +1,6 @@
 # mor-lightning
 
-The Lightning rail Module (`../module-lightning-rail-draft-1.md`), under the payment cMIP (`../../cmips/cmip-payment-draft-1.md`, crate `mor-payment`).
+The Lightning rail Module (`../module-lightning-rail-draft-2.md`), under the payment cMIP (`../../cmips/cmip-payment-draft-2.md`, crate `mor-payment`).
 
 - `src/bolt11.rs`: decodes a BOLT 11 invoice and recovers the node key that signed it.
 - `src/lib.rs`: the rail address, the rail proof and the verification rule.

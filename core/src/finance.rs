@@ -12,9 +12,11 @@
 //! from the vault the payee declared, where a payment of a given amount may
 //! be paid (rule 14a), or why it cannot be paid at all (rule 16).
 
-use crate::cbor::Value;
-use crate::hash::Hash;
-use crate::identity::Declaration;
+use crate::act::Signature;
+use crate::cbor::{self, Value};
+use crate::hash::{tagged_hash, Hash};
+use crate::identity::{self, Declaration, SigningKey};
+use crate::sig::{self, Verdict};
 use std::fmt;
 
 /// The types this MIP defines (Finance, "Act formats").
@@ -93,6 +95,57 @@ pub struct Forward {
     pub agreement: Hash,
 }
 
+/// `payer = hash / signing-key`: an identity, or an anonymous payer's bare
+/// signing key, used for one payment only (F113).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Payer {
+    Identity(Hash),
+    Key(SigningKey),
+}
+
+impl Payer {
+    pub fn decode(v: &Value) -> R<Self> {
+        match v {
+            Value::Bytes(_) => Ok(Payer::Identity(hash(v, "payer")?)),
+            Value::Array(_) => Ok(Payer::Key(
+                identity::signing_key(v).map_err(|_| FinError::Shape("payer: signing-key"))?,
+            )),
+            _ => Err(FinError::Shape("payer")),
+        }
+    }
+    pub fn to_value(&self) -> Value {
+        match self {
+            Payer::Identity(h) => b(h),
+            Payer::Key(k) => k.to_value(),
+        }
+    }
+}
+
+/// The tag an anonymous payer's key signs a claim under (F113).
+pub const ANONYMOUS_CLAIM_TAG: &str = "MOR/finance/anonymous-claim";
+
+/// `anonymous = [ key: signing-key, sig: bstr ]`: the key an anonymous
+/// payment committed to as its payer, and its signature binding it to one
+/// claim (claim key 8, F113).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Anonymous {
+    pub key: SigningKey,
+    pub sig: Vec<u8>,
+}
+
+impl Anonymous {
+    fn decode(v: &Value) -> R<Self> {
+        let a = tuple(v, 2, "anonymous")?;
+        Ok(Anonymous {
+            key: identity::signing_key(&a[0]).map_err(|_| FinError::Shape("anonymous key"))?,
+            sig: bytes(&a[1], "anonymous sig")?,
+        })
+    }
+    fn to_value(&self) -> Value {
+        Value::Array(vec![self.key.to_value(), Value::Bytes(self.sig.clone())])
+    }
+}
+
 /// `referral = [ identity: hash, evidence: hash ]`
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Referral {
@@ -133,8 +186,9 @@ pub struct Receipt {
     pub rail: Hash,
     /// The rail's proof, as the payment cMIP and that Module define it.
     pub proof: Vec<u8>,
-    /// Absent if the payer stays anonymous.
-    pub payer: Option<Hash>,
+    /// Absent if the payer stays anonymous and committed no key; an
+    /// anonymous payer's bare key where it committed one (F113).
+    pub payer: Option<Payer>,
     pub payee: Hash,
     pub amount: Amount,
     /// The obligation, agreement, offer or payee-pointer act this hop follows.
@@ -157,6 +211,43 @@ pub struct Claim {
     pub referral: Option<Referral>,
     /// Where a refund owed on this payment is to be paid (F80).
     pub refund: Option<Rail>,
+    /// An anonymous payer's key and signature (F113): the claim's payer is
+    /// then this key, not the act's signer.
+    pub anonymous: Option<Anonymous>,
+}
+
+impl Claim {
+    /// What an anonymous payer's key signs: `tagged_hash(ANONYMOUS_CLAIM_TAG,
+    /// [ field 0, field 1, field 2, field 3, field 4, field 7 or null ])`.
+    pub fn anonymous_message(&self) -> Hash {
+        let v = Value::Array(vec![
+            b(&self.rail),
+            Value::Bytes(self.proof.clone()),
+            b(&self.payee),
+            self.amount.to_value(),
+            b(&self.fulfils),
+            self.refund.as_ref().map(Rail::to_value).unwrap_or(Value::Null),
+        ]);
+        tagged_hash(ANONYMOUS_CLAIM_TAG, &cbor::encode(&v))
+    }
+
+    /// The signature an anonymous payer's key makes over this claim.
+    pub fn anonymous_signature(&self) -> Option<Signature> {
+        self.anonymous.as_ref().map(|a| Signature {
+            scheme: a.key.scheme,
+            key: a.key.key.clone(),
+            sig: a.sig.clone(),
+        })
+    }
+
+    /// Who paid, as the payment committed to it: the key in field 8 where
+    /// present, otherwise the claim's signer.
+    pub fn payer(&self, signer: &Hash) -> Payer {
+        match &self.anonymous {
+            Some(a) => Payer::Key(a.key.clone()),
+            None => Payer::Identity(*signer),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -373,7 +464,7 @@ impl Payload {
                 Payload::Receipt(Receipt {
                     rail: hash(req(&f, 0, "receipt 0: rail")?, "receipt 0")?,
                     proof: bytes(req(&f, 1, "receipt 1: proof")?, "receipt 1")?,
-                    payer: get(&f, 2).map(|v| hash(v, "receipt 2")).transpose()?,
+                    payer: get(&f, 2).map(Payer::decode).transpose()?,
                     payee: hash(req(&f, 3, "receipt 3: payee")?, "receipt 3")?,
                     amount: Amount::decode(req(&f, 4, "receipt 4: amount")?)?,
                     fulfils: hash(req(&f, 5, "receipt 5: fulfils")?, "receipt 5")?,
@@ -383,7 +474,7 @@ impl Payload {
                 })
             }
             CLAIM => {
-                let f = fields(p, 8, "claim: unknown key")?;
+                let f = fields(p, 9, "claim: unknown key")?;
                 Payload::Claim(Claim {
                     rail: hash(req(&f, 0, "claim 0: rail")?, "claim 0")?,
                     proof: bytes(req(&f, 1, "claim 1: proof")?, "claim 1")?,
@@ -393,6 +484,7 @@ impl Payload {
                     disagrees: get(&f, 5).map(|v| hash(v, "claim 5")).transpose()?,
                     referral: get(&f, 6).map(Referral::decode).transpose()?,
                     refund: get(&f, 7).map(Rail::decode).transpose()?,
+                    anonymous: get(&f, 8).map(Anonymous::decode).transpose()?,
                 })
             }
             t => return Err(FinError::UnknownType(t)),
@@ -437,7 +529,7 @@ impl Payload {
                 put(&mut m, 0, b(&r.rail));
                 put(&mut m, 1, Value::Bytes(r.proof.clone()));
                 if let Some(x) = &r.payer {
-                    put(&mut m, 2, b(x));
+                    put(&mut m, 2, x.to_value());
                 }
                 put(&mut m, 3, b(&r.payee));
                 put(&mut m, 4, r.amount.to_value());
@@ -467,6 +559,9 @@ impl Payload {
                 if let Some(x) = &c.refund {
                     put(&mut m, 7, x.to_value());
                 }
+                if let Some(x) = &c.anonymous {
+                    put(&mut m, 8, x.to_value());
+                }
             }
         }
         m
@@ -485,8 +580,20 @@ fn put(m: &mut Vec<(Value, Value)>, k: u64, v: Value) {
 
 /// Who must sign a Finance act (Finance: a pointer by its payee, F46; an
 /// obligation by its debtor, F66; a receipt by the payee of the hop; a
-/// claim by its payer, who is the claim's signer by definition).
+/// claim by its payer, who is the claim's signer by definition, or, for an
+/// anonymous payer, the key in its field 8, whose signature must verify:
+/// Finance rule 1, F113).
 pub fn check_signer(payload: &Payload, signer: &Hash) -> R<()> {
+    if let Payload::Claim(c) = payload {
+        if let Some(s) = c.anonymous_signature() {
+            if sig::verify(&s, &c.anonymous_message()) != Verdict::Valid {
+                return Err(FinError::Check(
+                    "an anonymous claim's key 8 must verify under the key it names (Finance rule 1, F113)",
+                ));
+            }
+        }
+        return Ok(());
+    }
     let ok = match payload {
         Payload::PayeePointer(p) => &p.payee == signer,
         Payload::Obligation(o) => &o.debtor == signer,
@@ -570,10 +677,6 @@ pub enum Undeliverable {
     NoSharedRail,
     /// The payee has no payee pointer (rule 16).
     NoPointer,
-    /// Several entries for the unit carry different limits, and the amount
-    /// lies between them: rule 14a does not say which limit applies. Refused
-    /// rather than guessed (flaw L2 of roadmap step 12).
-    Unsettled(&'static str),
 }
 
 impl fmt::Display for Undeliverable {
@@ -586,12 +689,12 @@ impl fmt::Display for Undeliverable {
                 "the payee offers no rail this wallet can pay on for this payment (Finance rule 16)"
             }
             Undeliverable::NoPointer => "the payee has no payee pointer (Finance rule 16)",
-            Undeliverable::Unsettled(w) => w,
         })
     }
 }
 
-/// Rule 14a. `vault` is the payee's vault in force: `None` if it declared
+/// Rule 14a, with F114: where several entries cover the unit, the smallest
+/// of their limits applies. `vault` is the payee's vault in force: `None` if it declared
 /// none. The answer does not yet look at rails; see [`choose`].
 pub fn destination(vault: Option<&[VaultEntry]>, amount: &Amount) -> Destination {
     let Some(vault) = vault else {
@@ -603,16 +706,12 @@ pub fn destination(vault: Option<&[VaultEntry]>, amount: &Amount) -> Destination
     if of_unit.is_empty() {
         return Destination::Undeliverable(Undeliverable::UnitNotCovered);
     }
-    let lo = of_unit.iter().map(|&i| vault[i].limit).min().unwrap();
-    let hi = of_unit.iter().map(|&i| vault[i].limit).max().unwrap();
-    if amount.value <= lo && lo > 0 {
+    // Several entries for one unit: the smallest limit is the unit's (F114).
+    let limit = of_unit.iter().map(|&i| vault[i].limit).min().unwrap();
+    if limit > 0 && amount.value <= limit {
         Destination::Flow
-    } else if amount.value > hi || hi == 0 {
-        Destination::Vault(of_unit)
     } else {
-        Destination::Undeliverable(Undeliverable::Unsettled(
-            "the vault's entries for this unit carry different limits and the amount lies between them; Finance rule 14a does not say which limit applies (flaw L2, refused rather than guessed)",
-        ))
+        Destination::Vault(of_unit)
     }
 }
 

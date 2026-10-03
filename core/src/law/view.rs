@@ -143,6 +143,10 @@ pub enum Consent {
     /// Its specification is adopted nowhere in a collective with areas: it
     /// counts for nothing (Q16).
     Unadopted { agreement: Hash },
+    /// A receipt or claim naming a rail Module that no payee pointer of the
+    /// collective that counts, and not its vault in force, names: it counts
+    /// for nothing (Finance rule 12a, F115).
+    RailNotAccepted { agreement: Hash, rail: Hash },
     /// It is invalid as an act of the collective (a grant beyond its area,
     /// a reinstatement that does not repeat its grant...).
     Invalid { agreement: Hash, reason: String },
@@ -1927,6 +1931,50 @@ impl<'a> LawView<'a> {
         self.before(&col, xh, l)
     }
 
+    /// For a receipt or claim of the collective (Finance types 2 and 3) as
+    /// payee: the rail Module it names, if the collective never accepted it
+    /// (Finance rule 12a, F115). Accepted: a rail of one of the collective's
+    /// payee pointers that counts (its Finance lane's holders signed it), or
+    /// an entry of the vault its identity chain declares at the act's
+    /// binding. *Which exact rail or entry a payment went to is in the rail's
+    /// proof, which the payment cMIP reads (`paid-to`); Law checks only that
+    /// the collective ever accepted the rail Module.*
+    fn rail_not_accepted(&self, col: &Col, c: &Hash, x: &Held, b: usize) -> R<Option<Hash>> {
+        use crate::finance::{self as fin, Payload as Fin};
+        let finance = self.mips.finance;
+        if x.inside.spec != finance {
+            return Ok(None);
+        }
+        let rail = match Fin::decode(x.inside.type_, &x.inside.payload) {
+            Ok(Fin::Receipt(r)) if &r.payee == c => r.rail,
+            Ok(Fin::Claim(cl)) if &cl.payee == c => cl.rail,
+            _ => return Ok(None),
+        };
+        if let Some(state) = col.res.states.get(b) {
+            if let Ok(Some(Some(entries))) = fin::vault_in(&finance, &state.declarations) {
+                if entries.iter().any(|e| e.rail_module == rail) {
+                    return Ok(None);
+                }
+            }
+        }
+        for h in self.v.signed_by(c) {
+            if h.inside.spec != finance || h.inside.type_ != fin::types::PAYEE_POINTER {
+                continue;
+            }
+            let Ok(Fin::PayeePointer(p)) = Fin::decode(h.inside.type_, &h.inside.payload) else {
+                continue;
+            };
+            if &p.payee == c
+                && p.rails.iter().any(|r| r.module == rail)
+                && self.v.status(&h.id) == Status::Valid
+                && self.consent(&h.id)?.counts()
+            {
+                return Ok(None);
+            }
+        }
+        Ok(Some(rail))
+    }
+
     /// Law's answer for an act of a collective (rules 36a, 37b, 38a, 44d;
     /// F100, F106, F109). The act's own standing is Identity's, from
     /// [`Verifier::status`]; this asks only what Law adds.
@@ -1954,6 +2002,9 @@ impl<'a> LawView<'a> {
             return Err(LawError::Unsupported(
                 "revocations and imports (types 10, 11): their formats are open",
             ));
+        }
+        if let Some(rail) = self.rail_not_accepted(&col, &c, x, b)? {
+            return Ok(Consent::RailNotAccepted { agreement: ag, rail });
         }
         let t = self.terms(&ag)?;
         let mut reaching: Vec<&Area> = vec![];

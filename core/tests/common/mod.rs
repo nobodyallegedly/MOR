@@ -22,6 +22,15 @@ pub fn identity_spec() -> Hash {
     sha256(b"IDENTITY, test value until the freeze")
 }
 
+/// The Finance and Law MIPs' spec hashes in these tests: the act types
+/// that may carry acknowledgements beside Identity's (F110).
+pub fn finance_spec() -> Hash {
+    sha256(b"FINANCE, test value until the freeze")
+}
+pub fn law_spec() -> Hash {
+    sha256(b"LAW, test value until the freeze")
+}
+
 /// The second implementation's verdict on an SLH-DSA signature.
 pub fn second_opinion(s: &Signature, msg: &[u8]) -> bool {
     fn check<P: slh_dsa::ParameterSet>(key: &[u8], sig: &[u8], msg: &[u8]) -> bool {
@@ -139,7 +148,7 @@ impl Default for World {
 impl World {
     pub fn new() -> Self {
         World {
-            v: Verifier::new(identity_spec()),
+            v: Verifier::with_mips(identity_spec(), finance_spec(), law_spec()),
             counter: 0,
         }
     }
@@ -393,16 +402,24 @@ impl World {
         self.add(&a)
     }
 
-    /// An act acknowledging `acked`, held.
+    /// A witness act acknowledging `acked` (Identity type 15, F110), held:
+    /// the one way to acknowledge a post or a message.
     pub fn ack(&mut self, p: &mut Person, acked: Hash) -> Hash {
         let a = self.everyday_act(
             p,
-            sha256(b"a text specification"),
-            0,
+            identity_spec(),
+            mor_core::identity::types::WITNESS,
             vec![],
             None,
             Some(vec![acked]),
         );
+        self.add(&a)
+    }
+
+    /// A post-like act of another specification carrying `acks`, as a
+    /// reaction module might make it: invalid since F110. Held.
+    pub fn like(&mut self, p: &mut Person, spec: Hash, acked: Hash) -> Hash {
+        let a = self.everyday_act(p, spec, 0, vec![], None, Some(vec![acked]));
         self.add(&a)
     }
 

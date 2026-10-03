@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
+import { IDENTITY_TYPES, SPECS, cborEncode } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { readPost, textPayload } from '../../barebone/src/post.ts';
 import { POST_SPECS } from '../../barebone/src/specs.ts';
@@ -160,7 +161,8 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   await other.publishGenesis();
   for (const a of other.chainActs()) await relayAt(relay.base).putAct(a);
   await other.publish(POST_SPECS.text, 0, textPayload('Nice post.'), { public: true, relays: [relay.base], to: [machine], refs: [post] });
-  await other.publish(POST_SPECS.text, 0, textPayload('Got it.'), { public: true, relays: [relay.base], to: [machine], acks: [post] });
+  // Relying on the post is a witness act (F110): a text act may not acknowledge.
+  await other.publish(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(new Map()), { public: true, relays: [relay.base], to: [machine], acks: [post] });
 
   // What the machine received, then sorted by clicks.
   const id = page.locator(`.card[data-identity="${machine}"]`);
@@ -169,13 +171,20 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   const pile = (p: string) => id.locator(`[data-pile="${p}"] .item`);
   assert.equal(await pile('new').count(), 2);
   await shot(page, '3-received');
+  // Relying on the reply: the click explains first and signs nothing; Cancel leaves nothing signed.
+  await pile('new').filter({ hasText: 'A reply' }).locator('[data-action="witness"]').click();
+  await id.locator('.here', { hasText: 'I received this act and rely on it' }).waitFor();
+  await id.locator('.here [data-action="witness-cancel"]').click();
+  await pile('new').filter({ hasText: 'A reply' }).locator('[data-action="witness"]').click();
+  await id.locator('.here [data-action="witness-sign"]').click();
+  await id.locator('.here .note.done', { hasText: 'Witness act' }).waitFor({ timeout: 60_000 });
   await pile('new').filter({ hasText: 'A reply' }).locator('[data-sorted="answered"]').click();
   await id.locator('[data-pile="answered"] .item').first().waitFor();
   await pile('new').filter({ hasText: 'An acknowledgement' }).locator('[data-sorted="ignored"]').click();
   await id.locator('[data-pile="ignored"] .item').first().waitFor();
   assert.equal(await pile('new').count(), 0);
   assert.match((await pile('answered').textContent())!, /Nice post\./);
-  assert.match((await pile('ignored').textContent())!, /Got it\./);
+  assert.match((await pile('ignored').textContent())!, /A witness act: its sender relies on/);
   await shot(page, '4-sorted');
 
   // Nothing was ever typed in a terminal; the page made no error.

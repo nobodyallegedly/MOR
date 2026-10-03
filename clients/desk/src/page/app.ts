@@ -6,6 +6,7 @@
 import { Client, Refused, type Done, type DraftView, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
+import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 
 const app = document.getElementById('app')!;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
@@ -181,6 +182,18 @@ app.addEventListener('click', async (ev) => {
       } catch (err) {
         fail(err, hereFor(d.identity));
       }
+      break;
+    }
+    case 'witness':
+      // Nothing is signed by this click: it shows what a witness act does.
+      say('', v.witnessAsk(d.identity!, d.act!), hereFor(d.identity));
+      break;
+    case 'witness-cancel':
+      say('', '', hereFor(d.identity));
+      break;
+    case 'witness-sign': {
+      const r = await busy('Signing the witness act…', () => c.ask<{ id: string }>('witness', { identity: d.identity, act: d.act, shown: WITNESS_EXPLANATION }), hereFor(d.identity));
+      if (r) say('done', `Witness act ${v.e(r.id.slice(0, 16))}… signed and sent.`, hereFor(d.identity));
       break;
     }
     case 'sort':

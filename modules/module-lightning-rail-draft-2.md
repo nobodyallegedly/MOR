@@ -1,6 +1,6 @@
 # Module: Lightning rail
 
-*Draft 1, 2 October 2026 (roadmap step 12). **Not yet approved.** A rail Module under the payment cMIP draft 1 (`cmips/cmip-payment-draft-1.md`), which its field 5 names. Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against the Finance MIP draft 6, the Production MIP draft 5, the payment cMIP draft 1, BOLT 11 (Lightning invoices) and findings F1 to F112. Not core: frozen at publication, competing with any other Lightning rail Module.*
+*Draft 2, 3 October 2026 (the core pass, core v21). **EXPERIMENTAL. Not approved, not a product, not for real money.** An instrument for throwing real use at the Finance MIP (build brief, 2 October 2026; F117: "I'm fine with presenting experimental stuff with plenty of disclaimers"). Its costs are stated below, under "Costs, stated", and a client using it MUST show them before the owner declares a Lightning rail. Draft 1 (2 October 2026, roadmap step 12) with questions a and b confirmed as built (F117), the anonymous payer's key (F113) and the costs written in. A rail Module under the payment cMIP draft 2 (`cmips/cmip-payment-draft-2.md`), which its field 5 names. Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against the Finance MIP draft 6, the Production MIP draft 6, the payment cMIP draft 2, BOLT 11 (Lightning invoices) and findings F1 to F117. Not core: frozen at publication, competing with any other Lightning rail Module.*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 
@@ -63,10 +63,20 @@ Given the commitment hash, the amount, the address or source the payee signed, a
 
 - **The payee alone** can sign a receipt (it is its own admission), but not the payer's claim. *Its receipt naming a payer proves only what the payee says; the claim is the payer's.*
 - **The payer alone** cannot produce a valid proof: the invoice must be signed by the node the payee's pointer or vault names, and the preimage is learned only by paying it.
-- **A node on the route** learns the preimage as the payment settles, and could present the proof; it cannot claim to be the payer, because the commitment names the payer, and a claim's signer must be that payer. *For an anonymous payment the commitment names nobody, and the proof alone does not show who paid: flaw L1 of the step 12 report, unsettled.*
+- **A node on the route** learns the preimage as the payment settles, and could present the proof; it cannot claim to be the payer, because the commitment names the payer, and a claim's signer must be that payer. *For an anonymous payment the commitment names the payer's bare key, and only a signature with that key claims it or its refund (Finance rule 10a, F113); a payment that committed no key can be refunded to nobody.*
 - **A thief with the payee's everyday key** can point the flow at its own node (the theft window, Finance rule 15), but not the vault, which the safety key alone changes.
 
 *The binding of node to identity is only as strong as the payee pointer that names it: an invoice proves payment to whoever controls the node, and the payee's signed pointer says that is the payee.*
+
+## Costs, stated (F117)
+
+*A client MUST show these before an owner declares a Lightning rail in a pointer or vault.*
+
+- **A public node exposes its owner.** Naming the node in a payee pointer links the MOR identity to it publicly: its channels and the on-chain coins behind them are visible, its network address may be, and identities that share a node are linked by it. It is also a visible target.
+- **A Lightning vault guards against one thief, not another.** It stops a thief holding the everyday MOR key, who cannot change the vault's node; it does not stop someone who takes the node, which must stay online to issue invoices. The vault's node should be a different node from the flow's.
+- **Mitigations are the payee's choice:** an unannounced node, one node per identity, a hosted node, Tor.
+- **Set aside:** a Lightning Address (name@domain), whose invoices a later verifier cannot tie to the payee. **Later:** a BOLT 12 offer (a reusable, checkable address that hides the node), as a second rail Module under the same payment cMIP, once lnd supports it; it would also exercise a payee choosing between rails (F115).
+- **Other stated costs:** a claim without its preimage stays pending forever (no clock, no expiry); an invoice for a fraction of a satoshi cannot be a MOR payment; keysend and AMP payments prove nothing.
 
 ## Reference implementation
 

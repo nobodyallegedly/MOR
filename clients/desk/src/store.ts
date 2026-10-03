@@ -64,6 +64,8 @@ export interface Item {
   /** This identity's own acts it answers (refs) or acknowledges (acks). */
   answers: string[];
   acknowledges: string[];
+  /** A witness act (Identity type 15): its sender relies on the acts it names (F110). */
+  witness?: boolean;
   /** Other acts it refers to. */
   refs: string[];
   /** What could not be read. */

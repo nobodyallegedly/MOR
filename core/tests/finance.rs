@@ -1,9 +1,13 @@
-//! The Finance MIP's formats, the pointer that counts (rule 12), and where a
-//! payment may go under the vault (rules 14a and 16).
+//! The Finance MIP's formats, the pointer that counts (rule 12), where a
+//! payment may go under the vault (rules 14a and 16, F114), and an
+//! anonymous payer's key (rules 1 and 10a, F113).
 
+use mor_core::act::Scheme;
 use mor_core::cbor::{self, Value};
 use mor_core::finance::*;
 use mor_core::hash::{sha256, Hash};
+use mor_core::identity::SigningKey;
+use mor_core::sig::SchnorrKey;
 
 fn h(s: &str) -> Hash {
     sha256(s.as_bytes())
@@ -75,7 +79,81 @@ fn every_payload_round_trips() {
             evidence: h("repost"),
         }),
         refund: Some(rail("ln")),
+        anonymous: None,
     }));
+    // F113: a receipt naming an anonymous payer's bare key; a claim carrying it.
+    let key = SchnorrKey::from_secret(&h("a one-time key")).unwrap();
+    let bare = SigningKey {
+        scheme: Scheme::Founding(1),
+        key: key.public().to_vec(),
+    };
+    roundtrip(Payload::Receipt(Receipt {
+        rail: h("ln"),
+        proof: vec![1],
+        payer: Some(Payer::Key(bare.clone())),
+        payee: h("bob"),
+        amount: sat(5),
+        fulfils: h("pointer 1"),
+        previous: None,
+        forward: None,
+        batch: None,
+    }));
+    roundtrip(Payload::Claim(Claim {
+        rail: h("ln"),
+        proof: vec![4],
+        payee: h("bob"),
+        amount: sat(5),
+        fulfils: h("pointer 1"),
+        disagrees: None,
+        referral: None,
+        refund: Some(rail("ln")),
+        anonymous: Some(Anonymous {
+            key: bare,
+            sig: vec![7; 64],
+        }),
+    }));
+}
+
+/// F113: an anonymous claim's key 8 must be signed by the key it names,
+/// over this claim: lifted onto another claim, or forged, it is invalid.
+#[test]
+fn an_anonymous_claim_is_signed_by_its_committed_key() {
+    let key = SchnorrKey::from_secret(&h("a one-time key")).unwrap();
+    let bare = SigningKey {
+        scheme: Scheme::Founding(1),
+        key: key.public().to_vec(),
+    };
+    let mut c = Claim {
+        rail: h("ln"),
+        proof: vec![4],
+        payee: h("bob"),
+        amount: sat(5),
+        fulfils: h("pointer 1"),
+        disagrees: None,
+        referral: None,
+        refund: Some(rail("ln")),
+        anonymous: None,
+    };
+    let signed = |c: &Claim, k: &SchnorrKey| Anonymous {
+        key: bare.clone(),
+        sig: k.sign(&c.anonymous_message(), &[0; 32]).sig,
+    };
+    c.anonymous = Some(signed(&c, &key));
+    // Signed by any identity: the payer is the key.
+    assert!(check_signer(&Payload::Claim(c.clone()), &h("a one-time identity")).is_ok());
+    assert_eq!(c.payer(&h("a one-time identity")), Payer::Key(bare.clone()));
+    // The refund redirected after signing: the signature no longer holds.
+    let mut moved = c.clone();
+    moved.refund = Some(rail("someone else's rail"));
+    assert!(check_signer(&Payload::Claim(moved), &h("x")).is_err());
+    // Another key signing in the committed key's name.
+    let thief = SchnorrKey::from_secret(&h("a routing node")).unwrap();
+    let mut forged = c.clone();
+    forged.anonymous = Some(signed(&c, &thief));
+    assert!(check_signer(&Payload::Claim(forged), &h("x")).is_err());
+    // Without key 8, the claim's signer is its payer.
+    let named = Claim { anonymous: None, ..c };
+    assert_eq!(named.payer(&h("alice")), Payer::Identity(h("alice")));
 }
 
 #[test]
@@ -123,7 +201,7 @@ fn who_signs() {
     let r = Payload::Receipt(Receipt {
         rail: h("ln"),
         proof: vec![],
-        payer: Some(h("alice")),
+        payer: Some(Payer::Identity(h("alice"))),
         payee: h("bob"),
         amount: sat(5),
         fulfils: h("p"),
@@ -211,18 +289,22 @@ fn rule_14a_where_a_payment_may_go() {
         destination(Some(&v), &eur),
         Destination::Undeliverable(Undeliverable::UnitNotCovered)
     );
-    // Two entries for one unit with different limits: between them, the
-    // rule does not say which applies (flaw L2), so it is refused.
+    // F114: two entries for one unit with different limits: the smallest
+    // applies, so between them the payment goes to the vault.
     let two = vec![entry("sat", "ln", 10_000), entry("sat", "chain", 100_000)];
     assert_eq!(destination(Some(&two), &sat(5_000)), Destination::Flow);
+    assert_eq!(destination(Some(&two), &sat(10_000)), Destination::Flow);
+    assert_eq!(
+        destination(Some(&two), &sat(50_000)),
+        Destination::Vault(vec![0, 1])
+    );
     assert_eq!(
         destination(Some(&two), &sat(200_000)),
         Destination::Vault(vec![0, 1])
     );
-    assert!(matches!(
-        destination(Some(&two), &sat(50_000)),
-        Destination::Undeliverable(Undeliverable::Unsettled(_))
-    ));
+    // A limit of zero on any entry turns the flow off for the unit.
+    let off = vec![entry("sat", "ln", 10_000), entry("sat", "chain", 0)];
+    assert_eq!(destination(Some(&off), &sat(1)), Destination::Vault(vec![0, 1]));
 }
 
 #[test]

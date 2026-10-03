@@ -1,5 +1,5 @@
 //! Hand-made identity chains, and the answers the Identity MIP requires
-//! (draft 8, "Verification procedures" and "Validity rules"). Freeze
+//! (draft 11, "Verification procedures" and "Validity rules"). Freeze
 //! scenario numbers are given where a test follows one.
 
 mod common;
@@ -448,6 +448,92 @@ fn an_acknowledgement_by_the_owner_itself_does_not_count() {
     w.receipt(&mut h, &j.id, &r, 1);
     assert_eq!(w.v.status(&x), Status::Void);
     let _ = &mut j;
+}
+
+/// F110 (freeze suite v21, scenario 5 step 7f): only Identity, Finance and
+/// Law act types carry acknowledgements. A text act or a cMIP's reaction
+/// carrying `acks` is invalid and rescues nothing; a witness act keeps a
+/// disowned post visible as disputed; a buyer's claim (Finance) does the
+/// same for a publication.
+#[test]
+fn only_identity_finance_and_law_acts_acknowledge_f110() {
+    let mut w = World::new();
+    let mut h = w.operator("home");
+    let mut j = w.genesis("journalist", vec![home(&h)], None, None);
+    let mut fan = w.operator("fan");
+    let mut buyer = w.operator("buyer");
+    let mut side = j.clone();
+    side.seq.clear();
+    let liked = w.post(&mut side, "a post a fan liked");
+    let witnessed = w.post(&mut side, "a post a reader relies on");
+    let sold = w.post(&mut side, "a publication a buyer paid for");
+    // A like as a text act, and as a reaction cMIP's act: invalid.
+    let text_like = w.like(&mut fan, sha256(b"TEXT, test value until the freeze"), liked);
+    let cmip_like = w.like(&mut fan, sha256(b"a reaction cMIP"), liked);
+    assert_eq!(w.v.status(&text_like), Status::Invalid);
+    assert_eq!(w.v.status(&cmip_like), Status::Invalid);
+    // A witness act, deliberately.
+    let wit = w.ack(&mut fan, witnessed);
+    assert_eq!(w.v.status(&wit), Status::Valid);
+    // A buyer's claim acknowledging the publication it paid for.
+    let claim = w.everyday_act(
+        &mut buyer,
+        finance_spec(),
+        3,
+        vec![(Value::Uint(0), Value::Text("a claim".into()))],
+        None,
+        Some(vec![sold]),
+    );
+    w.add(&claim);
+    // The journalist's rotation leaves the side line out.
+    let (r, _) = w.rotate(&j, Rot::default());
+    w.receipt(&mut h, &j.id, &r, 1);
+    assert_eq!(w.v.status(&liked), Status::Void, "likes keep nothing alive");
+    assert_eq!(w.v.status(&witnessed), Status::Disputed, "a witness act");
+    assert_eq!(w.v.status(&sold), Status::Disputed, "a buyer's claim");
+    let _ = &mut j;
+}
+
+/// A witness act's shape (Identity rule 18b): it acknowledges at least one
+/// act and belongs to no chain; a verifier that cannot tell an act's MIP
+/// shows a non-Identity act carrying `acks` as unknown, never valid.
+#[test]
+fn a_witness_act_names_what_it_witnesses() {
+    let mut w = World::new();
+    let mut r = w.operator("reader");
+    let x = sha256(b"some act");
+    let empty = w.everyday_act(&mut r, identity_spec(), 15, vec![], None, None);
+    let empty = w.add(&empty);
+    assert_eq!(w.v.status(&empty), Status::Invalid, "witnesses nothing");
+    let chained = w.everyday_act(
+        &mut r,
+        identity_spec(),
+        15,
+        vec![],
+        Some(vec![mor_core::act::Object { chain: x, predecessor: x }]),
+        Some(vec![x]),
+    );
+    let chained = w.add(&chained);
+    assert_eq!(w.v.status(&chained), Status::Invalid, "carries objects");
+    let said = w.everyday_act(
+        &mut r,
+        identity_spec(),
+        15,
+        vec![(Value::Uint(0), Value::Text("I like it".into()))],
+        None,
+        Some(vec![x]),
+    );
+    let said = w.add(&said);
+    assert_eq!(w.v.status(&said), Status::Invalid, "its payload is empty");
+    // A verifier told only the Identity MIP's hash.
+    let mut blind = mor_core::chain::Verifier::new(identity_spec());
+    let law_act = w.everyday_act(&mut r, law_spec(), 17, vec![], None, Some(vec![x]));
+    let genesis = w.v.resolve(&r.id).links[0].act;
+    blind.add(w.v.get(&genesis).unwrap().act.clone()).unwrap();
+    let id = blind.add(law_act.clone()).unwrap();
+    assert_eq!(blind.status(&id), Status::Unknown);
+    let id = w.add(&law_act);
+    assert_eq!(w.v.status(&id), Status::Valid);
 }
 
 // ---------------------------------------------------------------- competing rotations (5.7)

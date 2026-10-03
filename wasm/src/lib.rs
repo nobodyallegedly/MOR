@@ -1054,13 +1054,18 @@ fn how(h: &How) -> String {
 #[wasm_bindgen]
 impl Verifier {
     /// A verifier for the given Identity spec hash (`IDENTITY`; a test value
-    /// until the freeze).
+    /// until the freeze). Given the Finance and Law spec hashes too, it can
+    /// tell which acts may carry acknowledgements (F110); without them, an
+    /// act of another specification carrying `acks` is unknown to it.
     #[wasm_bindgen(constructor)]
-    pub fn new(identity_spec: &str) -> R<Verifier> {
-        Ok(Verifier {
-            inner: chain::Verifier::new(unhex(identity_spec)?),
-            held: vec![],
-        })
+    pub fn new(identity_spec: &str, finance_spec: Option<String>, law_spec: Option<String>) -> R<Verifier> {
+        let identity = unhex(identity_spec)?;
+        let inner = match (finance_spec, law_spec) {
+            (Some(f), Some(l)) => chain::Verifier::with_mips(identity, unhex(&f)?, unhex(&l)?),
+            (None, None) => chain::Verifier::new(identity),
+            _ => return Err(JsError::new("give both the Finance and the Law spec hashes, or neither")),
+        };
+        Ok(Verifier { inner, held: vec![] })
     }
 
     /// Hold an act. Returns its id. A malformed act is refused; a validly
@@ -2020,6 +2025,14 @@ impl Verifier {
             law::Consent::Unadopted { agreement } => {
                 o.kind = "unadopted".into();
                 o.agreement = Some(hx(&agreement));
+            }
+            law::Consent::RailNotAccepted { agreement, rail } => {
+                o.kind = "rail-not-accepted".into();
+                o.agreement = Some(hx(&agreement));
+                o.reason = Some(format!(
+                    "a receipt or claim on rail Module {}, which the collective's payee pointers and vault never named: it counts for nothing (Finance rule 12a)",
+                    hx(&rail)
+                ));
             }
             law::Consent::Invalid { agreement, reason } => {
                 o.kind = "invalid".into();

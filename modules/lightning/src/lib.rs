@@ -1,6 +1,6 @@
 //! # mor-lightning
 //!
-//! The Lightning rail Module, draft 1 (`modules/module-lightning-rail-draft-1.md`),
+//! The Lightning rail Module, draft 2 (`modules/module-lightning-rail-draft-2.md`),
 //! a rail Module under the payment cMIP (`mor-payment`).
 //!
 //! - [`bolt11`]: decoding a BOLT 11 invoice and recovering the node key
@@ -193,6 +193,10 @@ impl Lightning {
 impl RailModule for Lightning {
     fn spec(&self) -> Hash {
         spec()
+    }
+
+    fn implements(&self) -> Hash {
+        mor_payment::spec()
     }
 
     fn unit(&self, address: &[u8]) -> Option<Hash> {

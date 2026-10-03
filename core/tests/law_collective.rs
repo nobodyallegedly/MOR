@@ -1,4 +1,4 @@
-//! Law draft 9 on a collective's own sequences (F109): freeze suite v20,
+//! Law draft 9 on a collective's own sequences (F109): freeze suite v21,
 //! scenario 3 (the label), its step 7o (the ordering stories, each named
 //! after its test in `harness/ordering/tests/stories.rs`), steps 7k, 8 and
 //! 8b with the abandonment declaration (B12), Flaw B1 and B11, Flaws B17
@@ -248,8 +248,11 @@ impl Lab {
         sign(&mut self.w, &mut self.m[by], x)
     }
 
-    /// A receipt of the label, on device `d`, of a payment cMIP.
-    fn receipt(&mut self, d: usize, cmip: Hash) -> Hash {
+    /// An act of the label, on device `d`, of a cMIP's own type 0: an act in
+    /// the lane of the task the terms name that cMIP for (F106). Since F112
+    /// a payment cMIP defines no act of its own (receipts are Finance's,
+    /// below); these acts stand for any act of a cMIP adopted for a task.
+    fn cmip_act(&mut self, d: usize, cmip: Hash) -> Hash {
         let a = self.w.everyday_act(
             &mut self.c[d],
             cmip,
@@ -258,6 +261,46 @@ impl Lab {
             None,
             None,
         );
+        self.w.add(&a)
+    }
+
+    /// The label's payee pointer (Finance type 0), on device `d`, naming
+    /// these rail Modules: the rails it accepts (F115).
+    fn pointer(&mut self, d: usize, version: u64, previous: Option<Hash>, rails: &[Hash]) -> Hash {
+        let p = mor_core::finance::Payload::PayeePointer(mor_core::finance::PayeePointer {
+            payee: self.c[d].id,
+            version,
+            previous,
+            rails: rails
+                .iter()
+                .map(|m| mor_core::finance::Rail {
+                    module: *m,
+                    address: b"an address".to_vec(),
+                })
+                .collect(),
+        });
+        let a = self.w.everyday_act(&mut self.c[d], mips().finance, 0, p.to_map(), None, None);
+        self.w.add(&a)
+    }
+
+    /// A settlement receipt the label signs as payee (Finance type 2), on
+    /// device `d`, for a payment on the rail Module `rail`.
+    fn finance_receipt(&mut self, d: usize, rail: Hash) -> Hash {
+        let r = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
+            rail,
+            proof: vec![],
+            payer: Some(mor_core::finance::Payer::Identity(spec("a fan"))),
+            payee: self.c[d].id,
+            amount: mor_core::finance::Amount {
+                unit: spec("a unit"),
+                value: 10,
+            },
+            fulfils: spec("an offer"),
+            previous: None,
+            forward: None,
+            batch: None,
+        });
+        let a = self.w.everyday_act(&mut self.c[d], mips().finance, 2, r.to_map(), None, None);
         self.w.add(&a)
     }
 
@@ -452,16 +495,16 @@ fn acts_fall_in_the_lanes_the_terms_give() {
     lab.sign(ANA, &p);
     assert_eq!(areas(&lab.consent(&p)), vec![(1, false, true, vec![ana])]);
     // A receipt of the payment cMIP named for task 6: the treasurer's.
-    let r = lab.receipt(0, pay());
+    let r = lab.cmip_act(0, pay());
     assert!(!lab.counts(&r));
     lab.sign(BEN, &r);
     assert_eq!(areas(&lab.consent(&r)), vec![(2, false, true, vec![ben])]);
     // A cMIP the terms name nowhere: counts for nothing (Q16).
-    let x = lab.receipt(0, pay2());
+    let x = lab.cmip_act(0, pay2());
     lab.sign(BEN, &x);
     assert!(matches!(lab.consent(&x), Consent::Unadopted { .. }));
     // An act of the adopted extension: the Production lane's (F106).
-    let e = lab.receipt(0, ext());
+    let e = lab.cmip_act(0, ext());
     lab.sign(ANA, &e);
     assert_eq!(areas(&lab.consent(&e)), vec![(1, false, true, vec![ana])]);
     // In a collective with no area, the same receipt counts on the
@@ -470,12 +513,51 @@ fn acts_fall_in_the_lanes_the_terms_give() {
         t.areas = None;
         t.area_words = None;
     });
-    let x = plain.receipt(0, pay2());
+    let x = plain.cmip_act(0, pay2());
     assert!(matches!(plain.consent(&x), Consent::NoArea { .. }));
     // An identity declaring no agreement is not a collective.
     let mut solo = plain.w.genesis("solo", vec![own_home()], None, None);
     let post = plain.w.post(&mut solo, "hello");
     assert_eq!(plain.view().consent(&post).unwrap(), Consent::NotCollective);
+}
+
+/// 3.7g, F115 (suite v21): the label's receipts are Finance acts, in the
+/// treasurer's lane. A receipt on a rail the label's pointer names counts
+/// with the treasurer's signature; one on a rail it never named counts for
+/// nothing, signed or not; a pointer the treasurer never signed accepts
+/// nothing.
+#[test]
+fn receipts_count_only_on_rails_the_collective_named() {
+    let mut lab = Lab::new(&|_| {});
+    let ben = lab.m[BEN].id;
+    let (ln, chain) = (spec("a Lightning rail Module"), spec("an on-chain rail Module"));
+    // A receipt before any pointer: the label accepted no rail.
+    let early = lab.finance_receipt(0, ln);
+    lab.sign(BEN, &early);
+    assert!(matches!(lab.consent(&early), Consent::RailNotAccepted { rail, .. } if rail == ln));
+    // The label's pointer naming Lightning, not yet signed by the treasurer:
+    // it does not count, so it accepts nothing.
+    let p1 = lab.pointer(0, 1, None, &[ln]);
+    assert!(!lab.counts(&p1));
+    assert!(matches!(lab.consent(&early), Consent::RailNotAccepted { .. }));
+    // The treasurer signs it: the Lightning receipt counts with him.
+    lab.sign(BEN, &p1);
+    assert!(lab.counts(&p1));
+    assert_eq!(areas(&lab.consent(&early)), vec![(2, false, true, vec![ben])]);
+    let r = lab.finance_receipt(0, ln);
+    assert!(!lab.counts(&r), "the treasurer has not signed it");
+    lab.sign(BEN, &r);
+    assert!(lab.counts(&r));
+    // A receipt on a rail the label never named: nothing, signed or not.
+    let x = lab.finance_receipt(0, chain);
+    lab.sign(BEN, &x);
+    assert!(matches!(lab.consent(&x), Consent::RailNotAccepted { rail, .. } if rail == chain));
+    assert!(!lab.counts(&x));
+    // A new pointer (the treasurer's signature alone, no clone) adds the
+    // on-chain rail: now it counts.
+    let p2 = lab.pointer(0, 2, Some(p1), &[ln, chain]);
+    lab.sign(BEN, &p2);
+    assert!(lab.counts(&x));
 }
 
 /// 3.7g, rule 37c, A2, F109: the treasurer adopts a payment cMIP alone;
@@ -484,9 +566,9 @@ fn acts_fall_in_the_lanes_the_terms_give() {
 fn the_treasurer_adopts_a_cmip_and_the_record_places_it() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let before = lab.receipt(0, pay2());
-    let in_tip = lab.receipt(1, pay2());
-    let third = lab.receipt(2, pay2());
+    let before = lab.cmip_act(0, pay2());
+    let in_tip = lab.cmip_act(1, pay2());
+    let third = lab.cmip_act(2, pay2());
     let k = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| {
         t.cmips = vec![(6, pay2()), (11, anchor())];
     });
@@ -501,9 +583,9 @@ fn the_treasurer_adopts_a_cmip_and_the_record_places_it() {
     }
     let rec = lab.record(0, Some((k, vec![sk])), &[1], vec![], k);
     assert_eq!(puts(&lab, &rec), Some(k), "no clone rule, no rotation");
-    let after = lab.receipt(0, pay2());
+    let after = lab.cmip_act(0, pay2());
     lab.sign(BEN, &after);
-    let later_b = lab.receipt(1, pay2());
+    let later_b = lab.cmip_act(1, pay2());
     lab.sign(BEN, &later_b);
     lab.sign(BEN, &third);
     // Before the record, in its own sequence or a tip's ancestry: under the
@@ -538,7 +620,7 @@ fn the_treasurer_adopts_a_cmip_and_the_record_places_it() {
     // A record of a clone whose parent is no longer in force: nothing.
     let r4 = lab.record(0, Some((k, vec![sk])), &[1, 2], vec![], k);
     assert_eq!(puts(&lab, &r4), None);
-    let x = lab.receipt(0, pay3());
+    let x = lab.cmip_act(0, pay3());
     lab.sign(BEN, &x);
     assert_eq!(lab.in_force(&x), k2);
     // A record naming an act that is no signature on the clone: invalid.
@@ -653,9 +735,9 @@ fn a_departure_takes_effect_at_the_labels_line() {
     let mut ben_laptop = device(&ben_phone);
     let mut ben_tablet = device(&ben_phone);
 
-    let x1 = lab.receipt(0, pay());
+    let x1 = lab.cmip_act(0, pay());
     lab.sign(BEN, &x1); // phone
-    let x2 = lab.receipt(0, pay());
+    let x2 = lab.cmip_act(0, pay());
     sign(&mut lab.w, &mut ben_tablet, &x2); // tablet, never mentioned
 
     // A clone signed from the tablet, recorded before the line (Flaw F).
@@ -677,15 +759,15 @@ fn a_departure_takes_effect_at_the_labels_line() {
     // Ben resigns, from the laptop.
     let res = lab.resign_from(&mut ben_laptop, k, None);
     // Between the resignation and the line, his signature still counts.
-    let x3 = lab.receipt(0, pay());
+    let x3 = lab.cmip_act(0, pay());
     lab.sign(BEN, &x3);
-    let pending = lab.receipt(0, pay());
+    let pending = lab.cmip_act(0, pay());
     // The label's line.
     let line = lab.record(0, None, &[], vec![res], k);
     let e = lab.view().record(&lab.c[0].id, &line).unwrap();
     assert!(e.line && e.registers.len() == 1);
 
-    let x4 = lab.receipt(0, pay());
+    let x4 = lab.cmip_act(0, pay());
     let s4 = sign(&mut lab.w, &mut ben_tablet, &x4);
     for x in [x1, x2, x3] {
         assert!(lab.counts(&x), "before the line, from any device");
@@ -742,7 +824,7 @@ fn a_records_registrations_stand_without_its_clone() {
     let line = lab.record(0, Some((k, vec![sc])), &[], vec![res], k);
     let e = lab.view().record(&lab.c[0].id, &line).unwrap();
     assert!(e.line && e.puts.is_none());
-    let x = lab.receipt(0, pay());
+    let x = lab.cmip_act(0, pay());
     lab.sign(BEN, &x);
     assert!(!lab.counts(&x));
 }
@@ -797,7 +879,7 @@ fn a_rotation_declares_the_membership_clone_with_its_signatures() {
         // The release before the rotation still counts, under the founding.
         assert!(lab.counts(&before));
         // A receipt is now Dee's.
-        let r = lab.receipt(0, pay());
+        let r = lab.cmip_act(0, pay());
         lab.sign(BEN, &r);
         assert!(!lab.counts(&r));
         sign(&mut lab.w, &mut dee, &r);
@@ -835,7 +917,7 @@ fn a_number_never_asks_for_more_voices_than_remain() {
             let sc = lab.sign(CY, &k);
             let named = if mark.len() == 3 { vec![sa, sb, sc] } else { vec![sb, sc] };
             lab.rotate(Some((k, named)), &[0]);
-            let x = lab.receipt(0, pay());
+            let x = lab.cmip_act(0, pay());
             lab.sign(BEN, &x);
             let ok = !matches!(lab.consent(&x), Consent::Broken { .. });
             // Acknowledged: three voices, all three named meet it; two do not.
@@ -944,7 +1026,7 @@ fn an_area_freezes_and_its_grants_wait_for_the_refit() {
     assert_eq!(v.backing(&p1).unwrap(), Backing::Undetermined { grant: g1 }, "C8, stated cost");
     assert_eq!(v.backing(&p2).unwrap(), Backing::Undetermined { grant: g1 });
     // Ana keeps the rest of her voice.
-    let r = lab.receipt(0, pay());
+    let r = lab.cmip_act(0, pay());
     lab.sign(BEN, &r);
     assert!(lab.counts(&r));
 
@@ -1003,9 +1085,9 @@ fn co_holders_carry_on() {
     let f = lab.founding;
     let mut ben = lab.m[BEN].clone();
     let res = lab.resign_from(&mut ben, f, Some(2));
-    let x = lab.receipt(0, pay());
+    let x = lab.cmip_act(0, pay());
     lab.record(0, None, &[], vec![res], f);
-    let y = lab.receipt(0, pay());
+    let y = lab.cmip_act(0, pay());
     lab.sign(CY, &y);
     assert!(lab.counts(&y), "two deciding together, one left: the other alone (flaw C)");
     lab.sign(BEN, &x);
@@ -1066,8 +1148,8 @@ fn concurrent_lines() {
     // One departure registered twice, on two devices neither naming the other.
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let x_named = lab.receipt(0, pay());
-    let x_unnamed = lab.receipt(0, pay());
+    let x_named = lab.cmip_act(0, pay());
+    let x_unnamed = lab.cmip_act(0, pay());
     lab.sign(BEN, &x_named);
     lab.sign(BEN, &x_unnamed);
     let mut ben = lab.m[BEN].clone();
@@ -1100,7 +1182,7 @@ fn concurrent_lines() {
         assert_eq!(puts(&lab, &r), Some(k));
         ks.push(k);
     }
-    let x = lab.receipt(2, pay());
+    let x = lab.cmip_act(2, pay());
     assert_eq!(lab.in_force(&x), f, "two concurrent records: a fork, the parent stays");
     assert!(lab.view().current(&lab.c[0].id).unwrap().unwrap().fork);
     // Recorded one after the other instead: the second puts nothing.
@@ -1124,7 +1206,7 @@ fn an_omitted_fork_a_keeper_and_a_backdated_fork() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     // A receipt on device 1, which the line leaves out.
-    let x = lab.receipt(1, pay());
+    let x = lab.cmip_act(1, pay());
     lab.sign(BEN, &x);
     let fork_point = lab.c[0].clone();
     let mut ben = lab.m[BEN].clone();
@@ -1156,7 +1238,7 @@ fn an_omitted_fork_a_keeper_and_a_backdated_fork() {
 fn the_keepers_of_the_agreement_in_force_place() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let x = lab.receipt(1, pay());
+    let x = lab.cmip_act(1, pay());
     lab.sign(BEN, &x);
     let k2 = lab.w.genesis("keeper two", vec![own_home()], None, None);
     let t = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN, CY])], &|t| {
@@ -1184,9 +1266,9 @@ fn a_members_own_rotation_is_registered_on_the_line() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let mut tablet = device(&lab.m[BEN]);
-    lab.receipt(0, pay()); // the phone signs something first, to keep a tip
+    lab.cmip_act(0, pay()); // the phone signs something first, to keep a tip
     let p0 = lab.m[BEN].clone();
-    let x = lab.receipt(0, pay());
+    let x = lab.cmip_act(0, pay());
     sign(&mut lab.w, &mut tablet, &x);
     let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
     let k = lab.propose(ANA, &t);
@@ -1210,7 +1292,7 @@ fn a_members_own_rotation_is_registered_on_the_line() {
     let r2 = lab.record(0, Some((k2, vec![sk2])), &[], vec![], k2);
     assert!(matches!(clone_state(&lab, &r2), CloneState::Invalid(_)), "judged by Identity alone");
     // An old-key signature on a receipt after the line does not count.
-    let y = lab.receipt(0, pay());
+    let y = lab.cmip_act(0, pay());
     sign(&mut lab.w, &mut tablet, &y);
     assert!(!lab.counts(&y));
     lab.sign(BEN, &y);
@@ -1263,7 +1345,7 @@ fn a_rotation_declaring_nothing_carries_the_agreement_forward() {
     lab.record(0, Some((k, vec![s])), &[], vec![], k);
     // The label rotates its keys, declaring nothing.
     lab.rotate(None, &[0]);
-    let x = lab.receipt(0, pay2());
+    let x = lab.cmip_act(0, pay2());
     assert_eq!(lab.in_force(&x), k, "the recorded clone is still in force");
     assert!(!lab.counts(&x), "a receipt of the adopted rail needs the treasurer");
     lab.sign(BEN, &x);
@@ -1305,7 +1387,7 @@ fn a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
             lab.record(d, Some((k, vec![s])), &[], vec![], k);
             ks.push(k);
         }
-        let x = lab.receipt(2, pay());
+        let x = lab.cmip_act(2, pay());
         assert_eq!(lab.in_force(&x), f, "a fork: the parent stays");
         // A clone of the weekly branch.
         let t = lab.clone_terms(&ks[0], vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly, on Mondays."));
@@ -1319,10 +1401,10 @@ fn a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
         let e = lab.view().record(&lab.c[0].id, &r3).unwrap();
         assert_eq!(e.resolves, after_both);
         // Seen from an act after all three lines.
-        let y = lab.receipt(2, pay());
+        let y = lab.cmip_act(2, pay());
         let all = lab.record(2, None, &[0, 1], vec![], f);
         let _ = all;
-        let z = lab.receipt(2, pay());
+        let z = lab.cmip_act(2, pay());
         let want = if after_both { k3 } else { f };
         assert_eq!(lab.in_force(&z), want, "after both {after_both}");
         let _ = y;
@@ -1365,7 +1447,7 @@ fn a_fork_is_resolved_from_the_latest_clone_of_a_branch() {
     let r5 = lab.record(0, Some((k5, vec![s5])), &[1], vec![], k5);
     assert_eq!(puts(&lab, &r5), Some(k5));
     assert!(lab.view().record(&lab.c[0].id, &r5).unwrap().resolves);
-    let x = lab.receipt(0, pay());
+    let x = lab.cmip_act(0, pay());
     assert_eq!(lab.in_force(&x), k5);
 }
 
@@ -1428,7 +1510,7 @@ fn a_declaration_removes_a_voice_at_the_labels_line() {
     let sb = lab.sign(BEN, &k1);
     let r1 = lab.record(0, Some((k1, vec![sa, sb])), &[], vec![], k1);
     // A year of receipts, both treasurers signing.
-    let early = lab.receipt(0, pay());
+    let early = lab.cmip_act(0, pay());
     lab.sign(ANA, &early);
     lab.sign(BEN, &early);
     assert!(lab.counts(&early));
@@ -1460,7 +1542,7 @@ fn a_declaration_removes_a_voice_at_the_labels_line() {
     assert_eq!(e.registers.len(), 1);
     // k1 stays in force, Ana counted as a voice for it (Q28).
     assert_eq!(clone_state(&lab, &r1), CloneState::Complete);
-    let x = lab.receipt(0, pay());
+    let x = lab.cmip_act(0, pay());
     assert_eq!(lab.in_force(&x), k1);
     // The year of receipts keeps Ana's signature (Flaw L).
     assert!(lab.counts(&early));
@@ -1764,7 +1846,7 @@ fn a_seat_passes_by_nomination_after_a_declaration() {
     let d = lab.declare(None, k0, k0, BEN, vec![outcomes::VOICE_REMOVED]);
     lab.record(0, None, &[], vec![d], k0);
     // The Finance lane has nobody left: a receipt counts for nothing.
-    let x = lab.receipt(0, pay());
+    let x = lab.cmip_act(0, pay());
     lab.sign(BEN, &x);
     assert!(areas(&lab.consent(&x))[0].1, "frozen");
     assert!(!lab.counts(&x));
@@ -1793,7 +1875,7 @@ fn a_seat_passes_by_nomination_after_a_declaration() {
     let mut dee = dee;
     let sd = sign(&mut lab.w, &mut dee, &k);
     lab.rotate(Some((k, vec![sa, sc, sd])), &[0]);
-    let y = lab.receipt(0, pay());
+    let y = lab.cmip_act(0, pay());
     sign(&mut lab.w, &mut dee, &y);
     assert_eq!(lab.in_force(&y), k);
     assert!(lab.counts(&y));
@@ -1904,7 +1986,7 @@ fn a_seat_passes_by_automatic_succession() {
                 assert_eq!(lab.in_force(&y), k);
                 let cur = lab.view().current(&lab.c[0].id).unwrap().unwrap();
                 assert_eq!(cur.agreement, k);
-                let x = lab.receipt(0, pay());
+                let x = lab.cmip_act(0, pay());
                 if alone {
                     // Q21, Q22: Ben held Finance alone; it stands frozen.
                     assert!(cur.frozen.contains(&2));
@@ -2330,7 +2412,7 @@ fn a_specification_serving_two_layers_needs_both_lanes() {
             id: 3,
         });
     });
-    let x = lab.receipt(0, conv);
+    let x = lab.cmip_act(0, conv);
     lab.sign(BEN, &x);
     assert!(!lab.counts(&x));
     lab.sign(CY, &x);
@@ -2365,7 +2447,7 @@ fn the_production_lane_adopts_extensions() {
     let r = lab.record(0, Some((k, vec![sa, sb])), &[], vec![], k);
     assert_eq!(puts(&lab, &r), Some(k));
     // An act of the new extension: the Production lane's.
-    let e = lab.receipt(0, fin);
+    let e = lab.cmip_act(0, fin);
     lab.sign(ANA, &e);
     assert!(lab.counts(&e));
 }

@@ -9,12 +9,14 @@
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import {
+  ACK_SPECS,
   SPECS,
   ENVELOPE_TYPES,
   IDENTITY_TYPES,
   Verifier,
   actId,
   cborDecode,
+  cborEncode,
   describeAct,
   encryptionKeyPayload,
   hex,
@@ -37,6 +39,7 @@ import {
   unhex,
   xwingPublic,
 } from './core.ts';
+import { WITNESS_EXPLANATION } from './witness.ts';
 import { CODE, Relay, RelayError, type PutResult, type Via, relayAt, sealedId } from './transport.ts';
 import { record } from './kex.ts';
 import { lookUp, type Home, type Lookup, type RouteIn } from './lookup.ts';
@@ -210,6 +213,12 @@ export class TestIdentity {
     payload: Uint8Array,
     opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: string[]; acks?: string[] },
   ) {
+    // F110: only Identity, Finance and Law act types carry acknowledgements;
+    // a text act, a publication or a cMIP's act carrying them is invalid.
+    // To rely on such an act, sign a witness act (see `witness`).
+    if (opts.acks?.length && !ACK_SPECS.includes(spec)) {
+      throw new Error('only Identity, Finance and Law acts may acknowledge (Envelope rule 4a, F110): to rely on this act, sign a witness act');
+    }
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -252,6 +261,26 @@ export class TestIdentity {
     const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
     this.f.routes = { version, act: made.id };
     return { id: made.id, sent: await this.toHomes(made.act) };
+  }
+
+  /**
+   * Sign a witness act (Identity type 15, F110): "I received this act and
+   * rely on it", for each act named. It keeps them visible as disputed if
+   * their author later disowns them. Client conformance (Identity rule 18c):
+   * never a side effect; the caller passes back the explanation it showed
+   * the owner, `WITNESS_EXPLANATION`, word for word, or nothing is signed.
+   * Sent to every home and to the relays given, as a public Identity act.
+   */
+  async witness(acts: string[], opts: { shown: string; relays?: string[] }): Promise<{ id: string; act: Uint8Array; sent: Submitted[] }> {
+    if (opts.shown !== WITNESS_EXPLANATION) {
+      throw new Error('a witness act is signed only after the owner was shown what it does (Identity rule 18c)');
+    }
+    if (!acts.length) throw new Error('a witness act names at least one act');
+    if (acts.some((a) => this.f.sequence.includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
+    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(new Map()), { public: true, acks: acts });
+    const sent = await this.toHomes(made.act);
+    for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
+    return { id: made.id, act: made.act, sent };
   }
 
   /**
