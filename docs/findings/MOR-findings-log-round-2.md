@@ -1360,3 +1360,7 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 - *The eight readings of `docs/law-draft-10.md`, section 5:* 1 to 6 and 8 confirmed (Nobody, allegedly, 3 October 2026). Reading 7 corrected: for a party whose voice was removed before a judicial change, the abandonment clause **in force** applies, not an older one, as departed holders are under the collective's current rules (fix 1).
 
 *F121's questions all answered, 3 October 2026. To write: the fork grammar (scenario B: a fork act signed by both sides, closing the original in Law; ownership transfers; defaults; the "forked from" field; withdrawal of open offers), scenarios A, C and D, the release act, the pointer check (F123), equal treatment (Q8), fee visibility (Q9), the periods of the chain of judgment (Q7), and the rename of rule 47 to the concurrency rule.*
+
+## F124. Questions from writing F121 to F123 into Law draft 10 (`docs/law-draft-10.md`; answered by Nobody, allegedly, 3 October 2026, one at a time)
+
+- **S1, a collective cannot name itself at birth:** a collective's genesis names its founding agreement, so that agreement cannot name the collective, which does not exist yet; stakes in the collective itself (F121 Q8) and its own grants could never be in founding terms. **Decided:** option (a), "let's reuse the mechanic": a null object or holder in a stake or grant means "this collective", as Identity lets a genesis name itself as its home's operator by null. Set aside: always a first clone; a separate members' shares entry.
