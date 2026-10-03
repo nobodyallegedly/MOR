@@ -1,6 +1,8 @@
 //! The Law MIP (Law draft 10): exact formats, tiers, and the checks a
 //! collective needs, judged on the collective's own sequence (F109); the
-//! negotiation record (F118) and role-share evidence (F119).
+//! negotiation record (F118) and role-share evidence (F119); the judicial
+//! tier changed only by every member, the chain of judgment and the
+//! departed members entry (F120, F121).
 //!
 //! - [`formats`]: terms, areas, marks, signatures, resignations, records,
 //!   grants, and the checks that need no other act.

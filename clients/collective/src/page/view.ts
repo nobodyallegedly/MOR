@@ -121,7 +121,7 @@ function rulesFields(r: { safety: number | ''; release: number | ''; clone: numb
 ${f('safety', r.safety, 'Shares needed to rebuild the safety key')}
 ${f('release', r.release, 'Members who must sign a release')}
 ${f('constitution', r.constitution ?? '', 'Members who must sign a change of members or rules', 'every member')}
-${f('clone', r.clone, 'Members who must sign any other change')}
+${f('clone', r.clone, 'Members who must sign any other change (a change of who judges needs every member)')}
 ${f('others', r.others, 'Other members who together judge absence', 'all the others')}
 </div></fieldset>`;
 }

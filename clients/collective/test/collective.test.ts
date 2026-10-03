@@ -314,7 +314,7 @@ test('before drawing a record, a warning when the relays hold acts of the collec
   assert.doesNotMatch(words(plainChange.reading), /not in this device's sequence/, 'no record, no warning');
 });
 
-test('a judicial change: who judges absence, under the clone rule, recorded at once, no rotation (Law draft 8, B13)', async () => {
+test('a judicial change: who judges absence, every member signing, recorded at once, no rotation (Law draft 8, B13; Law draft 10, F121)', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, two, three] = ['Ada', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
@@ -326,8 +326,8 @@ test('a judicial change: who judges absence, under the clone rule, recorded at o
   assert.match(j.review.reading.title, /Who judges absence in “Judges”/);
   assert.match(jw, /A judicial change: only who judges absence changes\. The abandonment clause is a protected clause, in the judicial tier/);
   assert.match(jw, /Today any 2 of the other members together decide whether a member is absent; after the change, any 1\./);
-  assert.match(jw, /The clone is marked with the clone rule and signed by .*: enough members \(any 2 of /);
-  assert.match(jw, /who does not sign it, absence stays judged by the clause they signed: any 2 of the other members \(Law rule 46a\)/);
+  assert.match(jw, /The clone is marked with the judicial tier's power and signed by .*: every member whose voice remains/);
+  assert.match(jw, /one version for everyone: the new clause judges each member \(Law draft 10, F121\)/);
   assert.match(jw, /Absence is now judged by any 1 of the other parties \(was any 2 of the other parties\)/);
   assert.match(jw, /A change to .*: judicial, a protected clause/);
   assert.match(jw, /Its mark names exactly that/);

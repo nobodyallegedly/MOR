@@ -3,14 +3,15 @@
 //!
 //! In plain words: compare the clone with its parent field by field (and
 //! fields 2, 15 and 20 entry by entry). Any constitutional change needs the
-//! constitutional change rule alone. Otherwise each area in which a change
-//! lies needs its holders' power, and anything outside every area (a
-//! judicial change, or an operational one no area holds) needs the clone
-//! rule. A clone that changes nothing needs the clone rule. Which power is
+//! constitutional change rule alone (F120). Otherwise each area in which a
+//! change lies needs its holders' power; an operational change no area
+//! holds needs the clone rule; and a judicial change needs every member
+//! whose voice remains, one version for everyone (F121). A clone that
+//! changes nothing needs the clone rule. Which power is
 //! needed is read from the bytes, never from what the clone says of itself.
 
 use super::formats::{
-    layers, task_layer, FieldRef, LawError, Mips, Power, Terms, JUDICIAL_TASKS, R,
+    layers, task_layer, FieldRef, LawError, Mips, Power, Rule, Terms, JUDICIAL_TASKS, R,
 };
 use crate::cbor;
 use crate::hash::Hash;
@@ -41,8 +42,8 @@ impl Change {
     pub fn tier(&self) -> Tier {
         match self {
             Change::Field(f) => match f {
-                0 | 1 | 5 | 12 | 18 | 19 => Tier::Constitutional,
-                3 | 6 | 9 | 10 | 13 | 14 | 16 => Tier::Judicial,
+                0 | 1 | 5 | 12 | 18 | 19 | 22 => Tier::Constitutional,
+                3 | 6 | 9 | 10 | 13 | 14 | 16 | 21 => Tier::Judicial,
                 _ => Tier::Operational, // 7, 8, 17
             },
             Change::Task(t) if JUDICIAL_TASKS.contains(t) => Tier::Judicial,
@@ -64,7 +65,7 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
     };
     let (p, c) = (enc(parent), enc(clone));
     let mut out = vec![];
-    for n in 0..=20u64 {
+    for n in 0..=22u64 {
         let a = p.iter().find(|(k, _)| *k == n).map(|(_, v)| v);
         let b = c.iter().find(|(k, _)| *k == n).map(|(_, v)| v);
         if a != b {
@@ -195,13 +196,26 @@ pub fn powers_needed(
     }
     let ch = changes(parent, clone);
     if ch.iter().any(|c| c.tier() == Tier::Constitutional) {
+        // F120: the constitutional change rule alone. Where the same
+        // version also changes the judicial tier, F121 asks for every
+        // member: the two agree only where that rule is every party (flaw
+        // K1, Law draft 10, "Open in this draft"), so any other case is
+        // refused rather than guessed.
+        if ch.iter().any(|c| c.tier() == Tier::Judicial)
+            && !needs_everyone(&parent.constitutional_rule(), &parent.parties)
+        {
+            return Err(LawError::Unsettled(
+                "a version changing the constitution and the judicial tier under a constitutional change rule below every party (flaw K1)",
+            ));
+        }
         return Ok(vec![Power::Constitutional]);
     }
     let mut areas: Vec<u64> = vec![];
     let mut clone_rule = ch.is_empty();
+    let mut judicial = false;
     for c in &ch {
         match c.tier() {
-            Tier::Judicial => clone_rule = true,
+            Tier::Judicial => judicial = true,
             Tier::Operational => {
                 let (a, nowhere) = lies_in(parent, clone, c, ext_layers)?;
                 areas.extend(a);
@@ -217,8 +231,21 @@ pub fn powers_needed(
         out.push(Power::Clone);
     }
     out.extend(areas.into_iter().map(Power::Area));
+    if judicial {
+        out.push(Power::Judicial);
+    }
     out.sort_by_key(|p| p.encoding());
     Ok(out)
+}
+
+/// Whether a rule asks for every one of `parties`: every party, a
+/// threshold of all of them, or all of them named.
+fn needs_everyone(rule: &Rule, parties: &[Hash]) -> bool {
+    match rule {
+        Rule::All => true,
+        Rule::Threshold(k) => *k as usize >= parties.len(),
+        Rule::Named(n) => parties.iter().all(|p| n.contains(p)),
+    }
 }
 
 /// The judicial changes a clone makes, for showing which protected clauses

@@ -419,27 +419,36 @@ impl<'a> LawView<'a> {
         out
     }
 
-    /// Rule 36b per party: the version of the abandonment clause each party
-    /// counted by the constitutional change rule signed must cover them.
-    fn coverage(&self, clone: &Terms, lineage: &[(Hash, Terms)], signed_clone: &dyn Fn(&Hash) -> bool) -> Option<String> {
+    /// Rule 36b: every party the constitutional change rule counts is
+    /// covered by the clone's abandonment clause. The judicial tier is one
+    /// version for everyone (F121), so the clause in force judges each.
+    fn coverage(&self, clone: &Terms) -> Option<String> {
         for p in clone.constitutional_rule().counted_among(&clone.parties) {
-            let clause = if signed_clone(&p) {
-                clone.abandonment.clone()
-            } else {
-                lineage
-                    .iter()
-                    .skip(1)
-                    .find(|(id, _)| !self.signers(id, &[p]).is_empty())
-                    .map(|(_, t)| t.abandonment.clone())
-                    .unwrap_or_else(|| clone.abandonment.clone())
-            };
-            if !clause.is_some_and(|a| a.covers(&p)) {
+            if !clone.abandonment.as_ref().is_some_and(|a| a.covers(&p)) {
                 return Some(
-                    "a member with constitutional power is not covered, under the clause they signed, by an abandonment clause able to remove their voice (F105)".into(),
+                    "a member with constitutional power is not covered by an abandonment clause able to remove their voice (F105)".into(),
                 );
             }
         }
         None
+    }
+
+    /// The departed holders whose stake a clone drops or lowers (rule 46,
+    /// F121): each must sign it, as a party it adds does.
+    fn departed_losing(parent: &Terms, clone: &Terms) -> Vec<Hash> {
+        parent
+            .departed
+            .iter()
+            .flatten()
+            .filter(|e| {
+                !clone
+                    .departed
+                    .iter()
+                    .flatten()
+                    .any(|c| c.holder == e.holder && c.share >= e.share)
+            })
+            .map(|e| e.holder)
+            .collect()
     }
 
     /// An agreement: its terms, who signed, and what can be said of it
@@ -497,12 +506,14 @@ impl<'a> LawView<'a> {
             });
         }
         if invalid.is_none() {
-            invalid = self.coverage(&terms, &lineage, &|p| all_sigs.contains(p));
+            invalid = self.coverage(&terms);
         }
         let mark = terms.field4.mark().unwrap_or(&[]);
+        let losing = Self::departed_losing(parent, &terms);
         let ready = invalid.is_none()
             && mark.iter().all(|e| e.signers.iter().all(|s| all_sigs.contains(s)))
-            && Self::newcomers(parent, &terms).iter().all(|p| all_sigs.contains(p));
+            && Self::newcomers(parent, &terms).iter().all(|p| all_sigs.contains(p))
+            && losing.iter().all(|h| !self.signers(id, &[*h]).is_empty());
         Ok(Agreement {
             id: *id,
             terms,
@@ -1427,7 +1438,7 @@ impl<'a> LawView<'a> {
                     "a party it adds, or makes a holder, has not signed it (Q11)".into(),
                 ));
             }
-            if let Some(w) = self.coverage(clone, &lineage, &|p| by.contains_key(p)) {
+            if let Some(w) = self.coverage(clone) {
                 return Ok(CloneState::Invalid(w));
             }
             return self.plan_at(col, at, &lineage, party, signers, &by, own);
@@ -1465,7 +1476,12 @@ impl<'a> LawView<'a> {
                 "a party it adds, or makes a holder, has not signed it (Q11)".into(),
             ));
         }
-        if let Some(w) = self.coverage(clone, &lineage, &|p| by.contains_key(p)) {
+        if !Self::departed_losing(parent, clone).iter().all(|h| by.contains_key(h)) {
+            return Ok(CloneState::Draft(
+                "it drops or lowers a departed holder's stake, and that holder has not signed it (rule 46, F121)".into(),
+            ));
+        }
+        if let Some(w) = self.coverage(clone) {
             return Ok(CloneState::Invalid(w));
         }
         Ok(CloneState::Complete)
@@ -2385,6 +2401,7 @@ fn power_base(parent: &Terms, p: &Power) -> Option<(Vec<Hash>, Rule)> {
         Power::Clone => Some((parent.clone.counted_among(&parent.parties), parent.clone.clone())),
         Power::Area(id) => parent.area(*id).map(|a| (a.holders.clone(), a.rule())),
         Power::Plan(_) => None,
+        Power::Judicial => Some((parent.parties.clone(), Rule::All)),
     }
 }
 

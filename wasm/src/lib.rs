@@ -1444,7 +1444,7 @@ struct AreaOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PowerOut {
-    /// "constitutional", "clone", "area" or "plan".
+    /// "constitutional", "clone", "area", "plan" or "judicial".
     form: String,
     area: Option<u64>,
     party: Option<String>,
@@ -1456,6 +1456,7 @@ fn power_out(p: &law::Power) -> PowerOut {
         law::Power::Clone => ("clone", None, None),
         law::Power::Area(a) => ("area", Some(*a), None),
         law::Power::Plan(h) => ("plan", None, Some(hx(h))),
+        law::Power::Judicial => ("judicial", None, None),
     };
     PowerOut {
         form: form.into(),

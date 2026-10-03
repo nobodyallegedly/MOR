@@ -6,8 +6,9 @@
 use mor_core::cbor::{self, Value};
 use mor_core::hash::{sha256, Hash};
 use mor_core::law::{
-    self, outcomes, powers_needed, Abandonment, Area, Authority, Field4, FieldRef, Holding,
-    KeyGrammar, Kind, LawError, MarkEntry, Mips, Power, Recovery, Rule, SuccessionPlan, Terms,
+    self, judged, outcomes, powers_needed, Abandonment, Area, Authority, ChainLink, DepartedHolder,
+    Field4, FieldRef, Holding, Judge, KeyGrammar, Kind, LawError, MarkEntry, Mips, Power, Recovery,
+    Rule, SuccessionPlan, Terms,
 };
 
 pub fn mips() -> Mips {
@@ -101,6 +102,8 @@ fn label() -> Terms {
             (1, "Releases go out on Fridays.".into()),
             (2, "Receipts are signed within a week.".into()),
         ]),
+        chain: None,
+        departed: None,
     }
 }
 
@@ -415,13 +418,13 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
         needs(&p, &c(&|t| t.areas.as_mut().unwrap()[0].name = "Records".into())),
         vec![Power::Constitutional]
     );
-    // 3.7d: keepers are judicial: the clone rule.
+    // 3.7d: keepers are judicial: every member (F121).
     assert_eq!(
         needs(&p, &c(&|t| t.keepers = Some(law::Keepers {
             operators: vec![h(80)],
             rule: Rule::All
         }))),
-        vec![Power::Clone]
+        vec![Power::Judicial]
     );
     // 3.7c: an area's words are its holders'.
     assert_eq!(
@@ -441,17 +444,17 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
             t.area_words.as_mut().unwrap()[0].1 = "a".into();
             t.arbitrators = Some(vec![h(92)]);
         })),
-        vec![Power::Clone, Power::Area(1)]
+        vec![Power::Judicial, Power::Area(1)]
     );
     // 3.7g: the payment cMIP is the Finance lane's.
     assert_eq!(
         needs(&p, &c(&|t| t.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))])),
         vec![Power::Area(2)]
     );
-    // 3.7n, Q15: the anchoring cMIP stays judicial.
+    // 3.7n, Q15: the anchoring cMIP stays judicial: every member (F121).
     assert_eq!(
         needs(&p, &c(&|t| t.cmips = vec![(6, h(PAY)), (11, h(ANCHOR + 5))])),
-        vec![Power::Clone]
+        vec![Power::Judicial]
     );
     // A task no area holds: the clone rule (third pass reading).
     assert_eq!(
@@ -520,4 +523,165 @@ fn a_deals_clone_needs_every_party() {
     c.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))];
     assert_eq!(needs(&d, &c), vec![Power::Clone]);
     check(&c).unwrap();
+}
+
+// ---------------------------------------------------------------- F120, F121
+
+/// A change to terms, named by why it is wrong.
+type Change = Box<dyn Fn(&mut Terms)>;
+
+const CONDITION: u8 = 64;
+const CONDITION2: u8 = 65;
+const CONDITION3: u8 = 66;
+const ARBITRATOR2: u8 = 93;
+
+/// The label with a condition cMIP (task 9) and an arbitrator, each
+/// followed by a chain of judgment (F121).
+fn label_with_chain() -> Terms {
+    let mut t = label();
+    t.cmips = vec![(6, h(PAY)), (9, h(CONDITION)), (11, h(ANCHOR))];
+    t.arbitrators = Some(vec![h(ARBITRATOR)]);
+    t.chain = Some(vec![
+        ChainLink { judge: Judge::Task(9), next: vec![h(CONDITION2), h(CONDITION3)] },
+        ChainLink { judge: Judge::Identity(h(ARBITRATOR)), next: vec![h(ARBITRATOR2)] },
+    ]);
+    t
+}
+
+/// Freeze suite v21, 3.7p (F121): a chain of judgment. The condition cMIP
+/// answers "unknown"; the next in the chain decides, with no new signature.
+#[test]
+fn a_chain_of_judgment_passes_unknown_to_the_next() {
+    let t = label_with_chain();
+    assert_eq!(check(&t), Ok(()));
+    assert_eq!(roundtrip(&t), t);
+    assert_eq!(
+        t.chain_of(&Judge::Task(9)),
+        Some(vec![h(CONDITION), h(CONDITION2), h(CONDITION3)])
+    );
+    assert_eq!(t.chain_of(&Judge::Identity(h(ARBITRATOR))), Some(vec![h(ARBITRATOR), h(ARBITRATOR2)]));
+    // A judge with no chain is followed by nobody; a judge not named, by
+    // no chain at all.
+    assert_eq!(t.chain_of(&Judge::Task(11)), Some(vec![h(ANCHOR)]));
+    assert_eq!(t.chain_of(&Judge::Task(10)), None);
+    // The first answers unknown, the second decides; the third is never asked.
+    assert_eq!(judged(&[None, Some(true), Some(false)]), Some((1, true)));
+    assert_eq!(judged(&[Some(false), Some(true)]), Some((0, false)));
+    assert_eq!(judged::<bool>(&[None, None, None]), None);
+    // Changing the chain is judicial: every member (F121).
+    let mut c = clone_of(&t, vec![(Power::Judicial, vec![h(1), h(2), h(3)])]);
+    c.chain.as_mut().unwrap()[0].next = vec![h(CONDITION3)];
+    assert_eq!(needs(&t, &c), vec![Power::Judicial]);
+    // So is naming one where there was none.
+    let mut c = clone_of(&label(), vec![(Power::Judicial, vec![h(1), h(2), h(3)])]);
+    c.chain = Some(vec![ChainLink { judge: Judge::Task(11), next: vec![h(CONDITION3)] }]);
+    assert_eq!(needs(&label(), &c), vec![Power::Judicial]);
+}
+
+/// F121 with Q20: what a chain of judgment may name.
+#[test]
+fn a_chain_follows_named_judges_and_its_specifications_judge_only() {
+    let bad: Vec<(&str, Change)> = vec![
+        ("a task with no judge named", Box::new(|t| {
+            t.chain.as_mut().unwrap().push(ChainLink { judge: Judge::Task(10), next: vec![h(CLOCK)] })
+        })),
+        ("an operational task", Box::new(|t| {
+            t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::Task(6), next: vec![h(PAY2)] })
+        })),
+        ("the judge takes over from itself", Box::new(|t| {
+            t.chain.as_mut().unwrap()[0].next = vec![h(CONDITION)]
+        })),
+        ("a fallback named for a payment task", Box::new(|t| {
+            t.chain.as_mut().unwrap()[0].next = vec![h(PAY)]
+        })),
+        ("a fallback that is an extension", Box::new(|t| {
+            t.chain.as_mut().unwrap()[0].next = vec![h(EXT)]
+        })),
+        ("a fallback that is the anchoring cMIP", Box::new(|t| {
+            t.chain.as_mut().unwrap()[0].next = vec![h(ANCHOR)]
+        })),
+        ("a fallback twice", Box::new(|t| {
+            t.chain.as_mut().unwrap()[0].next = vec![h(CONDITION2), h(CONDITION2)]
+        })),
+        ("one fallback for two judges", Box::new(|t| {
+            t.chain.as_mut().unwrap().insert(1, ChainLink { judge: Judge::Task(11), next: vec![h(CONDITION2)] })
+        })),
+        ("an identity the terms name as no judge", Box::new(|t| {
+            t.chain.as_mut().unwrap()[1].judge = Judge::Identity(h(ARBITRATOR2))
+        })),
+        ("a split service the terms do not name", Box::new(|t| {
+            t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::SplitService, next: vec![h(94)] })
+        })),
+        ("links out of order", Box::new(|t| t.chain.as_mut().unwrap().reverse())),
+    ];
+    for (why, f) in bad {
+        let mut t = label_with_chain();
+        f(&mut t);
+        assert!(check(&t).is_err(), "{why}");
+    }
+    // The split service, named by its grant, followed by another grant.
+    let mut t = label_with_chain();
+    t.split_grant = Some(h(94));
+    // `[ 2 ]` encodes before `[ 0, task ]`: it comes first.
+    t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::SplitService, next: vec![h(95)] });
+    assert_eq!(check(&t), Ok(()));
+    assert_eq!(t.chain_of(&Judge::SplitService), Some(vec![h(94), h(95)]));
+    // The abandonment authority, named as an identity, may be followed.
+    let mut t = label();
+    t.chain = Some(vec![ChainLink { judge: Judge::Identity(h(AUTHORITY)), next: vec![h(96)] }]);
+    assert_eq!(check(&t), Ok(()));
+}
+
+/// F121: the departed members entry records who left and their stake,
+/// nothing else, in a collective only; it is constitutional.
+#[test]
+fn the_departed_members_entry_records_who_left_and_their_stake() {
+    let mut t = label();
+    t.departed = Some(vec![DepartedHolder { holder: h(4), share: 250_000 }]);
+    assert_eq!(check(&t), Ok(()));
+    assert_eq!(roundtrip(&t), t);
+    let bad: Vec<(&str, Change)> = vec![
+        ("a party", Box::new(|t| t.departed.as_mut().unwrap()[0].holder = h(1))),
+        ("a zero share", Box::new(|t| t.departed.as_mut().unwrap()[0].share = 0)),
+        ("one holder twice", Box::new(|t| t.departed.as_mut().unwrap().push(DepartedHolder { holder: h(4), share: 1 }))),
+        ("more than the whole", Box::new(|t| t.departed.as_mut().unwrap().push(DepartedHolder { holder: h(5), share: 750_001 }))),
+        ("in a deal", Box::new(|t| {
+            t.grammar = None;
+            t.areas = None;
+            t.area_words = None;
+            t.clone = Rule::All;
+        })),
+    ];
+    for (why, f) in bad {
+        let mut x = t.clone();
+        f(&mut x);
+        assert!(check(&x).is_err(), "{why}");
+    }
+    let mut c = clone_of(&t, vec![(Power::Constitutional, vec![h(1), h(2), h(3)])]);
+    c.departed.as_mut().unwrap()[0].share = 300_000;
+    assert_eq!(needs(&t, &c), vec![Power::Constitutional]);
+}
+
+/// F120 and flaw K1: a version changing the constitution and a judge needs
+/// the constitutional change rule alone; where that rule is below every
+/// party, F121's "every member" disagrees, and the case is refused as
+/// unsettled rather than guessed.
+#[test]
+fn a_constitutional_version_changing_a_judge_and_flaw_k1() {
+    let p = label();
+    let mut c = clone_of(&p, vec![(Power::Constitutional, vec![h(1), h(2), h(3)])]);
+    c.text = "New words.".into();
+    c.cmips = vec![(6, h(PAY)), (11, h(ANCHOR + 7))];
+    assert_eq!(needs(&p, &c), vec![Power::Constitutional]);
+    let mut p2 = label();
+    p2.constitutional = Some(Rule::Threshold(2));
+    let mut c2 = c.clone();
+    c2.constitutional = Some(Rule::Threshold(2));
+    assert!(matches!(
+        powers_needed(&p2, &c2, &mips(), &ext_layers),
+        Err(LawError::Unsettled(_))
+    ));
+    // A constitutional version that changes no judge is settled.
+    c2.cmips = p2.cmips.clone();
+    assert_eq!(needs(&p2, &c2), vec![Power::Constitutional]);
 }

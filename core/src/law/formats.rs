@@ -511,6 +511,9 @@ pub enum Power {
     Area(u64),
     /// `[ 3, party ]`: the succession plan of this party (rule 48c).
     Plan(Hash),
+    /// `[ 4 ]`: the judicial tier, every party of the parent whose voice
+    /// remains (rule 46a, F121).
+    Judicial,
 }
 
 impl Power {
@@ -520,6 +523,7 @@ impl Power {
             Power::Clone => Value::Array(vec![Value::Uint(1)]),
             Power::Area(a) => Value::Array(vec![Value::Uint(2), Value::Uint(*a)]),
             Power::Plan(p) => Value::Array(vec![Value::Uint(3), b(p)]),
+            Power::Judicial => Value::Array(vec![Value::Uint(4)]),
         }
     }
 
@@ -564,6 +568,81 @@ impl Field4 {
     }
 }
 
+// ---------------------------------------------------------------- the chain of judgment
+
+/// `judge`: a judge a chain of judgment follows (F121; terms field 21).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Judge {
+    /// `[ 0, task ]`: the specification named for judicial task 9, 10 or
+    /// 11 (field 2, or field 6 for the time reference).
+    Task(u64),
+    /// `[ 1, identity ]`: an identity the terms name as a keeper's
+    /// operator, an arbitrator or verifier, or the abandonment authority.
+    Identity(Hash),
+    /// `[ 2 ]`: the split service, named by the grant of field 14.
+    SplitService,
+}
+
+impl Judge {
+    pub fn to_value(&self) -> Value {
+        match self {
+            Judge::Task(t) => Value::Array(vec![Value::Uint(0), Value::Uint(*t)]),
+            Judge::Identity(h) => Value::Array(vec![Value::Uint(1), b(h)]),
+            Judge::SplitService => Value::Array(vec![Value::Uint(2)]),
+        }
+    }
+
+    /// The deterministic encoding, which orders field 21's links.
+    pub fn encoding(&self) -> Vec<u8> {
+        cbor::encode(&self.to_value())
+    }
+}
+
+/// `chain = [ judge, [+ hash] ]`: a judge, and in order those that take
+/// over when it answers "unknown" or cannot act: specifications for a
+/// judicial task, identities for an identity, grants for the split service.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ChainLink {
+    pub judge: Judge,
+    pub next: Vec<Hash>,
+}
+
+impl ChainLink {
+    pub fn to_value(&self) -> Value {
+        Value::Array(vec![self.judge.to_value(), hashes_value(&self.next)])
+    }
+}
+
+/// The answer a chain of judgment gives (F121): the first answer in the
+/// chain's order that is not "unknown" (`None`), with its place in the
+/// chain (0 for the judge itself); `None` when every one answers unknown.
+/// The answers are those the judge and each that takes over gave, in the
+/// chain's order ([`Terms::chain_of`]); a client that does not hold a
+/// judge's specification shows the question as unknown, and never passes
+/// it down the chain.
+pub fn judged<T: Clone>(answers: &[Option<T>]) -> Option<(usize, T)> {
+    answers
+        .iter()
+        .enumerate()
+        .find_map(|(i, a)| a.clone().map(|a| (i, a)))
+}
+
+/// One entry of the departed members entry (terms field 22, F121): an
+/// identity that left the collective keeping a stake, and that stake, in
+/// millionths of all the collective's income. Nothing else: a departed
+/// holder has no voice and no veto.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DepartedHolder {
+    pub holder: Hash,
+    pub share: u64,
+}
+
+impl DepartedHolder {
+    pub fn to_value(&self) -> Value {
+        Value::Array(vec![b(&self.holder), Value::Uint(self.share)])
+    }
+}
+
 // ---------------------------------------------------------------- terms
 
 /// Terms (type 0), in the fields Law draft 7 fixes.
@@ -603,6 +682,10 @@ pub struct Terms {
     pub areas: Option<Vec<Area>>,
     /// 20: each area's own words, by area id, ascending.
     pub area_words: Option<Vec<(u64, String)>>,
+    /// 21: the chain of judgment: who takes over from each judge (F121).
+    pub chain: Option<Vec<ChainLink>>,
+    /// 22: the departed members entry: who left, and their stake (F121).
+    pub departed: Option<Vec<DepartedHolder>>,
 }
 
 impl Terms {
@@ -749,6 +832,12 @@ impl Terms {
                 ),
             ));
         }
+        if let Some(c) = &self.chain {
+            m.push((Value::Uint(21), Value::Array(c.iter().map(ChainLink::to_value).collect())));
+        }
+        if let Some(d) = &self.departed {
+            m.push((Value::Uint(22), Value::Array(d.iter().map(DepartedHolder::to_value).collect())));
+        }
         m
     }
 
@@ -775,7 +864,7 @@ impl Terms {
                 Value::Uint(17) => {
                     return Err(LawError::Unsupported("terms field 17 (refund terms)"))
                 }
-                Value::Uint(n) if *n <= 20 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 22 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("terms: unknown field")),
             }
         }
@@ -844,6 +933,23 @@ impl Terms {
                         .map(|(k, v)| match v {
                             Value::Text(t) => Ok((uint(k, "area words id")?, t.clone())),
                             _ => Err(LawError::Shape("area words")),
+                        })
+                        .collect()
+                })
+                .transpose()?,
+            chain: get(21)
+                .map(|v| nonempty(v, "chain of judgment")?.iter().map(chain_link).collect())
+                .transpose()?,
+            departed: get(22)
+                .map(|v| {
+                    nonempty(v, "departed members")?
+                        .iter()
+                        .map(|e| {
+                            let a = tuple(e, 2, "departed member")?;
+                            Ok(DepartedHolder {
+                                holder: hash(&a[0], "departed holder")?,
+                                share: uint(&a[1], "departed share")?,
+                            })
                         })
                         .collect()
                 })
@@ -935,6 +1041,8 @@ impl Terms {
             }
         }
         self.check_judges()?;
+        self.check_chain()?;
+        self.check_departed()?;
         if let Some(a) = &self.abandonment {
             if let Authority::Others(k) = a.authority {
                 if k == 0 || k >= parties.len() as u64 {
@@ -1038,6 +1146,129 @@ impl Terms {
             }
         }
         Ok(())
+    }
+
+    /// The chain of judgment (field 21, F121): each judge it follows is one
+    /// the terms name, once, the links ascending by the judge's encoding;
+    /// those that take over are distinct, and none is the judge itself. A
+    /// specification that takes over from a judicial task is a judge too,
+    /// so it is named nowhere else in the terms: for no task, as no
+    /// extension, and in no other link (Q20, Q25).
+    fn check_chain(&self) -> R<()> {
+        let Some(chain) = &self.chain else { return Ok(()) };
+        for w in chain.windows(2) {
+            if w[0].judge.encoding() >= w[1].judge.encoding() {
+                return Err(LawError::Check(
+                    "the chain of judgment's links are ascending by their judge, no judge twice (F121)",
+                ));
+            }
+        }
+        let authority = match &self.abandonment {
+            Some(Abandonment { authority: Authority::Named(a), .. }) => Some(*a),
+            _ => None,
+        };
+        let mut fallbacks: Vec<Hash> = vec![];
+        for l in chain {
+            let judge: Hash = match &l.judge {
+                Judge::Task(t) => {
+                    let named = self.cmip(*t).copied().or_else(|| {
+                        (*t == TIME_REFERENCE_TASK).then(|| self.time.as_ref().map(|(h, _)| *h)).flatten()
+                    });
+                    match named {
+                        Some(h) if JUDICIAL_TASKS.contains(t) => h,
+                        _ => {
+                            return Err(LawError::Check(
+                                "the chain of judgment follows a judicial task the terms name no judge for (F121)",
+                            ))
+                        }
+                    }
+                }
+                Judge::Identity(x) => {
+                    let named = self.keepers.as_ref().is_some_and(|k| k.operators.contains(x))
+                        || self.arbitrators.iter().flatten().any(|a| a == x)
+                        || authority.as_ref() == Some(x);
+                    if !named {
+                        return Err(LawError::Check(
+                            "the chain of judgment follows an identity the terms name as no keeper, arbitrator or authority (F121)",
+                        ));
+                    }
+                    *x
+                }
+                Judge::SplitService => match self.split_grant {
+                    Some(g) => g,
+                    None => {
+                        return Err(LawError::Check(
+                            "the chain of judgment follows a split service the terms do not name (F121)",
+                        ))
+                    }
+                },
+            };
+            if !distinct(&l.next) || l.next.contains(&judge) {
+                return Err(LawError::Check(
+                    "those that take over from a judge are distinct, and none is the judge itself (F121)",
+                ));
+            }
+            if let Judge::Task(_) = l.judge {
+                for h in &l.next {
+                    let elsewhere = self.cmips.iter().any(|(_, c)| c == h)
+                        || self.time.as_ref().is_some_and(|(t, _)| t == h)
+                        || self.extensions().contains(h)
+                        || fallbacks.contains(h);
+                    if elsewhere {
+                        return Err(LawError::Check(
+                            "a judge never handles what it judges: a specification that takes over from a judge is named nowhere else in the terms (F121, Q20)",
+                        ));
+                    }
+                    fallbacks.push(*h);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// The departed members entry (field 22, F121): in a collective only;
+    /// each holder once, none of them a party; each stake a share of all
+    /// the collective's income, in millionths, above zero, and together no
+    /// more than the whole.
+    fn check_departed(&self) -> R<()> {
+        let Some(d) = &self.departed else { return Ok(()) };
+        if !self.is_collective() {
+            return Err(LawError::Check(
+                "a departed members entry belongs to a collective (F121)",
+            ));
+        }
+        let who: Vec<Hash> = d.iter().map(|e| e.holder).collect();
+        if !distinct(&who) || who.iter().any(|h| self.parties.contains(h)) {
+            return Err(LawError::Check(
+                "a departed members entry names each holder once, and no party (F121)",
+            ));
+        }
+        if d.iter().any(|e| e.share == 0 || e.share > MILLION)
+            || d.iter().map(|e| e.share).sum::<u64>() > MILLION
+        {
+            return Err(LawError::Check(
+                "departed stakes are shares of the collective's income in millionths, above zero, together at most 1,000,000 (F121)",
+            ));
+        }
+        Ok(())
+    }
+
+    /// The judge and, in order, those that take over from it (F121): the
+    /// chain of judgment for `judge`, starting with the judge itself.
+    /// `None` when the terms name no such judge.
+    pub fn chain_of(&self, judge: &Judge) -> Option<Vec<Hash>> {
+        let first = match judge {
+            Judge::Task(t) => self.cmip(*t).copied().or_else(|| {
+                (*t == TIME_REFERENCE_TASK).then(|| self.time.as_ref().map(|(h, _)| *h)).flatten()
+            })?,
+            Judge::Identity(x) => *x,
+            Judge::SplitService => self.split_grant?,
+        };
+        let mut out = vec![first];
+        if let Some(l) = self.chain.iter().flatten().find(|l| &l.judge == judge) {
+            out.extend(l.next.iter().copied());
+        }
+        Some(out)
     }
 
     /// "Areas" and Q21, Q32: fields 18 to 20, areas' holders, numbers,
@@ -1782,6 +2013,22 @@ fn rule(v: &Value) -> R<Rule> {
     }
 }
 
+fn chain_link(v: &Value) -> R<ChainLink> {
+    let a = tuple(v, 2, "chain link")?;
+    let j = nonempty(&a[0], "judge")?;
+    let judge = match (uint(&j[0], "judge form")?, j.len()) {
+        (0, 2) => Judge::Task(uint(&j[1], "judge task")?),
+        (1, 2) => Judge::Identity(hash(&j[1], "judge identity")?),
+        (2, 1) => Judge::SplitService,
+        _ => return Err(LawError::Shape("judge")),
+    };
+    let next = hashes(&a[1], "chain of judgment")?;
+    if next.is_empty() {
+        return Err(LawError::Shape("chain of judgment"));
+    }
+    Ok(ChainLink { judge, next })
+}
+
 fn power(v: &Value) -> R<Power> {
     let a = nonempty(v, "power")?;
     match (uint(&a[0], "power form")?, a.len()) {
@@ -1789,6 +2036,7 @@ fn power(v: &Value) -> R<Power> {
         (1, 1) => Ok(Power::Clone),
         (2, 2) => Ok(Power::Area(uint(&a[1], "power area")?)),
         (3, 2) => Ok(Power::Plan(hash(&a[1], "power party")?)),
+        (4, 1) => Ok(Power::Judicial),
         _ => Err(LawError::Shape("power")),
     }
 }

@@ -53,7 +53,7 @@ test('a founding agreement, read from its bytes: who is bound, the keys, the are
 
   const tiers = section(r, 'Who decides what');
   assert.match(tiers, /Constitutional: the members, the change rules, the key grammar, the areas and the constitution's words\. They change only by the constitutional change rule: every member whose voice remains: nobody loses their say without signing \(F103\)/);
-  assert.match(tiers, /Judicial: the protected clauses \(the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs\)\. They change under the clone rule, any 2 of the 3 parties, but for each member only with that member's own signature/);
+  assert.match(tiers, /Judicial: the protected clauses \(the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs\)\. They change only with the signature of every member whose voice remains: one version for everyone \(Law rule 46a, F121\)/);
   assert.match(tiers, /Operational: matters outside every area change by the clone rule, any 2 of the 3 parties/);
 
   const leaving = section(r, 'Leaving');

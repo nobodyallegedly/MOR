@@ -19,7 +19,7 @@ use mor_core::chain::Status;
 use mor_core::hash::{sha256, Hash};
 use mor_core::identity::KeptTip;
 use mor_core::law::{
-    self, outcomes, Abandonment, AbsenceDeclaration, Area, Authority, Backing, CloneState, Consent, Field4, Grant,
+    self, outcomes, Abandonment, AbsenceDeclaration, Area, Authority, Backing, CloneState, Consent, DepartedHolder, Field4, Grant,
     Holding, KeyGrammar, Keepers, Kind, LawError, LawView, MarkEntry, Mips, Power, Record,
     Recovery, Resignation, Rule, SuccessionPlan, Terms,
 };
@@ -134,6 +134,8 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
             },
         ]),
         area_words: Some(vec![(1, "Releases go out on Fridays.".into())]),
+        chain: None,
+        departed: None,
     };
     f(&mut t);
     t
@@ -690,15 +692,33 @@ fn false_marks_sink_clones_and_areas_are_exclusive() {
     let r = lab.record(0, Some((k, vec![sa, sb])), &[], vec![], k);
     assert_eq!(puts(&lab, &r), Some(k), "in force at once, no rotation (Q7, Q8)");
 
-    // 3.7f: two of three change the arbitrator under the clone rule.
+    // 3.7f (F121): two of three change the arbitrator: the judicial tier
+    // needs every member, so two never meet it; the clone rule is not the
+    // power for it either.
     let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &|t| {
+        t.arbitrators = Some(vec![spec("a friendlier arbitrator")]);
+    });
+    let k2 = lab.propose(ANA, &t);
+    assert!(lab.view().agreement(&k2).unwrap().invalid.is_some());
+    let t = lab.clone_terms(&k, vec![(Power::Judicial, vec![ANA, BEN])], &|t| {
         t.arbitrators = Some(vec![spec("a friendlier arbitrator")]);
     });
     let k2 = lab.propose(ANA, &t);
     let s1 = lab.sign(ANA, &k2);
     let s2 = lab.sign(BEN, &k2);
     let r = lab.record(0, Some((k2, vec![s1, s2])), &[], vec![], k2);
-    assert_eq!(puts(&lab, &r), Some(k2));
+    assert_eq!(puts(&lab, &r), None, "two of three never change a judge");
+    let t = lab.clone_terms(&k, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
+        t.arbitrators = Some(vec![spec("a friendlier arbitrator")]);
+    });
+    let k2 = lab.propose(ANA, &t);
+    let s1 = lab.sign(ANA, &k2);
+    let s2 = lab.sign(BEN, &k2);
+    let r = lab.record(0, Some((k2, vec![s1, s2])), &[], vec![], k2);
+    assert!(matches!(clone_state(&lab, &r), CloneState::Draft(_)), "a draft until Cy signs");
+    let s3 = lab.sign(CY, &k2);
+    let r = lab.record(0, Some((k2, vec![s1, s2, s3])), &[], vec![], k2);
+    assert_eq!(puts(&lab, &r), Some(k2), "one version, for everyone");
 
     // 3.7l, Q12: the manager's words and the keepers: both powers.
     let t = lab.clone_terms(&k2, vec![(Power::Area(1), vec![ANA])], &|t| {
@@ -709,7 +729,7 @@ fn false_marks_sink_clones_and_areas_are_exclusive() {
     assert!(lab.view().agreement(&k3).unwrap().invalid.is_some());
     let t = lab.clone_terms(
         &k2,
-        vec![(Power::Clone, vec![BEN, CY]), (Power::Area(1), vec![ANA])],
+        vec![(Power::Judicial, vec![ANA, BEN, CY]), (Power::Area(1), vec![ANA])],
         &|t| {
             words(t, 1, "Tuesdays.");
             t.keepers = None;
@@ -747,9 +767,9 @@ fn a_departure_takes_effect_at_the_labels_line() {
     let r0 = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
     assert_eq!(puts(&lab, &r0), Some(k));
 
-    // Q23 and C2: a clone under the clone rule, two of three; Ben signs and
-    // the label acknowledges it as it arrives.
-    let t = lab.clone_terms(&k, vec![(Power::Clone, vec![BEN, CY])], &|t| {
+    // Q23 and C2: a judicial clone, every member (F121); Ben signs and the
+    // label acknowledges it as it arrives.
+    let t = lab.clone_terms(&k, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
         t.arbitrators = Some(vec![spec("arbitrator two")]);
     });
     let k2 = lab.propose(CY, &t);
@@ -785,23 +805,26 @@ fn a_departure_takes_effect_at_the_labels_line() {
     // The completed clone stays complete.
     assert_eq!(lab.in_force(&x4), k);
 
-    // C2: Cy signs after the line; a record names both: Ben counts as a
-    // voice for it, the label having acknowledged his signature first.
+    // C2: Ana and Cy sign after the line; a record names all three: Ben
+    // counts as a voice for it, the label having acknowledged his
+    // signature first.
+    let sa2 = lab.sign(ANA, &k2);
     let sc2 = lab.sign(CY, &k2);
-    let r2 = lab.record(0, Some((k2, vec![sb2, sc2])), &[], vec![], k2);
+    let r2 = lab.record(0, Some((k2, vec![sa2, sb2, sc2])), &[], vec![], k2);
     assert_eq!(puts(&lab, &r2), Some(k2));
     // A third clone Ben signed but the label never acknowledged, recorded
     // after the line: his signature counts toward nothing.
-    let t = lab.clone_terms(&k2, vec![(Power::Clone, vec![BEN, CY])], &|t| {
+    let t = lab.clone_terms(&k2, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
         t.arbitrators = Some(vec![spec("arbitrator three")]);
     });
     let k3 = lab.propose(CY, &t);
+    let sa3 = lab.sign(ANA, &k3);
     let sb3 = sign(&mut lab.w, &mut ben_tablet, &k3);
     let sc3 = lab.sign(CY, &k3);
-    let r3 = lab.record(0, Some((k3, vec![sb3, sc3])), &[], vec![], k3);
+    let r3 = lab.record(0, Some((k3, vec![sa3, sb3, sc3])), &[], vec![], k3);
     assert!(matches!(clone_state(&lab, &r3), CloneState::Invalid(_)));
     // ... and the clone needs the voices that remain: Ana and Cy.
-    let t = lab.clone_terms(&k2, vec![(Power::Clone, vec![ANA, CY])], &|t| {
+    let t = lab.clone_terms(&k2, vec![(Power::Judicial, vec![ANA, CY])], &|t| {
         t.arbitrators = Some(vec![spec("arbitrator three")]);
     });
     let k3 = lab.propose(CY, &t);
@@ -957,6 +980,81 @@ fn a_member_removed_where_the_constitution_allows_it() {
     lab.sign(ANA, &p);
     assert_eq!(lab.in_force(&p), k);
     assert!(lab.counts(&p));
+}
+
+/// F121 (freeze suite v21, 3.7q): a member removed keeps their stake as a
+/// departed holder: the entry records who left and their stake, nothing
+/// else. The departed holder has no voice; the stake never shrinks without
+/// the holder's signature (rule 46).
+#[test]
+fn a_departed_holders_stake_never_shrinks_without_them() {
+    let mut lab = Lab::new(&|t| t.constitutional = Some(Rule::Threshold(2)));
+    let f = lab.founding;
+    let ids = lab.ids();
+    let cy = ids[CY];
+    let keep = vec![ids[ANA], ids[BEN]];
+    let out = |share: u64| -> Box<dyn Fn(&mut Terms)> {
+        let keep = keep.clone();
+        Box::new(move |t: &mut Terms| {
+            t.parties = keep.clone();
+            t.constitutional = Some(Rule::Threshold(2));
+            let g = t.grammar.as_mut().unwrap();
+            g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
+            g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
+            t.departed = Some(vec![DepartedHolder { holder: cy, share }]);
+        })
+    };
+    // Cy removed, keeping a quarter of the label's income.
+    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN])], &*out(250_000));
+    let k = lab.propose(ANA, &t);
+    let sa = lab.sign(ANA, &k);
+    let sb = lab.sign(BEN, &k);
+    lab.rotate(Some((k, vec![sa, sb])), &[0]);
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    assert_eq!(lab.in_force(&p), k);
+    // No voice: a mark naming the departed holder is invalid.
+    let t = lab.clone_terms(&k, vec![(Power::Constitutional, vec![ANA, CY])], &|t| t.text = "Other words.".into());
+    let x = lab.propose(ANA, &t);
+    assert!(lab.view().agreement(&x).unwrap().invalid.is_some());
+    // The two members lower Cy's stake: without Cy's signature, a draft.
+    let lower = |share: u64| -> Box<dyn Fn(&mut Terms)> {
+        Box::new(move |t: &mut Terms| t.departed = Some(vec![DepartedHolder { holder: cy, share }]))
+    };
+    let t = lab.clone_terms(&k, vec![(Power::Constitutional, vec![ANA, BEN])], &*lower(100_000));
+    let k2 = lab.propose(ANA, &t);
+    let s1 = lab.sign(ANA, &k2);
+    let s2 = lab.sign(BEN, &k2);
+    assert!(!lab.view().agreement(&k2).unwrap().ready, "Cy has not signed");
+    lab.rotate(Some((k2, vec![s1, s2])), &[0]);
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    assert!(matches!(lab.consent(&p), Consent::Broken { .. }), "nothing in force without Cy");
+    // Raising it needs no signature of Cy's.
+    let mut lab2 = Lab::new(&|t| t.constitutional = Some(Rule::Threshold(2)));
+    let f2 = lab2.founding;
+    let t = lab2.clone_terms(&f2, vec![(Power::Constitutional, vec![ANA, BEN])], &*out(250_000));
+    let k = lab2.propose(ANA, &t);
+    let sa = lab2.sign(ANA, &k);
+    let sb = lab2.sign(BEN, &k);
+    lab2.rotate(Some((k, vec![sa, sb])), &[0]);
+    let t = lab2.clone_terms(&k, vec![(Power::Constitutional, vec![ANA, BEN])], &*lower(300_000));
+    let k3 = lab2.propose(ANA, &t);
+    lab2.sign(ANA, &k3);
+    lab2.sign(BEN, &k3);
+    assert!(lab2.view().agreement(&k3).unwrap().ready);
+    // Lowered with Cy's signature named too: in force.
+    let t = lab2.clone_terms(&k, vec![(Power::Constitutional, vec![ANA, BEN])], &*lower(100_000));
+    let k4 = lab2.propose(ANA, &t);
+    let s1 = lab2.sign(ANA, &k4);
+    let s2 = lab2.sign(BEN, &k4);
+    let s3 = lab2.sign(CY, &k4);
+    assert!(lab2.view().agreement(&k4).unwrap().ready);
+    lab2.rotate(Some((k4, vec![s1, s2, s3])), &[0]);
+    let p = lab2.publish(0);
+    lab2.sign(ANA, &p);
+    assert_eq!(lab2.in_force(&p), k4);
+    assert!(lab2.counts(&p));
 }
 
 // ---------------------------------------------------------------- areas, freezes, grants
@@ -1241,7 +1339,7 @@ fn the_keepers_of_the_agreement_in_force_place() {
     let x = lab.cmip_act(1, pay());
     lab.sign(BEN, &x);
     let k2 = lab.w.genesis("keeper two", vec![own_home()], None, None);
-    let t = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN, CY])], &|t| {
+    let t = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
         t.keepers = Some(Keepers {
             operators: vec![k2.id],
             rule: Rule::All,
@@ -1476,7 +1574,7 @@ impl Lab {
 
     /// A clone adding a succession plan, signed by `who`, recorded at once.
     fn add_plan(&mut self, parent: &Hash, who: &[usize], plan: SuccessionPlan) -> Hash {
-        let t = self.clone_terms(parent, vec![(Power::Clone, who.to_vec())], &|t| {
+        let t = self.clone_terms(parent, vec![(Power::Judicial, who.to_vec())], &|t| {
             t.succession = Some(vec![plan.clone()]);
         });
         let k = self.propose(who[0], &t);
@@ -1500,22 +1598,23 @@ fn a_declaration_removes_a_voice_at_the_labels_line() {
         fin.threshold = 2;
     });
     let f = lab.founding;
-    // Before the line: Ana and Ben sign an operational clone (a judicial
-    // change, under the clone rule, two of three), recorded at once.
-    let t1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| {
+    // Before the line: every member signs a judicial clone (F121),
+    // recorded at once.
+    let t1 = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
         t.arbitrators = Some(vec![spec("another arbitrator")]);
     });
     let k1 = lab.propose(ANA, &t1);
     let sa = lab.sign(ANA, &k1);
     let sb = lab.sign(BEN, &k1);
-    let r1 = lab.record(0, Some((k1, vec![sa, sb])), &[], vec![], k1);
+    let sc = lab.sign(CY, &k1);
+    let r1 = lab.record(0, Some((k1, vec![sa, sb, sc])), &[], vec![], k1);
     // A year of receipts, both treasurers signing.
     let early = lab.cmip_act(0, pay());
     lab.sign(ANA, &early);
     lab.sign(BEN, &early);
     assert!(lab.counts(&early));
     // Ana also signs a second clone, which the label never acknowledges.
-    let t2 = lab.clone_terms(&k1, vec![(Power::Clone, vec![ANA, BEN])], &|t| {
+    let t2 = lab.clone_terms(&k1, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
         t.arbitrators = Some(vec![spec("a third arbitrator")]);
     });
     let k2 = lab.propose(ANA, &t2);
@@ -1555,10 +1654,12 @@ fn a_declaration_removes_a_voice_at_the_labels_line() {
     assert!(lab.counts(&x));
     assert_eq!(areas(&lab.consent(&x))[0].3, vec![lab.m[BEN].id]);
     // Ana's unacknowledged signature on k2, recorded after the line, counts
-    // toward nothing: a mark naming her is invalid; Ben and Cy meet it.
-    let r2 = lab.record(0, Some((k2, vec![sa2, sb2])), &[], vec![], k2);
+    // toward nothing: a mark naming her is invalid; Ben and Cy, every voice
+    // that remains, meet it.
+    let sc2 = lab.sign(CY, &k2);
+    let r2 = lab.record(0, Some((k2, vec![sa2, sb2, sc2])), &[], vec![], k2);
     assert!(matches!(clone_state(&lab, &r2), CloneState::Invalid(_)));
-    let t2b = lab.clone_terms(&k1, vec![(Power::Clone, vec![BEN, CY])], &|t| {
+    let t2b = lab.clone_terms(&k1, vec![(Power::Judicial, vec![BEN, CY])], &|t| {
         t.arbitrators = Some(vec![spec("a third arbitrator")]);
     });
     let k2b = lab.propose(BEN, &t2b);
@@ -1913,8 +2014,19 @@ fn a_seat_passes_by_automatic_succession() {
             entry: Some(0),
         };
         let f = lab.founding;
-        let who: &[usize] = if stranger { &[ANA, BEN] } else { &[ANA, BEN, CY] };
-        let k0 = lab.add_plan(&f, who, plan.clone());
+        if stranger {
+            // F121: a plan is judicial, and two of three never change it,
+            // so the stranger's plan never comes into force.
+            let t = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN])], &|t| {
+                t.succession = Some(vec![plan.clone()]);
+            });
+            let k = lab.propose(ANA, &t);
+            let sigs: Vec<Hash> = [ANA, BEN].iter().map(|i| lab.sign(*i, &k)).collect();
+            let r = lab.record(0, Some((k, sigs)), &[], vec![], k);
+            assert_eq!(puts(&lab, &r), None, "two of three never change a plan (F121)");
+            continue;
+        }
+        let k0 = lab.add_plan(&f, &[ANA, BEN, CY], plan.clone());
         if declared {
             let d = lab.declare(None, k0, k0, BEN, vec![outcomes::VOICE_REMOVED]);
             lab.record(0, None, &[], vec![d], k0);
@@ -2095,7 +2207,7 @@ fn a_sole_safety_holders_successor_names_their_own_successor() {
     let ana_plan = SuccessionPlan { party: ids[ANA], stakes: None, seats: Some(vec![(spec("Ana's heir"), 1)]), entry: Some(1) };
     let dee_plan = SuccessionPlan { party: dee.id, stakes: None, seats: Some(vec![(deesucc, 1)]), entry: Some(1) };
     let f = lab.founding;
-    let t0 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN, CY])], &|t| {
+    let t0 = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
         t.succession = Some(vec![ben_plan.clone(), ana_plan.clone()]);
     });
     let k0 = lab.propose(ANA, &t0);
@@ -2205,6 +2317,8 @@ fn a_deal_changes_only_with_everyone() {
         constitutional: None,
         areas: None,
         area_words: None,
+        chain: None,
+        departed: None,
     };
     let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -2275,6 +2389,8 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             constitutional: None,
             areas: None,
             area_words: None,
+            chain: None,
+            departed: None,
         };
         let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -2362,6 +2478,8 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         constitutional: None,
         areas: None,
         area_words: None,
+        chain: None,
+        departed: None,
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mips());

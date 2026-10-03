@@ -442,9 +442,9 @@ export class TestCollective {
   /**
    * A judicial change (Law rules 44a, 46a; Law draft 8, B13): only who
    * judges absence, the abandonment clause's number of the other members.
-   * A clone marked with the clone rule and the members who sign it,
-   * recorded at once (rule 37c, Q8). For a member who does not sign it, the
-   * clause stays the one they signed (rule 46a).
+   * A clone marked with the judicial tier's power, every member whose voice
+   * remains signing it (Law draft 10, F121: one version for everyone),
+   * recorded at once (rule 37c, Q8).
    */
   async changeAbsenceRule(opts: {
     others: number;
@@ -453,7 +453,7 @@ export class TestCollective {
     expect?: Uint8Array;
   }): Promise<{ clone: string; record: string; signed: Signed[] }> {
     const governance = { ...this.f.governance, abandonmentOthers: opts.others };
-    return this.recordChange({ ...opts, governance, power: { clone: true }, what: 'not a judicial change of who judges absence' });
+    return this.recordChange({ ...opts, governance, power: { judicial: true }, what: 'not a judicial change of who judges absence' });
   }
 
   /**

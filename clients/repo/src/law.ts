@@ -28,10 +28,11 @@ export type Rule = { all: true } | { threshold: number } | { named: string[] };
 const ruleValue = (r: Rule): unknown[] =>
   'all' in r ? [0] : 'threshold' in r ? [1, r.threshold] : [2, r.named.map(unhex)];
 
-/** A power a clone's mark claims (Law draft 7, F104). */
-export type Power = { constitutional: true } | { clone: true } | { area: number };
+/** A power a clone's mark claims (Law draft 7, F104); the judicial tier, every member (Law draft 10, F121). */
+export type Power = { constitutional: true } | { clone: true } | { area: number } | { judicial: true };
 
-const powerValue = (p: Power): unknown[] => ('constitutional' in p ? [0] : 'clone' in p ? [1] : [2, p.area]);
+const powerValue = (p: Power): unknown[] =>
+  'constitutional' in p ? [0] : 'clone' in p ? [1] : 'judicial' in p ? [4] : [2, p.area];
 
 /** One entry of a mark: the power, and the parties whose signatures meet it. */
 export interface MarkEntry {
@@ -129,7 +130,8 @@ export function clonePlan(parent: CollectiveTerms, clone: CollectiveTerms): {
 
 /** Whether the powers a mark names are exactly those a plan needs. */
 export function markMatches(mark: MarkEntry[], needs: { form: string; area?: number }[]): boolean {
-  const key = (p: Power) => ('constitutional' in p ? 'constitutional' : 'clone' in p ? 'clone' : `area ${p.area}`);
+  const key = (p: Power) =>
+    'constitutional' in p ? 'constitutional' : 'clone' in p ? 'clone' : 'judicial' in p ? 'judicial' : `area ${p.area}`;
   const want = needs.map((n) => (n.form === 'area' ? `area ${n.area}` : n.form));
   return JSON.stringify(mark.map((e) => key(e.power))) === JSON.stringify(want);
 }

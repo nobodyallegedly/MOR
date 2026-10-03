@@ -62,7 +62,7 @@ type HoldingOut = {
 };
 
 /** A power a clone's mark claims, or a plan needs (Law rule 44c). */
-export type PowerOut = { form: 'constitutional' | 'clone' | 'area' | 'plan'; area?: number | null; party?: string | null };
+export type PowerOut = { form: 'constitutional' | 'clone' | 'area' | 'plan' | 'judicial'; area?: number | null; party?: string | null };
 
 /** An area (terms field 19): who holds it, how many decide, what it reaches (Law rule 36a). */
 export interface AreaRead {
@@ -177,6 +177,8 @@ export function powerWords(p: PowerOut, areas: AreaRead[], names: Names): string
     }
     case 'plan':
       return `the succession plan of ${names(p.party ?? '')}`;
+    case 'judicial':
+      return "the judicial tier's rule, every member whose voice remains";
   }
 }
 
@@ -422,7 +424,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
           text: `Constitutional: the members, the change rules, the key grammar, the areas and the constitution's words. They change only by the constitutional change rule: ${constitutionWords(t, names)}. Such a change is declared by a rotation of the collective to new keys; whatever its old key signs afterwards is void (Law rule 37, F100).`,
         },
         {
-          text: `Judicial: the protected clauses (the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs). They change under the clone rule, ${clone}, but for each member only with that member's own signature: for a member who does not sign, the version they signed still applies (Law rule 46a).`,
+          text: `Judicial: the protected clauses (the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs). They change only with the signature of every member whose voice remains: one version for everyone (Law rule 46a, F121).`,
         },
         {
           text: `Operational: matters outside every area change by the clone rule, ${clone}, and are written on the collective's record at once (Law rule 37c); matters inside an area, by its holders.`,
@@ -613,7 +615,7 @@ export function readChanges(beforePayload: Uint8Array, afterPayload: Uint8Array,
     const words = (a: TermsRead['abandonment']) =>
       !a ? 'no one' : a.authority === 'named' ? names(a.identity!) : `any ${a.threshold} of the other parties`;
     out.push({
-      text: `Absence is now judged by ${words(after.abandonment)} (was ${words(before.abandonment)}). A protected clause: for a party who does not sign this clone, the version they signed still applies (Law rule 46a).`,
+      text: `Absence is now judged by ${words(after.abandonment)} (was ${words(before.abandonment)}). A protected clause: it changes only with every member's signature, one version for everyone (Law rule 46a, F121).`,
       tone: 'warn',
     });
   }
@@ -646,7 +648,7 @@ export function readChanges(beforePayload: Uint8Array, afterPayload: Uint8Array,
       ch.tier === 'constitutional'
         ? 'constitutional'
         : ch.tier === 'judicial'
-          ? 'judicial, a protected clause: for a member who does not sign, the version they signed still applies (Law rule 46a)'
+          ? 'judicial, a protected clause: it changes only with every member\'s signature, one version for everyone (Law rule 46a, F121)'
           : ch.form === 'words'
             ? `operational, in the “${areaName(ch.area)}” area`
             : 'operational';

@@ -782,6 +782,7 @@ export class Actions {
         tone: 'bad',
       });
     }
+    out.push({ text: `A change of who judges (the protected clauses) needs every member whose voice remains: ${list(voices.map(names)) || 'nobody'} (Law rule 46a, F121).` });
     out.push({ text: `Other changes need ${anyOf(needed(g.cloneThreshold, voices.length), voices, names)}.` });
     return out;
   }
@@ -1038,10 +1039,11 @@ export class Actions {
   /**
    * A judicial change (Law draft 8, B13): only who judges absence changes,
    * the abandonment clause, a protected clause of the judicial tier (Law
-   * rules 44a, 46a). Marked with the clone rule, signed by enough members
-   * whose voice remains, and written on the collective's record at once
-   * with its everyday key: no rotation (rule 37c, Q8). For a member who
-   * does not sign it, absence stays judged by the clause they signed.
+   * rules 44a, 46a). The judicial tier changes only with every member's
+   * signature, one version for everyone (Law draft 10, F121): marked with
+   * that power, signed by every member whose voice remains, and written on
+   * the collective's record at once with its everyday key: no rotation
+   * (rule 37c, Q8).
    */
   async prepareAbsenceRule(a: { collective: string; others: number; signers?: string[] }) {
     const names = this.store.names();
@@ -1054,16 +1056,16 @@ export class Actions {
     const others = whole(a.others, 'who judges absence');
     if (others === old) blocking.push('Nothing changes: this is who judges absence already.');
     const voices = voicesOf(c);
-    const k = needed(c.f.governance.cloneThreshold, voices.length);
-    const signers = a.signers?.length ? [...new Set(a.signers)] : voices.filter((m) => this.store.holds(m)).slice(0, k);
+    const signers = a.signers?.length ? [...new Set(a.signers)] : voices.filter((m) => this.store.holds(m));
     for (const s of signers) {
-      if (!voices.includes(s)) blocking.push(`${names(s)} is not a member whose voice remains, so their signature cannot meet the clone rule.`);
+      if (!voices.includes(s)) blocking.push(`${names(s)} is not a member whose voice remains, so their signature cannot meet the judicial tier's rule.`);
       else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
     }
-    if (voices.length && signers.length < k) blocking.push(`A judicial change needs ${anyOf(k, voices, names)} (the clone rule); only ${signers.length} sign here.`);
+    const missing = voices.filter((v) => !signers.includes(v));
+    if (missing.length) blocking.push(`A judicial change needs every member whose voice remains (Law rule 46a, F121); ${list(missing.map(names))} ${missing.length === 1 ? 'does' : 'do'} not sign here.`);
     const g: Governance = { ...c.f.governance, abandonmentOthers: others };
     const hints = rulesHints(toRules(g), c.f.members.length);
-    const mark: MarkEntry[] = [{ power: { clone: true }, signers }];
+    const mark: MarkEntry[] = [{ power: { judicial: true }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
     let changes: Line[] = [];
     if (signers.length && !hints.length) {
@@ -1076,7 +1078,6 @@ export class Actions {
       blocking.push(...withLaw([], readAgreement(after, names, before?.t).blocking));
     } else if (!signers.length && !blocking.length) blocking.push('Nobody here can sign it.');
     blocking.unshift(...hints);
-    const unsigned = voices.filter((v) => !signers.includes(v));
     const notes: Line[] = [];
     if (c.f.governance.text === standardWords(cname, c.f.governance)) {
       notes.push({
@@ -1089,10 +1090,8 @@ export class Actions {
       summary: [
         'A judicial change: only who judges absence changes. The abandonment clause is a protected clause, in the judicial tier (Law rules 44a, 46a).',
         `Today any ${old} of the other members together decide whether a member is absent; after the change, any ${others}. The outcome stays the same: the member loses their voice, never what they own (F105).`,
-        `The clone is marked with the clone rule and signed by ${list(signers.map(names))}: enough members (${anyOf(k, voices, names)}) (Law rules 44c, 45a).`,
-        unsigned.length
-          ? `For ${list(unsigned.map(names))}, who ${unsigned.length === 1 ? 'does' : 'do'} not sign it, absence stays judged by the clause they signed: any ${old} of the other members (Law rule 46a). A protected clause changes for a member only with that member's signature.`
-          : 'Every member whose voice remains signs it, so the new clause judges each of them.',
+        `The clone is marked with the judicial tier's power and signed by ${list(signers.map(names))}: every member whose voice remains (Law rules 44c, 45a, 46a).`,
+        'The judicial tier changes only with every member\'s signature, so there is one version for everyone: the new clause judges each member (Law draft 10, F121).',
         "The collective writes it on its record at once, signed with its everyday key: no rotation, no new keys (Law rule 37c, Q8).",
       ],
       sections: [
