@@ -2659,7 +2659,7 @@ fn a_group_splits_off_and_its_members_become_departed_holders() {
     assert_eq!(lab.view().current(&lab.c[0].id).unwrap().unwrap().closed, None);
 }
 
-/// F122 against removal (flaw R1, Law draft 10, section 6): under a
+/// F122 against removal (flaw M1, Law draft 10, section 6): under a
 /// constitutional change rule of two of three, removing a member whose
 /// succession plan the terms carry also drops that plan, a judicial
 /// change, which F122 counts among every member, the one removed included.

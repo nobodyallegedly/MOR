@@ -1352,6 +1352,8 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 
 *F122 decided by Nobody, allegedly, 3 October 2026.*
 
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 6):** rules 36a, 44c.1, 44e and 46a (the mark names `[0]` and `[4]`), core v21, freeze suite v21 (step 3.7s); built in the core library (the "unsettled" refusal replaced) and the collective client, and tested. *Writing it in exposed flaw M1: a removal under a constitutional change rule below every party that drops the removed member's own succession plan is a judicial change too, which F122 counts the removed member in.*
+
 ## F123. The split service vouches for the addresses in the owners' pointer (found writing F121 into Law draft 10, flaw P1, decided by Nobody, allegedly)
 
 **Pattern:** 4: a rule resting on a fact nobody can check. A payee pointer lists payment addresses and node keys, never an identity, so "the pointer names the split service" (F121, fix 2) cannot be verified.
@@ -1363,6 +1365,8 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Changes, to be made:** Law draft 10 (rule 18 as a check); the pointer check built in the core library; freeze suite scenario 3.7r run.
 
 *F123 decided by Nobody, allegedly, 3 October 2026.*
+
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 6):** rule 18 (one service's own pointer in force carries every address of the owners' pointer: the service named, or one its chain names, reading 4), core v21, freeze suite v21 (step 3.7r, now run); built in the core library (`LawView::pointer_check`) and the collective client, and tested. *Writing it in exposed flaw P2: the owners' vault is not reached by the check.*
 
 **F121, the fork's questions (`docs/law-draft-10.md`, section 5; answered by Nobody, allegedly, 3 October 2026, one at a time):**
 - *Q1, debts at a fork:* (c) the fork act assigns each debt to a side, which signs for it; any debt it does not name is owed by both sides. "It forces communication to reach agreement, which is a positive outcome." No debt can vanish.
@@ -1386,3 +1390,5 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 - *The eight readings of `docs/law-draft-10.md`, section 5:* 1 to 6 and 8 confirmed (Nobody, allegedly, 3 October 2026). Reading 7 corrected: for a party whose voice was removed before a judicial change, the abandonment clause **in force** applies, not an older one, as departed holders are under the collective's current rules (fix 1).
 
 *F121's questions all answered, 3 October 2026. To write: the fork grammar (scenario B: a fork act signed by both sides, closing the original in Law; ownership transfers; defaults; the "forked from" field; withdrawal of open offers), scenarios A, C and D, the release act, the pointer check (F123), equal treatment (Q8), fee visibility (Q9), the periods of the chain of judgment (Q7), and the rename of rule 47 to the concurrency rule.*
+
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 6):** the chain's periods on a compulsory time reference (field 21, rule 34a); stakes in the collective itself (field 7 made exact) and equal treatment checked against them (rule 46b); every split delivered to every holder it pays, naming each fee and its receiver (type 8 made exact, rules 20, 27); the four shapes of ending (rule 47a), the fork act (type 19) and "forked from" (field 23), the release act (type 5 made exact) and the release rule (field 24, rule 17); reading 7 corrected; the concurrency rule (field 10); core v21, freeze suite v21 (3.7p, 3.7q, 3.7t, 3.7u, 3.9, 3.9a to 3.9c; 3.7r and 3.9 now run), one page v6; built in the core library and the collective client, and tested. Writing it in exposed flaw S1 (founding terms cannot name the collective itself, so members' stakes in it come by a first clone), and ten questions (N1 to N10, `docs/law-draft-10.md`, section 6), each with a lean, the code built on the leans.

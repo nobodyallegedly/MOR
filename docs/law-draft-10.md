@@ -1,6 +1,6 @@
 # Law draft 10, and the seven rules of the core pass
 
-*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3, and again for F120 and F121), not merged. Section 5 writes in F120 and F121. Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
+*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3, and again for F120 and F121), not merged. Section 5 writes in F120 and F121; section 6 writes in F121's answers, F122 and F123, with main merged in again first. Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
 
 ## 1. What Law draft 10 changes
 
@@ -231,3 +231,144 @@ For the new collectives, in every reading: each has its own genesis and new keys
 4. Questions 7 to 9.
 5. The eight readings above.
 6. Approval of Law draft 10 with the core pass drafts; then the fork's grammar, the pointer check and the human regtest test on the Mac.
+
+## 6. F121's answers, F122 and F123 written in
+
+*Main merged in first (the findings log: F122, F123 and every answer under F121). Law draft 10, core v21, freeze suite v21 and one page v6 revised in place; the core library and the collective client built and tested. Nothing is approved.*
+
+### What changed, in plain words
+
+**A judge and the constitution in one version need both rules (F122).** When one new version changes the constitution (who decides) and a judge (who settles disputes), it needs the constitution's own rule, and every member for the judge. It stays a draft until both are met.
+*Precisely:* rule 44c.1: a constitutional change needs `[0]`; where some change is also judicial, `[4]` too, the mark naming both; rules 36a, 44e and 46a read alike. The core library's "unsettled" refusal (K1) is gone; such a version is judged by the rule.
+
+**The split service vouches for the owners' pointer (F123).** Where an agreement names a split service, the owners' payee pointer counts, for Law, only if every address in it also appears in the service's own signed pointer. To go around the service, the service would have to sign, publicly, for an address that is not its own.
+*Precisely:* rule 18: every rail of the owners' pointer in force (a rail Module and its address bytes) is a rail of one service's own pointer in force: the service the agreement names, or one its chain of judgment names to take over (reading 4). A Law client shows anything else as bypassing the split service; a Finance-only wallet cannot check it (cost stated).
+
+**A silent judge is replaced after a period (F121, Q7).** Each step of a chain of judgment names how long the judge has to act once asked. After that, measured on the agreement's time reference, the next one may act. Wherever a judge can stay silent (a person or a service), the agreement must name a time reference.
+*Precisely:* terms field 21 becomes `[ judge, [+ [ next, period ]] ]`, every period above zero; terms whose chain follows an identity or the split service without a time reference (field 6 or task 10) are invalid; rule 34a.
+
+**Members' stakes in the collective itself (F121, Q8), and equal treatment checked against them.** A stake whose object is the collective is a share of everything it earns, for members and departed holders alike. A split that pays a departed holder's share less than a member's of the same size is shown as breaking equal treatment.
+*Precisely:* terms field 7 is now exact (`[+ [ object, [+ [ holder, share ]] ]]`, millionths summing to 1,000,000, each object once); rule 46b.
+
+**Every split is shown to everyone it pays, with every fee (F121, Q9).** The split service delivers each split to every holder it pays, and names each fee and who received it. The core cannot tell who owns a service, so it never hides a fee.
+*Precisely:* the split (type 8) is now exact: its payouts are maps naming, each, the receiver, the amount, the stake it pays or the fee's module, and the split names the agreement whose stakes it pays (field 3); rules 20 and 27. *The draft 9 sketch, an array with optional parts that could not be told apart, is replaced.*
+
+**How a collective ends: four shapes (F121).**
+- **A, a group splits off** with the powers to do so: an ordinary change of members; those who leave become departed holders, recorded with their stake.
+- **B, the fork proper:** every member signs a **fork act** with their own identity, each on a side. Once complete, the original collective is **closed in Law**: anything its keys sign afterwards counts for nothing; rotating it is optional cleanup. Its ownership of each work passes to the collectives the sides found, in the shares the act names, **by default by the members' stakes**; **departed holders keep their percentage in every successor**; a debt the act assigns goes to that side, **any other is owed by both**; **every grant ends**, each side reinstating what it wants; **open offers are withdrawn**; the old split service pays the successors. Each successor names the original in a new **"forked from"** field, never as a parent.
+- **C, actively abandoned:** a plain collective; nothing new.
+- **D, dissolution:** works sold or **released to the public domain**: the **release act** ends the claim, names the work's history (its claims and the stakes it ends) and publishes its content key. It needs **every stake holder's signature** unless the founding terms set another release rule; a later claim is shown as made after the release.
+*Precisely:* the fork act (type 19): the original agreement, the collective, its chain act and kept tips (its line), the sides, optional shares and debts; terms field 23, forked from; the release act (type 5, now exact) and terms field 24, the release rule, set in founding terms and changed by no clone; rules 15b, 17, 47a.
+
+**Reading 7 corrected.** For a party whose voice was removed before a judicial change, the abandonment clause in force applies, not an older one.
+
+**The concurrency rule.** Rule 47's "fork rule" (terms field 10) is renamed the concurrency rule everywhere in Law draft 10, core v21 and the suite.
+
+The core names no specific use: the new text speaks of members, sides, holders, works and services only.
+
+### Three flaws (not worked around)
+
+**Flaw S1. Founding terms cannot name the collective itself.** *Plain words:* a collective's name is its birth certificate (its genesis), and the birth certificate names the founding agreement. So the founding agreement cannot name the collective: it does not exist yet. Q8's "stakes whose object is the collective itself" can therefore never be in founding terms; nor can the collective's own grants (the split service).
+*Example:* three people found a collective and want to own a third of its income each from day one. They cannot write it at founding; they must sign a first clone straight after. In a fork, each side founds a new collective: its founding terms cannot say how its members share its income either, only who the departed holders are.
+- (a) A "self" form: a stake's object or holder written as null means "this collective", as Identity already lets a genesis name itself as its own home's operator with null. *In the example:* the founding terms say "null: one third each".
+- (b) Stakes in the collective always come in a first clone, as built now. *In the example:* two steps, every member signing both.
+- (c) A members' entry beside the departed one (Q8's option set aside).
+**Lean: (a).** It follows Identity's own precedent, changes no other field, and lets a fork's successors be complete at birth.
+*Meanwhile:* the core library accepts a stake in the collective only by its identity hash, so only in a clone; the collective client sets stakes by a clone.
+
+**Flaw M1. F122 lets a member with a succession plan block their own removal.** *Plain words:* some collectives let a majority remove a member. If that member has a succession plan in the terms, the plan has to go too (a plan for someone who is no longer a member is invalid), and a plan is a judicial clause. Under F122 that needs every member, the one being removed included.
+*Example:* a collective of three, removal by two of three. Ana and Ben remove Cy, whose plan names an heir. The new version drops Cy's plan, so it needs Cy's signature: Cy can refuse, and stays.
+- (a) A clause that names only the member being removed (their own plan) goes with the removal, as their seats in areas already do (Q21): no judicial power needed for it. *In the example:* Ana and Ben's signatures suffice.
+- (b) The member a version removes is not counted for that version's judicial part. *Same result, but wider: it would also let the removal change other judges without them.*
+- (c) Accept it: such a member leaves only by their own signature or by the abandonment clause.
+**Lean: (a).** It is the narrowest, and keeps F122's protection for every judge that concerns anyone else.
+*Meanwhile:* the core library applies F122 as written: such a removal stays a draft without the removed member (a test says so).
+
+**Flaw P2. The pointer check does not reach the owners' vault.** *Plain words:* payments above a limit go to the owners' vault, not their everyday pointer. F123 checks the pointer only. Owners could keep a vault of their own and receive every large payment around the split service.
+*Example:* the collective's pointer leads to the split service, but its vault takes everything above 1,000 to an address a member controls.
+- (a) The same check for the vault: every entry of the owners' vault also appears in the service's own vault.
+- (b) A collective that names a split service has no vault of its own; large payments go to the service's vault.
+- (c) Accept it, stated: a wallet shows the vault as unchecked.
+**Lean: (a).** It is F123's own idea applied to the other half of the pointer.
+*Meanwhile:* only the pointer is checked, as F123 says.
+
+### Questions the writing needed, one at a time
+
+**N1. Who must sign a fork, and a member who signs no side.** F121 says "both sides sign".
+*Example:* Ana and Ben want to fork; Cy says nothing at all.
+- (a) Every member whose voice remains signs, on a side; without Cy, no fork. Cy's silence is the abandonment clause's business. *Built so.*
+- (b) The fork completes without Cy, who becomes a departed holder of both successors.
+- (c) Cy keeps the original.
+**Lean: (a).** Nobody loses their say without signing (F103), and (c) brings back the lone holdout keeping the name.
+
+**N2. What "afterwards" means for the closed original.** MOR has no clock.
+*Example:* after the fork, the collective's key signs a receipt dated earlier.
+- (a) The fork act names the original's chain act and the latest act of its sequence (kept tips), a line drawn by the members: an act of the original after it counts for nothing. *Built so.*
+- (b) Only a rotation of the original draws the line (the members could be blocked by a key holder).
+**Lean: (a).** It reuses how a record or rotation draws a line, without the collective's key.
+
+**N3. The default shares where the collective carries no members' stakes in itself.**
+*Example:* three members, no stakes written; sides of two and one.
+- (a) Each member counts alike: two thirds and one third. *Built so.*
+- (b) No default: the fork act must name the shares for every stake.
+**Lean: (a).** F121 says terms not agreed fall to defaults.
+
+**N4. Which collective is a side's successor.**
+*Example:* side B founds two collectives, each naming the fork and side B.
+- (a) A successor's founding terms name the fork and the side, their parties are exactly that side's members, and they keep every departed holder at their share; two that fit are both shown, and the side's share waits as an open obligation until one remains. *Built: the core lists every one that fits.*
+- (b) The first founded (needs an order between two identities' acts, which MOR does not have).
+**Lean: (a).**
+
+**N5. How the departed entry (field 22) relates to the stakes (field 7).**
+*Example:* Cy leaves with 25%.
+- (a) Cy's 25% stays in the stake in the collective (field 7), as every member's does, and field 22 records the same 25% and that Cy has no voice. *Built so, in the client.*
+- (b) Departed shares live only in field 22.
+**Lean: (a).** The split pays stakes, and equal treatment compares them.
+
+**N6. The chain's period: from when, and an answer given late.**
+*Example:* the arbitrator, asked on day 1, has 30 days; it answers on day 40, after the second arbitrator ruled on day 35.
+- (a) The period runs from an act asking the judge, by someone with standing, addressed to it; an answer after the period counts for nothing in that question. *Built: the core takes "asked, period passed" from the caller.*
+- (b) The earlier judge's answer prevails whenever it comes.
+**Lean: (a).** (b) is Q7's set-aside option (c).
+
+**N7. A release where a holder is a collective.**
+*Example:* the collective owns the whole work.
+- (a) Every holder of the collective's stake in itself signs, members and departed. *Built so.*
+- (b) The collective signs, by its own rules (a majority could then release).
+**Lean: (a).** "Majority stake is not enough."
+
+**N8. The release rule's form and life.**
+- (a) A rule among the stake's holders (every one, any k, or named ones), in the founding terms, which no clone changes. *Built so.*
+- (b) A clone may change it with every holder's signature.
+**Lean: (a).** "A later buyer of a stake buys it under those terms."
+
+**N9. How a dissolved collective closes (shape D).**
+- (a) No act: once every work is sold or released it holds nothing and pays nothing, an abandoned collective with nothing left.
+- (b) A closing act, signed by every member, as the fork's with one side.
+**Lean: (a).** *Not built.*
+
+**N10. Equal treatment's direction and rounding.**
+- (a) Only a departed stake paid less than a member's, beyond one smallest part per payout, is shown; members paying themselves less is their choice. *Built so.*
+- (b) Any difference either way.
+**Lean: (a).**
+
+**Formats made exact while writing, to confirm:** the split (payouts as maps; the agreement it pays), terms field 7 (each object once), the fork act and the release act (as above).
+
+### Code and tests
+
+- **Core library.** F122 in the tiers (`[0]` and `[4]`). Terms fields 7, 23 and 24 and the chain's periods, with their checks; `chain_answer` (a silent judge passes the question once its period has passed). `LawView::pointer_check` (F123). `LawView::split` (sums, fees and receivers, delivery, equal treatment). `LawView::fork`, `closed_by`, `after_closing`, `fork_transfer`, `debtors`, `offer_withdrawn`; an act of a closed collective after its fork counts for nothing (`Consent::Closed`), its grants ended (`Backing`). `LawView::release`, `released`, `claim_after_release`. Field 10 renamed. WebAssembly: `lawFork`, `lawPointerCheck`, `lawSplit`, `lawRelease`, `lawClaimAfterRelease`; `readTerms` shows the new fields.
+- **Collective client.** A section "Money and endings": stakes; a departed holder's stake kept when a member leaves; a split service; payee pointers and the pointer check; a simulated payment and its split, with its fee and equal treatment; a release to the public domain; the fork, after which the collective's actions are refused. A change of members that also changes who judges absence names both powers (F122). Founding the successors from the page is not built.
+- **New tests:** core: the chain's periods and time reference (3.7u); stakes and fields 23, 24; F122; shape A (3.9a); M1 as written; equal treatment and visible fees (3.7t); the pointer check (3.7r); the fork (3.9), and what is not a fork; the release (3.9c). Client: one end-to-end test of the whole section against real relays.
+- **Results:** Rust workspace **278 passed, 0 failed** (269 before, plus 9). Clients genesis 14, repo 11, longform 15, barebone 9, reader 16, manage 7, collective 19, connector 12, desk 8: **111 passed** (110 before, plus 1), every one typechecking.
+
+### The Mac regtest test
+
+Nothing it uses changed: this pass touched Law only (the core library's Law module, its WebAssembly bindings and the collective and repo clients), never Finance, the payment cMIP or the Lightning Module. The steps are those of `docs/core-pass-v21.md`, section 5, unchanged, run on this branch (`git fetch && git checkout claude/core-pass-v21`). It was not repeated here.
+
+### Waiting on Nobody, allegedly, in order
+
+1. Flaw S1.
+2. Flaw M1.
+3. Flaw P2.
+4. Questions N1 to N10, and the formats made exact.
+5. Approval of Law draft 10 with the core pass drafts; then the human regtest test on the Mac.
