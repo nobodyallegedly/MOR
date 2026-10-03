@@ -38,4 +38,4 @@ MOR judges nothing. It cannot tell a fair deal from a harsh one, an author from 
 
 ## Where to go next
 
-The core document is the map; the six MIPs are the rules. The case studies show what people could build on them, and end with what each one still needs. A small door to a big universe.
+The core document is the map; the six MIPs are the rules. The [case studies](case-studies/README.md) show what people could build on them, and end with what each one still needs. A small door to a big universe.
