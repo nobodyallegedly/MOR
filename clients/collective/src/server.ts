@@ -138,6 +138,28 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
             return actions.prepareDeclare({ collective: text(a.collective), member: text(a.member), signers: list(a.signers) });
           case 'words':
             return actions.prepareWords({ collective: text(a.collective), text: text(a.text), signers: list(a.signers) });
+          case 'stakes': {
+            const shares: Record<string, number> = {};
+            if (a.shares && typeof a.shares === 'object') {
+              for (const [k, v] of Object.entries(a.shares as Record<string, unknown>)) shares[k] = Number(v);
+            }
+            return actions.prepareStakes({ collective: text(a.collective), shares });
+          }
+          case 'split-service':
+            return actions.prepareSplitService({ collective: text(a.collective), service: text(a.service) });
+          case 'pointer':
+            return actions.preparePointer({ owner: text(a.owner), addresses: list(a.addresses) });
+          case 'split': {
+            const amounts: Record<string, number> = {};
+            if (a.amounts && typeof a.amounts === 'object') {
+              for (const [k, v] of Object.entries(a.amounts as Record<string, unknown>)) if (v !== '' && v !== null) amounts[k] = Number(v);
+            }
+            return actions.prepareSplit({ collective: text(a.collective), amount: Number(a.amount), fee: Number(a.fee ?? 0), amounts });
+          }
+          case 'fork':
+            return actions.prepareFork({ collective: text(a.collective), sides: Array.isArray(a.sides) ? a.sides.map(list) : [] });
+          case 'release-work':
+            return actions.prepareReleaseWork({ collective: text(a.collective), release: text(a.release) });
           default:
             throw new Error('unknown kind');
         }
@@ -150,6 +172,10 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
         return actions.verify({ release: text(a.release).trim().toLowerCase(), at: list(a.at) });
       case 'resend':
         return actions.resend(text(a.collective));
+      case 'check-pointer':
+        return actions.checkPointer({ collective: text(a.collective) });
+      case 'check-split':
+        return actions.checkSplit({ collective: text(a.collective), split: text(a.split) });
       case 'code':
         return { code: access.newCode() };
       case 'unpair':

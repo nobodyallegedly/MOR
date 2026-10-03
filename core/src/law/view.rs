@@ -50,6 +50,7 @@ pub struct LawView<'a> {
     pub keeper_logs: BTreeMap<Hash, Vec<Hash>>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
+    closed: RefCell<BTreeMap<Hash, Option<ForkEval>>>,
 }
 
 /// An agreement as a verifier holds it.
@@ -140,6 +141,9 @@ pub enum Consent {
     Line { agreement: Hash },
     /// No area reaches it: it counts on the collective's own signature.
     NoArea { agreement: Hash },
+    /// The collective was closed by a fork, and the act counts as made
+    /// after it: it counts for nothing in Law (rule 47a, F121).
+    Closed { fork: Hash },
     /// Its specification is adopted nowhere in a collective with areas: it
     /// counts for nothing (Q16).
     Unadopted { agreement: Hash },
@@ -216,6 +220,8 @@ pub struct Current {
     pub records: Vec<RecordEval>,
     /// Two records of different clones of one parent on concurrent lines.
     pub fork: bool,
+    /// The fork of the collective that closed it, if any (rule 47a).
+    pub closed: Option<Hash>,
 }
 
 /// A line: a record of the collective, or a rotation of it (by link).
@@ -260,6 +266,7 @@ impl<'a> LawView<'a> {
             keeper_logs: BTreeMap::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
+            closed: RefCell::new(BTreeMap::new()),
         }
     }
 
@@ -355,6 +362,11 @@ impl<'a> LawView<'a> {
             return Ok(Err(
                 "the mark names other powers than those the clone's changes require (rule 45a)".into(),
             ));
+        }
+        // F121, D: the release rule is set in founding terms; a later buyer
+        // of a stake buys it under them.
+        if clone.release_rule != parent.release_rule {
+            return Ok(Err("the release rule is set in founding terms, and no clone changes it (F121)".into()));
         }
         if !parent.is_collective() {
             // Every party whose voice remains: checked with the
@@ -2010,6 +2022,11 @@ impl<'a> LawView<'a> {
             Ok(x) => x,
             Err(reason) => return Ok(Consent::Broken { reason }),
         };
+        if let Some(e) = self.closed_by(&c)? {
+            if !self.before_fork(&col, x, &e.fork) {
+                return Ok(Consent::Closed { fork: e.id });
+            }
+        }
         let ag = self.in_force_act(&col, x, b, base)?.agreement;
         if self.is_law(x, types::RECORD) {
             return Ok(Consent::Line { agreement: ag });
@@ -2263,6 +2280,19 @@ impl<'a> LawView<'a> {
         if !within {
             return not("the act lies beyond the grant's reach (rule 44)");
         }
+        // A fork ends every grant of the original (Q2): a deal the original
+        // itself acknowledged before the fork binds, as a debt; any other
+        // waits until a side takes it up.
+        if let Some(e) = self.closed_by(&c)? {
+            if self.v.acknowledgements(act).any(|a| {
+                a.act.outside.signer == Some(c)
+                    && self.v.status(&a.id) == Status::Valid
+                    && self.before_fork(&col, a, &e.fork)
+            }) {
+                return Ok(Backing::Binds { grant: gh.id });
+            }
+            return Ok(Backing::Undetermined { grant: gh.id });
+        }
         let Some(area) = g.area else {
             return Ok(Backing::Backed { grant: gh.id });
         };
@@ -2366,6 +2396,7 @@ impl<'a> LawView<'a> {
             frozen,
             records,
             fork: f.fork,
+            closed: self.closed_by(collective)?.map(|e| e.id),
         }))
     }
 }
@@ -2674,4 +2705,637 @@ impl<'a> LawView<'a> {
             }
         }
     }
+}
+
+// ---------------------------------------------------------------- endings, money and the pointer (F121 to F123)
+
+/// A fork act, judged (rule 47a, F121 shape B).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ForkEval {
+    pub id: Hash,
+    pub fork: Fork,
+    /// Every member whose voice remains signed it, each on one side: the
+    /// original is closed in Law.
+    pub complete: bool,
+    /// Why it is not complete, or not valid.
+    pub why: Option<String>,
+    /// The members whose voice remains at the fork.
+    pub voices: Vec<Hash>,
+    /// Those of them who signed it (its signer, or a signature act).
+    pub signed: Vec<Hash>,
+    /// The default share of each side in every stake the original held, in
+    /// millionths: by the members' stakes in the original itself (Q8).
+    pub shares: Vec<u64>,
+    /// The original carries no members' stakes in itself: the default fell
+    /// to each member counting alike (reading, Law draft 10, section 6).
+    pub by_count: bool,
+    /// The original's departed holders, who keep their share in every
+    /// successor.
+    pub departed: Vec<DepartedHolder>,
+    /// For each side, the founding terms naming this fork and that side
+    /// that fit it: its successor's agreement, and the collective whose
+    /// genesis declares them, where held.
+    pub successors: Vec<Vec<(Hash, Option<Hash>)>>,
+}
+
+/// Where a pointer leads, for Law (rule 18, F123).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PointerCheck {
+    /// The agreement names no split service.
+    NoSplitService,
+    /// Every address in the owners' pointer is in the service's own pointer
+    /// in force: the pointer counts for Law.
+    Ordinary { pointer: Hash, service: Hash },
+    /// Some address is in no service's pointer: shown as bypassing the
+    /// split service, never as an ordinary pointer.
+    Bypasses { pointer: Hash, missing: Vec<crate::finance::Rail> },
+    /// What the check needs is not held, or a pointer chain is contested.
+    Undetermined { reason: String },
+}
+
+/// Equal treatment broken in a split (rule 46b, F121 Q8): a holder of the
+/// collective's stake in itself who is not a member paid less, for its
+/// share, than a member is, beyond what rounding allows.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Unequal {
+    pub departed: Hash,
+    pub member: Hash,
+}
+
+/// A split, judged for what Law checks of it (rules 20, 21, 46b; Q9).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SplitEval {
+    pub id: Hash,
+    pub split: Split,
+    /// Whether its payouts sum exactly to the receipt's amount (rule 21);
+    /// `None` when the receipt is not held.
+    pub sums: Option<bool>,
+    /// Each fee it takes: the module, who received it, how much (Q9).
+    pub fees: Vec<(Hash, Hash, u64)>,
+    /// Holders it pays to whom it was not delivered (Q9): neither among its
+    /// recipients nor public.
+    pub undelivered: Vec<Hash>,
+    /// The collective whose stake in itself it pays, where found.
+    pub collective: Option<Hash>,
+    /// Equal treatment broken (rule 46b).
+    pub unequal: Vec<Unequal>,
+}
+
+/// A public domain release, judged (rule 17, F121 shape D).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReleaseEval {
+    pub id: Hash,
+    pub release: Release,
+    /// Its rule is met, by every stake holder by default: the claim ends.
+    pub complete: bool,
+    pub why: Option<String>,
+    /// Those whose signature it counts: the holders of each stake it ends,
+    /// a holder that is a collective counted through the holders of its
+    /// stake in itself (reading, Law draft 10, section 6).
+    pub holders: Vec<Hash>,
+    /// Those of them who signed it.
+    pub signed: Vec<Hash>,
+}
+
+impl<'a> LawView<'a> {
+    // ------------------------------------------------------------ the fork
+
+    /// Whether the original's act `x` counts as made before the fork: bound
+    /// to an earlier link of its identity chain than the fork's chain act,
+    /// or, bound to it, one of the tips the fork names or in their ancestry.
+    fn before_fork(&self, col: &Col, x: &Held, f: &Fork) -> bool {
+        let (Some(bx), Some(bf)) = (col.pos(x), col.res.position_of(&f.chain_act)) else {
+            return false;
+        };
+        if bx != bf {
+            return bx < bf;
+        }
+        f.tips.iter().any(|t| {
+            t.act == x.id
+                || self
+                    .v
+                    .tip_line(&col.id, t)
+                    .is_some_and(|ids| ids.contains(&x.id))
+        })
+    }
+
+    /// A fork act, judged.
+    pub fn fork(&self, id: &Hash) -> R<ForkEval> {
+        let h = self.held(id)?;
+        if !self.is_law(h, types::FORK) {
+            return Err(LawError::Check("not a fork act"));
+        }
+        let f = Fork::decode(&h.inside)?;
+        let mut e = ForkEval {
+            id: *id,
+            fork: f.clone(),
+            complete: false,
+            why: None,
+            voices: vec![],
+            signed: vec![],
+            shares: vec![],
+            by_count: false,
+            departed: vec![],
+            successors: vec![vec![]; f.sides.len()],
+        };
+        let fail = |mut e: ForkEval, w: &str| {
+            e.why = Some(w.into());
+            Ok(e)
+        };
+        if self.v.status(id) != Status::Valid {
+            return fail(e, "the fork act is not valid under Identity");
+        }
+        let col = self.col(&f.collective);
+        let Some(bf) = col.res.position_of(&f.chain_act) else {
+            return fail(e, "the fork names a chain act of the original that does not count");
+        };
+        if f.tips.iter().any(|t| self.v.tip_line(&col.id, t).is_none()) {
+            return fail(e, "the fork names a kept tip of the original that does not hold");
+        }
+        if !self.declares(&col, bf) {
+            return fail(e, "the original is not a collective");
+        }
+        let base = match self.base(&col, bf)? {
+            Ok(b) => b,
+            Err(w) => return fail(e, &w),
+        };
+        let mut puts = vec![];
+        let mut departures = vec![];
+        for k in 0..=bf {
+            for r in self.records_at(&col, k) {
+                if !self.before_fork(&col, r, &f) {
+                    continue;
+                }
+                let re = self.record_eval(&col, r)?;
+                if re.line {
+                    departures.extend(re.registers.iter().cloned());
+                }
+                if k >= self.declared_at(&col, bf) {
+                    if let Some(c) = re.puts {
+                        puts.push((c, re.resolves));
+                    }
+                }
+            }
+        }
+        let inf = self.fold(base, &puts)?;
+        if inf.agreement != f.agreement {
+            return fail(e, "the fork names an agreement other than the one in force at its line");
+        }
+        let t = self.terms(&f.agreement)?;
+        let lineage: Vec<Hash> = self.lineage(&f.agreement)?.into_iter().map(|(i, _)| i).collect();
+        let mut gone = vec![];
+        for d in &departures {
+            if let DepartureKind::Resigned { agreement } | DepartureKind::Declared { agreement } = d.kind {
+                if lineage.contains(&agreement) {
+                    gone.push(d.party);
+                }
+            }
+        }
+        e.voices = t.parties.iter().filter(|p| !gone.contains(p)).copied().collect();
+        e.departed = t.departed.clone().unwrap_or_default();
+        // Shares by default: by the members' stakes in the original (Q8).
+        let stake = t.stake_on(&f.collective).map(|(_, s)| s.clone());
+        let mut weights: Vec<u64> = f
+            .sides
+            .iter()
+            .map(|s| s.iter().map(|m| stake.as_ref().map_or(0, |st| st.share_of(m))).sum())
+            .collect();
+        if weights.iter().sum::<u64>() == 0 {
+            e.by_count = true;
+            weights = f.sides.iter().map(|s| s.len() as u64).collect();
+        }
+        e.shares = divide(MILLION, &weights);
+        // Every member whose voice remains is on a side, and nobody else.
+        if let Some(x) = f.sides.iter().flatten().find(|m| !e.voices.contains(m)) {
+            let _ = x;
+            return fail(e, "a side lists someone who is not a member whose voice remains at the fork");
+        }
+        if e.voices.iter().any(|v| f.side_of(v).is_none()) {
+            return fail(e, "a member whose voice remains is on no side: every member signs a fork, on one side (F121)");
+        }
+        let signer = h.act.outside.signer.ok_or(LawError::Check("a fork act has a signer"))?;
+        if f.side_of(&signer).is_none() {
+            return fail(e, "the fork act is signed by someone on no side");
+        }
+        let members: Vec<Hash> = f.sides.iter().flatten().copied().collect();
+        let mut signed = self.signers(id, &members);
+        if !signed.contains(&signer) {
+            signed.push(signer);
+        }
+        e.signed = members.iter().filter(|m| signed.contains(m)).copied().collect();
+        // Successors: founding terms naming this fork and a side, whose
+        // parties are that side and whose departed members entry keeps
+        // every departed holder of the original at their share.
+        for x in self.v.held_acts() {
+            if !self.is_law(x, types::TERMS) {
+                continue;
+            }
+            let Ok(st) = self.terms(&x.id) else { continue };
+            let Some(ff) = &st.forked_from else { continue };
+            if ff.fork != *id || ff.original != f.agreement {
+                continue;
+            }
+            let Some(side) = f.sides.get(ff.side as usize) else { continue };
+            let mut a = st.parties.clone();
+            let mut b2 = side.clone();
+            a.sort();
+            b2.sort();
+            let keeps = e.departed.iter().all(|d| {
+                st.departed.iter().flatten().any(|s| s.holder == d.holder && s.share == d.share)
+            });
+            if a != b2 || !keeps {
+                continue;
+            }
+            let collective = self.v.held_acts().find_map(|g| match &g.identity {
+                Some(Ok(Payload::Genesis(gen)))
+                    if declared_in(gen.declarations.as_deref().unwrap_or(&[]), &self.law())
+                        .and_then(|d| d.ok())
+                        .is_some_and(|d| d.agreement == x.id) =>
+                {
+                    Some(g.id)
+                }
+                _ => None,
+            });
+            e.successors[ff.side as usize].push((x.id, collective));
+        }
+        if e.signed.len() < members.len() {
+            return fail(e, "every member on a side signs the fork, with their own identity (F121)");
+        }
+        e.complete = true;
+        Ok(e)
+    }
+
+    /// The complete fork that closes a collective, if any (rule 47a).
+    pub fn closed_by(&self, collective: &Hash) -> R<Option<ForkEval>> {
+        if let Some(e) = self.closed.borrow().get(collective) {
+            return Ok(e.clone());
+        }
+        let e = self.closed_by_inner(collective)?;
+        self.closed.borrow_mut().insert(*collective, e.clone());
+        Ok(e)
+    }
+
+    fn closed_by_inner(&self, collective: &Hash) -> R<Option<ForkEval>> {
+        for x in self.v.held_acts() {
+            if !self.is_law(x, types::FORK) {
+                continue;
+            }
+            match Fork::decode(&x.inside) {
+                Ok(f) if &f.collective == collective => {}
+                _ => continue,
+            }
+            let e = self.fork(&x.id)?;
+            if e.complete {
+                return Ok(Some(e));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Whether an act of a collective counts as made after the fork that
+    /// closed it, and so counts for nothing in Law: the fork, if so.
+    pub fn after_closing(&self, act: &Hash) -> R<Option<Hash>> {
+        let x = self.held(act)?;
+        let Some(c) = x.act.outside.signer else { return Ok(None) };
+        let Some(e) = self.closed_by(&c)? else { return Ok(None) };
+        let col = self.col(&c);
+        Ok((!self.before_fork(&col, x, &e.fork)).then_some(e.id))
+    }
+
+    /// The fork that withdrew a standing offer of a collective it closed:
+    /// every open offer of the original, whenever made (Q6).
+    pub fn offer_withdrawn(&self, offer: &Hash) -> R<Option<Hash>> {
+        let x = self.held(offer)?;
+        if !self.is_law(x, types::STANDING_OFFER) {
+            return Ok(None);
+        }
+        let Some(c) = x.act.outside.signer else { return Ok(None) };
+        Ok(self.closed_by(&c)?.map(|e| e.id))
+    }
+
+    /// Who takes a stake the original held, after its fork: each side's
+    /// share of it, in millionths of the stake, as the fork names, else by
+    /// default (F121). `None` where the original does not hold it.
+    pub fn fork_transfer(&self, fork: &Hash, agreement: &Hash, index: u64) -> R<Option<Vec<u64>>> {
+        let e = self.fork(fork)?;
+        let t = self.terms(agreement)?;
+        let Some(stake) = t.stakes.iter().flatten().nth(index as usize) else {
+            return Ok(None);
+        };
+        let held = stake.share_of(&e.fork.collective);
+        if held == 0 {
+            return Ok(None);
+        }
+        let sides = match e.fork.shares.iter().find(|s| &s.agreement == agreement && s.index == index) {
+            Some(s) => s.shares.clone(),
+            None => e.shares.clone(),
+        };
+        Ok(Some(divide(held, &sides)))
+    }
+
+    /// The sides owing an obligation of a collective closed by a fork: the
+    /// side the fork assigns it to, else every side (Q1). `None` where its
+    /// debtor is not closed.
+    pub fn debtors(&self, obligation: &Hash) -> R<Option<Vec<usize>>> {
+        use crate::finance::Payload as Fin;
+        let x = self.held(obligation)?;
+        if x.inside.spec != self.mips.finance {
+            return Ok(None);
+        }
+        let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else {
+            return Ok(None);
+        };
+        let Some(e) = self.closed_by(&o.debtor)? else { return Ok(None) };
+        Ok(Some(match e.fork.debts.iter().find(|(d, _)| d == obligation) {
+            Some((_, s)) => vec![*s as usize],
+            None => (0..e.fork.sides.len()).collect(),
+        }))
+    }
+
+    // ------------------------------------------------------------ the pointer
+
+    /// The latest valid payee pointer of an identity that counts: for a
+    /// collective, one its Finance lane's consent carries.
+    fn pointer_in_force(&self, who: &Hash) -> R<Result<(Hash, crate::finance::PayeePointer), String>> {
+        use crate::finance::{self as fin, Payload as Fin};
+        let mut held = vec![];
+        for h in self.v.signed_by(who) {
+            if h.inside.spec != self.mips.finance || h.inside.type_ != fin::types::PAYEE_POINTER {
+                continue;
+            }
+            let Ok(Fin::PayeePointer(p)) = Fin::decode(h.inside.type_, &h.inside.payload) else {
+                continue;
+            };
+            if &p.payee == who && self.v.status(&h.id) == Status::Valid && self.consent(&h.id)?.counts() {
+                held.push((h.id, p));
+            }
+        }
+        let l = fin::latest_pointer(&held);
+        if l.contested {
+            return Ok(Err("a payee pointer chain is contested".into()));
+        }
+        match l.act.and_then(|a| held.into_iter().find(|(i, _)| *i == a)) {
+            Some(x) => Ok(Ok(x)),
+            None => Ok(Err("no payee pointer in force is held".into())),
+        }
+    }
+
+    /// The pointer check (rule 18, F123): where `agreement` names a split
+    /// service, the payee pointer of `owners` counts for Law only if every
+    /// address in it also appears in the split service's own signed pointer
+    /// in force, or in that of a service its chain of judgment names to
+    /// take over (reading 4).
+    pub fn pointer_check(&self, owners: &Hash, agreement: &Hash) -> R<PointerCheck> {
+        let t = self.terms(agreement)?;
+        let Some(g) = t.split_grant else {
+            return Ok(PointerCheck::NoSplitService);
+        };
+        let mut grants = vec![g];
+        if let Some(l) = t.chain.iter().flatten().find(|l| l.judge == Judge::SplitService) {
+            grants.extend(l.successors());
+        }
+        let undetermined = |w: String| Ok(PointerCheck::Undetermined { reason: w });
+        let (pid, mine) = match self.pointer_in_force(owners)? {
+            Ok(x) => x,
+            Err(w) => return undetermined(format!("the owners' pointer: {w}")),
+        };
+        let mut first_missing = None;
+        for g in grants {
+            let Some(gh) = self.v.get(&g) else {
+                return undetermined("the split service's grant is not held".into());
+            };
+            let Ok(grant) = Grant::decode(&gh.inside.payload) else {
+                return undetermined("the split service's grant does not decode".into());
+            };
+            let service = grant.grantee;
+            let theirs = match self.pointer_in_force(&service)? {
+                Ok((_, p)) => p,
+                Err(_) => continue,
+            };
+            let missing: Vec<_> = mine.rails.iter().filter(|r| !theirs.rails.contains(r)).cloned().collect();
+            if missing.is_empty() {
+                return Ok(PointerCheck::Ordinary { pointer: pid, service });
+            }
+            first_missing.get_or_insert(missing);
+        }
+        match first_missing {
+            Some(missing) => Ok(PointerCheck::Bypasses { pointer: pid, missing }),
+            None => undetermined("no split service's own pointer in force is held".into()),
+        }
+    }
+
+    // ------------------------------------------------------------ splits
+
+    /// The collective whose stake in itself `t`'s stakes include: an
+    /// object whose identity chain lives under this agreement's lineage.
+    fn own_stake_object(&self, agreement: &Hash, t: &Terms) -> R<Option<Hash>> {
+        let mine: Vec<Hash> = self.lineage(agreement)?.into_iter().map(|(i, _)| i).collect();
+        for s in t.stakes.iter().flatten() {
+            if let Some(cur) = self.current(&s.object)? {
+                let theirs: Vec<Hash> = self.lineage(&cur.agreement)?.into_iter().map(|(i, _)| i).collect();
+                if theirs.contains(agreement) || mine.contains(&cur.agreement) {
+                    return Ok(Some(s.object));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// A split, judged: conservation, each fee and its receiver, delivery
+    /// to every holder it pays (Q9), equal treatment of the collective's
+    /// stake in itself (rule 46b, Q8).
+    pub fn split(&self, id: &Hash) -> R<SplitEval> {
+        use crate::finance::Payload as Fin;
+        let h = self.held(id)?;
+        if !self.is_law(h, types::SPLIT) {
+            return Err(LawError::Check("not a split"));
+        }
+        let s = Split::decode(&h.inside.payload)?;
+        let total: u64 = s.payouts.iter().map(|p| p.amount).sum();
+        let sums = self.v.get(&s.receipt).and_then(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
+            Ok(Fin::Receipt(x)) => Some(x.amount.value == total),
+            Ok(Fin::Claim(x)) => Some(x.amount.value == total),
+            _ => None,
+        });
+        let fees = s
+            .payouts
+            .iter()
+            .filter_map(|p| p.fee_module.map(|m| (m, p.receiver, p.amount)))
+            .collect();
+        let public = h.act.outside.content_key.is_some();
+        let to = h.act.outside.to.clone().unwrap_or_default();
+        let mut undelivered = vec![];
+        for p in &s.payouts {
+            if p.stake.is_some() && !public && !to.contains(&p.receiver) && !undelivered.contains(&p.receiver) {
+                undelivered.push(p.receiver);
+            }
+        }
+        let t = self.terms(&s.agreement)?;
+        let collective = self.own_stake_object(&s.agreement, &t)?;
+        let mut unequal = vec![];
+        if let Some((idx, stake)) = collective.and_then(|c| t.stake_on(&c)) {
+            let paid = |who: &Hash| -> u64 {
+                s.payouts
+                    .iter()
+                    .filter(|p| p.stake == Some(idx as u64) && &p.receiver == who)
+                    .map(|p| p.amount)
+                    .sum()
+            };
+            for (d, sd) in &stake.holders {
+                if t.parties.contains(d) {
+                    continue;
+                }
+                for (m, sm) in &stake.holders {
+                    if !t.parties.contains(m) {
+                        continue;
+                    }
+                    let (ad, am) = (paid(d) as u128, paid(m) as u128);
+                    let (sd, sm) = (*sd as u128, *sm as u128);
+                    // Paid less for its share than rounding allows.
+                    if ad * sm + sm + sd <= am * sd {
+                        unequal.push(Unequal { departed: *d, member: *m });
+                    }
+                }
+            }
+        }
+        Ok(SplitEval {
+            id: *id,
+            split: s,
+            sums,
+            fees,
+            undelivered,
+            collective,
+            unequal,
+        })
+    }
+
+    // ------------------------------------------------------------ the release
+
+    /// Those whose signature a stake's release counts: its holders, a
+    /// holder that is a collective counted through the holders of its stake
+    /// in itself, or, where it has none, its members whose voice remains.
+    fn release_holders(&self, holders: &[Hash]) -> R<Vec<Hash>> {
+        let mut out = vec![];
+        for h in holders {
+            let mut add = vec![*h];
+            if let Some(cur) = self.current(h)? {
+                let t = self.terms(&cur.agreement)?;
+                add = match t.stake_on(h) {
+                    Some((_, s)) => s.holders.iter().map(|(x, _)| *x).collect(),
+                    None => t.parties.iter().filter(|p| !cur.departed.contains(p)).copied().collect(),
+                };
+            }
+            for x in add {
+                if !out.contains(&x) {
+                    out.push(x);
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// A public domain release, judged (rule 17, F121 shape D).
+    pub fn release(&self, id: &Hash) -> R<ReleaseEval> {
+        let h = self.held(id)?;
+        if !self.is_law(h, types::RELEASE) {
+            return Err(LawError::Check("not a release"));
+        }
+        let r = Release::decode(&h.inside)?;
+        let mut e = ReleaseEval {
+            id: *id,
+            release: r.clone(),
+            complete: false,
+            why: None,
+            holders: vec![],
+            signed: vec![],
+        };
+        let fail = |mut e: ReleaseEval, w: &str| {
+            e.why = Some(w.into());
+            Ok(e)
+        };
+        if self.v.status(id) != Status::Valid {
+            return fail(e, "the release is not valid under Identity");
+        }
+        if h.act.outside.content_key.is_none() {
+            return fail(e, "a release is public, so that its content keys are published");
+        }
+        let signer = h.act.outside.signer.ok_or(LawError::Check("a release has a signer"))?;
+        let mut met = true;
+        for (ag, i) in &r.stakes {
+            let t = self.terms(ag)?;
+            let Some(stake) = t.stakes.iter().flatten().nth(*i as usize) else {
+                return fail(e, "a release names a stake its agreement does not define");
+            };
+            if stake.object != r.work {
+                return fail(e, "a release names a stake in another work");
+            }
+            let root = self.lineage(ag)?.pop().expect("a lineage has a root").1;
+            let holders = self.release_holders(&stake.holders.iter().map(|(x, _)| *x).collect::<Vec<_>>())?;
+            let mut signed = self.signers(id, &holders);
+            if holders.contains(&signer) && !signed.contains(&signer) {
+                signed.push(signer);
+            }
+            let rule = root.release_rule.clone().unwrap_or(Rule::All);
+            met &= rule.met(&holders, &signed);
+            for x in holders {
+                if !e.holders.contains(&x) {
+                    e.holders.push(x);
+                }
+            }
+            for x in signed {
+                if !e.signed.contains(&x) {
+                    e.signed.push(x);
+                }
+            }
+        }
+        let order = e.holders.clone();
+        e.signed.sort_by_key(|x| order.iter().position(|h| h == x));
+        if !met {
+            return fail(e, "the release rule is not met: by default, every stake holder signs, departed holders included");
+        }
+        e.complete = true;
+        Ok(e)
+    }
+
+    /// The complete release of a work, if one is held.
+    pub fn released(&self, work: &Hash) -> R<Option<ReleaseEval>> {
+        for x in self.v.held_acts() {
+            if !self.is_law(x, types::RELEASE) {
+                continue;
+            }
+            if !Release::decode(&x.inside).is_ok_and(|r| &r.work == work) {
+                continue;
+            }
+            let e = self.release(&x.id)?;
+            if e.complete {
+                return Ok(Some(e));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Whether a claim on a released work is shown as made after the
+    /// release: one the release does not name in its history (F121, D).
+    pub fn claim_after_release(&self, claim: &Hash, work: &Hash) -> R<Option<Hash>> {
+        let Some(e) = self.released(work)? else { return Ok(None) };
+        Ok((!e.release.claims.contains(claim) && claim != &e.id).then_some(e.id))
+    }
+}
+
+/// `total` divided by `weights`, in whole parts, leftovers to the first
+/// (rule 15a).
+fn divide(total: u64, weights: &[u64]) -> Vec<u64> {
+    let sum: u128 = weights.iter().map(|w| *w as u128).sum();
+    if sum == 0 {
+        return vec![0; weights.len()];
+    }
+    let mut out: Vec<u64> = weights
+        .iter()
+        .map(|w| ((total as u128) * (*w as u128) / sum) as u64)
+        .collect();
+    let left = total - out.iter().sum::<u64>();
+    if let Some(f) = out.first_mut() {
+        *f += left;
+    }
+    out
 }

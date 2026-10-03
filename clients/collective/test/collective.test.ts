@@ -459,3 +459,81 @@ test("declaring the everyday key's holder absent: no record, and the recovery ro
   assert.equal(v.ok, true, v.problems.join('; '));
   assert.equal(v.agreement, now.agreement, 'judged under the clone the recovery rotation put in force');
 });
+
+test('money and endings (Law draft 10, F121 to F123): stakes, a member leaving as a departed holder, a split service, the pointer check, a split treating every stake alike, a release to the public domain, a fork', async () => {
+  const c = w.client;
+  for (const n of ['Lea', 'Lee', 'Lou', 'Splitter']) await sign(c, { kind: 'identity', name: n, mine: false });
+  let s = await state(c);
+  const [ada, two, three, splitter] = ['Lea', 'Lee', 'Lou', 'Splitter'].map((n) => idOf(s, n));
+  await sign(c, { kind: 'found', name: 'Ledger', members: [ada, two, three], rules: {} });
+  s = await state(c);
+  let col = s.collectives.find((x) => x.name === 'Ledger')!;
+  commit(w.checkout, 'src/lib.rs', 'pub fn ledger() -> u8 { 19 }\n');
+  const rel = await sign(c, { kind: 'release', publisher: col.id, version: 'l.1' });
+  await sign(c, { kind: 'sign', member: two, release: rel.done.acts[0] });
+
+  // Stakes in the collective itself: shares of all its income (Q8).
+  const st = await sign(c, { kind: 'stakes', collective: col.id, shares: { [ada]: 50, [two]: 25, [three]: 25 } });
+  assert.match(words(st.review.reading), /a share of all its income/);
+  assert.match(words(st.review.reading), /flaw S1/);
+  s = await state(c);
+  col = s.collectives.find((x) => x.name === 'Ledger')!;
+  assert.deepEqual(col.stakes.map((x) => x.percent), [50, 25, 25]);
+
+  // Shape A: Lou leaves by a member change; they keep their quarter as a departed holder.
+  const out = await sign(c, { kind: 'change', collective: col.id, leave: [three], rules: { safety: 1, release: 1, clone: 1, others: 1 } });
+  assert.ok(out.done.lines.length);
+  s = await state(c);
+  col = s.collectives.find((x) => x.name === 'Ledger')!;
+  assert.deepEqual(col.members.map((m) => m.id), [ada, two]);
+  const lou = col.stakes.find((x) => x.id === three)!;
+  assert.equal(lou.percent, 25);
+  assert.equal(lou.member, false);
+  // Lowering the departed holder's stake without them is refused here (rule 46b).
+  const lower = await prepare(c, { kind: 'stakes', collective: col.id, shares: { [ada]: 60, [two]: 30, [three]: 10 } });
+  assert.match(lower.reading.blocking.join(' '), /never shrinks without their signature/);
+
+  // A split service, named by every member (judicial); its own pointer and the collective's.
+  await sign(c, { kind: 'split-service', collective: col.id, service: splitter });
+  await sign(c, { kind: 'pointer', owner: splitter, addresses: ['the-service-node'] });
+  await sign(c, { kind: 'pointer', owner: col.id, addresses: ['the-service-node'] });
+  let pc = await c.ask<{ kind: string; reading: { sections: { lines: { text: string }[] }[] } }>('check-pointer', { collective: col.id });
+  assert.equal(pc.kind, 'ordinary', JSON.stringify(pc));
+  // The pointer gains an address of its own: it bypasses the split service (F123).
+  await sign(c, { kind: 'pointer', owner: col.id, addresses: ['the-service-node', 'a-member-node'] });
+  pc = await c.ask('check-pointer', { collective: col.id });
+  assert.equal(pc.kind, 'bypasses');
+  assert.match(pc.reading.sections[0].lines.map((l) => l.text).join('\n'), /“a-member-node” is in no split service's own pointer/);
+
+  // A payment split: the fee named with its receiver, delivered to every holder, every stake alike.
+  const sp = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100 });
+  const spw = sp.done.lines.map((l) => l.text).join('\n');
+  assert.match(spw, /Fee: 100, received by Splitter/);
+  assert.match(spw, /Paid: 225 to Lou .* \(a departed holder\)/);
+  assert.match(spw, /Delivered to every holder it pays/);
+  assert.match(spw, /Every stake in the collective is paid alike/);
+  // One that charges the departed holder more is shown so.
+  const bad = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100, amounts: { [three]: 125, [ada]: 550 } });
+  assert.match(bad.done.lines.map((l) => l.text).join('\n'), /UNEQUAL TREATMENT: Lou.*'s stake is paid less, for its size/);
+  s = await state(c);
+  col = s.collectives.find((x) => x.name === 'Ledger')!;
+  const checked = await c.ask<{ unequal: number }>('check-split', { collective: col.id, split: col.splits[1] });
+  assert.equal(checked.unequal, 2);
+
+  // Shape D: the release, given to the public domain, every stake holder signing, the departed one too.
+  await sign(c, { kind: 'stakes', collective: col.id, shares: { [ada]: 50, [two]: 25, [three]: 25 } });
+  const pd = await sign(c, { kind: 'release-work', collective: col.id, release: rel.done.acts[0] });
+  assert.match(words(pd.review.reading), /majority stake is not enough/i);
+  assert.equal(pd.done.title, 'Released to the public domain', JSON.stringify(pd.done));
+
+  // Shape B: the fork, both sides signing with their own identities; the collective is closed in Law.
+  const fk = await sign(c, { kind: 'fork', collective: col.id, sides: [[ada], [two]] });
+  assert.match(words(fk.review.reading), /closed in Law/);
+  assert.match(words(fk.review.reading), /Lou.* \(25%\) keep their share in every new collective/);
+  assert.match(fk.done.title, /is forked, and closed in Law/, JSON.stringify(fk.done));
+  s = await state(c);
+  col = s.collectives.find((x) => x.name === 'Ledger')!;
+  assert.equal(col.closed, fk.done.acts[0]);
+  const after = await prepare(c, { kind: 'stakes', collective: col.id, shares: { [ada]: 50, [two]: 25, [three]: 25 } });
+  assert.match(after.reading.blocking.join(' '), /closed by its fork/);
+});

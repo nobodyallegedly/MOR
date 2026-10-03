@@ -11,7 +11,7 @@
 //! needed is read from the bytes, never from what the clone says of itself.
 
 use super::formats::{
-    layers, task_layer, FieldRef, LawError, Mips, Power, Rule, Terms, JUDICIAL_TASKS, R,
+    layers, task_layer, FieldRef, LawError, Mips, Power, Terms, JUDICIAL_TASKS, R,
 };
 use crate::cbor;
 use crate::hash::Hash;
@@ -196,19 +196,16 @@ pub fn powers_needed(
     }
     let ch = changes(parent, clone);
     if ch.iter().any(|c| c.tier() == Tier::Constitutional) {
-        // F120: the constitutional change rule alone. Where the same
-        // version also changes the judicial tier, F121 asks for every
-        // member: the two agree only where that rule is every party (flaw
-        // K1, Law draft 10, "Open in this draft"), so any other case is
-        // refused rather than guessed.
-        if ch.iter().any(|c| c.tier() == Tier::Judicial)
-            && !needs_everyone(&parent.constitutional_rule(), &parent.parties)
-        {
-            return Err(LawError::Unsettled(
-                "a version changing the constitution and the judicial tier under a constitutional change rule below every party (flaw K1)",
-            ));
+        // F122 (flaw K1, revising F120): the constitutional change rule,
+        // and, where the same version also changes the judicial tier, every
+        // member for it: the mark names both, and the version stays a draft
+        // until both are met.
+        let mut out = vec![Power::Constitutional];
+        if ch.iter().any(|c| c.tier() == Tier::Judicial) {
+            out.push(Power::Judicial);
         }
-        return Ok(vec![Power::Constitutional]);
+        out.sort_by_key(|p| p.encoding());
+        return Ok(out);
     }
     let mut areas: Vec<u64> = vec![];
     let mut clone_rule = ch.is_empty();
@@ -236,16 +233,6 @@ pub fn powers_needed(
     }
     out.sort_by_key(|p| p.encoding());
     Ok(out)
-}
-
-/// Whether a rule asks for every one of `parties`: every party, a
-/// threshold of all of them, or all of them named.
-fn needs_everyone(rule: &Rule, parties: &[Hash]) -> bool {
-    match rule {
-        Rule::All => true,
-        Rule::Threshold(k) => *k as usize >= parties.len(),
-        Rule::Named(n) => parties.iter().all(|p| n.contains(p)),
-    }
 }
 
 /// The judicial changes a clone makes, for showing which protected clauses

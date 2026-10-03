@@ -114,6 +114,16 @@ export interface TermsRead {
   splitGrant: string | null;
   extensions: string[] | null;
   succession: { party: string; stakes: [string, number][] | null; seats: [string, number][] | null; entry: number | null }[] | null;
+  /** Stakes (field 7): each object, and its holders' shares in millionths (F121, Q8). */
+  stakes: [string, [string, number][]][];
+  /** The departed members entry (field 22): who left keeping a stake, and that stake (F121). */
+  departed: [string, number][];
+  /** The chain of judgment (field 21): each judge, and those that take over with their periods (F121, Q7). */
+  chain: [string, [string, number][]][];
+  /** Forked from (field 23): the original agreement, the fork act, the side (F121, B). */
+  forkedFrom: [string, string, number] | null;
+  /** The release rule (field 24); null: every stake holder signs a release (F121, D). */
+  releaseRule: RuleOut | null;
   /** Why the terms fail Law's own checks, if they do: Law's code and its own words. */
   problem?: Problem | null;
 }
@@ -508,8 +518,23 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   }
   if (t.arbitrators) more.push({ text: `Arbitrators or verifiers, who receive keys to judge content: ${list(t.arbitrators.map(names))}.` });
   if (t.splitGrant) {
-    more.push({ text: `Incoming payments go to a split service, under grant ${short(t.splitGrant)}.`, tone: 'bad' });
-    blocking.push('It names a split service, which this client does not implement yet (roadmap step 13).');
+    more.push({
+      text: `Incoming payments go to a split service, under grant ${short(t.splitGrant)}. A protected clause. The collective's payee pointer counts for Law only if every address in it is also in the service's own signed pointer (Law rule 18, F123); every split is delivered to every holder it pays, naming each fee and who received it (F121, Q9).`,
+    });
+  }
+  for (const [object, holders] of t.stakes ?? []) {
+    more.push({
+      text: `Stake in ${names(object)}: ${list(holders.map(([h, n]) => `${names(h)} ${n / 10_000}%`))}. A stake in the collective itself is a share of all its income (F121, Q8); every term applies to every stake alike, member or departed (equal treatment, Law rule 46b).`,
+    });
+  }
+  if (t.departed?.length) {
+    more.push({ text: `Departed holders: ${list(t.departed.map(([h, n]) => `${names(h)} (${n / 10_000}% of all income)`))}. No voice and no veto; their stake never shrinks without their signature (Law rule 46b, F121).` });
+  }
+  for (const [judge, next] of t.chain ?? []) {
+    more.push({ text: `If ${judge === 'split service' ? 'the split service' : judge.startsWith('task ') ? `the judge for ${judge}` : names(judge)} answers “unknown”, or does not act within its period, ${list(next.map(([h, p]) => `${names(h)} (after ${p} on the time reference)`))} take${next.length === 1 ? 's' : ''} over, in that order (Law rule 34a, F121).` });
+  }
+  if (t.forkedFrom) {
+    more.push({ text: `Forked from ${short(t.forkedFrom[0])}, by the fork ${short(t.forkedFrom[1])}, as its side ${t.forkedFrom[2] + 1}: not a parent, a new collective (Law rule 47a, F121).` });
   }
   for (const p of t.succession ?? []) {
     const parts: string[] = [];

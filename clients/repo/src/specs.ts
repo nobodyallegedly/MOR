@@ -13,7 +13,24 @@ export const REPO_SPECS = {
   manifest: test('release manifest cMIP, draft 1, test value until publication'),
 };
 
-export const LAW_TYPES = { terms: 0, signature: 1, declaration: 13, resignation: 16, record: 17 } as const;
+export const LAW_TYPES = {
+  terms: 0,
+  signature: 1,
+  release: 5,
+  offer: 6,
+  split: 8,
+  grant: 9,
+  declaration: 13,
+  resignation: 16,
+  record: 17,
+  fork: 19,
+} as const;
+
+/** Finance act types the collective client makes (Finance draft 6). */
+export const FINANCE_TYPES = { pointer: 0, receipt: 2 } as const;
+
+/** The rail Module the test pointers name: a test value, no real rail. */
+export const TEST_RAIL = test('a test rail Module, no real rail');
 
 /** Law's declaration kind 0: the agreement a collective lives under. */
 export const FOUNDING_AGREEMENT = 0;

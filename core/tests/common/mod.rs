@@ -376,6 +376,54 @@ impl World {
         a
     }
 
+    /// An everyday act of `p`, private, addressed to `to` (Envelope): held
+    /// with its content key, as a recipient holds it.
+    #[allow(clippy::too_many_arguments)]
+    pub fn private_act(
+        &mut self,
+        p: &mut Person,
+        spec: Hash,
+        type_: u64,
+        payload: Vec<(Value, Value)>,
+        objects: Option<Vec<Object>>,
+        to: Vec<Hash>,
+    ) -> Hash {
+        let salt = self.fresh().2;
+        let inside = Inside {
+            spec,
+            type_,
+            prev: Some(p.seq.last().map(|x| vec![*x]).unwrap_or_default()),
+            objects,
+            payload,
+            position: Some(p.seq.len() as u64 + 1),
+            summary: Some(if p.seq.is_empty() {
+                ZERO_HASH
+            } else {
+                Mmr::from_ids(&p.seq).root()
+            }),
+            acks: None,
+            refs: None,
+            hint: None,
+            salt,
+        };
+        let (key, nonce, _) = self.fresh();
+        let sign = p.sign.clone();
+        let a = act::make(
+            &inside,
+            &key,
+            &nonce,
+            &Addressing {
+                signer: Some(p.id),
+                binding: Some(p.binding),
+                public: false,
+                to: Some(to),
+            },
+            |id| sign.sign(id, &[0; 32]),
+        );
+        p.seq.push(a.id());
+        self.v.add_with_key(a, Some(&key)).unwrap()
+    }
+
     /// An Identity everyday act, held.
     pub fn act(&mut self, p: &mut Person, payload: Payload, objects: Option<Vec<Object>>) -> Hash {
         let a = self.everyday_act(

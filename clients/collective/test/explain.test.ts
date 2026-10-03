@@ -120,10 +120,10 @@ test('what this client does not implement cannot be signed; open formats are ref
   const r = readAgreement(termsOf(encodeTerms(t)), names);
   assert.match(r.blocking.join(' '), /extension this client does not implement.*Law rule 2/);
 
-  // Terms with stakes (field 7), whose format is still open: the core will not read them at all.
+  // Terms with a split plan (field 8), whose format is still open: the core will not read them at all.
   const m = cborDecode(encodeTerms(collectiveTerms(g(), [a, b, c], a))) as Map<number, unknown>;
-  m.set(7, []);
-  assert.throws(() => termsOf(cborEncode(m)), /not supported yet.*stakes/);
+  m.set(8, []);
+  assert.throws(() => termsOf(cborEncode(m)), /not supported yet.*split plan/);
 });
 
 test("Law's objections by their codes, in Law's own words, after the client's own hints, never folded by wording", () => {
@@ -162,7 +162,12 @@ test("Law's objections by their codes, in Law's own words, after the client's ow
 test('what a clone changes, by tier, and the powers its mark must name', () => {
   const parent = sha256('the founding agreement');
   const before = encodeTerms(collectiveTerms(g(), [a, b, c], a));
-  const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: [b, c] }];
+  // F122: the version also changes a judge (who judges absence): its mark
+  // names the constitutional change rule and the judicial tier's rule.
+  const mark: MarkEntry[] = [
+    { power: { constitutional: true }, signers: [b, c] },
+    { power: { judicial: true }, signers: [a, b, c] },
+  ];
   const after = encodeTerms(collectiveTerms(g({ safetyThreshold: 1, abandonmentOthers: 1, text: 'New words.' }), [b, d], b, parent, mark));
   const w = readChanges(before, after, names).map((l) => l.text).join('\n');
   assert.match(w, /Di joins, bound once they sign the clone/);
@@ -175,7 +180,7 @@ test('what a clone changes, by tier, and the powers its mark must name', () => {
   assert.match(w, /The constitution's words change/);
   assert.match(w, /A change to who the members are: constitutional\./);
   assert.match(w, /A change to the abandonment clause: judicial, a protected clause/);
-  assert.match(w, /So its mark must name the constitutional change rule \(Law rule 44c\)\.\nIts mark names exactly that\./);
+  assert.match(w, /So its mark must name the constitutional change rule and the judicial tier's rule, every member whose voice remains \(Law rule 44c\)\.\nIts mark names exactly that\./);
 
   // An ordinary change: the release area's words, operational in that area.
   const words = encodeTerms(collectiveTerms(g({ releaseWords: 'Ours.' }), [a, b, c], a, parent, [{ power: { area: 1 }, signers: [a, b] }]));

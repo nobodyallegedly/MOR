@@ -31,6 +31,9 @@ const ruleValue = (r: Rule): unknown[] =>
 /** A power a clone's mark claims (Law draft 7, F104); the judicial tier, every member (Law draft 10, F121). */
 export type Power = { constitutional: true } | { clone: true } | { area: number } | { judicial: true };
 
+/** The powers a mark lists, ascending by their encoding (Law, "mark"): [0] < [1] < [4] < [2, area]. */
+export const markOrder = (p: Power): number => ('constitutional' in p ? 0 : 'clone' in p ? 1 : 'judicial' in p ? 2 : 3);
+
 const powerValue = (p: Power): unknown[] =>
   'constitutional' in p ? [0] : 'clone' in p ? [1] : 'judicial' in p ? [4] : [2, p.area];
 
@@ -73,6 +76,15 @@ export interface CollectiveTerms {
   /** For a clone: the agreement it replaces, and its mark. */
   parent?: string;
   mark?: MarkEntry[];
+  /** Stakes (field 7), each object and its holders' shares in millionths:
+   * the collective itself (a share of all its income, F121 Q8), or a work. */
+  stakes?: { object: string; holders: [string, number][] }[];
+  /** The split service's grant (field 14), a judicial clause. */
+  splitGrant?: string;
+  /** The departed members entry (field 22): who left, and their stake. */
+  departed?: [string, number][];
+  /** Forked from (field 23): founding terms of a side of a fork (F121, B). */
+  forkedFrom?: { original: string; fork: string; side: number };
 }
 
 /** The terms payload, as CBOR, checked by the core library. */
@@ -98,7 +110,7 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
   // A mark's signers are ascending by hash (Law draft 8, B8): lowercase
   // hex sorts as the bytes do.
   const field4 = t.parent
-    ? (t.mark ?? []).map((e) => [powerValue(e.power), [...e.signers].sort().map(unhex)])
+    ? [...(t.mark ?? [])].sort((a, b) => markOrder(a.power) - markOrder(b.power)).map((e) => [powerValue(e.power), [...e.signers].sort().map(unhex)])
     : [0];
   const m = new Map<number, unknown>([
     [0, t.parties.map(unhex)],
@@ -117,7 +129,133 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
   if (t.constitutional) m.set(18, ruleValue(t.constitutional));
   if (t.releases.words) m.set(20, new Map([[RELEASE_AREA, t.releases.words]]));
   if (t.parent) m.set(11, unhex(t.parent));
+  if (t.stakes?.length) {
+    m.set(7, [...t.stakes].sort((a, b) => (a.object < b.object ? -1 : 1)).map((x) => [unhex(x.object), x.holders.map(([h, n]) => [unhex(h), n])]));
+  }
+  if (t.splitGrant) m.set(14, unhex(t.splitGrant));
+  if (t.departed?.length) m.set(22, t.departed.map(([h, n]) => [unhex(h), n]));
+  if (t.forkedFrom) m.set(23, [unhex(t.forkedFrom.original), unhex(t.forkedFrom.fork), t.forkedFrom.side]);
   return cborEncode(m);
+}
+
+/** A kept tip: an act, its position, the running summary including it. */
+export interface Tip {
+  act: string;
+  position: number;
+  summary: string;
+}
+
+/** The fork of a collective (Law type 19, rule 47a, F121 shape B). */
+export interface ForkAct {
+  agreement: string;
+  collective: string;
+  chainAct: string;
+  tips: Tip[];
+  sides: string[][];
+  /** Shares of stakes the original held, where not the default: [agreement, index, a share per side]. */
+  shares?: [string, number, number[]][];
+  /** Debts assigned to a side: [obligation, side]. */
+  debts?: [string, number][];
+}
+
+export function forkPayload(f: ForkAct): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, unhex(f.agreement)],
+    [1, unhex(f.collective)],
+    [2, unhex(f.chainAct)],
+    [3, f.tips.map((t) => [unhex(t.act), t.position, unhex(t.summary)])],
+    [4, f.sides.map((s) => s.map(unhex))],
+  ]);
+  if (f.shares?.length) m.set(5, f.shares.map(([a, i, s]) => [unhex(a), i, s]));
+  if (f.debts?.length) m.set(6, f.debts.map(([o, i]) => [unhex(o), i]));
+  return cborEncode(m);
+}
+
+/** A release to the public domain (Law type 5, rule 17, F121 shape D). */
+export interface ReleaseAct {
+  work: string;
+  /** The stakes it ends: [agreement, index]. */
+  stakes: [string, number][];
+  /** The work claims naming its creators. */
+  claims?: string[];
+  /** Each publication carrying it, and its content key. */
+  keys: [string, Uint8Array][];
+}
+
+export function releasePayload(r: ReleaseAct): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, unhex(r.work)],
+    [1, r.stakes.map(([a, i]) => [unhex(a), i])],
+    [3, r.keys.map(([p, k]) => [unhex(p), k])],
+  ]);
+  if (r.claims?.length) m.set(2, r.claims.map(unhex));
+  return cborEncode(m);
+}
+
+/** One payout of a split (Law type 8, F121 Q9). */
+export interface PayoutIn {
+  receiver: string;
+  amount: number;
+  /** The stake it pays, by its index in the agreement's terms. */
+  stake?: number;
+  /** A fee: the module whose fee it pays. */
+  feeModule?: string;
+}
+
+export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: string; agreement: string }): Uint8Array {
+  return cborEncode(
+    new Map<number, unknown>([
+      [0, unhex(s.receipt)],
+      [
+        1,
+        s.payouts.map((p) => {
+          const m = new Map<number, unknown>([
+            [0, unhex(p.receiver)],
+            [1, p.amount],
+          ]);
+          if (p.stake !== undefined) m.set(2, p.stake);
+          if (p.feeModule) m.set(5, unhex(p.feeModule));
+          return m;
+        }),
+      ],
+      [2, unhex(s.cmip)],
+      [3, unhex(s.agreement)],
+    ]),
+  );
+}
+
+/** A grant (Law type 9) to act for the grantor: here, a split service's. */
+export function grantPayload(grantee: string): Uint8Array {
+  return cborEncode(
+    new Map<number, unknown>([
+      [0, unhex(grantee)],
+      [1, 2],
+    ]),
+  );
+}
+
+/** A payee pointer (Finance type 0): rails, each [rail Module, address bytes]. */
+export function pointerPayload(p: { payee: string; version: number; previous?: string; rails: [string, Uint8Array][] }): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, unhex(p.payee)],
+    [1, p.version],
+    [3, p.rails.map(([mod, a]) => [unhex(mod), a])],
+  ]);
+  if (p.previous) m.set(2, unhex(p.previous));
+  return cborEncode(m);
+}
+
+/** A settlement receipt (Finance type 2), signed by the payee of the hop. */
+export function receiptPayload(r: { rail: string; payee: string; unit: string; value: number; fulfils: string }): Uint8Array {
+  return cborEncode(
+    new Map<number, unknown>([
+      [0, unhex(r.rail)],
+      [1, new Uint8Array()],
+      [3, unhex(r.payee)],
+      [4, [unhex(r.unit), r.value]],
+      [5, unhex(r.fulfils)],
+    ]),
+  );
 }
 
 /** What a clone changes, and the powers its mark must name (Law rule 44c). */
@@ -133,7 +271,8 @@ export function markMatches(mark: MarkEntry[], needs: { form: string; area?: num
   const key = (p: Power) =>
     'constitutional' in p ? 'constitutional' : 'clone' in p ? 'clone' : 'judicial' in p ? 'judicial' : `area ${p.area}`;
   const want = needs.map((n) => (n.form === 'area' ? `area ${n.area}` : n.form));
-  return JSON.stringify(mark.map((e) => key(e.power))) === JSON.stringify(want);
+  const sorted = [...mark].sort((a, b) => markOrder(a.power) - markOrder(b.power));
+  return JSON.stringify(sorted.map((e) => key(e.power))) === JSON.stringify(want);
 }
 
 /**

@@ -157,6 +157,14 @@ export interface State {
     relays: string[];
     releases: { id: string; version: string }[];
     pending: boolean;
+    /** The fork that closed it (Law rule 47a, F121), if any. */
+    closed: string | null;
+    /** Its stakes in itself: each holder's share of all its income (F121, Q8). */
+    stakes: { id: string; name: string; percent: number; member: boolean }[];
+    /** Who may hold a stake in it: members whose voice remains and departed holders. */
+    holdersToBe: { id: string; name: string }[];
+    splitService: boolean;
+    splits: string[];
   }[];
   history: { time: number; kind: string; title: string; digest: string; acts: string[] }[];
   paired: { key: string; label: string; added: number; you: boolean }[];
