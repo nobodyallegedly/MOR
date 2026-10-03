@@ -1228,3 +1228,17 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Decided (Nobody, allegedly, 2 October 2026):** "I'm fine with presenting experimental stuff with plenty of disclaimers. The purpose is to throw stuff at the MIPs." a and b confirmed as built; the Module is presented as experimental, its costs stated plainly in its text and shown by clients. *Suggested (project lead):* a BOLT 12 rail Module later, as a second Module under the same payment cMIP, which also exercises F115 (a payee choosing between rails).
 
 *F117 decided by Nobody, allegedly, 2 October 2026.*
+
+## F118. A negotiation message is a Law act (found in the core pass, flaw V1, decided by Nobody, allegedly)
+
+**Pattern:** a decision checked against too little: F110 was decided on the project lead's statement that negotiation messages were Law acts; they were Text acts.
+
+**Found while writing:** the core pass (core v21, branch `claude/core-pass-v21`, flaw V1). Law rule 56 proves a negotiation record complete because each message acknowledges the last one received; a negotiation message was a Text act, and F110 forbids Text acts to carry acknowledgements. As written, no negotiation could be proven complete.
+
+**Decided (Nobody, allegedly, 3 October 2026):** option 1, "it stays on the same layer". A negotiation message is a Law act type carrying text, and may carry acknowledgements like every Law act. No reaction or reply can be one.
+
+**Set aside:** messages naming earlier ones as references (a disowned message would become void, not disputed); an exception for Text acts inside a negotiation (a hole in F110).
+
+**Changes, to be made:** Law draft 10 (the negotiation message act type; rule 56); core and freeze suite where they describe negotiation records.
+
+*F118 decided by Nobody, allegedly, 3 October 2026.*
