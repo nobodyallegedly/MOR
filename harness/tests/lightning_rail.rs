@@ -12,10 +12,12 @@
 //! Without `MOR_LN_REGTEST` it says so and passes without running.
 //! Test identities and regtest coins only.
 
-use mor_core::act::{Act, Inside};
+use mor_core::act::{Act, Inside, Scheme};
+use mor_core::identity::SigningKey;
+use mor_core::sig::SchnorrKey;
 use mor_core::chain::Status;
 use mor_core::envelope::{self, DecKey, EncryptionKey, Recipient, Routes, SealRandom, Sealed};
-use mor_core::finance::{Payer, 
+use mor_core::finance::{Anonymous, Payer, 
     self, choose, Amount, Choice, Claim, PayeePointer, Payload, Rail, Receipt, VaultEntry,
 };
 use mor_core::hash::{sha256, Hash};
@@ -334,9 +336,28 @@ struct Payment<'a> {
     payer_node: &'a Lnd,
     site: &'a Site,
     endpoint: &'a Endpoint<'a>,
+    /// An anonymous payer's one-time key, committed as payer (F113).
+    anonymous: Option<&'a SchnorrKey>,
+}
+
+/// A one-time key in Identity's signing-key form (F113).
+fn bare(k: &SchnorrKey) -> SigningKey {
+    SigningKey {
+        scheme: Scheme::Founding(1),
+        key: k.public().to_vec(),
+    }
 }
 
 impl Payment<'_> {
+    /// Who the payment commits to as payer: the payer's identity, or its
+    /// one-time key when it pays anonymously (F113).
+    fn payer_in_commitment(&self) -> Payer {
+        match self.anonymous {
+            Some(k) => Payer::Key(bare(k)),
+            None => Payer::Identity(self.payer.p.id),
+        }
+    }
+
     async fn pay(&mut self, view: &PayeeView, amount: Amount, fulfils: Hash) -> Outcome {
         let ln = Lightning;
         // The payer's node is on regtest: it can pay a Lightning rail on
@@ -394,7 +415,7 @@ impl Payment<'_> {
             payee: view.id,
             amount,
             fulfils,
-            payer: Some(Payer::Identity(self.payer.p.id)),
+            payer: Some(self.payer_in_commitment()),
             paid_to,
             salt: random::<16>(),
         };
@@ -445,9 +466,23 @@ impl Payment<'_> {
             fulfils,
             disagrees: None,
             referral: None,
-            refund: None,
+            refund: self.anonymous.map(|_| Rail {
+                module: mor_lightning::spec(),
+                address: b"where the anonymous payer wants a refund".to_vec(),
+            }),
             anonymous: None,
         });
+        // F113: an anonymous payer's key signs its claim.
+        let claim = match (claim, self.anonymous) {
+            (Payload::Claim(mut cl), Some(k)) => {
+                cl.anonymous = Some(Anonymous {
+                    key: bare(k),
+                    sig: k.sign(&cl.anonymous_message(), &[0; 32]).sig,
+                });
+                Payload::Claim(cl)
+            }
+            (cl, _) => cl,
+        };
         let claim_act = self.payer.finance_act(&claim, Some(view.id));
         deliver(view, &claim_act, &key_of(&claim_act, &self.payer.p)).await;
         // The payee sees its invoice settled, and signs the receipt.
@@ -460,7 +495,7 @@ impl Payment<'_> {
         let receipt = Payload::Receipt(Receipt {
             rail: mor_lightning::spec(),
             proof: proof(settled),
-            payer: Some(Payer::Identity(self.payer.p.id)),
+            payer: Some(self.payer_in_commitment()),
             payee: view.id,
             amount,
             fulfils,
@@ -636,6 +671,7 @@ async fn a_test_identity_pays_another_over_lightning() {
         payer_node: &alice_ln,
         site: &site,
         endpoint: &endpoint,
+        anonymous: None,
     }
     .pay(&bob_view, regtest_sat(1_234), pointer_act.id())
     .await;
@@ -707,6 +743,7 @@ async fn a_test_identity_pays_another_over_lightning() {
         payer_node: &alice_ln,
         site: &site,
         endpoint: &endpoint,
+        anonymous: None,
     }
     .pay(&bob_view, regtest_sat(50_000), pointer_act.id())
     .await;
@@ -761,6 +798,7 @@ async fn a_test_identity_pays_another_over_lightning() {
         payer_node: &alice_ln,
         site: &site,
         endpoint: &endpoint,
+        anonymous: None,
     }
     .pay(&bob_view, signet, pointer_act.id())
     .await;
@@ -798,6 +836,7 @@ async fn a_test_identity_pays_another_over_lightning() {
         payer_node: &alice_ln,
         site: &site,
         endpoint: &dana_endpoint,
+        anonymous: None,
     }
     .pay(&dana_view, regtest_sat(20_000), dana_pointer.id())
     .await;
@@ -811,4 +850,52 @@ async fn a_test_identity_pays_another_over_lightning() {
         "Dana was told"
     );
     eprintln!("20,000 to Dana refused (her vault is on-chain only), and Dana was told");
+
+    // 5. F113: an anonymous tip of 777 to Bob's flow. Alice commits a
+    // one-time key of its own as payer; the claim, signed with it, counts,
+    // and names where a refund should go. Bob's node learnt the preimage
+    // when it was paid, as every node on a route would: a claim he makes as
+    // payer, from the same proof, is invalid.
+    let one_time = SchnorrKey::from_secret(&random::<32>()).unwrap();
+    let anon = Payment {
+        payer: &mut alice,
+        payee: &mut bob,
+        payer_node: &alice_ln,
+        site: &site,
+        endpoint: &endpoint,
+        anonymous: Some(&one_time),
+    }
+    .pay(&bob_view, regtest_sat(777), pointer_act.id())
+    .await;
+    let Outcome::Paid { receipt, claim, .. } = anon else {
+        panic!("the anonymous tip was refused: {anon:?}")
+    };
+    bob.pick_up(&site).await;
+    bob.rd
+        .v
+        .add_with_key(receipt.clone(), Some(&bob.p.key_of(&receipt.id()).unwrap()))
+        .unwrap();
+    for act in [receipt.id(), claim.id()] {
+        assert_eq!(check(&bob, &act).0, Answer::Valid, "{}", short(&act));
+    }
+    let Payload::Claim(alices) =
+        Payload::decode(3, &bob.rd.v.get(&claim.id()).unwrap().inside.payload).unwrap()
+    else {
+        panic!()
+    };
+    assert_eq!(alices.payer(&alice.p.id), Payer::Key(bare(&one_time)));
+    // Bob, holding the preimage, claims the payment (and its refund) as his.
+    let mut bobs = alices.clone();
+    bobs.anonymous = None;
+    bobs.refund = Some(Rail {
+        module: mor_lightning::spec(),
+        address: b"Bob's own address".to_vec(),
+    });
+    let forged = bob.finance_act(&Payload::Claim(bobs), None);
+    bob.rd
+        .v
+        .add_with_key(forged.clone(), Some(&bob.p.key_of(&forged.id()).unwrap()))
+        .unwrap();
+    assert!(matches!(check(&bob, &forged.id()).0, Answer::Invalid(_)));
+    eprintln!("an anonymous tip of 777: the claim signed with the committed key counts; the payee holding the preimage cannot claim it");
 }
