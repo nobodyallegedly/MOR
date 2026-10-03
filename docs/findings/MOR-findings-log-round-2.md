@@ -1300,4 +1300,6 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 **Still needed, fork or not (accepted the same day):** fix 1, the protected clauses that touch money need every stake holder's signature, member or not, so ordinary leaving never strips a departed owner's protection; fix 2, the payee pointer cannot bypass the split service the agreement granted (a rule, or a duty making sales visible to every owner). Each to be settled one at a time.
 
+**Fix 2 decided (Nobody, allegedly, 3 October 2026): a Law check on the pointer.** "Law check makes sense, splits are law." A payee pointer of an identity whose agreement names a split service counts, for Law, only if it names that service (Law rule 18 made a rule, not a description); Law clients, and any wallet reading Law, check it before paying, and show a pointer that bypasses the split as such. *Cost, stated:* a wallet reading only Finance cannot check it (as F68), so payers who want the protection use wallets that read Law. Set aside: making every pointer change need all stake holders (every new rail would need everyone); visibility alone, the buyer's claim sent to every owner (reveals buyers).
+
 **Changes, to be made:** Law (rule 46a; the chain of judgment; a fork grammar); core; freeze suite.
