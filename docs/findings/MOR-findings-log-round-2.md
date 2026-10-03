@@ -1280,3 +1280,56 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Written in (Law draft 10, 3 October 2026, not yet approved):** Law draft 10 (rules 19 and 22, the role share's definition, the split's evidence field, with the cost stated), core v21, freeze suite v21 (step 2.4e); built in the core library (`LawView::role_evidence`) and tested. *Reading taken:* the payee whose pointer or vault must name the Module is the identity the payment was made to, whose pointer leads to the split service, never the service.
 
 **F110, the witness act's visibility (core pass, question V3; decided by Nobody, allegedly, 3 October 2026):** a witness act is public, like every Identity act. *Cost, stated:* anyone can see that its signer relies on a given act of another identity, a relationship, never the content of a private act. A private witness act was set aside: it would protect nothing for anyone not holding it, and would need rules of its own.
+
+## F120. A version changing both a judge and the constitution needs the constitutional rule alone (found writing Law draft 10, question J1, decided by Nobody, allegedly)
+
+**Pattern:** 4: two rules of Law disagreed on one case.
+
+**Found while writing:** Law draft 10 (`docs/law-draft-10.md`, J1), restating the seven rules the core pass could not state plainly. Rule 36a says the judicial tasks (condition evaluation, time reference, anchoring) change only under the clone rule; rule 44c.1 says a version touching the constitution needs the constitutional change rule alone, "which may change every tier". When one version does both, they disagree, but only where the clone rule is stricter than the constitutional rule.
+
+**Decided (Nobody, allegedly, 3 October 2026):** reading (a), the constitutional change rule alone: "rare case, but if core allows it" it must have one answer. Rule 36a's "only under the clone rule" reads as "never by the Law lane nor any other area". Under rule 46a, a member who did not sign keeps the judge they signed for, whatever the version.
+
+**Set aside:** both rules met (a check the constitutional rule could remove in the same version); forbidding both changes in one version (only an extra step).
+
+**Changes, to be made:** Law draft 10 (rules 36a and 44c.1 read alike); core v21's "Areas and lanes" (J1 no longer open).
+
+*F120 decided by Nobody, allegedly, 3 October 2026.*
+
+## F121. One judicial tier for everyone, a chain of fallbacks, and the fork of a collective (found writing Law draft 10, decided in part by Nobody, allegedly)
+
+**Pattern:** 3, both halves: F71's per-member protected clauses protect each member from rules they never signed, and leave two members with no judge they both signed.
+
+**Found while writing:** Law draft 10 (noticed outside the session's task). Under rule 46a (F71) a member who does not sign a change of a protected clause keeps the version they signed. Two members can then hold different judges, and where one joined after a change the other never signed, no judge both signed. Nothing said who decides a dispute between them.
+
+**Walked through (3 October 2026):** Nobody, allegedly: "It's the joint signature that matters", and "how could there be a valid newer version Anna did not sign?" Requiring every member's signature for the judicial tier costs three things (a holdout can block, a dead judge can trap, leverage); each was answered: "leverage is part of life"; a dead judge is answered by a chain of judgment; and the holdout by a standoff: "if a group within the collective wants change A but another group refuses it, it creates a standoff, which is good. Communication becomes the only channel to solve it, with a collective fork as an option to settle it."
+
+**Decided (Nobody, allegedly, 3 October 2026), in principle:**
+1. **The judicial tier changes only with every member's signature,** one version for everyone, replacing F71's per-member versions. *(The project lead's reading of the walk-through; confirmed by Nobody, allegedly, 3 October 2026.)*
+2. **A chain of judgment:** each judge, keeper or other judicial service may name, at founding, the one that takes over when it answers "unknown" or cannot act; everyone signs the chain, so a failing judge is replaced without new signatures. "It's a chain of judgment."
+3. **The fork of a collective** is its own grammar ("a fork of a collective makes sense, that's really what a collective splitting is"): the side that does not want the change keeps the collective as it is, minus the departing members; the side that wants it founds a new collective, naming the original as its parent. Where both sides want changes, the original closes with a final act declaring the fork, and both found new collectives naming it.
+4. **Cost, stated and accepted ("I think it is"):** the status-quo side can be one member, who then keeps the collective's identity, history and pointers while the others leave, each keeping their stake (Q6). A collective that will not accept this writes a removal clause at founding.
+
+**Still to settle, one at a time:** works and their claims after a fork; the collective's debts and obligations; grants; keys and the departing members' shares; the act that declares a fork and what the new collectives' first acts name; whether the existing "fork rule" (rule 47, forks of records) needs a new name to avoid confusion.
+
+**A work after a fork (Nobody, allegedly, 3 October 2026):** leaving costs the vote and the right to act, never a stake unless it is sold. A work is just a work: whoever made it (a person, a collective, a collective of collectives, a deal), the right to earn from it belongs to all the parties its claim lists as owners, not to its publisher. Anything made before the fork belongs to both groups. *The project lead's reading, confirmed by Nobody, allegedly, 3 October 2026:* either side may sell pre-fork works, each sale paying the owners as the claim lists them; the fork act names both successors as descending from the original agreement, so neither side's sales show as outside the claiming agreement.
+
+**Can the side keeping the original starve past members? (asked by Nobody, allegedly, 3 October 2026; the project lead's analysis):** blocked: shrinking a stake (rule 46); skipping a stake in a payout (visible as a shortfall); stopping sales, once pre-fork works can be sold by both sides. Open:
+- **F121 must not strip departed owners' protection.** Under F71 a departed member who kept a stake kept the protected clauses as they signed them; if F121's unanimity counts only current members, the staying side could change the split service or the fork rule without the owners who left. The protected clauses that touch money must still need every stake holder's signature, member or not.
+- **The pointer can bypass the split.** Law rule 18 says the owners' payee pointer points to the split service "so money actually reaches it", but nothing makes that a check: a collective's Finance lane could point the pointer at another receiver, and buyers' claims are private by default, so departed owners might never see the sales. A rule, or a visibility duty, is needed.
+- **Re-encoding** a work makes a new fingerprint, a "new" work outside the claim (F72's known limit): visible only where someone links the two.
+
+**Revised (Nobody, allegedly, 3 October 2026): no side keeps the original.** "Then maybe it is best no group keeps the original hash." A fork closes the original collective with a final act declaring it; every side founds a new collective naming the original as its parent, the status-quo side's being a copy of the original agreement minus the departing members. This replaces point 3's "the status-quo side keeps the collective" and removes point 4's cost (a lone holdout keeping the identity). Taken "for now".
+
+**Still needed, fork or not (accepted the same day):** fix 1, the protected clauses that touch money need every stake holder's signature, member or not, so ordinary leaving never strips a departed owner's protection; fix 2, the payee pointer cannot bypass the split service the agreement granted (a rule, or a duty making sales visible to every owner). Each to be settled one at a time.
+
+**Fix 2 decided (Nobody, allegedly, 3 October 2026): a Law check on the pointer.** "Law check makes sense, splits are law." A payee pointer of an identity whose agreement names a split service counts, for Law, only if it names that service (Law rule 18 made a rule, not a description); Law clients, and any wallet reading Law, check it before paying, and show a pointer that bypasses the split as such. *Cost, stated:* a wallet reading only Finance cannot check it (as F68), so payers who want the protection use wallets that read Law. Set aside: making every pointer change need all stake holders (every new rail would need everyone); visibility alone, the buyer's claim sent to every owner (reveals buyers).
+
+**Fix 1 decided (Nobody, allegedly, 3 October 2026): a departed member is a passive holder.** Walked through a scenario (four members; one leaves keeping 25%; the others change the split service and its fee). Per-owner versions ("everything that touches him", undefined, and a split service keeping two sets of terms for one payment) and a three-part shape were set aside for the status quo of legal frameworks for collective efforts: "A person who keeps stake in a collective accepts that they have zero control over decisions. If I think the collective won't survive, the incentive to sell the stake is there. It's a stake in a collective as a whole (not only on the work done while he was a member); it simply defines his share of income." A rail swap is the collective's decision: "to get paid, past members have to accept the decision and set up accordingly if they wish to get paid." So:
+- **The departed members entry** of a collective records who left and their stake, nothing else.
+- **No control, no veto:** the collective's current rules and judges apply to departed holders.
+- **The stake never shrinks** without its holder's signature (rule 46); it is a share of all the collective's income.
+- **Equal treatment** (suggested by the project lead, from company law; accepted): every term applies equally to every stake, member or departed. Members cannot treat departed stakes worse than their own; a fee raised for the departed is raised for the members, and a fee paid to a service the members own is public. "Your scenario is one of those where the change and creative accounting are made legible and poetically public."
+- **Unpaid shares stay open debts** (rule 16) until the holder can receive, for instance after setting up on a new rail.
+This also settles fix 1 without making the judicial tier need departed holders' signatures: F121's unanimity counts members only.
+
+**Changes, to be made:** Law (rule 46a; the chain of judgment; a fork grammar); core; freeze suite.
