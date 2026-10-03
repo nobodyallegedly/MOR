@@ -143,14 +143,14 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
 
 ### Agreements and deals
 
-- **An agreement is terms plus signatures.** One party proposes terms; each party signs them by a signature act of its own. An agreement binds identities, not keys, so it survives a party's key rotation. Its terms name at most one cMIP for each task, plus any extensions.
+- **An agreement is terms plus signatures:** the terms, and one signature act from each party. An agreement binds identities, not keys, so it survives a party's key rotation. Its terms carry the hash of at most one cMIP for each task (so the exact version is fixed), plus any extensions.
 - **Only your own signature binds you.** A rule in the terms decides when the agreement, or a clone of it, comes into force; no rule ever decides that someone owes something they did not sign.
 - **Everyone signs the founding terms.** Founding terms exist only once every party has signed them, and nobody is added to a collective without signing.
 - **A deal** is an agreement that founds no collective. It changes only with every party's signature. Majorities, areas and tiers belong to collectives, never to deals.
 - **A judge never handles what it judges.** A specification named for condition evaluation, time reference or anchoring (the judicial tasks) serves no other task and is not an extension, in a deal as in a collective.
-- **What you sign is what you saw.** Before signing, clients show the plain text, with bidirectional controls visible, and what any rule computes on an example.
+- **What you sign is what you saw.** Before signing, clients show the plain text, with bidirectional controls visible (invisible characters that can reorder how text displays), and what any rule computes.
 - **Clone, never modify.** An agreement is never edited. A change is a clone: a new version naming the old one as its parent.
-  - A clone states which rules its changes require and whose signatures meet them (its mark); a false statement makes it invalid.
+  - A clone states which rules its changes require and whose signatures meet them; this statement is its mark, and a false mark makes the clone invalid.
   - A clone touching several areas needs each area's rule, and comes into force all at once.
   - It is a draft until those signatures are in; then it closes its parent.
   - A clone never reduces a stake without its holder's signature. A deal's clone needs every party.
@@ -173,8 +173,7 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
 ### Splits, offers and time
 
 - **Splits.** The payee pointer of the identity a publication is made for usually points to a split service, named by a grant.
-  - For every incoming receipt or payer's claim, the service publishes a split that sums exactly, and pays each payout as a simple Finance payment, deducting no more than the plan's maximum fee.
-  - Every role share it pays carries evidence signed by someone other than the service and the payee.
+  - For every incoming receipt or payer's claim, the service publishes a split that sums exactly, with evidence for every role share signed by someone other than the service and the payee, and pays each payout as a simple Finance payment, deducting no more than the plan's maximum fee. *A role share is a share for a role filled at payment time, such as the reposter who led to the sale.*
   - It cannot pay outside the plan or change the plan. Receipts it has not split and payouts it has not paid are its open obligations.
   - A fee is one total with an agreed split, consented by whoever bears it; a fee left out of a split is visible. Amounts too small to send are held until they can be moved.
   - *No cMIP or Module can force a fee; developers earn through services, maintained originals, bounties and shares clients choose to pass on.*
@@ -184,6 +183,13 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
 ### Collectives: an identity many people act for
 
 *A collective is a band, a label, a cooperative: one identity, with its own keys, whose members act for it under a founding agreement. The rules below answer five questions in turn: who holds the keys; how members come and go; who may decide what; who decides when someone is gone; and, with no clock, what was done before or after a member left.*
+
+**Words used below.**
+- A **record** is the collective's everyday act that writes a complete clone of its agreement into its own sequence, naming the signature acts that complete it, and registers its members' departures and rotations.
+- A **line** is an act of the collective (a record, or a rotation of the collective) at which a change in who may act for it takes effect. It names the latest act of every other sequence the collective keeps: those acts are its **tips**, and everything leading up to a tip is that tip's **ancestry**.
+- To **place** an act is to give it a position in the collective's own sequence, so that it is before or after a line.
+- An area is **frozen** when no holder is left; its **refit** is the change that gives it holders again.
+- **Sealing** a grant closes its branch; **importing** an act from a grant's branch, or **handing it over**, is the collective taking it on as its own.
 
 **Keys.**
 - A collective is a full identity with its own keys, held under its founding agreement's key grammar: by one holder, by a threshold of members, or by a custodian. The safety key can be split into shares.
@@ -215,8 +221,8 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
   - A holder leaves an area by a constitutional change, or steps down at once, alone. Co-holders carry on.
   - An area with no holder left is frozen until that change. The grants issued within it end for good.
   - At the refit, the area's new holders, by the area's own rule, reinstate the grants they choose, one by one, each by an act of the collective made after they took the area, and seal the others. A grant's seal is judged, like the grant, by its area alone.
-  - Until the refit, a grantee's act binds the collective where the collective acknowledged it, paid on it or imported it; any other is undetermined until the refit decides.
-  - A clone that takes a holder off an area may keep the area's number of signatures, all the holders who remain meeting it. A clone that removes a member takes them off every area they held.
+  - A grantee's act the collective acknowledged, paid on or imported binds it; any other is undetermined until the refit decides.
+  - A clone that takes a holder off an area may keep the area's number of signatures even above the holders left; then all the holders who remain, together, meet it. A clone that removes a member takes them off every area they held.
 
 **Nobody's absence freezes the collective.**
 - Every member whose signature the constitutional change rule counts is covered by an abandonment clause that can remove their voice, so a lost member never freezes the constitution.
@@ -230,7 +236,7 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
 - **What puts a clone in force.** A record names the signatures that put its clone in force, and counts only with those; so does the rotation that declares a constitutional clone. A record's registrations stand even where its clone does not.
 - **Forks.** Records on lines that do not name each other are a fork of the agreement. It is settled by the agreement's own fork rule; where it has none, the earlier version stays in force, until a clone of either branch is recorded after both lines.
 - **Who else can place an act.** The collective's keepers may place its own acts that a line left out, never a member's signature or a deal. An acknowledgement by anyone else places nothing.
-- **A member's own rotation** is registered the same way, at the collective's line. Their signatures placed before that line stay valid for the collective, on its acts and on the clones its records or rotations put in force; a thief's signatures count only where the collective's key holders also signed.
+- **A member's own rotation** is registered the same way, at the collective's line. Their signatures placed before that line stay valid for the collective, on its acts and on the clones its records or rotations put in force; signatures made with the member's replaced key by whoever stole it count only where the collective's key holders also signed.
 - **What a departure does not undo.**
   - A member who left can still complete an act the collective signed before its line.
   - A signature placed before the line still counts, its signer a voice for that clone or act, the rule met or not as written.
@@ -249,9 +255,9 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
   - Acts under a grant sit in its own branch, and a publication under one names the grantor as the identity it is made for.
   - Revoking a grant seals its branch, naming no place on it. A deal the grantor acknowledged, paid on or imported still binds it.
   - The collective imports or hands over what it accepts; counterparties require import before performing.
-- **Abandonment** (when a party is gone and cannot sign) is decided only by the authority the clause names, always an identity.
+- **Abandonment** (when a party no longer answers) is decided only by the authority the clause names, always an identity.
   - The authority signs a declaration naming the agreement, the version of its clause the party signed last, the party, and the outcomes. It is judged against the time reference, with the outcomes the clause allows, under the clause version the party signed.
-  - Liveness acts by the party prevent it; a contest objects to it.
+  - Liveness acts prevent it; a contest objects to it.
   - One outcome removes the party's voice from then on, in a collective from the collective's line registering the declaration. It never takes their stake, and never undoes a clone a record or rotation already put in force.
   - **In a collective,** the authority may be a threshold of the other parties, counted at the collective's line registering the declaration. Where it needs several of them, one signs the declaration and the others add signature acts naming it; it counts once the required number have signed. Where the declared member alone holds the everyday key, the recovery rotation removing them names those signature acts.
   - **In a deal,** the authority is one identity (a party, a keeper's operator or a collective), never a threshold of the other parties.

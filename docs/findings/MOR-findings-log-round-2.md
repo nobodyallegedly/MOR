@@ -1047,6 +1047,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F108 decided by Nobody, allegedly, 1 October 2026.*
 
+**Written in (core pass, 3 October 2026, not yet approved):** Envelope draft 7 (field 3; rule 14a); freeze suite v21 (step 2.1b); core v21 (Envelope, media).
+
 ## F109. In a collective, "before" and "after" are judged on the collective's own sequence (found while drafting Law draft 7, decided by Nobody, allegedly)
 
 **Pattern:** a root cause behind several findings: flaws E to L, Q23, Q28 and Q30 of the Law redraft each ordered a member's personal sequences against a collective event (a resignation, a stepping-down, a freeze, a declaration of absence, a record), and each patch opened another gap.
@@ -1121,6 +1123,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *Decided "for now" (Nobody, allegedly, 2 October 2026: "for now it seems to work").*
 
+**Written in (core pass, 3 October 2026, not yet approved):** Envelope draft 7 (rules 4a, 7b), Identity draft 11 (type 15, rules 18b, 18c), core v21, freeze suite v21 (steps 2.5c, 5.5b); the core library, the genesis client (a `witness` command; acknowledgements refused on other types) and the desk (a witness act signed only after its explanation). Writing it in exposed flaw V1: Law rule 56's negotiation messages are text acts, which may no longer carry acknowledgements (`docs/core-pass-v21.md`).
+
 **Changes, to be made:** Envelope's next draft (field 7: which act types may carry it; validity); Identity's next draft (the witness act type; client conformance); core document (acknowledgements, glossary: witness act); freeze suite (a Text act carrying `acks` is invalid; a like-style reaction under a cMIP carrying `acks` is invalid; a witness act keeps a disowned post visible as disputed; a buyer's claim does the same for a publication). The desk and the genesis client acknowledge only through these types.
 
 ## F111. An owner learns of payments the vault leaves undeliverable (found while confirming Finance rule 14a, decided by Nobody, allegedly)
@@ -1139,6 +1143,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes, to be made:** Finance MIP's next draft (client conformance under rule 14a; reasoning). No change to the core document or the freeze test suite beyond a line in scenario 5's flow-off step (the payer's wallet notifies the payee).
 
 *F111 decided by Nobody, allegedly, 2 October 2026.*
+
+**Written in:** Finance draft 6, rule 14b (roadmap step 12); core v21 (Finance) and freeze suite v21 (step 5.2), core pass, 3 October 2026, not yet approved.
 
 ## F112. A rail is a Module under the payment cMIP; parties are not specifications (found while reading Finance, decided by Nobody, allegedly)
 
@@ -1159,6 +1165,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F112 decided by Nobody, allegedly, 2 October 2026.*
 
+**Written in:** Finance draft 6 and the payment cMIP (roadmap step 12); Production draft 6 (rule 8, task table rows 6 and 7, the verification rule), core v21 and freeze suite v21, core pass, 3 October 2026, not yet approved.
+
 ## F113. An anonymous payer's refund goes to a key the payer put in the commitment (found while building roadmap step 12, flaw L1, decided by Nobody, allegedly)
 
 **Pattern:** 1: the record that decides who is refunded could be produced by others than the party it protects.
@@ -1172,6 +1180,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Finance draft 6 (rule 10a; the commitment's payer field accepts a bare key); the payment cMIP; freeze suite scenario 2 step 6 (the anonymous refund is claimed by a signature with the committed key, and a routing node holding the preimage cannot claim it).
 
 *F113 decided by Nobody, allegedly, 2 October 2026.*
+
+**Written in (core pass, 3 October 2026, not yet approved):** Finance draft 6 (rules 1 and 10a, receipt field 2, claim field 8), payment cMIP draft 2, Lightning rail Module draft 2, core v21, freeze suite v21 (steps 2.6, 2.6b, 5.2); built and tested offline and on regtest. *Reading taken:* the bare key is a signing key in Identity's form, not rule 18's delivery key (an encryption key, which cannot sign). Law draft 9 rule 32 still says "whoever presents the rail proof": Law needs a draft 10.
 
 ## F114. Several vault entries for one unit: the smallest limit applies (found while building roadmap step 12, flaw L2, decided by Nobody, allegedly)
 
@@ -1188,6 +1198,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Finance draft 6 (rule 14a); the code's refusal of payments between the smallest and largest limits as unsettled is replaced by the rule.
 
 *F114 decided by Nobody, allegedly, 2 October 2026.*
+
+**Written in (core pass, 3 October 2026, not yet approved):** Finance draft 6 (rule 14a), core v21, freeze suite v21 (step 5.2); the code's refusal between the limits is replaced by the rule.
 
 ## F115. The payee decides which rails it accepts (found while building roadmap step 12, question c and flaw L4, decided by Nobody, allegedly)
 
@@ -1207,6 +1219,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F115 decided by Nobody, allegedly, 2 October 2026.*
 
+**Written in (core pass, 3 October 2026, not yet approved):** Finance draft 6 (rule 12a), payment cMIP draft 2, core v21, freeze suite v21 (step 3.7g rewritten); the core library's Law view and its test. *Reading taken:* the Law view checks that a counting pointer or the vault in force names the rail Module; which exact pointer the payment went to is in the rail's proof, which the payment cMIP checks. Law draft 9's scenario lines still speak of a payment cMIP's receipts: Law needs a draft 10.
+
 ## F116. Evidence that a Module was used comes from a party, never from the Module (found while building roadmap step 12, flaw L3, decided by Nobody, allegedly)
 
 **Pattern:** 1, after F112: a specification cannot sign.
@@ -1219,6 +1233,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F116 decided by Nobody, allegedly, 2 October 2026.*
 
+**Written in (core pass, 3 October 2026, not yet approved):** Production draft 6 (rule 17), Finance draft 6 (rule 10b), core v21, freeze suite v21. Law rule 19 does not read alike ("a module's signed use record", also rule 22): Law needs a draft 10, and rule 22's "someone other than the split service and the payee" meets F116 as flaw V2 (`docs/core-pass-v21.md`).
+
 ## F117. The first Lightning rail Module names the payee's node; its costs are stated, and it ships as experimental (roadmap step 12, questions a and b, decided by Nobody, allegedly)
 
 **Found while building:** the Lightning rail (roadmap step 12, question a). To check later that a payment went to the payee, a verifier needs the key that signed the invoice; on Lightning there is no address in the on-chain sense. The Module as built names the payee's node key in its pointer or vault (a), and a Lightning vault entry names the vault's own node, which issues each invoice (b).
@@ -1228,3 +1244,5 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Decided (Nobody, allegedly, 2 October 2026):** "I'm fine with presenting experimental stuff with plenty of disclaimers. The purpose is to throw stuff at the MIPs." a and b confirmed as built; the Module is presented as experimental, its costs stated plainly in its text and shown by clients. *Suggested (project lead):* a BOLT 12 rail Module later, as a second Module under the same payment cMIP, which also exercises F115 (a payee choosing between rails).
 
 *F117 decided by Nobody, allegedly, 2 October 2026.*
+
+**Written in (core pass, 3 October 2026):** Lightning rail Module draft 2 ("Costs, stated", experimental), Finance draft 6 (reasoning), the payment cMIP draft 2 (experimental).
