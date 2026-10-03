@@ -1246,3 +1246,33 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 *F117 decided by Nobody, allegedly, 2 October 2026.*
 
 **Written in (core pass, 3 October 2026):** Lightning rail Module draft 2 ("Costs, stated", experimental), Finance draft 6 (reasoning), the payment cMIP draft 2 (experimental).
+
+## F118. A negotiation message is a Law act (found in the core pass, flaw V1, decided by Nobody, allegedly)
+
+**Pattern:** a decision checked against too little: F110 was decided on the project lead's statement that negotiation messages were Law acts; they were Text acts.
+
+**Found while writing:** the core pass (core v21, branch `claude/core-pass-v21`, flaw V1). Law rule 56 proves a negotiation record complete because each message acknowledges the last one received; a negotiation message was a Text act, and F110 forbids Text acts to carry acknowledgements. As written, no negotiation could be proven complete.
+
+**Decided (Nobody, allegedly, 3 October 2026):** option 1, "it stays on the same layer". A negotiation message is a Law act type carrying text, and may carry acknowledgements like every Law act. No reaction or reply can be one.
+
+**Set aside:** messages naming earlier ones as references (a disowned message would become void, not disputed); an exception for Text acts inside a negotiation (a hole in F110).
+
+**Changes, to be made:** Law draft 10 (the negotiation message act type; rule 56); core and freeze suite where they describe negotiation records.
+
+*F118 decided by Nobody, allegedly, 3 October 2026.*
+
+## F119. A split service's receipt is evidence that a rail Module was used (found in the core pass, flaw V2, decided by Nobody, allegedly)
+
+**Pattern:** 1, checked: the party that signs is the split service, but what it can name is fixed by the payee.
+
+**Found while writing:** the core pass (flaw V2). F116 makes the receipt naming a rail Module the evidence of its use; in a split, that receipt is signed by the split service, and Law rule 22 (F75) refuses the service's own signature as evidence for a role share.
+
+**Decided (Nobody, allegedly, 3 October 2026):** option (a). The receipt counts as evidence of a rail Module's use even when a split service signs it, because under F115 a receipt counts only on a rail Module the payee's own pointer or vault names: the service cannot invent one. *Cost, stated:* where the payee's pointer names two Modules for one rail, whoever issues the invoice (here the split service) chooses which earns; the pointer shows it publicly, and the payee's agreement with the service can constrain it.
+
+**Set aside:** keeping rule 22 strict, so only the payer's claim counts (claims are private by default, so most uses would go unrecorded); one Module per rail as a validity rule, suggested by the project lead and withdrawn on Nobody, allegedly's question ("how can it be enforced?"): "same rail" is a label each Module declares, which no verifier can check (as F106), and one Module per unit would forbid accepting a unit on two rails.
+
+**Changes, to be made:** Law draft 10 (rules 19 and 22: the exception for a receipt naming a rail Module the payee published).
+
+*F119 decided by Nobody, allegedly, 3 October 2026.*
+
+**F110, the witness act's visibility (core pass, question V3; decided by Nobody, allegedly, 3 October 2026):** a witness act is public, like every Identity act. *Cost, stated:* anyone can see that its signer relies on a given act of another identity, a relationship, never the content of a private act. A private witness act was set aside: it would protect nothing for anyone not holding it, and would need rules of its own.
