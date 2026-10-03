@@ -189,7 +189,7 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
 - A **line** is an act of the collective (a record, or a rotation of the collective) at which a change in who may act for it takes effect. It names the latest act of every other sequence the collective keeps: those acts are its **tips**, and everything leading up to a tip is that tip's **ancestry**.
 - To **place** an act is to give it a position in the collective's own sequence, so that it is before or after a line.
 - An area is **frozen** when no holder is left; its **refit** is the change that gives it holders again.
-- **Sealing** a grant closes its branch; **importing** an act from a grant's branch, or **handing it over**, is the collective taking it on as its own.
+- **Sealing** a grant closes its branch. **Importing** acts of a sealed branch is the collective accepting them into its own chain; **handing them over** assigns them to another grant's branch.
 
 **Keys.**
 - A collective is a full identity with its own keys, held under its founding agreement's key grammar: by one holder, by a threshold of members, or by a custodian. The safety key can be split into shares.
