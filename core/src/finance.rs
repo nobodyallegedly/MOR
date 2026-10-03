@@ -611,6 +611,55 @@ pub fn check_signer(payload: &Payload, signer: &Hash) -> R<()> {
     }
 }
 
+// ---------------------------------------------------------------- rule 10a: who a refund is owed to
+
+/// Who a refund owed on a payment is owed to (rule 10a, F80, F113; Law
+/// rule 32).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RefundTo {
+    /// The payer the receipt names.
+    Identity(Hash),
+    /// Whoever signs with the key the payment committed to as its payer.
+    Key(SigningKey),
+    /// The payment committed to no key: nobody can claim it.
+    Nobody,
+}
+
+/// Who a refund owed on the payment this receipt records is owed to. Never
+/// whoever presents the rail proof: others on the route may hold it.
+pub fn refund_owed_to(receipt: &Receipt) -> RefundTo {
+    match &receipt.payer {
+        Some(Payer::Identity(h)) => RefundTo::Identity(*h),
+        Some(Payer::Key(k)) => RefundTo::Key(k.clone()),
+        None => RefundTo::Nobody,
+    }
+}
+
+/// Whether a claim, signed by `signer`, claims the refund owed on the
+/// payment this receipt records (rule 10a, F113; Law rule 32): it names the
+/// same rail, proof, payee and amount, says where to be paid (key 7), and
+/// is made by the payer the payment committed to: the named payer, or a
+/// claim carrying a valid signature of the committed key (key 8), whoever
+/// signs the act. A claim on a payment that committed no key never does.
+pub fn claims_refund(receipt: &Receipt, claim: &Claim, signer: &Hash) -> bool {
+    if claim.rail != receipt.rail
+        || claim.proof != receipt.proof
+        || claim.payee != receipt.payee
+        || claim.amount != receipt.amount
+        || claim.refund.is_none()
+    {
+        return false;
+    }
+    match refund_owed_to(receipt) {
+        RefundTo::Identity(h) => claim.anonymous.is_none() && &h == signer,
+        RefundTo::Key(k) => match (&claim.anonymous, claim.anonymous_signature()) {
+            (Some(a), Some(s)) => a.key == k && sig::verify(&s, &claim.anonymous_message()) == Verdict::Valid,
+            _ => false,
+        },
+        RefundTo::Nobody => false,
+    }
+}
+
 // ---------------------------------------------------------------- rule 12: the pointer that counts
 
 /// Which payee pointer counts (rule 12): the latest of an unbroken,

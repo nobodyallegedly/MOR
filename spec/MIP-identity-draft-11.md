@@ -252,7 +252,7 @@ An escape endorsement names a homeless rotation in `objects`. Its payload may li
 witness-payload = { }             ; empty: the type says it all
 ```
 
-A witness act says only: **"I received this act and rely on it."** The acts it witnesses are named in its `acks` (Envelope), at least one; it carries no `objects`. It is the one act whose whole purpose is acknowledgement (F110). *It brings back, deliberately, what a like must never do: relying on a post or a message that nobody paid for or signed around (a public promise, a threat kept as evidence, a statement a journalist relies on). It keeps the acts it names visible as disputes if their signer later disowns them (rule 16), and it is the natural carrier for the acknowledgement of a voided home receipt (receipt check 6, F95). Like every act this MIP defines, it is public: it shows anyone which acts its signer relies on, never what they say.*
+A witness act says only: **"I received this act and rely on it."** The acts it witnesses are named in its `acks` (Envelope), at least one; it carries no `objects`. It is the one act whose whole purpose is acknowledgement (F110). *It brings back, deliberately, what a like must never do: relying on a post or a message that nobody paid for or signed around (a public promise, a threat kept as evidence, a statement someone relies on). It keeps the acts it names visible as disputes if their signer later disowns them (rule 16), and it is the natural carrier for the acknowledgement of a voided home receipt (receipt check 6, F95). Like every act this MIP defines, it is public: it shows anyone which acts its signer relies on, never what they say.*
 
 ## Verification procedures
 

@@ -30,6 +30,8 @@ pub mod types {
     pub const DECLARATION: u64 = 13;
     pub const RESIGNATION: u64 = 16;
     pub const RECORD: u64 = 17;
+    /// A negotiation message (F118, rule 56).
+    pub const NEGOTIATION: u64 = 18;
 }
 
 /// The declaration kinds Law defines (Identity, declarations slot).
@@ -1654,6 +1656,73 @@ pub fn recovery_declaration(law: &Hash, clone: &Hash, signatures: &[Hash], absen
         spec: *law,
         kind: kinds::FOUNDING_AGREEMENT,
         value: Some(Value::Array(vec![b(clone), hashes_value(signatures), hashes_value(absence)])),
+    }
+}
+
+// ---------------------------------------------------------------- negotiation message
+
+/// Negotiation message (type 18, F118): a Law act carrying text, by which
+/// two sides negotiate (rule 56). Its inside names, in `objects`, nothing
+/// for a thread's first message, and `[[thread, previous]]` for every later
+/// one; its `acks` name at most the latest message of the other side its
+/// signer received.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NegotiationMessage {
+    /// 0: the message, as canonical text.
+    pub text: String,
+    /// 1: a text format cMIP, as a text act may name one.
+    pub format: Option<Hash>,
+    /// The thread it belongs to and the message it follows, from `objects`;
+    /// `None` for a thread's first message.
+    pub follows: Option<(Hash, Hash)>,
+    /// The other side's message it acknowledges, from `acks`.
+    pub acks: Option<Hash>,
+}
+
+impl NegotiationMessage {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        let mut m = vec![(Value::Uint(0), Value::Text(self.text.clone()))];
+        if let Some(f) = &self.format {
+            m.push((Value::Uint(1), b(f)));
+        }
+        m
+    }
+
+    /// Decode, and check the inside's `objects` and `acks` have the shape
+    /// rule 56 gives them.
+    pub fn decode(inside: &Inside) -> R<NegotiationMessage> {
+        let mut text = None;
+        let mut format = None;
+        for (k, v) in &inside.payload {
+            match (k, v) {
+                (Value::Uint(0), Value::Text(t)) => text = Some(t.clone()),
+                (Value::Uint(1), _) => format = Some(hash(v, "negotiation message: the format")?),
+                _ => return Err(LawError::Shape("negotiation message: unknown field")),
+            }
+        }
+        let text = text.ok_or(LawError::Shape("negotiation message: the text"))?;
+        if !crate::text::is_canonical(&text) {
+            return Err(LawError::Check("negotiation message: the text is not canonical (Text MIP)"));
+        }
+        let follows = match inside.objects.as_deref() {
+            None => None,
+            Some([o]) => Some((o.chain, o.predecessor)),
+            Some(_) => {
+                return Err(LawError::Shape(
+                    "negotiation message: objects name the thread and the previous message, once",
+                ))
+            }
+        };
+        let acks = match inside.acks.as_deref() {
+            None | Some([]) => None,
+            Some([a]) => Some(*a),
+            Some(_) => {
+                return Err(LawError::Shape(
+                    "negotiation message: acks name only the latest message received from the other side",
+                ))
+            }
+        };
+        Ok(NegotiationMessage { text, format, follows, acks })
     }
 }
 

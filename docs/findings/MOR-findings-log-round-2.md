@@ -1181,7 +1181,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F113 decided by Nobody, allegedly, 2 October 2026.*
 
-**Written in (core pass, 3 October 2026, not yet approved):** Finance draft 6 (rules 1 and 10a, receipt field 2, claim field 8), payment cMIP draft 2, Lightning rail Module draft 2, core v21, freeze suite v21 (steps 2.6, 2.6b, 5.2); built and tested offline and on regtest. *Reading taken:* the bare key is a signing key in Identity's form, not rule 18's delivery key (an encryption key, which cannot sign). Law draft 9 rule 32 still says "whoever presents the rail proof": Law needs a draft 10.
+**Written in (core pass, 3 October 2026, not yet approved):** Finance draft 6 (rules 1 and 10a, receipt field 2, claim field 8), payment cMIP draft 2, Lightning rail Module draft 2, core v21, freeze suite v21 (steps 2.6, 2.6b, 5.2); built and tested offline and on regtest. *Reading taken:* the bare key is a signing key in Identity's form, not rule 18's delivery key (an encryption key, which cannot sign). Law draft 9 rule 32 still says "whoever presents the rail proof": Law needs a draft 10. *Law draft 10 (3 October 2026, not yet approved):* rule 32 sends the refund to whoever signs with the committed key, never to whoever presents the rail proof; built as `finance::refund_owed_to` and `claims_refund`.
 
 ## F114. Several vault entries for one unit: the smallest limit applies (found while building roadmap step 12, flaw L2, decided by Nobody, allegedly)
 
@@ -1233,7 +1233,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F116 decided by Nobody, allegedly, 2 October 2026.*
 
-**Written in (core pass, 3 October 2026, not yet approved):** Production draft 6 (rule 17), Finance draft 6 (rule 10b), core v21, freeze suite v21. Law rule 19 does not read alike ("a module's signed use record", also rule 22): Law needs a draft 10, and rule 22's "someone other than the split service and the payee" meets F116 as flaw V2 (`docs/core-pass-v21.md`).
+**Written in (core pass, 3 October 2026, not yet approved):** Production draft 6 (rule 17), Finance draft 6 (rule 10b), core v21, freeze suite v21. Law rule 19 does not read alike ("a module's signed use record", also rule 22): Law needs a draft 10, and rule 22's "someone other than the split service and the payee" meets F116 as flaw V2 (`docs/core-pass-v21.md`). *Law draft 10 (3 October 2026, not yet approved):* rules 19, 22 and 28 read alike (F119 for rule 22).
 
 ## F117. The first Lightning rail Module names the payee's node; its costs are stated, and it ships as experimental (roadmap step 12, questions a and b, decided by Nobody, allegedly)
 
@@ -1261,6 +1261,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F118 decided by Nobody, allegedly, 3 October 2026.*
 
+**Written in (Law draft 10, 3 October 2026, not yet approved):** Law draft 10 (the negotiation message, type 18; rule 56; the readings on the thread's form listed there), core v21, Envelope draft 7 (V1 answered), freeze suite v21 (step 5.3, a component line); built in the core library (`LawView::negotiation`) and tested.
+
 ## F119. A split service's receipt is evidence that a rail Module was used (found in the core pass, flaw V2, decided by Nobody, allegedly)
 
 **Pattern:** 1, checked: the party that signs is the split service, but what it can name is fixed by the payee.
@@ -1274,5 +1276,7 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Law draft 10 (rules 19 and 22: the exception for a receipt naming a rail Module the payee published).
 
 *F119 decided by Nobody, allegedly, 3 October 2026.*
+
+**Written in (Law draft 10, 3 October 2026, not yet approved):** Law draft 10 (rules 19 and 22, the role share's definition, the split's evidence field, with the cost stated), core v21, freeze suite v21 (step 2.4e); built in the core library (`LawView::role_evidence`) and tested. *Reading taken:* the payee whose pointer or vault must name the Module is the identity the payment was made to, whose pointer leads to the split service, never the service.
 
 **F110, the witness act's visibility (core pass, question V3; decided by Nobody, allegedly, 3 October 2026):** a witness act is public, like every Identity act. *Cost, stated:* anyone can see that its signer relies on a given act of another identity, a relationship, never the content of a private act. A private witness act was set aside: it would protect nothing for anyone not holding it, and would need rules of its own.

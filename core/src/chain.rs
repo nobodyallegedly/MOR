@@ -393,6 +393,11 @@ impl Verifier {
     }
 
     /// The acts this verifier holds whose outside names `signer`.
+    /// Every act this verifier holds, by id.
+    pub fn held_acts(&self) -> impl Iterator<Item = &Held> {
+        self.acts.values()
+    }
+
     pub fn signed_by(&self, signer: &Hash) -> impl Iterator<Item = &Held> {
         self.by_signer
             .get(signer)

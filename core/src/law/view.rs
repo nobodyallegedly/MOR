@@ -2457,3 +2457,204 @@ fn plan_open(parent: &Terms, plan: &SuccessionPlan) -> Option<&'static str> {
     }
     None
 }
+
+// ---------------------------------------------------------------- negotiation (F118) and role-share evidence (F119)
+
+/// A negotiation thread as a verifier holds it (rule 56, F118).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NegotiationRecord {
+    /// The thread's first message.
+    pub thread: Hash,
+    /// The signer of the first message, then the other side once one of
+    /// its messages is held.
+    pub sides: Vec<Hash>,
+    /// The messages of the record: valid negotiation messages whose chain of
+    /// previous messages reaches the first one through messages of the
+    /// thread, signed by its two sides only.
+    pub messages: Vec<Hash>,
+    /// The latest message that a message of the other side acknowledges:
+    /// the record is proven complete up to it, every message before it
+    /// fixed by the previous messages each names.
+    pub complete_up_to: Option<Hash>,
+    /// Two messages of the record naming the same previous message.
+    pub forked: bool,
+}
+
+/// Which role a role share pays (Law rule 22).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Role {
+    /// A rail Module the payment ran through, by its hash (F119).
+    RailModule(Hash),
+    /// Any other role: a referral, a delivery, a service's use (F116).
+    Other,
+}
+
+impl<'a> LawView<'a> {
+    /// A held negotiation message of this verifier's Law MIP, valid under
+    /// Identity, with its decoded payload.
+    fn negotiation_message(&self, id: &Hash) -> Option<(&'a Held, NegotiationMessage)> {
+        let h = self.v.get(id)?;
+        if !self.is_law(h, types::NEGOTIATION) || self.v.status(id) != Status::Valid {
+            return None;
+        }
+        NegotiationMessage::decode(&h.inside).ok().map(|m| (h, m))
+    }
+
+    /// The chain from the thread's first message to `id`, first message
+    /// first, if every step is a valid negotiation message of the thread.
+    fn negotiation_chain(&self, thread: &Hash, id: &Hash) -> Option<Vec<(Hash, Hash)>> {
+        let mut out = vec![];
+        let mut at = *id;
+        let bound = self.v.held_acts().count();
+        loop {
+            let (h, m) = self.negotiation_message(&at)?;
+            let signer = h.act.outside.signer?;
+            out.push((at, signer));
+            match m.follows {
+                None if &at == thread => break,
+                Some((t, prev)) if &t == thread && prev != at => at = prev,
+                _ => return None,
+            }
+            if out.len() > bound {
+                return None;
+            }
+        }
+        out.reverse();
+        Some(out)
+    }
+
+    /// The negotiation record of a thread, by its first message (rule 56,
+    /// F118). Only negotiation messages count: a text act naming the thread,
+    /// or a message following one, is no part of it.
+    pub fn negotiation(&self, thread: &Hash) -> R<NegotiationRecord> {
+        let (first, m) = self
+            .negotiation_message(thread)
+            .ok_or(LawError::Check("the thread's first message is not a valid negotiation message"))?;
+        if m.follows.is_some() {
+            return Err(LawError::Check("a thread's first message names no chain"));
+        }
+        let a = first.act.outside.signer.ok_or(LawError::Check("the act has no signer"))?;
+        let mut chains: Vec<Vec<(Hash, Hash)>> = vec![];
+        for h in self.v.held_acts() {
+            if !self.is_law(h, types::NEGOTIATION) {
+                continue;
+            }
+            if let Some(c) = self.negotiation_chain(thread, &h.id) {
+                chains.push(c);
+            }
+        }
+        // The other side: the first signer other than the first message's
+        // along any chain, the nearest the first message.
+        let b = chains
+            .iter()
+            .filter_map(|c| c.iter().position(|(_, s)| s != &a).map(|i| (i, c[i])))
+            .min_by_key(|(i, (id, _))| (*i, *id))
+            .map(|(_, (_, s))| s);
+        let side_ok = |c: &Vec<(Hash, Hash)>| c.iter().all(|(_, s)| s == &a || Some(*s) == b);
+        let mut messages: Vec<Hash> = vec![];
+        let mut previous: BTreeMap<Hash, Hash> = BTreeMap::new();
+        let mut forked = false;
+        let mut best: Option<(usize, Hash)> = None;
+        for c in chains.iter().filter(|c| side_ok(c)) {
+            let (last, signer) = *c.last().expect("a chain holds its own message");
+            if !messages.contains(&last) {
+                messages.push(last);
+                if c.len() > 1 {
+                    let prev = c[c.len() - 2].0;
+                    if previous.values().any(|p| p == &prev) {
+                        forked = true;
+                    }
+                    previous.insert(last, prev);
+                }
+            }
+            // What this message acknowledges: a message of the other side on
+            // its own chain proves the record complete up to it.
+            let (_, msg) = self.negotiation_message(&last).expect("held in the chain");
+            if let Some(n) = msg.acks {
+                if let Some(i) = c.iter().position(|(x, s)| x == &n && s != &signer) {
+                    if best.is_none_or(|(d, _)| i > d) {
+                        best = Some((i, n));
+                    }
+                }
+            }
+        }
+        messages.sort();
+        let mut sides = vec![a];
+        sides.extend(b);
+        Ok(NegotiationRecord {
+            thread: *thread,
+            sides,
+            messages,
+            complete_up_to: best.map(|(_, n)| n),
+            forked,
+        })
+    }
+
+    /// Whether the payee ever accepted a rail Module: a valid payee pointer
+    /// it signed names it (for a collective, one that counts with its
+    /// Finance lane), or a vault its identity chain declared does (Finance
+    /// rule 12a, F115). *As for a collective's own receipts, which exact
+    /// rail or entry a payment went to is in the rail's proof, which the
+    /// payment cMIP reads.*
+    pub fn accepts_rail(&self, payee: &Hash, rail: &Hash) -> R<bool> {
+        use crate::finance::{self as fin, Payload as Fin};
+        let finance = self.mips.finance;
+        let res = self.v.resolve(payee);
+        for state in &res.states {
+            if let Ok(Some(Some(entries))) = fin::vault_in(&finance, &state.declarations) {
+                if entries.iter().any(|e| &e.rail_module == rail) {
+                    return Ok(true);
+                }
+            }
+        }
+        for h in self.v.signed_by(payee) {
+            if h.inside.spec != finance || h.inside.type_ != fin::types::PAYEE_POINTER {
+                continue;
+            }
+            let Ok(Fin::PayeePointer(p)) = Fin::decode(h.inside.type_, &h.inside.payload) else {
+                continue;
+            };
+            if &p.payee == payee
+                && p.rails.iter().any(|r| &r.module == rail)
+                && self.v.status(&h.id) == Status::Valid
+                && self.consent(&h.id)?.counts()
+            {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    /// Whether an act is evidence for a role share in a split by
+    /// `service` for `payee`, the identity the payment was made to (rules
+    /// 19 and 22). For any role but a rail Module's, the evidence is a
+    /// valid act signed by someone other than the service and the payee
+    /// (F75, F116). For a rail Module's role share (F119), it is a valid
+    /// receipt or claim naming that rail Module in its field 0, whoever
+    /// signed it, the split service included, provided the payee's own
+    /// pointer or vault names that Module (F115).
+    pub fn role_evidence(&self, evidence: &Hash, role: &Role, service: &Hash, payee: &Hash) -> R<bool> {
+        use crate::finance::Payload as Fin;
+        let x = self.held(evidence)?;
+        if self.v.status(evidence) != Status::Valid {
+            return Ok(false);
+        }
+        match role {
+            Role::Other => {
+                let s = x.act.outside.signer;
+                Ok(s.is_some() && s.as_ref() != Some(service) && s.as_ref() != Some(payee))
+            }
+            Role::RailModule(module) => {
+                if x.inside.spec != self.mips.finance {
+                    return Ok(false);
+                }
+                let rail = match Fin::decode(x.inside.type_, &x.inside.payload) {
+                    Ok(Fin::Receipt(r)) => r.rail,
+                    Ok(Fin::Claim(c)) => c.rail,
+                    _ => return Ok(false),
+                };
+                Ok(&rail == module && self.accepts_rail(payee, module)?)
+            }
+        }
+    }
+}
