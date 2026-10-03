@@ -1311,3 +1311,17 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 This also settles fix 1 without making the judicial tier need departed holders' signatures: F121's unanimity counts members only.
 
 **Changes, to be made:** Law (rule 46a; the chain of judgment; a fork grammar); core; freeze suite.
+
+## F122. A version changing a judge and the constitution needs both rules (found writing F121 into Law draft 10, flaw K1, decided by Nobody, allegedly)
+
+**Pattern:** a later decision changing an earlier one's ground: F120 rested on the constitutional rule being able to remove any stricter check; F121 fixed "every member" for the judicial tier in Law itself.
+
+**Found while writing:** F120 and F121 into Law draft 10 (`docs/law-draft-10.md`, section 5, K1). Under F120 a version changing both a judge and the constitution needs the constitutional rule alone; under F121 a judge changes only with every member. Together, two of three members could change a judge by adding any change of the constitution to the same version.
+
+**Decided (Nobody, allegedly, 3 October 2026):** option (b). Such a version needs the constitutional rule and every member's signature for the judge; it stays a draft until both are met. This revises F120.
+
+**Set aside:** the constitutional rule alone (the loophole); forbidding both changes in one version (an extra step, same result).
+
+**Changes, to be made:** Law draft 10 (rules 36a, 44c.1 and mark [4]); the code's "unsettled" refusal replaced by the rule.
+
+*F122 decided by Nobody, allegedly, 3 October 2026.*
