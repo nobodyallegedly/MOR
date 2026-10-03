@@ -1340,3 +1340,4 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 
 **F121, the fork's questions (`docs/law-draft-10.md`, section 5; answered by Nobody, allegedly, 3 October 2026, one at a time):**
 - *Q1, debts at a fork:* (c) the fork act assigns each debt to a side, which signs for it; any debt it does not name is owed by both sides. "It forces communication to reach agreement, which is a positive outcome." No debt can vanish.
+- *Q2, grants at a fork:* (a) every grant of the original ends at closing, as when an area loses its last holder; each new collective reinstates the grants it wants; a grantee's deal the collective acknowledged, paid on or imported binds (a debt under Q1); any other waits until a side takes it up or seals it. "A fork forces a whole lot of decisions to be taken again."
