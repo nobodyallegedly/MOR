@@ -16,3 +16,5 @@ They are not part of the core. The core document and the six MIPs in `spec/` def
 - [Experiment, Prototype, Protocol](21-MOR-case-study-experiment-prototype-protocol-v1.md): how MOR passes from its author to the people who build on it.
 
 Companion documents are in [`../companions/`](../companions/README.md).
+
+*These are working drafts. The documents that are neither core nor technical companions get a final draft by Nobody, allegedly, before publication.*

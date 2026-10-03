@@ -6,3 +6,5 @@ Companion documents are written for readers outside the project. They explain MO
 - [Core principle: Don't ban greed, make it legible](Core-principle-legible-greed-v2.md): why the core never judges whether a deal is fair, and what it guarantees instead.
 
 "MOR in one page" is at [`docs/07-MOR-in-one-page-v5.md`](../07-MOR-in-one-page-v5.md). The case studies are in [`../case-studies/`](../case-studies/README.md).
+
+*These are working drafts. The documents that are neither core nor technical companions get a final draft by Nobody, allegedly, before publication.*
