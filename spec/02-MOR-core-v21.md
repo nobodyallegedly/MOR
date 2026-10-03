@@ -8,9 +8,9 @@
 
 This document defines the core of MOR (Media Over Relays): the MIPs. Once frozen, the core never changes. There is no MIP process; all choice and competition happen in cMIPs and Modules.
 
-The core is deliberately agnostic. It describes identities, media, money, agreements and specifications, never what anyone does with them. What MOR could become is shown separately, in the case studies and the cMIPs and Modules they reference. For a plain-language walkthrough, see "MOR in one page".
+The core is deliberately agnostic. It describes identities, media, money, agreements and specifications, never what anyone does with them. What MOR could become is shown separately, in the [case studies](../docs/case-studies/README.md) and the cMIPs and Modules they reference. For a plain-language walkthrough, see ["MOR in one page"](../docs/07-MOR-in-one-page-v5.md).
 
-*Reviewers should try to break it, above all identity continuity, ordering without a clock, and whether any case study needs something this core cannot express.*
+*Reviewers should try to break it, above all identity continuity, ordering without a clock, and whether any [case study](../docs/case-studies/README.md) needs something this core cannot express.*
 
 ## Structure
 
