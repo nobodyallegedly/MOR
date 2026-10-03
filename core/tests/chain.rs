@@ -450,7 +450,7 @@ fn an_acknowledgement_by_the_owner_itself_does_not_count() {
     let _ = &mut j;
 }
 
-/// F110 (freeze suite v21, scenario 5 step 7f): only Identity, Finance and
+/// F110 (freeze suite v21, scenario 5 step 5b, scenario 2 step 5c): only Identity, Finance and
 /// Law act types carry acknowledgements. A text act or a cMIP's reaction
 /// carrying `acks` is invalid and rescues nothing; a witness act keeps a
 /// disowned post visible as disputed; a buyer's claim (Finance) does the
