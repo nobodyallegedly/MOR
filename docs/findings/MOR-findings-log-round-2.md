@@ -1258,3 +1258,17 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 *F119 decided by Nobody, allegedly, 3 October 2026.*
 
 **F110, the witness act's visibility (core pass, question V3; decided by Nobody, allegedly, 3 October 2026):** a witness act is public, like every Identity act. *Cost, stated:* anyone can see that its signer relies on a given act of another identity, a relationship, never the content of a private act. A private witness act was set aside: it would protect nothing for anyone not holding it, and would need rules of its own.
+
+## F120. A version changing both a judge and the constitution needs the constitutional rule alone (found writing Law draft 10, question J1, decided by Nobody, allegedly)
+
+**Pattern:** 4: two rules of Law disagreed on one case.
+
+**Found while writing:** Law draft 10 (`docs/law-draft-10.md`, J1), restating the seven rules the core pass could not state plainly. Rule 36a says the judicial tasks (condition evaluation, time reference, anchoring) change only under the clone rule; rule 44c.1 says a version touching the constitution needs the constitutional change rule alone, "which may change every tier". When one version does both, they disagree, but only where the clone rule is stricter than the constitutional rule.
+
+**Decided (Nobody, allegedly, 3 October 2026):** reading (a), the constitutional change rule alone: "rare case, but if core allows it" it must have one answer. Rule 36a's "only under the clone rule" reads as "never by the Law lane nor any other area". Under rule 46a, a member who did not sign keeps the judge they signed for, whatever the version.
+
+**Set aside:** both rules met (a check the constitutional rule could remove in the same version); forbidding both changes in one version (only an extra step).
+
+**Changes, to be made:** Law draft 10 (rules 36a and 44c.1 read alike); core v21's "Areas and lanes" (J1 no longer open).
+
+*F120 decided by Nobody, allegedly, 3 October 2026.*
