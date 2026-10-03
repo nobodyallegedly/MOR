@@ -39,7 +39,7 @@
    *Where:* core v21, "How an act in an area counts"; Law draft 10, rule 36a.
 2. **The judicial tasks "as each member signed them".** *Pinned by* rules 36a, 44a, 44c.2 and 46a, and "Layer".
    *Plain:* which specification fills the condition, time-reference and anchoring tasks is never a lane's choice, not even the Law lane's. Their acts, being Law acts, still fall in the Law lane. The clone rule changes them. For a member who did not sign a change, the last version that member signed stays in force for them.
-   *Where:* core v21. Law draft 10 keeps draft 9's wording here, because of J1.
+   *Where:* core v21. Law draft 10 keeps draft 9's wording here, because of J1. *Replaced by F120 and F121 (section 5): the judicial tasks now change only with every member, one version for everyone.*
 3. **A specification for two layers "answers to both lanes".** *Pinned by* "Areas", rule 36a, rule 44b (R4, B4) and rule 44c.
    *Plain:* it belongs to both layers. Naming it for the second layer needs whoever decides each of the two tasks: both lanes' holders where both lanes exist. Where a layer has no lane, that layer's part goes to an area naming the task, or else to the clone rule. Each of its acts needs the holders of every lane that covers it.
    *Where:* core v21; Law draft 10's reason "Nothing passes around the lanes".
@@ -109,7 +109,7 @@ Answered on 3 October 2026: J1 (as F120), the five readings of section 1, and th
 **One rule for changing a judge together with the constitution (F120).** When one new version of a collective's agreement changes both the constitution (who decides) and a judge (who settles disputes), the rule for the constitution alone decides. Rules 36a and 44c.1 now say the same thing.
 
 **Judges change only when everyone signs (F121, a).** In a collective, everything that judges (the clause on absence, the succession plans, the keepers, the arbitrators, the time reference, the condition and anchoring specifications, the split service, the fork rule) changes only when every member whose voice remains signs. There is one version for everyone. Before, a member who did not sign kept the version they had signed, so two members could end up with two different judges and nobody to decide between them.
-*Precisely:* a new power in the mark, `[4]`, "the judicial tier's rule", counted among every party of the parent whose voice remains, as rule 44d counts every rule. The clone rule (field 5) now covers only operational matters outside every area. Rule 46a rewritten; rules 6, 36a, 36b, 37, 37a, 44c, 44d, 44e, 45, 45a, 48a and 51 read alike. Coverage of the abandonment clause (rule 36b) is judged under the one clause in force. The abandonment declaration keeps its format: the version the member signed last now always carries the clause in force.
+*Precisely:* a new power in the mark, `[4]`, "the judicial tier's rule", counted among every party of the parent whose voice remains, as rule 44d counts every rule. The clone rule (field 5) now covers only operational matters outside every area. Rule 46a rewritten; rules 6, 36a, 36b, 37, 37a, 44c, 44d, 44e, 45, 45a, 48a and 51 read alike. Coverage of the abandonment clause (rule 36b) is judged under the one clause in force. The abandonment declaration keeps its format: the version the member signed last carries the clause in force for every member whose voice remains (reading 7).
 
 **A chain of judgment (F121, b).** For each judge, the agreement may name who takes over, in order, when it answers "unknown" or cannot act. Everyone signs the chain with the agreement, so when a judge fails, the next one steps in with no new signature.
 *Precisely:* terms field 21, `[+ [ judge, [+ hash] ]]`; a judge is a judicial task's specification `[0, task]`, an identity the terms name as keeper, arbitrator or abandonment authority `[1, id]`, or the split service `[2]` (followed by grants). Rule 34a: the first answer that is not "unknown" is the chain's. A specification that takes over is itself a judge, so it is named nowhere else in the terms (Q20). A client that does not know a judge's specification never passes the question on.
@@ -132,7 +132,7 @@ The core names no specific use: the new text speaks of members, sides, judges an
 - (a) The constitutional rule alone, as F120 says. *In the example:* the arbitrator changes, the third never signed it.
 - (b) The constitutional rule, and every member for the judge. The mark names both `[0]` and `[4]`. *In the example:* the version stays a draft until the third signs; the two may still change the constitution in a version that leaves the judge alone.
 - (c) No version may change both at once. *In the example:* refused; two versions needed, and the judge's still needs the third.
-**Lean: (b).** F120 set (b) aside because the constitutional rule could remove the extra check in the same version. F121's "every member" is now fixed by Law itself, not by the agreement, so that reason no longer holds, and (a) would reopen the very gap F121 closes.
+*The code compares the rule as written with every party: where removed voices already make it every remaining member, the readings agree, and such a version is still refused until K1 is decided.* **Lean: (b).** F120 set (b) aside because the constitutional rule could remove the extra check in the same version. F121's "every member" is now fixed by Law itself, not by the agreement, so that reason no longer holds, and (a) would reopen the very gap F121 closes.
 *Meanwhile:* the core library refuses such a version as unsettled, where the constitutional rule is below every party. Where it is every party, all three readings agree, and it counts.
 
 **Flaw P1. A payee pointer names rails, never a person.** Rule 18 now says the owners' pointer counts only if it "names" the split service. A pointer lists rails: a rail Module and some address bytes only that Module can read (a node key, an address). Nothing a verifier can read says whose address it is, so the check cannot be made.
@@ -212,6 +212,8 @@ For the new collectives, in every reading: each has its own genesis and new keys
 4. The split service's chain lists grants; rule 18's check accepts a pointer naming a service its chain names, so the chain passes without new signatures.
 5. Field 21 is judicial. Field 22 is constitutional; dropping or lowering an entry also needs its holder; raising one does not.
 6. A departed share is in millionths of all the collective's income; together at most 1,000,000.
+7. The abandonment declaration's field 1 and its check are unchanged: for a member whose voice remains, the version they signed last carries the one clause in force. For a party whose voice was removed before a judicial change, it may carry an older clause; I read that the older one still applies, as the check says.
+8. Rule 36b's coverage (every member with constitutional power covered by the absence clause) is judged under the clause in force.
 
 ### Code and tests
 
@@ -227,5 +229,5 @@ For the new collectives, in every reading: each has its own genesis and new keys
 2. Flaw P1.
 3. The fork's questions, 1 to 6.
 4. Questions 7 to 9.
-5. The six readings above.
+5. The eight readings above.
 6. Approval of Law draft 10 with the core pass drafts; then the fork's grammar, the pointer check and the human regtest test on the Mac.
