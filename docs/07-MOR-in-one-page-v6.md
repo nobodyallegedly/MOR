@@ -1,6 +1,6 @@
 # MOR in One Page
 
-*Companion document, version 6, 3 October 2026. Not part of the core. **Not yet approved.** Version 5 with one addition, decided by Nobody, allegedly, 2 October 2026: specialized forks, in two sentences under "Nobody plans the winners". The pitch first, then what MOR is for, then how it works: one object, one promise and one cost.*
+*Companion document, version 6, 3 October 2026. Not part of the core. **Not yet approved.** Version 5 with one addition, decided by Nobody, allegedly, 2 October 2026: specialized forks, in two sentences under "Nobody plans the winners". Revised in place, 3 October 2026, for F121: a group that splits, and what someone who leaves keeps, in one sentence under "You cannot be locked in" and one under "Nobody takes without being seen taking". The pitch first, then what MOR is for, then how it works: one object, one promise and one cost.*
 
 **MOR is a way for people to share, pay and agree with each other directly, where every cut is visible and anyone can leave.**
 
@@ -26,9 +26,9 @@ Because everything is an act, **whatever decides something is signed by someone 
 
 Three things follow, and they are why MOR exists.
 
-**You cannot be locked in.** Your identity is a name nobody can take away: a hash, not a key and not an account. Keys get lost or stolen; you replace them with a second key kept offline, and the name stays. The relays you choose keep the record of which key is current, but none can forge a change, and you can leave one that turns hostile. An agreement is never edited; it moves by being signed again, with another service, another partner, or another version of the protocol. MOR itself is built to be left for its successor.
+**You cannot be locked in.** Your identity is a name nobody can take away: a hash, not a key and not an account. Keys get lost or stolen; you replace them with a second key kept offline, and the name stays. The relays you choose keep the record of which key is current, but none can forge a change, and you can leave one that turns hostile. An agreement is never edited; it moves by being signed again, with another service, another partner, or another version of the protocol. A group that can no longer agree can split: the old group closes, each side starts anew from it, and what they made together still pays everyone who made it. MOR itself is built to be left for its successor.
 
-**Nobody takes without being seen taking.** Money arrives at an address the owner controls; every hand it passes through signs a receipt; the division among owners adds up exactly; a fee exists only inside signed terms. A harsh deal is allowed. A hidden one is not, because each line of the record is signed by a party who answers for it, and where a receiver could stay silent, the payer's proof counts too.
+**Nobody takes without being seen taking.** Money arrives at an address the owner controls; every hand it passes through signs a receipt; the division among owners adds up exactly; a fee exists only inside signed terms. Whoever leaves a group keeps their share, on the same terms as those who stay. A harsh deal is allowed. A hidden one is not, because each line of the record is signed by a party who answers for it, and where a receiver could stay silent, the payer's proof counts too.
 
 **Nobody plans the winners.** The core says what an act is; it never says how to split, rate, vote, license or rank. Those are competing rulebooks, named by their own hash, chosen per agreement, forgotten when nobody uses them. The core is frozen so that everything above it can evolve. Not every branch is meant to win everything: a **specialized fork** is a set of rulebooks made for one domain, music or science or news, that stays there and talks to the other forks as much as it chooses, while identities and plain text stay the same on all of them.
 

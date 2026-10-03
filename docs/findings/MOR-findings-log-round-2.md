@@ -1295,6 +1295,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F120 decided by Nobody, allegedly, 3 October 2026.*
 
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved):** rules 36a and 44c.1, core v21 ("Three tiers", "Areas and lanes"), freeze suite v21 (step 3.7s); built in the core library and tested. *Its reason, rule 46a's per-member protection, is removed by F121: where the constitutional change rule is below every party, the two disagree (flaw K1, `docs/law-draft-10.md`, section 5), and such a version is refused as unsettled until it is decided.*
+
 ## F121. One judicial tier for everyone, a chain of fallbacks, and the fork of a collective (found writing Law draft 10, decided in part by Nobody, allegedly)
 
 **Pattern:** 3, both halves: F71's per-member protected clauses protect each member from rules they never signed, and leave two members with no judge they both signed.
@@ -1333,3 +1335,5 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 This also settles fix 1 without making the judicial tier need departed holders' signatures: F121's unanimity counts members only.
 
 **Changes, to be made:** Law (rule 46a; the chain of judgment; a fork grammar); core; freeze suite.
+
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 5):** the judicial tier changed only by every member, its power `[4]` (rules 6, 36a, 36b, 44c, 44d, 46a); the chain of judgment, terms field 21 (rule 34a); departed holders, terms field 22 (rule 46b); the payee pointer check (rule 18), not built, since a pointer names rails, never an identity (flaw P1); the fork of a collective in principle (rules 15b, 47a), its grammar left unwritten; core v21, freeze suite v21 (steps 3.7f, 3.7i, 3.7n, 3.7p to 3.7s, 3.8b, 3.9), one page v6; a to c built in the core library and the repo and collective clients, and tested. Open for Nobody, allegedly: flaws K1 and P1; the fork's debts, grants, keys, act, name and money after it; when an identity judge "cannot act"; members' own stakes in the collective; how a fee to the members' own service is public; six readings.

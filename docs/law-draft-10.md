@@ -1,6 +1,6 @@
 # Law draft 10, and the seven rules of the core pass
 
-*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3), not merged. Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
+*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3, and again for F120 and F121), not merged. Section 5 writes in F120 and F121. Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
 
 ## 1. What Law draft 10 changes
 
@@ -96,13 +96,136 @@ The rule: the core names no particular use of MOR, and no case-study example.
 - **New tests** (`core/tests/law_draft_10.rs`): step 5.3, a negotiation proven complete by Law messages, where a text reply carrying `acks` is invalid and one without them is not part of the record, a stranger's message is ignored, and a fork shows; the message's form; step 2.4e, the service's own receipt as evidence for a Module named in the owners' pointer or vault, and as evidence of nothing for a Module they never named; rule 32's refunds.
 - **Results:** Rust workspace **264 passed, 0 failed** (260 before, plus 4). Clients genesis 14, repo 11, longform 15, barebone 9, reader 16, manage 7, collective 18, connector 12, desk 8: **110 passed**, every one typechecking. The regtest Lightning run was not repeated: nothing it uses changed.
 
-## Waiting on Nobody, allegedly
+## Waiting on Nobody, allegedly (sections 1 to 4)
 
-In order:
-1. J1 (above).
-2. The five readings of section 1.
-3. Whether the examples kept in section 3 (technology names) may stay.
-4. Approval of Law draft 10, with the core pass drafts (Finance 6, Envelope 7, Identity 11, Production 6, core v21, suite v21, one page v6).
-5. Then the human regtest test on the Mac (`docs/core-pass-v21.md`, section 5).
+Answered on 3 October 2026: J1 (as F120), the five readings of section 1, and the technology names (kept as examples inside definitions). The point found outside the task, two members holding different judges, became F121. What is still waiting is listed at the end of section 5.
 
-*Found on the way, outside this task:* rule 46a keeps, for each member, the judicial clauses that member signed. When two members signed different versions of one judge (say, two time references), nothing says which judge decides a dispute between those two members. Noted here; not touched.
+## 5. F120 and F121 written in
+
+*Main merged in first (the findings log, F120 and F121). Law draft 10, core v21, freeze suite v21 and one page v6 revised in place.*
+
+### What changed, in plain words
+
+**One rule for changing a judge together with the constitution (F120).** When one new version of a collective's agreement changes both the constitution (who decides) and a judge (who settles disputes), the rule for the constitution alone decides. Rules 36a and 44c.1 now say the same thing.
+
+**Judges change only when everyone signs (F121, a).** In a collective, everything that judges (the clause on absence, the succession plans, the keepers, the arbitrators, the time reference, the condition and anchoring specifications, the split service, the fork rule) changes only when every member whose voice remains signs. There is one version for everyone. Before, a member who did not sign kept the version they had signed, so two members could end up with two different judges and nobody to decide between them.
+*Precisely:* a new power in the mark, `[4]`, "the judicial tier's rule", counted among every party of the parent whose voice remains, as rule 44d counts every rule. The clone rule (field 5) now covers only operational matters outside every area. Rule 46a rewritten; rules 6, 36a, 36b, 37, 37a, 44c, 44d, 44e, 45, 45a, 48a and 51 read alike. Coverage of the abandonment clause (rule 36b) is judged under the one clause in force. The abandonment declaration keeps its format: the version the member signed last now always carries the clause in force.
+
+**A chain of judgment (F121, b).** For each judge, the agreement may name who takes over, in order, when it answers "unknown" or cannot act. Everyone signs the chain with the agreement, so when a judge fails, the next one steps in with no new signature.
+*Precisely:* terms field 21, `[+ [ judge, [+ hash] ]]`; a judge is a judicial task's specification `[0, task]`, an identity the terms name as keeper, arbitrator or abandonment authority `[1, id]`, or the split service `[2]` (followed by grants). Rule 34a: the first answer that is not "unknown" is the chain's. A specification that takes over is itself a judge, so it is named nowhere else in the terms (Q20). A client that does not know a judge's specification never passes the question on.
+
+**Departed members (F121, c).** Someone who leaves a collective keeping a stake is recorded, with their stake, in a departed members entry, and nothing else. They have no say and no veto; the collective's current rules and judges apply to them. Their stake never shrinks unless they sign, and it is a share of everything the collective earns. Every term treats their stake as it treats a member's. What cannot be paid stays an open debt.
+*Precisely:* terms field 22, `[+ [ holder, share ]]`, shares in millionths of all the collective's income; constitutional; a clone that drops or lowers an entry is a draft until its holder signs (rule 46b, rule 45).
+
+**The payee pointer must lead to the split service (F121, d).** Where an agreement names a split service, the owners' payee pointer counts, for Law, only if it names that service. Law clients check it before paying and show a pointer that goes around the service as such. A wallet that reads only Finance cannot check it: that cost is stated.
+*Written in rule 18, but not built:* see flaw P1.
+
+**The fork of a collective (F121, e).** When a collective's members split into sides that will not agree, a final act closes the collective, and every side founds a new one naming it as parent; the side that wants no change gets a copy of the old agreement, minus those leaving. Anything made before the fork belongs to every owner its claim lists, whichever side they joined; either side may sell it, and each sale pays all those owners. The fork act names both new collectives as descending from the old agreement, so neither side's sales look like sales outside the agreement.
+*Written in rules 15b and 47a as decided in principle; no format, since the questions below decide its shape.*
+
+The core names no specific use: the new text speaks of members, sides, judges and services only.
+
+### Two flaws (not worked around)
+
+**Flaw K1. F120 and F121 disagree in one case.** F120 says a version changing the constitution may change a judge under the constitutional rule alone. Its reason was that rule 46a kept the old judge for anyone who did not sign. F121 removed that protection and asks every member to sign a change of judge. Where a collective's constitutional rule is less than everyone, the two rules give different answers.
+*Example:* a collective of three whose constitutional rule is two of three. Two members want a friendlier arbitrator; the third refuses. Under F121 alone they cannot. But if they add a one-word change to the constitution in the same version, F120 lets the two of them change the arbitrator, and the third is judged by it.
+- (a) The constitutional rule alone, as F120 says. *In the example:* the arbitrator changes, the third never signed it.
+- (b) The constitutional rule, and every member for the judge. The mark names both `[0]` and `[4]`. *In the example:* the version stays a draft until the third signs; the two may still change the constitution in a version that leaves the judge alone.
+- (c) No version may change both at once. *In the example:* refused; two versions needed, and the judge's still needs the third.
+**Lean: (b).** F120 set (b) aside because the constitutional rule could remove the extra check in the same version. F121's "every member" is now fixed by Law itself, not by the agreement, so that reason no longer holds, and (a) would reopen the very gap F121 closes.
+*Meanwhile:* the core library refuses such a version as unsettled, where the constitutional rule is below every party. Where it is every party, all three readings agree, and it counts.
+
+**Flaw P1. A payee pointer names rails, never a person.** Rule 18 now says the owners' pointer counts only if it "names" the split service. A pointer lists rails: a rail Module and some address bytes only that Module can read (a node key, an address). Nothing a verifier can read says whose address it is, so the check cannot be made.
+*Example:* the owners' pointer lists a Lightning node key. Is it the split service's node, or the Finance lane holder's own? Nothing in the pointer says.
+- (a) The owners' pointer names the service when every rail it lists (Module and address bytes) is also in the service's own payee pointer, which the service signs. No format change. *In the example:* the node key must also appear in the split service's pointer.
+- (b) A new field in the pointer naming who receives on its rails. *In the example:* the pointer says "the split service", but anyone can write that next to their own node key, so it proves nothing alone.
+- (c) A forwarding rail: a pointer may say "pay to this identity's pointer" instead of listing rails, and every wallet follows it. *In the example:* the owners' pointer says "the split service's pointer". Clean, but it changes Finance and every wallet.
+**Lean: (a).** It needs nothing new in Finance, and it rests on the service's own signature, which the owners' Finance lane cannot fake.
+*Meanwhile:* no check is built; rule 18 says a Law client shows the pointer's relation to the service as undetermined until this is settled.
+
+### Questions, one at a time
+
+**1. The collective's debts and obligations at a fork.** The old collective is closed, and only a debtor's own signature binds, so the new collectives owe nothing they did not sign.
+*Example:* the old collective owes a supplier 900. The two members who want change found collective A; the one who does not founds B.
+- (a) Every new collective owes everything the old one owed, jointly. *The supplier may collect the 900 from A or from B.*
+- (b) Shared by the sides in proportion to their members' stakes. *If A's members held two thirds: A owes 600, B 300.*
+- (c) The fork act assigns each debt to a side, which signs for it; any debt it does not name is owed jointly, as in (a). *The act gives the 900 to A; A signs for it; an unlisted debt is owed by both.*
+**Lean: (c).** No debt can vanish, the creditor keeps a signed debtor, and the sides choose openly who pays what.
+
+**2. Grants the old collective issued, and the grantees' pending deals.**
+*Example:* the old collective let a grantee sign deals for it. Deal X was paid on by the collective; deal Y was signed by the grantee but never acknowledged.
+- (a) Every grant ends at closing, as in a frozen area (rule 37b); each side may reinstate, one by one, the grants it takes on; deals the old collective acknowledged, paid on or imported are its debts, handled as in question 1. *X is a debt of the old collective; Y waits until a side reinstates the grant, or is lost.*
+- (b) The fork act gives each grant to one side, which carries it on. *The act gives the grant to A; Y binds A as if nothing happened.*
+- (c) Every grant ends and is sealed; nothing is reinstated. *Y binds nobody; X is a debt as in question 1.*
+**Lean: (a).** It reuses the freeze and refit Law already has, and lets each side choose its hires visibly.
+
+**3. Keys: the old collective's key holders and shares at closing, and the new collectives' genesis.** Identity has no way to close an identity (only a home), so the old collective's keys could keep signing.
+*Example:* after the fork, someone holding enough shares of the old key signs a receipt in the old collective's name.
+- (a) The closing is a rotation of the old collective, at its safety key's ceremony, declaring the fork and no agreement in force: everything the old key signs afterwards that needs members' signatures counts for nothing, as when members change (F100). *The receipt counts for nothing in Law.*
+- (b) The closing is an everyday Law act; Law alone voids what the old collective signs after it. *Same result in Law, but the act is signed with the everyday key, which a thief may hold.*
+- (c) Identity gains a way to close an identity. *The old key is dead everywhere; Identity changes.*
+For the new collectives, in every reading: each has its own genesis and new keys, dealt among its side.
+**Lean: (a),** with rule 36's cost stated: for a moment one device holds the whole key, and nothing proves it forgot it.
+
+**4. The exact fork act: who signs it, what it names, how its sides are listed.**
+*Example:* members P and Q want change; R refuses.
+- Who signs: (a) every member, each naming the side they join (*R can block the fork, so the standoff stays*); (b) the constitutional change rule (*under "every party", R blocks it too*); (c) the members of each departing side; whoever signs nothing stays on the status-quo side (*P and Q sign; R is the status-quo side without signing*).
+- What it names: the agreement in force and its latest act; each side as a list of members, with the status-quo side marked (at most one).
+- How the new collectives name the old one: founding terms with a parent (field 11) would be a clone of the old agreement, which the departing members could never complete; so a new field naming the old agreement and the fork act.
+**Lean: (c), sides as member lists, and a new field.** (c) is what makes the fork a way out of the standoff F121's unanimity creates; nobody loses a stake by it, only the old identity.
+
+**5. A name.** Rule 47's "fork rule" (terms field 10) settles forks of records, two versions written concurrently; the fork of a collective is something else.
+- (a) Keep "fork of a collective" and rename field 10 the "concurrency rule", since it settles changes made concurrently ("branch" is already taken by grants). *Rule 47 would read "where the agreement has no concurrency rule...".*
+- (b) Call the collective's event a "parting", and keep "fork rule". *"The parting of a collective."*
+- (c) Keep both names, always qualified ("fork of records", "fork of a collective").
+**Lean: (a).** "Fork" is your word for a collective splitting, and the core already says "specialized fork" for a whole branch; field 10's format is still open, so renaming it costs nothing.
+
+**6. Money after a fork.** Where a work's claim names the old collective itself as an owner (rather than its members), the closed collective cannot receive; and payments still arrive at the old collective's payee pointer.
+*Example:* a song claimed by the old collective sells after the fork.
+- (a) The old collective's share is divided by the old agreement's stakes and split plan as last in force, whichever side sells; the old pointer keeps leading to its split service. *Both sides' members, and any departed holder, are paid as before the fork.*
+- (b) The fork act says how the old collective's share is divided. *The sides decide it in the act.*
+**Lean: (a).** It follows "anything made before the fork belongs to both groups" without a new choice.
+
+**7. The chain of judgment: when an identity "cannot act".** A specification always answers, so "unknown" covers it. A person or service (a keeper, an arbitrator, the absence authority, the split service) may simply stay silent, and nothing says when the next one may step in.
+*Example:* the arbitrator is asked to rule and says nothing for three months.
+- (a) Only an "unknown" answer passes. *The silent arbitrator is never replaced, and the chain does nothing for a dead judge.*
+- (b) Each link names a period on the time reference; once the judge has been asked and has not acted within it, the next may act. *After 30 days, the second arbitrator rules.*
+- (c) The next may act at any time; where both act, the earlier judge's act prevails. *The second rules at once, and is overruled if the first ever answers.*
+**Lean: (b),** a period added to each link.
+
+**8. Members' own stakes in the collective.** A departed member's stake is "a share of all the collective's income", but members' own stakes in the collective as a whole have no format yet (terms field 7, still open, names stakes per work or publication). So equal treatment cannot yet be checked by a verifier.
+*Example:* a departed member holds 25% of all income; a member holds 25%; the split plan charges the departed member's 25% a higher fee. To see it, the core needs both stakes in the same terms.
+- (a) Stakes in field 7 whose object is the collective's own identity are shares of all its income, in the same unit as the departed entry.
+- (b) A members' entry beside the departed one.
+**Lean: (a).**
+
+**9. "A fee paid to a service the members own is public."** The core cannot know who owns a service.
+- (a) Every split that pays a stake is delivered to that stake's holder, departed or not, and names every fee and who received it (rules 20, 27). *The departed member sees the members' own service's fee in every split that pays them.*
+- (b) The splits of a collective with departed holders are public to everyone.
+**Lean: (a).**
+
+### Readings taken, to confirm
+
+1. The judicial tier's rule is fixed by Law, not by the agreement: every party whose voice remains, counted as every rule is (fewer voices remaining are all needed, flaw C); a mark names it `[4]`.
+2. "Each judge may name, at founding, the one that takes over" is read as: the agreement names, for each judge, who takes over (field 21), in the founding terms or a later version signed by everyone. It works in deals too.
+3. A specification that takes over is a judge too, named nowhere else. A time reference's "undetermined" passes like "unknown"; "pending" does not; a client's own ignorance never passes.
+4. The split service's chain lists grants; rule 18's check accepts a pointer naming a service its chain names, so the chain passes without new signatures.
+5. Field 21 is judicial. Field 22 is constitutional; dropping or lowering an entry also needs its holder; raising one does not.
+6. A departed share is in millionths of all the collective's income; together at most 1,000,000.
+
+### Code and tests
+
+- **Core library.** The new power `[4]` and the tiers: a judicial change needs every member; the clone rule only operational matters outside every area; a version changing the constitution and a judge under a constitutional rule below every party is refused as unsettled (K1). Terms fields 21 and 22, their checks, `Terms::chain_of` and `judged` (the chain's answer). A clone that drops or lowers a departed stake is a draft until its holder signs. Rule 36b judged under the clause in force. Not built: rule 18's pointer check (P1), equal treatment's check (question 8, formats open), the fork (questions 1 to 6).
+- **Clients.** The repo client and the collective client mark a change of who judges absence with `[4]`, signed by every member, and say so in plain words.
+- **Tests changed** to F121: every story and format check that changed a judge or a succession plan with two of three now needs all three (3.7d, 3.7f, 3.7k, 3.7l, 3.7n, 3.8, 3.8b, Q23 and C2, Q34, B14, B17); in 3.8b's third collective, the stranger's plan now never comes into force.
+- **New tests:** a chain of judgment answering "unknown", then deciding (3.7p); what a chain may name; the departed members entry's checks; F120 and K1 (3.7s); a departed stake that never shrinks without its holder (3.7q).
+- **Results:** Rust workspace **269 passed, 0 failed** (264 before, plus 5). Clients genesis 14, repo 11, longform 15, barebone 9, reader 16, manage 7, collective 18, connector 12, desk 8: **110 passed**, every one typechecking.
+
+### Waiting on Nobody, allegedly, in order
+
+1. Flaw K1.
+2. Flaw P1.
+3. The fork's questions, 1 to 6.
+4. Questions 7 to 9.
+5. The six readings above.
+6. Approval of Law draft 10 with the core pass drafts; then the fork's grammar, the pointer check and the human regtest test on the Mac.
