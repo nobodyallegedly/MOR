@@ -1391,3 +1391,4 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 - **D2, how a verifier knows a debt was published:** (a) the verifier reports finding its outside on a relay, as it reports keeper records; an act counts where it is held, and the creditor, wanting the debt to bind, spreads it.
 - **D3, choosing the split model:** (a) by naming a split service or not; no new field.
 - **D4, changing the release rule:** (a) every owner's signature, and the ordinary clone rule for the version itself.
+- **D5, debts before closing:** (a) a collective cannot close while it owes anything; one that cannot pay stays open, abandoned, its debt visible.
