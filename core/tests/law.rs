@@ -6,9 +6,9 @@
 use mor_core::cbor::{self, Value};
 use mor_core::hash::{sha256, Hash};
 use mor_core::law::{
-    self, judged, outcomes, powers_needed, Abandonment, Area, Authority, ChainLink, DepartedHolder,
+    self, judged, outcomes, powers_needed, Abandonment, Area, Authority, ChainLink, Who,
     Field4, FieldRef, Holding, Judge, KeyGrammar, Kind, LawError, MarkEntry, Mips, Power, Recovery,
-    Rule, SuccessionPlan, Terms, chain_answer, ChainAnswer, Step, Stake, ForkedFrom,
+    Rule, SuccessionPlan, Terms, chain_answer, ChainAnswer, Step, Stake,
 };
 
 pub fn mips() -> Mips {
@@ -686,22 +686,29 @@ fn a_chain_of_judgment_has_periods_on_a_compulsory_time_reference() {
     assert_eq!(chain_answer(&[silent(Some(true)), Step::Unknown]), ChainAnswer::Unknown);
 }
 
-/// Q8: stakes (field 7), the collective's own among them.
+/// Q8 and S1: stakes (field 7), the collective's own among them, written
+/// null: "this collective".
 #[test]
 fn stakes_are_written_in_millionths() {
+    let id = |n: u8| Who::Id(h(n));
     let mut t = label();
-    t.stakes = Some(vec![Stake { object: h(70), holders: vec![(h(1), 500_000), (h(2), 250_000), (h(4), 250_000)] }]);
+    t.stakes = Some(vec![
+        Stake { object: Who::This, holders: vec![(id(1), 500_000), (id(2), 250_000), (id(4), 250_000)] },
+        Stake { object: id(70), holders: vec![(Who::This, 1_000_000)] },
+    ]);
     assert_eq!(check(&t), Ok(()));
     assert_eq!(roundtrip(&t), t);
-    assert_eq!(t.stake_on(&h(70)).map(|(i, s)| (i, s.share_of(&h(4)))), Some((0, 250_000)));
+    assert_eq!(t.own_stake().map(|(i, s)| (i, s.share_of(&id(4)))), Some((0, 250_000)));
+    assert_eq!(t.stake_on(&id(70)).map(|(i, _)| i), Some(1));
     let bad: Vec<(&str, Change)> = vec![
         ("short of the whole", Box::new(|t| t.stakes.as_mut().unwrap()[0].holders[0].1 = 499_999)),
-        ("a zero share", Box::new(|t| t.stakes.as_mut().unwrap()[0].holders.push((h(5), 0)))),
-        ("a holder twice", Box::new(|t| t.stakes.as_mut().unwrap()[0].holders[2].0 = h(1))),
+        ("a zero share", Box::new(|t| t.stakes.as_mut().unwrap()[0].holders.push((Who::Id(h(5)), 0)))),
+        ("a holder twice", Box::new(|t| t.stakes.as_mut().unwrap()[0].holders[2].0 = Who::Id(h(1)))),
         ("one object twice", Box::new(|t| {
             let s = t.stakes.as_ref().unwrap()[0].clone();
             t.stakes.as_mut().unwrap().push(s)
         })),
+        ("the collective holding itself", Box::new(|t| t.stakes.as_mut().unwrap()[0].holders[0].0 = Who::This)),
     ];
     for (why, f) in bad {
         let mut x = t.clone();
@@ -710,15 +717,19 @@ fn stakes_are_written_in_millionths() {
     }
     // Stakes are operational: a clone changing them needs the clone rule.
     let mut c = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
-    c.stakes.as_mut().unwrap()[0].holders = vec![(h(1), 400_000), (h(2), 350_000), (h(4), 250_000)];
+    c.stakes.as_mut().unwrap()[0].holders = vec![(id(1), 400_000), (id(2), 350_000), (id(4), 250_000)];
     assert_eq!(needs(&t, &c), vec![Power::Clone]);
-    // The release rule (field 24), and forked from (field 23) in founding
-    // terms of a collective only.
+    // The release rule (field 24): a clone changing it needs the clone rule
+    // (and every owner's signature, judged with the acts, N8).
     let mut x = t.clone();
     x.release_rule = Some(Rule::Threshold(2));
     assert_eq!(check(&x), Ok(()));
     assert_eq!(roundtrip(&x), x);
-    x.forked_from = Some(ForkedFrom { original: h(80), fork: h(81), side: 1 });
+    let mut c = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
+    c.release_rule = Some(Rule::Threshold(2));
+    assert_eq!(needs(&t, &c), vec![Power::Clone]);
+    // Forked from (field 23): a back-link in founding terms of a collective.
+    x.forked_from = Some(h(80));
     assert_eq!(check(&x), Ok(()));
     assert_eq!(roundtrip(&x), x);
     let mut c = clone_of(&x, vec![(Power::Clone, vec![h(1), h(2)])]);
@@ -726,19 +737,22 @@ fn stakes_are_written_in_millionths() {
     assert!(check(&c).is_err(), "a clone names no original it forked from");
 }
 
-/// F121: the departed members entry records who left and their stake,
-/// nothing else, in a collective only; it is constitutional.
+/// F121, F124 N5: the departed members entry records only who left, in a
+/// collective; their stake is in field 7; it is constitutional.
 #[test]
-fn the_departed_members_entry_records_who_left_and_their_stake() {
+fn the_departed_members_entry_records_who_left() {
     let mut t = label();
-    t.departed = Some(vec![DepartedHolder { holder: h(4), share: 250_000 }]);
+    t.stakes = Some(vec![Stake {
+        object: Who::This,
+        holders: vec![(Who::Id(h(1)), 500_000), (Who::Id(h(2)), 250_000), (Who::Id(h(4)), 250_000)],
+    }]);
+    t.departed = Some(vec![h(4)]);
     assert_eq!(check(&t), Ok(()));
     assert_eq!(roundtrip(&t), t);
     let bad: Vec<(&str, Change)> = vec![
-        ("a party", Box::new(|t| t.departed.as_mut().unwrap()[0].holder = h(1))),
-        ("a zero share", Box::new(|t| t.departed.as_mut().unwrap()[0].share = 0)),
-        ("one holder twice", Box::new(|t| t.departed.as_mut().unwrap().push(DepartedHolder { holder: h(4), share: 1 }))),
-        ("more than the whole", Box::new(|t| t.departed.as_mut().unwrap().push(DepartedHolder { holder: h(5), share: 750_001 }))),
+        ("a party", Box::new(|t| t.departed.as_mut().unwrap()[0] = h(1))),
+        ("one holder twice", Box::new(|t| t.departed.as_mut().unwrap().push(h(4)))),
+        ("no share of the collective", Box::new(|t| t.departed.as_mut().unwrap().push(h(5)))),
         ("in a deal", Box::new(|t| {
             t.grammar = None;
             t.areas = None;
@@ -752,7 +766,7 @@ fn the_departed_members_entry_records_who_left_and_their_stake() {
         assert!(check(&x).is_err(), "{why}");
     }
     let mut c = clone_of(&t, vec![(Power::Constitutional, vec![h(1), h(2), h(3)])]);
-    c.departed.as_mut().unwrap()[0].share = 300_000;
+    c.departed = None;
     assert_eq!(needs(&t, &c), vec![Power::Constitutional]);
 }
 

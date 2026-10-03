@@ -232,9 +232,12 @@ app.addEventListener('submit', async (ev) => {
   if (form.classList.contains('release-work')) return prepare({ kind: 'release-work', collective, release: words(d.get('release')) });
   if (form.classList.contains('fork')) {
     const sides: string[][] = [[], []];
-    for (const [m, side] of prefixed('side:')) sides[side === '2' ? 1 : 0].push(m);
+    // "none": a member who signs no side (F124 N1).
+    for (const [m, side] of prefixed('side:')) if (side !== 'none') sides[side === '2' ? 1 : 0].push(m);
     return prepare({ kind: 'fork', collective, sides });
   }
+  if (form.classList.contains('debt')) return prepare({ kind: 'debt', collective, creditor: words(d.get('creditor')), amount: numberOf(d.get('amount')) });
+  if (form.classList.contains('closing')) return prepare({ kind: 'closing', collective });
   if (form.classList.contains('release')) return prepare({ kind: 'release', publisher: collective, version: words(d.get('version')) });
   if (form.classList.contains('words')) return prepare({ kind: 'words', collective, text: words(d.get('text')) });
   if (form.classList.contains('change')) {

@@ -40,6 +40,8 @@ pub mod types {
     pub const NEGOTIATION: u64 = 18;
     /// The fork of a collective (rule 47a, F121 shape B).
     pub const FORK: u64 = 19;
+    /// The closing of a collective that holds nothing (rule 47a, F124 N9).
+    pub const CLOSING: u64 = 20;
 }
 
 /// The declaration kinds Law defines (Identity, declarations slot).
@@ -700,64 +702,82 @@ pub fn judged<T: Clone>(answers: &[Option<T>]) -> Option<(usize, T)> {
         .find_map(|(i, a)| a.clone().map(|a| (i, a)))
 }
 
-/// One entry of the departed members entry (terms field 22, F121): an
-/// identity that left the collective keeping a stake, and that stake, in
-/// millionths of all the collective's income. Nothing else: a departed
-/// holder has no voice and no veto.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DepartedHolder {
-    pub holder: Hash,
-    pub share: u64,
+/// Who a stake names (F124, S1): an identity, or null, meaning "this
+/// collective", the collective whose agreement these terms are, as Identity
+/// lets a genesis name itself as its home's operator by null. Only a
+/// collective's terms use null; founding terms can so carry stakes in the
+/// collective itself, which does not exist before its genesis.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Who {
+    /// null: this collective.
+    This,
+    /// An identity, by its hash.
+    Id(Hash),
 }
 
-impl DepartedHolder {
+impl Who {
     pub fn to_value(&self) -> Value {
-        Value::Array(vec![b(&self.holder), Value::Uint(self.share)])
+        match self {
+            Who::This => Value::Null,
+            Who::Id(h) => b(h),
+        }
+    }
+
+    /// The identity named, `this` standing for the collective whose
+    /// agreement it is (`None` where that is not known).
+    pub fn resolve(&self, this: Option<&Hash>) -> Option<Hash> {
+        match self {
+            Who::This => this.copied(),
+            Who::Id(h) => Some(*h),
+        }
+    }
+
+    /// The identity, where named by its hash.
+    pub fn id(&self) -> Option<&Hash> {
+        match self {
+            Who::This => None,
+            Who::Id(h) => Some(h),
+        }
+    }
+
+    /// The deterministic encoding, which orders field 7's stakes.
+    pub fn encoding(&self) -> Vec<u8> {
+        cbor::encode(&self.to_value())
     }
 }
 
 /// One stake of terms field 7: `[ object, [+ [ holder, share ]] ]`, its
-/// shares in millionths summing to 1,000,000. Where the object is the
-/// collective whose agreement this is, the stake is a share of all its
-/// income (F121, Q8).
+/// shares in millionths summing to 1,000,000. An object or holder written
+/// null is this collective (S1); a stake whose object is this collective is
+/// a share of all its income (F121, Q8), for members and departed holders
+/// alike (N5).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Stake {
-    pub object: Hash,
-    pub holders: Vec<(Hash, u64)>,
+    pub object: Who,
+    pub holders: Vec<(Who, u64)>,
 }
 
 impl Stake {
     pub fn to_value(&self) -> Value {
         Value::Array(vec![
-            b(&self.object),
+            self.object.to_value(),
             Value::Array(
                 self.holders
                     .iter()
-                    .map(|(h, n)| Value::Array(vec![b(h), Value::Uint(*n)]))
+                    .map(|(h, n)| Value::Array(vec![h.to_value(), Value::Uint(*n)]))
                     .collect(),
             ),
         ])
     }
 
     /// A holder's share of this stake, 0 if none.
-    pub fn share_of(&self, holder: &Hash) -> u64 {
+    pub fn share_of(&self, holder: &Who) -> u64 {
         self.holders.iter().filter(|(h, _)| h == holder).map(|(_, n)| n).sum()
     }
-}
 
-/// Terms field 23 (F121, shape B): founding terms of a collective that a
-/// side of a fork founds, naming the original agreement, the fork act and
-/// the side, by its place in the fork act. Not a parent: no clone.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ForkedFrom {
-    pub original: Hash,
-    pub fork: Hash,
-    pub side: u64,
-}
-
-impl ForkedFrom {
-    pub fn to_value(&self) -> Value {
-        Value::Array(vec![b(&self.original), b(&self.fork), Value::Uint(self.side)])
+    /// The holders named by their identity, with their shares.
+    pub fn identified(&self) -> Vec<(Hash, u64)> {
+        self.holders.iter().filter_map(|(h, n)| h.id().map(|x| (*x, *n))).collect()
     }
 }
 
@@ -802,15 +822,17 @@ pub struct Terms {
     pub area_words: Option<Vec<(u64, String)>>,
     /// 21: the chain of judgment: who takes over from each judge (F121).
     pub chain: Option<Vec<ChainLink>>,
-    /// 22: the departed members entry: who left, and their stake (F121).
-    pub departed: Option<Vec<DepartedHolder>>,
+    /// 22: the departed members entry: who left, and nothing else (F121,
+    /// F124 N5); their stake is in field 7.
+    pub departed: Option<Vec<Hash>>,
     /// 7: stakes, in works, publications, or the collective itself (Q8).
     pub stakes: Option<Vec<Stake>>,
-    /// 23: forked from: the original, the fork act and the side (F121, B).
-    pub forked_from: Option<ForkedFrom>,
+    /// 23: forked from: the original collective, a back-link only, deciding
+    /// nothing (F121, F124 N4).
+    pub forked_from: Option<Hash>,
     /// 24: the release rule, set in founding terms: who among a stake's
     /// holders must sign its release to the public domain (F121, D);
-    /// absent: every holder.
+    /// absent: every holder. A clone every owner signs may change it (N8).
     pub release_rule: Option<Rule>,
 }
 
@@ -962,13 +984,13 @@ impl Terms {
             m.push((Value::Uint(21), Value::Array(c.iter().map(ChainLink::to_value).collect())));
         }
         if let Some(d) = &self.departed {
-            m.push((Value::Uint(22), Value::Array(d.iter().map(DepartedHolder::to_value).collect())));
+            m.push((Value::Uint(22), hashes_value(d)));
         }
         if let Some(st) = &self.stakes {
             m.push((Value::Uint(7), Value::Array(st.iter().map(Stake::to_value).collect())));
         }
         if let Some(f) = &self.forked_from {
-            m.push((Value::Uint(23), f.to_value()));
+            m.push((Value::Uint(23), b(f)));
         }
         if let Some(r) = &self.release_rule {
             m.push((Value::Uint(24), r.to_value()));
@@ -1076,20 +1098,7 @@ impl Terms {
             chain: get(21)
                 .map(|v| nonempty(v, "chain of judgment")?.iter().map(chain_link).collect())
                 .transpose()?,
-            departed: get(22)
-                .map(|v| {
-                    nonempty(v, "departed members")?
-                        .iter()
-                        .map(|e| {
-                            let a = tuple(e, 2, "departed member")?;
-                            Ok(DepartedHolder {
-                                holder: hash(&a[0], "departed holder")?,
-                                share: uint(&a[1], "departed share")?,
-                            })
-                        })
-                        .collect()
-                })
-                .transpose()?,
+            departed: get(22).map(|v| hashes(v, "departed members")).transpose()?,
             stakes: get(7)
                 .map(|v| {
                     nonempty(v, "stakes")?
@@ -1097,30 +1106,33 @@ impl Terms {
                         .map(|e| {
                             let a = tuple(e, 2, "stake")?;
                             Ok(Stake {
-                                object: hash(&a[0], "stake object")?,
-                                holders: pairs(&a[1], "stake holders")?,
+                                object: who(&a[0], "stake object")?,
+                                holders: nonempty(&a[1], "stake holders")?
+                                    .iter()
+                                    .map(|x| {
+                                        let y = tuple(x, 2, "stake holder")?;
+                                        Ok((who(&y[0], "stake holder")?, uint(&y[1], "stake share")?))
+                                    })
+                                    .collect::<R<Vec<_>>>()?,
                             })
                         })
                         .collect()
                 })
                 .transpose()?,
-            forked_from: get(23)
-                .map(|v| {
-                    let a = tuple(v, 3, "forked from")?;
-                    Ok(ForkedFrom {
-                        original: hash(&a[0], "forked from: the original")?,
-                        fork: hash(&a[1], "forked from: the fork act")?,
-                        side: uint(&a[2], "forked from: the side")?,
-                    })
-                })
-                .transpose()?,
+            forked_from: get(23).map(|v| hash(v, "forked from")).transpose()?,
             release_rule: get(24).map(rule).transpose()?,
         })
     }
 
     /// The stake whose object is `object` (field 7), and its index.
-    pub fn stake_on(&self, object: &Hash) -> Option<(usize, &Stake)> {
+    pub fn stake_on(&self, object: &Who) -> Option<(usize, &Stake)> {
         self.stakes.iter().flatten().enumerate().find(|(_, s)| &s.object == object)
+    }
+
+    /// The stake in this collective itself (object null, S1): a share of
+    /// all its income (Q8), and its index.
+    pub fn own_stake(&self) -> Option<(usize, &Stake)> {
+        self.stake_on(&Who::This)
     }
 
     /// The checks that need no other act (Law rules 1, 2, 36, 36b for
@@ -1246,9 +1258,13 @@ impl Terms {
             }
         }
         for s in self.succession.iter().flatten() {
-            if !parties.contains(&s.party) {
+            // M1 (F124): a departed holder's plan keeps only its stake part,
+            // which stays with the stake; the seat part went with the seat.
+            let departed = self.departed.iter().flatten().any(|d| d == &s.party);
+            let stake_only = s.seats.is_none() && s.entry.is_none() && s.stakes.is_some();
+            if !parties.contains(&s.party) && !(departed && stake_only) {
                 return Err(LawError::Check(
-                    "a succession plan is for someone who is not a party",
+                    "a succession plan is for someone who is not a party (a departed holder's carries only its stake part, M1)",
                 ));
             }
             if let Some(st) = &s.stakes {
@@ -1424,10 +1440,10 @@ impl Terms {
         Ok(())
     }
 
-    /// The departed members entry (field 22, F121): in a collective only;
-    /// each holder once, none of them a party; each stake a share of all
-    /// the collective's income, in millionths, above zero, and together no
-    /// more than the whole.
+    /// The departed members entry (field 22, F121, F124 N5): in a
+    /// collective only; each holder once, none of them a party, each a
+    /// holder of the stake in the collective itself (field 7), which is what
+    /// pays them: the entry records only that the identity is departed.
     fn check_departed(&self) -> R<()> {
         let Some(d) = &self.departed else { return Ok(()) };
         if !self.is_collective() {
@@ -1435,39 +1451,47 @@ impl Terms {
                 "a departed members entry belongs to a collective (F121)",
             ));
         }
-        let who: Vec<Hash> = d.iter().map(|e| e.holder).collect();
-        if !distinct(&who) || who.iter().any(|h| self.parties.contains(h)) {
+        if !distinct(d) || d.iter().any(|h| self.parties.contains(h)) {
             return Err(LawError::Check(
                 "a departed members entry names each holder once, and no party (F121)",
             ));
         }
-        if d.iter().any(|e| e.share == 0 || e.share > MILLION)
-            || d.iter().map(|e| e.share).sum::<u64>() > MILLION
-        {
+        let own = self.own_stake().map(|(_, s)| s);
+        if d.iter().any(|h| own.is_none_or(|s| s.share_of(&Who::Id(*h)) == 0)) {
             return Err(LawError::Check(
-                "departed stakes are shares of the collective's income in millionths, above zero, together at most 1,000,000 (F121)",
+                "a departed holder holds a share of the stake in the collective itself (field 7): the entry records only that they are departed (N5)",
             ));
         }
         Ok(())
     }
 
     /// Terms field 7: each stake's holders distinct, each share above zero,
-    /// summing to 1,000,000; no object twice.
+    /// summing to 1,000,000; no object twice; null, this collective, only in
+    /// a collective's terms (S1), and never holding a stake in itself.
     fn check_stakes(&self) -> R<()> {
         let Some(st) = &self.stakes else { return Ok(()) };
-        let objects: Vec<Hash> = st.iter().map(|s| s.object).collect();
-        if !distinct(&objects) {
+        let objects: Vec<Who> = st.iter().map(|s| s.object).collect();
+        if objects.iter().enumerate().any(|(i, o)| objects[..i].contains(o)) {
             return Err(LawError::Check("two stakes on one object"));
         }
         for s in st {
-            let who: Vec<Hash> = s.holders.iter().map(|(h, _)| *h).collect();
-            if !distinct(&who)
+            let who: Vec<Who> = s.holders.iter().map(|(h, _)| *h).collect();
+            if who.iter().enumerate().any(|(i, o)| who[..i].contains(o))
                 || s.holders.iter().any(|(_, n)| *n == 0)
                 || s.holders.iter().map(|(_, n)| n).sum::<u64>() != MILLION
             {
                 return Err(LawError::Check(
                     "a stake's holders are distinct, each share above zero, summing to 1,000,000 (rule 15a)",
                 ));
+            }
+            let this = s.object == Who::This || who.contains(&Who::This);
+            if this && !self.is_collective() {
+                return Err(LawError::Check(
+                    "null names this collective: only a collective's terms use it (S1)",
+                ));
+            }
+            if s.object == Who::This && who.contains(&Who::This) {
+                return Err(LawError::Check("a collective holds no stake in itself"));
             }
         }
         Ok(())
@@ -1966,6 +1990,9 @@ pub struct Grant {
     pub kinds: Option<Vec<Kind>>,
     /// 7: a reinstatement: the ended grant it reinstates (Flaw N).
     pub reinstates: Option<Hash>,
+    /// 8, null: the grantor is this collective, the one whose founding
+    /// terms name the grant (F124, S1); absent: the grant's signer.
+    pub by_this: bool,
 }
 
 impl Grant {
@@ -1992,6 +2019,9 @@ impl Grant {
         if let Some(r) = &self.reinstates {
             m.push((Value::Uint(7), b(r)));
         }
+        if self.by_this {
+            m.push((Value::Uint(8), Value::Null));
+        }
         m
     }
 
@@ -2010,7 +2040,7 @@ impl Grant {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in p {
             match k {
-                Value::Uint(n) if *n <= 7 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 8 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("grant: unknown field")),
             }
         }
@@ -2026,7 +2056,17 @@ impl Grant {
                 .map(|v| nonempty(v, "grant: kinds")?.iter().map(kind).collect())
                 .transpose()?,
             reinstates: get(7).map(|v| hash(v, "grant: reinstates")).transpose()?,
+            by_this: match get(8) {
+                None => false,
+                Some(Value::Null) => true,
+                Some(_) => return Err(LawError::Shape("grant: field 8 is null, this collective (S1)")),
+            },
         };
+        if g.by_this && (g.area.is_some() || g.reinstates.is_some()) {
+            return Err(LawError::Shape(
+                "grant: a grant of this collective by its founding terms (field 8) names no area and reinstates nothing",
+            ));
+        }
         if g.scope > 2 {
             return Err(LawError::Check("a grant's scope is 0, 1 or 2"));
         }
@@ -2209,10 +2249,20 @@ pub struct ForkShare {
     pub shares: Vec<u64>,
 }
 
-/// The fork act (type 19, rule 47a, F121 shape B): signed by one member of
-/// the original collective with their own identity, completed by the
-/// signature acts of every other member it lists. Its inside names, in
-/// `objects`, the original agreement as chain and predecessor.
+/// One side of a fork (fork field 4): the successor collective it founded
+/// first, by its identity, and the members who join it (F124, N4).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Side {
+    pub successor: Hash,
+    pub members: Vec<Hash>,
+}
+
+/// The fork act (type 19, rule 47a, F121 shape B, F124): signed by one
+/// member of the original collective with their own identity, completed by
+/// the signature acts of every other member it lists, under the
+/// constitutional change rule (N1), and of each successor a debt is
+/// assigned to (N13). Its inside names, in `objects`, the original
+/// agreement as chain and predecessor.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fork {
     /// 0: the original's agreement in force at the fork.
@@ -2223,25 +2273,38 @@ pub struct Fork {
     /// latest acts are bound to.
     pub chain_act: Hash,
     /// 3: the latest act of every sequence the original keeps under it: the
-    /// fork's line, as a record's or a rotation's kept tips.
+    /// fork's line, as a record's or a rotation's kept tips (N2).
     pub tips: Vec<KeptTip>,
-    /// 4: the sides, each a list of members, at least two.
-    pub sides: Vec<Vec<Hash>>,
+    /// 4: the sides, at least two: each its successor and its members.
+    pub sides: Vec<Side>,
     /// 5: shares of stakes the original held, where not the default.
     pub shares: Vec<ForkShare>,
-    /// 6: debts assigned to a side: (obligation, side).
-    pub debts: Vec<(Hash, u64)>,
+    /// 6: every obligation of the original, each assigned to one side's
+    /// successor or to several jointly (N13): (obligation, sides).
+    pub debts: Vec<(Hash, Vec<u64>)>,
+}
+
+fn line_map(agreement: &Hash, collective: &Hash, chain_act: &Hash, t: &[KeptTip]) -> Vec<(Value, Value)> {
+    vec![
+        (Value::Uint(0), b(agreement)),
+        (Value::Uint(1), b(collective)),
+        (Value::Uint(2), b(chain_act)),
+        (Value::Uint(3), Value::Array(t.iter().map(tip_value).collect())),
+    ]
 }
 
 impl Fork {
     pub fn to_map(&self) -> Vec<(Value, Value)> {
-        let mut m = vec![
-            (Value::Uint(0), b(&self.agreement)),
-            (Value::Uint(1), b(&self.collective)),
-            (Value::Uint(2), b(&self.chain_act)),
-            (Value::Uint(3), Value::Array(self.tips.iter().map(tip_value).collect())),
-            (Value::Uint(4), Value::Array(self.sides.iter().map(|s| hashes_value(s)).collect())),
-        ];
+        let mut m = line_map(&self.agreement, &self.collective, &self.chain_act, &self.tips);
+        m.push((
+            Value::Uint(4),
+            Value::Array(
+                self.sides
+                    .iter()
+                    .map(|s| Value::Array(vec![b(&s.successor), hashes_value(&s.members)]))
+                    .collect(),
+            ),
+        ));
         if !self.shares.is_empty() {
             m.push((
                 Value::Uint(5),
@@ -2265,7 +2328,9 @@ impl Fork {
                 Value::Array(
                     self.debts
                         .iter()
-                        .map(|(o, i)| Value::Array(vec![b(o), Value::Uint(*i)]))
+                        .map(|(o, s)| {
+                            Value::Array(vec![b(o), Value::Array(s.iter().map(|i| Value::Uint(*i)).collect())])
+                        })
                         .collect(),
                 ),
             ));
@@ -2286,7 +2351,13 @@ impl Fork {
         let req = |k: u64, w| get(k).ok_or(LawError::Shape(w));
         let sides = nonempty(req(4, "fork: sides")?, "fork: sides")?
             .iter()
-            .map(|x| hashes(x, "fork: a side"))
+            .map(|x| {
+                let a = tuple(x, 2, "fork: a side")?;
+                Ok(Side {
+                    successor: hash(&a[0], "fork: a side's successor")?,
+                    members: hashes(&a[1], "fork: a side's members")?,
+                })
+            })
             .collect::<R<Vec<_>>>()?;
         let shares = match get(5) {
             None => vec![],
@@ -2307,7 +2378,19 @@ impl Fork {
         };
         let debts = match get(6) {
             None => vec![],
-            Some(v) => pairs(v, "fork: debts")?,
+            Some(v) => nonempty(v, "fork: debts")?
+                .iter()
+                .map(|x| {
+                    let a = tuple(x, 2, "fork: a debt")?;
+                    Ok((
+                        hash(&a[0], "fork: a debt's obligation")?,
+                        nonempty(&a[1], "fork: a debt's sides")?
+                            .iter()
+                            .map(|y| uint(y, "fork: a debt's side"))
+                            .collect::<R<Vec<_>>>()?,
+                    ))
+                })
+                .collect::<R<Vec<_>>>()?,
         };
         let x = Fork {
             agreement: hash(req(0, "fork: the agreement")?, "fork: the agreement")?,
@@ -2318,12 +2401,16 @@ impl Fork {
             shares,
             debts,
         };
-        if x.sides.len() < 2 || x.sides.iter().any(|s| s.is_empty()) {
-            return Err(LawError::Check("a fork has at least two sides, none empty (F121)"));
+        if x.sides.len() < 2 {
+            return Err(LawError::Check("a fork has at least two sides (F121)"));
         }
-        let all: Vec<Hash> = x.sides.iter().flatten().copied().collect();
+        let all: Vec<Hash> = x.sides.iter().flat_map(|s| s.members.iter()).copied().collect();
         if !distinct(&all) {
             return Err(LawError::Check("a member is on one side of a fork at most (F121)"));
+        }
+        let successors: Vec<Hash> = x.sides.iter().map(|s| s.successor).collect();
+        if !distinct(&successors) || successors.iter().any(|s| s == &x.collective) {
+            return Err(LawError::Check("each side names its own successor, never the original (N4)"));
         }
         for sh in &x.shares {
             if sh.shares.len() != x.sides.len() || sh.shares.iter().sum::<u64>() != MILLION {
@@ -2338,8 +2425,14 @@ impl Fork {
             }
         }
         let obligations: Vec<Hash> = x.debts.iter().map(|(o, _)| *o).collect();
-        if !distinct(&obligations) || x.debts.iter().any(|(_, s)| *s as usize >= x.sides.len()) {
-            return Err(LawError::Check("a fork assigns each debt once, to one of its sides (F121)"));
+        if !distinct(&obligations)
+            || x.debts.iter().any(|(_, s)| {
+                s.windows(2).any(|w| w[0] >= w[1]) || s.iter().any(|i| *i as usize >= x.sides.len())
+            })
+        {
+            return Err(LawError::Check(
+                "a fork assigns each debt once, to sides it lists, ascending (F121, N13)",
+            ));
         }
         check_objects_self(inside, &x.agreement, "fork")?;
         Ok(x)
@@ -2347,7 +2440,47 @@ impl Fork {
 
     /// The side a member is on.
     pub fn side_of(&self, member: &Hash) -> Option<usize> {
-        self.sides.iter().position(|s| s.contains(member))
+        self.sides.iter().position(|s| s.members.contains(member))
+    }
+}
+
+/// The closing act (type 20, F124 N9): ends a collective that holds
+/// nothing, every work sold or released. Signed by one member with their
+/// own identity, completed by the signature acts of members meeting the
+/// constitutional change rule, as the fork act is. Its fields draw its line
+/// as the fork's do; its inside names the agreement as chain and
+/// predecessor.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Closing {
+    pub agreement: Hash,
+    pub collective: Hash,
+    pub chain_act: Hash,
+    pub tips: Vec<KeptTip>,
+}
+
+impl Closing {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        line_map(&self.agreement, &self.collective, &self.chain_act, &self.tips)
+    }
+
+    pub fn decode(inside: &Inside) -> R<Closing> {
+        let mut f: Vec<(u64, &Value)> = vec![];
+        for (k, v) in &inside.payload {
+            match k {
+                Value::Uint(n) if *n <= 3 => f.push((*n, v)),
+                _ => return Err(LawError::Shape("closing: unknown field")),
+            }
+        }
+        let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
+        let req = |k: u64, w| get(k).ok_or(LawError::Shape(w));
+        let x = Closing {
+            agreement: hash(req(0, "closing: the agreement")?, "closing: the agreement")?,
+            collective: hash(req(1, "closing: the collective")?, "closing: the collective")?,
+            chain_act: hash(req(2, "closing: the chain act")?, "closing: the chain act")?,
+            tips: tips(req(3, "closing: kept tips")?, "closing: kept tip")?,
+        };
+        check_objects_self(inside, &x.agreement, "closing")?;
+        Ok(x)
     }
 }
 
@@ -2369,8 +2502,13 @@ pub struct Release {
     pub stakes: Vec<StakeRef>,
     /// 2: the work claims binding it to its creators: its creators' history.
     pub claims: Vec<Hash>,
-    /// 3: the content key of each publication carrying it.
+    /// 3: the content key of each publication carrying it; may be absent
+    /// in a timed release, whose keeper delivers the keys at its point.
     pub keys: Vec<(Hash, Vec<u8>)>,
+    /// 4: a timed release (F124, N11): the point on the time reference of
+    /// each agreement whose stake it ends, at which the claim ends, and the
+    /// identity that delivers the content keys then.
+    pub timed: Option<(Value, Hash)>,
 }
 
 impl Release {
@@ -2390,15 +2528,20 @@ impl Release {
         if !self.claims.is_empty() {
             m.push((Value::Uint(2), hashes_value(&self.claims)));
         }
-        m.push((
-            Value::Uint(3),
-            Value::Array(
-                self.keys
-                    .iter()
-                    .map(|(p, k)| Value::Array(vec![b(p), Value::Bytes(k.clone())]))
-                    .collect(),
-            ),
-        ));
+        if !self.keys.is_empty() {
+            m.push((
+                Value::Uint(3),
+                Value::Array(
+                    self.keys
+                        .iter()
+                        .map(|(p, k)| Value::Array(vec![b(p), Value::Bytes(k.clone())]))
+                        .collect(),
+                ),
+            ));
+        }
+        if let Some((point, keeper)) = &self.timed {
+            m.push((Value::Uint(4), Value::Array(vec![point.clone(), b(keeper)])));
+        }
         m
     }
 
@@ -2406,7 +2549,7 @@ impl Release {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in &inside.payload {
             match k {
-                Value::Uint(n) if *n <= 3 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 4 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("release: unknown field")),
             }
         }
@@ -2416,16 +2559,25 @@ impl Release {
             work: hash(req(0, "release: the work")?, "release: the work")?,
             stakes: pairs(req(1, "release: stakes")?, "release: a stake")?,
             claims: get(2).map(|v| hashes(v, "release: claims")).transpose()?.unwrap_or_default(),
-            keys: nonempty(req(3, "release: content keys")?, "release: content keys")?
-                .iter()
-                .map(|x| {
-                    let a = tuple(x, 2, "release: a content key")?;
-                    match &a[1] {
-                        Value::Bytes(k) if k.len() == 32 => Ok((hash(&a[0], "release: a publication")?, k.clone())),
-                        _ => Err(LawError::Shape("release: a content key is 32 bytes")),
-                    }
+            keys: match get(3) {
+                None if get(4).is_some() => vec![],
+                _ => nonempty(req(3, "release: content keys")?, "release: content keys")?
+                    .iter()
+                    .map(|x| {
+                        let a = tuple(x, 2, "release: a content key")?;
+                        match &a[1] {
+                            Value::Bytes(k) if k.len() == 32 => Ok((hash(&a[0], "release: a publication")?, k.clone())),
+                            _ => Err(LawError::Shape("release: a content key is 32 bytes")),
+                        }
+                    })
+                    .collect::<R<Vec<_>>>()?,
+            },
+            timed: get(4)
+                .map(|v| {
+                    let a = tuple(v, 2, "release: the point and its keeper")?;
+                    Ok((a[0].clone(), hash(&a[1], "release: the keeper of the keys")?))
                 })
-                .collect::<R<Vec<_>>>()?,
+                .transpose()?,
         };
         if get(2).is_some() && r.claims.is_empty() {
             return Err(LawError::Shape("release: claims"));
@@ -2785,6 +2937,13 @@ fn key_grammar(v: &Value) -> R<KeyGrammar> {
         safety: holding(field(&f, 1).ok_or(LawError::Shape("key grammar safety key"))?)?,
         recovery: field(&f, 3).map(recovery).transpose()?,
     })
+}
+
+fn who(v: &Value, w: &'static str) -> R<Who> {
+    match v {
+        Value::Null => Ok(Who::This),
+        _ => Ok(Who::Id(hash(v, w)?)),
+    }
 }
 
 fn pairs(v: &Value, w: &'static str) -> R<Vec<(Hash, u64)>> {

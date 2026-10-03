@@ -157,8 +157,10 @@ export interface State {
     relays: string[];
     releases: { id: string; version: string }[];
     pending: boolean;
-    /** The fork that closed it (Law rule 47a, F121), if any. */
+    /** The fork or closing that ended it (Law rule 47a, F121, F124 N9), if any. */
     closed: string | null;
+    /** For a successor of a fork: the original collective, a back-link (F124 N4). */
+    forkedFrom: string | null;
     /** Its stakes in itself: each holder's share of all its income (F121, Q8). */
     stakes: { id: string; name: string; percent: number; member: boolean }[];
     /** Who may hold a stake in it: members whose voice remains and departed holders. */

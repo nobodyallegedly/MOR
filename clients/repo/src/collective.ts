@@ -40,6 +40,7 @@ import {
   termsPayload,
   type CollectiveTerms,
   type MarkEntry,
+  type Stake,
   type Power,
   type Rule,
 } from './law.ts';
@@ -83,13 +84,16 @@ export interface Governance {
   /** A threshold of the other parties decides absence. */
   abandonmentOthers: number;
   text: string;
-  /** Stakes (terms field 7): the collective's own (a share of all its
-   * income, F121 Q8), keyed by holder, and works it holds. Absent in older files. */
-  stakes?: { object: string; holders: [string, number][] }[];
+  /** Stakes (terms field 7): the collective's own (object null, F124 S1:
+   * a share of all its income, F121 Q8), keyed by holder, and works it
+   * holds (holder null). Absent in older files. */
+  stakes?: Stake[];
   /** The split service's grant (field 14), a judicial clause. */
   splitGrant?: string;
-  /** Departed holders (field 22): who left keeping a stake, and that stake. */
-  departed?: [string, number][];
+  /** Departed holders (field 22): who left keeping a share of the collective's income, which is in `stakes` (F124 N5). */
+  departed?: string[];
+  /** Forked from (field 23): the original collective, for a successor of a fork (F124 N4). */
+  forkedFrom?: string;
 }
 
 export interface CollectiveFile {
@@ -137,10 +141,12 @@ export interface CollectiveFile {
   steppedDown?: { member: string; area: number; resignation: string; record: string }[];
   /** Kept by the collective client: the records the collective drew, its everyday lines (Law type 17), oldest first. */
   records?: string[];
-  /** Kept by the collective client: the fork that closed the collective (Law rule 47a, F121), once complete. */
+  /** Kept by the collective client: the fork or closing that ended the collective (Law rule 47a, F121, F124 N9), once complete. */
   closed?: string;
   /** Kept by the collective client: splits its simulated split service made, with their content keys (base64). */
   splits?: { id: string; key: string; receipt: string }[];
+  /** Kept by the collective client: debts the collective signed, private, with their content keys (base64) (F124 N13). */
+  debts?: { id: string; key: string; creditor: string }[];
   /** Kept by the collective client: its payee pointers, newest last. */
   pointers?: string[];
 }
@@ -184,6 +190,8 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
     stakes: g.stakes,
     splitGrant: g.splitGrant,
     departed: g.departed,
+    // Field 23 is for founding terms only: a clone never carries it.
+    forkedFrom: parent ? undefined : g.forkedFrom,
   };
 }
 
@@ -232,16 +240,17 @@ export class TestCollective {
   }
 
   /**
-   * The rules after a member change: a member who leaves keeping a stake
-   * in the collective itself is recorded, with that stake, in the departed
-   * members entry (Law rules 37a, 46b; F121).
+   * The rules after a member change: a member who leaves keeping a share
+   * of the collective's income (its stake in itself, field 7) is recorded
+   * as departed in the departed members entry, nothing else (Law rules
+   * 37a, 46b; F121, F124 N5).
    */
   departedAfter(g: Governance, members: string[]): Governance {
-    const own = g.stakes?.find((x) => x.object === this.identity);
+    const own = g.stakes?.find((x) => x.object === null);
     const departed = [...(g.departed ?? [])];
     for (const m of this.f.members.filter((x) => !members.includes(x))) {
       const share = own?.holders.find(([h]) => h === m)?.[1] ?? 0;
-      if (share > 0 && !departed.some(([h]) => h === m)) departed.push([m, share]);
+      if (share > 0 && !departed.includes(m)) departed.push(m);
     }
     return departed.length ? { ...g, departed } : g;
   }
@@ -494,7 +503,7 @@ export class TestCollective {
    * share it sets signs it (Law rule 13).
    */
   async setStakes(opts: {
-    stakes: { object: string; holders: [string, number][] }[];
+    stakes: Stake[];
     proposer: TestIdentity;
     signers: TestIdentity[];
     expect?: Uint8Array;

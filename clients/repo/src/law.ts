@@ -77,15 +77,24 @@ export interface CollectiveTerms {
   parent?: string;
   mark?: MarkEntry[];
   /** Stakes (field 7), each object and its holders' shares in millionths:
-   * the collective itself (a share of all its income, F121 Q8), or a work. */
-  stakes?: { object: string; holders: [string, number][] }[];
+   * null, this collective itself (a share of all its income, F121 Q8,
+   * F124 S1), or a work; a holder null is this collective. */
+  stakes?: Stake[];
   /** The split service's grant (field 14), a judicial clause. */
   splitGrant?: string;
-  /** The departed members entry (field 22): who left, and their stake. */
-  departed?: [string, number][];
-  /** Forked from (field 23): founding terms of a side of a fork (F121, B). */
-  forkedFrom?: { original: string; fork: string; side: number };
+  /** The departed members entry (field 22): who left (F124 N5); their stake is in field 7. */
+  departed?: string[];
+  /** Forked from (field 23): founding terms of a side of a fork, naming the original collective, a back-link (F124 N4). */
+  forkedFrom?: string;
 }
+
+/** A stake (terms field 7): null names this collective (F124, S1). */
+export interface Stake {
+  object: string | null;
+  holders: [string | null, number][];
+}
+
+const who = (h: string | null) => (h === null ? null : unhex(h));
 
 /** The terms payload, as CBOR, checked by the core library. */
 export function termsPayload(t: CollectiveTerms): Uint8Array {
@@ -130,11 +139,13 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
   if (t.releases.words) m.set(20, new Map([[RELEASE_AREA, t.releases.words]]));
   if (t.parent) m.set(11, unhex(t.parent));
   if (t.stakes?.length) {
-    m.set(7, [...t.stakes].sort((a, b) => (a.object < b.object ? -1 : 1)).map((x) => [unhex(x.object), x.holders.map(([h, n]) => [unhex(h), n])]));
+    // The collective's own stake (null) first, then works by hash.
+    const key = (o: string | null) => (o === null ? '' : o);
+    m.set(7, [...t.stakes].sort((a, b) => (key(a.object) < key(b.object) ? -1 : 1)).map((x) => [who(x.object), x.holders.map(([h, n]) => [who(h), n])]));
   }
   if (t.splitGrant) m.set(14, unhex(t.splitGrant));
-  if (t.departed?.length) m.set(22, t.departed.map(([h, n]) => [unhex(h), n]));
-  if (t.forkedFrom) m.set(23, [unhex(t.forkedFrom.original), unhex(t.forkedFrom.fork), t.forkedFrom.side]);
+  if (t.departed?.length) m.set(22, t.departed.map(unhex));
+  if (t.forkedFrom) m.set(23, unhex(t.forkedFrom));
   return cborEncode(m);
 }
 
@@ -145,17 +156,18 @@ export interface Tip {
   summary: string;
 }
 
-/** The fork of a collective (Law type 19, rule 47a, F121 shape B). */
+/** The fork of a collective (Law type 19, rule 47a, F121 shape B, F124). */
 export interface ForkAct {
   agreement: string;
   collective: string;
   chainAct: string;
   tips: Tip[];
-  sides: string[][];
+  /** Each side: the successor collective it founded first (N4), and its members. */
+  sides: { successor: string; members: string[] }[];
   /** Shares of stakes the original held, where not the default: [agreement, index, a share per side]. */
   shares?: [string, number, number[]][];
-  /** Debts assigned to a side: [obligation, side]. */
-  debts?: [string, number][];
+  /** Every obligation of the original, each to one side or several jointly (N13): [obligation, sides]. */
+  debts?: [string, number[]][];
 }
 
 export function forkPayload(f: ForkAct): Uint8Array {
@@ -164,11 +176,23 @@ export function forkPayload(f: ForkAct): Uint8Array {
     [1, unhex(f.collective)],
     [2, unhex(f.chainAct)],
     [3, f.tips.map((t) => [unhex(t.act), t.position, unhex(t.summary)])],
-    [4, f.sides.map((s) => s.map(unhex))],
+    [4, f.sides.map((s) => [unhex(s.successor), s.members.map(unhex)])],
   ]);
   if (f.shares?.length) m.set(5, f.shares.map(([a, i, s]) => [unhex(a), i, s]));
-  if (f.debts?.length) m.set(6, f.debts.map(([o, i]) => [unhex(o), i]));
+  if (f.debts?.length) m.set(6, f.debts.map(([o, i]) => [unhex(o), [...i].sort((x, y) => x - y)]));
   return cborEncode(m);
+}
+
+/** The closing of a collective that holds nothing (Law type 20, F124 N9): its line, as a fork's. */
+export function closingPayload(c: { agreement: string; collective: string; chainAct: string; tips: Tip[] }): Uint8Array {
+  return cborEncode(
+    new Map<number, unknown>([
+      [0, unhex(c.agreement)],
+      [1, unhex(c.collective)],
+      [2, unhex(c.chainAct)],
+      [3, c.tips.map((t) => [unhex(t.act), t.position, unhex(t.summary)])],
+    ]),
+  );
 }
 
 /** A release to the public domain (Law type 5, rule 17, F121 shape D). */
@@ -178,17 +202,20 @@ export interface ReleaseAct {
   stakes: [string, number][];
   /** The work claims naming its creators. */
   claims?: string[];
-  /** Each publication carrying it, and its content key. */
+  /** Each publication carrying it, and its content key; may be empty in a timed release. */
   keys: [string, Uint8Array][];
+  /** A timed release (F124 N11): a point on the time reference, and who delivers the keys then. */
+  timed?: { point: number; keeper: string };
 }
 
 export function releasePayload(r: ReleaseAct): Uint8Array {
   const m = new Map<number, unknown>([
     [0, unhex(r.work)],
     [1, r.stakes.map(([a, i]) => [unhex(a), i])],
-    [3, r.keys.map(([p, k]) => [unhex(p), k])],
   ]);
+  if (r.keys.length) m.set(3, r.keys.map(([p, k]) => [unhex(p), k]));
   if (r.claims?.length) m.set(2, r.claims.map(unhex));
+  if (r.timed) m.set(4, [r.timed.point, unhex(r.timed.keeper)]);
   return cborEncode(m);
 }
 
@@ -224,12 +251,26 @@ export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: st
   );
 }
 
-/** A grant (Law type 9) to act for the grantor: here, a split service's. */
-export function grantPayload(grantee: string): Uint8Array {
+/** A grant (Law type 9) to act for the grantor: here, a split service's.
+ * `byThis`: its grantor is "this collective", the one whose founding terms
+ * name it (field 8, null; F124 S1), signed before the collective exists. */
+export function grantPayload(grantee: string, byThis = false): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, unhex(grantee)],
+    [1, 2],
+  ]);
+  if (byThis) m.set(8, null);
+  return cborEncode(m);
+}
+
+/** An obligation (Finance type 1), signed by the debtor. */
+export function obligationPayload(o: { debtor: string; creditor: string; unit: string; value: number; pointer: string }): Uint8Array {
   return cborEncode(
     new Map<number, unknown>([
-      [0, unhex(grantee)],
-      [1, 2],
+      [0, unhex(o.debtor)],
+      [1, unhex(o.creditor)],
+      [2, [unhex(o.unit), o.value]],
+      [3, unhex(o.pointer)],
     ]),
   );
 }

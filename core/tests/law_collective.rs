@@ -19,7 +19,7 @@ use mor_core::chain::Status;
 use mor_core::hash::{sha256, Hash};
 use mor_core::identity::KeptTip;
 use mor_core::law::{
-    self, outcomes, Abandonment, AbsenceDeclaration, Area, Authority, Backing, CloneState, Consent, DepartedHolder, Field4, Grant,
+    self, outcomes, Abandonment, AbsenceDeclaration, Area, Authority, Backing, CloneState, Consent, Field4, Grant, Who,
     Holding, KeyGrammar, Keepers, Kind, LawError, LawView, MarkEntry, Mips, Power, Record,
     Recovery, Resignation, Rule, SuccessionPlan, Terms,
 };
@@ -996,6 +996,12 @@ fn a_departed_holders_stake_never_shrinks_without_them() {
     let ids = lab.ids();
     let cy = ids[CY];
     let keep = vec![ids[ANA], ids[BEN]];
+    // The label's stake in itself (null, S1): Ana, Ben, and Cy at `share`.
+    let (ana, ben) = (ids[ANA], ids[BEN]);
+    let own = move |share: u64| law::Stake {
+        object: Who::This,
+        holders: vec![(Who::Id(ana), 1_000_000 - share - 375_000), (Who::Id(ben), 375_000), (Who::Id(cy), share)],
+    };
     let out = |share: u64| -> Box<dyn Fn(&mut Terms)> {
         let keep = keep.clone();
         Box::new(move |t: &mut Terms| {
@@ -1004,7 +1010,8 @@ fn a_departed_holders_stake_never_shrinks_without_them() {
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
             g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
-            t.departed = Some(vec![DepartedHolder { holder: cy, share }]);
+            t.stakes = Some(vec![own(share)]);
+            t.departed = Some(vec![cy]);
         })
     };
     // Cy removed, keeping a quarter of the label's income.
@@ -1020,44 +1027,31 @@ fn a_departed_holders_stake_never_shrinks_without_them() {
     let t = lab.clone_terms(&k, vec![(Power::Constitutional, vec![ANA, CY])], &|t| t.text = "Other words.".into());
     let x = lab.propose(ANA, &t);
     assert!(lab.view().agreement(&x).unwrap().invalid.is_some());
-    // The two members lower Cy's stake: without Cy's signature, a draft.
-    let lower = |share: u64| -> Box<dyn Fn(&mut Terms)> {
-        Box::new(move |t: &mut Terms| t.departed = Some(vec![DepartedHolder { holder: cy, share }]))
-    };
-    let t = lab.clone_terms(&k, vec![(Power::Constitutional, vec![ANA, BEN])], &*lower(100_000));
+    // The two members lower Cy's stake (field 7, N5): without Cy's
+    // signature, a draft (rule 46). Stakes are operational: the clone rule.
+    let lower = move |share: u64| -> Box<dyn Fn(&mut Terms)> { Box::new(move |t: &mut Terms| t.stakes = Some(vec![own(share)])) };
+    let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &*lower(100_000));
     let k2 = lab.propose(ANA, &t);
     let s1 = lab.sign(ANA, &k2);
     let s2 = lab.sign(BEN, &k2);
     assert!(!lab.view().agreement(&k2).unwrap().ready, "Cy has not signed");
-    lab.rotate(Some((k2, vec![s1, s2])), &[0]);
-    let p = lab.publish(0);
-    lab.sign(ANA, &p);
-    assert!(matches!(lab.consent(&p), Consent::Broken { .. }), "nothing in force without Cy");
-    // Raising it needs no signature of Cy's.
-    let mut lab2 = Lab::new(&|t| t.constitutional = Some(Rule::Threshold(2)));
-    let f2 = lab2.founding;
-    let t = lab2.clone_terms(&f2, vec![(Power::Constitutional, vec![ANA, BEN])], &*out(250_000));
-    let k = lab2.propose(ANA, &t);
-    let sa = lab2.sign(ANA, &k);
-    let sb = lab2.sign(BEN, &k);
-    lab2.rotate(Some((k, vec![sa, sb])), &[0]);
-    let t = lab2.clone_terms(&k, vec![(Power::Constitutional, vec![ANA, BEN])], &*lower(300_000));
-    let k3 = lab2.propose(ANA, &t);
-    lab2.sign(ANA, &k3);
-    lab2.sign(BEN, &k3);
-    assert!(lab2.view().agreement(&k3).unwrap().ready);
+    let r = lab.record(0, Some((k2, vec![s1, s2])), &[], vec![], k2);
+    assert_eq!(puts(&lab, &r), None, "nothing in force without Cy");
+    // Raising it needs no signature of Cy's (Ana's share is lowered: hers).
+    let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &*lower(300_000));
+    let k3 = lab.propose(ANA, &t);
+    lab.sign(ANA, &k3);
+    lab.sign(BEN, &k3);
+    assert!(lab.view().agreement(&k3).unwrap().ready);
     // Lowered with Cy's signature named too: in force.
-    let t = lab2.clone_terms(&k, vec![(Power::Constitutional, vec![ANA, BEN])], &*lower(100_000));
-    let k4 = lab2.propose(ANA, &t);
-    let s1 = lab2.sign(ANA, &k4);
-    let s2 = lab2.sign(BEN, &k4);
-    let s3 = lab2.sign(CY, &k4);
-    assert!(lab2.view().agreement(&k4).unwrap().ready);
-    lab2.rotate(Some((k4, vec![s1, s2, s3])), &[0]);
-    let p = lab2.publish(0);
-    lab2.sign(ANA, &p);
-    assert_eq!(lab2.in_force(&p), k4);
-    assert!(lab2.counts(&p));
+    let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &*lower(100_000));
+    let k4 = lab.propose(ANA, &t);
+    let s1 = lab.sign(ANA, &k4);
+    let s2 = lab.sign(BEN, &k4);
+    let s3 = lab.sign(CY, &k4);
+    assert!(lab.view().agreement(&k4).unwrap().ready);
+    let r = lab.record(0, Some((k4, vec![s1, s2, s3])), &[], vec![], k4);
+    assert_eq!(puts(&lab, &r), Some(k4));
 }
 
 // ---------------------------------------------------------------- areas, freezes, grants
@@ -1081,6 +1075,7 @@ fn an_area_freezes_and_its_grants_wait_for_the_refit() {
         area: Some(1),
         kinds: Some(vec![pubs.clone()]),
         reinstates: None,
+        by_this: false,
     };
     let g1 = lab.grant(&g(publisher.id));
     lab.sign(ANA, &g1);
@@ -2585,26 +2580,32 @@ fn the_production_lane_adopts_extensions() {
     assert!(lab.counts(&e));
 }
 
-// ---------------------------------------------------------------- F121 to F123: endings, money, the pointer
+// ---------------------------------------------------------------- F121 to F124: endings, money, the pointer
 
-/// The label's stakes in itself, and in a work, added by an ordinary clone
-/// every member signs (Q8). Founding terms cannot name the label, whose
-/// identity does not exist before its genesis (flaw S1, Law draft 10,
-/// section 6), so the stakes come in the first clone.
-fn with_stakes(lab: &mut Lab, parent: Hash, holders: Vec<(Hash, u64)>, work: Hash) -> Hash {
-    let label = lab.c[0].id;
-    let t = lab.clone_terms(&parent, vec![(Power::Clone, vec![ANA, BEN, CY])], &|t| {
-        let mut st = vec![
-            law::Stake { object: label, holders: holders.clone() },
-            law::Stake { object: work, holders: vec![(label, 1_000_000)] },
-        ];
-        st.sort_by_key(|s| s.object);
-        t.stakes = Some(st);
+fn obligation(lab: &mut Lab, creditor: &str, value: u64) -> Hash {
+    let o = mor_core::finance::Payload::Obligation(mor_core::finance::Obligation {
+        debtor: lab.c[0].id,
+        creditor: spec(creditor),
+        amount: mor_core::finance::Amount { unit: spec("a unit"), value },
+        pointer: spec("its pointer"),
+        agreement: None,
     });
-    let k = lab.propose(ANA, &t);
-    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k)).collect();
-    lab.record(0, Some((k, s)), &[], vec![], k);
-    k
+    let a = lab.w.everyday_act(&mut lab.c[0], mips().finance, 1, o.to_map(), None, None);
+    lab.w.add(&a)
+}
+
+/// The label's stake in itself (null, S1), and the label holding a work.
+fn own(holders: Vec<(Hash, u64)>) -> law::Stake {
+    law::Stake { object: Who::This, holders: holders.into_iter().map(|(h, n)| (Who::Id(h), n)).collect() }
+}
+
+fn owns(work: Hash) -> law::Stake {
+    law::Stake { object: Who::Id(work), holders: vec![(Who::This, 1_000_000)] }
+}
+
+fn stakes(mut v: Vec<law::Stake>) -> Option<Vec<law::Stake>> {
+    v.sort_by_key(|s| s.object.encoding());
+    Some(v)
 }
 
 /// A payee pointer of `who`, naming these addresses on one rail Module.
@@ -2622,24 +2623,86 @@ fn pointer_of(w: &mut World, who: &mut Person, version: u64, previous: Option<Ha
     w.add(&a)
 }
 
+fn vault_entry(source: &[u8]) -> mor_core::finance::VaultEntry {
+    mor_core::finance::VaultEntry { unit: spec("a unit"), rail_module: spec("a rail Module"), source: source.to_vec(), limit: 1000 }
+}
+
+fn plain_grant(grantee: Hash, by_this: bool) -> Grant {
+    Grant { grantee, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, by_this }
+}
+
+/// Freeze suite v21, 3.7v (F124, S1): founding terms carry stakes in the
+/// collective itself and its own grant, written null; a deal cannot use
+/// null; a clone writing the collective's own identity instead is invalid.
+#[test]
+fn founding_terms_carry_stakes_in_the_collective_itself() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let svc = w.genesis("a split service", vec![own_home()], None, None);
+    // The split service's grant, by "this collective" (field 8), which
+    // the founding terms will name: signed by a founder.
+    let g = law_act(&mut w, &mut ana, law::types::GRANT, plain_grant(svc.id, true).to_map(), None);
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)]), owns(spec("a work"))]);
+    });
+    let f = lab.founding;
+    let t = lab.view().terms(&f).unwrap();
+    assert_eq!(t.own_stake().unwrap().1.share_of(&Who::Id(lab.ids()[ANA])), 400_000);
+    let a = lab.view().agreement(&f).unwrap();
+    assert_eq!(a.exists, Some(true));
+    assert_eq!(lab.view().collective_of(&f).unwrap(), Some(lab.c[0].id));
+    // Its own grant in its founding terms, by null.
+    let mut t2 = t.clone();
+    t2.split_grant = Some(g);
+    assert_eq!(t2.check(&mips()), Ok(()));
+    assert!(law::Grant::decode(&plain_grant(svc.id, true).to_map()).unwrap().by_this);
+    let mut bad = plain_grant(svc.id, true);
+    bad.area = Some(1);
+    bad.kinds = Some(vec![Kind::Layer(law::layers::FINANCE)]);
+    assert!(law::Grant::decode(&bad.to_map()).is_err(), "a founding grant names no area");
+    // A deal cannot write null: only a collective's terms name themselves.
+    let mut deal = t.clone();
+    deal.grammar = None;
+    deal.constitutional = None;
+    deal.areas = None;
+    deal.area_words = None;
+    deal.clone = Rule::All;
+    deal.abandonment = None;
+    assert!(matches!(deal.check(&mips()), Err(LawError::Check(w)) if w.contains("S1")));
+    // A collective holds no stake in itself.
+    let mut selfish = t.clone();
+    selfish.stakes = stakes(vec![law::Stake { object: Who::This, holders: vec![(Who::This, 1_000_000)] }]);
+    assert!(selfish.check(&mips()).is_err());
+    // One meaning, one encoding: a clone writing the label's identity.
+    let label = lab.c[0].id;
+    let c = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| {
+        t.stakes.as_mut().unwrap()[1].holders = vec![(Who::Id(label), 1_000_000)];
+    });
+    let k = lab.propose(ANA, &c);
+    let inv = lab.view().agreement(&k).unwrap().invalid;
+    assert!(inv.as_deref().is_some_and(|w| w.contains("S1")), "{inv:?}");
+}
+
 /// Freeze suite v21, shape A (F121): a group splits off with the powers to
 /// do so. An ordinary membership change: the label keeps its identity, Cy
-/// leaves and becomes a departed holder, keeping their stake in the label.
+/// leaves and becomes a departed holder, their stake in field 7 (N5).
 #[test]
 fn a_group_splits_off_and_its_members_become_departed_holders() {
-    let mut lab = Lab::new(&|_| {});
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
+    });
     let f = lab.founding;
     let ids = lab.ids();
-    let work = spec("a work");
-    let k1 = with_stakes(&mut lab, f, vec![(ids[ANA], 400_000), (ids[BEN], 300_000), (ids[CY], 300_000)], work);
     let keep = vec![ids[ANA], ids[BEN]];
     let cy = ids[CY];
-    let t = lab.clone_terms(&k1, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|t| {
+    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|t| {
         t.parties = keep.clone();
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
         g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
-        t.departed = Some(vec![DepartedHolder { holder: cy, share: 300_000 }]);
+        t.departed = Some(vec![cy]);
     });
     let k2 = lab.propose(ANA, &t);
     let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k2)).collect();
@@ -2648,158 +2711,167 @@ fn a_group_splits_off_and_its_members_become_departed_holders() {
     lab.sign(ANA, &p);
     assert_eq!(lab.in_force(&p), k2);
     assert!(lab.counts(&p));
-    // Cy keeps 30% of all the label's income, as a departed holder whose
-    // entry matches their stake in the label (Q8), and has no voice.
     let t = lab.view().terms(&k2).unwrap();
-    assert_eq!(t.stake_on(&lab.c[0].id).unwrap().1.share_of(&cy), 300_000);
+    assert_eq!(t.own_stake().unwrap().1.share_of(&Who::Id(cy)), 300_000);
+    // The departed entry records only that Cy is departed; one without a
+    // share in the label is invalid (N5).
+    let mut bad = t.clone();
+    bad.departed = Some(vec![spec("someone with no stake")]);
+    assert!(bad.check(&mips()).is_err());
     let t2 = lab.clone_terms(&k2, vec![(Power::Constitutional, vec![ANA, CY])], &|t| t.text = "Other words.".into());
     let x = lab.propose(ANA, &t2);
     assert!(lab.view().agreement(&x).unwrap().invalid.is_some(), "a departed holder has no voice");
-    // The label keeps its identity: no fork, nothing closed.
     assert_eq!(lab.view().current(&lab.c[0].id).unwrap().unwrap().closed, None);
 }
 
-/// F122 against removal (flaw M1, Law draft 10, section 6): under a
-/// constitutional change rule of two of three, removing a member whose
-/// succession plan the terms carry also drops that plan, a judicial
-/// change, which F122 counts among every member, the one removed included.
-/// As written, the removal stays a draft without their signature.
+/// Freeze suite v21, 3.7w (F124, M1): under a constitutional change rule of
+/// two of three, Ana and Ben remove Cy, whose plan names a stake heir and a
+/// seat heir. Only the seat part of the plan goes with the removal; the
+/// stake part stays with the stake. The removal completes with two
+/// signatures. Dropping the stake part too is a judicial change: every
+/// member, Cy included.
 #[test]
-fn removing_a_member_with_a_plan_needs_their_signature_under_f122() {
+fn a_removal_under_a_lower_rule_completes() {
+    let plan = |t: &Terms| SuccessionPlan {
+        party: t.parties[CY],
+        stakes: Some(vec![(spec("an heir"), 1_000_000)]),
+        seats: Some(vec![(spec("a seat heir"), 1)]),
+        entry: Some(1),
+    };
     let mut lab = Lab::new(&|t| {
         t.constitutional = Some(Rule::Threshold(2));
-        let cy = t.parties[CY];
-        t.succession = Some(vec![SuccessionPlan {
-            party: cy,
-            stakes: Some(vec![(spec("an heir"), 1_000_000)]),
-            seats: None,
-            entry: None,
-        }]);
+        t.succession = Some(vec![plan(t)]);
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
     });
     let f = lab.founding;
     let ids = lab.ids();
-    let keep = vec![ids[ANA], ids[BEN]];
-    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN]), (Power::Judicial, vec![ANA, BEN, CY])], &|t| {
-        t.parties = keep.clone();
-        t.succession = None;
-        let g = t.grammar.as_mut().unwrap();
-        g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
-        g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
-        t.areas.as_mut().unwrap()[1].holders = vec![keep[1]];
-    });
-    assert_eq!(
-        lab.view().powers_needed(&t).unwrap(),
-        vec![Power::Constitutional, Power::Judicial]
-    );
-    let k = lab.propose(ANA, &t);
-    lab.sign(ANA, &k);
-    lab.sign(BEN, &k);
-    assert!(!lab.view().agreement(&k).unwrap().ready, "Cy has not signed the judicial part");
-}
-
-/// Freeze suite v21, 3.7t (F121, Q8 and Q9): equal treatment checked against
-/// the stakes in the label itself, and every split delivered to every holder
-/// it pays, naming each fee and who received it.
-#[test]
-fn a_split_treats_every_stake_alike_and_shows_its_fees() {
-    let mut lab = Lab::new(&|_| {});
-    let f = lab.founding;
-    let ids = lab.ids();
-    let work = spec("a work");
-    let k1 = with_stakes(&mut lab, f, vec![(ids[ANA], 400_000), (ids[BEN], 300_000), (ids[CY], 300_000)], work);
     let keep = vec![ids[ANA], ids[BEN]];
     let cy = ids[CY];
-    let t = lab.clone_terms(&k1, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|t| {
-        t.parties = keep.clone();
-        let g = t.grammar.as_mut().unwrap();
-        g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
-        g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
-        t.departed = Some(vec![DepartedHolder { holder: cy, share: 300_000 }]);
+    let removal = |keep_stake_plan: bool| {
+        let keep = keep.clone();
+        move |t: &mut Terms| {
+            t.parties = keep.clone();
+            t.succession = keep_stake_plan.then(|| {
+                vec![SuccessionPlan { party: cy, stakes: Some(vec![(spec("an heir"), 1_000_000)]), seats: None, entry: None }]
+            });
+            t.departed = Some(vec![cy]);
+            let g = t.grammar.as_mut().unwrap();
+            g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
+            g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
+        }
+    };
+    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN])], &removal(true));
+    assert_eq!(lab.view().powers_needed(&t).unwrap(), vec![Power::Constitutional]);
+    let k = lab.propose(ANA, &t);
+    let sa = lab.sign(ANA, &k);
+    let sb = lab.sign(BEN, &k);
+    let a = lab.view().agreement(&k).unwrap();
+    assert!(a.invalid.is_none() && a.ready, "{:?}", a.invalid);
+    lab.rotate(Some((k, vec![sa, sb])), &[0]);
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    assert_eq!(lab.in_force(&p), k, "Cy is removed without their signature");
+    // The plan for Cy's stake stays, as a departed holder's.
+    let tk = lab.view().terms(&k).unwrap();
+    assert_eq!(tk.succession.as_ref().unwrap()[0].stakes, Some(vec![(spec("an heir"), 1_000_000)]));
+    // Dropping the stake part too: judicial, every member.
+    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN])], &removal(false));
+    assert_eq!(lab.view().powers_needed(&t).unwrap(), vec![Power::Constitutional, Power::Judicial]);
+}
+
+/// Freeze suite v21, 3.7t (F121 Q9, F124 N10): every payout matches its
+/// stake exactly, within one smallest unit of rounding per payout, every
+/// fee alike for every stake; a split is delivered to every holder it pays,
+/// naming each fee and who received it.
+#[test]
+fn every_payout_matches_its_stake() {
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
     });
-    let k2 = lab.propose(ANA, &t);
-    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k2)).collect();
-    lab.rotate(Some((k2, s)), &[0]);
+    let f = lab.founding;
+    let ids = lab.ids();
     let mut svc = lab.w.genesis("a split service", vec![own_home()], None, None);
     let fee_module = spec("a split service's fee Module");
-    let receipt = {
+    let receipt = |lab: &mut Lab, svc: &mut Person, value: u64| {
         let r = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
             rail: spec("a rail Module"),
             proof: vec![],
             payer: Some(mor_core::finance::Payer::Identity(spec("a fan"))),
             payee: svc.id,
-            amount: mor_core::finance::Amount { unit: spec("a unit"), value: 1000 },
+            amount: mor_core::finance::Amount { unit: spec("a unit"), value },
             fulfils: spec("an offer"),
             previous: None,
             forward: None,
             batch: None,
         });
-        let a = lab.w.everyday_act(&mut svc, mips().finance, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(svc, mips().finance, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
-    let stake = lab.view().terms(&k2).unwrap().stake_on(&lab.c[0].id).unwrap().0 as u64;
-    let payout = |who: Hash, amount: u64| law::Payout {
-        receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None,
-    };
+    let stake = lab.view().terms(&f).unwrap().own_stake().unwrap().0 as u64;
     let svc_id = svc.id;
-    let split = |cy_amount: u64, ana_amount: u64| law::Split {
+    let split = |receipt: Hash, ana: u64, ben: u64, cy: u64| law::Split {
         receipt,
         payouts: vec![
             law::Payout { receiver: svc_id, amount: 100, stake: None, role: None, evidence: None, fee_module: Some(fee_module), rail_fee: None },
-            payout(ids[ANA], ana_amount),
-            payout(ids[BEN], 270),
-            payout(cy, cy_amount),
+            law::Payout { receiver: ids[ANA], amount: ana, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
+            law::Payout { receiver: ids[BEN], amount: ben, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
+            law::Payout { receiver: ids[CY], amount: cy, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
         ],
         cmip: spec("a split cMIP"),
-        agreement: k2,
+        agreement: f,
     };
-    let everyone = vec![ids[ANA], ids[BEN], cy];
-    // Fair: 100 to the service's fee, then 360, 270 and 270 for 40%, 30%
-    // and 30%. Delivered to all three.
-    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(270, 360).to_map(), None, everyone.clone());
+    let everyone = ids.clone();
+    let r1 = receipt(&mut lab, &mut svc, 1000);
+    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r1, 360, 270, 270).to_map(), None, everyone.clone());
     let e = lab.view().split(&x).unwrap();
     assert_eq!(e.sums, Some(true));
     assert_eq!(e.fees, vec![(fee_module, svc.id, 100)]);
     assert!(e.undelivered.is_empty());
     assert_eq!(e.collective, Some(lab.c[0].id));
-    assert!(e.unequal.is_empty(), "{:?}", e.unequal);
-    // The departed stake charged more than a member's: shown so. And a
-    // split not delivered to Cy, whom it pays.
-    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(200, 430).to_map(), None, keep.clone());
+    assert!(e.mismatched.is_empty(), "{:?}", e.mismatched);
+    // Rounding: 901 leaves 801 to divide; the leftover unit to the first.
+    let r2 = receipt(&mut lab, &mut svc, 901);
+    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r2, 321, 240, 240).to_map(), None, everyone.clone());
+    assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
+    // Any deviation, either way, breaks the plan (N10): Cy paid less, Ana
+    // more. Not delivered to Cy, whom it pays.
+    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r1, 430, 270, 200).to_map(), None, vec![ids[ANA], ids[BEN]]);
     let e = lab.view().split(&x).unwrap();
     assert_eq!(e.sums, Some(true));
-    assert_eq!(e.unequal, vec![law::Unequal { departed: cy, member: ids[ANA] }, law::Unequal { departed: cy, member: ids[BEN] }]);
-    assert_eq!(e.undelivered, vec![cy]);
+    let who: Vec<Hash> = e.mismatched.iter().map(|m| m.holder).collect();
+    assert_eq!(who, vec![ids[ANA], ids[CY]]);
+    assert_eq!(e.undelivered, vec![ids[CY]]);
+    // Members paying a departed holder more is a deviation too: no
+    // one-direction check remains.
+    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r1, 300, 270, 330).to_map(), None, everyone.clone());
+    assert_eq!(lab.view().split(&x).unwrap().mismatched.len(), 2);
     // A split that does not sum exactly is shown so (rule 21).
-    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(270, 300).to_map(), None, everyone);
+    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r1, 300, 270, 270).to_map(), None, everyone);
     assert_eq!(lab.view().split(&x).unwrap().sums, Some(false));
 }
 
-/// Freeze suite v21, 3.7r (F121, F123): the pointer check. The label's
-/// pointer counts for Law only if every address in it is in the split
-/// service's own signed pointer in force, or in that of a service its chain
-/// of judgment names to take over (reading 4).
+/// Freeze suite v21, 3.7r (F121, F123, F124 P2): the pointer check, now
+/// reaching the vault. The label's pointer counts for Law only if every
+/// address in it is in the split service's own signed pointer in force, and
+/// every entry of its vault in the service's own vault, or both in those of
+/// a service its chain of judgment names to take over (reading 4).
 #[test]
 fn the_pointer_check() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let mut svc = lab.w.genesis("a split service", vec![own_home()], None, None);
+    let mut svc = lab.w.genesis_with(
+        "a split service",
+        vec![own_home()],
+        None,
+        None,
+        Some(vec![mor_core::finance::vault_declaration(&mips().finance, &[vault_entry(b"the service's vault")])]),
+        3,
+    );
     let mut svc2 = lab.w.genesis("a second split service", vec![own_home()], None, None);
-    let grant = |lab: &mut Lab, who: Hash| {
-        lab.grant(&Grant {
-            grantee: who,
-            scope: 2,
-            agreements: None,
-            limits: None,
-            limits_cmip: None,
-            area: None,
-            kinds: None,
-            reinstates: None,
-        })
-    };
-    let g1 = grant(&mut lab, svc.id);
-    let g2 = grant(&mut lab, svc2.id);
-    // The split service and its fallback are judicial: every member. A
-    // split service can stay silent, so a time reference is named (Q7).
+    let g1 = lab.grant(&plain_grant(svc.id, false));
+    let g2 = lab.grant(&plain_grant(svc2.id, false));
     let t = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
         t.split_grant = Some(g1);
         t.time = Some((spec("a clock"), Value::Uint(0)));
@@ -2811,60 +2883,156 @@ fn the_pointer_check() {
     let label = lab.c[0].id;
     pointer_of(&mut lab.w, &mut svc, 1, None, &[b"the service's node"]);
     pointer_of(&mut lab.w, &mut svc2, 1, None, &[b"the second service's node"]);
-    // The label's pointer, in its Finance lane: Ben signs it.
     let p1 = pointer_of(&mut lab.w, &mut lab.c[0], 1, None, &[b"the service's node"]);
     lab.sign(BEN, &p1);
-    assert_eq!(
-        lab.view().pointer_check(&label, &k).unwrap(),
-        law::PointerCheck::Ordinary { pointer: p1, service: svc.id }
-    );
-    // The Finance lane's holder points it at their own node: it bypasses
-    // the split service, and is shown so.
+    assert_eq!(lab.view().pointer_check(&label, &k).unwrap(), law::PointerCheck::Ordinary { pointer: p1, service: svc.id });
     let p2 = pointer_of(&mut lab.w, &mut lab.c[0], 2, Some(p1), &[b"the service's node", b"the treasurer's own node"]);
     lab.sign(BEN, &p2);
     match lab.view().pointer_check(&label, &k).unwrap() {
-        law::PointerCheck::Bypasses { pointer, missing } => {
+        law::PointerCheck::Bypasses { pointer, missing, vault_missing } => {
             assert_eq!(pointer, p2);
             assert_eq!(missing.len(), 1);
             assert_eq!(missing[0].address, b"the treasurer's own node".to_vec());
+            assert!(vault_missing.is_empty());
         }
         other => panic!("{other:?}"),
     }
-    // To the service its chain names to take over: ordinary.
-    let p3 = pointer_of(&mut lab.w, &mut lab.c[0], 3, Some(p2), &[b"the second service's node"]);
+    let p3 = pointer_of(&mut lab.w, &mut lab.c[0], 3, Some(p2), &[b"the service's node"]);
     lab.sign(BEN, &p3);
-    assert_eq!(
-        lab.view().pointer_check(&label, &k).unwrap(),
-        law::PointerCheck::Ordinary { pointer: p3, service: svc2.id }
+    assert_eq!(lab.view().pointer_check(&label, &k).unwrap(), law::PointerCheck::Ordinary { pointer: p3, service: svc.id });
+    // P2: the label's vault takes payments above its limit to an address
+    // of the treasurer's own: the vault bypasses the service, shown so.
+    lab.rotate_with(
+        Some(vec![mor_core::finance::vault_declaration(&mips().finance, &[vault_entry(b"the treasurer's own vault")])]),
+        &[0],
     );
-    // An agreement naming no split service: nothing to check.
+    match lab.view().pointer_check(&label, &k).unwrap() {
+        law::PointerCheck::Bypasses { missing, vault_missing, .. } => {
+            assert!(missing.is_empty());
+            assert_eq!(vault_missing, vec![vault_entry(b"the treasurer's own vault")]);
+        }
+        other => panic!("{other:?}"),
+    }
+    // The vault the service's own vault carries: ordinary again.
+    lab.rotate_with(
+        Some(vec![mor_core::finance::vault_declaration(&mips().finance, &[vault_entry(b"the service's vault")])]),
+        &[0],
+    );
+    assert_eq!(lab.view().pointer_check(&label, &k).unwrap(), law::PointerCheck::Ordinary { pointer: p3, service: svc.id });
     assert_eq!(lab.view().pointer_check(&label, &f).unwrap(), law::PointerCheck::NoSplitService);
 }
 
-/// Freeze suite v21, 3.9 (F121, shape B): the fork of a collective. Both
-/// sides sign with their own identities; the original is closed in Law;
-/// its ownership passes to the successors, by default by the members'
-/// stakes; the departed holder keeps their share in every successor; debts
-/// go to the side named, else to both; grants end; open offers are
-/// withdrawn; the successors name the original in "forked from".
+/// F124 P2: payer-side splitting. Where the owners' agreement names no
+/// split service, a wallet reading Law pays each holder's own pointer by
+/// the stake's shares; a holder that is a collective splitting payer-side
+/// too is followed to the holders of its stake in itself.
 #[test]
-fn a_collective_forks() {
+fn payer_side_splitting_follows_the_claim() {
+    let work = spec("a work");
     let mut lab = Lab::new(&|t| {
-        t.departed = Some(vec![DepartedHolder { holder: spec("dee"), share: 250_000 }]);
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 250_000), (p[CY], 250_000)]), owns(work)]);
     });
     let f = lab.founding;
     let ids = lab.ids();
+    let got = lab.view().payer_split(&f, &Who::Id(work), 1001).unwrap().unwrap();
+    assert_eq!(got, vec![(ids[ANA], 501), (ids[BEN], 250), (ids[CY], 250)]);
+    // A deal in which the label holds 60% and a guest 40%.
+    let guest = lab.w.genesis("a guest", vec![own_home()], None, None);
+    let label = lab.c[0].id;
+    let deal = Terms {
+        parties: vec![ids[ANA], guest.id],
+        text: "A work shared with a guest.".into(),
+        cmips: vec![],
+        keepers: None,
+        field4: Field4::Rule(Rule::All),
+        clone: Rule::All,
+        time: None,
+        abandonment: None,
+        parent: None,
+        grammar: None,
+        arbitrators: None,
+        split_grant: None,
+        extensions: None,
+        succession: None,
+        constitutional: None,
+        areas: None,
+        area_words: None,
+        chain: None,
+        departed: None,
+        stakes: Some(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::Id(label), 600_000), (Who::Id(guest.id), 400_000)] }]),
+        forked_from: None,
+        release_rule: None,
+    };
+    let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal.to_map(), None);
+    let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
+    assert_eq!(got, vec![(ids[ANA], 300), (ids[BEN], 150), (ids[CY], 150), (guest.id, 400)]);
+}
+
+/// The successor of one side, founded first (N4): founding terms whose
+/// parties are the side's members, keeping each departed holder at their
+/// share of all its income, recorded departed; the members divide the
+/// rest. Its genesis declares them. Returns (identity, terms).
+fn found_successor(lab: &mut Lab, name: &str, members: &[usize], kept: &[(Hash, u64)], original: Hash) -> (Person, Hash) {
+    let ids = lab.ids();
+    let m: Vec<Hash> = members.iter().map(|i| ids[*i]).collect();
+    let rest = 1_000_000 - kept.iter().map(|(_, n)| n).sum::<u64>();
+    let t = label_terms(&ids, lab.authority.id, lab.keeper.id, &|t| {
+        t.parties = m.clone();
+        t.clone = Rule::Threshold(m.len().min(2) as u64);
+        t.areas.as_mut().unwrap()[0].holders = vec![m[0]];
+        t.areas.as_mut().unwrap()[1].holders = vec![*m.last().unwrap()];
+        let g = t.grammar.as_mut().unwrap();
+        g.signing = Holding::Shares { threshold: 1, members: m.clone() };
+        g.safety = Holding::Shares { threshold: m.len() as u64, members: m.clone() };
+        let mut holders: Vec<(Hash, u64)> = kept.to_vec();
+        let each = rest / m.len() as u64;
+        for (i, x) in m.iter().enumerate() {
+            holders.push((*x, if i == 0 { rest - each * (m.len() as u64 - 1) } else { each }));
+        }
+        t.stakes = stakes(vec![own(holders)]);
+        if !kept.is_empty() {
+            t.departed = Some(kept.iter().map(|(h, _)| *h).collect());
+        }
+        t.forked_from = Some(original);
+    });
+    let x = law_act(&mut lab.w, &mut lab.m[members[0]], law::types::TERMS, t.to_map(), None);
+    for i in members {
+        lab.sign(*i, &x);
+    }
+    let p = lab.w.genesis_with(name, vec![own_home()], None, None, Some(vec![law::founding_declaration(&mips().law, &x)]), 3);
+    (p, x)
+}
+
+/// Freeze suite v21, 3.9 (F121 shape B, F124 N1 to N4, N13, N14): the fork
+/// of a collective. Each side founds its successor first; the fork act names
+/// them; every member signs under the constitutional rule (every party
+/// here); the original is closed in Law; its ownership passes to the
+/// successors by the members' stakes; the departed holder keeps their share
+/// in each; every obligation is assigned, each successor signing for its
+/// debts; grants end; open offers are withdrawn, a stray payment to the old
+/// service being its open debt to the successors.
+#[test]
+fn a_collective_forks() {
     let dee = spec("dee");
     let work = spec("a work made before the fork");
-    let k = with_stakes(
-        &mut lab,
-        f,
-        vec![(ids[ANA], 250_000), (ids[BEN], 250_000), (ids[CY], 250_000), (dee, 250_000)],
-        work,
-    );
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 250_000), (p[BEN], 250_000), (p[CY], 250_000), (dee, 250_000)]), owns(work)]);
+        t.departed = Some(vec![dee]);
+    });
+    let mut svc = lab.w.genesis("the old split service", vec![own_home()], None, None);
+    let f = lab.founding;
+    let ids = lab.ids();
     let label = lab.c[0].id;
+    // The old split service, named by the label.
+    let g_svc = lab.grant(&plain_grant(svc.id, false));
+    let t = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| t.split_grant = Some(g_svc));
+    let k = lab.propose(ANA, &t);
+    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k)).collect();
+    lab.record(0, Some((k, s)), &[], vec![], k);
     // Before the fork: a publication, an open offer, a grant and a deal
-    // under it, and two debts.
+    // under it, and three debts, two of them public.
     let before = lab.publish(0);
     lab.sign(ANA, &before);
     let offer = {
@@ -2872,107 +3040,166 @@ fn a_collective_forks() {
         lab.w.add(&a)
     };
     let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
-    let g = lab.grant(&Grant {
-        grantee: agent.id,
-        scope: 0,
-        agreements: None,
-        limits: None,
-        limits_cmip: None,
-        area: None,
-        kinds: None,
-        reinstates: None,
-    });
+    let g = lab.grant(&Grant { scope: 0, ..plain_grant(agent.id, false) });
     let deal = {
         let a = lab.w.everyday_act_refs(&mut agent, spec("a deal cMIP"), 0, vec![(Value::Uint(0), Value::Text("a deal".into()))], None, None, Some(vec![Ref::Act(g)]));
         lab.w.add(&a)
     };
-    let debt = |lab: &mut Lab, creditor: &str| {
-        let o = mor_core::finance::Payload::Obligation(mor_core::finance::Obligation {
-            debtor: lab.c[0].id,
-            creditor: spec(creditor),
-            amount: mor_core::finance::Amount { unit: spec("a unit"), value: 900 },
-            pointer: spec("its pointer"),
-            agreement: None,
-        });
-        let a = lab.w.everyday_act(&mut lab.c[0], mips().finance, 1, o.to_map(), None, None);
-        lab.w.add(&a)
-    };
-    let d1 = debt(&mut lab, "a supplier");
-    let d2 = debt(&mut lab, "another supplier");
-    // The fork act: Ana on one side, Ben and Cy on the other.
-    let fork = |lab: &mut Lab, sides: Vec<Vec<Hash>>| law::Fork {
+    let d1 = obligation(&mut lab, "a supplier", 900);
+    let d2 = obligation(&mut lab, "another supplier", 300);
+    let d3 = obligation(&mut lab, "a creditor kept out of sight", 50);
+    // Each side founds its successor first (N4); the departed holder keeps
+    // their quarter in each.
+    let kept = vec![(dee, 250_000)];
+    let (mut sa, _) = found_successor(&mut lab, "side A", &[ANA], &kept, label);
+    let (mut sb, tb) = found_successor(&mut lab, "side B", &[BEN, CY], &kept, label);
+    let (sa_id, sb_id) = (sa.id, sb.id);
+    let fork = |lab: &Lab, debts: Vec<(Hash, Vec<u64>)>| law::Fork {
         agreement: k,
         collective: label,
         chain_act: lab.c[0].binding,
         tips: vec![tip(&lab.c[0])],
-        sides,
+        sides: vec![law::Side { successor: sa_id, members: vec![ids[ANA]] }, law::Side { successor: sb_id, members: vec![ids[BEN], ids[CY]] }],
         shares: vec![],
-        debts: vec![(d1, 1)],
+        debts,
     };
-    let x = fork(&mut lab, vec![vec![ids[ANA]], vec![ids[BEN], ids[CY]]]);
+    fn with_published<'a>(lab: &'a Lab, xs: &[Hash]) -> LawView<'a> {
+        let mut v = lab.view();
+        v.published.extend(xs.iter().copied());
+        v
+    }
+    // A fork leaving a public debt unassigned does not take effect (N13).
+    let x = fork(&lab, vec![(d1, vec![1])]);
+    let short = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(k));
+    lab.sign(BEN, &short);
+    lab.sign(CY, &short);
+    sign(&mut lab.w, &mut sb, &short);
+    let e = with_published(&lab, &[d1, d2]).fork(&short).unwrap();
+    assert!(!e.complete);
+    assert_eq!(e.unassigned, vec![d2]);
+    assert!(e.why.as_deref().is_some_and(|w| w.contains("D1")), "{:?}", e.why);
+    // Every debt assigned: d1 to side B, d2 to both jointly.
+    let x = fork(&lab, vec![(d1, vec![1]), (d2, vec![0, 1])]);
     let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(k));
     lab.sign(BEN, &fa);
-    // Cy has not signed yet: nothing closes.
-    let e = lab.view().fork(&fa).unwrap();
-    assert!(!e.complete, "{:?}", e.why);
-    assert_eq!(lab.view().current(&label).unwrap().unwrap().closed, None);
+    let e = with_published(&lab, &[d1, d2]).fork(&fa).unwrap();
+    assert!(!e.complete, "Cy has not signed");
     lab.sign(CY, &fa);
-    let e = lab.view().fork(&fa).unwrap();
+    sign(&mut lab.w, &mut sb, &fa);
+    let e = with_published(&lab, &[d1, d2]).fork(&fa).unwrap();
+    assert!(!e.complete, "side A's successor has not signed for its debt");
+    assert!(e.why.as_deref().is_some_and(|w| w.contains("N13")), "{:?}", e.why);
+    sign(&mut lab.w, &mut sa, &fa);
+    let v = with_published(&lab, &[d1, d2]);
+    let e = v.fork(&fa).unwrap();
     assert!(e.complete, "{:?}", e.why);
     assert_eq!(e.voices, vec![ids[ANA], ids[BEN], ids[CY]]);
-    // By default, by the members' stakes: one quarter against two, the
-    // leftover millionth to the first side (rule 15a).
+    assert_eq!(e.successors[1], Some(tb));
     assert_eq!(e.shares, vec![333_334, 666_666]);
+    assert_eq!(e.kept, vec![(dee, 250_000)]);
     assert!(!e.by_count);
-    assert_eq!(
-        lab.view().fork_transfer(&fa, &k, lab.view().terms(&k).unwrap().stake_on(&work).unwrap().0 as u64).unwrap(),
-        Some(vec![333_334, 666_666])
-    );
+    let idx = v.terms(&k).unwrap().stake_on(&Who::Id(work)).unwrap().0 as u64;
+    assert_eq!(v.fork_transfer(&fa, &k, idx).unwrap(), Some(vec![333_334, 666_666]));
+    // d3, never published, binds nothing and blocked nothing.
+    assert_eq!(v.obligation_binds(&d3).unwrap(), Some(false));
+    assert_eq!(v.debtors(&d1).unwrap(), Some(vec![sb.id]));
+    assert_eq!(v.debtors(&d2).unwrap(), Some(vec![sa.id, sb.id]));
+    drop(v);
     // Closed in Law: what the label's keys sign afterwards counts for
     // nothing; what it signed before stands.
     let after = lab.publish(0);
     lab.sign(ANA, &after);
-    assert_eq!(lab.consent(&after), Consent::Closed { fork: fa });
-    assert!(lab.counts(&before));
-    assert_eq!(lab.view().current(&label).unwrap().unwrap().closed, Some(fa));
-    // Its open offers are withdrawn; its grants end, the agent's deal the
-    // label never acknowledged waiting for a side to take it up.
-    assert_eq!(lab.view().offer_withdrawn(&offer).unwrap(), Some(fa));
-    assert_eq!(lab.view().backing(&deal).unwrap(), Backing::Undetermined { grant: g });
-    // Debts: the one named goes to Ben and Cy's side; the other is owed by both.
-    assert_eq!(lab.view().debtors(&d1).unwrap(), Some(vec![1]));
-    assert_eq!(lab.view().debtors(&d2).unwrap(), Some(vec![0, 1]));
-    // The successors: founding terms naming the original, the fork and a
-    // side, not as a parent; the departed holder keeps their quarter.
-    let successor = |lab: &mut Lab, side: u64, members: Vec<Hash>, keeps_dee: bool| {
-        let t = label_terms(&members, lab.authority.id, lab.keeper.id, &|t| {
-            t.areas.as_mut().unwrap()[0].holders = vec![members[0]];
-            t.areas.as_mut().unwrap()[1].holders = vec![*members.last().unwrap()];
-            t.forked_from = Some(law::ForkedFrom { original: k, fork: fa, side });
-            if keeps_dee {
-                t.departed = Some(vec![DepartedHolder { holder: dee, share: 250_000 }]);
-            }
-        });
-        let by = ids.iter().position(|i| *i == members[0]).unwrap();
-        let x = law_act(&mut lab.w, &mut lab.m[by], law::types::TERMS, t.to_map(), None);
-        for m in &members {
-            let i = ids.iter().position(|j| j == m).unwrap();
-            lab.sign(i, &x);
-        }
-        x
-    };
-    let wrong = successor(&mut lab, 1, vec![ids[BEN], ids[CY]], false);
-    let b = successor(&mut lab, 1, vec![ids[BEN], ids[CY]], true);
-    let genesis = lab.w.genesis_with("side B", vec![own_home()], None, None, Some(vec![law::founding_declaration(&mips().law, &b)]), 3);
-    let e = lab.view().fork(&fa).unwrap();
-    assert_eq!(e.successors[1], vec![(b, Some(genesis.id))], "terms dropping the departed holder are no successor");
-    assert!(e.successors[0].is_empty());
-    let _ = wrong;
+    assert_eq!(with_published(&lab, &[d1, d2]).consent(&after).unwrap(), Consent::Closed { by: fa });
+    assert!(with_published(&lab, &[d1, d2]).consent(&before).unwrap().counts());
+    assert_eq!(with_published(&lab, &[d1, d2]).current(&label).unwrap().unwrap().closed, Some(fa));
+    assert_eq!(with_published(&lab, &[d1, d2]).offer_withdrawn(&offer).unwrap(), Some(fa));
+    assert_eq!(with_published(&lab, &[d1, d2]).backing(&deal).unwrap(), Backing::Undetermined { grant: g });
+    // N14: a wallet that does not read Law pays the withdrawn offer; the
+    // old split service receives it: its open debt to the successors.
+    let r = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
+        rail: spec("a rail Module"),
+        proof: vec![],
+        payer: Some(mor_core::finance::Payer::Identity(spec("a fan"))),
+        payee: svc.id,
+        amount: mor_core::finance::Amount { unit: spec("a unit"), value: 300 },
+        fulfils: offer,
+        previous: None,
+        forward: None,
+        batch: None,
+    });
+    let a = lab.w.everyday_act(&mut svc, mips().finance, 2, r.to_map(), None, None);
+    let stray = lab.w.add(&a);
+    let got = with_published(&lab, &[d1, d2]).stray(&stray).unwrap().unwrap();
+    assert_eq!(got.service, svc.id);
+    assert_eq!(got.owed, vec![(sa.id, 101), (sb.id, 199)]);
+    // N13: the hidden debt surfaces, published by its creditor after the
+    // fork. As written, the fork must assign every debt or take no effect,
+    // and a hidden one is owed by every successor: the two disagree here
+    // (flaw D1). The core refuses to choose: the fork shows as unsettled.
+    let mut v = with_published(&lab, &[d1, d2]);
+    v.published.insert(d3);
+    let e = v.fork(&fa).unwrap();
+    assert!(!e.complete && e.unassigned == vec![d3], "{:?}", e.why);
+    assert_eq!(v.current(&label).unwrap().unwrap().closed, None);
 }
 
-/// 3.9 (F121, B): what is not a fork. A member on no side, someone on a side
-/// who is no member, or a fork naming an agreement not in force, closes
-/// nothing.
+/// Freeze suite v21, 3.9d (F124 N1): under a constitutional rule of two of
+/// three, Ana and Ben fork without Cy, who signs no side: no seat in any
+/// successor, and a departed holder of each at their percentage. Without
+/// the rule met, no fork.
+#[test]
+fn a_member_who_signs_no_side() {
+    let mut lab = Lab::new(&|t| {
+        t.constitutional = Some(Rule::Threshold(2));
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 250_000), (p[CY], 250_000)])]);
+    });
+    let f = lab.founding;
+    let ids = lab.ids();
+    let label = lab.c[0].id;
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    let kept = vec![(ids[CY], 250_000)];
+    let (sa, ta) = found_successor(&mut lab, "side A", &[ANA], &kept, label);
+    let (sb, _) = found_successor(&mut lab, "side B", &[BEN], &kept, label);
+    // A successor that drops Cy is no successor.
+    let (sbad, _) = found_successor(&mut lab, "side B without Cy", &[BEN], &[], label);
+    let (binding, t0) = (lab.c[0].binding, tip(&lab.c[0]));
+    let x = |succ: Hash| law::Fork {
+        agreement: f,
+        collective: label,
+        chain_act: binding,
+        tips: vec![t0],
+        sides: vec![law::Side { successor: sa.id, members: vec![ids[ANA]] }, law::Side { successor: succ, members: vec![ids[BEN]] }],
+        shares: vec![],
+        debts: vec![],
+    };
+    let bad = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x(sbad.id).to_map(), obj(f));
+    lab.sign(BEN, &bad);
+    let e = lab.view().fork(&bad).unwrap();
+    assert!(!e.complete && e.why.as_deref().is_some_and(|w| w.contains("N4")), "{:?}", e.why);
+    let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x(sb.id).to_map(), obj(f));
+    let e = lab.view().fork(&fa).unwrap();
+    assert!(!e.complete, "Ben has not signed: Ana alone does not meet two of three");
+    lab.sign(BEN, &fa);
+    let e = lab.view().fork(&fa).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    assert_eq!(e.leaving, vec![ids[CY]]);
+    assert_eq!(e.kept, vec![(ids[CY], 250_000)]);
+    assert_eq!(e.successors[0], Some(ta));
+    // By the joining members' stakes: Ana's half against Ben's quarter.
+    assert_eq!(e.shares, vec![666_667, 333_333]);
+    assert_eq!(lab.view().current(&label).unwrap().unwrap().closed, Some(fa));
+    let after = lab.publish(0);
+    lab.sign(ANA, &after);
+    assert!(!lab.counts(&after));
+}
+
+/// 3.9 (F121, B; F124 N4): what is not a fork. A member whose voice remains
+/// left off a fork under every-party, a stranger on a side, a fork naming
+/// an agreement not in force, closes nothing; with no stakes written, each
+/// member counts alike (N3); two complete forks are concurrent acts on the
+/// agreement chain, and the status quo stands.
 #[test]
 fn what_is_not_a_fork() {
     let mut lab = Lab::new(&|_| {});
@@ -2981,39 +3208,31 @@ fn what_is_not_a_fork() {
     let p = lab.publish(0);
     lab.sign(ANA, &p);
     let label = lab.c[0].id;
-    let cases: Vec<(&str, Vec<Vec<Hash>>, Hash)> = vec![
-        ("a member on no side", vec![vec![ids[ANA]], vec![ids[BEN]]], f),
-        ("a stranger on a side", vec![vec![ids[ANA], ids[BEN]], vec![ids[CY], spec("a stranger")]], f),
-        ("an agreement not in force", vec![vec![ids[ANA], ids[BEN]], vec![ids[CY]]], spec("another agreement")),
+    let (sa, _) = found_successor(&mut lab, "side A", &[ANA, BEN], &[], label);
+    let (sb, _) = found_successor(&mut lab, "side B", &[CY], &[], label);
+    let side = |s: &Person, m: Vec<Hash>| law::Side { successor: s.id, members: m };
+    let cases: Vec<(&str, Vec<law::Side>, Hash)> = vec![
+        ("a member on no side", vec![side(&sa, vec![ids[ANA]]), side(&sb, vec![ids[BEN]])], f),
+        ("a stranger on a side", vec![side(&sa, vec![ids[ANA], ids[BEN]]), side(&sb, vec![ids[CY], spec("a stranger")])], f),
+        ("an agreement not in force", vec![side(&sa, vec![ids[ANA], ids[BEN]]), side(&sb, vec![ids[CY]])], spec("another agreement")),
     ];
     for (why, sides, ag) in cases {
-        let x = law::Fork {
-            agreement: ag,
-            collective: label,
-            chain_act: lab.c[0].binding,
-            tips: vec![tip(&lab.c[0])],
-            sides,
-            shares: vec![],
-            debts: vec![],
-        };
+        let x = law::Fork { agreement: ag, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], sides, shares: vec![], debts: vec![] };
         let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(ag));
         for i in [BEN, CY] {
             lab.sign(i, &fa);
         }
         let e = lab.view().fork(&fa).unwrap();
-        assert!(!e.complete, "{why}");
-        assert!(e.why.is_some(), "{why}");
+        assert!(!e.complete && e.why.is_some(), "{why}");
     }
     assert!(lab.counts(&p));
     assert_eq!(lab.view().current(&label).unwrap().unwrap().closed, None);
-    // The members' count is the default where the label has no stakes in
-    // itself (reading, Law draft 10, section 6).
     let x = law::Fork {
         agreement: f,
         collective: label,
         chain_act: lab.c[0].binding,
         tips: vec![tip(&lab.c[0])],
-        sides: vec![vec![ids[ANA], ids[BEN]], vec![ids[CY]]],
+        sides: vec![side(&sa, vec![ids[ANA], ids[BEN]]), side(&sb, vec![ids[CY]])],
         shares: vec![],
         debts: vec![],
     };
@@ -3024,27 +3243,121 @@ fn what_is_not_a_fork() {
     assert!(e.complete, "{:?}", e.why);
     assert!(e.by_count);
     assert_eq!(e.shares, vec![666_667, 333_333]);
+    assert_eq!(lab.view().current(&label).unwrap().unwrap().closed, Some(fa));
+    // A second complete fork, signed concurrently: the status quo stands.
+    let z = law::Fork { sides: vec![side(&sb, vec![ids[CY]]), side(&sa, vec![ids[ANA], ids[BEN]])], ..x };
+    let fb = law_act(&mut lab.w, &mut lab.m[CY], law::types::FORK, z.to_map(), obj(f));
+    lab.sign(ANA, &fb);
+    lab.sign(BEN, &fb);
+    assert!(lab.view().fork(&fb).unwrap().complete);
+    assert_eq!(lab.view().endings(&label).unwrap().len(), 2);
+    assert_eq!(lab.view().current(&label).unwrap().unwrap().closed, None);
+    assert!(lab.counts(&p));
 }
 
-/// Freeze suite v21, 3.9c (F121, shape D): a release to the public domain
-/// ends the claim, names the work's history and publishes its content key;
-/// it needs every stake holder's signature, unless the founding terms say
-/// otherwise; a later claim is shown as made after it.
+/// Freeze suite v21, 3.9c (F121 shape D, F124 N7, N8, N12): a release to
+/// the public domain ends the claim, names the work's history and publishes
+/// its content key; it needs every direct owner's signature, unless the
+/// release rule says otherwise; a clone every owner signs changes that
+/// rule; a claim it does not name is shown beside it.
 #[test]
 fn a_work_is_released_to_the_public_domain() {
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut cy = w.genesis("cy", vec![own_home()], None, None);
     let work = spec("a work");
-    let deal = |w: &mut World, ana: &mut Person, ben: &mut Person, rule: Option<Rule>| {
+    let terms = |ana: &Person, ben: &Person, cy: &Person, rule: Option<Rule>| Terms {
+        parties: vec![ana.id, ben.id],
+        text: "Ana and Ben share a work with Cy.".into(),
+        cmips: vec![],
+        keepers: None,
+        field4: Field4::Rule(Rule::All),
+        clone: Rule::All,
+        time: None,
+        abandonment: None,
+        parent: None,
+        grammar: None,
+        arbitrators: None,
+        split_grant: None,
+        extensions: None,
+        succession: None,
+        constitutional: None,
+        areas: None,
+        area_words: None,
+        chain: None,
+        departed: None,
+        stakes: Some(vec![law::Stake {
+            object: Who::Id(work),
+            holders: vec![(Who::Id(ana.id), 500_000), (Who::Id(ben.id), 400_000), (Who::Id(cy.id), 100_000)],
+        }]),
+        forked_from: None,
+        release_rule: rule,
+    };
+    let t = terms(&ana, &ben, &cy, None);
+    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let claim = law_act(&mut w, &mut ana, law::types::WORK_CLAIM, vec![(Value::Uint(0), Value::Bytes(work.to_vec()))], None);
+    let release = law::Release { work, stakes: vec![(d, 0)], claims: vec![claim], keys: vec![(spec("a publication carrying it"), vec![7; 32])], timed: None };
+    let r = law_act(&mut w, &mut ana, law::types::RELEASE, release.to_map(), obj(d));
+    sign(&mut w, &mut ben, &r);
+    let e = view(&w).release(&r).unwrap();
+    assert!(!e.complete, "Cy, an owner of a tenth, has not signed");
+    sign(&mut w, &mut cy, &r);
+    let e = view(&w).release(&r).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    assert_eq!(e.signed, vec![ana.id, ben.id, cy.id]);
+    assert_eq!(e.ended(None), Some(true));
+    // N12: the claim it names is history; a claim it does not name is
+    // shown beside it, openly contested.
+    assert_eq!(view(&w).claim_after_release(&claim, &work).unwrap(), None);
+    let other = law_act(&mut w, &mut ben, law::types::WORK_CLAIM, vec![(Value::Uint(0), Value::Bytes(work.to_vec()))], None);
+    assert_eq!(view(&w).claim_after_release(&other, &work).unwrap(), Some(r));
+    // N8: a clone changing the release rule needs every owner, Cy too.
+    let mut c = terms(&ana, &ben, &cy, Some(Rule::Threshold(2)));
+    c.parent = Some(d);
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
+    let k = law_act(&mut w, &mut ana, law::types::TERMS, c.to_map(), obj(d));
+    sign(&mut w, &mut ana, &k);
+    sign(&mut w, &mut ben, &k);
+    assert_eq!(view(&w).agreement(&k).unwrap().exists, Some(false), "Cy has not signed");
+    sign(&mut w, &mut cy, &k);
+    assert_eq!(view(&w).agreement(&k).unwrap().exists, Some(true));
+    // Under the clone's rule, two owners release.
+    let release2 = law::Release { stakes: vec![(k, 0)], ..release.clone() };
+    let r2 = law_act(&mut w, &mut ana, law::types::RELEASE, release2.to_map(), obj(k));
+    sign(&mut w, &mut ben, &r2);
+    assert!(view(&w).release(&r2).unwrap().complete);
+    // A release that keeps its key private publishes nothing: incomplete.
+    let p = w.private_act(&mut ana, mips().law, law::types::RELEASE, release2.to_map(), obj(k), vec![ben.id]);
+    assert!(!view(&w).release(&p).unwrap().complete);
+    let bad = law::Release { work: spec("another work"), ..release2.clone() };
+    let r3 = law_act(&mut w, &mut ana, law::types::RELEASE, bad.to_map(), obj(k));
+    assert!(!view(&w).release(&r3).unwrap().complete);
+    let r4 = law_act(&mut w, &mut ana, law::types::RELEASE, release2.to_map(), None);
+    assert!(view(&w).release(&r4).is_err());
+}
+
+/// Freeze suite v21, 3.9e (F124 N11): a timed release names a future point
+/// on the agreement's time reference and the identity that delivers the
+/// content key then; the claim ends there, checkably. Without a time
+/// reference, no timed release.
+#[test]
+fn a_timed_release() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let keeper = w.genesis("a key keeper", vec![own_home()], None, None);
+    let work = spec("a work");
+    let deal = |w: &mut World, ana: &mut Person, time: bool| {
         let t = Terms {
-            parties: vec![ana.id, ben.id],
-            text: "Ana and Ben share a work.".into(),
+            parties: vec![ana.id],
+            text: "Ana's work.".into(),
             cmips: vec![],
             keepers: None,
             field4: Field4::Rule(Rule::All),
             clone: Rule::All,
-            time: None,
+            time: time.then(|| (spec("a block height reference"), Value::Uint(0))),
             abandonment: None,
             parent: None,
             grammar: None,
@@ -3057,52 +3370,108 @@ fn a_work_is_released_to_the_public_domain() {
             area_words: None,
             chain: None,
             departed: None,
-            stakes: Some(vec![law::Stake { object: work, holders: vec![(ana.id, 600_000), (ben.id, 400_000)] }]),
+            stakes: Some(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::Id(ana.id), 1_000_000)] }]),
             forked_from: None,
-            release_rule: rule,
+            release_rule: None,
         };
         let x = law_act(w, ana, law::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
-        sign(w, ben, &x);
         x
     };
-    let d = deal(&mut w, &mut ana, &mut ben, None);
-    let claim = law_act(&mut w, &mut ana, law::types::WORK_CLAIM, vec![(Value::Uint(0), Value::Bytes(work.to_vec()))], None);
-    let release = law::Release {
-        work,
-        stakes: vec![(d, 0)],
-        claims: vec![claim],
-        keys: vec![(spec("a publication carrying it"), vec![7; 32])],
-    };
-    let r = law_act(&mut w, &mut ana, law::types::RELEASE, release.to_map(), obj(d));
-    let e = view(&w).release(&r).unwrap();
-    assert!(!e.complete, "Ben has not signed: majority stake is not enough");
-    assert_eq!(view(&w).released(&work).unwrap(), None);
-    sign(&mut w, &mut ben, &r);
+    let d = deal(&mut w, &mut ana, true);
+    let rel = law::Release { work, stakes: vec![(d, 0)], claims: vec![], keys: vec![], timed: Some((Value::Uint(900_000), keeper.id)) };
+    let r = law_act(&mut w, &mut ana, law::types::RELEASE, rel.to_map(), obj(d));
     let e = view(&w).release(&r).unwrap();
     assert!(e.complete, "{:?}", e.why);
-    assert_eq!(e.signed, vec![ana.id, ben.id]);
-    // The claim it names is history; a later claim is shown as made after.
-    assert_eq!(view(&w).claim_after_release(&claim, &work).unwrap(), None);
-    let late = law_act(&mut w, &mut ben, law::types::WORK_CLAIM, vec![(Value::Uint(0), Value::Bytes(work.to_vec()))], None);
-    assert_eq!(view(&w).claim_after_release(&late, &work).unwrap(), Some(r));
-    // Founding terms may say otherwise: one holder suffices here.
-    let mut w2 = World::new();
-    let mut ana2 = w2.genesis("ana", vec![own_home()], None, None);
-    let mut ben2 = w2.genesis("ben", vec![own_home()], None, None);
-    let d2 = deal(&mut w2, &mut ana2, &mut ben2, Some(Rule::Threshold(1)));
-    let release2 = law::Release { stakes: vec![(d2, 0)], ..release.clone() };
-    let r2 = law_act(&mut w2, &mut ana2, law::types::RELEASE, release2.to_map(), obj(d2));
-    assert!(view(&w2).release(&r2).unwrap().complete);
-    // A release that keeps its key private publishes nothing: incomplete.
-    let p = w2.private_act(&mut ana2, mips().law, law::types::RELEASE, release2.to_map(), obj(d2), vec![ben2.id]);
-    assert!(!view(&w2).release(&p).unwrap().complete);
-    // Naming a stake in another work, or naming no agreement in objects, fails.
-    let bad = law::Release { work: spec("another work"), ..release2.clone() };
-    let r3 = law_act(&mut w2, &mut ana2, law::types::RELEASE, bad.to_map(), obj(d2));
-    assert!(!view(&w2).release(&r3).unwrap().complete);
-    let r4 = law_act(&mut w2, &mut ana2, law::types::RELEASE, release2.to_map(), None);
-    assert!(view(&w2).release(&r4).is_err());
+    assert_eq!(e.ended(Some(false)), Some(false), "before its point, the claim stands");
+    assert_eq!(e.ended(Some(true)), Some(true));
+    assert_eq!(e.ended(None), None, "undetermined as the time reference is");
+    let d2 = deal(&mut w, &mut ana, false);
+    let rel2 = law::Release { stakes: vec![(d2, 0)], ..rel };
+    let r2 = law_act(&mut w, &mut ana, law::types::RELEASE, rel2.to_map(), obj(d2));
+    let e = view(&w).release(&r2).unwrap();
+    assert!(!e.complete && e.why.as_deref().is_some_and(|w| w.contains("N11")));
+    // An immediate release still carries its keys.
+    let mut bare = law::Release { timed: None, ..rel2 }.to_map();
+    bare.retain(|(k, _)| *k != Value::Uint(3));
+    let x = law_act(&mut w, &mut ana, law::types::RELEASE, bare, obj(d2));
+    assert!(view(&w).release(&x).is_err());
+}
+
+/// Freeze suite v21, 3.9f (F124 N7, N9): a collective that owns a work
+/// releases it by its own rules, across the lanes a release touches (here
+/// the Finance lane's holder); then, holding nothing, it closes by a
+/// closing act signed under the constitutional rule; its keys count for
+/// nothing in Law after the line. A closing while it still holds the work,
+/// or with a debt unpaid, does not take effect.
+#[test]
+fn a_collective_releases_its_work_and_closes() {
+    let work = spec("the label's work");
+    let mut lab = Lab::new(&|t| t.stakes = stakes(vec![owns(work)]));
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let closing = |lab: &Lab| law::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])] };
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    let x = closing(&lab);
+    let early = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), obj(f));
+    lab.sign(BEN, &early);
+    lab.sign(CY, &early);
+    let e = lab.view().closing(&early).unwrap();
+    assert!(!e.complete);
+    assert_eq!(e.holds, vec![(f, 0)]);
+    // The release: the label signs it; it needs its Finance lane too (N7).
+    let rel = law::Release { work, stakes: vec![(f, 0)], claims: vec![], keys: vec![(spec("its publication"), vec![9; 32])], timed: None };
+    let r = {
+        let a = lab.w.everyday_act(&mut lab.c[0], mips().law, law::types::RELEASE, rel.to_map(), obj(f), None);
+        lab.w.add(&a)
+    };
+    assert!(!lab.view().release(&r).unwrap().complete, "the Finance lane's holder has not signed");
+    lab.sign(BEN, &r);
+    let e = lab.view().release(&r).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    assert_eq!(e.holders, vec![label]);
+    // A debt unpaid: no closing (reading).
+    let d = obligation(&mut lab, "a supplier", 100);
+    let x = closing(&lab);
+    let c1 = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), obj(f));
+    lab.sign(BEN, &c1);
+    lab.sign(CY, &c1);
+    let mut v = lab.view();
+    v.published.insert(d);
+    let e = v.closing(&c1).unwrap();
+    assert!(e.holds.is_empty());
+    assert_eq!(e.open_debts, vec![d]);
+    assert!(!e.complete);
+    drop(v);
+    // Paid: the closing takes effect; the label's later acts count for
+    // nothing; what it did before stands.
+    let rc = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
+        rail: spec("a rail Module"),
+        proof: vec![],
+        payer: Some(mor_core::finance::Payer::Identity(label)),
+        payee: spec("a supplier"),
+        amount: mor_core::finance::Amount { unit: spec("a unit"), value: 100 },
+        fulfils: d,
+        previous: None,
+        forward: None,
+        batch: None,
+    });
+    let mut supplier = lab.w.genesis("the supplier", vec![own_home()], None, None);
+    let a = lab.w.everyday_act(&mut supplier, mips().finance, 2, rc.to_map(), None, None);
+    lab.w.add(&a);
+    let mut v = lab.view();
+    v.published.insert(d);
+    let e = v.closing(&c1).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    assert_eq!(v.current(&label).unwrap().unwrap().closed, Some(c1));
+    drop(v);
+    let after = lab.publish(0);
+    lab.sign(ANA, &after);
+    let mut v = lab.view();
+    v.published.insert(d);
+    assert_eq!(v.consent(&after).unwrap(), Consent::Closed { by: c1 });
+    assert!(v.consent(&p).unwrap().counts());
 }
 
 /// Reading 7, corrected (F121): for a party whose voice was removed before

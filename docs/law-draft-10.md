@@ -1,6 +1,6 @@
 # Law draft 10, and the seven rules of the core pass
 
-*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3, and again for F120 and F121), not merged. Section 5 writes in F120 and F121; section 6 writes in F121's answers, F122 and F123, with main merged in again first. Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
+*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3, and again for F120 and F121), not merged. Section 5 writes in F120 and F121; section 6 writes in F121's answers, F122 and F123, with main merged in again first; section 7 writes in F124, main merged in a third time. Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
 
 ## 1. What Law draft 10 changes
 
@@ -394,3 +394,106 @@ Nothing it uses changed: this pass touched Law only (the core library's Law modu
 3. Flaw P2.
 4. Questions N1 to N14, and the formats made exact.
 5. Approval of Law draft 10 with the core pass drafts; then the human regtest test on the Mac.
+
+## 7. F124 written in
+
+*Main merged in first (the findings log, F124). Law draft 10, core v21, freeze suite v21 and one page v6 revised in place; the core library, its WebAssembly bindings, the repo client's payloads and the collective client built and tested. Nothing is approved.*
+
+### What changed, in plain words
+
+**A collective can name itself from birth (S1).** In a collective's own terms, "null" means "this collective". So the founding terms can already say how the members share its income, which works it owns, and which split service it hires, before the collective exists.
+*Precisely:* terms field 7 is `[+ [ who, [+ [ who, share ]] ] ]` with `who = hash / null`, null only in terms carrying a key grammar, never a collective holding a stake in itself; grant field 8, `null`, makes the grantor "the collective whose founding terms name this grant". *Reading:* the collective is always written null in its own terms; a clone writing its own hash instead is invalid.
+
+**Removing a member takes only their seat (M1).** When a member is removed, the seat part of their succession plan goes with them, with no extra power needed; the part that says who inherits their stake stays, since the stake stays.
+*Precisely:* rule 44b: a change of field 16 that only drops keys 2 and 3 of each removed party's plan (the plan staying for its stake part, or going where it has none) is no change of its own. A departed holder's plan carries stake successors only.
+*Example:* under two of three, Ana and Ben remove Cy, whose plan names an heir and a seat successor. Their two signatures suffice; the heir stays named for Cy's stake.
+
+**Two ways to split money (P2).** Either a split service receives and divides (two flows), or the payer's wallet pays each holder directly by the stakes (one flow). For a split service, its own signed vault must now carry every entry of the owners' vault, as its pointer carries every address.
+*Precisely:* rule 18; `LawView::pointer_check` compares vaults too (`vault_missing`); `LawView::payer_split` gives what a wallet pays each holder, following a holder that is a collective splitting payer-side to its own holders.
+
+**The fork (N1 to N4, N13, N14).** Each side first founds its own new collective. The fork act then names them. It is signed as the group's constitution requires (everyone, by default). Where the founders chose a lower rule, someone who signs no side gets no seat in any new collective but keeps their share in each, as a departed holder. Every debt must be handed to a successor (or several jointly), and each successor signs for its debts. Every hire ends, the old split service's too; money follows the work's new owners, and anything the old service still receives it owes them.
+*Precisely:* type 19: sides are `[ successor, [+ member] ]`; debts are `[ obligation, [+ side] ]`; completeness checks the constitutional rule (rule 44d counting), each successor's founding terms (parties exactly the side; every departed holder and every member on no side kept at their share in field 7 and listed in field 22), every binding obligation before the line assigned, and each owing successor's signature act; field 23 is now just the original collective, a back-link. Two complete forks (or closings) of one collective are concurrent: neither ends it. `LawView::stray` gives a stray payment's debt to the successors.
+
+**The stakes decide the money (N5, N10).** The departed entry now lists only who left; the stakes say what everyone is paid. A split must pay each holder exactly their share of what it pays their stake, within one smallest unit per payout, so a fee always falls on everyone alike. Any difference, either way, is shown; the old one-direction "equal treatment" check is gone.
+*Precisely:* field 22 is `[+ hash]`, each a holder of the stake in the collective itself; rule 46 now protects every holder in field 7, member or not; `SplitEval::mismatched` replaces `unequal`.
+
+**The chain's period (N6).** It runs from a signed request to the judge by someone with standing; a late answer counts for nothing. Written as rule, no longer a reading.
+
+**Releases (N7, N8, N11, N12).** A release needs every direct owner of the work. If an owner is a collective, the collective decides by its own rules, and needs the holders of its Envelope, Finance and Law lanes. A clone every owner signs may change the release rule. A release may name a future date, and who hands out the key then. A competing claim stays shown beside the release.
+*Precisely:* type 5 field 4 `[ point, keeper ]`, field 3 then optional; rule 17; a release or a collective's signature on one is reached by the lanes of layers 1, 2 and 3; field 24 is compared, in no area (the clone rule), and a clone changing it is a draft until every holder of every stake signs.
+
+**Closing (N9).** A group that holds nothing ends by a closing act, signed under its constitutional rule; after its line, its keys count for nothing in Law.
+*Precisely:* type 20, `{ agreement, collective, chain act, kept tips }`; refused while the collective still holds a stake (unless released with its consent before the line) or, a reading, owes a binding debt not fulfilled by receipts.
+
+**Debts (N13).** A collective's private acts are sealed to every member (the collective client does so for its debts). A collective's debt binds it only once its outside is public. Where a verifier found it is a fact the verifier states (`LawView::published`), as it states a keeper's log.
+
+The core names no specific use: the new text speaks of collectives, members, holders, works, services and debts only.
+
+### One flaw (not worked around)
+
+**Flaw D1. A debt that surfaces after a fork falls under two rules.** *Plain words:* N13 says a fork that leaves a debt unassigned does not take effect; it also says a debt someone hid is owed by every successor once it surfaces. A hidden debt binds nobody while hidden; but when its creditor publishes it after the fork, a verifier now holds a binding debt of the old collective, made before the fork, that the fork never assigned. MOR has no clock, so nobody can tell whether it was public before the fork. The first rule says the fork never happened; the second says the fork stands and both new collectives owe it.
+*Example:* Ana, Ben and Cy fork. Before it, Cy, holding the collective's everyday key, signed in its name a debt of 50 to a friend, sealed to nobody else, never published. The fork completes. A month later the friend publishes the debt. Under the first rule, the old collective was never closed: every act of the new collectives about the old works rests on nothing, and Cy and the friend could do this on purpose to undo any fork. Under the second, the fork stands and the new collectives owe 50 jointly.
+- (a) Law never undoes a complete fork for a debt: assigning every debt is the members' clients' duty (each refuses to sign a fork leaving a debt it holds unassigned), and any debt a fork leaves unassigned is owed by every successor jointly. *In the example:* the fork stands; both new collectives owe 50; the fork act shows who signed it.
+- (b) A debt sealed to every member (its outside lists them all) blocks the fork until assigned; any other debt is a hidden one, owed by every successor. *In the example:* Cy's debt was sealed to nobody else: hidden, owed by both. But a debt addressed to all and never delivered could still be revealed late to undo a fork.
+- (c) As written: an unassigned debt, whenever it surfaces, undoes the fork. *In the example:* the fork never took effect.
+**Lean: (a).** It keeps both decisions' purpose (no debt vanishes; members must face every debt), uses what every verifier can check, and closes the door on undoing a fork by publishing late.
+*Meanwhile:* the core shows a fork leaving a binding debt unassigned as unsettled (`ForkEval::unassigned`, "flaw D1"), closing nothing; freeze step 3.9g shows the case.
+
+### Questions the writing needed, one at a time
+
+**D2. How does a verifier know a debt's outside is public?** "Published on relays" is not written in the act.
+*Example:* a verifier receives a collective's debt in a private message from the creditor, never seeing it on a relay.
+- (a) A fact the verifier states: it found the act at a relay (`published`), as it states which keepers recorded what. *The debt counts for that verifier only once it finds it on a relay.*
+- (b) A relay's signed statement that it holds the act (Envelope's relay commitment, type 2). *Provable to others; heavier, and any relay, the creditor's own included, will do.*
+**Lean: (a)**, built so; (b) can come later without changing the rule.
+
+**D3. How does a collective choose its split model?**
+- (a) By naming a split service (field 14) or not: no service means payer-side splitting. *Built so.*
+- (b) A field saying which.
+**Lean: (a).** Rule 18 already turns on whether a service is named.
+
+**D4. Which power does a clone changing the release rule need, besides every owner?**
+- (a) The clone rule, the release rule lying in no area. *Built so.*
+- (b) The constitutional change rule.
+**Lean: (a).** Every owner signs anyway; the release rule decides nothing about who decides.
+
+**D5. Does a closing need the collective's debts paid?** N9 says "holds nothing".
+*Example:* the collective released its last work but still owes a supplier 100.
+- (a) Yes: a closing does not take effect while a binding debt is not fulfilled by receipts. *Built so.*
+- (b) No: the debt stays open, owed by a closed collective.
+**Lean: (a).** Otherwise closing would be a way out of a debt.
+
+**D6. Who signs a "this collective" grant before the collective exists?**
+- (a) Any founder; the core does not check which, the grant counting through the founding terms everyone signs. *Built so.*
+- (b) The grantee, accepting the mandate.
+**Lean: (a).**
+
+### Readings taken, to confirm
+
+1. S1: the collective is written null in its own terms, never by its hash (one meaning, one encoding).
+2. M1: a departed holder's stake plan changes only with that holder's signature as well; a removed member keeps a plan only as a departed holder, so with a share of field 7.
+3. N1: with no stakes written, a member on no side keeps each member's equal share.
+4. N4: a successor fits its side when its founding terms (as its genesis declares them) have exactly that side's members as parties and keep each departed holder at exactly their share; field 23 names the original collective, not its agreement, since the agreement may still change before the fork; any two complete forks or closings of one collective are concurrent.
+5. N7: a release always touches Envelope, Finance and Law; a lane that does not exist is skipped.
+6. N9: "holds nothing" is judged on the latest versions of agreements a verifier holds; a stake sold by a transfer (type 4, still open) is not seen; a closing also withdraws offers.
+7. N10: nobody is paid a whole unit or more below their exact share; nobody as many units above it as the stake has holders.
+8. N11: the identity delivering a timed release's keys is not a keeper in rule 7's sense.
+9. N14: a stray payment is owed to the successors in the fork's default shares.
+
+### Code and tests
+
+- **Core library.** `Who` (null, this collective) in stakes; grant field 8; field 22 as a list; field 23 as the original; M1 in the tiers; rule 46 for every holder (`must_sign`); field 24 changeable; `pointer_check` with vaults; `payer_split`; the fork rewritten (successors, constitutional rule, members on no side, debts); `closing` (type 20) and `endings`, `closed_by` now any ending, concurrent ones ending nothing; `obligation_binds` and `published`; `debtors` naming successors; `stray`; the split's `mismatched`; the release by direct owners, a collective through its lanes, timed releases (`ReleaseEval::ended`). WebAssembly: `lawFork`, `lawSplit`, `lawRelease`, `lawPointerCheck` and `readTerms` changed; `lawClosing`, `lawPayerSplit`, `lawObligationBinds`, `lawDebtors`, `lawCollectiveOf` added.
+- **Collective client.** Founding with each member's share (S1); stakes written with null; the pointer check naming vault entries; splits checked for every payout matching its stake; a debt of the collective, sealed to the creditor and every member; a release signed by the collective itself; **the fork, founding each side's successor first and naming them in the fork act, every published debt assigned (jointly by default) and each owing successor signing**, a member on no side kept as a departed holder; a closing. The page gains a "no side" choice, a debt form and a closing button.
+- **New tests:** core: founding terms with stakes and a null grant (3.7v); a removal completing under two of three (M1); every payout matching its stake (3.7t, rewritten); the pointer check with a vault (3.7r, P2); payer-side splitting; the fork with successors, debts, a stray payment and the hidden debt shown as unsettled (3.9, 3.9g); a member on no side (3.9d); what is not a fork, with concurrent forks; a release with a non-party owner and a clone changing the rule (3.9c); a timed release (3.9e); a collective releasing its work and closing (3.9f). Client: the end-to-end test of "Money and endings" rewritten to all of the above against real relays.
+- **Results:** Rust workspace **284 passed, 0 failed** (279 before, plus 5). Clients genesis 14, repo 11, longform 15, barebone 9, reader 16, manage 7, collective 19, connector 12, desk 8: **111 passed**, every one typechecking.
+
+### The Mac regtest test
+
+Nothing it uses changed: this pass touched Law only (the core library's Law module, its WebAssembly bindings, the repo client's Law payloads and the collective client), never Finance, the payment cMIP, the Lightning Module or the harness. It does not need re-running for this pass; the steps of `docs/core-pass-v21.md`, section 5, stand for the approval run.
+
+### Waiting on Nobody, allegedly, in order
+
+1. Flaw D1.
+2. Questions D2 to D6.
+3. The nine readings above.
+4. Approval of Law draft 10 with the core pass drafts; then the human regtest test on the Mac.

@@ -1270,6 +1270,10 @@ struct SpecsIn {
     ext_layers: std::collections::BTreeMap<String, Vec<u64>>,
     #[serde(default)]
     keeper_logs: std::collections::BTreeMap<String, Vec<String>>,
+    /// Obligations whose outside the client found published on a relay
+    /// (F124 N13): a collective's obligation binds only once public.
+    #[serde(default)]
+    published: Vec<String>,
 }
 
 impl SpecsIn {
@@ -1297,6 +1301,9 @@ impl SpecsIn {
         for (k, log) in &self.keeper_logs {
             view.keeper_logs
                 .insert(unhex(k)?, log.iter().map(|x| unhex(x)).collect::<R<_>>()?);
+        }
+        for x in &self.published {
+            view.published.insert(unhex(x)?);
         }
         Ok(view)
     }
@@ -1513,20 +1520,25 @@ struct TermsOut {
     split_grant: Option<String>,
     extensions: Option<Vec<String>>,
     succession: Option<Vec<SuccessionOut>>,
-    /// Stakes (field 7): each object, and its holders' shares in millionths.
-    stakes: Vec<(String, Vec<(String, u64)>)>,
-    /// The departed members entry (field 22): who left, and their stake.
-    departed: Vec<(String, u64)>,
+    /// Stakes (field 7): each object, and its holders' shares in millionths;
+    /// null names this collective (S1).
+    stakes: Vec<StakeOut>,
+    /// The departed members entry (field 22): who left (N5).
+    departed: Vec<String>,
     /// The chain of judgment (field 21): each judge ("task N", an identity,
     /// "split service"), and those that take over with their periods.
     chain: Vec<(String, Vec<(String, u64)>)>,
-    /// Forked from (field 23): the original agreement, the fork act, the side.
-    forked_from: Option<(String, String, u64)>,
+    /// Forked from (field 23): the original collective, a back-link (N4).
+    forked_from: Option<String>,
     /// The release rule (field 24); null: every holder.
     release_rule: Option<RuleOut>,
     /// Why the terms fail the checks that need no other act, or null.
     problem: Option<ProblemOut>,
 }
+
+/// A stake as `readTerms` shows it: its object and holders, null for this
+/// collective (S1).
+type StakeOut = (Option<String>, Vec<(Option<String>, u64)>);
 
 /// Read a terms payload (Law type 0) as the core library decodes it, field
 /// by field, so a client can say in plain words what signing it means from
@@ -1638,9 +1650,9 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             .stakes
             .iter()
             .flatten()
-            .map(|x| (hx(&x.object), pairs(&x.holders)))
+            .map(|x| (x.object.id().map(hx), x.holders.iter().map(|(h, n)| (h.id().map(hx), *n)).collect()))
             .collect(),
-        departed: t.departed.iter().flatten().map(|d| (hx(&d.holder), d.share)).collect(),
+        departed: t.departed.iter().flatten().map(hx).collect(),
         chain: t
             .chain
             .iter()
@@ -1654,7 +1666,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 (j, l.next.iter().map(|(h, p)| (hx(h), *p)).collect())
             })
             .collect(),
-        forked_from: t.forked_from.as_ref().map(|f| (hx(&f.original), hx(&f.fork), f.side)),
+        forked_from: t.forked_from.as_ref().map(hx),
         release_rule: t.release_rule.as_ref().map(rule_out),
         problem: t.check(&s.mips()?).err().map(|e| problem(&e)),
     })
@@ -2046,11 +2058,11 @@ impl Verifier {
         };
         match c {
             law::Consent::NotCollective => o.kind = "not-collective".into(),
-            law::Consent::Closed { fork } => {
+            law::Consent::Closed { by } => {
                 o.kind = "closed".into();
                 o.reason = Some(format!(
-                    "the collective was closed by the fork {}: what its keys sign after it counts for nothing in Law (rule 47a)",
-                    hx(&fork)
+                    "the collective was ended by its fork or closing {}: what its keys sign after it counts for nothing in Law (rule 47a)",
+                    hx(&by)
                 ));
             }
             law::Consent::Broken { reason } => {
@@ -2165,10 +2177,11 @@ impl Verifier {
         })
     }
 
-    /// A fork of a collective, judged (rule 47a, F121 shape B): whether it
-    /// closes the original, the members whose voice remains and who signed,
-    /// each side's default share, the departed holders who keep their share
-    /// in every successor, and each side's successors held.
+    /// A fork of a collective, judged (rule 47a, F121 shape B, F124):
+    /// whether it closes the original, the members whose voice remains,
+    /// who signed and who leaves on no side, each side's default share, who
+    /// every successor keeps as a departed holder, each side's successor's
+    /// founding agreement where it fits, and debts it leaves unassigned.
     #[wasm_bindgen(js_name = lawFork)]
     pub fn law_fork(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2179,25 +2192,85 @@ impl Verifier {
             why: e.why.clone(),
             agreement: hx(&e.fork.agreement),
             collective: hx(&e.fork.collective),
-            sides: e.fork.sides.iter().map(|s| s.iter().map(hx).collect()).collect(),
+            sides: e.fork.sides.iter().map(|s| (hx(&s.successor), s.members.iter().map(hx).collect())).collect(),
             voices: e.voices.iter().map(hx).collect(),
             signed: e.signed.iter().map(hx).collect(),
+            leaving: e.leaving.iter().map(hx).collect(),
             shares: e.shares.clone(),
             by_count: e.by_count,
-            departed: e.departed.iter().map(|d| (hx(&d.holder), d.share)).collect(),
-            debts: e.fork.debts.iter().map(|(o, i)| (hx(o), *i)).collect(),
+            kept: e.kept.iter().map(|(h, n)| (hx(h), *n)).collect(),
+            debts: e.fork.debts.iter().map(|(o, i)| (hx(o), i.clone())).collect(),
+            unassigned: e.unassigned.iter().map(hx).collect(),
             named_shares: e
                 .fork
                 .shares
                 .iter()
                 .map(|x| (hx(&x.agreement), x.index, x.shares.clone()))
                 .collect(),
-            successors: e
-                .successors
-                .iter()
-                .map(|v| v.iter().map(|(t, c)| (hx(t), c.as_ref().map(hx))).collect())
-                .collect(),
+            successors: e.successors.iter().map(|x| x.as_ref().map(hx)).collect(),
         })
+    }
+
+    /// A closing act, judged (rule 47a, F124 N9).
+    #[wasm_bindgen(js_name = lawClosing)]
+    pub fn law_closing(&self, specs: JsValue, id: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let e = view.closing(&unhex(id)?).map_err(lerr)?;
+        to_js(&ClosingOut {
+            complete: e.complete,
+            why: e.why.clone(),
+            collective: hx(&e.closing.collective),
+            voices: e.voices.iter().map(hx).collect(),
+            signed: e.signed.iter().map(hx).collect(),
+            holds: e.holds.iter().map(|(a, i)| (hx(a), *i)).collect(),
+            open_debts: e.open_debts.iter().map(hx).collect(),
+        })
+    }
+
+    /// The collective whose genesis declares the root of `agreement`'s
+    /// lineage, where held: what null names in its terms (S1).
+    #[wasm_bindgen(js_name = lawCollectiveOf)]
+    pub fn law_collective_of(&self, specs: JsValue, agreement: &str) -> R<Option<String>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        Ok(view.collective_of(&unhex(agreement)?).map_err(lerr)?.map(|h| hx(&h)))
+    }
+
+    /// Payer-side splitting (F124 P2): what a paying wallet reading Law pays
+    /// each holder for `amount` on the stake in `object` (hex, or null for
+    /// the collective itself), or why it cannot.
+    #[wasm_bindgen(js_name = lawPayerSplit)]
+    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let o = match object {
+            Some(x) => law::Who::Id(unhex(&x)?),
+            None => law::Who::This,
+        };
+        let r = view.payer_split(&unhex(agreement)?, &o, amount).map_err(lerr)?;
+        to_js(&match r {
+            Ok(v) => PayerSplitOut { pays: v.iter().map(|(h, n)| (hx(h), *n)).collect(), why: None },
+            Err(w) => PayerSplitOut { pays: vec![], why: Some(w) },
+        })
+    }
+
+    /// Whether an obligation binds its debtor (F124 N13), given what the
+    /// client found published (`specs.published`); null if not one.
+    #[wasm_bindgen(js_name = lawObligationBinds)]
+    pub fn law_obligation_binds(&self, specs: JsValue, id: &str) -> R<Option<bool>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        view.obligation_binds(&unhex(id)?).map_err(lerr)
+    }
+
+    /// Who owes an obligation of a collective a fork closed (N13): the
+    /// successors; null where its debtor is not closed by a fork.
+    #[wasm_bindgen(js_name = lawDebtors)]
+    pub fn law_debtors(&self, specs: JsValue, id: &str) -> R<Option<Vec<String>>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        Ok(view.debtors(&unhex(id)?).map_err(lerr)?.map(|v| v.iter().map(hx).collect()))
     }
 
     /// The pointer check (rule 18, F123): whether the payee pointer of
@@ -2219,12 +2292,16 @@ impl Verifier {
                 service: Some(hx(&service)),
                 ..Default::default()
             },
-            law::PointerCheck::Bypasses { pointer, missing } => PointerOut {
+            law::PointerCheck::Bypasses { pointer, missing, vault_missing } => PointerOut {
                 kind: "bypasses".into(),
                 pointer: Some(hx(&pointer)),
                 missing: missing
                     .iter()
                     .map(|r| (hx(&r.module), r.address.iter().map(|b| format!("{b:02x}")).collect()))
+                    .collect(),
+                vault_missing: vault_missing
+                    .iter()
+                    .map(|e| (hx(&e.rail_module), e.source.iter().map(|b| format!("{b:02x}")).collect()))
                     .collect(),
                 ..Default::default()
             },
@@ -2237,10 +2314,10 @@ impl Verifier {
         to_js(&o)
     }
 
-    /// A split, judged (rules 20, 21, 46b; F121 Q8, Q9): whether it sums to
-    /// what arrived, each fee and who received it, the holders it pays and
-    /// was not delivered to, and equal treatment of the collective's stake
-    /// in itself.
+    /// A split, judged (rules 20, 21, 26; F121 Q9, F124 N10): whether it
+    /// sums to what arrived, each fee and who received it, the holders it
+    /// pays and was not delivered to, and every payout that does not match
+    /// its stake.
     #[wasm_bindgen(js_name = lawSplit)]
     pub fn law_split(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2258,7 +2335,7 @@ impl Verifier {
             fees: e.fees.iter().map(|(m, r, n)| (hx(m), hx(r), *n)).collect(),
             undelivered: e.undelivered.iter().map(hx).collect(),
             collective: e.collective.as_ref().map(hx),
-            unequal: e.unequal.iter().map(|u| (hx(&u.departed), hx(&u.member))).collect(),
+            mismatched: e.mismatched.iter().map(|m| (m.stake, hx(&m.holder), m.paid, m.due)).collect(),
         })
     }
 
@@ -2277,6 +2354,7 @@ impl Verifier {
             publications: e.release.keys.iter().map(|(p, _)| hx(p)).collect(),
             holders: e.holders.iter().map(hx).collect(),
             signed: e.signed.iter().map(hx).collect(),
+            timed: e.release.timed.as_ref().map(|(_, k)| hx(k)),
         })
     }
 
@@ -2300,15 +2378,37 @@ struct ForkOut {
     why: Option<String>,
     agreement: String,
     collective: String,
-    sides: Vec<Vec<String>>,
+    /// Each side: its successor, and its members.
+    sides: Vec<(String, Vec<String>)>,
     voices: Vec<String>,
     signed: Vec<String>,
+    leaving: Vec<String>,
     shares: Vec<u64>,
     by_count: bool,
-    departed: Vec<(String, u64)>,
-    debts: Vec<(String, u64)>,
+    kept: Vec<(String, u64)>,
+    debts: Vec<(String, Vec<u64>)>,
+    unassigned: Vec<String>,
     named_shares: Vec<(String, u64, Vec<u64>)>,
-    successors: Vec<Vec<(String, Option<String>)>>,
+    successors: Vec<Option<String>>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ClosingOut {
+    complete: bool,
+    why: Option<String>,
+    collective: String,
+    voices: Vec<String>,
+    signed: Vec<String>,
+    holds: Vec<(String, u64)>,
+    open_debts: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PayerSplitOut {
+    pays: Vec<(String, u64)>,
+    why: Option<String>,
 }
 
 #[derive(Serialize, Default)]
@@ -2318,6 +2418,7 @@ struct PointerOut {
     pointer: Option<String>,
     service: Option<String>,
     missing: Vec<(String, String)>,
+    vault_missing: Vec<(String, String)>,
     reason: Option<String>,
 }
 
@@ -2330,7 +2431,8 @@ struct SplitOut {
     fees: Vec<(String, String, u64)>,
     undelivered: Vec<String>,
     collective: Option<String>,
-    unequal: Vec<(String, String)>,
+    /// (stake index, holder, paid, due) for each payout not matching (N10).
+    mismatched: Vec<(u64, String, u64, u64)>,
 }
 
 #[derive(Serialize)]
@@ -2344,6 +2446,8 @@ struct ReleaseOut {
     publications: Vec<String>,
     holders: Vec<String>,
     signed: Vec<String>,
+    /// A timed release (N11): the identity that delivers the keys.
+    timed: Option<String>,
 }
 
 // ---------------------------------------------------------------- split safety keys

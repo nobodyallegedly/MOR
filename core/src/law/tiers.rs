@@ -44,7 +44,9 @@ impl Change {
             Change::Field(f) => match f {
                 0 | 1 | 5 | 12 | 18 | 19 | 22 => Tier::Constitutional,
                 3 | 6 | 9 | 10 | 13 | 14 | 16 | 21 => Tier::Judicial,
-                _ => Tier::Operational, // 7, 8, 17
+                // 7, 8, 17; and 24, the release rule, in no area: the clone
+                // rule, with every owner's signature besides (N8).
+                _ => Tier::Operational,
             },
             Change::Task(t) if JUDICIAL_TASKS.contains(t) => Tier::Judicial,
             Change::Task(_) | Change::Extension(_) | Change::Words(_) => Tier::Operational,
@@ -65,7 +67,14 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
     };
     let (p, c) = (enc(parent), enc(clone));
     let mut out = vec![];
-    for n in 0..=22u64 {
+    // Field 23 is never compared: a clone never carries it. Field 24, the
+    // release rule, may change by a clone every owner signs (F124, N8).
+    for n in (0..=24u64).filter(|n| *n != 23) {
+        if n == 16 && removal_only(parent, clone) {
+            // M1 (F124): the seat part of a removed member's plan goes with
+            // the removal, as their areas do; the stake part stays.
+            continue;
+        }
         let a = p.iter().find(|(k, _)| *k == n).map(|(_, v)| v);
         let b = c.iter().find(|(k, _)| *k == n).map(|(_, v)| v);
         if a != b {
@@ -109,6 +118,30 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
         }
     }
     out
+}
+
+/// Whether field 16 differs only as M1 allows (F124): each party the clone
+/// takes out of the parties loses the seat part of its plan (keys 2 and 3),
+/// the plan staying for its stake part, or going where it has none; every
+/// other plan as it was, in its order.
+fn removal_only(parent: &Terms, clone: &Terms) -> bool {
+    let removed: Vec<_> = parent.parties.iter().filter(|p| !clone.parties.contains(p)).collect();
+    if removed.is_empty() {
+        return false;
+    }
+    let expected: Vec<_> = parent
+        .succession
+        .iter()
+        .flatten()
+        .filter_map(|plan| {
+            if !removed.contains(&&plan.party) {
+                return Some(plan.clone());
+            }
+            plan.stakes.as_ref().map(|_| super::formats::SuccessionPlan { seats: None, entry: None, ..plan.clone() })
+        })
+        .collect();
+    let got = clone.succession.clone().unwrap_or_default();
+    expected == got
 }
 
 /// Where an operational change lies: the parent's areas it lies in, and

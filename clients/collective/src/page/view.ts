@@ -191,13 +191,14 @@ ${money(s, c)}</div>`;
     .join('');
 }
 
-/** Money and endings (Law draft 10, F121 to F123): stakes, the split service, the pointer, splits, the fork, a release to the public domain. */
+/** Money and endings (Law draft 10, F121 to F124): stakes, the split service, the pointer, splits, debts, the fork, a release to the public domain, closing. */
 function money(s: State, c: State['collectives'][number]): string {
-  if (c.closed) return note('warn', `Closed by its fork ${fp(c.closed)}: what its keys sign afterwards counts for nothing in Law. Each side carries on in its own collective.`);
+  if (c.closed) return note('warn', `Ended by its fork or closing ${fp(c.closed)}: what its keys sign afterwards counts for nothing in Law.`);
   const id = e(c.id);
-  const stakes = c.stakes.length
+  const back = c.forkedFrom ? `<p class="small">Forked from ${fp(c.forkedFrom)}.</p>` : '';
+  const stakes = back + (c.stakes.length
     ? `<p class="small">Shares of all its income: ${c.stakes.map((x) => `${e(x.name)} ${x.percent}%${x.member ? '' : ' (departed)'}`).join(', ')}.</p>`
-    : '<p class="small">No stakes in the collective yet.</p>';
+    : '<p class="small">No stakes in the collective yet.</p>');
   const voices = c.members.filter((m) => !m.left);
   return `<details class="money"><summary>Money and endings</summary>
 ${stakes}
@@ -212,8 +213,11 @@ ${c.splitService ? `<form class="split row" data-collective="${id}"><input name=
 ${c.splits.length ? `<ul class="plain">${c.splits.map((x) => `<li>Split ${fp(x)} <button class="quiet" data-action="check-split" data-collective="${id}" data-split="${e(x)}">Check it</button></li>`).join('')}</ul>` : ''}
 ${c.releases.length ? `<form class="release-work row" data-collective="${id}"><select name="release">${c.releases.map((r) => `<option value="${e(r.id)}">${e(r.version)}</option>`).join('')}</select><button type="submit">Review a release to the public domain</button></form>` : ''}
 ${voices.length > 1 ? `<form class="fork" data-collective="${id}"><fieldset><legend>Fork: each member on a side</legend>
-${voices.map((m) => `<label>${e(nameOf(s, m.id))} <select name="side:${e(m.id)}"><option value="1">side 1</option><option value="2">side 2</option></select></label>`).join(' ')}</fieldset>
+${voices.map((m) => `<label>${e(nameOf(s, m.id))} <select name="side:${e(m.id)}"><option value="1">side 1</option><option value="2">side 2</option><option value="none">no side</option></select></label>`).join(' ')}</fieldset>
+<p class="small">Each side founds its own collective first; the fork names them. A member on no side has no seat in either, and keeps their share in both as a departed holder.</p>
 <div class="row"><button type="submit">Review the fork</button></div></form>` : ''}
+<form class="debt row" data-collective="${id}"><select name="creditor">${s.identities.map((i) => `<option value="${e(i.id)}">${e(nameOf(s, i.id))}</option>`).join('')}</select><input name="amount" type="number" min="1" placeholder="amount owed" required><button type="submit">Review a debt of the collective</button></form>
+<form class="closing row" data-collective="${id}"><button type="submit">Review closing the collective (it must hold nothing)</button></form>
 </details>`;
 }
 

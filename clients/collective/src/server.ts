@@ -115,7 +115,11 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
             return actions.prepareRelease({ publisher: text(a.publisher), version: text(a.version), name: text(a.name) });
           case 'found': {
             const members = list(a.members);
-            return actions.prepareFound({ name: text(a.name), members, rules: rulesOf(a.rules, members.length), words: text(a.words) });
+            const shares: Record<string, number> = {};
+            if (a.shares && typeof a.shares === 'object') {
+              for (const [k, v] of Object.entries(a.shares as Record<string, unknown>)) shares[k] = Number(v);
+            }
+            return actions.prepareFound({ name: text(a.name), members, rules: rulesOf(a.rules, members.length), words: text(a.words), shares });
           }
           case 'change': {
             const c = store.collective(text(a.collective));
@@ -156,8 +160,17 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
             }
             return actions.prepareSplit({ collective: text(a.collective), amount: Number(a.amount), fee: Number(a.fee ?? 0), amounts });
           }
-          case 'fork':
-            return actions.prepareFork({ collective: text(a.collective), sides: Array.isArray(a.sides) ? a.sides.map(list) : [] });
+          case 'fork': {
+            const debts: Record<string, number[]> = {};
+            if (a.debts && typeof a.debts === 'object') {
+              for (const [k, v] of Object.entries(a.debts as Record<string, unknown>)) debts[k] = Array.isArray(v) ? v.map(Number) : [];
+            }
+            return actions.prepareFork({ collective: text(a.collective), sides: Array.isArray(a.sides) ? a.sides.map(list) : [], debts });
+          }
+          case 'debt':
+            return actions.prepareDebt({ collective: text(a.collective), creditor: text(a.creditor), amount: Number(a.amount) });
+          case 'closing':
+            return actions.prepareClosing({ collective: text(a.collective) });
           case 'release-work':
             return actions.prepareReleaseWork({ collective: text(a.collective), release: text(a.release) });
           default:

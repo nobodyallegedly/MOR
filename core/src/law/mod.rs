@@ -21,7 +21,7 @@ pub mod view;
 pub use formats::*;
 pub use tiers::{changes, judicial_changes, powers_needed, Change, Tier};
 pub use view::{
-    Agreement, AreaCount, Backing, CloneState, Consent, Current, Departure, DepartureKind,
-    ForkEval, LawView, NegotiationRecord, PointerCheck, RecordEval, ReleaseEval, Role, SplitEval,
-    Unequal,
+    Agreement, AreaCount, Backing, CloneState, Closed, ClosingEval, Consent, Current, Departure,
+    DepartureKind, ForkEval, LawView, Mismatch, NegotiationRecord, PointerCheck, RecordEval,
+    ReleaseEval, Role, SplitEval, Stray,
 };

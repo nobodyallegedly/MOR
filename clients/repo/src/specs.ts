@@ -24,10 +24,11 @@ export const LAW_TYPES = {
   resignation: 16,
   record: 17,
   fork: 19,
+  closing: 20,
 } as const;
 
 /** Finance act types the collective client makes (Finance draft 6). */
-export const FINANCE_TYPES = { pointer: 0, receipt: 2 } as const;
+export const FINANCE_TYPES = { pointer: 0, obligation: 1, receipt: 2 } as const;
 
 /** The rail Module the test pointers name: a test value, no real rail. */
 export const TEST_RAIL = test('a test rail Module, no real rail');
