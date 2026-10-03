@@ -1325,3 +1325,15 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Changes, to be made:** Law draft 10 (rules 36a, 44c.1 and mark [4]); the code's "unsettled" refusal replaced by the rule.
 
 *F122 decided by Nobody, allegedly, 3 October 2026.*
+
+## F123. The split service vouches for the addresses in the owners' pointer (found writing F121 into Law draft 10, flaw P1, decided by Nobody, allegedly)
+
+**Pattern:** 4: a rule resting on a fact nobody can check. A payee pointer lists payment addresses and node keys, never an identity, so "the pointer names the split service" (F121, fix 2) cannot be verified.
+
+**Decided (Nobody, allegedly, 3 October 2026):** option (a), "make it legible". The split service publishes its own payee pointer, signed by itself. The owners' payee pointer counts, for Law, only if every address in it also appears in the split service's own signed pointer in force. A bypass needs the service to sign, publicly, for an address that is not its own: collusion in plain view. No format change.
+
+**Set aside:** a "receiver" field (anyone can write any name next to their own address); a pointer that delegates to another identity's pointer (cleanest, but a change to Finance and every wallet).
+
+**Changes, to be made:** Law draft 10 (rule 18 as a check); the pointer check built in the core library; freeze suite scenario 3.7r run.
+
+*F123 decided by Nobody, allegedly, 3 October 2026.*
