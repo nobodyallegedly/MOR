@@ -217,7 +217,8 @@ ${voices.map((m) => `<label>${e(nameOf(s, m.id))} <select name="side:${e(m.id)}"
 <p class="small">Each side founds its own collective first; the fork names them. A member on no side has no seat in either, and keeps their share in both as a departed holder.</p>
 <div class="row"><button type="submit">Review the fork</button></div></form>` : ''}
 <form class="debt row" data-collective="${id}"><select name="creditor">${s.identities.map((i) => `<option value="${e(i.id)}">${e(nameOf(s, i.id))}</option>`).join('')}</select><input name="amount" type="number" min="1" placeholder="amount owed" required><button type="submit">Review a debt of the collective</button></form>
-<form class="closing row" data-collective="${id}"><button type="submit">Review closing the collective (it must hold nothing)</button></form>
+${c.debts.some((x) => x.creditorHeld) ? `<form class="debt-release row"><select name="debt">${c.debts.filter((x) => x.creditorHeld).map((x) => `<option value="${e(x.id)}">${e(x.id.slice(0, 8))}…, owed to ${e(x.creditorName)}${x.inherited ? ' (from the collective it was forked from)' : ''}</option>`).join('')}</select><button type="submit">Review the creditor's release of a debt (signed by the creditor alone)</button></form>` : ''}
+<form class="closing row" data-collective="${id}"><button type="submit">Review closing the collective (it must hold nothing and owe nothing)</button></form>
 </details>`;
 }
 

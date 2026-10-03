@@ -171,6 +171,8 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
             return actions.prepareDebt({ collective: text(a.collective), creditor: text(a.creditor), amount: Number(a.amount) });
           case 'closing':
             return actions.prepareClosing({ collective: text(a.collective) });
+          case 'debt-release':
+            return actions.prepareDebtRelease({ debt: text(a.debt), against: Array.isArray(a.against) ? a.against.map(String) : [] });
           case 'release-work':
             return actions.prepareReleaseWork({ collective: text(a.collective), release: text(a.release) });
           default:

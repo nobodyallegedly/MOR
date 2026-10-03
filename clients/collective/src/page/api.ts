@@ -167,6 +167,8 @@ export interface State {
     holdersToBe: { id: string; name: string }[];
     splitService: boolean;
     splits: string[];
+    /** Debts it signed, and those of the collective it was forked from (owed by its successors, F125 D1): each with its creditor, and whether this program holds the creditor. */
+    debts: { id: string; creditor: string; creditorName: string; creditorHeld: boolean; inherited: boolean }[];
   }[];
   history: { time: number; kind: string; title: string; digest: string; acts: string[] }[];
   paired: { key: string; label: string; added: number; you: boolean }[];

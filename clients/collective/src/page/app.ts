@@ -238,6 +238,7 @@ app.addEventListener('submit', async (ev) => {
   }
   if (form.classList.contains('debt')) return prepare({ kind: 'debt', collective, creditor: words(d.get('creditor')), amount: numberOf(d.get('amount')) });
   if (form.classList.contains('closing')) return prepare({ kind: 'closing', collective });
+  if (form.classList.contains('debt-release')) return prepare({ kind: 'debt-release', debt: words(d.get('debt')) });
   if (form.classList.contains('release')) return prepare({ kind: 'release', publisher: collective, version: words(d.get('version')) });
   if (form.classList.contains('words')) return prepare({ kind: 'words', collective, text: words(d.get('text')) });
   if (form.classList.contains('change')) {

@@ -42,6 +42,9 @@ pub mod types {
     pub const FORK: u64 = 19;
     /// The closing of a collective that holds nothing (rule 47a, F124 N9).
     pub const CLOSING: u64 = 20;
+    /// A creditor's release: a creditor ends an obligation owed to it
+    /// without full payment (rule 47b, F125).
+    pub const DEBT_RELEASE: u64 = 21;
 }
 
 /// The declaration kinds Law defines (Identity, declarations slot).
@@ -2481,6 +2484,48 @@ impl Closing {
         };
         check_objects_self(inside, &x.agreement, "closing")?;
         Ok(x)
+    }
+}
+
+// ---------------------------------------------------------------- the creditor's release
+
+/// A creditor's release (type 21, rule 47b, F125): the creditor an
+/// obligation names ends it without full payment, for instance against
+/// stakes or a partial payment. Only the creditor signs it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DebtRelease {
+    /// 0: the obligation it ends.
+    pub obligation: Hash,
+    /// 1: what the creditor took instead, for the record (receipts,
+    /// agreements, stake transfers); never checked.
+    pub against: Vec<Hash>,
+}
+
+impl DebtRelease {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        let mut m = vec![(Value::Uint(0), b(&self.obligation))];
+        if !self.against.is_empty() {
+            m.push((Value::Uint(1), hashes_value(&self.against)));
+        }
+        m
+    }
+
+    pub fn decode(inside: &Inside) -> R<DebtRelease> {
+        let mut obligation = None;
+        let mut against = vec![];
+        for (k, v) in &inside.payload {
+            match k {
+                Value::Uint(0) => obligation = Some(hash(v, "creditor's release: the obligation")?),
+                Value::Uint(1) => {
+                    against = hashes(v, "creditor's release: what it was released against")?;
+                    if !distinct(&against) {
+                        return Err(LawError::Shape("creditor's release: an act named twice"));
+                    }
+                }
+                _ => return Err(LawError::Shape("creditor's release: unknown field")),
+            }
+        }
+        Ok(DebtRelease { obligation: obligation.ok_or(LawError::Shape("creditor's release: the obligation"))?, against })
     }
 }
 

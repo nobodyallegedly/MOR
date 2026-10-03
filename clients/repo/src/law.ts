@@ -195,6 +195,13 @@ export function closingPayload(c: { agreement: string; collective: string; chain
   );
 }
 
+/** A creditor's release (Law type 21, rule 47b, F125): the creditor ends an obligation owed to it without full payment; `against`, for the record only, what it took instead (receipts, agreements). */
+export function debtReleasePayload(r: { obligation: string; against?: string[] }): Uint8Array {
+  const m = new Map<number, unknown>([[0, unhex(r.obligation)]]);
+  if (r.against?.length) m.set(1, r.against.map(unhex));
+  return cborEncode(m);
+}
+
 /** A release to the public domain (Law type 5, rule 17, F121 shape D). */
 export interface ReleaseAct {
   work: string;

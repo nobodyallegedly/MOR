@@ -25,6 +25,7 @@ export const LAW_TYPES = {
   record: 17,
   fork: 19,
   closing: 20,
+  debtRelease: 21,
 } as const;
 
 /** Finance act types the collective client makes (Finance draft 6). */

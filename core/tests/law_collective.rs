@@ -2594,6 +2594,42 @@ fn obligation(lab: &mut Lab, creditor: &str, value: u64) -> Hash {
     lab.w.add(&a)
 }
 
+/// A debt of the label to a creditor that is an identity, so that it can
+/// sign a release (F125).
+fn obligation_to(lab: &mut Lab, creditor: Hash, value: u64) -> Hash {
+    let o = mor_core::finance::Payload::Obligation(mor_core::finance::Obligation {
+        debtor: lab.c[0].id,
+        creditor,
+        amount: mor_core::finance::Amount { unit: spec("a unit"), value },
+        pointer: spec("its pointer"),
+        agreement: None,
+    });
+    let a = lab.w.everyday_act(&mut lab.c[0], mips().finance, 1, o.to_map(), None, None);
+    lab.w.add(&a)
+}
+
+/// A receipt paying `value` toward an obligation, signed by its payee.
+fn receipt(w: &mut World, payee: &mut Person, payer: Hash, obligation: Hash, value: u64) -> Hash {
+    let rc = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
+        rail: spec("a rail Module"),
+        proof: vec![],
+        payer: Some(mor_core::finance::Payer::Identity(payer)),
+        payee: payee.id,
+        amount: mor_core::finance::Amount { unit: spec("a unit"), value },
+        fulfils: obligation,
+        previous: None,
+        forward: None,
+        batch: None,
+    });
+    let a = w.everyday_act(payee, mips().finance, 2, rc.to_map(), None, None);
+    w.add(&a)
+}
+
+/// A creditor's release (type 21, F125), signed by `by`.
+fn debt_release(w: &mut World, by: &mut Person, obligation: Hash, against: Vec<Hash>) -> Hash {
+    law_act(w, by, law::types::DEBT_RELEASE, law::DebtRelease { obligation, against }.to_map(), None)
+}
+
 /// The label's stake in itself (null, S1), and the label holding a work.
 fn own(holders: Vec<(Hash, u64)>) -> law::Stake {
     law::Stake { object: Who::This, holders: holders.into_iter().map(|(h, n)| (Who::Id(h), n)).collect() }
@@ -3011,7 +3047,9 @@ fn found_successor(lab: &mut Lab, name: &str, members: &[usize], kept: &[(Hash, 
 /// successors by the members' stakes; the departed holder keeps their share
 /// in each; every obligation is assigned, each successor signing for its
 /// debts; grants end; open offers are withdrawn, a stray payment to the old
-/// service being its open debt to the successors.
+/// service being its open debt to the successors. 3.9g (F125, D1): a hidden
+/// debt surfacing after the fork is owed by every successor, the fork
+/// standing; a successor cannot close while it owes it (D5).
 #[test]
 fn a_collective_forks() {
     let dee = spec("dee");
@@ -3047,11 +3085,12 @@ fn a_collective_forks() {
     };
     let d1 = obligation(&mut lab, "a supplier", 900);
     let d2 = obligation(&mut lab, "another supplier", 300);
-    let d3 = obligation(&mut lab, "a creditor kept out of sight", 50);
+    let mut hidden = lab.w.genesis("a creditor kept out of sight", vec![own_home()], None, None);
+    let d3 = obligation_to(&mut lab, hidden.id, 50);
     // Each side founds its successor first (N4); the departed holder keeps
     // their quarter in each.
     let kept = vec![(dee, 250_000)];
-    let (mut sa, _) = found_successor(&mut lab, "side A", &[ANA], &kept, label);
+    let (mut sa, ta) = found_successor(&mut lab, "side A", &[ANA], &kept, label);
     let (mut sb, tb) = found_successor(&mut lab, "side B", &[BEN, CY], &kept, label);
     let (sa_id, sb_id) = (sa.id, sb.id);
     let fork = |lab: &Lab, debts: Vec<(Hash, Vec<u64>)>| law::Fork {
@@ -3068,16 +3107,6 @@ fn a_collective_forks() {
         v.published.extend(xs.iter().copied());
         v
     }
-    // A fork leaving a public debt unassigned does not take effect (N13).
-    let x = fork(&lab, vec![(d1, vec![1])]);
-    let short = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(k));
-    lab.sign(BEN, &short);
-    lab.sign(CY, &short);
-    sign(&mut lab.w, &mut sb, &short);
-    let e = with_published(&lab, &[d1, d2]).fork(&short).unwrap();
-    assert!(!e.complete);
-    assert_eq!(e.unassigned, vec![d2]);
-    assert!(e.why.as_deref().is_some_and(|w| w.contains("D1")), "{:?}", e.why);
     // Every debt assigned: d1 to side B, d2 to both jointly.
     let x = fork(&lab, vec![(d1, vec![1]), (d2, vec![0, 1])]);
     let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(k));
@@ -3098,6 +3127,7 @@ fn a_collective_forks() {
     assert_eq!(e.shares, vec![333_334, 666_666]);
     assert_eq!(e.kept, vec![(dee, 250_000)]);
     assert!(!e.by_count);
+    assert!(e.unassigned.is_empty());
     let idx = v.terms(&k).unwrap().stake_on(&Who::Id(work)).unwrap().0 as u64;
     assert_eq!(v.fork_transfer(&fa, &k, idx).unwrap(), Some(vec![333_334, 666_666]));
     // d3, never published, binds nothing and blocked nothing.
@@ -3129,18 +3159,89 @@ fn a_collective_forks() {
     });
     let a = lab.w.everyday_act(&mut svc, mips().finance, 2, r.to_map(), None, None);
     let stray = lab.w.add(&a);
-    let got = with_published(&lab, &[d1, d2]).stray(&stray).unwrap().unwrap();
+    let got = with_published(&lab, &[d1, d2]).stray(&stray, Some((k, idx))).unwrap().unwrap();
     assert_eq!(got.service, svc.id);
     assert_eq!(got.owed, vec![(sa.id, 101), (sb.id, 199)]);
-    // N13: the hidden debt surfaces, published by its creditor after the
-    // fork. As written, the fork must assign every debt or take no effect,
-    // and a hidden one is owed by every successor: the two disagree here
-    // (flaw D1). The core refuses to choose: the fork shows as unsettled.
+    // The fork names no shares: the defaults, whichever stake the offer sold.
+    let got = with_published(&lab, &[d1, d2]).stray(&stray, None).unwrap().unwrap();
+    assert_eq!(got.owed, vec![(sa.id, 101), (sb.id, 199)]);
+    // 3.9g (F125, D1): the hidden debt surfaces, published by its creditor
+    // after the fork. A complete fork is never undone over a debt: it
+    // stands, and every successor owes the debt jointly.
     let mut v = with_published(&lab, &[d1, d2]);
     v.published.insert(d3);
     let e = v.fork(&fa).unwrap();
-    assert!(!e.complete && e.unassigned == vec![d3], "{:?}", e.why);
-    assert_eq!(v.current(&label).unwrap().unwrap().closed, None);
+    assert!(e.complete, "{:?}", e.why);
+    assert_eq!(e.unassigned, vec![d3]);
+    assert_eq!(v.current(&label).unwrap().unwrap().closed, Some(fa));
+    assert_eq!(v.debtors(&d3).unwrap(), Some(vec![sa.id, sb.id]));
+    assert_eq!(sorted(v.owes(&sa.id).unwrap()), sorted(vec![d2, d3]));
+    assert_eq!(sorted(v.owes(&sb.id).unwrap()), sorted(vec![d1, d2, d3]));
+    drop(v);
+    // D5: side A's successor, holding nothing here, cannot close while it
+    // owes d2 (jointly) and d3 (every successor).
+    let sa_terms = ta;
+    let closing = law::Closing { agreement: sa_terms, collective: sa.id, chain_act: sa.binding, tips: vec![tip(&sa)] };
+    let cl = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, closing.to_map(), obj(sa_terms));
+    let mut v = with_published(&lab, &[d1, d2]);
+    v.published.insert(d3);
+    let e = v.closing(&cl).unwrap();
+    assert!(!e.complete);
+    assert_eq!(sorted(e.open_debts.clone()), sorted(vec![d2, d3]), "{:?}", e.why);
+    assert!(e.why.as_deref().is_some_and(|w| w.contains("D5")), "{:?}", e.why);
+    drop(v);
+    // Side B pays d2 in full; d3's creditor releases it, taking nothing.
+    let mut supplier = lab.w.genesis("another supplier's till", vec![own_home()], None, None);
+    receipt(&mut lab.w, &mut supplier, sb.id, d2, 300);
+    debt_release(&mut lab.w, &mut hidden, d3, vec![]);
+    let mut v = with_published(&lab, &[d1, d2]);
+    v.published.insert(d3);
+    assert_eq!(v.owes(&sa.id).unwrap(), Vec::<Hash>::new());
+    assert_eq!(v.owes(&sb.id).unwrap(), vec![d1]);
+    let e = v.closing(&cl).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+}
+
+/// Freeze suite v21, 3.9g (F125, D1): a fork that leaves a published debt
+/// unassigned still takes effect; every successor owes that debt jointly.
+/// Assigning every known debt is each member's client's duty, never a
+/// condition of the fork.
+#[test]
+fn a_fork_leaving_a_debt_unassigned_stands() {
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
+    });
+    let f = lab.founding;
+    let ids = lab.ids();
+    let label = lab.c[0].id;
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    let d1 = obligation(&mut lab, "a supplier", 100);
+    let d2 = obligation(&mut lab, "a printer", 60);
+    let (mut sa, _) = found_successor(&mut lab, "side A", &[ANA], &[], label);
+    let (sb, _) = found_successor(&mut lab, "side B", &[BEN, CY], &[], label);
+    let x = law::Fork {
+        agreement: f,
+        collective: label,
+        chain_act: lab.c[0].binding,
+        tips: vec![tip(&lab.c[0])],
+        sides: vec![law::Side { successor: sa.id, members: vec![ids[ANA]] }, law::Side { successor: sb.id, members: vec![ids[BEN], ids[CY]] }],
+        shares: vec![],
+        debts: vec![(d1, vec![0])],
+    };
+    let fk = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(f));
+    lab.sign(BEN, &fk);
+    lab.sign(CY, &fk);
+    sign(&mut lab.w, &mut sa, &fk);
+    let mut v = lab.view();
+    v.published.extend([d1, d2]);
+    let e = v.fork(&fk).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    assert_eq!(e.unassigned, vec![d2]);
+    assert_eq!(v.current(&label).unwrap().unwrap().closed, Some(fk));
+    assert_eq!(v.debtors(&d1).unwrap(), Some(vec![sa.id]));
+    assert_eq!(v.debtors(&d2).unwrap(), Some(vec![sa.id, sb.id]));
 }
 
 /// Freeze suite v21, 3.9d (F124 N1): under a constitutional rule of two of
@@ -3403,7 +3504,9 @@ fn a_timed_release() {
 /// the Finance lane's holder); then, holding nothing, it closes by a
 /// closing act signed under the constitutional rule; its keys count for
 /// nothing in Law after the line. A closing while it still holds the work,
-/// or with a debt unpaid, does not take effect.
+/// or owes anything, does not take effect (F125, D5): one debt is paid by
+/// a receipt, the other ended by its creditor's release, after a partial
+/// payment; a release signed by anyone else ends nothing.
 #[test]
 fn a_collective_releases_its_work_and_closes() {
     let work = spec("the label's work");
@@ -3431,37 +3534,49 @@ fn a_collective_releases_its_work_and_closes() {
     let e = lab.view().release(&r).unwrap();
     assert!(e.complete, "{:?}", e.why);
     assert_eq!(e.holders, vec![label]);
-    // A debt unpaid: no closing (reading).
-    let d = obligation(&mut lab, "a supplier", 100);
+    // Two debts open: no closing (F125, D5).
+    let mut supplier = lab.w.genesis("the supplier", vec![own_home()], None, None);
+    let mut printer = lab.w.genesis("the printer", vec![own_home()], None, None);
+    let d = obligation_to(&mut lab, supplier.id, 100);
+    let d2 = obligation_to(&mut lab, printer.id, 80);
     let x = closing(&lab);
     let c1 = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), obj(f));
     lab.sign(BEN, &c1);
     lab.sign(CY, &c1);
     let mut v = lab.view();
-    v.published.insert(d);
+    v.published.extend([d, d2]);
     let e = v.closing(&c1).unwrap();
     assert!(e.holds.is_empty());
-    assert_eq!(e.open_debts, vec![d]);
+    assert_eq!(sorted(e.open_debts.clone()), sorted(vec![d, d2]));
     assert!(!e.complete);
+    assert!(e.why.as_deref().is_some_and(|w| w.contains("cannot close while it owes anything")), "{:?}", e.why);
     drop(v);
-    // Paid: the closing takes effect; the label's later acts count for
-    // nothing; what it did before stands.
-    let rc = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
-        rail: spec("a rail Module"),
-        proof: vec![],
-        payer: Some(mor_core::finance::Payer::Identity(label)),
-        payee: spec("a supplier"),
-        amount: mor_core::finance::Amount { unit: spec("a unit"), value: 100 },
-        fulfils: d,
-        previous: None,
-        forward: None,
-        batch: None,
-    });
-    let mut supplier = lab.w.genesis("the supplier", vec![own_home()], None, None);
-    let a = lab.w.everyday_act(&mut supplier, mips().finance, 2, rc.to_map(), None, None);
-    lab.w.add(&a);
+    // The supplier is paid in full; the printer is paid 30 of 80.
+    receipt(&mut lab.w, &mut supplier, label, d, 100);
+    let part = receipt(&mut lab.w, &mut printer, label, d2, 30);
     let mut v = lab.view();
-    v.published.insert(d);
+    v.published.extend([d, d2]);
+    assert_eq!(v.closing(&c1).unwrap().open_debts, vec![d2]);
+    assert_eq!(v.paid_toward(&d2), 30);
+    drop(v);
+    // A release of the printer's debt signed by a member ends nothing:
+    // only the creditor signs it.
+    let wrong = debt_release(&mut lab.w, &mut lab.m[ANA], d2, vec![part]);
+    let mut v = lab.view();
+    v.published.extend([d, d2]);
+    let e = v.debt_release(&wrong).unwrap();
+    assert!(!e.counts);
+    assert!(e.why.as_deref().is_some_and(|w| w.contains("only the creditor")), "{:?}", e.why);
+    assert!(!v.closing(&c1).unwrap().complete);
+    drop(v);
+    // The printer releases the rest, against the partial payment: the
+    // closing takes effect; the label's later acts count for nothing; what
+    // it did before stands.
+    let rel = debt_release(&mut lab.w, &mut printer, d2, vec![part]);
+    let mut v = lab.view();
+    v.published.extend([d, d2]);
+    assert!(v.debt_release(&rel).unwrap().counts);
+    assert_eq!(v.debt_released(&d2).unwrap(), Some(rel));
     let e = v.closing(&c1).unwrap();
     assert!(e.complete, "{:?}", e.why);
     assert_eq!(v.current(&label).unwrap().unwrap().closed, Some(c1));
@@ -3469,9 +3584,72 @@ fn a_collective_releases_its_work_and_closes() {
     let after = lab.publish(0);
     lab.sign(ANA, &after);
     let mut v = lab.view();
-    v.published.insert(d);
+    v.published.extend([d, d2]);
     assert_eq!(v.consent(&after).unwrap(), Consent::Closed { by: c1 });
     assert!(v.consent(&p).unwrap().counts());
+}
+
+/// Freeze suite v21, 3.9h (F125, bankruptcy): a collective that cannot pay
+/// keeps its debt open and visible; it settles with its creditor by stakes
+/// and a release: it pays what it can, gives the creditor a share of its
+/// work by a clone of its agreement (debt turned into ownership), and the
+/// creditor, alone, releases the rest. Its members are never made personal
+/// debtors; it now owes nothing, and, still holding its share of the work,
+/// stays open.
+#[test]
+fn a_bankrupt_collective_settles_by_stakes_and_a_release() {
+    let work = spec("the label's only work");
+    let mut lab = Lab::new(&|t| t.stakes = stakes(vec![owns(work)]));
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    let mut lender = lab.w.genesis("the lender", vec![own_home()], None, None);
+    let d = obligation_to(&mut lab, lender.id, 1_000);
+    fn view2(lab: &Lab, d: Hash) -> LawView<'_> {
+        let mut v = lab.view();
+        v.published.insert(d);
+        v
+    }
+    let owes = |lab: &Lab| -> Vec<Hash> { view2(lab, d).owes(&lab.c[0].id).unwrap() };
+    assert_eq!(owes(&lab), vec![d]);
+    // It pays what it can: 300 of 1,000. The debt stays open, visible.
+    let part = receipt(&mut lab.w, &mut lender, label, d, 300);
+    assert_eq!(owes(&lab), vec![d]);
+    // A clone of its agreement gives the lender 40% of the work.
+    let lid = lender.id;
+    let t = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN, CY])], &|t| {
+        t.stakes = stakes(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::This, 600_000), (Who::Id(lid), 400_000)] }]);
+    });
+    assert_eq!(view2(&lab, d).powers_needed(&t).unwrap(), vec![Power::Clone]);
+    let k = lab.propose(ANA, &t);
+    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k)).collect();
+    lab.record(0, Some((k, s)), &[], vec![], k);
+    assert_eq!(view2(&lab, d).current(&label).unwrap().unwrap().agreement, k);
+    // Still owed until the lender signs a release: the clone ends nothing.
+    assert_eq!(owes(&lab), vec![d]);
+    // A release naming the receipt instead of the obligation ends nothing.
+    let odd = debt_release(&mut lab.w, &mut lender, part, vec![]);
+    assert!(!view2(&lab, d).debt_release(&odd).unwrap().counts);
+    // The lender releases the rest, against the payment and the stake.
+    let rel = debt_release(&mut lab.w, &mut lender, d, vec![part, k]);
+    let v = view2(&lab, d);
+    let e = v.debt_release(&rel).unwrap();
+    assert!(e.counts, "{:?}", e.why);
+    assert_eq!(e.release.against, vec![part, k]);
+    assert_eq!(v.owes(&label).unwrap(), Vec::<Hash>::new());
+    assert_eq!(v.paid_toward(&d), 300);
+    drop(v);
+    // It owes nothing, but holds 60% of the work: a closing still does not
+    // take effect; it stays open, paying the lender as a holder.
+    let x = law::Closing { agreement: k, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])] };
+    let c = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), obj(k));
+    lab.sign(BEN, &c);
+    lab.sign(CY, &c);
+    let e = view2(&lab, d).closing(&c).unwrap();
+    assert!(e.open_debts.is_empty());
+    assert_eq!(e.holds, vec![(k, 0)]);
+    assert!(!e.complete);
 }
 
 /// Reading 7, corrected (F121): for a party whose voice was removed before
@@ -3506,4 +3684,28 @@ fn the_clause_in_force_judges_a_party_removed_before_a_judicial_change() {
     assert!(lab.view().declaration(&by_new).unwrap().is_ok(), "the clause in force applies");
     let by_old = lab.declare(None, k, f, CY, vec![outcomes::STAKE_REDISTRIBUTED]);
     assert!(lab.view().declaration(&by_old).unwrap().is_err(), "the older clause's authority no longer judges");
+}
+
+/// The creditor's release's format (type 21, F125): the obligation it
+/// ends, and, for the record only, what it was released against.
+#[test]
+fn a_creditors_release_has_one_format() {
+    let o = spec("an obligation");
+    let r = law::DebtRelease { obligation: o, against: vec![spec("a receipt"), spec("a clone")] };
+    let mut w = World::new();
+    let mut lender = w.genesis("a lender", vec![own_home()], None, None);
+    let x = law_act(&mut w, &mut lender, law::types::DEBT_RELEASE, r.to_map(), None);
+    let got = law::DebtRelease::decode(&w.v.get(&x).unwrap().inside).unwrap();
+    assert_eq!(got, r);
+    // Nothing more: an unknown field, or an act named twice, is not in the format.
+    let mut extra = r.to_map();
+    extra.push((Value::Uint(2), Value::Uint(0)));
+    let y = law_act(&mut w, &mut lender, law::types::DEBT_RELEASE, extra, None);
+    assert!(law::DebtRelease::decode(&w.v.get(&y).unwrap().inside).is_err());
+    let twice = law::DebtRelease { obligation: o, against: vec![spec("a receipt"), spec("a receipt")] };
+    let z = law_act(&mut w, &mut lender, law::types::DEBT_RELEASE, twice.to_map(), None);
+    assert!(law::DebtRelease::decode(&w.v.get(&z).unwrap().inside).is_err());
+    // The obligation it names is not held: it ends nothing.
+    let e = view(&w).debt_release(&x).unwrap();
+    assert!(!e.counts);
 }

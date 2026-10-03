@@ -2181,7 +2181,8 @@ impl Verifier {
     /// whether it closes the original, the members whose voice remains,
     /// who signed and who leaves on no side, each side's default share, who
     /// every successor keeps as a departed holder, each side's successor's
-    /// founding agreement where it fits, and debts it leaves unassigned.
+    /// founding agreement where it fits, and debts it leaves unassigned,
+    /// owed by every successor (F125, D1).
     #[wasm_bindgen(js_name = lawFork)]
     pub fn law_fork(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2265,12 +2266,38 @@ impl Verifier {
     }
 
     /// Who owes an obligation of a collective a fork closed (N13): the
-    /// successors; null where its debtor is not closed by a fork.
+    /// successors it assigns it to, every successor where it assigns it to
+    /// none (F125, D1); null where its debtor is not closed by a fork.
     #[wasm_bindgen(js_name = lawDebtors)]
     pub fn law_debtors(&self, specs: JsValue, id: &str) -> R<Option<Vec<String>>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         Ok(view.debtors(&unhex(id)?).map_err(lerr)?.map(|v| v.iter().map(hx).collect()))
+    }
+
+    /// A creditor's release, judged (type 21, rule 47b, F125): whether it
+    /// ends the obligation it names (signed by that obligation's creditor).
+    #[wasm_bindgen(js_name = lawDebtRelease)]
+    pub fn law_debt_release(&self, specs: JsValue, id: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let e = view.debt_release(&unhex(id)?).map_err(lerr)?;
+        to_js(&DebtReleaseOut {
+            counts: e.counts,
+            why: e.why.clone(),
+            obligation: hx(&e.release.obligation),
+            against: e.release.against.iter().map(hx).collect(),
+        })
+    }
+
+    /// What a collective owes now (F125, D5): its obligations that bind,
+    /// and those it owes as a fork's successor, neither paid in full by the
+    /// receipts held nor ended by a creditor's release.
+    #[wasm_bindgen(js_name = lawOwes)]
+    pub fn law_owes(&self, specs: JsValue, collective: &str) -> R<Vec<String>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        Ok(view.owes(&unhex(collective)?).map_err(lerr)?.iter().map(hx).collect())
     }
 
     /// The pointer check (rule 18, F123): whether the payee pointer of
@@ -2402,6 +2429,15 @@ struct ClosingOut {
     signed: Vec<String>,
     holds: Vec<(String, u64)>,
     open_debts: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DebtReleaseOut {
+    counts: bool,
+    why: Option<String>,
+    obligation: String,
+    against: Vec<String>,
 }
 
 #[derive(Serialize)]

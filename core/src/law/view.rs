@@ -2779,9 +2779,9 @@ pub struct ForkEval {
     pub id: Hash,
     pub fork: Fork,
     /// Complete: the members on its sides signed it, meeting the
-    /// constitutional change rule (N1), each successor fits its side, every
-    /// obligation is assigned and each successor a debt goes to signed it
-    /// (N13): the original is closed in Law.
+    /// constitutional change rule (N1), each successor fits its side, and
+    /// each successor a debt is assigned to signed it (N13): the original is
+    /// closed in Law. A debt left unassigned never stops it (F125, D1).
     pub complete: bool,
     /// Why it is not complete, or not valid.
     pub why: Option<String>,
@@ -2804,7 +2804,8 @@ pub struct ForkEval {
     /// For each side, its successor's founding agreement, where it fits.
     pub successors: Vec<Option<Hash>>,
     /// Obligations of the original that bind and lie before its line, which
-    /// the fork does not assign (N13; flaw D1, the fork stays unsettled).
+    /// the fork does not assign: owed by every successor jointly, the fork
+    /// standing (F125, D1).
     pub unassigned: Vec<Hash>,
 }
 
@@ -2819,8 +2820,21 @@ pub struct ClosingEval {
     pub signed: Vec<Hash>,
     /// Stakes the collective still holds, by agreement and index.
     pub holds: Vec<(Hash, u64)>,
-    /// Its obligations that bind and that no receipt held fulfils in full.
+    /// What it owes (F125, D5): its own obligations that bind, before its
+    /// line, and those it owes as a fork's successor, that receipts held do
+    /// not fulfil in full and no creditor's release ends.
     pub open_debts: Vec<Hash>,
+}
+
+/// A creditor's release, judged (type 21, rule 47b, F125).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DebtReleaseEval {
+    pub id: Hash,
+    pub release: DebtRelease,
+    /// It ends the obligation: signed by the creditor the obligation names,
+    /// its consent counting by its own rules.
+    pub counts: bool,
+    pub why: Option<String>,
 }
 
 /// The act that ended a collective in Law, and the line it drew (N2, N9).
@@ -2920,13 +2934,18 @@ impl ReleaseEval {
 
 /// A payment that reached the old split service of a collective a fork
 /// closed, for one of its withdrawn offers: the service's open debt to the
-/// work's current owners (F124 N14, rule 30).
+/// work's current owners (F124 N14, rule 30), in the shares the fork act
+/// transferred, the defaults where it named none (F125, reading 9).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Stray {
     pub fork: Hash,
     pub service: Hash,
-    /// Each successor, and what it is owed.
+    /// Each successor, and what it is owed; empty where undetermined.
     pub owed: Vec<(Hash, u64)>,
+    /// Why the shares cannot be told: the fork names shares for some stakes
+    /// and the caller did not say which stake the offer sold (the standing
+    /// offer's format is open).
+    pub undetermined: Option<String>,
 }
 
 /// The constitutional change rule, counted among the voices that remain
@@ -3190,20 +3209,16 @@ impl<'a> LawView<'a> {
                 &format!("side {i}'s successor is not held, or its founding terms do not have that side's members as parties, keeping every departed holder and member leaving at their share (N4)"),
             );
         }
-        // Debts (N13): every obligation of the original that binds and lies
-        // before the line is assigned; each successor a debt goes to signs.
+        // Debts (N13, F125 D1): each successor a debt is assigned to signs
+        // for it. Assigning every known debt is each member's client's duty;
+        // a debt the fork leaves unassigned, hidden or not, never stops it:
+        // every successor owes it jointly.
         e.unassigned = self
             .debts_before(&col, &f.chain_act, &f.tips)?
             .into_iter()
             .map(|(x, _)| x)
             .filter(|x| !f.debts.iter().any(|(d, _)| d == x))
             .collect();
-        if !e.unassigned.is_empty() {
-            return fail(
-                e,
-                "unsettled: an obligation of the original that binds is not assigned by the fork (flaw D1, Law draft 10, section 7)",
-            );
-        }
         let mut owing: Vec<u64> = f.debts.iter().flat_map(|(_, s)| s.iter().copied()).collect();
         owing.sort();
         owing.dedup();
@@ -3275,7 +3290,6 @@ impl<'a> LawView<'a> {
 
     /// A closing act, judged (N9).
     pub fn closing(&self, id: &Hash) -> R<ClosingEval> {
-        use crate::finance::Payload as Fin;
         let h = self.held(id)?;
         if !self.is_law(h, types::CLOSING) {
             return Err(LawError::Check("not a closing act"));
@@ -3311,21 +3325,7 @@ impl<'a> LawView<'a> {
         }
         e.signed = voices.iter().filter(|m| signed.contains(m)).copied().collect();
         e.holds = self.holdings(&col, &c.chain_act, &c.tips)?;
-        for (x, o) in self.debts_before(&col, &c.chain_act, &c.tips)? {
-            let paid: u64 = self
-                .v
-                .held_acts()
-                .filter_map(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
-                    Ok(Fin::Receipt(rc)) if r.inside.spec == self.mips.finance && rc.fulfils == x && self.v.status(&r.id) == Status::Valid => {
-                        Some(rc.amount.value)
-                    }
-                    _ => None,
-                })
-                .sum();
-            if paid < o.amount.value {
-                e.open_debts.push(x);
-            }
-        }
+        e.open_debts = self.open_debts(&col, Some((&c.chain_act, &c.tips)))?;
         if !voices.contains(&signer) {
             return fail(e, "the closing act is signed by someone who is not a member whose voice remains");
         }
@@ -3336,7 +3336,10 @@ impl<'a> LawView<'a> {
             return fail(e, "a closing ends only a collective that holds nothing: every work sold or released (N9)");
         }
         if !e.open_debts.is_empty() {
-            return fail(e, "a closing leaves no debt unpaid (reading, Law draft 10, section 7)");
+            return fail(
+                e,
+                "a collective cannot close while it owes anything: every debt paid or released by its creditor (F125, D5); one that cannot pay stays open, its debts visible",
+            );
         }
         e.complete = true;
         Ok(e)
@@ -3442,8 +3445,9 @@ impl<'a> LawView<'a> {
 
     /// Who owes an obligation of a collective a fork closed: the successors
     /// the fork assigns it to, jointly where several (N13); every successor
-    /// where it assigns it to none (a debt hidden in breach, surfacing
-    /// later). `None` where its debtor is not closed by a fork.
+    /// where it assigns it to none, hidden or not (F125, D1). A successor a
+    /// later fork closed passes it on the same way (reading). `None` where
+    /// its debtor is not closed by a fork.
     pub fn debtors(&self, obligation: &Hash) -> R<Option<Vec<Hash>>> {
         use crate::finance::Payload as Fin;
         let x = self.held(obligation)?;
@@ -3453,20 +3457,150 @@ impl<'a> LawView<'a> {
         let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else {
             return Ok(None);
         };
-        let Some(Closed { fork: Some(e), .. }) = self.closed_by(&o.debtor)? else { return Ok(None) };
-        let sides: Vec<u64> = match e.fork.debts.iter().find(|(d, _)| d == obligation) {
-            Some((_, s)) => s.clone(),
-            None => (0..e.fork.sides.len() as u64).collect(),
+        if !matches!(self.closed_by(&o.debtor)?, Some(Closed { fork: Some(_), .. })) {
+            return Ok(None);
+        }
+        let mut out: Vec<Hash> = vec![];
+        let mut todo = vec![(o.debtor, 0u32)];
+        while let Some((who, depth)) = todo.pop() {
+            match self.closed_by(&who)? {
+                Some(Closed { fork: Some(e), .. }) if depth < 64 => {
+                    let sides: Vec<u64> = match e.fork.debts.iter().find(|(d, _)| d == obligation) {
+                        Some((_, s)) => s.clone(),
+                        None => (0..e.fork.sides.len() as u64).collect(),
+                    };
+                    for i in sides.iter().rev() {
+                        todo.push((e.fork.sides[*i as usize].successor, depth + 1));
+                    }
+                }
+                _ => {
+                    if !out.contains(&who) {
+                        out.push(who);
+                    }
+                }
+            }
+        }
+        Ok(Some(out))
+    }
+
+    /// What receipts held pay toward an obligation: the sum of valid
+    /// receipts fulfilling it.
+    pub fn paid_toward(&self, obligation: &Hash) -> u64 {
+        use crate::finance::Payload as Fin;
+        self.v
+            .held_acts()
+            .filter_map(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
+                Ok(Fin::Receipt(rc))
+                    if r.inside.spec == self.mips.finance && &rc.fulfils == obligation && self.v.status(&r.id) == Status::Valid =>
+                {
+                    Some(rc.amount.value)
+                }
+                _ => None,
+            })
+            .sum()
+    }
+
+    /// A creditor's release, judged (rule 47b, F125): it ends the
+    /// obligation it names when signed by the creditor that obligation
+    /// names, its consent counting by its own rules. Only the creditor
+    /// signs it.
+    pub fn debt_release(&self, id: &Hash) -> R<DebtReleaseEval> {
+        use crate::finance::Payload as Fin;
+        let h = self.held(id)?;
+        if !self.is_law(h, types::DEBT_RELEASE) {
+            return Err(LawError::Check("not a creditor's release"));
+        }
+        let r = DebtRelease::decode(&h.inside)?;
+        let mut e = DebtReleaseEval { id: *id, release: r.clone(), counts: false, why: None };
+        let fail = |mut e: DebtReleaseEval, w: &str| {
+            e.why = Some(w.into());
+            Ok(e)
         };
-        Ok(Some(sides.iter().map(|i| e.fork.sides[*i as usize].successor).collect()))
+        if self.v.status(id) != Status::Valid {
+            return fail(e, "the creditor's release is not valid under Identity");
+        }
+        let Some(x) = self.v.get(&r.obligation) else {
+            return fail(e, "the obligation it names is not held");
+        };
+        let o = match Fin::decode(x.inside.type_, &x.inside.payload) {
+            Ok(Fin::Obligation(o)) if x.inside.spec == self.mips.finance => o,
+            _ => return fail(e, "it names an act that is not an obligation"),
+        };
+        if h.act.outside.signer != Some(o.creditor) {
+            return fail(e, "only the creditor the obligation names signs its release (F125)");
+        }
+        if !self.consent(id)?.counts() {
+            return fail(e, "the creditor's consent does not count, by its own rules");
+        }
+        e.counts = true;
+        Ok(e)
+    }
+
+    /// The creditor's release that ended an obligation, if one held counts.
+    pub fn debt_released(&self, obligation: &Hash) -> R<Option<Hash>> {
+        for x in self.v.held_acts() {
+            if !self.is_law(x, types::DEBT_RELEASE) {
+                continue;
+            }
+            if !DebtRelease::decode(&x.inside).is_ok_and(|r| &r.obligation == obligation) {
+                continue;
+            }
+            if self.debt_release(&x.id)?.counts {
+                return Ok(Some(x.id));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Whether an obligation is still owed: neither fulfilled in full by
+    /// receipts held nor ended by a creditor's release.
+    fn still_owed(&self, obligation: &Hash, amount: u64) -> R<bool> {
+        Ok(self.paid_toward(obligation) < amount && self.debt_released(obligation)?.is_none())
+    }
+
+    /// What a collective owes (F125, D5): its own obligations that bind,
+    /// signed before the line where one is given, and every obligation that
+    /// binds a collective a fork closed which it owes as a successor; each
+    /// still owed.
+    fn open_debts(&self, col: &Col, line: Option<(&Hash, &[KeptTip])>) -> R<Vec<Hash>> {
+        use crate::finance::Payload as Fin;
+        let mut out = vec![];
+        for x in self.v.held_acts() {
+            if x.inside.spec != self.mips.finance {
+                continue;
+            }
+            let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else { continue };
+            if self.obligation_binds(&x.id)? != Some(true) {
+                continue;
+            }
+            let owes = if o.debtor == col.id {
+                line.is_none_or(|(c, t)| self.before_line(col, x, c, t))
+            } else {
+                self.debtors(&x.id)?.is_some_and(|d| d.contains(&col.id))
+            };
+            if owes && self.still_owed(&x.id, o.amount.value)? {
+                out.push(x.id);
+            }
+        }
+        Ok(out)
+    }
+
+    /// What a collective owes now, for showing (F125, D5): its debts and
+    /// those it owes as a fork's successor, still owed.
+    pub fn owes(&self, collective: &Hash) -> R<Vec<Hash>> {
+        let col = self.col(collective);
+        self.open_debts(&col, None)
     }
 
     /// A payment that reached the old split service of a collective a fork
     /// closed, for one of its withdrawn offers (N14): every grant ended at
     /// the fork, the service's included, so what it received is its open
-    /// debt to the work's current owners, the successors, in the fork's
-    /// shares (rule 30). `None` where the receipt is no such payment.
-    pub fn stray(&self, receipt: &Hash) -> R<Option<Stray>> {
+    /// debt to the work's current owners, the successors, in the shares the
+    /// fork act transferred for the stake the offer sold, the defaults where
+    /// it named none (rule 30, F125 reading 9). `stake` is that stake, as
+    /// the caller reads the offer (its format is open). `None` where the
+    /// receipt is no such payment.
+    pub fn stray(&self, receipt: &Hash, stake: Option<StakeRef>) -> R<Option<Stray>> {
         use crate::finance::Payload as Fin;
         let x = self.held(receipt)?;
         if x.inside.spec != self.mips.finance || self.v.status(receipt) != Status::Valid {
@@ -3486,11 +3620,25 @@ impl<'a> LawView<'a> {
         if x.act.outside.signer != Some(grant.grantee) {
             return Ok(None);
         }
-        let parts = divide(r.amount.value, &e.shares);
+        let named = |a: &Hash, i: u64| e.fork.shares.iter().find(|s| &s.agreement == a && s.index == i).map(|s| s.shares.clone());
+        let shares = match stake {
+            Some((a, i)) => named(&a, i).unwrap_or_else(|| e.shares.clone()),
+            None if e.fork.shares.is_empty() => e.shares.clone(),
+            None => {
+                return Ok(Some(Stray {
+                    fork: by,
+                    service: grant.grantee,
+                    owed: vec![],
+                    undetermined: Some("the fork names shares for some stakes, and which stake the offer sold is not known (the standing offer's format is open)".into()),
+                }))
+            }
+        };
+        let parts = divide(r.amount.value, &shares);
         Ok(Some(Stray {
             fork: by,
             service: grant.grantee,
             owed: e.fork.sides.iter().zip(parts).map(|(s, n)| (s.successor, n)).collect(),
+            undetermined: None,
         }))
     }
 

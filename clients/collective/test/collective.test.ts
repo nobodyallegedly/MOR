@@ -460,7 +460,7 @@ test("declaring the everyday key's holder absent: no record, and the recovery ro
   assert.equal(v.agreement, now.agreement, 'judged under the clone the recovery rotation put in force');
 });
 
-test('money and endings (Law draft 10, F121 to F124): stakes at founding, a member leaving as a departed holder, a split service, the pointer check, every payout matching its stake, a debt sealed to every member, a release by the collective, a fork founding its successors first, a closing', async () => {
+test('money and endings (Law draft 10, F121 to F124): stakes at founding, a member leaving as a departed holder, a split service, the pointer check, every payout matching its stake, a debt sealed to every member, a release by the collective, a fork founding its successors first, a closing refused while a debt is open, a creditor\'s release, a closing', async () => {
   const c = w.client;
   for (const n of ['Lea', 'Lee', 'Lou', 'Lyn', 'Lia', 'Splitter', 'Supplier']) await sign(c, { kind: 'identity', name: n, mine: false });
   let s = await state(c);
@@ -535,6 +535,7 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   assert.match(fkw, /founds its own collective, its successor/);
   assert.match(fkw, /Lou.* \(15%\) keep their share in every successor/);
   assert.match(fkw, /Every debt is assigned/);
+  assert.match(fkw, /never undoes it: every successor owes it jointly \(F125 D1\)/);
   assert.match(fk.done.title, /is forked, and closed in Law/, JSON.stringify(fk.done));
   s = await state(c);
   col = s.collectives.find((x) => x.name === 'Ledger')!;
@@ -545,9 +546,22 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   const after = await prepare(c, { kind: 'stakes', collective: col.id, shares });
   assert.match(after.reading.blocking.join(' '), /closed by its fork or closing/);
 
-  // N9: a collective that holds nothing closes.
+  // F125 D5: a successor that holds nothing still owes the original's debt (jointly): it cannot close.
   const side = successors[0];
+  assert.deepEqual(
+    side.debts.map((x) => [x.id, x.inherited]),
+    [[debt.done.acts[0], true]],
+  );
+  const refused = await prepare(c, { kind: 'closing', collective: side.id });
+  assert.match(refused.reading.blocking.join(' '), /cannot close while it owes anything \(F125 D5\).* to Supplier/);
+  // The creditor alone releases it (F125): a member cannot.
+  const rl = await sign(c, { kind: 'debt-release', debt: debt.done.acts[0] });
+  assert.match(words(rl.review.reading), /Only the creditor signs it/);
+  assert.equal(rl.done.title, 'The debt is released by its creditor', JSON.stringify(rl.done));
+
+  // N9: a collective that holds nothing and owes nothing closes.
   const cl = await sign(c, { kind: 'closing', collective: side.id });
+  assert.match(words(cl.review.reading), /It owes nothing/);
   assert.match(cl.done.title, /is closed in Law/, JSON.stringify(cl.done));
   s = await state(c);
   assert.ok(s.collectives.find((x) => x.id === side.id)!.closed);

@@ -497,3 +497,91 @@ Nothing it uses changed: this pass touched Law only (the core library's Law modu
 2. Questions D2 to D6.
 3. The nine readings above.
 4. Approval of Law draft 10 with the core pass drafts; then the human regtest test on the Mac.
+
+*All answered the same day by Nobody, allegedly, recorded as F125, and written in: section 8.*
+
+## 8. F125 written in
+
+*Main merged in first (the findings log, F125). Law draft 10, core v21, freeze suite v21 and one page v6 revised in place; the core library, its WebAssembly bindings, the repo client's Law payloads and the collective client built and tested. Nothing is approved.*
+
+### What changed, in plain words
+
+**A fork is never undone over a debt (D1).** Before, a debt left out of the fork act stopped the fork, and a debt someone hid was owed by both new groups when it surfaced; a creditor publishing a hidden debt late could have undone any fork. Now no debt decides whether the fork happened; it decides only who owes. Each member's client must hand out every debt it knows of; whatever the fork act did not hand out, hidden or not, every new group owes together.
+*Precisely:* the fork's completeness no longer checks field 6 against the debts held; `ForkEval::unassigned` lists the debts left out, owed by every successor (`LawView::debtors`), and no longer makes the fork "unsettled". The "unsettled" state of freeze step 3.9g is gone.
+*Example:* Ana, Ben and Cy fork. Cy had signed a debt of 50 in the collective's name, sealed to nobody else. A month after the fork, the creditor publishes it. The fork stands; both new collectives owe the 50 together.
+
+**A verifier says where it found a debt (D2).** A collective's debt binds once its outside is on a relay; the verifier reports that it found it there, as it reports what keepers recorded. Written as rule; the code already worked so (`published`).
+
+**The split model, the release rule, and the founding grant (D3, D4, D6).** Naming a split service means a service splits the money; naming none means the payer's wallet pays each holder directly; there is no field for it. Changing the release rule needs every owner's signature and the ordinary clone rule. A grant made in the collective's name before the collective exists is carried by the founding terms every founder signs; afterwards the collective's own key grants and revokes. Written as rules; the code already worked so.
+
+**A group that owes cannot close (D5).** A closing now checks everything the collective owes: its own debts, and any debt it owes as a successor of a fork. One that cannot pay stays open, abandoned, with its debts visible.
+*Precisely:* type 20 completeness adds "owes nothing": every binding obligation of the collective before its line, and every obligation `debtors` says it owes as a successor, fulfilled in full by receipts held or ended by a creditor's release. `LawView::owes` shows what a collective owes now.
+*Example:* after the fork above, Ana's new group holds nothing but owes the 50 together with the other: it cannot close until the 50 is paid or the creditor lets it go.
+
+**The creditor's release (new).** A creditor can end a debt without full payment, for example in exchange for a share of a work or for part of the money. Only the creditor signs it; nobody else can cancel a debt, and MOR has no court to force one.
+*Precisely:* Law type 21, `{ 0 => obligation, ? 1 => [+ hash] }`; field 1 names what the creditor took instead, for the record, never checked. It counts when valid, its signer is the creditor the obligation names, and, for a collective creditor, its consent counts by its own rules (rule 47b). `LawView::debt_release`, `debt_released`, `paid_toward`; WebAssembly `lawDebtRelease`, `lawOwes`.
+*Example (bankruptcy):* a collective owes a lender 1,000 and can pay only 300. By a clone of its agreement it gives the lender 40% of its one work. The lender signs a release of the rest, naming the payment and the clone. The collective owes nothing; its members never owed anything personally; still holding 60% of the work, it stays open.
+
+**A stray payment (reading 9, corrected).** Money paid by mistake to the old split service after a fork is owed to the new groups in the shares the fork act gave them for that work, the default shares only where the act named none.
+*Precisely:* `LawView::stray(receipt, stake)` takes the stake the offer sold, since the standing offer's format is still open; where the fork named shares for some stakes and the caller cannot say which, the shares are shown as undetermined.
+
+**Readings 1 to 8 confirmed.** Each "reading (to confirm)" they stood for is now plain rule text in Law draft 10.
+
+### One tension (not worked around)
+
+**Tension T1. A successor owes a debt it never signed for.** *Plain words:* MOR's rule 1 says nobody is bound except by their own signature. Under D1 (and already under N13 for a hidden debt), every new group owes a debt the fork act did not hand out. But a new group signs the fork act only when it is handed a debt, so a group that was handed nothing never signed anything, yet owes. Its members signed the fork act, each with their own identity, and they founded the group as a successor; the group itself did not sign.
+*Example:* Ana's side is handed no debt, so Ana's new group never signs the fork. Cy's hidden 50 surfaces. Ana's group owes it, though it signed nothing.
+- (a) It owes by being named as a successor in a complete fork its members signed: a stated exception to rule 1. *Built so.* *In the example:* Ana's group owes the 50.
+- (b) Every new group signs the fork act, not only those handed a debt, so that its own signature binds it. Rule 1 is kept as written, at the cost of one more signature per side, which each side, having founded its group for the purpose, can give. *In the example:* Ana's group signed the fork, so it owes the 50 by its own signature.
+- (c) Only a new group that signed the fork act owes a debt left out. *In the example:* Ana's group owes nothing; the other group owes the whole 50; this lets a side escape a hidden debt by being handed nothing.
+**Lean: (b).** It keeps D1 whole and rule 1 literal; (c) reopens the door D1 closed.
+
+### Questions the writing needed, one at a time
+
+**E1. Must a creditor's release be public?** A release to the public domain must be; for a debt's release, F125 says nothing.
+*Example:* the printer releases the collective privately, sealing the release only to its members. A stranger who saw the debt on a relay still sees it as open, and the closing as not taking effect.
+- (a) No: it counts wherever a verifier holds it, as every act does; the collective, wanting its closing to count everywhere, publishes it. *Built so; the collective client publishes it.*
+- (b) Yes: like the debt's outside, it must be public to count.
+**Lean: (a).** Nobody is harmed by a release kept private; the debtor is the one with a reason to spread it.
+
+**E2. Which lanes does a collective's release of a debt owed to it need?**
+*Example:* a collective lent 500 to another and wants to forgive 200. Its Finance lane is held by its treasurer, its Law lane by two others.
+- (a) As any Law act, by its own rules: the lane reaching type 21. *Built so.*
+- (b) Finance and Law, as giving up money owed is a money decision as much as a legal one, as N7 did for a release to the public domain.
+**Lean: (b).** Forgiving money is a Finance decision; the treasurer should not be bypassed.
+
+**E3. How does the core know which work a stray payment paid for?** Reading 9 needs the stake the offer sold, but the standing offer's format is open.
+- (a) Once the offer's format is made exact, it names the stake (agreement and index). *Meanwhile the caller says which; where the fork named shares for some stakes and the caller cannot, the shares are undetermined.*
+- (b) The fork act always names shares for every stake, so the question never arises.
+**Lean: (a).**
+
+**E4. Should Finance list "released" among an obligation's states?** Finance rule 7 lists unsigned, open, discharged and past its terms; a Finance-only reader would still show a released debt as open.
+- (a) Yes: "released (Law: the creditor's release)", as "unsigned" already rests on Law. One line in Finance draft 6, which this pass was not asked to touch.
+- (b) No: Finance shows money only; Law shows the release.
+**Lean: (a).**
+
+### Readings taken, to confirm
+
+1. A creditor's release ends the whole debt, whatever was paid toward it; to forgive only part, the debtor signs a new obligation for the rest, and the creditor releases the old one.
+2. A release counts wherever held, need not be published, and ends a debt whether or not that debt binds yet.
+3. Field 1 (what the debt was released against) is a record only, never checked.
+4. A new group that is itself forked later passes on what it owes the same way: the later fork may hand out the original's debt by naming it; what it does not hand out, every new group of the later fork owes.
+5. A closing checks every debt the collective owes as a successor, whenever it arose: the original's line, not the new group's, places it.
+
+### Code and tests
+
+- **Core library.** The fork no longer refuses an unassigned debt; `debtors` follows a chain of forks; `closing` checks `open_debts` with inherited debts and creditor's releases; new `DebtRelease` (type 21), `debt_release`, `debt_released`, `paid_toward`, `owes`; `stray` takes the stake and reports undetermined shares. WebAssembly: `lawDebtRelease`, `lawOwes` added. Repo client: `debtReleasePayload`, `LAW_TYPES.debtRelease`.
+- **Collective client.** A creditor's release, signed by the creditor alone (the page lists each collective's debts and those of the collective it was forked from); the closing checks what the collective owes before signing and names each debt and its creditor; the fork's review says that the client assigns every debt it holds and that a debt left out is owed by every successor; the verifier also loads the debts of the collectives a successor came from.
+- **New and rewritten tests:** core: 3.9 (no fork refused over a debt; the stray payment by the stake), 3.9g (a hidden debt surfacing after the fork owed by every successor, the fork standing; a successor that owes cannot close, then closes once one debt is paid and the other released; a fork leaving a published debt unassigned stands), 3.9f (a closing refused while two debts are open, one paid, the other released after a partial payment; a member's "release" ending nothing), 3.9h (a bankrupt collective settling by stakes and a release), the release's format. Client: the "Money and endings" test now has the successor's closing refused while it owes the original's debt, the creditor's release, then the closing.
+- **Results:** Rust workspace **287 passed, 0 failed** (284 before, plus 3). Clients genesis 14, repo 11, longform 15, barebone 9, reader 16, manage 7, collective 19, connector 12, desk 8: **111 passed**, every one typechecking.
+
+### The Mac regtest test
+
+Nothing it uses changed: this pass touched Law only (the core library's Law module, its WebAssembly bindings, the repo client's Law payloads and the collective client), never Finance, the payment cMIP, the Lightning Module or the harness. It does not need re-running for this pass; the steps of `docs/core-pass-v21.md`, section 5, stand for the approval run. If E4 is answered (a), it changes one line of Finance text, no code.
+
+### Waiting on Nobody, allegedly, in order
+
+1. Tension T1.
+2. Questions E1 to E4.
+3. The five readings above.
+4. Approval of the whole set (below); then the human regtest test on the Mac.

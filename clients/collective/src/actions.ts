@@ -16,6 +16,7 @@ import {
   RELEASE_AREA,
   clonePlan,
   closingPayload,
+  debtReleasePayload,
   encodeTerms,
   forkPayload,
   grantPayload,
@@ -1498,7 +1499,11 @@ export class Actions {
         }
       }
     }
-    for (const sp of [...(c.f.splits ?? []), ...(c.f.debts ?? [])]) {
+    // The collective's splits and debts, and the debts of every collective
+    // this program holds: a successor owes those of the collective it was
+    // forked from (F125, D1).
+    const debts = this.store.book().collectives.flatMap((x) => (x.id === c.identity || !this.store.isCollective(x.id) ? [] : (this.store.collective(x.id).f.debts ?? [])));
+    for (const sp of [...(c.f.splits ?? []), ...(c.f.debts ?? []), ...debts]) {
       const a = await this.fetchAct(sp.id, hints);
       if (a) {
         published.push(sp.id);
@@ -1510,6 +1515,18 @@ export class Actions {
       }
     }
     return { v, specs: { ...LAW_SPECS, published: [...new Set(published)] } };
+  }
+
+  /** The debts a collective signed, and those of the collectives it was forked from, which its successors owe (F124 N13, F125 D1). */
+  private debtsOf(c: TestCollective): { id: string; creditor: string; inherited: boolean; debtor: string }[] {
+    const out = (c.f.debts ?? []).map((d) => ({ id: d.id, creditor: d.creditor, inherited: false, debtor: c.identity }));
+    let from = c.f.governance.forkedFrom;
+    for (let depth = 0; from && this.store.isCollective(from) && depth < 64; depth++) {
+      const o = this.store.collective(from);
+      out.push(...(o.f.debts ?? []).map((d) => ({ id: d.id, creditor: d.creditor, inherited: true, debtor: o.identity })));
+      from = o.f.governance.forkedFrom;
+    }
+    return out;
   }
 
   /** Everyone a collective's money concerns: its members, departed holders, its successors, the identities and collectives held here. */
@@ -1998,6 +2015,7 @@ export class Actions {
         debts.length
           ? `Every debt is assigned, and the successor of each side it goes to signs for it (F124 N13): ${debts.map(([o, i]) => `${short(o)} to ${i.map((x) => `side ${x + 1}`).join(' and ')}`).join('; ')}.`
           : 'The collective has no debt that binds it (none published).',
+        "Assigning every known debt is each member's client's duty: this client assigns every debt it holds. A debt the fork does not assign, hidden or not, never undoes it: every successor owes it jointly (F125 D1).",
         'Every grant of the collective ends, its split service\'s included; its open offers are withdrawn; payment follows the work\'s current claim, to the successors (F124 N14).',
       ],
       sections: [{ heading: 'Signed on this device', lines: [{ text: 'Every member and each successor here is held by this program: their consent is simulated (test only).', tone: 'warn' }] }],
@@ -2154,12 +2172,22 @@ export class Actions {
     const k = c.f.governance.constitutionalThreshold;
     const signers = voices.filter((m) => this.store.holds(m));
     if (signers.length < (k ? Math.min(k, voices.length) : voices.length)) blocking.push(`A closing follows the constitutional change rule (F124 N9); ${list(voices.filter((m) => !this.store.holds(m)).map(names))} cannot sign here.`);
+    // D5: a collective cannot close while it owes anything, its own debts
+    // and those it owes as a fork's successor alike.
+    const { v: v0, specs: s0 } = await this.lawVerifier(c, this.concerned(c));
+    const owes = v0.lawOwes(s0, c.identity);
+    if (owes.length) {
+      const creditor = new Map(this.debtsOf(c).map((d) => [d.id, d.creditor]));
+      blocking.push(
+        `A collective cannot close while it owes anything (F125 D5): ${owes.map((o) => `${short(o)}${creditor.has(o) ? ` to ${names(creditor.get(o)!)}` : ''}`).join('; ')}. Pay it, or ask its creditor for a release; one that cannot pay stays open, its debts visible.`,
+      );
+    }
     const reading: Reading = {
       title: `Close “${cname}”`,
       summary: [
-        'A closing ends a collective that holds nothing: every work sold or released (F124 N9). After its line, anything the collective\'s keys sign counts for nothing in Law.',
+        'A closing ends a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor (F124 N9, F125 D5). After its line, anything the collective\'s keys sign counts for nothing in Law.',
         `Signed by ${list(signers.map(names))}, each with their own identity, under the constitutional change rule.`,
-        'The core library refuses it while the collective still holds a stake, or owes a debt no receipt has paid (a reading, to confirm).',
+        owes.length ? `It owes ${owes.length === 1 ? 'one debt' : `${owes.length} debts`}, its own or as a fork's successor.` : 'It owes nothing: every debt it signed or owes as a successor is paid or released.',
       ],
       sections: [{ heading: 'Signed on this device', lines: [{ text: 'Test identities: consent simulated.', tone: 'warn' }] }],
       plain: [],
@@ -2193,6 +2221,55 @@ export class Actions {
           title: e.complete ? `“${cname}” is closed in Law` : `The closing of “${cname}” does not take effect`,
           lines: [{ text: `Closing ${x.id}.`, tone: e.complete ? 'ok' : 'bad' }, ...(e.why ? [{ text: e.why, tone: 'bad' as const }] : [])],
           acts,
+        };
+      },
+    });
+  }
+
+  /**
+   * A creditor's release (Law type 21, rule 47b, F125): the creditor of a
+   * collective's debt ends it without full payment, for instance against
+   * stakes or a partial payment. Only the creditor signs it. Public, so that
+   * every verifier that sees the debt sees it end (a reading, to confirm).
+   */
+  async prepareDebtRelease(a: { debt: string; against?: string[] }) {
+    const names = this.store.names();
+    const all = this.store.book().collectives.filter((x) => this.store.isCollective(x.id)).flatMap((x) => this.debtsOf(this.store.collective(x.id)).filter((d) => !d.inherited));
+    const d = all.find((x) => x.id === a.debt);
+    const blocking: string[] = [];
+    if (!d) blocking.push('That debt is not one this program holds.');
+    else if (!this.store.holds(d.creditor)) blocking.push(`Only the creditor signs its release, and ${names(d.creditor)} cannot sign here (F125).`);
+    const against = (a.against ?? []).filter((x) => /^[0-9a-f]{64}$/.test(x));
+    const payload = blocking.length ? new Uint8Array() : debtReleasePayload({ obligation: a.debt, against });
+    const debtor = d ? this.store.collective(d.debtor) : null;
+    const dname = d ? (this.store.book().collectives.find((x) => x.id === d.debtor)?.name ?? short(d.debtor)) : '';
+    const reading: Reading = {
+      title: d ? `${names(d.creditor)} releases “${dname}” from its debt ${short(a.debt)}` : 'A creditor\'s release',
+      summary: [
+        'The creditor ends the obligation without full payment, for instance against stakes or a partial payment (F125). Only the creditor signs it: nobody else can discharge a debt, and MOR has no court to force one.',
+        'With every debt paid or released, the collective may close (F125 D5). Its members were never personal debtors of what it owed (F124 N13).',
+        against.length ? `Released against, for the record: ${against.map(short).join(', ')}.` : 'Released against nothing named.',
+      ],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: "The creditor's key signs it (test only).", tone: 'warn' }] }],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'debt-release',
+      digest: digestOf('debt-release', a.debt, payload),
+      reading,
+      depends: d ? [d.creditor, d.debtor] : [],
+      run: async () => {
+        const col = debtor!;
+        const creditor = this.store.identity(d!.creditor);
+        const x = await creditor.publish(REPO_SPECS.law, LAW_TYPES.debtRelease, payload, { public: true, relays: col.f.relays });
+        this.store.saveIdentity(creditor);
+        const { v, specs } = await this.lawVerifier(col, this.concerned(col));
+        const e = v.lawDebtRelease(specs, x.id) as { counts: boolean; why: string | null };
+        return {
+          title: e.counts ? 'The debt is released by its creditor' : 'The release ends nothing',
+          lines: [{ text: `Creditor's release ${x.id}.`, tone: e.counts ? 'ok' : 'bad' }, ...(e.why ? [{ text: e.why, tone: 'bad' as const }] : [])],
+          acts: [x.id],
         };
       },
     });
@@ -2256,6 +2333,7 @@ export class Actions {
           forkedFrom: c.f.governance.forkedFrom ?? null,
           splitService: !!c.f.governance.splitGrant,
           splits: (c.f.splits ?? []).map((x) => x.id),
+          debts: this.debtsOf(c).map((d) => ({ id: d.id, creditor: d.creditor, creditorName: names(d.creditor), creditorHeld: this.store.holds(d.creditor), inherited: d.inherited })),
         };
       }),
       history: this.store.history().slice(-50).reverse(),
