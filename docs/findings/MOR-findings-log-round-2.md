@@ -1337,3 +1337,6 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Changes, to be made:** Law draft 10 (rule 18 as a check); the pointer check built in the core library; freeze suite scenario 3.7r run.
 
 *F123 decided by Nobody, allegedly, 3 October 2026.*
+
+**F121, the fork's questions (`docs/law-draft-10.md`, section 5; answered by Nobody, allegedly, 3 October 2026, one at a time):**
+- *Q1, debts at a fork:* (c) the fork act assigns each debt to a side, which signs for it; any debt it does not name is owed by both sides. "It forces communication to reach agreement, which is a positive outcome." No debt can vanish.
