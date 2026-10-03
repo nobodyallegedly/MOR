@@ -1256,3 +1256,5 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Law draft 10 (rules 19 and 22: the exception for a receipt naming a rail Module the payee published).
 
 *F119 decided by Nobody, allegedly, 3 October 2026.*
+
+**F110, the witness act's visibility (core pass, question V3; decided by Nobody, allegedly, 3 October 2026):** a witness act is public, like every Identity act. *Cost, stated:* anyone can see that its signer relies on a given act of another identity, a relationship, never the content of a private act. A private witness act was set aside: it would protect nothing for anyone not holding it, and would need rules of its own.
