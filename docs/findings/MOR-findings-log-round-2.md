@@ -1242,3 +1242,17 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Law draft 10 (the negotiation message act type; rule 56); core and freeze suite where they describe negotiation records.
 
 *F118 decided by Nobody, allegedly, 3 October 2026.*
+
+## F119. A split service's receipt is evidence that a rail Module was used (found in the core pass, flaw V2, decided by Nobody, allegedly)
+
+**Pattern:** 1, checked: the party that signs is the split service, but what it can name is fixed by the payee.
+
+**Found while writing:** the core pass (flaw V2). F116 makes the receipt naming a rail Module the evidence of its use; in a split, that receipt is signed by the split service, and Law rule 22 (F75) refuses the service's own signature as evidence for a role share.
+
+**Decided (Nobody, allegedly, 3 October 2026):** option (a). The receipt counts as evidence of a rail Module's use even when a split service signs it, because under F115 a receipt counts only on a rail Module the payee's own pointer or vault names: the service cannot invent one. *Cost, stated:* where the payee's pointer names two Modules for one rail, whoever issues the invoice (here the split service) chooses which earns; the pointer shows it publicly, and the payee's agreement with the service can constrain it.
+
+**Set aside:** keeping rule 22 strict, so only the payer's claim counts (claims are private by default, so most uses would go unrecorded); one Module per rail as a validity rule, suggested by the project lead and withdrawn on Nobody, allegedly's question ("how can it be enforced?"): "same rail" is a label each Module declares, which no verifier can check (as F106), and one Module per unit would forbid accepting a unit on two rails.
+
+**Changes, to be made:** Law draft 10 (rules 19 and 22: the exception for a receipt naming a rail Module the payee published).
+
+*F119 decided by Nobody, allegedly, 3 October 2026.*
