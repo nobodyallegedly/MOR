@@ -1537,8 +1537,15 @@ impl<'a> LawView<'a> {
                 "the clause it applies is not the last version of the agreement the party signed (rule 46a)".into(),
             ));
         }
-        let Some(clause) = vt.abandonment.clone() else {
+        if vt.abandonment.is_none() {
             return Ok(Err("the version the party signed carries no abandonment clause".into()));
+        }
+        // Reading 7, corrected (F121): the clause in force applies, that of
+        // the agreement the declaration names, for every party, one whose
+        // voice was removed before a judicial change included; field 1
+        // still names the last version the party signed.
+        let Some(clause) = lineage[0].1.abandonment.clone() else {
+            return Ok(Err("the agreement it names carries no abandonment clause".into()));
         };
         if !d.outcomes.iter().all(|o| clause.outcomes.contains(o)) {
             return Ok(Err("an outcome the clause does not allow (rule 51)".into()));

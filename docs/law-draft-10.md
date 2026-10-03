@@ -261,6 +261,7 @@ For the new collectives, in every reading: each has its own genesis and new keys
 *Precisely:* the fork act (type 19): the original agreement, the collective, its chain act and kept tips (its line), the sides, optional shares and debts; terms field 23, forked from; the release act (type 5, now exact) and terms field 24, the release rule, set in founding terms and changed by no clone; rules 15b, 17, 47a.
 
 **Reading 7 corrected.** For a party whose voice was removed before a judicial change, the abandonment clause in force applies, not an older one.
+*Precisely:* the declaration's check (type 13, rule 51) judges its authority and outcomes by the clause of the agreement it names, the one in force; field 1 still names the last version the party signed. Built and tested.
 
 **The concurrency rule.** Rule 47's "fork rule" (terms field 10) is renamed the concurrency rule everywhere in Law draft 10, core v21 and the suite.
 
@@ -352,6 +353,27 @@ The core names no specific use: the new text speaks of members, sides, holders, 
 - (b) Any difference either way.
 **Lean: (a).**
 
+**N11. A release at a future point.** Rule 17 allowed a timed release; the release act publishes the content key at once.
+- (a) A field naming a point on the time reference: the claim ends then, and the content key is delivered then (Envelope's "going public later").
+- (b) No timed release: the holders sign the release when the time comes.
+**Lean: (a).** *Not built; rule 17 now says so.*
+
+**N12. A release naming every stake and claim.** Nothing a verifier holds proves a release named every agreement holding a stake in the work, or every claim.
+*Example:* Ana and Ben hold the work under one deal; Cy holds 10% of it under another. Ana and Ben release it.
+- (a) It ends only the stakes it names; where a held agreement carries another stake in the work, the release is shown as partial, and that stake stands; a claim it leaves out is shown as made after it.
+- (b) A release must name every stake a verifier holds, or it is incomplete.
+**Lean: (a).** *Built: a release ends what it names; "partial" is not shown yet.*
+
+**N13. Who signs a debt the fork assigns.** Q1 says the side "signs for it".
+- (a) The side's members, by their signatures on the fork act. *Built so.*
+- (b) The side's new collective, by its own act once founded.
+**Lean: (a).** The new collective does not exist when the fork is signed.
+
+**N14. The old split service after every grant ends.** Q2 ends every grant; Q6 has the old split service pay the successors, and it is named by a grant.
+- (a) The split service's grant is the one that continues, until the successors switch services. *Not built: the core does not judge splits by the grant's backing.*
+- (b) It ends too, and money reaching the old pointer waits as an open obligation.
+**Lean: (a).** Q6 needs it.
+
 **Formats made exact while writing, to confirm:** the split (payouts as maps; the agreement it pays), terms field 7 (each object once), the fork act and the release act (as above).
 
 ### Code and tests
@@ -359,7 +381,7 @@ The core names no specific use: the new text speaks of members, sides, holders, 
 - **Core library.** F122 in the tiers (`[0]` and `[4]`). Terms fields 7, 23 and 24 and the chain's periods, with their checks; `chain_answer` (a silent judge passes the question once its period has passed). `LawView::pointer_check` (F123). `LawView::split` (sums, fees and receivers, delivery, equal treatment). `LawView::fork`, `closed_by`, `after_closing`, `fork_transfer`, `debtors`, `offer_withdrawn`; an act of a closed collective after its fork counts for nothing (`Consent::Closed`), its grants ended (`Backing`). `LawView::release`, `released`, `claim_after_release`. Field 10 renamed. WebAssembly: `lawFork`, `lawPointerCheck`, `lawSplit`, `lawRelease`, `lawClaimAfterRelease`; `readTerms` shows the new fields.
 - **Collective client.** A section "Money and endings": stakes; a departed holder's stake kept when a member leaves; a split service; payee pointers and the pointer check; a simulated payment and its split, with its fee and equal treatment; a release to the public domain; the fork, after which the collective's actions are refused. A change of members that also changes who judges absence names both powers (F122). Founding the successors from the page is not built.
 - **New tests:** core: the chain's periods and time reference (3.7u); stakes and fields 23, 24; F122; shape A (3.9a); M1 as written; equal treatment and visible fees (3.7t); the pointer check (3.7r); the fork (3.9), and what is not a fork; the release (3.9c). Client: one end-to-end test of the whole section against real relays.
-- **Results:** Rust workspace **278 passed, 0 failed** (269 before, plus 9). Clients genesis 14, repo 11, longform 15, barebone 9, reader 16, manage 7, collective 19, connector 12, desk 8: **111 passed** (110 before, plus 1), every one typechecking.
+- **Results:** Rust workspace **279 passed, 0 failed** (269 before, plus 10, reading 7 among them). Clients genesis 14, repo 11, longform 15, barebone 9, reader 16, manage 7, collective 19, connector 12, desk 8: **111 passed** (110 before, plus 1), every one typechecking.
 
 ### The Mac regtest test
 
@@ -370,5 +392,5 @@ Nothing it uses changed: this pass touched Law only (the core library's Law modu
 1. Flaw S1.
 2. Flaw M1.
 3. Flaw P2.
-4. Questions N1 to N10, and the formats made exact.
+4. Questions N1 to N14, and the formats made exact.
 5. Approval of Law draft 10 with the core pass drafts; then the human regtest test on the Mac.

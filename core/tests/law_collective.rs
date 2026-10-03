@@ -3104,3 +3104,37 @@ fn a_work_is_released_to_the_public_domain() {
     let r4 = law_act(&mut w2, &mut ana2, law::types::RELEASE, release2.to_map(), None);
     assert!(view(&w2).release(&r4).is_err());
 }
+
+/// Reading 7, corrected (F121): for a party whose voice was removed before
+/// a judicial change, the abandonment clause in force applies, not the
+/// older one it signed; field 1 still names the last version it signed.
+#[test]
+fn the_clause_in_force_judges_a_party_removed_before_a_judicial_change() {
+    let mut lab = Lab::new(&|t| {
+        t.abandonment.as_mut().unwrap().outcomes = vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED];
+        t.grammar.as_mut().unwrap().recovery = None;
+        t.grammar.as_mut().unwrap().safety = Holding::Shares { threshold: 2, members: t.parties.clone() };
+    });
+    let f = lab.founding;
+    let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    lab.record(0, None, &[], vec![d], f);
+    // Ana and Ben, every voice that remains, change the authority.
+    let mut second = lab.w.genesis("a second authority", vec![own_home()], None, None);
+    let sid = second.id;
+    let t = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN])], &|t| {
+        t.abandonment.as_mut().unwrap().authority = Authority::Named(sid);
+    });
+    let k = lab.propose(ANA, &t);
+    let sa = lab.sign(ANA, &k);
+    let sb = lab.sign(BEN, &k);
+    let r = lab.record(0, Some((k, vec![sa, sb])), &[], vec![], k);
+    assert_eq!(puts(&lab, &r), Some(k));
+    // A second declaration against Cy, redistributing their stake: field 1
+    // names the founding terms, the last Cy signed; the clause in force
+    // (the second authority) judges it.
+    let x = AbsenceDeclaration { agreement: k, clause: f, party: lab.m[CY].id, outcomes: vec![outcomes::STAKE_REDISTRIBUTED] };
+    let by_new = law_act(&mut lab.w, &mut second, law::types::DECLARATION, x.to_map(), obj(k));
+    assert!(lab.view().declaration(&by_new).unwrap().is_ok(), "the clause in force applies");
+    let by_old = lab.declare(None, k, f, CY, vec![outcomes::STAKE_REDISTRIBUTED]);
+    assert!(lab.view().declaration(&by_old).unwrap().is_err(), "the older clause's authority no longer judges");
+}
