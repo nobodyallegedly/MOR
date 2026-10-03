@@ -19,3 +19,7 @@ clap = { version = "4", features = ["derive"] }
 # The second, independent SLH-DSA implementation: the harness checks every
 # safety-key signature it meets against it, as every test of the core does.
 slh-dsa = "=0.2.0-rc.5"
+
+[dev-dependencies]
+mor-payment = { path = "../cmips/payment" }
+mor-lightning = { path = "../modules/lightning", features = ["lnd"] }
