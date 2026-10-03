@@ -1384,3 +1384,7 @@ This also settles fix 1 without making the judicial tier need departed holders' 
   **N14 decided, replacing the provisional answer (Nobody, allegedly, 3 October 2026):** "the work is the point of payment, the work now states the two new collectives as stakeholders; why does it need the old one?" The work itself carries nothing and never changes; payment follows its current claim (owners and shares), the owners' pointers (rails) and the offer (price). The fork changes only the claim, so the routing follows to the successors' own pointers and split services. Every grant ends at the fork, the old split service's included. A stray payment to the old service (a wallet not reading Law paying a withdrawn offer) is that service's open debt to the work's current owners (rule 30).
 
 *F124's questions all answered, 3 October 2026.*
+
+## F125. Questions from writing F124 into Law draft 10 (`docs/law-draft-10.md`, section 7; answered by Nobody, allegedly, 3 October 2026, one at a time)
+
+- **D1, a debt that surfaces after a fork:** N13's two rules collided (an unassigned debt stops the fork; a hidden debt surfacing is owed by every successor); with no clock, a member and a friend could publish a secret debt late to undo any fork. **Decided:** option (a). A complete fork is never undone over a debt. Assigning every known debt is each member's client's duty; any debt the fork act did not assign, hidden or not, is owed by every successor jointly. The project lead's combination of N13's rules caused the collision.
