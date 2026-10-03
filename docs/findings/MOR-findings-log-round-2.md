@@ -1296,4 +1296,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 - **The pointer can bypass the split.** Law rule 18 says the owners' payee pointer points to the split service "so money actually reaches it", but nothing makes that a check: a collective's Finance lane could point the pointer at another receiver, and buyers' claims are private by default, so departed owners might never see the sales. A rule, or a visibility duty, is needed.
 - **Re-encoding** a work makes a new fingerprint, a "new" work outside the claim (F72's known limit): visible only where someone links the two.
 
+**Revised (Nobody, allegedly, 3 October 2026): no side keeps the original.** "Then maybe it is best no group keeps the original hash." A fork closes the original collective with a final act declaring it; every side founds a new collective naming the original as its parent, the status-quo side's being a copy of the original agreement minus the departing members. This replaces point 3's "the status-quo side keeps the collective" and removes point 4's cost (a lone holdout keeping the identity). Taken "for now".
+
+**Still needed, fork or not (accepted the same day):** fix 1, the protected clauses that touch money need every stake holder's signature, member or not, so ordinary leaving never strips a departed owner's protection; fix 2, the payee pointer cannot bypass the split service the agreement granted (a rule, or a duty making sales visible to every owner). Each to be settled one at a time.
+
 **Changes, to be made:** Law (rule 46a; the chain of judgment; a fork grammar); core; freeze suite.
