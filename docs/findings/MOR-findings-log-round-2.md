@@ -1272,3 +1272,21 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Law draft 10 (rules 36a and 44c.1 read alike); core v21's "Areas and lanes" (J1 no longer open).
 
 *F120 decided by Nobody, allegedly, 3 October 2026.*
+
+## F121. One judicial tier for everyone, a chain of fallbacks, and the fork of a collective (found writing Law draft 10, decided in part by Nobody, allegedly)
+
+**Pattern:** 3, both halves: F71's per-member protected clauses protect each member from rules they never signed, and leave two members with no judge they both signed.
+
+**Found while writing:** Law draft 10 (noticed outside the session's task). Under rule 46a (F71) a member who does not sign a change of a protected clause keeps the version they signed. Two members can then hold different judges, and where one joined after a change the other never signed, no judge both signed. Nothing said who decides a dispute between them.
+
+**Walked through (3 October 2026):** Nobody, allegedly: "It's the joint signature that matters", and "how could there be a valid newer version Anna did not sign?" Requiring every member's signature for the judicial tier costs three things (a holdout can block, a dead judge can trap, leverage); each was answered: "leverage is part of life"; a dead judge is answered by a chain of judgment; and the holdout by a standoff: "if a group within the collective wants change A but another group refuses it, it creates a standoff, which is good. Communication becomes the only channel to solve it, with a collective fork as an option to settle it."
+
+**Decided (Nobody, allegedly, 3 October 2026), in principle:**
+1. **The judicial tier changes only with every member's signature,** one version for everyone, replacing F71's per-member versions. *(The project lead's reading of the walk-through, to be confirmed when the text is written.)*
+2. **A chain of judgment:** each judge, keeper or other judicial service may name, at founding, the one that takes over when it answers "unknown" or cannot act; everyone signs the chain, so a failing judge is replaced without new signatures. "It's a chain of judgment."
+3. **The fork of a collective** is its own grammar ("a fork of a collective makes sense, that's really what a collective splitting is"): the side that does not want the change keeps the collective as it is, minus the departing members; the side that wants it founds a new collective, naming the original as its parent. Where both sides want changes, the original closes with a final act declaring the fork, and both found new collectives naming it.
+4. **Cost, stated and accepted ("I think it is"):** the status-quo side can be one member, who then keeps the collective's identity, history and pointers while the others leave, each keeping their stake (Q6). A collective that will not accept this writes a removal clause at founding.
+
+**Still to settle, one at a time:** works and their claims after a fork; the collective's debts and obligations; grants; keys and the departing members' shares; the act that declares a fork and what the new collectives' first acts name; whether the existing "fork rule" (rule 47, forks of records) needs a new name to avoid confusion.
+
+**Changes, to be made:** Law (rule 46a; the chain of judgment; a fork grammar); core; freeze suite.
