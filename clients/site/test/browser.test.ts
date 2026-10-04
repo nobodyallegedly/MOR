@@ -157,6 +157,11 @@ test('the front page opens on the first act, shown as the act, verified, with it
   await inner.waitForSelector('.mor-post img');
   assert.match((await inner.textContent('.mor-post-by'))!, /verified/);
   assert.match((await inner.textContent('.mor-post'))!, /Thank you for the shower/);
+  // A clear button to MOR in one page, opening the reader apart from the site; its act is a placeholder until step 17.
+  const onePage = f.locator('.one-page a.button');
+  assert.equal(await onePage.textContent(), 'MOR in one page');
+  assert.equal(await onePage.getAttribute('href'), 'https://reader.dubsar.org/#ONE-PAGE');
+  assert.equal(await onePage.getAttribute('target'), '_blank');
   const size = await inner.$eval('.mor-post img', (i) => (i as HTMLImageElement).naturalWidth);
   assert.ok(size > 0, 'the picture is shown');
   await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
@@ -317,6 +322,45 @@ test('the display client always looks for later versions, and says when a newer 
   } finally {
     pinned.close();
   }
+});
+
+test('a browser that blocks WebAssembly is told, in plain words, that the page cannot be checked there, and why; nothing is shown', async () => {
+  // As Tor Browser's Safer level does (onion check, 1 October 2026), the
+  // browser offers no WebAssembly at all; the checker used to wait for the
+  // core library forever. (Chromium's own switch for it is ignored, so the
+  // page loses it before anything runs. As text: a function would be
+  // rewritten by the TypeScript loader with helpers the page lacks.)
+  const ctx = await browser.newContext();
+  await ctx.addInitScript('delete globalThis.WebAssembly;');
+  const page = await ctx.newPage();
+  await page.goto(base + '/');
+  await page.waitForSelector('#mor-bar.bad', { timeout: 30_000 });
+  assert.equal(await page.evaluate(() => typeof (globalThis as { WebAssembly?: unknown }).WebAssembly), 'undefined');
+  assert.equal(await standing(page), 'This page cannot be checked in this browser, so it is not shown.');
+  const why = (await page.textContent('#mor-cannot'))!;
+  assert.match(why, /does not run WebAssembly, which the checker needs/);
+  assert.match(why, /Tor Browser's Safer and Safest security levels/);
+  assert.match(why, /mor-site verify/);
+  assert.match(why, /Nothing from the site is shown unchecked\./);
+  assert.equal(await page.title(), 'Not checked');
+  assert.equal(await page.locator('#mor-page').count(), 0, 'no page shown');
+  assert.equal(await page.locator('#mor-view').innerHTML(), '');
+  await shot(page, 'no-webassembly');
+  await ctx.close();
+});
+
+test('when the core library does not start for another reason, the page says so, with the reason, and shows nothing', async () => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.route('**/_mor/mor_wasm_bg.wasm', (r) => r.abort('connectionfailed'));
+  await page.goto(base + '/');
+  await page.waitForSelector('#mor-bar.bad', { timeout: 30_000 });
+  assert.equal(await standing(page), 'This page cannot be checked: the checker could not start. Not shown.');
+  const why = (await page.textContent('#mor-cannot'))!;
+  assert.match(why, /could not be started in this browser \(.+\)\./);
+  assert.match(why, /Reload the page to try again/);
+  assert.equal(await page.locator('#mor-page').count(), 0, 'no page shown');
+  await ctx.close();
 });
 
 test('everything ran under the content security policy, with nothing refused', () => {

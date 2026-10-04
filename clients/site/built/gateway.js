@@ -897,6 +897,33 @@ async function __wbg_init(module_or_path) {
   return __wbg_finalize_init(instance, module2);
 }
 
+// src/shell/cannot.ts
+var esc = (s) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+var blocksWasm = () => typeof WebAssembly !== "object";
+function refused(err) {
+  if (blocksWasm()) return true;
+  if (err instanceof WebAssembly.CompileError || err instanceof WebAssembly.LinkError) return true;
+  return /wasm|webassembly/i.test(err instanceof Error ? `${err.name} ${err.message}` : String(err));
+}
+var ANOTHER_WAY = "or check the site without a browser, from a relay, with MOR's own tools (<code>mor-site verify</code>).";
+function cannotCheck(err) {
+  const bar2 = document.getElementById("mor-bar");
+  if (!bar2) return;
+  const why = err instanceof Error ? err.message : String(err);
+  const words = refused(err) ? `<p>This browser does not run WebAssembly, which the checker needs: it runs MOR's core library, the code that checks who signed this site and that each page is exactly what they signed. Some privacy settings turn WebAssembly off, as do Tor Browser's Safer and Safest security levels.</p>
+<p>To see the site: allow WebAssembly for it (in Tor Browser, the Standard security level), or open it in another browser; ${ANOTHER_WAY}</p>` : `<p>MOR's core library, the code that checks who signed this site and that each page is exactly what they signed, could not be started in this browser${why ? ` (${esc(why)})` : ""}.</p>
+<p>Reload the page to try again; open it in another browser; ${ANOTHER_WAY}</p>`;
+  bar2.className = "bad";
+  bar2.innerHTML = `<div class="standing" id="mor-standing">${refused(err) ? "This page cannot be checked in this browser, so it is not shown." : "This page cannot be checked: the checker could not start. Not shown."}</div>
+<details open id="mor-cannot"><summary>Why, and how to see it</summary>${words}<p>Nothing from the site is shown unchecked.</p></details>`;
+  document.title = "Not checked";
+  document.getElementById("mor-view")?.replaceChildren();
+}
+function stillLoading() {
+  const standing = document.querySelector("#mor-bar.checking .standing");
+  if (standing) standing.textContent = "Still loading the core library\u2026 On a slow connection, such as Tor, this can take a minute.";
+}
+
 // ../reader/node_modules/@noble/hashes/_u64.js
 var fromNumH = (n) => n / 2 ** 32 | 0;
 var fromNumL = (n) => n >>> 0;
@@ -1300,7 +1327,16 @@ var IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3 };
 var ENVELOPE_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 };
 
 // src/web/core.ts
-await __wbg_init({ module_or_path: new URL("/_mor/mor_wasm_bg.wasm", location.origin) });
+var slow = setTimeout(stillLoading, 2e4);
+try {
+  if (blocksWasm()) throw new Error("WebAssembly is turned off in this browser");
+  await __wbg_init({ module_or_path: new URL("/_mor/mor_wasm_bg.wasm", location.origin) });
+} catch (err) {
+  cannotCheck(err);
+  throw err;
+} finally {
+  clearTimeout(slow);
+}
 
 // ../genesis/src/transport.ts
 var RelayError = class extends Error {
