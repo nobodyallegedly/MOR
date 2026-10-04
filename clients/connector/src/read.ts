@@ -37,7 +37,7 @@ export interface Told {
   /** One or two sentences: the answer. */
   verdict: string;
   signer: string | null;
-  /** The core library's standing of the act: valid, pending, disputed, void, invalid, unknown. */
+  /** The core library's standing of the act: valid, pending, disputed, void, invalid, unknown, or scoped (signed with a grant key, which Law judges, F128). */
   standing: string | null;
   sections: Section[];
   /** Words its signers wrote, quoted as data, invisible controls shown as escapes. */

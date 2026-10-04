@@ -94,6 +94,12 @@ export interface IdentityFile {
    * objects) and records, decisions that cite by their kept tips.
    */
   cites?: string[];
+  /**
+   * Grant keys this identity holds as a grantee (Law, F128): for each grant
+   * naming it, the secret part of the key the grant names (field 9). Acts
+   * signed with it are the granting collective's own, within the grant.
+   */
+  grantKeys?: { grant: string; collective: string; secret: string }[];
 }
 
 /** Law's record (type 17): a decision, which cites by its kept tips (F127). */
@@ -425,6 +431,21 @@ export class TestIdentity {
         if (!(e instanceof TypeError) && !(e instanceof RelayError)) throw e;
       }
     }
+  }
+
+  /**
+   * Make a grant key (Law, F128): a fresh signing key, its secret kept in
+   * this identity's file under the grant once known; its public part, as
+   * Identity's `[scheme, key]`, goes into the grant (field 9).
+   */
+  makeGrantKey(): { secret: Uint8Array; public: [number, Uint8Array] } {
+    const secret = newSigningSecret();
+    return { secret, public: [1, signingPublic(secret)] };
+  }
+
+  /** Keep a grant key's secret, under the grant that names it (F128). */
+  keepGrantKey(grant: string, collective: string, secret: Uint8Array): void {
+    this.f.grantKeys = [...(this.f.grantKeys ?? []).filter((k) => k.grant !== grant), { grant, collective, secret: hex(secret) }];
   }
 
   /** The public half of the safety key held for the next rotation. */

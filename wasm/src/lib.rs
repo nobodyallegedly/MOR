@@ -1157,7 +1157,8 @@ impl Verifier {
     }
 
     /// The standing of an act held: "valid", "disputed", "void", "pending",
-    /// "invalid" or "unknown".
+    /// "invalid", "unknown", or "scoped" (signed with a key a higher MIP's
+    /// act installs, a grant key: Law judges it, F128).
     pub fn status(&self, act: &str) -> R<String> {
         Ok(match self.inner.status(&unhex(act)?) {
             Status::Valid => "valid",
@@ -1166,6 +1167,7 @@ impl Verifier {
             Status::Pending => "pending",
             Status::Invalid => "invalid",
             Status::Unknown => "unknown",
+            Status::Scoped => "scoped",
         }
         .into())
     }
@@ -1271,21 +1273,13 @@ struct SpecsIn {
     ext_layers: std::collections::BTreeMap<String, Vec<u64>>,
     #[serde(default)]
     keeper_logs: std::collections::BTreeMap<String, Vec<String>>,
-    /// Acts whose outside the client found on a relay, and where (F124 N13,
-    /// F126): an act in a collective's name is done, and binds it, only once
-    /// sealed to every member and found on one of the relays its terms name.
+    /// The rail Modules the client read, in their specifications, as push
+    /// rails (F128, W4): the payer pays an address, with no request from
+    /// the payee's side committing to each payment. Every other rail is a
+    /// request rail. (Where the client found an act is never a condition of
+    /// validity, F128: it states it to its user as information only.)
     #[serde(default)]
-    published: Vec<PublishedIn>,
-}
-
-/// One act found on one relay: the relay's hint, and its operator where
-/// the client knows it.
-#[derive(Deserialize)]
-struct PublishedIn {
-    act: String,
-    hint: String,
-    #[serde(default)]
-    operator: Option<String>,
+    push_rails: Vec<String>,
 }
 
 impl SpecsIn {
@@ -1314,11 +1308,8 @@ impl SpecsIn {
             view.keeper_logs
                 .insert(unhex(k)?, log.iter().map(|x| unhex(x)).collect::<R<_>>()?);
         }
-        for x in &self.published {
-            view.published.entry(unhex(&x.act)?).or_default().push(law::Relay {
-                operator: x.operator.as_deref().map(unhex).transpose()?,
-                hint: x.hint.clone(),
-            });
+        for r in &self.push_rails {
+            view.push_rails.insert(unhex(r)?);
         }
         Ok(view)
     }
@@ -1547,9 +1538,6 @@ struct TermsOut {
     forked_from: Option<String>,
     /// The release rule (field 24); null: every holder.
     release_rule: Option<RuleOut>,
-    /// The collective's relays (field 25, F126): each operator (null where
-    /// none is named) and hint.
-    relays: Vec<(Option<String>, String)>,
     /// Why the terms fail the checks that need no other act, or null.
     problem: Option<ProblemOut>,
 }
@@ -1686,7 +1674,6 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             .collect(),
         forked_from: t.forked_from.as_ref().map(hx),
         release_rule: t.release_rule.as_ref().map(rule_out),
-        relays: t.relays.iter().flatten().map(|r| (r.operator.as_ref().map(hx), r.hint.clone())).collect(),
         problem: t.check(&s.mips()?).err().map(|e| problem(&e)),
     })
 }
@@ -2009,7 +1996,7 @@ struct CurrentOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BackingOut {
-    /// "not-under-grant", "backed", "not-backed", "binds" or "undetermined".
+    /// "not-under-grant", "backed", "not-backed" or "binds" (F128: no act is undetermined).
     kind: String,
     grant: Option<String>,
     reason: Option<String>,
@@ -2122,6 +2109,19 @@ impl Verifier {
                 o.agreement = Some(hx(&agreement));
                 o.reason = Some(reason);
             }
+            law::Consent::Granted { agreement, grant } => {
+                o.kind = "granted".into();
+                o.agreement = Some(hx(&agreement));
+                o.reason = Some(format!("signed with the grant key of grant {}, which backs it (F128)", hx(&grant)));
+            }
+            law::Consent::Ungranted { grant, reason } => {
+                o.kind = "ungranted".into();
+                o.reason = Some(format!("signed with the grant key of grant {}, which does not back it: {reason}", hx(&grant)));
+            }
+            law::Consent::Talk => {
+                o.kind = "talk".into();
+                o.reason = Some("a negotiation message: talk, binding nothing, on neither of the collective's chains (F128, W6)".into());
+            }
             law::Consent::Areas { agreement, areas, .. } => {
                 o.kind = "areas".into();
                 o.agreement = Some(hx(&agreement));
@@ -2196,7 +2196,6 @@ impl Verifier {
             law::Backing::Backed { grant } => ("backed", Some(grant), None),
             law::Backing::NotBacked { grant, reason } => ("not-backed", Some(grant), Some(reason)),
             law::Backing::Binds { grant } => ("binds", Some(grant), None),
-            law::Backing::Undetermined { grant } => ("undetermined", Some(grant), None),
         };
         to_js(&BackingOut {
             kind: kind.into(),
@@ -2305,8 +2304,8 @@ impl Verifier {
         })
     }
 
-    /// Whether an obligation binds its debtor (F124 N13), given what the
-    /// client found published (`specs.published`); null if not one.
+    /// Whether an obligation binds its debtor: for a collective, once done
+    /// (F128, N13's public outside withdrawn); null if not one.
     #[wasm_bindgen(js_name = lawObligationBinds)]
     pub fn law_obligation_binds(&self, specs: JsValue, id: &str) -> R<Option<bool>> {
         let s = specs_of(specs)?;
@@ -2340,9 +2339,9 @@ impl Verifier {
         })
     }
 
-    /// Whether an act in a collective's name is done (F126): sealed to every
-    /// member and found on one of its relays. `{ done, why }`, or null where
-    /// the act is not in a collective's name.
+    /// Whether an act in a collective's name is done (F126, F128): sealed to
+    /// every member, or public; where it is held decides nothing. `{ done,
+    /// why }`, or null where the act is not in a collective's name.
     #[wasm_bindgen(js_name = lawDone)]
     pub fn law_done(&self, specs: JsValue, act: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2353,12 +2352,11 @@ impl Verifier {
         }
     }
 
-    /// A payment for a work, judged (F126, F127 W2): "purchase", "no-purchase"
-    /// (a refund owed to the payer, with why), "unrecorded" (the seller a
-    /// collective whose actions chain has not recorded it yet: a sale once
-    /// it does), or "superseded" (undetermined, flaw W4, with the act that
-    /// supersedes the claim it names); null where the payment is not for a
-    /// work.
+    /// A payment for a work, judged (F126, F127 W2, F128 W4): "purchase",
+    /// "no-purchase" (a refund owed to the payer, with why), or "unrecorded"
+    /// (on a request rail, a collective seller's actions chain has not
+    /// recorded it yet; on a push rail (`specs.pushRails`), a holder has not
+    /// signed its receipt yet); null where the payment is not for a work.
     #[wasm_bindgen(js_name = lawPurchase)]
     pub fn law_purchase(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2366,11 +2364,10 @@ impl Verifier {
         let Some(e) = view.purchase(&unhex(id)?).map_err(lerr)? else {
             return Ok(JsValue::NULL);
         };
-        let (verdict, why, by) = match &e.verdict {
-            law::PurchaseVerdict::Purchase => ("purchase", None, None),
-            law::PurchaseVerdict::NoPurchase { why } => ("no-purchase", Some(why.clone()), None),
-            law::PurchaseVerdict::Unrecorded => ("unrecorded", None, None),
-            law::PurchaseVerdict::Superseded { by } => ("superseded", None, Some(hx(by))),
+        let (verdict, why) = match &e.verdict {
+            law::PurchaseVerdict::Purchase => ("purchase", None),
+            law::PurchaseVerdict::NoPurchase { why } => ("no-purchase", Some(why.clone())),
+            law::PurchaseVerdict::Unrecorded => ("unrecorded", None),
         };
         let refund_to = match &e.refund_to {
             finance::RefundTo::Identity(h) => Some(hx(h)),
@@ -2380,7 +2377,6 @@ impl Verifier {
         to_js(&PurchaseOut {
             verdict: verdict.into(),
             why,
-            superseded_by: by,
             claim: e.purchase.as_ref().map(|p| (hx(&p.agreement), hx(&p.line))),
             refund_to,
         })
@@ -2539,7 +2535,6 @@ struct DoneOut {
 struct PurchaseOut {
     verdict: String,
     why: Option<String>,
-    superseded_by: Option<String>,
     claim: Option<(String, String)>,
     refund_to: Option<String>,
 }

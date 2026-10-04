@@ -107,7 +107,6 @@ fn label() -> Terms {
         stakes: None,
         forked_from: None,
         release_rule: None,
-        relays: Some(vec![law::Relay { operator: None, hint: "https://relay.test".into() }]),
     }
 }
 
@@ -234,7 +233,6 @@ fn a_deal_has_everyone_as_its_rules() {
     // F107: a deal is terms without a key grammar.
     let mut d = label();
     d.grammar = None;
-    d.relays = None;
     d.areas = None;
     d.area_words = None;
     assert!(check(&d).is_err(), "a deal's clone rule of two of three is invalid");
@@ -280,7 +278,6 @@ fn a_judge_never_handles_what_it_judges() {
     // Q24 and scenario 1.7: in a deal too.
     let mut d = label();
     d.grammar = None;
-    d.relays = None;
     d.areas = None;
     d.area_words = None;
     d.clone = Rule::All;
@@ -370,7 +367,6 @@ fn every_constitutional_voice_is_covered() {
     // A deal needs no clause (rule 49).
     let mut d = label();
     d.grammar = None;
-    d.relays = None;
     d.areas = None;
     d.area_words = None;
     d.clone = Rule::All;
@@ -522,7 +518,6 @@ fn r4_a_specification_serving_two_layers_answers_to_both_lanes() {
 fn a_deals_clone_needs_every_party() {
     let mut d = label();
     d.grammar = None;
-    d.relays = None;
     d.areas = None;
     d.area_words = None;
     d.clone = Rule::All;
@@ -760,7 +755,6 @@ fn the_departed_members_entry_records_who_left() {
         ("no share of the collective", Box::new(|t| t.departed.as_mut().unwrap().push(h(5)))),
         ("in a deal", Box::new(|t| {
             t.grammar = None;
-            t.relays = None;
             t.areas = None;
             t.area_words = None;
             t.clone = Rule::All;

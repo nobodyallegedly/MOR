@@ -352,6 +352,8 @@ export interface Verified {
   /** Files checked against their hashes. */
   checked: number;
   problems: string[];
+  /** Where this verifier found each act of the collective it read, and the release: information only; no validity rests on it (F128). */
+  foundAt?: { act: string; hint: string }[];
 }
 
 async function fetchFirst<T>(hints: string[], via: Via, get: (r: ReturnType<typeof relayAt>) => Promise<T | null>): Promise<T | null> {
@@ -506,9 +508,8 @@ export async function verifyRelease(
   // The collective's own acts: its records (its everyday line, which writes
   // its ordinary clones and registers departures, Law draft 7, F109), and
   // the clones they name with their signature acts.
-  // F126, W3 (F127): the collective's acts, its records included, count
-  // only once found on a relay its terms name; this verifier states where
-  // it found each.
+  // The collective's acts, its records included (F127): this verifier
+  // states where it found each, as information only (F128).
   const found: { act: string; hint: string }[] = [];
   for (const hint of places) {
     for (const a of await allBy(d.signer, [hint], via)) {
@@ -526,18 +527,20 @@ export async function verifyRelease(
     areas: { area: number; name: string; frozen: boolean; voices: string[]; needed: number; signers: string[]; met: boolean }[];
     met: boolean;
   };
-  // F126: a release in a collective's name is done only once found on a
-  // relay its terms name; this verifier states where it found it.
-  const published: { act: string; hint: string }[] = [...found];
+  // Where the release was found: information only (F128). A release in a
+  // collective's name is done once sealed to every member, or public, and
+  // on the collective's chain, wherever it is held.
+  const foundAt: { act: string; hint: string }[] = [...found];
   for (const hint of places) {
     try {
-      if (await relayAt(hint, via).getAct(release)) published.push({ act: release, hint });
+      if (await relayAt(hint, via).getAct(release)) foundAt.push({ act: release, hint });
     } catch {
       // not reachable, or not there
     }
   }
+  r.foundAt = foundAt;
   try {
-    consent = v.lawConsent({ ...LAW_SPECS, published }, release);
+    consent = v.lawConsent(LAW_SPECS, release);
   } catch (e) {
     return fail(`Law: ${e instanceof Error ? e.message : e}`);
   }

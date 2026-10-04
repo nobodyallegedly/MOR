@@ -12,8 +12,9 @@
 
 mod common;
 
-use common::{own_home, Person, Rot, World};
-use mor_core::act::{Object, Ref};
+use common::{own_home, schnorr, signing_key, Person, Rot, World};
+use mor_core::sig::SchnorrKey;
+use mor_core::act::Object;
 use mor_core::cbor::Value;
 use mor_core::chain::Status;
 use mor_core::hash::{sha256, Hash};
@@ -71,19 +72,14 @@ struct Lab {
     authority: Person,
     keeper: Person,
     keeper_logs: Vec<(Hash, Vec<Hash>)>,
-    /// Acts no relay holds, as this verifier found them (F126): every other
-    /// act held is found on the label's relay.
-    hidden: std::collections::BTreeSet<Hash>,
 }
 
-/// The relay the label's terms name (field 25, F126).
-fn label_relay() -> law::Relay {
-    law::Relay { operator: None, hint: "https://relay.label.test".into() }
-}
-
-/// The verifier states it found `x` on the label's relay (F126, D2).
-fn found(v: &mut LawView, x: Hash) {
-    v.published.entry(x).or_default().push(label_relay());
+/// A grant key (F128): made by the grantee, who keeps its secret part; the
+/// grant names its public part (field 9).
+fn grant_key(name: &str) -> (SchnorrKey, mor_core::identity::SigningKey) {
+    let k = schnorr(&format!("{name}/grant"), 0);
+    let p = signing_key(&k);
+    (k, p)
 }
 
 /// The label's founding terms (scenario 3.1), with a change applied.
@@ -152,7 +148,6 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         stakes: None,
         forked_from: None,
         release_rule: None,
-        relays: Some(vec![label_relay()]),
     };
     f(&mut t);
     t
@@ -212,7 +207,6 @@ impl Lab {
             authority,
             keeper,
             keeper_logs: vec![],
-            hidden: Default::default(),
         }
     }
 
@@ -234,11 +228,6 @@ impl Lab {
             .insert(spec("an extension declaring Finance"), vec![law::layers::FINANCE]);
         for (op, log) in &self.keeper_logs {
             v.keeper_logs.insert(*op, log.clone());
-        }
-        for x in self.w.v.held_acts() {
-            if !self.hidden.contains(&x.id) {
-                found(&mut v, x.id);
-            }
         }
         v
     }
@@ -408,6 +397,17 @@ impl Lab {
     fn resign_from(&mut self, dev: &mut Person, agreement: Hash, area: Option<u64>) -> Hash {
         let r = Resignation { agreement, area };
         law_act(&mut self.w, dev, law::types::RESIGNATION, r.to_map(), obj(agreement))
+    }
+
+    /// The grantee's strand of the label's actions chain (F128): acts signed
+    /// with the grant key `k`, bound to the grant, citing it.
+    fn strand(&self, grant: Hash, k: &SchnorrKey) -> Person {
+        let mut p = self.c[0].clone();
+        p.binding = grant;
+        p.sign = k.clone();
+        p.seq = vec![];
+        p.cite = Some((self.c[0].id, vec![grant]));
+        p
     }
 
     /// The label grants, on device 0.
@@ -1105,10 +1105,16 @@ fn a_departed_holders_stake_never_shrinks_without_them() {
 
 // ---------------------------------------------------------------- areas, freezes, grants
 
-/// 3.7c, 3.7m, Q13, Q17, Q22, Flaws H and N, A6, C8 (ordering story
-/// `flaws_h_i_and_q30_grant_through_a_freeze`).
+/// 3.7c, 3.7m, Q13, Q17, Q22, Flaw N, A6; F128 (grant keys, G2, replacing
+/// C8): a grant hands its grantee a grant key, accepted by the grantee's
+/// signature; the grantee's acts are a strand of the label's actions chain,
+/// citing their grant. A departure that empties the area ends every grant
+/// in it, a decision ending powers: an act the line's history holds
+/// binds; one racing it, or after it, is void, the ending winning; one the
+/// label acknowledged binds (A6). Reinstating is cloning the ended grant,
+/// which takes nothing on.
 #[test]
-fn an_area_freezes_and_its_grants_wait_for_the_refit() {
+fn an_emptied_area_ends_its_grants() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let env = mips().envelope;
@@ -1125,6 +1131,7 @@ fn an_area_freezes_and_its_grants_wait_for_the_refit() {
         kinds: Some(vec![pubs.clone()]),
         reinstates: None,
         by_this: false,
+        key: grant_key(&format!("{who:?}")).1,
     };
     let g1 = lab.grant(&g(publisher.id));
     lab.sign(ANA, &g1);
@@ -1137,56 +1144,80 @@ fn an_area_freezes_and_its_grants_wait_for_the_refit() {
     lab.sign(ANA, &g3);
     assert!(matches!(lab.consent(&g3), Consent::Invalid { .. }));
 
-    // A grantee's act cites the label's chain (F127).
-    let under = |lab: &mut Lab, who: &mut Person, grant: Hash, spec: Hash| -> Hash {
-        let o = lab.chain(&[]);
-        let a = lab.w.everyday_act_refs(who, spec, 0, vec![], Some(o), None, Some(vec![Ref::Act(grant)]));
+    let mut pubs_strand = lab.strand(g1, &key_of(publisher.id));
+    let mut agent_strand = lab.strand(g2, &key_of(agent.id));
+    let under = |lab: &mut Lab, st: &mut Person, spec: Hash| -> Hash {
+        let a = lab.w.everyday_act(st, spec, 0, vec![], None, None);
         lab.w.add(&a)
     };
-    let p1 = under(&mut lab, &mut publisher, g1, env);
+    // Not yet accepted by its grantee: the key backs nothing (F128).
+    let early = under(&mut lab, &mut pubs_strand, env);
+    assert!(matches!(lab.view().backing(&early).unwrap(), Backing::NotBacked { reason, .. } if reason.contains("accept")));
+    sign(&mut lab.w, &mut publisher, &g1);
+    sign(&mut lab.w, &mut agent, &g2);
+    let p1 = under(&mut lab, &mut pubs_strand, env);
     assert_eq!(lab.view().backing(&p1).unwrap(), Backing::Backed { grant: g1 });
-    // Not citing the label's chain: on no chain of the label, not backed.
+    assert!(matches!(lab.consent(&p1), Consent::Granted { .. }));
+    // Not citing its grant: on no chain of the label, not backed.
     let loose = {
-        let a = lab.w.everyday_act_refs(&mut publisher, env, 0, vec![], None, None, Some(vec![Ref::Act(g1)]));
+        let mut st = lab.strand(g1, &key_of(publisher.id));
+        st.cite = None;
+        let a = lab.w.everyday_act(&mut st, env, 0, vec![], None, None);
         lab.w.add(&a)
     };
-    assert!(matches!(lab.view().backing(&loose).unwrap(), Backing::NotBacked { reason, .. } if reason.contains("F127")));
-    // Another publication under the grant, which the label's next act
-    // cites as the head it joins (F127).
-    let joined = under(&mut lab, &mut publisher, g1, env);
+    assert!(matches!(lab.view().backing(&loose).unwrap(), Backing::NotBacked { reason, .. } if reason.contains("F128")));
+    // Signed with another key than the grant's: not the label's act.
+    let forged = {
+        let mut st = lab.strand(g1, &key_of(agent.id));
+        let a = lab.w.everyday_act(&mut st, env, 0, vec![], None, None);
+        lab.w.add(&a)
+    };
+    assert_eq!(lab.view().backing(&forged).unwrap(), Backing::NotUnderGrant);
+    assert_eq!(lab.w.v.status(&forged), Status::Scoped);
+    // Another publication, which the label's next act cites as the head it
+    // joins (F127).
+    let joined = under(&mut lab, &mut pubs_strand, env);
     let o = lab.chain(&[joined]);
     let a = lab.w.everyday_act(&mut lab.c[0], pay(), 0, vec![], Some(o), None);
     lab.w.add(&a);
     // An act beyond the grant's reach is not backed.
-    let off = under(&mut lab, &mut publisher, g1, pay());
+    let off = {
+        let mut st = lab.strand(g1, &key_of(publisher.id));
+        let a = lab.w.everyday_act(&mut st, pay(), 0, vec![], None, None);
+        lab.w.add(&a)
+    };
     assert!(matches!(lab.view().backing(&off).unwrap(), Backing::NotBacked { .. }));
-    // The agent's deals A, B, C; the label pays on B.
-    let da = under(&mut lab, &mut agent, g2, env);
-    let db = under(&mut lab, &mut agent, g2, env);
-    let dc = under(&mut lab, &mut agent, g2, env);
+    // The agent's deals A, B, C, on the agent's strand; the label
+    // acknowledges B.
+    let mut agent2 = agent_strand.clone();
+    let da = under(&mut lab, &mut agent_strand, env);
+    let db = under(&mut lab, &mut agent2, env);
+    let mut agent3 = lab.strand(g2, &key_of(agent.id));
+    let dc = under(&mut lab, &mut agent3, env);
     lab.ack(0, db);
 
-    // Ana steps down at once; the label registers it: the area freezes.
+    // Ana steps down at once; the label registers it: the area is empty,
+    // and every grant in it ends (G2).
     let mut ana = lab.m[ANA].clone();
     let res = lab.resign_from(&mut ana, f, Some(1));
     lab.m[ANA] = ana;
-    let line = lab.record(0, None, &[], vec![res], f);
-    let _ = line;
+    lab.record(0, None, &[], vec![res], f);
     let p = lab.publish(0);
     lab.sign(ANA, &p);
     assert_eq!(areas(&lab.consent(&p)), vec![(1, true, false, vec![])]);
-    let dd = under(&mut lab, &mut agent, g2, env);
-    let p2 = under(&mut lab, &mut publisher, g1, env);
+    let dd = under(&mut lab, &mut agent_strand, env);
+    let p2 = under(&mut lab, &mut pubs_strand, env);
     let v = lab.view();
-    assert_eq!(v.backing(&db).unwrap(), Backing::Binds { grant: g2 });
+    assert_eq!(v.backing(&db).unwrap(), Backing::Binds { grant: g2 }, "A6");
     for d in [da, dc, dd] {
-        assert_eq!(v.backing(&d).unwrap(), Backing::Undetermined { grant: g2 });
+        assert!(matches!(v.backing(&d).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G2")), "{d:?}");
     }
-    assert_eq!(v.backing(&p1).unwrap(), Backing::Undetermined { grant: g1 }, "C8, stated cost");
-    // F127: done within the grant's powers, and cited by the label's chain
-    // before the line that froze the area: it counted as soon as done.
-    assert_eq!(v.backing(&joined).unwrap(), Backing::Backed { grant: g1 });
-    assert_eq!(v.backing(&p2).unwrap(), Backing::Undetermined { grant: g1 });
+    // Done within the grant's powers, and held by the history of the line
+    // that emptied the area: it binds. So does what comes before it on the
+    // same strand.
+    assert_eq!(v.backing(&joined).unwrap(), Backing::Binds { grant: g1 });
+    assert_eq!(v.backing(&p1).unwrap(), Backing::Binds { grant: g1 });
+    assert!(matches!(v.backing(&p2).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G2")));
     // Ana keeps the rest of her voice.
     let r = lab.cmip_act(0, pay());
     lab.sign(BEN, &r);
@@ -1212,26 +1243,102 @@ fn an_area_freezes_and_its_grants_wait_for_the_refit() {
     assert!(lab.counts(&p), "the publications count again, with the new holder");
     // A signature on the ended grant itself reinstates nothing (C1).
     lab.sign(CY, &g1);
-    assert_eq!(lab.view().backing(&p2).unwrap(), Backing::Undetermined { grant: g1 });
+    assert!(matches!(lab.view().backing(&p2).unwrap(), Backing::NotBacked { .. }));
     // A reinstatement whose fields differ is invalid.
     let mut wrong = g(agent.id);
     wrong.reinstates = Some(g1);
     let rw = lab.grant(&wrong);
     lab.sign(CY, &rw);
     assert!(matches!(lab.consent(&rw), Consent::Invalid { .. }));
-    // The reinstatement, after the refit, completed by the new holder.
+    // The reinstatement, after the refit, completed by the new holder: a
+    // clone of the ended grant with a key of its own, which the grantee
+    // accepts. It takes nothing on (G2).
+    let (k2, pk2) = grant_key("publisher, again");
     let mut again = g(publisher.id);
     again.reinstates = Some(g1);
+    again.key = pk2;
     let re = lab.grant(&again);
     assert!(!lab.counts(&re));
     lab.sign(CY, &re);
     assert!(lab.counts(&re));
-    for x in [p1, p2] {
-        assert_eq!(lab.view().backing(&x).unwrap(), Backing::Backed { grant: re });
-    }
-    // The agent's grant, not reinstated: B binds, A, C and D wait.
+    sign(&mut lab.w, &mut publisher, &re);
+    let mut st = lab.strand(re, &k2);
+    let p3 = under(&mut lab, &mut st, env);
+    assert_eq!(lab.view().backing(&p3).unwrap(), Backing::Backed { grant: re });
+    assert!(matches!(lab.view().backing(&p2).unwrap(), Backing::NotBacked { .. }), "taken on by nothing");
+    // The agent's grant, not reinstated: B binds, D stays void.
     assert_eq!(lab.view().backing(&db).unwrap(), Backing::Binds { grant: g2 });
-    assert_eq!(lab.view().backing(&dd).unwrap(), Backing::Undetermined { grant: g2 });
+    assert!(matches!(lab.view().backing(&dd).unwrap(), Backing::NotBacked { .. }));
+}
+
+/// F128, G1: a revocation is a decision ending powers; it removes the grant
+/// key. A grantee's act its history holds binds; one racing it (neither
+/// citing the other) or after it is void, the ending winning, unless the
+/// collective itself acknowledges it (A6). A revocation of a grant within
+/// an area counts only with that area's holders (Q29).
+#[test]
+fn a_revocation_ends_the_grant_key() {
+    let mut lab = Lab::new(&|_| {});
+    let env = mips().envelope;
+    let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
+    let grant = Grant {
+        area: Some(1),
+        kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]),
+        ..plain_grant(agent.id, false)
+    };
+    let g = lab.grant(&grant);
+    lab.sign(ANA, &g);
+    sign(&mut lab.w, &mut agent, &g);
+    let mut s1 = lab.strand(g, &key_of(agent.id));
+    let mut s2 = s1.clone();
+    let act = |lab: &mut Lab, st: &mut Person| -> Hash {
+        let a = lab.w.everyday_act(st, env, 0, vec![], None, None);
+        lab.w.add(&a)
+    };
+    let cited = act(&mut lab, &mut s1);
+    let racing = act(&mut lab, &mut s2);
+    // The revocation, on device 0, citing the head it saw (the cited act).
+    let rev = |lab: &mut Lab| -> Hash {
+        let o = lab.chain(&[cited]);
+        let a = lab.w.everyday_act(&mut lab.c[0], mips().law, law::types::REVOCATION, law::Revocation { grant: g }.to_map(), Some(o), None);
+        lab.w.add(&a)
+    };
+    let r = rev(&mut lab);
+    // Not yet completed by the area's holder: it counts for nothing (Q29).
+    assert!(!lab.counts(&r));
+    assert_eq!(lab.view().backing(&racing).unwrap(), Backing::Backed { grant: g });
+    lab.sign(ANA, &r);
+    assert!(lab.counts(&r));
+    let v = lab.view();
+    assert_eq!(v.backing(&cited).unwrap(), Backing::Binds { grant: g });
+    assert!(matches!(v.backing(&racing).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")));
+    drop(v);
+    // After it, citing it: void.
+    s1.cite.as_mut().unwrap().1.push(r);
+    let after = act(&mut lab, &mut s1);
+    assert!(matches!(lab.view().backing(&after).unwrap(), Backing::NotBacked { .. }));
+    // The label acknowledges the racing act: it adopts it (A6).
+    lab.ack(0, racing);
+    assert_eq!(lab.view().backing(&racing).unwrap(), Backing::Binds { grant: g });
+}
+
+/// F128, W6: a collective's negotiation message is talk: it binds nothing,
+/// sits on neither chain, and need not be sealed to every member.
+#[test]
+fn a_collectives_negotiation_is_talk() {
+    let mut lab = Lab::new(&|_| {});
+    let other = lab.w.genesis("a buyer", vec![own_home()], None, None);
+    let saved = lab.c[0].cite.take();
+    let m = lab.w.private_act(
+        &mut lab.c[0],
+        mips().law,
+        law::types::NEGOTIATION,
+        law::NegotiationMessage { text: "Shall we?".into(), format: None, follows: None, acks: None }.to_map(),
+        None,
+        vec![other.id],
+    );
+    lab.c[0].cite = saved;
+    assert_eq!(lab.consent(&m), Consent::Talk);
 }
 
 /// 3.7m, Q17: one of two holders steps down; the other carries on, and the
@@ -1465,13 +1572,19 @@ fn a_members_own_rotation_is_registered_on_the_line() {
 
 #[test]
 fn open_formats_are_refused_not_guessed() {
-    // A revocation (type 10): its format is open.
+    // An import (type 11): its format is open. A revocation's is exact
+    // since F128: one naming no grant is invalid.
     let mut lab = Lab::new(&|_| {});
+    let a = lab
+        .w
+        .everyday_act(&mut lab.c[0], mips().law, law::types::IMPORT, vec![], None, None);
+    let x = lab.w.add(&a);
+    assert!(matches!(lab.view().consent(&x), Err(LawError::Unsupported(_))));
     let a = lab
         .w
         .everyday_act(&mut lab.c[0], mips().law, law::types::REVOCATION, vec![], None, None);
     let x = lab.w.add(&a);
-    assert!(matches!(lab.view().consent(&x), Err(LawError::Unsupported(_))));
+    assert!(matches!(lab.view().consent(&x), Ok(Consent::Invalid { .. })));
     // A record registering a declaration not in the format is no line.
     let f = lab.founding;
     let mut auth = lab.authority.clone();
@@ -2389,7 +2502,6 @@ fn a_deal_changes_only_with_everyone() {
         stakes: None,
         forked_from: None,
         release_rule: None,
-        relays: None,
     };
     let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -2465,7 +2577,6 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             stakes: None,
             forked_from: None,
             release_rule: None,
-            relays: None,
         };
         let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -2558,7 +2669,6 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         stakes: None,
         forked_from: None,
         release_rule: None,
-        relays: None,
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mips());
@@ -2736,8 +2846,14 @@ fn vault_entry(source: &[u8]) -> mor_core::finance::VaultEntry {
     mor_core::finance::VaultEntry { unit: spec("a unit"), rail_module: spec("a rail Module"), source: source.to_vec(), limit: 1000 }
 }
 
+/// The grant key a grantee made for `plain_grant` (F128).
+fn key_of(grantee: Hash) -> SchnorrKey {
+    grant_key(&format!("{grantee:?}")).0
+}
+
 fn plain_grant(grantee: Hash, by_this: bool) -> Grant {
-    Grant { grantee, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, by_this }
+    let key = grant_key(&format!("{grantee:?}")).1;
+    Grant { grantee, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, by_this, key }
 }
 
 /// Freeze suite v21, 3.7v (F124, S1): founding terms carry stakes in the
@@ -3073,7 +3189,6 @@ fn payer_side_splitting_follows_the_claim() {
         stakes: Some(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::Id(label), 600_000), (Who::Id(guest.id), 400_000)] }]),
         forked_from: None,
         release_rule: None,
-        relays: None,
     };
     let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal.to_map(), None);
     let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
@@ -3158,14 +3273,19 @@ fn a_collective_forks() {
     };
     let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
     let g = lab.grant(&Grant { scope: 0, ..plain_grant(agent.id, false) });
-    let mut deal_on_chain = |lab: &mut Lab| {
-        let o = lab.chain(&[]);
-        let a = lab.w.everyday_act_refs(&mut agent, spec("a deal cMIP"), 0, vec![(Value::Uint(0), Value::Text("a deal".into()))], Some(o), None, Some(vec![Ref::Act(g)]));
+    sign(&mut lab.w, &mut agent, &g);
+    // F128: the agent signs with its grant key, on its strand of the
+    // label's actions chain.
+    // Two of the agent's devices, each a strand under the same grant key.
+    let mut s1 = lab.strand(g, &key_of(agent.id));
+    let mut s2 = s1.clone();
+    let deal_on_chain = |lab: &mut Lab, st: &mut Person| {
+        let a = lab.w.everyday_act(st, spec("a deal cMIP"), 0, vec![(Value::Uint(0), Value::Text("a deal".into()))], None, None);
         lab.w.add(&a)
     };
     // One deal the label's chain never cites; another its next act joins.
-    let deal = deal_on_chain(&mut lab);
-    let cited_deal = deal_on_chain(&mut lab);
+    let deal = deal_on_chain(&mut lab, &mut s1);
+    let cited_deal = deal_on_chain(&mut lab, &mut s2);
     let o = lab.chain(&[cited_deal]);
     let a = lab.w.everyday_act(&mut lab.c[0], spec("a deal cMIP"), 1, vec![], Some(o), None);
     lab.w.add(&a);
@@ -3173,7 +3293,6 @@ fn a_collective_forks() {
     let d2 = obligation(&mut lab, "another supplier", 300);
     let mut hidden = lab.w.genesis("a creditor kept out of sight", vec![own_home()], None, None);
     let d3 = obligation_to(&mut lab, hidden.id, 50);
-    lab.hidden.insert(d3);
     // Each side founds its successor first (N4); the departed holder keeps
     // their quarter in each.
     let kept = vec![(dee, 250_000)];
@@ -3226,8 +3345,10 @@ fn a_collective_forks() {
     assert!(e.unassigned.is_empty());
     let idx = v.terms(&k).unwrap().stake_on(&Who::Id(work)).unwrap().0 as u64;
     assert_eq!(v.fork_transfer(&fa, &k, idx).unwrap(), Some(vec![333_334, 666_666]));
-    // d3, not yet published, binds nothing yet; it is handed out.
-    assert_eq!(v.obligation_binds(&d3).unwrap(), Some(false));
+    // d3, unpublished, is done all the same (sealed to every member, on
+    // the chain): it binds, and it is handed out. Where an act is held is
+    // never a condition (F128).
+    assert_eq!(v.obligation_binds(&d3).unwrap(), Some(true));
     assert_eq!(v.debtors(&d1).unwrap(), Some(vec![sb.id]));
     assert_eq!(v.debtors(&d2).unwrap(), Some(vec![sa.id, sb.id]));
     drop(v);
@@ -3287,8 +3408,7 @@ fn a_collective_forks() {
     assert!(matches!(lab.view().purchase(&wrong).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { .. }));
     // 3.9g (F127): d3 surfaces, published by its creditor after the fork.
     // It was handed out, so the fork stands as it was, and side A owes it.
-    let mut v = lab.view();
-    found(&mut v, d3);
+    let v = lab.view();
     let e = v.fork(&fa).unwrap();
     assert!(e.complete, "{:?}", e.why);
     assert!(e.unassigned.is_empty());
@@ -3302,8 +3422,7 @@ fn a_collective_forks() {
     let sa_terms = ta;
     let closing = law::Closing { agreement: sa_terms, collective: sa.id, chain_act: sa.binding, tips: vec![tip(&sa)] };
     let cl = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, closing.to_map(), obj(sa_terms));
-    let mut v = lab.view();
-    found(&mut v, d3);
+    let v = lab.view();
     let e = v.closing(&cl).unwrap();
     assert!(!e.complete);
     assert_eq!(sorted(e.open_debts.clone()), sorted(vec![d2, d3]), "{:?}", e.why);
@@ -3313,8 +3432,7 @@ fn a_collective_forks() {
     let mut supplier = lab.w.genesis("another supplier's till", vec![own_home()], None, None);
     receipt(&mut lab.w, &mut supplier, sb.id, d2, 300);
     debt_release(&mut lab.w, &mut hidden, d3, vec![]);
-    let mut v = lab.view();
-    found(&mut v, d3);
+    let v = lab.view();
     assert_eq!(v.owes(&sa.id).unwrap(), Vec::<Hash>::new());
     assert_eq!(v.owes(&sb.id).unwrap(), vec![d1]);
     let e = v.closing(&cl).unwrap();
@@ -3610,7 +3728,6 @@ fn a_work_is_released_to_the_public_domain() {
         }]),
         forked_from: None,
         release_rule: rule,
-        relays: None,
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
@@ -3691,7 +3808,6 @@ fn a_timed_release() {
             stakes: Some(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::Id(ana.id), 1_000_000)] }]),
             forked_from: None,
             release_rule: None,
-            relays: None,
         };
         let x = law_act(w, ana, law::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
@@ -3819,10 +3935,8 @@ fn a_bankrupt_collective_settles_by_stakes_and_a_release() {
     lab.sign(ANA, &p);
     let mut lender = lab.w.genesis("the lender", vec![own_home()], None, None);
     let d = obligation_to(&mut lab, lender.id, 1_000);
-    fn view2(lab: &Lab, d: Hash) -> LawView<'_> {
-        let mut v = lab.view();
-        found(&mut v, d);
-        v
+    fn view2(lab: &Lab, _d: Hash) -> LawView<'_> {
+        lab.view()
     }
     let owes = |lab: &Lab| -> Vec<Hash> { view2(lab, d).owes(&lab.c[0].id).unwrap() };
     assert_eq!(owes(&lab), vec![d]);
@@ -3931,13 +4045,14 @@ fn a_creditors_release_has_one_format() {
     assert!(!e.counts);
 }
 
-/// Freeze suite v21, 3.9i (F126, item 1): an act in a collective's name is
-/// done, and binds it, only once sealed to every member and its outside is
-/// found on one of the relays its terms name; before that, even signed, it
-/// binds no one. A public act is readable by every member. One named relay
-/// is enough. A grantee's act is held to the same.
+/// Freeze suite v21, 3.9i (F126, F128): an act in a collective's name is
+/// done, and binds it, once sealed to every member (or public) and on the
+/// collective's chain; before that, even signed, it binds no one. Where a
+/// verifier found it is never a condition (F128: named relays withdrawn
+/// from validity). A grantee's act, signed with its grant key, is held to
+/// the same.
 #[test]
-fn an_act_in_the_collectives_name_is_done_only_once_sealed_and_on_its_relays() {
+fn an_act_in_the_collectives_name_is_done_once_sealed_wherever_held() {
     use mor_core::finance::{Amount, Obligation, Payload as Fin};
     let mut lab = Lab::new(&|_| {});
     let ids = lab.ids();
@@ -3953,108 +4068,61 @@ fn an_act_in_the_collectives_name_is_done_only_once_sealed_and_on_its_relays() {
         });
         lab.w.private_act(&mut lab.c[0], mips().finance, 1, o.to_map(), None, to)
     };
-    // Sealed to the creditor alone, found on the label's relay: not done.
+    // Sealed to the creditor alone: not done.
     let secret = debt(&mut lab, vec![creditor.id]);
     let v = lab.view();
     assert_eq!(v.obligation_binds(&secret).unwrap(), Some(false));
     assert!(v.done(&secret).unwrap().unwrap().unwrap_err().contains("sealed to every member"));
     assert!(matches!(v.consent(&secret).unwrap(), Consent::NotDone { .. }));
     drop(v);
-    // Sealed to the creditor and every member, but found on no relay the
-    // terms name: still planning, binding no one.
+    // Sealed to the creditor and every member: done, and it binds, found
+    // on no relay at all (F128).
     let mut all = vec![creditor.id];
     all.extend(ids.iter().copied());
     let open = debt(&mut lab, all);
-    lab.hidden.insert(open);
-    let mut v = lab.view();
-    assert_eq!(v.obligation_binds(&open).unwrap(), Some(false));
-    v.published.entry(open).or_default().push(law::Relay { operator: None, hint: "https://elsewhere.test".into() });
-    assert_eq!(v.obligation_binds(&open).unwrap(), Some(false), "a relay the terms do not name");
-    assert!(v.done(&open).unwrap().unwrap().unwrap_err().contains("relay"));
-    // Found on the label's relay: done, and it binds.
-    found(&mut v, open);
+    let v = lab.view();
     assert_eq!(v.done(&open).unwrap(), Some(Ok(())));
     assert_eq!(v.obligation_binds(&open).unwrap(), Some(true));
     drop(v);
-    // A public act is readable by every member: on the relay, done; a
-    // publication not found on it counts for nothing yet.
+    // A public act is readable by every member: done.
     let p = lab.publish(0);
     lab.sign(ANA, &p);
     assert!(lab.counts(&p));
-    lab.hidden.insert(p);
-    assert!(matches!(lab.consent(&p), Consent::NotDone { .. }));
-    lab.hidden.remove(&p);
-    // A grantee's act in the label's name: the same condition.
+    // A grantee's act in the label's name, signed with its grant key: the
+    // same condition.
     let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
     let g = lab.grant(&plain_grant(agent.id, false));
+    sign(&mut lab.w, &mut agent, &g);
+    let mut st = lab.strand(g, &key_of(agent.id));
     let deal = {
-        let o = lab.chain(&[]);
-        let a = lab.w.everyday_act_refs(&mut agent, spec("a deal cMIP"), 0, vec![(Value::Uint(0), Value::Text("a deal".into()))], Some(o), None, Some(vec![Ref::Act(g)]));
+        let a = lab.w.everyday_act(&mut st, spec("a deal cMIP"), 0, vec![(Value::Uint(0), Value::Text("a deal".into()))], None, None);
         lab.w.add(&a)
     };
     assert_eq!(lab.view().backing(&deal).unwrap(), Backing::Backed { grant: g });
-    lab.hidden.insert(deal);
-    assert!(matches!(lab.view().backing(&deal).unwrap(), Backing::NotBacked { reason, .. } if reason.contains("F126")));
+    assert!(matches!(lab.consent(&deal), Consent::Granted { grant, .. } if grant == g));
+    let quiet = lab.w.private_act(&mut st, spec("a deal cMIP"), 0, vec![], None, vec![creditor.id]);
+    assert!(matches!(lab.view().backing(&quiet).unwrap(), Backing::NotBacked { reason, .. } if reason.contains("F126")));
     // Not a collective's act: the condition does not apply.
     assert_eq!(lab.view().done(&creditor.id).ok().flatten(), None);
 }
 
-/// F127 (reading 3, adjusted): the relays are constitutional (field 25),
-/// "so much stands on it": changed by the constitutional change rule, which
-/// a rotation declares, never by the clone rule or an area; an act found
-/// only on the new relay is done once the clone is in force. A collective's
-/// terms name relays; a deal's never.
+/// F128: terms field 25 (the relays, F126, constitutional under F127) is
+/// withdrawn: relays are transport, where a collective's clients publish
+/// and look first (client conformance, the relay transport cMIP), never a
+/// condition of validity. Terms carrying it are refused, the number never
+/// reused; no area reaches it.
 #[test]
-fn a_collectives_relays_change_by_the_constitutional_rule() {
-    let mut lab = Lab::new(&|_| {});
-    let f = lab.founding;
-    let new = law::Relay { operator: Some(spec("a relay operator")), hint: "https://new.test".into() };
-    let n2 = new.clone();
-    // The clone rule cannot change them: a record of such a clone puts
-    // nothing in force.
-    let t = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.relays = Some(vec![n2.clone()]));
-    assert_eq!(lab.view().powers_needed(&t).unwrap(), vec![Power::Constitutional]);
-    let k0 = lab.propose(ANA, &t);
-    let s0 = vec![lab.sign(ANA, &k0), lab.sign(BEN, &k0)];
-    let r0 = lab.record(0, Some((k0, s0)), &[], vec![], k0);
-    assert_eq!(puts(&lab, &r0), None);
-    // Nor can an area reach them (field reference [0, 25]).
-    let mut reach = lab.view().terms(&f).unwrap();
-    reach.parent = None;
-    reach.field4 = Field4::Rule(Rule::All);
+fn terms_field_25_is_withdrawn() {
+    let lab = Lab::new(&|_| {});
+    let ids = lab.ids();
+    let t = label_terms(&ids, lab.authority.id, lab.keeper.id, &|_| {});
+    assert!(t.check(&mips()).is_ok(), "a collective's terms name no relays");
+    let mut m = t.to_map();
+    m.push((Value::Uint(25), Value::Array(vec![Value::Array(vec![Value::Null, Value::Text("https://relay.test".into())])])));
+    assert!(Terms::decode(&m).unwrap_err().to_string().contains("F128"));
+    let mut reach = t.clone();
     reach.areas.as_mut().unwrap()[0].fields = Some(vec![law::FieldRef::Field(25)]);
     assert!(reach.check(&mips()).is_err());
-    // The constitutional change rule, every member, declared by a rotation.
-    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|t| t.relays = Some(vec![n2.clone()]));
-    let k = lab.propose(ANA, &t);
-    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k)).collect();
-    lab.rotate(Some((k, s)), &[0]);
-    let p = lab.publish(0);
-    lab.sign(ANA, &p);
-    lab.hidden.insert(p);
-    let mut v = lab.view();
-    assert!(matches!(v.consent(&p).unwrap(), Consent::NotDone { .. }));
-    // Found on the old relay: no longer named.
-    found(&mut v, p);
-    assert!(matches!(v.consent(&p).unwrap(), Consent::NotDone { .. }));
-    // Found on a relay of the same operator, at another address: the
-    // operator is what counts.
-    v.published.entry(p).or_default().push(law::Relay { operator: Some(spec("a relay operator")), hint: "https://moved.test".into() });
-    assert!(v.consent(&p).unwrap().counts());
-    drop(v);
-    // Terms: a collective without relays, or a deal with them, are invalid.
-    let ids = lab.ids();
-    let mut no_relays = label_terms(&ids, lab.authority.id, lab.keeper.id, &|_| {});
-    no_relays.relays = None;
-    assert!(no_relays.check(&mips()).is_err());
-    let mut deal = no_relays.clone();
-    deal.grammar = None;
-    deal.areas = None;
-    deal.area_words = None;
-    deal.clone = Rule::All;
-    deal.abandonment = None;
-    deal.relays = Some(vec![new]);
-    assert!(deal.check(&mips()).unwrap_err().to_string().contains("F126"));
 }
 
 /// F126 (E2): a collective forgives a debt owed to it by its Finance lane
@@ -4161,15 +4229,14 @@ fn deal_terms(a: Hash, b: Hash) -> Terms {
     d.area_words = None;
     d.clone = Rule::All;
     d.abandonment = None;
-    d.relays = None;
     d.stakes = None;
     d
 }
 
 /// Freeze suite v21, 3.9l (F127, W3): a record is an act in the
 /// collective's name like any other: not done (not sealed to every member,
-/// or not on its relays), it is no line: it puts nothing in force and
-/// registers nothing.
+/// nor public), it is no line: it puts nothing in force and registers
+/// nothing. Where it is held decides nothing (F128).
 #[test]
 fn a_record_not_done_is_no_line() {
     let mut lab = Lab::new(&|_| {});
@@ -4178,17 +4245,10 @@ fn a_record_not_done_is_no_line() {
     let k = lab.propose(BEN, &t);
     let s = lab.sign(BEN, &k);
     let r = lab.record(0, Some((k, vec![s])), &[], vec![], k);
-    lab.hidden.insert(r);
-    let e = lab.view().record(&lab.c[0].id, &r).unwrap();
-    assert!(!e.line);
-    assert_eq!(e.puts, None);
-    assert!(e.not_a_line.as_deref().is_some_and(|w| w.contains("relay")), "{:?}", e.not_a_line);
+    // Public: the line, and the clone in force.
+    assert_eq!(puts(&lab, &r), Some(k));
     let x = lab.cmip_act(0, pay());
     lab.sign(BEN, &x);
-    assert_eq!(lab.in_force(&x), f);
-    // On the relay: the line, and the clone in force.
-    lab.hidden.remove(&r);
-    assert_eq!(puts(&lab, &r), Some(k));
     assert_eq!(lab.in_force(&x), k);
     // A resignation registered by a record sealed to Ben alone: no line,
     // and Ben's voice remains.
@@ -4309,6 +4369,31 @@ fn a_sale_is_recorded_on_the_actions_chain() {
     let v = lab.view();
     assert_eq!(v.purchase(&ana).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
     drop(v);
+    // F128 (reading 6): the label's split service records a sale with its
+    // grant key, a grant within the Finance area, which Ben holds.
+    let mut svc = lab.w.genesis("the label's split service", vec![own_home()], None, None);
+    let g = lab.grant(&Grant { area: Some(2), kinds: Some(vec![Kind::Layer(law::layers::FINANCE)]), ..plain_grant(svc.id, false) });
+    lab.sign(BEN, &g);
+    sign(&mut lab.w, &mut svc, &g);
+    let mut st = lab.strand(g, &key_of(svc.id));
+    let by_svc = {
+        let r = Fin::Receipt(Receipt {
+            rail,
+            proof: b"cy".to_vec(),
+            payer: Some(Payer::Identity(spec("Cy the fan"))),
+            payee: label,
+            amount: Amount { unit: spec("a unit"), value: 10 },
+            fulfils: publication,
+            previous: None,
+            forward: None,
+            batch: None,
+            purchase: Some(Purchase { agreement: f, line: f }),
+        });
+        let a = lab.w.everyday_act(&mut st, mips().finance, 2, r.to_map(), None, None);
+        lab.w.add(&a)
+    };
+    assert!(matches!(lab.consent(&by_svc), Consent::Granted { .. }), "{:?}", lab.consent(&by_svc));
+    assert_eq!(lab.view().purchase(&by_svc).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
     // A receipt on device 1, which no act the fork cites ever joins.
     let off = receipt(&mut lab, 1, "a fan on a device left out", b"off");
     let (mut sa, _) = found_successor(&mut lab, "side A", &[ANA], &[], label);
@@ -4340,4 +4425,104 @@ fn a_sale_is_recorded_on_the_actions_chain() {
     let got = lab.view().purchase(&ben).unwrap().unwrap();
     assert!(matches!(got.verdict, law::PurchaseVerdict::NoPurchase { ref why } if why.contains("W2")), "{got:?}");
     assert_eq!(got.refund_to, mor_core::finance::RefundTo::Identity(spec("Ben the fan")));
+}
+
+/// Freeze suite v21, 3.9o (F128, W4): two musicians, no collective, clone
+/// their deal to change their shares in a song. On a request rail, the
+/// claim a purchase names is the one the seller's request committed to: a
+/// purchase, whatever came after. On a push rail, each holder settles on its
+/// own chain: a receipt recorded before that holder's signature on the new
+/// version is a sale; the payment is a purchase only if every holder's
+/// receipt is; otherwise every holder refunds; until every holder has
+/// signed its receipt, it is unrecorded.
+#[test]
+fn a_superseded_claim_settles_on_each_holders_chain() {
+    use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let mut w = World::new();
+    let mut ana = w.genesis("ana the singer", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben the drummer", vec![own_home()], None, None);
+    let work = spec("their song");
+    let both = sorted(vec![ana.id, ben.id]);
+    let mut d = deal_terms(both[0], both[1]);
+    d.stakes = Some(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::Id(both[0]), 500_000), (Who::Id(both[1]), 500_000)] }]);
+    let deal = law_act(&mut w, &mut ana, law::types::TERMS, d.to_map(), None);
+    sign(&mut w, &mut ana, &deal);
+    sign(&mut w, &mut ben, &deal);
+    let publication = {
+        let a = w.everyday_act(&mut ana, mips().envelope, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        w.add(&a)
+    };
+    let (request, push) = (spec("an invoice rail"), spec("a push rail"));
+    let receipt = |w: &mut World, who: &mut Person, rail: Hash, proof: &[u8]| {
+        let r = Fin::Receipt(Receipt {
+            rail,
+            proof: proof.to_vec(),
+            payer: Some(Payer::Identity(spec("a fan"))),
+            payee: who.id,
+            amount: Amount { unit: spec("a unit"), value: 5 },
+            fulfils: publication,
+            previous: None,
+            forward: None,
+            batch: None,
+            purchase: Some(Purchase { agreement: deal, line: deal }),
+        });
+        let a = w.everyday_act(who, mips().finance, 2, r.to_map(), None, None);
+        w.add(&a)
+    };
+    fn pview(w: &World, push: Hash) -> LawView<'_> {
+        let mut v = LawView::new(&w.v, mips());
+        v.push_rails.insert(push);
+        v
+    }
+    // On the push rail, before the change: each holder's receipt.
+    let early_a = receipt(&mut w, &mut ana, push, b"tx1");
+    assert_eq!(pview(&w, push).purchase(&early_a).unwrap().unwrap().verdict, law::PurchaseVerdict::Unrecorded, "Ben has not signed his receipt");
+    let early_b = receipt(&mut w, &mut ben, push, b"tx1");
+    // The clone: 60/40.
+    let mut k = d.clone();
+    k.parent = Some(deal);
+    k.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: both.clone() }]);
+    k.stakes = Some(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::Id(both[0]), 600_000), (Who::Id(both[1]), 400_000)] }]);
+    let clone = law_act(&mut w, &mut ana, law::types::TERMS, k.to_map(), obj(deal));
+    sign(&mut w, &mut ana, &clone);
+    sign(&mut w, &mut ben, &clone);
+    let v = pview(&w, push);
+    assert_eq!(v.purchase(&early_a).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase, "both receipts before their signatures");
+    assert_eq!(v.purchase(&early_b).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
+    drop(v);
+    // A stale wallet pays the old version on the push rail, after both
+    // signed the new one: Ana's receipt comes after her signature.
+    let late_a = receipt(&mut w, &mut ana, push, b"tx2");
+    receipt(&mut w, &mut ben, push, b"tx2");
+    let got = pview(&w, push).purchase(&late_a).unwrap().unwrap();
+    assert!(matches!(got.verdict, law::PurchaseVerdict::NoPurchase { ref why } if why.contains("W4")), "{got:?}");
+    // On a request rail, the seller's request committed to the old claim:
+    // a purchase under it.
+    let invoiced = receipt(&mut w, &mut ana, request, b"invoice");
+    assert_eq!(pview(&w, push).purchase(&invoiced).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
+}
+
+/// Freeze suite v21, 3.9p (F128, W5): a fork or a closing counts only once
+/// done: sealed to every member, or public. A closing sealed to one member
+/// takes no effect.
+#[test]
+fn a_closing_must_be_done() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    let c = law::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])] };
+    let ben = lab.m[BEN].id;
+    let quiet = lab.w.private_act(&mut lab.m[ANA], mips().law, law::types::CLOSING, c.to_map(), obj(f), vec![ben]);
+    lab.sign(BEN, &quiet);
+    lab.sign(CY, &quiet);
+    let e = lab.view().closing(&quiet).unwrap();
+    assert!(!e.complete);
+    assert!(e.why.as_deref().is_some_and(|w| w.contains("W5")), "{:?}", e.why);
+    let open = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, c.to_map(), obj(f));
+    lab.sign(BEN, &open);
+    lab.sign(CY, &open);
+    let e = lab.view().closing(&open).unwrap();
+    assert!(e.complete, "{:?}", e.why);
 }

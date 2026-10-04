@@ -280,15 +280,14 @@ test('a key grammar that one lost holder would freeze is refused (F96)', () => {
         [5, [1, 2]],
         [9, new Map<number, unknown>([[0, [1, 2]], [1, [0]]])],
         [12, new Map<number, unknown>([[0, [0, h(1)]], [1, safety]])],
-        [25, [[null, 'https://relay.test']]],
         ...extra,
       ]),
     );
   checkTerms(terms([1, 2, [h(1), h(2), h(3)]]), LAW_SPECS);
-  // F126: a collective's terms name its relays.
-  const none = cborDecode(terms([1, 2, [h(1), h(2), h(3)]])) as Map<number, unknown>;
-  none.delete(25);
-  assert.throws(() => checkTerms(cborEncode(none), LAW_SPECS), /^Error: law\/check:.*F126/);
+  // F128: terms field 25 (the relays) is withdrawn; terms carrying it are refused.
+  const relays = cborDecode(terms([1, 2, [h(1), h(2), h(3)]])) as Map<number, unknown>;
+  relays.set(25, [[null, 'https://relay.test']]);
+  assert.throws(() => checkTerms(cborEncode(relays), LAW_SPECS), /^Error: law\/check:.*F128/);
   assert.throws(() => checkTerms(terms([1, 3, [h(1), h(2), h(3)]]), LAW_SPECS), /^Error: law\/check:.*recovery/);
   assert.throws(() => checkTerms(terms([0, h(1)]), LAW_SPECS), /^Error: law\/check:.*F96/);
   // Every member with constitutional power is covered by an abandonment

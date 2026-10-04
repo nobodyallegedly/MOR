@@ -86,8 +86,6 @@ export interface CollectiveTerms {
   departed?: string[];
   /** Forked from (field 23): founding terms of a side of a fork, naming the original collective, a back-link (F124 N4). */
   forkedFrom?: string;
-  /** The collective's relays (field 25, F126): an act in its name is done, and binds it, only once sealed to every member and found on one of these. Named by address, no operator. */
-  relays?: string[];
 }
 
 /** A stake (terms field 7): null names this collective (F124, S1). */
@@ -140,7 +138,6 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
   if (t.constitutional) m.set(18, ruleValue(t.constitutional));
   if (t.releases.words) m.set(20, new Map([[RELEASE_AREA, t.releases.words]]));
   if (t.parent) m.set(11, unhex(t.parent));
-  if (t.relays?.length) m.set(25, t.relays.map((h) => [null, h]));
   if (t.stakes?.length) {
     // The collective's own stake (null) first, then works by hash.
     const key = (o: string | null) => (o === null ? '' : o);
@@ -262,14 +259,19 @@ export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: st
 }
 
 /** A grant (Law type 9) to act for the grantor: here, a split service's.
- * `byThis`: its grantor is "this collective", the one whose founding terms
- * name it (field 8, null; F124 S1), signed before the collective exists. */
-export function grantPayload(grantee: string, byThis = false): Uint8Array {
+ * `key`: the grant key (field 9, F128), the public part of a signing key
+ * the grantee made and keeps, as Identity's `[scheme, key]`: acts signed
+ * with it are the collective's own, a strand of its actions chain, within
+ * the grant. `byThis`: its grantor is "this collective", the one whose
+ * founding terms name it (field 8, null; F124 S1), signed before the
+ * collective exists. */
+export function grantPayload(grantee: string, key: [number, Uint8Array], byThis = false): Uint8Array {
   const m = new Map<number, unknown>([
     [0, unhex(grantee)],
     [1, 2],
   ]);
   if (byThis) m.set(8, null);
+  m.set(9, key);
   return cborEncode(m);
 }
 

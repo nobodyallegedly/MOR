@@ -22,7 +22,6 @@ const g = (o: Partial<Governance> = {}): Governance => ({
   cloneThreshold: 2,
   abandonmentOthers: 2,
   text: 'We publish releases together.',
-  relays: ['https://relay.test'],
   ...o,
 });
 

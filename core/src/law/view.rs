@@ -28,7 +28,6 @@
 
 use super::formats::*;
 use super::tiers::{changes, powers_needed, Change, Tier};
-use crate::act::Ref;
 use crate::chain::{Resolution, Status, Verifier, Held};
 use crate::hash::Hash;
 use crate::identity::{KeptTip, Payload, Rotation};
@@ -48,12 +47,14 @@ pub struct LawView<'a> {
     /// verifier states what it holds, as it states `keeper_recorded` to
     /// Identity.
     pub keeper_logs: BTreeMap<Hash, Vec<Hash>>,
-    /// Acts whose outside this verifier found on a relay, and on which
-    /// relays (F124 N13, F125 D2, F126): an act in a collective's name is
-    /// done, and binds it, only once sealed to every member and found on
-    /// one of the relays its terms name. Like `keeper_logs`, a fact the
-    /// verifier states.
-    pub published: BTreeMap<Hash, Vec<Relay>>,
+    /// The rail Modules this verifier read, in their specifications, as
+    /// push rails (F128, W4): rails on which the payer pays an address with
+    /// no request from the payee's side committing to each payment. Every
+    /// other rail is a request rail, as every rail Module under the payment
+    /// cMIP draft 2 is: the payee's side commits to the payment, and to the
+    /// claim a purchase names, before it is made. Like `ext_layers`, a fact
+    /// the caller states from the specifications it holds.
+    pub push_rails: BTreeSet<Hash>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -157,9 +158,9 @@ pub enum Consent {
     Broken { reason: String },
     /// A record: judged by the clone it names alone ([`LawView::record`]).
     Line { agreement: Hash },
-    /// Not done (F126): not sealed to every member, or its outside not found
-    /// on one of the relays the agreement in force names. It is planning,
-    /// and binds no one, its signer included.
+    /// Not done (F126, F128): not sealed to every member of the agreement
+    /// in force for it, nor public. It is planning, and binds no one, its
+    /// signer included. (Where it is held is never a condition, F128.)
     NotDone { agreement: Hash, reason: String },
     /// Not on the collective's actions chain (F127): it does not cite the
     /// decision it acts under, or names there an act that is not on the
@@ -180,6 +181,16 @@ pub enum Consent {
     /// It is invalid as an act of the collective (a grant beyond its area,
     /// a reinstatement that does not repeat its grant...).
     Invalid { agreement: Hash, reason: String },
+    /// Signed with a grant key (F128) and backed by its grant: it counts
+    /// as the collective's own act, within the grant's reach.
+    Granted { agreement: Hash, grant: Hash },
+    /// Signed with a grant key (F128), and not backed by its grant: the
+    /// grant does not count, was revoked or ended before it, or the act
+    /// lies beyond its reach. It counts for nothing.
+    Ungranted { grant: Hash, reason: String },
+    /// A negotiation message (F128, W6): talk, binding nothing, on neither
+    /// of the collective's chains; the deal it leads to is an action.
+    Talk,
     /// The areas reaching it, each counted.
     Areas {
         agreement: Hash,
@@ -193,7 +204,10 @@ impl Consent {
     pub fn counts(&self) -> bool {
         matches!(
             self,
-            Consent::NotCollective | Consent::NoArea { .. } | Consent::Areas { met: true, .. }
+            Consent::NotCollective
+                | Consent::NoArea { .. }
+                | Consent::Granted { .. }
+                | Consent::Areas { met: true, .. }
         )
     }
 }
@@ -215,21 +229,20 @@ pub struct AreaCount {
     pub met: bool,
 }
 
-/// Whether an act under a grant binds the grantor collective (rule 44).
+/// Whether an act signed with a grant key binds the collective whose key it
+/// is (rule 44, F128).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Backing {
-    /// The act names no grant to its signer.
+    /// The act is not signed with a grant key.
     NotUnderGrant,
-    /// Backed by a live grant (or a reinstatement of it).
+    /// Backed by a grant that counts and has not ended for it.
     Backed { grant: Hash },
     /// Not backed: the reason.
     NotBacked { grant: Hash, reason: String },
-    /// The grant ended with its area's freeze, and the collective itself
-    /// acknowledged the act: it binds (rule 40, A6).
+    /// The grant ended (a revocation, a departure emptying its area, a fork
+    /// or closing) and the act binds all the same: the ending's history
+    /// holds it, or the collective itself acknowledged it (rule 40, A6).
     Binds { grant: Hash },
-    /// The grant ended with its area's freeze; nothing the collective did
-    /// places the act: undetermined until the refit decides (C8).
-    Undetermined { grant: Hash },
 }
 
 /// The collective's state after everything held: for showing.
@@ -290,7 +303,7 @@ impl<'a> LawView<'a> {
             mips,
             ext_layers: BTreeMap::new(),
             keeper_logs: BTreeMap::new(),
-            published: BTreeMap::new(),
+            push_rails: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -313,6 +326,97 @@ impl<'a> LawView<'a> {
 
     fn ext(&self) -> impl Fn(&Hash) -> R<Vec<u64>> + '_ {
         move |e: &Hash| self.ext_layers.get(e).cloned().ok_or(LawError::Missing(*e))
+    }
+
+    // ------------------------------------------------------------ grant keys (F128)
+
+    /// The grant whose key signed `h`, where `h` is signed with a grant key
+    /// (F128): its binding names a grant (type 9) whose field 9 made its
+    /// signature, and its signer is the grantor: the grant's signer, or,
+    /// for a grant by founding terms (field 8), the collective they found.
+    fn key_grant(&self, h: &Held) -> Option<(&'a Held, Grant)> {
+        let b = h.act.outside.binding.as_ref()?;
+        let g = self.v.get(b)?;
+        if !self.is_law(g, types::GRANT) || g.id == h.id || h.verdict != crate::sig::Verdict::Valid {
+            return None;
+        }
+        let x = Grant::decode(&g.inside.payload).ok()?;
+        if !x.key.made(&h.act.signature) {
+            return None;
+        }
+        let c = h.act.outside.signer?;
+        let grantor_ok = if x.by_this {
+            self.founding_grant(&c, g)
+        } else {
+            g.act.outside.signer == Some(c) && self.col(&c).pos(g).is_some()
+        };
+        grantor_ok.then_some((g, x))
+    }
+
+    /// Whether `g` is a grant of `collective` by its founding terms (F124
+    /// S1, F125 D6): field 8, named by the founding terms its genesis
+    /// declares, as the split service's grant (field 14) or in its chain
+    /// of judgment (field 21).
+    fn founding_grant(&self, collective: &Hash, g: &Held) -> bool {
+        if !self.is_law(g, types::GRANT) || !Grant::decode(&g.inside.payload).is_ok_and(|x| x.by_this) {
+            return false;
+        }
+        let Some(f) = self.founding_of(collective) else { return false };
+        let Ok(t) = self.terms(&f) else { return false };
+        t.split_grant == Some(g.id)
+            || t.chain.iter().flatten().any(|l| l.next.iter().any(|(h, _)| h == &g.id))
+    }
+
+    /// Whether an act stands under Identity, for Law: valid; or signed with
+    /// a grant key (Identity's `Scoped`, F128) whose grant itself stands.
+    /// Whether the grant backs the act is [`Self::backing`].
+    fn valid(&self, id: &Hash) -> bool {
+        match self.v.status(id) {
+            Status::Valid => true,
+            Status::Scoped => self
+                .v
+                .get(id)
+                .and_then(|h| self.key_grant(h))
+                .is_some_and(|(g, _)| self.v.status(&g.id) == Status::Valid),
+            _ => false,
+        }
+    }
+
+    /// Whether `h` is signed with the collective's own key: bound to a link
+    /// of its identity chain (a device of the collective, F127).
+    fn own_key(col: &Col, h: &Held) -> bool {
+        h.act.outside.signer == Some(col.id) && col.pos(h).is_some()
+    }
+
+    /// Whether `h` is on one of the collective's strands: signed with its
+    /// own key or with a grant key of its (F128: a grantee's strand is like
+    /// a device of the collective, limited to its grant's scope).
+    fn strand(&self, col: &Col, h: &Held) -> bool {
+        Self::own_key(col, h) || (h.act.outside.signer == Some(col.id) && self.key_grant(h).is_some())
+    }
+
+    /// The link of the collective's identity chain an act of its is judged
+    /// at: its binding's, for its own key; for a grant key (F128), the
+    /// latest link among its grant and the decisions it cites.
+    fn link(&self, col: &Col, h: &Held) -> Option<usize> {
+        if let Some(k) = col.pos(h) {
+            return Some(k);
+        }
+        if h.act.outside.signer != Some(col.id) {
+            return None;
+        }
+        let (g, _) = self.key_grant(h)?;
+        let mut k = self.decision_link(col, g)?;
+        for y in Self::cites(h, &col.id) {
+            if let Some(d) = self.v.get(&y) {
+                if self.is_decision(col, d) {
+                    if let Some(l) = self.decision_link(col, d) {
+                        k = k.max(l);
+                    }
+                }
+            }
+        }
+        Some(k)
     }
 
     // ------------------------------------------------------------ terms
@@ -355,7 +459,7 @@ impl<'a> LawView<'a> {
             if let Some(h) = self.v.signed_by(who).find(|h| {
                 self.is_law(h, types::SIGNATURE)
                     && decode_signature(&h.inside).ok() == Some(*act)
-                    && self.v.status(&h.id) == Status::Valid
+                    && self.valid(&h.id)
             }) {
                 out.push((*who, h.id));
             }
@@ -807,7 +911,7 @@ impl<'a> LawView<'a> {
             .filter(|h| {
                 self.is_law(h, types::RECORD)
                     && h.act.outside.binding == Some(link.act)
-                    && self.v.status(&h.id) == Status::Valid
+                    && self.valid(&h.id)
             })
             .collect()
     }
@@ -897,7 +1001,10 @@ impl<'a> LawView<'a> {
     /// grantee's act on the chain is before a line when that history
     /// reaches it. Lines are ordered among themselves this way alone.
     fn before_struct(&self, col: &Col, x: &Held, l: Line) -> bool {
-        let own = x.act.outside.signer == Some(col.id);
+        // A grant key's act (F128) has no place by its key: like any act
+        // off the collective's own key, it is before a line when the line's
+        // history holds it.
+        let own = Self::own_key(col, x);
         match l {
             Line::Rotation(j) => {
                 let Some(r) = col.rotation(self.v, j) else {
@@ -927,7 +1034,7 @@ impl<'a> LawView<'a> {
                 if x.id == lh.id {
                     return false;
                 }
-                let Some(bl) = col.pos(lh) else { return false };
+                let Some(bl) = self.link(col, lh) else { return false };
                 if own {
                     let Some(bx) = col.pos(x) else { return false };
                     if bx != bl {
@@ -955,18 +1062,26 @@ impl<'a> LawView<'a> {
     }
 
     /// Whether `h` is a decision of the collective an action can act under
-    /// (F127): its genesis or a rotation counting in its identity chain, or
-    /// one of its records. Its forks and closings are decisions too, signed
-    /// by members; an act acting under one counts for nothing.
+    /// (F127, F128): its genesis or a rotation counting in its identity
+    /// chain, one of its records, grants or revocations signed with its own
+    /// key, or a grant its founding terms carry. Its forks and closings are
+    /// decisions too, signed by members; an act acting under one counts for
+    /// nothing.
     fn is_decision(&self, col: &Col, h: &Held) -> bool {
         col.res.position_of(&h.id).is_some()
-            || (self.is_law(h, types::RECORD) && h.act.outside.signer == Some(col.id))
+            || ((self.is_law(h, types::RECORD) || self.is_law(h, types::GRANT) || self.is_law(h, types::REVOCATION))
+                && Self::own_key(col, h))
+            || self.founding_grant(&col.id, h)
     }
 
     /// The link of the collective's identity chain a decision sits at: the
-    /// chain act itself, or a record's binding.
+    /// chain act itself, a decision's binding, or the genesis for a grant
+    /// the founding terms carry.
     fn decision_link(&self, col: &Col, h: &Held) -> Option<usize> {
-        col.res.position_of(&h.id).or_else(|| col.pos(h))
+        col.res
+            .position_of(&h.id)
+            .or_else(|| col.pos(h))
+            .or_else(|| self.founding_grant(&col.id, h).then_some(0))
     }
 
     /// The history cited from `start` (acts) and `tips` (kept tips) on the
@@ -1002,8 +1117,7 @@ impl<'a> LawView<'a> {
                 missing.insert(y);
                 continue;
             };
-            let own = h.act.outside.signer == Some(col.id);
-            if own {
+            if Self::own_key(col, h) || col.res.position_of(&y).is_some() {
                 if col.pos(h).is_none_or(|b| b < link) || col.res.position_of(&y).is_some() {
                     continue;
                 }
@@ -1016,6 +1130,11 @@ impl<'a> LawView<'a> {
                             push_tip(t, &mut todo, &mut missing);
                         }
                     }
+                }
+            } else if self.strand(col, h) {
+                // A grantee's strand (F128): its previous act is cited.
+                if let Some([p]) = h.inside.prev.as_deref() {
+                    todo.push(*p);
                 }
             }
             todo.extend(Self::cites(h, &col.id));
@@ -1062,7 +1181,7 @@ impl<'a> LawView<'a> {
         let mut out = vec![];
         let mut seen = BTreeSet::new();
         let mut todo: Vec<Hash> = Self::cites(x, &col.id);
-        if x.act.outside.signer == Some(col.id) {
+        if self.strand(col, x) {
             if let Some([p]) = x.inside.prev.as_deref() {
                 todo.push(*p);
             }
@@ -1072,7 +1191,7 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let h = self.held(&y)?;
-            let own = h.act.outside.signer == Some(col.id);
+            let own = Self::own_key(col, h);
             if col.res.position_of(&y).is_some() {
                 continue;
             }
@@ -1083,7 +1202,7 @@ impl<'a> LawView<'a> {
                 out.push(h);
                 continue;
             }
-            if own {
+            if own || self.strand(col, h) {
                 if let Some([p]) = h.inside.prev.as_deref() {
                     todo.push(*p);
                 }
@@ -1180,7 +1299,7 @@ impl<'a> LawView<'a> {
         match (p, l) {
             (Line::Record(ph), l) => self.before_struct(col, ph, l),
             (Line::Rotation(i), Line::Rotation(j)) => i < j,
-            (Line::Rotation(i), Line::Record(lh)) => col.pos(lh).is_some_and(|b| b >= i),
+            (Line::Rotation(i), Line::Record(lh)) => self.link(col, lh).is_some_and(|b| b >= i),
         }
     }
 
@@ -1191,13 +1310,13 @@ impl<'a> LawView<'a> {
         let mut out = vec![];
         if let Ok(signed) = decode_signature(&s.inside) {
             if let Some(a) = self.v.get(&signed) {
-                if a.act.outside.signer == Some(col.id) && self.v.status(&a.id) == Status::Valid {
+                if Self::own_key(col, a) && self.v.status(&a.id) == Status::Valid {
                     out.push((Line::Record(a), self.is_law(a, types::RECORD)));
                 }
             }
         }
         for h in self.v.signed_by(&col.id) {
-            if self.v.status(&h.id) != Status::Valid {
+            if !Self::own_key(col, h) || self.v.status(&h.id) != Status::Valid {
                 continue;
             }
             if self.is_law(h, types::RECORD) {
@@ -1213,7 +1332,7 @@ impl<'a> LawView<'a> {
             }
         }
         for a in self.v.acknowledgements(&s.id) {
-            if a.act.outside.signer == Some(col.id) && self.v.status(&a.id) == Status::Valid {
+            if Self::own_key(col, a) && self.v.status(&a.id) == Status::Valid {
                 out.push((Line::Record(a), self.is_law(a, types::RECORD)));
             }
         }
@@ -1281,7 +1400,7 @@ impl<'a> LawView<'a> {
         };
         if !self.is_law(h, types::RECORD)
             || h.act.outside.signer != Some(col.id)
-            || self.v.status(&h.id) != Status::Valid
+            || !self.valid(&h.id)
         {
             return no(e, "not a valid record act of the collective");
         }
@@ -1334,7 +1453,7 @@ impl<'a> LawView<'a> {
                 return no(e, "it registers an act of someone who is not a party of the agreement in force");
             }
             if self.is_law(a, types::RESIGNATION) {
-                if self.v.status(&a.id) != Status::Valid {
+                if !self.valid(&a.id) {
                     return no(e, "it registers a resignation that is not valid");
                 }
                 let r = match Resignation::decode(&a.inside) {
@@ -1448,7 +1567,7 @@ impl<'a> LawView<'a> {
     fn departure_lines(&self, col: &Col, point: Point<'a>, own: &[Departure]) -> R<Vec<(Line<'a>, Departure)>> {
         let mut out = vec![];
         let (limit, me): (usize, Option<&'a Held>) = match point {
-            Point::Act(x) => (col.pos(x).unwrap_or(0), None),
+            Point::Act(x) => (self.link(col, x).unwrap_or(0), None),
             Point::Line(Line::Record(r)) => (col.pos(r).unwrap_or(0), Some(r)),
             Point::Line(Line::Rotation(j)) => (j - 1, None),
         };
@@ -1484,7 +1603,7 @@ impl<'a> LawView<'a> {
             .signed_by(&col.id)
             .filter(|h| {
                 self.is_law(h, types::RECORD)
-                    && self.v.status(&h.id) == Status::Valid
+                    && self.valid(&h.id)
                     && Record::decode(&h.inside)
                         .is_ok_and(|r| r.registers.iter().flatten().any(|x| x == rot))
             })
@@ -1754,7 +1873,7 @@ impl<'a> LawView<'a> {
         if !self.is_law(h, types::DECLARATION) {
             return Ok(Err("not an abandonment declaration (type 13)".into()));
         }
-        if self.v.status(&h.id) != Status::Valid {
+        if !self.valid(&h.id) {
             return Ok(Err("the declaration is not valid under Identity".into()));
         }
         let d = match AbsenceDeclaration::decode(&h.inside) {
@@ -1964,7 +2083,7 @@ impl<'a> LawView<'a> {
         };
         for s in absence {
             let h = self.held(s)?;
-            let on = if self.is_law(h, types::SIGNATURE) && self.v.status(&h.id) == Status::Valid {
+            let on = if self.is_law(h, types::SIGNATURE) && self.valid(&h.id) {
                 decode_signature(&h.inside).ok()
             } else {
                 None
@@ -2179,7 +2298,7 @@ impl<'a> LawView<'a> {
             return Err(LawError::Check("the act has no signer"));
         };
         let col = self.col(&c);
-        let Some(b) = col.pos(x) else {
+        let Some(b) = self.link(&col, x) else {
             return Err(LawError::Check("the act's binding does not count"));
         };
         if !self.declares(&col, b) {
@@ -2241,7 +2360,7 @@ impl<'a> LawView<'a> {
             };
             if &p.payee == c
                 && p.rails.iter().any(|r| r.module == rail)
-                && self.v.status(&h.id) == Status::Valid
+                && self.valid(&h.id)
                 && self.consent(&h.id)?.counts()
             {
                 return Ok(None);
@@ -2259,6 +2378,24 @@ impl<'a> LawView<'a> {
             return Err(LawError::Check("the act has no signer or binding"));
         };
         let col = self.col(&c);
+        // F128: an act signed with a grant key is the collective's own,
+        // backed by its grant, with no area's signatures: the grant is the
+        // area's consent, given once.
+        if col.pos(x).is_none() {
+            if let Some((g, _)) = self.key_grant(x) {
+                return Ok(match self.backing(act)? {
+                    Backing::Backed { grant } | Backing::Binds { grant } => Consent::Granted {
+                        agreement: self.in_force(act)?.unwrap_or(g.id),
+                        grant,
+                    },
+                    Backing::NotBacked { grant, reason } => Consent::Ungranted { grant, reason },
+                    Backing::NotUnderGrant => Consent::Ungranted {
+                        grant: g.id,
+                        reason: "not signed with its grant's key".into(),
+                    },
+                });
+            }
+        }
         let Some(b) = col.pos(x) else {
             return Err(LawError::Check("the act's binding does not count"));
         };
@@ -2278,6 +2415,12 @@ impl<'a> LawView<'a> {
             let ag = self.in_force_act(&col, x, b, base)?.agreement;
             return Ok(Consent::Line { agreement: ag });
         }
+        // W6 (F128): negotiation is talk, binding nothing, on neither chain;
+        // it need not be sealed to every member. The deal it leads to is
+        // signed, and that signature is an action.
+        if self.is_law(x, types::NEGOTIATION) {
+            return Ok(Consent::Talk);
+        }
         // F127: an action cites, on the collective's chain, the decision it
         // acts under, and is judged under what its decisions leave in force.
         if let Some(reason) = self.uncited(&col, x, Some(b))? {
@@ -2287,16 +2430,32 @@ impl<'a> LawView<'a> {
         if let Some(reason) = self.not_done(x, &ag)? {
             return Ok(Consent::NotDone { agreement: ag, reason });
         }
-        if self.is_law(x, types::REVOCATION) || self.is_law(x, types::IMPORT) {
-            return Err(LawError::Unsupported(
-                "revocations and imports (types 10, 11): their formats are open",
-            ));
+        if self.is_law(x, types::IMPORT) {
+            return Err(LawError::Unsupported("imports (type 11): the format is open"));
         }
         if let Some(rail) = self.rail_not_accepted(&col, &c, x, b)? {
             return Ok(Consent::RailNotAccepted { agreement: ag, rail });
         }
         let t = self.terms(&ag)?;
         let mut reaching: Vec<&Area> = vec![];
+        // A revocation is judged, like the grant it names, by that grant's
+        // area alone (rule 38a, Q29); it names a grant of this collective.
+        if self.is_law(x, types::REVOCATION) {
+            let r = match Revocation::decode(&x.inside.payload) {
+                Ok(r) => r,
+                Err(e) => return Ok(Consent::Invalid { agreement: ag, reason: e.to_string() }),
+            };
+            let g = self.v.get(&r.grant).filter(|g| self.is_law(g, types::GRANT));
+            let Some(g) = g.and_then(|g| Grant::decode(&g.inside.payload).ok().map(|d| (g, d))) else {
+                return Ok(Consent::Invalid { agreement: ag, reason: "it names no grant this verifier holds".into() });
+            };
+            if !(Self::own_key(&col, g.0) || self.founding_grant(&c, g.0)) {
+                return Ok(Consent::Invalid { agreement: ag, reason: "it names a grant of another grantor".into() });
+            }
+            if let Some(a) = g.1.area.and_then(|id| t.area(id)) {
+                reaching.push(a);
+            }
+        }
         if self.is_law(x, types::GRANT) {
             let g = match Grant::decode(&x.inside.payload) {
                 Ok(g) => g,
@@ -2494,56 +2653,84 @@ impl<'a> LawView<'a> {
         Ok(out)
     }
 
-    /// Whether an act under a grant binds the collective that issued the
-    /// grant (rules 38a, 40, 44; A6, C8, Flaw N). Revocations' format is
-    /// open: a collective holding any is refused.
-    pub fn backing(&self, act: &Hash) -> R<Backing> {
-        let y = self.held(act)?;
-        let Some(signer) = y.act.outside.signer else {
-            return Ok(Backing::NotUnderGrant);
-        };
-        let mut grant = None;
-        for r in y.inside.refs.iter().flatten() {
-            if let Ref::Act(g) = r {
-                if let Some(h) = self.v.get(g) {
-                    if self.is_law(h, types::GRANT)
-                        && Grant::decode(&h.inside.payload).is_ok_and(|x| x.grantee == signer)
-                    {
-                        grant = Some(h);
-                        break;
-                    }
-                }
+    /// Whether the grantee signed to accept the grant (F128): a valid
+    /// signature act (type 1) of its own identity naming it.
+    fn accepted(&self, gh: &Held, g: &Grant) -> bool {
+        self.v.signed_by(&g.grantee).any(|h| {
+            self.is_law(h, types::SIGNATURE)
+                && decode_signature(&h.inside).ok() == Some(gh.id)
+                && self.v.status(&h.id) == Status::Valid
+        })
+    }
+
+    /// The revocations of a grant that count (F128): decisions of the
+    /// grantor, signed with its own key, naming the grant.
+    fn revocations(&self, col: &Col, grant: &Hash) -> R<Vec<&'a Held>> {
+        let mut out = vec![];
+        for h in self.v.signed_by(&col.id) {
+            if self.is_law(h, types::REVOCATION)
+                && Self::own_key(col, h)
+                && Revocation::decode(&h.inside.payload).is_ok_and(|r| &r.grant == grant)
+                && self.valid(&h.id)
+                && self.consent(&h.id)?.counts()
+            {
+                out.push(h);
             }
         }
-        let Some(gh) = grant else {
+        Ok(out)
+    }
+
+    /// Whether an act signed with a grant key binds the collective whose key
+    /// it is (rules 38a, 40, 44; F128). The grant counts (its area's
+    /// holders, or the founding terms carrying it) and its grantee signed to
+    /// accept it; the act cites its grant, is on the collective's chain,
+    /// done, and within the grant's reach. A decision ending the grant's
+    /// powers (a revocation, G1; a departure emptying its area, G2; a fork
+    /// or closing) leaves it binding only where that decision's history
+    /// holds it: otherwise the ending wins, and the act is void (the tie
+    /// rule), unless the collective itself acknowledged it (rule 40, A6).
+    pub fn backing(&self, act: &Hash) -> R<Backing> {
+        let y = self.held(act)?;
+        let Some(c) = y.act.outside.signer else {
             return Ok(Backing::NotUnderGrant);
         };
-        let g = Grant::decode(&gh.inside.payload)?;
-        let c = gh.act.outside.signer.ok_or(LawError::Check("a grant with no signer"))?;
         let col = self.col(&c);
-        if self
-            .v
-            .signed_by(&c)
-            .any(|h| self.is_law(h, types::REVOCATION))
-        {
-            return Err(LawError::Unsupported("revocation (type 10): its format is open"));
+        if col.pos(y).is_some() {
+            return Ok(Backing::NotUnderGrant);
         }
+        let Some((gh, g)) = self.key_grant(y) else {
+            return Ok(Backing::NotUnderGrant);
+        };
         let not = |w: &str| {
             Ok(Backing::NotBacked {
                 grant: gh.id,
                 reason: w.into(),
             })
         };
-        if self.v.status(&gh.id) != Status::Valid || !self.consent(&gh.id)?.counts() {
+        let founding = self.founding_grant(&c, gh);
+        let counts = if founding {
+            // Carried by the founding terms every founder signed (D6).
+            self.v.status(&gh.id) == Status::Valid
+        } else {
+            self.valid(&gh.id) && self.consent(&gh.id)?.counts()
+        };
+        if !counts {
             return not("the grant does not count");
         }
-        if g.reinstates.is_some() {
-            return not("a reinstatement is named instead of the grant it reinstates");
+        if !self.accepted(gh, &g) {
+            return not("the grantee has not signed to accept the grant (F128)");
         }
-        // Reach: the act's kind lies within the grant's (rule 44).
-        let Some(ag) = self.in_force(&gh.id)? else {
+        // F128: the grantee's act cites the decision it acts under, its grant.
+        if !Self::cites(y, &c).contains(&gh.id) {
+            return not("it does not cite its grant on the collective's chain (F128)");
+        }
+        if let Some(w) = self.uncited(&col, y, None)? {
+            return not(&w);
+        }
+        let Some(ag) = self.in_force(act)? else {
             return not("the grantor is not a collective");
         };
+        // Reach: the act's kind lies within the grant's (rule 44).
         let t = self.terms(&ag)?;
         let (spec, ty) = (&y.inside.spec, y.inside.type_);
         let within = match &g.kinds {
@@ -2558,67 +2745,75 @@ impl<'a> LawView<'a> {
         if !within {
             return not("the act lies beyond the grant's reach (rule 44)");
         }
-        // F127: a grantee's act is an action of the collective: it cites the
-        // collective's chain, the decision it acts under among it.
-        if let Some(w) = self.uncited(&col, y, None)? {
-            return not(&w);
+        // A grant key never signs a decision: records, grants, revocations
+        // and identity-chain acts are signed with the collective's own key.
+        if self.is_law(y, types::RECORD) || self.is_law(y, types::GRANT) || self.is_law(y, types::REVOCATION) {
+            return not("a grant key signs no decision of the collective (F128)");
         }
-        // F126: an act in the collective's name, a grantee's included, is
-        // done only once sealed to every member and on one of its relays.
+        // F126: an act in the collective's name is done only once sealed
+        // to every member.
         if let Some(w) = self.not_done(y, &ag)? {
             return not(&w);
         }
-        // A fork ends every grant of the original (Q2). A grantee's act in
-        // the history the fork cites was done within its powers, and binds,
-        // as a debt the fork hands out; so does a deal the original itself
-        // acknowledged before the fork. Any other is missing from the
-        // ending's history, and void (the tie rule, F127).
+        let acked = |before: &dyn Fn(&Held) -> bool| -> R<bool> {
+            for a in self.v.acknowledgements(act) {
+                if Self::own_key(&col, a) && self.valid(&a.id) && before(a) && self.consent(&a.id)?.counts() {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        };
+        let mut ended = false;
+        // A fork or closing ends every grant (N14): every grant key ends at
+        // its line. An act in the history it cites binds, as a debt the
+        // fork hands out; so does a deal the original acknowledged before
+        // it. Any other is missing from the ending's history, and void.
         if let Some(e) = self.closed_by(&c)? {
             if self.before_line(&col, y, &e.chain_act, &e.tips)
-                || self.v.acknowledgements(act).any(|a| {
-                    a.act.outside.signer == Some(c)
-                        && self.v.status(&a.id) == Status::Valid
-                        && self.before_line(&col, a, &e.chain_act, &e.tips)
-                })
+                || acked(&|a| self.before_line(&col, a, &e.chain_act, &e.tips))?
             {
                 return Ok(Backing::Binds { grant: gh.id });
             }
             return not("the fork or closing that ended the grant does not cite it: an action missing from the ending's history is void (the tie rule, F127)");
         }
-        let Some(area) = g.area else {
-            return Ok(Backing::Backed { grant: gh.id });
-        };
-        let mut ended = false;
-        let mut cited = true;
-        for l in self.freezes(&col, area)? {
-            let here = match l {
-                Line::Record(_) => self.before(&col, gh, l)?,
-                Line::Rotation(_) => self.before_struct(&col, gh, l),
-            };
-            ended |= here;
-            // F127: done within the grant's powers and cited by the line
-            // that froze the area, it counted as soon as done.
-            cited &= !here || self.before_struct(&col, y, l);
+        // G1 (F128): a revocation removes the grant key, a decision ending
+        // powers. An act its history holds was done within the grant's
+        // powers; any other, racing it or after it, is void, the ending
+        // winning, unless the collective itself acknowledged it (A6).
+        for r in self.revocations(&col, &gh.id)? {
+            if self.before_struct(&col, y, Line::Record(r)) {
+                ended = true;
+                continue;
+            }
+            if acked(&|_| true)? {
+                return Ok(Backing::Binds { grant: gh.id });
+            }
+            return not("the revocation ended the grant, and its history does not hold the act: the ending wins (the tie rule, F128 G1)");
         }
-        if !ended || cited {
-            return Ok(Backing::Backed { grant: gh.id });
-        }
-        // Ended: a reinstatement that counts backs it again (Flaw N).
-        for h in self.v.signed_by(&c) {
-            if self.is_law(h, types::GRANT)
-                && Grant::decode(&h.inside.payload).is_ok_and(|r| r.reinstates == Some(gh.id))
-                && self.v.status(&h.id) == Status::Valid
-                && self.consent(&h.id)?.counts()
-            {
-                return Ok(Backing::Backed { grant: h.id });
+        // G2 (F128): a departure emptying the grant's area ends every grant
+        // in it, a decision ending powers: the same, with no suspension and
+        // no undetermined act. A reinstatement is a new grant, and takes
+        // nothing on.
+        if let Some(area) = g.area {
+            for l in self.freezes(&col, area)? {
+                let here = match l {
+                    Line::Record(_) => self.before(&col, gh, l)?,
+                    Line::Rotation(_) => self.before_struct(&col, gh, l),
+                };
+                if !here {
+                    continue;
+                }
+                if self.before_struct(&col, y, l) {
+                    ended = true;
+                    continue;
+                }
+                if acked(&|_| true)? {
+                    return Ok(Backing::Binds { grant: gh.id });
+                }
+                return not("the departure that emptied the grant's area ended it, and that line's history does not hold the act: the ending wins (the tie rule, F128 G2)");
             }
         }
-        if self.v.acknowledgements(act).any(|a| {
-            a.act.outside.signer == Some(c) && self.v.status(&a.id) == Status::Valid
-        }) {
-            return Ok(Backing::Binds { grant: gh.id });
-        }
-        Ok(Backing::Undetermined { grant: gh.id })
+        Ok(if ended { Backing::Binds { grant: gh.id } } else { Backing::Backed { grant: gh.id } })
     }
 
     /// The collective's state after everything held under its latest key.
@@ -2839,7 +3034,7 @@ impl<'a> LawView<'a> {
     /// Identity, with its decoded payload.
     fn negotiation_message(&self, id: &Hash) -> Option<(&'a Held, NegotiationMessage)> {
         let h = self.v.get(id)?;
-        if !self.is_law(h, types::NEGOTIATION) || self.v.status(id) != Status::Valid {
+        if !self.is_law(h, types::NEGOTIATION) || !self.valid(id) {
             return None;
         }
         NegotiationMessage::decode(&h.inside).ok().map(|m| (h, m))
@@ -2961,7 +3156,7 @@ impl<'a> LawView<'a> {
             };
             if &p.payee == payee
                 && p.rails.iter().any(|r| &r.module == rail)
-                && self.v.status(&h.id) == Status::Valid
+                && self.valid(&h.id)
                 && self.consent(&h.id)?.counts()
             {
                 return Ok(true);
@@ -2981,7 +3176,7 @@ impl<'a> LawView<'a> {
     pub fn role_evidence(&self, evidence: &Hash, role: &Role, service: &Hash, payee: &Hash) -> R<bool> {
         use crate::finance::Payload as Fin;
         let x = self.held(evidence)?;
-        if self.v.status(evidence) != Status::Valid {
+        if !self.valid(evidence) {
             return Ok(false);
         }
         match role {
@@ -3173,24 +3368,19 @@ impl ReleaseEval {
 /// What it is (F126).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PurchaseVerdict {
-    /// A purchase: it names the claim current as this verifier holds it,
-    /// sold by no collective; or a collective's actions chain recorded it
-    /// where that claim was current (F127, W2).
+    /// A purchase: on a request rail, the claim its seller's request
+    /// committed to, recorded by a collective seller's actions chain (F127
+    /// W2, F128 W4); on a push rail, every holder's receipt a sale (W4).
     Purchase,
     /// No purchase: money received for nothing, owed back to the payer as a
     /// refund (Finance rule 10a; with no key committed, an open debt nobody
     /// can claim).
     NoPurchase { why: String },
-    /// It names the claim current as this verifier holds it, the seller a
-    /// collective, whose actions chain has not recorded it yet: it becomes a
-    /// sale once an act in the collective's name records it (F127, W2).
+    /// Not settled yet: on a request rail, a collective seller's actions
+    /// chain has not recorded it (F127, W2); on a push rail, a holder the
+    /// claim names has not signed its receipt (F128, W4). It becomes a sale
+    /// once recorded, or is refunded where a receipt comes too late.
     Unrecorded,
-    /// It names a claim that a later act this verifier holds supersedes,
-    /// where no actions chain of a collective seller settles it: the
-    /// seller is not a collective, or the act is a release or a clone that
-    /// a record of the claim may still precede (flaw W4): undetermined
-    /// between a purchase and a refund.
-    Superseded { by: Hash },
 }
 
 /// A payment for a work, judged (F126).
@@ -3252,7 +3442,7 @@ impl<'a> LawView<'a> {
         let Some(bf) = col.res.position_of(chain_act) else {
             return false;
         };
-        if x.act.outside.signer == Some(col.id) {
+        if Self::own_key(col, x) {
             let Some(bx) = col.pos(x) else { return false };
             if bx != bf {
                 return bx < bf;
@@ -3338,10 +3528,11 @@ impl<'a> LawView<'a> {
         Ok(false)
     }
 
-    /// Whether an obligation binds its debtor (F66; F124 N13): signed by its
-    /// debtor, and, where the debtor is a collective, only once its outside
-    /// is public, published on relays (`published`). `None` where the act
-    /// is not an obligation.
+    /// Whether an obligation binds its debtor (F66): signed by its debtor,
+    /// and, where the debtor is a collective, only once done, like any act
+    /// in its name (F128, withdrawing N13's public outside): publishing it
+    /// is the creditor's choice and protection. `None` where the act is not
+    /// an obligation.
     pub fn obligation_binds(&self, id: &Hash) -> R<Option<bool>> {
         use crate::finance::Payload as Fin;
         let x = self.held(id)?;
@@ -3351,7 +3542,7 @@ impl<'a> LawView<'a> {
         let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else {
             return Ok(None);
         };
-        if self.v.status(id) != Status::Valid || x.act.outside.signer != Some(o.debtor) {
+        if !self.valid(id) || x.act.outside.signer != Some(o.debtor) {
             return Ok(Some(false));
         }
         let col = self.col(&o.debtor);
@@ -3368,43 +3559,21 @@ impl<'a> LawView<'a> {
         Ok(Some(self.after_closing(id)?.is_none()))
     }
 
-    /// Whether an act in a collective's name is done (F126): sealed to every
-    /// member of the agreement in force for it (public, or every member
-    /// among its recipients), and its outside found on one of the relays
-    /// that agreement names. `None` where the act is not in a collective's
-    /// name: neither signed by a collective nor backed by its grant.
+    /// Whether an act in a collective's name is done (F126, F128): sealed to
+    /// every member of the agreement in force for it (public, or every
+    /// member among its recipients). Where it is held is never a condition
+    /// (F128: relays are transport); that it is on the collective's chain,
+    /// citing its head, is [`Consent::Uncited`]. `None` where the act is not
+    /// in a collective's name: signed neither with a collective's own key
+    /// nor with a grant key of its.
     pub fn done(&self, act: &Hash) -> R<Option<Result<(), String>>> {
         let x = self.held(act)?;
-        let Some(signer) = x.act.outside.signer else { return Ok(None) };
+        if x.act.outside.signer.is_none() {
+            return Ok(None);
+        }
         let agreement = match self.in_force(act) {
-            Ok(Some(a)) => Some(a),
-            _ => None,
-        };
-        let agreement = match agreement {
-            Some(a) => a,
-            None => {
-                // A grantee's act: the grantor collective's agreement in
-                // force for the grant.
-                let mut found = None;
-                for r in x.inside.refs.iter().flatten() {
-                    if let Ref::Act(g) = r {
-                        if let Some(h) = self.v.get(g) {
-                            if self.is_law(h, types::GRANT)
-                                && Grant::decode(&h.inside.payload).is_ok_and(|y| y.grantee == signer)
-                            {
-                                if let Ok(Some(a)) = self.in_force(g) {
-                                    found = Some(a);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                match found {
-                    Some(a) => a,
-                    None => return Ok(None),
-                }
-            }
+            Ok(Some(a)) => a,
+            _ => return Ok(None),
         };
         Ok(Some(match self.not_done(x, &agreement)? {
             None => Ok(()),
@@ -3413,25 +3582,15 @@ impl<'a> LawView<'a> {
     }
 
     /// Why an act in the name of the collective whose agreement in force is
-    /// `agreement` is not done (F126), if it is not.
+    /// `agreement` is not done (F126, F128), if it is not.
     fn not_done(&self, x: &Held, agreement: &Hash) -> R<Option<String>> {
         let t = self.terms(agreement)?;
-        if x.act.outside.content_key.is_none() {
+        if !self.sealed_to_all(x, &t) {
             let to = x.act.outside.to.clone().unwrap_or_default();
-            let missing: Vec<&Hash> = t.parties.iter().filter(|p| !to.contains(p)).collect();
-            if !missing.is_empty() {
-                return Ok(Some(format!(
-                    "not done: it is not sealed to every member ({} missing), so it binds no one (F126)",
-                    missing.len()
-                )));
-            }
-        }
-        let named = t.relays.clone().unwrap_or_default();
-        let found = self.published.get(&x.id).is_some_and(|rs| rs.iter().any(|r| named.iter().any(|n| n.matches(r))));
-        if !found {
-            return Ok(Some(
-                "not done: its outside was not found on a relay the collective's terms name, so it binds no one (F126)".into(),
-            ));
+            let missing = t.parties.iter().filter(|p| !to.contains(p)).count();
+            return Ok(Some(format!(
+                "not done: it is not sealed to every member ({missing} missing), nor public, so it binds no one (F126)"
+            )));
         }
         Ok(None)
     }
@@ -3448,7 +3607,7 @@ impl<'a> LawView<'a> {
         use crate::finance::Payload as Fin;
         let mut out = vec![];
         for x in self.v.signed_by(&col.id) {
-            if x.inside.spec != self.mips.finance || self.v.status(&x.id) != Status::Valid {
+            if x.inside.spec != self.mips.finance || !self.valid(&x.id) {
                 continue;
             }
             let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else { continue };
@@ -3521,7 +3680,7 @@ impl<'a> LawView<'a> {
             e.why = Some(w.into());
             Ok(e)
         };
-        if self.v.status(id) != Status::Valid {
+        if !self.valid(id) {
             return fail(e, "the fork act is not valid under Identity");
         }
         let col = self.col(&f.collective);
@@ -3552,6 +3711,11 @@ impl<'a> LawView<'a> {
         }
         for m in &e.leaving {
             e.kept.push((*m, pct(m)));
+        }
+        // W5 (F128): a fork counts only once done: sealed to every member,
+        // or public, as it cites the collective's head by its line.
+        if !self.sealed_to_all(h, &t) {
+            return fail(e, "not done: the fork is not sealed to every member, nor public (W5, F128)");
         }
         if f.sides.iter().any(|s| s.members.iter().any(|m| !voices.contains(m))) {
             return fail(e, "a side lists someone who is not a member whose voice remains at the fork");
@@ -3709,7 +3873,7 @@ impl<'a> LawView<'a> {
             e.why = Some(w.into());
             Ok(e)
         };
-        if self.v.status(id) != Status::Valid {
+        if !self.valid(id) {
             return fail(e, "the closing act is not valid under Identity");
         }
         let col = self.col(&c.collective);
@@ -3718,6 +3882,10 @@ impl<'a> LawView<'a> {
             Err(w) => return fail(e, &format!("the closing: {w}")),
         };
         e.voices = voices.clone();
+        // W5 (F128): a closing counts only once done.
+        if !self.sealed_to_all(h, &t) {
+            return fail(e, "not done: the closing is not sealed to every member, nor public (W5, F128)");
+        }
         let signer = h.act.outside.signer.ok_or(LawError::Check("a closing act has a signer"))?;
         let mut signed = self.signers(id, &voices);
         if voices.contains(&signer) && !signed.contains(&signer) {
@@ -3891,7 +4059,7 @@ impl<'a> LawView<'a> {
             .held_acts()
             .filter_map(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
                 Ok(Fin::Receipt(rc))
-                    if r.inside.spec == self.mips.finance && &rc.fulfils == obligation && self.v.status(&r.id) == Status::Valid =>
+                    if r.inside.spec == self.mips.finance && &rc.fulfils == obligation && self.valid(&r.id) =>
                 {
                     Some(rc.amount.value)
                 }
@@ -3917,7 +4085,7 @@ impl<'a> LawView<'a> {
             e.why = Some(w.into());
             Ok(e)
         };
-        if self.v.status(id) != Status::Valid {
+        if !self.valid(id) {
             return fail(e, "the creditor's release is not valid under Identity");
         }
         let Some(x) = self.v.get(&r.obligation) else {
@@ -4075,25 +4243,25 @@ impl<'a> LawView<'a> {
     /// pays under (receipt or claim field 9). A payment for a claimed work,
     /// or for a standing offer, that names none, or names a line that is
     /// none of that agreement's claims, is no purchase: money received for
-    /// nothing, owed back to the payer as a refund (Finance rule 10a). One
-    /// naming a claim that a later act this verifier holds supersedes is
-    /// shown as undetermined: whether it was paid before or after that act
-    /// cannot be told (flaw W2). `None` where the payment is not for a work.
+    /// nothing, owed back to the payer as a refund (Finance rule 10a). W4
+    /// (F128): on a request rail, the claim named is the one the seller's
+    /// request committed to; on a push rail, each holder's own chain
+    /// settles it. `None` where the payment is not for a work.
     pub fn purchase(&self, id: &Hash) -> R<Option<PurchaseEval>> {
         use crate::finance::{self as fin, Payer, Payload as Fin};
         let x = self.held(id)?;
         if x.inside.spec != self.mips.finance {
             return Ok(None);
         }
-        let (purchase, fulfils, refund_to) = match Fin::decode(x.inside.type_, &x.inside.payload) {
-            Ok(Fin::Receipt(r)) => (r.purchase.clone(), r.fulfils, fin::refund_owed_to(&r)),
+        let (purchase, fulfils, refund_to, rail) = match Fin::decode(x.inside.type_, &x.inside.payload) {
+            Ok(Fin::Receipt(r)) => (r.purchase.clone(), r.fulfils, fin::refund_owed_to(&r), r.rail),
             Ok(Fin::Claim(c)) => {
                 let signer = x.act.outside.signer.unwrap_or_default();
                 let to = match c.payer(&signer) {
                     Payer::Identity(h) => fin::RefundTo::Identity(h),
                     Payer::Key(k) => fin::RefundTo::Key(k),
                 };
-                (c.purchase.clone(), c.fulfils, to)
+                (c.purchase.clone(), c.fulfils, to, c.rail)
             }
             _ => return Ok(None),
         };
@@ -4133,34 +4301,192 @@ impl<'a> LawView<'a> {
             return no(e, "the line it names carries none of that agreement's claims");
         }
         let current = self.claim_line(&p.agreement, work.as_ref())?;
-        // W2 (F127): where the seller is a collective, a payment becomes a
-        // sale once its actions chain records it, where the claim it names
-        // was current; one the original's chain never so recorded before its
-        // fork or closing is no purchase, and is refunded.
         let sellers = self.sellers(&p, work.as_ref())?;
-        if sellers.is_empty() {
-            if self.claim_version(&current, work.as_ref())? != self.claim_version(&p.line, work.as_ref())? {
-                e.verdict = PurchaseVerdict::Superseded { by: current };
-            }
-            return Ok(Some(e));
-        }
-        for c in &sellers {
-            if self.recorded(id, c, &p, work.as_ref(), &current)? {
+        if !self.push_rails.contains(&rail) {
+            // W4 (F128), request rails: the claim the payment names is the
+            // one the seller's request committed to, so a buyer cannot pay a
+            // version the seller has left. Where the seller is a collective,
+            // the payment becomes a sale once its actions chain records it
+            // (F127, W2); one the original's chain never recorded before the
+            // fork or closing that superseded its claim is refunded.
+            if sellers.is_empty() {
                 return Ok(Some(e));
             }
+            for c in &sellers {
+                if self.recorded(id, c, &p, work.as_ref(), &current, true)? {
+                    return Ok(Some(e));
+                }
+            }
+            if p.line != current && sellers.iter().any(|c| matches!(self.closed_by(c), Ok(Some(ref x)) if x.by == current)) {
+                return no(
+                    e,
+                    "the seller's actions chain never recorded it before the fork or closing that superseded its claim: no purchase, refunded (F127, W2)",
+                );
+            }
+            e.verdict = PurchaseVerdict::Unrecorded;
+            return Ok(Some(e));
         }
-        if p.line != current && sellers.iter().any(|c| matches!(self.closed_by(c), Ok(Some(ref x)) if x.by == current)) {
-            return no(
-                e,
-                "the seller's actions chain never recorded it before the fork or closing that superseded its claim: no purchase, refunded (F127, W2)",
-            );
+        // W4 (F128), push rails: each holder the claim names settles on its
+        // own chain. A holder's receipt recorded before that holder's
+        // signature on the act superseding the claim is a sale under it; one
+        // recorded after it is not. The payment is a purchase only if every
+        // holder's receipt is a sale; otherwise every holder refunds what it
+        // received, and the buyer buys again under the current claim.
+        let holders = self.claim_holders(&p, work.as_ref())?;
+        if holders.is_empty() {
+            return no(e, "the claim it names has no holder of the work's stake");
         }
-        e.verdict = if self.claim_version(&current, work.as_ref())? == self.claim_version(&p.line, work.as_ref())? {
-            PurchaseVerdict::Unrecorded
-        } else {
-            PurchaseVerdict::Superseded { by: current }
-        };
+        let superseded = self.claim_version(&current, work.as_ref())? != self.claim_version(&p.line, work.as_ref())?;
+        let mut waiting = false;
+        for h in &holders {
+            let col = self.col(h);
+            let collective = (0..col.res.links.len()).any(|k| self.declares(&col, k));
+            let sale = if collective {
+                if self.recorded(id, h, &p, work.as_ref(), &current, false)? {
+                    Some(true)
+                } else if !self.holder_receipts(id, h).is_empty()
+                    || (p.line != current && matches!(self.closed_by(h), Ok(Some(ref x)) if x.by == current))
+                {
+                    // Its receipt came too late, or its fork or closing
+                    // superseded the claim before its chain recorded it.
+                    Some(false)
+                } else {
+                    None
+                }
+            } else {
+                let rs = self.holder_receipts(id, h);
+                if rs.is_empty() {
+                    None
+                } else if !superseded {
+                    Some(true)
+                } else {
+                    let over = self.superseding(&p, &current, work.as_ref())?;
+                    Some(rs.iter().any(|r| !self.after_own_signature(r, h, &over)))
+                }
+            };
+            match sale {
+                Some(true) => {}
+                Some(false) => {
+                    return no(
+                        e,
+                        "on a push rail, a holder recorded its receipt after its own signature on the act superseding the claim: no purchase, every holder refunds (F128, W4)",
+                    )
+                }
+                None => waiting = true,
+            }
+        }
+        if waiting {
+            e.verdict = PurchaseVerdict::Unrecorded;
+        }
         Ok(Some(e))
+    }
+
+    /// The holders of the work's stake in the claim a purchase names (W4,
+    /// F128): the successors where it names a fork; otherwise the holders
+    /// in that version of the claiming agreement, a holder written null
+    /// being the collective whose terms they are.
+    fn claim_holders(&self, p: &crate::finance::Purchase, work: Option<&Hash>) -> R<Vec<Hash>> {
+        if let Some(l) = self.v.get(&p.line) {
+            if self.is_law(l, types::FORK) {
+                if let Ok(f) = Fork::decode(&l.inside) {
+                    return Ok(f.sides.iter().map(|s| s.successor).collect());
+                }
+            }
+        }
+        let version = match self.v.get(&p.line) {
+            Some(l) if self.is_law(l, types::TERMS) => p.line,
+            _ => p.agreement,
+        };
+        let t = self.terms(&version)?;
+        let this = if t.is_collective() { self.collective_of(&p.agreement)? } else { None };
+        let mut out = vec![];
+        for st in t.stakes.iter().flatten() {
+            if st.object == Who::This || work.is_some_and(|w| st.object != Who::Id(*w)) {
+                continue;
+            }
+            for (h, _) in &st.holders {
+                if let Some(c) = h.resolve(this.as_ref()) {
+                    if !out.contains(&c) {
+                        out.push(c);
+                    }
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// The receipts `holder` signed for the same rail payment as `id` (the
+    /// payment itself, where `holder` signed it, or a receipt carrying the
+    /// same rail proof), that stand: a push rail's one payment to several
+    /// holders (W4, F128).
+    fn holder_receipts(&self, id: &Hash, holder: &Hash) -> Vec<&'a Held> {
+        use crate::finance::Payload as Fin;
+        let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
+            _ => None,
+        };
+        let Some(x) = self.v.get(id) else { return vec![] };
+        let mine = proof(x);
+        self.v
+            .signed_by(holder)
+            .filter(|h| {
+                h.inside.spec == self.mips.finance
+                    && h.inside.type_ == crate::finance::types::RECEIPT
+                    && self.valid(&h.id)
+                    && (h.id == *id || mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m)))
+            })
+            .collect()
+    }
+
+    /// The acts superseding the claim a purchase names, up to the current
+    /// claim (W4): the versions of the claiming agreement after the one it
+    /// names, or the fork, closing or release that is current.
+    fn superseding(&self, p: &crate::finance::Purchase, current: &Hash, work: Option<&Hash>) -> R<Vec<Hash>> {
+        let named = self.claim_version(&p.line, work)?;
+        match self.v.get(current) {
+            Some(c) if self.is_law(c, types::TERMS) => {
+                let mut out = vec![];
+                for (v, _) in self.lineage(current)? {
+                    if v == named || v == p.line {
+                        break;
+                    }
+                    out.push(v);
+                }
+                Ok(out)
+            }
+            _ => Ok(vec![*current]),
+        }
+    }
+
+    /// Whether `holder`'s receipt `r` was recorded after its own signature
+    /// on one of the acts `over` (W4, F128): that signature (the act itself,
+    /// or its signature act naming it) lies before `r` on `r`'s own
+    /// sequence. A signature on another of the holder's sequences is not
+    /// before it: each holder's clock is its own, and it answers for it.
+    fn after_own_signature(&self, r: &Held, holder: &Hash, over: &[Hash]) -> bool {
+        let mut signed: BTreeSet<Hash> = BTreeSet::new();
+        for a in over {
+            if self.v.get(a).is_some_and(|h| h.act.outside.signer.as_ref() == Some(holder)) {
+                signed.insert(*a);
+            }
+            for (_, s) in self.valid_sigs(a, &[*holder]) {
+                signed.insert(s);
+            }
+        }
+        let mut cur = r.inside.prev.as_deref().and_then(|p| p.first()).copied();
+        for _ in 0..1_000_000 {
+            let Some(y) = cur else { return false };
+            if signed.contains(&y) {
+                return true;
+            }
+            cur = self
+                .v
+                .get(&y)
+                .filter(|h| h.act.outside.signer.as_ref() == Some(holder))
+                .and_then(|h| h.inside.prev.as_deref().and_then(|p| p.first()).copied());
+        }
+        false
     }
 
     /// The version at which a claim stands, from a version of its agreement
@@ -4223,7 +4549,15 @@ impl<'a> LawView<'a> {
     /// that counts (done, on its chain, not void at an ending), signed by it
     /// or by its split service under its grant, that is the payment's
     /// receipt, acknowledges it, or is a receipt for the same rail proof.
-    fn recorded(&self, id: &Hash, c: &Hash, p: &crate::finance::Purchase, work: Option<&Hash>, current: &Hash) -> R<bool> {
+    fn recorded(
+        &self,
+        id: &Hash,
+        c: &Hash,
+        p: &crate::finance::Purchase,
+        work: Option<&Hash>,
+        current: &Hash,
+        request: bool,
+    ) -> R<bool> {
         use crate::finance::Payload as Fin;
         let x = self.held(id)?;
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
@@ -4245,21 +4579,18 @@ impl<'a> LawView<'a> {
         }
         let claim_here = self.claim_version(&p.line, work)?;
         for r in candidates {
-            let at = if r.act.outside.signer.as_ref() == Some(c) {
-                if self.v.status(&r.id) != Status::Valid || !self.consent(&r.id)?.counts() {
-                    continue;
-                }
-                self.in_force(&r.id)?
-            } else {
-                match self.backing(&r.id) {
-                    Ok(Backing::Backed { grant } | Backing::Binds { grant })
-                        if self.v.get(&grant).and_then(|g| g.act.outside.signer) == Some(*c) =>
-                    {
-                        self.in_force(&grant)?
-                    }
-                    _ => continue,
-                }
-            };
+            // Signed with the collective's own key, or with a grant key of
+            // its, its split service's among them (F128, reading 6).
+            if r.act.outside.signer.as_ref() != Some(c) || !self.valid(&r.id) || !self.consent(&r.id)?.counts() {
+                continue;
+            }
+            // W4 (F128): on a request rail the claim is the one the
+            // seller's request committed to: the recording act counting is
+            // enough.
+            if request {
+                return Ok(true);
+            }
+            let at = self.in_force(&r.id)?;
             // Where the claim it names was current at that act.
             let current_there = match self.v.get(&p.line) {
                 Some(l) if self.is_law(l, types::TERMS) => {
@@ -4271,14 +4602,14 @@ impl<'a> LawView<'a> {
                 }
                 _ => &p.line == current,
             };
-            // A release by the seller, an action on its chain, ends the claim:
-            // a record it cites came before it; any other did not, and
-            // whether it came before cannot be told where neither cites
-            // the other (flaw W4).
+            // A release by the seller, an action on its chain, ends the claim
+            // (W4, F128): a receipt recorded after it, its history holding the
+            // release, is no sale; one recorded before it, or knowing nothing
+            // of it, is judged as it knew the claim.
             let released_first = match self.v.get(current) {
                 Some(rl) if self.is_law(rl, types::RELEASE) && rl.act.outside.signer.as_ref() == Some(c) => {
                     let col = self.col(c);
-                    !self.before_struct(&col, r, Line::Record(rl))
+                    self.before_struct(&col, rl, Line::Record(r))
                 }
                 _ => false,
             };
@@ -4303,7 +4634,7 @@ impl<'a> LawView<'a> {
             let Ok(Fin::PayeePointer(p)) = Fin::decode(h.inside.type_, &h.inside.payload) else {
                 continue;
             };
-            if &p.payee == who && self.v.status(&h.id) == Status::Valid && self.consent(&h.id)?.counts() {
+            if &p.payee == who && self.valid(&h.id) && self.consent(&h.id)?.counts() {
                 held.push((h.id, p));
             }
         }
@@ -4540,7 +4871,7 @@ impl<'a> LawView<'a> {
             e.why = Some(w.into());
             Ok(e)
         };
-        if self.v.status(id) != Status::Valid {
+        if !self.valid(id) {
             return fail(e, "the release is not valid under Identity");
         }
         if h.act.outside.content_key.is_none() {

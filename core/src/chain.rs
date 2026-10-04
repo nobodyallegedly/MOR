@@ -175,6 +175,12 @@ pub enum Status {
     Invalid,
     /// Signed under a scheme, or of a type, this client does not implement.
     Unknown,
+    /// Signed with a scoped key (F128): its binding names an act of a higher
+    /// MIP that installs a key of this identity, such as a Law grant's grant
+    /// key. Identity checks only that the signature is valid; that MIP
+    /// judges whether the key is the identity's and the act within its
+    /// scope. A client that does not implement it shows the act as unknown.
+    Scoped,
 }
 
 // ---------------------------------------------------------------- the verifier
@@ -1149,10 +1155,13 @@ impl Verifier {
         }
         let res = self.resolve_cx(cx, signer);
         let Some(k) = res.position_of(binding) else {
-            return if res.waiting().contains(binding) {
-                Status::Pending
-            } else {
-                Status::Invalid
+            if res.waiting().contains(binding) {
+                return Status::Pending;
+            }
+            // F128: a scoped key, installed by an act of a higher MIP.
+            return match self.acts.get(binding) {
+                Some(b) if b.inside.spec != self.identity_spec && b.id != x.id => Status::Scoped,
+                _ => Status::Invalid,
             };
         };
         if !res.states[k].signing_key.made(&x.act.signature) {

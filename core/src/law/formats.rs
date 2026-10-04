@@ -16,7 +16,7 @@
 use crate::act::{Inside, Object};
 use crate::cbor::{self, Value};
 use crate::hash::Hash;
-use crate::identity::{Declaration, KeptTip};
+use crate::identity::{Declaration, KeptTip, SigningKey};
 use std::fmt;
 
 /// The Law act types (Law, "Act formats").
@@ -836,53 +836,6 @@ pub struct Terms {
     /// holders must sign its release to the public domain (F121, D);
     /// absent: every holder. A clone every owner signs may change it (N8).
     pub release_rule: Option<Rule>,
-    /// 25: the collective's relays, where its acts are done (F126): an act
-    /// in its name binds it only once sealed to every member and its
-    /// outside is on one of these. Required in a collective's terms, never
-    /// in a deal's; constitutional since F127 (reading 3, adjusted).
-    pub relays: Option<Vec<Relay>>,
-}
-
-/// A relay a collective's terms name (field 25, F126): its operator, or
-/// null where it declares none, and an address hint, as a home is declared
-/// (Identity). Where an operator is named, the operator is what counts.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Relay {
-    pub operator: Option<Hash>,
-    pub hint: String,
-}
-
-impl Relay {
-    pub fn to_value(&self) -> Value {
-        Value::Array(vec![
-            self.operator.as_ref().map(b).unwrap_or(Value::Null),
-            Value::Text(self.hint.clone()),
-        ])
-    }
-
-    pub fn decode(v: &Value) -> R<Relay> {
-        let a = tuple(v, 2, "relay")?;
-        let operator = match &a[0] {
-            Value::Null => None,
-            x => Some(hash(x, "relay operator")?),
-        };
-        let Value::Text(hint) = &a[1] else {
-            return Err(LawError::Shape("relay hint"));
-        };
-        if hint.is_empty() {
-            return Err(LawError::Shape("relay hint"));
-        }
-        Ok(Relay { operator, hint: hint.clone() })
-    }
-
-    /// Whether a relay a verifier found an act on is this one: by its
-    /// operator where this entry names one, else by its hint.
-    pub fn matches(&self, found: &Relay) -> bool {
-        match &self.operator {
-            Some(o) => found.operator.as_ref() == Some(o),
-            None => found.hint == self.hint,
-        }
-    }
 }
 
 impl Terms {
@@ -1044,9 +997,6 @@ impl Terms {
         if let Some(r) = &self.release_rule {
             m.push((Value::Uint(24), r.to_value()));
         }
-        if let Some(r) = &self.relays {
-            m.push((Value::Uint(25), Value::Array(r.iter().map(Relay::to_value).collect())));
-        }
         m
     }
 
@@ -1074,7 +1024,15 @@ impl Terms {
                 Value::Uint(17) => {
                     return Err(LawError::Unsupported("terms field 17 (refund terms)"))
                 }
-                Value::Uint(n) if *n <= 25 => f.push((*n, v)),
+                // 25, the relays (F126), is withdrawn (F128): relays are
+                // transport, never a condition of validity. It is never
+                // reused, and terms carrying it are refused.
+                Value::Uint(25) => {
+                    return Err(LawError::Check(
+                        "terms field 25 (the relays) is withdrawn: an act is done by its signatures, seals and citations, wherever held (F128)",
+                    ))
+                }
+                Value::Uint(n) if *n <= 24 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("terms: unknown field")),
             }
         }
@@ -1173,9 +1131,6 @@ impl Terms {
                 .transpose()?,
             forked_from: get(23).map(|v| hash(v, "forked from")).transpose()?,
             release_rule: get(24).map(rule).transpose()?,
-            relays: get(25)
-                .map(|v| nonempty(v, "relays")?.iter().map(Relay::decode).collect())
-                .transpose()?,
         })
     }
 
@@ -1286,21 +1241,6 @@ impl Terms {
             if !ok {
                 return Err(LawError::Check("the release rule is a rule among a stake's holders"));
             }
-        }
-        // F126: a collective's terms name its relays; a deal's never.
-        match (&self.relays, self.is_collective()) {
-            (None, true) => {
-                return Err(LawError::Check(
-                    "a collective's terms name its relays, where its acts are done (field 25, F126)",
-                ))
-            }
-            (Some(_), false) => {
-                return Err(LawError::Check("only a collective's terms name relays (field 25, F126)"))
-            }
-            (Some(r), true) if r.iter().enumerate().any(|(i, x)| r[..i].contains(x)) => {
-                return Err(LawError::Check("the relays name the same relay twice"))
-            }
-            _ => {}
         }
         if self.forked_from.is_some() && (self.parent.is_some() || !self.is_collective()) {
             return Err(LawError::Check(
@@ -2085,6 +2025,10 @@ pub struct Grant {
     /// 8, null: the grantor is this collective, the one whose founding
     /// terms name the grant (F124, S1); absent: the grant's signer.
     pub by_this: bool,
+    /// 9: the grant key (F128): a key of the collective, scoped to the
+    /// grant, held by the grantee, who made it and keeps its secret part.
+    /// Acts signed with it are the collective's own, bound to this grant.
+    pub key: SigningKey,
 }
 
 impl Grant {
@@ -2114,13 +2058,16 @@ impl Grant {
         if self.by_this {
             m.push((Value::Uint(8), Value::Null));
         }
+        m.push((Value::Uint(9), self.key.to_value()));
         m
     }
 
-    /// Fields 0 to 6, which a reinstatement repeats.
+    /// Fields 0 to 6, which a reinstatement repeats; its key is its own
+    /// (F128: reinstating is cloning the ended grant, a new decision).
     pub fn same_grant(&self, other: &Grant) -> bool {
         Grant {
             reinstates: None,
+            key: other.key.clone(),
             ..self.clone()
         } == Grant {
             reinstates: None,
@@ -2132,7 +2079,7 @@ impl Grant {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in p {
             match k {
-                Value::Uint(n) if *n <= 8 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 9 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("grant: unknown field")),
             }
         }
@@ -2153,6 +2100,8 @@ impl Grant {
                 Some(Value::Null) => true,
                 Some(_) => return Err(LawError::Shape("grant: field 8 is null, this collective (S1)")),
             },
+            key: crate::identity::signing_key(get(9).ok_or(LawError::Shape("grant: field 9, the grant key (F128)"))?)
+                .map_err(|_| LawError::Shape("grant: field 9, the grant key, is a signing key (F128)"))?,
         };
         if g.by_this && (g.area.is_some() || g.reinstates.is_some()) {
             return Err(LawError::Shape(
@@ -2169,6 +2118,36 @@ impl Grant {
             return Err(LawError::Shape("grant: field 7 only with field 5"));
         }
         Ok(g)
+    }
+}
+
+// ---------------------------------------------------------------- revocation
+
+/// Revocation (type 10, F128): a decision of the grantor ending a grant's
+/// powers, which removes its grant key. It names the grant, never a place
+/// on the grantee's strand (C6). `{ 0 => hash }`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Revocation {
+    /// 0: the grant revoked.
+    pub grant: Hash,
+}
+
+impl Revocation {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        vec![(Value::Uint(0), b(&self.grant))]
+    }
+
+    pub fn decode(p: &[(Value, Value)]) -> R<Revocation> {
+        let mut grant = None;
+        for (k, v) in p {
+            match k {
+                Value::Uint(0) => grant = Some(hash(v, "revocation: the grant")?),
+                _ => return Err(LawError::Shape("revocation: unknown field")),
+            }
+        }
+        Ok(Revocation {
+            grant: grant.ok_or(LawError::Shape("revocation: the grant"))?,
+        })
     }
 }
 

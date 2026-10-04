@@ -94,8 +94,6 @@ export interface Governance {
   departed?: string[];
   /** Forked from (field 23): the original collective, for a successor of a fork (F124 N4). */
   forkedFrom?: string;
-  /** The relays its terms name (field 25, F126): where its acts are done. Absent in files made before F126, whose terms Law now refuses. */
-  relays?: string[];
 }
 
 export interface CollectiveFile {
@@ -194,7 +192,6 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
     departed: g.departed,
     // Field 23 is for founding terms only: a clone never carries it.
     forkedFrom: parent ? undefined : g.forkedFrom,
-    relays: g.relays,
   };
 }
 
@@ -249,7 +246,6 @@ export class TestCollective {
    * 37a, 46b; F121, F124 N5).
    */
   departedAfter(g: Governance, members: string[]): Governance {
-    g = this.withRelays(g);
     const own = g.stakes?.find((x) => x.object === null);
     const departed = [...(g.departed ?? [])];
     for (const m of this.f.members.filter((x) => !members.includes(x))) {
@@ -257,11 +253,6 @@ export class TestCollective {
       if (share > 0 && !departed.includes(m)) departed.push(m);
     }
     return departed.length ? { ...g, departed } : g;
-  }
-
-  /** The rules with the collective's relays (field 25, F126) carried on where a change does not name them. */
-  withRelays(g: Governance): Governance {
-    return g.relays ? g : { ...g, relays: this.f.governance.relays };
   }
 
   /** Who holds the everyday key after a member change: the holder if they stay, else the first member. */
@@ -300,8 +291,6 @@ export class TestCollective {
   }): Promise<{ collective: TestCollective; agreement: string; signed: Signed[]; sent: Submitted[] }> {
     const ids = opts.members.map((m) => m.id);
     const holder = ids[0];
-    // F126: the founding terms name the collective's relays, where its acts are done.
-    opts = { ...opts, governance: { ...opts.governance, relays: opts.governance.relays ?? opts.relays } };
     const payload = termsPayload(collectiveTerms(opts.governance, ids, holder));
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the founding agreement is not the one shown: nothing signed');
     const proposed = await proposePayload(opts.members[0], payload, undefined, opts.relays);
@@ -556,7 +545,6 @@ export class TestCollective {
     expect?: Uint8Array;
   }): Promise<{ clone: string; record: string; signed: Signed[] }> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
-    opts = { ...opts, governance: this.withRelays(opts.governance) };
     const mark: MarkEntry[] = [{ power: opts.power, signers: opts.signers.map((m) => m.id) }];
     const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
     const next = collectiveTerms(opts.governance, this.f.members, this.f.signingHolder, this.f.agreement, mark);

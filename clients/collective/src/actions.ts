@@ -471,8 +471,9 @@ export class Actions {
     for (const m of members) if (!this.store.holds(m)) blocking.push(`${names(m)} is not held by this program, so it cannot sign here.`);
     if (members.length < 2) blocking.push('A collective has at least two members.');
     const rules = fromRules(a.rules);
-    // F126: the founding terms name the collective's relays, where its acts are done.
-    const g: Governance = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules), relays };
+    // F128: the founding terms name no relays; the relays are where the
+    // collective's clients publish and look first, never a condition.
+    const g: Governance = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules) };
     // F124 S1: founding terms may carry each member's share of all the
     // collective's income, the collective written null, "this collective".
     if (a.shares && Object.keys(a.shares).length) {
@@ -615,7 +616,7 @@ export class Actions {
     }
     const changedGovernance = rulesChanged || text !== current.text;
     const g: Governance = c.departedAfter(
-      { ...rules, releaseWords: current.releaseWords, text, stakes: current.stakes, splitGrant: current.splitGrant, departed: current.departed, relays: current.relays },
+      { ...rules, releaseWords: current.releaseWords, text, stakes: current.stakes, splitGrant: current.splitGrant, departed: current.departed },
       members,
     );
 
@@ -1472,16 +1473,15 @@ export class Actions {
   /**
    * A verifier holding these identities' chains and every act their relays
    * hold, and the collective's own splits with their keys: what the core
-   * library judges the money and endings with. `specs` names, as
-   * published, every obligation found at a relay: an obligation a
-   * collective signed binds it only once its outside is public (F124 N13).
+   * library judges the money and endings with. An obligation a collective
+   * signed binds it once done, sealed to every member, wherever it is held
+   * (F128, withdrawing N13's public outside).
    */
-  private async lawVerifier(c: TestCollective, ids: string[]): Promise<{ v: Verifier; specs: typeof LAW_SPECS & { published: { act: string; hint: string }[] } }> {
+  private async lawVerifier(c: TestCollective, ids: string[]): Promise<{ v: Verifier; specs: typeof LAW_SPECS }> {
     const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
     const hints = this.hintsOf(c);
-    // Where this program found each act: an act in a collective's name is
-    // done, and binds it, only once found on a relay its terms name (F126).
-    const published: { act: string; hint: string }[] = [];
+    // The relays are where this program looks first (client conformance);
+    // where it found an act is never a condition of its validity (F128).
     for (const id of new Set(ids)) {
       try {
         await lookUp(id, hints, this.via, v);
@@ -1490,12 +1490,6 @@ export class Actions {
       }
       for (const hint of hints) {
         for (const a of await allBy(id, [hint], this.via)) {
-          try {
-            const d = describeAct(a) as { id: string };
-            published.push({ act: d.id, hint });
-          } catch {
-            // malformed
-          }
           try {
             v.add(a);
           } catch {
@@ -1511,13 +1505,6 @@ export class Actions {
     for (const sp of [...(c.f.splits ?? []), ...(c.f.debts ?? []), ...debts]) {
       const a = await this.fetchAct(sp.id, hints);
       if (a) {
-        for (const hint of hints) {
-          try {
-            if (await relayAt(hint, this.via).getAct(sp.id)) published.push({ act: sp.id, hint });
-          } catch {
-            // not reachable, or not there
-          }
-        }
         try {
           v.addWithKey(a, unb64(sp.key));
         } catch {
@@ -1525,8 +1512,7 @@ export class Actions {
         }
       }
     }
-    const seen = new Set<string>();
-    return { v, specs: { ...LAW_SPECS, published: published.filter((p) => !seen.has(`${p.act} ${p.hint}`) && !!seen.add(`${p.act} ${p.hint}`)) } };
+    return { v, specs: LAW_SPECS };
   }
 
   /** The debts a collective signed, and those of the collectives it was forked from, which their forks handed to its successors (F124 N13, F127); the core says who owes each. */
@@ -1689,6 +1675,7 @@ export class Actions {
         'The split service is a judicial clause: every member whose voice remains signs it, one version for everyone (Law rule 46a, F121).',
         "From then on the collective's payee pointer counts, for Law, only if every address in it is also in the split service's own signed pointer, and every entry of its vault in the service's own vault (Law rule 18, F123, F124 P2); a Law client shows any other as bypassing the split.",
         'Every split is delivered to every holder it pays, and names each fee and who received it (F121, Q9). A collective naming no split service is paid payer-side instead: a wallet reading Law pays each holder by the stakes (F124 P2).',
+        `The grant hands ${names(a.service)} a grant key: a key of the collective scoped to the grant, which the service makes and keeps, and signs to accept (F128). What the service signs with it, its receipts among them, is the collective's own act, a strand of its actions chain; a revocation removes the key.`,
       ],
       sections: [{ heading: 'Signed on this device', lines: [{ text: 'The collective signs the grant; every member signs the clone; the collective records it. Test identities: consent simulated.', tone: 'warn' }] }],
       plain: [],
@@ -1701,7 +1688,14 @@ export class Actions {
       depends: [a.collective, ...voices],
       run: async () => {
         const col = this.store.collective(a.collective);
-        const g = await col.id.publish(REPO_SPECS.law, LAW_TYPES.grant, grantPayload(a.service), { public: true, relays: col.f.relays });
+        // F128: the service makes its grant key and keeps its secret; the
+        // grant names its public part; the service signs to accept it.
+        const service = this.store.identity(a.service);
+        const key = service.makeGrantKey();
+        const g = await col.id.publish(REPO_SPECS.law, LAW_TYPES.grant, grantPayload(a.service, key.public), { public: true, relays: col.f.relays });
+        service.keepGrantKey(g.id, col.id.id, key.secret);
+        await lawSign(service, g.id, col.f.relays);
+        this.store.saveIdentity(service);
         const ids = voices.map((x) => this.store.identity(x));
         const got = await col.nameSplitService({ grant: g.id, proposer: ids[0], signers: ids });
         col.f.records = [...(col.f.records ?? []), got.record];
