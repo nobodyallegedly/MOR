@@ -4526,3 +4526,90 @@ fn a_closing_must_be_done() {
     let e = lab.view().closing(&open).unwrap();
     assert!(e.complete, "{:?}", e.why);
 }
+
+/// F128, extended to every identity (Nobody, allegedly, 4 October 2026):
+/// a person grants a key too. The grant and its revocation are everyday
+/// acts signed with the person's own signing key, public: no rotation, no
+/// safety key. A rotation still fences off a grant it does not keep, so a
+/// thief who stole the everyday key and granted itself a key loses it at
+/// the owner's next rotation.
+#[test]
+fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
+    let mut w = World::new();
+    let mut singer = w.genesis("a singer", vec![own_home()], None, None);
+    let mut agent = w.genesis("her agent", vec![own_home()], None, None);
+    let env = mips().envelope;
+    let grant = Grant { kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]), ..plain_grant(agent.id, false) };
+    let g = law_act(&mut w, &mut singer, law::types::GRANT, grant.to_map(), None);
+    assert!(w.v.get(&g).unwrap().act.outside.is_public());
+    assert_eq!(w.v.status(&g), Status::Valid, "an everyday act: no safety key");
+    sign(&mut w, &mut agent, &g);
+    // The agent's strand: acts in the singer's name, citing the grant.
+    let mut s1 = singer.clone();
+    s1.binding = g;
+    s1.sign = key_of(agent.id);
+    s1.seq = vec![];
+    s1.cite = Some((singer.id, vec![g]));
+    let mut s2 = s1.clone();
+    let post = |w: &mut World, st: &mut Person| {
+        let a = w.everyday_act(st, env, 0, vec![], None, None);
+        w.add(&a)
+    };
+    let cited = post(&mut w, &mut s1);
+    let racing = post(&mut w, &mut s2);
+    fn view(w: &World) -> LawView<'_> {
+        LawView::new(&w.v, mips())
+    }
+    assert_eq!(view(&w).backing(&cited).unwrap(), Backing::Backed { grant: g });
+    assert!(matches!(view(&w).consent(&cited).unwrap(), Consent::Granted { .. }));
+    // Beyond its reach: a Finance act.
+    let off = {
+        let a = w.everyday_act(&mut s1, mips().finance, 0, vec![], None, None);
+        w.add(&a)
+    };
+    assert!(matches!(view(&w).backing(&off).unwrap(), Backing::NotBacked { .. }));
+    // The revocation: an everyday act of the singer, public, citing the
+    // head it saw on her chain.
+    let sid = singer.id;
+    let r = law_act(
+        &mut w,
+        &mut singer,
+        law::types::REVOCATION,
+        law::Revocation { grant: g }.to_map(),
+        Some(vec![Object { chain: sid, predecessor: cited }]),
+    );
+    assert_eq!(w.v.status(&r), Status::Valid, "an everyday act: no safety key");
+    assert_eq!(view(&w).backing(&cited).unwrap(), Backing::Binds { grant: g });
+    assert!(matches!(view(&w).backing(&racing).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")));
+    // A thief holding the singer's everyday key grants itself a key.
+    let mut thief = w.genesis("a thief", vec![own_home()], None, None);
+    let mut stolen = singer.clone();
+    let tg = law_act(&mut w, &mut stolen, law::types::GRANT, plain_grant(thief.id, false).to_map(), None);
+    sign(&mut w, &mut thief, &tg);
+    let mut ts = singer.clone();
+    ts.binding = tg;
+    ts.sign = key_of(thief.id);
+    ts.seq = vec![];
+    ts.cite = Some((singer.id, vec![tg]));
+    let forged = post(&mut w, &mut ts);
+    assert_eq!(view(&w).backing(&forged).unwrap(), Backing::Backed { grant: tg }, "until the owner rotates");
+    // The singer rotates, keeping her own line's tip, not the thief's act:
+    // the thief's grant is void under Identity, and its key with it.
+    let (_, next) = w.rotate(&singer, Rot::default());
+    singer = next;
+    assert_eq!(w.v.status(&tg), Status::Void);
+    assert!(matches!(view(&w).backing(&forged).unwrap(), Backing::NotBacked { .. }));
+    // A private grant of a person is not visible to those who check the
+    // grantee's acts, and backs nothing (reading).
+    let mut quiet = w.genesis("a quiet agent", vec![own_home()], None, None);
+    let qid = quiet.id;
+    let qg = w.private_act(&mut singer, mips().law, law::types::GRANT, plain_grant(qid, false).to_map(), None, vec![qid]);
+    sign(&mut w, &mut quiet, &qg);
+    let mut qs = singer.clone();
+    qs.binding = qg;
+    qs.sign = key_of(qid);
+    qs.seq = vec![];
+    qs.cite = Some((singer.id, vec![qg]));
+    let q = post(&mut w, &mut qs);
+    assert!(matches!(view(&w).backing(&q).unwrap(), Backing::NotBacked { .. }));
+}

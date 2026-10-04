@@ -903,10 +903,36 @@ So the line covers the second and third kinds and fails the first, which is wher
 
 **No change.** No collective takes part in the run, so no grant key, revocation or "done" check is exercised; its payments are on Lightning, a request rail, and none of them is a purchase, so W4 changes nothing there. The payment commitment's bytes, the Lightning Module's rule and the harness are untouched. The steps of `docs/core-pass-v21.md`, section 5, stand as written.
 
+### Extended the same day: grant keys for every identity
+
+*Main merged in again first (F128's last decision, the adversarial test plans; one conflict, in the roadmap, both sides kept).* F128 now ends: grant keys extend to every identity, a person as well as a collective; in a deal, each payee grants the split service its own grant key, scoped to the deal. This answers H2.
+
+**The check you asked for: can a person's grant key be added and removed without a rotation?** **Yes.** As built, a grant and its revocation are everyday acts signed with the person's ordinary signing key; neither needs the safety key. The safety key is still what protects it: the next rotation judges the grant like any act of the key it replaces, so a grant the owner's rotation does not keep is void, and its key with it.
+*Example:* a thief steals the singer's everyday key and grants itself a key. Its posts count until the singer rotates; she keeps her own line and not the thief's grant, and the thief's grant and everything signed with its key fall. *Cost, stated:* a thief holding the everyday key can also revoke her grants until she rotates and grants again, as it could already replace her payee pointer.
+"Scoped and visible": a person's grant names its reach (kinds), and it is public (reading: a person has no members to seal to, and whoever checks the grantee's acts must read it); a private one backs nothing. Built and run: `a_persons_grant_key_is_added_and_revoked_by_everyday_acts` (freeze step 3.9s).
+
+**Not written: the deal's part.** Writing it found two questions, each needing your decision:
+
+**Question H4. How a deal names its payees' grants.** A grant scoped to the deal must name the deal, and the deal names its split service's grant (field 14): each would have to contain the other's fingerprint first, which is impossible; and field 14 holds one grant where a deal now has one per payee.
+*Example:* Ana and Ben's deal for their song names a split service; Ana's grant must name the deal, which must already name Ana's grant.
+- (a) In a deal, field 14 names the service's identity; each payee grants it a key naming the deal afterwards.
+- (b) Each payee signs its grant before the deal, naming it as "this agreement" by null, as founding terms name "this collective" (S1, D6); field 14 lists one grant per payee.
+- (c) Sign the deal, then clone it, everyone signing again, to add the grants.
+**Lean: (b)**, the mechanic already used for a collective's founding grant; leaving the service stays a revocation by each payee.
+
+**Question H5. What a payee's grant to the service may reach.** Holding Ben's key, the service could sign "Ben received his payout" in Ben's name without paying him, hiding exactly what rule 29 (a payout without a receipt is an open obligation) exists to show.
+*Example:* the service owes Ben 40 from a sale and signs Ben's receipt for it with Ben's grant key.
+- (a) A payee's grant key never signs a receipt whose payer is the service itself, or a split's payout.
+- (b) It signs only receipts for the deal's incoming payments (purchases of its work, or its offer), nothing else.
+- (c) The service signs incoming receipts under its own identity, as before F128, and holds no payee's key.
+**Lean: (b), with (a) as a rule beside it.**
+
+**Code and tests.** `LawView::backing` serves a person's grant (public, its reach from its kinds, revocations public, no areas or "done"); nothing else changed. Rust workspace **299 passed, 0 failed** (one new test). Repo 11, collective 19 and connector 12 rerun against the rebuilt bindings, all passing; the other six clients are untouched since the 111 above. The Mac regtest steps: no change.
+
 ### Waiting on Nobody, allegedly, in order
 
 1. Question H1 (what a client without Law sees of a grant key).
-2. Question H2 (a grant by someone who is not a group).
-3. Question H3 (the handover).
-4. The twelve readings above.
+2. Question H3 (the handover). *(H2 is answered: grant keys for every identity.)*
+3. Question H4 (how a deal names its payees' grants), then H5 (what such a grant may reach): the deal's part of F128 waits on both.
+4. The twelve readings above, and the person's grant being public.
 5. Approval of the whole set: Law 10, Finance 6, Envelope 7, Identity 11, Production 6, core v21, suite v21, one page v6, the payment cMIP and Lightning Module draft 2; then the Mac regtest run once.

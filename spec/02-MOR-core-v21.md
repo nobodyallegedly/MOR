@@ -270,7 +270,7 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
   - A seat never carries the areas its holder held: the succession clone takes the member off them, and the collective refits them.
   - *The core gives the language; death is left to the parties and their named authorities.*
 - **Grants** delegate authority, with limits, revocably, and never beyond the power of whoever issued them: an area's holders grant only within their area.
-  - A collective's grant hands its grantee a grant key (F128): a key of the collective scoped to the grant, which the grantee makes, keeps and accepts by signing. What it signs is the collective's own act, a strand of its actions chain; every grant key ends at a fork's line. *A stolen grant key acts within its scope until revoked.*
+  - A grant hands its grantee a grant key (F128), whoever grants, a person as well as a collective: a key of the grantor scoped to the grant, added and removed by everyday acts, never a rotation, which the grantee makes, keeps and accepts by signing. What it signs is the collective's own act, a strand of its actions chain; every grant key ends at a fork's line. *A stolen grant key acts within its scope until revoked.*
   - Revoking a grant removes its key: a decision ending powers. An act the revocation's history holds binds; one racing it, or after it, is void, unless the collective itself adopts it.
   - The collective imports or hands over what it accepts; counterparties require import before performing.
 - **Abandonment** (when a party no longer answers) is decided only by the authority the clause names, always an identity.
@@ -339,7 +339,7 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
 ## Open before freeze
 
 - [ ] Exact formats for every act in Finance, Law and Production (the Identity, Envelope and Text drafts already have them).
-- [ ] Law draft 10's open points: questions H1 to H3, found writing F128 in, and its readings (Law draft 10, "Open in this draft").
+- [ ] Law draft 10's open points: questions H1, H3, H4 and H5, found writing F128 in, and its readings (Law draft 10, "Open in this draft").
 - [ ] Technical review of the RV32IM verification profile and its test vectors, the running-summary test vector, the signature-scheme specification format, and the pinned Unicode version.
 - [ ] Human adversarial review (round 3).
 - [ ] Completeness, per the freeze test suite.
@@ -374,7 +374,7 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
 | Concurrency rule | An agreement's rule for settling changes made concurrently, a fork of records (formerly the fork rule). |
 | Fork of a collective | The end of a collective whose members split into sides that will not agree: each side founds its successor first; a fork act naming them, signed under the constitutional change rule, closes the original; each successor names it as "forked from", a back-link only. Not a fork of records. |
 | Grant | A delegation of authority, with limits, revocable. A collective's grant hands its grantee a grant key (F128). |
-| Grant key | A key of a collective, scoped to one grant, made and held by the grantee; what it signs is the collective's own act. A revocation removes it (F128). |
+| Grant key | A key of an identity, a person or a collective, scoped to one grant, made and held by the grantee; what it signs is the grantor's own act. A revocation removes it (F128). |
 | Home | A relay focused on identity, run by an operator, storing identity chains and signing receipts. |
 | Homeless rotation | A rotation that leaves homes that are gone, voided by a live home's objection unless endorsed with both keys; final once the next rotation counts, except one accepted only on a client's own failed attempt to reach the home. |
 | Identity | The hash of a genesis act. |

@@ -2670,6 +2670,7 @@ impl<'a> LawView<'a> {
         for h in self.v.signed_by(&col.id) {
             if self.is_law(h, types::REVOCATION)
                 && Self::own_key(col, h)
+                && (h.act.outside.is_public() || (0..col.res.links.len()).any(|k| self.declares(col, k)))
                 && Revocation::decode(&h.inside.payload).is_ok_and(|r| &r.grant == grant)
                 && self.valid(&h.id)
                 && self.consent(&h.id)?.counts()
@@ -2708,7 +2709,14 @@ impl<'a> LawView<'a> {
             })
         };
         let founding = self.founding_grant(&c, gh);
-        let counts = if founding {
+        // F128, extended: any identity grants keys, a person as well as a
+        // collective. A person's grant, and its revocation, are public
+        // (reading: "scoped and visible"), since every verifier of the
+        // grantee's acts must read them; a person has no members to seal to.
+        let collective = (0..col.res.links.len()).any(|k| self.declares(&col, k));
+        let counts = if !collective {
+            self.valid(&gh.id) && gh.act.outside.is_public()
+        } else if founding {
             // Carried by the founding terms every founder signed (D6).
             self.v.status(&gh.id) == Status::Valid
         } else {
@@ -2727,33 +2735,49 @@ impl<'a> LawView<'a> {
         if let Some(w) = self.uncited(&col, y, None)? {
             return not(&w);
         }
-        let Some(ag) = self.in_force(act)? else {
-            return not("the grantor is not a collective");
-        };
-        // Reach: the act's kind lies within the grant's (rule 44).
-        let t = self.terms(&ag)?;
-        let (spec, ty) = (&y.inside.spec, y.inside.type_);
-        let within = match &g.kinds {
-            Some(k) => k.iter().any(|k| t.kind_reaches(&self.mips, k, spec, ty)),
-            None => !t.areas().iter().any(|a| {
-                a.kinds
-                    .iter()
-                    .flatten()
-                    .any(|k| t.kind_reaches(&self.mips, k, spec, ty))
-            }),
-        };
-        if !within {
-            return not("the act lies beyond the grant's reach (rule 44)");
-        }
         // A grant key never signs a decision: records, grants, revocations
-        // and identity-chain acts are signed with the collective's own key.
+        // and identity-chain acts are signed with the grantor's own key.
         if self.is_law(y, types::RECORD) || self.is_law(y, types::GRANT) || self.is_law(y, types::REVOCATION) {
-            return not("a grant key signs no decision of the collective (F128)");
+            return not("a grant key signs no decision of its grantor (F128)");
         }
-        // F126: an act in the collective's name is done only once sealed
-        // to every member.
-        if let Some(w) = self.not_done(y, &ag)? {
-            return not(&w);
+        let (spec, ty) = (&y.inside.spec, y.inside.type_);
+        if collective {
+            let Some(ag) = self.in_force(act)? else {
+                return not("the grantor's agreement in force cannot be read");
+            };
+            // Reach: the act's kind lies within the grant's (rule 44).
+            let t = self.terms(&ag)?;
+            let within = match &g.kinds {
+                Some(k) => k.iter().any(|k| t.kind_reaches(&self.mips, k, spec, ty)),
+                None => !t.areas().iter().any(|a| {
+                    a.kinds
+                        .iter()
+                        .flatten()
+                        .any(|k| t.kind_reaches(&self.mips, k, spec, ty))
+                }),
+            };
+            if !within {
+                return not("the act lies beyond the grant's reach (rule 44)");
+            }
+            // F126: an act in the collective's name is done only once sealed
+            // to every member.
+            if let Some(w) = self.not_done(y, &ag)? {
+                return not(&w);
+            }
+        } else {
+            // A person's grant: its reach is the kinds it names (a MIP's
+            // layer, or a type of a specification); naming none, every act
+            // but a decision (reading).
+            let within = match &g.kinds {
+                Some(k) => k.iter().any(|k| match k {
+                    Kind::Layer(l) => self.mips.layer(spec) == Some(*l),
+                    Kind::Type { spec: s2, type_ } => s2 == spec && *type_ == ty,
+                }),
+                None => true,
+            };
+            if !within {
+                return not("the act lies beyond the grant's reach (rule 44)");
+            }
         }
         let acked = |before: &dyn Fn(&Held) -> bool| -> R<bool> {
             for a in self.v.acknowledgements(act) {
