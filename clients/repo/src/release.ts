@@ -520,8 +520,18 @@ export async function verifyRelease(
     areas: { area: number; name: string; frozen: boolean; voices: string[]; needed: number; signers: string[]; met: boolean }[];
     met: boolean;
   };
+  // F126: a release in a collective's name is done only once found on a
+  // relay its terms name; this verifier states where it found it.
+  const published: { act: string; hint: string }[] = [];
+  for (const hint of places) {
+    try {
+      if (await relayAt(hint, via).getAct(release)) published.push({ act: release, hint });
+    } catch {
+      // not reachable, or not there
+    }
+  }
   try {
-    consent = v.lawConsent(LAW_SPECS, release);
+    consent = v.lawConsent({ ...LAW_SPECS, published }, release);
   } catch (e) {
     return fail(`Law: ${e instanceof Error ? e.message : e}`);
   }

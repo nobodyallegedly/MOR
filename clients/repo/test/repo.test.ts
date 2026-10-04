@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cborEncode, checkTerms, rebuildSafety, verifyShare } from '../../genesis/src/core.ts';
+import { cborDecode, cborEncode, checkTerms, rebuildSafety, verifyShare } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { TestCollective, type Governance } from '../src/collective.ts';
@@ -263,10 +263,15 @@ test('a key grammar that one lost holder would freeze is refused (F96)', () => {
         [5, [1, 2]],
         [9, new Map<number, unknown>([[0, [1, 2]], [1, [0]]])],
         [12, new Map<number, unknown>([[0, [0, h(1)]], [1, safety]])],
+        [25, [[null, 'https://relay.test']]],
         ...extra,
       ]),
     );
   checkTerms(terms([1, 2, [h(1), h(2), h(3)]]), LAW_SPECS);
+  // F126: a collective's terms name its relays.
+  const none = cborDecode(terms([1, 2, [h(1), h(2), h(3)]])) as Map<number, unknown>;
+  none.delete(25);
+  assert.throws(() => checkTerms(cborEncode(none), LAW_SPECS), /^Error: law\/check:.*F126/);
   assert.throws(() => checkTerms(terms([1, 3, [h(1), h(2), h(3)]]), LAW_SPECS), /^Error: law\/check:.*recovery/);
   assert.throws(() => checkTerms(terms([0, h(1)]), LAW_SPECS), /^Error: law\/check:.*F96/);
   // Every member with constitutional power is covered by an abandonment

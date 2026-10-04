@@ -418,6 +418,7 @@ impl Payment<'_> {
             payer: Some(self.payer_in_commitment()),
             paid_to,
             salt: random::<16>(),
+            purchase: None,
         };
         let (invoice, payee_node) = self
             .endpoint
@@ -471,6 +472,7 @@ impl Payment<'_> {
                 address: b"where the anonymous payer wants a refund".to_vec(),
             }),
             anonymous: None,
+            purchase: None,
         });
         // F113: an anonymous payer's key signs its claim.
         let claim = match (claim, self.anonymous) {
@@ -502,6 +504,7 @@ impl Payment<'_> {
             previous: None,
             forward: None,
             batch: None,
+            purchase: None,
         });
         let receipt_act = self.payee.finance_act(&receipt, Some(self.payer.p.id));
         let payer_view = read_payee(

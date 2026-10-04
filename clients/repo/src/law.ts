@@ -86,6 +86,8 @@ export interface CollectiveTerms {
   departed?: string[];
   /** Forked from (field 23): founding terms of a side of a fork, naming the original collective, a back-link (F124 N4). */
   forkedFrom?: string;
+  /** The collective's relays (field 25, F126): an act in its name is done, and binds it, only once sealed to every member and found on one of these. Named by address, no operator. */
+  relays?: string[];
 }
 
 /** A stake (terms field 7): null names this collective (F124, S1). */
@@ -138,6 +140,7 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
   if (t.constitutional) m.set(18, ruleValue(t.constitutional));
   if (t.releases.words) m.set(20, new Map([[RELEASE_AREA, t.releases.words]]));
   if (t.parent) m.set(11, unhex(t.parent));
+  if (t.relays?.length) m.set(25, t.relays.map((h) => [null, h]));
   if (t.stakes?.length) {
     // The collective's own stake (null) first, then works by hash.
     const key = (o: string | null) => (o === null ? '' : o);
@@ -195,7 +198,7 @@ export function closingPayload(c: { agreement: string; collective: string; chain
   );
 }
 
-/** A creditor's release (Law type 21, rule 47b, F125): the creditor ends an obligation owed to it without full payment; `against`, for the record only, what it took instead (receipts, agreements). */
+/** A creditor's release (Finance type 4, F126; Law type 21 under F125): the creditor ends an obligation owed to it without full payment; `against`, for the record only, what it took instead (receipts, a Law agreement it was traded for). A collective signs it by its Finance lane. */
 export function debtReleasePayload(r: { obligation: string; against?: string[] }): Uint8Array {
   const m = new Map<number, unknown>([[0, unhex(r.obligation)]]);
   if (r.against?.length) m.set(1, r.against.map(unhex));
@@ -293,17 +296,18 @@ export function pointerPayload(p: { payee: string; version: number; previous?: s
   return cborEncode(m);
 }
 
-/** A settlement receipt (Finance type 2), signed by the payee of the hop. */
-export function receiptPayload(r: { rail: string; payee: string; unit: string; value: number; fulfils: string }): Uint8Array {
-  return cborEncode(
-    new Map<number, unknown>([
-      [0, unhex(r.rail)],
-      [1, new Uint8Array()],
-      [3, unhex(r.payee)],
-      [4, [unhex(r.unit), r.value]],
-      [5, unhex(r.fulfils)],
-    ]),
-  );
+/** A settlement receipt (Finance type 2), signed by the payee of the hop; `purchase`, for a purchase, the claim it pays under: [agreement, line] (field 9, F126). */
+export function receiptPayload(r: { rail: string; payee: string; unit: string; value: number; fulfils: string; payer?: string; purchase?: [string, string] }): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, unhex(r.rail)],
+    [1, new Uint8Array()],
+    [3, unhex(r.payee)],
+    [4, [unhex(r.unit), r.value]],
+    [5, unhex(r.fulfils)],
+  ]);
+  if (r.payer) m.set(2, unhex(r.payer));
+  if (r.purchase) m.set(9, r.purchase.map(unhex));
+  return cborEncode(m);
 }
 
 /** What a clone changes, and the powers its mark must name (Law rule 44c). */

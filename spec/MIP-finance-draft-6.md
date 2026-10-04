@@ -1,6 +1,6 @@
 # MIP: Finance
 
-*Draft 6, 2 October 2026 (roadmap step 12, the Lightning rail). Draft 5 with rule 14a confirmed as drafted, F111 and F112 applied. Rule 14a stays fail closed: a payment in a unit the vault does not cover is undeliverable, and the debt stays open until the owner adds the unit (rule 16), confirmed by Nobody, allegedly, 2 October 2026. F111: the owner learns of what the vault refuses, by client conformance (rule 14b). F112: the payment task is filled by one payment cMIP per agreement, and each rail is a Module under it, a **rail Module**, with its own verification rule; receipts are signed by receivers and claims by payers, and no specification signs or "produces" anything; conversion and custodial flow services are identities, parties to agreements, not cMIPs or Modules. *Revised 3 October 2026 (the core pass, core v21) with the answers to the four flaws the Lightning rail exposed:* **F113** (flaw L1): an anonymous payer may put a bare signing key of its own in the payment commitment, and a refund owed on that payment goes to whoever signs with that key, never to whoever presents the rail's proof (rule 10a; receipt field 2; claim field 8); **F114** (flaw L2): where a vault has several entries for one unit, the smallest of their limits applies (rule 14a); **F115** (question c, flaw L4): an agreement names its payment cMIP, the payee's pointer or vault names the rail Modules it accepts, and a receipt or claim counts only on one of those (rule 12a); **F116** (flaw L3): evidence that a Module was used comes from a party, never from the Module (rule 10b and Production rule 17); **F117**: the first Lightning rail Module is experimental, its costs stated in it. **Not yet approved.** Written against core v21, Identity MIP draft 11, Envelope MIP draft 7, Text MIP draft 6, Law MIP draft 9, Production MIP draft 6, the payment cMIP draft 2, the Lightning rail Module draft 2 and findings F1 to F117.*
+*Draft 6, 2 October 2026 (roadmap step 12, the Lightning rail). Draft 5 with rule 14a confirmed as drafted, F111 and F112 applied. Rule 14a stays fail closed: a payment in a unit the vault does not cover is undeliverable, and the debt stays open until the owner adds the unit (rule 16), confirmed by Nobody, allegedly, 2 October 2026. F111: the owner learns of what the vault refuses, by client conformance (rule 14b). F112: the payment task is filled by one payment cMIP per agreement, and each rail is a Module under it, a **rail Module**, with its own verification rule; receipts are signed by receivers and claims by payers, and no specification signs or "produces" anything; conversion and custodial flow services are identities, parties to agreements, not cMIPs or Modules. *Revised 3 October 2026 (the core pass, core v21) with the answers to the four flaws the Lightning rail exposed:* **F113** (flaw L1): an anonymous payer may put a bare signing key of its own in the payment commitment, and a refund owed on that payment goes to whoever signs with that key, never to whoever presents the rail's proof (rule 10a; receipt field 2; claim field 8); **F114** (flaw L2): where a vault has several entries for one unit, the smallest of their limits applies (rule 14a); **F115** (question c, flaw L4): an agreement names its payment cMIP, the payee's pointer or vault names the rail Modules it accepts, and a receipt or claim counts only on one of those (rule 12a); **F116** (flaw L3): evidence that a Module was used comes from a party, never from the Module (rule 10b and Production rule 17); **F117**: the first Lightning rail Module is experimental, its costs stated in it. *Revised in place again, 4 October 2026, for F126* (`docs/law-draft-10.md`, section 9): **the creditor's release becomes a Finance act** (type 4, moved from Law type 21): the creditor ends an obligation, wholly, without full payment, alone; a collective creditor signs it by its Finance lane; and **"released" is one of an obligation's states** (rules 7, 7a); **a purchase names the claim it pays under** (receipt and claim field 9, rule 10c): a payment for a work under a Law claim that names none is no purchase, and is owed back to the payer as a refund (rule 10a). **Not yet approved.** Written against core v21, Identity MIP draft 11, Envelope MIP draft 7, Text MIP draft 6, Law MIP draft 9 (draft 10 for F126), Production MIP draft 6, the payment cMIP draft 2, the Lightning rail Module draft 2 and findings F1 to F117, and F126.*
 
 *Draft 5, 27 September 2026, applied review round 2: double entry (a payer's claim is evidence on equal footing with a receipt); one rail proof per batch; obligations signed by the debtor; the vault as per-unit, per-rail entries with derived addresses and flow off; payment for a publication to the identity it is made for; refunds claimable by proof; referral evidence signed by the payer.*
 
@@ -21,7 +21,7 @@ A payment to a work or a person, such as a tip, needs only this MIP and the paye
 
 ## Dependencies
 
-Identity, Envelope and Text. Finance never depends on Law or Production: a Finance-only client, such as a wallet that sends tips, is a complete client. Where a Finance state depends on Law, a Finance-only client shows it as unknown (F32).
+Identity, Envelope and Text. Finance never depends on Law or Production: a Finance-only client, such as a wallet that sends tips, is a complete client. Where a Finance state depends on Law, a Finance-only client shows it as unknown (F32). *A purchase names a Law claim (rule 10c, F126): a Finance-only client cannot make one, and shows the claim a receipt names as unknown; buying a work under a Law claim needs a client that reads Law.*
 
 ## Definitions
 
@@ -30,6 +30,8 @@ Identity, Envelope and Text. Finance never depends on Law or Production: a Finan
 - **Rail Module.** A Module under a payment cMIP for one rail: the rail's address and vault-source formats, its proof format, and its verification rule. Several rail Modules work under one payment cMIP, one per rail (Production rule 8, F112). *A Module is a specification: it signs nothing and holds no money; the identities acting under it do.*
 - **Unit.** What an amount is counted in, in its smallest indivisible part. A unit is a small specification of its own, which rail Modules reference, so the same unit has one name on every rail that carries it.
 - **Obligation.** A signed statement by a debtor that it owes a creditor an amount, in a unit.
+- **Creditor's release.** A signed statement by a creditor that it lets an obligation owed to it go, wholly, without full payment (type 4, F126; Law rule 47b).
+- **Purchase.** A payment for a work under a Law claim, naming the claim it pays under (receipt and claim field 9, rule 10c, F126).
 - **Hop.** One movement of money on one rail, from one party to the next.
 - **Settlement receipt.** The common proof of one hop, signed by its receiver, the same for every rail: who paid whom, how much, in what unit, under which agreement.
 - **Payment claim.** A payer's record of a payment, carrying the rail's proof. Evidence on equal footing with a receipt.
@@ -44,7 +46,7 @@ Identity, Envelope and Text. Finance never depends on Law or Production: a Finan
 
 ## Act formats
 
-All acts are Envelope MIP acts. Payee pointers are public; obligations, receipts and payment claims are private by default, visible to their parties.
+All acts are Envelope MIP acts. Payee pointers are public; obligations, receipts, payment claims and creditor's releases are private by default, visible to their parties.
 
 ```cddl
 amount = [ unit: hash, value: uint ]      ; unit: the unit's specification; value in its smallest part
@@ -111,8 +113,11 @@ receipt-payload = {
   5 => hash,               ; fulfils: the obligation, agreement, offer or payee-pointer act this hop follows
   ? 6 => hash,             ; the previous hop's receipt (absent on the first hop)
   ? 7 => forward,          ; conversion hops only: what is passed on to the next hop
-  ? 8 => hash              ; batch: the batch this receipt belongs to, when one rail proof covers several payouts (Law)
+  ? 8 => hash,             ; batch: the batch this receipt belongs to, when one rail proof covers several payouts (Law)
+  ? 9 => purchase          ; a purchase: the claim it pays under (rule 10c, F126)
 }
+
+purchase = [ agreement: hash, line: hash ]   ; the work's claiming agreement (Law), and the line at which the payer's client read it current
 
 forward = [ next-payee: hash, amount, agreement: hash ]   ; amount in the next hop's unit
 payer   = hash / signing-key                              ; signing-key as Identity defines it: [ scheme, key ]
@@ -136,7 +141,8 @@ claim-payload = {
   ? 5 => hash,             ; the receipt this claim disagrees with, if any
   ? 6 => referral,         ; referral: who led the payer to this payment, signed here by the payer (Law, role shares)
   ? 7 => rail,             ; where a refund owed on this payment is to be paid (F80)
-  ? 8 => anonymous         ; an anonymous payer's claim: the key the payment committed to as payer, and its signature (F113)
+  ? 8 => anonymous,        ; an anonymous payer's claim: the key the payment committed to as payer, and its signature (F113)
+  ? 9 => purchase          ; a purchase: the claim it pays under, as in the receipt (rule 10c, F126)
 }
 
 referral  = [ identity: hash, evidence: hash ]   ; the referrer, and the act (a repost, a page) the payer followed
@@ -146,6 +152,17 @@ anonymous = [ key: signing-key, sig: bstr ]       ; sig: by key, over tagged_has
 A claim carrying key 8 is the claim of the payer that committed to that key. Its signer, the act's signer, may be any identity, a one-time identity where the payer wishes to stay unnamed; the payer is the key, and the signature in key 8 binds it to this claim's rail, proof, payee, amount, purpose and refund rail, so nobody can lift it onto another claim. The signed bytes are the array shown, encoded in deterministic CBOR, with null where key 7 is absent; the signature scheme is the key's, as Identity defines it.
 
 A payment claim is the payer's side of the record. It carries the rail's proof, so anyone can verify that the money reached the payee's rail address. It is private by default like every act; publishing it, to a counterparty or more widely, is the payer's choice and reveals the payer only to whom the payer chooses.
+
+### Creditor's release (type 4)
+
+```cddl
+release-payload = {
+  0 => hash,               ; the obligation it ends
+  ? 1 => [+ hash]          ; what the creditor took instead, for the record: receipts, a Law agreement it was traded for, stake transfers; never checked
+}
+```
+
+Signed by the creditor the obligation names, alone; nobody else's signature counts, and none is needed (F125, F126). Field 1 names each act once. *Moved here from Law (type 21 there, F125, now retired) by F126: forgiving a sum only gives up money, "a simple money decision" (Nobody, allegedly). A release given against future terms (a share of income, stakes) is also a deal, a Law agreement signed on its own, which field 1 names (Law rule 47b).*
 
 ## Validity rules
 
@@ -160,7 +177,8 @@ A payment claim is the payer's side of the record. It carries the rail's proof, 
 
 5. A route is valid when every receipt in it is valid, each names the previous hop's receipt, and each hop's received amount equals the previous hop's forward.
 6. Only conversion hops forward. A conversion hop forwards in the next unit, at the rate its agreement defines.
-7. An obligation is discharged when valid routes ending at the creditor's payee pointer, each naming the obligation, sum to the owed amount. Its states are: unsigned (Law: the debtor has not signed the agreement), open, discharged, past its terms, closed by clone, redirected. The last three depend on Law; a client that does not implement Law MUST show them as unknown.
+7. An obligation is discharged when valid routes ending at the creditor's payee pointer, each naming the obligation, sum to the owed amount. Its states are: unsigned (Law: the debtor has not signed the agreement), open, discharged (by payment), **released** (by its creditor, rule 7a; F126, E4), past its terms, closed by clone, redirected. The last three depend on Law; a client that does not implement Law MUST show them as unknown.
+7a. **The creditor's release** (F126). An obligation is released when a creditor's release (type 4) names it, valid under Identity and signed by the creditor the obligation names; a release signed by anyone else ends nothing. A release ends the whole obligation, whatever was paid toward it: to forgive part, the debtor signs a new obligation for the rest and the creditor releases the old one. It counts wherever a verifier holds it, published or not, and ends an obligation whether or not that obligation binds yet. What it names in field 1 is a record only, never checked. *Where the creditor is a collective, its release counts by its own rules, and is reached by its Finance lane alone (Law rule 47b, E2); a Finance-only client cannot check that, and shows such a release's standing as unknown.*
 8. Each hop's receipt MUST be disclosed at least to the next payee and to the final creditor, so the creditor can verify the whole route. Everything else may stay private.
 8a. **One proof, one payment.** Receipts or claims MAY share a rail proof only if they name the same batch, and their amounts together do not exceed what the proof shows. Otherwise a verifier holding both counts neither until the receiver signs a receipt that resolves them (F65).
 
@@ -170,6 +188,7 @@ A payment claim is the payer's side of the record. It carries the rail's proof, 
 10. **Double entry.** A payment claim is admitted as evidence on equal footing with a receipt. A payer MAY publish one at any time. Where a claim and a receipt name the same rail proof and disagree in amount, payee, or what the payment fulfils, the disagreement is shown as an open question on the receiver, and the greater amount counts as received until the receiver signs a receipt matching the proof. Where a payer holds a valid rail proof and the payee has signed no receipt, the claim alone shows the money arrived (F64).
 10a. **Refunds to the committed key** (F80, F113). A refund owed on a payment whose payer is not named is owed to whoever signs with the bare key the payment committed to as its payer (receipt field 2): it is paid where a claim carrying that key's valid signature (key 8) says (key 7). Presenting the rail proof proves nothing about who paid: on some rails the payee and every node on the route learn it (Lightning's preimage). A payment that committed to no key leaves its refund unclaimable: the obligation stays open and visible, and nobody can take it. Until claimed and discharged, the obligation stays open and visible. Whether an unclaimed refund ever lapses is for the offer's terms (Law); the core sets no lapse. *The payer's wallet supplies the key when it asks for the receiving address, and recomputes the commitment from what the payee's side signed before paying, so the payee's side cannot swap the key (payment cMIP).*
 10b. **Referrals, and evidence of a rail Module's use.** A referral counts as evidence for a role share (Law) only when it is signed by the payer, in a claim; a referral the receiver or its split service names on its own earns nothing (F75). The evidence that a rail Module carried a payment is the receipt or claim naming it in field 0, signed by a party; a Module signs nothing (F116, Production rule 17).
+10c. **A purchase names the claim it pays under** (F126). A payment for a work under a Law claim (a standing offer, or a publication carrying a work an agreement claims) is a purchase only when its receipt and claim name, in field 9, the claim it pays under: the claiming agreement, and the line at which the payer's client read it current (Law rule 32a). The payment commitment carries it on the rail (payment cMIP). A payment for such a work naming no claim, or a claim that is not the work's current one, is no purchase: money received for nothing, owed back to the payer as a refund, by rule 10a. *Whether a claim was superseded before or after a payment is Law's question, and is open (Law draft 10, flaw W2).* A payment to an identity's own pointer (a tip) or toward an obligation is no purchase and names nothing. *Cost, stated: a Finance-only wallet can pay a claimed work's publication, but cannot buy it; its payment is owed back to it.*
 11. In every case, the receipts and claims name the exact hop and agreement that failed. What follows (refund, penalty, contest) is Law's business.
 
 ### Payee pointers and the vault
@@ -244,7 +263,7 @@ Splits are a Law task. A custodial flow service, which holds an identity's hot p
 - Obligation signed by the debtor, and discharge, unit-agnostic, possibly by several routes: 1, 4.
 - Verification answers, including a trusted party named for a fiat rail: 1, 2.
 - Receiver visibility dial; sender never required; a payer's claim published by choice: 2, 5.
-- Payment for a publication to the identity in `for`; a Finance-only wallet and a full client pay the same identity; the wallet checks the vault: 2, 3.
+- Payment for a publication to the identity in `for`; a Finance-only wallet and a full client pay the same identity; the wallet checks the vault; for a work under a Law claim, only the full client's payment, naming the claim, is a purchase (F126): 2, 3.
 - Flow and vault; a thief changing the flow pointer cannot collect obligations that name an earlier version, nor re-issue them; a unit switch goes to the vault; a dead vault rail is covered by another; flow off: 1, 5.
 - Good-faith payment to an invalidated pointer counts as made; a payment that ignored the vault is not protected: 1.
 - Undeliverable payment kept as an open obligation; refund to an anonymous payer claimed by a signature with the key the payment committed to, which a routing node holding the rail's proof cannot make (F113): 2, 5.
@@ -255,4 +274,6 @@ Splits are a Law task. A custodial flow service, which holds an identity's hot p
 - Double entry: a receiver under-reports, the payer's claim exposes the gap, the greater amount counts; a payout arrives short of the plan's maximum fee: 2.
 - One proof claimed against two obligations counts for neither; one batched payout proof covers several payouts: 2, 7.
 - A referral signed by the payer earns a role share; one named by the service alone earns nothing: 2.
+- A creditor's release, signed by the creditor alone, ends an obligation wholly after a partial payment; one signed by anyone else ends nothing; a collective creditor's counts only with its Finance lane (F126): 3.
+- A payment for a claimed work naming no claim is no purchase, and is owed back to the payer; one naming the current claim is a purchase (F126): 3.
 - Moved to Law: conservation and remainder rule; module fees and omitted fees; splits by attention metrics.

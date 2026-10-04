@@ -95,12 +95,16 @@ pub struct Commitment {
     pub paid_to: PaidTo,
     /// Chosen by the payer, so the commitment cannot be guessed.
     pub salt: [u8; 16],
+    /// For a purchase, the claim it pays under (Finance receipt and claim
+    /// field 9, F126); absent otherwise, and then not encoded, so a payment
+    /// that is no purchase commits to exactly what it did before.
+    pub purchase: Option<mor_core::finance::Purchase>,
 }
 
 impl Commitment {
-    /// `commitment = [ rail, payee, amount, fulfils, payer / null, paid-to, salt ]`
+    /// `commitment = [ rail, payee, amount, fulfils, payer / null, paid-to, salt, ? purchase ]`
     pub fn to_value(&self) -> Value {
-        Value::Array(vec![
+        let mut v = vec![
             Value::Bytes(self.rail.to_vec()),
             Value::Bytes(self.payee.to_vec()),
             self.amount.to_value(),
@@ -111,7 +115,11 @@ impl Commitment {
                 .unwrap_or(Value::Null),
             self.paid_to.to_value(),
             Value::Bytes(self.salt.to_vec()),
-        ])
+        ];
+        if let Some(p) = &self.purchase {
+            v.push(p.to_value());
+        }
+        Value::Array(v)
     }
 
     pub fn hash(&self) -> Hash {
@@ -349,8 +357,8 @@ pub fn verify_under(
 /// Verify a receipt or claim outside any agreement (a tip following a payee
 /// pointer): [`verify_under`] with no payment cMIP named.
 pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verification {
-    let (rail, proof, payee, amount, fulfils, payer) = match &record {
-        Record::Receipt(r) => (&r.rail, &r.proof, &r.payee, &r.amount, &r.fulfils, r.payer.clone()),
+    let (rail, proof, payee, amount, fulfils, payer, purchase) = match &record {
+        Record::Receipt(r) => (&r.rail, &r.proof, &r.payee, &r.amount, &r.fulfils, r.payer.clone(), r.purchase.clone()),
         Record::Claim(c, signer) => (
             &c.rail,
             &c.proof,
@@ -358,6 +366,7 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
             &c.amount,
             &c.fulfils,
             Some(c.payer(signer)),
+            c.purchase.clone(),
         ),
     };
     let out = |answer| Verification {
@@ -387,6 +396,7 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
         payer,
         paid_to: p.paid_to,
         salt: p.salt,
+        purchase,
     };
     // A claim's anonymous key must have signed it (Finance rule 1, F113);
     // a claim signed by anyone else as payer recomputes another commitment,

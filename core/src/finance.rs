@@ -25,6 +25,9 @@ pub mod types {
     pub const OBLIGATION: u64 = 1;
     pub const RECEIPT: u64 = 2;
     pub const CLAIM: u64 = 3;
+    /// The creditor's release (F126, from Law type 21): the creditor an
+    /// obligation names ends it without full payment.
+    pub const RELEASE: u64 = 4;
 }
 
 /// The vault's kind in the Identity declarations slot (Finance, "The vault").
@@ -196,6 +199,8 @@ pub struct Receipt {
     pub previous: Option<Hash>,
     pub forward: Option<Forward>,
     pub batch: Option<Hash>,
+    /// 9: for a purchase, the claim it pays under (F126).
+    pub purchase: Option<Purchase>,
 }
 
 /// Payment claim (type 3), signed by the payer.
@@ -214,6 +219,8 @@ pub struct Claim {
     /// An anonymous payer's key and signature (F113): the claim's payer is
     /// then this key, not the act's signer.
     pub anonymous: Option<Anonymous>,
+    /// 9: for a purchase, the claim it pays under (F126).
+    pub purchase: Option<Purchase>,
 }
 
 impl Claim {
@@ -256,6 +263,45 @@ pub enum Payload {
     Obligation(Obligation),
     Receipt(Receipt),
     Claim(Claim),
+    Release(Release),
+}
+
+/// The claim a purchase pays under (receipt and claim field 9, F126): the
+/// work's claiming agreement, and the line at which the payer's client
+/// read it current. *A Law reference: a Finance-only client shows it as
+/// unknown, and cannot make one.*
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Purchase {
+    pub agreement: Hash,
+    pub line: Hash,
+}
+
+impl Purchase {
+    pub fn to_value(&self) -> Value {
+        Value::Array(vec![b(&self.agreement), b(&self.line)])
+    }
+
+    pub fn decode(v: &Value) -> R<Self> {
+        match v {
+            Value::Array(a) if a.len() == 2 => Ok(Purchase {
+                agreement: hash(&a[0], "purchase: agreement")?,
+                line: hash(&a[1], "purchase: line")?,
+            }),
+            _ => Err(FinError::Shape("purchase")),
+        }
+    }
+}
+
+/// The creditor's release (type 4, F126; Law type 21 under F125): the
+/// creditor the obligation names ends it, wholly, without full payment.
+/// Signed by the creditor alone; a collective creditor by its Finance lane.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Release {
+    /// 0: the obligation it ends.
+    pub obligation: Hash,
+    /// 1: what the creditor took instead, for the record (receipts, a Law
+    /// agreement it was traded for, stake transfers); never checked.
+    pub against: Vec<Hash>,
 }
 
 // ---------------------------------------------------------------- decoding
@@ -460,7 +506,7 @@ impl Payload {
                 })
             }
             RECEIPT => {
-                let f = fields(p, 9, "receipt: unknown key")?;
+                let f = fields(p, 10, "receipt: unknown key")?;
                 Payload::Receipt(Receipt {
                     rail: hash(req(&f, 0, "receipt 0: rail")?, "receipt 0")?,
                     proof: bytes(req(&f, 1, "receipt 1: proof")?, "receipt 1")?,
@@ -471,10 +517,11 @@ impl Payload {
                     previous: get(&f, 6).map(|v| hash(v, "receipt 6")).transpose()?,
                     forward: get(&f, 7).map(Forward::decode).transpose()?,
                     batch: get(&f, 8).map(|v| hash(v, "receipt 8")).transpose()?,
+                    purchase: get(&f, 9).map(Purchase::decode).transpose()?,
                 })
             }
             CLAIM => {
-                let f = fields(p, 9, "claim: unknown key")?;
+                let f = fields(p, 10, "claim: unknown key")?;
                 Payload::Claim(Claim {
                     rail: hash(req(&f, 0, "claim 0: rail")?, "claim 0")?,
                     proof: bytes(req(&f, 1, "claim 1: proof")?, "claim 1")?,
@@ -485,6 +532,27 @@ impl Payload {
                     referral: get(&f, 6).map(Referral::decode).transpose()?,
                     refund: get(&f, 7).map(Rail::decode).transpose()?,
                     anonymous: get(&f, 8).map(Anonymous::decode).transpose()?,
+                    purchase: get(&f, 9).map(Purchase::decode).transpose()?,
+                })
+            }
+            RELEASE => {
+                let f = fields(p, 2, "release: unknown key")?;
+                let against = match get(&f, 1) {
+                    None => vec![],
+                    Some(v) => {
+                        let a = nonempty(v, "release 1")?
+                            .iter()
+                            .map(|x| hash(x, "release 1"))
+                            .collect::<R<Vec<_>>>()?;
+                        if a.iter().enumerate().any(|(i, x)| a[..i].contains(x)) {
+                            return Err(FinError::Shape("release 1: an act named twice"));
+                        }
+                        a
+                    }
+                };
+                Payload::Release(Release {
+                    obligation: hash(req(&f, 0, "release 0: obligation")?, "release 0")?,
+                    against,
                 })
             }
             t => return Err(FinError::UnknownType(t)),
@@ -497,6 +565,7 @@ impl Payload {
             Payload::Obligation(_) => types::OBLIGATION,
             Payload::Receipt(_) => types::RECEIPT,
             Payload::Claim(_) => types::CLAIM,
+            Payload::Release(_) => types::RELEASE,
         }
     }
 
@@ -543,6 +612,9 @@ impl Payload {
                 if let Some(x) = &r.batch {
                     put(&mut m, 8, b(x));
                 }
+                if let Some(x) = &r.purchase {
+                    put(&mut m, 9, x.to_value());
+                }
             }
             Payload::Claim(c) => {
                 put(&mut m, 0, b(&c.rail));
@@ -561,6 +633,15 @@ impl Payload {
                 }
                 if let Some(x) = &c.anonymous {
                     put(&mut m, 8, x.to_value());
+                }
+                if let Some(x) = &c.purchase {
+                    put(&mut m, 9, x.to_value());
+                }
+            }
+            Payload::Release(r) => {
+                put(&mut m, 0, b(&r.obligation));
+                if !r.against.is_empty() {
+                    put(&mut m, 1, Value::Array(r.against.iter().map(b).collect()));
                 }
             }
         }
@@ -599,6 +680,9 @@ pub fn check_signer(payload: &Payload, signer: &Hash) -> R<()> {
         Payload::Obligation(o) => &o.debtor == signer,
         Payload::Receipt(r) => &r.payee == signer,
         Payload::Claim(_) => true,
+        // Its signer must be the obligation's creditor: checked where the
+        // obligation is held (Law's view, `debt_release`).
+        Payload::Release(_) => true,
     };
     if ok {
         Ok(())

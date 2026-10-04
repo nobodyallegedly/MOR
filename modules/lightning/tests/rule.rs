@@ -211,6 +211,7 @@ fn paid(
         payer: payer_in_commitment.clone(),
         paid_to,
         salt: SALT,
+        purchase: None,
     };
     let inv = invoice(
         node,
@@ -241,6 +242,7 @@ fn paid(
             previous: None,
             forward: None,
             batch: None,
+            purchase: None,
         },
         Claim {
             rail: mor_lightning::spec(),
@@ -252,6 +254,7 @@ fn paid(
             referral: None,
             refund: None,
             anonymous: None,
+            purchase: None,
         },
     )
 }
@@ -394,6 +397,7 @@ fn c_receipt(c: &Claim, w: &World) -> Receipt {
         previous: None,
         forward: None,
         batch: None,
+        purchase: None,
     }
 }
 

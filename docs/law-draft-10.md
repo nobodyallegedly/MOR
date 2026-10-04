@@ -1,6 +1,6 @@
 # Law draft 10, and the seven rules of the core pass
 
-*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3, and again for F120 and F121), not merged. Section 5 writes in F120 and F121; section 6 writes in F121's answers, F122 and F123, with main merged in again first; section 7 writes in F124, main merged in a third time. Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
+*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3, and again for F120 and F121), not merged. Section 5 writes in F120 and F121; section 6 writes in F121's answers, F122 and F123, with main merged in again first; section 7 writes in F124, main merged in a third time; section 8 writes in F125; section 9 writes in F126, main merged in again, and stops at item 2 (flaw W1). Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
 
 ## 1. What Law draft 10 changes
 
@@ -585,3 +585,94 @@ Nothing it uses changed: this pass touched Law only (the core library's Law modu
 2. Questions E1 to E4.
 3. The five readings above.
 4. Approval of the whole set (below); then the human regtest test on the Mac.
+
+*Answered on 4 October 2026 by Nobody, allegedly, recorded as F126: section 9.*
+
+## 9. F126 written in, and where it stopped
+
+*4 October 2026. Main merged in first (the findings log, F126; one conflict in the log, two additions kept side by side). Law draft 10, Finance draft 6, Envelope draft 7, Production draft 6, the payment cMIP draft 2, core v21, freeze suite v21 and one page v6 revised in place; the core library, its WebAssembly bindings, the repo client and the collective client built and tested. The Lightning Module draft 2 is unchanged (below). Nothing is approved.*
+
+**The short answer.** Three of F126's four rules are written in and built: when a group's act counts (item 1), the creditor's release as a money act (item 3), and a purchase naming its claim (item 4). The fourth, a fork having to hand out every act done before its line (item 2), is **not written**. The check you asked for first failed: the fork's line says where an act was *signed*, never when it was *published*, and F126 makes publishing part of being done. That is flaw W1 below. So D1 (every successor owes what the fork missed) still stands, and tension T1 with it. Writing item 4 found a second flaw of the same kind, W2: a payment can't be placed against the act that superseded the claim it names. Readings 1, 2, 3 (adjusted) and 5 are written as rule text; reading 4 waits with W1.
+
+### What changed, in plain words
+
+**A group's act counts only once everyone can read it (item 1).** Whatever a collective does, signed with its key or by someone working under its grant, binds it only once two things are true: it is sealed to every member, and it can be found on one of the relays the group's terms name. Before that, even signed, it is a plan and binds no one, its signer included. A group's terms now list its relays, and they change like any other term. One relay is enough.
+*Example:* Cy holds the group's everyday key and signs a debt of 50 in its name, sealed only to the printer. It binds no one. Sealed to every member but never put on the group's relay, it still binds no one. Once it is on the relay, it binds the group.
+
+**Forgiving a debt is a money act (item 3).** The creditor's release moves from Law to Finance. A group that is owed money forgives it through its Finance lane alone. If the forgiveness is traded for something in the future (a share of income, a stake), that trade is also a deal: a Law agreement of its own, signed by the group's Law lane. The release names that agreement as what it was given against. Finance now lists "released" among a debt's states.
+*Example:* a group lent 500 and forgives it. Its release counts once the treasurer (the Finance lane) signs; another member's signature changes nothing.
+
+**Buying names what you buy (item 4).** A payment for a work that a Law agreement claims is a purchase only if it names that claim: the agreement, and the point at which the buyer's client read it as current. So buying needs a client that reads Law. A payment that names no claim is not a purchase: the money is owed back to the payer, by the refund rule Finance already has. A split service whose grant has ended stops asking for payments. Reading 9 (a stray payment passed on to the new groups) and question E3 are withdrawn.
+*Example:* after a fork, a wallet that only reads Finance pays the old split service for the old offer. The payment names no claim, so the money goes back to the payer. A full client naming the claim at the fork buys the work.
+
+**A consequence, written in.** Freeze step 2.4 had a Finance-only wallet buying a claimed song. Under item 4 that payment is no purchase and is owed back; only the full client's payment, naming the claim, buys the song. Step 2.4, and Finance's matching scenario line, now say so.
+
+### Precisely
+
+- **Item 1.** Law rule 35a (new); terms field 25 `[+ relay]`, `relay = [ operator: hash / null, hint: tstr ]`, required in a collective's terms, invalid in a deal's, operational (field reference `[0, 25]`). "Sealed to every member": every party of the agreement in force for the act among its recipients (Envelope `to`), or the act public. "On a relay": the verifier states on which relays it found each act (`LawView::published`, now act → relays, generalising D2); an entry naming an operator matches any relay of that operator, an entry with no operator matches its address. Checked in `consent` (new answer `NotDone`) for every act the collective's key signs except records, in `backing` for grantees' acts, and in `obligation_binds`, which replaces "found on a relay". Rule 47a's N13 client-conformance sentence ("sealed to every member") is now this validity rule. Envelope draft 7: one note on `to`.
+- **Item 3.** Finance type 4, `release-payload = { 0 => hash, ? 1 => [+ hash] }` (the same shape as Law type 21 under F125); Finance rules 7 (states: "released") and 7a; Law type 21 retired, never reused; Law rule 47b rewritten (the Finance lane alone; a release traded for future terms is also a Law agreement, signed by the Law lane, named in field 1, binding on its own); the closing names Finance type 4.
+- **Item 4.** Finance receipt and claim field 9, `purchase = [ agreement: hash, line: hash ]`; Finance rule 10c; Law rule 32a; the payment cMIP's commitment gains an optional eighth element, the purchase, encoded only where there is one; Production's task table, row 6, names it among the payment task's inputs. Rule 47a "Money after it" replaces reading 9. `LawView::purchase` replaces `LawView::stray`: "purchase", "no purchase" (with whom a refund is owed to), or "superseded" (undetermined, W2).
+- **Readings, confirmed and written:** 1 (a release ends the whole debt; to forgive part, a new obligation and the old one released) and 2 (a release counts wherever held, even before the debt binds) in Finance rule 7a and Law rule 47b; 3, adjusted (what a release was given against is a record, never checked; terms it was traded for are their own Law agreement, binding on their own) in rule 47b; 5 (a closing checks every debt it owes as a successor, placed by the original's line) in the closing's text. 4 waits with W1.
+- **Answered and recorded:** E1 (a release need not be public; the collective client still publishes it), E2 (the Finance lane alone), E4 ("released" in Finance). T1 was answered by item 2, which is not written, so T1 stays open until W1 is decided.
+
+### The check you asked for: does N2's line cover every act in a collective's name?
+
+**No.** The fork's line (N2) names the original's chain act and the latest act of each of its sequences. It places every act the original's key signed by where it sits in those sequences: in the ancestry of a named tip means before; anywhere else means after. It says nothing about publishing, and under item 1 publishing is half of being done. Three kinds of act are in the collective's name:
+1. **Acts its key signs.** The line places where they were signed. Their publication has no place in any sequence: a verifier only states that it found an act on a relay, never when. That gap is flaw W1.
+2. **Grantees' acts** (signed by someone under the collective's grant). The line never places them; history rule 2 says only the collective's own acknowledgement, payment or import places them. Rule 47a's grant clause already gives them a fate at a fork: acknowledged before the fork, a debt of the original; otherwise they wait for a successor to take them up or seal them. I read that as covering them, with no new rule needed.
+3. **Members' signature acts on the collective's acts.** They are placed by the act they sign (C1). They are the members' own acts, not acts in the collective's name.
+
+So the line covers the second and third kinds and fails the first, which is where debts live. As you asked, I stopped there and did not write item 2.
+
+### Two flaws and a question (not worked around)
+
+**Flaw W1. The fork's line places where an act was signed, never when it was done.**
+*Plain words:* F126 says an act is done when it is sealed and published, and that the fork must hand out every act done before its line. The line can tell signed-before from signed-after. It cannot tell published-before from published-after. That leaves two holes.
+- *Case 1, publishing late undoes the fork.* Before the fork, Cy signs a debt of 50 in the group's name, sealed to every member but never published. The members fork; the debt is not handed out. A month later the printer publishes it. The line puts it before the fork (it sits in the group's sequence), and it is now done. By item 2 the fork never took effect, which is exactly what F126 meant to rule out.
+- *Case 2, leaving a device out escapes a debt.* The group's tablet signed a public debt of 300 to a printer, sealed to every member, on the group's relay. At the fork, the members name only the laptop's latest act in the line. The line puts the tablet's debt after the fork, so it "can never be done" and need not be handed out. The members escape a public debt by leaving out the device that signed it. A closing's line has the same hole today, so a group could close while owing.
+- **(a)** The line decides "before"; publishing decides only whether an act binds. The fork must hand out every obligation of the original that is sealed to every member and placed before its line, published or not. Client conformance: a member's client signs a fork only once it holds every act of the original before the line, and names every sequence it knows. *Case 1:* the members' clients saw the debt (it was sealed to them) and must hand it out, so publishing it later changes nothing. *Case 2:* left to the clients; a group whose members all agree can still leave a device out.
+- **(b)** The relays the terms name place publication. Each relay may sign a commitment listing the acts it holds (Envelope type 2, already defined). An act is done before the fork when a named relay committed to holding it before that relay committed to holding the fork act. An act no named relay held before the fork can never be done; one that was, on whatever sequence, must be handed out. *Case 1:* no named relay held the debt before the fork, so it can never be done, and the fork stands. *Case 2:* the relay held the tablet's debt before the fork, so it must be handed out. Cost: it rests on the relays' honesty about order, as keepers' records already do, and a collective's relays must publish commitments.
+- **(c)** Keep D1: a fork never waits on a debt, and every successor owes whatever it missed. T1 stays open.
+**Lean: (b).** It closes both holes and uses what F126 itself added, the relays the group names. (a) closes the first hole by client conformance only, and the second not at all.
+
+**Flaw W2. A payment can't be placed against the act that superseded its claim.**
+*Plain words:* F126 says a payment naming a superseded claim is no purchase. Ana buys a song naming the claim as it stood on Monday. On Tuesday the group forks, which supersedes Monday's claim. On Wednesday Ben's stale wallet pays naming Monday's claim too. Both payments name the same thing. Ana's receipt, Ben's receipt and the group's fork sit in three different sequences, and nothing orders them. A verifier cannot refund Ben without refunding Ana.
+- **(a)** Delivery decides, as rule 32 already does for offers. A payment naming a claim is a purchase once the seller delivers under it. The original's delivery after its fork counts for nothing, so Ben's payment gets no delivery that counts and is owed back, while Ana's was delivered before the fork. This is checkable where the seller delivers with its own key, and undetermined where a split service delivers under the original's grant.
+- **(b)** The claim as the verifier holds it now decides: every payment naming an old line is refunded, Ana's included.
+- **(c)** Undetermined, stated: the payee's side settles each one, visibly, by delivering or refunding.
+**Lean: (a).** *Meanwhile:* the core shows such a payment as undetermined. A payment naming no claim is no purchase, as decided, and that part is built.
+
+**Question W3. Do a group's own lines have to be done too?** A record (Law type 17) is an act in the group's name, and it draws the line the history rules count from.
+*Example:* a key holder draws a record registering a member's resignation, sealed to nobody, never published.
+- (a) Yes: a record that is not done is no line, and puts nothing in force.
+- (b) No: a record is history, judged by its place in the sequence, and the clone it names already carries the members' own signatures.
+**Lean: (a)**, since information should run free. It changes how lines are found, so it is not built: records and the group's identity-chain acts are judged as before, and the condition is checked on everything else.
+
+### Readings taken writing it, to confirm
+
+1. "Sealed to every member" means every party of the agreement in force for the act is among its recipients, or the act is public. A departed holder is not a member.
+2. "In a collective's name" means signed with the collective's key, or by a grantee under its grant. A member's own signature act on such an act is the member's.
+3. Relays are named as homes are: an operator, or none, and an address. They are required in a group's terms and forbidden in a deal's; changing them is operational.
+4. "The line at which a claim is current" is a version of the claiming agreement, or the fork, closing or release that last changed who is paid for the work. A purchase is a payment for a standing offer, or for a publication of a work that some agreement held claims. A tip, or a payment toward a debt, names nothing.
+5. The payment commitment carries the purchase only where there is one, so every other payment commits to exactly what it did before. An anonymous claim's key signs the same fields as before, since the commitment already binds the purchase to the rail.
+6. Collectives founded before F126 name no relays, so their terms are now invalid. Test collectives must be founded again; they are test acts, to be wiped before the first real acts.
+
+### Code and tests
+
+- **Core library.** Terms field 25 and `Relay`, checked; field 25 operational and reachable by an area; `LawView::published` now records act → relays; `LawView::done`, and `Consent::NotDone` in `consent`; `backing` and `obligation_binds` require done. Finance type 4 `Release`, and receipt and claim field 9 `Purchase`; Law's `DebtRelease` and type 21 removed; `debt_release` and `debt_released` read the Finance act, its consent counting by the Finance lane. `LawView::purchase` replaces `stray`. Payment cMIP: `Commitment.purchase`, the eighth element only where present. WebAssembly: `published` now takes `{ act, hint, operator? }`; `readTerms` shows the relays; `lawConsent` reports `not-done`; new `lawDone` and `lawPurchase`; `lawDebtRelease` reads the Finance act.
+- **Repo client.** Terms carry the collective's relays (from its settings, kept on with every change); `debtReleasePayload` is a Finance type 4 payload (`FINANCE_TYPES.release`); `receiptPayload` can name a purchase; the release verifier states on which relays it found the release.
+- **Collective client.** Founding names the relays; every change keeps them; the verifier states where it found each act; the creditor's release is published as a Finance act, its reading saying so and naming the Law agreement when forgiveness is traded for terms; the fork's debt check reads the members' agreement, which "sealed to every member" needs; the reading of an agreement names its relays in plain words.
+- **New tests.** Core: an act done only once sealed and on the relays, for a debt, a publication and a grantee's act (3.9i); relays changed by a clone, matched by operator, refused in a deal and required in a collective; a collective forgiving by its Finance lane (3.9j); purchases after a fork (no claim: no purchase, refund to the fan; the old claim: superseded, W2; the fork: a purchase; a wrong line: none), replacing the stray-payment checks in 3.9; the release's Finance format, and the retired type 21; Finance round trips for the release and the purchase field. Repo client: terms without relays refused.
+- **Results.** Rust workspace **290 passed, 0 failed** (287 before, plus 3). Clients genesis 14, repo 11, longform 15, barebone 9, reader 16, manage 7, collective 19, connector 12, desk 8: **111 passed, 0 failed**, every one typechecking. Changed to F126 rather than added: the fork test's stray-payment checks (now purchases), the release's format test, the release in 3.9f and 3.9h (now Finance acts), and every collective's test terms (now naming a relay).
+
+### The Mac regtest steps
+
+**No change.** None of the run's five payments is a purchase: each pays a payee pointer, as a tip would. A payment that is no purchase commits to exactly the same seven elements as before, so every invoice's description hash, receipt and claim is byte for byte what it was. The harness and the Lightning Module tests changed only to say "no purchase" where they build a commitment. The steps of `docs/core-pass-v21.md`, section 5, stand as written, on this branch. The Lightning Module draft 2 carries only the commitment's hash, so its text is unchanged. A regtest purchase would need a work under a claim and an offer, which the run does not have; the core tests cover purchases offline.
+
+### Waiting on Nobody, allegedly, in order
+
+1. Flaw W1 (the fork's line places signing, not publishing), and with it item 2, tension T1 and reading 4.
+2. Flaw W2 (a payment against the act that superseded its claim).
+3. Question W3 (whether records must be done).
+4. The six readings above.
+5. Approval of the whole set: Law 10, Finance 6, Envelope 7, Identity 11, Production 6, core v21, suite v21, one page v6, the payment cMIP and Lightning Module draft 2; then the Mac regtest run once.

@@ -42,9 +42,8 @@ pub mod types {
     pub const FORK: u64 = 19;
     /// The closing of a collective that holds nothing (rule 47a, F124 N9).
     pub const CLOSING: u64 = 20;
-    /// A creditor's release: a creditor ends an obligation owed to it
-    /// without full payment (rule 47b, F125).
-    pub const DEBT_RELEASE: u64 = 21;
+    // 21, the creditor's release (F125), is retired and never reused: it is
+    // a Finance act (Finance type 4, F126).
 }
 
 /// The declaration kinds Law defines (Identity, declarations slot).
@@ -837,6 +836,53 @@ pub struct Terms {
     /// holders must sign its release to the public domain (F121, D);
     /// absent: every holder. A clone every owner signs may change it (N8).
     pub release_rule: Option<Rule>,
+    /// 25: the collective's relays, where its acts are done (F126): an act
+    /// in its name binds it only once sealed to every member and its
+    /// outside is on one of these. Required in a collective's terms, never
+    /// in a deal's; operational, changeable like any term.
+    pub relays: Option<Vec<Relay>>,
+}
+
+/// A relay a collective's terms name (field 25, F126): its operator, or
+/// null where it declares none, and an address hint, as a home is declared
+/// (Identity). Where an operator is named, the operator is what counts.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Relay {
+    pub operator: Option<Hash>,
+    pub hint: String,
+}
+
+impl Relay {
+    pub fn to_value(&self) -> Value {
+        Value::Array(vec![
+            self.operator.as_ref().map(b).unwrap_or(Value::Null),
+            Value::Text(self.hint.clone()),
+        ])
+    }
+
+    pub fn decode(v: &Value) -> R<Relay> {
+        let a = tuple(v, 2, "relay")?;
+        let operator = match &a[0] {
+            Value::Null => None,
+            x => Some(hash(x, "relay operator")?),
+        };
+        let Value::Text(hint) = &a[1] else {
+            return Err(LawError::Shape("relay hint"));
+        };
+        if hint.is_empty() {
+            return Err(LawError::Shape("relay hint"));
+        }
+        Ok(Relay { operator, hint: hint.clone() })
+    }
+
+    /// Whether a relay a verifier found an act on is this one: by its
+    /// operator where this entry names one, else by its hint.
+    pub fn matches(&self, found: &Relay) -> bool {
+        match &self.operator {
+            Some(o) => found.operator.as_ref() == Some(o),
+            None => found.hint == self.hint,
+        }
+    }
 }
 
 impl Terms {
@@ -998,6 +1044,9 @@ impl Terms {
         if let Some(r) = &self.release_rule {
             m.push((Value::Uint(24), r.to_value()));
         }
+        if let Some(r) = &self.relays {
+            m.push((Value::Uint(25), Value::Array(r.iter().map(Relay::to_value).collect())));
+        }
         m
     }
 
@@ -1025,7 +1074,7 @@ impl Terms {
                 Value::Uint(17) => {
                     return Err(LawError::Unsupported("terms field 17 (refund terms)"))
                 }
-                Value::Uint(n) if *n <= 24 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 25 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("terms: unknown field")),
             }
         }
@@ -1124,6 +1173,9 @@ impl Terms {
                 .transpose()?,
             forked_from: get(23).map(|v| hash(v, "forked from")).transpose()?,
             release_rule: get(24).map(rule).transpose()?,
+            relays: get(25)
+                .map(|v| nonempty(v, "relays")?.iter().map(Relay::decode).collect())
+                .transpose()?,
         })
     }
 
@@ -1234,6 +1286,21 @@ impl Terms {
             if !ok {
                 return Err(LawError::Check("the release rule is a rule among a stake's holders"));
             }
+        }
+        // F126: a collective's terms name its relays; a deal's never.
+        match (&self.relays, self.is_collective()) {
+            (None, true) => {
+                return Err(LawError::Check(
+                    "a collective's terms name its relays, where its acts are done (field 25, F126)",
+                ))
+            }
+            (Some(_), false) => {
+                return Err(LawError::Check("only a collective's terms name relays (field 25, F126)"))
+            }
+            (Some(r), true) if r.iter().enumerate().any(|(i, x)| r[..i].contains(x)) => {
+                return Err(LawError::Check("the relays name the same relay twice"))
+            }
+            _ => {}
         }
         if self.forked_from.is_some() && (self.parent.is_some() || !self.is_collective()) {
             return Err(LawError::Check(
@@ -1562,7 +1629,7 @@ impl Terms {
             }
             for f in a.fields.iter().flatten() {
                 let ok = match f {
-                    FieldRef::Field(n) => [7, 8, 17].contains(n),
+                    FieldRef::Field(n) => [7, 8, 17, 25].contains(n),
                     FieldRef::Task(t) => (1..=LAST_TASK).contains(t) && !JUDICIAL_TASKS.contains(t),
                 };
                 if !ok {
@@ -2484,48 +2551,6 @@ impl Closing {
         };
         check_objects_self(inside, &x.agreement, "closing")?;
         Ok(x)
-    }
-}
-
-// ---------------------------------------------------------------- the creditor's release
-
-/// A creditor's release (type 21, rule 47b, F125): the creditor an
-/// obligation names ends it without full payment, for instance against
-/// stakes or a partial payment. Only the creditor signs it.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DebtRelease {
-    /// 0: the obligation it ends.
-    pub obligation: Hash,
-    /// 1: what the creditor took instead, for the record (receipts,
-    /// agreements, stake transfers); never checked.
-    pub against: Vec<Hash>,
-}
-
-impl DebtRelease {
-    pub fn to_map(&self) -> Vec<(Value, Value)> {
-        let mut m = vec![(Value::Uint(0), b(&self.obligation))];
-        if !self.against.is_empty() {
-            m.push((Value::Uint(1), hashes_value(&self.against)));
-        }
-        m
-    }
-
-    pub fn decode(inside: &Inside) -> R<DebtRelease> {
-        let mut obligation = None;
-        let mut against = vec![];
-        for (k, v) in &inside.payload {
-            match k {
-                Value::Uint(0) => obligation = Some(hash(v, "creditor's release: the obligation")?),
-                Value::Uint(1) => {
-                    against = hashes(v, "creditor's release: what it was released against")?;
-                    if !distinct(&against) {
-                        return Err(LawError::Shape("creditor's release: an act named twice"));
-                    }
-                }
-                _ => return Err(LawError::Shape("creditor's release: unknown field")),
-            }
-        }
-        Ok(DebtRelease { obligation: obligation.ok_or(LawError::Shape("creditor's release: the obligation"))?, against })
     }
 }
 

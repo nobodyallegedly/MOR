@@ -124,6 +124,8 @@ export interface TermsRead {
   forkedFrom: string | null;
   /** The release rule (field 24); null: every stake holder signs a release (F121, D). */
   releaseRule: RuleOut | null;
+  /** The collective's relays (field 25, F126): each operator (null where none is named) and address. */
+  relays?: [string | null, string][];
   /** Why the terms fail Law's own checks, if they do: Law's code and its own words. */
   problem?: Problem | null;
 }
@@ -533,6 +535,11 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   }
   for (const [judge, next] of t.chain ?? []) {
     more.push({ text: `If ${judge === 'split service' ? 'the split service' : judge.startsWith('task ') ? `the judge for ${judge}` : names(judge)} answers “unknown”, or does not act within its period, ${list(next.map(([h, p]) => `${names(h)} (after ${p} on the time reference)`))} take${next.length === 1 ? 's' : ''} over, in that order (Law rule 34a, F121).` });
+  }
+  if (t.relays?.length) {
+    more.push({
+      text: `Its relays: ${list(t.relays.map(([o, h]) => (o ? `${h} (run by ${names(o)})` : h)))}. Whatever is done in the collective's name binds it only once it is sealed to every member and found on one of these; before that, even signed, it binds no one (Law rule 35a, F126). Every member's client reads all of them; one is enough. Changed like any other term.`,
+    });
   }
   if (t.forkedFrom) {
     more.push({ text: `Forked from ${names(t.forkedFrom)}: a back-link only, deciding nothing; the fork act names this collective as a successor (Law rule 47a, F124 N4).` });

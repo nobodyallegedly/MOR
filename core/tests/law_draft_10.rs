@@ -151,6 +151,7 @@ fn service_receipt(w: &mut World, service: &mut Person, rail: Hash, fulfils: Has
         previous: None,
         forward: None,
         batch: None,
+        purchase: None,
     });
     let a = w.everyday_act(service, mips().finance, fin::types::RECEIPT, r.to_map(), None, None);
     w.add(&a)
@@ -212,6 +213,7 @@ fn rule_32_an_anonymous_refund_goes_to_the_committed_key() {
         previous: None,
         forward: None,
         batch: None,
+        purchase: None,
     };
     assert_eq!(fin::refund_owed_to(&receipt), RefundTo::Key(bare.clone()));
     let mut claim = Claim {
@@ -224,6 +226,7 @@ fn rule_32_an_anonymous_refund_goes_to_the_committed_key() {
         referral: None,
         refund: Some(Rail { module: h("ln"), address: b"buyer".to_vec() }),
         anonymous: None,
+        purchase: None,
     };
     let signed = |c: &Claim, k: &SchnorrKey| Anonymous { key: bare.clone(), sig: k.sign(&c.anonymous_message(), &[0; 32]).sig };
     // Presenting the rail proof alone, as a routing node or the payee could:

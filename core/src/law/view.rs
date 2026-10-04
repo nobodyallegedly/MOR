@@ -48,10 +48,12 @@ pub struct LawView<'a> {
     /// verifier states what it holds, as it states `keeper_recorded` to
     /// Identity.
     pub keeper_logs: BTreeMap<Hash, Vec<Hash>>,
-    /// Obligations whose outside this verifier found published on a relay
-    /// (F124 N13): an obligation a collective signed binds it only once
-    /// public. Like `keeper_logs`, a fact the verifier states.
-    pub published: BTreeSet<Hash>,
+    /// Acts whose outside this verifier found on a relay, and on which
+    /// relays (F124 N13, F125 D2, F126): an act in a collective's name is
+    /// done, and binds it, only once sealed to every member and found on
+    /// one of the relays its terms name. Like `keeper_logs`, a fact the
+    /// verifier states.
+    pub published: BTreeMap<Hash, Vec<Relay>>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -144,6 +146,10 @@ pub enum Consent {
     Broken { reason: String },
     /// A record: judged by the clone it names alone ([`LawView::record`]).
     Line { agreement: Hash },
+    /// Not done (F126): not sealed to every member, or its outside not found
+    /// on one of the relays the agreement in force names. It is planning,
+    /// and binds no one, its signer included.
+    NotDone { agreement: Hash, reason: String },
     /// No area reaches it: it counts on the collective's own signature.
     NoArea { agreement: Hash },
     /// The collective was ended by a fork or a closing, and the act counts
@@ -269,7 +275,7 @@ impl<'a> LawView<'a> {
             mips,
             ext_layers: BTreeMap::new(),
             keeper_logs: BTreeMap::new(),
-            published: BTreeSet::new(),
+            published: BTreeMap::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -2073,6 +2079,9 @@ impl<'a> LawView<'a> {
         if self.is_law(x, types::RECORD) {
             return Ok(Consent::Line { agreement: ag });
         }
+        if let Some(reason) = self.not_done(x, &ag)? {
+            return Ok(Consent::NotDone { agreement: ag, reason });
+        }
         if self.is_law(x, types::REVOCATION) || self.is_law(x, types::IMPORT) {
             return Err(LawError::Unsupported(
                 "revocations and imports (types 10, 11): their formats are open",
@@ -2343,6 +2352,11 @@ impl<'a> LawView<'a> {
         };
         if !within {
             return not("the act lies beyond the grant's reach (rule 44)");
+        }
+        // F126: an act in the collective's name, a grantee's included, is
+        // done only once sealed to every member and on one of its relays.
+        if let Some(w) = self.not_done(y, &ag)? {
+            return not(&w);
         }
         // A fork ends every grant of the original (Q2): a deal the original
         // itself acknowledged before the fork binds, as a debt; any other
@@ -2826,13 +2840,14 @@ pub struct ClosingEval {
     pub open_debts: Vec<Hash>,
 }
 
-/// A creditor's release, judged (type 21, rule 47b, F125).
+/// A creditor's release, judged (Finance type 4, F126; rule 47b).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DebtReleaseEval {
     pub id: Hash,
-    pub release: DebtRelease,
+    pub release: crate::finance::Release,
     /// It ends the obligation: signed by the creditor the obligation names,
-    /// its consent counting by its own rules.
+    /// a collective creditor's consent counting by its own rules, a Finance
+    /// act reached by its Finance lane (F126, E2).
     pub counts: bool,
     pub why: Option<String>,
 }
@@ -2935,17 +2950,30 @@ impl ReleaseEval {
 /// A payment that reached the old split service of a collective a fork
 /// closed, for one of its withdrawn offers: the service's open debt to the
 /// work's current owners (F124 N14, rule 30), in the shares the fork act
-/// transferred, the defaults where it named none (F125, reading 9).
+/// What it is (F126).
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Stray {
-    pub fork: Hash,
-    pub service: Hash,
-    /// Each successor, and what it is owed; empty where undetermined.
-    pub owed: Vec<(Hash, u64)>,
-    /// Why the shares cannot be told: the fork names shares for some stakes
-    /// and the caller did not say which stake the offer sold (the standing
-    /// offer's format is open).
-    pub undetermined: Option<String>,
+pub enum PurchaseVerdict {
+    /// It names the claim current as this verifier holds it: a purchase.
+    Purchase,
+    /// No purchase: money received for nothing, owed back to the payer as a
+    /// refund (Finance rule 10a; with no key committed, an open debt nobody
+    /// can claim).
+    NoPurchase { why: String },
+    /// It names a claim that a later act this verifier holds supersedes:
+    /// whether the payment came before or after it cannot be told (flaw
+    /// W2), so it is undetermined between a purchase and a refund.
+    Superseded { by: Hash },
+}
+
+/// A payment for a work, judged (F126).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PurchaseEval {
+    pub id: Hash,
+    /// The claim it names, if any.
+    pub purchase: Option<crate::finance::Purchase>,
+    pub verdict: PurchaseVerdict,
+    /// Who a refund would be owed to (Finance rule 10a).
+    pub refund_to: crate::finance::RefundTo,
 }
 
 /// The constitutional change rule, counted among the voices that remain
@@ -3087,7 +3115,78 @@ impl<'a> LawView<'a> {
         }
         let col = self.col(&o.debtor);
         let collective = (0..col.res.links.len()).any(|k| self.declares(&col, k));
-        Ok(Some(!collective || self.published.contains(id)))
+        if !collective {
+            return Ok(Some(true));
+        }
+        Ok(Some(self.done(id)? == Some(Ok(()))))
+    }
+
+    /// Whether an act in a collective's name is done (F126): sealed to every
+    /// member of the agreement in force for it (public, or every member
+    /// among its recipients), and its outside found on one of the relays
+    /// that agreement names. `None` where the act is not in a collective's
+    /// name: neither signed by a collective nor backed by its grant.
+    pub fn done(&self, act: &Hash) -> R<Option<Result<(), String>>> {
+        let x = self.held(act)?;
+        let Some(signer) = x.act.outside.signer else { return Ok(None) };
+        let agreement = match self.in_force(act) {
+            Ok(Some(a)) => Some(a),
+            _ => None,
+        };
+        let agreement = match agreement {
+            Some(a) => a,
+            None => {
+                // A grantee's act: the grantor collective's agreement in
+                // force for the grant.
+                let mut found = None;
+                for r in x.inside.refs.iter().flatten() {
+                    if let Ref::Act(g) = r {
+                        if let Some(h) = self.v.get(g) {
+                            if self.is_law(h, types::GRANT)
+                                && Grant::decode(&h.inside.payload).is_ok_and(|y| y.grantee == signer)
+                            {
+                                if let Ok(Some(a)) = self.in_force(g) {
+                                    found = Some(a);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                match found {
+                    Some(a) => a,
+                    None => return Ok(None),
+                }
+            }
+        };
+        Ok(Some(match self.not_done(x, &agreement)? {
+            None => Ok(()),
+            Some(w) => Err(w),
+        }))
+    }
+
+    /// Why an act in the name of the collective whose agreement in force is
+    /// `agreement` is not done (F126), if it is not.
+    fn not_done(&self, x: &Held, agreement: &Hash) -> R<Option<String>> {
+        let t = self.terms(agreement)?;
+        if x.act.outside.content_key.is_none() {
+            let to = x.act.outside.to.clone().unwrap_or_default();
+            let missing: Vec<&Hash> = t.parties.iter().filter(|p| !to.contains(p)).collect();
+            if !missing.is_empty() {
+                return Ok(Some(format!(
+                    "not done: it is not sealed to every member ({} missing), so it binds no one (F126)",
+                    missing.len()
+                )));
+            }
+        }
+        let named = t.relays.clone().unwrap_or_default();
+        let found = self.published.get(&x.id).is_some_and(|rs| rs.iter().any(|r| named.iter().any(|n| n.matches(r))));
+        if !found {
+            return Ok(Some(
+                "not done: its outside was not found on a relay the collective's terms name, so it binds no one (F126)".into(),
+            ));
+        }
+        Ok(None)
     }
 
     /// The obligations of `collective` that bind, signed before a line.
@@ -3500,17 +3599,18 @@ impl<'a> LawView<'a> {
             .sum()
     }
 
-    /// A creditor's release, judged (rule 47b, F125): it ends the
-    /// obligation it names when signed by the creditor that obligation
-    /// names, its consent counting by its own rules. Only the creditor
-    /// signs it.
+    /// A creditor's release, judged (Finance type 4, F126; Law rule 47b):
+    /// it ends the obligation it names when signed by the creditor that
+    /// obligation names, a collective creditor's consent counting by its own
+    /// rules: a Finance act, reached by its Finance lane alone (E2). Only the
+    /// creditor signs it.
     pub fn debt_release(&self, id: &Hash) -> R<DebtReleaseEval> {
-        use crate::finance::Payload as Fin;
+        use crate::finance::{self as fin, Payload as Fin};
         let h = self.held(id)?;
-        if !self.is_law(h, types::DEBT_RELEASE) {
-            return Err(LawError::Check("not a creditor's release"));
-        }
-        let r = DebtRelease::decode(&h.inside)?;
+        let r = match Fin::decode(h.inside.type_, &h.inside.payload) {
+            Ok(Fin::Release(r)) if h.inside.spec == self.mips.finance && h.inside.type_ == fin::types::RELEASE => r,
+            _ => return Err(LawError::Check("not a creditor's release")),
+        };
         let mut e = DebtReleaseEval { id: *id, release: r.clone(), counts: false, why: None };
         let fail = |mut e: DebtReleaseEval, w: &str| {
             e.why = Some(w.into());
@@ -3530,7 +3630,7 @@ impl<'a> LawView<'a> {
             return fail(e, "only the creditor the obligation names signs its release (F125)");
         }
         if !self.consent(id)?.counts() {
-            return fail(e, "the creditor's consent does not count, by its own rules");
+            return fail(e, "the creditor's consent does not count, by its own rules (its Finance lane, F126)");
         }
         e.counts = true;
         Ok(e)
@@ -3538,11 +3638,12 @@ impl<'a> LawView<'a> {
 
     /// The creditor's release that ended an obligation, if one held counts.
     pub fn debt_released(&self, obligation: &Hash) -> R<Option<Hash>> {
+        use crate::finance::{self as fin, Payload as Fin};
         for x in self.v.held_acts() {
-            if !self.is_law(x, types::DEBT_RELEASE) {
+            if x.inside.spec != self.mips.finance || x.inside.type_ != fin::types::RELEASE {
                 continue;
             }
-            if !DebtRelease::decode(&x.inside).is_ok_and(|r| &r.obligation == obligation) {
+            if !matches!(Fin::decode(x.inside.type_, &x.inside.payload), Ok(Fin::Release(r)) if &r.obligation == obligation) {
                 continue;
             }
             if self.debt_release(&x.id)?.counts {
@@ -3592,54 +3693,149 @@ impl<'a> LawView<'a> {
         self.open_debts(&col, None)
     }
 
-    /// A payment that reached the old split service of a collective a fork
-    /// closed, for one of its withdrawn offers (N14): every grant ended at
-    /// the fork, the service's included, so what it received is its open
-    /// debt to the work's current owners, the successors, in the shares the
-    /// fork act transferred for the stake the offer sold, the defaults where
-    /// it named none (rule 30, F125 reading 9). `stake` is that stake, as
-    /// the caller reads the offer (its format is open). `None` where the
-    /// receipt is no such payment.
-    pub fn stray(&self, receipt: &Hash, stake: Option<StakeRef>) -> R<Option<Stray>> {
-        use crate::finance::Payload as Fin;
-        let x = self.held(receipt)?;
-        if x.inside.spec != self.mips.finance || self.v.status(receipt) != Status::Valid {
-            return Ok(None);
+    /// The work a payment is for (F126): a publication's work hash, where
+    /// some agreement held carries a stake in it (a claimed work); `None`
+    /// for a standing offer (its format is open) or anything else.
+    fn work_of(&self, fulfils: &Hash) -> Option<Hash> {
+        let x = self.v.get(fulfils)?;
+        if x.inside.spec != self.mips.envelope || x.inside.type_ != 0 {
+            return None;
         }
-        let Ok(Fin::Receipt(r)) = Fin::decode(x.inside.type_, &x.inside.payload) else { return Ok(None) };
-        if self.v.get(&r.fulfils).is_none() {
-            return Ok(None);
-        }
-        let Some(by) = self.offer_withdrawn(&r.fulfils)? else { return Ok(None) };
-        let Some(Closed { fork: Some(e), .. }) = self.closed_by(&self.held(&r.fulfils)?.act.outside.signer.unwrap_or_default())? else {
-            return Ok(None);
-        };
-        let t = self.terms(&e.fork.agreement)?;
-        let Some(g) = t.split_grant.and_then(|g| self.v.get(&g)) else { return Ok(None) };
-        let Ok(grant) = Grant::decode(&g.inside.payload) else { return Ok(None) };
-        if x.act.outside.signer != Some(grant.grantee) {
-            return Ok(None);
-        }
-        let named = |a: &Hash, i: u64| e.fork.shares.iter().find(|s| &s.agreement == a && s.index == i).map(|s| s.shares.clone());
-        let shares = match stake {
-            Some((a, i)) => named(&a, i).unwrap_or_else(|| e.shares.clone()),
-            None if e.fork.shares.is_empty() => e.shares.clone(),
-            None => {
-                return Ok(Some(Stray {
-                    fork: by,
-                    service: grant.grantee,
-                    owed: vec![],
-                    undetermined: Some("the fork names shares for some stakes, and which stake the offer sold is not known (the standing offer's format is open)".into()),
-                }))
+        x.inside.payload.iter().find_map(|(k, v)| match (k, v) {
+            (crate::cbor::Value::Uint(1), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
+            _ => None,
+        })
+    }
+
+    /// Whether some agreement held carries a stake in `work`.
+    fn claimed(&self, work: &Hash) -> bool {
+        self.v.held_acts().any(|x| {
+            self.is_law(x, types::TERMS)
+                && self.terms(&x.id).is_ok_and(|t| t.stake_on(&Who::Id(*work)).is_some())
+        })
+    }
+
+    /// The latest version of an agreement that exists: for a collective's
+    /// own agreement, the one in force at its current state; for a deal,
+    /// the furthest version every party signed.
+    fn latest_version(&self, agreement: &Hash) -> R<Hash> {
+        let t = self.terms(agreement)?;
+        if t.is_collective() {
+            if let Some(c) = self.collective_of(agreement)? {
+                if let Some(cur) = self.current(&c)? {
+                    return Ok(cur.agreement);
+                }
             }
+            return Ok(*agreement);
+        }
+        let mut at = *agreement;
+        loop {
+            let next = self.v.held_acts().find(|x| {
+                self.is_law(x, types::TERMS)
+                    && self.terms(&x.id).is_ok_and(|c| c.parent == Some(at))
+                    && self.agreement(&x.id).is_ok_and(|a| a.exists == Some(true))
+            });
+            match next {
+                Some(x) => at = x.id,
+                None => return Ok(at),
+            }
+        }
+    }
+
+    /// The act at which a work's claim under `agreement` is current, as this
+    /// verifier holds it (F126): the latest version of the agreement, or,
+    /// where a collective holding the work's stake in it was ended by a fork
+    /// or closing, that act; or the work's release.
+    fn claim_line(&self, agreement: &Hash, work: Option<&Hash>) -> R<Hash> {
+        let v = self.latest_version(agreement)?;
+        if let Some(w) = work {
+            if let Some(r) = self.released(w)? {
+                return Ok(r.id);
+            }
+        }
+        let t = self.terms(&v)?;
+        let this = if t.is_collective() { self.collective_of(&v)? } else { None };
+        for st in t.stakes.iter().flatten() {
+            if work.is_some_and(|w| st.object != Who::Id(*w)) || st.object == Who::This {
+                continue;
+            }
+            for (h, _) in &st.holders {
+                if let Some(c) = h.resolve(this.as_ref()) {
+                    if let Some(e) = self.closed_by(&c)? {
+                        return Ok(e.by);
+                    }
+                }
+            }
+        }
+        Ok(v)
+    }
+
+    /// A payment for a work, judged (F126): a purchase names the claim it
+    /// pays under (receipt or claim field 9). A payment for a claimed work,
+    /// or for a standing offer, that names none, or names a line that is
+    /// none of that agreement's claims, is no purchase: money received for
+    /// nothing, owed back to the payer as a refund (Finance rule 10a). One
+    /// naming a claim that a later act this verifier holds supersedes is
+    /// shown as undetermined: whether it was paid before or after that act
+    /// cannot be told (flaw W2). `None` where the payment is not for a work.
+    pub fn purchase(&self, id: &Hash) -> R<Option<PurchaseEval>> {
+        use crate::finance::{self as fin, Payer, Payload as Fin};
+        let x = self.held(id)?;
+        if x.inside.spec != self.mips.finance {
+            return Ok(None);
+        }
+        let (purchase, fulfils, refund_to) = match Fin::decode(x.inside.type_, &x.inside.payload) {
+            Ok(Fin::Receipt(r)) => (r.purchase.clone(), r.fulfils, fin::refund_owed_to(&r)),
+            Ok(Fin::Claim(c)) => {
+                let signer = x.act.outside.signer.unwrap_or_default();
+                let to = match c.payer(&signer) {
+                    Payer::Identity(h) => fin::RefundTo::Identity(h),
+                    Payer::Key(k) => fin::RefundTo::Key(k),
+                };
+                (c.purchase.clone(), c.fulfils, to)
+            }
+            _ => return Ok(None),
         };
-        let parts = divide(r.amount.value, &shares);
-        Ok(Some(Stray {
-            fork: by,
-            service: grant.grantee,
-            owed: e.fork.sides.iter().zip(parts).map(|(s, n)| (s.successor, n)).collect(),
-            undetermined: None,
-        }))
+        let work = self.work_of(&fulfils);
+        let for_offer = self.v.get(&fulfils).is_some_and(|f| self.is_law(f, types::STANDING_OFFER));
+        let for_work = for_offer || work.is_some_and(|w| self.claimed(&w));
+        if purchase.is_none() && !for_work {
+            return Ok(None);
+        }
+        let mut e = PurchaseEval { id: *id, purchase: purchase.clone(), verdict: PurchaseVerdict::Purchase, refund_to };
+        let no = |mut e: PurchaseEval, w: &str| {
+            e.verdict = PurchaseVerdict::NoPurchase { why: w.into() };
+            Ok(Some(e))
+        };
+        let Some(p) = purchase else {
+            return no(e, "it names no claim: a Finance-only payment for a claimed work is no purchase (F126)");
+        };
+        let Ok(t) = self.terms(&p.agreement) else {
+            return no(e, "the agreement it names is not held terms");
+        };
+        if let Some(w) = &work {
+            if t.stake_on(&Who::Id(*w)).is_none() && self.latest_version(&p.agreement).ok().and_then(|v| self.terms(&v).ok()).is_none_or(|v| v.stake_on(&Who::Id(*w)).is_none()) {
+                return no(e, "the agreement it names carries no stake in the work it pays for");
+            }
+        }
+        // The line: a version of the agreement, or an act ending a holder
+        // of the work's stake in it, or the work's release.
+        let in_history = match self.v.get(&p.line) {
+            None => false,
+            Some(l) if self.is_law(l, types::TERMS) => {
+                self.lineage(&p.line).is_ok_and(|ls| ls.iter().any(|(i, _)| i == &p.agreement))
+            }
+            Some(l) if self.is_law(l, types::FORK) || self.is_law(l, types::CLOSING) || self.is_law(l, types::RELEASE) => true,
+            Some(_) => false,
+        };
+        if !in_history {
+            return no(e, "the line it names carries none of that agreement's claims");
+        }
+        let current = self.claim_line(&p.agreement, work.as_ref())?;
+        if current != p.line {
+            e.verdict = PurchaseVerdict::Superseded { by: current };
+        }
+        Ok(Some(e))
     }
 
     // ------------------------------------------------------------ the pointer

@@ -27,6 +27,7 @@ use mor_core::hash::Hash;
 use mor_core::identity::{
     self, Genesis, Home, HomeRule, KeptTip, Payload, Rotation, SafetyCommit, SigningKey,
 };
+use mor_core::finance;
 use mor_core::law;
 use mor_core::mmr;
 use mor_core::sig::{self, SchnorrKey, SlhKey};
@@ -1270,10 +1271,21 @@ struct SpecsIn {
     ext_layers: std::collections::BTreeMap<String, Vec<u64>>,
     #[serde(default)]
     keeper_logs: std::collections::BTreeMap<String, Vec<String>>,
-    /// Obligations whose outside the client found published on a relay
-    /// (F124 N13): a collective's obligation binds only once public.
+    /// Acts whose outside the client found on a relay, and where (F124 N13,
+    /// F126): an act in a collective's name is done, and binds it, only once
+    /// sealed to every member and found on one of the relays its terms name.
     #[serde(default)]
-    published: Vec<String>,
+    published: Vec<PublishedIn>,
+}
+
+/// One act found on one relay: the relay's hint, and its operator where
+/// the client knows it.
+#[derive(Deserialize)]
+struct PublishedIn {
+    act: String,
+    hint: String,
+    #[serde(default)]
+    operator: Option<String>,
 }
 
 impl SpecsIn {
@@ -1303,7 +1315,10 @@ impl SpecsIn {
                 .insert(unhex(k)?, log.iter().map(|x| unhex(x)).collect::<R<_>>()?);
         }
         for x in &self.published {
-            view.published.insert(unhex(x)?);
+            view.published.entry(unhex(&x.act)?).or_default().push(law::Relay {
+                operator: x.operator.as_deref().map(unhex).transpose()?,
+                hint: x.hint.clone(),
+            });
         }
         Ok(view)
     }
@@ -1532,6 +1547,9 @@ struct TermsOut {
     forked_from: Option<String>,
     /// The release rule (field 24); null: every holder.
     release_rule: Option<RuleOut>,
+    /// The collective's relays (field 25, F126): each operator (null where
+    /// none is named) and hint.
+    relays: Vec<(Option<String>, String)>,
     /// Why the terms fail the checks that need no other act, or null.
     problem: Option<ProblemOut>,
 }
@@ -1668,6 +1686,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             .collect(),
         forked_from: t.forked_from.as_ref().map(hx),
         release_rule: t.release_rule.as_ref().map(rule_out),
+        relays: t.relays.iter().flatten().map(|r| (r.operator.as_ref().map(hx), r.hint.clone())).collect(),
         problem: t.check(&s.mips()?).err().map(|e| problem(&e)),
     })
 }
@@ -2069,6 +2088,11 @@ impl Verifier {
                 o.kind = "broken".into();
                 o.reason = Some(reason);
             }
+            law::Consent::NotDone { agreement, reason } => {
+                o.kind = "not-done".into();
+                o.agreement = Some(hx(&agreement));
+                o.reason = Some(reason);
+            }
             law::Consent::Line { agreement } => {
                 o.kind = "line".into();
                 o.agreement = Some(hx(&agreement));
@@ -2275,8 +2299,9 @@ impl Verifier {
         Ok(view.debtors(&unhex(id)?).map_err(lerr)?.map(|v| v.iter().map(hx).collect()))
     }
 
-    /// A creditor's release, judged (type 21, rule 47b, F125): whether it
-    /// ends the obligation it names (signed by that obligation's creditor).
+    /// A creditor's release, judged (Finance type 4, F126; rule 47b):
+    /// whether it ends the obligation it names (signed by that obligation's
+    /// creditor, a collective by its Finance lane).
     #[wasm_bindgen(js_name = lawDebtRelease)]
     pub fn law_debt_release(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2287,6 +2312,49 @@ impl Verifier {
             why: e.why.clone(),
             obligation: hx(&e.release.obligation),
             against: e.release.against.iter().map(hx).collect(),
+        })
+    }
+
+    /// Whether an act in a collective's name is done (F126): sealed to every
+    /// member and found on one of its relays. `{ done, why }`, or null where
+    /// the act is not in a collective's name.
+    #[wasm_bindgen(js_name = lawDone)]
+    pub fn law_done(&self, specs: JsValue, act: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        match view.done(&unhex(act)?).map_err(lerr)? {
+            None => Ok(JsValue::NULL),
+            Some(r) => to_js(&DoneOut { done: r.is_ok(), why: r.err() }),
+        }
+    }
+
+    /// A payment for a work, judged (F126): "purchase", "no-purchase" (a
+    /// refund owed to the payer, with why), or "superseded" (undetermined,
+    /// flaw W2, with the act that supersedes the claim it names); null
+    /// where the payment is not for a work.
+    #[wasm_bindgen(js_name = lawPurchase)]
+    pub fn law_purchase(&self, specs: JsValue, id: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let Some(e) = view.purchase(&unhex(id)?).map_err(lerr)? else {
+            return Ok(JsValue::NULL);
+        };
+        let (verdict, why, by) = match &e.verdict {
+            law::PurchaseVerdict::Purchase => ("purchase", None, None),
+            law::PurchaseVerdict::NoPurchase { why } => ("no-purchase", Some(why.clone()), None),
+            law::PurchaseVerdict::Superseded { by } => ("superseded", None, Some(hx(by))),
+        };
+        let refund_to = match &e.refund_to {
+            finance::RefundTo::Identity(h) => Some(hx(h)),
+            finance::RefundTo::Key(_) => Some("the key the payment committed to".into()),
+            finance::RefundTo::Nobody => None,
+        };
+        to_js(&PurchaseOut {
+            verdict: verdict.into(),
+            why,
+            superseded_by: by,
+            claim: e.purchase.as_ref().map(|p| (hx(&p.agreement), hx(&p.line))),
+            refund_to,
         })
     }
 
@@ -2429,6 +2497,23 @@ struct ClosingOut {
     signed: Vec<String>,
     holds: Vec<(String, u64)>,
     open_debts: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DoneOut {
+    done: bool,
+    why: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PurchaseOut {
+    verdict: String,
+    why: Option<String>,
+    superseded_by: Option<String>,
+    claim: Option<(String, String)>,
+    refund_to: Option<String>,
 }
 
 #[derive(Serialize)]

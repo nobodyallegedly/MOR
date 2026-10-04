@@ -166,7 +166,7 @@ test('given only an agreement id, it says who is bound, what each rule does, and
 
 test('an agreement proposed and not yet signed is read as not in force yet; it is read, never prepared', async () => {
   const parties = [w.members[3], w.members[1], w.members[2]];
-  const terms = termsPayload(collectiveTerms({ ...governance, text: 'A second agreement, for the test.' }, parties.map((m) => m.id), parties[0].id));
+  const terms = termsPayload(collectiveTerms({ ...governance, text: 'A second agreement, for the test.', relays: [w.relay.base] }, parties.map((m) => m.id), parties[0].id));
   const proposer = TestIdentity.load(w.files[3]);
   const proposed = await proposePayload(proposer, terms, undefined, [w.relay.base]);
   proposer.save(w.files[3]);

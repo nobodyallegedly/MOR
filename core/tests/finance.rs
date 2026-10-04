@@ -66,6 +66,7 @@ fn every_payload_round_trips() {
             agreement: h("conversion offer"),
         }),
         batch: Some(h("batch")),
+        purchase: Some(Purchase { agreement: h("claiming agreement"), line: h("its version") }),
     }));
     roundtrip(Payload::Claim(Claim {
         rail: h("ln"),
@@ -80,7 +81,11 @@ fn every_payload_round_trips() {
         }),
         refund: Some(rail("ln")),
         anonymous: None,
+        purchase: Some(Purchase { agreement: h("claiming agreement"), line: h("its version") }),
     }));
+    // F126: the creditor's release, a Finance act (type 4).
+    roundtrip(Payload::Release(Release { obligation: h("a debt"), against: vec![h("a receipt"), h("a deal")] }));
+    roundtrip(Payload::Release(Release { obligation: h("a debt"), against: vec![] }));
     // F113: a receipt naming an anonymous payer's bare key; a claim carrying it.
     let key = SchnorrKey::from_secret(&h("a one-time key")).unwrap();
     let bare = SigningKey {
@@ -97,6 +102,7 @@ fn every_payload_round_trips() {
         previous: None,
         forward: None,
         batch: None,
+        purchase: None,
     }));
     roundtrip(Payload::Claim(Claim {
         rail: h("ln"),
@@ -111,6 +117,7 @@ fn every_payload_round_trips() {
             key: bare,
             sig: vec![7; 64],
         }),
+        purchase: None,
     }));
 }
 
@@ -133,6 +140,7 @@ fn an_anonymous_claim_is_signed_by_its_committed_key() {
         referral: None,
         refund: Some(rail("ln")),
         anonymous: None,
+        purchase: None,
     };
     let signed = |c: &Claim, k: &SchnorrKey| Anonymous {
         key: bare.clone(),
@@ -183,7 +191,7 @@ fn shapes_are_strict() {
     m.push((Value::Uint(2), Value::Bytes(h("x").to_vec())));
     assert!(Payload::decode(types::PAYEE_POINTER, &m).is_err());
     // A type Finance does not define.
-    assert_eq!(Payload::decode(4, &[]), Err(FinError::UnknownType(4)));
+    assert_eq!(Payload::decode(5, &[]), Err(FinError::UnknownType(5)));
 }
 
 #[test]
@@ -208,6 +216,7 @@ fn who_signs() {
         previous: None,
         forward: None,
         batch: None,
+        purchase: None,
     });
     assert!(check_signer(&r, &h("alice")).is_err());
     assert!(check_signer(&r, &h("bob")).is_ok());

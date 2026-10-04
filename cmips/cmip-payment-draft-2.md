@@ -1,6 +1,6 @@
 # cMIP: Payment
 
-*Draft 2, 3 October 2026 (the core pass, core v21). **Experimental, not approved:** an instrument for testing the Finance MIP, not a product (build brief, 2 October 2026). Draft 1 (2 October 2026, roadmap step 12) with the answers to flaws L1 and L4 and question c written in, as far as testing the core needs: an anonymous payer's commitment names a bare key of its own, and a refund goes to whoever signs with it (F113); a receipt or claim counts only on a rail Module the payee's pointer or vault names, and, under an agreement, one implementing this cMIP (F115). Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v21, the Identity MIP draft 11, the Envelope MIP draft 7, the Text MIP draft 6, the Finance MIP draft 6, the Law MIP draft 9, the Production MIP draft 6 and findings F1 to F117. Not core: a founding cMIP, frozen at publication, competing with any other payment cMIP.*
+*Draft 2, 3 October 2026 (the core pass, core v21). **Experimental, not approved:** an instrument for testing the Finance MIP, not a product (build brief, 2 October 2026). Draft 1 (2 October 2026, roadmap step 12) with the answers to flaws L1 and L4 and question c written in, as far as testing the core needs: an anonymous payer's commitment names a bare key of its own, and a refund goes to whoever signs with it (F113); a receipt or claim counts only on a rail Module the payee's pointer or vault names, and, under an agreement, one implementing this cMIP (F115). *Revised in place, 4 October 2026, for F126:* a purchase carries the claim it pays under in the commitment, as an optional eighth element, so the rail binds it too; a payment that is no purchase commits to exactly what it did before. Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v21, the Identity MIP draft 11, the Envelope MIP draft 7, the Text MIP draft 6, the Finance MIP draft 6, the Law MIP draft 9, the Production MIP draft 6 and findings F1 to F117. Not core: a founding cMIP, frozen at publication, competing with any other payment cMIP.*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 
@@ -50,7 +50,8 @@ commitment = [
   fulfils: hash,           ; the obligation, agreement, offer or payee-pointer act the payment follows
   payer: hash / signing-key / null,  ; the payer's identity; an anonymous payer's bare key (Finance, F113); or null
   paid-to,
-  salt: bstr .size 16      ; chosen by the payer, fresh for each payment
+  salt: bstr .size 16,     ; chosen by the payer, fresh for each payment
+  ? purchase               ; a purchase only: the claim it pays under, Finance's `purchase` (F126)
 ]
 
 paid-to = [ 0, pointer: hash, rail: uint ]       ; the payee's flow pointer act, and the index of its rail
@@ -62,7 +63,8 @@ The commitment hash is `tagged_hash("MOR/cmip/payment/commitment", commitment)`,
 1. **Before paying**, the payer computes the commitment and asks the payee's side for a receiving address committing to it, as the rail Module defines. The payee's side MUST issue one only for a commitment naming the payee, and a `paid-to` that is the payee's own pointer or vault, with the address or source that `paid-to` names.
 2. **The payer checks** the address against the payee's own pointer or vault before paying: a conforming wallet runs the rail Module's rule on it, without the completing part of the proof, and pays only on the answer the rule gives an unpaid payment (pending, for Lightning).
 3. **The salt** keeps the commitment from being guessed by anyone who sees the rail: on Lightning, the invoice is visible to every node on its route.
-4. **An anonymous payer** who wants a refund to stay claimable puts a fresh bare signing key of its own in `payer` (Finance, F113), and, before paying, recomputes the commitment from what the payee's side signed, so the payee's side cannot swap the key. A payer that commits `null` can never be refunded: nobody can claim for it.
+4. **A purchase** (F126; Finance rule 10c, Law rule 32a) puts the claim it pays under, the claiming agreement and the line at which the payer's client read it current, as the commitment's last element; the payee's side commits to it like the rest. A payment that is no purchase leaves it out, so its commitment is the seven elements above. *Client conformance:* a split service whose grant has ended issues no receiving address for any commitment (Law rule 32a), and a payee's side issues one for a purchase only naming the claim it serves.
+5. **An anonymous payer** who wants a refund to stay claimable puts a fresh bare signing key of its own in `payer` (Finance, F113), and, before paying, recomputes the commitment from what the payee's side signed, so the payee's side cannot swap the key. A payer that commits `null` can never be refunded: nobody can claim for it.
 
 *This answers Finance's open parameter for every rail at once: what the payment follows (`fulfils`) is inside the commitment, which the rail carries; each rail Module says only where.*
 
@@ -74,7 +76,7 @@ A receipt's or claim's field 1 holds, encoded in deterministic CBOR:
 proof = [ paid-to, salt: bstr .size 16, rail-proof: bstr ]
 ```
 
-`rail-proof` is defined by the rail Module named in field 0. Every other part of the commitment is read from the act itself: field 0 (rail), the payee (receipt 3, claim 2), the amount (receipt 4, claim 3), `fulfils` (receipt 5, claim 4), and the payer: a receipt's field 2 (an identity or a bare key), or null where it is absent; for a claim, the key in its field 8 where present (Finance, F113), otherwise the claim's signer.
+`rail-proof` is defined by the rail Module named in field 0. Every other part of the commitment is read from the act itself: field 0 (rail), the payee (receipt 3, claim 2), the amount (receipt 4, claim 3), `fulfils` (receipt 5, claim 4), the purchase where the act names one (receipt 9, claim 9), and the payer: a receipt's field 2 (an identity or a bare key), or null where it is absent; for a claim, the key in its field 8 where present (Finance, F113), otherwise the claim's signer.
 
 ## Verifying a receipt or claim
 

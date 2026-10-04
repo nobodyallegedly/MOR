@@ -471,7 +471,8 @@ export class Actions {
     for (const m of members) if (!this.store.holds(m)) blocking.push(`${names(m)} is not held by this program, so it cannot sign here.`);
     if (members.length < 2) blocking.push('A collective has at least two members.');
     const rules = fromRules(a.rules);
-    const g: Governance = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules) };
+    // F126: the founding terms name the collective's relays, where its acts are done.
+    const g: Governance = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules), relays };
     // F124 S1: founding terms may carry each member's share of all the
     // collective's income, the collective written null, "this collective".
     if (a.shares && Object.keys(a.shares).length) {
@@ -614,7 +615,7 @@ export class Actions {
     }
     const changedGovernance = rulesChanged || text !== current.text;
     const g: Governance = c.departedAfter(
-      { ...rules, releaseWords: current.releaseWords, text, stakes: current.stakes, splitGrant: current.splitGrant, departed: current.departed },
+      { ...rules, releaseWords: current.releaseWords, text, stakes: current.stakes, splitGrant: current.splitGrant, departed: current.departed, relays: current.relays },
       members,
     );
 
@@ -1475,27 +1476,31 @@ export class Actions {
    * published, every obligation found at a relay: an obligation a
    * collective signed binds it only once its outside is public (F124 N13).
    */
-  private async lawVerifier(c: TestCollective, ids: string[]): Promise<{ v: Verifier; specs: typeof LAW_SPECS & { published: string[] } }> {
+  private async lawVerifier(c: TestCollective, ids: string[]): Promise<{ v: Verifier; specs: typeof LAW_SPECS & { published: { act: string; hint: string }[] } }> {
     const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
     const hints = this.hintsOf(c);
-    const published: string[] = [];
+    // Where this program found each act: an act in a collective's name is
+    // done, and binds it, only once found on a relay its terms name (F126).
+    const published: { act: string; hint: string }[] = [];
     for (const id of new Set(ids)) {
       try {
         await lookUp(id, hints, this.via, v);
       } catch {
         // not found: its acts cannot count
       }
-      for (const a of await allBy(id, hints, this.via)) {
-        try {
-          const d = describeAct(a) as { id: string; spec?: string; type?: number };
-          if (d.spec === MIPS.finance && d.type === FINANCE_TYPES.obligation) published.push(d.id);
-        } catch {
-          // private: its outside is still published
-        }
-        try {
-          v.add(a);
-        } catch {
-          // a private act: added below with its key where this program holds it
+      for (const hint of hints) {
+        for (const a of await allBy(id, [hint], this.via)) {
+          try {
+            const d = describeAct(a) as { id: string };
+            published.push({ act: d.id, hint });
+          } catch {
+            // malformed
+          }
+          try {
+            v.add(a);
+          } catch {
+            // a private act: added below with its key where this program holds it
+          }
         }
       }
     }
@@ -1506,7 +1511,13 @@ export class Actions {
     for (const sp of [...(c.f.splits ?? []), ...(c.f.debts ?? []), ...debts]) {
       const a = await this.fetchAct(sp.id, hints);
       if (a) {
-        published.push(sp.id);
+        for (const hint of hints) {
+          try {
+            if (await relayAt(hint, this.via).getAct(sp.id)) published.push({ act: sp.id, hint });
+          } catch {
+            // not reachable, or not there
+          }
+        }
         try {
           v.addWithKey(a, unb64(sp.key));
         } catch {
@@ -1514,7 +1525,8 @@ export class Actions {
         }
       }
     }
-    return { v, specs: { ...LAW_SPECS, published: [...new Set(published)] } };
+    const seen = new Set<string>();
+    return { v, specs: { ...LAW_SPECS, published: published.filter((p) => !seen.has(`${p.act} ${p.hint}`) && !!seen.add(`${p.act} ${p.hint}`)) } };
   }
 
   /** The debts a collective signed, and those of the collectives it was forked from, which its successors owe (F124 N13, F125 D1). */
@@ -1994,9 +2006,9 @@ export class Actions {
     const w = sides.map((s) => weight(s) || s.length);
     const sum = w.reduce((x, y) => x + y, 0) || 1;
     // N13: every obligation of the original that binds (published), assigned.
-    const { v: v0, specs: s0 } = await this.lawVerifier(c, [c.identity]);
+    const { v: v0, specs: s0 } = await this.lawVerifier(c, this.concerned(c));
     const debts: [string, number[]][] = [];
-    for (const o of s0.published) {
+    for (const o of new Set(s0.published.map((p) => p.act))) {
       if (v0.lawObligationBinds(s0, o) !== true) continue;
       const to = a.debts?.[o] ?? sides.map((_, i) => i);
       if (!to.length || to.some((i) => i < 0 || i >= sides.length)) blocking.push(`The debt ${short(o)} is assigned to no side the fork lists.`);
@@ -2227,10 +2239,12 @@ export class Actions {
   }
 
   /**
-   * A creditor's release (Law type 21, rule 47b, F125): the creditor of a
+   * A creditor's release (Finance type 4, F126; rule 47b): the creditor of a
    * collective's debt ends it without full payment, for instance against
-   * stakes or a partial payment. Only the creditor signs it. Public, so that
-   * every verifier that sees the debt sees it end (a reading, to confirm).
+   * stakes or a partial payment. Only the creditor signs it; a collective
+   * creditor would sign by its Finance lane (E2). It counts wherever held
+   * (E1); published here, so that every verifier that sees the debt sees it
+   * end.
    */
   async prepareDebtRelease(a: { debt: string; against?: string[] }) {
     const names = this.store.names();
@@ -2246,7 +2260,8 @@ export class Actions {
     const reading: Reading = {
       title: d ? `${names(d.creditor)} releases “${dname}” from its debt ${short(a.debt)}` : 'A creditor\'s release',
       summary: [
-        'The creditor ends the obligation without full payment, for instance against stakes or a partial payment (F125). Only the creditor signs it: nobody else can discharge a debt, and MOR has no court to force one.',
+        'The creditor ends the obligation without full payment, for instance against stakes or a partial payment (F125). Only the creditor signs it: nobody else can discharge a debt, and MOR has no court to force one. It is a Finance act (F126): forgiving a sum is a money decision.',
+        'A release traded for future terms (a share of income, stakes) is also a deal: a Law agreement of its own, which the release names among what it was released against, and which binds on its own (F126).',
         'With every debt paid or released, the collective may close (F125 D5). Its members were never personal debtors of what it owed (F124 N13).',
         against.length ? `Released against, for the record: ${against.map(short).join(', ')}.` : 'Released against nothing named.',
       ],
@@ -2262,7 +2277,7 @@ export class Actions {
       run: async () => {
         const col = debtor!;
         const creditor = this.store.identity(d!.creditor);
-        const x = await creditor.publish(REPO_SPECS.law, LAW_TYPES.debtRelease, payload, { public: true, relays: col.f.relays });
+        const x = await creditor.publish(MIPS.finance, FINANCE_TYPES.release, payload, { public: true, relays: col.f.relays });
         this.store.saveIdentity(creditor);
         const { v, specs } = await this.lawVerifier(col, this.concerned(col));
         const e = v.lawDebtRelease(specs, x.id) as { counts: boolean; why: string | null };
