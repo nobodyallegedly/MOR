@@ -1,6 +1,6 @@
 # Law draft 10, and the seven rules of the core pass
 
-*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3, and again for F120 and F121), not merged. Section 5 writes in F120 and F121; section 6 writes in F121's answers, F122 and F123, with main merged in again first; section 7 writes in F124, main merged in a third time; section 8 writes in F125; section 9 writes in F126, main merged in again, and stops at item 2 (flaw W1). Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
+*3 October 2026. Branch `claude/core-pass-v21` (continued; main merged in first, for F118, F119 and V3, and again for F120 and F121), not merged. Section 5 writes in F120 and F121; section 6 writes in F121's answers, F122 and F123, with main merged in again first; section 7 writes in F124, main merged in a third time; section 8 writes in F125; section 9 writes in F126, main merged in again, and stops at item 2 (flaw W1); section 10 writes in F127, main merged in again first. Written for Nobody, allegedly: plain words first, then the precise version. Nothing here is approved; Law draft 9 stays beside draft 10 until approval. Core v21, freeze suite v21 and one page v6 are revised in place, with no new version numbers.*
 
 ## 1. What Law draft 10 changes
 
@@ -676,3 +676,129 @@ So the line covers the second and third kinds and fails the first, which is wher
 3. Question W3 (whether records must be done).
 4. The six readings above.
 5. Approval of the whole set: Law 10, Finance 6, Envelope 7, Identity 11, Production 6, core v21, suite v21, one page v6, the payment cMIP and Lightning Module draft 2; then the Mac regtest run once.
+
+## 10. F127 written in
+
+*4 October 2026. Main merged in first (the findings log, F127; one conflict, in the roadmap, both sides kept). Law draft 10, Finance draft 6, Envelope draft 7, core v21, freeze suite v21 and one page v6 revised in place; the core library, its WebAssembly bindings, the repo client and the collective client built and tested. Identity draft 11, Production draft 6, the payment cMIP draft 2 and the Lightning Module draft 2 are unchanged (below). Nothing is approved.*
+
+**The short answer.** All of F127 is written in and built: the two chains, an act counting once done and citing the head, the fork handing out its whole history (D1 withdrawn, T1 gone), the tie rule, sales recorded on the actions chain (W2), records held to "done" (W3), and the six readings, the relays now constitutional. Writing it found two questions about a grantee's act at an ending (G1, G2), one flaw where no actions chain settles a superseded claim (W4), and two smaller questions (W5, W6). None is worked around; each is below with an example and options.
+
+### What changed, in plain words
+
+**A group keeps two chains.** One holds its decisions: founding, changes to its terms, who joins and leaves, a split or a closing. The other holds its actions: debts, payments, publications, releases, sales, and what someone working under its grant does. Every action now says, inside it, which decision it acts under and which earlier actions it follows. When two devices act at the same moment, the next act names both, joining them. A decision says which actions it saw, as it already did.
+*Example:* the group's laptop signs a payment while its tablet signs a publication. The laptop's next act names the tablet's publication too: from then on both are in the chain, one behind the other.
+
+**An act counts as soon as it is done.** If you act within your powers, you act for the group: once your act is sealed to every member and on the group's relay, and names the group's latest decision as you knew it, it counts. It is judged under the decisions it names, not under one it never saw.
+*Example:* the treasurer adopts a new payment rule; the group records it on the laptop. The tablet, which had not heard yet, signs a receipt under the new rule, naming the old decision. Under the old decision that rule was never adopted, so the receipt counts for nothing. Before F127 the receipt was judged under the new rule because the record "came before it" by a quirk of which device drew it.
+
+**A split hands out everything in its history, or does not happen.** The split act names the group's latest actions. Every debt in that history, published or not, must go to one of the new groups; otherwise the split does not take effect. What lies outside that history counts for nothing. So nobody can undo a split by publishing a debt late (it was either in the history, and handed out, or outside it, and void), and no new group ever owes a debt it did not sign for. D1 ("every new group owes what the split missed") is gone, and with it tension T1.
+*Example:* Cy signed a debt of 50, sealed to every member, not yet published. The split must hand it out. A month later the printer publishes it: it binds the new group that took it, and the split stands.
+
+**The ending wins.** If a split, a closing or a member's removal, and an act using the powers it ends, never named each other, the act is void.
+*Example:* the group closes, citing the laptop's latest act; meanwhile the tablet signed a public debt that the laptop never cited. The closing takes effect and the debt is void. The printer protects itself by waiting until the group's chain visibly moves past its debt before delivering.
+
+**A payment becomes a sale once the group records it (W2).** The payment is the buyer's act; the sale is the group's, on its actions chain: its receipt, or its split service's under its grant. A sale recorded before a split stays a sale. A payment the old group's chain never recorded before the split is no purchase, and the money goes back to the payer.
+*Example:* Ana pays for the song on Monday; the group's receipt records it. On Tuesday the group splits. On Wednesday Ben's old wallet pays naming Monday's claim; the old group's key, closed by the split, records it, and that counts for nothing. Ana bought the song; Ben is refunded.
+
+**A group's records must be done too (W3).** A record that is not sealed to every member and on the relay draws no line and changes nothing.
+*Example:* a key holder draws a record registering Ben's resignation, sealed to Ben alone. It is no line, and Ben's voice remains until a record everyone can read registers it.
+
+**Changing a group's relays is constitutional.** "Because so much stands on it": the relays are the group's notice board. It now needs the constitutional rule (every member by default) and a rotation; no area and no ordinary majority can do it.
+
+### Precisely
+
+- **Two chains** (Law rule 35b, "Made before, made after", new point 7; Definitions: decisions chain, actions chain, history, tie rule). An action names, in its inside's `objects`, entries `[collective, act]` (the collective's identity as chain): the decision it acts under (a record of the collective, or its genesis or a rotation, under the action's own key or an earlier one) and each head of another device it joins; its own sequence's `prev` counts as cited. These entries come after those the act's type defines, all on that one chain; Law's formats that fix `objects` (signature, release, resignation, declaration, terms) accept them there (`chain_citations`). An action citing no decision, or naming there an act not on the collective's chain, is on no chain and counts for nothing (`Consent::Uncited`). Grantees' acts cite the collective's chain the same way. Identity's own everyday acts carry no objects (Identity) and are on neither chain.
+- **History and before.** A line's history is its own sequence, the tips it names, what each act reached cites on the chain, and the tips of each record reached; an act is before a line when that history holds it (`before_struct`, `before_line`, with `history`). A rotation keeps Identity's rule, its kept tips alone, for the collective's own acts.
+- **The agreement in force for an action** is what its decisions leave: the chain's declarations, records under earlier keys carried forward (B1), and, under its own key, the records its history holds and those before them (`in_force_action`, rules 37c and "Collectives in the identity chain"). B2's "every record an act is not before counts, a concurrent one included" now holds for records alone.
+- **The tie rule** ("Made before, made after", 7). A fork's or closing's history decides what of the original counts; a line removing a voice removes it for every act its history does not hold, an act judged under a version earlier than the one the departure names included (`voices`, the "later" case).
+- **The fork** (type 19, rule 47a "Debts" and "Grants"). Complete only when field 6 hands out every obligation in the history it cites, published or not, paid or not, save one sealed neither to every member nor publicly (never the collective's), and every obligation an earlier fork handed to the original where the original's signature on that fork lies in the history (F125 reading 4, as adjusted in F126); and only when the verifier holds every act that history names. An obligation of an ended collective outside that history binds no one (`obligation_binds`), and `debtors` returns none for it. A grantee's deal the fork's history cites binds; any other is void. `ForkEval.unassigned` now lists what the fork fails to hand out.
+- **W2** (rule 32a; Finance rule 10c). Sellers are the collectives holding the work's stake in the agreement named, or the successors where the claim names a fork. A recording act: the payment's receipt itself, an act acknowledging it, or a receipt for the same rail proof, signed by the seller (counting) or by a grantee whose backing reaches the seller, where the claim named was current as that act's agreement in force reads the work's stake, and, where the current claim is the seller's release, before it. `PurchaseVerdict::Unrecorded` is new: the claim is current and no recording act exists yet. A collective seller's superseded claim with no recording act is `NoPurchase` where a fork or closing superseded it, else `Superseded` (W4).
+- **W3** (Record, rule 35a). A record not done is no line (`RecordEval.line` false), puts nothing in force, registers nothing and places no signature.
+- **Relays** (field 25; tier table row 25). Constitutional; a field reference `[0, 25]` is invalid.
+- **The claim line** (reading 4, confirmed): a version is where the claim stands when the work's stake in it differs from its parent's (`claim_version`).
+- **Wording withdrawn:** D1's joint liability (type 19, rule 47a, reasoning); "the superseded case is undetermined until flaw W2"; the F126 reading that records are judged as before; field 25 "operational, changeable like any term".
+
+### How the sequences map onto the two chains (the check you asked for)
+
+**Plainly:** the decisions chain is the "lines" the group already drew; the actions chain is the devices' sequences, one strand per device. What was missing was the stitching between strands, and actions saying which decision they act under. F127 adds both, inside each action; no decision's format changes.
+
+**Precisely:**
+- **Decisions.** Genesis and rotations are the identity chain: each rotation names the latest act of every sequence (kept tips), the actions it saw, by Identity's rule. Records name their own sequence's previous act and the other sequences' tips (field 1): the action head they saw, the previous decision lying in that history. Forks and closings name a chain act and tips. So "each decision cites the previous decision and the action head it saw" was already true of F109's lines; it is now read as a history, transitively, through records reached.
+- **Actions.** Each device's sequence (F24: one line per device, `prev`, position, running summary) is one strand of the actions chain; each act cites its previous one by `prev`. Before F127, strands met only at a line. Now an action also names, in `objects`, the other strands' heads it knows, so the next act joins them, and the decision it acts under. A grantee's act, on its own sequence, joins the collective's chain by those citations alone.
+- **What changed in judging.** "Before a line" now follows joins as well as sequences. The agreement in force for an action comes from the decisions its history holds, no longer from every record it is not before. For endings, F109's "every act a line does not hold counts as after it" is exactly the tie rule, so departures, forks and closings judge as before, with joins.
+- **What did not change.** Positions, running summaries and kept tips (Envelope, Identity); rotations' kept ancestry; keepers placing the collective's own acts (C4); members' signatures placed by the collective's acts (C1, C2, A2). The ordering simulation (`harness/ordering`) models F109 without joins or citations; it runs unchanged (21 stories pass) and was not extended to F127.
+
+### Flaws and questions (not worked around)
+
+**Question G1. A grantee's act and a revocation that cite neither each other.**
+*Plain words:* the tie rule speaks of a decision ending powers. A revocation ends a grant's powers, but F127 lists it nowhere, and it is an act of the group like a payment, so an action.
+*Example:* the group revokes its agent's grant on the laptop while the agent, citing the group's latest act, signs a deal; neither names the other.
+- (a) The tie rule reaches every act that ends powers, a revocation included: the deal is void.
+- (b) A revocation is an action like any other: both count, the deal binds.
+- (c) Rules 40 to 43 as they stand: the seal ends the deal unless the group acknowledged, paid on or imported it.
+**Lean: (a)**, for the tie rule's own reason: an ending cannot be raced. *Meanwhile:* revocations' format is still open, and the core refuses them; the text says only that a grantee's act the revocation's history holds binds.
+
+**Question G2. A grantee's act at the same moment as the line that froze its area.**
+*Plain words:* when an area's last holder leaves, its grants end, and C8 leaves the grantee's unplaced acts undetermined until the refit, which can take them on. The tie rule would void the ones made at the same moment as that line.
+*Example:* the agent publishes under the releases area's grant while, on another device, the group registers Ana stepping down, the area's last holder; neither names the other.
+- (a) The tie rule: void, the refit unable to take it on; C8 only for acts made after the line, which name it.
+- (b) C8 for both: undetermined until the refit decides; the tie rule reaches forks, closings and voices only.
+- (c) Void for both; a reinstatement takes nothing on.
+**Lean: (b):** the tie rule keeps an ending from being held up, and a freeze is not held up by an undetermined deal; the refit decides each one, visibly. *Meanwhile:* C8 stands for it; an act the freezing line's history holds is backed (F127 item 2), which is built.
+
+**Flaw W4. A superseded claim no actions chain settles.**
+*Plain words:* W2 works because a group's sales are on its chain. Where the seller is no group, or the claim is superseded by a release or a clone that neither cites the sale nor is cited by it, there is still no telling whether a payment came before or after.
+*Example:* two musicians, no group, change their deal to new shares in their song. A fan's old wallet pays naming the old version. Nothing orders the payment against the change.
+- (a) Delivery decides: the seller's delivery, on the seller's own sequence, against the seller's own signature on the change.
+- (b) Undetermined, stated: a seller who wants every sale settled sells through a group, whose chain settles it.
+- (c) The claim as the verifier sees it now decides: every payment naming an old version is refunded, honest buyers before the change too.
+**Lean: (b)**, F127's own tool, at no cost to sellers who need none. *Meanwhile:* shown as undetermined.
+
+**Question W5. Must a split or a closing be done?**
+*Plain words:* W3 holds the group's records to "done". A split and a closing are decisions too, but members sign them with their own identities, so they are not "in the group's name" (reading 2).
+*Example:* the members sign a split sealed only to themselves and never put on the group's relay; someone reading the relay cannot see the group ended.
+- (a) Yes: a split or closing counts only once readable by every member and on one of the group's relays.
+- (b) No: it counts wherever held, as now.
+**Lean: (a)**, the relays being the group's notice board. *Meanwhile:* judged as before; the collective client publishes both on the relays anyway.
+
+**Question W6. A group's negotiation messages.**
+*Plain words:* a negotiation message's format has no room for the chain's citations (a first message names nothing; a later one names exactly its thread, so a citation would read as a thread).
+- (a) Citations after the thread, a first message carrying none.
+- (b) Negotiation messages are talk, binding nothing, on neither chain; the deal they lead to is signed, and that signature is an action.
+- (c) A group negotiates only through someone under its grant.
+**Lean: (b).** *Meanwhile:* nothing in the core judges a negotiation message's consent, so nothing changes.
+
+### Readings taken writing it, to confirm
+
+1. The mapping above: decisions keep their formats and cite by what they already name; actions cite in `objects`, after their type's entries, on the chain named by the group's own identity.
+2. Which acts are actions: every act signed with the group's key except records and Identity's own acts; and grantees' acts. Identity's own everyday acts (a witness act, routes, an encryption key) carry no objects and are on neither chain.
+3. An action is judged under the records its history holds and those before them; B2's "a concurrent record counts" now holds for records alone (freeze step 3.7g changed accordingly).
+4. "Ending powers": a split, a closing, and a line removing a voice (a resignation, a stepping down or a declaration registered by a record; a rotation taking a member out or a holder off an area).
+5. "Everything in that history": every debt the group signed there, published or not and paid or not, so that whether a split happened never changes with what happens after it; save a debt sealed neither to every member nor publicly, which was never the group's; plus what an earlier split handed it. While an act that history names is not held, the split is not complete for that verifier.
+6. W2's "records it": the payment's receipt by the group or its split service under its grant, an act acknowledging it, or a receipt for the same rail proof, where the claim named was current there. A payment naming the current claim not yet recorded is shown as "unrecorded".
+7. The claim line: a version changes "who is paid for the work" only where the work's stake in it differs from its parent's.
+8. Genesis and rotations meet W3 by Identity's own rules (public, at the group's homes), not the relays.
+9. A verifier states where it found every act in a group's name, records included (the repo client now does).
+
+### Code and tests
+
+- **Core library** (`core/src/law/view.rs`, `formats.rs`, `tiers.rs`). New: `Consent::Uncited`; `PurchaseVerdict::Unrecorded`; histories following joins and records' tips (`history`, cached), `uncited`, `known_records`, `in_force_action`; `before_struct` and `before_line` read histories, grantees' acts included; `line_missing`; the fork's `to_hand_out` and the public `hand_out`; `debtors` without joint liability; `obligation_binds` void outside an ending's history; `backing` requiring the chain and applying the tie rule at a fork, a freezing line's citation backing an act; records not done are no line; W2's `sellers`, `recorded` and `claim_version`; `chain_citations` in the formats; field 25 constitutional, `[0, 25]` refused.
+- **WebAssembly.** `lawConsent` reports `uncited`; `lawPurchase` reports `unrecorded`; new `lawHandOut(specs, collective, agreement, chainAct, tips)`; `lawFork`'s `unassigned` is what the fork fails to hand out.
+- **Clients.** The identity file (genesis client) carries `cites` for a collective: every everyday act it signs cites that decision, except Identity's own acts and records; a record or a rotation becomes the new decision. The repo client founds collectives citing their genesis; its release verifier states where it found every act of the collective. The collective client's fork hands out what the core finds in the history its line cites (`lawHandOut`), and its reading says the ending wins.
+- **Tests.** Core, new: 3.9k (a sale recorded on the actions chain), 3.9l (a record not done is no line), 3.9m (two chains), 3.9n (the ending wins); rewritten: 3.9 (`a_collective_forks`), 3.9g (`a_fork_hands_out_its_whole_history`, replacing `a_fork_leaving_a_debt_unassigned_stands`), the relays (`a_collectives_relays_change_by_the_constitutional_rule`), 3.7g's third-sequence act, the area freeze (a grantee's act cited by the line stays backed; one citing nothing is not backed), the done test's grantee act; every test collective's devices cite its chain (`Person.cite` in the test helpers). Repo client: a release cites the collective's latest decision; one citing nothing is refused. Collective client: the fork's reading.
+- **Results.** Rust workspace **294 passed, 0 failed** (290 before, plus 4). Clients genesis 14, repo 11, longform 15, barebone 9, reader 16, manage 7, collective 19, connector 12, desk 8: **111 passed, 0 failed**, every one typechecking.
+- **Changed to F127 rather than added:** 3.7g's act in a third sequence (now judged under the decision it cites, and counting for nothing); the stale payment in 3.9 (now refunded, W2) and the payment naming the fork (now unrecorded); the unpublished debt in 3.9 (now handed out); the grantee's uncited deal at the fork (now void); the relays test (constitutional).
+
+### The Mac regtest steps
+
+**No change.** No collective takes part in the run, so nothing in it needs to cite a chain, and none of its five payments is a purchase. The payment commitment, the Lightning Module and the harness are untouched. The steps of `docs/core-pass-v21.md`, section 5, stand as written.
+
+### Waiting on Nobody, allegedly, in order
+
+1. Question G1 (a grantee's act and a revocation that cite neither each other).
+2. Question G2 (a grantee's act at the same moment as the line freezing its area).
+3. Flaw W4 (a superseded claim no actions chain settles).
+4. Question W5 (must a split or closing be done).
+5. Question W6 (a group's negotiation messages).
+6. The nine readings above.
+7. Approval of the whole set: Law 10, Finance 6, Envelope 7, Identity 11, Production 6, core v21, suite v21, one page v6, the payment cMIP and Lightning Module draft 2; then the Mac regtest run once.

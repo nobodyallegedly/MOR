@@ -4271,7 +4271,18 @@ impl<'a> LawView<'a> {
                 }
                 _ => &p.line == current,
             };
-            if current_there {
+            // A release by the seller, an action on its chain, ends the claim:
+            // a record it cites came before it; any other did not, and
+            // whether it came before cannot be told where neither cites
+            // the other (flaw W4).
+            let released_first = match self.v.get(current) {
+                Some(rl) if self.is_law(rl, types::RELEASE) && rl.act.outside.signer.as_ref() == Some(c) => {
+                    let col = self.col(c);
+                    !self.before_struct(&col, r, Line::Record(rl))
+                }
+                _ => false,
+            };
+            if current_there && !released_first {
                 return Ok(true);
             }
         }
