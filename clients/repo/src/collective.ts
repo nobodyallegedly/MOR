@@ -335,6 +335,9 @@ export class TestCollective {
       routes: null,
       encryption: [],
       pending: null,
+      // F127: its actions cite, on its chain, the decision they act under:
+      // its genesis first, then its latest rotation or record.
+      cites: [id],
     };
     const c = new TestCollective(
       {

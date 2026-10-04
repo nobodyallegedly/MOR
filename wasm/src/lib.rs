@@ -2093,6 +2093,10 @@ impl Verifier {
                 o.agreement = Some(hx(&agreement));
                 o.reason = Some(reason);
             }
+            law::Consent::Uncited { reason } => {
+                o.kind = "uncited".into();
+                o.reason = Some(reason);
+            }
             law::Consent::Line { agreement } => {
                 o.kind = "line".into();
                 o.agreement = Some(hx(&agreement));
@@ -2205,8 +2209,9 @@ impl Verifier {
     /// whether it closes the original, the members whose voice remains,
     /// who signed and who leaves on no side, each side's default share, who
     /// every successor keeps as a departed holder, each side's successor's
-    /// founding agreement where it fits, and debts it leaves unassigned,
-    /// owed by every successor (F125, D1).
+    /// founding agreement where it fits, and the obligations in the history
+    /// it cites that it does not hand out, which keep it from taking effect
+    /// (F127, replacing F125 D1).
     #[wasm_bindgen(js_name = lawFork)]
     pub fn law_fork(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2234,6 +2239,26 @@ impl Verifier {
                 .collect(),
             successors: e.successors.iter().map(|x| x.as_ref().map(hx)).collect(),
         })
+    }
+
+    /// What a fork of `collective` must hand out (F127), its line drawn at
+    /// `chain_act` and `tips` (`[{ act, position, summary }]`) with
+    /// `agreement` in force there: every obligation in the history it would
+    /// cite, its own and those an earlier fork handed to it. Null where the
+    /// line does not hold.
+    #[wasm_bindgen(js_name = lawHandOut)]
+    pub fn law_hand_out(&self, specs: JsValue, collective: &str, agreement: &str, chain_act: &str, tips: JsValue) -> R<Option<Vec<String>>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let tips: Vec<TipIn> = from_js(tips)?;
+        let tips = tips
+            .iter()
+            .map(|t| Ok(KeptTip { act: unhex(&t.act)?, position: t.position, summary: unhex(&t.summary)? }))
+            .collect::<R<Vec<_>>>()?;
+        Ok(view
+            .hand_out(&unhex(collective)?, &unhex(agreement)?, &unhex(chain_act)?, &tips)
+            .map_err(lerr)?
+            .map(|v| v.iter().map(hx).collect()))
     }
 
     /// A closing act, judged (rule 47a, F124 N9).
@@ -2328,10 +2353,12 @@ impl Verifier {
         }
     }
 
-    /// A payment for a work, judged (F126): "purchase", "no-purchase" (a
-    /// refund owed to the payer, with why), or "superseded" (undetermined,
-    /// flaw W2, with the act that supersedes the claim it names); null
-    /// where the payment is not for a work.
+    /// A payment for a work, judged (F126, F127 W2): "purchase", "no-purchase"
+    /// (a refund owed to the payer, with why), "unrecorded" (the seller a
+    /// collective whose actions chain has not recorded it yet: a sale once
+    /// it does), or "superseded" (undetermined, flaw W4, with the act that
+    /// supersedes the claim it names); null where the payment is not for a
+    /// work.
     #[wasm_bindgen(js_name = lawPurchase)]
     pub fn law_purchase(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2342,6 +2369,7 @@ impl Verifier {
         let (verdict, why, by) = match &e.verdict {
             law::PurchaseVerdict::Purchase => ("purchase", None, None),
             law::PurchaseVerdict::NoPurchase { why } => ("no-purchase", Some(why.clone()), None),
+            law::PurchaseVerdict::Unrecorded => ("unrecorded", None, None),
             law::PurchaseVerdict::Superseded { by } => ("superseded", None, Some(hx(by))),
         };
         let refund_to = match &e.refund_to {

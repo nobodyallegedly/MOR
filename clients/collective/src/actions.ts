@@ -1505,8 +1505,8 @@ export class Actions {
       }
     }
     // The collective's splits and debts, and the debts of every collective
-    // this program holds: a successor owes those of the collective it was
-    // forked from (F125, D1).
+    // this program holds: a successor owes those the fork of the collective
+    // it was forked from handed to it (F124 N13, F127).
     const debts = this.store.book().collectives.flatMap((x) => (x.id === c.identity || !this.store.isCollective(x.id) ? [] : (this.store.collective(x.id).f.debts ?? [])));
     for (const sp of [...(c.f.splits ?? []), ...(c.f.debts ?? []), ...debts]) {
       const a = await this.fetchAct(sp.id, hints);
@@ -1529,7 +1529,7 @@ export class Actions {
     return { v, specs: { ...LAW_SPECS, published: published.filter((p) => !seen.has(`${p.act} ${p.hint}`) && !!seen.add(`${p.act} ${p.hint}`)) } };
   }
 
-  /** The debts a collective signed, and those of the collectives it was forked from, which its successors owe (F124 N13, F125 D1). */
+  /** The debts a collective signed, and those of the collectives it was forked from, which their forks handed to its successors (F124 N13, F127); the core says who owes each. */
   private debtsOf(c: TestCollective): { id: string; creditor: string; inherited: boolean; debtor: string }[] {
     const out = (c.f.debts ?? []).map((d) => ({ id: d.id, creditor: d.creditor, inherited: false, debtor: c.identity }));
     let from = c.f.governance.forkedFrom;
@@ -2005,11 +2005,16 @@ export class Actions {
     const weight = (s: string[]) => s.reduce((x, m) => x + pct(m), 0);
     const w = sides.map((s) => weight(s) || s.length);
     const sum = w.reduce((x, y) => x + y, 0) || 1;
-    // N13: every obligation of the original that binds (published), assigned.
+    // F127: the fork hands out every obligation in the history it cites
+    // (paid or not), its own and what an earlier fork handed to it, or it
+    // does not take effect. The core reads that history from the line this
+    // fork will draw: the collective's latest act.
     const { v: v0, specs: s0 } = await this.lawVerifier(c, this.concerned(c));
     const debts: [string, number[]][] = [];
-    for (const o of new Set(s0.published.map((p) => p.act))) {
-      if (v0.lawObligationBinds(s0, o) !== true) continue;
+    const seq0 = c.f.identity.sequence;
+    const line = seq0.length ? [{ act: seq0[seq0.length - 1], position: seq0.length, summary: runningSummary(seq0) }] : [];
+    const history = (v0.lawHandOut(s0, c.identity, c.f.agreement, c.f.identity.binding, line) as string[] | null) ?? [];
+    for (const o of new Set(history)) {
       const to = a.debts?.[o] ?? sides.map((_, i) => i);
       if (!to.length || to.some((i) => i < 0 || i >= sides.length)) blocking.push(`The debt ${short(o)} is assigned to no side the fork lists.`);
       debts.push([o, [...new Set(to)].sort((x, y) => x - y)]);
@@ -2025,9 +2030,9 @@ export class Actions {
         `Its ownership of each work passes to the successors, ${own.length ? "by the members' stakes" : 'each member counting alike, since the collective carries no stakes in itself (F124 N3)'}: ${sides.map((_, i) => `side ${i + 1} ${((100 * w[i]) / sum).toFixed(2)}%`).join(', ')}.`,
         kept.length ? `${list(kept.map(([h, n]) => `${names(h)} (${n / 10_000}%)`))} keep their share in every successor, and in its future works.` : 'There are no departed holders.',
         debts.length
-          ? `Every debt is assigned, and the successor of each side it goes to signs for it (F124 N13): ${debts.map(([o, i]) => `${short(o)} to ${i.map((x) => `side ${x + 1}`).join(' and ')}`).join('; ')}.`
-          : 'The collective has no debt that binds it (none published).',
-        "Assigning every known debt is each member's client's duty: this client assigns every debt it holds. A debt the fork does not assign, hidden or not, never undoes it: every successor owes it jointly (F125 D1).",
+          ? `Every debt is handed out, and the successor of each side it goes to signs for it (F124 N13): ${debts.map(([o, i]) => `${short(o)} to ${i.map((x) => `side ${x + 1}`).join(' and ')}`).join('; ')}.`
+          : 'The collective owes nothing.',
+        "The fork cites the collective's history up to its line, and hands out every debt in it, or it does not take effect (F127). Whatever the collective's keys sign that the fork's history does not include is void: the ending wins.",
         'Every grant of the collective ends, its split service\'s included; its open offers are withdrawn; payment follows the work\'s current claim, to the successors (F124 N14).',
       ],
       sections: [{ heading: 'Signed on this device', lines: [{ text: 'Every member and each successor here is held by this program: their consent is simulated (test only).', tone: 'warn' }] }],

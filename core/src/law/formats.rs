@@ -839,7 +839,7 @@ pub struct Terms {
     /// 25: the collective's relays, where its acts are done (F126): an act
     /// in its name binds it only once sealed to every member and its
     /// outside is on one of these. Required in a collective's terms, never
-    /// in a deal's; operational, changeable like any term.
+    /// in a deal's; constitutional since F127 (reading 3, adjusted).
     pub relays: Option<Vec<Relay>>,
 }
 
@@ -1629,7 +1629,7 @@ impl Terms {
             }
             for f in a.fields.iter().flatten() {
                 let ok = match f {
-                    FieldRef::Field(n) => [7, 8, 17, 25].contains(n),
+                    FieldRef::Field(n) => [7, 8, 17].contains(n),
                     FieldRef::Task(t) => (1..=LAST_TASK).contains(t) && !JUDICIAL_TASKS.contains(t),
                 };
                 if !ok {
@@ -1802,27 +1802,49 @@ pub fn signature_payload(signed: &Hash) -> Vec<(Value, Value)> {
     vec![(Value::Uint(0), b(signed))]
 }
 
+/// F127: an act in a collective's name cites, in `objects`, the
+/// collective's chain (its previous actions and the decision it acts
+/// under), after the entries its type defines: entries all naming one
+/// chain that none of the type's own entries names. Splits `objects` into
+/// the type's `own` first entries and those citations.
+pub fn chain_citations(objects: &[Object], own: usize) -> R<(&[Object], &[Object])> {
+    let (a, c) = objects.split_at(own.min(objects.len()));
+    if let Some(first) = c.first() {
+        if c.iter().any(|o| o.chain != first.chain) || a.iter().any(|o| o.chain == first.chain) {
+            return Err(LawError::Shape(
+                "objects: after the entries the type defines, only citations of one collective's chain (F127)",
+            ));
+        }
+    }
+    Ok((a, c))
+}
+
 fn check_objects_self(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
     let expected = [Object {
         chain: *x,
         predecessor: *x,
     }];
-    if inside.objects.as_deref() != Some(&expected[..]) {
-        return Err(LawError::Shape(w));
+    let o = inside.objects.as_deref().unwrap_or(&[]);
+    match chain_citations(o, 1) {
+        Ok((own, _)) if own == &expected[..] => Ok(()),
+        _ => Err(LawError::Shape(w)),
     }
-    Ok(())
 }
 
 /// The inside `objects` a terms act carries: none for founding terms; for a
-/// clone, `[[parent, the parent-chain act it follows]]`.
+/// clone, `[[parent, the parent-chain act it follows]]`; either followed, for
+/// terms a collective proposes, by its chain citations (F127).
 pub(crate) fn check_terms_inside(inside: &Inside, t: &Terms) -> R<()> {
-    match (&t.parent, &inside.objects) {
-        (None, None) => Ok(()),
-        (Some(p), Some(o)) if o.len() == 1 && &o[0].chain == p => Ok(()),
-        (None, Some(_)) => Err(LawError::Shape("terms without a parent name no chain")),
-        _ => Err(LawError::Shape(
-            "a clone names its parent's chain in objects, once",
-        )),
+    let o = inside.objects.as_deref().unwrap_or(&[]);
+    match &t.parent {
+        None => match chain_citations(o, 0) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(LawError::Shape("terms without a parent name no chain")),
+        },
+        Some(p) => match chain_citations(o, 1) {
+            Ok((own, _)) if own.len() == 1 && &own[0].chain == p => Ok(()),
+            _ => Err(LawError::Shape("a clone names its parent's chain in objects, once")),
+        },
     }
 }
 
@@ -2664,7 +2686,9 @@ impl Release {
         ags.sort();
         ags.dedup();
         let mut named: Vec<Hash> = vec![];
-        for o in inside.objects.iter().flatten() {
+        let (own, _) = chain_citations(inside.objects.as_deref().unwrap_or(&[]), ags.len())
+            .map_err(|_| LawError::Shape("release: objects name each agreement whose stake it ends"))?;
+        for o in own {
             if o.chain != o.predecessor {
                 return Err(LawError::Shape("release: objects name each agreement as chain and predecessor"));
             }

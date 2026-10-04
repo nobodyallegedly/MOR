@@ -506,11 +506,17 @@ export async function verifyRelease(
   // The collective's own acts: its records (its everyday line, which writes
   // its ordinary clones and registers departures, Law draft 7, F109), and
   // the clones they name with their signature acts.
-  for (const a of await allBy(d.signer, places, via)) {
-    try {
-      v.add(a);
-    } catch {
-      // a private act, or malformed
+  // F126, W3 (F127): the collective's acts, its records included, count
+  // only once found on a relay its terms name; this verifier states where
+  // it found each.
+  const found: { act: string; hint: string }[] = [];
+  for (const hint of places) {
+    for (const a of await allBy(d.signer, [hint], via)) {
+      try {
+        found.push({ act: v.add(a), hint });
+      } catch {
+        // a private act, or malformed
+      }
     }
   }
   let consent: {
@@ -522,7 +528,7 @@ export async function verifyRelease(
   };
   // F126: a release in a collective's name is done only once found on a
   // relay its terms name; this verifier states where it found it.
-  const published: { act: string; hint: string }[] = [];
+  const published: { act: string; hint: string }[] = [...found];
   for (const hint of places) {
     try {
       if (await relayAt(hint, via).getAct(release)) published.push({ act: release, hint });

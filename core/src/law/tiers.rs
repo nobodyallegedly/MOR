@@ -42,11 +42,12 @@ impl Change {
     pub fn tier(&self) -> Tier {
         match self {
             Change::Field(f) => match f {
-                0 | 1 | 5 | 12 | 18 | 19 | 22 => Tier::Constitutional,
+                // 25, the relays, since F127: "so much stands on it", the
+                // collective's notice board (reading 3, adjusted).
+                0 | 1 | 5 | 12 | 18 | 19 | 22 | 25 => Tier::Constitutional,
                 3 | 6 | 9 | 10 | 13 | 14 | 16 | 21 => Tier::Judicial,
                 // 7, 8, 17; 24, the release rule, in no area: the clone
-                // rule, with every owner's signature besides (N8); and 25,
-                // the relays, like any term (F126).
+                // rule, with every owner's signature besides (N8).
                 _ => Tier::Operational,
             },
             Change::Task(t) if JUDICIAL_TASKS.contains(t) => Tier::Judicial,

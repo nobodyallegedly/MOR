@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import {
   ACK_SPECS,
+  MIPS,
   SPECS,
   ENVELOPE_TYPES,
   IDENTITY_TYPES,
@@ -85,7 +86,18 @@ export interface IdentityFile {
   /** Every encryption key published, oldest first; old ones still open old deliveries. */
   encryption: { version: number; act: string; secret: string }[];
   pending: Pending | null;
+  /**
+   * For a collective (Law, F127): the decision its next action cites on its
+   * chain, the collective's own identity as chain: its genesis, its latest
+   * rotation, or its latest record. Absent for anyone else. Every everyday
+   * act it signs cites it, except Identity's own acts (which carry no
+   * objects) and records, decisions that cite by their kept tips.
+   */
+  cites?: string[];
 }
+
+/** Law's record (type 17): a decision, which cites by its kept tips (F127). */
+const LAW_RECORD = 17;
 
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
 const unb64 = (s: string) => Uint8Array.from(Buffer.from(s, 'base64'));
@@ -219,6 +231,13 @@ export class TestIdentity {
     if (opts.acks?.length && !ACK_SPECS.includes(spec)) {
       throw new Error('only Identity, Finance and Law acts may acknowledge (Envelope rule 4a, F110): to rely on this act, sign a witness act');
     }
+    // F127: a collective's action cites, on its chain, the decision it acts
+    // under, after the entries its type defines.
+    const isRecord = spec === MIPS.law && type === LAW_RECORD;
+    let objects = opts.objects;
+    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
+      objects = [...(objects ?? []), ...this.f.cites.map((d): [string, string] => [this.f.identity, d])];
+    }
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -229,11 +248,13 @@ export class TestIdentity {
       sequence: this.f.sequence,
       public: opts.public,
       to: opts.to,
-      objects: opts.objects,
+      objects,
       refs: opts.refs,
       acks: opts.acks,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
     this.f.sequence.push(made.id);
+    // A record is the collective's latest decision: its next actions cite it.
+    if (this.f.cites && isRecord) this.f.cites = [made.id];
     return made;
   }
 
@@ -372,6 +393,8 @@ export class TestIdentity {
       this.f.homes = p.homes;
       this.f.rule = p.rule;
       this.f.pending = null;
+      // A rotation is a decision: a collective's next actions cite it (F127).
+      if (this.f.cites) this.f.cites = [p.id];
       await this.spread(lookup);
     }
     return { counts, lookup };

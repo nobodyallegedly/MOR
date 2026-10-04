@@ -12,7 +12,8 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cborDecode, cborEncode, checkTerms, rebuildSafety, verifyShare } from '../../genesis/src/core.ts';
+import { cborDecode, cborEncode, checkTerms, describeAct, rebuildSafety, verifyShare } from '../../genesis/src/core.ts';
+import { relayAt } from '../../genesis/src/transport.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { TestCollective, type Governance } from '../src/collective.ts';
@@ -195,6 +196,22 @@ test('the next release is signed under the new rules', async () => {
   v = await verifyRelease(second, [relay.base]);
   assert.ok(v.ok, v.problems.join('; '));
   assert.deepEqual(v.signers, [m1.id, m4.id]);
+
+  // F127: the release is an action of the collective: it cites, on the
+  // collective's chain, the decision it acts under, the rotation that
+  // changed its members; and a release citing nothing counts for nothing.
+  const act = await relayAt(relay.base).getAct(second);
+  const objects = (describeAct(act!) as { objects?: [string, string][] }).objects ?? [];
+  assert.deepEqual(objects, [[c.identity, c.f.identity.binding]]);
+  const cites = c.f.identity.cites;
+  c.f.identity.cites = undefined;
+  const loose = await publishRelease(c, { name: 'MOR test tree', version: 'uncited', files });
+  c.f.identity.cites = cites;
+  await signRelease(m1, loose.id, c.f.relays);
+  await signRelease(m4, loose.id, c.f.relays);
+  const vl = await verifyRelease(loose.id, [relay.base]);
+  assert.equal(vl.ok, false);
+  assert.match(vl.problems[0], /F127/);
 });
 
 test('an ordinary change is recorded at once, without a rotation', async () => {

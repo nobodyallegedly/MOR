@@ -534,8 +534,8 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   const fkw = words(fk.review.reading);
   assert.match(fkw, /founds its own collective, its successor/);
   assert.match(fkw, /Lou.* \(15%\) keep their share in every successor/);
-  assert.match(fkw, /Every debt is assigned/);
-  assert.match(fkw, /never undoes it: every successor owes it jointly \(F125 D1\)/);
+  assert.match(fkw, /Every debt is handed out/);
+  assert.match(fkw, /the ending wins/);
   assert.match(fk.done.title, /is forked, and closed in Law/, JSON.stringify(fk.done));
   s = await state(c);
   col = s.collectives.find((x) => x.name === 'Ledger')!;

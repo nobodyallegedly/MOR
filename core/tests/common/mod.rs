@@ -70,6 +70,28 @@ pub struct Person {
     /// As a home operator: the receipts signed, in log order.
     pub log: Vec<Hash>,
     pub last_summary: Option<Hash>,
+    /// For a collective's device (F127): the collective's chain, and the
+    /// decisions every everyday act it signs cites there, unless the act
+    /// already names that chain.
+    pub cite: Option<(Hash, Vec<Hash>)>,
+}
+
+/// The objects of an everyday act, with the collective's chain cited where
+/// its signer is a collective's device (F127).
+fn cited(p: &Person, spec: &Hash, type_: u64, objects: Option<Vec<Object>>) -> Option<Vec<Object>> {
+    let Some((chain, ds)) = &p.cite else { return objects };
+    // Identity's own everyday acts (a witness act...) carry no objects:
+    // they are not on the actions chain (reading, F127). A record (Law
+    // type 17) is a decision, citing by its kept tips.
+    if spec == &identity_spec() || (spec == &law_spec() && type_ == 17) {
+        return objects;
+    }
+    if objects.iter().flatten().any(|o| &o.chain == chain) {
+        return objects;
+    }
+    let mut o = objects.unwrap_or_default();
+    o.extend(ds.iter().map(|d| Object { chain: *chain, predecessor: *d }));
+    Some(o)
 }
 
 pub fn schnorr(name: &str, gen: u32) -> SchnorrKey {
@@ -257,6 +279,7 @@ impl World {
             seq: vec![],
             log: vec![],
             last_summary: None,
+            cite: None,
         }
     }
 
@@ -351,6 +374,7 @@ impl World {
         refs: Option<Vec<act::Ref>>,
     ) -> Act {
         let salt = self.fresh().2;
+        let objects = cited(p, &spec, type_, objects);
         let inside = Inside {
             spec,
             type_,
@@ -389,6 +413,7 @@ impl World {
         to: Vec<Hash>,
     ) -> Hash {
         let salt = self.fresh().2;
+        let objects = cited(p, &spec, type_, objects);
         let inside = Inside {
             spec,
             type_,
