@@ -802,3 +802,111 @@ So the line covers the second and third kinds and fails the first, which is wher
 5. Question W6 (a group's negotiation messages).
 6. The nine readings above.
 7. Approval of the whole set: Law 10, Finance 6, Envelope 7, Identity 11, Production 6, core v21, suite v21, one page v6, the payment cMIP and Lightning Module draft 2; then the Mac regtest run once.
+
+## 11. F128 written in
+
+*4 October 2026. Main merged in first (the findings log, F128; one conflict, in the roadmap, both sides kept). Law draft 10, Identity draft 11, Envelope draft 7, Finance draft 6, Production draft 6, the payment cMIP draft 2, the Lightning Module draft 2, core v21, freeze suite v21 and one page v6 revised in place; the core library, its WebAssembly bindings and the genesis, repo, collective, reader and connector clients changed and tested. Nothing is approved.*
+
+**The short answer.** All of F128 is written in and built: grant keys (G1 by the tie rule), an emptied area ending its grants with nothing left undetermined (G2), named relays withdrawn from validity, W4, W5, W6, N13's public outside and D2 withdrawn, and the nine readings as confirmed. Writing it found three questions (H1 to H3): what a client without Law sees of a grant key, a grant by someone who is not a collective, and the handover. None is worked around; each is below with an example and options.
+
+### What changed, in plain words
+
+**Someone a group hires gets a key of the group, limited to the job.** Before, the group's agent signed with their own key and pointed to the grant; their deals lived outside the group's record, which is why G1 and G2 had no answer. Now the grant names a key the agent made, the agent signs once to accept it, and what the agent signs with that key is the group's own act, on the group's record like any of its devices. Taking the grant back removes the key; if the agent signed something at the same moment and neither act names the other, the taking-back wins.
+*Example:* the label hires Marco to sign gig deals. Two of his deals are named by the label's later acts; a third, signed on his laptop while the label revokes him on its tablet, is named by nothing. The two count; the third is void. If the label later pays on the third, it has adopted it, and it counts.
+
+**When the last person running an area leaves, the area's hires end at once.** No waiting, no "undetermined": what the group's record held before that moment counts, the rest is void. Members see an empty area as an emergency, and the new holders can bring a hire back by copying the old grant, which takes on nothing from before.
+*Example:* Ana, the only one running releases, steps down. The publisher's post that the label's record already named counts; one posted at the same moment, and everything after, is void. After the refit, Cy copies the publisher's grant; the publisher posts again under the copy.
+
+**Where an act is stored no longer matters.** An act of a group counts once every member can read it (sealed to them all, or public) and it names the group's latest decision as its signer knew it. Groups no longer name relays in their terms; relays are just where clients publish and look first.
+*Example:* a debt sealed to every member of the label counts even if no relay ever held it; one sealed to the printer alone still counts for nothing.
+
+**Which version a buyer pays for is settled where the payment really happens.** With an invoice (Lightning), the seller's own invoice names the version: the buyer gets what the seller asked for. Where the buyer just sends money to an address, each owner's own record decides: money an owner recorded before signing the new version is a sale under the old one; after it, not; and unless every owner's receipt is a sale, everyone gives the money back.
+*Example:* two musicians move from 50/50 to 60/40. A fan pays the old version on an address-only rail; both had already signed the change before recording the receipt: both refund, and the fan buys again.
+
+**A split or a closing counts only once every member can read it**, like everything else. **Negotiating is talk**: it binds nothing and can stay private; the deal it leads to is an act like any other.
+
+### Precisely
+
+- **Grant keys** (Law rules 38 to 44, grant field 9, definitions "Grant", "Grant key"; Identity "Scoped keys"). The grant names, in field 9, a signing key in Identity's form, made and kept by the grantee; it counts only once the grantee signed a signature act naming it, a grant by founding terms included. An act signed with the grant key has the collective as signer and the grant as `binding`; Identity shows it as **scoped** (new status) and leaves it to Law. Law backs it (`Backing`, `Consent::Granted`, `Consent::Ungranted`) when the grant counts and was accepted, the act cites its grant on the collective's chain, is done, lies within the grant's reach, signs no decision, and no decision ending the grant fails to hold it. It is judged at the latest link among its grant and the decisions it cites; its strand is followed by `prev`. Grants and revocations are decisions, citing as actions do.
+- **Revocation** (type 10, now exact: `{ 0 => grant }`). Signed with the grantor's own key, judged by the grant's area alone (Q29). An act of the grant key its history holds binds; any other is void (G1, the tie rule), unless the collective adopts it by an act of its own key that counts (A6, kept).
+- **G2** (rule 37b). A departure leaving an area held leaves its grants in force; one emptying it ends them at that line: acts its history holds bind, the rest are void. `Backing::Undetermined` and C8 are gone. A reinstatement clones the ended grant (fields 0 to 6), with its own key, accepted again, and takes nothing on.
+- **Every grant key ends at a fork's line** (rule 47a, as before for grants).
+- **Done** (rule 35a): sealed to every member of the agreement in force, or public, and on the chain citing its head. `LawView.published` and the relay check are removed; terms field 25 is withdrawn, refused on decoding and never reused; the tier table's row 25 and the area reference to it go. A verifier states where it found acts as information only (the repo client's `foundAt`).
+- **W4** (rule 32a; Finance rule 10c; payment cMIP; Lightning Module; Production row 6). A rail Module states whether it is a request rail or a push rail; `LawView.push_rails` (bindings: `specs.pushRails`) lists those the verifier read as push. Request rail: a purchase under the claim the request committed to; a collective seller's once its chain records it (W2). Push rail: each holder of the work's stake in the claim named signs its receipt for the one rail payment (same rail proof); a person's receipt is no sale where its own sequence holds that person's signature on a superseding act before it; a collective's, where the version in force for it is past the claim; every receipt a sale: a purchase; any not: no purchase, every holder refunds; a holder missing: unrecorded. `PurchaseVerdict::Superseded` is gone.
+- **W5** (rule 47a): a fork or closing not sealed to every member, nor public, takes no effect.
+- **W6** (rule 35a): a negotiation message of a collective is `Consent::Talk`: binding nothing, on no chain, never held to "done".
+- **N13 and D2** (rule 47a "Debts"): an obligation of a collective binds once done; where it is held decides nothing.
+- **Readings 1 to 9** written as rule text: decisions keep their formats (1); actions are every act signed with the collective's key or a grant key, save decisions and Identity's own acts (2, adjusted, and below); judged under the decisions their history holds (3); decisions ending powers: fork, closing, departure, revocation, a departure emptying an area (4, adjusted); everything in a fork's history (5); a sale recorded by the collective's receipt or its split service's, signed with its grant key (6, adjusted); a version changes who is paid only where the work's shares differ (7); founding and rotations done by Identity's own rules, no relays (8, adjusted); where a verifier found an act is information only (9, adjusted).
+- **Withdrawn wording**: C8 and Flaw H's "sealed or reinstated at the refit", the branch model of rules 39 to 44 for collectives, field 25 and its paragraph, "one is enough", the relays' constitutional tier, N13's public outside, D2, W4's undetermined state, "found on a relay" throughout.
+
+### Questions found writing it (not worked around)
+
+**Question H1. What a client without Law sees of a grant key.**
+*Plain words:* the grant that hands out the key, and the revocation that removes it, are Law acts. Identity, the ground layer, cannot read Law. So something has to say, below Law, that the key belongs to the group.
+*Example:* the label's split service signs a receipt with its grant key. A fan's wallet that reads only Finance cannot tell whether that key is the label's.
+- (a) As built: Identity learns that an act may be signed by a "scoped" key installed by a higher rulebook's act; it checks the signature and shows the act as "scoped"; Law decides the rest; a client without Law shows it as unknown.
+- (b) Identity installs the key itself, by a new Identity act signed with the group's everyday key, naming the key, who holds it, and a scope Law defines; the grant names that act. Every client can then tell the key is the group's. Costs: two acts per grant, a removal act in Identity too, and a grant written in founding terms (signed by a founder before the group exists) cannot install one.
+**Lean: (a)**, F128's own mechanism (the grant installs the key, the revocation removes it); before F128 a Finance-only wallet could not tell a split service's receipt was the group's either. *Meanwhile:* (a) is built.
+
+**Question H2. A grant by someone who is not a group.**
+*Plain words:* F128 decided keys for a group's grants. Law still lets a single person grant, and a person has no record of decisions on which a revocation could place its agent's acts.
+*Example:* a singer, no group, lets an agent sign gig deals; the singer revokes on the phone while the agent signs a deal on the laptop; neither names the other.
+- (a) Grant keys for everyone, a person's revocation placing the agent's acts by the person's own lines (the device problem F109 solved for groups comes back).
+- (b) As before: the old branch model (seal, import, the `for` field), which no verifier implements.
+- (c) Only groups grant: a person who wants an agent forms a group with them, as parties who must judge absence together form one (B19).
+**Lean: (b) meanwhile, (c) to decide:** nothing in V1 needs a person's grant. *Meanwhile:* refused, as before.
+
+**Question H3. The handover.**
+*Plain words:* rule 41 let a group hand an agent's deals over to another agent's branch. With grant keys there is no branch: the deals are the group's own acts, and a void one counts only if the group adopts it.
+*Example:* Marco is revoked; the label wants Sofia to manage deal 4, which the revocation voided.
+- (a) Withdraw the handover; the group adopts what it wants (import, its format still open) and Sofia manages it under her own grant.
+- (b) Keep it, as an act moving responsibility for an ended grant's acts to another grant, which then answers for them.
+**Lean: (a).** *Meanwhile:* neither format is exact, and a verifier refuses both; freeze step 3.5's handover is reasoned only.
+
+### Readings taken writing it, to confirm
+
+1. The grantee makes the grant key and keeps its secret; the grant names its public part. The grant counts only once the grantee signed it, a grant in founding terms included (replacing D6's "the service shows its acceptance by receiving").
+2. An act signed with a grant key cites its grant on the collective's chain, follows its strand by `prev`, and is judged at the latest link among its grant and the decisions it cites.
+3. A grant survives the collective's rotations; only a revocation, a departure emptying its area, a fork or a closing ends it.
+4. A grant key signs no decision (record, grant, revocation), and none of its acts places a member's signature or adopts another act.
+5. Grants and revocations are decisions, citing in `objects` as actions do; so actions are every act signed with the collective's key or a grant key, except decisions, negotiation messages and Identity's own acts.
+6. A6 kept: a void act of a grant key binds where an act of the collective's own key that counts acknowledges, pays on or imports it, adopting it; at a fork, only before its line.
+7. A reinstatement repeats fields 0 to 6, has a key of its own, is accepted again, and takes nothing on.
+8. Request or push is stated in the rail Module's specification; every rail Module under payment cMIP draft 2 is a request rail; a verifier states which rails it read as push.
+9. One push payment to several holders is one rail payment: their receipts carry its rail proof.
+10. "After the holder's signature": the receipt's own history holds it (before it in the same line, for a person; the version in force for it, for a group). A receipt on another device of the holder, knowing nothing of the signature, is a sale. *Cost, stated:* each holder answers for its own devices.
+11. A split (type 8) stays signed with the split service's own identity; its receipts in the group's name use the grant key, so their signer and payee are both the group.
+12. Terms carrying field 25 are refused; test collectives founded under F126 or F127 naming relays are founded again (reversing F127 reading 6).
+
+### Code and tests
+
+- **Core library.** `core/src/chain.rs`: `Status::Scoped`. `core/src/law/formats.rs`: grant field 9 (`Grant.key`), `same_grant` ignoring it; `Revocation` (type 10); `Terms.relays` and `Relay` removed, key 25 refused (F128). `core/src/law/tiers.rs`: row 25 gone. `core/src/law/view.rs`: `key_grant`, `founding_grant`, `valid` (Identity's status, a grant key's included), `own_key`, `strand`, `link`; decisions include grants, revocations and founding grants; histories follow grant-key strands; `consent` routes grant-key acts to `backing` (`Consent::Granted`, `Ungranted`), negotiation messages to `Consent::Talk`, revocations to the grant's area; `backing` rewritten (acceptance, citation, reach, done, fork, revocations, emptied areas, adoption; `Backing::Undetermined` removed); `done` and `not_done` without relays (`published` removed); forks and closings must be sealed to every member or public (W5); `purchase` split into request and push rails (`push_rails`, `claim_holders`, `holder_receipts`, `superseding`, `after_own_signature`; `PurchaseVerdict::Superseded` removed); a release counted against a receipt only where the receipt's history holds it.
+- **WebAssembly.** `status` reports `scoped`; `lawConsent` reports `granted`, `ungranted`, `talk`; `lawBacking` no longer reports `undetermined`; `lawPurchase` no longer reports `superseded` (`supersededBy` removed); `specs.published` replaced by `specs.pushRails`; terms no longer carry `relays`.
+- **Clients.** Genesis: an identity file keeps the grant keys it holds (`makeGrantKey`, `keepGrantKey`). Repo: `grantPayload(grantee, key)` with field 9; terms without field 25; the release verifier states where it found each act as information only (`foundAt`). Collective: a split service makes its grant key, the grant names it, the service signs to accept; the founding terms name no relays; its Law verifier no longer passes where acts were found; the terms' reading says what "done" means now. Reader: plain words for `scoped`. Connector: the standing list names `scoped`.
+- **Tests.** Core, new: `a_revocation_ends_the_grant_key` (3.9r, G1), `a_collectives_negotiation_is_talk` (3.9q, W6), `a_superseded_claim_settles_on_each_holders_chain` (3.9o, W4), `a_closing_must_be_done` (3.9p, W5), `terms_field_25_is_withdrawn`; rewritten: `an_emptied_area_ends_its_grants` (3.7m, G2, replacing `an_area_freezes_and_its_grants_wait_for_the_refit`), `an_act_in_the_collectives_name_is_done_once_sealed_wherever_held` (3.9i), `a_record_not_done_is_no_line` (3.9l), `a_collective_forks` (3.9: the grantee's deals on two devices, signed with the grant key; the unpublished debt binds), `a_sale_is_recorded_on_the_actions_chain` (3.9k: the split service's receipt signed with its grant key), `open_formats_are_refused_not_guessed` (a revocation's format is exact; an import's is open); removed: `a_collectives_relays_change_by_the_constitutional_rule`. Every test collective's terms lose field 25. Repo client: field 25 refused. Collective and connector clients: fixtures without relays in the terms.
+- **Results.** Rust workspace **298 passed, 0 failed** (294 before, plus 4). Clients: see the table below, every one typechecking.
+
+| Client | Passed | Failed |
+| --- | --- | --- |
+| genesis | 14 | 0 |
+| repo | 11 | 0 |
+| longform | 15 | 0 |
+| barebone | 9 | 0 |
+| reader | 16 | 0 |
+| manage | 7 | 0 |
+| collective | 19 | 0 |
+| connector | 12 | 0 |
+| desk | 8 | 0 |
+| **All** | **111** | **0** |
+
+### The Mac regtest steps
+
+**No change.** No collective takes part in the run, so no grant key, revocation or "done" check is exercised; its payments are on Lightning, a request rail, and none of them is a purchase, so W4 changes nothing there. The payment commitment's bytes, the Lightning Module's rule and the harness are untouched. The steps of `docs/core-pass-v21.md`, section 5, stand as written.
+
+### Waiting on Nobody, allegedly, in order
+
+1. Question H1 (what a client without Law sees of a grant key).
+2. Question H2 (a grant by someone who is not a group).
+3. Question H3 (the handover).
+4. The twelve readings above.
+5. Approval of the whole set: Law 10, Finance 6, Envelope 7, Identity 11, Production 6, core v21, suite v21, one page v6, the payment cMIP and Lightning Module draft 2; then the Mac regtest run once.
