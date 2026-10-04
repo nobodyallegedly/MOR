@@ -70,13 +70,15 @@ async function drafts() {
 let working = false;
 
 /**
- * New drafts appear by themselves: every few seconds, while the page is
- * in view and nothing else is under way, the program is asked which
- * drafts wait (the folder alone, no relay), and the drafts are read again
- * only when that list changed.
+ * New drafts appear by themselves: every few seconds, while nothing else
+ * is under way, the program is asked which drafts wait (the folder alone,
+ * no relay), and the drafts are read again only when that list changed.
+ * This runs whether or not the browser says the page is in view: on a Mac,
+ * a page partly covered by another window (Claude's) can be reported
+ * hidden while the owner is reading it.
  */
 async function watch() {
-  if (working || !c || document.visibilityState !== 'visible' || !$('drafts')) return;
+  if (working || !c || !$('drafts')) return;
   try {
     const waiting = await c.ask<string[]>('waiting');
     if (working || waiting.join(',') === shown) return;
@@ -312,4 +314,5 @@ async function start() {
 
 setInterval(() => void watch(), 4000);
 document.addEventListener('visibilitychange', () => void watch());
+window.addEventListener('focus', () => void watch());
 void start();

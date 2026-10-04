@@ -15,7 +15,7 @@ A small program runs on your Mac and holds your test identities: yours, "Machine
 - **Identities, and what they received.** For each identity, **Look for what it received** opens its inbox: messages, replies to its acts, acknowledgements that its acts were received, and payments. Each is checked with the core library and shown with who sent it. You sort each one into **To answer**, **Answered** or **Ignored**; new ones wait under **New**.
 - **Claude may prepare drafts for this identity: On / Off.** A question on each identity's card, answered on or off. Claude can prepare drafts only for identities set to On; set one to Off, and its drafts are refused. The answer is said on the card, where you clicked.
 - **Copy ID**, beside each fingerprint: copies the whole ID, without the spaces it is shown with, to paste where an identity is asked for (for example, to tell Claude whom to write to).
-- **New drafts appear by themselves:** the page looks in the drafts folder every few seconds while it is in view (the folder only; relays are asked only when a new draft is there to read). **Look for new drafts now** does the same at once.
+- **New drafts appear by themselves:** the page looks in the drafts folder every few seconds, even while another window covers it (the folder only; relays are asked only when a new draft is there to read). **Look for new drafts now** does the same at once.
 - **What you answered:** every approval, decline and note, newest first.
 
 Claude prepares acts of the Text and Envelope layers only: posts, publications, withdrawals and messages. A Law act (a signature on a release, an agreement) is never prepared by Claude, and the desk refuses one if a draft of it appears; those are signed in the collective client.
@@ -28,7 +28,8 @@ Claude prepares acts of the Text and Envelope layers only: posts, publications, 
 | `src/store.ts` | The program's folder (default `~/mor-desk`, owner-only): `book.json` (names, linked), `settings.json` (homes, relays, other addresses, the drafts folder), `identities/` (the genesis client's format), `signed/` (each act signed from a draft, to send again), `received/` (what each identity received, and its sorting), `history.jsonl`, `access.json`. |
 | `src/specs.ts` | The Finance MIP's test spec hash, to recognise a payment. |
 | `src/server.ts` | The program: `127.0.0.1` only, the page built at start, not minified, under a content security policy; requests signed by a paired browser (the collective client's `access.ts`, with the desk's own domain line `MOR desk, version 1`). |
-| `src/cli.ts` | `open` (start the program if needed, open the page with a one-time pairing link), `run`, `stop`. Port 8471. |
+| `src/cli.ts` | `open` (start the program if needed, open the page with a one-time pairing link), `run`, `stop`. Port 8471. A program left running from an older version of the code is stopped and started again by `open`. |
+| `src/version.ts` | The program's version: a fingerprint of every source file it runs (here and in the clients it uses), its page and the core library's WebAssembly, given by `/hello` and in `run.json`. |
 | `src/page/` | The page. |
 | `scripts/make-app.sh` | Makes `~/Applications/MOR Identities.app` on macOS, which runs `open` (and removes the same app made under its earlier name, `MOR Desk.app`). |
 
@@ -77,7 +78,8 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
   - a picture (location and camera data stripped), a post showing it, verified by the barebone reader, and its withdrawal; a withdrawal of someone else's publication refused before any draft;
   - **received interactions:** a message from one desk identity to another (prepared by Claude, sealed at approval), and from an outsider a reply, an acknowledgement and a payment claim; each read, verified and told apart; **sorted** into to answer, answered and ignored; looking again finds nothing new and keeps the sorting;
   - unlinking stops Claude preparing for an identity, and the desk refuses its drafts.
-- `test/browser.test.ts`: the step's "done when" in headless Chromium on a fresh profile, from the launcher's link, by clicks and typing alone, with the connector beside it: the page named MOR Identities; "Settings saved" said beside the button; identities made, the Claude question answered On and Off by clicks and said on the card; Copy ID copying the whole ID without spaces; a draft from Claude appearing without a click or a reload, sent back with a note, reworked, approved and accepted by the relay; a message from "Machine, allegedly" to the author's unlinked identity, by its ID, approved and found in that identity's inbox; what each received sorted into the piles by clicks; no console error. `MOR_SCREENSHOTS=DIR` keeps a picture of each step.
+- `test/browser.test.ts`: the step's "done when" in headless Chromium on a fresh profile, from the launcher's link, by clicks and typing alone, with the connector beside it: the page named MOR Identities; "Settings saved" said beside the button; identities made, the Claude question answered On and Off by clicks and said on the card; Copy ID copying the whole ID without spaces; a draft from Claude appearing without a click or a reload, sent back with a note, reworked, approved and accepted by the relay; a message from "Machine, allegedly" to the author's unlinked identity, by its ID, approved and found in that identity's inbox; what each received sorted into the piles by clicks; no console error. `MOR_SCREENSHOTS=DIR` keeps a picture of each step. A second test: a new draft appears by itself while the browser reports the page hidden, as macOS did with Claude's window over the browser.
+- `test/launcher.test.ts`: `mor-desk open`, as the app runs it, stops a program left running from an older version (one that gives no version, as before 4 October 2026) and starts one from the code on disk; opened again, the same program stays.
 
 ## Using it (a human test, on the author's Mac)
 
@@ -91,7 +93,13 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
    cd ../connector && npm install && npm run add-to-claude
    ```
    The last line installs the connector outside Documents, where Claude's app may start it (`clients/connector/README.md`).
-2. From then on, double-click **MOR Identities** in `~/Applications`. The page opens, paired.
+
+   Once, check the saved copy of Claude's settings by eye. It is meant to be the file as it was before MOR was ever added, and it is never overwritten, so a copy made by an earlier, faulty run stays wrong. In Terminal:
+   ```
+   cat ~/Library/Application\ Support/Claude/claude_desktop_config.json.before-mor
+   ```
+   Under `"mcpServers"` there should be no `"mor"` entry. If there is one, the copy was made after MOR was first added (as on the author's Mac, by a run before 2 October 2026) and is not the original: should you ever put Claude's settings back from it, take that `"mor"` entry out first. If the file does not exist, Claude had no settings file before MOR.
+2. From then on, double-click **MOR Identities** in `~/Applications`. The page opens, paired. After a pull, the app restarts a program left running from the older code by itself.
 3. Under **Settings**: homes `https://home1.dubsar.org` and `https://home2.dubsar.org`; relays the same two. Leave the drafts folder as it is (`~/mor-drafts`).
 4. Under **A new test identity**: yourself, with "Claude may prepare drafts for it" left unticked; then "Machine, allegedly", with it ticked. Claude prepares for "Machine, allegedly" only (decided by Nobody, allegedly, 1 October 2026).
 5. Quit Claude completely and open it again. Ask: "Prepare a post for Machine, allegedly, saying …". Claude shows a digest.

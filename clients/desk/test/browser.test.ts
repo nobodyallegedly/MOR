@@ -182,3 +182,24 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   assert.deepEqual(problems, []);
   await context.close();
 });
+
+test('a new draft appears by itself even while the browser reports the page hidden', async () => {
+  // On the author's Mac, a page partly covered by Claude's window was
+  // reported hidden, and a new draft showed only after a refresh (retest of
+  // 2 October 2026). Here the page is told it is hidden from the start.
+  const context = await browser.newContext();
+  // As text: a function would be rewritten by the TypeScript loader with helpers the page lacks.
+  await context.addInitScript(`
+    Object.defineProperty(Document.prototype, 'visibilityState', { get: () => 'hidden', configurable: true });
+    Object.defineProperty(Document.prototype, 'hidden', { get: () => true, configurable: true });`);
+  const page = await context.newPage();
+  page.on('pageerror', (e) => problems.push(String(e)));
+  await page.goto(`${app.base}/#pair=${app.access.newCode()}`);
+  await page.locator('#drafts').waitFor();
+  assert.equal(await page.evaluate(() => document.visibilityState), 'hidden');
+  const r = await claude.ask('mor_prepare_post', { signer: 'Machine, allegedly', text: 'Seen while hidden.' });
+  await page.locator(`.draft[data-draft="${handed(r.text)}"]`).waitFor({ timeout: 15_000 });
+  await page.locator('#drafts-watch', { hasText: 'A new draft from Claude arrived' }).waitFor();
+  assert.deepEqual(problems, []);
+  await context.close();
+});
