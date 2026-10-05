@@ -1597,6 +1597,16 @@ impl<'a> LawView<'a> {
                 if k == limit && !self.applies(col, r, point)? {
                     continue;
                 }
+                // F131 (IT2a): an act the collective's own key cites, by an
+                // act that counts and that the line does not follow, is
+                // adopted: a departure racing that citation takes no voice
+                // off it. Found by the Law invariants
+                // (`docs/law-invariants.md`, IC9).
+                if let Point::Act(x) = point {
+                    if k == limit && self.cited_against(col, x, r)? {
+                        continue;
+                    }
+                }
                 if ended.as_ref().is_some_and(|e| !self.before_line(col, r, &e.chain_act, &e.tips)) {
                     continue;
                 }
@@ -1614,6 +1624,25 @@ impl<'a> LawView<'a> {
             }
         }
         Ok(out)
+    }
+
+    /// Whether an act of the collective's own key that counts, other than
+    /// `x`, holds `x` in its history while the line `l` does not hold it:
+    /// the collective took `x` on, by a citation `l` races (F131, IT2a;
+    /// "cites" as a line reads it, reading U3).
+    fn cited_against(&self, col: &Col, x: &'a Held, l: &'a Held) -> R<bool> {
+        for a in self.v.signed_by(&col.id) {
+            if a.id == x.id || a.id == l.id || !Self::own_key(col, a) || self.is_law(a, types::RECORD) {
+                continue;
+            }
+            if !self.before_struct(col, x, Line::Record(a)) || self.before_struct(col, l, Line::Record(a)) {
+                continue;
+            }
+            if self.valid(&a.id) && self.consent(&a.id)?.counts() {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     /// The records naming `p`'s rotation `rot` in field 3: valid record acts

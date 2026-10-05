@@ -2622,6 +2622,29 @@ fn ic8_a_record_after_the_ending_registers_nothing() {
     assert!(cw.view().consent(&g).unwrap().counts(), "{:?}", cw.view().consent(&g));
 }
 
+/// IC9 (F131 IT2a, the tie rule): an act the collective's own key cited
+/// while it counted is adopted, and a departure racing that citation takes
+/// no voice off it. A grant the Finance area's holders signed, cited by the
+/// other device's next act; then both holders leave the area by records on
+/// a device that never heard of either: the grant stopped counting. Hidden
+/// until F131 made SAFE-ONCE-CITED a failure again.
+#[test]
+fn ic9_a_departure_racing_a_citation_takes_no_voice() {
+    let shape = Shape { members: 2, devices: 2, member_devices: 1, constitutional: None, lane: Some((3, 1)), owns_work: false };
+    let ops = [
+        Op::Grant { dev: 1, agent: 0, in_area: true, accept: false, holders_sign: true },
+        Op::Join { dev: 29, other: 0 },
+        Op::Resign { member: 90, area_only: true, dev: 90, tips: 104, inform: false },
+        Op::Resign { member: 13, area_only: false, dev: 68, tips: 4, inform: false },
+    ];
+    let cw = run_col(&shape, &ops, 0);
+    assert_eq!(cw.cited_counting.len(), 1);
+    let (y, by) = cw.cited_counting[0];
+    let lv = cw.view();
+    assert!(lv.consent(&by).unwrap().counts());
+    assert!(lv.consent(&y).unwrap().counts(), "{:?}", lv.consent(&y));
+}
+
 /// IT1, decided (F131): a complete ending is final. A later fork naming
 /// the first counts for nothing: the first still ends the collective, its
 /// successors keep what it handed them. Two complete endings neither
