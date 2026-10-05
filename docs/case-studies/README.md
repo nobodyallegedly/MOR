@@ -8,11 +8,16 @@ They are not part of the core. The core document and the six MIPs in `spec/` def
 - [From Bedroom to Label](08-MOR-case-study-musician-to-label-v2.md): a musician from stems and remixes to a band and a label deal.
 - [From Cat Video to Coproduction](09-MOR-case-study-cat-video-to-coproduction-v2.md): a video creator from tips to an ad-supported platform and a streaming coproduction.
 - [Migration to MOR 2](10-MOR-case-study-migration-to-MOR2-v2.md): the right of exit at its largest, crossing to a successor protocol, including after a cryptographic break.
+- [From Local Question to World Story](11-MOR-case-study-journalism-v1.md): a local journalist from a funded question to a world story, with every asset credited, every check signed and every correction shown. *Draft 1, older than the current core.*
 - [One Reputation, Many Trades](12-MOR-case-study-gig-economy-v2.md): the gig economy as job, settlement and rating, with a reputation that belongs to the worker.
+- [From Pocket Game to Open Market](13-MOR-case-study-gaming-v1.md): a game developer from a mobile game to a studio, a store dispute, an open market and a console release. *Draft 1, older than the current core.*
+- [Shown, Not Listed](14-MOR-case-study-learning-and-work-v1.md): accreditation computed from signed evidence, and profiles that show what people can do. *Draft 1, older than the current core.*
 - [Paid for Results, Seen for What It Is](15-MOR-case-study-advertising-v2.md): advertising paid on real sales, and attention deals made legible.
+- [No Firm Required](16-MOR-case-study-commerce-v1.md): an open marketplace and logistics network with no owner, Coase revisited. *Draft 1, older than the current core.*
 - [From the Stands to the Main League](17-MOR-case-study-live-sports-v2.md): live streaming, from a phone in the stands to co-streaming a main league.
 - [Adult Content, Consent on the Record](18-MOR-case-study-adult-content-v2.md): signed consent, age proofs without exposure, and payment rails that cannot switch a sector off alone.
 - [Paying the Ones Everything Stands On](19-MOR-case-study-software-v2.md): open-source maintainers paid through dependency lineage, targets and bounties.
+- [From Agents to Open Intelligence](20-MOR-case-study-ai-v1.md): AI agents under grants, then AI itself made by many, with data on stated terms, a market for compute and training collectives. *Draft 1, older than the current core.*
 
 Companion documents are in [`../companions/`](../companions/README.md).
 
