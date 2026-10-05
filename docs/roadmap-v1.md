@@ -247,7 +247,7 @@ After the first acts, once the first builders have joined, Nobody, allegedly set
 
 **Mass (decided by Nobody, allegedly):** no number. "It will be a feeling anyway. If ever… 'I can leave, the snowball is heading downhill.'"
 
-*People Nobody, allegedly has named as natural to ask segmented questions, each with their own angle: Semisol, JB (Damus), Kirian, UTXO, Fishcake (nostr.build), hazard (Blossom), the people behind nostr.wine, Rock (Stemstr). None has a role.*
+*People Nobody, allegedly has named as natural to ask segmented questions, each with their own angle: Semisol, JB (Damus), Kirian, UTXO, Fishcake (nostr.build), hazard (Blossom), the people behind nostr.wine, Rock (Stemstr). None has a role.* *Roles sketched, 5 October 2026 (project lead, with Nobody, allegedly):* protocol and cryptography review (Semisol); Rust core and relays, and clients (JB, who covers both); relay and infrastructure operators (nostr.wine, Fishcake); media storage (hazard); Bitcoin and Lightning (UTXO); a pilot community (Rock, Stemstr). Unfilled: someone who thinks about agreements (a lawyer, a contract or governance designer, a cooperative organiser) to test Law against how real groups behave.
 
 ## If a step exposes a flaw in a MIP
 
