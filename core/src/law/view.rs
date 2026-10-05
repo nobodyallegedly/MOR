@@ -1574,6 +1574,16 @@ impl<'a> LawView<'a> {
     /// effect at it (C7).
     fn departure_lines(&self, col: &Col, point: Point<'a>, own: &[Departure]) -> R<Vec<(Line<'a>, Departure)>> {
         let mut out = vec![];
+        // A record after the line of the fork or closing that ended the
+        // collective counts for nothing in Law (rule 47a): it registers no
+        // departure. Found by the Law invariants (`docs/law-invariants.md`,
+        // IC8), hidden until F131 made ENDING-UNDONE a failure again.
+        // Judged for an act only: a line's own judgment is part of judging
+        // the ending, and the ending is judged before any act (`consent`).
+        let ended = match point {
+            Point::Act(_) => self.closed_by(&col.id)?,
+            Point::Line(_) => None,
+        };
         let (limit, me): (usize, Option<&'a Held>) = match point {
             Point::Act(x) => (self.link(col, x).unwrap_or(0), None),
             Point::Line(Line::Record(r)) => (col.pos(r).unwrap_or(0), Some(r)),
@@ -1585,6 +1595,9 @@ impl<'a> LawView<'a> {
                     continue;
                 }
                 if k == limit && !self.applies(col, r, point)? {
+                    continue;
+                }
+                if ended.as_ref().is_some_and(|e| !self.before_line(col, r, &e.chain_act, &e.tips)) {
                     continue;
                 }
                 let e = self.record_eval(col, r)?;

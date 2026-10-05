@@ -2601,6 +2601,27 @@ fn ic7_sums_that_overflow_never_pass() {
     assert!(t.check(&mips()).is_err(), "shares wrapping round to 1,000,000 are refused");
 }
 
+/// IC8 (rule 47a): after the line of the fork or closing that ended a
+/// collective, its keys count for nothing in Law, so a record drawn there
+/// registers no departure. A member's resignation, registered by a record
+/// on a device the fork's line never named, took the member's voice off an
+/// act in the fork's history: an ending undone from after it. Hidden until
+/// F131 made ENDING-UNDONE a failure again.
+#[test]
+fn ic8_a_record_after_the_ending_registers_nothing() {
+    let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let ops = [
+        Op::Grant { dev: 49, agent: 0, in_area: true, accept: false, holders_sign: true },
+        Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
+    ];
+    let mut cw = run_col(&shape, &ops, 0);
+    let g = *cw.info.iter().find(|(_, f)| matches!(f.kind, K::GrantAct)).unwrap().0;
+    assert!(cw.view().closed_by(&cw.col).unwrap().is_some());
+    assert!(cw.view().consent(&g).unwrap().counts());
+    cw.apply(2, &Op::Resign { member: 30, area_only: false, dev: 65, tips: 4, inform: false });
+    assert!(cw.view().consent(&g).unwrap().counts(), "{:?}", cw.view().consent(&g));
+}
+
 /// IT1, decided (F131): a complete ending is final. A later fork naming
 /// the first counts for nothing: the first still ends the collective, its
 /// successors keep what it handed them. Two complete endings neither
