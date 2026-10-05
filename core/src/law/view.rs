@@ -69,6 +69,7 @@ pub struct LawView<'a> {
     citing: RefCell<BTreeSet<Hash>>,
     adopting: RefCell<BTreeSet<Hash>>,
     histories: RefCell<BTreeMap<(Hash, usize, Vec<Hash>), Rc<History>>>,
+    ending_sigs: RefCell<BTreeMap<Hash, Rc<EndingSigs>>>,
 }
 
 /// What a decision cites on the collective's chain (F127): every act it
@@ -297,6 +298,20 @@ impl Col {
     }
 }
 
+/// Every node reachable from `from` in `edges`, `from` itself left out.
+fn closure(edges: &BTreeMap<Hash, BTreeSet<Hash>>, from: &Hash) -> BTreeSet<Hash> {
+    let mut out = BTreeSet::new();
+    let mut todo = vec![*from];
+    while let Some(x) = todo.pop() {
+        for y in edges.get(&x).into_iter().flatten() {
+            if y != from && out.insert(*y) {
+                todo.push(*y);
+            }
+        }
+    }
+    out
+}
+
 /// What a fold over records leaves in force.
 struct InForce {
     agreement: Hash,
@@ -321,6 +336,7 @@ impl<'a> LawView<'a> {
             citing: RefCell::new(BTreeSet::new()),
             adopting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
+            ending_sigs: RefCell::new(BTreeMap::new()),
         }
     }
 
@@ -1633,7 +1649,7 @@ impl<'a> LawView<'a> {
     /// Whether an act of the collective's own key that counts, other than
     /// `x`, holds `x` in its history while the line `l` does not hold it:
     /// the collective took `x` on, by a citation `l` races (F131, IT2a;
-    /// "cites" as a line reads it, reading U3).
+    /// "cites" as a line reads it, reading U3, confirmed, F132).
     fn cited_against(&self, col: &Col, x: &'a Held, l: &'a Held) -> R<bool> {
         // Judging the citing act may ask again about acts being judged here:
         // an act under judgment adopts nothing.
@@ -3066,7 +3082,7 @@ impl<'a> LawView<'a> {
         // F131 (IT2a): once such an act cites it, the act is adopted, and no
         // ending racing that citation voids it; the tie rule voids only
         // acts the collective never took on. "Cites" as a line does
-        // (reading U3, to confirm): the act lies in the citing act's
+        // (reading U3, confirmed, F132): the act lies in the citing act's
         // history, so citing the grantee's later act cites it too.
         let citing: Vec<&Held> = if collective {
             self.v
@@ -3604,6 +3620,34 @@ pub struct Closed {
     pub fork: Option<ForkEval>,
 }
 
+/// The ending signatures of one collective's forks and closings (F132): a
+/// member signs an ending by a chain signature (Identity type 16), on its
+/// identity chain with its safety key, so any two of one signer's ending
+/// signatures are ordered by their positions there.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct EndingSigs {
+    /// The signatures that count, by (ending, signer): the chain signature
+    /// and its position in the signer's identity chain. Only one counting
+    /// in the signer's chain is read, the earliest for each ending.
+    pub counting: BTreeMap<(Hash, Hash), (Hash, u64)>,
+    /// Signatures that count for nothing (U4): each lies, in its signer's
+    /// chain, after the signer's signature on another ending naming the one
+    /// it signs. By (ending, signer): the chain signature, and that other
+    /// ending.
+    pub void: BTreeMap<(Hash, Hash), (Hash, Hash)>,
+    /// The endings each ending names directly: in its own `objects`, or
+    /// through a signer's chain (U1): a signer's counting signature on it
+    /// placed after the same signer's counting signature on the other.
+    pub names: BTreeMap<Hash, BTreeSet<Hash>>,
+    /// Fork and closing acts that are no ending (U4b): their drafter (the
+    /// act's signer) signed, earlier in their own identity chain than their
+    /// signature on it, another ending of the collective that it does not
+    /// name in its `objects` (directly or through the endings it names
+    /// there). Each with that other ending. Their signatures are left out
+    /// of everything above.
+    pub no_ending: BTreeMap<Hash, Hash>,
+}
+
 /// Where a pointer leads, for Law (rule 18, F123, F124 P2).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PointerCheck {
@@ -4093,11 +4137,10 @@ impl<'a> LawView<'a> {
             return fail(e, "the fork act is signed by someone on no side");
         }
         let members: Vec<Hash> = f.sides.iter().flat_map(|s| s.members.iter()).copied().collect();
-        let mut signed = self.signers(id, &members);
-        if !signed.contains(&signer) {
-            signed.push(signer);
+        e.signed = self.ending_signed(&f.collective, id, &members);
+        if let Some(y) = self.ending_sigs(&f.collective).no_ending.get(id) {
+            return fail(e, &format!("no fork: its signer signed another ending of the collective, {}, earlier on their own chain, and the fork does not name it in its objects (F132, U4b)", y.iter().map(|b| format!("{b:02x}")).collect::<String>()));
         }
-        e.signed = members.iter().filter(|m| signed.contains(m)).copied().collect();
         // Successors (N4): each side founded its collective first; its
         // founding terms have that side's members as parties, and keep every
         // departed holder and every member leaving at their percentage.
@@ -4117,7 +4160,10 @@ impl<'a> LawView<'a> {
             }
         }
         if e.signed.len() < members.len() {
-            return fail(e, "every member on a side signs the fork, with their own identity (F121)");
+            return fail(
+                e,
+                "every member on a side signs the fork, with their own identity (F121), by a chain signature with their safety key (F132); a signature placed after the signer's own signature on an ending naming this one counts for nothing (U4)",
+            );
         }
         if !constitution_met(&t, &voices, &e.signed) {
             return fail(e, "the fork follows the constitutional change rule, every member by default (N1)");
@@ -4255,18 +4301,20 @@ impl<'a> LawView<'a> {
             return fail(e, "not done: the closing is not sealed to every member, nor public (W5, F128)");
         }
         let signer = h.act.outside.signer.ok_or(LawError::Check("a closing act has a signer"))?;
-        let mut signed = self.signers(id, &voices);
-        if voices.contains(&signer) && !signed.contains(&signer) {
-            signed.push(signer);
+        e.signed = self.ending_signed(&c.collective, id, &voices);
+        if let Some(y) = self.ending_sigs(&c.collective).no_ending.get(id) {
+            return fail(e, &format!("no closing: its signer signed another ending of the collective, {}, earlier on their own chain, and the closing does not name it in its objects (F132, U4b)", y.iter().map(|b| format!("{b:02x}")).collect::<String>()));
         }
-        e.signed = voices.iter().filter(|m| signed.contains(m)).copied().collect();
         e.holds = self.holdings(&col, &c.chain_act, &c.tips)?;
         e.open_debts = self.open_debts(&col, Some((&c.chain_act, &c.tips)))?;
         if !voices.contains(&signer) {
             return fail(e, "the closing act is signed by someone who is not a member whose voice remains");
         }
+        if !e.signed.contains(&signer) {
+            return fail(e, "the closing's signer signs it too, by a chain signature with their safety key (F132)");
+        }
         if !constitution_met(&t, &voices, &e.signed) {
-            return fail(e, "a closing follows the constitutional change rule, every member by default (N9)");
+            return fail(e, "a closing follows the constitutional change rule, every member by default (N9), each signing by a chain signature with their safety key (F132)");
         }
         if !e.holds.is_empty() {
             return fail(e, "a closing ends only a collective that holds nothing: every work sold or released (N9)");
@@ -4284,10 +4332,13 @@ impl<'a> LawView<'a> {
     /// The act that ended a collective in Law, if any (rule 47a): its one
     /// complete fork or closing that counts. A complete ending is final
     /// (F131, IT1): a later ending of the same collective, one that names it
-    /// (`ending_knows`), counts for nothing. Two complete endings neither
-    /// naming the other are concurrent, made without knowing each other:
-    /// neither counts (F125 reading 4, narrowed by F131 to that case), until
-    /// an ending naming both settles the race (reading U2, to confirm).
+    /// (`ending_knows`: in its `objects`, or through a signer's chain,
+    /// F132 U1), counts for nothing. Two complete endings sharing no signer
+    /// and neither naming the other are concurrent, made without knowing
+    /// each other: neither counts (F125 reading 4, narrowed by F131 and
+    /// F132 to that case), until an ending naming both settles the race
+    /// (U2, confirmed, F132). Two endings each naming the other, through
+    /// two signers' chains, are not ordered either.
     pub fn closed_by(&self, collective: &Hash) -> R<Option<Closed>> {
         if let Some(e) = self.closed.borrow().get(collective) {
             return Ok(e.clone());
@@ -4348,29 +4399,139 @@ impl<'a> LawView<'a> {
     /// The forks and closings of a collective that an ending act names,
     /// directly or through the endings it names (F131, IT1): an `objects`
     /// entry whose predecessor is another fork or closing of the same
-    /// collective, `[agreement, ending]`, its chain the agreement. A later
-    /// ending names every earlier one it holds (client conformance); acts
-    /// are immutable, so no two endings name each other.
+    /// collective, `[agreement, ending]`, its chain the agreement; or,
+    /// through a signer's own chain (F132, U1), another ending the same
+    /// member signed earlier in their identity chain. A later ending names
+    /// every earlier one it holds (client conformance). Acts are immutable;
+    /// two endings may still name each other through two signers' chains,
+    /// and then neither is the earlier.
     pub fn ending_knows(&self, collective: &Hash, ending: &Hash) -> BTreeSet<Hash> {
+        let sigs = self.ending_sigs(collective);
+        closure(&sigs.names, ending)
+    }
+
+    /// The forks and closings of a collective an ending names in its own
+    /// `objects`, directly.
+    pub fn ending_objects(&self, collective: &Hash, ending: &Hash) -> BTreeSet<Hash> {
         let mut out = BTreeSet::new();
-        let mut todo = vec![*ending];
-        while let Some(x) = todo.pop() {
-            let Some(h) = self.v.get(&x) else { continue };
-            for o in h.inside.objects.iter().flatten() {
-                let p = o.predecessor;
-                if out.contains(&p) || p == *ending {
-                    continue;
-                }
-                let Some(ph) = self.v.get(&p) else { continue };
-                let of_this = (self.is_law(ph, types::FORK) && Fork::decode(&ph.inside).is_ok_and(|f| &f.collective == collective))
-                    || (self.is_law(ph, types::CLOSING) && Closing::decode(&ph.inside).is_ok_and(|c| &c.collective == collective));
-                if of_this {
-                    out.insert(p);
-                    todo.push(p);
-                }
+        let Some(h) = self.v.get(ending) else { return out };
+        for o in h.inside.objects.iter().flatten() {
+            let p = o.predecessor;
+            if p == *ending {
+                continue;
+            }
+            let Some(ph) = self.v.get(&p) else { continue };
+            let of_this = (self.is_law(ph, types::FORK) && Fork::decode(&ph.inside).is_ok_and(|f| &f.collective == collective))
+                || (self.is_law(ph, types::CLOSING) && Closing::decode(&ph.inside).is_ok_and(|c| &c.collective == collective));
+            if of_this {
+                out.insert(p);
             }
         }
         out
+    }
+
+    /// The members who signed an ending, among `among`, in that order: each
+    /// by a chain signature that counts (F132, U1 refined), not made void
+    /// by U4.
+    pub fn ending_signed(&self, collective: &Hash, ending: &Hash, among: &[Hash]) -> Vec<Hash> {
+        let sigs = self.ending_sigs(collective);
+        among.iter().filter(|m| sigs.counting.contains_key(&(*ending, **m))).copied().collect()
+    }
+
+    /// A collective's ending signatures, judged (F132).
+    ///
+    /// Every chain signature (Identity type 16) naming a fork or closing of
+    /// the collective that counts in its signer's identity chain is read, at
+    /// its position there. Then U4: a signature counts for nothing where it
+    /// lies, in its signer's chain, after the signer's signature on another
+    /// ending naming the one it signs. "Names" is judged in two steps, so
+    /// that no signature both judges and is judged (reading, to confirm):
+    /// first by `objects`; then, among the signatures left, through
+    /// signers' chains (U1). The endings named through signers' chains are
+    /// read from the signatures left after both steps.
+    pub fn ending_sigs(&self, collective: &Hash) -> Rc<EndingSigs> {
+        if let Some(s) = self.ending_sigs.borrow().get(collective) {
+            return s.clone();
+        }
+        let s = Rc::new(self.ending_sigs_inner(collective));
+        self.ending_sigs.borrow_mut().insert(*collective, s.clone());
+        s
+    }
+
+    fn ending_sigs_inner(&self, collective: &Hash) -> EndingSigs {
+        let endings: BTreeSet<Hash> = self.ending_acts(collective).into_iter().collect();
+        let mut raw: BTreeMap<(Hash, Hash), (Hash, u64)> = BTreeMap::new();
+        for x in self.v.held_acts() {
+            if x.inside.spec != self.mips.identity || x.inside.type_ != crate::identity::types::CHAIN_SIGNATURE {
+                continue;
+            }
+            let (Some(Ok(Payload::ChainSignature(c))), Some(signer)) = (&x.identity, x.act.outside.signer) else {
+                continue;
+            };
+            if !endings.contains(&c.signs) {
+                continue;
+            }
+            let Some(p) = self.v.resolve(&signer).position_of(&x.id) else { continue };
+            let p = p as u64;
+            let e = raw.entry((c.signs, signer)).or_insert((x.id, p));
+            if p < e.1 {
+                *e = (x.id, p);
+            }
+        }
+        let objects: BTreeMap<Hash, BTreeSet<Hash>> =
+            endings.iter().map(|e| (*e, self.ending_objects(collective, e))).collect();
+        // U4b: an ending's drafter names, in its `objects`, every ending of
+        // the collective they signed earlier on their own chain; otherwise
+        // it is no ending, and its signatures count for nothing.
+        let mut no_ending = BTreeMap::new();
+        for e in &endings {
+            let Some(d) = self.v.get(e).and_then(|h| h.act.outside.signer) else { continue };
+            let Some((_, p)) = raw.get(&(*e, d)) else { continue };
+            let named = closure(&objects, e);
+            if let Some(((y, _), _)) = raw.iter().find(|((y, m), (_, q))| *m == d && y != e && q < p && !named.contains(y)) {
+                no_ending.insert(*e, *y);
+            }
+        }
+        raw.retain(|(e, _), _| !no_ending.contains_key(e));
+        let objects: BTreeMap<Hash, BTreeSet<Hash>> = objects
+            .into_iter()
+            .filter(|(e, _)| !no_ending.contains_key(e))
+            .map(|(e, s)| (e, s.into_iter().filter(|x| !no_ending.contains_key(x)).collect()))
+            .collect();
+        // Whether, in `sigs`, the signer of (x, m) signed an ending naming x
+        // (in `names`, transitively) earlier in their chain: that ending.
+        let voided = |sigs: &BTreeMap<(Hash, Hash), (Hash, u64)>, names: &BTreeMap<Hash, BTreeSet<Hash>>| {
+            let mut out = BTreeMap::new();
+            for ((x, m), (cs, p)) in sigs {
+                let by = sigs
+                    .iter()
+                    .find(|((y, m2), (_, q))| m2 == m && y != x && q < p && closure(names, y).contains(x))
+                    .map(|((y, _), _)| *y);
+                if let Some(y) = by {
+                    out.insert((*x, *m), (*cs, y));
+                }
+            }
+            out
+        };
+        let through_chains = |sigs: &BTreeMap<(Hash, Hash), (Hash, u64)>| {
+            let mut names = objects.clone();
+            for ((y, m), (_, q)) in sigs {
+                for ((x, m2), (_, p)) in sigs {
+                    if m2 == m && x != y && p < q {
+                        names.entry(*y).or_default().insert(*x);
+                    }
+                }
+            }
+            names
+        };
+        let mut void = voided(&raw, &objects);
+        let mut left: BTreeMap<_, _> = raw.iter().filter(|(k, _)| !void.contains_key(k)).map(|(k, v)| (*k, *v)).collect();
+        let names = through_chains(&left);
+        let more = voided(&left, &names);
+        left.retain(|k, _| !more.contains_key(k));
+        void.extend(more);
+        let names = through_chains(&left);
+        EndingSigs { counting: left, void, names, no_ending }
     }
 
     /// Whether an act of a collective counts as made after the fork or

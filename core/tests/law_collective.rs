@@ -272,6 +272,14 @@ impl Lab {
         sign(&mut self.w, &mut self.m[by], x)
     }
 
+    /// A member's signature on a fork or closing: a chain signature, with
+    /// their safety key, on their identity chain (F132).
+    fn end(&mut self, by: usize, x: &Hash) -> Hash {
+        let (id, q) = self.w.chain_sign(&self.m[by], *x);
+        self.m[by] = q;
+        id
+    }
+
     /// An act of the label, on device `d`, of a cMIP's own type 0: an act in
     /// the lane of the task the terms name that cMIP for (F106). Since F112
     /// a payment cMIP defines no act of its own (receipts are Finance's,
@@ -482,6 +490,16 @@ fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
 fn sorted(mut v: Vec<Hash>) -> Vec<Hash> {
     v.sort();
     v
+}
+
+/// An ending's `objects`: the agreement, and every earlier fork or
+/// closing of the collective held, as a member's client names them (F131
+/// IT1, client conformance; F132 U4b: a drafter names every ending they
+/// signed).
+fn ending_obj(lab: &Lab, ag: Hash, collective: Hash) -> Option<Vec<Object>> {
+    let mut o = obj(ag).unwrap();
+    o.extend(lab.view().ending_acts(&collective).into_iter().map(|e| Object { chain: ag, predecessor: e }));
+    Some(o)
 }
 
 fn device(p: &Person) -> Person {
@@ -3340,9 +3358,11 @@ fn a_collective_forks() {
     // everything in it, d3 included, unpublished as it is: otherwise the
     // fork does not take effect.
     let x = fork(&lab, vec![(d1, vec![1]), (d2, vec![0, 1])]);
-    let short = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(k));
+    let eo = ending_obj(&lab, k, x.collective);
+    let short = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), eo);
+    lab.end(ANA, &short);
     for i in [BEN, CY] {
-        lab.sign(i, &short);
+        lab.end(i, &short);
     }
     sign(&mut lab.w, &mut sb, &short);
     sign(&mut lab.w, &mut sa, &short);
@@ -3352,11 +3372,13 @@ fn a_collective_forks() {
     assert!(e.why.as_deref().is_some_and(|w| w.contains("F127")), "{:?}", e.why);
     // Every debt handed out: d1 to side B, d2 to both jointly, d3 to A.
     let x = fork(&lab, vec![(d1, vec![1]), (d2, vec![0, 1]), (d3, vec![0])]);
-    let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(k));
-    lab.sign(BEN, &fa);
+    let eo = ending_obj(&lab, k, x.collective);
+    let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), eo);
+    lab.end(ANA, &fa);
+    lab.end(BEN, &fa);
     let e = lab.view().fork(&fa).unwrap();
     assert!(!e.complete, "Cy has not signed");
-    lab.sign(CY, &fa);
+    lab.end(CY, &fa);
     sign(&mut lab.w, &mut sb, &fa);
     let e = lab.view().fork(&fa).unwrap();
     assert!(!e.complete, "side A's successor has not signed for its debt");
@@ -3449,7 +3471,9 @@ fn a_collective_forks() {
     // owes d2 (jointly) and d3 (handed to it).
     let sa_terms = ta;
     let closing = law::Closing { agreement: sa_terms, collective: sa.id, chain_act: sa.binding, tips: vec![tip(&sa)] };
-    let cl = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, closing.to_map(), obj(sa_terms));
+    let eo = ending_obj(&lab, sa_terms, closing.collective);
+    let cl = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, closing.to_map(), eo);
+    lab.end(ANA, &cl);
     let v = lab.view();
     let e = v.closing(&cl).unwrap();
     assert!(!e.complete);
@@ -3518,9 +3542,11 @@ fn a_fork_hands_out_its_whole_history() {
             shares: vec![],
             debts,
         };
-        let fk = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(f));
-        lab.sign(BEN, &fk);
-        lab.sign(CY, &fk);
+        let eo = ending_obj(&lab, f, x.collective);
+        let fk = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), eo);
+        lab.end(ANA, &fk);
+        lab.end(BEN, &fk);
+        lab.end(CY, &fk);
         sign(&mut lab.w, sa, &fk);
         sign(&mut lab.w, sb, &fk);
         fk
@@ -3558,8 +3584,10 @@ fn a_fork_hands_out_its_whole_history() {
             shares: vec![],
             debts,
         };
-        let x = law_act(&mut lab.w, &mut lab.m[BEN], law::types::FORK, x.to_map(), obj(tb));
-        lab.sign(CY, &x);
+        let eo = ending_obj(&lab, tb, x.collective);
+        let x = law_act(&mut lab.w, &mut lab.m[BEN], law::types::FORK, x.to_map(), eo);
+        lab.end(BEN, &x);
+        lab.end(CY, &x);
         x
     };
     let fb = fork_b(&mut lab, vec![], &sb);
@@ -3597,9 +3625,11 @@ fn a_fork_hands_out_its_whole_history() {
         shares: vec![],
         debts: vec![],
     };
-    let fk = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(f));
-    lab.sign(BEN, &fk);
-    lab.sign(CY, &fk);
+    let eo = ending_obj(&lab, f, x.collective);
+    let fk = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), eo);
+    lab.end(ANA, &fk);
+    lab.end(BEN, &fk);
+    lab.end(CY, &fk);
     sign(&mut lab.w, &mut sa, &fk);
     sign(&mut lab.w, &mut sb, &fk);
     let e = lab.view().fork(&fk).unwrap();
@@ -3638,14 +3668,18 @@ fn a_member_who_signs_no_side() {
         shares: vec![],
         debts: vec![],
     };
-    let bad = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x(sbad.id).to_map(), obj(f));
-    lab.sign(BEN, &bad);
+    let eo = ending_obj(&lab, f, x(sbad.id).collective);
+    let bad = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x(sbad.id).to_map(), eo);
+    lab.end(ANA, &bad);
+    lab.end(BEN, &bad);
     let e = lab.view().fork(&bad).unwrap();
     assert!(!e.complete && e.why.as_deref().is_some_and(|w| w.contains("N4")), "{:?}", e.why);
-    let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x(sb.id).to_map(), obj(f));
+    let eo = ending_obj(&lab, f, x(sb.id).collective);
+    let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x(sb.id).to_map(), eo);
+    lab.end(ANA, &fa);
     let e = lab.view().fork(&fa).unwrap();
     assert!(!e.complete, "Ben has not signed: Ana alone does not meet two of three");
-    lab.sign(BEN, &fa);
+    lab.end(BEN, &fa);
     let e = lab.view().fork(&fa).unwrap();
     assert!(e.complete, "{:?}", e.why);
     assert_eq!(e.leaving, vec![ids[CY]]);
@@ -3682,9 +3716,11 @@ fn what_is_not_a_fork() {
     ];
     for (why, sides, ag) in cases {
         let x = law::Fork { agreement: ag, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], sides, shares: vec![], debts: vec![] };
-        let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(ag));
+        let eo = ending_obj(&lab, ag, x.collective);
+        let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), eo);
+        lab.end(ANA, &fa);
         for i in [BEN, CY] {
-            lab.sign(i, &fa);
+            lab.end(i, &fa);
         }
         let e = lab.view().fork(&fa).unwrap();
         assert!(!e.complete && e.why.is_some(), "{why}");
@@ -3700,22 +3736,31 @@ fn what_is_not_a_fork() {
         shares: vec![],
         debts: vec![],
     };
-    let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(f));
-    lab.sign(BEN, &fa);
-    lab.sign(CY, &fa);
+    let eo = ending_obj(&lab, f, x.collective);
+    let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), eo);
+    lab.end(ANA, &fa);
+    lab.end(BEN, &fa);
+    lab.end(CY, &fa);
     let e = lab.view().fork(&fa).unwrap();
     assert!(e.complete, "{:?}", e.why);
     assert!(e.by_count);
     assert_eq!(e.shares, vec![666_667, 333_333]);
     assert_eq!(lab.view().current(&label).unwrap().unwrap().closed, Some(fa));
-    // A second complete fork, signed concurrently: the status quo stands.
+    // A second complete fork, not naming the first in its objects: its
+    // signers signed the first earlier in their own identity chains, so it
+    // names the first through their chains, and counts for nothing (F131
+    // IT1, F132 U1). Before F132 the two were concurrent and neither
+    // counted.
     let z = law::Fork { sides: vec![side(&sb, vec![ids[CY]]), side(&sa, vec![ids[ANA], ids[BEN]])], ..x };
-    let fb = law_act(&mut lab.w, &mut lab.m[CY], law::types::FORK, z.to_map(), obj(f));
-    lab.sign(ANA, &fb);
-    lab.sign(BEN, &fb);
+    let eo = ending_obj(&lab, f, z.collective);
+    let fb = law_act(&mut lab.w, &mut lab.m[CY], law::types::FORK, z.to_map(), eo);
+    lab.end(CY, &fb);
+    lab.end(ANA, &fb);
+    lab.end(BEN, &fb);
     assert!(lab.view().fork(&fb).unwrap().complete);
     assert_eq!(lab.view().endings(&label).unwrap().len(), 2);
-    assert_eq!(lab.view().current(&label).unwrap().unwrap().closed, None);
+    assert!(lab.view().ending_knows(&label, &fb).contains(&fa));
+    assert_eq!(lab.view().current(&label).unwrap().unwrap().closed, Some(fa));
     assert!(lab.counts(&p));
 }
 
@@ -3882,9 +3927,11 @@ fn a_collective_releases_its_work_and_closes() {
     let p = lab.publish(0);
     lab.sign(ANA, &p);
     let x = closing(&lab);
-    let early = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), obj(f));
-    lab.sign(BEN, &early);
-    lab.sign(CY, &early);
+    let eo = ending_obj(&lab, f, x.collective);
+    let early = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), eo);
+    lab.end(ANA, &early);
+    lab.end(BEN, &early);
+    lab.end(CY, &early);
     let e = lab.view().closing(&early).unwrap();
     assert!(!e.complete);
     assert_eq!(e.holds, vec![(f, 0)]);
@@ -3905,9 +3952,11 @@ fn a_collective_releases_its_work_and_closes() {
     let d = obligation_to(&mut lab, supplier.id, 100);
     let d2 = obligation_to(&mut lab, printer.id, 80);
     let x = closing(&lab);
-    let c1 = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), obj(f));
-    lab.sign(BEN, &c1);
-    lab.sign(CY, &c1);
+    let eo = ending_obj(&lab, f, x.collective);
+    let c1 = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), eo);
+    lab.end(ANA, &c1);
+    lab.end(BEN, &c1);
+    lab.end(CY, &c1);
     let v = lab.view();
     let e = v.closing(&c1).unwrap();
     assert!(e.holds.is_empty());
@@ -4001,9 +4050,11 @@ fn a_bankrupt_collective_settles_by_stakes_and_a_release() {
     // It owes nothing, but holds 60% of the work: a closing still does not
     // take effect; it stays open, paying the lender as a holder.
     let x = law::Closing { agreement: k, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])] };
-    let c = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), obj(k));
-    lab.sign(BEN, &c);
-    lab.sign(CY, &c);
+    let eo = ending_obj(&lab, k, x.collective);
+    let c = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, x.to_map(), eo);
+    lab.end(ANA, &c);
+    lab.end(BEN, &c);
+    lab.end(CY, &c);
     let e = view2(&lab, d).closing(&c).unwrap();
     assert!(e.open_debts.is_empty());
     assert_eq!(e.holds, vec![(k, 0)]);
@@ -4323,9 +4374,11 @@ fn the_ending_wins() {
     lab.sign(BEN, &d);
     assert_eq!(lab.view().obligation_binds(&d).unwrap(), Some(true), "done: it binds, for now");
     let closing = law::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])] };
-    let cl = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, closing.to_map(), obj(f));
-    lab.sign(BEN, &cl);
-    lab.sign(CY, &cl);
+    let eo = ending_obj(&lab, f, closing.collective);
+    let cl = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, closing.to_map(), eo);
+    lab.end(ANA, &cl);
+    lab.end(BEN, &cl);
+    lab.end(CY, &cl);
     let v = lab.view();
     let e = v.closing(&cl).unwrap();
     assert!(e.complete, "{:?}", e.why);
@@ -4347,9 +4400,11 @@ fn the_ending_wins() {
     let d2 = lab2.w.add(&a);
     lab2.sign(BEN, &d2);
     let closing = law::Closing { agreement: f2, collective: label2, chain_act: lab2.c[1].binding, tips: vec![tip(&lab2.c[1])] };
-    let cl = law_act(&mut lab2.w, &mut lab2.m[ANA], law::types::CLOSING, closing.to_map(), obj(f2));
-    lab2.sign(BEN, &cl);
-    lab2.sign(CY, &cl);
+    let eo = ending_obj(&lab2, f2, closing.collective);
+    let cl = law_act(&mut lab2.w, &mut lab2.m[ANA], law::types::CLOSING, closing.to_map(), eo);
+    lab2.end(ANA, &cl);
+    lab2.end(BEN, &cl);
+    lab2.end(CY, &cl);
     let e = lab2.view().closing(&cl).unwrap();
     assert!(!e.complete);
     assert_eq!(e.open_debts, vec![d2]);
@@ -4442,9 +4497,11 @@ fn a_sale_is_recorded_on_the_actions_chain() {
         shares: vec![],
         debts: vec![],
     };
-    let fk = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), obj(f));
-    lab.sign(BEN, &fk);
-    lab.sign(CY, &fk);
+    let eo = ending_obj(&lab, f, x.collective);
+    let fk = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), eo);
+    lab.end(ANA, &fk);
+    lab.end(BEN, &fk);
+    lab.end(CY, &fk);
     sign(&mut lab.w, &mut sa, &fk);
     sign(&mut lab.w, &mut sb, &fk);
     assert!(lab.view().fork(&fk).unwrap().complete);
@@ -4549,15 +4606,19 @@ fn a_closing_must_be_done() {
     lab.sign(ANA, &p);
     let c = law::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])] };
     let ben = lab.m[BEN].id;
-    let quiet = lab.w.private_act(&mut lab.m[ANA], mips().law, law::types::CLOSING, c.to_map(), obj(f), vec![ben]);
-    lab.sign(BEN, &quiet);
-    lab.sign(CY, &quiet);
+    let eo = ending_obj(&lab, f, c.collective);
+    let quiet = lab.w.private_act(&mut lab.m[ANA], mips().law, law::types::CLOSING, c.to_map(), eo, vec![ben]);
+    lab.end(ANA, &quiet);
+    lab.end(BEN, &quiet);
+    lab.end(CY, &quiet);
     let e = lab.view().closing(&quiet).unwrap();
     assert!(!e.complete);
     assert!(e.why.as_deref().is_some_and(|w| w.contains("W5")), "{:?}", e.why);
-    let open = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, c.to_map(), obj(f));
-    lab.sign(BEN, &open);
-    lab.sign(CY, &open);
+    let eo = ending_obj(&lab, f, c.collective);
+    let open = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, c.to_map(), eo);
+    lab.end(ANA, &open);
+    lab.end(BEN, &open);
+    lab.end(CY, &open);
     let e = lab.view().closing(&open).unwrap();
     assert!(e.complete, "{:?}", e.why);
 }

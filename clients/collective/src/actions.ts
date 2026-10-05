@@ -489,6 +489,12 @@ export class Actions {
         `${count(unheld.length, 'act')} in the history this ending would cite ${unheld.length === 1 ? 'is' : 'are'} not held here (first ${short(unheld[0])}): until ${unheld.length === 1 ? 'it is' : 'they are'}, what it must hand out cannot be told (F127; F131 IT2b, client conformance).`,
       );
     }
+    // F132 (U4, client conformance): once a complete ending of the
+    // collective is held, a member's client signs no further one.
+    const closed = (v.lawCurrent(specs, c.identity) as { closed: string | null } | null)?.closed;
+    if (closed) {
+      blocking.push(`The collective is already ended by ${short(closed)}: a member's client signs no further fork or closing of it (Law rule 47a; F132 U4, client conformance).`);
+    }
     return { blocking, named: v.lawEndingActs(specs, c.identity) as string[] };
   }
 
@@ -2057,7 +2063,7 @@ export class Actions {
     const reading: Reading = {
       title: `Fork “${cname}”`,
       summary: [
-        `${sides.length} sides: ${sides.map((s, i) => `side ${i + 1}, ${list(s.map(names))}`).join('; ')}. Each side first founds its own collective, its successor; the fork act names them (F124 N4). Every member on a side signs with their own identity, not the collective's key, under the constitutional change rule (Law rule 47a, F124 N1).`,
+        `${sides.length} sides: ${sides.map((s, i) => `side ${i + 1}, ${list(s.map(names))}`).join('; ')}. Each side first founds its own collective, its successor; the fork act names them (F124 N4). Every member on a side signs with their own identity, not the collective's key, with their safety key on their own identity chain (a chain signature, F132), under the constitutional change rule (Law rule 47a, F124 N1).`,
         leaving.length
           ? `${list(leaving.map(names))} sign${leaving.length === 1 ? 's' : ''} no side: no seat in any successor, and a departed holder of each at their percentage (F124 N1).`
           : 'Every member whose voice remains is on a side.',
@@ -2134,10 +2140,13 @@ export class Actions {
         const objects: [string, string][] = [[col.f.agreement, col.f.agreement], ...gate.named.map((e): [string, string] => [col.f.agreement, e])];
         const x = await first.publish(REPO_SPECS.law, LAW_TYPES.fork, payload, { public: true, relays, objects });
         acts.push(x.id);
-        const ids = [first];
-        for (const m of listed.slice(1)) {
+        // F132 (U1): every member on a side, the fork's signer included,
+        // signs it with their safety key, by a chain signature on their own
+        // identity chain.
+        const ids = [];
+        for (const m of listed) {
           const i = this.store.identity(m);
-          acts.push((await lawSign(i, x.id, relays)).id);
+          acts.push((await i.chainSign(x.id, relays)).id);
           ids.push(i);
         }
         for (const i of ids) this.store.saveIdentity(i);
@@ -2245,7 +2254,7 @@ export class Actions {
       title: `Close “${cname}”`,
       summary: [
         'A closing ends a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor (F124 N9, F125 D5). After its line, anything the collective\'s keys sign counts for nothing in Law.',
-        `Signed by ${list(signers.map(names))}, each with their own identity, under the constitutional change rule.`,
+        `Signed by ${list(signers.map(names))}, each with their own identity and their safety key, on their own identity chain (a chain signature, F132), under the constitutional change rule.`,
         owes.length ? `It owes ${owes.length === 1 ? 'one debt' : `${owes.length} debts`}, its own or as a fork's successor.` : 'It owes nothing: every debt it signed or owes as a successor is paid or released.',
       ],
       sections: [{ heading: 'Signed on this device', lines: [{ text: 'Test identities: consent simulated.', tone: 'warn' }] }],
@@ -2266,10 +2275,12 @@ export class Actions {
         const objects: [string, string][] = [[col.f.agreement, col.f.agreement], ...gate.named.map((e): [string, string] => [col.f.agreement, e])];
         const x = await first.publish(REPO_SPECS.law, LAW_TYPES.closing, payload, { public: true, relays: col.f.relays, objects });
         const acts = [x.id];
-        const ids = [first];
-        for (const m of signers.slice(1)) {
+        // F132 (U1): each signer, the closing's own included, signs it with
+        // their safety key, by a chain signature on their identity chain.
+        const ids = [];
+        for (const m of signers) {
           const i = this.store.identity(m);
-          acts.push((await lawSign(i, x.id, col.f.relays)).id);
+          acts.push((await i.chainSign(x.id, col.f.relays)).id);
           ids.push(i);
         }
         for (const i of ids) this.store.saveIdentity(i);

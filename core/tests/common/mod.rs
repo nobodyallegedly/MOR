@@ -10,7 +10,7 @@ use mor_core::chain::Verifier;
 use mor_core::hash::{sha256, Hash, ZERO_HASH};
 use mor_core::identity::{
     Absence, Audit, Declaration, Endorsement, Genesis, Home, HomeRule, KeptTip, LogSummary,
-    Objection, Payload, Receipt, Rotation, SafetyCommit, SigningKey, Successor,
+    ChainSignature, Objection, Payload, Receipt, Rotation, SafetyCommit, SigningKey, Successor,
 };
 use mor_core::merkle;
 use mor_core::mmr::Mmr;
@@ -63,6 +63,9 @@ pub struct Person {
     pub binding: Hash,
     /// Its position in the identity chain.
     pub position: u64,
+    /// The latest act of its identity chain: the binding, or a chain
+    /// signature made since (F132).
+    pub tip: Hash,
     /// The safety scheme used for new commitments (2 or 3).
     pub scheme: u8,
     /// The everyday sequence, as act ids.
@@ -281,6 +284,7 @@ impl World {
             safety,
             binding: id,
             position: 0,
+            tip: id,
             scheme,
             seq: vec![],
             log: vec![],
@@ -317,7 +321,7 @@ impl World {
                 .unwrap_or_default()
         });
         let payload = Payload::Rotation(Rotation {
-            prev: p.binding,
+            prev: p.tip,
             position: p.position + 1,
             signing_key: r
                 .raw_signing_key
@@ -342,8 +346,32 @@ impl World {
         q.sign = next_sign;
         q.safety = next_safety;
         q.binding = a.id();
+        q.tip = a.id();
         q.position += 1;
         (a, q)
+    }
+
+    /// A chain signature of `p` on `signs` (Identity type 16, F132), signed
+    /// with the safety key its latest chain act committed, committing the
+    /// next one. Held. Returns the act and the person as it is once the
+    /// signature counts: same signing key and binding, a new safety key.
+    pub fn chain_sign(&mut self, p: &Person, signs: Hash) -> (Hash, Person) {
+        let next_safety = slh(&format!("{}/chain/{}", p.name, p.position + 1), p.gen, p.scheme);
+        let payload = Payload::ChainSignature(ChainSignature {
+            prev: p.tip,
+            position: p.position + 1,
+            safety: commit(&next_safety),
+            signs,
+        });
+        let inside = self.inside(16, &payload);
+        let safety = p.safety.clone();
+        let a = self.seal(&inside, Some(p.id), None, |id| safety.sign(id, None));
+        let id = self.add(&a);
+        let mut q = p.clone();
+        q.safety = next_safety;
+        q.tip = id;
+        q.position += 1;
+        (id, q)
     }
 
     /// Rotate and hold the rotation.

@@ -49,5 +49,5 @@ export const ACK_SPECS: readonly string[] = [MIPS.identity, MIPS.finance, MIPS.l
 
 export { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 
-export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15 } as const;
+export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15, chainSignature: 16 } as const;
 export const ENVELOPE_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 } as const;

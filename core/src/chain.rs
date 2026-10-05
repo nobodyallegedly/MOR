@@ -28,7 +28,7 @@
 use crate::act::{Act, ActError, Inside};
 use crate::hash::Hash;
 use crate::identity::{
-    self, check_everyday_shape, check_genesis, check_rotation_shape, check_witness_shape, names, types, ChainState,
+    self, check_everyday_shape, check_genesis, check_chain_signature_shape, check_rotation_shape, check_witness_shape, names, types, ChainState,
     Effective, Endorsement, IdError, Operator, Payload, Rotation,
 };
 use crate::lock::ContentKey;
@@ -241,9 +241,10 @@ enum Judgement {
 
 /// A rotation that can count at a position: valid, naming the act that
 /// counts at the position before, revealing the committed safety key.
-struct Cand<'a> {
+struct Cand {
     id: Hash,
-    rot: &'a Rotation,
+    /// A homeless rotation (never a chain signature).
+    homeless: bool,
     /// The state it would leave.
     state: ChainState,
 }
@@ -331,6 +332,7 @@ impl Verifier {
             match &p {
                 Payload::Genesis(g) => check_genesis(&act, &inside, g)?,
                 Payload::Rotation(r) => check_rotation_shape(&act, &inside, r)?,
+                Payload::ChainSignature(c) => check_chain_signature_shape(&act, &inside, c)?,
                 Payload::Witness => {
                     check_everyday_shape(&act, &inside)?;
                     check_witness_shape(&inside)?
@@ -525,7 +527,7 @@ impl Verifier {
     }
 
     /// The rotations that can count at position `n` (rotation checks 2 to 5).
-    fn candidates(&self, id: &Hash, n: u64, prev: &Hash, ps: &ChainState) -> Vec<Cand<'_>> {
+    fn candidates(&self, id: &Hash, n: u64, prev: &Hash, ps: &ChainState) -> Vec<Cand> {
         let mut out = vec![];
         for rid in self.by_type.get(&types::ROTATION).into_iter().flatten() {
             let h = &self.acts[rid];
@@ -544,10 +546,32 @@ impl Verifier {
             if let Ok(state) = ps.apply(r) {
                 out.push(Cand {
                     id: *rid,
-                    rot: r,
+                    homeless: r.homeless,
                     state,
                 });
             }
+        }
+        // Chain signatures (F132): signed with the same safety key, they
+        // compete for the position as rotations do, and count as they do.
+        for cid in self.by_type.get(&types::CHAIN_SIGNATURE).into_iter().flatten() {
+            let h = &self.acts[cid];
+            let Some(Payload::ChainSignature(c)) = h.payload() else {
+                continue;
+            };
+            if h.signer() != Some(id) || c.position != n || &c.prev != prev {
+                continue;
+            }
+            let s = &h.act.signature;
+            if s.scheme != ps.safety.scheme
+                || sig::safety_commitment(&s.scheme, &s.key) != ps.safety.commit
+            {
+                continue;
+            }
+            out.push(Cand {
+                id: *cid,
+                homeless: false,
+                state: ps.sign(c),
+            });
         }
         out
     }
@@ -584,7 +608,7 @@ impl Verifier {
         // Escape endorsements abandon earlier rotations at this position.
         let abandoned: BTreeSet<Hash> = cands
             .iter()
-            .filter(|c| c.rot.homeless)
+            .filter(|c| c.homeless)
             .flat_map(|c| self.endorsements(id, &prev, ps, &c.id))
             .flat_map(|e| e.abandoned.clone().unwrap_or_default())
             .collect();
@@ -592,7 +616,7 @@ impl Verifier {
             .iter()
             .filter(|c| !abandoned.contains(&c.id))
             .collect();
-        let homeless: Vec<&Cand> = pool.iter().copied().filter(|c| c.rot.homeless).collect();
+        let homeless: Vec<&Cand> = pool.iter().copied().filter(|c| c.homeless).collect();
 
         // 1. Under the home rule in effect. A rotation that counts under the
         //    old home rule always beats a homeless rotation at the same
@@ -796,8 +820,8 @@ impl Verifier {
         if audit.is_some() && !cosigned {
             return Judged::No;
         }
-        if k + 1 < res.links.len() {
-            match self.judge(cx, r, &res.links[k + 1].act, &op) {
+        if let Some(j) = self.judging(&res, k) {
+            match self.judge(cx, r, &res.links[j].act, &op) {
                 Judgement::Kept => Judged::Support { protected: true },
                 _ if cosigned => Judged::Support { protected: true },
                 Judgement::Disputed => Judged::Disputed,
@@ -868,13 +892,30 @@ impl Verifier {
         false
     }
 
+    /// The position of the rotation that judges acts signed with the key
+    /// set at position `k`: the first counting rotation after it. A chain
+    /// signature changes no key and judges nothing (F132).
+    fn judging(&self, res: &Resolution, k: usize) -> Option<usize> {
+        (k + 1..res.links.len()).find(|j| matches!(self.acts[&res.links[*j].act].payload(), Some(Payload::Rotation(_))))
+    }
+
+    /// Whether a counting link is a chain signature, which binds no key.
+    fn is_chain_signature(&self, res: &Resolution, k: usize) -> bool {
+        matches!(self.acts[&res.links[k].act].payload(), Some(Payload::ChainSignature(_)))
+    }
+
     /// Everyday check 2: the position of the counting identity-chain act
     /// that bound the act's key, if the binding counts and the key matches.
+    /// A binding names the genesis or a rotation, the act that set the key,
+    /// never a chain signature (F132).
     fn bound(&self, res: &Resolution, h: &Held) -> Option<usize> {
         if h.verdict != Verdict::Valid {
             return None;
         }
         let k = res.position_of(h.act.outside.binding.as_ref()?)?;
+        if self.is_chain_signature(res, k) {
+            return None;
+        }
         res.states[k]
             .signing_key
             .made(&h.act.signature)
@@ -1011,7 +1052,7 @@ impl Verifier {
                 match x.payload() {
                     Some(Payload::Endorsement(en))
                         if x.signer() == Some(id)
-                            && x.act.outside.binding.as_ref() == Some(prev)
+                            && x.act.outside.binding.as_ref().is_some_and(|b| b == prev || self.sets_key(id, b))
                             && ps.signing_key.made(&x.act.signature)
                             && names(&x.inside, id, h) =>
                     {
@@ -1020,6 +1061,18 @@ impl Verifier {
                     _ => None,
                 }
             })
+    }
+
+    /// Whether `b` is a genesis or rotation of `id`, an act that sets a
+    /// signing key: where a chain signature is the act just before a
+    /// homeless rotation, the endorsement is bound to the act that set the
+    /// key in effect (F132).
+    fn sets_key(&self, id: &Hash, b: &Hash) -> bool {
+        self.acts.get(b).is_some_and(|h| match h.payload() {
+            Some(Payload::Genesis(_)) => h.id == *id,
+            Some(Payload::Rotation(_)) => h.signer() == Some(id),
+            _ => false,
+        })
     }
 
     /// Whether an operator closed its homes by a counting rotation.
@@ -1142,7 +1195,7 @@ impl Verifier {
         }
         match &x.identity {
             Some(Err(_)) => return Status::Invalid,
-            Some(Ok(Payload::Genesis(_))) | Some(Ok(Payload::Rotation(_))) => {
+            Some(Ok(Payload::Genesis(_))) | Some(Ok(Payload::Rotation(_))) | Some(Ok(Payload::ChainSignature(_))) => {
                 let who = x.signer().copied().unwrap_or(x.id);
                 let res = self.resolve_cx(cx, &who);
                 return if res.position_of(&x.id).is_some() {
@@ -1172,11 +1225,11 @@ impl Verifier {
                 _ => Status::Invalid,
             };
         };
-        if !res.states[k].signing_key.made(&x.act.signature) {
+        if self.is_chain_signature(&res, k) || !res.states[k].signing_key.made(&x.act.signature) {
             return Status::Invalid;
         }
-        if k + 1 < res.links.len() {
-            match self.judge(cx, x, &res.links[k + 1].act, signer) {
+        if let Some(j) = self.judging(&res, k) {
+            match self.judge(cx, x, &res.links[j].act, signer) {
                 Judgement::Kept => Status::Valid,
                 Judgement::Disputed => Status::Disputed,
                 Judgement::Void => Status::Void,

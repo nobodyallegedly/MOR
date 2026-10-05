@@ -169,6 +169,20 @@ fn cites_on(v: &Verifier, chain: &Hash, x: &Hash) -> Vec<Hash> {
 
 /// The history of a set of starting acts on a collective's chain: every act
 /// reached by following what each cites, transitively (F127, "History").
+/// Every node reachable from `from` along `edges`, `from` left out.
+fn reach(edges: &BTreeMap<Hash, BTreeSet<Hash>>, from: &Hash) -> BTreeSet<Hash> {
+    let mut out = BTreeSet::new();
+    let mut todo = vec![*from];
+    while let Some(x) = todo.pop() {
+        for y in edges.get(&x).into_iter().flatten() {
+            if y != from && out.insert(*y) {
+                todo.push(*y);
+            }
+        }
+    }
+    out
+}
+
 fn history(v: &Verifier, chain: &Hash, start: &[Hash]) -> BTreeSet<Hash> {
     let mut seen = BTreeSet::new();
     let mut todo: Vec<Hash> = start.to_vec();
@@ -345,6 +359,9 @@ enum Op {
     /// holds (client conformance, F131 IT1); otherwise none.
     Fork { stale: u8, sides: u8, debts: DebtsMode, seal: Seal, all_sign: bool, succ_sign: bool, names: bool },
     Closing { stale: u8, seal: Seal, all_sign: bool, names: bool },
+    /// A member listed on an earlier ending who has not signed it signs it
+    /// now, after whatever came since: an old proposal finished late (U4).
+    LateSign { ending: u8, member: u8 },
     Pay { debt: u8, by: PaidBy, full: bool },
     Release { debt: u8, by_creditor: bool },
     Sale { strand: u8, proof: u8, disguise: Disguise, lane_sign: bool, line_current: bool },
@@ -378,6 +395,7 @@ fn op() -> impl Strategy<Value = Op> {
             .prop_map(|(stale, sides, debts, seal, all_sign, succ_sign, names)| Op::Fork { stale, sides, debts, seal, all_sign, succ_sign, names }),
         1 => (prop_oneof![3 => Just(0u8), 1 => 1u8..3], seal(), prop::bool::weighted(0.85), prop::bool::weighted(0.75))
             .prop_map(|(stale, seal, all_sign, names)| Op::Closing { stale, seal, all_sign, names }),
+        1 => (any::<u8>(), any::<u8>()).prop_map(|(ending, member)| Op::LateSign { ending, member }),
         2 => (any::<u8>(), paid, prop::bool::weighted(0.8)).prop_map(|(debt, by, full)| Op::Pay { debt, by, full }),
         1 => (any::<u8>(), prop::bool::weighted(0.8)).prop_map(|(debt, by_creditor)| Op::Release { debt, by_creditor }),
         2 => (any::<u8>(), 0u8..3, disguise, prop::bool::weighted(0.8), any::<bool>())
@@ -457,6 +475,8 @@ struct EndingInfo {
     id: Hash,
     fork: bool,
     tips: Vec<Hash>,
+    /// The members it lists: a fork's sides, a closing's voices.
+    listed: Vec<Hash>,
 }
 
 struct ColWorld {
@@ -481,6 +501,12 @@ struct ColWorld {
     grants: Vec<GrantInfo>,
     debts: Vec<Hash>,
     endings: Vec<EndingInfo>,
+    /// Every member's ending signature (a chain signature, F132), in the
+    /// order made, so in each member's chain order: (member, ending, op
+    /// index, late: a LateSign).
+    end_sigs: Vec<(Hash, Hash, usize, bool)>,
+    /// The op being applied.
+    step: usize,
     /// Departures registered: (record, party, area only).
     departures: Vec<(Hash, Hash, bool)>,
     records: Vec<Hash>,
@@ -590,6 +616,8 @@ impl ColWorld {
             grants: vec![],
             debts: vec![],
             endings: vec![],
+            end_sigs: vec![],
+            step: 0,
             departures: vec![],
             records: vec![],
             first_end: None,
@@ -625,6 +653,21 @@ impl ColWorld {
     }
 
     /// A member signs an act, from one of their devices.
+    /// Member `i` signs an ending: a chain signature, with their safety
+    /// key, on their identity chain (F132), which every one of their
+    /// devices then carries on from.
+    fn member_end(&mut self, i: usize, x: &Hash, late: bool) -> Hash {
+        let d = self.rng.below(self.m[i].len());
+        let (id, q) = self.w.chain_sign(&self.m[i][d], *x);
+        for dv in self.m[i].iter_mut() {
+            dv.tip = q.tip;
+            dv.safety = q.safety.clone();
+            dv.position = q.position;
+        }
+        self.end_sigs.push((q.id, *x, self.step, late));
+        id
+    }
+
     fn member_sign(&mut self, i: usize, x: &Hash) -> Hash {
         let d = self.rng.below(self.m[i].len());
         sign(&mut self.w, &mut self.m[i][d], x)
@@ -844,6 +887,7 @@ impl ColWorld {
         // Each step draws its own randomness from what it is, so that
         // shrinking a story never changes the steps it keeps.
         self.rng = Lcg(u64::from_le_bytes(sha256(format!("{op:?}/{}", self.seed).as_bytes())[..8].try_into().unwrap()));
+        self.step = i;
         let devs = self.c.len();
         match *op {
             Op::Publish { dev, seal } => {
@@ -1042,11 +1086,12 @@ impl ColWorld {
                         self.w.private_act(&mut self.m[signer][0], mips().law, law::types::FORK, f.to_map(), o, to)
                     }
                 };
+                self.member_end(signer, &x, false);
                 let others: Vec<usize> = a.iter().chain(b.iter()).copied().filter(|m| *m != signer).collect();
                 let skip = if all_sign { usize::MAX } else { self.rng.below(others.len().max(1)) };
                 for (k, m) in others.iter().enumerate() {
                     if k != skip {
-                        self.member_sign(*m, &x);
+                        self.member_end(*m, &x, false);
                     }
                 }
                 let n = self.succ_people.len();
@@ -1057,7 +1102,8 @@ impl ColWorld {
                         self.succ_people[j] = p;
                     }
                 }
-                self.endings.push(EndingInfo { id: x, fork: true, tips: tips.iter().map(|t| t.act).collect() });
+                let listed = a.iter().chain(b.iter()).map(|m| ids[*m]).collect();
+                self.endings.push(EndingInfo { id: x, fork: true, tips: tips.iter().map(|t| t.act).collect(), listed });
             }
             Op::Closing { stale, seal, all_sign, names } => {
                 if self.endings.len() >= 3 {
@@ -1068,7 +1114,25 @@ impl ColWorld {
                 let voices: Vec<usize> = (0..ids.len()).filter(|i| !gone.contains(&ids[*i])).collect();
                 let tips = self.line(stale);
                 let c = law::Closing { agreement: self.current, collective: self.col, chain_act: self.c[0].binding, tips: tips.clone() };
-                let signer = voices[0];
+                if voices.is_empty() {
+                    return;
+                }
+                // Who signs: every voice; or, under a threshold, sometimes
+                // just enough of them from a random start, so that two
+                // closings may share no signer (a true tie, F132 U1); or
+                // every voice but one.
+                let signers: Vec<usize> = match self.shape.constitutional {
+                    _ if all_sign => voices.clone(),
+                    Some(k) if self.rng.below(2) == 0 => {
+                        let o = self.rng.below(voices.len());
+                        (0..(k as usize).clamp(1, voices.len())).map(|j| voices[(o + j) % voices.len()]).collect()
+                    }
+                    _ => {
+                        let skip = 1 + self.rng.below(voices.len().saturating_sub(1).max(1));
+                        voices.iter().enumerate().filter(|(k, _)| *k != skip).map(|(_, m)| *m).collect()
+                    }
+                };
+                let signer = signers[0];
                 let o = self.ending_objects(names);
                 let x = match seal {
                     Seal::Public => law_act(&mut self.w, &mut self.m[signer][0], law::types::CLOSING, c.to_map(), o),
@@ -1078,13 +1142,25 @@ impl ColWorld {
                         self.w.private_act(&mut self.m[signer][0], mips().law, law::types::CLOSING, c.to_map(), o, to)
                     }
                 };
-                let skip = if all_sign { usize::MAX } else { 1 + self.rng.below(voices.len().saturating_sub(1).max(1)) };
-                for (k, m) in voices.iter().enumerate().skip(1) {
-                    if k != skip {
-                        self.member_sign(*m, &x);
-                    }
+                for m in &signers {
+                    self.member_end(*m, &x, false);
                 }
-                self.endings.push(EndingInfo { id: x, fork: false, tips: tips.iter().map(|t| t.act).collect() });
+                let listed = voices.iter().map(|m| ids[*m]).collect();
+                self.endings.push(EndingInfo { id: x, fork: false, tips: tips.iter().map(|t| t.act).collect(), listed });
+            }
+            Op::LateSign { ending, member } => {
+                if self.endings.is_empty() {
+                    return;
+                }
+                let e = &self.endings[ending as usize % self.endings.len()];
+                let x = e.id;
+                let unsigned: Vec<Hash> = e.listed.iter().filter(|m| !self.end_sigs.iter().any(|(s, y, _, _)| s == *m && *y == x)).copied().collect();
+                if unsigned.is_empty() {
+                    return;
+                }
+                let who = unsigned[member as usize % unsigned.len()];
+                let i = self.ids().iter().position(|h| *h == who).unwrap();
+                self.member_end(i, &x, true);
             }
             Op::Pay { debt, by, full } => {
                 if self.debts.is_empty() {
@@ -1177,19 +1253,79 @@ impl ColWorld {
     }
 
     /// The endings an ending names, directly or through the endings it
-    /// names, read from the acts (the oracle's own reading of F131 IT1).
+    /// names (the oracle's own reading of F131 IT1 and F132 U1): in its
+    /// `objects`, read from the acts, or through a member's chain, read
+    /// from the generator's own order of the members' ending signatures.
     fn ending_names(&self, x: &Hash) -> BTreeSet<Hash> {
-        let ends: BTreeSet<Hash> = self.endings.iter().map(|e| e.id).collect();
-        let mut out = BTreeSet::new();
-        let mut todo = vec![*x];
-        while let Some(y) = todo.pop() {
-            for o in self.w.v.get(&y).and_then(|h| h.inside.objects.clone()).unwrap_or_default() {
-                if ends.contains(&o.predecessor) && o.predecessor != *x && out.insert(o.predecessor) {
-                    todo.push(o.predecessor);
+        reach(&self.ending_model().1, x)
+    }
+
+    /// The oracle's own reading of F132: the ending signatures that count,
+    /// as (member, ending), and the endings each ending names directly.
+    /// U4: a member's signature on an ending counts for nothing where the
+    /// member signed, earlier, another ending naming it; judged first with
+    /// naming by `objects`, then, among the signatures left, with naming
+    /// through members' chains too.
+    fn ending_model(&self) -> (BTreeSet<(Hash, Hash)>, BTreeMap<Hash, BTreeSet<Hash>>) {
+        let (sigs, names, _) = self.ending_model_full();
+        (sigs, names)
+    }
+
+    /// As `ending_model`, with the endings that are no ending (U4b): their
+    /// drafter signed, earlier, another ending they do not name in their
+    /// `objects`. Those are left out of the rest.
+    fn ending_model_full(&self) -> (BTreeSet<(Hash, Hash)>, BTreeMap<Hash, BTreeSet<Hash>>, BTreeSet<Hash>) {
+        let all: BTreeSet<Hash> = self.endings.iter().map(|e| e.id).collect();
+        let objects_all: BTreeMap<Hash, BTreeSet<Hash>> = all
+            .iter()
+            .map(|e| {
+                let os = self.w.v.get(e).and_then(|h| h.inside.objects.clone()).unwrap_or_default();
+                (*e, os.iter().map(|o| o.predecessor).filter(|p| all.contains(p) && p != e).collect())
+            })
+            .collect();
+        let no_ending: BTreeSet<Hash> = all
+            .iter()
+            .filter(|e| {
+                let Some(d) = self.w.v.get(e).and_then(|h| h.act.outside.signer) else { return false };
+                let Some(p) = self.end_sigs.iter().position(|(m, x, _, _)| *m == d && x == *e) else { return false };
+                let named = reach(&objects_all, e);
+                self.end_sigs[..p].iter().any(|(m, y, _, _)| *m == d && y != *e && !named.contains(y))
+            })
+            .copied()
+            .collect();
+        let ends: BTreeSet<Hash> = all.difference(&no_ending).copied().collect();
+        let objects: BTreeMap<Hash, BTreeSet<Hash>> = ends
+            .iter()
+            .map(|e| {
+                let os = self.w.v.get(e).and_then(|h| h.inside.objects.clone()).unwrap_or_default();
+                (*e, os.iter().map(|o| o.predecessor).filter(|p| ends.contains(p) && p != e).collect())
+            })
+            .collect();
+        let sigs: Vec<(Hash, Hash)> = self.end_sigs.iter().filter(|(_, x, _, _)| ends.contains(x)).map(|(m, x, _, _)| (*m, *x)).collect();
+        let voided = |sigs: &[(Hash, Hash)], names: &BTreeMap<Hash, BTreeSet<Hash>>| -> Vec<(Hash, Hash)> {
+            sigs.iter()
+                .enumerate()
+                .filter(|(k, (m, x))| sigs[..*k].iter().any(|(m2, y)| m2 == m && y != x && reach(names, y).contains(x)))
+                .map(|(_, s)| *s)
+                .collect()
+        };
+        let chains = |sigs: &[(Hash, Hash)]| {
+            let mut names = objects.clone();
+            for (k, (m, y)) in sigs.iter().enumerate() {
+                for (m2, x) in &sigs[..k] {
+                    if m2 == m && x != y {
+                        names.entry(*y).or_default().insert(*x);
+                    }
                 }
             }
-        }
-        out
+            names
+        };
+        let v1 = voided(&sigs, &objects);
+        let left: Vec<(Hash, Hash)> = sigs.iter().filter(|s| !v1.contains(s)).copied().collect();
+        let v2 = voided(&left, &chains(&left));
+        let left: Vec<(Hash, Hash)> = left.into_iter().filter(|s| !v2.contains(s)).collect();
+        let names = chains(&left);
+        (left.into_iter().collect(), names, no_ending)
     }
 
     /// An ending's `objects`: the agreement as chain and predecessor, and,
@@ -1429,18 +1565,39 @@ impl ColWorld {
                 bad.push(format!("{code}: act {y:?} counted and a later act of the collective {by:?} cited it, yet it no longer counts ({:?}; backing {:?}; binds {:?}; the citing act counts: {})", self.info[y].kind, lv.backing(y), lv.obligation_binds(y), self.counts(&lv, by)));
             }
         }
+        // A member signs an ending by a chain signature (F132); one placed
+        // after the member's signature on another ending naming it counts
+        // for nothing (U4).
+        let (counting, _, no_ending) = self.ending_model_full();
+        let lib: BTreeSet<Hash> = lv.ending_sigs(&col).no_ending.keys().copied().collect();
+        if lib != no_ending {
+            bad.push(format!("ENDING-NO-ENDING: the library's endings that are no ending {lib:?}, expected {no_ending:?} (F132 U4b)"));
+        }
+        for x in &self.endings {
+            for m in &x.listed {
+                let want = counting.contains(&(*m, x.id));
+                let got = !lv.ending_signed(&col, &x.id, &[*m]).is_empty();
+                if want != got {
+                    bad.push(format!("ENDING-SIGNATURES: {m:?}'s signature on the ending {:?} counts: {got}, expected {want} (F132 U1, U4)", x.id));
+                }
+            }
+        }
         // Nothing published after a complete ending undoes it (F131, IT1):
-        // a later ending names it, and counts for nothing. A later ending
-        // naming none of the earlier ones cannot be told from one made
-        // without knowing them: the two are concurrent, and neither counts
-        // (ENDING-RACE, open: U1).
+        // a later ending names it, in its objects or through a member's
+        // chain (F132 U1), and counts for nothing. Only a later ending
+        // sharing no signer with it and naming none of the earlier ones is
+        // concurrent: neither counts (ENDING-RACE, counted). U4's stated
+        // cost: under a threshold, members who signed no ending naming an
+        // old proposal can finish it late (ENDING-LATE, counted).
         if let Some((at, e, snap)) = &self.first_end {
             let now = lv.closed_by(&col).map_err(|e| format!("{e:?}"))?.map(|c| c.by);
             let complete = |x: &EndingInfo| -> bool {
                 if x.fork { lv.fork(&x.id).is_ok_and(|f| f.complete) } else { lv.closing(&x.id).is_ok_and(|c| c.complete) }
             };
             let unnamed = self.endings.iter().any(|x| x.id != *e && complete(x) && !self.ending_names(&x.id).contains(e));
-            let code = if unnamed { "ENDING-RACE" } else { "ENDING-UNDONE" };
+            let late = self.shape.constitutional.is_some()
+                && self.end_sigs.iter().any(|(m, x, s, late)| *late && s > at && counting.contains(&(*m, *x)));
+            let code = if late { "ENDING-LATE" } else if unnamed { "ENDING-RACE" } else { "ENDING-UNDONE" };
             if now != Some(*e) {
                 bad.push(format!("{code}: the ending {e:?}, complete after step {at}, no longer ends the collective (now {now:?})"));
             }
@@ -1499,7 +1656,14 @@ struct Violations(Vec<String>);
 /// the citing act: its signers colluding, or a client breaking the
 /// conformance rule), counted, not failed. ENDING-RACE is a later ending
 /// naming none of the earlier ones, open for Nobody, allegedly (U1).
-const TEXT: &[&str] = &["SAFE-STALE-LINE", "ENDING-RACE"];
+///
+/// After F132: an ending is signed on each member's identity chain, so
+/// ENDING-UNDONE fails wherever the two endings share a signer;
+/// ENDING-RACE now counts only endings sharing no signer (a true tie,
+/// settled by a third ending naming both, U2). ENDING-LATE is U4's stated
+/// cost: under a threshold, members who signed no ending naming an old
+/// proposal finish it late with others' earlier signatures.
+const TEXT: &[&str] = &["SAFE-STALE-LINE", "ENDING-RACE", "ENDING-LATE"];
 
 fn known() -> &'static Stats {
     static S: std::sync::OnceLock<Stats> = std::sync::OnceLock::new();
@@ -1526,7 +1690,7 @@ impl Violations {
 
 fn col_stats() -> &'static Stats {
     static S: std::sync::OnceLock<Stats> = std::sync::OnceLock::new();
-    S.get_or_init(|| Stats::new(&["cases", "acts", "fork_complete", "closing_complete", "ended", "revocation_counts", "area_emptied", "grant_binds", "grant_void", "debt_binds", "purchase", "refund", "adopted_by_citation", "later_ending_named"]))
+    S.get_or_init(|| Stats::new(&["cases", "acts", "fork_complete", "closing_complete", "ended", "revocation_counts", "area_emptied", "grant_binds", "grant_void", "debt_binds", "purchase", "refund", "adopted_by_citation", "later_ending_named", "named_through_chains", "ending_signatures", "late_signature_counts", "late_signature_void", "tie_unsettled", "no_ending"]))
 }
 
 fn run_col(shape: &Shape, ops: &[Op], seed: u64) -> ColWorld {
@@ -1557,8 +1721,25 @@ fn tally(cw: &ColWorld) {
         if let Some((_, first, _)) = &cw.first_end {
             if e.id != *first && cw.ending_names(&e.id).contains(first) {
                 s.hit("later_ending_named");
+                if !lv.ending_objects(&cw.col, &e.id).contains(first) {
+                    s.hit("named_through_chains");
+                }
             }
         }
+    }
+    let (counting, _) = cw.ending_model();
+    for (m, x, _, late) in &cw.end_sigs {
+        s.hit("ending_signatures");
+        if *late {
+            s.hit(if counting.contains(&(*m, *x)) { "late_signature_counts" } else { "late_signature_void" });
+        }
+    }
+    for _ in cw.ending_model_full().2 {
+        s.hit("no_ending");
+    }
+    let complete = cw.endings.iter().filter(|x| if x.fork { lv.fork(&x.id).is_ok_and(|f| f.complete) } else { lv.closing(&x.id).is_ok_and(|c| c.complete) }).count();
+    if complete >= 2 && lv.closed_by(&cw.col).ok().flatten().is_none() {
+        s.hit("tie_unsettled");
     }
     for (x, f) in &cw.info {
         if matches!(f.kind, K::Revocation { .. }) && f.grant.is_none() && lv.consent(x).is_ok_and(|c| c.counts()) {
@@ -2663,12 +2844,10 @@ fn ic9_a_departure_racing_a_citation_takes_no_voice() {
 
 /// IT1, decided (F131): a complete ending is final. A later fork naming
 /// the first counts for nothing: the first still ends the collective, its
-/// successors keep what it handed them. Two complete endings neither
-/// naming the other are concurrent, made without knowing each other:
-/// neither counts (F125 reading 4, narrowed to that case), until an ending
-/// naming both settles it (reading U2, to confirm). A later ending that
-/// knew the first and does not name it cannot be told from a concurrent
-/// one (U1, open).
+/// successors keep what it handed them; a closing naming both, nothing
+/// either. Two endings neither naming the other are tested in
+/// `u1_a_signers_chain_orders_two_endings` and
+/// `u2_a_third_ending_naming_both_settles_a_tie` (F132).
 #[test]
 fn it1_a_complete_ending_is_final() {
     let mut cw = ColWorld::new(&two(), 0);
@@ -2686,21 +2865,159 @@ fn it1_a_complete_ending_is_final() {
     drop(lv);
     cw.apply(2, &Op::Closing { stale: 0, seal: Seal::Public, all_sign: true, names: true });
     assert_eq!(cw.view().closed_by(&cw.col).unwrap().map(|c| c.by), Some(first));
+}
 
-    // Two forks neither naming the other: concurrent, neither counts.
-    let mut race = ColWorld::new(&two(), 0);
-    race.apply(0, &Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: true, names: false });
-    race.apply(1, &Op::Fork { stale: 0, sides: 1, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: true, names: false });
-    let lv = race.view();
-    assert!(lv.fork(&race.endings[0].id).unwrap().complete && lv.fork(&race.endings[1].id).unwrap().complete);
-    assert_eq!(lv.closed_by(&race.col).unwrap(), None, "a race between equals: neither counts");
+/// A closing of `cw`'s collective drafted by `signers[0]`, signed by each
+/// of `signers` with a chain signature (F132), naming in `objects` the
+/// endings `names` (none: an ending drawn without knowing the others).
+fn close_with(cw: &mut ColWorld, signers: &[usize], names: &[Hash]) -> Hash {
+    let c = law::Closing { agreement: cw.current, collective: cw.col, chain_act: cw.c[0].binding, tips: cw.line(0) };
+    let mut o = obj(cw.current).unwrap();
+    o.extend(names.iter().map(|e| Object { chain: cw.current, predecessor: *e }));
+    let x = law_act(&mut cw.w, &mut cw.m[signers[0]][0], law::types::CLOSING, c.to_map(), Some(o));
+    for m in signers {
+        cw.member_end(*m, &x, false);
+    }
+    let listed = cw.ids();
+    cw.endings.push(EndingInfo { id: x, fork: false, tips: c.tips.iter().map(|t| t.act).collect(), listed });
+    x
+}
+
+/// U1, decided (F132): a member signs a fork or closing with their safety
+/// key, by a chain signature (Identity type 16) on their identity chain, so
+/// any two of one member's ending signatures are ordered, whatever devices
+/// they use. Of Ana, Ben and Cy (two of three suffice), Ana and Ben close
+/// the collective. Cy, who did not sign it, drafts a second closing naming
+/// nothing, and Ben signs it too: it names the first through Ben's chain,
+/// counts for nothing, and the first stays final. A signature act (Law
+/// type 1) on an ending counts for nothing. And U4b: a drafter who signed
+/// an earlier ending must name it in `objects`; Ben's own closing leaving
+/// it out is no ending.
+#[test]
+fn u1_a_signers_chain_orders_two_endings() {
+    let shape = Shape { members: 3, devices: 1, member_devices: 3, constitutional: Some(2), lane: None, owns_work: false };
+    let mut cw = ColWorld::new(&shape, 0);
+    let first = close_with(&mut cw, &[0, 1], &[]);
+    assert_eq!(cw.view().closed_by(&cw.col).unwrap().map(|c| c.by), Some(first));
+    let second = close_with(&mut cw, &[2, 1], &[]);
+    let lv = cw.view();
+    assert!(lv.closing(&first).unwrap().complete && lv.closing(&second).unwrap().complete, "{:?}", lv.closing(&second).unwrap().why);
+    assert!(lv.ending_objects(&cw.col, &second).is_empty(), "the second names nothing in its objects");
+    assert!(lv.ending_knows(&cw.col, &second).contains(&first), "it names the first through Ben's chain");
+    assert!(!lv.ending_knows(&cw.col, &first).contains(&second));
+    assert_eq!(lv.closed_by(&cw.col).unwrap().map(|c| c.by), Some(first), "the first stays final");
     drop(lv);
-    // Reading U2: a closing naming both settles the race.
-    race.apply(2, &Op::Closing { stale: 0, seal: Seal::Public, all_sign: true, names: true });
-    let lv = race.view();
-    let c = race.endings[2].id;
-    assert!(lv.closing(&c).unwrap().complete, "{:?}", lv.closing(&c).unwrap().why);
-    assert_eq!(lv.closed_by(&race.col).unwrap().map(|x| x.by), Some(c));
+    // Ben drafts a closing leaving out the endings he signed: no ending.
+    let third = close_with(&mut cw, &[1, 2], &[]);
+    let lv = cw.view();
+    let e = lv.closing(&third).unwrap();
+    assert!(!e.complete && e.why.as_deref().is_some_and(|w| w.contains("U4b")), "{:?}", e.why);
+    assert!(lv.ending_sigs(&cw.col).no_ending.contains_key(&third));
+    assert_eq!(lv.closed_by(&cw.col).unwrap().map(|c| c.by), Some(first));
+    drop(lv);
+    // Signature acts (Law type 1) on a closing, the old way: no signature.
+    let ids = cw.ids();
+    let c = law::Closing { agreement: cw.current, collective: cw.col, chain_act: cw.c[0].binding, tips: cw.line(0) };
+    let x = law_act(&mut cw.w, &mut cw.m[0][0], law::types::CLOSING, c.to_map(), obj(cw.current));
+    sign(&mut cw.w, &mut cw.m[1][0], &x);
+    let e = cw.view().closing(&x).unwrap();
+    assert!(e.signed.is_empty() && !e.complete, "{:?}", e.why);
+    assert!(cw.view().ending_signed(&cw.col, &x, &ids).is_empty());
+}
+
+/// U2, confirmed (F132): only endings sharing no signer can tie. Ana and
+/// Ben close the collective; Cy and Dee, unaware, close it too (two of
+/// four suffice): a true tie, and neither counts. A third closing Ana
+/// drafts, naming in its `objects` the one she signed (U4b), and Cy signs,
+/// settles it: it names the other through Cy's chain, and counts.
+#[test]
+fn u2_a_third_ending_naming_both_settles_a_tie() {
+    let shape = Shape { members: 4, devices: 1, member_devices: 1, constitutional: Some(2), lane: None, owns_work: false };
+    let mut cw = ColWorld::new(&shape, 0);
+    let c1 = close_with(&mut cw, &[0, 1], &[]);
+    assert_eq!(cw.view().closed_by(&cw.col).unwrap().map(|c| c.by), Some(c1));
+    let c2 = close_with(&mut cw, &[2, 3], &[]);
+    let lv = cw.view();
+    assert!(lv.closing(&c1).unwrap().complete && lv.closing(&c2).unwrap().complete);
+    assert!(lv.ending_knows(&cw.col, &c2).is_empty() && lv.ending_knows(&cw.col, &c1).is_empty());
+    assert_eq!(lv.closed_by(&cw.col).unwrap(), None, "a race between equals: neither counts");
+    drop(lv);
+    let c3 = close_with(&mut cw, &[0, 2], &[c1]);
+    let lv = cw.view();
+    assert_eq!(lv.ending_knows(&cw.col, &c3), [c1, c2].into_iter().collect());
+    assert_eq!(lv.closed_by(&cw.col).unwrap().map(|x| x.by), Some(c3));
+}
+
+/// U4, decided (F132, option a): a member's signature on an ending counts
+/// for nothing where it lies, on their identity chain, after their own
+/// signature on another ending naming it. Ben drafts a closing and signs
+/// it; Ana does not. They then close by a second closing, naming the
+/// first; it is complete, and final. Weeks later Ana signs the first: her
+/// signature counts for nothing, and the second stays final. (Before F132
+/// the first then counted, and the second for nothing.)
+///
+/// The stated cost: under a threshold, a member who signed no ending
+/// naming the old proposal can still finish it with others' earlier
+/// signatures. Of Ana, Ben and Cy (two of three suffice), Ben drafts and
+/// signs a closing; Ana and Ben close by a second one naming it; Cy, who
+/// signed neither, signs the first: it is complete with Ben's earlier
+/// signature, named by the second, so the earlier: it counts, and the
+/// second for nothing. Visible: Cy's late signature is on Cy's chain.
+#[test]
+fn u4_an_old_proposal_finished_late_counts_for_nothing() {
+    let mut cw = ColWorld::new(&two(), 0);
+    let ids = cw.ids();
+    let old = close_with(&mut cw, &[1], &[]);
+    assert!(!cw.view().closing(&old).unwrap().complete);
+    let new = close_with(&mut cw, &[0, 1], &[old]);
+    assert_eq!(cw.view().closed_by(&cw.col).unwrap().map(|c| c.by), Some(new));
+    cw.member_end(0, &old, true);
+    let lv = cw.view();
+    let sigs = lv.ending_sigs(&cw.col);
+    assert_eq!(sigs.void.get(&(old, ids[0])).map(|v| v.1), Some(new), "Ana's late signature counts for nothing");
+    assert!(!lv.closing(&old).unwrap().complete);
+    assert_eq!(lv.closed_by(&cw.col).unwrap().map(|c| c.by), Some(new));
+    drop(lv);
+
+    let shape = Shape { members: 3, devices: 1, member_devices: 1, constitutional: Some(2), lane: None, owns_work: false };
+    let mut cw = ColWorld::new(&shape, 0);
+    let old = close_with(&mut cw, &[1], &[]);
+    let new = close_with(&mut cw, &[0, 1], &[old]);
+    assert_eq!(cw.view().closed_by(&cw.col).unwrap().map(|c| c.by), Some(new));
+    cw.member_end(2, &old, true);
+    let lv = cw.view();
+    assert!(lv.closing(&old).unwrap().complete);
+    assert!(lv.ending_sigs(&cw.col).void.is_empty());
+    assert_eq!(lv.closed_by(&cw.col).unwrap().map(|c| c.by), Some(old), "the stated cost");
+}
+
+/// U4b, decided (F132, option b; found by the large run): an ending's
+/// drafter names, in its `objects`, every ending of the collective they
+/// signed earlier on their own chain; otherwise it is no ending. Ben drafts
+/// and signs a fork; Ana does not. Ben then drafts a second fork leaving
+/// the first out, and both sign it. Before U4b, Ana's late signature on the
+/// first made the two forks name each other through their chains, and
+/// neither counted: an ending undone, even under the every-member rule. Now
+/// the second fork is no ending; the first, once Ana signs it, is complete
+/// and ends the collective.
+#[test]
+fn u4b_a_drafter_names_the_endings_they_signed() {
+    let mut cw = ColWorld::new(&two(), 0);
+    cw.apply(0, &Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: false, succ_sign: false, names: false });
+    let first = cw.endings[0].id;
+    cw.apply(1, &Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: false, names: false });
+    let second = cw.endings[1].id;
+    let lv = cw.view();
+    let e = lv.fork(&second).unwrap();
+    assert!(!e.complete && e.why.as_deref().is_some_and(|w| w.contains("U4b")), "{:?}", e.why);
+    assert_eq!(lv.ending_sigs(&cw.col).no_ending.get(&second), Some(&first));
+    assert_eq!(lv.closed_by(&cw.col).unwrap(), None);
+    drop(lv);
+    cw.apply(2, &Op::LateSign { ending: 0, member: 0 });
+    let lv = cw.view();
+    assert!(lv.fork(&first).unwrap().complete, "{:?}", lv.fork(&first).unwrap().why);
+    assert_eq!(lv.closed_by(&cw.col).unwrap().map(|c| c.by), Some(first));
+    assert!(cw.check().is_ok(), "{:?}", cw.check());
 }
 
 /// IT2a, decided (F131): an act that a counting act of the collective's

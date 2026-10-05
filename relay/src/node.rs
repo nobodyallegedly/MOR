@@ -16,7 +16,7 @@ use mor_core::act::{Act, Inside, Object};
 use mor_core::cbor::{self, Value};
 use mor_core::hash::{sha256, Hash};
 use mor_core::identity::{
-    check_everyday_shape, check_genesis, check_rotation_shape, types, ChainState, Home, LogSummary,
+    check_chain_signature_shape, check_everyday_shape, check_genesis, check_rotation_shape, types, ChainSignature, ChainState, Home, LogSummary,
     Objection, Payload, Receipt, Rotation,
 };
 use mor_core::merkle;
@@ -771,11 +771,12 @@ impl Node {
             Some(i) if i.spec == self.specs.identity => Some(self.identity_payload(&act, i)?),
             _ => None,
         };
-        // Identity rule 2: an act signed with a safety key must be a rotation.
-        if sig::is_slh(&act.signature.scheme) && !matches!(payload, Some(Payload::Rotation(_))) {
+        // Identity rule 2: an act signed with a safety key must be a rotation
+        // or a chain signature (F132).
+        if sig::is_slh(&act.signature.scheme) && !matches!(payload, Some(Payload::Rotation(_) | Payload::ChainSignature(_))) {
             return wire(
                 code::INVALID,
-                "an act signed with a safety key must be a rotation",
+                "an act signed with a safety key must be a rotation or a chain signature",
             );
         }
         self.check_binding(&act)?;
@@ -797,6 +798,9 @@ impl Node {
             }
             (Some(Payload::Rotation(r)), true) => {
                 Some(self.plan_rotation(&act, bytes, r, verdict)?)
+            }
+            (Some(Payload::ChainSignature(c)), true) => {
+                Some(self.plan_chain_signature(&act, c, verdict)?)
             }
             _ => None,
         };
@@ -902,6 +906,7 @@ impl Node {
         let checked = match &p {
             Payload::Genesis(g) => check_genesis(act, inside, g),
             Payload::Rotation(r) => check_rotation_shape(act, inside, r),
+            Payload::ChainSignature(c) => check_chain_signature_shape(act, inside, c),
             _ => check_everyday_shape(act, inside),
         };
         checked.map_err(|e| WireError::invalid(e.to_string()))?;
@@ -1004,6 +1009,54 @@ impl Node {
         })
     }
 
+    /// A chain signature (Identity type 16, F132): held and receipted as a
+    /// rotation is (rules 9, 10a, 11), at its position; it never homeless.
+    /// The operator's approval for a strict identity (rule 12) is asked of
+    /// rotations only: a chain signature changes no key.
+    fn plan_chain_signature(&self, act: &Act, c: &ChainSignature, verdict: Verdict) -> R<Plan> {
+        let identity = act.outside.signer.expect("checked by the chain signature's shape");
+        let states = self.chain_states(&identity)?;
+        let p = c.position as usize;
+        if states.len() < p {
+            return wire(
+                code::MISSING_PREDECESSOR,
+                match states.len() {
+                    0 => "this home holds no genesis for that identity: send the earlier identity-chain acts first, oldest first".to_string(),
+                    n => format!("this home holds that identity's chain up to position {}: send the earlier identity-chain acts first, oldest first", n - 1),
+                },
+            );
+        }
+        let (pred, before) = &states[p - 1];
+        if c.prev != *pred {
+            return wire(
+                code::INVALID,
+                "the chain signature names a predecessor other than the identity-chain act this home holds at the position before",
+            );
+        }
+        if verdict == Verdict::Unknown {
+            return wire(code::NOT_SUPPORTED, "the chain signature is signed under a scheme this home does not implement");
+        }
+        let s = &act.signature;
+        if s.scheme != before.safety.scheme || sig::safety_commitment(&s.scheme, &s.key) != before.safety.commit {
+            return wire(code::INVALID, "the revealed safety key does not match the commitment of the act before");
+        }
+        let names_us = self.names_us(&before.homes);
+        let own = Some(identity) == self.operator();
+        if !own && self.closed()? && names_us {
+            return wire(code::REFUSED, CLOSED);
+        }
+        if let Some((held, _)) = states.get(p) {
+            let mut e = WireError::new(code::CONFLICT, "this home already holds another identity-chain act at that position");
+            e.acts.push(self.item_bytes(held)?);
+            if let Some(rc) = self.store.receipt_for(held)? {
+                e.acts.push(self.item_bytes(&rc)?);
+            }
+            return Err(Fail::Wire(e));
+        }
+        let serve = self.store.is_served(&identity)? || names_us;
+        Ok(Plan::Hold { identity, position: c.position, serve })
+    }
+
     /// The state each identity-chain act this home holds leaves, by position.
     fn chain_states(&self, identity: &Hash) -> R<Vec<(Hash, ChainState)>> {
         let mut out: Vec<(Hash, ChainState)> = vec![];
@@ -1014,6 +1067,7 @@ impl Node {
                 (_, Payload::Rotation(r), Some((_, before))) => before
                     .apply(&r)
                     .map_err(|e| Fail::Internal(e.to_string()))?,
+                (_, Payload::ChainSignature(c), Some((_, before))) => before.sign(&c),
                 _ => {
                     return Err(Fail::Internal(
                         "a held identity chain is out of order".into(),
@@ -1179,7 +1233,7 @@ impl Node {
                     "this home serves only the identities its operator lists",
                 );
             }
-            Some(Payload::Rotation(_)) => {
+            Some(Payload::Rotation(_) | Payload::ChainSignature(_)) => {
                 if self.allowed(&act.outside.signer.unwrap())? {
                     return Ok(());
                 }

@@ -653,6 +653,60 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct ChainSignatureIn {
+    identity_spec: String,
+    identity: String,
+    previous: String,
+    position: u64,
+    /// The safety key the previous act committed, revealed now.
+    safety_scheme: u8,
+    #[serde(with = "serde_bytes")]
+    safety_seeds: Vec<u8>,
+    next_safety_scheme: u8,
+    next_safety_commit: String,
+    /// The act it signs.
+    signs: String,
+}
+
+/// A chain signature (Identity type 16, F132): an act on the identity
+/// chain, signed by the revealed safety key, naming the act it signs and
+/// committing the next safety key; nothing else changes. Law's members sign
+/// forks and closings with it.
+///
+/// The safety key here is held in software: **test identities only**. As
+/// for a rotation, the caller keeps the returned bytes and sends exactly
+/// them to every home (Identity rule 8a).
+#[wasm_bindgen(js_name = makeChainSignature)]
+pub fn make_chain_signature(input: JsValue) -> R<Vec<u8>> {
+    let c: ChainSignatureIn = from_js(input)?;
+    let safety = slh(c.safety_scheme, &c.safety_seeds)?;
+    let payload = identity::ChainSignature {
+        prev: unhex(&c.previous)?,
+        position: c.position,
+        safety: SafetyCommit {
+            scheme: Scheme::Founding(c.next_safety_scheme),
+            commit: unhex(&c.next_safety_commit)?,
+        },
+        signs: unhex(&c.signs)?,
+    };
+    let inside = identity_inside(
+        unhex(&c.identity_spec)?,
+        identity::types::CHAIN_SIGNATURE,
+        Payload::ChainSignature(payload).to_map(),
+    );
+    let a = act::make(
+        &inside,
+        &random::<32>(),
+        &random::<24>(),
+        &public_addr(Some(unhex(&c.identity)?)),
+        |id| safety.sign(id, Some(&random::<16>())),
+    );
+    identity::check_chain_signature_shape(&a, &inside, &payload).map_err(err)?;
+    Ok(a.encode())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct EverydayIn {
     #[serde(with = "serde_bytes")]
     signing_secret: Vec<u8>,
