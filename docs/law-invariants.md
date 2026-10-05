@@ -174,3 +174,100 @@ Named tests, kept: `ic1_a_debt_citing_nothing_binds_no_one`, `ic2_only_the_credi
 Existing tests changed, with the reason: in `core/tests/law_collective.rs`, the label's debts (`obligation`, `obligation_to`, and four debts written inline) are signed by Ben, who holds the label's Finance lane (rule 36a; IC1), and d2 in `a_collective_forks` is owed to an identity that signs its own receipt (Finance rule 7; IC2). No assertion was changed.
 
 All existing tests were run: every Rust test in the workspace, 321 passed and none failed (the 305 there before and 16 new); the nine TypeScript clients' 113 tests, against the WebAssembly bindings rebuilt from this branch, all passed.
+
+## F131 written in
+
+*5 October 2026, same branch, main merged in first. Nobody, allegedly, answered IT1 to IT3 (findings log, F131). This section writes those answers into Law draft 10, Finance draft 6, the payment cMIP, core v21 and suite v21 (the one page, v6, says nothing at this depth and is unchanged), builds them in the core library and the collective client, and runs everything again. The approved set is revised in place, so these changes need Nobody, allegedly, to approve them again.*
+
+### In plain words
+
+**What changed.**
+
+- **A finished ending stays finished (IT1).** Once a fork or a closing is complete, the collective is over. If someone later signs another fork or closing of the same collective, and that new one names the first (as every honest client now does automatically), the new one counts for nothing. The collective stays ended, and the successors keep what the first fork gave them. Only when two endings were made without either naming the other are they treated as a tie, a race between equals, and then neither counts.
+- **Once the collective has cited your act, you are safe from a racing ending (IT2a).** If a later act of the collective's own key that counts cites an act (for example an agent's sale), the collective has taken that act on: it is "adopted". A revocation of the agent's powers, made on another device that never saw the citation, no longer voids the sale. The tie rule ("the ending wins") now only voids acts the collective never took on. The revocation still stops everything the agent does afterwards.
+- **A fork drawn on an old line on purpose is a cost we state, not one we cure (IT2b).** Members could still draw a fork's line as the collective stood before a debt, on purpose, and leave the debt out. No program can tell that apart from an honest line drawn before the debt existed, and every cure would let something published after a fork reopen it. So the text says so plainly. Two things limit it: it needs every signer of the fork to go along, and it stays visible (the signed debt, the collective's citation of it, and the fork leaving it out are all there for any outside court). And the collective client now refuses to sign a fork or a closing until it has caught up with every one of the collective's devices and holds every act the ending should cover.
+- **The payment decides which claim it buys under (IT3).** When the receipts of one payment name different claims (say one names the song's old shares and another the new shares), the claim that counts is the one the payment itself committed to. A receipt naming a different claim is a "wrong receipt": shown as such, and counting for nothing. The rail shows which one is wrong, because a wrong receipt does not match what the payment carried. Until a program has checked that, it calls the payment "unrecorded" rather than guessing. One payment can no longer be both a purchase and a refund.
+
+**What writing it in found: one flaw and two readings, for Nobody, allegedly.**
+
+- **Flaw U1. A later ending that "forgets" to name the first one still undoes it.** IT1 tells endings apart by naming: the later one names the earlier one. But without a clock, a second fork that knew about the first and simply leaves it out cannot be told from one made without knowing it. *Smallest example:* Ana and Ben fork their collective; it is complete. Days later, Ana and Ben sign a second fork that does not name the first. By the rule's own words the two are a tie, so neither counts, and the collective is alive again: exactly IT1's harm. Honest clients name every ending they hold, so this needs every signer of the second ending to bypass their client, and it is visible (the same people signed both). *Options:* (1) a stated cost, as for IT2b; (2) also order endings by their lines: a fork whose line includes the whole of the other's line and more is the later one even without naming it, which leaves only endings drawn on the same or an older line as ties; (3) a member who signed both orders them. *Built meanwhile:* naming only, as F131 says; the tests count these stories separately ("ENDING-RACE") instead of failing them.
+- **Reading U2. How a tie is settled.** Acts never change, so two tied endings can never come to name each other, and "until one names the other" would never come. The code reads it as: a third ending that names both settles the tie and counts, the way a later clone settles two clashing records (B11). The alternative is that a tie can never be settled, and the collective can never end.
+- **Reading U3. What "cites" means for IT2a.** The code reads it as "holds in its history": if the collective cites an agent's later act, the agent's earlier acts on the same strand are cited too. Read strictly as "names it directly", a buyer would not be safe once the collective joined the agent's strand at a later act, which is how clients cite.
+
+**What the large runs found.** Two new CODE failures, both hidden until now: before F131, every story where an ending was undone, or a cited act stopped counting, was counted as IT1 or IT2 and set aside. Once those became failures again, the runs found:
+
+- **IC8. A record made after the collective had ended still took a member's voice away.** After a fork, everything the collective's keys sign counts for nothing in Law. But a member's resignation, registered by a record on a device the fork's line never named, removed that member's voice from an act inside the fork's history, so the act stopped counting: an ending undone from after it. Fixed: a record after the ending registers nothing. *Smallest story: a grant, a fork, a resignation on a third device.*
+- **IC9. A departure racing the collective's citation still took a voice off the cited act.** IT2a says an act the collective cited is adopted, and no ending racing that citation voids it. A departure (a member leaving) is one of those endings, but the code only applied adoption to agents' acts, not to the collective's own acts signed by its members. Fixed: such an act counts if it counts as judged, or once the departures racing its citation are set aside. *Smallest story: a grant the Finance area's two holders sign, cited by the other device; both holders then leave, by records on a device that never saw the citation.* My first fix skipped those departures outright; the next large run showed that this could bring a departed holder's voice back into a threshold and make an act fail. The fix was redone, and both stories are kept in the test.
+
+Neither changed a rule: both follow from the text as it now stands (rule 47a for IC8, F131's IT2a for IC9). The Law draft says the second in one added sentence (tie rule, "a departure racing the citation takes no voice off the act").
+
+### Precisely
+
+**Rule text.**
+
+| Document | Where | Change |
+| --- | --- | --- |
+| Law draft 10 | header | revised in place a tenth time, after approval, for F131 |
+| | "Made before, made after", 7 (the tie rule) | voids only acts the collective never took on; an act a counting act of the collective's own key cites is adopted (IT2a; reading U3) |
+| | same, client conformance | a member's client refuses to sign a fork or closing until it holds every device's latest acts and every act its history should hold (IT2b) |
+| | "Fork (type 19)" | `objects` `[[agreement, agreement], * [agreement, ending]]`; reading 4 of F125 replaced: a complete ending is final, a later one naming it counts for nothing, only endings neither naming the other concurrent; which complete ending counts (IT1); reading U2; flaw U1 |
+| | "Closing (type 20)" | the same `objects`; counts only as a fork does (IT1) |
+| | rule 32a | the payment decides; a wrong receipt counts for nothing; unrecorded until the rail answers (IT3) |
+| | rules 35a, 40, 43 | the promise to counterparties restated; adoption by citing; the stated cost of a stale line (IT2a, IT2b) |
+| | rule 47a | a complete fork is final; concurrent forks only when neither names the other (IT1) |
+| | Decided, Freeze scenarios, Open | F131 and its format; four scenarios; U1, U2, U3 and three readings |
+| Finance draft 6 | header, rules 8a, 10c | one push payment's holders share its proof (reading); the payment decides, a wrong receipt counts for nothing (IT3) |
+| Payment cMIP draft 2 | header, rail Modules item 3 | a receipt naming another claim recomputes another commitment: the rule answers invalid, Law shows a wrong receipt (IT3) |
+| Core v21 | header; purchases; the fork proper; the ending wins; grants; checklist | IT1 to IT3 in short; U1 to U3 on the checklist |
+| Suite v21 | header; scenario 3, steps 9w to 9z and "Passes if" | one step per answer, all run |
+
+**Code.**
+
+| | Where | Change |
+| --- | --- | --- |
+| IT1 | `LawView::closed_by` (`core/src/law/view.rs`), new `ending_knows`, `ending_acts`; `Fork::decode`, `Closing::decode` (`core/src/law/formats.rs`, `check_objects_ending`) | of the complete endings, the one counting is ordered (names or is named by) against every other, and names no other such one; an ending names others by `[agreement, ending]` entries in `objects`, transitively |
+| IT2a | `LawView::backing` | an act of the collective's own key that counts, whose history holds the grantee's act, adopts it, as an acknowledgement did (before a fork's line, where a fork or closing ended the collective) |
+| IT2b | `LawView::line_unheld`; wasm `lawLineUnheld`, `lawEndingActs`; collective client `endingGate` (`clients/collective/src/actions.ts`) | the client refuses to prepare a fork or closing while its relays hold acts of the collective its sequence lacks, or the line's history is not all held; every ending it signs names the endings of the collective it holds |
+| IC8 | `LawView::departure_lines` | for an act, a record after the line of the fork or closing that ended the collective registers no departure (rule 47a) |
+| IC9 | `LawView::consent`, `cited_against` | an act of the collective's own key that does not count as judged is judged again with the departures racing a counting citation of it set aside, and counts if either judgment does (F131 IT2a); guarded against re-entry |
+| IT3 | `LawView::rail_invalid` (new input, like `push_rails`), `PurchaseVerdict::WrongReceipt`, `same_payment`; wasm `specs.railInvalid`, verdict `"wrong-receipt"` | a receipt the rail shows wrong is a wrong receipt; receipts of one rail proof naming different claims with no rail answer are unrecorded; holders' receipts and recordings ignore wrong ones |
+
+The core reads no rail: which receipts carry the payment's commitment is the payment cMIP's rule, run by the caller, which hands its answer to the core, as it already says which rails are push rails.
+
+**Tests.** New named tests, each checked to fail with its fix undone: `ic8_a_record_after_the_ending_registers_nothing`, `ic9_a_departure_racing_a_citation_takes_no_voice` (with the second story, where setting a departure aside outright would fail the act). The counterexample tests now assert the decided behaviour, renamed: `it1_a_complete_ending_is_final` (a second fork naming the first counts for nothing, a closing naming both too; two forks neither naming the other: neither counts; a closing naming both settles it), `it2_a_cited_act_is_adopted` (the cited sale binds against the racing revocation; the agent's act after it is void), `it2b_a_stale_line_is_a_stated_cost` (the cost stands, and stays legible: the debt and its citation valid, the citation outside the fork's history), `it3_the_payments_claim_decides` (the old-version receipt a wrong receipt, the others a purchase; with no rail answer, all three unrecorded). The collective client's test of unheard acts now also checks that a fork and a closing are refused, naming the unheard act and the rule.
+
+`ic3_a_revoked_act_stays_void_inside_a_forks_history` changed with the decision: its story (a revocation on the other device citing the agent's act) is now an adoption under IT2a, and binds; the test keeps that, and checks IC3's fix where nothing adopts the act: a fork whose line names the grant key's strand holds the act in its history, and the racing revocation still voids it. It was checked to fail with the IC3 fix undone.
+
+**Invariants.**
+
+| Code | Before F131 | Now |
+| --- | --- | --- |
+| ENDING-UNDONE | TEXT (IT1) | a failure: once an ending counts, no later act undoes it, where every later complete ending names it |
+| ENDING-RACE | — | a later complete ending naming none of the earlier ones (flaw U1): counted, not failed |
+| SAFE-ONCE-CITED | TEXT (IT2) | a failure: an act cited while it counted, the citing act still counting, still counts |
+| SAFE-STALE-LINE | TEXT (IT2) | IT2b's stated cost (the citing act itself left out by an ending's line): counted, not failed |
+| PAYMENT-CLAIMS-DISAGREE | TEXT (IT3) | a failure, judged both with the rail's answers and without them |
+| RAIL-WRONG | — | a receipt the rail shows wrong is judged a wrong receipt, and no other is |
+| TIE-REVOCATION, TIE-EMPTIED, TIE-ENDING, PURCHASE-UNRECORDED | — | their oracle's "adopted" now includes an act of the collective's own key whose history holds the act (IT2a, U3) |
+
+Generators: a fork or closing names every earlier ending of the collective in three stories out of four (`names`), none otherwise; a push payment's commitment names the claim its first receipt names, later receipts for the same proof naming another being wrong receipts the rail shows.
+
+**Large runs** (debug build, one process each, two at a time on four cores):
+
+| Property | Cases | Acts judged | Result |
+| --- | --- | --- | --- |
+| collective_promises_hold | 5,000 | 225,914 | passed (373 s) |
+| collective_verdicts_do_not_depend_on_order | 1,500, each delivered 3 ways | — | passed (278 s) |
+| deal_promises_hold | 5,000 | 129,011 | passed (365 s) |
+| deal_verdicts_do_not_depend_on_order | 1,500, each delivered 3 ways | — | passed (195 s) |
+| collective_stakes_move_only_with_their_holders | 10,000 | — | passed (199 s) |
+
+Coverage in the large collective run: 2,145 complete forks, 647 complete closings, 1,924 collectives ended, 1,125 later endings naming the first (each counting for nothing), 4,672 debts binding, 2,269 revocations counting, 185 areas emptied, 1,214 grant-key acts binding (462 of them adopted by a citation) and 4,094 void, 1,142 purchases and 651 refunds. Stated costs and open questions met, not failures: ENDING-RACE (flaw U1, a later ending naming none of the earlier ones) in 161 stories, SAFE-STALE-LINE (IT2b's stated cost) in 43.
+
+Coverage in the large deal run: 5,419 versions in force and 4,791 drafts, 777 thief's signatures voided by a rotation, 3,186 service receipts backed and 4,273 refused, 2,757 purchases, 2,341 refunds, 4,902 unrecorded payments and 812 wrong receipts (IT3), 3,905 splits of which 1,470 broke their plan as the text says they should. PAYMENT-CLAIMS-DISAGREE, now a failure, never met, with the rail's answers or without them.
+
+The large collective run was repeated until it passed: the first round stopped on IC8; the second on IC9; the first fix for IC9 overflowed the stack (it called itself back, now guarded), and once guarded failed twice, on TIE-EMPTIED and on the story now kept in IC9's test, because skipping a departure outright was wrong; the redone fix passed a 5,000-case run, and then the final round above, every property. Each run draws fresh random stories.
+
+**All tests.** Every Rust test in the workspace: 323 passed, none failed (the 321 there before, and IC8 and IC9; the four IT tests changed in place). The nine TypeScript clients' 113 tests, against WebAssembly bindings rebuilt from this branch's final code: all passed (barebone 9, collective 20, connector 12, desk 8, genesis 14, longform 15, manage 7, reader 16, repo 12).
+
+**Open for Nobody, allegedly, in order:** flaw U1 (a later ending not naming the first); readings U2 (a third ending naming both settles a race) and U3 ("cites" as a line reads it), and the three readings in Law draft 10, "Open in this draft", and the IC9 reading (a racing departure set aside); then approval of the revised set (Law draft 10, Finance 6, core v21, suite v21; the payment cMIP as an instrument). Nothing is merged.
