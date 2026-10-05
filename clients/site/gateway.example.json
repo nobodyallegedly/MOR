@@ -1,0 +1,15 @@
+{
+  "listen": "127.0.0.1:8090",
+  "release": null,
+  "look": 600,
+  "sites": [
+    {
+      "hosts": ["dubsar.org", "REPLACE-WITH-THE-ONION-ADDRESS.onion"],
+      "identity": "REPLACE WITH THE SITE OWNER'S IDENTITY HASH (64 hex digits)",
+      "name": "Nobody, allegedly",
+      "relays": ["https://relay1.example.org", "https://relay2.example.org"],
+      "version": "REPLACE WITH A VERSION'S ACT ID (64 hex digits), as mor-site publish prints it",
+      "serve": "latest"
+    }
+  ]
+}

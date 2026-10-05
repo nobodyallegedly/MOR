@@ -1,0 +1,27 @@
+:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 22%,transparent);--soft:color-mix(in srgb,CanvasText 70%,Canvas);--ok:#1a7f37;--bad:#b3261e;--bar:color-mix(in srgb,CanvasText 6%,Canvas)}
+@media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;display:flex;flex-direction:column;background:Canvas;color:CanvasText;font:15px/1.45 system-ui,sans-serif}
+#mor-bar{flex:none;padding:8px 16px;border-bottom:2px solid var(--line);background:var(--bar);max-height:60vh;overflow:auto}
+#mor-bar.ok{border-bottom-color:var(--ok)}
+#mor-bar.bad{border-bottom-color:var(--bad)}
+#mor-bar .standing{font-weight:600}
+#mor-bar.ok .standing{color:var(--ok)}
+#mor-bar.bad .standing{color:var(--bad)}
+#mor-bar .newer{margin-top:4px;font-weight:600}
+#mor-bar details{margin-top:4px;font-size:13px}
+#mor-bar summary{cursor:pointer;color:var(--soft)}
+#mor-bar dl{margin:6px 0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px}
+#mor-bar dt{color:var(--soft)}
+#mor-bar dd{margin:0;overflow-wrap:anywhere}
+#mor-bar ul{margin:4px 0;padding-left:18px}
+code,.fp{font-family:ui-monospace,Menlo,monospace;font-size:.92em;overflow-wrap:anywhere}
+.ok-word{color:var(--ok);font-weight:600}
+.bad-word{color:var(--bad);font-weight:600}
+#mor-view{flex:1;min-height:0;display:flex}
+#mor-view>iframe{flex:1;width:100%;border:0;background:Canvas}
+#mor-view>.file{flex:1;overflow:auto;padding:16px}
+#mor-view img{max-width:100%;height:auto;image-orientation:from-image}
+#mor-view pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,Menlo,monospace}
+.note{max-width:42em;margin:24px auto;padding:10px 12px;border-left:3px solid var(--bad)}

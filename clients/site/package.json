@@ -1,0 +1,33 @@
+{
+  "name": "mor-site",
+  "version": "0.1.0",
+  "description": "Websites on MOR (website cMIP, draft 2): a site as a signed manifest of its files, published on relays; a gateway that serves it at an address, with a display client that checks every page in the visitor's browser.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-site": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "build": "node --import tsx scripts/build.ts",
+    "release": "node --import tsx scripts/build.ts --release",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:build": "node --import tsx --test test/build/*.test.ts",
+    "cli": "node --import tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "esbuild": "^0.25",
+    "playwright-core": "1.56",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

@@ -10,6 +10,7 @@
 //! mor-relay rotated --dir DIR --operator-key FILE --rotation FILE.mor
 //! mor-relay pair    --dir DIR             (managers, unpair --dir DIR KEY)
 //! mor-relay limit   --dir DIR [N]         (new identities per 24 hours)
+//! mor-relay address --dir DIR [--add URL] (an onion address, say; stop it first)
 //! ```
 //!
 //! Day to day, the operator runs it from the management page instead, at
@@ -21,7 +22,7 @@ use mor_relay::http::{self, Net, Shared};
 use mor_relay::node::OperatorSetup;
 use mor_relay::operator::Keys;
 use mor_relay::wire::{self, Limits};
-use mor_relay::{Config, Node, Policy, Role, Specs};
+use mor_relay::{AddedBase, Config, Node, Policy, Role, Specs};
 use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
@@ -165,6 +166,24 @@ enum Cmd {
         dir: PathBuf,
         per_day: Option<u64>,
     },
+    /// List the base addresses this relay answers under; with --add, add
+    /// one after setup, such as an onion address. Stop the relay first. A
+    /// home whose test operator is held here also publishes the operator's
+    /// next routes, naming the new address, so that clients find it.
+    Address {
+        #[arg(long)]
+        dir: PathBuf,
+        /// The address to add (https, or an onion address).
+        #[arg(long, conflicts_with = "remove")]
+        add: Option<String>,
+        /// The address to remove: the reverse of --add, the operator's next
+        /// routes no longer naming it.
+        #[arg(long)]
+        remove: Option<String>,
+        /// Allow a plain http address: for a relay on this machine only.
+        #[arg(long)]
+        local_test: bool,
+    },
     /// The operator rotated where its safety key is kept: hold the rotation
     /// (a bundle holding that one act) and take the new key file. Stop the
     /// home first.
@@ -192,6 +211,25 @@ fn print_code(node: &Node) {
     println!("Pairing code for the management page (/manage/), valid for an hour, once: {code}");
 }
 
+/// A base address as the cMIP takes it: https, or an onion address; plain
+/// http only for a local test. Exits with the reason otherwise.
+fn check_base(b: &str, local_test: bool) {
+    use mor_relay::client::{reach, Reach};
+    match reach(b) {
+        Reach::Direct | Reach::Onion => {}
+        Reach::TestOnly if local_test => {}
+        Reach::TestOnly => die(format!(
+            "{b}: plain http is for local tests only (--local-test)"
+        )),
+        Reach::No => die(format!(
+            "{b} is not a base address (https, or an onion address)"
+        )),
+    }
+    if mor_core::text::check(b).is_err() {
+        die(format!("{b} is not canonical text"));
+    }
+}
+
 fn identity(s: &str) -> [u8; 32] {
     wire::parse_hex(s).unwrap_or_else(|| die("an identity is 64 lowercase hexadecimal characters"))
 }
@@ -211,21 +249,8 @@ async fn main() {
             max_act,
             max_media,
         } => {
-            use mor_relay::client::{reach, Reach};
             for b in &bases {
-                match reach(b) {
-                    Reach::Direct | Reach::Onion => {}
-                    Reach::TestOnly if local_test => {}
-                    Reach::TestOnly => die(format!(
-                        "{b}: plain http is for local tests only (--local-test)"
-                    )),
-                    Reach::No => die(format!(
-                        "{b} is not a base address (https, or an onion address)"
-                    )),
-                }
-                if mor_core::text::check(b).is_err() {
-                    die(format!("{b} is not canonical text"));
-                }
+                check_base(b, local_test);
             }
             let mut limits = Limits::default();
             limits.act = max_act.unwrap_or(limits.act);
@@ -364,6 +389,46 @@ async fn main() {
                 .unwrap_or_else(|e| die(e))
             {
                 die("that key is not paired");
+            }
+        }
+        Cmd::Address {
+            dir,
+            add,
+            remove,
+            local_test,
+        } => {
+            let mut n = open(&dir);
+            if let Some(b) = remove {
+                match n.remove_base(&b).unwrap_or_else(|e| die(e)) {
+                    AddedBase::Relay => println!("Removed {b}."),
+                    AddedBase::Routes(id) => println!(
+                        "Removed {b}. The operator's routes no longer name it (act {}).",
+                        wire::hex(&id)
+                    ),
+                    AddedBase::OperatorElsewhere(op) => println!(
+                        "Removed {b} from this home's settings. Its operator ({}) is kept elsewhere: from there, publish the operator's next routes without it.",
+                        wire::hex(&op)
+                    ),
+                }
+                println!("Start the relay again to stop answering under it.");
+            }
+            if let Some(b) = add {
+                check_base(&b, local_test);
+                match n.add_base(&b).unwrap_or_else(|e| die(e)) {
+                    AddedBase::Relay => println!("Added {b}."),
+                    AddedBase::Routes(id) => println!(
+                        "Added {b}. The operator's routes now name it (act {}).",
+                        wire::hex(&id)
+                    ),
+                    AddedBase::OperatorElsewhere(op) => println!(
+                        "Added {b} to this home's settings. Its operator ({}) is kept elsewhere: from there, publish the operator's next routes, naming every address of this home in the outbox route for IDENTITY, so that clients find it.",
+                        wire::hex(&op)
+                    ),
+                }
+                println!("Start the relay again to answer under it.");
+            }
+            for b in &n.config().bases {
+                println!("{b}");
             }
         }
         Cmd::Limit { dir, per_day } => open(&dir)

@@ -1,0 +1,23 @@
+/* dubsar.org: the look of the pages. A site's pages run no code and load
+   nothing from elsewhere (website cMIP, rules 11 and 12): no fonts, no
+   pictures from this file, only what is written here. */
+:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 20%,transparent);--soft:color-mix(in srgb,CanvasText 65%,Canvas)}
+*{box-sizing:border-box}
+body{margin:0;background:Canvas;color:CanvasText;font:18px/1.6 Georgia,'Times New Roman',serif}
+main,footer{max-width:40em;margin:0 auto;padding:24px 16px}
+h1{font-weight:normal;font-size:1.6em;margin:.5em 0}
+.back{font:14px system-ui,sans-serif}
+.back a{color:inherit}
+.first-act{margin:8px 0 32px}
+.one-page{margin:24px 0;text-align:center}
+.button{display:inline-block;padding:12px 28px;border:2px solid CanvasText;border-radius:999px;color:inherit;text-decoration:none;font:600 18px/1.3 system-ui,sans-serif}
+.button:hover,.button:focus{background:CanvasText;color:Canvas}
+.doors{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:12px;margin:24px 0}
+.doors a{display:block;padding:16px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none}
+.doors a:hover{border-color:CanvasText}
+.door{display:block;font-size:1.4em}
+.what{display:block;font:15px/1.4 system-ui,sans-serif;color:var(--soft);margin-top:4px}
+.items li{margin:.4em 0}
+.placeholder{font-family:system-ui,sans-serif;font-size:.85em;color:var(--soft);border-left:3px solid var(--line);padding-left:8px}
+footer{border-top:1px solid var(--line);font:14px/1.5 system-ui,sans-serif;color:var(--soft)}
+footer a{color:inherit}

@@ -153,6 +153,18 @@ impl Config {
 
 // ---------------------------------------------------------------- failures
 
+/// What adding a base address did (`Node::add_base`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AddedBase {
+    /// A basic relay: the address is in its settings.
+    Relay,
+    /// A home whose operator is held here: this new routes act names it.
+    Routes(Hash),
+    /// A home whose operator is kept elsewhere: its routes are published
+    /// there, by the operator's own client.
+    OperatorElsewhere(Hash),
+}
+
 /// Why a request failed: an answer under the cMIP, or a fault of this relay.
 #[derive(Debug)]
 pub enum Fail {
@@ -582,6 +594,150 @@ impl Node {
             }
         }
         Ok(false)
+    }
+
+    /// Add a base address after setup, such as an onion address for a home
+    /// that so far answered only over https. The relay answers under it from
+    /// its next start: stop it first, as for a rotation.
+    ///
+    /// Clients find a home's addresses in its operator's routes (relay
+    /// transport cMIP, "Addresses"). Where the operator is held here alone
+    /// (the test operator, its safety key in the key file), this home is the
+    /// only one that signs for it, so it also publishes the next version of
+    /// the operator's routes, the new address added to the outbox route for
+    /// `IDENTITY`. Otherwise the operator's routes are signed where its
+    /// identity is kept (the genesis client), and signing them here could
+    /// fork them: the address is added to the settings only, and the
+    /// answer says so.
+    pub fn add_base(&mut self, base: &str) -> R<AddedBase> {
+        if self.cfg.bases.iter().any(|b| b == base) {
+            return Err(Fail::Internal(format!(
+                "{base} is already one of this relay's addresses"
+            )));
+        }
+        let mut cfg = self.cfg.clone();
+        cfg.bases.push(base.to_string());
+        self.change_bases(cfg, None)
+    }
+
+    /// Remove a base address, the reverse of `add_base`: taken out of the
+    /// settings and, where the operator is held here, out of the next
+    /// version of the operator's routes. A relay keeps at least one address.
+    pub fn remove_base(&mut self, base: &str) -> R<AddedBase> {
+        if !self.cfg.bases.iter().any(|b| b == base) {
+            return Err(Fail::Internal(format!(
+                "{base} is not one of this relay's addresses"
+            )));
+        }
+        if self.cfg.bases.len() == 1 {
+            return Err(Fail::Internal(
+                "that is this relay's only address: it keeps at least one".into(),
+            ));
+        }
+        let mut cfg = self.cfg.clone();
+        cfg.bases.retain(|b| b != base);
+        self.change_bases(cfg, Some(base))
+    }
+
+    fn change_bases(&mut self, cfg: Config, drop: Option<&str>) -> R<AddedBase> {
+        if self.closed()? {
+            return Err(Fail::Internal(
+                "this home is closed for good: it signs nothing more".into(),
+            ));
+        }
+        let signs_routes = self.keys.as_ref().is_some_and(|k| k.safety.is_some());
+        self.store.begin()?;
+        let done = (|| {
+            let routes = if signs_routes {
+                Some(self.next_routes(&cfg.bases, drop)?)
+            } else {
+                None
+            };
+            self.store.set_setting("config", &cfg.encode())?;
+            Ok(routes)
+        })();
+        match done {
+            Ok(routes) => {
+                self.store.commit()?;
+                self.cfg = cfg;
+                Ok(match (routes, self.operator()) {
+                    (Some(id), _) => AddedBase::Routes(id),
+                    (None, Some(op)) => AddedBase::OperatorElsewhere(op),
+                    (None, None) => AddedBase::Relay,
+                })
+            }
+            Err(e) => {
+                self.store.rollback();
+                Err(e)
+            }
+        }
+    }
+
+    /// Sign the next version of the operator's routes (Identity type 3),
+    /// naming every base address in its outbox route for `IDENTITY`, and
+    /// keeping every other route as it was.
+    fn next_routes(&mut self, bases: &[String], drop: Option<&str>) -> R<Hash> {
+        use mor_core::envelope::{latest, Route, Routes, Version};
+        let op = self
+            .operator()
+            .ok_or_else(|| Fail::Internal("a relay has no operator".into()))?;
+        let spec = self.specs.identity;
+        let mut found: Vec<(Hash, Routes)> = vec![];
+        for (id, _) in self.store.acts_by(&op, &spec, &[types::ROUTES])? {
+            if let Some((_, inside)) = self.held_opened(&id)? {
+                if let Ok(r) = Routes::decode(&inside.payload) {
+                    found.push((id, r));
+                }
+            }
+        }
+        let versions: Vec<(Hash, Version)> = found.iter().map(|(id, r)| (*id, r.version)).collect();
+        let tip = latest(&versions);
+        if tip.contested {
+            return Err(Fail::Internal(
+                "the operator's routes are forked here: settle that first (a rotation)".into(),
+            ));
+        }
+        let (version, mut routes) = match tip.act {
+            Some(id) => {
+                let r = &found.iter().find(|(i, _)| *i == id).unwrap().1;
+                (
+                    Version {
+                        version: r.version.version + 1,
+                        previous: Some(id),
+                    },
+                    r.routes.clone(),
+                )
+            }
+            None => (
+                Version {
+                    version: 1,
+                    previous: None,
+                },
+                vec![],
+            ),
+        };
+        match routes
+            .iter_mut()
+            .find(|r| r.kind == 0 && r.scope == Some(spec))
+        {
+            Some(r) => {
+                if let Some(d) = drop {
+                    r.hints.retain(|h| h != d);
+                }
+                for b in bases {
+                    if !r.hints.contains(b) {
+                        r.hints.push(b.clone());
+                    }
+                }
+            }
+            None => routes.push(Route {
+                scope: Some(spec),
+                hints: bases.to_vec(),
+                kind: 0,
+            }),
+        }
+        let payload = Routes { version, routes }.to_map();
+        self.sign_and_store(spec, types::ROUTES, payload, None)
     }
 
     /// Rotate the operator of a home whose key file holds the safety key
