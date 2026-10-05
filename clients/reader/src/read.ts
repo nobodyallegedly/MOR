@@ -70,6 +70,8 @@ export function standingWords(s: string): { ok: boolean; words: string } {
       return { ok: false, words: 'Void: signed with a key the identity has since replaced, and its owner did not keep it.' };
     case 'invalid':
       return { ok: false, words: 'Invalid: the signature or the act does not check.' };
+    case 'scoped':
+      return { ok: false, words: "Signed with a grant key: a key of a collective scoped to one of its grants (Law, F128). Whether the grant backs it is Law's to say, and this reader does not judge Law." };
     default:
       return { ok: false, words: `Not verified (${s}): this browser could not establish who signed it.` };
   }

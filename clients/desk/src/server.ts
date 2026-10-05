@@ -133,6 +133,8 @@ export async function serve(opts: { dir: string; port: number; drafts?: string }
         return desk.resend(text(a.digest));
       case 'refresh':
         return desk.refresh(text(a.identity));
+      case 'witness':
+        return desk.witness(text(a.identity), text(a.act), text(a.shown));
       case 'sort':
         desk.sort(text(a.identity), text(a.key), text(a.sorted));
         return {};

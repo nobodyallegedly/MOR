@@ -121,7 +121,7 @@ function rulesFields(r: { safety: number | ''; release: number | ''; clone: numb
 ${f('safety', r.safety, 'Shares needed to rebuild the safety key')}
 ${f('release', r.release, 'Members who must sign a release')}
 ${f('constitution', r.constitution ?? '', 'Members who must sign a change of members or rules', 'every member')}
-${f('clone', r.clone, 'Members who must sign any other change')}
+${f('clone', r.clone, 'Members who must sign any other change (a change of who judges needs every member)')}
 ${f('others', r.others, 'Other members who together judge absence', 'all the others')}
 </div></fieldset>`;
 }
@@ -185,9 +185,41 @@ ${c.members.filter((m) => !m.left).length > 1 ? `<details class="absence"><summa
 <fieldset><legend>Remove</legend>${c.members.map((m) => `<label class="check"><input type="checkbox" name="leave" value="${e(m.id)}"> ${e(nameOf(s, m.id))}</label>`).join('')}</fieldset>
 ${rulesFields(c.rules)}
 <label>The words (empty: the standard words, if the words were standard)</label><textarea name="words">${e(c.words)}</textarea>
-<div class="row"><button type="submit">Review the change</button></div></form></details></div>`;
+<div class="row"><button type="submit">Review the change</button></div></form></details>
+${money(s, c)}</div>`;
     })
     .join('');
+}
+
+/** Money and endings (Law draft 10, F121 to F124): stakes, the split service, the pointer, splits, debts, the fork, a release to the public domain, closing. */
+function money(s: State, c: State['collectives'][number]): string {
+  if (c.closed) return note('warn', `Ended by its fork or closing ${fp(c.closed)}: what its keys sign afterwards counts for nothing in Law.`);
+  const id = e(c.id);
+  const back = c.forkedFrom ? `<p class="small">Forked from ${fp(c.forkedFrom)}.</p>` : '';
+  const stakes = back + (c.stakes.length
+    ? `<p class="small">Shares of all its income: ${c.stakes.map((x) => `${e(x.name)} ${x.percent}%${x.member ? '' : ' (departed)'}`).join(', ')}.</p>`
+    : '<p class="small">No stakes in the collective yet.</p>');
+  const voices = c.members.filter((m) => !m.left);
+  return `<details class="money"><summary>Money and endings</summary>
+${stakes}
+<form class="stakes" data-collective="${id}"><fieldset><legend>Each holder's share of all the collective's income, in percent</legend>
+${c.holdersToBe.map((h) => `<label>${e(h.name)} <input type="number" step="any" min="0" name="share:${e(h.id)}" value="${c.stakes.find((x) => x.id === h.id)?.percent ?? ''}"></label>`).join(' ')}</fieldset>
+<div class="row"><button type="submit">Review the stakes</button></div></form>
+<form class="split-service row" data-collective="${id}"><select name="service">${s.identities.map((i) => `<option value="${e(i.id)}">${e(nameOf(s, i.id))}</option>`).join('')}</select><button type="submit">Review a split service</button></form>
+<form class="pointer row" data-collective="${id}"><input name="addresses" type="text" placeholder="the collective's addresses, separated by spaces" required><button type="submit">Review a payee pointer</button></form>
+<form class="service-pointer row"><select name="owner">${s.identities.map((i) => `<option value="${e(i.id)}">${e(nameOf(s, i.id))}</option>`).join('')}</select><input name="addresses" type="text" placeholder="its addresses, separated by spaces" required><button type="submit">Review a pointer for this identity</button></form>
+<div class="row"><button class="quiet" data-action="check-pointer" data-collective="${id}">Check the collective's pointer, as a Law client before paying</button></div>
+${c.splitService ? `<form class="split row" data-collective="${id}"><input name="amount" type="number" min="1" placeholder="amount received" required><input name="fee" type="number" min="0" placeholder="the service's fee" value="0"><button type="submit">Review a simulated payment and its split</button></form>` : ''}
+${c.splits.length ? `<ul class="plain">${c.splits.map((x) => `<li>Split ${fp(x)} <button class="quiet" data-action="check-split" data-collective="${id}" data-split="${e(x)}">Check it</button></li>`).join('')}</ul>` : ''}
+${c.releases.length ? `<form class="release-work row" data-collective="${id}"><select name="release">${c.releases.map((r) => `<option value="${e(r.id)}">${e(r.version)}</option>`).join('')}</select><button type="submit">Review a release to the public domain</button></form>` : ''}
+${voices.length > 1 ? `<form class="fork" data-collective="${id}"><fieldset><legend>Fork: each member on a side</legend>
+${voices.map((m) => `<label>${e(nameOf(s, m.id))} <select name="side:${e(m.id)}"><option value="1">side 1</option><option value="2">side 2</option><option value="none">no side</option></select></label>`).join(' ')}</fieldset>
+<p class="small">Each side founds its own collective first; the fork names them. A member on no side has no seat in either, and keeps their share in both as a departed holder.</p>
+<div class="row"><button type="submit">Review the fork</button></div></form>` : ''}
+<form class="debt row" data-collective="${id}"><select name="creditor">${s.identities.map((i) => `<option value="${e(i.id)}">${e(nameOf(s, i.id))}</option>`).join('')}</select><input name="amount" type="number" min="1" placeholder="amount owed" required><button type="submit">Review a debt of the collective</button></form>
+${c.debts.some((x) => x.creditorHeld) ? `<form class="debt-release row"><select name="debt">${c.debts.filter((x) => x.creditorHeld).map((x) => `<option value="${e(x.id)}">${e(x.id.slice(0, 8))}…, owed to ${e(x.creditorName)}${x.inherited ? ' (from the collective it was forked from)' : ''}</option>`).join('')}</select><button type="submit">Review the creditor's release of a debt (signed by the creditor alone)</button></form>` : ''}
+<form class="closing row" data-collective="${id}"><button type="submit">Review closing the collective (it must hold nothing and owe nothing)</button></form>
+</details>`;
 }
 
 export function found(s: State): string {

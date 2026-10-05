@@ -9,12 +9,15 @@
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import {
+  ACK_SPECS,
+  MIPS,
   SPECS,
   ENVELOPE_TYPES,
   IDENTITY_TYPES,
   Verifier,
   actId,
   cborDecode,
+  cborEncode,
   describeAct,
   encryptionKeyPayload,
   hex,
@@ -37,6 +40,7 @@ import {
   unhex,
   xwingPublic,
 } from './core.ts';
+import { WITNESS_EXPLANATION } from './witness.ts';
 import { CODE, Relay, RelayError, type PutResult, type Via, relayAt, sealedId } from './transport.ts';
 import { record } from './kex.ts';
 import { lookUp, type Home, type Lookup, type RouteIn } from './lookup.ts';
@@ -82,7 +86,24 @@ export interface IdentityFile {
   /** Every encryption key published, oldest first; old ones still open old deliveries. */
   encryption: { version: number; act: string; secret: string }[];
   pending: Pending | null;
+  /**
+   * For a collective (Law, F127): the decision its next action cites on its
+   * chain, the collective's own identity as chain: its genesis, its latest
+   * rotation, or its latest record. Absent for anyone else. Every everyday
+   * act it signs cites it, except Identity's own acts (which carry no
+   * objects) and records, decisions that cite by their kept tips.
+   */
+  cites?: string[];
+  /**
+   * Grant keys this identity holds as a grantee (Law, F128): for each grant
+   * naming it, the secret part of the key the grant names (field 9). Acts
+   * signed with it are the granting collective's own, within the grant.
+   */
+  grantKeys?: { grant: string; collective: string; secret: string }[];
 }
+
+/** Law's record (type 17): a decision, which cites by its kept tips (F127). */
+const LAW_RECORD = 17;
 
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
 const unb64 = (s: string) => Uint8Array.from(Buffer.from(s, 'base64'));
@@ -210,6 +231,19 @@ export class TestIdentity {
     payload: Uint8Array,
     opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: string[]; acks?: string[] },
   ) {
+    // F110: only Identity, Finance and Law act types carry acknowledgements;
+    // a text act, a publication or a cMIP's act carrying them is invalid.
+    // To rely on such an act, sign a witness act (see `witness`).
+    if (opts.acks?.length && !ACK_SPECS.includes(spec)) {
+      throw new Error('only Identity, Finance and Law acts may acknowledge (Envelope rule 4a, F110): to rely on this act, sign a witness act');
+    }
+    // F127: a collective's action cites, on its chain, the decision it acts
+    // under, after the entries its type defines.
+    const isRecord = spec === MIPS.law && type === LAW_RECORD;
+    let objects = opts.objects;
+    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
+      objects = [...(objects ?? []), ...this.f.cites.map((d): [string, string] => [this.f.identity, d])];
+    }
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -220,11 +254,13 @@ export class TestIdentity {
       sequence: this.f.sequence,
       public: opts.public,
       to: opts.to,
-      objects: opts.objects,
+      objects,
       refs: opts.refs,
       acks: opts.acks,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
     this.f.sequence.push(made.id);
+    // A record is the collective's latest decision: its next actions cite it.
+    if (this.f.cites && isRecord) this.f.cites = [made.id];
     return made;
   }
 
@@ -252,6 +288,26 @@ export class TestIdentity {
     const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
     this.f.routes = { version, act: made.id };
     return { id: made.id, sent: await this.toHomes(made.act) };
+  }
+
+  /**
+   * Sign a witness act (Identity type 15, F110): "I received this act and
+   * rely on it", for each act named. It keeps them visible as disputed if
+   * their author later disowns them. Client conformance (Identity rule 18c):
+   * never a side effect; the caller passes back the explanation it showed
+   * the owner, `WITNESS_EXPLANATION`, word for word, or nothing is signed.
+   * Sent to every home and to the relays given, as a public Identity act.
+   */
+  async witness(acts: string[], opts: { shown: string; relays?: string[] }): Promise<{ id: string; act: Uint8Array; sent: Submitted[] }> {
+    if (opts.shown !== WITNESS_EXPLANATION) {
+      throw new Error('a witness act is signed only after the owner was shown what it does (Identity rule 18c)');
+    }
+    if (!acts.length) throw new Error('a witness act names at least one act');
+    if (acts.some((a) => this.f.sequence.includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
+    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(new Map()), { public: true, acks: acts });
+    const sent = await this.toHomes(made.act);
+    for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
+    return { id: made.id, act: made.act, sent };
   }
 
   /**
@@ -343,6 +399,8 @@ export class TestIdentity {
       this.f.homes = p.homes;
       this.f.rule = p.rule;
       this.f.pending = null;
+      // A rotation is a decision: a collective's next actions cite it (F127).
+      if (this.f.cites) this.f.cites = [p.id];
       await this.spread(lookup);
     }
     return { counts, lookup };
@@ -373,6 +431,21 @@ export class TestIdentity {
         if (!(e instanceof TypeError) && !(e instanceof RelayError)) throw e;
       }
     }
+  }
+
+  /**
+   * Make a grant key (Law, F128): a fresh signing key, its secret kept in
+   * this identity's file under the grant once known; its public part, as
+   * Identity's `[scheme, key]`, goes into the grant (field 9).
+   */
+  makeGrantKey(): { secret: Uint8Array; public: [number, Uint8Array] } {
+    const secret = newSigningSecret();
+    return { secret, public: [1, signingPublic(secret)] };
+  }
+
+  /** Keep a grant key's secret, under the grant that names it (F128). */
+  keepGrantKey(grant: string, collective: string, secret: Uint8Array): void {
+    this.f.grantKeys = [...(this.f.grantKeys ?? []).filter((k) => k.grant !== grant), { grant, collective, secret: hex(secret) }];
   }
 
   /** The public half of the safety key held for the next rotation. */

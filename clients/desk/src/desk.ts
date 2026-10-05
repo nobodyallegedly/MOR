@@ -8,7 +8,7 @@
 // desk reads the file again, checks its bytes hash to that digest, reads it
 // again, and signs only if nothing blocks it. What you sign is what you saw.
 
-import { SPECS, ENVELOPE_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts } from '../../genesis/src/core.ts';
+import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPE_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts } from '../../genesis/src/core.ts';
 import { TestIdentity, sealFor, type Home } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
@@ -511,7 +511,10 @@ export class Desk {
       }
     }
     const refs = d.refs ?? [];
-    const acks = d.acks ?? [];
+    // F110: only Identity, Finance and Law acts acknowledge; any other act
+    // carrying acks is invalid and acknowledges nothing.
+    const acksAllowed = !d.spec || ACK_SPECS.includes(d.spec);
+    const acks = acksAllowed ? (d.acks ?? []) : [];
     const item: Item = {
       ...base,
       key: d.id,
@@ -539,9 +542,27 @@ export class Desk {
     else if (isText) item.kind = 'message';
     else if (d.spec === DESK_SPECS.finance) item.kind = 'payment';
     else if (d.spec === SPECS.envelope && d.type === ENVELOPE_TYPES.keyDelivery) item.kind = 'key delivery';
+    if (d.spec === SPECS.identity && d.type === IDENTITY_TYPES.witness) item.witness = true;
+    if (!acksAllowed && d.acks?.length) item.problem = 'It carries acknowledgements, which only Identity, Finance and Law acts may carry (Envelope rule 4a, F110): it is invalid, and acknowledges nothing.';
     if (item.kind === 'payment') item.problem = 'A Finance act (a payment claim, a receipt or an obligation): this desk does not read Finance yet, nor check a rail’s proof (Lightning module, roadmap step 12). It is shown as received, not as paid.';
     if (d.spec === REPO_SPECS.law) item.problem = 'A Law act: read it in the collective client.';
     return item;
+  }
+
+  /**
+   * The owner relies on an act it received: a witness act (Identity type
+   * 15, F110), signed by this identity, public, sent to its homes and
+   * relays. Never a side effect: the page shows `WITNESS_EXPLANATION` and
+   * passes it back word for word, or nothing is signed (Identity rule 18c).
+   */
+  async witness(identity: string, act: string, shown: string): Promise<{ id: string }> {
+    return this.serial(async () => {
+      const me = this.store.identity(identity);
+      const r = await me.witness([act], { shown, relays: this.store.settings().relays });
+      this.store.saveIdentity(me);
+      if (!r.sent.some((s) => s.result)) throw new Error(`No home took the witness act: ${r.sent.map((s) => `${s.home}: ${s.error}`).join('; ')}`);
+      return { id: r.id };
+    });
   }
 
   /** The owner sorts one received item. */

@@ -1,6 +1,6 @@
 # MIP: Production
 
-*Draft 5, 1 October 2026. Written against core v18, Law MIP draft 7 and findings F1 to F107. Draft 5 is draft 4 with one field added and nothing else changed: an extension declares, in its specification, the layers it acts on (field 10), so that a collective's client knows whose approval adopting or dropping it needs (F106; Law redraft, Q18, recorded under F103). Draft 4, 27 September 2026, was written against core v12, the other MIP drafts and findings F1 to F82. Draft 4 applies review round 2: RV32IM only, with the step budget and the input and output convention fixed; signature schemes as a kind of specification; binary rules carried as locked objects; a successor changes the tag prefix; the six hashes as the trust root; predecessor and creator claims shown for what they are.*
+*Draft 6, 3 October 2026 (the core pass, core v21). **Not yet approved.** Written against core v21, Finance MIP draft 6, Law MIP draft 10 and findings F1 to F119. *Revised in place, 4 October 2026, for F126: the payment task's input names, for a purchase, the claim it pays under (task table, row 6); nothing else changes.* *Revised in place again, 4 October 2026, for F128 (W4): the payment task's output says whether each rail Module is a request rail (the payee's side commits to each payment, and so to the claim a purchase names) or a push rail (task table, row 6); nothing else changes.* Draft 6 is draft 5 with two findings written in, wording only: a rail is a Module under the one payment cMIP an agreement names, and a Module is a specification, which signs nothing (F112: rule 8, task table rows 6 and 7, the definition of a verification rule); and the evidence that a Module was used comes from a party, never from the Module: for a rail Module, the receipt or claim naming it; for a service, a record signed by the identity running it (F116: rule 17). Draft 5, 1 October 2026, was written against core v18, Law MIP draft 7 and findings F1 to F107. Draft 5 was draft 4 with one field added and nothing else changed: an extension declares, in its specification, the layers it acts on (field 10), so that a collective's client knows whose approval adopting or dropping it needs (F106; Law redraft, Q18, recorded under F103). Draft 4, 27 September 2026, was written against core v12, the other MIP drafts and findings F1 to F82. Draft 4 applies review round 2: RV32IM only, with the step budget and the input and output convention fixed; signature schemes as a kind of specification; binary rules carried as locked objects; a successor changes the tag prefix; the six hashes as the trust root; predecessor and creator claims shown for what they are.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -27,8 +27,8 @@ Identity, Envelope, Text, Finance and Law. Fees and usage rewards are defined in
 - **Task.** A point where a MIP hands work to a cMIP. Tasks exist only where the MIPs define them.
 - **Extension.** A cMIP an agreement names outside the listed tasks, for work nobody foresaw. An extension may add rules, never relax the core's.
 - **cMIP.** A community specification for one task: what it accepts and produces in core terms, the act types it defines, and the rules a verifier runs. Many cMIPs may compete for the same task.
-- **Module.** An implementation or extension under a MIP or cMIP: code, a verification rule, a media type, a unit, a signature scheme, a split plan template. Identified by its spec hash.
-- **Verification rule.** An executable program, part of a cMIP or Module, that anyone can run to check its outputs, such as a payment module's check of a rail proof. The rule decides validity; the text explains it.
+- **Module.** An implementation or extension under a MIP or cMIP: code, a verification rule, a media type, a unit, a signature scheme, a split plan template, a rail. Identified by its spec hash. *A Module is a specification: it signs nothing, holds nothing and is paid nothing by itself; the identities acting under it do (F112, F116).*
+- **Verification rule.** An executable program, part of a cMIP or Module, that anyone can run to check its outputs, such as a rail Module's check of a rail proof. The rule decides validity; the text explains it.
 - **Creator.** The identity that publishes a cMIP or Module and signs it as its own. MIPs have no creator: they are the protocol itself.
 - **Adoption.** A client's or user's opt-in to a specification, after which acts under it are no longer unknown to them.
 - **Signature-scheme specification.** A specification of kind 5 that defines a signature scheme's key encoding, signature encoding and verification, so that Identity can name it as a scheme by its hash (F54).
@@ -82,7 +82,7 @@ The spec hash covers this content, not the act that publishes it, so the same sp
 5a. **Task numbers.** Every task has one global number, given in the table below. Agreements name their cMIPs by these numbers (Law, terms field 2), so every client counts tasks the same way. A successor protocol may add tasks with new numbers; the numbers here never change.
 6. **Task grammar.** For each task, the MIP that defines it states what a cMIP must accept and produce, in core terms. A cMIP that fills a task MUST accept everything the task requires and produce only what it allows.
 7. **One per task, per agreement.** An agreement names at most one cMIP per task (Law). A client chooses its cMIPs; choosing them is like choosing a sub-network.
-8. **Modules within cMIPs.** Several Modules may operate at once under one task (for example several payment modules for different rails), each implementing a cMIP.
+8. **Modules within cMIPs.** Several Modules may operate at once under the one cMIP an agreement names for a task (for example several rail Modules under the payment cMIP, one per rail), each naming that cMIP in its field 5. A Module is a specification: it signs nothing; the identities acting under it sign (F112).
 
 The tasks the core defines:
 
@@ -93,8 +93,8 @@ The tasks the core defines:
 | 3 | Identity | Outside link proofs | a link claim and its proof | valid, invalid or unknown |
 | 4 | Text | Text format | a canonical text | a rendering that hides only non-letters and adds no text |
 | 5 | Envelope | Media interpretation | a media object or manifest | its interpretation for display or play |
-| 6 | Finance | Payment, per rail | an obligation, offer or payee pointer and an amount, or a vault entry | a settlement receipt and its verification rule; a derived receiving address |
-| 7 | Finance | Conversion | a hop on one rail | a receipt forwarding on another |
+| 6 | Finance | Payment | an obligation, offer or payee pointer, an amount, the flow rail or vault entry paid to, and, for a purchase, the claim it pays under (F126) | how rail Modules plug in; how a payment carries what its receipt and claim say; how the receiver's receipt and the payer's claim carry a rail's proof, and the rule that checks it; how a fresh receiving address is obtained under a vault entry; whether each rail Module is a request rail or a push rail (F128, W4) |
+| 7 | Finance | Conversion | a conversion service's offer, and a hop received on one rail | how the service's receipt with a forward, and its onward hop, are evidenced |
 | 8 | Law | Split | an amount received and a split plan | payouts summing exactly, with third-party evidence |
 | 9 | Law | Condition evaluation | a condition and the acts it refers to | true, false, pending or unknown |
 | 10 | Law | Time reference | a point on the reference and an act | before, after or undetermined |
@@ -131,7 +131,7 @@ The tasks the core defines:
 ### Earning
 
 16. **Fees are standing offers.** A creator who charges publishes fee terms as a standing offer (Law). A fee can only be charged where whoever bears it signed for it, and a split that omits a declared fee is visible (Law).
-17. **Usage is evidenced, not tracked.** Receipts and splits name the specifications they ran under (Finance, Law). *That record is the only evidence of use the core provides, and it is enough for role shares that pay "the modules the payment ran through" (Law), provided the module's use record is signed by the module, not by the split service.* A plain tip carries no module fees (Finance).
+17. **Usage is evidenced, not tracked, and always by a party** (F116). Receipts and splits name the specifications they ran under (Finance, Law). The evidence that a Module was used is signed by a party, never by the Module, which is a specification and signs nothing: for a rail Module, the receipt or the payer's claim naming it in field 0 (Finance); for a service someone runs on a Module, a use record signed by the identity running the service. *That record is the only evidence of use the core provides, and it is enough for role shares that pay "the modules the payment ran through" (Law).* A plain tip carries no module fees (Finance).
 18. **Bounties.** A client or collective may offer a share of future splits to whoever builds a specification it needs. A bounty is an agreement like any other.
 
 ### Discovery and the trust root
@@ -173,6 +173,8 @@ The tasks the core defines:
 - **F54.** Signature schemes are specifications.
 - **F82.** Binary rules as locked objects; predecessor and creator claims shown; the six hashes; the successor's prefix.
 - **F106, Q18 (draft 5).** An extension declares, in its specification's field 10, the layers it acts on beyond Production.
+- **F112 (draft 6).** A rail is a Module under the one payment cMIP an agreement names; a Module signs nothing.
+- **F116 (draft 6).** Evidence of a Module's use is signed by a party: a receipt or claim for a rail Module, a record signed by the operating identity for a service.
 
 ## Freeze scenarios
 
@@ -181,9 +183,9 @@ The tasks the core defines:
 - Exit by cloning onto another cMIP: 1.
 - Unknown act carried, shown, then adopted by opt-in: 2.
 - An extension declaring the layers it acts on (field 10); a collective adopting and dropping it with the approval of each layer declared: 3, 8.
-- A payment module's verification rule run by two different clients on the RV32IM profile, giving the same answer; a rule exceeding its budget, or making an environment call, answering unknown on both: 2, 8.
+- A rail Module's verification rule run by two different clients on the RV32IM profile, giving the same answer; a rule exceeding its budget, or making an environment call, answering unknown on both: 2, 8.
 - A split plan shown with its computed payouts before signing: 2.
-- A role share paid to the modules a payment ran through, evidenced by the module's signed record: 2.
+- A role share paid to the modules a payment ran through, evidenced by a party: the receipt or claim naming a rail Module, or a use record signed by the identity running a service (F116): 2.
 - A signature-scheme specification published; an identity rotates to it; a client without it shows the identity's later acts as unknown and the rotation as valid: 8.
 - A successor specification by a different creator shown with the creator mismatch: 8.
 - The six MIP hashes stable wherever published; a read-only client checks them against its build: 8.

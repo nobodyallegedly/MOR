@@ -140,6 +140,17 @@ app.addEventListener('click', async (ev) => {
       // Absence, judged by the other members under the clause the member signed (Law rules 49, 53; B15).
       await prepare({ kind: 'declare', collective: d.collective, member: d.member });
       break;
+    case 'check-pointer':
+    case 'check-split': {
+      const r = await busy('Fetching and judging…', () =>
+        c.ask<{ reading: Reading }>(d.action!, d.action === 'check-split' ? { collective: d.collective, split: d.split } : { collective: d.collective }),
+      );
+      if (r) {
+        say('', '');
+        show(r.reading);
+      }
+      break;
+    }
     case 'resend':
       await after(await busy('Sending the member change again…', () => c.ask<Done>('resend', { collective: d.collective })));
       break;
@@ -211,7 +222,23 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
+  if (form.classList.contains('service-pointer')) return prepare({ kind: 'pointer', owner: words(d.get('owner')), addresses: linesOf(d.get('addresses')) });
   const collective = form.dataset.collective;
+  const prefixed = (p: string) => [...d.entries()].filter(([k]) => k.startsWith(p)).map(([k, x]) => [k.slice(p.length), words(x)] as [string, string]);
+  if (form.classList.contains('stakes')) return prepare({ kind: 'stakes', collective, shares: Object.fromEntries(prefixed('share:').filter(([, x]) => x !== '').map(([k, x]) => [k, Number(x)])) });
+  if (form.classList.contains('split-service')) return prepare({ kind: 'split-service', collective, service: words(d.get('service')) });
+  if (form.classList.contains('pointer')) return prepare({ kind: 'pointer', owner: collective, addresses: linesOf(d.get('addresses')) });
+  if (form.classList.contains('split')) return prepare({ kind: 'split', collective, amount: numberOf(d.get('amount')), fee: numberOf(d.get('fee')) ?? 0 });
+  if (form.classList.contains('release-work')) return prepare({ kind: 'release-work', collective, release: words(d.get('release')) });
+  if (form.classList.contains('fork')) {
+    const sides: string[][] = [[], []];
+    // "none": a member who signs no side (F124 N1).
+    for (const [m, side] of prefixed('side:')) if (side !== 'none') sides[side === '2' ? 1 : 0].push(m);
+    return prepare({ kind: 'fork', collective, sides });
+  }
+  if (form.classList.contains('debt')) return prepare({ kind: 'debt', collective, creditor: words(d.get('creditor')), amount: numberOf(d.get('amount')) });
+  if (form.classList.contains('closing')) return prepare({ kind: 'closing', collective });
+  if (form.classList.contains('debt-release')) return prepare({ kind: 'debt-release', debt: words(d.get('debt')) });
   if (form.classList.contains('release')) return prepare({ kind: 'release', publisher: collective, version: words(d.get('version')) });
   if (form.classList.contains('words')) return prepare({ kind: 'words', collective, text: words(d.get('text')) });
   if (form.classList.contains('change')) {

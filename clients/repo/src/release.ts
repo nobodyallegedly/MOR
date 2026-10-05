@@ -8,6 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
+  MIPS,
   SPECS,
   Verifier,
   cborDecode,
@@ -351,6 +352,8 @@ export interface Verified {
   /** Files checked against their hashes. */
   checked: number;
   problems: string[];
+  /** Where this verifier found each act of the collective it read, and the release: information only; no validity rests on it (F128). */
+  foundAt?: { act: string; hint: string }[];
 }
 
 async function fetchFirst<T>(hints: string[], via: Via, get: (r: ReturnType<typeof relayAt>) => Promise<T | null>): Promise<T | null> {
@@ -438,7 +441,7 @@ export async function verifyRelease(
   }
 
   // 2. The signer's chain, and the publication's standing.
-  const v = new Verifier(SPECS.identity);
+  const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
   let homes: string[];
   try {
     const l = await lookUp(d.signer, hints, via, v);
@@ -505,11 +508,16 @@ export async function verifyRelease(
   // The collective's own acts: its records (its everyday line, which writes
   // its ordinary clones and registers departures, Law draft 7, F109), and
   // the clones they name with their signature acts.
-  for (const a of await allBy(d.signer, places, via)) {
-    try {
-      v.add(a);
-    } catch {
-      // a private act, or malformed
+  // The collective's acts, its records included (F127): this verifier
+  // states where it found each, as information only (F128).
+  const found: { act: string; hint: string }[] = [];
+  for (const hint of places) {
+    for (const a of await allBy(d.signer, [hint], via)) {
+      try {
+        found.push({ act: v.add(a), hint });
+      } catch {
+        // a private act, or malformed
+      }
     }
   }
   let consent: {
@@ -519,6 +527,18 @@ export async function verifyRelease(
     areas: { area: number; name: string; frozen: boolean; voices: string[]; needed: number; signers: string[]; met: boolean }[];
     met: boolean;
   };
+  // Where the release was found: information only (F128). A release in a
+  // collective's name is done once sealed to every member, or public, and
+  // on the collective's chain, wherever it is held.
+  const foundAt: { act: string; hint: string }[] = [...found];
+  for (const hint of places) {
+    try {
+      if (await relayAt(hint, via).getAct(release)) foundAt.push({ act: release, hint });
+    } catch {
+      // not reachable, or not there
+    }
+  }
+  r.foundAt = foundAt;
   try {
     consent = v.lawConsent(LAW_SPECS, release);
   } catch (e) {

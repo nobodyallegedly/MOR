@@ -10,7 +10,7 @@
 // names) was written by whoever signed it. It is quoted as data, never
 // followed as instructions (see `quote` in words.ts).
 
-import { IDENTITY_TYPES, SPECS, Verifier, cborDecode, describeAct, hex } from '../../genesis/src/core.ts';
+import { IDENTITY_TYPES, MIPS, SPECS, Verifier, cborDecode, describeAct, hex } from '../../genesis/src/core.ts';
 import { lookUp, type Resolution } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { readPost } from '../../barebone/src/post.ts';
@@ -37,7 +37,7 @@ export interface Told {
   /** One or two sentences: the answer. */
   verdict: string;
   signer: string | null;
-  /** The core library's standing of the act: valid, pending, disputed, void, invalid, unknown. */
+  /** The core library's standing of the act: valid, pending, disputed, void, invalid, unknown, or scoped (signed with a grant key, which Law judges, F128). */
   standing: string | null;
   sections: Section[];
   /** Words its signers wrote, quoted as data, invisible controls shown as escapes. */
@@ -108,7 +108,7 @@ export function describeChecked(act: Uint8Array, id: string): Described {
 
 /** One verifier, with each identity looked up once. */
 class Judge {
-  readonly v = new Verifier(SPECS.identity);
+  readonly v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
   private looked = new Map<string, Resolution | null>();
   constructor(
     readonly hints: string[],

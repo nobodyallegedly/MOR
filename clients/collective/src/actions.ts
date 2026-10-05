@@ -7,11 +7,31 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { SPECS, describeAct, resignationPayload } from '../../genesis/src/core.ts';
-import { TestIdentity, type Home } from '../../genesis/src/identity.ts';
+import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
+import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestCollective, collectiveTerms, type Governance } from '../../repo/src/collective.ts';
-import { RELEASE_AREA, encodeTerms, record, resign, type MarkEntry } from '../../repo/src/law.ts';
+import {
+  LAW_SPECS,
+  RELEASE_AREA,
+  clonePlan,
+  closingPayload,
+  debtReleasePayload,
+  encodeTerms,
+  forkPayload,
+  grantPayload,
+  obligationPayload,
+  pointerPayload,
+  receiptPayload,
+  record,
+  releasePayload,
+  resign,
+  sign as lawSign,
+  splitPayload,
+  type MarkEntry,
+  type PayoutIn,
+  type Stake,
+} from '../../repo/src/law.ts';
 import {
   allBy,
   compareWithTree,
@@ -26,7 +46,7 @@ import {
   type Publisher,
   type Verified,
 } from '../../repo/src/release.ts';
-import { REPO_SPECS } from '../../repo/src/specs.ts';
+import { FINANCE_TYPES, LAW_TYPES, REPO_SPECS, TEST_RAIL } from '../../repo/src/specs.ts';
 import {
   count,
   lawThrown,
@@ -435,7 +455,7 @@ export class Actions {
 
   // ------------------------------------------------------------ founding
 
-  prepareFound(a: { name: string; members: string[]; rules: Rules; words?: string }) {
+  prepareFound(a: { name: string; members: string[]; rules: Rules; words?: string; shares?: Record<string, number> }) {
     const names = this.store.names();
     const s = this.store.settings();
     const name = a.name.trim();
@@ -451,7 +471,17 @@ export class Actions {
     for (const m of members) if (!this.store.holds(m)) blocking.push(`${names(m)} is not held by this program, so it cannot sign here.`);
     if (members.length < 2) blocking.push('A collective has at least two members.');
     const rules = fromRules(a.rules);
+    // F128: the founding terms name no relays; the relays are where the
+    // collective's clients publish and look first, never a condition.
     const g: Governance = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules) };
+    // F124 S1: founding terms may carry each member's share of all the
+    // collective's income, the collective written null, "this collective".
+    if (a.shares && Object.keys(a.shares).length) {
+      for (const k of Object.keys(a.shares)) if (!members.includes(k)) blocking.push(`${names(k)} is not a founder.`);
+      const m = this.millionths(members, a.shares);
+      if (m.problem) blocking.push(m.problem);
+      g.stakes = [{ object: null, holders: m.pairs }];
+    }
     const payload = encodeTerms(collectiveTerms(g, members, members[0]));
     const t = this.read(payload);
     const read = readAgreement(t, names);
@@ -462,6 +492,7 @@ export class Actions {
         `Each of the ${members.length} members signs the founding agreement below, each with a visible act of their own. It exists only once every one has signed: nobody is founded into a collective without signing (Q11).`,
         `Then the collective is born: an identity of its own, whose genesis declares this agreement. Its safety key is dealt as ${members.length} shares, and each member checks theirs; any ${rules.safetyThreshold} rebuild it.`,
         `${names(members[0])} proposes it and holds the collective's everyday key.`,
+        ...(g.stakes ? [`Each founder's share of all the collective's income, in its founding terms, which name the collective as null, "this collective" (F124 S1): ${g.stakes[0].holders.map(([h, n]) => `${names(h!)} ${n / 10_000}%`).join(', ')}.`] : []),
       ],
       sections: [
         ...read.sections,
@@ -584,10 +615,23 @@ export class Actions {
       else notes.push({ text: 'The rules change but the words stay as they were: check they still say what the rules do.', tone: 'warn' });
     }
     const changedGovernance = rulesChanged || text !== current.text;
-    const g: Governance = { ...rules, releaseWords: current.releaseWords, text };
+    const g: Governance = c.departedAfter(
+      { ...rules, releaseWords: current.releaseWords, text, stakes: current.stakes, splitGrant: current.splitGrant, departed: current.departed },
+      members,
+    );
 
     const holder = c.nextHolder(members);
     const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: signersStaying }];
+    // F122: a version that also changes a judge (who judges absence, here)
+    // needs every member whose voice remains for it, its mark naming both.
+    const parentTerms = collectiveTerms(current, c.f.members, c.f.signingHolder);
+    if (clonePlan(parentTerms, collectiveTerms(g, members, holder, c.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
+      mark.push({ power: { judicial: true }, signers: signersStaying.filter((m) => voices.includes(m)) });
+      const missing = voices.filter((v) => !signersStaying.includes(v));
+      if (missing.length) {
+        blocking.push(`This change also changes a judge (who judges absence), which needs every member whose voice remains (Law draft 10, F122); ${list(missing.map(names))} cannot sign here.`);
+      }
+    }
     const payload = encodeTerms(collectiveTerms(g, members, holder, c.f.agreement, mark));
     const after = this.read(payload);
     const hints = this.hintsOf(c);
@@ -782,6 +826,7 @@ export class Actions {
         tone: 'bad',
       });
     }
+    out.push({ text: `A change of who judges (the protected clauses) needs every member whose voice remains: ${list(voices.map(names)) || 'nobody'} (Law rule 46a, F121).` });
     out.push({ text: `Other changes need ${anyOf(needed(g.cloneThreshold, voices.length), voices, names)}.` });
     return out;
   }
@@ -1038,10 +1083,11 @@ export class Actions {
   /**
    * A judicial change (Law draft 8, B13): only who judges absence changes,
    * the abandonment clause, a protected clause of the judicial tier (Law
-   * rules 44a, 46a). Marked with the clone rule, signed by enough members
-   * whose voice remains, and written on the collective's record at once
-   * with its everyday key: no rotation (rule 37c, Q8). For a member who
-   * does not sign it, absence stays judged by the clause they signed.
+   * rules 44a, 46a). The judicial tier changes only with every member's
+   * signature, one version for everyone (Law draft 10, F121): marked with
+   * that power, signed by every member whose voice remains, and written on
+   * the collective's record at once with its everyday key: no rotation
+   * (rule 37c, Q8).
    */
   async prepareAbsenceRule(a: { collective: string; others: number; signers?: string[] }) {
     const names = this.store.names();
@@ -1054,16 +1100,16 @@ export class Actions {
     const others = whole(a.others, 'who judges absence');
     if (others === old) blocking.push('Nothing changes: this is who judges absence already.');
     const voices = voicesOf(c);
-    const k = needed(c.f.governance.cloneThreshold, voices.length);
-    const signers = a.signers?.length ? [...new Set(a.signers)] : voices.filter((m) => this.store.holds(m)).slice(0, k);
+    const signers = a.signers?.length ? [...new Set(a.signers)] : voices.filter((m) => this.store.holds(m));
     for (const s of signers) {
-      if (!voices.includes(s)) blocking.push(`${names(s)} is not a member whose voice remains, so their signature cannot meet the clone rule.`);
+      if (!voices.includes(s)) blocking.push(`${names(s)} is not a member whose voice remains, so their signature cannot meet the judicial tier's rule.`);
       else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
     }
-    if (voices.length && signers.length < k) blocking.push(`A judicial change needs ${anyOf(k, voices, names)} (the clone rule); only ${signers.length} sign here.`);
+    const missing = voices.filter((v) => !signers.includes(v));
+    if (missing.length) blocking.push(`A judicial change needs every member whose voice remains (Law rule 46a, F121); ${list(missing.map(names))} ${missing.length === 1 ? 'does' : 'do'} not sign here.`);
     const g: Governance = { ...c.f.governance, abandonmentOthers: others };
     const hints = rulesHints(toRules(g), c.f.members.length);
-    const mark: MarkEntry[] = [{ power: { clone: true }, signers }];
+    const mark: MarkEntry[] = [{ power: { judicial: true }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
     let changes: Line[] = [];
     if (signers.length && !hints.length) {
@@ -1076,7 +1122,6 @@ export class Actions {
       blocking.push(...withLaw([], readAgreement(after, names, before?.t).blocking));
     } else if (!signers.length && !blocking.length) blocking.push('Nobody here can sign it.');
     blocking.unshift(...hints);
-    const unsigned = voices.filter((v) => !signers.includes(v));
     const notes: Line[] = [];
     if (c.f.governance.text === standardWords(cname, c.f.governance)) {
       notes.push({
@@ -1089,10 +1134,8 @@ export class Actions {
       summary: [
         'A judicial change: only who judges absence changes. The abandonment clause is a protected clause, in the judicial tier (Law rules 44a, 46a).',
         `Today any ${old} of the other members together decide whether a member is absent; after the change, any ${others}. The outcome stays the same: the member loses their voice, never what they own (F105).`,
-        `The clone is marked with the clone rule and signed by ${list(signers.map(names))}: enough members (${anyOf(k, voices, names)}) (Law rules 44c, 45a).`,
-        unsigned.length
-          ? `For ${list(unsigned.map(names))}, who ${unsigned.length === 1 ? 'does' : 'do'} not sign it, absence stays judged by the clause they signed: any ${old} of the other members (Law rule 46a). A protected clause changes for a member only with that member's signature.`
-          : 'Every member whose voice remains signs it, so the new clause judges each of them.',
+        `The clone is marked with the judicial tier's power and signed by ${list(signers.map(names))}: every member whose voice remains (Law rules 44c, 45a, 46a).`,
+        'The judicial tier changes only with every member\'s signature, so there is one version for everyone: the new clause judges each member (Law draft 10, F121).',
         "The collective writes it on its record at once, signed with its everyday key: no rotation, no new keys (Law rule 37c, Q8).",
       ],
       sections: [
@@ -1418,6 +1461,834 @@ export class Actions {
     };
   }
 
+  // ------------------------------------------------------------ money and endings (Law draft 10: F121 to F124)
+
+  /** Why nothing more can be done in a collective a fork or closing ended (Law rule 47a, F121, F124 N9). */
+  private closedBlock(c: TestCollective): string[] {
+    return c.f.closed
+      ? [`The collective was closed by its fork or closing (${short(c.f.closed)}): what its keys sign afterwards counts for nothing in Law (rule 47a).`]
+      : [];
+  }
+
+  /**
+   * A verifier holding these identities' chains and every act their relays
+   * hold, and the collective's own splits with their keys: what the core
+   * library judges the money and endings with. An obligation a collective
+   * signed binds it once done, sealed to every member, wherever it is held
+   * (F128, withdrawing N13's public outside).
+   */
+  private async lawVerifier(c: TestCollective, ids: string[]): Promise<{ v: Verifier; specs: typeof LAW_SPECS }> {
+    const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+    const hints = this.hintsOf(c);
+    // The relays are where this program looks first (client conformance);
+    // where it found an act is never a condition of its validity (F128).
+    for (const id of new Set(ids)) {
+      try {
+        await lookUp(id, hints, this.via, v);
+      } catch {
+        // not found: its acts cannot count
+      }
+      for (const hint of hints) {
+        for (const a of await allBy(id, [hint], this.via)) {
+          try {
+            v.add(a);
+          } catch {
+            // a private act: added below with its key where this program holds it
+          }
+        }
+      }
+    }
+    // The collective's splits and debts, and the debts of every collective
+    // this program holds: a successor owes those the fork of the collective
+    // it was forked from handed to it (F124 N13, F127).
+    const debts = this.store.book().collectives.flatMap((x) => (x.id === c.identity || !this.store.isCollective(x.id) ? [] : (this.store.collective(x.id).f.debts ?? [])));
+    for (const sp of [...(c.f.splits ?? []), ...(c.f.debts ?? []), ...debts]) {
+      const a = await this.fetchAct(sp.id, hints);
+      if (a) {
+        try {
+          v.addWithKey(a, unb64(sp.key));
+        } catch {
+          // already held
+        }
+      }
+    }
+    return { v, specs: LAW_SPECS };
+  }
+
+  /** The debts a collective signed, and those of the collectives it was forked from, which their forks handed to its successors (F124 N13, F127); the core says who owes each. */
+  private debtsOf(c: TestCollective): { id: string; creditor: string; inherited: boolean; debtor: string }[] {
+    const out = (c.f.debts ?? []).map((d) => ({ id: d.id, creditor: d.creditor, inherited: false, debtor: c.identity }));
+    let from = c.f.governance.forkedFrom;
+    for (let depth = 0; from && this.store.isCollective(from) && depth < 64; depth++) {
+      const o = this.store.collective(from);
+      out.push(...(o.f.debts ?? []).map((d) => ({ id: d.id, creditor: d.creditor, inherited: true, debtor: o.identity })));
+      from = o.f.governance.forkedFrom;
+    }
+    return out;
+  }
+
+  /** Everyone a collective's money concerns: its members, departed holders, its successors, the identities and collectives held here. */
+  private concerned(c: TestCollective): string[] {
+    const b = this.store.book();
+    return [c.identity, ...c.f.members, ...(c.f.governance.departed ?? []), ...b.identities.map((i) => i.id), ...b.collectives.map((x) => x.id)];
+  }
+
+  /** The collective's stake in itself (object null, F124 S1), as its terms carry it (F121, Q8). */
+  private ownStake(c: TestCollective): [string, number][] {
+    return (c.f.governance.stakes?.find((x) => x.object === null)?.holders ?? []).filter((x): x is [string, number] => x[0] !== null);
+  }
+
+  /** The index of a stake in the terms as encoded: the collective's own (null) first, then works by hash. */
+  private stakeIndex(c: TestCollective, object: string | null): number {
+    const key = (o: string | null) => (o === null ? '' : o);
+    return [...(c.f.governance.stakes ?? [])].sort((x, y) => (key(x.object) < key(y.object) ? -1 : 1)).findIndex((x) => x.object === object);
+  }
+
+  /** The work hash a release of the collective carries (its publication's media, field 1). */
+  private async workOf(c: TestCollective, release: string): Promise<{ work: string; key: Uint8Array } | null> {
+    const a = await this.fetchAct(release, this.hintsOf(c));
+    if (!a) return null;
+    const d = describeAct(a) as { payload?: Uint8Array };
+    if (!d.payload) return null;
+    const m = cborDecode(d.payload) as Map<number, unknown>;
+    const w = m.get(1);
+    const k = m.get(5);
+    return w instanceof Uint8Array && k instanceof Uint8Array ? { work: hex(w), key: k } : null;
+  }
+
+  /** Shares typed in percent, as millionths summing to 1,000,000, rounding to the first listed (rule 15a); or why not. */
+  private millionths(holders: string[], shares: Record<string, number>): { pairs: [string, number][]; problem?: string } {
+    const pairs = holders.map((h) => [h, Math.round((shares[h] ?? 0) * 10_000)] as [string, number]).filter(([, n]) => n > 0);
+    const total = pairs.reduce((x, [, n]) => x + n, 0);
+    if (!pairs.length) return { pairs, problem: 'Give at least one holder a share.' };
+    if (total !== 1_000_000) {
+      if (Math.abs(total - 1_000_000) <= holders.length) pairs[0][1] += 1_000_000 - total;
+      else return { pairs, problem: `The shares add up to ${total / 10_000}%, not 100%.` };
+    }
+    return { pairs };
+  }
+
+  /**
+   * The collective's stakes (terms field 7, F121 Q8): each member's and
+   * departed holder's share of all its income, in percent, and the
+   * collective's ownership of every release it published, both written
+   * with null for the collective itself (F124 S1). An ordinary change
+   * under the clone rule, recorded at once; every member whose voice
+   * remains signs it, and no holder's share is lowered without them
+   * (rule 46).
+   */
+  async prepareStakes(a: { collective: string; shares: Record<string, number> }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const blocking: string[] = [...this.closedBlock(c)];
+    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
+    blocking.push(...this.awaitingRecovery(c, names));
+    const voices = voicesOf(c);
+    const departed = c.f.governance.departed ?? [];
+    const holders = [...voices, ...departed];
+    for (const k of Object.keys(a.shares)) if (!holders.includes(k)) blocking.push(`${names(k)} is neither a member whose voice remains nor a departed holder.`);
+    const m = this.millionths(holders, a.shares);
+    if (m.problem) blocking.push(m.problem);
+    const millionths = m.pairs;
+    for (const [h, n] of this.ownStake(c)) {
+      if (!departed.includes(h)) continue;
+      const now = millionths.find(([x]) => x === h)?.[1] ?? 0;
+      if (now < n) blocking.push(`${names(h)} left keeping ${n / 10_000}%: a stake never shrinks without its holder's signature (Law rule 46), which this change does not carry.`);
+    }
+    const missing = voices.filter((x) => !this.store.holds(x));
+    if (missing.length) blocking.push(`${list(missing.map(names))} cannot sign here, and every member's share is set with their signature (Law rule 13).`);
+    const works: Stake[] = [];
+    for (const r of c.f.releases) {
+      const w = await this.workOf(c, r.id);
+      if (w && !works.some((x) => x.object === w.work)) works.push({ object: w.work, holders: [[null, 1_000_000]] });
+    }
+    const stakes: Stake[] = [{ object: null, holders: millionths }, ...works];
+    const signers = voices.filter((x) => this.store.holds(x));
+    if (signers.length < Math.min(c.f.governance.cloneThreshold, voices.length)) blocking.push('Too few members can sign here for the clone rule.');
+    const g: Governance = { ...c.f.governance, stakes };
+    const mark: MarkEntry[] = [{ power: { clone: true }, signers }];
+    const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
+    if (!blocking.length) blocking.push(...withLaw([], readAgreement(this.read(payload), names).blocking));
+    const reading: Reading = {
+      title: `The stakes in “${cname}”`,
+      summary: [
+        'A stake whose object is the collective itself is a share of all its income, whoever earns it and whenever (Law draft 10, F121 Q8); the terms write the collective as null, "this collective" (F124 S1).',
+        ...millionths.map(([h, n]) => `${names(h)}: ${n / 10_000}% of all the collective's income${departed.includes(h) ? ', as a departed holder: no voice; the stakes, not the departed entry, decide what they are paid (F124 N5)' : ''}.`),
+        works.length ? `The collective owns ${count(works.length, 'release')} it published, each wholly: its income is shared by the stakes above.` : 'The collective has published no release yet.',
+        'Every payout of a split must match its stake exactly, within one smallest unit of rounding, every fee alike for every stake (F124 N10).',
+        "An ordinary change outside every area, under the clone rule, written on the collective's record at once; no rotation (Law rules 37c, 44c).",
+      ],
+      sections: [
+        {
+          heading: 'Signed on this device',
+          lines: [
+            { text: `${list(signers.map(names))} sign the clone; the collective's everyday key signs the record.` },
+            { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
+          ],
+        },
+      ],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'stakes',
+      digest: digestOf('stakes', a.collective, payload),
+      reading,
+      depends: [a.collective, ...signers],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const ids = signers.map((x) => this.store.identity(x));
+        const got = await col.setStakes({ stakes, proposer: ids[0], signers: ids, expect: payload });
+        col.f.records = [...(col.f.records ?? []), got.record];
+        this.store.saveCollective(col);
+        for (const i of ids) this.store.saveIdentity(i);
+        return {
+          title: `The stakes in “${cname}” are set`,
+          lines: [{ text: `Clone ${got.clone}, recorded by ${got.record}.`, tone: 'ok' }],
+          acts: [got.clone, ...got.signed.map((x) => x.act), got.record],
+        };
+      },
+    });
+  }
+
+  /**
+   * Name a split service (terms field 14, by a grant of the collective): a
+   * judicial change, every member whose voice remains signing it (rule
+   * 46a). Here the service is a test identity held by this program.
+   */
+  async prepareSplitService(a: { collective: string; service: string }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const blocking: string[] = [...this.closedBlock(c)];
+    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
+    blocking.push(...this.awaitingRecovery(c, names));
+    if (!this.store.holds(a.service) || this.store.isCollective(a.service)) blocking.push('The split service must be a test identity this program holds (it is simulated here).');
+    const voices = voicesOf(c);
+    const missing = voices.filter((m) => !this.store.holds(m));
+    if (missing.length) blocking.push(`A judicial change needs every member whose voice remains (Law rule 46a, F121); ${list(missing.map(names))} cannot sign here.`);
+    const reading: Reading = {
+      title: `A split service for “${cname}”`,
+      summary: [
+        `The collective grants ${names(a.service)} the right to receive its payments and split them (Law rule 18).`,
+        'The split service is a judicial clause: every member whose voice remains signs it, one version for everyone (Law rule 46a, F121).',
+        "From then on the collective's payee pointer counts, for Law, only if every address in it is also in the split service's own signed pointer, and every entry of its vault in the service's own vault (Law rule 18, F123, F124 P2); a Law client shows any other as bypassing the split.",
+        'Every split is delivered to every holder it pays, and names each fee and who received it (F121, Q9). A collective naming no split service is paid payer-side instead: a wallet reading Law pays each holder by the stakes (F124 P2).',
+        `The grant hands ${names(a.service)} a grant key: a key of the collective scoped to the grant, which the service makes and keeps, and signs to accept (F128). What the service signs with it, its receipts among them, is the collective's own act, a strand of its actions chain; a revocation removes the key.`,
+      ],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: 'The collective signs the grant; every member signs the clone; the collective records it. Test identities: consent simulated.', tone: 'warn' }] }],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'split-service',
+      digest: digestOf('split-service', a.collective, a.service, c.f.agreement),
+      reading,
+      depends: [a.collective, ...voices],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        // F128: the service makes its grant key and keeps its secret; the
+        // grant names its public part; the service signs to accept it.
+        const service = this.store.identity(a.service);
+        const key = service.makeGrantKey();
+        const g = await col.id.publish(REPO_SPECS.law, LAW_TYPES.grant, grantPayload(a.service, key.public), { public: true, relays: col.f.relays });
+        service.keepGrantKey(g.id, col.id.id, key.secret);
+        await lawSign(service, g.id, col.f.relays);
+        this.store.saveIdentity(service);
+        const ids = voices.map((x) => this.store.identity(x));
+        const got = await col.nameSplitService({ grant: g.id, proposer: ids[0], signers: ids });
+        col.f.records = [...(col.f.records ?? []), got.record];
+        this.store.saveCollective(col);
+        for (const i of ids) this.store.saveIdentity(i);
+        return {
+          title: `${names(a.service)} is the split service of “${cname}”`,
+          lines: [
+            { text: `Grant ${g.id}.` },
+            { text: `Clone ${got.clone}, signed by every member, recorded by ${got.record}.`, tone: 'ok' },
+          ],
+          acts: [g.id, got.clone, ...got.signed.map((x) => x.act), got.record],
+        };
+      },
+    });
+  }
+
+  /** Publish a payee pointer (Finance type 0) for an identity or a collective this program holds: its addresses on the test rail. */
+  async preparePointer(a: { owner: string; addresses: string[] }) {
+    const names = this.store.names();
+    const isCol = this.store.isCollective(a.owner);
+    const blocking: string[] = [];
+    if (!isCol && !this.store.holds(a.owner)) blocking.push('This program does not hold that identity.');
+    if (isCol) blocking.push(...this.closedBlock(this.store.collective(a.owner)));
+    const addresses = a.addresses.map((x) => x.trim()).filter(Boolean);
+    if (!addresses.length) blocking.push('Give at least one address.');
+    const hints = isCol ? this.hintsOf(this.store.collective(a.owner)) : this.store.settings().relays;
+    let previous: string | undefined;
+    let version = 1;
+    for (const x of await allBy(a.owner, hints, this.via)) {
+      try {
+        const d = describeAct(x) as { id: string; spec?: string; type?: number; payload?: Uint8Array };
+        if (d.spec !== MIPS.finance || d.type !== FINANCE_TYPES.pointer || !d.payload) continue;
+        const v = (cborDecode(d.payload) as Map<number, unknown>).get(1) as number;
+        if (v >= version) {
+          version = v + 1;
+          previous = d.id;
+        }
+      } catch {
+        // not a pointer
+      }
+    }
+    const payload = pointerPayload({
+      payee: a.owner,
+      version,
+      previous,
+      rails: addresses.map((x) => [TEST_RAIL, new TextEncoder().encode(x)]),
+    });
+    const reading: Reading = {
+      title: `A payee pointer for ${names(a.owner)}`,
+      summary: [
+        `Version ${version}: payments to ${names(a.owner)} go to ${list(addresses.map((x) => `“${x}”`))}, on a test rail (no real money).`,
+        isCol
+          ? "Where the collective's agreement names a split service, this pointer counts for Law only if every address in it is also in the service's own pointer, and every entry of its vault in the service's own vault (Law rule 18, F123, F124 P2). A wallet reading only Finance cannot check it (cost stated)."
+          : 'An ordinary pointer of a test identity.',
+      ],
+      sections: [],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'pointer',
+      digest: digestOf('pointer', a.owner, payload),
+      reading,
+      depends: [a.owner],
+      run: async () => {
+        if (isCol) {
+          const col = this.store.collective(a.owner);
+          const x = await col.id.publish(MIPS.finance, FINANCE_TYPES.pointer, payload, { public: true, relays: col.f.relays });
+          col.f.pointers = [...(col.f.pointers ?? []), x.id];
+          this.store.saveCollective(col);
+          return { title: 'The pointer is published', lines: [{ text: `Pointer ${x.id}, version ${version}.`, tone: 'ok' }], acts: [x.id] };
+        }
+        const i = this.store.identity(a.owner);
+        const x = await i.publish(MIPS.finance, FINANCE_TYPES.pointer, payload, { public: true, relays: this.store.settings().relays });
+        this.store.saveIdentity(i);
+        return { title: 'The pointer is published', lines: [{ text: `Pointer ${x.id}, version ${version}.`, tone: 'ok' }], acts: [x.id] };
+      },
+    });
+  }
+
+  /** The pointer check (Law rule 18, F123, F124 P2), as a Law client makes it before paying the collective. */
+  async checkPointer(a: { collective: string }): Promise<{ reading: Reading; kind: string }> {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const { v, specs } = await this.lawVerifier(c, this.concerned(c));
+    const r = v.lawPointerCheck(specs, c.identity, c.f.agreement) as {
+      kind: string;
+      pointer?: string;
+      service?: string;
+      missing: [string, string][];
+      vaultMissing: [string, string][];
+      reason?: string;
+    };
+    const text = (h: string) => Buffer.from(h, 'hex').toString('utf8');
+    const lines: Line[] =
+      r.kind === 'ordinary'
+        ? [{ text: `Every address in the collective's pointer, and every entry of its vault, is also in ${names(r.service!)}'s own: it leads to the split service, an ordinary pointer.`, tone: 'ok' }]
+        : r.kind === 'bypasses'
+          ? [
+              { text: 'BYPASSES THE SPLIT SERVICE: this pointer counts for nothing in Law. A Law client never shows it as an ordinary pointer, and does not pay it as one.', tone: 'bad' },
+              ...r.missing.map(([, addr]) => ({ text: `“${text(addr)}” is in no split service's own pointer.`, tone: 'bad' as const })),
+              ...r.vaultMissing.map(([, src]) => ({ text: `The vault entry “${text(src)}” is in no split service's own vault (F124 P2).`, tone: 'bad' as const })),
+              { text: 'A wallet reading only Finance cannot check this, and would pay the pointer as it stands (cost stated, F68, F121).', tone: 'warn' },
+            ]
+          : r.kind === 'no-split-service'
+            ? [{ text: "The collective's agreement names no split service: a wallet reading Law splits payer-side, paying each holder's own pointer by the stakes (F124 P2)." }]
+            : [{ text: `Undetermined: ${r.reason}.`, tone: 'warn' }];
+    return {
+      kind: r.kind,
+      reading: { title: `The pointer check for ${names(c.identity)}`, summary: ["Law rule 18, F123, F124 P2: the split service vouches for the addresses in the owners' pointer and vault, publicly."], sections: [{ heading: 'What a Law client sees before paying', lines }], plain: [], blocking: [] },
+    };
+  }
+
+  /**
+   * A payment of `amount` to the collective, received and split by its
+   * split service (simulated here): the service signs a receipt, then a
+   * split paying each holder of the collective's stake in itself, and a
+   * fee to itself, delivered to every holder it pays (F121, Q9). `amounts`
+   * overrides the computed payouts (to show a deviation the core shows).
+   */
+  async prepareSplit(a: { collective: string; amount: number; fee: number; amounts?: Record<string, number> }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const blocking: string[] = [];
+    const own = this.ownStake(c);
+    if (!own.length) blocking.push('The collective has no stakes in itself yet: set them first.');
+    const amount = whole(a.amount, 'the amount');
+    const fee = whole(a.fee, 'the fee');
+    if (fee > amount) blocking.push('The fee is more than the amount.');
+    let service: string | null = null;
+    if (!c.f.governance.splitGrant) blocking.push('The collective names no split service yet.');
+    else {
+      const g = await this.fetchAct(c.f.governance.splitGrant, this.hintsOf(c));
+      const p = g ? ((describeAct(g) as { payload?: Uint8Array }).payload ?? null) : null;
+      service = p ? hex((cborDecode(p) as Map<number, unknown>).get(0) as Uint8Array) : null;
+      if (!service || !this.store.holds(service)) blocking.push('The split service is not held by this program, so it cannot split here.');
+    }
+    const pool = amount - fee;
+    const auto = own.map(([h, n]) => [h, Math.floor((pool * n) / 1_000_000)] as [string, number]);
+    if (auto.length) auto[0][1] += pool - auto.reduce((x, [, n]) => x + n, 0);
+    const payouts: [string, number][] = auto.map(([h, n]) => [h, a.amounts?.[h] ?? n]);
+    const index = this.stakeIndex(c, null);
+    const departed = c.f.governance.departed ?? [];
+    const reading: Reading = {
+      title: `A payment of ${amount} to “${cname}”, split`,
+      summary: [
+        `The split service ${service ? names(service) : ''} receives ${amount} and takes a fee of ${fee}, named in the split with who received it (F121, Q9).`,
+        ...payouts.map(([h, n]) => `${names(h)}: ${n}${departed.includes(h) ? ' (a departed holder)' : ''}.`),
+        'The split is delivered to every holder it pays (Q9), and Law checks that every payout matches its stake exactly, within one smallest unit of rounding, every fee alike for every stake: any deviation, either way, breaks the plan (F124 N10, rule 26).',
+      ],
+      sections: [{ heading: 'Simulated', lines: [{ text: 'The split service and the payment are simulated on a test rail: no money moves.', tone: 'warn' }] }],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'split',
+      digest: digestOf('split', a.collective, String(amount), String(fee), JSON.stringify(payouts)),
+      reading,
+      depends: [a.collective, ...(service ? [service] : [])],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const svc = this.store.identity(service!);
+        const relays = col.f.relays;
+        const r = await svc.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: svc.f.identity, unit: TEST_RAIL, value: amount, fulfils: col.f.agreement }), { public: true, relays });
+        const ps: PayoutIn[] = [
+          ...(fee ? [{ receiver: svc.f.identity, amount: fee, feeModule: TEST_RAIL }] : []),
+          ...payouts.map(([h, n]) => ({ receiver: h, amount: n, stake: index })),
+        ];
+        const to = [...new Set(payouts.map(([h]) => h))];
+        const x = await svc.publish(REPO_SPECS.law, LAW_TYPES.split, splitPayload({ receipt: r.id, payouts: ps, cmip: TEST_RAIL, agreement: col.f.agreement }), { public: false, to, relays });
+        col.f.splits = [...(col.f.splits ?? []), { id: x.id, key: Buffer.from(x.key).toString('base64'), receipt: r.id }];
+        this.store.saveCollective(col);
+        this.store.saveIdentity(svc);
+        const judged = await this.checkSplit({ collective: a.collective, split: x.id });
+        return { title: 'The payment is split', lines: [{ text: `Receipt ${r.id}; split ${x.id}.`, tone: 'ok' }, ...judged.reading.sections.flatMap((s) => s.lines)], acts: [r.id, x.id] };
+      },
+    });
+  }
+
+  /** A split, as the core library judges it: its fees and their receivers, delivery, every payout matching its stake (F121 Q9, F124 N10). */
+  async checkSplit(a: { collective: string; split: string }): Promise<{ reading: Reading; mismatched: number }> {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const departed = c.f.governance.departed ?? [];
+    const { v, specs } = await this.lawVerifier(c, this.concerned(c));
+    const e = v.lawSplit(specs, a.split) as {
+      sums: boolean | null;
+      payouts: [string, number, number | null, string | null][];
+      fees: [string, string, number][];
+      undelivered: string[];
+      mismatched: [number, string, number, number][];
+    };
+    const lines: Line[] = [
+      ...e.fees.map(([, r, n]) => ({ text: `Fee: ${n}, received by ${names(r)}.` })),
+      ...e.payouts.filter(([, , st]) => st !== null).map(([r, n]) => ({ text: `Paid: ${n} to ${names(r)}${departed.includes(r) ? ' (a departed holder)' : ''}.` })),
+      e.sums === false ? { text: 'The payouts do not add up to what arrived (Law rule 21): an invalid split.', tone: 'bad' as const } : { text: 'The payouts add up exactly to what arrived.', tone: 'ok' as const },
+      ...(e.undelivered.length
+        ? [{ text: `Not delivered to ${list(e.undelivered.map(names))}, whom it pays (Q9).`, tone: 'bad' as const }]
+        : [{ text: 'Delivered to every holder it pays (Q9).', tone: 'ok' as const }]),
+      ...(e.mismatched.length
+        ? e.mismatched.map(([, h, paid, due]) => ({ text: `DOES NOT MATCH ITS STAKE: ${names(h)} is paid ${paid}, their share is ${due} (F124 N10, rule 26).`, tone: 'bad' as const }))
+        : [{ text: 'Every payout matches its stake exactly, every fee alike for every stake, member or departed (F124 N10).', tone: 'ok' as const }]),
+    ];
+    return {
+      mismatched: e.mismatched.length,
+      reading: { title: `The split ${short(a.split)}`, summary: [], sections: [{ heading: 'What the core library finds', lines }], plain: [], blocking: [] },
+    };
+  }
+
+  /**
+   * A debt of the collective (a Finance obligation it signs as debtor),
+   * to a creditor: private, its outside published on the collective's
+   * relays, so it binds the collective (F124 N13), and sealed to every
+   * member as well as the creditor (client conformance, N13: no member can
+   * keep the collective's debts out of the others' sight).
+   */
+  async prepareDebt(a: { collective: string; creditor: string; amount: number }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const blocking: string[] = [...this.closedBlock(c)];
+    const value = whole(a.amount, 'the amount');
+    if (!/^[0-9a-f]{64}$/.test(a.creditor)) blocking.push('Name the creditor by its identity.');
+    const to = [...new Set([a.creditor, ...c.f.members])];
+    const payload = blocking.length ? new Uint8Array() : obligationPayload({ debtor: c.identity, creditor: a.creditor, unit: TEST_RAIL, value, pointer: c.f.agreement });
+    const reading: Reading = {
+      title: `“${cname}” owes ${value} to ${names(a.creditor)}`,
+      summary: [
+        'The collective signs an obligation as its debtor (F66). It binds the collective only once its outside is public: it is published on the collective\'s relays, its inside locked (F124 N13).',
+        `Sealed to the creditor and to every member: ${list(to.map(names))} (client conformance, F124 N13).`,
+        'Cost, stated: anyone can see that the collective has debts, and how many, never their content.',
+      ],
+      sections: [],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'debt',
+      digest: digestOf('debt', a.collective, payload),
+      reading,
+      depends: [a.collective],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const x = await col.id.publish(MIPS.finance, FINANCE_TYPES.obligation, payload, { public: false, to, relays: col.f.relays });
+        col.f.debts = [...(col.f.debts ?? []), { id: x.id, key: Buffer.from(x.key).toString('base64'), creditor: a.creditor }];
+        this.store.saveCollective(col);
+        return { title: 'The debt is signed and published', lines: [{ text: `Obligation ${x.id}, sealed to ${count(to.length, 'recipient')}.`, tone: 'ok' }], acts: [x.id] };
+      },
+    });
+  }
+
+  /**
+   * The fork of the collective (Law rule 47a, F121 shape B, F124). Each
+   * side first founds its successor: a new collective whose founding terms
+   * have that side's members as parties, keep every departed holder and
+   * every member who signs no side at their share of all income, and name
+   * the original in "forked from", a back-link (N4). Then the fork act,
+   * naming each successor, is signed by the members on the sides with their
+   * own identities, under the constitutional change rule (N1), and each
+   * successor signs for the debts it is assigned (N13): every obligation of
+   * the original is assigned, by default to every side jointly. Once
+   * complete, the original is closed in Law; its ownership passes to the
+   * successors by the members' stakes; every grant ends, the split
+   * service's included; payment follows the work's current claim (N14).
+   */
+  async prepareFork(a: { collective: string; sides: string[][]; debts?: Record<string, number[]> }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const blocking: string[] = [...this.closedBlock(c)];
+    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
+    const sides = a.sides.map((s) => [...new Set(s)]).filter((s) => s.length);
+    const voices = voicesOf(c);
+    if (sides.length < 2) blocking.push('A fork has at least two sides.');
+    if (sides.some((x) => x.length < 2)) blocking.push("This client founds collectives of two members or more (absence is judged by a threshold of the other members): put two members on each side.");
+    const listed = sides.flat();
+    if (new Set(listed).size !== listed.length) blocking.push('A member is on one side at most.');
+    const leaving = voices.filter((m) => !listed.includes(m));
+    for (const m of listed) {
+      if (!voices.includes(m)) blocking.push(`${names(m)} is not a member whose voice remains.`);
+      else if (!this.store.holds(m)) blocking.push(`${names(m)} cannot sign here.`);
+    }
+    // N1: the constitutional change rule, every member whose voice remains by default.
+    const k = c.f.governance.constitutionalThreshold;
+    const needed = k ? Math.min(k, voices.length) : voices.length;
+    if (listed.filter((m) => voices.includes(m)).length < needed) {
+      blocking.push(
+        k
+          ? `A fork follows the constitutional change rule: any ${k} members (F124 N1); ${listed.length} sign here.`
+          : `A fork follows the constitutional change rule, every member whose voice remains by default (F124 N1): ${list(leaving.map(names))} would sign no side.`,
+      );
+    }
+    // Each member's percentage of all income: the stake in itself, else each alike (N3).
+    const own = this.ownStake(c);
+    const alike = Math.floor(1_000_000 / Math.max(voices.length, 1));
+    const pct = (m: string) => (own.length ? (own.find(([h]) => h === m)?.[1] ?? 0) : m === voices[0] ? 1_000_000 - alike * (voices.length - 1) : alike);
+    const departed = c.f.governance.departed ?? [];
+    const kept: [string, number][] = [...departed.map((d) => [d, pct(d)] as [string, number]), ...leaving.map((m) => [m, pct(m)] as [string, number])];
+    const weight = (s: string[]) => s.reduce((x, m) => x + pct(m), 0);
+    const w = sides.map((s) => weight(s) || s.length);
+    const sum = w.reduce((x, y) => x + y, 0) || 1;
+    // F127: the fork hands out every obligation in the history it cites
+    // (paid or not), its own and what an earlier fork handed to it, or it
+    // does not take effect. The core reads that history from the line this
+    // fork will draw: the collective's latest act.
+    const { v: v0, specs: s0 } = await this.lawVerifier(c, this.concerned(c));
+    const debts: [string, number[]][] = [];
+    const seq0 = c.f.identity.sequence;
+    const line = seq0.length ? [{ act: seq0[seq0.length - 1], position: seq0.length, summary: runningSummary(seq0) }] : [];
+    const history = (v0.lawHandOut(s0, c.identity, c.f.agreement, c.f.identity.binding, line) as string[] | null) ?? [];
+    for (const o of new Set(history)) {
+      const to = a.debts?.[o] ?? sides.map((_, i) => i);
+      if (!to.length || to.some((i) => i < 0 || i >= sides.length)) blocking.push(`The debt ${short(o)} is assigned to no side the fork lists.`);
+      debts.push([o, [...new Set(to)].sort((x, y) => x - y)]);
+    }
+    const reading: Reading = {
+      title: `Fork “${cname}”`,
+      summary: [
+        `${sides.length} sides: ${sides.map((s, i) => `side ${i + 1}, ${list(s.map(names))}`).join('; ')}. Each side first founds its own collective, its successor; the fork act names them (F124 N4). Every member on a side signs with their own identity, not the collective's key, under the constitutional change rule (Law rule 47a, F124 N1).`,
+        leaving.length
+          ? `${list(leaving.map(names))} sign${leaving.length === 1 ? 's' : ''} no side: no seat in any successor, and a departed holder of each at their percentage (F124 N1).`
+          : 'Every member whose voice remains is on a side.',
+        "Once complete, the collective is closed in Law: anything its keys sign after the fork's line counts for nothing. Its rotation is optional cleanup.",
+        `Its ownership of each work passes to the successors, ${own.length ? "by the members' stakes" : 'each member counting alike, since the collective carries no stakes in itself (F124 N3)'}: ${sides.map((_, i) => `side ${i + 1} ${((100 * w[i]) / sum).toFixed(2)}%`).join(', ')}.`,
+        kept.length ? `${list(kept.map(([h, n]) => `${names(h)} (${n / 10_000}%)`))} keep their share in every successor, and in its future works.` : 'There are no departed holders.',
+        debts.length
+          ? `Every debt is handed out, and the successor of each side it goes to signs for it (F124 N13): ${debts.map(([o, i]) => `${short(o)} to ${i.map((x) => `side ${x + 1}`).join(' and ')}`).join('; ')}.`
+          : 'The collective owes nothing.',
+        "The fork cites the collective's history up to its line, and hands out every debt in it, or it does not take effect (F127). Whatever the collective's keys sign that the fork's history does not include is void: the ending wins.",
+        'Every grant of the collective ends, its split service\'s included; its open offers are withdrawn; payment follows the work\'s current claim, to the successors (F124 N14).',
+      ],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: 'Every member and each successor here is held by this program: their consent is simulated (test only).', tone: 'warn' }] }],
+      plain: [],
+      blocking,
+    };
+    const s = this.store.settings();
+    return this.plan({
+      kind: 'fork',
+      digest: digestOf('fork', a.collective, c.f.agreement, JSON.stringify({ sides, debts, kept })),
+      reading,
+      depends: [a.collective, ...listed],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const relays = col.f.relays;
+        const acts: string[] = [];
+        // Each side founds its successor first (N4).
+        const successors: TestCollective[] = [];
+        for (const [i, side] of sides.entries()) {
+          const ids = side.map((m) => this.store.identity(m));
+          const rest = 1_000_000 - kept.reduce((x, [, n]) => x + n, 0);
+          const each = Math.floor(rest / side.length);
+          const holders: [string, number][] = [...kept, ...side.map((m, j) => [m, j === 0 ? rest - each * (side.length - 1) : each] as [string, number])];
+          const rules = { ...col.f.governance };
+          const n = side.length;
+          const g: Governance = {
+            safetyThreshold: Math.min(rules.safetyThreshold, Math.max(n - 1, 1)),
+            releaseThreshold: Math.min(rules.releaseThreshold, n),
+            cloneThreshold: Math.min(rules.cloneThreshold, n),
+            constitutionalThreshold: rules.constitutionalThreshold ? Math.min(rules.constitutionalThreshold, n) : undefined,
+            abandonmentOthers: Math.max(1, Math.min(rules.abandonmentOthers, n - 1)),
+            text: '',
+            stakes: [{ object: null, holders }],
+            departed: kept.length ? kept.map(([h]) => h) : undefined,
+            forkedFrom: col.identity,
+          };
+          g.text = `${standardWords(`${cname}, side ${i + 1}`, g)} Forked from ${col.identity}.`;
+          if (n === 1) {
+            // One member alone: the clone and constitution rules are theirs.
+            g.safetyThreshold = 1;
+          }
+          const got = await TestCollective.found({ members: ids, homes: s.homes, relays, governance: g, via: s.via });
+          for (const x of ids) this.store.saveIdentity(x);
+          this.store.saveCollective(got.collective);
+          const book = this.store.book();
+          book.collectives.push({ id: got.collective.identity, name: `${cname}, side ${i + 1}` });
+          this.store.saveBook(book);
+          successors.push(got.collective);
+          acts.push(got.agreement, got.collective.identity);
+        }
+        const seq = col.f.identity.sequence;
+        const tips = seq.length ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }] : [];
+        const payload = forkPayload({
+          agreement: col.f.agreement,
+          collective: col.identity,
+          chainAct: col.f.identity.binding,
+          tips,
+          sides: sides.map((m, i) => ({ successor: successors[i].identity, members: m })),
+          debts,
+        });
+        const first = this.store.identity(sides[0][0]);
+        const x = await first.publish(REPO_SPECS.law, LAW_TYPES.fork, payload, { public: true, relays, objects: [[col.f.agreement, col.f.agreement]] });
+        acts.push(x.id);
+        const ids = [first];
+        for (const m of listed.slice(1)) {
+          const i = this.store.identity(m);
+          acts.push((await lawSign(i, x.id, relays)).id);
+          ids.push(i);
+        }
+        for (const i of ids) this.store.saveIdentity(i);
+        // Each successor assigned a debt signs for it (N13).
+        const owing = new Set(debts.flatMap(([, i]) => i));
+        for (const i of owing) {
+          const sc = this.store.collective(successors[i].identity);
+          acts.push((await lawSign(sc.id, x.id, relays)).id);
+          this.store.saveCollective(sc);
+        }
+        const { v, specs } = await this.lawVerifier(col, [...this.concerned(col), ...successors.map((x) => x.identity)]);
+        const e = v.lawFork(specs, x.id) as { complete: boolean; why: string | null; shares: number[]; successors: (string | null)[] };
+        if (e.complete) col.f.closed = x.id;
+        this.store.saveCollective(col);
+        return {
+          title: e.complete ? `“${cname}” is forked, and closed in Law` : `The fork of “${cname}” is not complete`,
+          lines: [
+            ...successors.map((sc, i) => ({ text: `Side ${i + 1}'s successor: ${sc.identity}, founded first, forked from “${cname}” (a back-link).` })),
+            { text: `Fork ${x.id}, signed by ${listed.length}.`, tone: e.complete ? 'ok' : 'bad' },
+            ...(e.complete ? [{ text: `Shares by default: ${e.shares.map((n, i) => `side ${i + 1} ${n / 10_000}%`).join(', ')}.` }] : [{ text: e.why ?? '', tone: 'bad' as const }]),
+          ],
+          acts,
+        };
+      },
+    });
+  }
+
+  /**
+   * Release one of the collective's releases to the public domain (Law
+   * rule 17, F121 shape D, F124 N7): the claim ends, its history stays
+   * named, its content key is published. It needs every direct owner of the
+   * work: here the collective alone, which signs by its own rules, meeting
+   * the lanes of every layer a release touches (Envelope, Finance, Law).
+   */
+  async prepareReleaseWork(a: { collective: string; release: string }) {
+    const c = this.store.collective(a.collective);
+    const blocking: string[] = [...this.closedBlock(c)];
+    const w = await this.workOf(c, a.release);
+    if (!w) blocking.push("That release was not found at the collective's relays.");
+    const index = w ? this.stakeIndex(c, w.work) : -1;
+    if (w && index < 0) blocking.push("The collective's terms carry no stake in that release: set the stakes first.");
+    const payload = w ? releasePayload({ work: w.work, stakes: [[c.f.agreement, Math.max(index, 0)]], keys: [[a.release, w.key]] }) : new Uint8Array();
+    const reading: Reading = {
+      title: `Release ${short(a.release)} to the public domain`,
+      summary: [
+        'The claim ends: nobody earns from this work as its owner any more. Its history (who made it, who owned it) stays named, and its content key is published: anyone may carry or sell copies (Law rule 17, F121).',
+        "The collective owns the work wholly, so it alone signs, by its own rules, meeting the lanes of every layer a release touches: Envelope, Finance and Law (F124 N7). This collective gives none of them to an area, so its own signature counts. Its members and departed holders own shares of its income, not the work; a release affects every holder alike.",
+        'A claim on this work that the release does not name is shown beside it, openly contested (F124 N12).',
+      ],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: "The collective's everyday key signs it (test only).", tone: 'warn' }] }],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'release-work',
+      digest: digestOf('release-work', a.collective, payload),
+      reading,
+      depends: [a.collective],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const x = await col.id.publish(REPO_SPECS.law, LAW_TYPES.release, payload, { public: true, relays: col.f.relays, objects: [[col.f.agreement, col.f.agreement]] });
+        this.store.saveCollective(col);
+        const { v, specs } = await this.lawVerifier(col, this.concerned(col));
+        const e = v.lawRelease(specs, x.id) as { complete: boolean; why: string | null; signed: string[] };
+        const names = this.store.names();
+        return {
+          title: e.complete ? 'Released to the public domain' : 'The release is not complete',
+          lines: [{ text: `Release ${x.id}, signed by ${list(e.signed.map(names))}.`, tone: e.complete ? 'ok' : 'bad' }, ...(e.why ? [{ text: e.why, tone: 'bad' as const }] : [])],
+          acts: [x.id],
+        };
+      },
+    });
+  }
+
+  /**
+   * Close a collective that holds nothing (Law rule 47a, F124 N9): every
+   * work sold or released, every debt paid. A closing act, signed by its
+   * members with their own identities under the constitutional change rule;
+   * after its line, the collective's keys count for nothing in Law.
+   */
+  async prepareClosing(a: { collective: string }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const blocking: string[] = [...this.closedBlock(c)];
+    const voices = voicesOf(c);
+    const k = c.f.governance.constitutionalThreshold;
+    const signers = voices.filter((m) => this.store.holds(m));
+    if (signers.length < (k ? Math.min(k, voices.length) : voices.length)) blocking.push(`A closing follows the constitutional change rule (F124 N9); ${list(voices.filter((m) => !this.store.holds(m)).map(names))} cannot sign here.`);
+    // D5: a collective cannot close while it owes anything, its own debts
+    // and those it owes as a fork's successor alike.
+    const { v: v0, specs: s0 } = await this.lawVerifier(c, this.concerned(c));
+    const owes = v0.lawOwes(s0, c.identity);
+    if (owes.length) {
+      const creditor = new Map(this.debtsOf(c).map((d) => [d.id, d.creditor]));
+      blocking.push(
+        `A collective cannot close while it owes anything (F125 D5): ${owes.map((o) => `${short(o)}${creditor.has(o) ? ` to ${names(creditor.get(o)!)}` : ''}`).join('; ')}. Pay it, or ask its creditor for a release; one that cannot pay stays open, its debts visible.`,
+      );
+    }
+    const reading: Reading = {
+      title: `Close “${cname}”`,
+      summary: [
+        'A closing ends a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor (F124 N9, F125 D5). After its line, anything the collective\'s keys sign counts for nothing in Law.',
+        `Signed by ${list(signers.map(names))}, each with their own identity, under the constitutional change rule.`,
+        owes.length ? `It owes ${owes.length === 1 ? 'one debt' : `${owes.length} debts`}, its own or as a fork's successor.` : 'It owes nothing: every debt it signed or owes as a successor is paid or released.',
+      ],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: 'Test identities: consent simulated.', tone: 'warn' }] }],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'closing',
+      digest: digestOf('closing', a.collective, c.f.agreement, String(c.f.identity.sequence.length)),
+      reading,
+      depends: [a.collective, ...signers],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const seq = col.f.identity.sequence;
+        const tips = seq.length ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }] : [];
+        const payload = closingPayload({ agreement: col.f.agreement, collective: col.identity, chainAct: col.f.identity.binding, tips });
+        const first = this.store.identity(signers[0]);
+        const x = await first.publish(REPO_SPECS.law, LAW_TYPES.closing, payload, { public: true, relays: col.f.relays, objects: [[col.f.agreement, col.f.agreement]] });
+        const acts = [x.id];
+        const ids = [first];
+        for (const m of signers.slice(1)) {
+          const i = this.store.identity(m);
+          acts.push((await lawSign(i, x.id, col.f.relays)).id);
+          ids.push(i);
+        }
+        for (const i of ids) this.store.saveIdentity(i);
+        const { v, specs } = await this.lawVerifier(col, this.concerned(col));
+        const e = v.lawClosing(specs, x.id) as { complete: boolean; why: string | null; holds: [string, number][] };
+        if (e.complete) col.f.closed = x.id;
+        this.store.saveCollective(col);
+        return {
+          title: e.complete ? `“${cname}” is closed in Law` : `The closing of “${cname}” does not take effect`,
+          lines: [{ text: `Closing ${x.id}.`, tone: e.complete ? 'ok' : 'bad' }, ...(e.why ? [{ text: e.why, tone: 'bad' as const }] : [])],
+          acts,
+        };
+      },
+    });
+  }
+
+  /**
+   * A creditor's release (Finance type 4, F126; rule 47b): the creditor of a
+   * collective's debt ends it without full payment, for instance against
+   * stakes or a partial payment. Only the creditor signs it; a collective
+   * creditor would sign by its Finance lane (E2). It counts wherever held
+   * (E1); published here, so that every verifier that sees the debt sees it
+   * end.
+   */
+  async prepareDebtRelease(a: { debt: string; against?: string[] }) {
+    const names = this.store.names();
+    const all = this.store.book().collectives.filter((x) => this.store.isCollective(x.id)).flatMap((x) => this.debtsOf(this.store.collective(x.id)).filter((d) => !d.inherited));
+    const d = all.find((x) => x.id === a.debt);
+    const blocking: string[] = [];
+    if (!d) blocking.push('That debt is not one this program holds.');
+    else if (!this.store.holds(d.creditor)) blocking.push(`Only the creditor signs its release, and ${names(d.creditor)} cannot sign here (F125).`);
+    const against = (a.against ?? []).filter((x) => /^[0-9a-f]{64}$/.test(x));
+    const payload = blocking.length ? new Uint8Array() : debtReleasePayload({ obligation: a.debt, against });
+    const debtor = d ? this.store.collective(d.debtor) : null;
+    const dname = d ? (this.store.book().collectives.find((x) => x.id === d.debtor)?.name ?? short(d.debtor)) : '';
+    const reading: Reading = {
+      title: d ? `${names(d.creditor)} releases “${dname}” from its debt ${short(a.debt)}` : 'A creditor\'s release',
+      summary: [
+        'The creditor ends the obligation without full payment, for instance against stakes or a partial payment (F125). Only the creditor signs it: nobody else can discharge a debt, and MOR has no court to force one. It is a Finance act (F126): forgiving a sum is a money decision.',
+        'A release traded for future terms (a share of income, stakes) is also a deal: a Law agreement of its own, which the release names among what it was released against, and which binds on its own (F126).',
+        'With every debt paid or released, the collective may close (F125 D5). Its members were never personal debtors of what it owed (F124 N13).',
+        against.length ? `Released against, for the record: ${against.map(short).join(', ')}.` : 'Released against nothing named.',
+      ],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: "The creditor's key signs it (test only).", tone: 'warn' }] }],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'debt-release',
+      digest: digestOf('debt-release', a.debt, payload),
+      reading,
+      depends: d ? [d.creditor, d.debtor] : [],
+      run: async () => {
+        const col = debtor!;
+        const creditor = this.store.identity(d!.creditor);
+        const x = await creditor.publish(MIPS.finance, FINANCE_TYPES.release, payload, { public: true, relays: col.f.relays });
+        this.store.saveIdentity(creditor);
+        const { v, specs } = await this.lawVerifier(col, this.concerned(col));
+        const e = v.lawDebtRelease(specs, x.id) as { counts: boolean; why: string | null };
+        return {
+          title: e.counts ? 'The debt is released by its creditor' : 'The release ends nothing',
+          lines: [{ text: `Creditor's release ${x.id}.`, tone: e.counts ? 'ok' : 'bad' }, ...(e.why ? [{ text: e.why, tone: 'bad' as const }] : [])],
+          acts: [x.id],
+        };
+      },
+    });
+  }
+
   // ------------------------------------------------------------ what the page shows
 
   state() {
@@ -1470,6 +2341,13 @@ export class Actions {
           relays: c.f.relays,
           releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })),
           pending: !!c.f.pending,
+          closed: c.f.closed ?? null,
+          stakes: this.ownStake(c).map(([h, n]) => ({ id: h, name: names(h), percent: n / 10_000, member: c.f.members.includes(h) })),
+          holdersToBe: [...voicesOf(c), ...(c.f.governance.departed ?? [])].map((h) => ({ id: h, name: names(h) })),
+          forkedFrom: c.f.governance.forkedFrom ?? null,
+          splitService: !!c.f.governance.splitGrant,
+          splits: (c.f.splits ?? []).map((x) => x.id),
+          debts: this.debtsOf(c).map((d) => ({ id: d.id, creditor: d.creditor, creditorName: names(d.creditor), creditorHeld: this.store.holds(d.creditor), inherited: d.inherited })),
         };
       }),
       history: this.store.history().slice(-50).reverse(),

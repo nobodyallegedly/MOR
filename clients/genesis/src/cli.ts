@@ -4,7 +4,8 @@
 
 import { writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { SPECS, cborEncode, hex, unhex } from './core.ts';
+import { SPECS, WITNESS_EXPLANATION, cborEncode, hex, unhex } from './core.ts';
+import { createInterface } from 'node:readline/promises';
 import { TestIdentity, lookUp, type Home, type Submitted } from './identity.ts';
 import { relayAt, type Via } from './transport.ts';
 
@@ -34,6 +35,9 @@ never for a real identity. Keep the file secret: it holds every key.
   inbox --file F [--at URL ...]
         Open what was delivered to this identity (key deliveries, and messages, their
         text with invisible characters shown as escapes); --at: where to find senders.
+  witness --file F ACT [ACT ...] [--relay URL ...]
+        Sign a witness act: "I received this act and rely on it" (Identity type 15).
+        What it does is shown first, and nothing is signed until you type RELY.
   export-operator --file F --out DIR
         Write operator.key (the everyday signing key and its binding, no safety
         key) and operator-chain.mor, for \`mor-relay init --operator-key ...\`.
@@ -204,6 +208,25 @@ async function main() {
               (g.text !== undefined ? `, a message:\n${shownPlain(g.text).replace(/^/gm, '  | ')}` : ''),
           );
       }
+      break;
+    }
+    case 'witness': {
+      const acts = pos.slice(1);
+      if (!acts.length) throw new Error('name at least one act to witness');
+      console.log(WITNESS_EXPLANATION);
+      console.log(`Acts: ${acts.join(', ')}`);
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const answer = (await rl.question('Type RELY to sign it, anything else to stop: ')).trim();
+      rl.close();
+      if (answer !== 'RELY') {
+        console.log('Nothing signed.');
+        break;
+      }
+      const t = load();
+      const r = await t.witness(acts, { shown: WITNESS_EXPLANATION, relays: opts.relay ?? [] });
+      t.save(need('file'));
+      report('witness act', r.sent);
+      console.log(`witness act ${r.id}`);
       break;
     }
     case 'export-operator': {

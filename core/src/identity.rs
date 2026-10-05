@@ -32,6 +32,8 @@ pub mod types {
     pub const OBJECTION: u64 = 12;
     pub const ABSENCE: u64 = 13;
     pub const ESCAPE_ENDORSEMENT: u64 = 14;
+    /// "I received this act and rely on it" (F110, Identity draft 11).
+    pub const WITNESS: u64 = 15;
 }
 
 /// Why an Identity act is invalid on its own.
@@ -210,6 +212,9 @@ pub enum Payload {
     Objection(Objection),
     Absence(Absence),
     Endorsement(Endorsement),
+    /// A witness act (type 15): its payload is empty; what it witnesses is
+    /// in its `acks` (F110).
+    Witness,
     /// Routes, names and links (types 3 to 8): decoded by their own checks,
     /// not needed for the identity chain.
     Other(u64),
@@ -270,7 +275,9 @@ fn scheme(v: &Value, w: &'static str) -> R<Scheme> {
     }
 }
 
-fn signing_key(v: &Value) -> R<SigningKey> {
+/// Decode `signing-key = [ scheme, key: bstr ]`; Finance reads an anonymous
+/// payer's bare key in this form (F113).
+pub fn signing_key(v: &Value) -> R<SigningKey> {
     let a = tuple(v, 2, "signing-key")?;
     let Value::Bytes(key) = &a[1] else {
         return Err(IdError::Shape("signing-key key"));
@@ -498,6 +505,10 @@ impl Payload {
                         .transpose()?,
                 })
             }
+            WITNESS => {
+                empty("witness: the payload is empty")?;
+                Payload::Witness
+            }
             ROUTES | NAME | NAME_WITHDRAWAL | LINK_CLAIM | LINK_CONFIRMATION | LINK_TERMINATION => {
                 Payload::Other(type_)
             }
@@ -665,7 +676,7 @@ impl Payload {
                     put(&mut m, 2, b(p));
                 }
             }
-            Payload::Cosignature | Payload::Other(_) => {}
+            Payload::Cosignature | Payload::Witness | Payload::Other(_) => {}
             Payload::Objection(o) => put(&mut m, 0, b(&o.identity)),
             Payload::Absence(a) => {
                 put(&mut m, 0, b(&a.operator));
@@ -694,6 +705,7 @@ impl Payload {
             Payload::Objection(_) => OBJECTION,
             Payload::Absence(_) => ABSENCE,
             Payload::Endorsement(_) => ESCAPE_ENDORSEMENT,
+            Payload::Witness => WITNESS,
             Payload::Other(t) => *t,
         }
     }
@@ -837,6 +849,18 @@ pub fn check_everyday_shape(act: &Act, inside: &Inside) -> R<()> {
         return Err(IdError::Check(
             "an everyday act must carry signer, binding and prev",
         ));
+    }
+    Ok(())
+}
+
+/// A witness act's shape (Identity rule 18b, F110): it acknowledges at
+/// least one act, and belongs to no object's chain.
+pub fn check_witness_shape(inside: &Inside) -> R<()> {
+    if inside.acks.as_ref().is_none_or(|a| a.is_empty()) {
+        return Err(IdError::Check("a witness act names at least one act in acks"));
+    }
+    if inside.objects.is_some() {
+        return Err(IdError::Check("a witness act carries no objects"));
     }
     Ok(())
 }

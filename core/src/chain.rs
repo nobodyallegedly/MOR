@@ -28,7 +28,7 @@
 use crate::act::{Act, ActError, Inside};
 use crate::hash::Hash;
 use crate::identity::{
-    self, check_everyday_shape, check_genesis, check_rotation_shape, names, types, ChainState,
+    self, check_everyday_shape, check_genesis, check_rotation_shape, check_witness_shape, names, types, ChainState,
     Effective, Endorsement, IdError, Operator, Payload, Rotation,
 };
 use crate::lock::ContentKey;
@@ -175,6 +175,12 @@ pub enum Status {
     Invalid,
     /// Signed under a scheme, or of a type, this client does not implement.
     Unknown,
+    /// Signed with a scoped key (F128): its binding names an act of a higher
+    /// MIP that installs a key of this identity, such as a Law grant's grant
+    /// key. Identity checks only that the signature is valid; that MIP
+    /// judges whether the key is the identity's and the act within its
+    /// scope. A client that does not implement it shows the act as unknown.
+    Scoped,
 }
 
 // ---------------------------------------------------------------- the verifier
@@ -192,6 +198,11 @@ fn closure_at(v: &Verifier, res: &Resolution) -> Option<usize> {
 pub struct Verifier {
     /// The spec hash of the Identity MIP (`IDENTITY`), fixed at the freeze.
     identity_spec: Hash,
+    /// The spec hashes of the Finance and Law MIPs, whose act types may
+    /// carry acknowledgements beside Identity's (Envelope rule 4a, F110).
+    /// Unset: this verifier cannot tell, and an act of another specification
+    /// carrying `acks` is unknown to it, never valid.
+    ack_specs: Option<(Hash, Hash)>,
     acts: BTreeMap<Hash, Held>,
     by_type: BTreeMap<u64, Vec<Hash>>,
     by_signer: BTreeMap<Hash, Vec<Hash>>,
@@ -264,6 +275,7 @@ impl Verifier {
     pub fn new(identity_spec: Hash) -> Self {
         Verifier {
             identity_spec,
+            ack_specs: None,
             acts: BTreeMap::new(),
             by_type: BTreeMap::new(),
             by_signer: BTreeMap::new(),
@@ -273,6 +285,27 @@ impl Verifier {
             recorded: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
         }
+    }
+
+    /// A verifier that also knows the Finance and Law MIPs' spec hashes, so
+    /// it can tell which acts may carry acknowledgements (F110).
+    pub fn with_mips(identity_spec: Hash, finance: Hash, law: Hash) -> Self {
+        let mut v = Verifier::new(identity_spec);
+        v.ack_specs = Some((finance, law));
+        v
+    }
+
+    /// Whether an act may carry the acknowledgements it carries (Envelope
+    /// rules 4a and 7b, F110): `Some(true)` if it carries none or is of an
+    /// Identity, Finance or Law type; `Some(false)` if it carries some and is
+    /// of any other specification; `None` if this verifier does not know the
+    /// Finance and Law hashes and cannot tell.
+    pub fn acks_allowed(&self, inside: &Inside) -> Option<bool> {
+        if inside.acks.as_ref().is_none_or(|a| a.is_empty()) || inside.spec == self.identity_spec {
+            return Some(true);
+        }
+        let (finance, law) = self.ack_specs?;
+        Some(inside.spec == finance || inside.spec == law)
     }
 
     fn changed(&mut self) {
@@ -298,6 +331,10 @@ impl Verifier {
             match &p {
                 Payload::Genesis(g) => check_genesis(&act, &inside, g)?,
                 Payload::Rotation(r) => check_rotation_shape(&act, &inside, r)?,
+                Payload::Witness => {
+                    check_everyday_shape(&act, &inside)?;
+                    check_witness_shape(&inside)?
+                }
                 _ => check_everyday_shape(&act, &inside)?,
             }
             Ok(p)
@@ -362,6 +399,11 @@ impl Verifier {
     }
 
     /// The acts this verifier holds whose outside names `signer`.
+    /// Every act this verifier holds, by id.
+    pub fn held_acts(&self) -> impl Iterator<Item = &Held> {
+        self.acts.values()
+    }
+
     pub fn signed_by(&self, signer: &Hash) -> impl Iterator<Item = &Held> {
         self.by_signer
             .get(signer)
@@ -373,12 +415,14 @@ impl Verifier {
     /// The acts this verifier holds whose `acks` name `id` (Envelope), in
     /// the order they were added. Law places a member's signature at an act
     /// of the collective acknowledging it ("Made before, made after").
+    /// Only acts that may carry acknowledgements are returned (F110).
     pub fn acknowledgements(&self, id: &Hash) -> impl Iterator<Item = &Held> {
         self.acked_by
             .get(id)
             .into_iter()
             .flatten()
             .filter_map(|a| self.acts.get(a))
+            .filter(|h| self.acks_allowed(&h.inside) == Some(true))
     }
 
     /// The act ids of `signer`'s line ending in the tip `t`, in order, if the
@@ -859,6 +903,11 @@ impl Verifier {
     fn acknowledged(&self, cx: &mut Cx, x: &Held) -> bool {
         for a in self.acked_by.get(&x.id).into_iter().flatten() {
             let y = &self.acts[a];
+            // Only an Identity, Finance or Law act acknowledges (F110); an
+            // Identity act only if its own shape holds (a witness act).
+            if self.acks_allowed(&y.inside) != Some(true) || matches!(y.identity, Some(Err(_))) {
+                continue;
+            }
             let Some(s) = y.signer() else { continue };
             if Some(s) == x.signer() {
                 continue;
@@ -1078,6 +1127,11 @@ impl Verifier {
             Verdict::Invalid => return Status::Invalid,
             Verdict::Valid => {}
         }
+        match self.acks_allowed(&x.inside) {
+            Some(false) => return Status::Invalid,
+            None => return Status::Unknown,
+            Some(true) => {}
+        }
         match &x.identity {
             Some(Err(_)) => return Status::Invalid,
             Some(Ok(Payload::Genesis(_))) | Some(Ok(Payload::Rotation(_))) => {
@@ -1101,10 +1155,13 @@ impl Verifier {
         }
         let res = self.resolve_cx(cx, signer);
         let Some(k) = res.position_of(binding) else {
-            return if res.waiting().contains(binding) {
-                Status::Pending
-            } else {
-                Status::Invalid
+            if res.waiting().contains(binding) {
+                return Status::Pending;
+            }
+            // F128: a scoped key, installed by an act of a higher MIP.
+            return match self.acts.get(binding) {
+                Some(b) if b.inside.spec != self.identity_spec && b.id != x.id => Status::Scoped,
+                _ => Status::Invalid,
             };
         };
         if !res.states[k].signing_key.made(&x.act.signature) {

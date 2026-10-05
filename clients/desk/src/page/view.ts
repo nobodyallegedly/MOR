@@ -6,6 +6,7 @@
 import { STYLE as BASE, e } from '../../../manage/src/view.ts';
 import { STYLE as TEXT, plainHtml } from '../../../longform/src/html.ts';
 import type { Done, DraftView, Item, Line, Sorted, State } from './api.ts';
+import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 
 export { e };
 
@@ -153,7 +154,12 @@ function item(identity: string, x: Item): string {
   facts.push(x.from ? `From ${e(x.fromName ?? x.from)}${x.private ? ', privately' : ', publicly addressed to this identity'}.` : 'From an unknown sender.');
   facts.push(x.standing === 'valid' ? '<span class="tag ok">verified</span> its signer’s identity chain counts it.' : `<span class="tag warn">${e(x.standing)}</span>`);
   if (x.answers.length) facts.push(`It answers this identity's act${x.answers.length > 1 ? 's' : ''} ${x.answers.map(fp).join(', ')}.`);
-  if (x.acknowledges.length) facts.push(`It acknowledges receiving this identity's act${x.acknowledges.length > 1 ? 's' : ''} ${x.acknowledges.map(fp).join(', ')}.`);
+  if (x.acknowledges.length)
+    facts.push(
+      x.witness
+        ? `A witness act: its sender relies on this identity's act${x.acknowledges.length > 1 ? 's' : ''} ${x.acknowledges.map(fp).join(', ')}, and keeps ${x.acknowledges.length > 1 ? 'them' : 'it'} visible as disputed even if this identity later disowns ${x.acknowledges.length > 1 ? 'them' : 'it'}.`
+        : `It acknowledges receiving this identity's act${x.acknowledges.length > 1 ? 's' : ''} ${x.acknowledges.map(fp).join(', ')}.`,
+    );
   if (x.refs.length) facts.push(`It refers to ${x.refs.map(fp).join(', ')}.`);
   if (x.act) facts.push(`Act ${fp(x.act)}.`);
   const sorts = PILES.filter(([s]) => s !== 'new')
@@ -162,7 +168,14 @@ function item(identity: string, x: Item): string {
   return `<div class="item" data-item="${e(x.key)}" data-kind="${e(x.kind)}"><strong>${e(KIND[x.kind])}</strong> <span class="small">${facts.join(' ')}</span>
 ${x.problem ? note('warn', e(x.problem)) : ''}
 ${x.text !== undefined ? plain(x.text) : ''}
-<div class="sorts">${sorts}</div></div>`;
+<div class="sorts">${sorts}</div>
+${x.act && x.from && x.standing === 'valid' ? `<div class="row"><button class="quiet" data-action="witness" data-identity="${e(identity)}" data-act="${e(x.act)}">Rely on this act…</button></div>` : ''}</div>`;
+}
+
+/** Before a witness act is signed: what it does, in plain words (Identity rule 18c). */
+export function witnessAsk(identity: string, act: string): string {
+  return `${note('', `${e(WITNESS_EXPLANATION)}<br>Act ${fp(act)}.`)}
+<div class="row"><button data-action="witness-sign" data-identity="${e(identity)}" data-act="${e(act)}">Sign the witness act</button> <button class="quiet" data-action="witness-cancel" data-identity="${e(identity)}">Cancel</button></div>`;
 }
 
 export function identities(s: State): string {

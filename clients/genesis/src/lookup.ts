@@ -3,7 +3,7 @@
 // files, so that a reader that holds no keys, such as the web reader in a
 // browser, uses the same code as the genesis client.
 
-import { SPECS, ENVELOPE_TYPES, IDENTITY_TYPES, Verifier, actId, cborDecode, describeAct, hex } from './core.ts';
+import { MIPS, SPECS, ENVELOPE_TYPES, IDENTITY_TYPES, Verifier, actId, cborDecode, describeAct, hex } from './core.ts';
 import { relayAt, type Via } from './transport.ts';
 
 interface Described {
@@ -70,7 +70,7 @@ export interface Lookup {
  * verifier, so several identities can be judged together.
  */
 export async function lookUp(identity: string, hints: string[], via: Via = {}, into?: Verifier): Promise<Lookup> {
-  const v = into ?? new Verifier(SPECS.identity);
+  const v = into ?? new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
   const tried = new Set<string>();
   const unreachable: string[] = [];
   const operatorActs = new Map<string, Uint8Array[]>();

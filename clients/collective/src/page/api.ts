@@ -157,6 +157,18 @@ export interface State {
     relays: string[];
     releases: { id: string; version: string }[];
     pending: boolean;
+    /** The fork or closing that ended it (Law rule 47a, F121, F124 N9), if any. */
+    closed: string | null;
+    /** For a successor of a fork: the original collective, a back-link (F124 N4). */
+    forkedFrom: string | null;
+    /** Its stakes in itself: each holder's share of all its income (F121, Q8). */
+    stakes: { id: string; name: string; percent: number; member: boolean }[];
+    /** Who may hold a stake in it: members whose voice remains and departed holders. */
+    holdersToBe: { id: string; name: string }[];
+    splitService: boolean;
+    splits: string[];
+    /** Debts it signed, and those of the collective it was forked from (owed by the successors its fork handed them to, F127): each with its creditor, and whether this program holds the creditor. */
+    debts: { id: string; creditor: string; creditorName: string; creditorHeld: boolean; inherited: boolean }[];
   }[];
   history: { time: number; kind: string; title: string; digest: string; acts: string[] }[];
   paired: { key: string; label: string; added: number; you: boolean }[];

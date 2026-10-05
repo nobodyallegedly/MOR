@@ -1,0 +1,28 @@
+[package]
+name = "mor-lightning"
+version = "0.1.0"
+description = "The Lightning rail Module: BOLT 11 invoices as proofs of payment, the verification rule, and (feature `lnd`) a client for an lnd node, for tests on regtest."
+edition.workspace = true
+license.workspace = true
+
+[features]
+lnd = ["dep:reqwest", "dep:serde_json", "dep:base64", "dep:rustls"]
+
+[dependencies]
+mor-core = { path = "../../core" }
+mor-payment = { path = "../../cmips/payment" }
+sha2 = { version = "0.10", default-features = false }
+# ECDSA public-key recovery over secp256k1, for BOLT 11 invoice signatures.
+k256 = { version = "0.13.4", default-features = false, features = ["ecdsa"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"], optional = true }
+serde_json = { version = "1", optional = true }
+base64 = { version = "0.22", optional = true }
+# To pin the node's own certificate: lnd's is self-signed and marked as a
+# certificate authority, which rustls refuses as a server's certificate.
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std", "tls12"], optional = true }
+
+[dev-dependencies]
+hex = "0.4"
+# The second, independent BOLT 11 decoder the tests check every invoice against.
+lightning-invoice = "0.33"
+bitcoin = "0.32"

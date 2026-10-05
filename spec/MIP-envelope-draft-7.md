@@ -1,6 +1,6 @@
 # MIP: Envelope
 
-*Draft 6, 29 September 2026. Written against core v16, the Identity MIP draft 9, the Text MIP draft 5 and findings F1 to F99. Draft 6 is draft 5 with two findings of the genesis client (roadmap step 5): encryption keys and key delivery use X-Wing, and their formats are fixed (F98); a private act, a key delivery included, reaches its recipients inside a sealed container that carries its key, since a key delivery that was itself private could never be opened (F99). Draft 5 was draft 4 with three findings from building the core library (roadmap step 2): the running summary's peaks are bagged with left kept on the left (F89); the lock binds no associated data (F90); no data item is nested more than 128 levels deep (F91). Draft 4 applied review round 2: the `for` field on publications and withdrawal by signer or `for`; `objects` entries name their chain; the running summary's empty value and bagging order; signature schemes by specification hash; key delivery to a bare key; inbox delivery and the holding principle; reposts as references.*
+*Draft 7, 3 October 2026 (the core pass, core v21). **Not yet approved.** *Revised in place, 4 October 2026, for F127: one note under "Chains, acknowledgements and references": a collective's actions cite its chain in `objects` (Law rule 35b); no rule of this MIP changes.* *Revised in place again, 4 October 2026, for F128: the `binding` field may name the act that installs a scoped key (Identity, a collective's grant key, Law grant field 9); a collective's act is done once sealed to every member (or public) and on its chain, wherever it is held, relays being transport (Law rule 35a); a publication a collective's grantee makes with its grant key is the collective's own, its signer, so it needs no `for`; no rule of this MIP changes.* Written against core v21, the Identity MIP draft 11, the Text MIP draft 6, the Finance MIP draft 6, the Law MIP draft 10 and findings F1 to F119. Draft 7 is draft 6 with two findings written in: a publication's size field is the size of the media once unlocked, as every client already writes and reads it (F108); and only act types defined by the Identity, Finance and Law MIPs may carry acknowledgements, any other act carrying them being invalid, so that a like can never become an acknowledgement (F110). *Revised in place, 4 October 2026, for F126:* one sentence under "For whom": buying a work under a Law claim needs a payment naming that claim; and, for a collective, its recipients (`to`) carry the rule that an act in its name binds it only once sealed to every member (Law rule 35a); Envelope's own rules are unchanged. Draft 6, 29 September 2026, was written against core v16, the Identity MIP draft 9, the Text MIP draft 5 and findings F1 to F99. Draft 6 was draft 5 with two findings of the genesis client (roadmap step 5): encryption keys and key delivery use X-Wing, and their formats are fixed (F98); a private act, a key delivery included, reaches its recipients inside a sealed container that carries its key, since a key delivery that was itself private could never be opened (F99). Draft 5 was draft 4 with three findings from building the core library (roadmap step 2): the running summary's peaks are bagged with left kept on the left (F89); the lock binds no associated data (F90); no data item is nested more than 128 levels deep (F91). Draft 4 applied review round 2: the `for` field on publications and withdrawal by signer or `for`; `objects` entries name their chain; the running summary's empty value and bagging order; signature schemes by specification hash; key delivery to a bare key; inbox delivery and the holding principle; reposts as references.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -34,7 +34,7 @@ Identity (signers, keys, bindings, sequences, routes) and Text (canonical text i
 - **Specification.** The MIP or cMIP that defines an act's type, named by its hash.
 - **Chain.** The acts on one object, each naming the act or acts it follows. Each MIP that defines an object defines its chain rules; this MIP defines only what all chains share.
 - **Fork.** Two acts naming the same predecessor in the same chain.
-- **Acknowledgement.** An act naming another identity's act, as received.
+- **Acknowledgement.** An act naming another identity's act, as received. Only act types defined by the Identity, Finance and Law MIPs may carry one (F110).
 - **Reference.** An act naming another act, or a web resource, without following or acknowledging it. A repost is a reference.
 - **Work hash.** The fingerprint of a work's complete plaintext.
 - **Relay.** A server that publishes, fetches and mirrors acts and media, untrusted by default, operated by an identity (F18).
@@ -49,12 +49,12 @@ act = [ outside, locked: bstr, signature ]
 
 outside = {
   ? 0 => hash,          ; signer: identity hash (absent only in genesis)
-  ? 1 => hash,          ; binding: identity-chain act that bound the signing key
+  ? 1 => hash,          ; binding: identity-chain act that bound the signing key; for a scoped key, the act installing it (Identity, F128)
   2 => hash,            ; inside commitment: tagged_hash("MOR/inside", inside)
   3 => hash,            ; locked hash: SHA-256 of the locked bytes
   4 => bstr .size 24,   ; nonce for the lock
   ? 5 => bstr .size 32, ; content key: present on a public act, absent on a private one
-  ? 6 => [+ hash]       ; to: recipients' identity hashes (key deliveries, and acts addressed to someone)
+  ? 6 => [+ hash]       ; to: recipients' identity hashes (key deliveries, and acts addressed to someone); for a collective's act, every member among them, or the act public (Law rule 35a, F126, F128)
 }
 
 inside = {
@@ -65,7 +65,7 @@ inside = {
   4 => { * any => any },; payload, defined by the type
   ? 5 => uint,          ; position in the signer's sequence
   ? 6 => hash,          ; running summary of the signer's sequence up to this act
-  ? 7 => [+ hash],      ; acks: acts by other identities this act acknowledges
+  ? 7 => [+ hash],      ; acks: acts by other identities this act acknowledges; only on act types the Identity, Finance and Law MIPs define (F110)
   ? 8 => [+ ref],       ; refs: acts or web resources this act refers to
   ? 9 => tstr,          ; hint: a timestamp or other hint, never load-bearing
   10 => bstr .size 16   ; salt: random, so the inside commitment cannot be guessed
@@ -101,7 +101,7 @@ signature = [ scheme: 1 / 2 / 3 / hash, key: bstr, sig: bstr ]   ; scheme as Ide
 
 ### Identity acts are public
 
-Identity acts are the public face of an identity (F29): genesis, rotations, receipts, routes, names, encryption keys, links, log summaries, cosignatures, objections, absence statements, escape endorsements. They MUST be public acts. *They go through the same lock as everything else, with their key attached, so every act has one shape.*
+Identity acts are the public face of an identity (F29): genesis, rotations, receipts, routes, names, encryption keys, links, log summaries, cosignatures, objections, absence statements, escape endorsements, witness acts. They MUST be public acts. *They go through the same lock as everything else, with their key attached, so every act has one shape.*
 
 ### Encryption keys and key delivery
 
@@ -166,10 +166,11 @@ Every everyday act carries, inside, its position in the signer's sequence and a 
 
 ## Chains, acknowledgements and references
 
-1. **Chains.** An act that belongs to an object's chain names, in `objects`, that chain and the act it follows in it: one entry normally, several where branches of one chain merge (same chain), or where one act belongs to several chains (different chains). A chain may branch and merge.
+1. **Chains.** An act that belongs to an object's chain names, in `objects`, that chain and the act it follows in it: one entry normally, several where branches of one chain merge (same chain), or where one act belongs to several chains (different chains). A chain may branch and merge. *A collective keeps two chains (Law rule 35b, F127): its decisions, and its actions, each action citing, on the chain named by the collective's own identity, the decision it acts under and the heads it joins: several entries naming one chain, a merge of its branches, as this rule already reads them.*
 2. **Forks.** Two valid acts naming the same predecessor in the same chain are a fork, provable from their signatures and insides. Whether a fork is normal or a conflict is defined by the MIP that defines the object (F4).
 3. **Order without a clock.** A chain's order records when acts were added to it, never when the things they refer to were created. Hints are never load-bearing. Every "before" in the core is judged inside one named chain, by reference to a specific act.
-4. **Acknowledgements.** An act acknowledges another identity's act by naming it in `acks`. It says only "I received this". An acknowledgement counts, for any purpose in the core, only alongside the act it names: a verifier that does not hold that act, or holds it and finds it invalid as an act, ignores the acknowledgement. *It keeps an act visible as a dispute after a rotation (Identity), and proves a negotiation thread complete (Law).*
+4. **Acknowledgements.** An act acknowledges another identity's act by naming it in `acks`. It says only "I received this". An acknowledgement counts, for any purpose in the core, only alongside the act it names: a verifier that does not hold that act, or holds it and finds it invalid as an act, ignores the acknowledgement. *It keeps an act visible as a dispute after a rotation (Identity), turns a regretted sale into a visible dispute (Finance), proves a negotiation thread complete and places a member's signature on a collective's line (Law).*
+4a. **Who may acknowledge** (F110). Only an act whose type is defined by the Identity, Finance or Law MIP may carry `acks`. A text act, any other act of this MIP, and every act of a cMIP or Module MUST NOT carry `acks`; an act that does is invalid. *The rule limits which acts carry an acknowledgement, never which acts can be acknowledged: a post or a publication still becomes disputed, not void, after its signer's rotation when an Identity, Finance or Law act acknowledges it (a witness act, a buyer's claim, a signature) or a keeper recorded it. To rely on a post or a message deliberately, an identity signs a witness act (Identity, type 15).*
 5. **References.** An act names other acts, or web resources, in `refs`, meaning only "look at this". A web reference may carry the hash of what was there when it was referenced, so readers can check it has not changed. A repost is a reference to a publication, never a publication of its own: it pays nobody by itself, and a reposter earns through a role share where the owners' split plan offers one (Law).
 
 ## How acts reach people
@@ -193,7 +194,7 @@ media = {
   0 => hash,          ; spec of the media type (a media module), which interprets the bytes
   1 => hash,          ; work hash
   2 => hash,          ; locked bytes hash: SHA-256 of the media as stored
-  3 => uint,          ; size of those bytes
+  3 => uint,          ; size of the media once unlocked, in bytes (F108)
   4 => bstr .size 24, ; nonce of the media lock
   ? 5 => bstr .size 32, ; the media's content key, for public media
   ? 6 => [+ tstr],    ; where the locked bytes can be fetched
@@ -202,9 +203,9 @@ media = {
 }
 ```
 
-Media bytes are always stored locked, with their own content key, the same way as an inside: XChaCha20-Poly1305 with the nonce in the payload and no associated data. For public media, the key sits in the publication's payload. For media on sale, the publication is public (anyone can see the offer) but the media key is absent, and is delivered to each buyer. After unlocking, a buyer checks the plaintext against the work hash.
+Media bytes are always stored locked, with their own content key, the same way as an inside: XChaCha20-Poly1305 with the nonce in the payload and no associated data. The size (field 3) is that of the media once unlocked: what a reader and a media module need to know; a relay measures the locked bytes it stores for itself (F108). For public media, the key sits in the publication's payload. For media on sale, the publication is public (anyone can see the offer) but the media key is absent, and is delivered to each buyer. After unlocking, a buyer checks the plaintext against the work hash.
 
-**For whom.** Payment for a publication goes to the payee pointer of the identity named in `for` if present, otherwise of the signer (Finance). *A false `for` can only send money to the identity it names, never to whoever wrote it, so nobody gains by lying in it. Whether a grant backs a publication made for another identity is Law's business; a Law client may refuse a publication whose `for` is not backed by a grant it can check, and shows it so. A Finance-only wallet needs nothing beyond this field (F68).*
+**For whom.** Payment for a publication goes to the payee pointer of the identity named in `for` if present, otherwise of the signer (Finance). *A false `for` can only send money to the identity it names, never to whoever wrote it, so nobody gains by lying in it. Whether a grant backs a publication made for another identity is Law's business (a collective's grantee signs with a grant key, so its publication is the collective's own and names no `for`, F128); a Law client may refuse a publication whose `for` is not backed by a grant it can check, and shows it so. A Finance-only wallet needs nothing beyond this field (F68).* **Buying a work under a Law claim** is a purchase only when the payment names that claim (Law rule 32a, Finance rule 10c, F126): a Finance-only wallet can pay a claimed work's publication, but its payment is no purchase and is owed back to it. *A plain publication of an unclaimed work is paid as before.*
 
 Segmentation, chunk fingerprints, streaming and live media are defined by the cMIP the publication names; the fields above then describe the whole, or a manifest of the parts. A live stream has no work hash until it ends; paid live access is sold through a standing offer (Law), not a publication.
 
@@ -250,6 +251,7 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 6. A hint MUST NOT be used for any validity decision.
 7. Rules about an act's inside can only be checked by those who hold its key. A client MUST NOT treat a private act as valid for anything that depends on its inside unless it has opened and checked it.
 7a. An act's signature scheme is checked as Identity defines: a scheme the client does not implement makes the act unknown, never valid.
+7b. An act carrying `acks` whose type is not defined by the Identity, Finance or Law MIP is invalid (F110). *A verifier needs the six MIP hashes to apply this, as it needs them for everything else; one that cannot tell which MIP an act's specification is shows the act as unknown, never as valid.*
 
 ### Public and private
 
@@ -267,6 +269,7 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 ### Media and withdrawal
 
 14. A client MUST check unlocked media against the work hash before treating a purchase as delivered.
+14a. A publication whose size (field 3) is not the size of the unlocked media is shown as inconsistent (F108). *It cannot be judged without the media's key, so it is not a validity rule on the act; a client that unlocks the media checks it, as it checks the work hash.*
 15. A withdrawal is valid only if signed by the publication's signer or by the identity named in its `for` field.
 16. A payment for a publication is owed to the identity in `for` if present, otherwise to the signer (Finance).
 
@@ -284,6 +287,8 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 - **Going public is one act.** *Publishing a key turns anything private public, for embargoes, timed releases and disclosure, with no copy and no new fingerprint.*
 - **Order without a clock.** *Clocks can be faked and disagree; hash links cannot.*
 - **Acknowledgements are cheap, on purpose, and never stand alone.** *A thief with an accomplice can turn their own acts into visible disputes, never into valid acts. In return, anyone who genuinely relied on an act is protected. An acknowledgement of an act nobody can produce changes nothing, so the noise a thief can make is bounded by the real acts the thief signed.*
+- **A like is never an acknowledgement (F110).** *An acknowledgement carries weight in three layers: it keeps an act alive as a dispute, turns a regretted sale into a dispute, and places signatures on a collective's line. A reaction module that let a like carry `acks` would turn every like on a thief's post into testimony. So the line is drawn by type, the simplest check there is: only the act types of the three layers that need acknowledgements may carry them, and a deliberate reliance on anything else is a witness act, signed on purpose. An accomplice can still witness a thief's acts, making a visible dispute and never a valid act; what disappears is the accidental case.*
+- **One size, the one readers need (F108).** *A field two conforming programs can read two ways is a flaw. The size of the unlocked media is what a reader shows and a media module needs; a relay counts what it stores itself.*
 - **A layer's rules use only that layer's data.** *The `for` field exists so that a wallet with no Law can pay the right identity, and a client with no Law can judge a withdrawal. Pushing one small field down is always better than pulling a rule up.*
 - **Delivery is the signer's interest.** *An act counts only where it is held, so whoever wants an act to count carries it to those who must hold it. A reserved inbox gives that carrying a destination without making any relay the meeting point by default.*
 - **One depth for everyone.** *A decoder must stop somewhere, or hostile input can crash it. If each stopped at its own depth, one verifier could accept an act that another cannot read. A fixed limit, far above any act the MIPs define, gives every verifier the same answer.*
@@ -291,6 +296,8 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 - **One place for the key exchange.** *A key that must be delivered privately cannot sit inside the act that delivers it. The sealed container is where every private act meets its recipient's key, so the key delivery can stay a plain statement, and the same statement, published, makes something public (F99).*
 
 ## Open technical parameters
+
+- **Flaw V1, found writing this draft, answered by Nobody, allegedly, 3 October 2026 (F118):** Law rule 56 has negotiation messages acknowledge the latest message received from the other side, but a message was a text act (Text MIP), which rule 4a forbids to carry `acks`. A negotiation message is now a Law act type carrying text (Law draft 10, type 18), so it may carry `acks` under rule 4a, unchanged; a text act in a negotiation thread still may not, and is no part of the record.
 
 - Merkle construction for commitments (sorted set).
 - The running-summary test vector (F78): published in draft with the core library (`core/vectors/sequence-three-acts.json`, and `running-summary.json` for longer sequences); final at freeze, when the spec hashes it names are fixed.
@@ -312,6 +319,8 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 - **F91.** No data item is nested more than 128 levels deep.
 - **F98.** Encryption keys and key delivery use X-Wing, founding scheme number 4.
 - **F99.** A private act reaches its recipients in a sealed container that carries its key; a key delivery's payload is the key itself, private inside a container or public to make something public.
+- **F108 (draft 7).** A publication's size field is the size of the unlocked media.
+- **F110 (draft 7).** Only act types defined by the Identity, Finance and Law MIPs may carry acknowledgements; any other act carrying them is invalid.
 
 ## Freeze scenarios
 
@@ -328,3 +337,5 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 - A private message between two parties that a relay can route but not read, sender sealed; the two parties share no relay and meet through the inbox: 5.
 - A private act made public later by publishing its key (disclosure): 5.
 - A repost as a reference; tips reach the original: 5.
+- A publication whose size is not the unlocked media's, shown as inconsistent (F108): 2.
+- A text act carrying `acks` is invalid; a reaction under a cMIP carrying `acks` is invalid; a witness act keeps a disowned post visible as disputed; a buyer's claim does the same for a publication (F110): 2, 5.

@@ -36,5 +36,18 @@ export const SPECS = {
   text: sha256('TEXT, test value until the freeze'),
 };
 
-export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3 } as const;
+/** The six MIPs' spec hashes, as in the genesis client. Test values. */
+export const MIPS = {
+  ...SPECS,
+  finance: sha256('FINANCE, test value until the freeze'),
+  law: sha256('LAW, test value until the freeze'),
+  production: sha256('PRODUCTION, test value until the freeze'),
+};
+
+/** The specifications whose act types may carry acknowledgements (F110). */
+export const ACK_SPECS: readonly string[] = [MIPS.identity, MIPS.finance, MIPS.law];
+
+export { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
+
+export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15 } as const;
 export const ENVELOPE_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 } as const;

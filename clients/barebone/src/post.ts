@@ -5,6 +5,7 @@
 // every judgement through the core library.
 
 import {
+  MIPS,
   SPECS,
   Verifier,
   cborDecode,
@@ -198,7 +199,7 @@ class Judge {
     private hints: string[],
     private via: Via,
   ) {
-    this.v = new Verifier(SPECS.identity);
+    this.v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
   }
   async standing(act: Uint8Array, id: string, signer: string): Promise<string> {
     if (!this.looked.has(signer)) {

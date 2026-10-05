@@ -40,6 +40,7 @@ import {
   termsPayload,
   type CollectiveTerms,
   type MarkEntry,
+  type Stake,
   type Power,
   type Rule,
 } from './law.ts';
@@ -83,6 +84,16 @@ export interface Governance {
   /** A threshold of the other parties decides absence. */
   abandonmentOthers: number;
   text: string;
+  /** Stakes (terms field 7): the collective's own (object null, F124 S1:
+   * a share of all its income, F121 Q8), keyed by holder, and works it
+   * holds (holder null). Absent in older files. */
+  stakes?: Stake[];
+  /** The split service's grant (field 14), a judicial clause. */
+  splitGrant?: string;
+  /** Departed holders (field 22): who left keeping a share of the collective's income, which is in `stakes` (F124 N5). */
+  departed?: string[];
+  /** Forked from (field 23): the original collective, for a successor of a fork (F124 N4). */
+  forkedFrom?: string;
 }
 
 export interface CollectiveFile {
@@ -130,6 +141,14 @@ export interface CollectiveFile {
   steppedDown?: { member: string; area: number; resignation: string; record: string }[];
   /** Kept by the collective client: the records the collective drew, its everyday lines (Law type 17), oldest first. */
   records?: string[];
+  /** Kept by the collective client: the fork or closing that ended the collective (Law rule 47a, F121, F124 N9), once complete. */
+  closed?: string;
+  /** Kept by the collective client: splits its simulated split service made, with their content keys (base64). */
+  splits?: { id: string; key: string; receipt: string }[];
+  /** Kept by the collective client: debts the collective signed, private, with their content keys (base64) (F124 N13). */
+  debts?: { id: string; key: string; creditor: string }[];
+  /** Kept by the collective client: its payee pointers, newest last. */
+  pointers?: string[];
 }
 
 /** What happened to one act the members signed. */
@@ -168,6 +187,11 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
     extensions: [REPO_SPECS.manifest],
     parent,
     mark,
+    stakes: g.stakes,
+    splitGrant: g.splitGrant,
+    departed: g.departed,
+    // Field 23 is for founding terms only: a clone never carries it.
+    forkedFrom: parent ? undefined : g.forkedFrom,
   };
 }
 
@@ -213,6 +237,22 @@ export class TestCollective {
 
   get identity(): string {
     return this.f.identity.identity;
+  }
+
+  /**
+   * The rules after a member change: a member who leaves keeping a share
+   * of the collective's income (its stake in itself, field 7) is recorded
+   * as departed in the departed members entry, nothing else (Law rules
+   * 37a, 46b; F121, F124 N5).
+   */
+  departedAfter(g: Governance, members: string[]): Governance {
+    const own = g.stakes?.find((x) => x.object === null);
+    const departed = [...(g.departed ?? [])];
+    for (const m of this.f.members.filter((x) => !members.includes(x))) {
+      const share = own?.holders.find(([h]) => h === m)?.[1] ?? 0;
+      if (share > 0 && !departed.includes(m)) departed.push(m);
+    }
+    return departed.length ? { ...g, departed } : g;
   }
 
   /** Who holds the everyday key after a member change: the holder if they stay, else the first member. */
@@ -284,6 +324,9 @@ export class TestCollective {
       routes: null,
       encryption: [],
       pending: null,
+      // F127: its actions cite, on its chain, the decision they act under:
+      // its genesis first, then its latest rotation or record.
+      cites: [id],
     };
     const c = new TestCollective(
       {
@@ -333,7 +376,7 @@ export class TestCollective {
     expect?: Uint8Array;
   }): Promise<{ clone: string; rotation: string; record?: string; resigned: Signed[]; signed: Signed[]; sent: Submitted[] }> {
     if (this.f.pending || this.f.identity.pending) throw new Error('a member change is already pending: resend it');
-    const governance = opts.governance ?? this.f.governance;
+    const governance = this.departedAfter(opts.governance ?? this.f.governance, opts.members);
     const holder = this.nextHolder(opts.members);
     const resigned: Signed[] = [];
     let line: string | undefined;
@@ -349,13 +392,13 @@ export class TestCollective {
     // members' signature acts on the declaration.
     const recovered = this.recovering().filter((d) => !opts.members.includes(d.member));
     const absence = recovered.flatMap((d) => d.signatures ?? []);
-    const mark: MarkEntry[] = [
-      {
-        power: { constitutional: true },
-        signers: opts.signers.map((m) => m.id).filter((id) => this.f.members.includes(id) && !left.has(id)),
-      },
-    ];
+    const voices = opts.signers.map((m) => m.id).filter((id) => this.f.members.includes(id) && !left.has(id));
+    const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: voices }];
     const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+    // F122: a version that also changes a judge needs every member for it.
+    if (clonePlan(parent, collectiveTerms(governance, opts.members, holder, this.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
+      mark.push({ power: { judicial: true }, signers: voices });
+    }
     const next = collectiveTerms(governance, opts.members, holder, this.f.agreement, mark);
     if (!markMatches(mark, clonePlan(parent, next).needs)) {
       throw new Error('a member change is constitutional: its mark names the constitutional change rule');
@@ -416,7 +459,7 @@ export class TestCollective {
       homes: f.homes,
       rule: f.rule,
     };
-    this.f.pending = { safety: dealt, agreement: proposed.id, members: opts.members, governance: opts.governance };
+    this.f.pending = { safety: dealt, agreement: proposed.id, members: opts.members, governance: governance === this.f.governance ? undefined : governance };
     this.f.signingHolder = holder;
     const sent = await this.id.submitRotation();
     return { clone: proposed.id, rotation: id, record: line, resigned, signed, sent };
@@ -442,9 +485,9 @@ export class TestCollective {
   /**
    * A judicial change (Law rules 44a, 46a; Law draft 8, B13): only who
    * judges absence, the abandonment clause's number of the other members.
-   * A clone marked with the clone rule and the members who sign it,
-   * recorded at once (rule 37c, Q8). For a member who does not sign it, the
-   * clause stays the one they signed (rule 46a).
+   * A clone marked with the judicial tier's power, every member whose voice
+   * remains signing it (Law draft 10, F121: one version for everyone),
+   * recorded at once (rule 37c, Q8).
    */
   async changeAbsenceRule(opts: {
     others: number;
@@ -453,10 +496,42 @@ export class TestCollective {
     expect?: Uint8Array;
   }): Promise<{ clone: string; record: string; signed: Signed[] }> {
     const governance = { ...this.f.governance, abandonmentOthers: opts.others };
-    return this.recordChange({ ...opts, governance, power: { clone: true }, what: 'not a judicial change of who judges absence' });
+    return this.recordChange({ ...opts, governance, power: { judicial: true }, what: 'not a judicial change of who judges absence' });
   }
 
   /**
+   * The collective's stakes (terms field 7, F121 Q8): its members' shares
+   * of all its income, and the works it owns. An ordinary change, outside
+   * every area, under the clone rule, recorded at once; every holder whose
+   * share it sets signs it (Law rule 13).
+   */
+  async setStakes(opts: {
+    stakes: Stake[];
+    proposer: TestIdentity;
+    signers: TestIdentity[];
+    expect?: Uint8Array;
+  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+    const governance = { ...this.f.governance, stakes: opts.stakes };
+    return this.recordChange({ ...opts, governance, power: { clone: true }, what: 'not an ordinary change of the stakes' });
+  }
+
+  /**
+   * Name the split service (terms field 14, by its grant): a judicial
+   * change, every member whose voice remains signing it (Law rule 46a,
+   * F121), recorded at once.
+   */
+  async nameSplitService(opts: {
+    grant: string;
+    proposer: TestIdentity;
+    signers: TestIdentity[];
+    expect?: Uint8Array;
+  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+    const governance = { ...this.f.governance, splitGrant: opts.grant };
+    return this.recordChange({ ...opts, governance, power: { judicial: true }, what: 'not a judicial change naming the split service' });
+  }
+
+  /**
+   * A change written on the collective's record at once (rule 37c): a  /**
    * A change written on the collective's record at once (rule 37c): a
    * clone marked with the one power its changes need, signed by `signers`,
    * recorded with their signature acts (A2) and the everyday key.

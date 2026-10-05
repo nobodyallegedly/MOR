@@ -53,7 +53,7 @@ test('a founding agreement, read from its bytes: who is bound, the keys, the are
 
   const tiers = section(r, 'Who decides what');
   assert.match(tiers, /Constitutional: the members, the change rules, the key grammar, the areas and the constitution's words\. They change only by the constitutional change rule: every member whose voice remains: nobody loses their say without signing \(F103\)/);
-  assert.match(tiers, /Judicial: the protected clauses \(the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs\)\. They change under the clone rule, any 2 of the 3 parties, but for each member only with that member's own signature/);
+  assert.match(tiers, /Judicial: the protected clauses \(the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs\)\. They change only with the signature of every member whose voice remains: one version for everyone \(Law rule 46a, F121\)/);
   assert.match(tiers, /Operational: matters outside every area change by the clone rule, any 2 of the 3 parties/);
 
   const leaving = section(r, 'Leaving');
@@ -120,10 +120,10 @@ test('what this client does not implement cannot be signed; open formats are ref
   const r = readAgreement(termsOf(encodeTerms(t)), names);
   assert.match(r.blocking.join(' '), /extension this client does not implement.*Law rule 2/);
 
-  // Terms with stakes (field 7), whose format is still open: the core will not read them at all.
+  // Terms with a split plan (field 8), whose format is still open: the core will not read them at all.
   const m = cborDecode(encodeTerms(collectiveTerms(g(), [a, b, c], a))) as Map<number, unknown>;
-  m.set(7, []);
-  assert.throws(() => termsOf(cborEncode(m)), /not supported yet.*stakes/);
+  m.set(8, []);
+  assert.throws(() => termsOf(cborEncode(m)), /not supported yet.*split plan/);
 });
 
 test("Law's objections by their codes, in Law's own words, after the client's own hints, never folded by wording", () => {
@@ -162,7 +162,12 @@ test("Law's objections by their codes, in Law's own words, after the client's ow
 test('what a clone changes, by tier, and the powers its mark must name', () => {
   const parent = sha256('the founding agreement');
   const before = encodeTerms(collectiveTerms(g(), [a, b, c], a));
-  const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: [b, c] }];
+  // F122: the version also changes a judge (who judges absence): its mark
+  // names the constitutional change rule and the judicial tier's rule.
+  const mark: MarkEntry[] = [
+    { power: { constitutional: true }, signers: [b, c] },
+    { power: { judicial: true }, signers: [a, b, c] },
+  ];
   const after = encodeTerms(collectiveTerms(g({ safetyThreshold: 1, abandonmentOthers: 1, text: 'New words.' }), [b, d], b, parent, mark));
   const w = readChanges(before, after, names).map((l) => l.text).join('\n');
   assert.match(w, /Di joins, bound once they sign the clone/);
@@ -175,7 +180,7 @@ test('what a clone changes, by tier, and the powers its mark must name', () => {
   assert.match(w, /The constitution's words change/);
   assert.match(w, /A change to who the members are: constitutional\./);
   assert.match(w, /A change to the abandonment clause: judicial, a protected clause/);
-  assert.match(w, /So its mark must name the constitutional change rule \(Law rule 44c\)\.\nIts mark names exactly that\./);
+  assert.match(w, /So its mark must name the constitutional change rule and the judicial tier's rule, every member whose voice remains \(Law rule 44c\)\.\nIts mark names exactly that\./);
 
   // An ordinary change: the release area's words, operational in that area.
   const words = encodeTerms(collectiveTerms(g({ releaseWords: 'Ours.' }), [a, b, c], a, parent, [{ power: { area: 1 }, signers: [a, b] }]));
@@ -190,4 +195,29 @@ test('what a clone changes, by tier, and the powers its mark must name', () => {
   const bad = readChanges(before, wrong, names).filter((l) => l.tone === 'bad');
   assert.equal(bad.length, 1);
   assert.match(bad[0].text, /Its mark names the clone rule: a false mark sinks the clone \(F104\)/);
+});
+
+test("a deal's chain of judgment follows its split service: one grant per payee for each service taking over (F130, H6)", () => {
+  const h = (n: number) => new Uint8Array(32).fill(n);
+  const hx = (n: number) => Buffer.from(h(n)).toString('hex');
+  const deal = (link: unknown) =>
+    cborEncode(
+      new Map<number, unknown>([
+        [0, [h(1), h(2)]],
+        [1, 'a song'],
+        [2, new Map()],
+        [4, [0]],
+        [5, [0]],
+        [6, [h(3), 0]],
+        [14, [h(7), h(8)]],
+        [21, [link]],
+      ]),
+    );
+  const t = termsOf(deal([[2], [[[h(9), h(10)], 30]]]));
+  assert.ok(!t.problem, `Law accepts it: ${JSON.stringify(t.problem)}`);
+  assert.deepEqual(t.chain, [['split service', [[[hx(9), hx(10)], 30]]]]);
+  const w = all(readAgreement(t, names));
+  assert.match(w, /the service granted by .* \(one grant per payee, signed with this deal, F130 H6\) \(after 30 on the time reference\) takes over/);
+  // A deal's service taking over is never one grant.
+  assert.match(JSON.stringify(termsOf(deal([[2], [[h(9), 30]]])).problem ?? ''), /H6/);
 });

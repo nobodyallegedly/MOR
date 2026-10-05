@@ -1047,6 +1047,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F108 decided by Nobody, allegedly, 1 October 2026.*
 
+**Written in (core pass, 3 October 2026, not yet approved):** Envelope draft 7 (field 3; rule 14a); freeze suite v21 (step 2.1b); core v21 (Envelope, media).
+
 ## F109. In a collective, "before" and "after" are judged on the collective's own sequence (found while drafting Law draft 7, decided by Nobody, allegedly)
 
 **Pattern:** a root cause behind several findings: flaws E to L, Q23, Q28 and Q30 of the Law redraft each ordered a member's personal sequences against a collective event (a resignation, a stepping-down, a freeze, a declaration of absence, a record), and each patch opened another gap.
@@ -1121,6 +1123,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *Decided "for now" (Nobody, allegedly, 2 October 2026: "for now it seems to work").*
 
+**Written in (core pass, 3 October 2026, not yet approved):** Envelope draft 7 (rules 4a, 7b), Identity draft 11 (type 15, rules 18b, 18c), core v21, freeze suite v21 (steps 2.5c, 5.5b); the core library, the genesis client (a `witness` command; acknowledgements refused on other types) and the desk (a witness act signed only after its explanation). Writing it in exposed flaw V1: Law rule 56's negotiation messages are text acts, which may no longer carry acknowledgements (`docs/core-pass-v21.md`).
+
 **Changes, to be made:** Envelope's next draft (field 7: which act types may carry it; validity); Identity's next draft (the witness act type; client conformance); core document (acknowledgements, glossary: witness act); freeze suite (a Text act carrying `acks` is invalid; a like-style reaction under a cMIP carrying `acks` is invalid; a witness act keeps a disowned post visible as disputed; a buyer's claim does the same for a publication). The desk and the genesis client acknowledge only through these types.
 
 ## F111. An owner learns of payments the vault leaves undeliverable (found while confirming Finance rule 14a, decided by Nobody, allegedly)
@@ -1139,6 +1143,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Core changes, to be made:** Finance MIP's next draft (client conformance under rule 14a; reasoning). No change to the core document or the freeze test suite beyond a line in scenario 5's flow-off step (the payer's wallet notifies the payee).
 
 *F111 decided by Nobody, allegedly, 2 October 2026.*
+
+**Written in:** Finance draft 6, rule 14b (roadmap step 12); core v21 (Finance) and freeze suite v21 (step 5.2), core pass, 3 October 2026, not yet approved.
 
 ## F112. A rail is a Module under the payment cMIP; parties are not specifications (found while reading Finance, decided by Nobody, allegedly)
 
@@ -1159,6 +1165,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F112 decided by Nobody, allegedly, 2 October 2026.*
 
+**Written in:** Finance draft 6 and the payment cMIP (roadmap step 12); Production draft 6 (rule 8, task table rows 6 and 7, the verification rule), core v21 and freeze suite v21, core pass, 3 October 2026, not yet approved.
+
 ## F113. An anonymous payer's refund goes to a key the payer put in the commitment (found while building roadmap step 12, flaw L1, decided by Nobody, allegedly)
 
 **Pattern:** 1: the record that decides who is refunded could be produced by others than the party it protects.
@@ -1172,6 +1180,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Finance draft 6 (rule 10a; the commitment's payer field accepts a bare key); the payment cMIP; freeze suite scenario 2 step 6 (the anonymous refund is claimed by a signature with the committed key, and a routing node holding the preimage cannot claim it).
 
 *F113 decided by Nobody, allegedly, 2 October 2026.*
+
+**Written in (core pass, 3 October 2026, not yet approved):** Finance draft 6 (rules 1 and 10a, receipt field 2, claim field 8), payment cMIP draft 2, Lightning rail Module draft 2, core v21, freeze suite v21 (steps 2.6, 2.6b, 5.2); built and tested offline and on regtest. *Reading taken:* the bare key is a signing key in Identity's form, not rule 18's delivery key (an encryption key, which cannot sign). Law draft 9 rule 32 still says "whoever presents the rail proof": Law needs a draft 10. *Law draft 10 (3 October 2026, not yet approved):* rule 32 sends the refund to whoever signs with the committed key, never to whoever presents the rail proof; built as `finance::refund_owed_to` and `claims_refund`.
 
 ## F114. Several vault entries for one unit: the smallest limit applies (found while building roadmap step 12, flaw L2, decided by Nobody, allegedly)
 
@@ -1188,6 +1198,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Finance draft 6 (rule 14a); the code's refusal of payments between the smallest and largest limits as unsettled is replaced by the rule.
 
 *F114 decided by Nobody, allegedly, 2 October 2026.*
+
+**Written in (core pass, 3 October 2026, not yet approved):** Finance draft 6 (rule 14a), core v21, freeze suite v21 (step 5.2); the code's refusal between the limits is replaced by the rule.
 
 ## F115. The payee decides which rails it accepts (found while building roadmap step 12, question c and flaw L4, decided by Nobody, allegedly)
 
@@ -1207,6 +1219,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F115 decided by Nobody, allegedly, 2 October 2026.*
 
+**Written in (core pass, 3 October 2026, not yet approved):** Finance draft 6 (rule 12a), payment cMIP draft 2, core v21, freeze suite v21 (step 3.7g rewritten); the core library's Law view and its test. *Reading taken:* the Law view checks that a counting pointer or the vault in force names the rail Module; which exact pointer the payment went to is in the rail's proof, which the payment cMIP checks. Law draft 9's scenario lines still speak of a payment cMIP's receipts: Law needs a draft 10.
+
 ## F116. Evidence that a Module was used comes from a party, never from the Module (found while building roadmap step 12, flaw L3, decided by Nobody, allegedly)
 
 **Pattern:** 1, after F112: a specification cannot sign.
@@ -1219,6 +1233,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F116 decided by Nobody, allegedly, 2 October 2026.*
 
+**Written in (core pass, 3 October 2026, not yet approved):** Production draft 6 (rule 17), Finance draft 6 (rule 10b), core v21, freeze suite v21. Law rule 19 does not read alike ("a module's signed use record", also rule 22): Law needs a draft 10, and rule 22's "someone other than the split service and the payee" meets F116 as flaw V2 (`docs/core-pass-v21.md`). *Law draft 10 (3 October 2026, not yet approved):* rules 19, 22 and 28 read alike (F119 for rule 22).
+
 ## F117. The first Lightning rail Module names the payee's node; its costs are stated, and it ships as experimental (roadmap step 12, questions a and b, decided by Nobody, allegedly)
 
 **Found while building:** the Lightning rail (roadmap step 12, question a). To check later that a payment went to the payee, a verifier needs the key that signed the invoice; on Lightning there is no address in the on-chain sense. The Module as built names the payee's node key in its pointer or vault (a), and a Lightning vault entry names the vault's own node, which issues each invoice (b).
@@ -1228,6 +1244,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Decided (Nobody, allegedly, 2 October 2026):** "I'm fine with presenting experimental stuff with plenty of disclaimers. The purpose is to throw stuff at the MIPs." a and b confirmed as built; the Module is presented as experimental, its costs stated plainly in its text and shown by clients. *Suggested (project lead):* a BOLT 12 rail Module later, as a second Module under the same payment cMIP, which also exercises F115 (a payee choosing between rails).
 
 *F117 decided by Nobody, allegedly, 2 October 2026.*
+
+**Written in (core pass, 3 October 2026):** Lightning rail Module draft 2 ("Costs, stated", experimental), Finance draft 6 (reasoning), the payment cMIP draft 2 (experimental).
 
 ## F118. A negotiation message is a Law act (found in the core pass, flaw V1, decided by Nobody, allegedly)
 
@@ -1243,6 +1261,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 
 *F118 decided by Nobody, allegedly, 3 October 2026.*
 
+**Written in (Law draft 10, 3 October 2026, not yet approved):** Law draft 10 (the negotiation message, type 18; rule 56; the readings on the thread's form listed there), core v21, Envelope draft 7 (V1 answered), freeze suite v21 (step 5.3, a component line); built in the core library (`LawView::negotiation`) and tested.
+
 ## F119. A split service's receipt is evidence that a rail Module was used (found in the core pass, flaw V2, decided by Nobody, allegedly)
 
 **Pattern:** 1, checked: the party that signs is the split service, but what it can name is fixed by the payee.
@@ -1256,6 +1276,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Law draft 10 (rules 19 and 22: the exception for a receipt naming a rail Module the payee published).
 
 *F119 decided by Nobody, allegedly, 3 October 2026.*
+
+**Written in (Law draft 10, 3 October 2026, not yet approved):** Law draft 10 (rules 19 and 22, the role share's definition, the split's evidence field, with the cost stated), core v21, freeze suite v21 (step 2.4e); built in the core library (`LawView::role_evidence`) and tested. *Reading taken:* the payee whose pointer or vault must name the Module is the identity the payment was made to, whose pointer leads to the split service, never the service.
 
 **F110, the witness act's visibility (core pass, question V3; decided by Nobody, allegedly, 3 October 2026):** a witness act is public, like every Identity act. *Cost, stated:* anyone can see that its signer relies on a given act of another identity, a relationship, never the content of a private act. A private witness act was set aside: it would protect nothing for anyone not holding it, and would need rules of its own.
 
@@ -1272,6 +1294,8 @@ Applied in the consolidated revision as drafting, each a sentence or a format no
 **Changes, to be made:** Law draft 10 (rules 36a and 44c.1 read alike); core v21's "Areas and lanes" (J1 no longer open).
 
 *F120 decided by Nobody, allegedly, 3 October 2026.*
+
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved):** rules 36a and 44c.1, core v21 ("Three tiers", "Areas and lanes"), freeze suite v21 (step 3.7s); built in the core library and tested. *Its reason, rule 46a's per-member protection, is removed by F121: where the constitutional change rule is below every party, the two disagree (flaw K1, `docs/law-draft-10.md`, section 5), and such a version is refused as unsettled until it is decided.*
 
 ## F121. One judicial tier for everyone, a chain of fallbacks, and the fork of a collective (found writing Law draft 10, decided in part by Nobody, allegedly)
 
@@ -1312,6 +1336,8 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 
 **Changes, to be made:** Law (rule 46a; the chain of judgment; a fork grammar); core; freeze suite.
 
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 5):** the judicial tier changed only by every member, its power `[4]` (rules 6, 36a, 36b, 44c, 44d, 46a); the chain of judgment, terms field 21 (rule 34a); departed holders, terms field 22 (rule 46b); the payee pointer check (rule 18), not built, since a pointer names rails, never an identity (flaw P1); the fork of a collective in principle (rules 15b, 47a), its grammar left unwritten; core v21, freeze suite v21 (steps 3.7f, 3.7i, 3.7n, 3.7p to 3.7s, 3.8b, 3.9), one page v6; a to c built in the core library and the repo and collective clients, and tested. Open for Nobody, allegedly: flaws K1 and P1; the fork's debts, grants, keys, act, name and money after it; when an identity judge "cannot act"; members' own stakes in the collective; how a fee to the members' own service is public; eight readings.
+
 ## F122. A version changing a judge and the constitution needs both rules (found writing F121 into Law draft 10, flaw K1, decided by Nobody, allegedly)
 
 **Pattern:** a later decision changing an earlier one's ground: F120 rested on the constitutional rule being able to remove any stricter check; F121 fixed "every member" for the judicial tier in Law itself.
@@ -1326,6 +1352,8 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 
 *F122 decided by Nobody, allegedly, 3 October 2026.*
 
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 6):** rules 36a, 44c.1, 44e and 46a (the mark names `[0]` and `[4]`), core v21, freeze suite v21 (step 3.7s); built in the core library (the "unsettled" refusal replaced) and the collective client, and tested. *Writing it in exposed flaw M1: a removal under a constitutional change rule below every party that drops the removed member's own succession plan is a judicial change too, which F122 counts the removed member in.*
+
 ## F123. The split service vouches for the addresses in the owners' pointer (found writing F121 into Law draft 10, flaw P1, decided by Nobody, allegedly)
 
 **Pattern:** 4: a rule resting on a fact nobody can check. A payee pointer lists payment addresses and node keys, never an identity, so "the pointer names the split service" (F121, fix 2) cannot be verified.
@@ -1337,6 +1365,8 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Changes, to be made:** Law draft 10 (rule 18 as a check); the pointer check built in the core library; freeze suite scenario 3.7r run.
 
 *F123 decided by Nobody, allegedly, 3 October 2026.*
+
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 6):** rule 18 (one service's own pointer in force carries every address of the owners' pointer: the service named, or one its chain names, reading 4), core v21, freeze suite v21 (step 3.7r, now run); built in the core library (`LawView::pointer_check`) and the collective client, and tested. *Writing it in exposed flaw P2: the owners' vault is not reached by the check.*
 
 **F121, the fork's questions (`docs/law-draft-10.md`, section 5; answered by Nobody, allegedly, 3 October 2026, one at a time):**
 - *Q1, debts at a fork:* (c) the fork act assigns each debt to a side, which signs for it; any debt it does not name is owed by both sides. "It forces communication to reach agreement, which is a positive outcome." No debt can vanish.
@@ -1360,6 +1390,8 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 - *The eight readings of `docs/law-draft-10.md`, section 5:* 1 to 6 and 8 confirmed (Nobody, allegedly, 3 October 2026). Reading 7 corrected: for a party whose voice was removed before a judicial change, the abandonment clause **in force** applies, not an older one, as departed holders are under the collective's current rules (fix 1).
 
 *F121's questions all answered, 3 October 2026. To write: the fork grammar (scenario B: a fork act signed by both sides, closing the original in Law; ownership transfers; defaults; the "forked from" field; withdrawal of open offers), scenarios A, C and D, the release act, the pointer check (F123), equal treatment (Q8), fee visibility (Q9), the periods of the chain of judgment (Q7), and the rename of rule 47 to the concurrency rule.*
+
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 6):** the chain's periods on a compulsory time reference (field 21, rule 34a); stakes in the collective itself (field 7 made exact) and equal treatment checked against them (rule 46b); every split delivered to every holder it pays, naming each fee and its receiver (type 8 made exact, rules 20, 27); the four shapes of ending (rule 47a), the fork act (type 19) and "forked from" (field 23), the release act (type 5 made exact) and the release rule (field 24, rule 17); reading 7 corrected; the concurrency rule (field 10); core v21, freeze suite v21 (3.7p, 3.7q, 3.7t, 3.7u, 3.9, 3.9a to 3.9c; 3.7r and 3.9 now run), one page v6; built in the core library and the collective client, and tested. Writing it in exposed flaw S1 (founding terms cannot name the collective itself, so members' stakes in it come by a first clone), and fourteen questions (N1 to N14, `docs/law-draft-10.md`, section 6), each with a lean, the code built on the leans.
 
 ## F124. Questions from writing F121 to F123 into Law draft 10 (`docs/law-draft-10.md`; answered by Nobody, allegedly, 3 October 2026, one at a time)
 
@@ -1385,6 +1417,8 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 
 *F124's questions all answered, 3 October 2026.*
 
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 7):** null as this collective in stakes and grants (S1; terms field 7, grant field 8); the seat part of a removed member's plan going with the removal (M1; rule 44b); both split models, the vault vouched for by the service (P2; rule 18); the fork under the constitutional rule, a member on no side a departed holder of each successor, successors founded first and named by the fork act, "forked from" a back-link, concurrent forks ending nothing (N1 to N4; type 19, field 23, rule 47a); the stakes deciding money, field 22 a list (N5); the chain's period (N6, rule 34a); releases by direct owners, a collective through its lanes, the release rule changed by a clone every owner signs, a timed release, a competing claim beside a release (N7, N8, N11, N12; type 5, field 24, rule 17); the closing act (N9, type 20); every payout matching its stake (N10); debts assigned at a fork and signed for by successors, sealed to every member, binding once public (N13); every grant ending at a fork, payment following the claim, a stray payment owed to the successors (N14); core v21, freeze suite v21 (3.7q, 3.7r, 3.7s, 3.7t, 3.9, 3.9a, 3.9c rewritten; 3.7v, 3.9d to 3.9g new), one page v6; built in the core library and the collective client (the successors founded and named in the fork act end to end), and tested. Writing it in exposed flaw D1 (a debt surfacing after a fork falls under both N13 rules) and questions D2 to D6, each with a lean.
+
 ## F125. Questions from writing F124 into Law draft 10 (`docs/law-draft-10.md`, section 7; answered by Nobody, allegedly, 3 October 2026, one at a time)
 
 - **D1, a debt that surfaces after a fork:** N13's two rules collided (an unassigned debt stops the fork; a hidden debt surfacing is owed by every successor); with no clock, a member and a friend could publish a secret debt late to undo any fork. **Decided:** option (a). A complete fork is never undone over a debt. Assigning every known debt is each member's client's duty; any debt the fork act did not assign, hidden or not, is owed by every successor jointly. The project lead's combination of N13's rules caused the collision.
@@ -1397,6 +1431,8 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 - **The nine readings of `docs/law-draft-10.md`, section 7:** 1 to 8 confirmed. Reading 9 corrected: a stray payment to the old split service is owed to the successors in the shares the fork act transferred, the defaults applying only where the act named none.
 
 *F125's questions all answered, 3 October 2026. To write: D1 to D6, the creditor's release, reading 9 corrected.*
+
+**Written in (Law draft 10, revised in place, 3 October 2026, not yet approved; `docs/law-draft-10.md`, section 8):** a complete fork never undone over a debt, any debt the fork act did not assign owed by every successor jointly, assigning every known debt each member's client's duty, the "unsettled" state of freeze 3.9g removed (D1; type 19, rule 47a); a verifier stating that it found a debt's outside on a relay (D2); the split model chosen by naming a split service or not (D3); the release rule changed with every owner and the ordinary clone rule (D4); no closing while the collective owes anything, its own debts and those it owes as a successor (D5; type 20); a founding grant carried by the founding terms (D6); the creditor's release, signed by the creditor alone (type 21, rule 47b), a closing checking that every debt is paid or released; a stray payment in the shares the fork transferred (reading 9 corrected); readings 1 to 8 confirmed in the text; core v21, freeze suite v21 (3.9, 3.9f, 3.9g rewritten, 3.9h new), one page v6; built in the core library and the collective client (a creditor's release; a closing checking debts), and tested. Writing it in exposed tension T1 (a successor owing a debt it never signed for, against rule 1) and questions E1 to E4, each with a lean.
 
 ## F126. Questions from writing F125 into Law draft 10 (`docs/law-draft-10.md`, section 8; answered by Nobody, allegedly, from 4 October 2026, one at a time)
 

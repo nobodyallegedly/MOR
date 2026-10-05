@@ -3,10 +3,11 @@
 //!
 //! In plain words: compare the clone with its parent field by field (and
 //! fields 2, 15 and 20 entry by entry). Any constitutional change needs the
-//! constitutional change rule alone. Otherwise each area in which a change
-//! lies needs its holders' power, and anything outside every area (a
-//! judicial change, or an operational one no area holds) needs the clone
-//! rule. A clone that changes nothing needs the clone rule. Which power is
+//! constitutional change rule alone (F120). Otherwise each area in which a
+//! change lies needs its holders' power; an operational change no area
+//! holds needs the clone rule; and a judicial change needs every member
+//! whose voice remains, one version for everyone (F121). A clone that
+//! changes nothing needs the clone rule. Which power is
 //! needed is read from the bytes, never from what the clone says of itself.
 
 use super::formats::{
@@ -41,9 +42,12 @@ impl Change {
     pub fn tier(&self) -> Tier {
         match self {
             Change::Field(f) => match f {
-                0 | 1 | 5 | 12 | 18 | 19 => Tier::Constitutional,
-                3 | 6 | 9 | 10 | 13 | 14 | 16 => Tier::Judicial,
-                _ => Tier::Operational, // 7, 8, 17
+                // 25, the relays, is withdrawn (F128) and never reused.
+                0 | 1 | 5 | 12 | 18 | 19 | 22 => Tier::Constitutional,
+                3 | 6 | 9 | 10 | 13 | 14 | 16 | 21 => Tier::Judicial,
+                // 7, 8, 17; 24, the release rule, in no area: the clone
+                // rule, with every owner's signature besides (N8).
+                _ => Tier::Operational,
             },
             Change::Task(t) if JUDICIAL_TASKS.contains(t) => Tier::Judicial,
             Change::Task(_) | Change::Extension(_) | Change::Words(_) => Tier::Operational,
@@ -64,7 +68,14 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
     };
     let (p, c) = (enc(parent), enc(clone));
     let mut out = vec![];
-    for n in 0..=20u64 {
+    // Field 23 is never compared: a clone never carries it. Field 24, the
+    // release rule, may change by a clone every owner signs (F124, N8).
+    for n in (0..=24u64).filter(|n| *n != 23) {
+        if n == 16 && removal_only(parent, clone) {
+            // M1 (F124): the seat part of a removed member's plan goes with
+            // the removal, as their areas do; the stake part stays.
+            continue;
+        }
         let a = p.iter().find(|(k, _)| *k == n).map(|(_, v)| v);
         let b = c.iter().find(|(k, _)| *k == n).map(|(_, v)| v);
         if a != b {
@@ -108,6 +119,30 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
         }
     }
     out
+}
+
+/// Whether field 16 differs only as M1 allows (F124): each party the clone
+/// takes out of the parties loses the seat part of its plan (keys 2 and 3),
+/// the plan staying for its stake part, or going where it has none; every
+/// other plan as it was, in its order.
+fn removal_only(parent: &Terms, clone: &Terms) -> bool {
+    let removed: Vec<_> = parent.parties.iter().filter(|p| !clone.parties.contains(p)).collect();
+    if removed.is_empty() {
+        return false;
+    }
+    let expected: Vec<_> = parent
+        .succession
+        .iter()
+        .flatten()
+        .filter_map(|plan| {
+            if !removed.contains(&&plan.party) {
+                return Some(plan.clone());
+            }
+            plan.stakes.as_ref().map(|_| super::formats::SuccessionPlan { seats: None, entry: None, ..plan.clone() })
+        })
+        .collect();
+    let got = clone.succession.clone().unwrap_or_default();
+    expected == got
 }
 
 /// Where an operational change lies: the parent's areas it lies in, and
@@ -195,13 +230,23 @@ pub fn powers_needed(
     }
     let ch = changes(parent, clone);
     if ch.iter().any(|c| c.tier() == Tier::Constitutional) {
-        return Ok(vec![Power::Constitutional]);
+        // F122 (flaw K1, revising F120): the constitutional change rule,
+        // and, where the same version also changes the judicial tier, every
+        // member for it: the mark names both, and the version stays a draft
+        // until both are met.
+        let mut out = vec![Power::Constitutional];
+        if ch.iter().any(|c| c.tier() == Tier::Judicial) {
+            out.push(Power::Judicial);
+        }
+        out.sort_by_key(|p| p.encoding());
+        return Ok(out);
     }
     let mut areas: Vec<u64> = vec![];
     let mut clone_rule = ch.is_empty();
+    let mut judicial = false;
     for c in &ch {
         match c.tier() {
-            Tier::Judicial => clone_rule = true,
+            Tier::Judicial => judicial = true,
             Tier::Operational => {
                 let (a, nowhere) = lies_in(parent, clone, c, ext_layers)?;
                 areas.extend(a);
@@ -217,6 +262,9 @@ pub fn powers_needed(
         out.push(Power::Clone);
     }
     out.extend(areas.into_iter().map(Power::Area));
+    if judicial {
+        out.push(Power::Judicial);
+    }
     out.sort_by_key(|p| p.encoding());
     Ok(out)
 }

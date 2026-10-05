@@ -129,6 +129,7 @@ export interface Item {
   text?: string;
   answers: string[];
   acknowledges: string[];
+  witness?: boolean;
   refs: string[];
   problem?: string;
   found: number;

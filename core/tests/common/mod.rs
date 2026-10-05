@@ -22,6 +22,15 @@ pub fn identity_spec() -> Hash {
     sha256(b"IDENTITY, test value until the freeze")
 }
 
+/// The Finance and Law MIPs' spec hashes in these tests: the act types
+/// that may carry acknowledgements beside Identity's (F110).
+pub fn finance_spec() -> Hash {
+    sha256(b"FINANCE, test value until the freeze")
+}
+pub fn law_spec() -> Hash {
+    sha256(b"LAW, test value until the freeze")
+}
+
 /// The second implementation's verdict on an SLH-DSA signature.
 pub fn second_opinion(s: &Signature, msg: &[u8]) -> bool {
     fn check<P: slh_dsa::ParameterSet>(key: &[u8], sig: &[u8], msg: &[u8]) -> bool {
@@ -61,6 +70,28 @@ pub struct Person {
     /// As a home operator: the receipts signed, in log order.
     pub log: Vec<Hash>,
     pub last_summary: Option<Hash>,
+    /// For a collective's device (F127): the collective's chain, and the
+    /// decisions every everyday act it signs cites there, unless the act
+    /// already names that chain.
+    pub cite: Option<(Hash, Vec<Hash>)>,
+}
+
+/// The objects of an everyday act, with the collective's chain cited where
+/// its signer is a collective's device (F127).
+fn cited(p: &Person, spec: &Hash, type_: u64, objects: Option<Vec<Object>>) -> Option<Vec<Object>> {
+    let Some((chain, ds)) = &p.cite else { return objects };
+    // Identity's own everyday acts (a witness act...) carry no objects:
+    // they are not on the actions chain (reading, F127). A record (Law
+    // type 17) is a decision, citing by its kept tips.
+    if spec == &identity_spec() || (spec == &law_spec() && type_ == 17) {
+        return objects;
+    }
+    if objects.iter().flatten().any(|o| &o.chain == chain) {
+        return objects;
+    }
+    let mut o = objects.unwrap_or_default();
+    o.extend(ds.iter().map(|d| Object { chain: *chain, predecessor: *d }));
+    Some(o)
 }
 
 pub fn schnorr(name: &str, gen: u32) -> SchnorrKey {
@@ -139,7 +170,7 @@ impl Default for World {
 impl World {
     pub fn new() -> Self {
         World {
-            v: Verifier::new(identity_spec()),
+            v: Verifier::with_mips(identity_spec(), finance_spec(), law_spec()),
             counter: 0,
         }
     }
@@ -248,6 +279,7 @@ impl World {
             seq: vec![],
             log: vec![],
             last_summary: None,
+            cite: None,
         }
     }
 
@@ -342,6 +374,7 @@ impl World {
         refs: Option<Vec<act::Ref>>,
     ) -> Act {
         let salt = self.fresh().2;
+        let objects = cited(p, &spec, type_, objects);
         let inside = Inside {
             spec,
             type_,
@@ -365,6 +398,55 @@ impl World {
         });
         p.seq.push(a.id());
         a
+    }
+
+    /// An everyday act of `p`, private, addressed to `to` (Envelope): held
+    /// with its content key, as a recipient holds it.
+    #[allow(clippy::too_many_arguments)]
+    pub fn private_act(
+        &mut self,
+        p: &mut Person,
+        spec: Hash,
+        type_: u64,
+        payload: Vec<(Value, Value)>,
+        objects: Option<Vec<Object>>,
+        to: Vec<Hash>,
+    ) -> Hash {
+        let salt = self.fresh().2;
+        let objects = cited(p, &spec, type_, objects);
+        let inside = Inside {
+            spec,
+            type_,
+            prev: Some(p.seq.last().map(|x| vec![*x]).unwrap_or_default()),
+            objects,
+            payload,
+            position: Some(p.seq.len() as u64 + 1),
+            summary: Some(if p.seq.is_empty() {
+                ZERO_HASH
+            } else {
+                Mmr::from_ids(&p.seq).root()
+            }),
+            acks: None,
+            refs: None,
+            hint: None,
+            salt,
+        };
+        let (key, nonce, _) = self.fresh();
+        let sign = p.sign.clone();
+        let a = act::make(
+            &inside,
+            &key,
+            &nonce,
+            &Addressing {
+                signer: Some(p.id),
+                binding: Some(p.binding),
+                public: false,
+                to: Some(to),
+            },
+            |id| sign.sign(id, &[0; 32]),
+        );
+        p.seq.push(a.id());
+        self.v.add_with_key(a, Some(&key)).unwrap()
     }
 
     /// An Identity everyday act, held.
@@ -393,16 +475,24 @@ impl World {
         self.add(&a)
     }
 
-    /// An act acknowledging `acked`, held.
+    /// A witness act acknowledging `acked` (Identity type 15, F110), held:
+    /// the one way to acknowledge a post or a message.
     pub fn ack(&mut self, p: &mut Person, acked: Hash) -> Hash {
         let a = self.everyday_act(
             p,
-            sha256(b"a text specification"),
-            0,
+            identity_spec(),
+            mor_core::identity::types::WITNESS,
             vec![],
             None,
             Some(vec![acked]),
         );
+        self.add(&a)
+    }
+
+    /// A post-like act of another specification carrying `acks`, as a
+    /// reaction module might make it: invalid since F110. Held.
+    pub fn like(&mut self, p: &mut Person, spec: Hash, acked: Hash) -> Hash {
+        let a = self.everyday_act(p, spec, 0, vec![], None, Some(vec![acked]));
         self.add(&a)
     }
 
