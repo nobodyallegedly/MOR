@@ -13,7 +13,6 @@ They are not part of the core. The core document and the six MIPs in `spec/` def
 - [From the Stands to the Main League](17-MOR-case-study-live-sports-v2.md): live streaming, from a phone in the stands to co-streaming a main league.
 - [Adult Content, Consent on the Record](18-MOR-case-study-adult-content-v2.md): signed consent, age proofs without exposure, and payment rails that cannot switch a sector off alone.
 - [Paying the Ones Everything Stands On](19-MOR-case-study-software-v2.md): open-source maintainers paid through dependency lineage, targets and bounties.
-- [Experiment, Prototype, Protocol](21-MOR-case-study-experiment-prototype-protocol-v1.md): how MOR passes from its author to the people who build on it.
 
 Companion documents are in [`../companions/`](../companions/README.md).
 
