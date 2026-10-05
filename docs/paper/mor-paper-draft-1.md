@@ -4,7 +4,7 @@
 
 **Nobody, allegedly** · nobodyallegedly@proton.me
 
-*Draft 1, 5 October 2026. Pre-freeze: the protocol described here is experimental, has not been reviewed by any human adversary, and must not be used with real funds.*
+*Draft 1, 5 October 2026, revised the same evening (order without a clock moved: the principle into the architecture, its collective rules after collectives). Pre-freeze: the protocol described here is experimental, has not been reviewed by any human adversary, and must not be used with real funds.*
 
 ---
 
@@ -27,7 +27,7 @@ MOR (Media Over Relays) is an attempt to give identity, money and agreements a s
 - **The right of exit.** An identity, its history and its agreements can always leave: to other homes, to other services, and to a successor protocol.
 - **Evolutionary design.** The core is expected to be succeeded. It is built to be a good ancestor, so that a successor can carry identities and agreements across.
 
-This paper is organised as follows. Section 2 describes how MOR was built. Section 3 gives the architecture, and sections 4 to 6 the three parts we consider most novel: identity that survives key theft, order without a clock, and money and agreements in the core. Section 7 states the claims and the threat model. Section 8 reports what was tested and what was only reasoned. Section 9 discusses related work, and section 10 lists open problems.
+This paper is organised as follows. Section 2 describes how MOR was built. Section 3 gives the architecture, including how MOR orders acts without a clock, and sections 4 and 5 the two parts we consider most novel: identity that survives key theft, and money and agreements in the core, ending with how a collective orders what its members do. Section 6 states the claims and the threat model. Section 7 reports what was tested and what was only reasoned. Section 8 discusses related work, and section 9 lists open problems.
 
 ## 2. How MOR was built
 
@@ -35,13 +35,13 @@ We state this first, because it bears on how much weight the rest of the paper c
 
 **The author.** MOR's concept, and every decision recorded in its specifications, are the author's. The author has no coding background and works from logic and scenarios. The design began in June 2026 as a set of extensions to Nostr, and became a separate protocol in September 2026.
 
-**The specifications and the code were drafted with AI.** The MIPs were drafted with Claude, an AI system made by Anthropic, acting as project lead: proposing wording and options, which the author accepted, rejected or redirected, one decision at a time. The reference implementation (a Rust core library, relays, a test harness, and TypeScript clients) was written by AI coding sessions working from the specifications, between 28 September and 5 October 2026. Every decision about a rule was taken by the author; the record of each, with the question it answered and the options weighed, is public (section 8).
+**The specifications and the code were drafted with AI.** The MIPs were drafted with Claude, an AI system made by Anthropic, acting as project lead: proposing wording and options, which the author accepted, rejected or redirected, one decision at a time. The reference implementation (a Rust core library, relays, a test harness, and TypeScript clients) was written by AI coding sessions working from the specifications, between 28 September and 5 October 2026. Every decision about a rule was taken by the author; the record of each, with the question it answered and the options weighed, is public (section 7).
 
-**Review so far.** The specifications have been through two adversarial reviews, both by AI systems: a fresh-eyes review (round 1) and a second, more aggressive review (round 2). Writing the code was itself treated as a review: whenever implementing a rule exposed a gap, a contradiction or a rule that could not be checked, work stopped and the author decided. Law was then stress-tested by invariant hunting over random histories (section 8).
+**Review so far.** The specifications have been through two adversarial reviews, both by AI systems: a fresh-eyes review (round 1) and a second, more aggressive review (round 2). Writing the code was itself treated as a review: whenever implementing a rule exposed a gap, a contradiction or a rule that could not be checked, work stopped and the author decided. Law was then stress-tested by invariant hunting over random histories (section 7).
 
 **What has not happened.** No human adversary has yet tried to break MOR. That review (round 3) is the purpose of publishing this draft.
 
-**Why say so.** A reader who distrusts AI-assisted work should know before investing time; a reader who does not should know what kind of evidence stands behind each claim. Section 8 separates what was run from what was only reasoned.
+**Why say so.** A reader who distrusts AI-assisted work should know before investing time; a reader who does not should know what kind of evidence stands behind each claim. Section 7 separates what was run from what was only reasoned.
 
 ## 3. Architecture
 
@@ -73,6 +73,10 @@ Where a MIP needs work it does not define (a payment rail, a media format, a way
 
 The admission test for the core is: *something belongs in the core only if it is part of the shared language every act is written in, or a guarantee no module may be able to break.*
 
+### 3.4 No clock
+
+MOR has no clock: timestamps are hints, never load-bearing. Two acts are ordered only where one cites the other, directly or through what it cites, the happened-before relation of Lamport [Lamport 1978]. Where one identity's act names another's, their chains knot, and order carries across through the knots. Agreements that need real deadlines name a **time reference**, such as a block height. So every rule is stated in terms of what cites what, never of when; section 5.4 shows what that costs where several people act as one.
+
 ## 4. Identity that survives key theft
 
 MOR's identity design derives from KERI [KERI], adapted to a relay network without a global ledger.
@@ -91,7 +95,7 @@ There is no third key: the chain key is the recovery key. Signature schemes are 
 
 ### 4.2 The identity chain and sequences
 
-The **identity chain** holds only key events: the genesis, rotations, and (since F132) chain signatures, which are described in section 6. It never branches, because each event reveals the committed chain key and commits the next one.
+The **identity chain** holds only key events: the genesis, rotations, and (since F132) chain signatures, which are described in section 5.4. It never branches, because each event reveals the committed chain key and commits the next one.
 
 Everyday acts form **sequences**, one or several per identity (for example one per device). Each everyday act names the previous act in its sequence, its position, and a **running summary** of the sequence: the root of a Merkle mountain range over the act ids up to the previous act. The summary lets anyone prove cheaply that an act lies on the line leading to a later act, without opening private acts.
 
@@ -109,33 +113,9 @@ If its homes are gone or hostile, an owner can leave with a **homeless rotation*
 
 Succession is declared in a rotation, naming a successor identity in MOR or in another protocol, and two-way **links** let an identity be confirmed from both sides.
 
-## 5. Order without a clock
+## 5. Money and agreements in the core
 
-### 5.1 No timestamps
-
-MOR has no clock. Timestamps are hints, never load-bearing. Every "before" is judged inside one named chain, by reference to a specific act. Two acts are ordered only where one cites the other, directly or through what it cites: the happened-before relation of Lamport [Lamport 1978]. Where one identity's act names another's, their chains knot, and order carries across identities through the knots. Agreements that need real deadlines name a **time reference**, such as a block height, and judge their deadlines on it.
-
-This has a cost: every rule must be stated in terms of what cites what, never in terms of when. A recurring finding during design (section 8) was a rule that silently assumed a clock; each was restated in terms of chains and citations, or turned into a stated cost.
-
-### 5.2 Collectives keep two chains
-
-A **collective** is one identity, with its own keys, whose members act for it under a founding agreement. Several members, on several devices, may sign in its name at once. Its history is therefore not one line but many, and the question "was this debt incurred before or after the members split up?" has no answer from timestamps.
-
-A collective keeps **two chains** (F127). Its **decisions** (founding, versions of its terms, members joining and leaving, grants and their revocations, a fork or closing) each cite the previous decision and the latest actions they saw. Its **actions** (debts, payments, publications, sales, and what its agents sign) each cite the previous actions and the decision they act under; where several devices sign at once, the next act joins their heads. An act within its signer's powers counts for the collective once it is **done**, that is, sealed to every member (or public) and on the chain, citing the latest act its signer knew. Before that, even signed, it is planning, and binds no one. The chain makes acts unmissable, not confirmed: every member can read what the collective does, and every later act must cite it.
-
-### 5.3 The ending wins
-
-The one place a race survives is where a decision that ends powers (a fork, a closing, a departure, a revocation) meets an action that uses those powers, and neither cites the other. No hash order can settle it. MOR settles it by rule: **the ending wins**, and the action is void. Otherwise anyone holding a power could prevent a fork or a closing from ever settling by racing it.
-
-The rule voids only acts the collective never took on (F131): an act that a counting act of the collective's own key cites is adopted, and no racing ending voids it. A counterparty is therefore safe once the collective has visibly cited its act, against everything but the deliberate collusion of an ending's signers, who could draw the ending's line before the citation on purpose. That residue cannot be closed without a clock; it is stated as a cost, and it stays visible, since the signed act, its citation, and the ending that leaves it out all remain on record.
-
-### 5.4 Endings ordered by their signers
-
-A complete fork or closing is **final**: a later ending of the same collective that names it counts for nothing. To order two endings that do not name each other, MOR uses the one line in an identity that never branches. Each member signs a fork or closing with a **chain signature**, an act on their own identity chain, signed with the chain key (F132). Any two endings signed by the same member are therefore ordered by that member's chain, whatever devices were used. A true tie remains only between endings that share no signer, and is settled by a third ending naming both. The cost is stated: signing an ending requires the offline key ceremony, as a rotation does.
-
-## 6. Money and agreements in the core
-
-### 6.1 Payments
+### 5.1 Payments
 
 Finance defines how a payment moves, never the rails. Whatever the rail, the receiver signs the same **settlement receipt**: who paid whom, how much, in what unit, under which agreement; only the rail's proof differs, checked by the rule of the rail Module the receipt names. A payer's **claim**, carrying the same proof, is evidence on equal footing. Where receipt and claim disagree, the disagreement is shown on the receiver and the greater amount counts. Hiding income therefore requires the payer's silence or collusion. One rail proof discharges one payment.
 
@@ -143,7 +123,7 @@ An identity's **payee pointers** form a versioned chain. The **flow** pointer ch
 
 An anonymous payer may commit a one-time key in the payment; a refund is owed only to whoever signs with that key, since a payment proof (such as a Lightning preimage) proves nothing about who paid.
 
-### 6.2 Agreements
+### 5.2 Agreements
 
 An **agreement** is terms plus one signature act from each party. It binds identities, not keys, so it survives a party's rotation. Three rules carry most of the weight:
 
@@ -157,15 +137,27 @@ A **deal** is an agreement that founds no collective; it changes only with every
 
 A **purchase** names the claim it pays under; a payment that names none is not a purchase and is owed back. Where the seller is a collective, a payment becomes a sale once the collective's actions chain records it.
 
-### 6.3 Collectives
+### 5.3 Collectives
 
-A collective holds its keys under its founding agreement's key grammar, which must always leave a way to rotate that needs fewer than every member. Its rules fall into three tiers: **constitutional** (who decides), changed only by the constitutional change rule, every party unless the founders agreed otherwise; **judicial** (who judges, by what), changed only with every member; and **operational**, changed by the clone rule or by the holders of an **area**, a share of the collective's work, such as its payments, held by some members.
+A **collective** is one identity, with its own keys, whose members act for it under a founding agreement. It holds its keys under its founding agreement's key grammar, which must always leave a way to rotate that needs fewer than every member. Its rules fall into three tiers: **constitutional** (who decides), changed only by the constitutional change rule, every party unless the founders agreed otherwise; **judicial** (who judges, by what), changed only with every member; and **operational**, changed by the clone rule or by the holders of an **area**, a share of the collective's work, such as its payments, held by some members.
 
 A member can always leave alone, giving up their voice and keeping their stake. A collective can end in four ways: a group splits off; a **fork**, in which each side founds a successor and the fork act hands out every obligation in the history it cites, or does not take effect; active abandonment; or dissolution by a closing act, which a collective cannot sign while it owes anything. A creditor may release a debt without full payment, by a release only the creditor signs. Members are never personal debtors of what the collective owes.
 
-## 7. Claims and threat model
+### 5.4 Order inside a collective
 
-### 7.1 Assumptions
+Several members of a collective, on several devices, may sign in its name at once. Its history is therefore not one line but many, and the question "was this debt incurred before or after the members split up?" has no answer from timestamps.
+
+**Two chains.** A collective keeps two hash-linked chains (F127). Its **decisions** (founding, versions of its terms, members joining and leaving, grants and their revocations, a fork or closing) each cite the previous decision and the latest actions they saw. Its **actions** (debts, payments, publications, sales, and what its agents sign) each cite the previous actions and the decision they act under; where several devices sign at once, the next act joins their heads. An act within its signer's powers counts for the collective once it is **done**, that is, sealed to every member (or public) and on the chain, citing the latest act its signer knew. Before that, even signed, it is planning, and binds no one. The chain makes acts unmissable, not confirmed: every member can read what the collective does, and every later act must cite it.
+
+**The ending wins.** The one place a race survives is where a decision that ends powers (a fork, a closing, a departure, a revocation) meets an action that uses those powers, and neither cites the other. No hash order can settle it. MOR settles it by rule: **the ending wins**, and the action is void. Otherwise anyone holding a power could prevent a fork or a closing from ever settling by racing it.
+
+The rule voids only acts the collective never took on (F131): an act that a counting act of the collective's own key cites is adopted, and no racing ending voids it. A counterparty is therefore safe once the collective has visibly cited its act, against everything but the deliberate collusion of an ending's signers, who could draw the ending's line before the citation on purpose. That residue cannot be closed without a clock; it is stated as a cost, and it stays visible, since the signed act, its citation, and the ending that leaves it out all remain on record.
+
+**Endings ordered by their signers.** A complete fork or closing is **final**: a later ending of the same collective that names it counts for nothing. To order two endings that do not name each other, MOR uses the one line in an identity that never branches. Each member signs a fork or closing with a **chain signature**, an act on their own identity chain, signed with the chain key (F132). Any two endings signed by the same member are therefore ordered by that member's chain, whatever devices were used. A true tie remains only between endings that share no signer, and is settled by a third ending naming both. The cost is stated: signing an ending requires the offline key ceremony, as a rotation does.
+
+## 6. Claims and threat model
+
+### 6.1 Assumptions
 
 - The cryptographic primitives (SHA-256, BIP-340 Schnorr, SLH-DSA, XChaCha20-Poly1305, X25519, ML-KEM-768) are secure.
 - An owner's chain key is kept offline and is not stolen. Where it is stolen, protection depends on the homes the owner chose (section 4.3).
@@ -173,11 +165,11 @@ A member can always leave alone, giving up their voice and keeping their stake. 
 - Relays may be malicious: they may withhold, reorder or refuse acts, but cannot forge signatures.
 - A minority of home operators may be malicious, within the home rule the owner declared.
 
-### 7.2 Claims
+### 6.2 Claims
 
 Each claim is marked **run**, where the reference implementation exercises it in the freeze test suite or the invariant tests, or **reasoned**, where it rests on argument only.
 
-1. **Two honest verifiers holding the same acts reach the same verdicts, whatever the order in which the acts arrived.** *Run* (order replays over random histories, section 8).
+1. **Two honest verifiers holding the same acts reach the same verdicts, whatever the order in which the acts arrived.** *Run* (order replays over random histories, section 7).
 2. **A stolen signing key cannot outlast the owner's next rotation:** the thief's acts outside the kept line are void, except those a third party relied on, which stay visible as disputes. *Run* (freeze scenario 1, step 5c; scenario 5, step 5b; invariants: 743 thief's signatures voided by a rotation in the final deal run).
 3. **A stolen home operator key cannot change any identity's chain, and cannot close a home.** *Run* (gauntlet).
 4. **An owner holding both keys can leave any home, including a hostile one.** *Run* (gauntlet).
@@ -190,18 +182,18 @@ Each claim is marked **run**, where the reference implementation exercises it in
 11. **Relays cannot read private content, and a sealed container does not reveal its sender.** *Reasoned*, resting on the encryption primitives; the formats are tested, the privacy is not measured.
 12. **Identities, agreements and history can move to a successor protocol.** *Reasoned* (the successor case study and the "MOR 2" section of the core).
 
-### 7.3 What MOR does not claim
+### 6.3 What MOR does not claim
 
 - **No enforcement.** The core never enforces an agreement; it makes default impossible to hide.
-- **No protection against collusion of an ending's signers** who draw a fork's line early on purpose (section 5.3): a stated, visible cost.
+- **No protection against collusion of an ending's signers** who draw a fork's line early on purpose (section 5.4): a stated, visible cost.
 - **No metadata privacy.** An addressed act shows its recipient; who talks to whom is visible to relays. That is left to relay operators and cMIPs.
 - **No protection for a lost chain key.** Back up both seeds.
 - **No proof of distinct persons.** The protocol cannot tell whether two identities are one person.
 - **Timing, load and denial of service** are relay-market concerns, outside the core.
 
-## 8. Evaluation
+## 7. Evaluation
 
-### 8.1 What exists
+### 7.1 What exists
 
 - **Specifications:** the core document and six MIPs (about 110,000 words), with a freeze test suite of eight end-to-end scenarios (a feature film, a song with two publishers, a label run as a collective, a democracy round, a pseudonymous journalist, a streaming service, a subscription service, and the specifications themselves).
 - **A findings log** of 132 entries, each recording a problem found while drafting, reviewing or building, the options considered, and the decision. It is the record of why each rule exists.
@@ -210,17 +202,17 @@ Each claim is marked **run**, where the reference implementation exercises it in
 
 The Rust workspace has 328 tests and the clients 113; all pass on the current version.
 
-### 8.2 Invariant hunting
+### 7.2 Invariant hunting
 
 The most informative testing came from writing Law's promises as invariants and checking them over randomly generated histories (property-based testing with shrinking). Generators produce collectives of two to five members on one to three devices each, and deals of two to four parties, with honest and adversarial behaviour: stolen keys, acts sealed to too few members, stale heads, concurrent forks and debts, revoked agents still signing, payouts disguised as receipts. Every failure is shrunk to its smallest example and kept as a permanent test.
 
 In its final run, the hunt judged 5,000 collective histories (231,838 acts), 5,000 deals (130,114 acts) and 10,000 collectives' stake clones, and replayed 1,500 collectives and 1,500 deals in three arrival orders each, querying the verifier while acts arrived. Over successive runs it found nine implementation errors (each a rule stated clearly but implemented wrongly, now fixed) and six flaws in the specification text itself, places where it allowed an outcome its own principles forbade (IT1 to IT3, U1, U4 and U4b), each decided by the author and written in (findings F131 and F132). The checker of each invariant reads history independently of the library under test, though both were written by AI from the same text; a verifier written from the text alone by someone who never read the library is listed as open work.
 
-### 8.3 What is only reasoned
+### 7.3 What is only reasoned
 
 Several freeze scenarios are marked reasoned: notably the unlinkability of ballots in the democracy round, which rests on a voting cMIP outside the core, and the move to a successor protocol. The technical parameters for freeze (the RISC-V verification profile and its test vectors, the pinned Unicode version, exact formats for parts of Finance, Law and Production) are not yet settled. No human adversarial review has taken place.
 
-## 9. Related work
+## 8. Related work
 
 **KERI** [KERI] is the source of MOR's identity design: pre-rotation (committing to the next key by its hash), key event logs, and witnesses that receipt key events. MOR adapts it to a relay network without a ledger: homes play the role of witnesses, receipts count only alongside the act they name, an identity's everyday acts form sequences kept by rotations, and the pre-committed key uses a hash-based post-quantum signature.
 
@@ -236,13 +228,13 @@ Several freeze scenarios are marked reasoned: notably the unlinkability of ballo
 
 **Lightning** [Lightning] is the first payment rail implemented; MOR treats rails as interchangeable Modules beneath one payment cMIP.
 
-## 10. Open problems
+## 9. Open problems
 
 Each of the following is, we believe, a self-contained piece of work, suitable for a thesis or a focused study, with a running system to test it on.
 
 1. **Ordering without a clock.** How much of what MOR leaves undetermined can knots between identities' chains settle? A formal account of what can and cannot be ordered, and of the costs MOR states where it cannot.
 2. **Identity security.** A formal model of rotation, receipts, home rules, audits and homeless rotations, and a proof (or a counterexample) that a stolen signing key, a stolen operator key, or a hostile home cannot take an identity.
-3. **Formal verification of Law.** The invariants of section 8.2 are tested over random histories; can they be proven, for instance by model checking small worlds exhaustively?
+3. **Formal verification of Law.** The invariants of section 7.2 are tested over random histories; can they be proven, for instance by model checking small worlds exhaustively?
 4. **An independent verifier.** A second implementation of any MIP, written from the text alone. Every disagreement with the reference implementation is either a bug or a rule that allows two readings.
 5. **Economics of legible greed.** Do visible fees and balanced splits produce competitive markets for services above the core? What do fee markets for relays, homes and split services look like?
 6. **Governance of collectives.** Are the four endings, the tiers and the tie rule adequate for how real cooperatives, labels and associations behave? This is a question for law and economics as much as for computer science.
