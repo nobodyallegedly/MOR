@@ -2992,13 +2992,19 @@ impl<'a> LawView<'a> {
         // its line. An act in the history it cites binds, as a debt the
         // fork hands out; so does a deal the original acknowledged before
         // it. Any other is missing from the ending's history, and void.
+        // An act the ending's history holds still answers to the other
+        // decisions ending its grant (rule 43): a revocation, or a departure
+        // emptying its area, that does not hold it voids it, unless the
+        // collective adopted it. Found by the Law invariants
+        // (`docs/law-invariants.md`, IC3).
         if let Some(e) = self.closed_by(&c)? {
-            if self.before_line(&col, y, &e.chain_act, &e.tips)
-                || acked(&|a| self.before_line(&col, a, &e.chain_act, &e.tips))?
-            {
+            if acked(&|a| self.before_line(&col, a, &e.chain_act, &e.tips))? {
                 return Ok(Backing::Binds { grant: gh.id });
             }
-            return not("the fork or closing that ended the grant does not cite it: an action missing from the ending's history is void (the tie rule, F127)");
+            if !self.before_line(&col, y, &e.chain_act, &e.tips) {
+                return not("the fork or closing that ended the grant does not cite it: an action missing from the ending's history is void (the tie rule, F127)");
+            }
+            ended = true;
         }
         // G1 (F128): a revocation removes the grant key, a decision ending
         // powers. An act its history holds was done within the grant's
@@ -3777,6 +3783,14 @@ impl<'a> LawView<'a> {
         if self.done(id)? != Some(Ok(())) {
             return Ok(Some(false));
         }
+        // An act in the collective's name binds it only where Law's consent
+        // counts (rules 35b, 36a, 44): it cites the decision it acts under,
+        // its area's holders signed it (the Finance lane, for a debt), and,
+        // signed with a grant key, its grant backs it. Found by the Law
+        // invariants (`docs/law-invariants.md`, IC1).
+        if !self.consent(id)?.counts() {
+            return Ok(Some(false));
+        }
         // The tie rule (F127): an obligation outside the history of the fork
         // or closing that ended its debtor was made with powers that were
         // ending, and is void.
@@ -4254,6 +4268,13 @@ impl<'a> LawView<'a> {
         if !matches!(self.closed_by(&o.debtor)?, Some(Closed { fork: Some(_), .. })) {
             return Ok(None);
         }
+        // An obligation that does not bind (outside the fork's history, the
+        // tie rule; not done; not the collective's by its own rules) is owed
+        // by nobody, whatever field 6 lists (rule 47a). Found by the Law
+        // invariants (`docs/law-invariants.md`, IC5).
+        if self.obligation_binds(obligation)? != Some(true) {
+            return Ok(Some(vec![]));
+        }
         let mut out: Vec<Hash> = vec![];
         let mut todo = vec![(o.debtor, 0u32)];
         while let Some((who, depth)) = todo.pop() {
@@ -4276,20 +4297,32 @@ impl<'a> LawView<'a> {
     }
 
     /// What receipts held pay toward an obligation: the sum of valid
-    /// receipts fulfilling it.
+    /// receipts fulfilling it that end at its creditor, received and signed
+    /// by the creditor the obligation names (Finance rule 7: routes ending
+    /// at the creditor's payee pointer). A receipt anyone else signs naming
+    /// the debt, the debtor's own among them, pays nothing toward it. Found
+    /// by the Law invariants (`docs/law-invariants.md`, IC2).
     pub fn paid_toward(&self, obligation: &Hash) -> u64 {
         use crate::finance::Payload as Fin;
+        let creditor = match self.v.get(obligation).map(|o| Fin::decode(o.inside.type_, &o.inside.payload)) {
+            Some(Ok(Fin::Obligation(o))) => o.creditor,
+            _ => return 0,
+        };
         self.v
             .held_acts()
             .filter_map(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
                 Ok(Fin::Receipt(rc))
-                    if r.inside.spec == self.mips.finance && &rc.fulfils == obligation && self.valid(&r.id) =>
+                    if r.inside.spec == self.mips.finance
+                        && &rc.fulfils == obligation
+                        && rc.payee == creditor
+                        && r.act.outside.signer == Some(creditor)
+                        && self.valid(&r.id) =>
                 {
                     Some(rc.amount.value)
                 }
                 _ => None,
             })
-            .sum()
+            .fold(0u64, u64::saturating_add)
     }
 
     /// A creditor's release, judged (Finance type 4, F126; Law rule 47b):
@@ -4792,6 +4825,10 @@ impl<'a> LawView<'a> {
         let mine = proof(x);
         let mut candidates: Vec<&Held> = vec![x];
         candidates.extend(self.v.acknowledgements(id));
+        // The payment is the rail proof's (one proof, one payment): an act
+        // acknowledging any receipt for it records it, so that one payment
+        // is never a purchase by one receipt and refunded by another. Found
+        // by the Law invariants (`docs/law-invariants.md`, IC4).
         for h in self.v.held_acts() {
             if h.id != *id
                 && h.inside.spec == self.mips.finance
@@ -4799,6 +4836,7 @@ impl<'a> LawView<'a> {
                 && mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m))
             {
                 candidates.push(h);
+                candidates.extend(self.v.acknowledgements(&h.id));
             }
         }
         let claim_here = self.claim_version(&p.line, work)?;
@@ -5023,10 +5061,13 @@ impl<'a> LawView<'a> {
             return Err(LawError::Check("not a split"));
         }
         let s = Split::decode(&h.inside.payload)?;
-        let total: u64 = s.payouts.iter().map(|p| p.amount).sum();
+        // Summed wide (rule 21): payouts that overflow 64 bits never sum to
+        // the amount received, and never panic the verifier. Found by the Law
+        // invariants (`docs/law-invariants.md`, IC7).
+        let total: u128 = s.payouts.iter().map(|p| p.amount as u128).sum();
         let sums = self.v.get(&s.receipt).and_then(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
-            Ok(Fin::Receipt(x)) => Some(x.amount.value == total),
-            Ok(Fin::Claim(x)) => Some(x.amount.value == total),
+            Ok(Fin::Receipt(x)) => Some(x.amount.value as u128 == total),
+            Ok(Fin::Claim(x)) => Some(x.amount.value as u128 == total),
             _ => None,
         });
         let fees = s

@@ -2788,7 +2788,11 @@ fn obligation(lab: &mut Lab, creditor: &str, value: u64) -> Hash {
         agreement: None,
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mips().finance, 1, o.to_map(), None, None);
-    lab.w.add(&a)
+    let x = lab.w.add(&a);
+    // A debt is a Finance act: the Finance lane's holder signs it, or it is
+    // not the label's (rule 36a; `docs/law-invariants.md`, IC1).
+    lab.sign(BEN, &x);
+    x
 }
 
 /// A debt of the label to a creditor that is an identity, so that it can
@@ -2802,7 +2806,9 @@ fn obligation_to(lab: &mut Lab, creditor: Hash, value: u64) -> Hash {
         agreement: None,
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mips().finance, 1, o.to_map(), None, None);
-    lab.w.add(&a)
+    let x = lab.w.add(&a);
+    lab.sign(BEN, &x);
+    x
 }
 
 /// A receipt paying `value` toward an obligation, signed by its payee.
@@ -3309,7 +3315,10 @@ fn a_collective_forks() {
     let a = lab.w.everyday_act(&mut lab.c[0], spec("a deal cMIP"), 1, vec![], Some(o), None);
     lab.w.add(&a);
     let d1 = obligation(&mut lab, "a supplier", 900);
-    let d2 = obligation(&mut lab, "another supplier", 300);
+    // The creditor of d2 is an identity, so that its own receipt can
+    // discharge it (Finance rule 7; `docs/law-invariants.md`, IC2).
+    let mut supplier = lab.w.genesis("another supplier's till", vec![own_home()], None, None);
+    let d2 = obligation_to(&mut lab, supplier.id, 300);
     let mut hidden = lab.w.genesis("a creditor kept out of sight", vec![own_home()], None, None);
     let d3 = obligation_to(&mut lab, hidden.id, 50);
     // Each side founds its successor first (N4); the departed holder keeps
@@ -3448,7 +3457,6 @@ fn a_collective_forks() {
     assert!(e.why.as_deref().is_some_and(|w| w.contains("D5")), "{:?}", e.why);
     drop(v);
     // Side B pays d2 in full; d3's creditor releases it, taking nothing.
-    let mut supplier = lab.w.genesis("another supplier's till", vec![own_home()], None, None);
     receipt(&mut lab.w, &mut supplier, sb.id, d2, 300);
     debt_release(&mut lab.w, &mut hidden, d3, vec![]);
     let v = lab.view();
@@ -3489,7 +3497,9 @@ fn a_fork_hands_out_its_whole_history() {
             agreement: None,
         });
         let a = lab.w.everyday_act(&mut lab.c[d], mips().finance, 1, o.to_map(), None, None);
-        lab.w.add(&a)
+        let x = lab.w.add(&a);
+        lab.sign(BEN, &x);
+        x
     };
     let d5 = debt_on(&mut lab, 1, "a creditor whose debt was joined");
     let o = lab.chain(&[d5]);
@@ -4087,7 +4097,9 @@ fn an_act_in_the_collectives_name_is_done_once_sealed_wherever_held() {
             pointer: spec("its pointer"),
             agreement: None,
         });
-        lab.w.private_act(&mut lab.c[0], mips().finance, 1, o.to_map(), None, to)
+        let x = lab.w.private_act(&mut lab.c[0], mips().finance, 1, o.to_map(), None, to);
+        lab.sign(BEN, &x);
+        x
     };
     // Sealed to the creditor alone: not done.
     let secret = debt(&mut lab, vec![creditor.id]);
@@ -4308,6 +4320,7 @@ fn the_ending_wins() {
     });
     let a = lab.w.everyday_act(&mut lab.c[1], mips().finance, 1, o.to_map(), None, None);
     let d = lab.w.add(&a);
+    lab.sign(BEN, &d);
     assert_eq!(lab.view().obligation_binds(&d).unwrap(), Some(true), "done: it binds, for now");
     let closing = law::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])] };
     let cl = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, closing.to_map(), obj(f));
@@ -4332,6 +4345,7 @@ fn the_ending_wins() {
     });
     let a = lab2.w.everyday_act(&mut lab2.c[1], mips().finance, 1, o.to_map(), None, None);
     let d2 = lab2.w.add(&a);
+    lab2.sign(BEN, &d2);
     let closing = law::Closing { agreement: f2, collective: label2, chain_act: lab2.c[1].binding, tips: vec![tip(&lab2.c[1])] };
     let cl = law_act(&mut lab2.w, &mut lab2.m[ANA], law::types::CLOSING, closing.to_map(), obj(f2));
     lab2.sign(BEN, &cl);

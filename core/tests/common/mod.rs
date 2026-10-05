@@ -159,6 +159,10 @@ pub struct Rot {
 pub struct World {
     pub v: Verifier,
     counter: u64,
+    /// Every act held, in the order it was added, with the content key a
+    /// recipient opens it with: so a history can be replayed into a fresh
+    /// verifier in another order (the Law invariants).
+    pub log: Vec<(Act, Option<mor_core::lock::ContentKey>)>,
 }
 
 impl Default for World {
@@ -172,6 +176,7 @@ impl World {
         World {
             v: Verifier::with_mips(identity_spec(), finance_spec(), law_spec()),
             counter: 0,
+            log: vec![],
         }
     }
 
@@ -192,6 +197,7 @@ impl World {
                 "the two SLH-DSA implementations disagree"
             );
         }
+        self.log.push((a.clone(), None));
         self.v.add(a.clone()).unwrap()
     }
 
@@ -446,6 +452,7 @@ impl World {
             |id| sign.sign(id, &[0; 32]),
         );
         p.seq.push(a.id());
+        self.log.push((a.clone(), Some(key)));
         self.v.add_with_key(a, Some(&key)).unwrap()
     }
 

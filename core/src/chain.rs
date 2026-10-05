@@ -357,15 +357,23 @@ impl Verifier {
             }
             return Ok(id);
         }
+        // Each index is kept in act-id order, never in arrival order, so that
+        // nothing read from it depends on the order acts were delivered in.
+        // Found by the Law invariants (`docs/law-invariants.md`, IC6).
+        fn put(v: &mut Vec<Hash>, id: Hash) {
+            if let Err(i) = v.binary_search(&id) {
+                v.insert(i, id);
+            }
+        }
         let (act, inside) = (&held.act, &held.inside);
         if inside.spec == self.identity_spec {
-            self.by_type.entry(inside.type_).or_default().push(id);
+            put(self.by_type.entry(inside.type_).or_default(), id);
         }
         if let Some(s) = act.outside.signer {
-            self.by_signer.entry(s).or_default().push(id);
+            put(self.by_signer.entry(s).or_default(), id);
         }
         for a in inside.acks.iter().flatten() {
-            self.acked_by.entry(*a).or_default().push(id);
+            put(self.acked_by.entry(*a).or_default(), id);
         }
         self.acts.insert(id, held);
         self.changed();
@@ -413,7 +421,7 @@ impl Verifier {
     }
 
     /// The acts this verifier holds whose `acks` name `id` (Envelope), in
-    /// the order they were added. Law places a member's signature at an act
+    /// act-id order. Law places a member's signature at an act
     /// of the collective acknowledging it ("Made before, made after").
     /// Only acts that may carry acknowledgements are returned (F110).
     pub fn acknowledgements(&self, id: &Hash) -> impl Iterator<Item = &Held> {

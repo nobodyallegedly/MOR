@@ -1349,7 +1349,7 @@ impl Terms {
                 ));
             }
             if let Some(st) = &s.stakes {
-                if st.iter().map(|(_, n)| n).sum::<u64>() != MILLION {
+                if st.iter().map(|(_, n)| *n as u128).sum::<u128>() != MILLION as u128 {
                     return Err(LawError::Check(
                         "stake successors' shares do not sum to 1,000,000",
                     ));
@@ -1580,11 +1580,14 @@ impl Terms {
         if objects.iter().enumerate().any(|(i, o)| objects[..i].contains(o)) {
             return Err(LawError::Check("two stakes on one object"));
         }
+        // Shares are summed wide: summed in 64 bits, shares near the top
+        // could wrap round to exactly 1,000,000 and pass (found by the Law
+        // invariants, `docs/law-invariants.md`, IC7).
         for s in st {
             let who: Vec<Who> = s.holders.iter().map(|(h, _)| *h).collect();
             if who.iter().enumerate().any(|(i, o)| who[..i].contains(o))
                 || s.holders.iter().any(|(_, n)| *n == 0)
-                || s.holders.iter().map(|(_, n)| n).sum::<u64>() != MILLION
+                || s.holders.iter().map(|(_, n)| *n as u128).sum::<u128>() != MILLION as u128
             {
                 return Err(LawError::Check(
                     "a stake's holders are distinct, each share above zero, summing to 1,000,000 (rule 15a)",
@@ -2594,7 +2597,7 @@ impl Fork {
             return Err(LawError::Check("each side names its own successor, never the original (N4)"));
         }
         for sh in &x.shares {
-            if sh.shares.len() != x.sides.len() || sh.shares.iter().sum::<u64>() != MILLION {
+            if sh.shares.len() != x.sides.len() || sh.shares.iter().map(|n| *n as u128).sum::<u128>() != MILLION as u128 {
                 return Err(LawError::Check(
                     "a fork's shares name one share per side, in millionths, summing to 1,000,000 (F121)",
                 ));
