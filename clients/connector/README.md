@@ -80,6 +80,12 @@ Drafts going to the desk, sent back, reworked, approved and accepted by a relay:
    cd clients/connector && npm install && npm run add-to-claude
    ```
    It installs the connector in `~/Library/Application Support/MOR/connector/` (see above why) and says so. Run it again after each pull.
+
+   Once, check the saved copy of Claude's settings by eye. It is meant to be the file as it was before MOR was ever added, and it is never overwritten, so a copy made by an earlier, faulty run stays wrong. In Terminal:
+   ```
+   cat ~/Library/Application\ Support/Claude/claude_desktop_config.json.before-mor
+   ```
+   Under `"mcpServers"` there should be no `"mor"` entry. If there is one, the copy was made after MOR was first added (as on the author's Mac, by a run before 2 October 2026) and is not the original: should you ever put Claude's settings back from it, take that `"mor"` entry out first. If the file does not exist, Claude had no settings file before MOR.
 2. Quit Claude completely and open it again. Under Settings, Developer, "mor" is listed, starting from `~/Library/Application Support/MOR/connector/mor-connector.sh`.
 3. Ask Claude: "Read this MOR link: https://reader.dubsar.org/#…", or "Is release … a release?", or "Who signed agreement …?". Claude asks before it uses a tool the first time.
 4. To act: "Prepare a post for Machine, allegedly, saying …". Claude shows what signing means and the draft's digest. In MOR Identities the draft appears by itself within a few seconds, with the same digest; approve, decline, or send it back with a note. Then tell Claude "see what the desk said".

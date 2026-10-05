@@ -13,6 +13,7 @@ import { Access, Refusal } from '../../collective/src/access.ts';
 import { Desk } from './desk.ts';
 import { Store } from './store.ts';
 import { STYLE } from './page/view.ts';
+import { version } from './version.ts';
 
 /** What the browser's key signs, before the request body. */
 export const DOMAIN = 'MOR desk, version 1\n';
@@ -50,6 +51,8 @@ export interface RunFile {
   port: number;
   pid: number;
   secret: string;
+  /** The fingerprint of the code it was started from (`src/version.ts`); absent before 4 October 2026. */
+  version?: string;
 }
 
 export interface Running {
@@ -92,6 +95,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string }
   const script = await pageScript();
   const index = readFileSync(here('static/index.html'), 'utf8');
   const secret = randomBytes(32).toString('hex');
+  const built = await version();
   let port = opts.port;
 
   const api = async (op: string, a: Record<string, unknown>, key: string): Promise<unknown> => {
@@ -159,7 +163,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string }
         if (url.pathname === '/') return send(res, 200, 'text/html; charset=utf-8', index);
         if (url.pathname === '/app.js') return send(res, 200, 'text/javascript; charset=utf-8', script);
         if (url.pathname === '/app.css') return send(res, 200, 'text/css; charset=utf-8', STYLE);
-        if (url.pathname === '/hello') return json(res, 200, { app: access.app, time: Math.floor(Date.now() / 1000) });
+        if (url.pathname === '/hello') return json(res, 200, { app: access.app, time: Math.floor(Date.now() / 1000), pid: process.pid, version: built });
         return send(res, 404, 'text/plain', 'not found');
       }
       if (req.method === 'POST' && url.pathname === '/local/code') {
@@ -189,7 +193,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string }
   const a = server.address();
   port = typeof a === 'object' && a ? a.port : opts.port;
   const run = store.path('run.json');
-  writeFileSync(`${run}.tmp`, JSON.stringify({ port, pid: process.pid, secret } satisfies RunFile) + '\n', { mode: 0o600 });
+  writeFileSync(`${run}.tmp`, JSON.stringify({ port, pid: process.pid, secret, version: built } satisfies RunFile) + '\n', { mode: 0o600 });
   renameSync(`${run}.tmp`, run);
   return {
     server,

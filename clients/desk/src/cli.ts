@@ -9,6 +9,7 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve, type RunFile } from './server.ts';
+import { version } from './version.ts';
 
 const HELP = `mor-desk: MOR Identities, the owner's desk: a client with no command line for several test identities.
 TEST IDENTITIES ONLY: every key is held in software, in its folder.
@@ -29,13 +30,37 @@ function parse(argv: string[]) {
   return o;
 }
 
-async function hello(port: number): Promise<boolean> {
+/** What a running program says of itself; `pid` and `version` are absent from programs started before 4 October 2026. */
+interface Hello {
+  app: string;
+  pid?: number;
+  version?: string;
+}
+
+async function hello(port: number): Promise<Hello | null> {
   try {
     const r = await fetch(`http://127.0.0.1:${port}/hello`);
-    return r.ok;
+    return r.ok ? ((await r.json()) as Hello) : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+/**
+ * Stop a program left running from an older version of the code (started
+ * before a pull), and wait until it has gone, so a new one can take its port.
+ */
+async function stopOlder(run: RunFile, said: Hello) {
+  try {
+    process.kill(said.pid ?? run.pid, 'SIGTERM');
+  } catch {
+    // already gone
+  }
+  for (let i = 0; i < 100; i++) {
+    if (!(await hello(run.port))) return;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error(`the program left running from an older version (process ${said.pid ?? run.pid}) did not stop; quit it, or restart the computer, and open again`);
 }
 
 function runFile(dir: string): RunFile | null {
@@ -58,7 +83,14 @@ function browse(url: string) {
 
 async function open(dir: string, port: number) {
   let run = runFile(dir);
-  if (!run || !(await hello(run.port))) {
+  const said = run ? await hello(run.port) : null;
+  if (run && said && said.version !== (await version())) {
+    // Started before the code on disk changed: what it serves is older.
+    console.log('restarting the program, left running from an older version');
+    await stopOlder(run, said);
+    run = null;
+  }
+  if (!run || !said) {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const log = openSync(join(dir, 'desk.log'), 'a', 0o600);
     const child = spawn(process.execPath, ['--import', 'tsx', fileURLToPath(import.meta.url), 'run', '--dir', dir, '--port', String(port)], {
