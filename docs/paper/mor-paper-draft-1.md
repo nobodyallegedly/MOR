@@ -252,7 +252,7 @@ Each of the following is, we believe, a self-contained piece of work, suitable f
 
 ## Availability
 
-The specifications, the findings log, the reference implementation and the tests are in the MOR repository. Contact: nobodyallegedly@proton.me.
+The specifications, the findings log, the reference implementation and the tests are in the MOR repository. The texts, this paper included, are licensed CC BY 4.0; the code MIT or Apache 2.0. Contact: nobodyallegedly@proton.me.
 
 ## References
 

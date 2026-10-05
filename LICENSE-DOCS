@@ -1,0 +1,11 @@
+The specifications and documents of MOR (the folders spec/, cmips/, modules/ and docs/,
+including the paper in docs/paper/) are licensed under the Creative Commons
+Attribution 4.0 International License (CC BY 4.0).
+
+You may copy, share, translate, adapt and build on them, for any purpose, including
+commercially, provided you give appropriate credit to "Nobody, allegedly", link to
+the license, and indicate if changes were made.
+
+Full legal code: https://creativecommons.org/licenses/by/4.0/legalcode
+
+The code in this repository is licensed separately: see LICENSE-MIT and LICENSE-APACHE.

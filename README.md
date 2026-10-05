@@ -75,6 +75,6 @@ This repository is the workshop, not the record. Each release and each specifica
 
 The code is licensed under either of the [MIT license](LICENSE-MIT) or the [Apache License 2.0](LICENSE-APACHE), at your option. Unless you state otherwise, any contribution you submit is licensed the same way.
 
-The license of the specifications and documents (`spec/`, `cmips/`, `modules/`, `docs/`) is still to be decided.
+The specifications and documents (`spec/`, `cmips/`, `modules/`, `docs/`) are licensed under [Creative Commons Attribution 4.0](LICENSE-DOCS) (CC BY 4.0): use, adapt and build on them freely, crediting Nobody, allegedly.
 
 *Author: Nobody, allegedly.*
