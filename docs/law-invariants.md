@@ -271,3 +271,99 @@ The large collective run was repeated until it passed: the first round stopped o
 **All tests.** Every Rust test in the workspace: 323 passed, none failed (the 321 there before, and IC8 and IC9; the four IT tests changed in place). The nine TypeScript clients' 113 tests, against WebAssembly bindings rebuilt from this branch's final code: all passed (barebone 9, collective 20, connector 12, desk 8, genesis 14, longform 15, manage 7, reader 16, repo 12).
 
 **Open for Nobody, allegedly, in order:** flaw U1 (a later ending not naming the first); readings U2 (a third ending naming both settles a race) and U3 ("cites" as a line reads it), and the three readings in Law draft 10, "Open in this draft", and the IC9 reading (a racing departure set aside); then approval of the revised set (Law draft 10, Finance 6, core v21, suite v21; the payment cMIP as an instrument). Nothing is merged.
+
+## F132 written in
+
+*5 October 2026, same branch, main merged in first. Nobody, allegedly, answered U1 to U3 and the readings (findings log, F132); writing U1 in raised one question and two flaws, each answered the same day and recorded under F132: U1 refined (an ending signature is an act on the member's identity chain), U4 (an old proposal finished late) and U4b (found by the large run: a drafter names the endings they signed). This section writes them all into Identity draft 11, Law draft 10, Finance draft 6, core v21 and suite v21, builds them in the core library, the homes, the WebAssembly bindings and the collective client, and runs everything again. The approved set is revised in place, so these changes need Nobody, allegedly, to approve them again.*
+
+### In plain words
+
+**What changed.**
+
+- **Members sign forks and closings with their safety key (U1).** A member's signature on a fork or a closing is now an act on their own identity chain: the one line of an identity that never branches, which only the safety key adds to. It is a new kind of Identity act, a *chain signature*: it reveals the safety key, commits the next one, names the fork or closing it signs, and changes nothing else (same everyday key, same homes; no act judged). It counts the way a rotation counts: once the member's homes hold it. Because a member's chain is one line, any two of their ending signatures are in order, whatever phone or laptop they used. The cost is stated: every member signing an ending goes through the safety-key ceremony, so forks and closings are slow and heavy, as rotations are. The old signature acts (Law type 1) no longer count on an ending.
+- **A member who signed both endings orders them (U1).** If Ana signed the first fork and, later on her chain, a second one, the second counts as naming the first, even if its own text names nothing. So it counts for nothing, and the first stays final. A true tie is left only between endings that share no signer.
+- **A tie is settled by a third ending naming both (U2, confirmed as built).**
+- **"Cites" means "holds in its history" (U3), and the other readings, confirmed**: a departure racing the collective's citation takes no voice off the cited act (IC9); a push payment whose receipts name different claims stays unrecorded until the rail's answer is held; one push payment's holders' receipts share its proof without a batch.
+- **Once you signed what replaced a proposal, you cannot finish the proposal (U4).** Ben drafts a closing and signs it; Ana does not. They close by a second closing naming the first. If Ana later signs the first, her signature counts for nothing, and the second stays final. Without this, Ana alone could swap or revive an ended collective by finishing an old proposal.
+- **Whoever drafts an ending names every ending they signed before (U4b).** Ben drafts a fork and signs it; Ana does not. If Ben then drafts a second fork leaving the first out, that second fork is no fork. Without this rule, Ana's late signature on the first would leave each fork naming the other through their two chains, and neither would count, even where every member must sign. Unlike "every ending a client holds", this can be checked on the drafter's own chain.
+
+**What remains, stated.** Where the drafter of a newer ending never signed an older proposal and leaves it unnamed (they never saw it, a true race; or they bypassed their client, which names every ending it holds), the older proposal can still be finished late. It then counts as the earlier ending, or the two tie until a third names both. Under a threshold, members who signed neither can do it with others' earlier signatures. The late signatures stay visible on their signers' own chains.
+
+**What writing it in found, all answered by Nobody, allegedly, the same day:**
+
+- **U1 refined (question):** a person keeps one sequence per device, and two devices are not ordered until a rotation. So "a signer's own chain" did not order a member who signed two endings from two devices. *Smallest example:* Ana signs the first fork on her phone and the second on her laptop: neither signature is "after" the other. Answer: the ending signature goes on the identity chain, with the safety key. Then asked how: as a full rotation, or as a new act. Answer: a new act, the chain signature (Identity type 16).
+- **U4 (flaw, found reasoning about the decision, then confirmed by a test against the code as it stood):** an old half-signed ending finished after a newer one was complete. As built before this session, the old one then counted and the newer one for nothing; with U1 alone, each named the other and neither counted. Answer: U4, above.
+- **U4b (flaw, TEXT, found by the 5,000-case run, shrunk to three steps; the code and the oracle agreed):** a newer ending leaving out a proposal its own drafter had signed, then the proposal finished late: a tie even under the every-member rule. The same signatures arise from a true race, so no reading of the chains can tell them apart. Answer: U4b, above.
+
+The rerun after U4b then met the cost named in the answer (a drafter who never signed the proposal) under the every-member rule, where the text had said "under a threshold". No new choice was needed: the stated cost was made exact (above), and the test counts such stories instead of failing them.
+
+**What the large runs found.** Besides U4b, nothing: no CODE failure. Every property passed on the final code.
+
+### Precisely
+
+**Rule text.**
+
+| Document | Where | Change |
+| --- | --- | --- |
+| Identity draft 11 | header; Definitions (safety key, identity chain, chain signature); types table; "Chain signature (type 16)", new; verification "Chain signature", new; everyday check 2; receipt check 1; "Which rotation counts"; rules 2, 8a, 11; "Status of an act after a rotation"; freeze scenarios; decided 17 | the chain signature: `{0 previous chain act, 1 position, 2 next safety commitment, 3 the act it signs}`, signed by the revealed safety key; sets no key, judges no act, never homeless; a binding never names it; counts at its position as a rotation does; cost stated |
+| Law draft 10 | header | revised in place an eleventh time, for F132 |
+| | "Fork (type 19)" | every member it lists, its signer included, signs by a chain signature, a signature act or the fork act itself being no member's signature; a successor's signature for its debts stays a signature act (reading); complete only with chain signatures that count and are not void; an ending names another in its `objects` or through a signer's chain (U1); a true tie only between endings sharing no signer, settled by a third (U2, confirmed); U4; U4b; the stated cost; client conformance (no ending another held ending names, none once a complete one is held); U4 judged in two steps (reading) |
+| | "Closing (type 20)" | the same |
+| | "Made before, made after", 7; rule 32a | U3, the IC9 reading and the two payment readings confirmed |
+| | Decided, Freeze scenarios, Open | F132; two scenarios; three readings taken writing F132 in, to confirm; U1 to U3 moved to answered |
+| Finance draft 6 | header, rule 8a | the reading on one push payment's holders' receipts confirmed |
+| Core v21 | header; the fork proper; checklist | members sign endings with their safety keys; U1, U2, U4, U4b in short; U1 to U3 answered, three readings open |
+| Suite v21 | header; 3.9w; new 3.9aa, 3.9ab, 3.9ac; "Passes if" | the chain signature; a signer's chain orders two endings, a true tie settled; an old proposal finished late, U4b; all run |
+| Payment cMIP draft 2 | — | unchanged since F131 |
+
+**Readings taken writing F132 in, to confirm** (Law draft 10, "Open in this draft"): the ending act's own signer signs on their chain too (the act itself is the proposal); a successor's signature for its debts stays a signature act (two endings sharing a successor share that side's members, whose chains order them); U4 judged in two steps, first by `objects`, then, among the signatures left, through signers' chains, so that no signature both judges and is judged (in one step, a single late signature could void another member's honest earlier one).
+
+**Code.**
+
+| | Where | Change |
+| --- | --- | --- |
+| Chain signature | `core/src/identity.rs` (`ChainSignature`, type 16, `check_chain_signature_shape`, `ChainState::sign`); `core/src/chain.rs` | a candidate at its position beside rotations, counted by the same tally; the state it leaves changes only the safety commitment; acts are judged by the next counting *rotation* (`judging`), never a chain signature; a binding naming a chain signature binds nothing (`bound`, `status`); an escape endorsement may be bound to the act that set the key (`sets_key`) |
+| Homes | `relay/src/node.rs` (`plan_chain_signature`, `chain_states`, rule 2, policy) | a home holds and receipts a chain signature at its position, refusing a second act at a position it holds, as for rotations; the operator's approval for a strict identity stays a rotation's alone |
+| Ending signatures, U1, U4, U4b | `core/src/law/view.rs` (`EndingSigs`, `ending_sigs`, `ending_signed`, `ending_knows`, `ending_objects`; `fork`, `closing`) | a member's signature on an ending is their earliest counting chain signature naming it; U4b first (an ending whose drafter signed earlier an ending it does not name is no ending, its signatures left out); then U4 in two steps; naming is `objects` plus signers' chains; `closed_by` as before over that naming |
+| WebAssembly | `wasm/src/lib.rs` (`makeChainSignature`) | a chain signature made from a test safety key |
+| Clients | `clients/genesis/src/identity.ts` (`chainSign`; a rotation's predecessor is the latest chain act); `clients/collective/src/actions.ts` | every member signs a fork or closing by a chain signature sent to their homes; the ending gate refuses a further ending once one is complete (U4, client conformance) |
+
+**Tests.** New named tests: `a_chain_signature_takes_a_position_and_changes_no_key` (`core/tests/chain.rs`), `u1_a_signers_chain_orders_two_endings`, `u2_a_third_ending_naming_both_settles_a_tie`, `u4_an_old_proposal_finished_late_counts_for_nothing`, `u4b_a_drafter_names_the_endings_they_signed` (the last checked to fail with U4b switched off; it keeps both the run's first story and the stated-cost story the rerun met). `it1_a_complete_ending_is_final` keeps its first part; its two-forks race moved to the U1 and U2 tests, since two forks of a two-member collective always share signers now.
+
+Existing tests changed, with the reason: in `core/tests/law_collective.rs`, every member's signature on a fork or closing is a chain signature (`Lab::end`), the drafter's included (U1); every fork or closing names, in its `objects`, the earlier endings of its collective (`ending_obj`, as a conforming client does; U4b makes it necessary where the drafter signed them); in `what_is_not_a_fork`, the second complete fork, signed by the same members, now names the first and the first stays final (before: concurrent, neither counting). In `core/tests/chain.rs`, a rotation's predecessor is the person's latest chain act (`Person::tip`). No other assertion changed.
+
+**Invariants.**
+
+| Code | Before F132 | Now |
+| --- | --- | --- |
+| ENDING-UNDONE | a failure where every later complete ending names the first in `objects` | a failure wherever the later ending names the first in `objects` or through a shared signer's chain: so wherever the two share a signer |
+| ENDING-RACE | a later ending naming none of the earlier ones (U1): counted | only endings sharing no signer and naming each other in no way (a true tie): counted |
+| ENDING-LATE | — | U4's stated cost: an old proposal the complete ending's drafter never signed nor named, finished late: counted |
+| ENDING-SIGNATURES | — | every member's signature on every ending counts in the library exactly as the oracle's own reading of U1, U4 and U4b says |
+| ENDING-NO-ENDING | — | the library's endings that are no ending are exactly the oracle's (U4b) |
+
+Generators: every member signs an ending by a chain signature, from a random one of their devices, which then all carry on from it; a closing under a threshold is sometimes signed by just enough members from a random start, so two closings may share no signer; a new step, LateSign, has a member listed on an earlier ending who has not signed it sign it now. The oracle reads U1, U4 and U4b from the generator's own order of the members' ending signatures and from the acts' `objects`, never from the library.
+
+**Large runs** (debug build, on the final code; the collective order replay on the code with U4b, before the oracle's stated-cost reading was made exact, which it does not use):
+
+| Property | Cases | Acts judged | Result |
+| --- | --- | --- | --- |
+| collective_promises_hold | 5,000 | 231,838 | passed (1,060 s) |
+| collective_verdicts_do_not_depend_on_order | 1,500, each delivered 3 ways | — | passed (463 s) |
+| deal_promises_hold | 5,000 | 130,114 | passed (333 s) |
+| deal_verdicts_do_not_depend_on_order | 1,500, each delivered 3 ways | — | passed (167 s) |
+| collective_stakes_move_only_with_their_holders | 10,000 | — | passed (174 s) |
+
+Coverage in the large collective run: 19,496 ending signatures on members' chains; 2,056 complete forks and 615 complete closings; 2,046 collectives ended; 1,172 later endings naming the first (each counting for nothing), 17 of them through a signer's chain alone; 635 endings that are no ending (U4b); 169 late signatures, 125 counting and 44 void (U4); 4,409 debts binding, 2,092 revocations counting, 176 areas emptied, 1,215 grant-key acts binding (460 adopted by a citation) and 3,920 void, 1,084 purchases and 628 refunds. Stated costs and open questions met, not failures: ENDING-RACE (a true tie) in 1 story, ENDING-LATE in none this run (met by the earlier rerun, the story now kept in `u4b_…`), SAFE-STALE-LINE (IT2b) in 38.
+
+Coverage in the large deal run: 5,549 versions in force and 5,123 drafts, 743 thief's signatures voided by a rotation, 2,980 service receipts backed and 4,399 refused, 2,709 purchases, 2,357 refunds, 4,811 unrecorded payments and 686 wrong receipts, 3,839 splits of which 1,437 broke their plan as the text says they should.
+
+The large collective run was run three times: the first round stopped on U4b (TEXT, three steps once shrunk: a fork Ana leaves unsigned, a second fork by its drafter Ben leaving it out, Ana's late signature); the second, after U4b was built, on the stated cost the answer had named, met under the every-member rule (three steps: the second fork drafted by Ana, who never signed the first); the third passed. Before the first large round, four runs of 500 cases were made on the code before U4b; three passed, and the first failed, but its message was lost (only the end of its shrunk story was seen, a resignation step), so it is not classified. It did not recur in those three runs, nor in any large run since. Each run draws fresh random stories.
+
+**All tests.** Every Rust test in the workspace, on the final code: 328 passed, none failed (the 323 there before, and the chain signature, U1, U2, U4 and U4b tests; `it1_…` changed in place). The nine TypeScript clients' 113 tests, against WebAssembly bindings rebuilt from this branch's final code (the collective client's fork and closing now complete only through members' chain signatures, sent to test homes): all passed (barebone 9, collective 20, connector 12, desk 8, genesis 14, longform 15, manage 7, reader 16, repo 12).
+
+**Open for Nobody, allegedly:** the three readings taken writing F132 in (Law draft 10, "Open in this draft"); then approval of the revised set. Nothing is merged.
+
+### Set for approval
+
+Since the approval of 5 October 2026, the set has been revised in place twice, for F131 and F132; nothing else changed. **Law draft 10:** a complete ending is final; an act the collective's own key cites is adopted; a stale line a stated cost, with a client refusing to sign an ending until it holds every device's acts; the payment's claim decides (F131); members sign forks and closings by chain signatures on their identity chains, an ending naming another in its `objects` or through a signer's chain, a true tie only between endings sharing no signer and settled by a third, a signature on a replaced proposal counting for nothing, and a drafter naming every ending they signed (F132); three readings to confirm. **Identity draft 11** (changed by F132 only): the chain signature, type 16. **Finance draft 6:** the payment's commitment decides which claim a purchase buys under, a receipt naming another a wrong receipt (F131); the push-payment reading confirmed (F132). **The payment cMIP draft 2:** a receipt naming another claim recomputes another commitment, so the rule answers invalid and Law shows a wrong receipt (F131); unchanged by F132. **Core v21:** IT1 to IT3 and F132 in short; the checklist's open points. **Suite v21:** steps 3.9w to 3.9z (F131) and 3.9aa to 3.9ac (F132), all run.

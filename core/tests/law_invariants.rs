@@ -1587,16 +1587,23 @@ impl ColWorld {
         // chain (F132 U1), and counts for nothing. Only a later ending
         // sharing no signer with it and naming none of the earlier ones is
         // concurrent: neither counts (ENDING-RACE, counted). U4's stated
-        // cost: under a threshold, members who signed no ending naming an
-        // old proposal can finish it late (ENDING-LATE, counted).
+        // cost (U4b): an old proposal the complete ending's drafter never
+        // signed nor named, finished late (ENDING-LATE, counted).
         if let Some((at, e, snap)) = &self.first_end {
             let now = lv.closed_by(&col).map_err(|e| format!("{e:?}"))?.map(|c| c.by);
             let complete = |x: &EndingInfo| -> bool {
                 if x.fork { lv.fork(&x.id).is_ok_and(|f| f.complete) } else { lv.closing(&x.id).is_ok_and(|c| c.complete) }
             };
             let unnamed = self.endings.iter().any(|x| x.id != *e && complete(x) && !self.ending_names(&x.id).contains(e));
-            let late = self.shape.constitutional.is_some()
-                && self.end_sigs.iter().any(|(m, x, s, late)| *late && s > at && counting.contains(&(*m, *x)));
+            // U4's stated cost (F132, U4b): the complete ending's drafter
+            // never signed, before it, an old proposal it does not name,
+            // and that proposal was signed late, after it.
+            let drafter = self.w.v.get(e).and_then(|h| h.act.outside.signer);
+            let pe = self.end_sigs.iter().position(|(m, x, _, _)| Some(*m) == drafter && x == e).unwrap_or(0);
+            let named: BTreeSet<Hash> = self.w.v.get(e).and_then(|h| h.inside.objects.clone()).unwrap_or_default().iter().map(|o| o.predecessor).collect();
+            let late = self.end_sigs.iter().any(|(_, x, s, late)| {
+                *late && s > at && x != e && !named.contains(x) && !self.end_sigs[..pe].iter().any(|(m, y, _, _)| Some(*m) == drafter && y == x)
+            });
             let code = if late { "ENDING-LATE" } else if unnamed { "ENDING-RACE" } else { "ENDING-UNDONE" };
             if now != Some(*e) {
                 bad.push(format!("{code}: the ending {e:?}, complete after step {at}, no longer ends the collective (now {now:?})"));
@@ -1661,8 +1668,8 @@ struct Violations(Vec<String>);
 /// ENDING-UNDONE fails wherever the two endings share a signer;
 /// ENDING-RACE now counts only endings sharing no signer (a true tie,
 /// settled by a third ending naming both, U2). ENDING-LATE is U4's stated
-/// cost: under a threshold, members who signed no ending naming an old
-/// proposal finish it late with others' earlier signatures.
+/// cost (U4b): the complete ending's drafter never signed an old proposal
+/// it leaves unnamed, which is then finished late.
 const TEXT: &[&str] = &["SAFE-STALE-LINE", "ENDING-RACE", "ENDING-LATE"];
 
 fn known() -> &'static Stats {
@@ -3017,6 +3024,24 @@ fn u4b_a_drafter_names_the_endings_they_signed() {
     let lv = cw.view();
     assert!(lv.fork(&first).unwrap().complete, "{:?}", lv.fork(&first).unwrap().why);
     assert_eq!(lv.closed_by(&cw.col).unwrap().map(|c| c.by), Some(first));
+    drop(lv);
+    assert!(cw.check().is_ok(), "{:?}", cw.check());
+
+    // The stated cost, found by the large run after U4b: Ana drafts the
+    // second fork, never having signed the first, and names nothing; both
+    // sign it. Ana then signs the first: Ben's chain puts the first before
+    // the second, Ana's the second before the first; each names the other,
+    // and neither counts, as in a true race.
+    let ops = [
+        Op::Fork { stale: 0, sides: 188, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: false, succ_sign: false, names: false },
+        Op::Fork { stale: 0, sides: 125, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
+    ];
+    let mut cw = run_col(&two(), &ops, 0);
+    let second = cw.endings[1].id;
+    assert_eq!(cw.view().closed_by(&cw.col).unwrap().map(|c| c.by), Some(second));
+    cw.apply(2, &Op::LateSign { ending: 134, member: 0 });
+    assert_eq!(cw.view().closed_by(&cw.col).unwrap(), None);
+    // Counted as the stated cost (ENDING-LATE), not failed.
     assert!(cw.check().is_ok(), "{:?}", cw.check());
 }
 
