@@ -2643,6 +2643,22 @@ fn ic9_a_departure_racing_a_citation_takes_no_voice() {
     let lv = cw.view();
     assert!(lv.consent(&by).unwrap().counts());
     assert!(lv.consent(&y).unwrap().counts(), "{:?}", lv.consent(&y));
+    // Setting a racing departure aside must never make an act fail: here
+    // the departure lowers the holders a threshold of two counts among, and
+    // a later act of the device that signed the grant holds it without
+    // holding the departure. (A first fix, skipping the departure outright,
+    // brought the departed holder's voice back and failed the grant.)
+    let shape = Shape { members: 2, devices: 2, member_devices: 1, constitutional: None, lane: Some((3, 2)), owns_work: true };
+    let ops = [
+        Op::Resign { member: 0, area_only: false, dev: 91, tips: 5, inform: false },
+        Op::Grant { dev: 12, agent: 0, in_area: true, accept: false, holders_sign: true },
+        Op::AgentAct { grant: 0, strand: 0, what: AgentWhat::InScope, seal: Seal::Public },
+        Op::Join { dev: 73, other: 66 },
+        Op::Join { dev: 92, other: 26 },
+    ];
+    let cw = run_col(&shape, &ops, 0);
+    let (y, _) = cw.cited_counting[0];
+    assert!(cw.view().consent(&y).unwrap().counts());
 }
 
 /// IT1, decided (F131): a complete ending is final. A later fork naming
@@ -2780,3 +2796,4 @@ fn it3_the_payments_claim_decides() {
         assert_eq!(bare.purchase(x).unwrap().unwrap().verdict, law::PurchaseVerdict::Unrecorded, "no rail answer yet");
     }
 }
+

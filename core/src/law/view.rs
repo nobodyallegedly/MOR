@@ -66,6 +66,8 @@ pub struct LawView<'a> {
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
     ending: RefCell<BTreeSet<Hash>>,
+    citing: RefCell<BTreeSet<Hash>>,
+    adopting: RefCell<BTreeSet<Hash>>,
     histories: RefCell<BTreeMap<(Hash, usize, Vec<Hash>), Rc<History>>>,
 }
 
@@ -316,6 +318,8 @@ impl<'a> LawView<'a> {
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
             ending: RefCell::new(BTreeSet::new()),
+            citing: RefCell::new(BTreeSet::new()),
+            adopting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
         }
     }
@@ -1603,7 +1607,7 @@ impl<'a> LawView<'a> {
                 // off it. Found by the Law invariants
                 // (`docs/law-invariants.md`, IC9).
                 if let Point::Act(x) = point {
-                    if k == limit && self.cited_against(col, x, r)? {
+                    if k == limit && self.adopting.borrow().contains(&x.id) && self.cited_against(col, x, r)? {
                         continue;
                     }
                 }
@@ -1631,8 +1635,19 @@ impl<'a> LawView<'a> {
     /// the collective took `x` on, by a citation `l` races (F131, IT2a;
     /// "cites" as a line reads it, reading U3).
     fn cited_against(&self, col: &Col, x: &'a Held, l: &'a Held) -> R<bool> {
+        // Judging the citing act may ask again about acts being judged here:
+        // an act under judgment adopts nothing.
+        if !self.citing.borrow_mut().insert(x.id) {
+            return Ok(false);
+        }
+        let r = self.cited_against_inner(col, x, l);
+        self.citing.borrow_mut().remove(&x.id);
+        r
+    }
+
+    fn cited_against_inner(&self, col: &Col, x: &'a Held, l: &'a Held) -> R<bool> {
         for a in self.v.signed_by(&col.id) {
-            if a.id == x.id || a.id == l.id || !Self::own_key(col, a) || self.is_law(a, types::RECORD) {
+            if a.id == x.id || a.id == l.id || !Self::own_key(col, a) || self.is_law(a, types::RECORD) || self.citing.borrow().contains(&a.id) {
                 continue;
             }
             if !self.before_struct(col, x, Line::Record(a)) || self.before_struct(col, l, Line::Record(a)) {
@@ -2423,6 +2438,23 @@ impl<'a> LawView<'a> {
     /// F100, F106, F109). The act's own standing is Identity's, from
     /// [`Verifier::status`]; this asks only what Law adds.
     pub fn consent(&self, act: &Hash) -> R<Consent> {
+        // F131 (IT2a): an act of the collective's own key that does not count
+        // as judged counts all the same where the departures racing a
+        // citation of it by a counting act of its own key are set aside: no
+        // ending racing that citation voids it. Judged again only then, so
+        // that setting a departure aside never makes an act fail.
+        let first = self.consent_judged(act)?;
+        if first.counts() || self.adopting.borrow().contains(act) {
+            return Ok(first);
+        }
+        self.adopting.borrow_mut().insert(*act);
+        let again = self.consent_judged(act);
+        self.adopting.borrow_mut().remove(act);
+        let again = again?;
+        Ok(if again.counts() { again } else { first })
+    }
+
+    fn consent_judged(&self, act: &Hash) -> R<Consent> {
         let x = self.held(act)?;
         let (Some(c), Some(_)) = (x.act.outside.signer, x.act.outside.binding) else {
             return Err(LawError::Check("the act has no signer or binding"));
