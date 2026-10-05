@@ -45,13 +45,15 @@ cMIPs and Modules here are instruments for testing the core, not products: a wor
 
 ## Build and test
 
-Rust (stable) for the workspace:
+Everything, with one command:
 
 ```
-cargo test --workspace
+scripts/test-all.sh
 ```
 
-The clients need Node 22 or later, Rust's `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.129; see [clients/README.md](clients/README.md) and [wasm/README.md](wasm/README.md). The Lightning test on regtest is optional; its steps are in [docs/core-pass-v21.md](docs/core-pass-v21.md), section 5.
+It runs the Rust workspace's tests, builds the core library for the clients (WebAssembly), and runs every TypeScript package's tests. Add `--reproducible` to also rebuild the published display client and check it is the same, byte for byte. GitHub runs the same command on every change ([.github/workflows/test.yml](.github/workflows/test.yml)).
+
+It needs Rust through rustup (the version is pinned in `rust-toolchain.toml`, installed on first use), Node 22 or later, and `wasm-bindgen-cli` 0.2.129 (`cargo install wasm-bindgen-cli --version 0.2.129 --locked`). The site's browser test needs Chromium or Chrome, named by `MOR_CHROMIUM`. The Lightning test on regtest is optional; its steps are in [docs/core-pass-v21.md](docs/core-pass-v21.md), section 5. See also [clients/README.md](clients/README.md) and [wasm/README.md](wasm/README.md).
 
 ## Open work
 

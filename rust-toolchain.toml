@@ -1,0 +1,6 @@
+# The Rust version every build and test uses, here and on GitHub, so that the
+# WebAssembly the clients publish is the same, byte for byte, on any machine
+# (clients/site/built/BUILT-WITH.txt). rustup installs it on first use.
+[toolchain]
+channel = "1.97.0"
+targets = ["wasm32-unknown-unknown"]

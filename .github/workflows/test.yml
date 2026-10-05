@@ -1,0 +1,33 @@
+# Every test, on GitHub's machines, at each change to main and each pull
+# request: the same command anyone runs locally, scripts/test-all.sh.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      MOR_CHROMIUM: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: scripts/test-all.sh --reproducible
