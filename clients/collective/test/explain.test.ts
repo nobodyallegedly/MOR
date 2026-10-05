@@ -196,3 +196,28 @@ test('what a clone changes, by tier, and the powers its mark must name', () => {
   assert.equal(bad.length, 1);
   assert.match(bad[0].text, /Its mark names the clone rule: a false mark sinks the clone \(F104\)/);
 });
+
+test("a deal's chain of judgment follows its split service: one grant per payee for each service taking over (F130, H6)", () => {
+  const h = (n: number) => new Uint8Array(32).fill(n);
+  const hx = (n: number) => Buffer.from(h(n)).toString('hex');
+  const deal = (link: unknown) =>
+    cborEncode(
+      new Map<number, unknown>([
+        [0, [h(1), h(2)]],
+        [1, 'a song'],
+        [2, new Map()],
+        [4, [0]],
+        [5, [0]],
+        [6, [h(3), 0]],
+        [14, [h(7), h(8)]],
+        [21, [link]],
+      ]),
+    );
+  const t = termsOf(deal([[2], [[[h(9), h(10)], 30]]]));
+  assert.ok(!t.problem, `Law accepts it: ${JSON.stringify(t.problem)}`);
+  assert.deepEqual(t.chain, [['split service', [[[hx(9), hx(10)], 30]]]]);
+  const w = all(readAgreement(t, names));
+  assert.match(w, /the service granted by .* \(one grant per payee, signed with this deal, F130 H6\) \(after 30 on the time reference\) takes over/);
+  // A deal's service taking over is never one grant.
+  assert.match(JSON.stringify(termsOf(deal([[2], [[h(9), 30]]])).problem ?? ''), /H6/);
+});

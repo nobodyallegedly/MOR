@@ -612,16 +612,53 @@ impl Judge {
     }
 }
 
-/// `chain = [ judge, [+ [ next: hash, period: uint ]] ]`: a judge, and in
-/// order those that take over when it answers "unknown" or cannot act:
-/// specifications for a judicial task, identities for an identity, grants
-/// for the split service. Each names the period, on the agreement's time
-/// reference, that the one before it has to act once asked, after which it
-/// may act (Q7): compulsory, above zero.
+/// One that takes over from a judge (F121; F130, H6): a specification, an
+/// identity or a grant, by its hash; or, for a deal's split service, the
+/// service taking over by a group of grants, one per payee, each naming
+/// "this agreement" by null like field 14's.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Taker {
+    /// `hash`.
+    One(Hash),
+    /// `[+ hash]`: in a deal, one grant per payee to the service taking
+    /// over from its split service.
+    Grants(Vec<Hash>),
+}
+
+impl From<Hash> for Taker {
+    fn from(h: Hash) -> Self {
+        Taker::One(h)
+    }
+}
+
+impl Taker {
+    pub fn to_value(&self) -> Value {
+        match self {
+            Taker::One(h) => b(h),
+            Taker::Grants(g) => Value::Array(g.iter().map(b).collect()),
+        }
+    }
+
+    /// Every hash it names: one, or the group's grants.
+    pub fn hashes(&self) -> Vec<Hash> {
+        match self {
+            Taker::One(h) => vec![*h],
+            Taker::Grants(g) => g.clone(),
+        }
+    }
+}
+
+/// `chain = [ judge, [+ [ next: hash / [+ hash], period: uint ]] ]`: a
+/// judge, and in order those that take over when it answers "unknown" or
+/// cannot act: specifications for a judicial task, identities for an
+/// identity, grants for the split service (in a deal, a group of grants per
+/// service taking over, one per payee, F130 H6). Each names the period, on
+/// the agreement's time reference, that the one before it has to act once
+/// asked, after which it may act (Q7): compulsory, above zero.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChainLink {
     pub judge: Judge,
-    pub next: Vec<(Hash, u64)>,
+    pub next: Vec<(Taker, u64)>,
 }
 
 impl ChainLink {
@@ -631,15 +668,16 @@ impl ChainLink {
             Value::Array(
                 self.next
                     .iter()
-                    .map(|(h, p)| Value::Array(vec![b(h), Value::Uint(*p)]))
+                    .map(|(t, p)| Value::Array(vec![t.to_value(), Value::Uint(*p)]))
                     .collect(),
             ),
         ])
     }
 
-    /// Those that take over, in order, without their periods.
+    /// Those that take over, in order, without their periods: one hash
+    /// each, or, for a group, the hashes of its grants in its place.
     pub fn successors(&self) -> Vec<Hash> {
-        self.next.iter().map(|(h, _)| *h).collect()
+        self.next.iter().flat_map(|(t, _)| t.hashes()).collect()
     }
 
     /// Whether this judge is one that can stay silent: an identity or a
@@ -1435,20 +1473,40 @@ impl Terms {
                     }
                     *x
                 }
-                Judge::SplitService => match self.split_grant {
-                    Some(g) => g,
-                    None if self.payee_grants.is_some() => {
-                        return Err(LawError::Unsupported(
-                            "a deal's chain of judgment following its split service: a successor would need one grant per payee, unsettled (F129, question H6)",
-                        ))
+                Judge::SplitService => match (&self.split_grant, &self.payee_grants) {
+                    (Some(g), _) => *g,
+                    // F130, H6: in a deal, each service taking over carries
+                    // one grant per payee, grouped by service, as many as
+                    // field 14 lists; every grant is listed once.
+                    (None, Some(list)) => {
+                        if !l.next.iter().all(|(t, _)| matches!(t, Taker::Grants(g) if g.len() == list.len())) {
+                            return Err(LawError::Check(
+                                "in a deal, each service taking over from the split service is a group of grants, one per payee, as many as field 14 lists (F130, H6)",
+                            ));
+                        }
+                        let mut all = list.clone();
+                        all.extend(l.successors());
+                        if !distinct(&all) {
+                            return Err(LawError::Check(
+                                "a deal lists each grant to its split service, and to each service taking over, once (F130, H6)",
+                            ));
+                        }
+                        list[0]
                     }
-                    None => {
+                    (None, None) => {
                         return Err(LawError::Check(
                             "the chain of judgment follows a split service the terms do not name (F121)",
                         ))
                     }
                 },
             };
+            // A group of grants takes over only from a deal's split service.
+            let grouped = l.next.iter().any(|(t, _)| matches!(t, Taker::Grants(_)));
+            if grouped && (l.judge != Judge::SplitService || self.payee_grants.is_none()) {
+                return Err(LawError::Check(
+                    "a group of grants takes over only from a deal's split service; every other one that takes over is one hash (F130, H6)",
+                ));
+            }
             let next = l.successors();
             if l.next.iter().any(|(_, p)| *p == 0) {
                 return Err(LawError::Check(
@@ -2921,7 +2979,11 @@ fn chain_link(v: &Value) -> R<ChainLink> {
         .iter()
         .map(|n| {
             let x = tuple(n, 2, "chain of judgment: one that takes over, and its period")?;
-            Ok((hash(&x[0], "chain of judgment")?, uint(&x[1], "chain of judgment: period")?))
+            let taker = match &x[0] {
+                Value::Array(_) => Taker::Grants(hashes(&x[0], "chain of judgment: a service's grants, one per payee")?),
+                v => Taker::One(hash(v, "chain of judgment")?),
+            };
+            Ok((taker, uint(&x[1], "chain of judgment: period")?))
         })
         .collect::<R<Vec<_>>>()?;
     Ok(ChainLink { judge, next })

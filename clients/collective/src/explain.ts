@@ -120,8 +120,8 @@ export interface TermsRead {
   stakes: [string | null, [string | null, number][]][];
   /** The departed members entry (field 22): who left (F121, F124 N5). */
   departed: string[];
-  /** The chain of judgment (field 21): each judge, and those that take over with their periods (F121, Q7). */
-  chain: [string, [string, number][]][];
+  /** The chain of judgment (field 21): each judge, and those that take over with their periods (F121, Q7); each one hash, or, taking over from a deal's split service, the service's grants, one per payee (F130, H6). */
+  chain: [string, [string[], number][]][];
   /** Forked from (field 23): the original collective, a back-link (F121, F124 N4). */
   forkedFrom: string | null;
   /** The release rule (field 24); null: every stake holder signs a release (F121, D). */
@@ -521,12 +521,12 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   if (t.arbitrators) more.push({ text: `Arbitrators or verifiers, who receive keys to judge content: ${list(t.arbitrators.map(names))}.` });
   if (t.splitGrant) {
     more.push({
-      text: `Incoming payments go to a split service, under grant ${short(t.splitGrant)}. A protected clause. The collective's payee pointer counts for Law only if every address in it is also in the service's own signed pointer (Law rule 18, F123); every split is delivered to every holder it pays, naming each fee and who received it (F121, Q9).`,
+      text: `Incoming payments go to a split service, under grant ${short(t.splitGrant)}. A protected clause. The collective's payee pointer counts for Law only if every address in it is also in the service's own signed pointer (Law rule 18, F123); every split is delivered to every holder it pays, naming each fee and who received it (F121, Q9). The service's grant key signs only receipts for money coming in under the collective's own claims and offers: never one whose payer is the service, nor a payout the collective is owed (F130, H7).`,
     });
   }
   if (t.payeeGrants?.length) {
     more.push({
-      text: `Incoming payments go to a split service, under ${t.payeeGrants.length === 1 ? 'one payee grant' : `${t.payeeGrants.length} payee grants`}: ${list(t.payeeGrants.map(short))}. Each payee's own grant, signed by signing this deal; the service holds one grant key per payee, which signs only receipts for money coming into the deal, never one whose payer is the service, nor a split's payout; each payee can revoke its own grant (F129, H4, H5).`,
+      text: `Incoming payments go to a split service, under ${t.payeeGrants.length === 1 ? 'one payee grant' : `${t.payeeGrants.length} payee grants`}: ${list(t.payeeGrants.map(short))}. Each payee's own grant, signed by signing this deal; the service holds one grant key per payee, which signs only receipts for money coming into the deal, never one whose payer is the service, nor a split's payout; each payee can revoke its own grant (F129, H4, H5; F130, H7).`,
     });
   }
   const holderName = (h: string | null) => (h == null ? 'this collective' : names(h));
@@ -539,7 +539,8 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     more.push({ text: `Departed holders: ${list(t.departed.map(names))}. No voice and no veto; their share of the collective's income is in its stakes above (Law rule 46b, F124 N5).` });
   }
   for (const [judge, next] of t.chain ?? []) {
-    more.push({ text: `If ${judge === 'split service' ? 'the split service' : judge.startsWith('task ') ? `the judge for ${judge}` : names(judge)} answers “unknown”, or does not act within its period, ${list(next.map(([h, p]) => `${names(h)} (after ${p} on the time reference)`))} take${next.length === 1 ? 's' : ''} over, in that order (Law rule 34a, F121).` });
+    const taker = (hs: string[]) => (judge !== 'split service' || !t.payeeGrants?.length ? names(hs[0]) : `the service granted by ${list(hs.map(short))} (one grant per payee, signed with this deal, F130 H6)`);
+    more.push({ text: `If ${judge === 'split service' ? 'the split service' : judge.startsWith('task ') ? `the judge for ${judge}` : names(judge)} answers “unknown”, or does not act within its period, ${list(next.map(([hs, p]) => `${taker(hs)} (after ${p} on the time reference)`))} take${next.length === 1 ? 's' : ''} over, in that order (Law rule 34a, F121).` });
   }
   more.push({
     text: "Whatever is done in the collective's name binds it once it is sealed to every member (or public) and on its chain, citing its latest decision; before that, even signed, it binds no one (Law rule 35a, F128). Where it is stored decides nothing: the relays are only where its clients publish and look first.",

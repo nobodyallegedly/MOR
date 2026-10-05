@@ -548,8 +548,8 @@ fn label_with_chain() -> Terms {
     // reference, compulsory there (Q7).
     t.time = Some((h(CLOCK), Value::Uint(0)));
     t.chain = Some(vec![
-        ChainLink { judge: Judge::Task(9), next: vec![(h(CONDITION2), 30), (h(CONDITION3), 30)] },
-        ChainLink { judge: Judge::Identity(h(ARBITRATOR)), next: vec![(h(ARBITRATOR2), 30)] },
+        ChainLink { judge: Judge::Task(9), next: vec![(h(CONDITION2).into(), 30), (h(CONDITION3).into(), 30)] },
+        ChainLink { judge: Judge::Identity(h(ARBITRATOR)), next: vec![(h(ARBITRATOR2).into(), 30)] },
     ]);
     t
 }
@@ -580,11 +580,11 @@ fn a_chain_of_judgment_passes_unknown_to_the_next() {
     );
     // Changing the chain is judicial: every member (F121).
     let mut c = clone_of(&t, vec![(Power::Judicial, vec![h(1), h(2), h(3)])]);
-    c.chain.as_mut().unwrap()[0].next = vec![(h(CONDITION3), 30)];
+    c.chain.as_mut().unwrap()[0].next = vec![(h(CONDITION3).into(), 30)];
     assert_eq!(needs(&t, &c), vec![Power::Judicial]);
     // So is naming one where there was none.
     let mut c = clone_of(&label(), vec![(Power::Judicial, vec![h(1), h(2), h(3)])]);
-    c.chain = Some(vec![ChainLink { judge: Judge::Task(11), next: vec![(h(CONDITION3), 30)] }]);
+    c.chain = Some(vec![ChainLink { judge: Judge::Task(11), next: vec![(h(CONDITION3).into(), 30)] }]);
     assert_eq!(needs(&label(), &c), vec![Power::Judicial]);
 }
 
@@ -593,34 +593,34 @@ fn a_chain_of_judgment_passes_unknown_to_the_next() {
 fn a_chain_follows_named_judges_and_its_specifications_judge_only() {
     let bad: Vec<(&str, Change)> = vec![
         ("a task with no judge named", Box::new(|t| {
-            t.chain.as_mut().unwrap().push(ChainLink { judge: Judge::Task(10), next: vec![(h(CLOCK), 30)] })
+            t.chain.as_mut().unwrap().push(ChainLink { judge: Judge::Task(10), next: vec![(h(CLOCK).into(), 30)] })
         })),
         ("an operational task", Box::new(|t| {
-            t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::Task(6), next: vec![(h(PAY2), 30)] })
+            t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::Task(6), next: vec![(h(PAY2).into(), 30)] })
         })),
         ("the judge takes over from itself", Box::new(|t| {
-            t.chain.as_mut().unwrap()[0].next = vec![(h(CONDITION), 30)]
+            t.chain.as_mut().unwrap()[0].next = vec![(h(CONDITION).into(), 30)]
         })),
         ("a fallback named for a payment task", Box::new(|t| {
-            t.chain.as_mut().unwrap()[0].next = vec![(h(PAY), 30)]
+            t.chain.as_mut().unwrap()[0].next = vec![(h(PAY).into(), 30)]
         })),
         ("a fallback that is an extension", Box::new(|t| {
-            t.chain.as_mut().unwrap()[0].next = vec![(h(EXT), 30)]
+            t.chain.as_mut().unwrap()[0].next = vec![(h(EXT).into(), 30)]
         })),
         ("a fallback that is the anchoring cMIP", Box::new(|t| {
-            t.chain.as_mut().unwrap()[0].next = vec![(h(ANCHOR), 30)]
+            t.chain.as_mut().unwrap()[0].next = vec![(h(ANCHOR).into(), 30)]
         })),
         ("a fallback twice", Box::new(|t| {
-            t.chain.as_mut().unwrap()[0].next = vec![(h(CONDITION2), 30), (h(CONDITION2), 30)]
+            t.chain.as_mut().unwrap()[0].next = vec![(h(CONDITION2).into(), 30), (h(CONDITION2).into(), 30)]
         })),
         ("one fallback for two judges", Box::new(|t| {
-            t.chain.as_mut().unwrap().insert(1, ChainLink { judge: Judge::Task(11), next: vec![(h(CONDITION2), 30)] })
+            t.chain.as_mut().unwrap().insert(1, ChainLink { judge: Judge::Task(11), next: vec![(h(CONDITION2).into(), 30)] })
         })),
         ("an identity the terms name as no judge", Box::new(|t| {
             t.chain.as_mut().unwrap()[1].judge = Judge::Identity(h(ARBITRATOR2))
         })),
         ("a split service the terms do not name", Box::new(|t| {
-            t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::SplitService, next: vec![(h(94), 30)] })
+            t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::SplitService, next: vec![(h(94).into(), 30)] })
         })),
         ("links out of order", Box::new(|t| t.chain.as_mut().unwrap().reverse())),
     ];
@@ -633,13 +633,13 @@ fn a_chain_follows_named_judges_and_its_specifications_judge_only() {
     let mut t = label_with_chain();
     t.split_grant = Some(h(94));
     // `[ 2 ]` encodes before `[ 0, task ]`: it comes first.
-    t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::SplitService, next: vec![(h(95), 30)] });
+    t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::SplitService, next: vec![(h(95).into(), 30)] });
     assert_eq!(check(&t), Ok(()));
     assert_eq!(t.chain_of(&Judge::SplitService), Some(vec![h(94), h(95)]));
     // The abandonment authority, named as an identity, may be followed.
     let mut t = label();
     t.time = Some((h(CLOCK), Value::Uint(0)));
-    t.chain = Some(vec![ChainLink { judge: Judge::Identity(h(AUTHORITY)), next: vec![(h(96), 30)] }]);
+    t.chain = Some(vec![ChainLink { judge: Judge::Identity(h(AUTHORITY)), next: vec![(h(96).into(), 30)] }]);
     assert_eq!(check(&t), Ok(()));
 }
 
@@ -650,7 +650,7 @@ fn a_chain_follows_named_judges_and_its_specifications_judge_only() {
 fn a_chain_of_judgment_has_periods_on_a_compulsory_time_reference() {
     let t = label_with_chain();
     let l = &t.chain.as_ref().unwrap()[1];
-    assert_eq!(l.next, vec![(h(ARBITRATOR2), 30)]);
+    assert_eq!(l.next, vec![(h(ARBITRATOR2).into(), 30)]);
     assert!(l.can_stay_silent());
     // No time reference where an arbitrator can stay silent: invalid.
     let mut x = t.clone();

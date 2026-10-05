@@ -1534,8 +1534,10 @@ struct TermsOut {
     /// The departed members entry (field 22): who left (N5).
     departed: Vec<String>,
     /// The chain of judgment (field 21): each judge ("task N", an identity,
-    /// "split service"), and those that take over with their periods.
-    chain: Vec<(String, Vec<(String, u64)>)>,
+    /// "split service"), and those that take over with their periods: each
+    /// one hash, or, taking over from a deal's split service, the service's
+    /// grants, one per payee (F130, H6).
+    chain: Vec<(String, Vec<(Vec<String>, u64)>)>,
     /// Forked from (field 23): the original collective, a back-link (N4).
     forked_from: Option<String>,
     /// The release rule (field 24); null: every holder.
@@ -1672,7 +1674,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                     law::Judge::Identity(h) => hx(h),
                     law::Judge::SplitService => "split service".into(),
                 };
-                (j, l.next.iter().map(|(h, p)| (hx(h), *p)).collect())
+                (j, l.next.iter().map(|(t, p)| (t.hashes().iter().map(hx).collect(), *p)).collect())
             })
             .collect(),
         forked_from: t.forked_from.as_ref().map(hx),
