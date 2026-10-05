@@ -275,6 +275,24 @@ export function grantPayload(grantee: string, key: [number, Uint8Array], byThis 
   return cborEncode(m);
 }
 
+/** A payee's grant to a deal's split service (Law type 9, F129 H4): signed
+ * by the payee with its own key, public, managing "this agreement" (scope 1,
+ * field 2 written null), the deal whose terms list it in field 14, one grant
+ * per payee. It counts once every party has signed that deal, and the
+ * service has signed to accept it. Its key signs only receipts for money
+ * coming into the deal, never one whose payer is the service, nor a split's
+ * payout (H5). */
+export function dealGrantPayload(service: string, key: [number, Uint8Array]): Uint8Array {
+  return cborEncode(
+    new Map<number, unknown>([
+      [0, unhex(service)],
+      [1, 1],
+      [2, null],
+      [9, key],
+    ]),
+  );
+}
+
 /** An obligation (Finance type 1), signed by the debtor. */
 export function obligationPayload(o: { debtor: string; creditor: string; unit: string; value: number; pointer: string }): Uint8Array {
   return cborEncode(

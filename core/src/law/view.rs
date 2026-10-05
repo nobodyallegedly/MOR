@@ -2663,6 +2663,91 @@ impl<'a> LawView<'a> {
         })
     }
 
+    /// The deals that carry a grant naming "this agreement" by null (F129,
+    /// H4): held terms of a deal listing it in field 14, which exist
+    /// (every party signed them), its grantor among their parties. "This
+    /// agreement" is each such deal, with the versions it clones.
+    fn carrying_deals(&self, gh: &Held, grantor: &Hash) -> R<Vec<Hash>> {
+        let mut out = vec![];
+        for h in self.v.held_acts() {
+            if !self.is_law(h, types::TERMS) {
+                continue;
+            }
+            let Ok(t) = self.terms(&h.id) else { continue };
+            if t.is_collective() || !t.payee_grants.iter().flatten().any(|x| x == &gh.id) || !t.parties.contains(grantor) {
+                continue;
+            }
+            if self.agreement(&h.id)?.exists != Some(true) {
+                continue;
+            }
+            // One split service, one grant per payee: every grant field 14
+            // lists is held, names the same grantee, and is signed by a
+            // distinct party (reading, F129). Otherwise fail closed.
+            let Some(g0) = Grant::decode(&gh.inside.payload).ok() else { continue };
+            let mut grantors = vec![];
+            let one_service = t.payee_grants.iter().flatten().all(|x| {
+                let Some(xh) = self.v.get(x).filter(|xh| self.is_law(xh, types::GRANT)) else { return false };
+                let Ok(xg) = Grant::decode(&xh.inside.payload) else { return false };
+                let Some(by) = xh.act.outside.signer else { return false };
+                let fresh = !grantors.contains(&by);
+                grantors.push(by);
+                xg.this_agreement && xg.grantee == g0.grantee && fresh && t.parties.contains(&by)
+            });
+            if !one_service {
+                continue;
+            }
+            for (id, _) in self.lineage(&h.id)? {
+                if !out.contains(&id) {
+                    out.push(id);
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// What keeps an act of a payee's grant key to a deal's split service
+    /// from being backed (F129, H4, H5), or nothing. The grant counts only
+    /// through a deal its grantor signed that lists it in field 14
+    /// ("signing the deal signs them"). Its key signs only receipts for
+    /// money coming into the deal, received by the grantor: a purchase
+    /// naming the deal's claim, or a payment following the deal itself;
+    /// never a receipt whose payer is the service, nor a split's payout.
+    fn deal_grant_problem(&self, gh: &Held, g: &Grant, grantor: &Hash, y: &Held) -> R<Option<String>> {
+        use crate::finance::{self as fin, Payer, Payload as Fin};
+        let deals = self.carrying_deals(gh, grantor)?;
+        if deals.is_empty() {
+            return Ok(Some(
+                "the grant names this agreement, and no deal its grantor signed lists it in field 14, with one grant per payee to one split service (F129, H4)".into(),
+            ));
+        }
+        if y.inside.spec != self.mips.finance || y.inside.type_ != fin::types::RECEIPT {
+            return Ok(Some("a payee's grant key signs only receipts for money coming into the deal (F129, H5)".into()));
+        }
+        let Ok(Fin::Receipt(r)) = Fin::decode(y.inside.type_, &y.inside.payload) else {
+            return Ok(Some("the receipt does not decode".into()));
+        };
+        if &r.payee != grantor {
+            return Ok(Some("a payee's grant key signs only receipts its grantor received (F129, H5)".into()));
+        }
+        if matches!(&r.payer, Some(Payer::Identity(p)) if p == &g.grantee) {
+            return Ok(Some(
+                "a payee's grant key never signs a receipt whose payer is the split service itself (F129, H5; rule 29)".into(),
+            ));
+        }
+        let names_split = |x: &Hash| self.v.get(x).is_some_and(|h| self.is_law(h, types::SPLIT));
+        let objects_split = y.inside.objects.iter().flatten().any(|o| names_split(&o.chain) || names_split(&o.predecessor));
+        if r.batch.is_some() || names_split(&r.fulfils) || objects_split {
+            return Ok(Some("a payee's grant key never signs a split's payout (F129, H5; rule 29)".into()));
+        }
+        let incoming = r.purchase.as_ref().is_some_and(|p| deals.contains(&p.agreement)) || deals.contains(&r.fulfils);
+        if !incoming {
+            return Ok(Some(
+                "a payee's grant key signs only receipts for money coming into the deal: a purchase under its claim, or a payment on it (F129, H5)".into(),
+            ));
+        }
+        Ok(None)
+    }
+
     /// The revocations of a grant that count (F128): decisions of the
     /// grantor, signed with its own key, naming the grant.
     fn revocations(&self, col: &Col, grant: &Hash) -> R<Vec<&'a Held>> {
@@ -2777,6 +2862,12 @@ impl<'a> LawView<'a> {
             };
             if !within {
                 return not("the act lies beyond the grant's reach (rule 44)");
+            }
+            // F129, H4 and H5: a payee's grant to a deal's split service.
+            if g.this_agreement {
+                if let Some(w) = self.deal_grant_problem(gh, &g, &c, y)? {
+                    return not(&w);
+                }
             }
         }
         let acked = |before: &dyn Fn(&Held) -> bool| -> R<bool> {
@@ -4695,8 +4786,18 @@ impl<'a> LawView<'a> {
     /// judgment names to take over (reading 4).
     pub fn pointer_check(&self, owners: &Hash, agreement: &Hash) -> R<PointerCheck> {
         let t = self.terms(agreement)?;
-        let Some(g) = t.split_grant else {
-            return Ok(PointerCheck::NoSplitService);
+        // F129, H4: in a deal, the payee's own grant to the service.
+        let g = match (&t.split_grant, &t.payee_grants) {
+            (Some(g), _) => *g,
+            (None, Some(list)) => match list.iter().find(|x| self.v.get(x).is_some_and(|h| h.act.outside.signer == Some(*owners))) {
+                Some(g) => *g,
+                None => {
+                    return Ok(PointerCheck::Undetermined {
+                        reason: "the deal lists no grant of this payee to its split service that this verifier holds (F129, H4)".into(),
+                    })
+                }
+            },
+            (None, None) => return Ok(PointerCheck::NoSplitService),
         };
         let mut grants = vec![g];
         if let Some(l) = t.chain.iter().flatten().find(|l| l.judge == Judge::SplitService) {
@@ -4751,7 +4852,7 @@ impl<'a> LawView<'a> {
             return Ok(Err("collectives nested deeper than 8".into()));
         }
         let t = self.terms(agreement)?;
-        if t.split_grant.is_some() {
+        if t.split_grant.is_some() || t.payee_grants.is_some() {
             return Ok(Err("the agreement names a split service: payments go to the owners' pointer, which leads to it".into()));
         }
         let Some((_, stake)) = t.stake_on(object) else {
@@ -4771,7 +4872,7 @@ impl<'a> LawView<'a> {
             let inner = match self.current(&id)? {
                 Some(cur) if Some(id) != this || *object != Who::This => {
                     let ct = self.terms(&cur.agreement)?;
-                    if ct.split_grant.is_none() && ct.own_stake().is_some() {
+                    if ct.split_grant.is_none() && ct.payee_grants.is_none() && ct.own_stake().is_some() {
                         Some(self.payer_split_depth(&cur.agreement, &Who::This, n, depth + 1)?)
                     } else {
                         None

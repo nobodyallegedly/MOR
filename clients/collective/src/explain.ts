@@ -112,6 +112,8 @@ export interface TermsRead {
   } | null;
   arbitrators: string[] | null;
   splitGrant: string | null;
+  /** Field 14 in a deal: each payee's grant to the split service (F129, H4). */
+  payeeGrants?: string[] | null;
   extensions: string[] | null;
   succession: { party: string; stakes: [string, number][] | null; seats: [string, number][] | null; entry: number | null }[] | null;
   /** Stakes (field 7): each object, and its holders' shares in millionths (F121, Q8); null is this collective (F124 S1). */
@@ -520,6 +522,11 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   if (t.splitGrant) {
     more.push({
       text: `Incoming payments go to a split service, under grant ${short(t.splitGrant)}. A protected clause. The collective's payee pointer counts for Law only if every address in it is also in the service's own signed pointer (Law rule 18, F123); every split is delivered to every holder it pays, naming each fee and who received it (F121, Q9).`,
+    });
+  }
+  if (t.payeeGrants?.length) {
+    more.push({
+      text: `Incoming payments go to a split service, under ${t.payeeGrants.length === 1 ? 'one payee grant' : `${t.payeeGrants.length} payee grants`}: ${list(t.payeeGrants.map(short))}. Each payee's own grant, signed by signing this deal; the service holds one grant key per payee, which signs only receipts for money coming into the deal, never one whose payer is the service, nor a split's payout; each payee can revoke its own grant (F129, H4, H5).`,
     });
   }
   const holderName = (h: string | null) => (h == null ? 'this collective' : names(h));

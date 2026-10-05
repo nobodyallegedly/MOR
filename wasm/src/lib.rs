@@ -1524,6 +1524,8 @@ struct TermsOut {
     grammar: Option<GrammarOut>,
     arbitrators: Option<Vec<String>>,
     split_grant: Option<String>,
+    /// Field 14 in a deal: each payee's grant to the split service (F129, H4).
+    payee_grants: Option<Vec<String>>,
     extensions: Option<Vec<String>>,
     succession: Option<Vec<SuccessionOut>>,
     /// Stakes (field 7): each object, and its holders' shares in millionths;
@@ -1641,6 +1643,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         }),
         arbitrators: t.arbitrators.as_ref().map(hs),
         split_grant: t.split_grant.as_ref().map(hx),
+        payee_grants: t.payee_grants.as_ref().map(|g| g.iter().map(hx).collect()),
         extensions: t.extensions.as_ref().map(hs),
         succession: t.succession.as_ref().map(|s| {
             s.iter()

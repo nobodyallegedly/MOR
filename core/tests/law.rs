@@ -71,6 +71,7 @@ fn label() -> Terms {
         }),
         arbitrators: Some(vec![h(ARBITRATOR)]),
         split_grant: None,
+        payee_grants: None,
         extensions: Some(vec![h(EXT)]),
         succession: None,
         constitutional: None,

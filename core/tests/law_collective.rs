@@ -115,6 +115,7 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         }),
         arbitrators: Some(vec![spec("an arbitrator")]),
         split_grant: None,
+        payee_grants: None,
         extensions: Some(vec![ext()]),
         succession: None,
         constitutional: None,
@@ -1125,6 +1126,7 @@ fn an_emptied_area_ends_its_grants() {
         grantee: who,
         scope: 2,
         agreements: None,
+        this_agreement: false,
         limits: None,
         limits_cmip: None,
         area: Some(1),
@@ -1320,6 +1322,19 @@ fn a_revocation_ends_the_grant_key() {
     // The label acknowledges the racing act: it adopts it (A6).
     lab.ack(0, racing);
     assert_eq!(lab.view().backing(&racing).unwrap(), Backing::Binds { grant: g });
+    // H3 (F129): no handover. Another grantee manages the adopted act
+    // under its own grant (scope 1, naming it), with its own grant key;
+    // the revoked key signs nothing more.
+    let mut sofia = lab.w.genesis("sofia", vec![own_home()], None, None);
+    let (ks, ps) = grant_key("sofia");
+    let gs = lab.grant(&Grant { grantee: sofia.id, scope: 1, agreements: Some(vec![racing]), key: ps, ..grant.clone() });
+    lab.sign(ANA, &gs);
+    sign(&mut lab.w, &mut sofia, &gs);
+    let mut s3 = lab.strand(gs, &ks);
+    let managed = act(&mut lab, &mut s3);
+    assert_eq!(lab.view().backing(&managed).unwrap(), Backing::Backed { grant: gs });
+    let marco_again = act(&mut lab, &mut s1);
+    assert!(matches!(lab.view().backing(&marco_again).unwrap(), Backing::NotBacked { .. }));
 }
 
 /// F128, W6: a collective's negotiation message is talk: it binds nothing,
@@ -2492,6 +2507,7 @@ fn a_deal_changes_only_with_everyone() {
         grammar: None,
         arbitrators: None,
         split_grant: None,
+        payee_grants: None,
         extensions: None,
         succession: None,
         constitutional: None,
@@ -2567,6 +2583,7 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             grammar: None,
             arbitrators: None,
             split_grant: None,
+            payee_grants: None,
             extensions: None,
             succession: None,
             constitutional: None,
@@ -2659,6 +2676,7 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         grammar: None,
         arbitrators: None,
         split_grant: None,
+        payee_grants: None,
         extensions: None,
         succession: None,
         constitutional: None,
@@ -2853,7 +2871,7 @@ fn key_of(grantee: Hash) -> SchnorrKey {
 
 fn plain_grant(grantee: Hash, by_this: bool) -> Grant {
     let key = grant_key(&format!("{grantee:?}")).1;
-    Grant { grantee, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, by_this, key }
+    Grant { grantee, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, by_this, key }
 }
 
 /// Freeze suite v21, 3.7v (F124, S1): founding terms carry stakes in the
@@ -3179,6 +3197,7 @@ fn payer_side_splitting_follows_the_claim() {
         grammar: None,
         arbitrators: None,
         split_grant: None,
+        payee_grants: None,
         extensions: None,
         succession: None,
         constitutional: None,
@@ -3715,6 +3734,7 @@ fn a_work_is_released_to_the_public_domain() {
         grammar: None,
         arbitrators: None,
         split_grant: None,
+        payee_grants: None,
         extensions: None,
         succession: None,
         constitutional: None,
@@ -3798,6 +3818,7 @@ fn a_timed_release() {
             grammar: None,
             arbitrators: None,
             split_grant: None,
+            payee_grants: None,
             extensions: None,
             succession: None,
             constitutional: None,
@@ -4612,4 +4633,209 @@ fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
     qs.cite = Some((singer.id, vec![qg]));
     let q = post(&mut w, &mut qs);
     assert!(matches!(view(&w).backing(&q).unwrap(), Backing::NotBacked { .. }));
+}
+
+/// Freeze suite v21, 3.9t (F129, H4 and H5): a deal's payees grant its
+/// split service in the deal's terms. Each payee's grant is its own act,
+/// naming "this agreement" by null (grant field 2); the deal lists them in
+/// field 14, one per payee; signing the deal signs them, and the service
+/// signs to accept each. A payee's grant key signs only receipts for money
+/// coming into the deal, never one whose payer is the service, nor a
+/// split's payout; each payee revokes its own grant.
+#[test]
+fn a_deals_payees_grant_its_split_service_in_its_terms() {
+    use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut svc = w.genesis("a split service", vec![own_home()], None, None);
+    let fan = w.genesis("a fan", vec![own_home()], None, None);
+    let (aid, bid, sid, fid) = (ana.id, ben.id, svc.id, fan.id);
+    // Each payee's grant: scope 1, this agreement by null, a key the
+    // service made for it.
+    let deal_grant = |who: &str| {
+        let (k, p) = grant_key(&format!("{sid:?} for {who}"));
+        (k, Grant { grantee: sid, scope: 1, agreements: None, this_agreement: true, key: p, ..plain_grant(sid, false) })
+    };
+    let (ka, gra) = deal_grant("ana");
+    let (kb, grb) = deal_grant("ben");
+    // The format: field 2 written null, read back as this agreement.
+    assert_eq!(Grant::decode(&gra.to_map()).unwrap(), gra);
+    let bad = Grant { scope: 2, ..gra.clone() };
+    assert!(Grant::decode(&bad.to_map()).is_err(), "this agreement only with scope 1");
+    let ga = law_act(&mut w, &mut ana, law::types::GRANT, gra.to_map(), None);
+    let gb = law_act(&mut w, &mut ben, law::types::GRANT, grb.to_map(), None);
+    assert!(w.v.get(&ga).unwrap().act.outside.is_public(), "a person's grant is public");
+    sign(&mut w, &mut svc, &ga);
+    sign(&mut w, &mut svc, &gb);
+    // The deal lists both grants in field 14.
+    let mut t = deal_terms(aid, bid);
+    t.payee_grants = Some(vec![ga, gb]);
+    assert_eq!(Terms::decode(&t.to_map()).unwrap(), t);
+    assert_eq!(t.check(&mips()), Ok(()));
+    let deal = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &deal);
+    // The service's strand in each payee's name.
+    let strand = |p: &Person, g: Hash, k: &SchnorrKey| {
+        let mut s = p.clone();
+        s.binding = g;
+        s.sign = k.clone();
+        s.seq = vec![];
+        s.cite = Some((p.id, vec![g]));
+        s
+    };
+    let mut sa = strand(&ana, ga, &ka);
+    let mut sb = strand(&ben, gb, &kb);
+    let rc = |payee: Hash, payer: Hash, fulfils: Hash, purchase: Option<Hash>, batch: Option<Hash>| {
+        Fin::Receipt(Receipt {
+            rail: spec("a rail Module"),
+            proof: vec![],
+            payer: Some(Payer::Identity(payer)),
+            payee,
+            amount: Amount { unit: spec("a unit"), value: 100 },
+            fulfils,
+            previous: None,
+            forward: None,
+            batch,
+            purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
+        })
+        .to_map()
+    };
+    let add = |w: &mut World, s: &mut Person, p: Vec<(Value, Value)>| {
+        let a = w.everyday_act(s, mips().finance, 2, p, None, None);
+        w.add(&a)
+    };
+    let backed = |w: &World, x: &Hash| matches!(view(w).backing(x).unwrap(), Backing::Backed { .. } | Backing::Binds { .. });
+    let reason = |w: &World, x: &Hash| match view(w).backing(x).unwrap() {
+        Backing::NotBacked { reason, .. } => reason,
+        other => panic!("backed: {other:?}"),
+    };
+    // Before Ben signs, the deal does not exist, and carries no grant.
+    let early = add(&mut w, &mut sa, rc(aid, fid, deal, Some(deal), None));
+    assert!(reason(&w, &early).contains("H4"));
+    sign(&mut w, &mut ben, &deal);
+    // A fan's purchase under the deal's claim: Ana's own receipt, signed
+    // by the service with Ana's grant key.
+    let sale = add(&mut w, &mut sa, rc(aid, fid, deal, Some(deal), None));
+    assert!(backed(&w, &sale));
+    assert!(matches!(view(&w).consent(&sale).unwrap(), Consent::Granted { .. }));
+    let ben_sale = add(&mut w, &mut sb, rc(bid, fid, deal, Some(deal), None));
+    assert!(backed(&w, &ben_sale));
+    // H5: never a receipt whose payer is the service itself.
+    let payout = add(&mut w, &mut sb, rc(bid, sid, deal, None, None));
+    assert!(reason(&w, &payout).contains("payer is the split service"));
+    // Nor a split's payout, whoever is named as payer.
+    let split = law::Split {
+        receipt: sale,
+        payouts: vec![law::Payout { receiver: bid, amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None }],
+        cmip: spec("a split cMIP"),
+        agreement: deal,
+    };
+    let sp = law_act(&mut w, &mut svc, law::types::SPLIT, split.to_map(), None);
+    let named = add(&mut w, &mut sb, rc(bid, fid, sp, None, None));
+    assert!(reason(&w, &named).contains("payout"));
+    let batched = add(&mut w, &mut sb, rc(bid, fid, deal, Some(deal), Some(spec("a batch"))));
+    assert!(reason(&w, &batched).contains("payout"));
+    // Nor money for anything but the deal, nor a receipt someone else
+    // received, nor any act but a receipt.
+    let other = add(&mut w, &mut sa, rc(aid, fid, spec("another deal"), Some(spec("another deal")), None));
+    assert!(reason(&w, &other).contains("coming into the deal"));
+    let not_hers = add(&mut w, &mut sa, rc(bid, fid, deal, Some(deal), None));
+    assert!(reason(&w, &not_hers).contains("received"));
+    let post = {
+        let a = w.everyday_act(&mut sa, mips().envelope, 0, vec![], None, None);
+        w.add(&a)
+    };
+    assert!(reason(&w, &post).contains("only receipts"));
+    // Ana revokes her own grant, citing the sale; Ben's stands.
+    let r = law_act(
+        &mut w,
+        &mut ana,
+        law::types::REVOCATION,
+        law::Revocation { grant: ga }.to_map(),
+        Some(vec![Object { chain: aid, predecessor: sale }]),
+    );
+    assert_eq!(w.v.status(&r), Status::Valid);
+    assert_eq!(view(&w).backing(&sale).unwrap(), Backing::Binds { grant: ga });
+    let late = add(&mut w, &mut sa, rc(aid, fid, deal, Some(deal), None));
+    assert!(reason(&w, &late).contains("G1"));
+    let ben_late = add(&mut w, &mut sb, rc(bid, fid, deal, Some(deal), None));
+    assert!(backed(&w, &ben_late), "each payee revokes only its own grant");
+}
+
+/// Freeze suite v21, 3.9t (F129, H4): field 14's two forms. A collective
+/// names its split service by one grant; a deal lists one grant per payee.
+/// A deal's chain of judgment following its split service is refused,
+/// unsettled (question H6).
+#[test]
+fn field_14_is_one_grant_in_a_collective_and_a_list_in_a_deal() {
+    let (a, b) = (spec("ana"), spec("ben"));
+    let mut d = deal_terms(a, b);
+    d.payee_grants = Some(vec![spec("ana's grant"), spec("ben's grant")]);
+    assert_eq!(d.check(&mips()), Ok(()));
+    let mut x = d.clone();
+    x.payee_grants = Some(vec![spec("ana's grant"), spec("ana's grant")]);
+    assert!(x.check(&mips()).is_err(), "each grant once");
+    let mut x = d.clone();
+    x.payee_grants = None;
+    x.split_grant = Some(spec("one grant"));
+    assert!(x.check(&mips()).is_err(), "a deal lists its payees' grants");
+    let mut x = d.clone();
+    x.time = Some((spec("a clock"), Value::Uint(0)));
+    x.chain = Some(vec![law::ChainLink { judge: law::Judge::SplitService, next: vec![(spec("another grant"), 30)] }]);
+    assert!(matches!(x.check(&mips()), Err(law::LawError::Unsupported(w)) if w.contains("H6")));
+    let mut c = label_terms(&[a, b, spec("cy")], spec("an authority"), spec("a keeper"), &|_| {});
+    c.payee_grants = Some(vec![spec("a grant")]);
+    assert!(c.check(&mips()).is_err(), "a collective names one grant");
+    c.payee_grants = None;
+    c.split_grant = Some(spec("a grant"));
+    assert_eq!(c.check(&mips()), Ok(()));
+}
+
+/// F129, H4 (reading): one split service per deal, one grant per payee. A
+/// deal listing grants to two services, or two grants of one payee,
+/// carries none of them.
+#[test]
+fn a_deal_names_one_split_service_one_grant_per_payee() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut s1 = w.genesis("one service", vec![own_home()], None, None);
+    let mut s2 = w.genesis("another service", vec![own_home()], None, None);
+    let (aid, bid) = (ana.id, ben.id);
+    let mk = |svc: Hash, tag: &str| {
+        let (k, p) = grant_key(&format!("{svc:?} {tag}"));
+        (k, Grant { grantee: svc, scope: 1, this_agreement: true, key: p, ..plain_grant(svc, false) })
+    };
+    let (ka, ga) = mk(s1.id, "a");
+    let (_, gb) = mk(s2.id, "b");
+    let ga = law_act(&mut w, &mut ana, law::types::GRANT, ga.to_map(), None);
+    let gb = law_act(&mut w, &mut ben, law::types::GRANT, gb.to_map(), None);
+    sign(&mut w, &mut s1, &ga);
+    sign(&mut w, &mut s2, &gb);
+    let mut t = deal_terms(aid, bid);
+    t.payee_grants = Some(vec![ga, gb]);
+    let deal = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &deal);
+    sign(&mut w, &mut ben, &deal);
+    let mut sa = ana.clone();
+    sa.binding = ga;
+    sa.sign = ka;
+    sa.seq = vec![];
+    sa.cite = Some((aid, vec![ga]));
+    let rc = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
+        rail: spec("a rail Module"),
+        proof: vec![],
+        payer: Some(mor_core::finance::Payer::Identity(spec("a fan"))),
+        payee: aid,
+        amount: mor_core::finance::Amount { unit: spec("a unit"), value: 10 },
+        fulfils: deal,
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: Some(mor_core::finance::Purchase { agreement: deal, line: deal }),
+    });
+    let a = w.everyday_act(&mut sa, mips().finance, 2, rc.to_map(), None, None);
+    let x = w.add(&a);
+    assert!(matches!(view(&w).backing(&x).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("one split service")));
 }

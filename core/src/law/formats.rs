@@ -32,6 +32,8 @@ pub mod types {
     pub const SPLIT: u64 = 8;
     pub const GRANT: u64 = 9;
     pub const REVOCATION: u64 = 10;
+    /// An import (rule 41): the grantor adopting acts of an ended grant
+    /// (format open). The handover is withdrawn (F129, H3).
     pub const IMPORT: u64 = 11;
     pub const DECLARATION: u64 = 13;
     pub const RESIGNATION: u64 = 16;
@@ -810,8 +812,12 @@ pub struct Terms {
     pub grammar: Option<KeyGrammar>,
     /// 13: arbitrators or verifiers.
     pub arbitrators: Option<Vec<Hash>>,
-    /// 14: the split service's grant.
+    /// 14, in a collective: the split service's grant, one hash (its one
+    /// payee is the collective).
     pub split_grant: Option<Hash>,
+    /// 14, in a deal: the payees' grants to the split service, one per
+    /// payee, each naming "this agreement" by null (F129, H4).
+    pub payee_grants: Option<Vec<Hash>>,
     /// 15: extensions.
     pub extensions: Option<Vec<Hash>>,
     /// 16: succession plans of parties.
@@ -957,6 +963,9 @@ impl Terms {
         if let Some(g) = &self.split_grant {
             m.push((Value::Uint(14), b(g)));
         }
+        if let Some(g) = &self.payee_grants {
+            m.push((Value::Uint(14), hashes_value(g)));
+        }
         if let Some(e) = &self.extensions {
             m.push((Value::Uint(15), hashes_value(e)));
         }
@@ -1075,7 +1084,15 @@ impl Terms {
             arbitrators: get(13)
                 .map(|v| hashes(v, "terms arbitrators"))
                 .transpose()?,
-            split_grant: get(14).map(|v| hash(v, "terms split grant")).transpose()?,
+            split_grant: match get(14) {
+                Some(v @ Value::Bytes(_)) => Some(hash(v, "terms split grant")?),
+                Some(Value::Array(_)) | None => None,
+                Some(_) => return Err(LawError::Shape("terms field 14: a grant, or a deal's list of grants (F129)")),
+            },
+            payee_grants: match get(14) {
+                Some(v @ Value::Array(_)) => Some(hashes(v, "terms payee grants")?),
+                _ => None,
+            },
             extensions: get(15).map(|v| hashes(v, "terms extensions")).transpose()?,
             succession: get(16)
                 .map(|v| {
@@ -1207,12 +1224,28 @@ impl Terms {
                     "tiers and areas belong to collectives: a deal carries no field 18, 19 or 20",
                 ));
             }
+            // F129, H4: a deal lists its payees' grants, one per payee.
+            if self.split_grant.is_some() {
+                return Err(LawError::Check(
+                    "a deal lists its payees' grants to the split service in field 14, one per payee (F129, H4)",
+                ));
+            }
+            if let Some(g) = &self.payee_grants {
+                if g.is_empty() || !distinct(g) {
+                    return Err(LawError::Check("field 14 lists each payee's grant once (F129, H4)"));
+                }
+            }
             // B19: in a deal, the absence authority is one identity.
             if matches!(&self.abandonment, Some(Abandonment { authority: Authority::Others(_), .. })) {
                 return Err(LawError::Check(
                     "in a deal, the absence authority is one identity, never a threshold of the other parties (B19)",
                 ));
             }
+        }
+        if self.is_collective() && self.payee_grants.is_some() {
+            return Err(LawError::Check(
+                "a collective names its split service by one grant in field 14; a list of payees' grants is a deal's (F129, H4)",
+            ));
         }
         if let Some(k) = &self.keepers {
             if !distinct(&k.operators) || !k.rule.fits(&k.operators) {
@@ -1404,6 +1437,11 @@ impl Terms {
                 }
                 Judge::SplitService => match self.split_grant {
                     Some(g) => g,
+                    None if self.payee_grants.is_some() => {
+                        return Err(LawError::Unsupported(
+                            "a deal's chain of judgment following its split service: a successor would need one grant per payee, unsettled (F129, question H6)",
+                        ))
+                    }
                     None => {
                         return Err(LawError::Check(
                             "the chain of judgment follows a split service the terms do not name (F121)",
@@ -2012,6 +2050,9 @@ pub struct Grant {
     pub scope: u64,
     /// 2: the agreements concerned, for scope 1.
     pub agreements: Option<Vec<Hash>>,
+    /// 2, null: "this agreement", the deal whose terms list the grant in
+    /// field 14 (F129, H4), as founding terms name "this collective" (S1).
+    pub this_agreement: bool,
     /// 3: limits, as the grant's cMIP defines.
     pub limits: Option<Value>,
     /// 4: the cMIP defining the limits.
@@ -2039,6 +2080,8 @@ impl Grant {
         ];
         if let Some(a) = &self.agreements {
             m.push((Value::Uint(2), hashes_value(a)));
+        } else if self.this_agreement {
+            m.push((Value::Uint(2), Value::Null));
         }
         if let Some(l) = &self.limits {
             m.push((Value::Uint(3), l.clone()));
@@ -2087,7 +2130,11 @@ impl Grant {
         let g = Grant {
             grantee: hash(get(0).ok_or(LawError::Shape("grant: grantee"))?, "grant: grantee")?,
             scope: uint(get(1).ok_or(LawError::Shape("grant: scope"))?, "grant: scope")?,
-            agreements: get(2).map(|v| hashes(v, "grant: agreements")).transpose()?,
+            agreements: match get(2) {
+                Some(Value::Null) | None => None,
+                Some(v) => Some(hashes(v, "grant: agreements")?),
+            },
+            this_agreement: matches!(get(2), Some(Value::Null)),
             limits: get(3).cloned(),
             limits_cmip: get(4).map(|v| hash(v, "grant: limits cMIP")).transpose()?,
             area: get(5).map(|v| uint(v, "grant: area")).transpose()?,
@@ -2106,6 +2153,11 @@ impl Grant {
         if g.by_this && (g.area.is_some() || g.reinstates.is_some()) {
             return Err(LawError::Shape(
                 "grant: a grant of this collective by its founding terms (field 8) names no area and reinstates nothing",
+            ));
+        }
+        if g.this_agreement && (g.scope != 1 || g.by_this || g.area.is_some() || g.reinstates.is_some()) {
+            return Err(LawError::Shape(
+                "grant: a grant naming this agreement by null (F129, H4) manages that deal (scope 1), and names no area, reinstates nothing and is not a collective's founding grant",
             ));
         }
         if g.scope > 2 {

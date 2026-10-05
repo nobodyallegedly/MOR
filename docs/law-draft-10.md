@@ -936,3 +936,91 @@ So the line covers the second and third kinds and fails the first, which is wher
 3. Question H4 (how a deal names its payees' grants), then H5 (what such a grant may reach): the deal's part of F128 waits on both.
 4. The twelve readings above, and the person's grant being public.
 5. Approval of the whole set: Law 10, Finance 6, Envelope 7, Identity 11, Production 6, core v21, suite v21, one page v6, the payment cMIP and Lightning Module draft 2; then the Mac regtest run once.
+
+## 12. F129 written in
+
+*5 October 2026. Main merged in first (the findings log, F129; one conflict, in the roadmap, both sides kept). Law draft 10, Identity draft 11, Finance draft 6, the payment cMIP draft 2, core v21, freeze suite v21 and one page v6 revised in place; the core library, its WebAssembly bindings, and the repo and collective clients changed and tested. Nothing is approved.*
+
+**The short answer.** All of F129 is written in and built: H1 as built, the handover withdrawn (H3), a deal's grants written in its terms (H4), a payee's grant key limited to money coming in (H5), readings 1 to 12 and a person's grant being public. With it, the deal's part of F128 is done. Writing it found two questions (H6, H7), neither worked around; each is below with an example and options.
+
+### What changed, in plain words
+
+**A client that does not read Law still sees a grant key's act, as "scoped".** Nothing changed here: what was built is now confirmed. Identity checks the signature and says "scoped"; Law decides whether the act counts; a wallet without Law shows it as unknown.
+
+**There is no handover any more.** When a group takes an agent's grant back, the agent's last acts that nothing of the group had named are void. The group can still keep any of them, by an act of its own key (acknowledging it, paying on it, or importing it), and then another agent looks after it under that agent's own grant.
+*Example:* the label revokes Marco; deal 4, signed on his second laptop and named by nothing, is void. The label acknowledges deal 4: it counts. The label grants Sofia the job of managing deal 4; she signs with her own grant key. Marco's key signs nothing more that counts.
+
+**In a deal, each owner's permission to the money service is written into the deal itself.** Two musicians, no group, use a service to divide their song's money. Each of them signs a grant to the service, which names "this agreement" without its fingerprint (the deal does not exist yet), as a group's founding terms name "this collective". The deal lists both grants. Once both musicians have signed the deal, the grants count, and the service, which signed to accept each, holds one key per musician. Either musician can take back their own grant at any time: leaving the service is a revocation, not a renegotiation.
+*Example:* Ana and Ben's deal lists Ana's grant and Ben's grant. Before Ben signs the deal, the service's receipt in Ana's name counts for nothing; after, it counts. Ana takes her grant back: the receipts it signed before stay; any later one with her key is void; Ben's key still works.
+
+**The service can use a musician's key only for money coming in, never to say it paid them.** With Ana's key, the service signs Ana's receipt when a fan buys the song: the money came into the deal. It cannot sign "Ana received her share" with Ana's key, nor any receipt where the service itself is the payer: a payout without Ana's own receipt stays visibly owed by the service.
+*Example:* the service owes Ben 40 from a sale and signs "Ben received 40" with Ben's grant key: not backed. Until Ben signs his own receipt, the 40 shows as owed.
+
+### Precisely
+
+- **H1** (Identity "Scoped keys", definition, F128 decision 16): confirmed as option (a); the text marks it decided, no rule changed.
+- **H3** (Law rules 40, 41; act table type 11): the handover withdrawn; type 11 is the import alone (format still open, refused by verifiers); the adoption is the grantor's, a person's as a collective's (reading 6); another grantee manages the adopted act under its own grant (scope 1, naming it). Freeze step 3.5 rewritten and run; the suite's checklist and step 3's "Passes if" no longer wait on H3.
+- **H4** (definitions "Grant", "This agreement", "Payee"; grant field 2; terms field 14; "Grant (type 9)", "A payee's grant in a deal"; rules 18, 30, 38): grant field 2 may be written `null`, "this agreement", only with scope 1, never with fields 5, 7 or 8. Terms field 14 is `hash` in a collective (unchanged) and `[+ hash]` in a deal, one grant per payee, distinct; a single hash in a deal, or a list in a collective, makes the terms invalid. A payee's grant is a person's grant: signed by the payee with its own key, public, accepted by the service's signature act; it counts only once a deal its grantor signed lists it in field 14 and exists. Every grant field 14 lists names one grantee and is signed by a distinct party, or the deal carries none (reading). The pointer check uses the payee's own grant in field 14; payer-side splitting is refused where field 14 names grants, as before.
+- **H5** ("What a payee's grant key may sign"; Finance rule 1; payment cMIP point 4): backed only for a Finance receipt (type 2) whose payee is the grantor and which is a purchase naming the deal or a version of it (field 9), or follows the deal or a version of it (field 5); never one whose payer (field 2) is the grantee, nor one carrying a batch (field 8) or naming a split in field 5 or `objects`; no other act. Its kinds (field 6), where named, still apply.
+- **Readings 1 to 12 and the person's grant** confirmed: the F128 readings move from "Open in this draft" to rule text, already written in the F128 pass.
+- **Formats:** terms field 14 (a deal's list); grant field 2's null. No other format changes; the payment commitment is unchanged.
+- **Suite steps rewritten to grant keys:** 1.3 (the film's payees grant the service, H5's refusals named), 6.2 (key release delegated by a grant key), 7.1 (each creator's grant in its deal; listeners pay the service's own pointer, which it receipts with its own key), 7.7 (each creator revokes its own grant; the deals cloned with grants to the new service). **Step 3.4 already revokes by grant key** (rewritten in the F128 pass), so it is unchanged. New step 3.9t (run).
+
+### Questions found writing it (not worked around)
+
+**Question H6. A deal's chain of judgment that follows its split service.**
+*Plain words:* a deal may name, in advance, a second service to take over if the first fails. In a collective that is one grant. In a deal the second service would need a grant from every payee, and a link of the chain holds one.
+*Example:* Ana and Ben's deal names service S and, should S fail, service T. T needs Ana's grant and Ben's grant; the link has room for one.
+- (a) A deal's link lists one grant per payee for each service taking over, grouped by service, each naming "this agreement" like field 14's.
+- (b) A deal's chain never follows its split service; switching is each payee revoking and a clone of the deal (rule 30).
+- (c) The link names the next service's identity, and each payee grants it only when the chain passes.
+**Lean: (a)**, so the chain works in deals as in collectives, signed with the terms. *Meanwhile:* a deal whose chain follows its split service is refused, never guessed.
+
+**Question H7. Does H5's limit also bind a collective's split service?**
+*Plain words:* H5 stops a deal's service from signing "I paid you" in a payee's name. A collective's service also holds a key of the collective, and can sign whatever receipts that key's grant reaches. Where the collective is itself owed money as an owner of someone else's work, its service could sign "the collective received its share" without it arriving.
+*Example:* a label owns a quarter of a film. The film's service owes the label 40. The label's own service, whose grant key reaches the label's receipts, signs "the label received 40".
+- (a) The same limit for a collective's split-service grant: only receipts for money coming in under the collective's own claims and offers, never one whose payer is the service, nor a payout the collective is owed.
+- (b) Leave it to the collective, which chose the grant's reach and may name receipts narrowly.
+- (c) (a) as client conformance only.
+**Lean: (a)**, one rule for every split service. *Meanwhile:* H5 is written for deals' grants only; a collective's split-service grant reaches what its kinds name.
+
+### Readings taken writing it, to confirm
+
+1. A payee's grant is a person's grant (rule 38): signed by the payee with its own key, public, revoked by the payee alone. "Signing the deal signs them" is read as: it counts only once a deal its grantor signed lists it and exists, every party having signed; the payee signs both the grant act and the deal.
+2. "This agreement" is the deal with the versions it clones: a purchase naming any of them, or a payment following any of them, is money coming into the deal. A grant listed by two deals its grantor signed serves each.
+3. One split service per deal, one grant per payee: every grant field 14 lists is held, names the same grantee and is signed by a distinct party; otherwise the deal carries none, and a verifier not holding every listed grant cannot tell (fail closed).
+4. A payout is a receipt carrying a batch, or naming a split in field 5 or `objects`; "payments on its offer" are receipts following the deal itself, a standing offer's format being open (refused, never guessed); a receipt received by anyone but the grantor is never backed.
+5. A collective's field 14 stays one hash, its one payee being the collective.
+6. Rule 40's adoption is the grantor's, a person's as a collective's.
+
+### Code and tests
+
+- **Core library.** `core/src/law/formats.rs`: `Terms.payee_grants` (field 14 as a list in a deal; one hash in a collective, else invalid); a deal's chain following its split service refused (`Unsupported`, H6); `Grant.this_agreement` (field 2 written null, scope 1 only); type 11 documented as the import alone. `core/src/law/view.rs`: `carrying_deals` and `deal_grant_problem` (H4: the grant counts only through a deal its grantor signed, one service and one grant per payee; H5: only incoming receipts the grantor received, never one paid by the service, nor a payout), called from `backing` for a person's grant naming this agreement; `pointer_check` reads the payee's own grant in a deal; payer-side splitting refused where field 14 names grants.
+- **WebAssembly.** Terms read back with `payeeGrants`.
+- **Clients.** Repo: `dealGrantPayload(service, key)` (scope 1, field 2 null). Collective: the terms' reading names a deal's payee grants and what their keys may sign. The others are unchanged and rerun.
+- **Tests.** Core, new: `a_deals_payees_grant_its_split_service_in_its_terms` (3.9t: H4 and H5 end to end, a payee's revocation), `field_14_is_one_grant_in_a_collective_and_a_list_in_a_deal` (3.9t, H6 refused), `a_deal_names_one_split_service_one_grant_per_payee` (reading 3); extended: `a_revocation_ends_the_grant_key` (3.5, H3: after adoption, Sofia's own grant backs her act, Marco's key nothing). Repo client, new: a deal's field 14 as a list, a single hash and a repeated grant refused, the deal grant's payload.
+- **Results.** Rust workspace **302 passed, 0 failed** (299 before, plus 3), no warnings. Clients, every one typechecking against bindings rebuilt from this branch:
+
+| Client | Passed | Failed |
+| --- | --- | --- |
+| genesis | 14 | 0 |
+| repo | 12 | 0 |
+| longform | 15 | 0 |
+| barebone | 9 | 0 |
+| reader | 16 | 0 |
+| manage | 7 | 0 |
+| collective | 19 | 0 |
+| connector | 12 | 0 |
+| desk | 8 | 0 |
+| **All** | **112** | **0** |
+
+### The Mac regtest steps
+
+**No change.** No deal in the run names a split service, so no payee grant, field 14 list or H5 check is exercised; no grant is revoked or adopted. The payment commitment's bytes, the Lightning Module and the harness are untouched. The steps of `docs/core-pass-v21.md`, section 5, stand as written.
+
+### Waiting on Nobody, allegedly, in order
+
+1. Question H6 (a deal's chain of judgment following its split service).
+2. Question H7 (whether H5's limit also binds a collective's split service).
+3. The six readings above.
+4. Approval of the whole set: Law 10, Finance 6, Envelope 7, Identity 11, Production 6, core v21, suite v21, one page v6, the payment cMIP and Lightning Module draft 2; then the Mac regtest run once.

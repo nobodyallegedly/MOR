@@ -12,12 +12,12 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cborDecode, cborEncode, checkTerms, describeAct, rebuildSafety, verifyShare } from '../../genesis/src/core.ts';
+import { cborDecode, cborEncode, checkTerms, hex, describeAct, rebuildSafety, verifyShare } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { TestCollective, type Governance } from '../src/collective.ts';
-import { LAW_SPECS } from '../src/law.ts';
+import { LAW_SPECS, dealGrantPayload } from '../src/law.ts';
 import {
   compareWithTree,
   decodeManifest,
@@ -301,6 +301,27 @@ test('a key grammar that one lost holder would freeze is refused (F96)', () => {
     () => checkTerms(terms([1, 2, [h(1), h(2), h(3)]], [[12, new Map<number, unknown>([[0, [0, h(1)]], [1, [1, 2, [h(1), h(2), h(3)]]], [2, []]])]]), LAW_SPECS),
     /^Error: law\/shape:/,
   );
+});
+
+test("a deal lists its payees' grants in field 14, one per payee (F129, H4)", () => {
+  const h = (n: number) => new Uint8Array(32).fill(n);
+  const deal = (f14: unknown) =>
+    cborEncode(
+      new Map<number, unknown>([
+        [0, [h(1), h(2)]],
+        [1, 'a song'],
+        [2, new Map()],
+        [4, [0]],
+        [5, [0]],
+        [14, f14],
+      ]),
+    );
+  checkTerms(deal([h(7), h(8)]), LAW_SPECS);
+  assert.throws(() => checkTerms(deal(h(7)), LAW_SPECS), /^Error: law\/check:.*H4/);
+  assert.throws(() => checkTerms(deal([h(7), h(7)]), LAW_SPECS), /^Error: law\/check:.*H4/);
+  const g = cborDecode(dealGrantPayload(hex(h(9)), [0, h(5)])) as Map<number, unknown>;
+  assert.equal(g.get(1), 1);
+  assert.equal(g.get(2), null);
 });
 
 test('shares check alone, and fewer than the threshold rebuild nothing', () => {
