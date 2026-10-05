@@ -51,7 +51,7 @@ Everything in MOR is an **act**: a signed object, encoded in deterministic CBOR 
 
 An act has one signer. Anything that needs two identities is two acts, the second naming the first. An act counts for a verifier only once the verifier holds it: nothing forces propagation, and delivery is the signer's interest.
 
-Hashes are SHA-256 with domain-separating tags, in the style of BIP-340 [BIP-340], every tag beginning `MOR/`; a successor protocol must use a different prefix, so that nothing can be replayed across the two. Content is encrypted with XChaCha20-Poly1305 under a fresh key per object. Encryption keys for identities are hybrid, X25519 with ML-KEM-768 [FIPS 203] (X-Wing).
+Hashes are SHA-256 with domain-separating tags, in the style of BIP-340 [BIP-340], every tag beginning `MOR/`; a successor protocol must use a different prefix, so that nothing can be replayed across the two. Content is encrypted with XChaCha20-Poly1305 under a fresh key per object. Encryption keys for identities are hybrid, X25519 with ML-KEM-768 [FIPS 203] (X-Wing [X-Wing]).
 
 ### 3.2 Layers
 
@@ -178,7 +178,7 @@ A member can always leave alone, giving up their voice and keeping their stake. 
 Each claim is marked **run**, where the reference implementation exercises it in the freeze test suite or the invariant tests, or **reasoned**, where it rests on argument only.
 
 1. **Two honest verifiers holding the same acts reach the same verdicts, whatever the order in which the acts arrived.** *Run* (order replays over random histories, section 8).
-2. **A stolen signing key cannot outlast the owner's next rotation:** the thief's acts outside the kept line are void, except those a third party relied on, which stay visible as disputes. *Run* (identity gauntlet; freeze scenario 5).
+2. **A stolen signing key cannot outlast the owner's next rotation:** the thief's acts outside the kept line are void, except those a third party relied on, which stay visible as disputes. *Run* (freeze scenario 1, step 5c; scenario 5, step 5b; invariants: 743 thief's signatures voided by a rotation in the final deal run).
 3. **A stolen home operator key cannot change any identity's chain, and cannot close a home.** *Run* (gauntlet).
 4. **An owner holding both keys can leave any home, including a hostile one.** *Run* (gauntlet).
 5. **No stake or share moves without its holder's signature, and a deal changes only with every party.** *Run* (invariants over 5,000 deals and 10,000 collectives' stake clones).
@@ -268,3 +268,4 @@ The specifications, the findings log, the reference implementation and the tests
 - [RFC 6962] B. Laurie, A. Langley, E. Kasper. *Certificate Transparency.* 2013.
 - [RFC 8949] C. Bormann, P. Hoffman. *Concise Binary Object Representation (CBOR).* 2020.
 - [SSB] D. Tarr et al. *Secure Scuttlebutt: An Identity-Centric Protocol for Subjective and Decentralized Applications.* ACM ICN 2019.
+- [X-Wing] M. Barbosa, D. Connolly, J. Duarte, A. Kaiser, P. Schwabe, K. Varner, B. Westerbaan. *X-Wing: The Hybrid KEM You've Been Looking For.* IACR Communications in Cryptology 1(1), 2024.
