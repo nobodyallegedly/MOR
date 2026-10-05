@@ -1870,6 +1870,21 @@ fn check_objects_self(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
     }
 }
 
+/// A fork's or closing's `objects` (F131, IT1): the agreement as chain and
+/// predecessor, `[agreement, agreement]`, then one entry `[agreement,
+/// ending]` for each earlier fork or closing of the same collective it
+/// names, the act it follows on that chain, distinct, none the agreement.
+fn check_objects_ending(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
+    let o = inside.objects.as_deref().unwrap_or(&[]);
+    let named = o.iter().skip(1).take_while(|e| &e.chain == x).count();
+    let first = o.first().is_some_and(|e| &e.chain == x && &e.predecessor == x);
+    let ends: Vec<Hash> = o.iter().skip(1).take(named).map(|e| e.predecessor).collect();
+    if !first || ends.contains(x) || !distinct(&ends) || chain_citations(&o[1 + named..], 0).is_err() {
+        return Err(LawError::Shape(w));
+    }
+    Ok(())
+}
+
 /// The inside `objects` a terms act carries: none for founding terms; for a
 /// clone, `[[parent, the parent-chain act it follows]]`; either followed, for
 /// terms a collective proposes, by its chain citations (F127).
@@ -2618,7 +2633,7 @@ impl Fork {
                 "a fork assigns each debt once, to sides it lists, ascending (F121, N13)",
             ));
         }
-        check_objects_self(inside, &x.agreement, "fork")?;
+        check_objects_ending(inside, &x.agreement, "fork")?;
         Ok(x)
     }
 
@@ -2663,7 +2678,7 @@ impl Closing {
             chain_act: hash(req(2, "closing: the chain act")?, "closing: the chain act")?,
             tips: tips(req(3, "closing: kept tips")?, "closing: kept tip")?,
         };
-        check_objects_self(inside, &x.agreement, "closing")?;
+        check_objects_ending(inside, &x.agreement, "closing")?;
         Ok(x)
     }
 }

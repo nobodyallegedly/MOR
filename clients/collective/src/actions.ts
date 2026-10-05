@@ -429,6 +429,20 @@ export class Actions {
    * device not heard from.
    */
   private async unheard(c: TestCollective): Promise<Line[]> {
+    const found = await this.unheardActs(c);
+    if (!found.size) return [];
+    const latest = [...found].sort((x, y) => y[1] - x[1])[0][0];
+    const n = found.size;
+    return [
+      {
+        text: `${count(n, 'act')} signed by the collective ${n === 1 ? 'is' : 'are'} at its relays but not in this device's sequence (latest ${short(latest)}): another device made ${n === 1 ? 'it' : 'them'}. The record names no other sequence, so ${n === 1 ? 'it' : 'they'} will count as made after its line (Law, “Made before, made after”). Client conformance: the collective's devices share their tips before a line is drawn.`,
+        tone: 'warn',
+      },
+    ];
+  }
+
+  /** Acts of the collective its relays hold that this device's sequence does not, with their positions. */
+  private async unheardActs(c: TestCollective): Promise<Map<string, number>> {
     const mine = new Set(c.f.identity.sequence);
     const found = new Map<string, number>();
     for (const a of await allBy(c.identity, this.hintsOf(c), this.via)) {
@@ -442,15 +456,40 @@ export class Actions {
       if (d.spec === SPECS.identity && (d.type === 0 || d.type === 1)) continue; // genesis and rotations: the chain
       if (!mine.has(d.id)) found.set(d.id, d.position ?? 0);
     }
-    if (!found.size) return [];
-    const latest = [...found].sort((x, y) => y[1] - x[1])[0][0];
-    const n = found.size;
-    return [
-      {
-        text: `${count(n, 'act')} signed by the collective ${n === 1 ? 'is' : 'are'} at its relays but not in this device's sequence (latest ${short(latest)}): another device made ${n === 1 ? 'it' : 'them'}. The record names no other sequence, so ${n === 1 ? 'it' : 'they'} will count as made after its line (Law, “Made before, made after”). Client conformance: the collective's devices share their tips before a line is drawn.`,
-        tone: 'warn',
-      },
-    ];
+    return found;
+  }
+
+  /**
+   * Before signing a fork or closing (F131, IT2b, client conformance): this
+   * client refuses until it has pulled every device's latest acts and holds
+   * every act the ending's history should hold. A line drawn without them
+   * would leave out acts the collective already did, and any debt or sale
+   * they carry would be void: a cost the text states only for an ending
+   * whose signers all chose it. Also (F131, IT1) the endings of the
+   * collective already held, which the new one names, so that it counts as
+   * made after them and never undoes a complete one.
+   */
+  private async endingGate(
+    c: TestCollective,
+    v: Verifier,
+    specs: typeof LAW_SPECS,
+    line: { act: string; position: number; summary: string }[],
+  ): Promise<{ blocking: string[]; named: string[] }> {
+    const blocking: string[] = [];
+    const found = await this.unheardActs(c);
+    if (found.size) {
+      const latest = [...found].sort((x, y) => y[1] - x[1])[0][0];
+      blocking.push(
+        `This device has not caught up with the collective's other devices: ${count(found.size, 'act')} signed by the collective ${found.size === 1 ? 'is' : 'are'} at its relays but not in its sequence (latest ${short(latest)}). An ending drawn here would leave ${found.size === 1 ? 'it' : 'them'} out of its history, and void what ${found.size === 1 ? 'it carries' : 'they carry'}: bring this device up to date first (Law rule 47a; F131 IT2b, client conformance).`,
+      );
+    }
+    const unheld = v.lawLineUnheld(specs, c.identity, c.f.identity.binding, line) as string[];
+    if (unheld.length) {
+      blocking.push(
+        `${count(unheld.length, 'act')} in the history this ending would cite ${unheld.length === 1 ? 'is' : 'are'} not held here (first ${short(unheld[0])}): until ${unheld.length === 1 ? 'it is' : 'they are'}, what it must hand out cannot be told (F127; F131 IT2b, client conformance).`,
+      );
+    }
+    return { blocking, named: v.lawEndingActs(specs, c.identity) as string[] };
   }
 
   // ------------------------------------------------------------ founding
@@ -2007,6 +2046,8 @@ export class Actions {
     const debts: [string, number[]][] = [];
     const seq0 = c.f.identity.sequence;
     const line = seq0.length ? [{ act: seq0[seq0.length - 1], position: seq0.length, summary: runningSummary(seq0) }] : [];
+    const gate = await this.endingGate(c, v0, s0, line);
+    blocking.push(...gate.blocking);
     const history = (v0.lawHandOut(s0, c.identity, c.f.agreement, c.f.identity.binding, line) as string[] | null) ?? [];
     for (const o of new Set(history)) {
       const to = a.debts?.[o] ?? sides.map((_, i) => i);
@@ -2036,7 +2077,7 @@ export class Actions {
     const s = this.store.settings();
     return this.plan({
       kind: 'fork',
-      digest: digestOf('fork', a.collective, c.f.agreement, JSON.stringify({ sides, debts, kept })),
+      digest: digestOf('fork', a.collective, c.f.agreement, JSON.stringify({ sides, debts, kept, named: gate.named })),
       reading,
       depends: [a.collective, ...listed],
       run: async () => {
@@ -2088,7 +2129,10 @@ export class Actions {
           debts,
         });
         const first = this.store.identity(sides[0][0]);
-        const x = await first.publish(REPO_SPECS.law, LAW_TYPES.fork, payload, { public: true, relays, objects: [[col.f.agreement, col.f.agreement]] });
+        // F131 (IT1): it names every ending of the collective held, so it
+        // counts as made after them.
+        const objects: [string, string][] = [[col.f.agreement, col.f.agreement], ...gate.named.map((e): [string, string] => [col.f.agreement, e])];
+        const x = await first.publish(REPO_SPECS.law, LAW_TYPES.fork, payload, { public: true, relays, objects });
         acts.push(x.id);
         const ids = [first];
         for (const m of listed.slice(1)) {
@@ -2186,6 +2230,10 @@ export class Actions {
     // D5: a collective cannot close while it owes anything, its own debts
     // and those it owes as a fork's successor alike.
     const { v: v0, specs: s0 } = await this.lawVerifier(c, this.concerned(c));
+    const seq0 = c.f.identity.sequence;
+    const line = seq0.length ? [{ act: seq0[seq0.length - 1], position: seq0.length, summary: runningSummary(seq0) }] : [];
+    const gate = await this.endingGate(c, v0, s0, line);
+    blocking.push(...gate.blocking);
     const owes = v0.lawOwes(s0, c.identity);
     if (owes.length) {
       const creditor = new Map(this.debtsOf(c).map((d) => [d.id, d.creditor]));
@@ -2206,7 +2254,7 @@ export class Actions {
     };
     return this.plan({
       kind: 'closing',
-      digest: digestOf('closing', a.collective, c.f.agreement, String(c.f.identity.sequence.length)),
+      digest: digestOf('closing', a.collective, c.f.agreement, String(c.f.identity.sequence.length), gate.named.join(',')),
       reading,
       depends: [a.collective, ...signers],
       run: async () => {
@@ -2215,7 +2263,8 @@ export class Actions {
         const tips = seq.length ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }] : [];
         const payload = closingPayload({ agreement: col.f.agreement, collective: col.identity, chainAct: col.f.identity.binding, tips });
         const first = this.store.identity(signers[0]);
-        const x = await first.publish(REPO_SPECS.law, LAW_TYPES.closing, payload, { public: true, relays: col.f.relays, objects: [[col.f.agreement, col.f.agreement]] });
+        const objects: [string, string][] = [[col.f.agreement, col.f.agreement], ...gate.named.map((e): [string, string] => [col.f.agreement, e])];
+        const x = await first.publish(REPO_SPECS.law, LAW_TYPES.closing, payload, { public: true, relays: col.f.relays, objects });
         const acts = [x.id];
         const ids = [first];
         for (const m of signers.slice(1)) {

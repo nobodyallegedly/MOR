@@ -196,9 +196,14 @@ fn binds(b: &Backing) -> bool {
 
 /// Every verdict the library gives on every act held, as text: what a
 /// client would show. Two deliveries of the same acts must give the same.
-fn verdicts(v: &Verifier, push: &BTreeSet<Hash>) -> BTreeMap<Hash, String> {
+/// What the caller states about rails: the push rails, and the receipts a
+/// rail showed wrong (F131, IT3).
+type Rails = (BTreeSet<Hash>, BTreeSet<Hash>);
+
+fn verdicts(v: &Verifier, rails: &Rails) -> BTreeMap<Hash, String> {
     let mut lv = LawView::new(v, mips());
-    lv.push_rails = push.clone();
+    lv.push_rails = rails.0.clone();
+    lv.rail_invalid = rails.1.clone();
     let mut out = BTreeMap::new();
     let ids: Vec<Hash> = v.held_acts().map(|h| h.id).collect();
     for id in ids {
@@ -230,7 +235,7 @@ fn verdicts(v: &Verifier, push: &BTreeSet<Hash>) -> BTreeMap<Hash, String> {
 /// The same acts delivered into a fresh verifier in a shuffled order. With
 /// `probe`, the verifier is queried while they arrive (a client reading as
 /// acts come in), so any state cached from a partial delivery shows.
-fn replay(log: &[(Act, Option<ContentKey>)], seed: u64, probe: bool, push: &BTreeSet<Hash>) -> BTreeMap<Hash, String> {
+fn replay(log: &[(Act, Option<ContentKey>)], seed: u64, probe: bool, push: &Rails) -> BTreeMap<Hash, String> {
     let mut order: Vec<usize> = (0..log.len()).collect();
     let mut r = Lcg(seed);
     for i in (1..order.len()).rev() {
@@ -336,8 +341,10 @@ enum Op {
     Revoke { grant: u8, dev: u8, join_strand: bool, holders_sign: bool },
     Ack { dev: u8, target: u8 },
     Resign { member: u8, area_only: bool, dev: u8, tips: u8, inform: bool },
-    Fork { stale: u8, sides: u8, debts: DebtsMode, seal: Seal, all_sign: bool, succ_sign: bool },
-    Closing { stale: u8, seal: Seal, all_sign: bool },
+    /// `names`: the ending names every earlier ending of the collective it
+    /// holds (client conformance, F131 IT1); otherwise none.
+    Fork { stale: u8, sides: u8, debts: DebtsMode, seal: Seal, all_sign: bool, succ_sign: bool, names: bool },
+    Closing { stale: u8, seal: Seal, all_sign: bool, names: bool },
     Pay { debt: u8, by: PaidBy, full: bool },
     Release { debt: u8, by_creditor: bool },
     Sale { strand: u8, proof: u8, disguise: Disguise, lane_sign: bool, line_current: bool },
@@ -367,10 +374,10 @@ fn op() -> impl Strategy<Value = Op> {
         1 => (any::<u8>(), any::<u8>()).prop_map(|(dev, target)| Op::Ack { dev, target }),
         1 => (any::<u8>(), any::<bool>(), any::<u8>(), any::<u8>(), any::<bool>())
             .prop_map(|(member, area_only, dev, tips, inform)| Op::Resign { member, area_only, dev, tips, inform }),
-        2 => (prop_oneof![3 => Just(0u8), 1 => 1u8..3], any::<u8>(), debts, seal(), prop::bool::weighted(0.85), prop::bool::weighted(0.85))
-            .prop_map(|(stale, sides, debts, seal, all_sign, succ_sign)| Op::Fork { stale, sides, debts, seal, all_sign, succ_sign }),
-        1 => (prop_oneof![3 => Just(0u8), 1 => 1u8..3], seal(), prop::bool::weighted(0.85))
-            .prop_map(|(stale, seal, all_sign)| Op::Closing { stale, seal, all_sign }),
+        2 => (prop_oneof![3 => Just(0u8), 1 => 1u8..3], any::<u8>(), debts, seal(), prop::bool::weighted(0.85), prop::bool::weighted(0.85), prop::bool::weighted(0.75))
+            .prop_map(|(stale, sides, debts, seal, all_sign, succ_sign, names)| Op::Fork { stale, sides, debts, seal, all_sign, succ_sign, names }),
+        1 => (prop_oneof![3 => Just(0u8), 1 => 1u8..3], seal(), prop::bool::weighted(0.85), prop::bool::weighted(0.75))
+            .prop_map(|(stale, seal, all_sign, names)| Op::Closing { stale, seal, all_sign, names }),
         2 => (any::<u8>(), paid, prop::bool::weighted(0.8)).prop_map(|(debt, by, full)| Op::Pay { debt, by, full }),
         1 => (any::<u8>(), prop::bool::weighted(0.8)).prop_map(|(debt, by_creditor)| Op::Release { debt, by_creditor }),
         2 => (any::<u8>(), 0u8..3, disguise, prop::bool::weighted(0.8), any::<bool>())
@@ -485,6 +492,9 @@ struct ColWorld {
     /// Acts a later act of the collective cited (joined) while they counted:
     /// a counterparty that waited for that is promised safety (rule 43).
     cited_counting: Vec<(Hash, Hash)>,
+    /// A line names the grant keys' strands' tips too, as kept tips (a
+    /// named test only).
+    line_strands: bool,
     rng: Lcg,
     seed: u64,
 }
@@ -586,6 +596,7 @@ impl ColWorld {
             successors: vec![],
             succ_people: vec![],
             cited_counting: vec![],
+            line_strands: false,
             rng: Lcg(seed),
             seed,
         };
@@ -774,11 +785,18 @@ impl ColWorld {
 
     /// The line a fork or closing draws: each device's tip, `stale` acts back.
     fn line(&self, stale: u8) -> Vec<KeptTip> {
-        self.c
+        let mut out: Vec<KeptTip> = self
+            .c
             .iter()
             .filter(|d| !d.seq.is_empty())
             .map(|d| tip_at(&d.seq, d.seq.len().saturating_sub(stale as usize).max(1)))
-            .collect()
+            .collect();
+        if self.line_strands {
+            for g in &self.grants {
+                out.extend(g.strands.iter().filter(|d| !d.seq.is_empty()).map(|d| tip_at(&d.seq, d.seq.len())));
+            }
+        }
+        out
     }
 
     /// A successor collective founded by one side of a fork (N4), keeping
@@ -960,7 +978,7 @@ impl ColWorld {
                 self.departures.push((rec, who, area_only));
                 let _ = i;
             }
-            Op::Fork { stale, sides, debts, seal, all_sign, succ_sign } => {
+            Op::Fork { stale, sides, debts, seal, all_sign, succ_sign, names } => {
                 if self.endings.iter().filter(|e| e.fork).count() >= 2 {
                     return;
                 }
@@ -1015,13 +1033,13 @@ impl ColWorld {
                     debts: list,
                 };
                 let signer = a[0];
-                let cur = self.current;
+                let o = self.ending_objects(names);
                 let x = match seal {
-                    Seal::Public => law_act(&mut self.w, &mut self.m[signer][0], law::types::FORK, f.to_map(), obj(cur)),
+                    Seal::Public => law_act(&mut self.w, &mut self.m[signer][0], law::types::FORK, f.to_map(), o),
                     _ => {
                         let keep = if seal == Seal::All { ids.len() } else { ids.len() - 1 };
                         let to: Vec<Hash> = ids.iter().take(keep).copied().collect();
-                        self.w.private_act(&mut self.m[signer][0], mips().law, law::types::FORK, f.to_map(), obj(cur), to)
+                        self.w.private_act(&mut self.m[signer][0], mips().law, law::types::FORK, f.to_map(), o, to)
                     }
                 };
                 let others: Vec<usize> = a.iter().chain(b.iter()).copied().filter(|m| *m != signer).collect();
@@ -1041,7 +1059,7 @@ impl ColWorld {
                 }
                 self.endings.push(EndingInfo { id: x, fork: true, tips: tips.iter().map(|t| t.act).collect() });
             }
-            Op::Closing { stale, seal, all_sign } => {
+            Op::Closing { stale, seal, all_sign, names } => {
                 if self.endings.len() >= 3 {
                     return;
                 }
@@ -1051,13 +1069,13 @@ impl ColWorld {
                 let tips = self.line(stale);
                 let c = law::Closing { agreement: self.current, collective: self.col, chain_act: self.c[0].binding, tips: tips.clone() };
                 let signer = voices[0];
-                let cur = self.current;
+                let o = self.ending_objects(names);
                 let x = match seal {
-                    Seal::Public => law_act(&mut self.w, &mut self.m[signer][0], law::types::CLOSING, c.to_map(), obj(cur)),
+                    Seal::Public => law_act(&mut self.w, &mut self.m[signer][0], law::types::CLOSING, c.to_map(), o),
                     _ => {
                         let keep = if seal == Seal::All { ids.len() } else { ids.len() - 1 };
                         let to: Vec<Hash> = ids.iter().take(keep).copied().collect();
-                        self.w.private_act(&mut self.m[signer][0], mips().law, law::types::CLOSING, c.to_map(), obj(cur), to)
+                        self.w.private_act(&mut self.m[signer][0], mips().law, law::types::CLOSING, c.to_map(), o, to)
                     }
                 };
                 let skip = if all_sign { usize::MAX } else { 1 + self.rng.below(voices.len().saturating_sub(1).max(1)) };
@@ -1158,6 +1176,34 @@ impl ColWorld {
         }
     }
 
+    /// The endings an ending names, directly or through the endings it
+    /// names, read from the acts (the oracle's own reading of F131 IT1).
+    fn ending_names(&self, x: &Hash) -> BTreeSet<Hash> {
+        let ends: BTreeSet<Hash> = self.endings.iter().map(|e| e.id).collect();
+        let mut out = BTreeSet::new();
+        let mut todo = vec![*x];
+        while let Some(y) = todo.pop() {
+            for o in self.w.v.get(&y).and_then(|h| h.inside.objects.clone()).unwrap_or_default() {
+                if ends.contains(&o.predecessor) && o.predecessor != *x && out.insert(o.predecessor) {
+                    todo.push(o.predecessor);
+                }
+            }
+        }
+        out
+    }
+
+    /// An ending's `objects`: the agreement as chain and predecessor, and,
+    /// where it names them, every earlier ending as the act it follows on
+    /// that chain (F131, IT1).
+    fn ending_objects(&self, names: bool) -> Option<Vec<Object>> {
+        let cur = self.current;
+        let mut o = obj(cur).unwrap();
+        if names {
+            o.extend(self.endings.iter().map(|e| Object { chain: cur, predecessor: e.id }));
+        }
+        Some(o)
+    }
+
     /// What must never change once an ending is complete: whether each act
     /// in its history counts, and whether each debt there binds.
     fn ending_snapshot(&self, lv: &LawView, tips: &[Hash]) -> BTreeMap<Hash, String> {
@@ -1190,9 +1236,12 @@ impl ColWorld {
     /// Acts of the collective's own key acknowledging `y` that count: an
     /// adoption (rule 40, A6).
     fn adopters(&self, lv: &LawView, y: &Hash) -> Vec<Hash> {
+        // F131 (IT2a): an act of the collective's own key whose history
+        // holds it (reading U3) adopts it too.
+        let cites = |a: &Hash| history_of(&self.w.v, &self.col, a).contains(y);
         self.info
             .iter()
-            .filter(|(_, f)| f.kind == K::Ack { target: *y })
+            .filter(|(a, f)| f.kind == K::Ack { target: *y } || (f.grant.is_none() && *a != y && self.w.v.get(a).is_some_and(|h| h.act.outside.signer == Some(self.col)) && cites(a)))
             .filter(|(a, _)| lv.consent(a).map(|c| c.counts()).unwrap_or(false) && self.w.v.status(a) == Status::Valid)
             .map(|(a, _)| *a)
             .collect()
@@ -1380,17 +1429,26 @@ impl ColWorld {
                 bad.push(format!("{code}: act {y:?} counted and a later act of the collective {by:?} cited it, yet it no longer counts ({:?}; backing {:?}; binds {:?}; the citing act counts: {})", self.info[y].kind, lv.backing(y), lv.obligation_binds(y), self.counts(&lv, by)));
             }
         }
-        // Nothing published after a complete ending undoes it.
+        // Nothing published after a complete ending undoes it (F131, IT1):
+        // a later ending names it, and counts for nothing. A later ending
+        // naming none of the earlier ones cannot be told from one made
+        // without knowing them: the two are concurrent, and neither counts
+        // (ENDING-RACE, open: U1).
         if let Some((at, e, snap)) = &self.first_end {
             let now = lv.closed_by(&col).map_err(|e| format!("{e:?}"))?.map(|c| c.by);
+            let complete = |x: &EndingInfo| -> bool {
+                if x.fork { lv.fork(&x.id).is_ok_and(|f| f.complete) } else { lv.closing(&x.id).is_ok_and(|c| c.complete) }
+            };
+            let unnamed = self.endings.iter().any(|x| x.id != *e && complete(x) && !self.ending_names(&x.id).contains(e));
+            let code = if unnamed { "ENDING-RACE" } else { "ENDING-UNDONE" };
             if now != Some(*e) {
-                bad.push(format!("ENDING-UNDONE: the ending {e:?}, complete after step {at}, no longer ends the collective (now {now:?})"));
+                bad.push(format!("{code}: the ending {e:?}, complete after step {at}, no longer ends the collective (now {now:?})"));
             }
             let tips: Vec<Hash> = self.endings.iter().find(|x| x.id == *e).map(|x| x.tips.clone()).unwrap_or_default();
             let again = self.ending_snapshot(&lv, &tips);
             for (x, s) in snap {
                 if again.get(x) != Some(s) {
-                    bad.push(format!("ENDING-UNDONE: act {x:?} in the ending's history changed after it: {s} -> {:?}", again.get(x)));
+                    bad.push(format!("{code}: act {x:?} in the ending's history changed after it: {s} -> {:?}", again.get(x)));
                 }
             }
         }
@@ -1403,6 +1461,7 @@ impl ColWorld {
                     Some(law::PurchaseVerdict::Purchase) => "purchase",
                     Some(law::PurchaseVerdict::NoPurchase { .. }) => "refund",
                     Some(law::PurchaseVerdict::Unrecorded) => "unrecorded",
+                    Some(law::PurchaseVerdict::WrongReceipt { .. }) => "wrong",
                     None => "none",
                 };
                 if tag == "purchase" && !self.counts(&lv, x) && !by_proof.contains_key(&proof) {
@@ -1433,7 +1492,14 @@ struct Violations(Vec<String>);
 
 /// Promises the text itself lets break (TEXT findings): counted, shown by a
 /// named test each, and reported for Nobody, allegedly; never "fixed" here.
-const TEXT: &[&str] = &["ENDING-UNDONE", "SAFE-ONCE-CITED", "SAFE-STALE-LINE", "PAYMENT-CLAIMS-DISAGREE"];
+///
+/// After F131: IT1, IT2a and IT3 are decided, and ENDING-UNDONE,
+/// SAFE-ONCE-CITED and PAYMENT-CLAIMS-DISAGREE are failures again.
+/// SAFE-STALE-LINE is IT2b's stated cost (an ending whose line leaves out
+/// the citing act: its signers colluding, or a client breaking the
+/// conformance rule), counted, not failed. ENDING-RACE is a later ending
+/// naming none of the earlier ones, open for Nobody, allegedly (U1).
+const TEXT: &[&str] = &["SAFE-STALE-LINE", "ENDING-RACE"];
 
 fn known() -> &'static Stats {
     static S: std::sync::OnceLock<Stats> = std::sync::OnceLock::new();
@@ -1460,7 +1526,7 @@ impl Violations {
 
 fn col_stats() -> &'static Stats {
     static S: std::sync::OnceLock<Stats> = std::sync::OnceLock::new();
-    S.get_or_init(|| Stats::new(&["cases", "acts", "fork_complete", "closing_complete", "ended", "revocation_counts", "area_emptied", "grant_binds", "grant_void", "debt_binds", "purchase", "refund"]))
+    S.get_or_init(|| Stats::new(&["cases", "acts", "fork_complete", "closing_complete", "ended", "revocation_counts", "area_emptied", "grant_binds", "grant_void", "debt_binds", "purchase", "refund", "adopted_by_citation", "later_ending_named"]))
 }
 
 fn run_col(shape: &Shape, ops: &[Op], seed: u64) -> ColWorld {
@@ -1488,6 +1554,11 @@ fn tally(cw: &ColWorld) {
         if !e.fork && lv.closing(&e.id).is_ok_and(|c| c.complete) {
             s.hit("closing_complete");
         }
+        if let Some((_, first, _)) = &cw.first_end {
+            if e.id != *first && cw.ending_names(&e.id).contains(first) {
+                s.hit("later_ending_named");
+            }
+        }
     }
     for (x, f) in &cw.info {
         if matches!(f.kind, K::Revocation { .. }) && f.grant.is_none() && lv.consent(x).is_ok_and(|c| c.counts()) {
@@ -1496,6 +1567,9 @@ fn tally(cw: &ColWorld) {
         if f.grant.is_some() {
             if lv.backing(x).is_ok_and(|b| binds(&b)) {
                 s.hit("grant_binds");
+                if cw.adopters(&lv, x).iter().any(|a| !matches!(cw.info[a].kind, K::Ack { .. })) {
+                    s.hit("adopted_by_citation");
+                }
             } else {
                 s.hit("grant_void");
             }
@@ -1530,7 +1604,7 @@ fn collective_promises_hold() {
         cw.check().map_err(TestCaseError::fail)
     });
     col_stats().show("collective_promises_hold");
-    known().show("TEXT findings met (not failures)");
+    known().show("stated costs and open questions met (not failures)");
     if let Err(e) = r {
         panic!("{e}");
     }
@@ -1543,7 +1617,7 @@ fn collective_verdicts_do_not_depend_on_order() {
     let mut runner = TestRunner::new(config(24));
     let r = runner.run(&(story(), any::<u64>(), any::<u64>()), |((shape, ops, seed), s1, s2)| {
         let cw = run_col(&shape, &ops, seed);
-        let push = BTreeSet::new();
+        let push = Rails::default();
         let first = verdicts(&cw.w.v, &push);
         same_verdicts(&first, &verdicts(&cw.w.v, &push), "determinism (the same verifier read twice)")?;
         same_verdicts(&first, &replay(&cw.w.log, s1, false, &push), "another order")?;
@@ -1678,6 +1752,12 @@ struct DealWorld {
     receipts: Vec<(Hash, usize, DealDisguise, bool)>,
     /// Push receipts: (act, proof).
     push: Vec<(Hash, u8)>,
+    /// The claim each push payment's commitment names, by proof: the line
+    /// its first receipt names (F131, IT3).
+    committed: BTreeMap<u8, Hash>,
+    /// Push receipts naming another claim than their payment's commitment:
+    /// the rail shows them wrong (F131, IT3).
+    wrong: BTreeSet<Hash>,
     revocations: Vec<(Hash, usize)>,
     splits: Vec<(Hash, SplitMode, bool, u64)>,
     rng: Lcg,
@@ -1785,6 +1865,8 @@ impl DealWorld {
             sigs: sm,
             receipts: vec![],
             push: vec![],
+            committed: BTreeMap::new(),
+            wrong: BTreeSet::new(),
             revocations: vec![],
             splits: vec![],
             rng: Lcg(seed),
@@ -1795,6 +1877,7 @@ impl DealWorld {
     fn view(&self) -> LawView<'_> {
         let mut lv = LawView::new(&self.w.v, mips());
         lv.push_rails.insert(push_rail());
+        lv.rail_invalid = self.wrong.clone();
         lv
     }
 
@@ -1890,6 +1973,10 @@ impl DealWorld {
             }
             DOp::Push { proof, payees, line_latest } => {
                 let line = if *line_latest { self.latest() } else { self.deal };
+                // The payment commits to one claim; a holder's receipt naming
+                // another recomputes another commitment, which the rail
+                // refuses (F131, IT3).
+                let committed = *self.committed.entry(*proof).or_insert(line);
                 for i in 0..n {
                     if payees & (1 << i) == 0 {
                         continue;
@@ -1909,6 +1996,9 @@ impl DealWorld {
                     let a = self.w.everyday_act(&mut self.p[i], mips().finance, 2, Fin::Receipt(r).to_map(), None, None);
                     let x = self.w.add(&a);
                     self.push.push((x, *proof));
+                    if line != committed {
+                        self.wrong.insert(x);
+                    }
                 }
             }
             DOp::Split { receipt, mode, fee, deliver_all } => {
@@ -2028,43 +2118,57 @@ impl DealWorld {
             }
         }
         // One payment, one verdict: never a purchase and owed back at once.
-        let mut groups: BTreeMap<(Hash, u8), Vec<String>> = BTreeMap::new();
-        let mut lines: BTreeMap<(Hash, u8), BTreeSet<Hash>> = BTreeMap::new();
+        // F131 (IT3): the payment decides; a receipt naming another claim
+        // than its commitment is a wrong receipt, counting for nothing.
+        // Judged with the rail's answers, and again without them (a
+        // verifier that has not checked the rail yet).
         let line_of = |x: &Hash| match v.get(x).map(|h| Fin::decode(h.inside.type_, &h.inside.payload)) {
             Some(Ok(Fin::Receipt(r))) => r.purchase.map(|p| p.line),
             _ => None,
         };
-        for (x, proof) in &self.push {
-            lines.entry((push_rail(), *proof)).or_default().extend(line_of(x));
-            let t = match lv.purchase(x).map_err(|e| format!("{e:?}"))?.map(|p| p.verdict) {
-                Some(law::PurchaseVerdict::Purchase) => "purchase",
-                Some(law::PurchaseVerdict::NoPurchase { .. }) => "refund",
-                Some(law::PurchaseVerdict::Unrecorded) => "unrecorded",
-                None => "none",
+        let mut bare = LawView::new(&self.w.v, mips());
+        bare.push_rails.insert(push_rail());
+        for (answers, lv) in [(true, &lv), (false, &bare)] {
+            let mut groups: BTreeMap<(Hash, u8), Vec<String>> = BTreeMap::new();
+            let mut lines: BTreeMap<(Hash, u8), BTreeSet<Hash>> = BTreeMap::new();
+            let tag = |x: &Hash| -> Result<&'static str, String> {
+                Ok(match lv.purchase(x).map_err(|e| format!("{e:?}"))?.map(|p| p.verdict) {
+                    Some(law::PurchaseVerdict::Purchase) => "purchase",
+                    Some(law::PurchaseVerdict::NoPurchase { .. }) => "refund",
+                    Some(law::PurchaseVerdict::Unrecorded) => "unrecorded",
+                    Some(law::PurchaseVerdict::WrongReceipt { .. }) => "wrong",
+                    None => "none",
+                })
             };
-            groups.entry((push_rail(), *proof)).or_default().push(t.into());
-        }
-        for (x, _, d, _) in &self.receipts {
-            if !matches!(d, DealDisguise::None) {
-                continue;
+            for (x, proof) in &self.push {
+                let t = tag(x)?;
+                let wrong = answers && self.wrong.contains(x);
+                if wrong != (t == "wrong") {
+                    bad.push(format!("RAIL-WRONG: a receipt the rail shows {} is judged {t} (F131 IT3): {x:?}", if wrong { "wrong" } else { "right" }));
+                }
+                if t == "wrong" {
+                    continue;
+                }
+                lines.entry((push_rail(), *proof)).or_default().extend(line_of(x));
+                groups.entry((push_rail(), *proof)).or_default().push(t.into());
             }
-            let h = v.get(x).unwrap();
-            let Ok(Fin::Receipt(r)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
-            let t = match lv.purchase(x).map_err(|e| format!("{e:?}"))?.map(|p| p.verdict) {
-                Some(law::PurchaseVerdict::Purchase) => "purchase",
-                Some(law::PurchaseVerdict::NoPurchase { .. }) => "refund",
-                Some(law::PurchaseVerdict::Unrecorded) => "unrecorded",
-                None => "none",
-            };
-            lines.entry((r.rail, r.proof[0])).or_default().extend(line_of(x));
-            groups.entry((r.rail, r.proof[0])).or_default().push(t.into());
-        }
-        for (k, ts) in &groups {
-            if ts.iter().any(|t| t == "purchase") && ts.iter().any(|t| t == "refund") {
-                // Receipts of one rail payment naming different claims: the
-                // text says nothing of it (TEXT); otherwise a CODE failure.
-                let code = if lines[k].len() > 1 { "PAYMENT-CLAIMS-DISAGREE" } else { "PURCHASE-AND-REFUND" };
-                bad.push(format!("{code}: one payment ({k:?}) is both a purchase and owed back: {ts:?}; the claims its receipts name: {:?}", lines[k]));
+            for (x, _, d, _) in &self.receipts {
+                if !matches!(d, DealDisguise::None) {
+                    continue;
+                }
+                let h = v.get(x).unwrap();
+                let Ok(Fin::Receipt(r)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
+                let t = tag(x)?;
+                lines.entry((r.rail, r.proof[0])).or_default().extend(line_of(x));
+                groups.entry((r.rail, r.proof[0])).or_default().push(t.into());
+            }
+            for (k, ts) in &groups {
+                if ts.iter().any(|t| t == "purchase") && ts.iter().any(|t| t == "refund") {
+                    // Receipts of one rail payment naming different claims
+                    // (F131 IT3: the payment's claim decides), or the same.
+                    let code = if lines[k].len() > 1 { "PAYMENT-CLAIMS-DISAGREE" } else { "PURCHASE-AND-REFUND" };
+                    bad.push(format!("{code}: one payment ({k:?}, rail answers {answers}) is both a purchase and owed back: {ts:?}; the claims its receipts name: {:?}", lines[k]));
+                }
             }
         }
         // Every split sums exactly; every payout matches its stake within the
@@ -2136,7 +2240,7 @@ fn run_deal(s: &DealShape, ops: &[DOp], seed: u64) -> DealWorld {
 
 fn deal_stats() -> &'static Stats {
     static S: std::sync::OnceLock<Stats> = std::sync::OnceLock::new();
-    S.get_or_init(|| Stats::new(&["cases", "acts", "versions_exist", "versions_draft", "thief_voided", "service_binds", "service_refused", "purchase", "refund", "unrecorded", "splits", "split_mismatch"]))
+    S.get_or_init(|| Stats::new(&["cases", "acts", "versions_exist", "versions_draft", "thief_voided", "service_binds", "service_refused", "purchase", "refund", "unrecorded", "wrong_receipt", "splits", "split_mismatch"]))
 }
 
 fn deal_tally(d: &DealWorld) {
@@ -2170,6 +2274,7 @@ fn deal_tally(d: &DealWorld) {
             Some(law::PurchaseVerdict::Purchase) => s.hit("purchase"),
             Some(law::PurchaseVerdict::NoPurchase { .. }) => s.hit("refund"),
             Some(law::PurchaseVerdict::Unrecorded) => s.hit("unrecorded"),
+            Some(law::PurchaseVerdict::WrongReceipt { .. }) => s.hit("wrong_receipt"),
             None => {}
         }
     }
@@ -2195,7 +2300,7 @@ fn deal_promises_hold() {
         d.check().map_err(TestCaseError::fail)
     });
     deal_stats().show("deal_promises_hold");
-    known().show("TEXT findings met (not failures)");
+    known().show("stated costs and open questions met (not failures)");
     if let Err(e) = r {
         panic!("{e}");
     }
@@ -2207,7 +2312,7 @@ fn deal_verdicts_do_not_depend_on_order() {
     let mut runner = TestRunner::new(config(24));
     let r = runner.run(&(deal_story(), any::<u64>(), any::<u64>()), |((shape, ops, seed), s1, s2)| {
         let d = run_deal(&shape, &ops, seed);
-        let push: BTreeSet<Hash> = [push_rail()].into();
+        let push: Rails = ([push_rail()].into(), d.wrong.clone());
         let first = verdicts(&d.w.v, &push);
         same_verdicts(&first, &verdicts(&d.w.v, &push), "determinism")?;
         same_verdicts(&first, &replay(&d.w.log, s1, false, &push), "another order")?;
@@ -2350,7 +2455,7 @@ fn two() -> Shape {
 }
 
 fn fork_op(stale: u8, debts: DebtsMode) -> Op {
-    Op::Fork { stale, sides: 0, debts, seal: Seal::Public, all_sign: true, succ_sign: true }
+    Op::Fork { stale, sides: 0, debts, seal: Seal::Public, all_sign: true, succ_sign: true, names: true }
 }
 
 fn debt_op(dev: u8, cited: bool) -> Op {
@@ -2382,7 +2487,7 @@ fn ic1_a_debt_citing_nothing_binds_no_one() {
 /// its own debt, and that let it close owing it.
 #[test]
 fn ic2_only_the_creditors_receipt_pays_a_debt() {
-    let close = Op::Closing { stale: 0, seal: Seal::Public, all_sign: true };
+    let close = Op::Closing { stale: 0, seal: Seal::Public, all_sign: true, names: true };
     for (by, closes) in [(PaidBy::Debtor, false), (PaidBy::Stranger, false), (PaidBy::Creditor, true)] {
         let cw = run_col(&two(), &[debt_op(0, true), Op::Pay { debt: 0, by, full: true }, close.clone()], 0);
         let e = cw.view().closing(&cw.endings[0].id).unwrap();
@@ -2391,26 +2496,41 @@ fn ic2_only_the_creditors_receipt_pays_a_debt() {
 }
 
 /// IC3 (rules 40, 43; G1): an act of a grant key that a revocation does not
-/// hold is void. A fork whose history held it (through the other device's
-/// revocation that cited it) brought it back: the fork's branch returned
-/// "binds" before looking at revocations.
+/// hold is void. A fork whose history held it brought it back: the fork's
+/// branch returned "binds" before looking at revocations. Since F131
+/// (IT2a), an act the collective's own key cites is adopted, so the story
+/// that found this (a revocation on the other device citing the act)
+/// now binds by adoption; the fork's history here holds the act through
+/// its line naming the grant key's strand, which adopts nothing.
 #[test]
 fn ic3_a_revoked_act_stays_void_inside_a_forks_history() {
     let shape = Shape { devices: 2, ..two() };
     let ops = [
         Op::Grant { dev: 0, agent: 0, in_area: false, accept: true, holders_sign: false },
         Op::AgentAct { grant: 0, strand: 0, what: AgentWhat::InScope, seal: Seal::Public },
-        // Device 1 revokes, citing the agent's act: it binds by that one.
+        // Device 0 revokes, never having heard of it: it races it.
+        Op::Revoke { grant: 0, dev: 0, join_strand: false, holders_sign: false },
+    ];
+    let mut cw = run_col(&shape, &ops, 0);
+    cw.line_strands = true;
+    cw.apply(3, &fork_op(0, DebtsMode::Honest));
+    let y = *cw.info.iter().find(|(_, f)| f.grant.is_some()).unwrap().0;
+    assert!(history(&cw.w.v, &cw.col, &cw.endings[0].tips).contains(&y), "the fork's history holds it");
+    let lv = cw.view();
+    assert!(lv.closed_by(&cw.col).unwrap().is_some(), "the fork ends the collective: {:?}", lv.fork(&cw.endings[0].id).unwrap().why);
+    assert!(matches!(lv.backing(&y).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")), "{:?}", lv.backing(&y));
+    // The story that found it: the other device's revocation cites the
+    // act, and adopts it (F131, IT2a).
+    let ops = [
+        Op::Grant { dev: 0, agent: 0, in_area: false, accept: true, holders_sign: false },
+        Op::AgentAct { grant: 0, strand: 0, what: AgentWhat::InScope, seal: Seal::Public },
         Op::Revoke { grant: 0, dev: 1, join_strand: true, holders_sign: false },
-        // Device 0 revokes too, never having heard of it: it races it.
         Op::Revoke { grant: 0, dev: 0, join_strand: false, holders_sign: false },
         fork_op(0, DebtsMode::Honest),
     ];
     let cw = run_col(&shape, &ops, 0);
     let y = *cw.info.iter().find(|(_, f)| f.grant.is_some()).unwrap().0;
-    let lv = cw.view();
-    assert!(lv.closed_by(&cw.col).unwrap().is_some(), "the fork ends the collective");
-    assert!(matches!(lv.backing(&y).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")), "{:?}", lv.backing(&y));
+    assert!(binds(&cw.view().backing(&y).unwrap()));
 }
 
 /// IC4 (rule 32a, F127 W2): a sale is recorded by an act of the collective
@@ -2454,9 +2574,9 @@ fn ic5_no_successor_owes_a_debt_outside_the_forks_history() {
 #[test]
 fn ic6_explanations_do_not_depend_on_arrival_order() {
     let cw = run_col(&two(), &[debt_op(0, false), debt_op(0, false), fork_op(0, DebtsMode::Nothing)], 0);
-    let first = verdicts(&cw.w.v, &BTreeSet::new());
+    let first = verdicts(&cw.w.v, &Rails::default());
     for seed in 0..16 {
-        same_verdicts(&first, &replay(&cw.w.log, seed, seed % 2 == 0, &BTreeSet::new()), "another order").unwrap();
+        same_verdicts(&first, &replay(&cw.w.log, seed, seed % 2 == 0, &Rails::default()), "another order").unwrap();
     }
 }
 
@@ -2481,31 +2601,55 @@ fn ic7_sums_that_overflow_never_pass() {
     assert!(t.check(&mips()).is_err(), "shares wrapping round to 1,000,000 are refused");
 }
 
-/// IT1 (TEXT, rule 47a and reading 4 of F125): "a complete fork is never
-/// undone", yet "any two complete forks or closings of one collective are
-/// concurrent, and neither ends it". A second fork, complete, published
-/// after the first, undoes it: the collective is no longer ended, its
-/// later acts count again, its successors' debts fall back. Pinned as the
-/// code reads it today, for Nobody, allegedly, to decide.
+/// IT1, decided (F131): a complete ending is final. A later fork naming
+/// the first counts for nothing: the first still ends the collective, its
+/// successors keep what it handed them. Two complete endings neither
+/// naming the other are concurrent, made without knowing each other:
+/// neither counts (F125 reading 4, narrowed to that case), until an ending
+/// naming both settles it (reading U2, to confirm). A later ending that
+/// knew the first and does not name it cannot be told from a concurrent
+/// one (U1, open).
 #[test]
-fn it1_a_second_complete_fork_undoes_the_first() {
+fn it1_a_complete_ending_is_final() {
     let mut cw = ColWorld::new(&two(), 0);
     cw.apply(0, &fork_op(0, DebtsMode::Honest));
     let first = cw.endings[0].id;
     assert_eq!(cw.view().closed_by(&cw.col).unwrap().map(|c| c.by), Some(first));
+    // A second fork, complete, naming the first: it counts for nothing.
     cw.apply(1, &fork_op(0, DebtsMode::Honest));
+    let second = cw.endings[1].id;
     let lv = cw.view();
-    assert!(lv.fork(&first).unwrap().complete && lv.fork(&cw.endings[1].id).unwrap().complete);
-    assert_eq!(lv.closed_by(&cw.col).unwrap(), None, "neither ends it: the first is undone");
+    assert!(lv.fork(&first).unwrap().complete && lv.fork(&second).unwrap().complete);
+    assert!(lv.ending_knows(&cw.col, &second).contains(&first));
+    assert_eq!(lv.closed_by(&cw.col).unwrap().map(|c| c.by), Some(first), "the first stays final");
+    // A closing naming both: later again, nothing.
+    drop(lv);
+    cw.apply(2, &Op::Closing { stale: 0, seal: Seal::Public, all_sign: true, names: true });
+    assert_eq!(cw.view().closed_by(&cw.col).unwrap().map(|c| c.by), Some(first));
+
+    // Two forks neither naming the other: concurrent, neither counts.
+    let mut race = ColWorld::new(&two(), 0);
+    race.apply(0, &Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: true, names: false });
+    race.apply(1, &Op::Fork { stale: 0, sides: 1, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: true, names: false });
+    let lv = race.view();
+    assert!(lv.fork(&race.endings[0].id).unwrap().complete && lv.fork(&race.endings[1].id).unwrap().complete);
+    assert_eq!(lv.closed_by(&race.col).unwrap(), None, "a race between equals: neither counts");
+    drop(lv);
+    // Reading U2: a closing naming both settles the race.
+    race.apply(2, &Op::Closing { stale: 0, seal: Seal::Public, all_sign: true, names: true });
+    let lv = race.view();
+    let c = race.endings[2].id;
+    assert!(lv.closing(&c).unwrap().complete, "{:?}", lv.closing(&c).unwrap().why);
+    assert_eq!(lv.closed_by(&race.col).unwrap().map(|x| x.by), Some(c));
 }
 
-/// IT2 (TEXT, rules 35a, 43; the tie rule): "wait until a later act of the
-/// collective cites the act before performing: from then on it is in
-/// every ending's history". With several devices it is not: a revocation
-/// drawn on a device that had not heard of the citing act races the act,
-/// and the tie rule voids it, though the collective had visibly cited it.
+/// IT2a, decided (F131): an act that a counting act of the collective's
+/// own key cites is adopted (rule 40), and no ending racing that citation
+/// voids it. Device 1 cites the agent's act; device 0, which never heard of
+/// it, revokes the grant: the act still binds; the revocation ends the
+/// grant for everything after it.
 #[test]
-fn it2_a_cited_act_is_voided_by_an_ending_drawn_elsewhere() {
+fn it2_a_cited_act_is_adopted() {
     let shape = Shape { devices: 2, ..two() };
     let ops = [
         Op::Grant { dev: 0, agent: 0, in_area: false, accept: true, holders_sign: false },
@@ -2514,55 +2658,81 @@ fn it2_a_cited_act_is_voided_by_an_ending_drawn_elsewhere() {
         Op::Join { dev: 1, other: 1 },
         // Device 0, which never heard of it, revokes the grant.
         Op::Revoke { grant: 0, dev: 0, join_strand: false, holders_sign: false },
+        // The agent acts again, after the revocation: void.
+        Op::AgentAct { grant: 0, strand: 0, what: AgentWhat::InScope, seal: Seal::Public },
     ];
-    let mut cw = ColWorld::new(&shape, 0);
-    for (i, o) in ops.iter().enumerate() {
-        cw.apply(i, o);
-    }
-    let y = *cw.info.iter().find(|(_, f)| f.grant.is_some()).unwrap().0;
-    assert_eq!(cw.cited_counting.len(), 1, "the collective cited it while it counted");
+    let cw = run_col(&shape, &ops, 0);
+    let ys: Vec<Hash> = cw.info.iter().filter(|(_, f)| f.grant.is_some()).map(|(x, _)| *x).collect();
+    let (cited, later): (Vec<Hash>, Vec<Hash>) = ys.iter().partition(|y| cw.cited_counting.iter().any(|(c, _)| c == *y));
+    assert_eq!(cited.len(), 1, "the collective cited one act while it counted");
     let lv = cw.view();
-    assert!(matches!(lv.backing(&y).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")));
+    assert!(binds(&lv.backing(&cited[0]).unwrap()), "{:?}", lv.backing(&cited[0]));
+    for y in &later {
+        assert!(matches!(lv.backing(y).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")), "{:?}", lv.backing(y));
+    }
 }
 
-/// IT2, second shape (TEXT, rule 47a field 3): a fork's line is "the latest
-/// act of every sequence", but no verifier can tell a stale line from one
-/// drawn before later acts were made. Members drawing the fork's line as
-/// it stood before a debt the collective had already cited void the debt,
-/// and with it the creditor's claim: nobody owes it.
+/// IT2b, decided (F131): a fork drawn on an old line on purpose is a
+/// stated cost. No verifier can tell a line drawn early on purpose from one
+/// drawn before the later acts existed, and every cure would let something
+/// published after a fork reopen it (against IT1). It needs every signer of
+/// the fork to break the client conformance rule (pull every device's
+/// latest acts before signing an ending), and it stays legible: the signed
+/// debt, the act citing it and the fork leaving it out stand as evidence.
 #[test]
-fn it2b_a_stale_line_voids_a_cited_debt() {
+fn it2b_a_stale_line_is_a_stated_cost() {
     let shape = Shape { owns_work: true, ..two() };
     let mut cw = ColWorld::new(&shape, 0);
     cw.apply(0, &debt_op(0, true));
     let d = cw.debts[0];
     // The collective's next act cites the debt (its sequence's previous act).
     cw.apply(1, &Op::Publish { dev: 0, seal: Seal::Public });
+    let citing = *cw.info.iter().find(|(_, f)| f.kind == K::Publication).unwrap().0;
     assert_eq!(cw.view().obligation_binds(&d).unwrap(), Some(true));
     cw.apply(2, &fork_op(2, DebtsMode::Honest));
     let lv = cw.view();
-    assert!(lv.fork(&cw.endings[0].id).unwrap().complete, "{:?}", lv.fork(&cw.endings[0].id).unwrap().why);
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete, "{:?}", f.why);
+    // The cost: the debt, outside the stale line's history, binds no one.
     assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
     assert_eq!(lv.debtors(&d).unwrap(), Some(vec![]));
+    // Legible: the debt and the act citing it stand, and the fork's line
+    // leaves out an act the collective's own chain had moved past.
+    assert_eq!(cw.w.v.status(&d), Status::Valid);
+    assert_eq!(cw.w.v.status(&citing), Status::Valid);
+    assert!(!history(&cw.w.v, &cw.col, &cw.endings[0].tips).contains(&citing));
 }
 
-/// IT3 (TEXT, rule 32a W4 and Finance rule 8a): on a push rail, one rail
-/// payment to several holders carries its one rail proof on each holder's
-/// receipt; here the holders' receipts name different claims (one the
-/// version it replaced, one the current version). Nothing says what such a
-/// payment is: the library judges each receipt alone, so the one payment
-/// is both a purchase and owed back. (Finance 8a, "receipts may share a
-/// rail proof only if they name the same batch", would count neither.)
+/// IT3, decided (F131): the payment decides. One push payment, its
+/// commitment naming the new version; Ben's wallet signs two receipts for
+/// it, one naming the old version, one the new; Ana's names the new. The
+/// rail shows Ben's old-version receipt wrong (its commitment, recomputed,
+/// is not the payment's): it counts for nothing, and the payment is judged
+/// by the receipts naming its claim. A verifier that has not checked the
+/// rail yet cannot tell which is wrong: it judges none of them a purchase
+/// or a refund until it can.
 #[test]
-fn it3_one_payment_whose_receipts_name_different_claims() {
+fn it3_the_payments_claim_decides() {
     let shape = DealShape { parties: 2, shares: vec![1, 1, 1, 1], service: false, backup: false, all_found: true };
     let ops = [
         DOp::Clone { shares: vec![1, 2, 1, 1], signers: 0xff, thieves: 0, from_latest: false },
-        DOp::Push { proof: 4, payees: 0b10, line_latest: false },
         DOp::Push { proof: 4, payees: 0b11, line_latest: true },
+        DOp::Push { proof: 4, payees: 0b10, line_latest: false },
     ];
     let d = run_deal(&shape, &ops, 0);
+    assert_eq!(d.wrong.len(), 1, "Ben's old-version receipt");
     let lv = d.view();
-    let ts: Vec<String> = d.push.iter().map(|(x, _)| format!("{:?}", lv.purchase(x).unwrap().unwrap().verdict)).collect();
-    assert!(ts.iter().any(|t| t == "Purchase") && ts.iter().any(|t| t.starts_with("NoPurchase")), "{ts:?}");
+    for (x, _) in &d.push {
+        let got = lv.purchase(x).unwrap().unwrap().verdict;
+        if d.wrong.contains(x) {
+            assert!(matches!(got, law::PurchaseVerdict::WrongReceipt { ref why } if why.contains("IT3")), "{got:?}");
+        } else {
+            assert_eq!(got, law::PurchaseVerdict::Purchase);
+        }
+    }
+    let mut bare = LawView::new(&d.w.v, mips());
+    bare.push_rails.insert(push_rail());
+    for (x, _) in &d.push {
+        assert_eq!(bare.purchase(x).unwrap().unwrap().verdict, law::PurchaseVerdict::Unrecorded, "no rail answer yet");
+    }
 }

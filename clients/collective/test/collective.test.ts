@@ -312,6 +312,16 @@ test('before drawing a record, a warning when the relays hold acts of the collec
   assert.match(words(rm.reading), /not in this device's sequence/);
   const plainChange = await prepare(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 1, clone: 2, others: 2 } });
   assert.doesNotMatch(words(plainChange.reading), /not in this device's sequence/, 'no record, no warning');
+  await c.ask('cancel', { plan: plainChange.plan });
+  // A fork or closing is refused, not warned (F131 IT2b, client
+  // conformance): this device has not caught up with the other one.
+  for (const ask of [{ kind: 'closing', collective: col.id }, { kind: 'fork', collective: col.id, sides: [[ada, two], [three]] }]) {
+    const ending = await prepare(c, ask);
+    const gate = ending.reading.blocking.find((b: string) => /has not caught up with the collective's other devices/.test(b));
+    assert.ok(gate, `${ask.kind}: ${ending.reading.blocking.join(' | ')}`);
+    assert.match(gate!, new RegExp(`latest ${stray.id.slice(0, 8)}…${stray.id.slice(-4)}`));
+    assert.match(gate!, /F131 IT2b, client conformance/);
+  }
 });
 
 test('a judicial change: who judges absence, every member signing, recorded at once, no rotation (Law draft 8, B13; Law draft 10, F121)', async () => {
