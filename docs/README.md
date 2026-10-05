@@ -1,5 +1,7 @@
 # Documents
 
+**Before anything else:** [Thank You For the Shower](thank-you-for-the-shower.md), written in 2014, the essence MOR serves.
+
 **Start here:** [MOR in one page](07-MOR-in-one-page-v6.md).
 
 ## Plan and record

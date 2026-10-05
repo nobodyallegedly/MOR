@@ -4,6 +4,8 @@
 
 MOR has a small core, meant to be frozen: six MIPs in layers (Identity; Envelope and Text; Finance; Law; Production). Above it sits an open, competitive layer of cMIPs and Modules, where adoption decides. Every act is signed, named by its hash, and never updated: a new version is a new act naming the one before.
 
+It began with a text written in 2014, before MOR had a name: [Thank You For the Shower](docs/thank-you-for-the-shower.md).
+
 It is built to be a good ancestor. Identities, agreements and history can always leave, including to a successor protocol. Only the way out has to be right; everything else can be fixed by MOR 2.
 
 ## Status: pre-freeze draft, open for breaking
