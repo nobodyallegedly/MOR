@@ -11,11 +11,11 @@ It is built to be a good ancestor. Identities, agreements and history can always
 **Experimental. Not frozen. Test identities and test money only (regtest or signet), never real funds.**
 
 - The core drafts are complete and approved by their author (5 October 2026), after two independent review rounds and 132 recorded findings ([docs/findings/](docs/findings/)), each saying why a rule exists.
-- A Rust core library implements all six MIPs. It is tested against the freeze test suite and by invariant hunting: Law's promises checked over about 13,000 random histories of collectives and deals, replayed in shuffled orders ([docs/law-invariants.md](docs/law-invariants.md)). Rust workspace: 328 tests; TypeScript clients: 113 tests.
+- A Rust core library implements all six MIPs. It is tested against the freeze test suite and by invariant hunting: Law's promises checked over about 13,000 random histories of collectives and deals, replayed in shuffled orders ([docs/law-invariants.md](docs/law-invariants.md)). Rust workspace: 330 tests; TypeScript clients: 113 tests, plus the website client's own.
 - A Lightning rail runs end to end on regtest.
 - **Round 3, the human adversarial review, has not happened yet.** That is the invitation: break it. What you break is the most useful contribution there is.
 
-What is run and what is only reasoned is stated, scenario by scenario, in the freeze test suite ([spec/03-MOR-freeze-test-suite-v21.md](spec/03-MOR-freeze-test-suite-v21.md)).
+What is run and what is only reasoned is stated claim by claim in the paper ([docs/paper/mor-paper-draft-2.md](docs/paper/mor-paper-draft-2.md), section 6.2). The freeze test suite ([spec/03-MOR-freeze-test-suite-v21.md](spec/03-MOR-freeze-test-suite-v21.md)) does not yet mark each scenario; that marking is the freeze report, still to be written.
 
 ## Where to start reading
 

@@ -35,3 +35,10 @@ Each records what a session built, what it found, and what it left open. They ar
 | [small-fixes-2026-10-04.md](small-fixes-2026-10-04.md) | Small client fixes. |
 | [adversarial-test-plan-v2.md](adversarial-test-plan-v2.md), [v3](adversarial-test-plan-v3.md) | Earlier versions of the test plan. |
 | [project-lead-prompt.md](project-lead-prompt.md) | The brief the AI project lead worked from. |
+
+## The paper and its reviews
+
+| Document | What |
+| --- | --- |
+| [paper/mor-paper-draft-2.md](paper/mor-paper-draft-2.md) | The paper: design, claims marked run or reasoned, threat model, evaluation, related work, open problems. Draft 1 is kept beside it. |
+| [reviews/fable-paper-review-1.md](reviews/fable-paper-review-1.md) | A hostile review of draft 1, by an AI reviewer, which draft 2 answers. |
