@@ -55,11 +55,21 @@ pub struct LawView<'a> {
     /// claim a purchase names, before it is made. Like `ext_layers`, a fact
     /// the caller states from the specifications it holds.
     pub push_rails: BTreeSet<Hash>,
+    /// Receipts and claims whose rail proof the caller checked under the
+    /// payment cMIP and found not to carry the commitment recomputed from
+    /// them (F131, IT3): on a payment whose receipts name different claims,
+    /// those naming a claim the payment did not commit to. The rail's
+    /// answer, like `push_rails`, a fact the caller states: the core reads
+    /// no rail.
+    pub rail_invalid: BTreeSet<Hash>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
     ending: RefCell<BTreeSet<Hash>>,
+    citing: RefCell<BTreeSet<Hash>>,
+    adopting: RefCell<BTreeSet<Hash>>,
     histories: RefCell<BTreeMap<(Hash, usize, Vec<Hash>), Rc<History>>>,
+    ending_sigs: RefCell<BTreeMap<Hash, Rc<EndingSigs>>>,
 }
 
 /// What a decision cites on the collective's chain (F127): every act it
@@ -288,6 +298,20 @@ impl Col {
     }
 }
 
+/// Every node reachable from `from` in `edges`, `from` itself left out.
+fn closure(edges: &BTreeMap<Hash, BTreeSet<Hash>>, from: &Hash) -> BTreeSet<Hash> {
+    let mut out = BTreeSet::new();
+    let mut todo = vec![*from];
+    while let Some(x) = todo.pop() {
+        for y in edges.get(&x).into_iter().flatten() {
+            if y != from && out.insert(*y) {
+                todo.push(*y);
+            }
+        }
+    }
+    out
+}
+
 /// What a fold over records leaves in force.
 struct InForce {
     agreement: Hash,
@@ -304,11 +328,15 @@ impl<'a> LawView<'a> {
             ext_layers: BTreeMap::new(),
             keeper_logs: BTreeMap::new(),
             push_rails: BTreeSet::new(),
+            rail_invalid: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
             ending: RefCell::new(BTreeSet::new()),
+            citing: RefCell::new(BTreeSet::new()),
+            adopting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
+            ending_sigs: RefCell::new(BTreeMap::new()),
         }
     }
 
@@ -1566,6 +1594,16 @@ impl<'a> LawView<'a> {
     /// effect at it (C7).
     fn departure_lines(&self, col: &Col, point: Point<'a>, own: &[Departure]) -> R<Vec<(Line<'a>, Departure)>> {
         let mut out = vec![];
+        // A record after the line of the fork or closing that ended the
+        // collective counts for nothing in Law (rule 47a): it registers no
+        // departure. Found by the Law invariants (`docs/law-invariants.md`,
+        // IC8), hidden until F131 made ENDING-UNDONE a failure again.
+        // Judged for an act only: a line's own judgment is part of judging
+        // the ending, and the ending is judged before any act (`consent`).
+        let ended = match point {
+            Point::Act(_) => self.closed_by(&col.id)?,
+            Point::Line(_) => None,
+        };
         let (limit, me): (usize, Option<&'a Held>) = match point {
             Point::Act(x) => (self.link(col, x).unwrap_or(0), None),
             Point::Line(Line::Record(r)) => (col.pos(r).unwrap_or(0), Some(r)),
@@ -1577,6 +1615,19 @@ impl<'a> LawView<'a> {
                     continue;
                 }
                 if k == limit && !self.applies(col, r, point)? {
+                    continue;
+                }
+                // F131 (IT2a): an act the collective's own key cites, by an
+                // act that counts and that the line does not follow, is
+                // adopted: a departure racing that citation takes no voice
+                // off it. Found by the Law invariants
+                // (`docs/law-invariants.md`, IC9).
+                if let Point::Act(x) = point {
+                    if k == limit && self.adopting.borrow().contains(&x.id) && self.cited_against(col, x, r)? {
+                        continue;
+                    }
+                }
+                if ended.as_ref().is_some_and(|e| !self.before_line(col, r, &e.chain_act, &e.tips)) {
                     continue;
                 }
                 let e = self.record_eval(col, r)?;
@@ -1593,6 +1644,36 @@ impl<'a> LawView<'a> {
             }
         }
         Ok(out)
+    }
+
+    /// Whether an act of the collective's own key that counts, other than
+    /// `x`, holds `x` in its history while the line `l` does not hold it:
+    /// the collective took `x` on, by a citation `l` races (F131, IT2a;
+    /// "cites" as a line reads it, reading U3, confirmed, F132).
+    fn cited_against(&self, col: &Col, x: &'a Held, l: &'a Held) -> R<bool> {
+        // Judging the citing act may ask again about acts being judged here:
+        // an act under judgment adopts nothing.
+        if !self.citing.borrow_mut().insert(x.id) {
+            return Ok(false);
+        }
+        let r = self.cited_against_inner(col, x, l);
+        self.citing.borrow_mut().remove(&x.id);
+        r
+    }
+
+    fn cited_against_inner(&self, col: &Col, x: &'a Held, l: &'a Held) -> R<bool> {
+        for a in self.v.signed_by(&col.id) {
+            if a.id == x.id || a.id == l.id || !Self::own_key(col, a) || self.is_law(a, types::RECORD) || self.citing.borrow().contains(&a.id) {
+                continue;
+            }
+            if !self.before_struct(col, x, Line::Record(a)) || self.before_struct(col, l, Line::Record(a)) {
+                continue;
+            }
+            if self.valid(&a.id) && self.consent(&a.id)?.counts() {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     /// The records naming `p`'s rotation `rot` in field 3: valid record acts
@@ -2373,6 +2454,23 @@ impl<'a> LawView<'a> {
     /// F100, F106, F109). The act's own standing is Identity's, from
     /// [`Verifier::status`]; this asks only what Law adds.
     pub fn consent(&self, act: &Hash) -> R<Consent> {
+        // F131 (IT2a): an act of the collective's own key that does not count
+        // as judged counts all the same where the departures racing a
+        // citation of it by a counting act of its own key are set aside: no
+        // ending racing that citation voids it. Judged again only then, so
+        // that setting a departure aside never makes an act fail.
+        let first = self.consent_judged(act)?;
+        if first.counts() || self.adopting.borrow().contains(act) {
+            return Ok(first);
+        }
+        self.adopting.borrow_mut().insert(*act);
+        let again = self.consent_judged(act);
+        self.adopting.borrow_mut().remove(act);
+        let again = again?;
+        Ok(if again.counts() { again } else { first })
+    }
+
+    fn consent_judged(&self, act: &Hash) -> R<Consent> {
         let x = self.held(act)?;
         let (Some(c), Some(_)) = (x.act.outside.signer, x.act.outside.binding) else {
             return Err(LawError::Check("the act has no signer or binding"));
@@ -2979,8 +3077,23 @@ impl<'a> LawView<'a> {
                 }
             }
         }
+        // An adoption (rule 40): an act of the collective's own key that
+        // counts, acknowledging it or citing it on the collective's chain.
+        // F131 (IT2a): once such an act cites it, the act is adopted, and no
+        // ending racing that citation voids it; the tie rule voids only
+        // acts the collective never took on. "Cites" as a line does
+        // (reading U3, confirmed, F132): the act lies in the citing act's
+        // history, so citing the grantee's later act cites it too.
+        let citing: Vec<&Held> = if collective {
+            self.v
+                .signed_by(&c)
+                .filter(|a| a.id != y.id && Self::own_key(&col, a) && self.before_struct(&col, y, Line::Record(a)))
+                .collect()
+        } else {
+            vec![]
+        };
         let acked = |before: &dyn Fn(&Held) -> bool| -> R<bool> {
-            for a in self.v.acknowledgements(act) {
+            for a in self.v.acknowledgements(act).into_iter().chain(citing.iter().copied()) {
                 if Self::own_key(&col, a) && self.valid(&a.id) && before(a) && self.consent(&a.id)?.counts() {
                     return Ok(true);
                 }
@@ -2992,13 +3105,19 @@ impl<'a> LawView<'a> {
         // its line. An act in the history it cites binds, as a debt the
         // fork hands out; so does a deal the original acknowledged before
         // it. Any other is missing from the ending's history, and void.
+        // An act the ending's history holds still answers to the other
+        // decisions ending its grant (rule 43): a revocation, or a departure
+        // emptying its area, that does not hold it voids it, unless the
+        // collective adopted it. Found by the Law invariants
+        // (`docs/law-invariants.md`, IC3).
         if let Some(e) = self.closed_by(&c)? {
-            if self.before_line(&col, y, &e.chain_act, &e.tips)
-                || acked(&|a| self.before_line(&col, a, &e.chain_act, &e.tips))?
-            {
+            if acked(&|a| self.before_line(&col, a, &e.chain_act, &e.tips))? {
                 return Ok(Backing::Binds { grant: gh.id });
             }
-            return not("the fork or closing that ended the grant does not cite it: an action missing from the ending's history is void (the tie rule, F127)");
+            if !self.before_line(&col, y, &e.chain_act, &e.tips) {
+                return not("the fork or closing that ended the grant does not cite it: an action missing from the ending's history is void (the tie rule, F127)");
+            }
+            ended = true;
         }
         // G1 (F128): a revocation removes the grant key, a decision ending
         // powers. An act its history holds was done within the grant's
@@ -3501,6 +3620,34 @@ pub struct Closed {
     pub fork: Option<ForkEval>,
 }
 
+/// The ending signatures of one collective's forks and closings (F132): a
+/// member signs an ending by a chain signature (Identity type 16), on its
+/// identity chain with its safety key, so any two of one signer's ending
+/// signatures are ordered by their positions there.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct EndingSigs {
+    /// The signatures that count, by (ending, signer): the chain signature
+    /// and its position in the signer's identity chain. Only one counting
+    /// in the signer's chain is read, the earliest for each ending.
+    pub counting: BTreeMap<(Hash, Hash), (Hash, u64)>,
+    /// Signatures that count for nothing (U4): each lies, in its signer's
+    /// chain, after the signer's signature on another ending naming the one
+    /// it signs. By (ending, signer): the chain signature, and that other
+    /// ending.
+    pub void: BTreeMap<(Hash, Hash), (Hash, Hash)>,
+    /// The endings each ending names directly: in its own `objects`, or
+    /// through a signer's chain (U1): a signer's counting signature on it
+    /// placed after the same signer's counting signature on the other.
+    pub names: BTreeMap<Hash, BTreeSet<Hash>>,
+    /// Fork and closing acts that are no ending (U4b): their drafter (the
+    /// act's signer) signed, earlier in their own identity chain than their
+    /// signature on it, another ending of the collective that it does not
+    /// name in its `objects` (directly or through the endings it names
+    /// there). Each with that other ending. Their signatures are left out
+    /// of everything above.
+    pub no_ending: BTreeMap<Hash, Hash>,
+}
+
 /// Where a pointer leads, for Law (rule 18, F123, F124 P2).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PointerCheck {
@@ -3603,8 +3750,15 @@ pub enum PurchaseVerdict {
     /// Not settled yet: on a request rail, a collective seller's actions
     /// chain has not recorded it (F127, W2); on a push rail, a holder the
     /// claim names has not signed its receipt (F128, W4). It becomes a sale
-    /// once recorded, or is refunded where a receipt comes too late.
+    /// once recorded, or is refunded where a receipt comes too late. Also
+    /// where receipts of one payment name different claims and the rail has
+    /// not yet shown which the payment committed to (F131, IT3).
     Unrecorded,
+    /// A wrong receipt (F131, IT3): the payment's commitment names another
+    /// claim than this receipt does. Shown as such; it counts for nothing,
+    /// neither a sale nor a refund: the payment is judged by the receipts
+    /// naming the claim it committed to.
+    WrongReceipt { why: String },
 }
 
 /// A payment for a work, judged (F126).
@@ -3777,6 +3931,14 @@ impl<'a> LawView<'a> {
         if self.done(id)? != Some(Ok(())) {
             return Ok(Some(false));
         }
+        // An act in the collective's name binds it only where Law's consent
+        // counts (rules 35b, 36a, 44): it cites the decision it acts under,
+        // its area's holders signed it (the Finance lane, for a debt), and,
+        // signed with a grant key, its grant backs it. Found by the Law
+        // invariants (`docs/law-invariants.md`, IC1).
+        if !self.consent(id)?.counts() {
+            return Ok(Some(false));
+        }
         // The tie rule (F127): an obligation outside the history of the fork
         // or closing that ended its debtor was made with powers that were
         // ending, and is void.
@@ -3873,6 +4035,32 @@ impl<'a> LawView<'a> {
         Ok(Some(self.to_hand_out(&col, &t, chain_act, tips)?))
     }
 
+    /// The acts the history a line drawn at `chain_act` and `tips` would
+    /// cite that this verifier does not hold: until it holds them, a fork or
+    /// closing drawn there is not complete for it (F127). A member's client
+    /// signs no ending while any is missing (F131, IT2b, client
+    /// conformance).
+    pub fn line_unheld(&self, collective: &Hash, chain_act: &Hash, tips: &[KeptTip]) -> Vec<Hash> {
+        self.line_missing(&self.col(collective), chain_act, tips)
+    }
+
+    /// Every fork and closing of a collective this verifier holds, complete
+    /// or not, in id order: what a new ending names (F131, IT1, client
+    /// conformance).
+    pub fn ending_acts(&self, collective: &Hash) -> Vec<Hash> {
+        let mut out: Vec<Hash> = self
+            .v
+            .held_acts()
+            .filter(|x| {
+                (self.is_law(x, types::FORK) && Fork::decode(&x.inside).is_ok_and(|f| &f.collective == collective))
+                    || (self.is_law(x, types::CLOSING) && Closing::decode(&x.inside).is_ok_and(|c| &c.collective == collective))
+            })
+            .map(|x| x.id)
+            .collect();
+        out.sort();
+        out
+    }
+
     /// Whether an act is sealed to every party of `t`, or public (F126).
     fn sealed_to_all(&self, x: &Held, t: &Terms) -> bool {
         x.act.outside.content_key.is_some()
@@ -3949,11 +4137,10 @@ impl<'a> LawView<'a> {
             return fail(e, "the fork act is signed by someone on no side");
         }
         let members: Vec<Hash> = f.sides.iter().flat_map(|s| s.members.iter()).copied().collect();
-        let mut signed = self.signers(id, &members);
-        if !signed.contains(&signer) {
-            signed.push(signer);
+        e.signed = self.ending_signed(&f.collective, id, &members);
+        if let Some(y) = self.ending_sigs(&f.collective).no_ending.get(id) {
+            return fail(e, &format!("no fork: its signer signed another ending of the collective, {}, earlier on their own chain, and the fork does not name it in its objects (F132, U4b)", y.iter().map(|b| format!("{b:02x}")).collect::<String>()));
         }
-        e.signed = members.iter().filter(|m| signed.contains(m)).copied().collect();
         // Successors (N4): each side founded its collective first; its
         // founding terms have that side's members as parties, and keep every
         // departed holder and every member leaving at their percentage.
@@ -3973,7 +4160,10 @@ impl<'a> LawView<'a> {
             }
         }
         if e.signed.len() < members.len() {
-            return fail(e, "every member on a side signs the fork, with their own identity (F121)");
+            return fail(
+                e,
+                "every member on a side signs the fork, with their own identity (F121), by a chain signature with their safety key (F132); a signature placed after the signer's own signature on an ending naming this one counts for nothing (U4)",
+            );
         }
         if !constitution_met(&t, &voices, &e.signed) {
             return fail(e, "the fork follows the constitutional change rule, every member by default (N1)");
@@ -4111,18 +4301,20 @@ impl<'a> LawView<'a> {
             return fail(e, "not done: the closing is not sealed to every member, nor public (W5, F128)");
         }
         let signer = h.act.outside.signer.ok_or(LawError::Check("a closing act has a signer"))?;
-        let mut signed = self.signers(id, &voices);
-        if voices.contains(&signer) && !signed.contains(&signer) {
-            signed.push(signer);
+        e.signed = self.ending_signed(&c.collective, id, &voices);
+        if let Some(y) = self.ending_sigs(&c.collective).no_ending.get(id) {
+            return fail(e, &format!("no closing: its signer signed another ending of the collective, {}, earlier on their own chain, and the closing does not name it in its objects (F132, U4b)", y.iter().map(|b| format!("{b:02x}")).collect::<String>()));
         }
-        e.signed = voices.iter().filter(|m| signed.contains(m)).copied().collect();
         e.holds = self.holdings(&col, &c.chain_act, &c.tips)?;
         e.open_debts = self.open_debts(&col, Some((&c.chain_act, &c.tips)))?;
         if !voices.contains(&signer) {
             return fail(e, "the closing act is signed by someone who is not a member whose voice remains");
         }
+        if !e.signed.contains(&signer) {
+            return fail(e, "the closing's signer signs it too, by a chain signature with their safety key (F132)");
+        }
         if !constitution_met(&t, &voices, &e.signed) {
-            return fail(e, "a closing follows the constitutional change rule, every member by default (N9)");
+            return fail(e, "a closing follows the constitutional change rule, every member by default (N9), each signing by a chain signature with their safety key (F132)");
         }
         if !e.holds.is_empty() {
             return fail(e, "a closing ends only a collective that holds nothing: every work sold or released (N9)");
@@ -4138,9 +4330,15 @@ impl<'a> LawView<'a> {
     }
 
     /// The act that ended a collective in Law, if any (rule 47a): its one
-    /// complete fork or closing. Two of them are concurrent acts on its
-    /// agreement chain (N4, rule 5): with no concurrency rule (field 10's
-    /// format is open), the status quo stands, and neither ends it.
+    /// complete fork or closing that counts. A complete ending is final
+    /// (F131, IT1): a later ending of the same collective, one that names it
+    /// (`ending_knows`: in its `objects`, or through a signer's chain,
+    /// F132 U1), counts for nothing. Two complete endings sharing no signer
+    /// and neither naming the other are concurrent, made without knowing
+    /// each other: neither counts (F125 reading 4, narrowed by F131 and
+    /// F132 to that case), until an ending naming both settles the race
+    /// (U2, confirmed, F132). Two endings each naming the other, through
+    /// two signers' chains, are not ordered either.
     pub fn closed_by(&self, collective: &Hash) -> R<Option<Closed>> {
         if let Some(e) = self.closed.borrow().get(collective) {
             return Ok(e.clone());
@@ -4184,8 +4382,156 @@ impl<'a> LawView<'a> {
     }
 
     fn closed_by_inner(&self, collective: &Hash) -> R<Option<Closed>> {
-        let mut all = self.endings(collective)?;
-        Ok(if all.len() == 1 { all.pop() } else { None })
+        let all = self.endings(collective)?;
+        let knows: Vec<BTreeSet<Hash>> = all.iter().map(|e| self.ending_knows(collective, &e.by)).collect();
+        // An ending is ordered against every other complete one when it
+        // names it or is named by it; those form one line, and the earliest
+        // of them is the one that counts: every later one names it, and
+        // counts for nothing (F131, IT1). Where none is ordered against all
+        // the others, some two are concurrent, and none counts.
+        let ordered: Vec<usize> = (0..all.len())
+            .filter(|i| (0..all.len()).all(|j| j == *i || knows[*i].contains(&all[j].by) || knows[j].contains(&all[*i].by)))
+            .collect();
+        let first = ordered.iter().copied().find(|i| !ordered.iter().any(|j| j != i && knows[*i].contains(&all[*j].by)));
+        Ok(first.map(|i| all[i].clone()))
+    }
+
+    /// The forks and closings of a collective that an ending act names,
+    /// directly or through the endings it names (F131, IT1): an `objects`
+    /// entry whose predecessor is another fork or closing of the same
+    /// collective, `[agreement, ending]`, its chain the agreement; or,
+    /// through a signer's own chain (F132, U1), another ending the same
+    /// member signed earlier in their identity chain. A later ending names
+    /// every earlier one it holds (client conformance). Acts are immutable;
+    /// two endings may still name each other through two signers' chains,
+    /// and then neither is the earlier.
+    pub fn ending_knows(&self, collective: &Hash, ending: &Hash) -> BTreeSet<Hash> {
+        let sigs = self.ending_sigs(collective);
+        closure(&sigs.names, ending)
+    }
+
+    /// The forks and closings of a collective an ending names in its own
+    /// `objects`, directly.
+    pub fn ending_objects(&self, collective: &Hash, ending: &Hash) -> BTreeSet<Hash> {
+        let mut out = BTreeSet::new();
+        let Some(h) = self.v.get(ending) else { return out };
+        for o in h.inside.objects.iter().flatten() {
+            let p = o.predecessor;
+            if p == *ending {
+                continue;
+            }
+            let Some(ph) = self.v.get(&p) else { continue };
+            let of_this = (self.is_law(ph, types::FORK) && Fork::decode(&ph.inside).is_ok_and(|f| &f.collective == collective))
+                || (self.is_law(ph, types::CLOSING) && Closing::decode(&ph.inside).is_ok_and(|c| &c.collective == collective));
+            if of_this {
+                out.insert(p);
+            }
+        }
+        out
+    }
+
+    /// The members who signed an ending, among `among`, in that order: each
+    /// by a chain signature that counts (F132, U1 refined), not made void
+    /// by U4.
+    pub fn ending_signed(&self, collective: &Hash, ending: &Hash, among: &[Hash]) -> Vec<Hash> {
+        let sigs = self.ending_sigs(collective);
+        among.iter().filter(|m| sigs.counting.contains_key(&(*ending, **m))).copied().collect()
+    }
+
+    /// A collective's ending signatures, judged (F132).
+    ///
+    /// Every chain signature (Identity type 16) naming a fork or closing of
+    /// the collective that counts in its signer's identity chain is read, at
+    /// its position there. Then U4: a signature counts for nothing where it
+    /// lies, in its signer's chain, after the signer's signature on another
+    /// ending naming the one it signs. "Names" is judged in two steps, so
+    /// that no signature both judges and is judged (reading, to confirm):
+    /// first by `objects`; then, among the signatures left, through
+    /// signers' chains (U1). The endings named through signers' chains are
+    /// read from the signatures left after both steps.
+    pub fn ending_sigs(&self, collective: &Hash) -> Rc<EndingSigs> {
+        if let Some(s) = self.ending_sigs.borrow().get(collective) {
+            return s.clone();
+        }
+        let s = Rc::new(self.ending_sigs_inner(collective));
+        self.ending_sigs.borrow_mut().insert(*collective, s.clone());
+        s
+    }
+
+    fn ending_sigs_inner(&self, collective: &Hash) -> EndingSigs {
+        let endings: BTreeSet<Hash> = self.ending_acts(collective).into_iter().collect();
+        let mut raw: BTreeMap<(Hash, Hash), (Hash, u64)> = BTreeMap::new();
+        for x in self.v.held_acts() {
+            if x.inside.spec != self.mips.identity || x.inside.type_ != crate::identity::types::CHAIN_SIGNATURE {
+                continue;
+            }
+            let (Some(Ok(Payload::ChainSignature(c))), Some(signer)) = (&x.identity, x.act.outside.signer) else {
+                continue;
+            };
+            if !endings.contains(&c.signs) {
+                continue;
+            }
+            let Some(p) = self.v.resolve(&signer).position_of(&x.id) else { continue };
+            let p = p as u64;
+            let e = raw.entry((c.signs, signer)).or_insert((x.id, p));
+            if p < e.1 {
+                *e = (x.id, p);
+            }
+        }
+        let objects: BTreeMap<Hash, BTreeSet<Hash>> =
+            endings.iter().map(|e| (*e, self.ending_objects(collective, e))).collect();
+        // U4b: an ending's drafter names, in its `objects`, every ending of
+        // the collective they signed earlier on their own chain; otherwise
+        // it is no ending, and its signatures count for nothing.
+        let mut no_ending = BTreeMap::new();
+        for e in &endings {
+            let Some(d) = self.v.get(e).and_then(|h| h.act.outside.signer) else { continue };
+            let Some((_, p)) = raw.get(&(*e, d)) else { continue };
+            let named = closure(&objects, e);
+            if let Some(((y, _), _)) = raw.iter().find(|((y, m), (_, q))| *m == d && y != e && q < p && !named.contains(y)) {
+                no_ending.insert(*e, *y);
+            }
+        }
+        raw.retain(|(e, _), _| !no_ending.contains_key(e));
+        let objects: BTreeMap<Hash, BTreeSet<Hash>> = objects
+            .into_iter()
+            .filter(|(e, _)| !no_ending.contains_key(e))
+            .map(|(e, s)| (e, s.into_iter().filter(|x| !no_ending.contains_key(x)).collect()))
+            .collect();
+        // Whether, in `sigs`, the signer of (x, m) signed an ending naming x
+        // (in `names`, transitively) earlier in their chain: that ending.
+        let voided = |sigs: &BTreeMap<(Hash, Hash), (Hash, u64)>, names: &BTreeMap<Hash, BTreeSet<Hash>>| {
+            let mut out = BTreeMap::new();
+            for ((x, m), (cs, p)) in sigs {
+                let by = sigs
+                    .iter()
+                    .find(|((y, m2), (_, q))| m2 == m && y != x && q < p && closure(names, y).contains(x))
+                    .map(|((y, _), _)| *y);
+                if let Some(y) = by {
+                    out.insert((*x, *m), (*cs, y));
+                }
+            }
+            out
+        };
+        let through_chains = |sigs: &BTreeMap<(Hash, Hash), (Hash, u64)>| {
+            let mut names = objects.clone();
+            for ((y, m), (_, q)) in sigs {
+                for ((x, m2), (_, p)) in sigs {
+                    if m2 == m && x != y && p < q {
+                        names.entry(*y).or_default().insert(*x);
+                    }
+                }
+            }
+            names
+        };
+        let mut void = voided(&raw, &objects);
+        let mut left: BTreeMap<_, _> = raw.iter().filter(|(k, _)| !void.contains_key(k)).map(|(k, v)| (*k, *v)).collect();
+        let names = through_chains(&left);
+        let more = voided(&left, &names);
+        left.retain(|k, _| !more.contains_key(k));
+        void.extend(more);
+        let names = through_chains(&left);
+        EndingSigs { counting: left, void, names, no_ending }
     }
 
     /// Whether an act of a collective counts as made after the fork or
@@ -4254,6 +4600,13 @@ impl<'a> LawView<'a> {
         if !matches!(self.closed_by(&o.debtor)?, Some(Closed { fork: Some(_), .. })) {
             return Ok(None);
         }
+        // An obligation that does not bind (outside the fork's history, the
+        // tie rule; not done; not the collective's by its own rules) is owed
+        // by nobody, whatever field 6 lists (rule 47a). Found by the Law
+        // invariants (`docs/law-invariants.md`, IC5).
+        if self.obligation_binds(obligation)? != Some(true) {
+            return Ok(Some(vec![]));
+        }
         let mut out: Vec<Hash> = vec![];
         let mut todo = vec![(o.debtor, 0u32)];
         while let Some((who, depth)) = todo.pop() {
@@ -4276,20 +4629,32 @@ impl<'a> LawView<'a> {
     }
 
     /// What receipts held pay toward an obligation: the sum of valid
-    /// receipts fulfilling it.
+    /// receipts fulfilling it that end at its creditor, received and signed
+    /// by the creditor the obligation names (Finance rule 7: routes ending
+    /// at the creditor's payee pointer). A receipt anyone else signs naming
+    /// the debt, the debtor's own among them, pays nothing toward it. Found
+    /// by the Law invariants (`docs/law-invariants.md`, IC2).
     pub fn paid_toward(&self, obligation: &Hash) -> u64 {
         use crate::finance::Payload as Fin;
+        let creditor = match self.v.get(obligation).map(|o| Fin::decode(o.inside.type_, &o.inside.payload)) {
+            Some(Ok(Fin::Obligation(o))) => o.creditor,
+            _ => return 0,
+        };
         self.v
             .held_acts()
             .filter_map(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
                 Ok(Fin::Receipt(rc))
-                    if r.inside.spec == self.mips.finance && &rc.fulfils == obligation && self.valid(&r.id) =>
+                    if r.inside.spec == self.mips.finance
+                        && &rc.fulfils == obligation
+                        && rc.payee == creditor
+                        && r.act.outside.signer == Some(creditor)
+                        && self.valid(&r.id) =>
                 {
                     Some(rc.amount.value)
                 }
                 _ => None,
             })
-            .sum()
+            .fold(0u64, u64::saturating_add)
     }
 
     /// A creditor's release, judged (Finance type 4, F126; Law rule 47b):
@@ -4500,6 +4865,22 @@ impl<'a> LawView<'a> {
             e.verdict = PurchaseVerdict::NoPurchase { why: w.into() };
             Ok(Some(e))
         };
+        // F131 (IT3): the payment decides. The claim is the one the
+        // payment's commitment names; a receipt naming another is a wrong
+        // receipt, which the rail shows: its commitment, recomputed from it,
+        // is not the one the rail proof carries.
+        if self.rail_invalid.contains(id) {
+            e.verdict = PurchaseVerdict::WrongReceipt {
+                why: "its rail proof does not carry the commitment recomputed from it: the payment committed to another claim; a wrong receipt counts for nothing (F131, IT3)".into(),
+            };
+            return Ok(Some(e));
+        }
+        if self.same_payment(id).iter().any(|(_, q)| q != &purchase) {
+            // Receipts of one payment naming different claims, and no rail
+            // answer yet saying which one the payment committed to.
+            e.verdict = PurchaseVerdict::Unrecorded;
+            return Ok(Some(e));
+        }
         let Some(p) = purchase else {
             return no(e, "it names no claim: a Finance-only payment for a claimed work is no purchase (F126)");
         };
@@ -4605,6 +4986,34 @@ impl<'a> LawView<'a> {
         Ok(Some(e))
     }
 
+    /// The other receipts and claims of the same rail payment as `id` (one
+    /// rail proof, one payment), valid and not shown wrong by their rail,
+    /// with the claim each names (F131, IT3).
+    fn same_payment(&self, id: &Hash) -> Vec<(Hash, Option<crate::finance::Purchase>)> {
+        use crate::finance::Payload as Fin;
+        let of = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some(((r.rail, r.proof), r.purchase)),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some(((r.rail, r.proof), r.purchase)),
+            _ => None,
+        };
+        let Some(Some((mine, _))) = self.v.get(id).map(of) else { return vec![] };
+        if mine.1.is_empty() {
+            return vec![];
+        }
+        let mut out = vec![];
+        for h in self.v.held_acts() {
+            if h.id == *id || self.rail_invalid.contains(&h.id) || !self.valid(&h.id) {
+                continue;
+            }
+            if let Some((k, q)) = of(h) {
+                if k == mine {
+                    out.push((h.id, q));
+                }
+            }
+        }
+        out
+    }
+
     /// The holders of the work's stake in the claim a purchase names (W4,
     /// F128): the successors where it names a fork; otherwise the holders
     /// in that version of the claiming agreement, a holder written null
@@ -4658,6 +5067,7 @@ impl<'a> LawView<'a> {
                 h.inside.spec == self.mips.finance
                     && h.inside.type_ == crate::finance::types::RECEIPT
                     && self.valid(&h.id)
+                    && !self.rail_invalid.contains(&h.id)
                     && (h.id == *id || mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m)))
             })
             .collect()
@@ -4792,6 +5202,10 @@ impl<'a> LawView<'a> {
         let mine = proof(x);
         let mut candidates: Vec<&Held> = vec![x];
         candidates.extend(self.v.acknowledgements(id));
+        // The payment is the rail proof's (one proof, one payment): an act
+        // acknowledging any receipt for it records it, so that one payment
+        // is never a purchase by one receipt and refunded by another. Found
+        // by the Law invariants (`docs/law-invariants.md`, IC4).
         for h in self.v.held_acts() {
             if h.id != *id
                 && h.inside.spec == self.mips.finance
@@ -4799,10 +5213,14 @@ impl<'a> LawView<'a> {
                 && mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m))
             {
                 candidates.push(h);
+                candidates.extend(self.v.acknowledgements(&h.id));
             }
         }
         let claim_here = self.claim_version(&p.line, work)?;
         for r in candidates {
+            if self.rail_invalid.contains(&r.id) {
+                continue;
+            }
             // Signed with the collective's own key, or with a grant key of
             // its, its split service's among them (F128, reading 6).
             if r.act.outside.signer.as_ref() != Some(c) || !self.valid(&r.id) || !self.consent(&r.id)?.counts() {
@@ -5023,10 +5441,13 @@ impl<'a> LawView<'a> {
             return Err(LawError::Check("not a split"));
         }
         let s = Split::decode(&h.inside.payload)?;
-        let total: u64 = s.payouts.iter().map(|p| p.amount).sum();
+        // Summed wide (rule 21): payouts that overflow 64 bits never sum to
+        // the amount received, and never panic the verifier. Found by the Law
+        // invariants (`docs/law-invariants.md`, IC7).
+        let total: u128 = s.payouts.iter().map(|p| p.amount as u128).sum();
         let sums = self.v.get(&s.receipt).and_then(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
-            Ok(Fin::Receipt(x)) => Some(x.amount.value == total),
-            Ok(Fin::Claim(x)) => Some(x.amount.value == total),
+            Ok(Fin::Receipt(x)) => Some(x.amount.value as u128 == total),
+            Ok(Fin::Claim(x)) => Some(x.amount.value as u128 == total),
             _ => None,
         });
         let fees = s

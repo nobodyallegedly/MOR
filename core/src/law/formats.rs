@@ -1349,7 +1349,7 @@ impl Terms {
                 ));
             }
             if let Some(st) = &s.stakes {
-                if st.iter().map(|(_, n)| n).sum::<u64>() != MILLION {
+                if st.iter().map(|(_, n)| *n as u128).sum::<u128>() != MILLION as u128 {
                     return Err(LawError::Check(
                         "stake successors' shares do not sum to 1,000,000",
                     ));
@@ -1580,11 +1580,14 @@ impl Terms {
         if objects.iter().enumerate().any(|(i, o)| objects[..i].contains(o)) {
             return Err(LawError::Check("two stakes on one object"));
         }
+        // Shares are summed wide: summed in 64 bits, shares near the top
+        // could wrap round to exactly 1,000,000 and pass (found by the Law
+        // invariants, `docs/law-invariants.md`, IC7).
         for s in st {
             let who: Vec<Who> = s.holders.iter().map(|(h, _)| *h).collect();
             if who.iter().enumerate().any(|(i, o)| who[..i].contains(o))
                 || s.holders.iter().any(|(_, n)| *n == 0)
-                || s.holders.iter().map(|(_, n)| n).sum::<u64>() != MILLION
+                || s.holders.iter().map(|(_, n)| *n as u128).sum::<u128>() != MILLION as u128
             {
                 return Err(LawError::Check(
                     "a stake's holders are distinct, each share above zero, summing to 1,000,000 (rule 15a)",
@@ -1865,6 +1868,21 @@ fn check_objects_self(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
         Ok((own, _)) if own == &expected[..] => Ok(()),
         _ => Err(LawError::Shape(w)),
     }
+}
+
+/// A fork's or closing's `objects` (F131, IT1): the agreement as chain and
+/// predecessor, `[agreement, agreement]`, then one entry `[agreement,
+/// ending]` for each earlier fork or closing of the same collective it
+/// names, the act it follows on that chain, distinct, none the agreement.
+fn check_objects_ending(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
+    let o = inside.objects.as_deref().unwrap_or(&[]);
+    let named = o.iter().skip(1).take_while(|e| &e.chain == x).count();
+    let first = o.first().is_some_and(|e| &e.chain == x && &e.predecessor == x);
+    let ends: Vec<Hash> = o.iter().skip(1).take(named).map(|e| e.predecessor).collect();
+    if !first || ends.contains(x) || !distinct(&ends) || chain_citations(&o[1 + named..], 0).is_err() {
+        return Err(LawError::Shape(w));
+    }
+    Ok(())
 }
 
 /// The inside `objects` a terms act carries: none for founding terms; for a
@@ -2594,7 +2612,7 @@ impl Fork {
             return Err(LawError::Check("each side names its own successor, never the original (N4)"));
         }
         for sh in &x.shares {
-            if sh.shares.len() != x.sides.len() || sh.shares.iter().sum::<u64>() != MILLION {
+            if sh.shares.len() != x.sides.len() || sh.shares.iter().map(|n| *n as u128).sum::<u128>() != MILLION as u128 {
                 return Err(LawError::Check(
                     "a fork's shares name one share per side, in millionths, summing to 1,000,000 (F121)",
                 ));
@@ -2615,7 +2633,7 @@ impl Fork {
                 "a fork assigns each debt once, to sides it lists, ascending (F121, N13)",
             ));
         }
-        check_objects_self(inside, &x.agreement, "fork")?;
+        check_objects_ending(inside, &x.agreement, "fork")?;
         Ok(x)
     }
 
@@ -2660,7 +2678,7 @@ impl Closing {
             chain_act: hash(req(2, "closing: the chain act")?, "closing: the chain act")?,
             tips: tips(req(3, "closing: kept tips")?, "closing: kept tip")?,
         };
-        check_objects_self(inside, &x.agreement, "closing")?;
+        check_objects_ending(inside, &x.agreement, "closing")?;
         Ok(x)
     }
 }

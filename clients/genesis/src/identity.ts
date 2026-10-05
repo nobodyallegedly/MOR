@@ -24,6 +24,7 @@ import {
   keyDeliveryPayload,
   makeEveryday,
   makeGenesis,
+  makeChainSignature,
   makeRotation,
   newEncryptionSecret,
   newSigningSecret,
@@ -341,12 +342,15 @@ export class TestIdentity {
     const kept = seq.length
       ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }]
       : [];
-    const previous = actId(this.chainActs()[this.f.position]);
+    // The latest identity-chain act: the binding, or a chain signature
+    // made since (F132).
+    const chain = this.chainActs();
+    const previous = actId(chain[chain.length - 1]);
     const rotation = makeRotation({
       identitySpec: SPECS.identity,
       identity: this.f.identity,
       previous,
-      position: this.f.position + 1,
+      position: chain.length,
       safetyScheme: this.f.safety.scheme,
       safetySeeds: unhex(this.f.safety.seeds),
       newSigningPublic: signingPublic(newSigning),
@@ -392,7 +396,7 @@ export class TestIdentity {
     const counts = links.some((l) => l.act === p.id);
     if (counts) {
       this.f.chain.push(p.rotation);
-      this.f.position += 1;
+      this.f.position = this.f.chain.length - 1;
       this.f.binding = p.id;
       this.f.signingSecret = p.signingSecret;
       this.f.safety = p.safety;
@@ -404,6 +408,42 @@ export class TestIdentity {
       await this.spread(lookup);
     }
     return { counts, lookup };
+  }
+
+  /**
+   * A chain signature (Identity type 16, F132): `signs` signed with the
+   * safety key the latest identity-chain act committed, on the identity
+   * chain, committing a new one; the everyday key, homes and rules stay.
+   * Law takes a member's signature on a fork or closing only in this form.
+   * The safety key is spent once signed, so the act is kept in the chain
+   * file at once and sent to every home, as a rotation is (the same bytes
+   * whenever resent, rule 8a); it counts once the homes hold it. Sent to
+   * `relays` too, beside the act it signs.
+   */
+  async chainSign(signs: string, relays: string[] = []): Promise<{ id: string; counts: boolean; sent: Submitted[] }> {
+    if (this.f.pending) throw new Error('a rotation is pending: submit and settle it first; one safety key signs one identity-chain act (Identity rule 8a)');
+    const next = newTestSafetyKey(this.f.safety.scheme as 2 | 3);
+    const chain = this.chainActs();
+    const act = makeChainSignature({
+      identitySpec: SPECS.identity,
+      identity: this.f.identity,
+      previous: actId(chain[chain.length - 1]),
+      position: chain.length,
+      safetyScheme: this.f.safety.scheme,
+      safetySeeds: unhex(this.f.safety.seeds),
+      nextSafetyScheme: next.scheme,
+      nextSafetyCommit: next.commit,
+      signs,
+    });
+    const id = actId(act);
+    this.f.chain.push(b64(act));
+    this.f.safety = { scheme: next.scheme, seeds: hex(next.seeds) };
+    const sent = await this.submitChainAct(act, this.f.homes);
+    for (const hint of relays) await relayAt(hint, this.via).putAct(act);
+    const lookup = await lookUp(this.f.identity, this.f.homes.map((h) => h.hint), this.via);
+    const counts = lookup.resolution.links.some((l) => l.act === id);
+    if (counts) await this.spread(lookup);
+    return { id, counts, sent };
   }
 
   /**

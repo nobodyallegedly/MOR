@@ -167,7 +167,7 @@ fn a_rotation_must_reveal_the_committed_safety_key_and_name_its_predecessor() {
     assert_eq!(w.v.status(&bad), Status::Invalid);
     // Naming a predecessor that is not the act counting before it.
     let mut astray = a.clone();
-    astray.binding = sha256(b"not alice's genesis");
+    astray.tip = sha256(b"not alice's genesis");
     let (bad2, _) = w.rotate(&astray, Rot::default());
     w.receipt(&mut h, &a.id, &bad2, 1);
     assert_eq!(chain(&w, &a), vec![a.id]);
@@ -188,6 +188,55 @@ fn both_safety_schemes_rotate() {
     w.receipt(&mut h, &a.id, &r2, 2);
     assert_eq!(chain(&w, &a), vec![a.id, r1, r2]);
     assert_eq!(w.v.get(&r1).unwrap().act.signature.sig.len(), 7856);
+}
+
+/// A chain signature (type 16, F132): signed with the revealed safety key,
+/// it takes the next position as a rotation does, pending until the homes
+/// receipt it, and commits the next safety key. It sets no key and judges
+/// nothing: acts under the key in effect stay valid, before and after it,
+/// and a later rotation names it as its predecessor. A binding naming it
+/// is invalid; a second act revealing the same safety key competes for the
+/// position.
+#[test]
+fn a_chain_signature_takes_a_position_and_changes_no_key() {
+    let mut w = World::new();
+    let mut h = w.operator("home");
+    let mut a = w.genesis("alice", vec![home(&h)], None, None);
+    let before = w.post(&mut a, "before");
+    let signed = sha256(b"a fork Alice signs");
+    let (cs, mut a1) = w.chain_sign(&a, signed);
+    assert_eq!(w.v.status(&cs), Status::Pending);
+    w.receipt(&mut h, &a.id, &cs, 1);
+    assert_eq!(chain(&w, &a), vec![a.id, cs]);
+    assert_eq!(w.v.status(&cs), Status::Valid);
+    // The same everyday key, the same binding: nothing judged.
+    let after = w.post(&mut a1, "after");
+    assert_eq!(w.v.status(&before), Status::Valid);
+    assert_eq!(w.v.status(&after), Status::Valid);
+    // A binding naming the chain signature binds no key.
+    let mut odd = a1.clone();
+    odd.binding = cs;
+    let bad = w.post(&mut odd, "bound to a chain signature");
+    assert_eq!(w.v.status(&bad), Status::Invalid);
+    // A second chain signature, then a rotation, each after the last.
+    let (cs2, a2) = w.chain_sign(&a1, sha256(b"a closing"));
+    w.receipt(&mut h, &a.id, &cs2, 2);
+    let (r, _) = w.rotate(&a2, Rot::default());
+    w.receipt(&mut h, &a.id, &r, 3);
+    assert_eq!(chain(&w, &a), vec![a.id, cs, cs2, r]);
+    // The rotation judges the key it replaces, set at genesis: "after" was
+    // not kept (the default keeps the person's own sequence, which holds it).
+    assert_eq!(w.v.status(&after), Status::Valid);
+    // Revealing a spent safety key again: never counts.
+    let (late, _) = w.chain_sign(&a, sha256(b"another fork"));
+    assert_eq!(w.v.status(&late), Status::Invalid);
+    // Two acts revealing the same safety key compete for one position.
+    let mut w2 = World::new();
+    let s = w2.genesis("self", vec![own_home()], None, None);
+    let (c1, _) = w2.chain_sign(&s, sha256(b"one"));
+    assert_eq!(chain(&w2, &s), vec![s.id, c1]);
+    let (r1, _) = w2.rotate(&s, Rot::default());
+    assert!(matches!(w2.v.resolve(&s.id).stop, Stop::Contested(ref c) if c.contains(&r1)));
 }
 
 // ---------------------------------------------------------------- several homes (5.6)

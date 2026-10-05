@@ -653,6 +653,60 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct ChainSignatureIn {
+    identity_spec: String,
+    identity: String,
+    previous: String,
+    position: u64,
+    /// The safety key the previous act committed, revealed now.
+    safety_scheme: u8,
+    #[serde(with = "serde_bytes")]
+    safety_seeds: Vec<u8>,
+    next_safety_scheme: u8,
+    next_safety_commit: String,
+    /// The act it signs.
+    signs: String,
+}
+
+/// A chain signature (Identity type 16, F132): an act on the identity
+/// chain, signed by the revealed safety key, naming the act it signs and
+/// committing the next safety key; nothing else changes. Law's members sign
+/// forks and closings with it.
+///
+/// The safety key here is held in software: **test identities only**. As
+/// for a rotation, the caller keeps the returned bytes and sends exactly
+/// them to every home (Identity rule 8a).
+#[wasm_bindgen(js_name = makeChainSignature)]
+pub fn make_chain_signature(input: JsValue) -> R<Vec<u8>> {
+    let c: ChainSignatureIn = from_js(input)?;
+    let safety = slh(c.safety_scheme, &c.safety_seeds)?;
+    let payload = identity::ChainSignature {
+        prev: unhex(&c.previous)?,
+        position: c.position,
+        safety: SafetyCommit {
+            scheme: Scheme::Founding(c.next_safety_scheme),
+            commit: unhex(&c.next_safety_commit)?,
+        },
+        signs: unhex(&c.signs)?,
+    };
+    let inside = identity_inside(
+        unhex(&c.identity_spec)?,
+        identity::types::CHAIN_SIGNATURE,
+        Payload::ChainSignature(payload).to_map(),
+    );
+    let a = act::make(
+        &inside,
+        &random::<32>(),
+        &random::<24>(),
+        &public_addr(Some(unhex(&c.identity)?)),
+        |id| safety.sign(id, Some(&random::<16>())),
+    );
+    identity::check_chain_signature_shape(&a, &inside, &payload).map_err(err)?;
+    Ok(a.encode())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct EverydayIn {
     #[serde(with = "serde_bytes")]
     signing_secret: Vec<u8>,
@@ -1280,6 +1334,11 @@ struct SpecsIn {
     /// validity, F128: it states it to its user as information only.)
     #[serde(default)]
     push_rails: Vec<String>,
+    /// Receipts and claims whose rail proof the client checked under the
+    /// payment cMIP and found not to carry the commitment recomputed from
+    /// them (F131, IT3): wrong receipts, counting for nothing.
+    #[serde(default)]
+    rail_invalid: Vec<String>,
 }
 
 impl SpecsIn {
@@ -1310,6 +1369,9 @@ impl SpecsIn {
         }
         for r in &self.push_rails {
             view.push_rails.insert(unhex(r)?);
+        }
+        for r in &self.rail_invalid {
+            view.rail_invalid.insert(unhex(r)?);
         }
         Ok(view)
     }
@@ -2265,6 +2327,31 @@ impl Verifier {
             .map(|v| v.iter().map(hx).collect()))
     }
 
+    /// The acts the history a line at `chain_act` and `tips` would cite
+    /// that this verifier does not hold (F127): a member's client signs no
+    /// fork or closing while any is missing (F131 IT2b, client conformance).
+    #[wasm_bindgen(js_name = lawLineUnheld)]
+    pub fn law_line_unheld(&self, specs: JsValue, collective: &str, chain_act: &str, tips: JsValue) -> R<Vec<String>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let tips: Vec<TipIn> = from_js(tips)?;
+        let tips = tips
+            .iter()
+            .map(|t| Ok(KeptTip { act: unhex(&t.act)?, position: t.position, summary: unhex(&t.summary)? }))
+            .collect::<R<Vec<_>>>()?;
+        Ok(view.line_unheld(&unhex(collective)?, &unhex(chain_act)?, &tips).iter().map(hx).collect())
+    }
+
+    /// Every fork and closing of `collective` held, complete or not: what a
+    /// new ending names in its `objects`, `[agreement, ending]` (F131 IT1,
+    /// client conformance).
+    #[wasm_bindgen(js_name = lawEndingActs)]
+    pub fn law_ending_acts(&self, specs: JsValue, collective: &str) -> R<Vec<String>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        Ok(view.ending_acts(&unhex(collective)?).iter().map(hx).collect())
+    }
+
     /// A closing act, judged (rule 47a, F124 N9).
     #[wasm_bindgen(js_name = lawClosing)]
     pub fn law_closing(&self, specs: JsValue, id: &str) -> R<JsValue> {
@@ -2361,7 +2448,11 @@ impl Verifier {
     /// "no-purchase" (a refund owed to the payer, with why), or "unrecorded"
     /// (on a request rail, a collective seller's actions chain has not
     /// recorded it yet; on a push rail (`specs.pushRails`), a holder has not
-    /// signed its receipt yet); null where the payment is not for a work.
+    /// signed its receipt yet, or receipts of one payment name different
+    /// claims and the rail has not shown which the payment committed to),
+    /// or "wrong-receipt" (F131 IT3: a receipt `specs.railInvalid` names,
+    /// whose claim the payment did not commit to; it counts for nothing);
+    /// null where the payment is not for a work.
     #[wasm_bindgen(js_name = lawPurchase)]
     pub fn law_purchase(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2373,6 +2464,7 @@ impl Verifier {
             law::PurchaseVerdict::Purchase => ("purchase", None),
             law::PurchaseVerdict::NoPurchase { why } => ("no-purchase", Some(why.clone())),
             law::PurchaseVerdict::Unrecorded => ("unrecorded", None),
+            law::PurchaseVerdict::WrongReceipt { why } => ("wrong-receipt", Some(why.clone())),
         };
         let refund_to = match &e.refund_to {
             finance::RefundTo::Identity(h) => Some(hx(h)),

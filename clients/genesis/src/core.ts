@@ -37,7 +37,7 @@ export const MIPS = {
   production: sha256('PRODUCTION, test value until the freeze'),
 };
 
-export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15 } as const;
+export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15, chainSignature: 16 } as const;
 
 /** The specifications whose act types may carry acknowledgements (Envelope
  * draft 7, rule 4a, F110): Identity, Finance and Law. Any other act carrying
