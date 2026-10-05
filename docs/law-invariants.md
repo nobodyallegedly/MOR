@@ -23,18 +23,18 @@ Each failure was sorted into one of two kinds:
 
 | Promise | Held? | Stories |
 | --- | --- | --- |
-| No stake or share moves without its holder's signature; a deal changes only with every party; a thief's signature counts for nothing once its victim rotates | Held | COUNT_DEAL deals, COUNT_STAKES collective clones |
-| Every split sums exactly; every payout matches its stake within the rounding the text allows | Held after one fix (IC7) | COUNT_DEAL deals (COUNT_SPLITS splits) |
-| The same acts, in any order, or with some arriving late, give the same verdicts | Held after one fix (IC6) | COUNT_COL_ORDER collectives and COUNT_DEAL_ORDER deals, each delivered three ways |
+| No stake or share moves without its holder's signature; a deal changes only with every party; a thief's signature counts for nothing once its victim rotates | Held | 5,000 deals (5,435 versions in force, 776 thief's signatures voided), 10,000 collective clones |
+| Every split sums exactly; every payout matches its stake within the rounding the text allows | Held after one fix (IC7) | 5,000 deals (3,887 splits) |
+| The same acts, in any order, or with some arriving late, give the same verdicts | Held after one fix (IC6) | 1,500 collectives and 1,500 deals, each delivered three ways |
 | The same acts always give the same answer | Held | the same |
-| Nothing published after a complete fork or closing undoes it | **Broken by the text (IT1)** | COUNT_COL collectives |
-| An act in a collective's name sealed to too few members, or citing nothing on its chain, never binds | Held after one fix (IC1) | COUNT_COL collectives |
-| The tie rule: an act an ending's history does not hold is void, in every order | Held after one fix (IC3) | COUNT_COL collectives |
-| A fork takes effect only if it hands out every debt in its history; no successor owes a debt not handed to it | Held after one fix (IC5) | COUNT_COL collectives |
-| A collective with an open debt cannot close | Held after one fix (IC2) | COUNT_COL collectives |
-| A grant key never acts beyond its reach, after its revocation, after its area empties, or after a fork's line; never signs a decision; a split service's key signs only incoming receipts | Held after one fix (IC3) | COUNT_COL collectives and COUNT_DEAL deals |
-| A counterparty that waits until the collective cites its act is safe | **Broken by the text (IT2)** | COUNT_COL collectives |
-| A payment is never both a purchase and owed back | Held after one fix (IC4), **except where the text is silent (IT3)** | COUNT_COL collectives and COUNT_DEAL deals |
+| Nothing published after a complete fork or closing undoes it | **Broken by the text (IT1)** | 5,000 collectives |
+| An act in a collective's name sealed to too few members, or citing nothing on its chain, never binds | Held after one fix (IC1) | 5,000 collectives |
+| The tie rule: an act an ending's history does not hold is void, in every order | Held after one fix (IC3) | 5,000 collectives |
+| A fork takes effect only if it hands out every debt in its history; no successor owes a debt not handed to it | Held after one fix (IC5) | 5,000 collectives |
+| A collective with an open debt cannot close | Held after one fix (IC2) | 5,000 collectives |
+| A grant key never acts beyond its reach, after its revocation, after its area empties, or after a fork's line; never signs a decision; a split service's key signs only incoming receipts | Held after one fix (IC3) | 5,000 collectives and 5,000 deals |
+| A counterparty that waits until the collective cites its act is safe | **Broken by the text (IT2)** | 5,000 collectives |
+| A payment is never both a purchase and owed back | Held after one fix (IC4), **except where the text is silent (IT3)** | 5,000 collectives and 5,000 deals |
 
 ### What broke because of the code, now fixed
 
@@ -147,15 +147,15 @@ Large runs (debug build, so overflow is checked), one process each:
 
 | Property | Cases | Acts judged | Result |
 | --- | --- | --- | --- |
-| collective_promises_hold | COUNT_COL | ACTS_COL | RESULT_COL |
-| collective_verdicts_do_not_depend_on_order | COUNT_COL_ORDER | — | RESULT_COL_ORDER |
-| deal_promises_hold | COUNT_DEAL | ACTS_DEAL | RESULT_DEAL |
-| deal_verdicts_do_not_depend_on_order | COUNT_DEAL_ORDER | — | RESULT_DEAL_ORDER |
-| collective_stakes_move_only_with_their_holders | COUNT_STAKES | — | RESULT_STAKES |
+| collective_promises_hold | 5,000 | 228,679 | passed (409 s) |
+| collective_verdicts_do_not_depend_on_order | 1,500, each delivered 3 ways | — | passed (281 s) |
+| deal_promises_hold | 5,000 | 129,067 | passed (402 s) |
+| deal_verdicts_do_not_depend_on_order | 1,500, each delivered 3 ways | — | passed (201 s) |
+| collective_stakes_move_only_with_their_holders | 10,000 | — | passed (216 s) |
 
-Coverage in the large collective run: COVERAGE_COL. TEXT findings met: TEXT_COL.
+Coverage in the large collective run: 2,240 complete forks, 679 complete closings, 1,530 collectives ended, 5,357 debts binding, 2,611 revocations counting, 184 areas emptied, 1,292 grant-key acts binding and 4,190 void, 1,479 purchases and 593 refunds. TEXT findings met: IT1 (ENDING-UNDONE) in 621 stories, IT2 in 7 (an ending drawn elsewhere) and 25 (an early line).
 
-Coverage in the large deal run: COVERAGE_DEAL. TEXT findings met: TEXT_DEAL.
+Coverage in the large deal run: 5,435 versions in force and 4,956 drafts, 776 thief's signatures voided by a rotation, 3,117 service receipts backed and 4,269 refused, 3,060 purchases, 2,625 refunds and 4,959 unrecorded payments, 3,887 splits of which 1,436 broke their plan as the text says they should. TEXT findings met: IT3 (PAYMENT-CLAIMS-DISAGREE) in 126 stories.
 
 Named tests, kept: `ic1_a_debt_citing_nothing_binds_no_one`, `ic2_only_the_creditors_receipt_pays_a_debt`, `ic3_a_revoked_act_stays_void_inside_a_forks_history`, `ic4_an_acknowledgement_records_the_whole_payment`, `ic5_no_successor_owes_a_debt_outside_the_forks_history`, `ic6_explanations_do_not_depend_on_arrival_order`, `ic7_sums_that_overflow_never_pass`, `it1_a_second_complete_fork_undoes_the_first`, `it2_a_cited_act_is_voided_by_an_ending_drawn_elsewhere`, `it2b_a_stale_line_voids_a_cited_debt`, `it3_one_payment_whose_receipts_name_different_claims`. Each IC-test was checked to fail with the library as it was before this session.
 
@@ -173,4 +173,4 @@ Named tests, kept: `ic1_a_debt_citing_nothing_binds_no_one`, `ic2_only_the_credi
 
 Existing tests changed, with the reason: in `core/tests/law_collective.rs`, the label's debts (`obligation`, `obligation_to`, and four debts written inline) are signed by Ben, who holds the label's Finance lane (rule 36a; IC1), and d2 in `a_collective_forks` is owed to an identity that signs its own receipt (Finance rule 7; IC2). No assertion was changed.
 
-All existing tests were run: TESTS_LINE.
+All existing tests were run: every Rust test in the workspace, 321 passed and none failed (the 305 there before and 16 new); the nine TypeScript clients' 113 tests, against the WebAssembly bindings rebuilt from this branch, all passed.
