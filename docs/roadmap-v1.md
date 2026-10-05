@@ -201,6 +201,10 @@ The relays are wiped of every test act. Every server that carries on past the te
 Every component re-tested end to end; the door opened on devices it has never seen.
 *Done when:* all passes. **Only then is anything shown.**
 
+### Toward universities *(decided by Nobody, allegedly, 5 October 2026: "let's do this")*
+
+After the first two Nostr developers answered that they had no time, the original wide net is taken up: universities, across departments, with the case studies as tailored doors. To make MOR worth a researcher's time: (1) the repository public, with a licence for the documents; (2) a short technical paper (problem, design, precise claims, threat model, what was run and what only reasoned, open problems); (3) related work credited honestly, KERI first, then Nostr, the AT Protocol, Scuttlebutt, Ricardian contracts; (4) a list of open research problems, each thesis-sized; (5) one-command reproducibility. The paper first.
+
 ## Decisions due along the way
 
 | Decision | Before |
