@@ -1610,3 +1610,12 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 10. **Text:** "and similar" and "letters or digits" name exact Unicode categories of the pinned version (Cf, Bidi_Control, Default_Ignorable_Code_Point; L and N).
 
 **Core changes:** Law draft 10 (act table, abandonment clause, rules 15a, 16, 21, 27, 28, 46b, stakes format), Production draft 6 (rule 17), Text draft 6 (rule 5, the format task), payment cMIP draft 2 (rail Modules, item 3). *To build:* rail kind read from the Module's specification instead of `push_rails` by hand.
+
+
+## F141. A claim and a receipt disagreeing in payee or purpose (U5, 6 October 2026)
+
+**Found building double entry (U5):** rule 10 said the greater amount counts where a claim and a receipt sharing one rail proof disagree, but not toward which obligation when they disagree in payee or in what the payment fulfils; counting toward both counts one payment twice, and rule 8a says such acts count neither until resolved. On every rail under the payment cMIP draft 2 the commitment binds payee and purpose, so both cannot be valid; the case arises only on a rail without such a binding.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed"** to the project lead's suggestion, following IT3: the payment's own commitment decides; where a rail binds no payee or purpose, neither counts until the receiver resolves them (rule 8a), the disagreement shown.
+
+**Core changes:** Finance draft 6, rule 10. *Code:* as built (the disagreeing claim adds nothing, the disagreement shown); the commitment check on rails that bind payee and purpose to be confirmed in the next Finance session.
