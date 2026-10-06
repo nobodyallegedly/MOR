@@ -1718,10 +1718,19 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 
 
 
+## F151. On a rail that binds nothing, the payer's claim decides the purpose (review finding 7, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 7):** under F141, where a rail binds no payee or purpose and a claim and receipt disagree, neither counted until the receiver resolved them, so a creditor could receive a debt payment, sign a receipt calling it a tip, never resolve, and demand the money again: a receiver's veto. It also contradicted paper section 5.1. Rare: every rail written so far binds both.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed":** back to F64's fallback. Where the rail binds nothing, the payer's claim decides what the payment fulfils; the receiver's contrary receipt stays shown as a dispute.
+
+**Core changes:** Finance draft 6, rule 10 (replacing F141's last clause; where the rail binds them, F141 stands). *To build:* the payment cMIP's resolution for non-binding rails.
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
 
 **Corrected the same evening by the project lead, as editorial or following the decisions' own stated reasons (no new decision):** F144 now hands out every obligation that binds the collective (done, on its chain, within its signer's powers or adopted), as decided ("the debts that bind the collective"); F142 says "an action of its own key", "wherever it is stored"; F143's italic no longer claims independence from when a verifier is asked; F135's null sentence names keys 5, 6, 7 and 9; the rail-kind field marked format open; the freeze suite's leftover wording follows F140.
 
-**Open for Nobody, allegedly:** findings 1, 2, 3, 5 and 6 decided (F145 to F150); open: findings 7, 8, 10, 16, 17, and the remaining "when" sentences.
+**Open for Nobody, allegedly:** findings 1, 2, 3, 5, 6 and 7 decided (F145 to F151); open: findings 8, 10, 16, 17, and the remaining "when" sentences.
