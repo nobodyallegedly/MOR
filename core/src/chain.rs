@@ -683,6 +683,21 @@ impl Verifier {
         }
     }
 
+    /// The counting rotation of its signer that judges an everyday act
+    /// (validity rules 15 to 17): the first rotation after the chain act
+    /// that bound the act's key, if one counts. `None` for an act not
+    /// held, an identity-chain act, or one no rotation judges yet. *Finance
+    /// rule 15 names it: the rotation that invalidated a payee pointer.*
+    pub fn judged_by(&self, act: &Hash) -> Option<Hash> {
+        let x = self.acts.get(act)?;
+        if matches!(&x.identity, Some(Ok(Payload::Genesis(_) | Payload::Rotation(_) | Payload::ChainSignature(_)))) {
+            return None;
+        }
+        let res = self.resolve(x.signer()?);
+        let k = res.position_of(x.act.outside.binding.as_ref()?)?;
+        self.judging(&res, k).map(|j| res.links[j].act)
+    }
+
     // ------------------------------------------------------------ resolving
 
     fn resolve_cx(&self, cx: &mut Cx, id: &Hash) -> Rc<Resolution> {

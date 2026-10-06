@@ -228,23 +228,29 @@ fn rule_32_an_anonymous_refund_goes_to_the_committed_key() {
         anonymous: None,
         purchase: None,
     };
-    let signed = |c: &Claim, k: &SchnorrKey| Anonymous { key: bare.clone(), sig: k.sign(&c.anonymous_message(), &[0; 32]).sig };
+    // The claim act cites the offer it paid (F147: the key signs that too).
+    let cited = fin::Citations { objects: Some(vec![Object { chain: h("offer"), predecessor: h("offer") }]), acks: None, refs: None };
+    let none_cited = fin::Citations::default();
+    let signed = |c: &Claim, k: &SchnorrKey| Anonymous { key: bare.clone(), sig: k.sign(&c.anonymous_message(&cited), &[0; 32]).sig };
     // Presenting the rail proof alone, as a routing node or the payee could:
     // no refund.
-    assert!(!fin::claims_refund(&receipt, &claim, &h("a routing node")));
+    assert!(!fin::claims_refund(&receipt, &claim, &h("a routing node"), &cited));
     let mut forged = claim.clone();
     forged.anonymous = Some(signed(&claim, &SchnorrKey::from_secret(&h("a routing node")).unwrap()));
-    assert!(!fin::claims_refund(&receipt, &forged, &h("a routing node")));
+    assert!(!fin::claims_refund(&receipt, &forged, &h("a routing node"), &cited));
     // Signed with the committed key, by any identity: the refund is theirs.
     claim.anonymous = Some(signed(&claim, &key));
-    assert!(fin::claims_refund(&receipt, &claim, &h("a one-time identity")));
+    assert!(fin::claims_refund(&receipt, &claim, &h("a one-time identity"), &cited));
+    // Re-wrapped in an act with other citations (F147): its key 8 no
+    // longer verifies, and it claims nothing.
+    assert!(!fin::claims_refund(&receipt, &claim, &h("a one-time identity"), &none_cited));
     // A payment that committed no key: nobody.
     let none = Receipt { payer: None, ..receipt.clone() };
     assert_eq!(fin::refund_owed_to(&none), RefundTo::Nobody);
-    assert!(!fin::claims_refund(&none, &claim, &h("anyone")));
+    assert!(!fin::claims_refund(&none, &claim, &h("anyone"), &cited));
     // A named payer: only that identity.
     let named = Receipt { payer: Some(Payer::Identity(h("alice"))), ..receipt };
     let plain = Claim { anonymous: None, ..claim };
-    assert!(fin::claims_refund(&named, &plain, &h("alice")));
-    assert!(!fin::claims_refund(&named, &plain, &h("mallory")));
+    assert!(fin::claims_refund(&named, &plain, &h("alice"), &none_cited));
+    assert!(!fin::claims_refund(&named, &plain, &h("mallory"), &none_cited));
 }

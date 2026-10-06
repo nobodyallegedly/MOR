@@ -1,28 +1,32 @@
-//! Finance rule 14 over the Lightning rail Module, as freeze test suite
-//! scenario 1, step 5c tells it: a thief with a contributor's stolen
-//! signing key changes the contributor's flow pointer. Royalties owed under
-//! the earlier pointer cannot be collected through the thief's flow, only
-//! through the vault; an obligation the thief re-issues with the stolen key
-//! is no obligation; one the debtor re-signs to name the thief's pointer,
-//! which its agreement act never cited, does not count toward the thief's
-//! flow (F133); a fan's tip that followed the published pointer counts.
+//! Finance rules 12, 14 and 15 over the Lightning rail Module, as freeze
+//! test suite scenario 1, step 5c tells it: a thief with a contributor's
+//! stolen signing key changes the contributor's flow pointer. Royalties
+//! owed under the earlier pointer cannot be collected through the thief's
+//! flow, only through the vault; an obligation the thief re-issues with the
+//! stolen key is no obligation; one the debtor re-signs to name the thief's
+//! pointer counts for nothing there, since the pointer is judged by the
+//! contributor's own act (F145, F155); a fan's tip that followed the
+//! published pointer counts, and still counts after the rotation that
+//! invalidates it, where the fan's claims meet rule 15's proviso (F139,
+//! F146, F147, F154).
 //!
 //! Without a node: invoices are made and signed by `lightning-invoice`, as
-//! in `rule.rs`. Test identities and regtest units only.
+//! in `rule.rs`. What the verifier holds is stated by hand ([`Contributor`]);
+//! what an act holds is computed over real acts by the core library
+//! (`core/tests/finance_f145.rs`). Test identities and regtest units only.
 
 use bitcoin::hashes::{sha256 as bh, Hash as _};
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
 use mor_core::finance::{
-    self, Amount, Claim, Obligation, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry,
+    self, Amount, Citations, Claim, Holding, Obligation, PayeePointer, Payer, PayersClaim, Payload, Rail, Receipt,
+    VaultEntry,
 };
 use mor_core::hash::{sha256, Hash};
 use mor_lightning::bolt11::Network;
 use mor_lightning::{unit, Lightning, LnAddress, LnProof};
-use mor_payment::{
-    pointer_in_force, verify, Answer, Commitment, Held, HeldObligation, Modules, PaidTo, Proof, Record,
-};
-use std::collections::BTreeMap;
+use mor_payment::{pointer_in_force, verify, Answer, Commitment, Held, Modules, PaidTo, Proof, Record};
+use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
 fn h(label: &str) -> Hash {
@@ -51,21 +55,32 @@ fn sat(n: u64) -> Amount {
 
 const SALT: [u8; 16] = [5; 16];
 
-/// An obligation as a verifier holds it, its agreement act citing the
-/// pointer it names (F133), or not, or not known.
-fn held(obligation: Obligation, pointer_cited: Option<bool>) -> HeldObligation {
-    HeldObligation {
-        obligation,
-        pointer_cited,
+/// The contributor's pointers its own act holds (F145): complete.
+fn holds(pointers: &[Hash]) -> Holding {
+    Holding {
+        pointers: pointers.to_vec(),
+        complete: true,
     }
 }
 
 /// What a verifier holds of the contributor: two flow pointers (its own,
-/// then the thief's), its vault, and the obligations owed to it.
+/// then the thief's), its vault, the obligations owed to it, what its own
+/// acts hold for each, and, once it rotates, the pointers that rotation
+/// invalidated and the payers' claims rule 15 reads.
 struct Contributor {
     id: Hash,
+    /// Valid now.
     pointers: BTreeMap<Hash, PayeePointer>,
-    obligations: BTreeMap<Hash, HeldObligation>,
+    /// Pointers published after the rotation, among `pointers`.
+    after_rotation: BTreeSet<Hash>,
+    /// Invalidated by the rotation, with it.
+    voided: BTreeMap<Hash, (PayeePointer, Hash)>,
+    obligations: BTreeMap<Hash, Obligation>,
+    /// For each obligation, agreement or offer: what the contributor's own
+    /// act holds (F145).
+    holdings: BTreeMap<Hash, Holding>,
+    /// The payers' claims for each rail proof, as rule 15 reads them.
+    claims: BTreeMap<Vec<u8>, Vec<PayersClaim>>,
     genesis: Hash,
     vault: Vec<VaultEntry>,
 }
@@ -77,8 +92,11 @@ impl Held for Contributor {
     fn vault(&self, id: &Hash) -> Option<(Hash, Vec<VaultEntry>)> {
         (id == &self.genesis).then(|| (self.id, self.vault.clone()))
     }
-    fn obligation(&self, id: &Hash) -> Option<HeldObligation> {
+    fn obligation(&self, id: &Hash) -> Option<Obligation> {
         self.obligations.get(id).cloned()
+    }
+    fn holding(&self, fulfils: &Hash, payee: &Hash) -> Option<Holding> {
+        (payee == &self.id).then(|| self.holdings.get(fulfils).cloned()).flatten()
     }
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
         self.pointers
@@ -86,6 +104,26 @@ impl Held for Contributor {
             .filter(|(_, p)| &p.payee == payee)
             .map(|(i, p)| (*i, p.clone()))
             .collect()
+    }
+    fn voided_pointer(&self, id: &Hash) -> Option<(PayeePointer, Hash)> {
+        self.voided.get(id).cloned()
+    }
+    fn pointers_before(&self, payee: &Hash, rotation: &Hash) -> Vec<(Hash, PayeePointer)> {
+        let mut out: Vec<_> = self
+            .pointers_of(payee)
+            .into_iter()
+            .filter(|(i, _)| !self.after_rotation.contains(i))
+            .collect();
+        out.extend(
+            self.voided
+                .iter()
+                .filter(|(_, (p, r))| &p.payee == payee && r == rotation)
+                .map(|(i, (p, _))| (*i, p.clone())),
+        );
+        out
+    }
+    fn payers_claims(&self, proof: &[u8], _: &Hash) -> Vec<PayersClaim> {
+        self.claims.get(proof).cloned().unwrap_or_default()
     }
     fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
         (payee == &self.id).then(|| self.vault.clone())
@@ -136,21 +174,29 @@ fn story() -> Story {
     ]);
     let service = h("the film's split service");
     let royalties = h("royalties owed");
+    let deal = h("the film's deal");
     let obligations = BTreeMap::from([(
         royalties,
-        held(Obligation {
+        Obligation {
             debtor: service,
             creditor: id,
             amount: sat(40_000),
             pointer: own_pointer,
-            agreement: Some(h("the film's deal")),
-        }, Some(true)),
+            agreement: Some(deal),
+        },
     )]);
+    // The contributor's signature act on the film's deal holds its own
+    // pointer, version 1, and never the thief's.
+    let holdings = BTreeMap::from([(royalties, holds(&[own_pointer])), (deal, holds(&[own_pointer]))]);
     Story {
         c: Contributor {
             id,
             pointers,
+            after_rotation: BTreeSet::new(),
+            voided: BTreeMap::new(),
             obligations,
+            holdings,
+            claims: BTreeMap::new(),
             genesis: h("the contributor's genesis"),
             vault: vec![VaultEntry {
                 unit: unit(Network::Regtest),
@@ -246,14 +292,15 @@ fn to_vault(s: &Story) -> PaidTo {
 fn judged(s: &Story, r: &Receipt, c: &Claim, payer: Hash) -> [(Answer, Answer); 2] {
     let ln = Lightning;
     let m = Modules::new().adopt(&ln);
+    let none = Citations::default();
     [
         (
             verify(Record::Receipt(r), &s.c, &m).answer,
             pointer_in_force(Record::Receipt(r), &s.c),
         ),
         (
-            verify(Record::Claim(c, payer), &s.c, &m).answer,
-            pointer_in_force(Record::Claim(c, payer), &s.c),
+            verify(Record::Claim(c, payer, &none), &s.c, &m).answer,
+            pointer_in_force(Record::Claim(c, payer, &none), &s.c),
         ),
     ]
 }
@@ -276,8 +323,8 @@ fn the_thief_cannot_collect_older_royalties_through_the_new_flow() {
     for (rail, rule_14) in judged(&s, &r, &c, s.service) {
         assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "paid to the vault, it counts");
     }
-    // Paid to the flow pointer it names, the contributor's own, it counts
-    // too: rule 14 refuses only a flow later than the one named.
+    // Paid to the flow pointer the contributor's own act holds, it counts
+    // too: rule 14 refuses only a flow later than that one.
     let (r, c) = paid(&s, s.service, s.royalties, to_flow(s.own_pointer), &s.own_node, sat(40_000));
     for (rail, rule_14) in judged(&s, &r, &c, s.service) {
         assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid));
@@ -301,7 +348,7 @@ fn an_obligation_the_thief_reissues_is_no_obligation() {
     };
     // Signed by the creditor's identity, with the stolen key.
     assert!(
-        finance::check_signer(&Payload::Obligation(reissued.clone()), &s.c.id).is_err(),
+        finance::check_signer(&Payload::Obligation(reissued.clone()), &s.c.id, &Citations::default()).is_err(),
         "an obligation signed by its creditor is invalid (F66)"
     );
     // A verifier holds only valid obligations, so it does not hold this one:
@@ -313,7 +360,7 @@ fn an_obligation_the_thief_reissues_is_no_obligation() {
         assert_ne!(rule_14, Answer::Valid, "a payment naming no obligation held does not count for one");
     }
     // And the original obligation is unchanged: still payable to the vault.
-    assert_eq!(s.c.obligation(&s.royalties).unwrap().obligation.pointer, s.own_pointer);
+    assert_eq!(s.c.obligation(&s.royalties).unwrap().pointer, s.own_pointer);
 }
 
 /// 1.5c: a fan tips in good faith, following the published pointer, the
@@ -335,33 +382,40 @@ fn a_tip_that_followed_the_published_pointer_counts() {
     }
 }
 
-/// An obligation that arose under the thief's pointer (a deal made after
-/// the theft, before the rotation) names version 2: paid to that flow, it
-/// counts. This is the stream between theft and rotation, a stated cost
-/// that no clockless rule closes (Finance, "Reasoning").
+/// An obligation under a deal made after the theft, before the rotation,
+/// that the thief signed as the contributor with the stolen key: that
+/// signature act, the contributor's own until the rotation, holds the
+/// thief's version 2, so paid to that flow it counts. This is the stream
+/// between theft and rotation, a stated cost that no clockless rule closes
+/// (Finance, "Reasoning").
 #[test]
-fn an_obligation_naming_the_later_pointer_counts_on_that_flow() {
+fn an_obligation_whose_payees_act_holds_the_later_pointer_counts_on_that_flow() {
     let mut s = story();
-    let later = h("an obligation naming version 2");
+    let later = h("an obligation under a later deal");
     s.c.obligations.insert(
         later,
-        held(Obligation {
+        Obligation {
             debtor: s.service,
             creditor: s.c.id,
             amount: sat(3_000),
             pointer: s.thief_pointer,
             agreement: Some(h("a later deal")),
-        }, Some(true)),
+        },
     );
+    s.c.holdings.insert(later, holds(&[s.own_pointer, s.thief_pointer]));
     let (r, c) = paid(&s, s.service, later, to_flow(s.thief_pointer), &s.thief_node, sat(3_000));
     for (rail, rule_14) in judged(&s, &r, &c, s.service) {
         assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid));
     }
 }
 
-/// What rule 14 cannot read: an obligation naming a pointer this verifier
-/// does not hold, or an agreement that names no pointer, answers unknown,
-/// never valid; an obligation naming another identity's pointer, invalid.
+/// What rule 14 cannot read: what a payment fulfils that is no obligation,
+/// agreement or offer this verifier can read the payee's own acts on (a
+/// Finance-only verifier reads none), or one whose payee's act holds what
+/// the verifier cannot tell, answers unknown, never valid. One whose
+/// payee's acts hold no pointer at all answers invalid: only the vault.
+/// The version an obligation names, held or not, the payee's or not, is
+/// informative only (F155), and decides nothing.
 #[test]
 fn what_rule_14_cannot_read_is_never_valid() {
     let mut s = story();
@@ -370,134 +424,128 @@ fn what_rule_14_cannot_read_is_never_valid() {
     let unheld = h("names an unheld pointer");
     s.c.obligations.insert(
         unheld,
-        held(Obligation {
+        Obligation {
             debtor: s.service,
             creditor: s.c.id,
             amount: sat(10),
             pointer: h("a pointer nobody holds"),
-            agreement: None,
-        }, Some(true)),
-    );
-    let (r, _) = paid(&s, s.service, unheld, to_flow(s.own_pointer), &s.own_node, sat(10));
-    assert!(matches!(pointer_in_force(Record::Receipt(&r), &s.c), Answer::Unknown(_)));
-    let other = h("someone else's pointer");
-    s.c.pointers.insert(
-        other,
-        PayeePointer {
-            payee: h("someone else"),
-            version: 9,
-            previous: Some(h("x")),
-            rails: vec![Rail {
-                module: mor_lightning::spec(),
-                address: address(&s.thief_node),
-            }],
+            agreement: Some(h("a deal not held")),
         },
     );
-    let wrong = h("names someone else's pointer");
+    s.c.holdings.insert(unheld, Holding { pointers: vec![], complete: false });
+    let (r, _) = paid(&s, s.service, unheld, to_flow(s.own_pointer), &s.own_node, sat(10));
+    assert!(matches!(pointer_in_force(Record::Receipt(&r), &s.c), Answer::Unknown(_)));
+    let wrong = h("names someone else's pointer, under a deal the contributor never signed");
     s.c.obligations.insert(
         wrong,
-        held(Obligation {
+        Obligation {
             debtor: s.service,
             creditor: s.c.id,
             amount: sat(10),
-            pointer: other,
-            agreement: None,
-        }, Some(true)),
+            pointer: h("someone else's pointer"),
+            agreement: Some(h("a deal drafted by the service alone")),
+        },
     );
-    let (r, _) = paid(&s, s.service, wrong, to_flow(s.thief_pointer), &s.thief_node, sat(10));
+    s.c.holdings.insert(wrong, holds(&[]));
+    let (r, _) = paid(&s, s.service, wrong, to_flow(s.own_pointer), &s.own_node, sat(10));
+    assert!(matches!(pointer_in_force(Record::Receipt(&r), &s.c), Answer::Invalid(w) if w.contains("F145")));
+    // A deal the contributor signed, whose signature holds version 1: a
+    // direct payment under it (no obligation between, rule 15, F145) is
+    // judged by that act too.
+    let deal = h("the film's deal");
+    let (r, _) = paid(&s, s.service, deal, to_flow(s.own_pointer), &s.own_node, sat(10));
+    assert_eq!(pointer_in_force(Record::Receipt(&r), &s.c), Answer::Valid);
+    let (r, _) = paid(&s, s.service, deal, to_flow(s.thief_pointer), &s.thief_node, sat(10));
     assert!(matches!(pointer_in_force(Record::Receipt(&r), &s.c), Answer::Invalid(_)));
 }
 
-/// Rule 14 with F133: the debtor itself re-signs the royalty debt, naming
-/// the thief's newer pointer, under the film's deal, whose act never cited
-/// that pointer. The version it names does not count for it: paid to the
-/// thief's flow, it counts for nothing; paid to the vault, it counts.
-/// (Whether the agreement act cites the pointer is computed by the core
-/// library, `finance::pointer_cited`, over real acts:
-/// `core/tests/finance_f133.rs`.)
+/// Rule 14 with F145 (review finding 1): the debtor itself re-signs the
+/// royalty debt, naming the thief's newer pointer, under the film's deal.
+/// The version that counts is the one the contributor's own signature act
+/// holds, version 1: paid to the thief's flow, it counts for nothing; paid
+/// to the vault, it counts. Where the verifier cannot tell what that act
+/// holds, and has found nothing late enough, it is unknown.
 #[test]
-fn a_debt_resigned_to_the_thiefs_pointer_its_agreement_never_cited_does_not_count() {
+fn a_debt_resigned_to_the_thiefs_pointer_counts_for_nothing_there() {
     let mut s = story();
     let resigned = h("the royalty debt, re-signed by the debtor to version 2");
     s.c.obligations.insert(
         resigned,
-        held(
-            Obligation {
-                debtor: s.service,
-                creditor: s.c.id,
-                amount: sat(40_000),
-                pointer: s.thief_pointer,
-                agreement: Some(h("the film's deal")),
-            },
-            Some(false),
-        ),
+        Obligation {
+            debtor: s.service,
+            creditor: s.c.id,
+            amount: sat(40_000),
+            pointer: s.thief_pointer,
+            agreement: Some(h("the film's deal")),
+        },
     );
+    s.c.holdings.insert(resigned, holds(&[s.own_pointer]));
     let (r, c) = paid(&s, s.service, resigned, to_flow(s.thief_pointer), &s.thief_node, sat(40_000));
     for (rail, rule_14) in judged(&s, &r, &c, s.service) {
         assert_eq!(rail, Answer::Valid, "the rail itself shows a payment");
         assert!(
-            matches!(&rule_14, Answer::Invalid(w) if w.contains("F133")),
-            "its agreement never cited the thief's pointer: {rule_14}"
+            matches!(&rule_14, Answer::Invalid(w) if w.contains("F145")),
+            "the contributor's own act never held the thief's pointer: {rule_14}"
         );
     }
     let (r, c) = paid(&s, s.service, resigned, to_vault(&s), &s.vault_node, sat(40_000));
     for (rail, rule_14) in judged(&s, &r, &c, s.service) {
         assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "paid to the vault, it counts");
     }
-    // Where the verifier cannot tell what the agreement act cites, the
-    // payment to the flow is unknown, never counted.
-    s.c.obligations.get_mut(&resigned).unwrap().pointer_cited = None;
+    s.c.holdings.get_mut(&resigned).unwrap().complete = false;
     let (r, _) = paid(&s, s.service, resigned, to_flow(s.thief_pointer), &s.thief_node, sat(40_000));
     assert!(matches!(pointer_in_force(Record::Receipt(&r), &s.c), Answer::Unknown(_)));
 }
 
-/// F133 (d0b7813): an IOU, an obligation naming no agreement act, must hold
-/// the pointer it names in its own history. One citing the contributor's
-/// pointer counts when paid to that flow; one naming the thief's pointer,
-/// which it never cited, does not count toward the thief's flow, only
-/// through the vault. (Whether an IOU cites its pointer is computed over
-/// real acts in `core/tests/finance_f133.rs`,
-/// `an_iou_must_cite_the_pointer_it_names_itself`.)
+/// F145: an IOU, an obligation naming no agreement act, counts only if paid
+/// to the vault, whatever it cites, until the contributor acknowledges it
+/// with an act of its own that holds a pointer; then that pointer, or an
+/// older one, counts (F155), never the thief's newer one.
 #[test]
-fn an_iou_counts_on_the_flow_only_for_a_pointer_it_cites() {
+fn an_iou_counts_on_the_flow_only_once_the_payee_acknowledges_it() {
     let mut s = story();
     let friend = h("a friend who owes");
-    let iou = |pointer| Obligation {
-        debtor: friend,
-        creditor: s.c.id,
-        amount: sat(5_000),
-        pointer,
-        agreement: None,
-    };
-    let (cites_own, names_thiefs) = (h("an IOU citing the own pointer"), h("an IOU naming the thief's pointer"));
-    let (a, b) = (iou(s.own_pointer), iou(s.thief_pointer));
-    s.c.obligations.insert(cites_own, held(a, Some(true)));
-    s.c.obligations.insert(names_thiefs, held(b, Some(false)));
-
-    let (r, c) = paid(&s, friend, cites_own, to_flow(s.own_pointer), &s.own_node, sat(5_000));
-    for (rail, rule_14) in judged(&s, &r, &c, friend) {
-        assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "cited, paid to that flow: counts");
-    }
-    let (r, c) = paid(&s, friend, names_thiefs, to_flow(s.thief_pointer), &s.thief_node, sat(5_000));
+    let iou = h("an IOU");
+    s.c.obligations.insert(
+        iou,
+        Obligation {
+            debtor: friend,
+            creditor: s.c.id,
+            amount: sat(5_000),
+            pointer: s.own_pointer,
+            agreement: None,
+        },
+    );
+    s.c.holdings.insert(iou, holds(&[]));
+    let (r, c) = paid(&s, friend, iou, to_flow(s.own_pointer), &s.own_node, sat(5_000));
     for (rail, rule_14) in judged(&s, &r, &c, friend) {
         assert_eq!(rail, Answer::Valid, "the rail itself shows a payment");
-        assert!(matches!(&rule_14, Answer::Invalid(w) if w.contains("F133")), "never cited: {rule_14}");
+        assert!(matches!(&rule_14, Answer::Invalid(w) if w.contains("F145")), "not acknowledged: {rule_14}");
     }
-    let (r, c) = paid(&s, friend, names_thiefs, to_vault(&s), &s.vault_node, sat(5_000));
+    let (r, c) = paid(&s, friend, iou, to_vault(&s), &s.vault_node, sat(5_000));
     for (rail, rule_14) in judged(&s, &r, &c, friend) {
         assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "paid to the vault, it counts");
+    }
+    // The contributor acknowledges it with an act holding version 1.
+    s.c.holdings.insert(iou, holds(&[s.own_pointer]));
+    let (r, c) = paid(&s, friend, iou, to_flow(s.own_pointer), &s.own_node, sat(5_000));
+    for (rail, rule_14) in judged(&s, &r, &c, friend) {
+        assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "acknowledged: counts on that flow");
+    }
+    let (r, c) = paid(&s, friend, iou, to_flow(s.thief_pointer), &s.thief_node, sat(5_000));
+    for (_, rule_14) in judged(&s, &r, &c, friend) {
+        assert!(matches!(&rule_14, Answer::Invalid(_)), "never a newer wallet: {rule_14}");
     }
 }
 
 /// Finance rule 12 (audit, October 2026, gap 1): the thief does not extend
 /// the chain but forks it. The owner's current pointer is version 2; with
 /// the stolen signing key the thief signs a second version 2 naming the
-/// same predecessor. Rule 14's version compare alone would let every debt
-/// naming the owner's version 2 count on the thief's flow (2 ≥ 2), and the
-/// agreement did cite the owner's pointer (F133). Rule 12: a forked chain
-/// counts only up to the fork. Paid to the thief's fork, the debt counts
-/// for nothing; paid to the last pointer before the fork, or to the vault,
-/// it counts. *Stated cost: until a rotation settles the fork, the owner's
+/// same predecessor. The owner's act holds both of its own pointers, but a
+/// forked chain counts only up to the fork (rules 12 and 14, F155): the
+/// version that counts is 1. Paid to the thief's fork, the debt counts for
+/// nothing; paid to the last pointer before the fork, or to the vault, it
+/// counts. *Stated cost: until a rotation settles the fork, the owner's
 /// own version 2 does not count either.*
 #[test]
 fn a_thiefs_same_version_pointer_cannot_collect_debts_naming_the_owners() {
@@ -520,17 +568,15 @@ fn a_thiefs_same_version_pointer_cannot_collect_debts_naming_the_owners() {
     let debt = h("a debt naming the owner's version 2");
     s.c.obligations.insert(
         debt,
-        held(
-            Obligation {
-                debtor: s.service,
-                creditor: s.c.id,
-                amount: sat(40_000),
-                pointer: owner_v2,
-                agreement: Some(h("a deal citing the owner's version 2")),
-            },
-            Some(true),
-        ),
+        Obligation {
+            debtor: s.service,
+            creditor: s.c.id,
+            amount: sat(40_000),
+            pointer: owner_v2,
+            agreement: Some(h("a deal the owner signed after its version 2")),
+        },
     );
+    s.c.holdings.insert(debt, holds(&[s.own_pointer, owner_v2]));
     let (r, c) = paid(&s, s.service, debt, to_flow(s.thief_pointer), &s.thief_node, sat(40_000));
     for (rail, rule_12) in judged(&s, &r, &c, s.service) {
         assert_eq!(rail, Answer::Valid, "the rail itself shows a payment");
@@ -564,7 +610,7 @@ fn the_vault_rules_judge_a_payment_received_on_the_flow() {
     let both = |s: &Story, r: &Receipt, c: &Claim| {
         [
             mor_payment::beside(Record::Receipt(r), &s.c),
-            mor_payment::beside(Record::Claim(c, s.fan), &s.c),
+            mor_payment::beside(Record::Claim(c, s.fan, &Citations::default()), &s.c),
         ]
     };
     // A tip following the thief's published pointer, under the limit: counts.
@@ -587,5 +633,89 @@ fn the_vault_rules_judge_a_payment_received_on_the_flow() {
     let (r, c) = paid(&s, s.fan, s.thief_pointer, to_flow(s.thief_pointer), &s.thief_node, sat(10));
     for a in both(&s, &r, &c) {
         assert!(matches!(&a, Answer::Invalid(w) if w.contains("14a")), "a unit the vault does not cover: {a}");
+    }
+}
+
+// ---------------------------------------------------------------- rule 15: after the rotation
+
+/// The contributor rotates: the thief's version 2 is void, and the
+/// contributor publishes its own version 2, naming version 1 as the
+/// thief's did. Returns the rotation.
+fn rotate(s: &mut Story) -> Hash {
+    let rotation = h("the contributor's rotation");
+    let thiefs = s.c.pointers.remove(&s.thief_pointer).unwrap();
+    s.c.voided.insert(s.thief_pointer, (thiefs, rotation));
+    let new_v2 = h("the contributor's new version 2");
+    s.c.pointers.insert(
+        new_v2,
+        PayeePointer {
+            payee: s.c.id,
+            version: 2,
+            previous: Some(s.own_pointer),
+            rails: vec![Rail {
+                module: mor_lightning::spec(),
+                address: address(&secret("the contributor's new node")),
+            }],
+        },
+    );
+    s.c.after_rotation.insert(new_v2);
+    rotation
+}
+
+/// Rule 15 (F139, F146, F147, F154): the fan's tip to the thief's pointer,
+/// made before the rotation, is judged after it. With no payer's claim
+/// held, it counts as made (F154); with a claim not holding the rotation,
+/// too (F139); with only a claim holding it, not; the honest payer whose
+/// client wrote a second claim later, citing the rotation, still counts
+/// (read together, F147); anchored, the anchor order decides (F146); where
+/// a claim's history cannot be told, unknown. The rail's own answer stays
+/// valid: the payee's key signed that address. Before rule 15 was built, a
+/// payment to the voided pointer was unknown: its pointer not held.
+#[test]
+fn a_tip_paid_before_the_rotation_is_judged_by_the_payers_claims() {
+    let mut s = story();
+    let (r, c) = paid(&s, s.fan, s.thief_pointer, to_flow(s.thief_pointer), &s.thief_node, sat(2_100));
+    let rotation = rotate(&mut s);
+    let claim = |holds_rotation, anchored_before| PayersClaim { holds_rotation, anchored_before };
+    let answers = |s: &Story| judged(s, &r, &c, s.fan);
+    // No payer's claim held (a receipt alone, or a silent wallet): made.
+    for (rail, rule_15) in answers(&s) {
+        assert_eq!((rail, rule_15), (Answer::Valid, Answer::Valid), "F154");
+    }
+    let mut set = |claims: Vec<PayersClaim>| {
+        s.c.claims.insert(r.proof.clone(), claims);
+        answers(&s).map(|(rail, a)| {
+            assert_eq!(rail, Answer::Valid);
+            a
+        })
+    };
+    assert_eq!(set(vec![claim(Some(false), None)]), [Answer::Valid, Answer::Valid], "F139");
+    for a in set(vec![claim(Some(true), None)]) {
+        assert!(matches!(&a, Answer::Invalid(w) if w.contains("rule 15")), "{a}");
+    }
+    assert_eq!(set(vec![claim(Some(false), None), claim(Some(true), None)]), [Answer::Valid, Answer::Valid], "F147");
+    for a in set(vec![claim(Some(false), Some(false))]) {
+        assert!(matches!(&a, Answer::Invalid(_)), "anchored after the rotation: {a}");
+    }
+    assert_eq!(set(vec![claim(Some(true), Some(true))]), [Answer::Valid, Answer::Valid], "anchored before: F146");
+    for a in set(vec![claim(None, None)]) {
+        assert!(matches!(&a, Answer::Unknown(_)), "{a}");
+    }
+    let _ = rotation;
+}
+
+/// Rule 15 judges the payment as the chain stood before the rotation: the
+/// contributor's own new version 2, published after it, makes no fork of
+/// the thief's version 2 for a payment made before. But rule 14 still
+/// applies to it: royalties whose contributor's act holds only version 1,
+/// paid to the voided version 2, count for nothing.
+#[test]
+fn good_faith_does_not_lift_rule_14() {
+    let mut s = story();
+    let (r, c) = paid(&s, s.service, s.royalties, to_flow(s.thief_pointer), &s.thief_node, sat(40_000));
+    rotate(&mut s);
+    for (rail, a) in judged(&s, &r, &c, s.service) {
+        assert_eq!(rail, Answer::Valid);
+        assert!(matches!(&a, Answer::Invalid(w) if w.contains("rule 14")), "{a}");
     }
 }

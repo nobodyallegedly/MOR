@@ -10,12 +10,15 @@
 //! Modules check it (Finance rule 2, F112). This module answers only what
 //! the Finance MIP itself decides: the formats, which pointer counts, and,
 //! from the vault the payee declared, where a payment of a given amount may
-//! be paid (rule 14a), or why it cannot be paid at all (rule 16); and, from
-//! the flow pointer version an obligation names, whether a payment to the
-//! flow can count for it, and whether that version is one its agreement
-//! act cites (rule 14, F133).
+//! be paid (rule 14a), or why it cannot be paid at all (rule 16); which
+//! flow pointer version counts for a payment or a debt, the latest the
+//! payee's own act holds through its citations (rule 14, F145, F155), and
+//! whether a payment to the flow can count for it; and whether a payment
+//! made in good faith counts after a rotation, from the payer's claims
+//! (rule 15, F139, F146, F147, F154). Which acts are the payee's own is
+//! Law's to say (the Law view).
 
-use crate::act::Signature;
+use crate::act::{Inside, Object, Ref, Signature};
 use crate::cbor::{self, Value};
 use crate::hash::{tagged_hash, Hash};
 use crate::identity::{self, Declaration, SigningKey};
@@ -226,17 +229,69 @@ pub struct Claim {
     pub purchase: Option<Purchase>,
 }
 
+/// An act's own citations other than `prev`: its inside keys 3
+/// (`objects`), 7 (`acks`) and 8 (`refs`), as the act carries them. An
+/// anonymous payer's key signs them with its claim (F147), and they are
+/// all of that claim's history (rules 14 and 15).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Citations {
+    pub objects: Option<Vec<Object>>,
+    pub acks: Option<Vec<Hash>>,
+    pub refs: Option<Vec<Ref>>,
+}
+
+impl Citations {
+    /// The citations an act's inside carries.
+    pub fn of(inside: &Inside) -> Self {
+        Citations {
+            objects: inside.objects.clone(),
+            acks: inside.acks.clone(),
+            refs: inside.refs.clone(),
+        }
+    }
+
+    /// The acts they name: each `objects` entry's chain and predecessor,
+    /// each acknowledged act, each act referred to (a web resource is no
+    /// act).
+    pub fn acts(&self) -> Vec<Hash> {
+        let mut out = vec![];
+        for o in self.objects.iter().flatten() {
+            out.push(o.chain);
+            out.push(o.predecessor);
+        }
+        out.extend(self.acks.iter().flatten().copied());
+        out.extend(self.refs.iter().flatten().filter_map(|r| match r {
+            Ref::Act(h) => Some(*h),
+            Ref::Web { .. } => None,
+        }));
+        out
+    }
+}
+
 impl Claim {
-    /// What an anonymous payer's key signs: `tagged_hash(ANONYMOUS_CLAIM_TAG,
-    /// [ field 0, field 1, field 2, field 3, field 4, field 7 or null ])`.
-    pub fn anonymous_message(&self) -> Hash {
+    /// What an anonymous payer's key signs (F135, F147):
+    /// `tagged_hash(ANONYMOUS_CLAIM_TAG, [ field 0, field 1, field 2, field
+    /// 3, field 4, field 5 or null, field 6 or null, field 7 or null, field
+    /// 9 or null, inside key 3 or null, inside key 7 or null, inside key 8
+    /// or null ])`, the inside keys being the claim act's own `objects`,
+    /// `acks` and `refs`, encoded exactly as the act encodes them. *So
+    /// nobody can lift the signature onto another claim, nor re-wrap this
+    /// claim with other citations or acknowledgements.*
+    pub fn anonymous_message(&self, cited: &Citations) -> Hash {
+        let or_null = |v: Option<Value>| v.unwrap_or(Value::Null);
         let v = Value::Array(vec![
             b(&self.rail),
             Value::Bytes(self.proof.clone()),
             b(&self.payee),
             self.amount.to_value(),
             b(&self.fulfils),
-            self.refund.as_ref().map(Rail::to_value).unwrap_or(Value::Null),
+            or_null(self.disagrees.as_ref().map(b)),
+            or_null(self.referral.as_ref().map(Referral::to_value)),
+            or_null(self.refund.as_ref().map(Rail::to_value)),
+            or_null(self.purchase.as_ref().map(Purchase::to_value)),
+            or_null(cited.objects.as_deref().map(crate::act::objects_value)),
+            or_null(cited.acks.as_deref().map(crate::act::acks_value)),
+            or_null(cited.refs.as_deref().map(crate::act::refs_value)),
         ]);
         tagged_hash(ANONYMOUS_CLAIM_TAG, &cbor::encode(&v))
     }
@@ -667,10 +722,14 @@ fn put(m: &mut Vec<(Value, Value)>, k: u64, v: Value) {
 /// claim by its payer, who is the claim's signer by definition, or, for an
 /// anonymous payer, the key in its field 8, whose signature must verify:
 /// Finance rule 1, F113).
-pub fn check_signer(payload: &Payload, signer: &Hash) -> R<()> {
+///
+/// `cited` is the act's own `objects`, `acks` and `refs`
+/// ([`Citations::of`] its inside): an anonymous payer's key signs them
+/// with the claim (F147). Other acts ignore it.
+pub fn check_signer(payload: &Payload, signer: &Hash, cited: &Citations) -> R<()> {
     if let Payload::Claim(c) = payload {
         if let Some(s) = c.anonymous_signature() {
-            if sig::verify(&s, &c.anonymous_message()) != Verdict::Valid {
+            if sig::verify(&s, &c.anonymous_message(cited)) != Verdict::Valid {
                 return Err(FinError::Check(
                     "an anonymous claim's key 8 must verify under the key it names (Finance rule 1, F113)",
                 ));
@@ -727,8 +786,9 @@ pub fn refund_owed_to(receipt: &Receipt) -> RefundTo {
 /// same rail, proof, payee and amount, says where to be paid (key 7), and
 /// is made by the payer the payment committed to: the named payer, or a
 /// claim carrying a valid signature of the committed key (key 8), whoever
-/// signs the act. A claim on a payment that committed no key never does.
-pub fn claims_refund(receipt: &Receipt, claim: &Claim, signer: &Hash) -> bool {
+/// signs the act, over the claim act's own citations, `cited` (F147). A
+/// claim on a payment that committed no key never does.
+pub fn claims_refund(receipt: &Receipt, claim: &Claim, signer: &Hash, cited: &Citations) -> bool {
     if claim.rail != receipt.rail
         || claim.proof != receipt.proof
         || claim.payee != receipt.payee
@@ -740,7 +800,7 @@ pub fn claims_refund(receipt: &Receipt, claim: &Claim, signer: &Hash) -> bool {
     match refund_owed_to(receipt) {
         RefundTo::Identity(h) => claim.anonymous.is_none() && &h == signer,
         RefundTo::Key(k) => match (&claim.anonymous, claim.anonymous_signature()) {
-            (Some(a), Some(s)) => a.key == k && sig::verify(&s, &claim.anonymous_message()) == Verdict::Valid,
+            (Some(a), Some(s)) => a.key == k && sig::verify(&s, &claim.anonymous_message(cited)) == Verdict::Valid,
             _ => false,
         },
         RefundTo::Nobody => false,
@@ -960,44 +1020,170 @@ pub fn counts_toward(named: u64, into: PaidInto) -> bool {
     }
 }
 
-/// Rule 14 with F133: whether the payee pointer an obligation names (field
-/// 3) is one its agreement act (field 4) holds in its history: cites,
-/// directly or through what it cites, each act's previous acts in its
-/// sequence (`prev`) and every `objects` predecessor. *There is no clock to
-/// say when the agreement act was made; what it cites says what it saw. A
-/// debt re-signed to name a pointer its agreement act never saw, such as a
-/// thief's newer one, names a version that does not count for it.*
-///
-/// For an obligation naming no agreement act (field 4 absent), such as an
-/// IOU its debtor signs alone, the walk starts from the obligation act
-/// itself, `act` (F133, d0b7813).
-///
-/// `None` where it cannot be told from the acts held: the act the walk
-/// starts from is not held, or the walk meets an act not held without
-/// finding the pointer.
-pub fn pointer_cited(v: &crate::chain::Verifier, act: &Hash, o: &Obligation) -> Option<bool> {
-    let start = v.get(o.agreement.as_ref().unwrap_or(act))?;
-    let cites = |i: &crate::act::Inside| -> Vec<Hash> {
-        let mut out: Vec<Hash> = i.prev.iter().flatten().copied().collect();
-        out.extend(i.objects.iter().flatten().map(|x| x.predecessor));
-        out
+
+// ---------------------------------------------------------------- rules 14 and 15: what an act holds
+
+/// What an act holds (rules 14 and 15, F155): every act reachable through
+/// its citations, `prev`, `objects`, `acks` and `refs`, directly or
+/// through what they cite; never a hash merely written in a payload.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Holds {
+    pub acts: std::collections::BTreeSet<Hash>,
+    /// The walk met no act this verifier does not hold: what is not in
+    /// `acts` is not held. Where it did, an act missing from `acts` may
+    /// still be held, behind the gap.
+    pub complete: bool,
+}
+
+/// The acts an inside cites: its `prev`, then its other citations
+/// ([`Citations::acts`]).
+pub fn cites(inside: &Inside) -> Vec<Hash> {
+    let mut out: Vec<Hash> = inside.prev.iter().flatten().copied().collect();
+    out.extend(Citations::of(inside).acts());
+    out
+}
+
+/// What the acts `from` and everything they cite hold, `from` included:
+/// the walk follows each act's citations ([`cites`]) through the acts this
+/// verifier holds.
+pub fn holds(v: &crate::chain::Verifier, from: Vec<Hash>) -> Holds {
+    let mut out = Holds {
+        acts: Default::default(),
+        complete: true,
     };
-    let mut seen = std::collections::BTreeSet::new();
-    let mut todo = cites(&start.inside);
-    let mut missing = false;
+    let mut todo = from;
     while let Some(x) = todo.pop() {
-        if x == o.pointer {
-            return Some(true);
-        }
-        if !seen.insert(x) {
+        if !out.acts.insert(x) {
             continue;
         }
         match v.get(&x) {
             Some(h) => todo.extend(cites(&h.inside)),
-            None => missing = true,
+            None => out.complete = false,
         }
     }
-    if missing {
+    out
+}
+
+/// The history of an act, as rules 14 and 15 read it: what its citations
+/// hold, the act itself left out. For an anonymous payer's claim (claim
+/// key 8, `anonymous`), only what its `objects`, `acks` and `refs` hold,
+/// the citations its key signed: its `prev` belongs to whoever signed the
+/// act, not to the payer, and does not count (F147).
+pub fn history(v: &crate::chain::Verifier, inside: &Inside, anonymous: bool) -> Holds {
+    let from = if anonymous {
+        Citations::of(inside).acts()
+    } else {
+        cites(inside)
+    };
+    holds(v, from)
+}
+
+/// The payee's pointer acts that the payee's own act, or acts, hold, for
+/// a payment or an obligation (rules 14 and 15, F145): the payee's
+/// signature act on the agreement, or the offer the agreement accepts; for
+/// an obligation with neither, the payee's own acts acknowledging it.
+/// Which acts those are is Law's to say (a Law client checks it, F66).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Holding {
+    /// The payee's payee-pointer acts they hold, whatever their standing
+    /// now: which of them count is rule 12's ([`select_pointer`]).
+    pub pointers: Vec<Hash>,
+    /// Every walk was complete ([`Holds::complete`]).
+    pub complete: bool,
+}
+
+/// Rules 12 and 14 with F145 and F155: the version that counts, the latest
+/// of the payee's pointer chain that the payee's own act holds. `held` are
+/// the payee's pointer acts it holds ([`Holding`]); `chain` the payee's
+/// pointers as this verifier counts them. A forked chain counts only up to
+/// the fork (rule 12): a held pointer past the fork is not on the chain
+/// that counts, and is passed over. `None` where it holds none that
+/// counts.
+pub fn select_pointer(held: &[Hash], chain: &[(Hash, PayeePointer)]) -> Option<(Hash, u64)> {
+    held.iter()
+        .filter(|p| pointer_counts(chain, p))
+        .filter_map(|p| chain.iter().find(|(i, _)| i == p).map(|(i, q)| (*i, q.version)))
+        .max_by_key(|(_, v)| *v)
+}
+
+/// Rule 14's answer for a payment to the flow pointer of version `paid`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Rule14 {
+    /// The version selected is `paid` or a later one.
+    Counts,
+    /// It counts only if paid to the vault; says why.
+    Vault(&'static str),
+    /// What the payee's acts hold cannot be told from the acts held.
+    Unknown(&'static str),
+}
+
+/// Rule 14 with F145 and F155: a payment to the payee's flow pointer of
+/// version `paid` counts only where the version selected ([`select_pointer`]
+/// over `holding` and `chain`) is that one or a later one (`named >= paid`:
+/// the selected wallet or an older one, never a newer one). Where the
+/// payee's own acts hold no pointer, it counts only if paid to the vault.
+/// The version an obligation names (field 3) is informative only, and not
+/// read here. *The pointer is judged by the act of the one it pays, never
+/// by the act of the one who pays or drafts.*
+pub fn rule_14(holding: &Holding, chain: &[(Hash, PayeePointer)], paid: u64) -> Rule14 {
+    match select_pointer(&holding.pointers, chain) {
+        Some((_, named)) if counts_toward(named, PaidInto::Flow(paid)) => Rule14::Counts,
+        _ if !holding.complete => Rule14::Unknown(
+            "what the payee's own act holds is not known from the acts held: a later pointer may lie behind an act not held (Finance rule 14, F145)",
+        ),
+        None => Rule14::Vault(
+            "no act of the payee's own (its signature act on the agreement, the offer, or an act acknowledging the obligation) holds a pointer of its that counts: it counts only if paid to the vault (Finance rule 14, F145)",
+        ),
+        Some(_) => Rule14::Vault(
+            "the payee's own act holds only an earlier flow pointer than the one it was paid to: it counts only if paid to the vault (Finance rule 14, F145, F155)",
+        ),
+    }
+}
+
+/// A payer's claim for a payment, as rule 15's proviso reads it (F139,
+/// F146, F147).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PayersClaim {
+    /// Whether the claim's history ([`history`]) holds the rotation that
+    /// invalidated the pointer it was paid to; `None` where it cannot be
+    /// told (the walk met an act not held without finding it).
+    pub holds_rotation: Option<bool>,
+    /// Where both the claim and that rotation are anchored, and the anchors
+    /// place them: whether the claim is anchored before the rotation.
+    /// `None` where either is not anchored, or the anchors cannot place
+    /// them. The anchoring cMIP's answer, which the caller states: its
+    /// format is open.
+    pub anchored_before: Option<bool>,
+}
+
+impl PayersClaim {
+    /// Whether this claim meets rule 15's proviso: anchored, by the anchor
+    /// order (F146); otherwise, by whether its history holds the rotation
+    /// (F139).
+    pub fn meets(&self) -> Option<bool> {
+        match self.anchored_before {
+            Some(b) => Some(b),
+            None => self.holds_rotation.map(|h| !h),
+        }
+    }
+}
+
+/// Rule 15, good faith after a rotation: whether a payment that followed
+/// the published pointer and vault counts as made although a later
+/// rotation invalidated that pointer, from the payer's claims for that one
+/// payment (one rail proof). With none, it counts (F154). Read together, it
+/// counts if any of them meets the proviso (F147): the claim does not hold
+/// the rotation in its history (F139), or, where both are anchored, the
+/// claim is anchored before the rotation (F146). `None` where none meets
+/// it and whether one does cannot be told.
+pub fn good_faith(claims: &[PayersClaim]) -> Option<bool> {
+    if claims.is_empty() {
+        return Some(true);
+    }
+    let answers: Vec<Option<bool>> = claims.iter().map(PayersClaim::meets).collect();
+    if answers.contains(&Some(true)) {
+        Some(true)
+    } else if answers.contains(&None) {
         None
     } else {
         Some(false)
