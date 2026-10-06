@@ -1,0 +1,50 @@
+# The display client's release, built on GitHub's Linux machines (the release
+# platform, roadmap, 6 October 2026), so that anyone on Linux x86-64 can rebuild
+# the same bytes. Runs on a push to main whose message contains
+# "[release display client]", or by hand. It rebuilds clients/site/built/ with the
+# pinned tools and, if anything changed, commits it to main.
+name: release display client
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release display client]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the WebAssembly and the display client's release
+        run: |
+          cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
+          cd ../site && npm ci --no-audit --no-fund && npm run release
+      - name: The release, built twice, is the same
+        run: cd clients/site && npm run test:build
+      - name: Commit the release if it changed
+        env:
+          TZ: UTC
+        run: |
+          if git diff --quiet -- clients/site/built; then echo "::notice::the release is unchanged"; exit 0; fi
+          for f in clients/site/built/*; do echo "::notice::$(sha256sum "$f")"; done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add clients/site/built
+          git commit -m "Display client released from ${GITHUB_SHA::7}, built on GitHub (Linux x86-64)" -m "Release platform: Linux x86-64 (roadmap, 6 October 2026). Rebuild: cd clients/genesis && npm run wasm; cd ../site && npm run release."
+          git push origin HEAD:main
