@@ -70,17 +70,16 @@ pub struct LawView<'a> {
     /// receipt or claim not listed has no rail answer, and pays nothing
     /// toward a debt ([`Self::paid_toward`]).
     pub rail_valid: BTreeMap<Hash, crate::finance::PaidAt>,
-    /// Absence by anchoring (rule 51, F136), for each abandonment
-    /// declaration whose clause names a period of absence (key 2): what the
-    /// anchoring cMIP the agreement names answers, as the caller states it,
-    /// the anchoring and time-reference formats being open. `true`: the
-    /// declaration is anchored on the agreement's time reference, and no
-    /// act of the party on the agreement is anchored within the period
-    /// before it; `false`: one is. A declaration not listed is not anchored,
-    /// or one the anchors cannot place, and does not count. Where the
-    /// clause names no period, the declaration is the authority's judgment,
-    /// and this is not consulted.
-    pub absence_anchored: BTreeMap<Hash, bool>,
+    /// Anchoring (rules 50 and 51; F136, F148): for each act the anchoring
+    /// cMIP the agreement names places on the agreement's time reference,
+    /// the point it places it at, as the caller states it, the anchoring
+    /// and time-reference formats being open; counted in the unit the
+    /// abandonment clause's period (key 2) is written in (reading). Whoever
+    /// anchored the act, it is placed (anyone may anchor anyone's act,
+    /// F148). An act not listed is not anchored, or the anchors cannot
+    /// place it. Consulted only where an abandonment clause names a period
+    /// ([`Self::declaration`]).
+    pub anchors: BTreeMap<Hash, u64>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -366,7 +365,7 @@ impl<'a> LawView<'a> {
             push_rails: BTreeSet::new(),
             rail_invalid: BTreeSet::new(),
             rail_valid: BTreeMap::new(),
-            absence_anchored: BTreeMap::new(),
+            anchors: BTreeMap::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -2016,8 +2015,10 @@ impl<'a> LawView<'a> {
     /// from it, that the party signed; every outcome is one that clause
     /// allows; and its signer can be that clause's authority: the identity
     /// it names, or one of the other parties, whose number is counted where
-    /// the declaration takes effect ([`Self::authority_at`]). Returns the
-    /// declaration and the clause, or why it fails.
+    /// the declaration takes effect ([`Self::authority_at`]); and, where
+    /// the clause names a period of absence, the anchors' checks (F136,
+    /// F148: [`Self::absence_by_anchors`]). Returns the declaration and the
+    /// clause, or why it fails.
     pub fn declaration(&self, id: &Hash) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let h = self.held(id)?;
         if !self.is_law(h, types::DECLARATION) {
@@ -2066,25 +2067,69 @@ impl<'a> LawView<'a> {
         if !ok {
             return Ok(Err("it is not signed by the authority the clause names (rule 51)".into()));
         }
-        // F136: where the clause names a period of absence, the declaration
-        // counts only if the party has no act anchored on the agreement's
-        // time reference within that period before the declaration's own
-        // anchored point; not anchored, or unplaceable, it does not count.
-        // The anchoring cMIP's answer is stated by the caller
-        // (`absence_anchored`), its format being open. With no period, the
+        // F136, F148: where the clause names a period of absence, judged by
+        // anchors alone ([`Self::absence_by_anchors`]). With no period, the
         // declaration is the authority's judgment, a stated cost.
-        if clause.period.is_some() {
-            match self.absence_anchored.get(id) {
-                Some(true) => {}
-                Some(false) => {
-                    return Ok(Err("the clause names a period of absence, and an act of the party on the agreement is anchored on its time reference within that period before the declaration (rule 51, F136)".into()))
-                }
-                None => {
-                    return Ok(Err("the clause names a period of absence, and the declaration is not anchored on the agreement's time reference, or the anchors cannot place it: it does not count (rule 51, F136)".into()))
-                }
+        if let Some(period) = clause.period {
+            let versions: Vec<Hash> = lineage.iter().map(|(v, _)| *v).collect();
+            if let Err(w) = self.absence_by_anchors(id, &d, period, &versions, &lineage[0].1) {
+                return Ok(Err(w));
             }
         }
         Ok(Ok((d, clause)))
+    }
+
+    /// Rule 51's checks under a clause naming a period of absence (F136,
+    /// F148), on the anchors the caller states ([`Self::anchors`]): the
+    /// declaration is anchored, at a point D; no act of the declared party
+    /// on the agreement is anchored within the period before it, from D
+    /// less the period to D; and an acknowledgement of it (Envelope,
+    /// `acks`) by another party of the agreement or by one of its keepers'
+    /// operators is anchored within one further period, from D to D plus
+    /// the period, with no act of the declared party on the agreement
+    /// anchored between the two. Only acts on the agreement count as
+    /// presence (rule 50): acts naming, in `objects`, the agreement or a
+    /// version back through its parents, as chain or predecessor, and
+    /// signature acts signing one; activity elsewhere does not. An act of
+    /// the party that nobody anchored is no presence (a stated cost, rule
+    /// 50). Bounds are taken inclusive, so that an act anchored at the
+    /// declaration's own point, or at its acknowledgement's, protects the
+    /// party (reading).
+    fn absence_by_anchors(&self, decl: &Hash, d: &AbsenceDeclaration, period: u64, versions: &[Hash], terms: &Terms) -> Result<(), String> {
+        let Some(&at) = self.anchors.get(decl) else {
+            return Err("the clause names a period of absence, and the declaration is not anchored on the agreement's time reference, or the anchors cannot place it: it does not count (rule 51, F136); until the anchoring cMIP and the time-reference format exist, the anchors are the caller's statement".into());
+        };
+        let on_agreement = |h: &Held| {
+            h.inside.objects.iter().flatten().any(|o| versions.contains(&o.chain) || versions.contains(&o.predecessor))
+                || (self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).is_ok_and(|x| versions.contains(&x)))
+        };
+        let presence: Vec<u64> = self
+            .v
+            .signed_by(&d.party)
+            .filter(|h| h.id != *decl && self.valid(&h.id) && on_agreement(h))
+            .filter_map(|h| self.anchors.get(&h.id).copied())
+            .collect();
+        if presence.iter().any(|p| *p >= at.saturating_sub(period) && *p <= at) {
+            return Err("the clause names a period of absence, and an act of the party on the agreement is anchored on its time reference within that period before the declaration (rule 51, F136)".into());
+        }
+        let keepers: Vec<Hash> = terms.keepers.iter().flat_map(|k| k.operators.iter().copied()).collect();
+        let ack = self
+            .v
+            .acknowledgements(decl)
+            .filter(|a| self.valid(&a.id))
+            .filter(|a| {
+                a.act.outside.signer.is_some_and(|s| s != d.party && (terms.parties.contains(&s) || keepers.contains(&s)))
+            })
+            .filter_map(|a| self.anchors.get(&a.id).copied())
+            .filter(|p| *p >= at && *p <= at.saturating_add(period))
+            .min();
+        let Some(ack) = ack else {
+            return Err("no acknowledgement of the declaration by another party or by the keeper is anchored within one further period after its own anchor: it does not count, so a declaration cannot be kept and used later (rule 51, F148)".into());
+        };
+        if presence.iter().any(|p| *p >= at && *p <= ack) {
+            return Err("an act of the declared party on the agreement is anchored between the declaration and its acknowledgement: it does not count (rule 51, F148)".into());
+        }
+        Ok(())
     }
 
     /// A threshold authority, counted where the declaration takes effect

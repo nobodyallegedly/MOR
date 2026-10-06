@@ -1361,14 +1361,14 @@ struct SpecsIn {
     /// them (F131, IT3): wrong receipts, counting for nothing.
     #[serde(default)]
     rail_invalid: Vec<String>,
-    /// Absence by anchoring (Law rule 51, F136): for each abandonment
-    /// declaration whose clause names a period, whether the anchoring cMIP
-    /// places it on the agreement's time reference with no act of the
-    /// party within the period before it (true), or finds one (false), as
-    /// the client read the anchors. A declaration not listed does not
-    /// count.
+    /// Anchoring (Law rules 50 and 51; F136, F148): for each act the
+    /// anchoring cMIP the agreement names places on its time reference, the
+    /// point it places it at, as the client read the anchors (the formats
+    /// being open), in the unit of the abandonment clause's period. Whoever
+    /// anchored it. An act not listed is not anchored. Under a clause
+    /// naming a period, a declaration counts only on these anchors.
     #[serde(default)]
-    absence_anchored: std::collections::BTreeMap<String, bool>,
+    anchors: std::collections::BTreeMap<String, u64>,
 }
 
 impl SpecsIn {
@@ -1403,8 +1403,8 @@ impl SpecsIn {
         for r in &self.rail_invalid {
             view.rail_invalid.insert(unhex(r)?);
         }
-        for (d, a) in &self.absence_anchored {
-            view.absence_anchored.insert(unhex(d)?, *a);
+        for (d, a) in &self.anchors {
+            view.anchors.insert(unhex(d)?, *a);
         }
         Ok(view)
     }
