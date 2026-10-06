@@ -146,10 +146,10 @@ claim-payload = {
 }
 
 referral  = [ identity: hash, evidence: hash ]   ; the referrer, and the act (a repost, a page) the payer followed
-anonymous = [ key: signing-key, sig: bstr ]       ; sig: by key, over tagged_hash("MOR/finance/anonymous-claim", [ field 0, field 1, field 2, field 3, field 4, field 7 or null ])
+anonymous = [ key: signing-key, sig: bstr ]       ; sig: by key, over tagged_hash("MOR/finance/anonymous-claim", [ field 0, field 1, field 2, field 3, field 4, field 5 or null, field 6 or null, field 7 or null, field 9 or null ]) (F135)
 ```
 
-A claim carrying key 8 is the claim of the payer that committed to that key. Its signer, the act's signer, may be any identity, a one-time identity where the payer wishes to stay unnamed; the payer is the key, and the signature in key 8 binds it to this claim's rail, proof, payee, amount, purpose and refund rail, so nobody can lift it onto another claim. The signed bytes are the array shown, encoded in deterministic CBOR, with null where key 7 is absent; the signature scheme is the key's, as Identity defines it.
+A claim carrying key 8 is the claim of the payer that committed to that key. Its signer, the act's signer, may be any identity, a one-time identity where the payer wishes to stay unnamed; the payer is the key, and the signature in key 8 binds it to this claim's rail, proof, payee, amount, purpose, disputed receipt, referral, refund rail and purchase, so nobody can lift it onto another claim. The signed bytes are the array shown, encoded in deterministic CBOR, with null where key 7 is absent; the signature scheme is the key's, as Identity defines it.
 
 A payment claim is the payer's side of the record. It carries the rail's proof, so anyone can verify that the money reached the payee's rail address. It is private by default like every act; publishing it, to a counterparty or more widely, is the payer's choice and reveals the payer only to whom the payer chooses.
 

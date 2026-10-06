@@ -1547,3 +1547,12 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): "Agreed"** to the project lead's suggestion: links are the one stated exception. A link's claim, confirmation and termination may be private; every other Identity act stays public. A link carries no key event, so no home or auditor needs it to follow an identity's keys. *The point of a private link* (asked by Nobody, allegedly): proving to one party, and only that party, that two identities belong to the same person: a pseudonymous journalist to an award jury or a publisher's lawyer, an artist name to a label at contract time, a business identity to a bank, a pseudonymous identity to a service that needs a verified one; without it, the only proof is public, and the separation the owner chose is gone.
 
 **Core changes:** Identity draft 11, the sentence on public acts. *To build:* the core accepts private acts of types 6 to 8, and still refuses every other private Identity act.
+
+
+## F135. The anonymous payer's signature covers the whole claim (rule audit, 6 October 2026)
+
+**Found by the rule audit (Finance, unclear: line 149):** an anonymous payer's key-8 signature covered fields 0 to 4 and 7, not field 5 (the receipt disputed), 6 (the referral) or 9 (the purchase's claim, which since F131 decides purchase or refund). Anyone holding the claim could re-wrap it with another referrer or another purchase, still apparently signed by the payer; rule 10b's "signed by the payer" did not hold for the referral.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed":** the signature covers every field of the claim (0 to 7 and 9, each absent one as null). A format fix with no change in meaning.
+
+**Core changes:** Finance draft 6, the anonymous claim's signed bytes. *To build:* the core library and the payment cMIP sign and check the new array; existing test vectors regenerated.
