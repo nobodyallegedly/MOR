@@ -1567,3 +1567,14 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): (b), with (a) as the fallback** ("Your suggestion fits"), in line with the working rule of F133: time only where anchoring is involved.
 
 **Core changes:** Law draft 10, rule 51. *To build:* the core reads the clause's period and the anchors of the party's acts and of the declaration on the agreement's time reference; unanchored or unplaceable, the declaration does not count. Depends on the anchoring and time-reference cMIPs, whose formats are open (FORMAT OPEN until then).
+
+
+## F137. "The same answer for every verifier", stated with its inputs (rule audit, 6 October 2026)
+
+**Found by the rule audit (Identity, unclear: line 439):** Identity promised the same answer to every verifier holding the same chain, acknowledgements and keeper records, but a homeless rotation may count on a reader's own failed attempts to reach the old home (rule 32a), and answers also depend on the inclusion proofs held. Two readers holding the same acts could disagree. Paper claim 1 rests on the promise.
+
+**Options:** (a) restate the promise with all its inputs (the same acts, proofs and attempts), mark answers resting on the reader's own attempts, and keep binding acts from relying on them; (b) remove the own-attempt basis, so all readers agree but a censored owner cannot escape until auditors attest absence.
+
+**Decided (Nobody, allegedly, 6 October 2026): (a).**
+
+**Core changes:** Identity draft 11, the sentence closing the validity rules. *To build:* `LawView` and the payment cMIP refuse to rely on an answer whose basis is the reader's own attempt (`Basis::OwnAttempt`), audit gap 4. Paper claim 1 to name its inputs.
