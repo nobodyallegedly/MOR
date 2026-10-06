@@ -264,7 +264,7 @@ test('only Identity, Finance and Law acts acknowledge; reliance is a witness act
   assert.throws(() => alice.sign(SPECS.envelope, 0, text('a publication'), { public: true, acks: [post.id] }), /witness act/);
 });
 
-test('a private link counts only once published at its signer\'s homes, where its owner sees it (F152)', async () => {
+test('a private link counts only once published at its signer\'s homes, where its owner sees it (F152, F159)', async () => {
   // Nothing at Alice's homes that she did not make.
   assert.deepEqual(await alice.unrecognised(), []);
   // A thief holding a copy of Alice's signing key confirms a link (Identity
@@ -274,13 +274,17 @@ test('a private link counts only once published at its signer\'s homes, where it
   const made = thief.sign(SPECS.identity, 7, cborEncode(new Map()), { public: false, to: [bob.id], objects: [[claim, claim]] });
   const shown = await lookUp(alice.id, hints());
   shown.verifier.addWithKey(made.act, made.key);
-  assert.equal(shown.verifier.status(made.id), 'invalid', 'shown to one party only, it counts for nothing');
-  // To count, it must be published at Alice's homes; there Alice's client sees it.
+  assert.equal(shown.verifier.status(made.id), 'unknown', 'shown to one party only, it counts for nothing: unknown, never invalid');
+  // To count, it must be published at the homes Alice's chain names at its
+  // binding; there Alice's client sees it.
   await relayAt(homes[0].base).putAct(made.act);
   assert.deepEqual(await alice.unrecognised(), [{ id: made.id, home: homes[0].base, private: true }]);
   const found = await lookUp(alice.id, hints());
   found.verifier.addWithKey(made.act, made.key);
   assert.equal(found.verifier.status(made.id), 'valid');
+  // What this reader found at the home is its own input: nothing binding
+  // rests on that fetch alone (F159).
+  assert.equal(found.verifier.bindingStatus(made.id), 'unknown');
 });
 
 test('every key exchange in these tests agrees with a second implementation (noble)', () => {
