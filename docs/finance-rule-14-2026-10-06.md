@@ -1,6 +1,6 @@
 # Finance rule 14 in code, and seeds for the invariant runs
 
-*6 October 2026. Branch `claude/confident-euler-qnejr7`, from main at 8f9a2e3. Against Finance draft 6, the payment cMIP draft 2, the freeze test suite v21 (scenario 1, step 5c) and findings F31, F34, F66. No rule in `spec/` was changed.*
+*6 October 2026. Branch `claude/confident-euler-qnejr7`, from main at 8f9a2e3. Against Finance draft 6, the payment cMIP draft 2, the freeze test suite v21 (scenario 1, step 5c) and findings F31, F34, F66. No rule in `spec/` was changed; the freeze suite's step 1.5c reworded to follow rule 14 (R14-4).*
 
 ## In plain words
 
@@ -43,7 +43,7 @@ Nothing here was decided: each is for Nobody, allegedly.
 
 **R14-3. A payment for an agreement or offer names no pointer (rules 14 and 15).** Rule 15 says a receipt names the pointer it followed "directly or through the obligation or agreement", but Law's terms have no field naming a payee pointer. So, for a payment that fulfils an agreement or an offer rather than an obligation or a pointer, there is no version to compare; the code answers "unknown" there rather than choose. A reading to confirm.
 
-**R14-4. A wording difference, to confirm.** Scenario 1.5c says the older royalties "can only be paid to the vault". Rule 14 also lets them be paid to the flow pointer they name, the owner's own earlier one. The code follows rule 14 (a test shows it); read in context, the scenario means "not to the thief's flow". Nothing to change unless Nobody, allegedly, reads it otherwise.
+**R14-4. A wording difference, to confirm.** Scenario 1.5c says the older royalties "can only be paid to the vault". Rule 14 also lets them be paid to the flow pointer they name, the owner's own earlier one. The code follows rule 14 (a test shows it). *Wording fixed, at the project lead's instruction: step 1.5c now says "only to the vault, or to the flow pointer the debt names (Finance rule 14), never to the thief's". The finding stays open for the author with the other three.*
 
 ## Precisely
 
@@ -55,4 +55,4 @@ Nothing here was decided: each is for Nobody, allegedly.
 
 **Tests:** `scripts/test-all.sh` on this branch, 6 October 2026: all passed. Rust workspace 336 (330 before, plus five story tests in `flow_theft.rs` and `rule_14_older_obligations_and_the_flow`), none failed, the regtest Lightning test skipping as usual; TypeScript 156 (nine clients, the website client with its browser test, and the jpeg module), none failed.
 
-**The reproducible-build check fails on this branch, because of this change.** The core library is compiled into the display client's WebAssembly, so the copy released in `clients/site/built/` (built on GitHub from main) no longer matches a build from this code. On main the check is green (GitHub run 29, 421621d). (On this container the check also fails on main's unchanged code, so the local result alone proves nothing; the hashes differ between main's build and this branch's.) Merging needs a new release of the display client (the release workflow, run by a push naming "[release display client]"), and then the server following it. That is outward-facing, so it was not done here: this branch is not merged, for Nobody, allegedly, or the project lead, to decide.
+**The reproducible-build check fails on this branch, because of this change.** The core library is compiled into the display client's WebAssembly, so the copy released in `clients/site/built/` (built on GitHub from main) no longer matches a build from this code. On main the check is green (GitHub run 29, 421621d). (On this container the check also fails on main's unchanged code, so the local result alone proves nothing; the hashes differ between main's build and this branch's.) Merging needs a new release of the display client (the release workflow, run by a push naming "[release display client]"), and then the server following it. That is outward-facing, so it was not done here: this branch is not merged, for Nobody, allegedly, or the project lead, to decide. *Decided by the project lead: merged to main with "[release display client]" in the merge commit's message, so GitHub's release workflow rebuilds `clients/site/built/` on Linux and commits it; nothing released by hand.*
