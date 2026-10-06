@@ -1708,7 +1708,9 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Law draft 10, stakes CDDL comment, rules 15a and 21, reasoning; freeze suite line on stakes. *To build:* the split computation in the core library and the split service, with a test that reordering holders changes no payout.
 
 
-## F151. Does a collective's witness act count in Law? (verifier2 rerun, 6 October 2026)
+## F156. Does a collective's witness act count in Law? (verifier2 rerun, 6 October 2026)
+
+*Numbered F151 by the Law gaps session (merge commit f542e45 says so) while F151 was also given, the same evening, to review finding 7; renumbered F156 by the project lead, 6 October 2026. The entry stands where the session put it.*
 
 **Found by rerunning verifier2 after F142 to F144 were built** (`docs/verifier2-report.md`, "Rerun"): on the same 4,000 random collective histories, the two verifiers now agree on every ending, every ending signature, which ending counts and every debtor; one disagreement remains, in 262 stories, on one kind of act. The collective's own Identity witness act (type 15), the act by which it acknowledges another act (F110), carries no `objects`. The reference library counts it as the collective's act (`Consent::NoArea`: valid under Identity, reached by no area, Identity governs it, on no chain of Law's) that adopts nothing (F142) and binds nothing, but places the members' signature acts it acknowledges ("Made before, made after", 2: "an act of the collective before it acknowledges them"). Verifier2 reads rule 35b first ("Identity's own everyday acts carry no objects and are on neither chain"; "an action citing no decision ... counts for nothing"): the witness act counts for nothing in Law at all. F142 decided what such an act adopts (nothing), not what it is.
 
