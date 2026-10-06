@@ -5295,7 +5295,8 @@ impl<'a> LawView<'a> {
         if fin::rule_14(&holding, &chain, paid.version) != fin::Rule14::Counts {
             return false;
         }
-        let vault = self.vault_in_force(creditor);
+        // F160: the vault the creditor's own act for the debt showed.
+        let vault = &holding.vault;
         if !fin::flow_followed_vault((!vault.is_empty()).then_some(vault.as_slice()), amount) {
             return false;
         }
@@ -5319,8 +5320,11 @@ impl<'a> LawView<'a> {
     ///
     /// Each such act counts only while valid under Identity. Where the
     /// payee has several, what any of them holds counts (the latest is
-    /// taken). What an act holds is what its citations reach
-    /// ([`crate::finance::holds`]), never a hash in a payload. `None` where
+    /// taken). What an act holds is what its citations reach through the
+    /// payee's own acts only, never through an act another identity signed
+    /// (F157, [`crate::finance::holds_own`]), and never a hash in a
+    /// payload. The vault that applies is the one the payee's chain
+    /// declared at the latest binding of those acts (F160). `None` where
     /// `fulfils` is none of these, or an obligation owed to another.
     pub fn pointer_holding(&self, fulfils: &Hash, payee: &Hash) -> Option<crate::finance::Holding> {
         use crate::finance::{self as fin, Payload as Fin};
@@ -5357,9 +5361,18 @@ impl<'a> LawView<'a> {
             self.payees_acts_on(fulfils, payee)?
         };
         let mut pointers = vec![];
+        // F160: the vault the payee's chain declared at the latest binding
+        // among its own acts for the payment.
+        let res = self.v.resolve(payee);
+        let shown = acts
+            .iter()
+            .filter_map(|a| self.v.get(a)?.act.outside.binding.and_then(|b| res.position_of(&b)))
+            .max();
+        let vault = shown.map(|k| self.vault_at(payee, k)).unwrap_or_default();
         for a in acts {
             let Some(h) = self.v.get(&a) else { continue };
-            let held = fin::holds(self.v, fin::cites(&h.inside));
+            // F157: through the payee's own acts only.
+            let held = fin::holds_own(self.v, fin::cites(&h.inside), payee);
             complete &= held.complete;
             for p in held.acts {
                 let Some(y) = self.v.get(&p) else { continue };
@@ -5373,7 +5386,7 @@ impl<'a> LawView<'a> {
                 }
             }
         }
-        Some(fin::Holding { pointers, complete })
+        Some(fin::Holding { pointers, complete, vault })
     }
 
     /// The payee's own acts on an agreement or offer `a` (F145): its valid
@@ -6254,10 +6267,16 @@ impl<'a> LawView<'a> {
     /// The vault an identity's chain declares in force (Finance rule 14a):
     /// its entries, none where it declares no vault.
     fn vault_in_force(&self, who: &Hash) -> Vec<crate::finance::VaultEntry> {
+        self.vault_at(who, usize::MAX)
+    }
+
+    /// The vault an identity's chain declares at its link `k` (Finance
+    /// rules 12a and 14a, F160): what an act bound there showed.
+    fn vault_at(&self, who: &Hash, k: usize) -> Vec<crate::finance::VaultEntry> {
         let res = self.v.resolve(who);
         let mut out = vec![];
         // F153: not past a link counting only through own attempts.
-        for (l, st) in res.links.iter().zip(&res.states) {
+        for (l, st) in res.links.iter().zip(&res.states).take(k.saturating_add(1)) {
             if self.refuses(&l.act) {
                 break;
             }

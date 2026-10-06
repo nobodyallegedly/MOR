@@ -266,9 +266,12 @@ pub trait Held {
     /// `mor_core::finance::history`), and the anchor order where both are
     /// anchored (F139, F146, F147).
     fn payers_claims(&self, proof: &[u8], rotation: &Hash) -> Vec<fin::PayersClaim>;
-    /// The vault this identity's chain declares in force: its entries, or
-    /// `None` where it declares none (Finance rule 14a).
-    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>>;
+    /// The vault the chain of the act's signer declared at the act's
+    /// binding: its entries, or `None` where it declared none (Finance
+    /// rules 12a and 14a, F160). For a tip, the act is the payee pointer it
+    /// follows, the payee's own act for it; for anything else, the vault
+    /// comes with [`Held::holding`].
+    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>>;
 }
 
 /// The rail Modules a verifier has adopted, by spec hash.
@@ -492,16 +495,22 @@ pub fn beside(record: Record, held: &dyn Held) -> Answer {
 
 /// Finance rules 14a and 15, judged beside the verification answer for a
 /// payment received: a payment to the flow counts as paid to the flow only
-/// where the payee's vault in force lets it go there (an entry for its
-/// unit, and no more than that unit's smallest limit, F114); a payment
-/// that did not follow the published vault is not protected (rule 15). A
-/// payment to the vault, or to an identity that declares no vault, is
-/// valid here. *A thief who redirects the flow pointer cannot take a large
-/// payment through it, nor one in a unit the vault does not cover.*
+/// where the payee's vault lets it go there (an entry for its unit, and no
+/// more than that unit's smallest limit, F114); a payment that did not
+/// follow the published vault is not protected (rule 15). The vault that
+/// applies is the one the payee's own act for the payment showed (rules
+/// 12a and 14a, F160): for a tip, the vault at the binding of the payee
+/// pointer it follows; for an obligation, an agreement or an offer, the
+/// one [`Held::holding`] gives. *A payer is judged by what the payee
+/// showed, never by a limit the payee set afterwards.* A payment to the
+/// vault, or to an identity that showed no vault, is valid here; one whose
+/// payee's own act this verifier cannot read is unknown. *A thief who
+/// redirects the flow pointer cannot take a large payment through it, nor
+/// one in a unit the vault does not cover.*
 pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
-    let (proof, payee, amount) = match &record {
-        Record::Receipt(r) => (&r.proof, &r.payee, &r.amount),
-        Record::Claim(c, ..) => (&c.proof, &c.payee, &c.amount),
+    let (proof, payee, amount, fulfils) = match &record {
+        Record::Receipt(r) => (&r.proof, &r.payee, &r.amount, &r.fulfils),
+        Record::Claim(c, ..) => (&c.proof, &c.payee, &c.amount, &c.fulfils),
     };
     let Some(p) = Proof::decode(proof) else {
         return Answer::Invalid("the proof is not in the payment cMIP's shape".into());
@@ -509,7 +518,22 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
     if matches!(p.paid_to, PaidTo::Vault { .. }) {
         return Answer::Valid;
     }
-    if fin::flow_followed_vault(held.vault_in_force(payee).as_deref(), amount) {
+    let tip = held.pointer(fulfils).or_else(|| held.voided_pointer(fulfils).map(|(p, _)| p));
+    let vault = match (held.obligation(fulfils), tip) {
+        // Not this hop's to judge, as for the pointer.
+        (Some(o), _) if &o.creditor != payee => return Answer::Valid,
+        (None, Some(_)) => held.vault_at_binding(fulfils),
+        _ => match held.holding(fulfils, payee) {
+            Some(h) => (!h.vault.is_empty()).then_some(h.vault),
+            None => {
+                return Answer::Unknown(
+                    "what it fulfils is no obligation, agreement or offer this verifier can read the payee's own acts on, so the vault they showed is unknown (Finance rules 12a and 14a, F160)"
+                        .into(),
+                )
+            }
+        },
+    };
+    if fin::flow_followed_vault(vault.as_deref(), amount) {
         Answer::Valid
     } else {
         Answer::Invalid(

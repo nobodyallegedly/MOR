@@ -237,18 +237,17 @@ fn the_pointer_is_judged_by_the_payees_own_signature_act() {
     assert_eq!(l.paid(&d3), 0, "the drafter's citations choose nothing");
 }
 
-/// FLAW, open for Nobody, allegedly (found building F145): "holds" is
-/// transitive through every citation (F155), and a signature act must cite
-/// the terms it signs (Law, type 1: `objects` `[[signed, signed]]`). So the
-/// owner's signature act on terms its debtor drafted to cite the thief's
-/// version 3 holds version 3, through the terms, and a debt under them
-/// counts on the thief's flow: review finding 1's first story, as the text
-/// now reads. Likewise an act of the owner's acknowledging an IOU holds
-/// everything the IOU's debtor ever cited, through the IOU's `prev`. Built
-/// as the text says; this test pins that reading so a decision changes it
-/// visibly.
+/// F157 (flaw 1 of the build of F145 to F156, decided by Nobody,
+/// allegedly): for selecting the payee's pointer, the walk passes only
+/// through the payee's own acts, never through an act another identity
+/// signed. A signature act must cite the terms it signs (Law, type 1), so
+/// before F157 the owner's signature on terms its debtor drafted to cite
+/// the thief's version 3 held version 3 through the terms, and a debt
+/// under them counted on the thief's flow; an act of the owner's
+/// acknowledging an IOU held everything the IOU's debtor ever cited. Now
+/// neither reaches it: review finding 1's first story is closed.
 #[test]
-fn flaw_the_payees_signature_holds_what_the_drafters_terms_cite() {
+fn the_payees_pointer_is_found_through_its_own_acts_only() {
     let mut l = Lab::new();
     let mut owner = l.person("owner");
     let mut debtor = l.person("debtor");
@@ -261,18 +260,67 @@ fn flaw_the_payees_signature_holds_what_the_drafters_terms_cite() {
     l.sign(&mut debtor, drafted);
     l.sign(&mut owner, drafted);
     let holding = l.view().pointer_holding(&drafted, &oid).unwrap();
-    assert!(holding.pointers.contains(&v3), "held through the terms the signature cites");
+    assert!(holding.complete);
+    assert_eq!(BTreeSet::from_iter(holding.pointers), BTreeSet::from([v1, v2]), "never through the drafter's terms");
     let d = l.debt(&mut debtor, oid, 900, v3, Some(drafted), vec![]);
     l.claim(&mut debtor, oid, d, 900, "to the thief", PaidAt::Flow(v3), vec![]);
-    assert_eq!(l.paid(&d), 900, "the flaw: the thief collects through the drafter's citation");
+    assert_eq!(l.paid(&d), 0, "the thief collects nothing through the drafter's citation");
+    l.claim(&mut debtor, oid, d, 900, "to the owner", PaidAt::Flow(v2), vec![]);
+    assert_eq!(l.paid(&d), 900, "the owner's own latest pointer counts");
     // The same through an IOU: the owner acknowledges a debtor's IOU; the
-    // acknowledgement holds the IOU, and through its `prev` the debtor's
-    // whole history, which cites version 3.
+    // IOU's `prev` leads to the debtor's terms citing version 3, which the
+    // walk no longer enters.
     let iou = l.debt(&mut debtor, oid, 30, v1, None, vec![]);
     l.act(&mut owner, mips().law, law::types::NEGOTIATION, vec![], None, Some(vec![iou]), None);
-    assert!(l.view().pointer_holding(&iou, &oid).unwrap().pointers.contains(&v3));
+    let holding = l.view().pointer_holding(&iou, &oid).unwrap();
+    assert!(!holding.pointers.contains(&v3), "never through the debtor's history");
     l.claim(&mut debtor, oid, iou, 30, "iou to the thief", PaidAt::Flow(v3), vec![]);
-    assert_eq!(l.paid(&iou), 30, "the flaw, through an acknowledgement");
+    assert_eq!(l.paid(&iou), 0);
+}
+
+/// F160 (question A of the build of F145 to F156, decided by Nobody,
+/// allegedly): the vault and its limits that apply to a payment are those
+/// the payee's own act for it showed, read at that act's binding (decided
+/// this session: a vault is declared only in a genesis or rotation, which
+/// no citation reaches). The smallest story: the owner's vault limit is
+/// 1,000; it signs a deal; a payment of 900 under it goes to the flow; the
+/// owner then rotates to a limit of 500. The 900 still followed the vault
+/// the owner showed. A deal the owner signs after the rotation shows the
+/// limit of 500: 900 to the flow does not count there, to the vault it
+/// does.
+#[test]
+fn a_limit_lowered_after_the_payment_does_not_reach_back() {
+    use common::Rot;
+    let mut l = Lab::new();
+    let entry = |limit| fin::VaultEntry { unit: unit(), rail_module: rail(), source: b"the owner's vault".to_vec(), limit };
+    let vault = |limit| vec![fin::vault_declaration(&mips().finance, &[entry(limit)])];
+    let mut owner = l.w.genesis_with("owner", vec![own_home()], None, None, Some(vault(1_000)), 3);
+    let mut debtor = l.person("debtor");
+    let oid = owner.id;
+    let v1 = l.pointer(&mut owner, oid, 1, None, "the owner's node");
+    let deal = l.terms(&mut debtor, vec![]);
+    l.sign(&mut debtor, deal);
+    l.sign(&mut owner, deal);
+    let d = l.debt(&mut debtor, oid, 900, v1, Some(deal), vec![]);
+    l.claim(&mut debtor, oid, d, 900, "900 to the flow", PaidAt::Flow(v1), vec![]);
+    assert_eq!(l.paid(&d), 900, "within the limit of 1,000 the owner showed");
+
+    // The owner lowers its limit to 500 by rotation.
+    let (_, mut owner) = l.w.rotate(&owner, Rot { declarations: Some(vault(500)), ..Default::default() });
+    assert_eq!(l.w.v.status(&v1), Status::Valid);
+    assert_eq!(l.view().pointer_holding(&deal, &oid).unwrap().vault, vec![entry(1_000)]);
+    assert_eq!(l.paid(&d), 900, "a limit set afterwards does not reach back");
+
+    // A deal signed after the rotation shows the limit of 500.
+    let later = l.terms(&mut debtor, vec![]);
+    l.sign(&mut debtor, later);
+    l.sign(&mut owner, later);
+    assert_eq!(l.view().pointer_holding(&later, &oid).unwrap().vault, vec![entry(500)]);
+    let d2 = l.debt(&mut debtor, oid, 900, v1, Some(later), vec![]);
+    l.claim(&mut debtor, oid, d2, 900, "900 to the flow, later", PaidAt::Flow(v1), vec![]);
+    assert_eq!(l.paid(&d2), 0, "above the limit the owner's act showed");
+    l.claim(&mut debtor, oid, d2, 900, "900 to the vault", PaidAt::Vault(oid), vec![]);
+    assert_eq!(l.paid(&d2), 900);
 }
 
 /// F145 (review finding 1, the IOU story): an obligation naming no
@@ -295,7 +343,7 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     // The refund IOU cites and names the thief's version 3, and is paid
     // there: nothing.
     let iou = l.debt(&mut debtor, cid, 50, v3, None, vec![v3]);
-    assert_eq!(l.view().pointer_holding(&iou, &cid).unwrap(), fin::Holding { pointers: vec![], complete: true });
+    assert_eq!(l.view().pointer_holding(&iou, &cid).unwrap(), fin::Holding { pointers: vec![], complete: true, vault: vec![] });
     l.claim(&mut debtor, cid, iou, 50, "iou to v3", PaidAt::Flow(v3), vec![]);
     assert_eq!(l.paid(&iou), 0, "no act of the creditor's: only the vault");
 
@@ -310,7 +358,8 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     // history cites nothing of the creditor's, with an act of its own,
     // which holds its versions 1 and 2: version 2 counts, and the older 1.
     // (Acknowledging an act of the first debtor, whose earlier IOU cites
-    // version 3, would hold version 3 too: see the flaw test below.)
+    // version 3, holds no more: the walk passes only through the
+    // creditor's own acts, F157.)
     let mut friend = l.person("a second debtor");
     let acked = l.debt(&mut friend, cid, 30, v1, None, vec![]);
     let ack = l.act(&mut creditor, mips().law, law::types::NEGOTIATION, vec![], None, Some(vec![acked]), None);

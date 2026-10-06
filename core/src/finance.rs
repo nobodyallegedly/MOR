@@ -1064,6 +1064,37 @@ pub fn holds(v: &crate::chain::Verifier, from: Vec<Hash>) -> Holds {
     out
 }
 
+/// What the acts `from` hold for selecting `own`'s pointer and vault
+/// (rules 12a, 14 and 14a, F157, F160): as [`holds`], but the walk passes
+/// only through acts `own` signed, never through an act another identity
+/// signed, so what a drafter's terms or a debtor's IOU cite never reaches
+/// it. An act of another's met on the way is left out, and not followed.
+/// An act not held may be `own`'s, so meeting one makes the walk
+/// incomplete. *The payee's pointers are acts in its own sequence, so the
+/// walk finds the latest the payee had published when it signed.*
+pub fn holds_own(v: &crate::chain::Verifier, from: Vec<Hash>, own: &Hash) -> Holds {
+    let mut out = Holds {
+        acts: Default::default(),
+        complete: true,
+    };
+    let mut todo = from;
+    let mut seen = std::collections::BTreeSet::new();
+    while let Some(x) = todo.pop() {
+        if !seen.insert(x) {
+            continue;
+        }
+        match v.get(&x) {
+            Some(h) if h.act.outside.signer.as_ref() == Some(own) => {
+                out.acts.insert(x);
+                todo.extend(cites(&h.inside));
+            }
+            Some(_) => {}
+            None => out.complete = false,
+        }
+    }
+    out
+}
+
 /// The history of an act, as rules 14 and 15 read it: what its citations
 /// hold, the act itself left out. For an anonymous payer's claim (claim
 /// key 8, `anonymous`), only what its `objects`, `acks` and `refs` hold,
@@ -1090,6 +1121,13 @@ pub struct Holding {
     pub pointers: Vec<Hash>,
     /// Every walk was complete ([`Holds::complete`]).
     pub complete: bool,
+    /// The vault, with its limits, that applies to the payment (rules 12a
+    /// and 14a, F160): the one the payee's chain declared at the binding of
+    /// the payee's own act for it, the latest such binding where it has
+    /// several; empty where that chain declared none, or the payee has no
+    /// such act. *A payer is judged by what the payee showed, never by a
+    /// limit the payee set afterwards.*
+    pub vault: Vec<VaultEntry>,
 }
 
 /// Rules 12 and 14 with F145 and F155: the version that counts, the latest
@@ -1123,8 +1161,9 @@ pub enum Rule14 {
 /// the selected wallet or an older one, never a newer one). Where the
 /// payee's own acts hold no pointer, it counts only if paid to the vault.
 /// The version an obligation names (field 3) is informative only, and not
-/// read here. *The pointer is judged by the act of the one it pays, never
-/// by the act of the one who pays or drafts.*
+/// read here. What the payee's act holds is found through the payee's own
+/// acts only ([`holds_own`], F157). *The pointer is judged by the act of
+/// the one it pays, never by the act of the one who pays or drafts.*
 pub fn rule_14(holding: &Holding, chain: &[(Hash, PayeePointer)], paid: u64) -> Rule14 {
     match select_pointer(&holding.pointers, chain) {
         Some((_, named)) if counts_toward(named, PaidInto::Flow(paid)) => Rule14::Counts,

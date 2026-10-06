@@ -169,8 +169,9 @@ impl Held for World {
             vec![]
         }
     }
-    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
-        (payee == &self.payee).then(|| self.vault.clone())
+    /// The payee's one vault, at the binding of its pointer (F160).
+    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>> {
+        (act == &self.pointer_id).then(|| self.vault.clone())
     }
 }
 

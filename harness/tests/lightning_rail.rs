@@ -307,10 +307,11 @@ impl Held for View<'_> {
             .collect()
     }
 
-    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
-        // The latest chain act that declared one: these identities never
-        // rotate in this test, so it is the genesis.
-        self.vault(payee).map(|(_, v)| v)
+    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>> {
+        // The chain act the act is bound to (F160): these identities never
+        // rotate in this test, so it is the genesis, which declared it.
+        let b = self.0.v.get(act)?.act.outside.binding?;
+        self.vault(&b).map(|(_, v)| v)
     }
 }
 

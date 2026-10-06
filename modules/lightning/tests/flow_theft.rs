@@ -25,7 +25,7 @@ use mor_core::finance::{
 use mor_core::hash::{sha256, Hash};
 use mor_lightning::bolt11::Network;
 use mor_lightning::{unit, Lightning, LnAddress, LnProof};
-use mor_payment::{pointer_in_force, verify, Answer, Commitment, Held, Modules, PaidTo, Proof, Record};
+use mor_payment::{beside, pointer_in_force, verify, Answer, Commitment, Held, Modules, PaidTo, Proof, Record};
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
@@ -60,6 +60,7 @@ fn holds(pointers: &[Hash]) -> Holding {
     Holding {
         pointers: pointers.to_vec(),
         complete: true,
+        vault: vec![],
     }
 }
 
@@ -82,7 +83,11 @@ struct Contributor {
     /// The payers' claims for each rail proof, as rule 15 reads them.
     claims: BTreeMap<Vec<u8>, Vec<PayersClaim>>,
     genesis: Hash,
+    /// The vault its chain declares now.
     vault: Vec<VaultEntry>,
+    /// Where an act of its own showed another vault than `vault`, at its
+    /// binding (F160): by what the payment fulfils.
+    shown: BTreeMap<Hash, Vec<VaultEntry>>,
 }
 
 impl Held for Contributor {
@@ -95,8 +100,12 @@ impl Held for Contributor {
     fn obligation(&self, id: &Hash) -> Option<Obligation> {
         self.obligations.get(id).cloned()
     }
+    /// The vault the contributor's own act for it showed (F160): `vault`,
+    /// unless `shown` says otherwise.
     fn holding(&self, fulfils: &Hash, payee: &Hash) -> Option<Holding> {
-        (payee == &self.id).then(|| self.holdings.get(fulfils).cloned()).flatten()
+        let mut h = (payee == &self.id).then(|| self.holdings.get(fulfils).cloned()).flatten()?;
+        h.vault = self.shown.get(fulfils).unwrap_or(&self.vault).clone();
+        Some(h)
     }
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
         self.pointers
@@ -125,8 +134,9 @@ impl Held for Contributor {
     fn payers_claims(&self, proof: &[u8], _: &Hash) -> Vec<PayersClaim> {
         self.claims.get(proof).cloned().unwrap_or_default()
     }
-    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
-        (payee == &self.id).then(|| self.vault.clone())
+    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>> {
+        let mine = self.pointers.get(act).or_else(|| self.voided.get(act).map(|(p, _)| p));
+        mine.filter(|p| p.payee == self.id).map(|_| self.shown.get(act).unwrap_or(&self.vault).clone())
     }
 }
 
@@ -204,6 +214,7 @@ fn story() -> Story {
                 source: address(&vault_node),
                 limit: 100_000,
             }],
+            shown: BTreeMap::new(),
         },
         service,
         fan: h("a fan"),
@@ -432,7 +443,7 @@ fn what_rule_14_cannot_read_is_never_valid() {
             agreement: Some(h("a deal not held")),
         },
     );
-    s.c.holdings.insert(unheld, Holding { pointers: vec![], complete: false });
+    s.c.holdings.insert(unheld, Holding { pointers: vec![], complete: false, vault: vec![] });
     let (r, _) = paid(&s, s.service, unheld, to_flow(s.own_pointer), &s.own_node, sat(10));
     assert!(matches!(pointer_in_force(Record::Receipt(&r), &s.c), Answer::Unknown(_)));
     let wrong = h("names someone else's pointer, under a deal the contributor never signed");
@@ -718,4 +729,30 @@ fn good_faith_does_not_lift_rule_14() {
         assert_eq!(rail, Answer::Valid);
         assert!(matches!(&a, Answer::Invalid(w) if w.contains("rule 14")), "{a}");
     }
+}
+
+/// F160 (Finance rules 12a and 14a): the vault a payment is judged by is
+/// the one the payee's own act for it showed, never one set afterwards.
+/// The contributor signed the film's deal under a limit of 100,000 sat;
+/// it then lowers its vault to 10,000. Royalties of 40,000 paid to its
+/// own flow followed the vault its signature showed: they count. A tip of
+/// 40,000 following a pointer the contributor publishes under the new
+/// vault does not: that pointer showed the limit of 10,000.
+#[test]
+fn a_flow_payment_is_judged_by_the_vault_the_payees_act_showed() {
+    let mut s = story();
+    let shown = s.c.vault.clone();
+    s.c.vault[0].limit = 10_000;
+    s.c.shown.insert(s.royalties, shown.clone());
+    s.c.shown.insert(s.own_pointer, shown);
+    let (r, c) = paid(&s, s.service, s.royalties, to_flow(s.own_pointer), &s.own_node, sat(40_000));
+    assert!(!finance::flow_followed_vault(Some(&s.c.vault), &r.amount), "above the limit set afterwards");
+    let none = Citations::default();
+    assert_eq!(beside(Record::Receipt(&r), &s.c), Answer::Valid, "the limit the signature showed applies");
+    assert_eq!(beside(Record::Claim(&c, s.service, &none), &s.c), Answer::Valid);
+    // A pointer published under the lowered vault shows 10,000.
+    s.c.shown.remove(&s.own_pointer);
+    let (r, c) = paid(&s, s.fan, s.own_pointer, to_flow(s.own_pointer), &s.own_node, sat(40_000));
+    assert!(matches!(beside(Record::Receipt(&r), &s.c), Answer::Invalid(w) if w.contains("vault")), "above the limit that pointer showed");
+    assert!(matches!(beside(Record::Claim(&c, s.fan, &none), &s.c), Answer::Invalid(w) if w.contains("vault")));
 }
