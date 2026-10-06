@@ -1,0 +1,58 @@
+{
+ "collective": "C",
+ "members": [
+  "ana",
+  "ben"
+ ],
+ "rule": {
+  "kind": "every"
+ },
+ "areas": {},
+ "acts": [
+  {
+   "id": "genesis",
+   "type": "genesis",
+   "signer": "C"
+  },
+  {
+   "id": "G",
+   "type": "grant",
+   "signer": "C/d0",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ],
+   "grantee": "agent"
+  },
+  {
+   "id": "S",
+   "type": "publication",
+   "signer": "G/key",
+   "prev": null,
+   "cites": [
+    "G"
+   ],
+   "grant": "G"
+  },
+  {
+   "id": "R",
+   "type": "revocation",
+   "signer": "C/d0",
+   "prev": "G",
+   "cites": [
+    "S"
+   ],
+   "revokes": "G"
+  },
+  {
+   "id": "S2",
+   "type": "publication",
+   "signer": "G/key",
+   "prev": "S",
+   "cites": [
+    "R"
+   ],
+   "grant": "G"
+  }
+ ]
+}

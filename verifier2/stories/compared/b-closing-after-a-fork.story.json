@@ -1,0 +1,162 @@
+{
+  "acts": [
+    {
+      "amount": 114,
+      "cites": [
+        "664f43668854b40c8a20f70cfb62a4e75efe079aa54419d6f8cda41cad9305bd"
+      ],
+      "creditor": "6b28d8708f75ace421f1d4bceb05466f24f83f66149e7c8c12bf06a14cb27ed1",
+      "id": "0464bada5aa8d830c3ead5a26bfab0fa687713445f6f433f5ad0ce8e7dc76ee2",
+      "kind": "Debt",
+      "order": 23,
+      "public": false,
+      "seal": "All",
+      "sealed_to_all": true,
+      "signer": "C/d0",
+      "type": "obligation",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "c3fc0dc4bec1dce238f74be82ce92320913748b2f28ec93f8f46efaa95d17426",
+      "id": "4c624a7f28f79371cd67ada63d07d2945b915cde2fce242b4a6ce4065a10a16f",
+      "order": 20,
+      "position": 1,
+      "signer": "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "7db8a9846edc4fd84029c5fac480c9aafc51c5190bc1cba69301857247dac118",
+      "id": "50f5ef78c09358b897fb15e52e98ad9a2e57b67301931182b05d1d1cc70fbfc0",
+      "order": 25,
+      "position": 2,
+      "signer": "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "cites": [],
+      "id": "664f43668854b40c8a20f70cfb62a4e75efe079aa54419d6f8cda41cad9305bd",
+      "order": 6,
+      "public": true,
+      "sealed_to_all": false,
+      "signer": "C",
+      "type": "genesis",
+      "valid": true
+    },
+    {
+      "agreement": "9f9db297376f121ab84c73958b61816211ed5108038c64466ef348e04914880d",
+      "cites": [],
+      "holds_nothing": true,
+      "id": "7db8a9846edc4fd84029c5fac480c9aafc51c5190bc1cba69301857247dac118",
+      "objects": [
+        "c3fc0dc4bec1dce238f74be82ce92320913748b2f28ec93f8f46efaa95d17426"
+      ],
+      "order": 24,
+      "public": true,
+      "sealed_to_all": false,
+      "signer": "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+      "tips": [
+        "0464bada5aa8d830c3ead5a26bfab0fa687713445f6f433f5ad0ce8e7dc76ee2"
+      ],
+      "type": "closing",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "c3fc0dc4bec1dce238f74be82ce92320913748b2f28ec93f8f46efaa95d17426",
+      "id": "9fa42f7c5573cc6b273d3791146a36a33f83349da5e8f974b58f6fe19a88fd9f",
+      "order": 19,
+      "position": 1,
+      "signer": "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "7db8a9846edc4fd84029c5fac480c9aafc51c5190bc1cba69301857247dac118",
+      "id": "a71e6cfdeaf4c3d95188b4b5e4ddfebdbe8a42dd6921440b56989af6eae7d496",
+      "order": 26,
+      "position": 2,
+      "signer": "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "agreement": "9f9db297376f121ab84c73958b61816211ed5108038c64466ef348e04914880d",
+      "assigned": [],
+      "cites": [],
+      "id": "c3fc0dc4bec1dce238f74be82ce92320913748b2f28ec93f8f46efaa95d17426",
+      "objects": [],
+      "order": 18,
+      "public": true,
+      "sealed_to_all": false,
+      "sides": [
+        {
+          "members": [
+            "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d"
+          ],
+          "successor": "25c8f758bfd2a72d9b5df3647f8de0712ba9e165fc187a8fec4f284dbaa8557b"
+        },
+        {
+          "members": [
+            "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf"
+          ],
+          "successor": "39f4bb2eed84695a0ff7ac405211a6aed4b3971c1f72f7244ae74b4270f0e6dc"
+        }
+      ],
+      "signer": "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+      "sigs": [
+        "39f4bb2eed84695a0ff7ac405211a6aed4b3971c1f72f7244ae74b4270f0e6dc",
+        "25c8f758bfd2a72d9b5df3647f8de0712ba9e165fc187a8fec4f284dbaa8557b"
+      ],
+      "successor_signed": {
+        "25c8f758bfd2a72d9b5df3647f8de0712ba9e165fc187a8fec4f284dbaa8557b": true,
+        "39f4bb2eed84695a0ff7ac405211a6aed4b3971c1f72f7244ae74b4270f0e6dc": true
+      },
+      "tips": [],
+      "type": "fork",
+      "valid": true
+    }
+  ],
+  "areas": {},
+  "collective": "664f43668854b40c8a20f70cfb62a4e75efe079aa54419d6f8cda41cad9305bd",
+  "founding": "9f9db297376f121ab84c73958b61816211ed5108038c64466ef348e04914880d",
+  "members": [
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d"
+  ],
+  "meta": {
+    "name": "case00243.min",
+    "ops": [
+      "1: Fork { stale: 1, sides: 122, debts: Extra, seal: Public, all_sign: true, succ_sign: true, names: true }",
+      "4: Debt { dev: 75, seal: All, cited: true, creditor: 130, amount: 114, lane_sign: true }",
+      "7: Closing { stale: 0, seal: Public, all_sign: true, names: true }"
+    ],
+    "picked": [
+      1,
+      4,
+      7
+    ],
+    "seed": 17439019474687293749,
+    "shape": "Shape { members: 2, devices: 1, member_devices: 1, constitutional: None, lane: None, owns_work: false }"
+  },
+  "names": {
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "ben",
+    "25c8f758bfd2a72d9b5df3647f8de0712ba9e165fc187a8fec4f284dbaa8557b": "S0",
+    "39f4bb2eed84695a0ff7ac405211a6aed4b3971c1f72f7244ae74b4270f0e6dc": "S1",
+    "664f43668854b40c8a20f70cfb62a4e75efe079aa54419d6f8cda41cad9305bd": "C",
+    "6b28d8708f75ace421f1d4bceb05466f24f83f66149e7c8c12bf06a14cb27ed1": "creditor0",
+    "b670cc7050cfa555b2888c3d2925315483874e89f6b3c2657fb5e620cc344094": "agent1",
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "ana",
+    "cc5b8dac2072ef4ac57427c158c8e0bba3483317734ddf48806e33ec380bcb0d": "stranger",
+    "ced9b6a49c3867d8eb4e071b528bea628854b5cd1bb03c3e8afd04dbff132e58": "creditor1",
+    "ef1b35521f7fbdff1030b8a667b2e83c73b40377cfb609f2e397711b80c25439": "agent0"
+  },
+  "rule": {
+    "kind": "every"
+  },
+  "skipped": []
+}

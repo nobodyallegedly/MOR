@@ -1,0 +1,37 @@
+{
+  "acts": {
+    "0464bada5aa8d830c3ead5a26bfab0fa687713445f6f433f5ad0ce8e7dc76ee2": {
+      "after_ending": "c3fc0dc4bec1dce238f74be82ce92320913748b2f28ec93f8f46efaa95d17426",
+      "binds": "Ok(Some(false))",
+      "consent": "Ok(Closed { by: [195, 252, 13, 196, 190, 193, 220, 226, 56, 247, 75, 232, 44, 233, 35, 32, 145, 55, 72, 178, 242, 142, 201, 63, 143, 70, 239, 170, 149, 209, 116, 38] })",
+      "counts": false,
+      "done": true
+    }
+  },
+  "closed_by": "c3fc0dc4bec1dce238f74be82ce92320913748b2f28ec93f8f46efaa95d17426",
+  "debtors": {},
+  "endings": {
+    "7db8a9846edc4fd84029c5fac480c9aafc51c5190bc1cba69301857247dac118": {
+      "counts": false,
+      "names": [
+        "c3fc0dc4bec1dce238f74be82ce92320913748b2f28ec93f8f46efaa95d17426"
+      ],
+      "signatures": {
+        "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "counts",
+        "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "counts"
+      },
+      "status": "complete",
+      "why": []
+    },
+    "c3fc0dc4bec1dce238f74be82ce92320913748b2f28ec93f8f46efaa95d17426": {
+      "counts": true,
+      "names": [],
+      "signatures": {
+        "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "counts",
+        "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "counts"
+      },
+      "status": "complete",
+      "why": []
+    }
+  }
+}

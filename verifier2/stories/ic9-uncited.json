@@ -1,0 +1,70 @@
+{
+ "collective": "C",
+ "members": [
+  "ana",
+  "ben",
+  "cy"
+ ],
+ "rule": {
+  "kind": "every"
+ },
+ "areas": {
+  "finance": {
+   "holders": [
+    "ana",
+    "ben"
+   ],
+   "threshold": 2
+  }
+ },
+ "acts": [
+  {
+   "id": "genesis",
+   "type": "genesis",
+   "signer": "C"
+  },
+  {
+   "id": "G",
+   "type": "grant",
+   "signer": "C/d0",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ],
+   "grantee": "agent",
+   "area": "finance",
+   "sigs": [
+    "ana",
+    "ben"
+   ]
+  },
+  {
+   "id": "r1",
+   "type": "record",
+   "signer": "C/d1",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ],
+   "registers": [
+    {
+     "member": "ana",
+     "what": "resign"
+    }
+   ]
+  },
+  {
+   "id": "r2",
+   "type": "record",
+   "signer": "C/d1",
+   "prev": "r1",
+   "cites": [],
+   "registers": [
+    {
+     "member": "ben",
+     "what": "resign"
+    }
+   ]
+  }
+ ]
+}

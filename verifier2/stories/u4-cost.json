@@ -1,0 +1,83 @@
+{
+ "collective": "C",
+ "members": [
+  "ana",
+  "ben",
+  "cy"
+ ],
+ "rule": {
+  "kind": "threshold",
+  "n": 2
+ },
+ "areas": {},
+ "acts": [
+  {
+   "id": "genesis",
+   "type": "genesis",
+   "signer": "C"
+  },
+  {
+   "id": "p1",
+   "type": "publication",
+   "signer": "C/d0",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ]
+  },
+  {
+   "id": "P",
+   "type": "closing",
+   "signer": "ben",
+   "tips": [
+    "p1"
+   ],
+   "objects": [],
+   "public": true
+  },
+  {
+   "id": "sig/ben/P",
+   "type": "chain_sig",
+   "signer": "ben",
+   "ending": "P",
+   "position": 1,
+   "counts": true
+  },
+  {
+   "id": "X",
+   "type": "closing",
+   "signer": "ben",
+   "tips": [
+    "p1"
+   ],
+   "objects": [
+    "P"
+   ],
+   "public": true
+  },
+  {
+   "id": "sig/ana/X",
+   "type": "chain_sig",
+   "signer": "ana",
+   "ending": "X",
+   "position": 1,
+   "counts": true
+  },
+  {
+   "id": "sig/ben/X",
+   "type": "chain_sig",
+   "signer": "ben",
+   "ending": "X",
+   "position": 2,
+   "counts": true
+  },
+  {
+   "id": "sig/cy/P",
+   "type": "chain_sig",
+   "signer": "cy",
+   "ending": "P",
+   "position": 1,
+   "counts": true
+  }
+ ]
+}

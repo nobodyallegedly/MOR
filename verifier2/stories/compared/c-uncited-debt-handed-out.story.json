@@ -1,0 +1,161 @@
+{
+  "acts": [
+    {
+      "counts": true,
+      "ending": "b0f08dacfeee1d6420b0378924d165883c0d2ba937e15bffcdbf3f41c29de17a",
+      "id": "12b634275d75843a9cf753470161ff3978a9fb5381145180b74a56086cbb43f1",
+      "order": 33,
+      "position": 1,
+      "signer": "4d758250ef1cb53ff1af5ae49d54e63b64b2d8ef9d134feb042c0f3d20e7aa6d",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "b0f08dacfeee1d6420b0378924d165883c0d2ba937e15bffcdbf3f41c29de17a",
+      "id": "1b94dc87c94b6af68a3e594df268adc20616094fa2f6fc03744fcb8462f3608a",
+      "order": 31,
+      "position": 1,
+      "signer": "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "b0f08dacfeee1d6420b0378924d165883c0d2ba937e15bffcdbf3f41c29de17a",
+      "id": "5cc8263302d1d4be7d1ef12874d575703e3a1f7af8f5cf72060c17976fac4c09",
+      "order": 29,
+      "position": 1,
+      "signer": "de1bb8f465bb7713680fcfd0386c5bef9662bb09b40c3da0fed0b6e2e7937328",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "b0f08dacfeee1d6420b0378924d165883c0d2ba937e15bffcdbf3f41c29de17a",
+      "id": "7095ee73cda91989f14b8d8e9323915f477831279d5c4fe9d246dcdb320fac53",
+      "order": 30,
+      "position": 1,
+      "signer": "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "agreement": "adf336facda92947b7aede2d57d65e9c95b7b803befd81a7d518f24c3c9ff730",
+      "assigned": [],
+      "cites": [],
+      "id": "b0f08dacfeee1d6420b0378924d165883c0d2ba937e15bffcdbf3f41c29de17a",
+      "objects": [],
+      "order": 28,
+      "public": true,
+      "sealed_to_all": false,
+      "sides": [
+        {
+          "members": [
+            "de1bb8f465bb7713680fcfd0386c5bef9662bb09b40c3da0fed0b6e2e7937328"
+          ],
+          "successor": "7f671d922c65f36b2b0cfaa5b9b51dd125afdebc58c648bc4b3459f84a42726f"
+        },
+        {
+          "members": [
+            "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+            "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+            "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a",
+            "4d758250ef1cb53ff1af5ae49d54e63b64b2d8ef9d134feb042c0f3d20e7aa6d"
+          ],
+          "successor": "87ca44888bd73bf81ee22818f4ae9dc1f6bf2a1e62d2c83d0f7b5e0a4e5f3ad8"
+        }
+      ],
+      "signer": "de1bb8f465bb7713680fcfd0386c5bef9662bb09b40c3da0fed0b6e2e7937328",
+      "sigs": [
+        "7f671d922c65f36b2b0cfaa5b9b51dd125afdebc58c648bc4b3459f84a42726f",
+        "87ca44888bd73bf81ee22818f4ae9dc1f6bf2a1e62d2c83d0f7b5e0a4e5f3ad8"
+      ],
+      "successor_signed": {
+        "7f671d922c65f36b2b0cfaa5b9b51dd125afdebc58c648bc4b3459f84a42726f": true,
+        "87ca44888bd73bf81ee22818f4ae9dc1f6bf2a1e62d2c83d0f7b5e0a4e5f3ad8": true
+      },
+      "tips": [
+        "fce4337c1ff3320f1e4d04d0ade2e38bb66fbbea7690e0990ffc7413f2ec8366"
+      ],
+      "type": "fork",
+      "valid": true
+    },
+    {
+      "cites": [],
+      "id": "b2de2fa031043bece72f75b64eea5bfb07f3af5d6f3994d798c646aa252fb2db",
+      "order": 12,
+      "public": true,
+      "sealed_to_all": false,
+      "signer": "C",
+      "type": "genesis",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "b0f08dacfeee1d6420b0378924d165883c0d2ba937e15bffcdbf3f41c29de17a",
+      "id": "c75b26e188445263bfa22bae9f6bfeb6e70892455aaaa7c576649f0455da810f",
+      "order": 32,
+      "position": 1,
+      "signer": "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "amount": 17,
+      "cites": [],
+      "creditor": "e1455c04edc3b8bf2af4946bcc406e33d8223eb8705f09976fa7293ab007f2f1",
+      "id": "fce4337c1ff3320f1e4d04d0ade2e38bb66fbbea7690e0990ffc7413f2ec8366",
+      "kind": "Debt",
+      "order": 18,
+      "public": true,
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "type": "obligation",
+      "valid": true
+    }
+  ],
+  "areas": {},
+  "collective": "b2de2fa031043bece72f75b64eea5bfb07f3af5d6f3994d798c646aa252fb2db",
+  "founding": "adf336facda92947b7aede2d57d65e9c95b7b803befd81a7d518f24c3c9ff730",
+  "members": [
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+    "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a",
+    "4d758250ef1cb53ff1af5ae49d54e63b64b2d8ef9d134feb042c0f3d20e7aa6d",
+    "de1bb8f465bb7713680fcfd0386c5bef9662bb09b40c3da0fed0b6e2e7937328"
+  ],
+  "meta": {
+    "name": "case00446.min",
+    "ops": [
+      "0: Debt { dev: 179, seal: Public, cited: false, creditor: 228, amount: 17, lane_sign: true }",
+      "11: Fork { stale: 1, sides: 144, debts: DropOne, seal: Public, all_sign: true, succ_sign: true, names: true }"
+    ],
+    "picked": [
+      0,
+      11
+    ],
+    "seed": 587655437411835057,
+    "shape": "Shape { members: 5, devices: 1, member_devices: 1, constitutional: None, lane: None, owns_work: false }"
+  },
+  "names": {
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "ben",
+    "060d445bd1423205a00afefd2af4de43f7fd06a087128906e12587df795ae34b": "stranger",
+    "4d758250ef1cb53ff1af5ae49d54e63b64b2d8ef9d134feb042c0f3d20e7aa6d": "dee",
+    "7f671d922c65f36b2b0cfaa5b9b51dd125afdebc58c648bc4b3459f84a42726f": "S0",
+    "87ca44888bd73bf81ee22818f4ae9dc1f6bf2a1e62d2c83d0f7b5e0a4e5f3ad8": "S1",
+    "a4e9a06e3677b4cbcbb238d720344b0e5df6ebab5a8beddc67f8bfa4a16146d4": "agent1",
+    "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a": "cy",
+    "b0c9213c33af2e0374f0a3dc3dabe6716e6473a784635a427005e3f32b7ae218": "creditor1",
+    "b2de2fa031043bece72f75b64eea5bfb07f3af5d6f3994d798c646aa252fb2db": "C",
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "ana",
+    "d7f231febe3abad2be5c38b056391fd03d4ff03658feae095b6a872370622d2a": "agent0",
+    "de1bb8f465bb7713680fcfd0386c5bef9662bb09b40c3da0fed0b6e2e7937328": "eli",
+    "e1455c04edc3b8bf2af4946bcc406e33d8223eb8705f09976fa7293ab007f2f1": "creditor0"
+  },
+  "rule": {
+    "kind": "every"
+  },
+  "skipped": []
+}
