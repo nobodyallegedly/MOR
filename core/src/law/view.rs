@@ -419,7 +419,7 @@ impl<'a> LawView<'a> {
             push_rails: self.push_rails.clone(),
             rail_invalid: self.rail_invalid.clone(),
             rail_valid: self.rail_valid.clone(),
-            absence_anchored: self.absence_anchored.clone(),
+            anchors: self.anchors.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
