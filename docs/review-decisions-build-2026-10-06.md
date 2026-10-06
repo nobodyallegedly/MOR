@@ -14,7 +14,7 @@
   2. **F148: a keeper's operator who is also the authority can acknowledge its own absence declaration.** The "kept for later" attack then still works in freeze scenario 1's shape.
   3. **F152 against F137.** A private link now counts only if it is published at its signer's homes. But the list of inputs every verifier must share does not name what a verifier found at the homes. Two verifiers holding the same acts and keys can disagree.
 - **The "when" sentences are rewritten below, but not written into the spec.** This session's permissions refused the edit to `spec/` and the paper. So the rewrites are proposals here, for Nobody, allegedly, to apply. One of them would change a rule's meaning (which vault counts for a payment), so it is written as a question instead.
-- **GitHub:** the tests run on this branch by hand (see "Run").
+- **GitHub:** every test passes on this branch (run 76).
   - The check that the published display client is the same as the code fails by design until the display client is released again.
   - A release commits to main and moves the live site, so it waits for Nobody, allegedly.
 
@@ -169,15 +169,20 @@
 
 ## Run
 
-- **Rust workspace.** Run on this branch after the three merges (`cargo test --workspace --locked --no-fail-fast`); see the closing note for the final count.
-- **WebAssembly and TypeScript clients.** Rebuilt and run on this branch; see the closing note.
+- **Rust workspace** on this branch after the three merges (`cargo test --workspace --locked --no-fail-fast`): 372 passed, 0 failed.
+  - The first run gave 371 and 1 failure. `a_debt_paid_through_a_readers_own_attempt_is_unknown` (F153) still paid an IOU the printer had never acknowledged. Under F145 that pays 0 whether or not the reader's attempts count, so the test never reached the own-attempt answer.
+  - Fixed by having the printer acknowledge the IOU with an act of its own (f4dec2a).
+- **WebAssembly and TypeScript.** The WebAssembly rebuilt. Every TypeScript package passed, 159 tests in all: barebone 9, collective 20, connector 12, desk 10, genesis 15, longform 17, manage 7, reader 16, repo 12, site 27, jpeg 14.
 - **Each building agent** ran the full suites in its own copy before merging:
   - Identity and Text: Rust 360 passed; TypeScript 159 passed across eleven packages.
   - Law: Rust 356 passed; the collective, repo and genesis clients passed.
   - Finance: Rust 362 passed; the manage, reader, repo, site and longform clients passed.
   - The `manage` and `reader` browser tests each failed once and then passed twice. The cause was not found.
 - **Verifier2.** 4,000 histories, 0 disagreements (above).
-- **GitHub.** The test workflow, run by hand on this branch; see the closing note. The reproducible-build check compares the code with the published display client in `clients/site/built/`, so it fails until the display client is released again (`.github/workflows/release-display-client.yml`). That release commits to main and the live site follows it, so it waits for Nobody, allegedly.
+- **GitHub.** The test workflow ran by hand on this branch at f4dec2a (run 76, 6 October 2026, 20:54 UTC).
+  - Every test step passed: the Rust workspace, the WebAssembly, the ten clients and the JPEG Module.
+  - Two steps failed, both by design: "Reproducible build of the display client" ("gateway.js differs from the released copy in built/") and the fingerprints step that compares with `built/`.
+  - Both compare the code with the published display client in `clients/site/built/`, which predates this code, so they stay red until the display client is released again (`.github/workflows/release-display-client.yml`). A release commits to main, and the live site follows it, so it waits for Nobody, allegedly.
 
 ## Only reasoned, not run
 
