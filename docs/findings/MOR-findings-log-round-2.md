@@ -1718,6 +1718,10 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 
 *What turns on it:* only the placement of members' signatures by acknowledgement, and the label a client shows on the witness act; no ending, signature or debt changed in the 4,000 stories. Smallest story: `verifier2/stories/compared/a-witness-act-counts` (seed 1, case 9, steps 10, 11, 18). *For Nobody, allegedly, to decide; neither verifier was changed.*
 
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed", option (b):** a collective's line is how Law orders without a clock, so an act on neither chain has no place on it and cannot give a signature one. A collective's Identity witness act counts for nothing in Law; it adopts nothing (F142) and places nothing. A collective places a member's signature by an action on its chain acknowledging or citing it, or by a record. The witness act keeps its Identity role (keeping an act visible as received).
+
+**Core changes:** Law draft 10, rule 35b and "Made before, made after" item 2. *To build:* the reference library stops placing signatures by a collective's witness act (`Consent::NoArea`), so the two verifiers agree; rerun verifier2.
+
 
 
 ## F151. On a rail that binds nothing, the payer's claim decides the purpose (review finding 7, 6 October 2026)
