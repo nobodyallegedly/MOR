@@ -2884,7 +2884,11 @@ fn ic3_a_revoked_act_stays_void_inside_a_forks_history() {
 /// IC4 (rule 32a, F127 W2): a sale is recorded by an act of the collective
 /// that acknowledges the payment. One rail payment, two receipts: the
 /// collective acknowledged one; the other was judged "never recorded,
-/// refunded": one payment both a purchase and owed back.
+/// refunded": one payment both a purchase and owed back. The
+/// acknowledgement here is the collective's witness act, which since F156
+/// counts for nothing in Law and records nothing (rule 35b): both receipts
+/// now share one verdict, never recorded before the fork, refunded. (Before
+/// F156 this test had the witness act record both: a purchase.)
 #[test]
 fn ic4_an_acknowledgement_records_the_whole_payment() {
     let shape = Shape { lane: Some((3, 1)), owns_work: true, ..two() };
@@ -2897,7 +2901,9 @@ fn ic4_an_acknowledgement_records_the_whole_payment() {
     let cw = run_col(&shape, &ops, 0);
     let lv = cw.view();
     let verdicts: Vec<law::PurchaseVerdict> = cw.info.iter().filter(|(_, f)| matches!(f.kind, K::Receipt { .. })).map(|(x, _)| lv.purchase(x).unwrap().unwrap().verdict).collect();
-    assert_eq!(verdicts, vec![law::PurchaseVerdict::Purchase; 2]);
+    assert_eq!(verdicts.len(), 2);
+    assert_eq!(verdicts[0], verdicts[1], "one payment, one verdict");
+    assert!(matches!(verdicts[0], law::PurchaseVerdict::NoPurchase { .. }), "the witness act records nothing (F156): {verdicts:?}");
 }
 
 /// IC5 (rule 47a, the tie rule): an obligation outside the history a fork
