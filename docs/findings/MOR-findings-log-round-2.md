@@ -1650,7 +1650,65 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 *Verifier2's three readings are all decided (F142 to F144). Reading D was settled by the text itself; the sentence "its own sequence's previous act counts as cited" to be reworded so it cannot mislead (with the next Law pass).*
 
 
-## F145. Does a collective's witness act count in Law? (verifier2 rerun, 6 October 2026)
+## F145. The pointer is judged by the payee's own act (review finding 1, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 1, first half):** F133 and F138 judged which pointer counts by the agreement act, an obligation or an offer, acts the payer or the debtor may sign or draft. A payer colluding with a thief could draft terms or an IOU citing the thief's pointer.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed":** the pointer is judged by the payee's own act, never the payer's. In an agreement, that is the payee's own signature act on it, which holds the payee's latest pointer and any rotation; in an offer, the offer, which is already the payee's. An obligation with no act of the payee's, such as an IOU, counts only if paid to the vault, until the payee acknowledges it with an act of their own.
+
+**Core changes:** Finance draft 6, rules 14 and 15 (replacing F133's and F138's "the agreement act holds"). *To build:* the payment cMIP's `pointer_in_force` reads the payee's signature act or the offer; an IOU without a payee's act counts only to the vault. *Still open:* good faith after a rotation (finding 1, second half; F139).
+
+
+## F146. Good faith after a rotation: the payer's claim as the floor, anchoring where both use it (review finding 1, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 1, second half):** F139 judges good faith by whether the payer's claim cites the rotation, an act the payer signs: a payer colluding with the thief leaves it out, and an honest payer who writes the claim after hearing of the rotation loses protection.
+
+**Considered and set aside:** judging by anchor order alone (the project lead's first suggestion). Nobody, allegedly: anchoring is not a core mechanic and has always been optional, so a Finance rule cannot depend on it. Judging by the owner's own list of accepted payments would put the loss on honest payers, against rule 15.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree. Documentation can outline the risk and recommend anchoring where there is value to protect":** F139 stays as the floor. Where both the payer's claim and the rotation are anchored, anchor order decides. Collusion is the stated cost of an unanchored theft window, borne by the owner and visible. A payer's client writes the claim at the moment it pays (client conformance). Documentation outlines the risk and recommends anchoring wherever there is value to protect.
+
+**Core changes:** Finance draft 6, rule 15. *To build:* the payment cMIP compares anchors when both acts are anchored; clients write the claim at payment. *Documentation:* the risk and the recommendation, in "Who can earn on MOR" and the case studies that handle value.
+
+
+## F147. An anonymous payer's claim covers its citations; several claims for one payment are read together (review finding 2, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 2):** the key-8 signature of an anonymous payer's claim (F135) covered the payload, not the act's citations or acknowledgements. Since F139 and F146 a claim's history decides good faith, so anyone holding the claim could re-wrap it in a new act citing the owner's rotation (or stripping it), turning the payer's good faith on or off, and could add or remove acknowledgements, making or unmaking a dispute in the payer's name. Also unclear: which of a payer's two claims for one payment counts.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Trusting you on this one. If it fails we'll come back to it":** the key-8 signature also covers the act's `objects`, `acks` and `refs`; the claim's history, for an anonymous payer, is only those covered citations (not `prev`, which is the act signer's). A payer's several claims for one payment are read together: the payment counts as made if any of them meets rule 15's proviso. The decision was the project lead's suggestion, accepted on trust; it is to be revisited if building or review breaks it.
+
+**Core changes:** Finance draft 6, claim format (anonymous signature) and rule 15. *To build:* the anonymous claim's signed bytes; the history walk for anonymous claims; reading a payer's claims for one proof together. *Freeze suite:* step 2.5c (a buyer's claim acknowledging a publication) relies on the covered `acks`.
+
+
+## F148. Absence periods: anchoring is a MUST where a clause expresses a time (review finding 3, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 3):** under F136, (a) an authority could anchor an absence declaration during a gap, keep it, and publish it months after the party returned; (b) unanchored liveness acts protected no one, against freeze scenario 1 ("the liveness act prevents a wrongful declaration"); (c) "act anchored on the agreement's time reference" could be read as any act anywhere, against rule 49; (d) the spec did not say that no period declaration can count until the anchoring and time-reference formats exist.
+
+**Decided (Nobody, allegedly, 6 October 2026): "This is one place where anchoring becomes a must… someone expressed a temporal variable":** anchoring stays optional in the core except where an act expresses a time; a clause naming a period of absence does, so there it is a MUST. A party's client MUST anchor its acts on such an agreement, liveness acts included; anyone may anchor anyone's act, and an anchored act protects its party whoever anchored it. A declaration counts only once an acknowledgement of it by another party or the keeper is anchored within one further period after the declaration's anchor, with no act of the declared party on the agreement anchored between. Only acts on the agreement count as presence (editorial, following rule 49), and the spec states the format dependency (editorial).
+
+**Working rule (follows F133's "'when' is avoided unless anchoring is involved"):** where a signed act expresses a time, anchoring is a MUST for what depends on it; elsewhere it stays optional.
+
+**Core changes:** Law draft 10, rules 50 and 51. *To build:* the acknowledgement-within-a-period check; anchored presence. *Freeze suite:* scenario 1's liveness act is anchored.
+
+
+## F149. A text format may hide only its own declared markup (review finding 5, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 5):** F140 bounded what a text format may hide to characters outside Unicode categories L and N, so a format could hide combining marks (a Hindi vowel sign turns "work" into "less"), punctuation (a decimal point) and symbols (a minus sign), changing an amount or a word without hiding a letter.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed":** the bound is inverted. A format may hide only its own markup: the characters its specification declares as markup, in the positions it declares them; everything else is shown.
+
+**Core changes:** Text draft 6, Text format task and its reasoning (replacing F140 item 10's category bound). *To build:* a format cMIP declares its markup; the long-form cMIP's declaration and the client check follow. Rule 5's warning list (Cf, Bidi_Control, Default_Ignorable_Code_Point) is unchanged.
+
+
+## F150. Leftovers by largest remainder, ties by the payment's hash (review finding 6, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 6):** F140 gave each stake's rounding leftovers to its first listed holder, but the order of holders is protected by nothing: a clone that only reorders them changes no share, needs no signature from the holder who loses, and with small payments moves most of the money (1 unit split three ways goes wholly to the first). The freeze suite still said "first listed party", and the paper's "within one smallest unit" did not hold.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed":** leftover units go one each to the holders with the largest fractional remainders; ties are ordered by a hash of the payment's receipt with each holder's identity. The listed order decides nothing. A split cMIP's own remainder rule must not depend on it either.
+
+**Core changes:** Law draft 10, stakes CDDL comment, rules 15a and 21, reasoning; freeze suite line on stakes. *To build:* the split computation in the core library and the split service, with a test that reordering holders changes no payout.
+
+
+## F151. Does a collective's witness act count in Law? (verifier2 rerun, 6 October 2026)
 
 **Found by rerunning verifier2 after F142 to F144 were built** (`docs/verifier2-report.md`, "Rerun"): on the same 4,000 random collective histories, the two verifiers now agree on every ending, every ending signature, which ending counts and every debtor; one disagreement remains, in 262 stories, on one kind of act. The collective's own Identity witness act (type 15), the act by which it acknowledges another act (F110), carries no `objects`. The reference library counts it as the collective's act (`Consent::NoArea`: valid under Identity, reached by no area, Identity governs it, on no chain of Law's) that adopts nothing (F142) and binds nothing, but places the members' signature acts it acknowledges ("Made before, made after", 2: "an act of the collective before it acknowledges them"). Verifier2 reads rule 35b first ("Identity's own everyday acts carry no objects and are on neither chain"; "an action citing no decision ... counts for nothing"): the witness act counts for nothing in Law at all. F142 decided what such an act adopts (nothing), not what it is.
 
@@ -1659,10 +1717,11 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 *What turns on it:* only the placement of members' signatures by acknowledgement, and the label a client shows on the witness act; no ending, signature or debt changed in the 4,000 stories. Smallest story: `verifier2/stories/compared/a-witness-act-counts` (seed 1, case 9, steps 10, 11, 18). *For Nobody, allegedly, to decide; neither verifier was changed.*
 
 
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
 
 **Corrected the same evening by the project lead, as editorial or following the decisions' own stated reasons (no new decision):** F144 now hands out every obligation that binds the collective (done, on its chain, within its signer's powers or adopted), as decided ("the debts that bind the collective"); F142 says "an action of its own key", "wherever it is stored"; F143's italic no longer claims independence from when a verifier is asked; F135's null sentence names keys 5, 6, 7 and 9; the rail-kind field marked format open; the freeze suite's leftover wording follows F140.
 
-**Open for Nobody, allegedly:** findings 1, 2, 3, 5, 6, 7, 8, 10, 16, 17, and the remaining "when" sentences.
+**Open for Nobody, allegedly:** findings 1, 2, 3, 5 and 6 decided (F145 to F150); open: findings 7, 8, 10, 16, 17, and the remaining "when" sentences.
