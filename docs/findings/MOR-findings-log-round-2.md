@@ -1534,3 +1534,5 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Still open, from the same build (for later, not decided):** R14-2, a payment in good faith after the owner's rotation (rule 15) needs the same treatment; R14-3, agreements name no pointer, so payments under them are judged "unknown"; R14-4, freeze scenario 1 step 5c's wording follows rule 14 ("only to the vault, or to the flow pointer the debt names"), a wording fix.
 
 **Core changes:** Finance draft 6, rule 14 (revised in place). To build: the core library checks the cited pointer version (the session that built rule 14, or the next).
+
+**Built, 6 October 2026:** `finance::pointer_cited` in the core library walks the agreement act's citations (`prev` and `objects`); the payment cMIP refuses a payment to the flow for a debt whose agreement act does not cite the pointer it names, and judges it unknown where the history held cannot tell (`docs/finance-rule-14-2026-10-06.md`, "F133, built"). A debt naming no agreement act counts only through the vault: a reading to confirm.

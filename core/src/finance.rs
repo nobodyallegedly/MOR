@@ -12,7 +12,8 @@
 //! from the vault the payee declared, where a payment of a given amount may
 //! be paid (rule 14a), or why it cannot be paid at all (rule 16); and, from
 //! the flow pointer version an obligation names, whether a payment to the
-//! flow can count for it (rule 14).
+//! flow can count for it, and whether that version is one its agreement
+//! act cites (rule 14, F133).
 
 use crate::act::Signature;
 use crate::cbor::{self, Value};
@@ -929,5 +930,49 @@ pub fn counts_toward(named: u64, into: PaidInto) -> bool {
     match into {
         PaidInto::Vault => true,
         PaidInto::Flow(paid) => named >= paid,
+    }
+}
+
+/// Rule 14 with F133: whether the payee pointer an obligation names (field
+/// 3) is one its agreement act (field 4) holds in its history: cites,
+/// directly or through what it cites, each act's previous acts in its
+/// sequence (`prev`) and every `objects` predecessor. *There is no clock to
+/// say when the agreement act was made; what it cites says what it saw. A
+/// debt re-signed to name a pointer its agreement act never saw, such as a
+/// thief's newer one, names a version that does not count for it.*
+///
+/// `None` where it cannot be told from the acts held: the agreement act is
+/// not held, or the walk meets an act not held without finding the
+/// pointer. An obligation naming no agreement act has no history that
+/// could hold the pointer: `Some(false)`, so only the vault counts for it.
+pub fn pointer_cited(v: &crate::chain::Verifier, o: &Obligation) -> Option<bool> {
+    let Some(agreement) = o.agreement else {
+        return Some(false);
+    };
+    let start = v.get(&agreement)?;
+    let cites = |i: &crate::act::Inside| -> Vec<Hash> {
+        let mut out: Vec<Hash> = i.prev.iter().flatten().copied().collect();
+        out.extend(i.objects.iter().flatten().map(|x| x.predecessor));
+        out
+    };
+    let mut seen = std::collections::BTreeSet::new();
+    let mut todo = cites(&start.inside);
+    let mut missing = false;
+    while let Some(x) = todo.pop() {
+        if x == o.pointer {
+            return Some(true);
+        }
+        if !seen.insert(x) {
+            continue;
+        }
+        match v.get(&x) {
+            Some(h) => todo.extend(cites(&h.inside)),
+            None => missing = true,
+        }
+    }
+    if missing {
+        None
+    } else {
+        Some(false)
     }
 }
