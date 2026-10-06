@@ -1789,6 +1789,17 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Law draft 10, rules 50 and 51. *To build:* `absence_by_anchors` refuses an acknowledgement by the declaration's signer; client warning at signing; scenario 1 test of the keeper-authority acknowledging itself. Also answers the build's question 4 (the declaring party may not acknowledge its own declaration).
 
 
+## F159. What a verifier found at the homes is an input; which homes count (build of F145 to F156, flaw 3 and question 14, 6 October 2026)
+
+**Found building F152** (flaw 3, question 14): a private link counts only if published at its signer's homes, but F137's list of shared inputs did not name what a verifier found there, so two verifiers holding the same acts could disagree; and which homes count was unstated (a signer who moves homes).
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** what a verifier found at the signer's homes joins the inputs; where it decides anything binding it is treated like a reader's own attempts (F153), shown as unknown until it no longer rests on one verifier's fetch. The homes that count are those the signer's chain names at the link act's binding; a later move does not void the link; a link nobody can fetch is unknown, never invalid. Identity rule 13: a home MUST store and serve sealed private links.
+
+**Working rule (Nobody, allegedly, refining F158's):** "We're more and more in rare cases. A common case would not get the 'argh just use the added stuff' reply." A stated cost, with an additional feature as the safer path, is acceptable for rare cases; a common case must work safely by default.
+
+**Core changes:** Identity draft 11, rule 13, the envelope section, the sentence after rule 17. *To build:* `published_at_home` judged against the homes at the link's binding; the fetch treated as an own-attempt input in `binding_status`.
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
