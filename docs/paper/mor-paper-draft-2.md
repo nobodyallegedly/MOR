@@ -2,7 +2,7 @@
 
 *A frozen core for identities that survive key theft, payments that cannot hide their cuts, and agreements anyone can leave*
 
-**Nobody, allegedly** · nobodyallegedly@proton.me
+**Nobody, allegedly** · nobodyallegedly@dubsar.org
 
 *Draft 2, 5 October 2026. Draft 1 revised after a hostile review (`docs/reviews/fable-paper-review-1.md`): claims narrowed to what the tests show, assumptions and non-claims added, related work widened. Pre-freeze: the protocol described here is experimental, has not been reviewed by any human adversary, and must not be used with real funds.*
 
@@ -267,7 +267,7 @@ Each of the following is, we believe, a self-contained piece of work, suitable f
 
 ## Availability
 
-The specifications, the findings log, the reference implementation and the tests are in the MOR repository. The texts, this paper included, are licensed CC BY 4.0; the code MIT or Apache 2.0. Contact: nobodyallegedly@proton.me.
+The specifications, the findings log, the reference implementation and the tests are in the MOR repository. The texts, this paper included, are licensed CC BY 4.0; the code MIT or Apache 2.0. Contact: nobodyallegedly@dubsar.org.
 
 ## References
 
