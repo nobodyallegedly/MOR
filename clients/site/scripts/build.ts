@@ -41,6 +41,20 @@ const browserCore: Plugin = {
   },
 };
 
+/** Every package is taken from this client's node_modules, whichever folder imports it: shared code from
+ * the reader or barebone clients would otherwise take its packages from their node_modules when those are
+ * installed, and the bundle would differ from one machine to another (found 6 October 2026, Mac against Linux). */
+const ownPackages: Plugin = {
+  name: 'own-packages',
+  setup(b) {
+    b.onResolve({ filter: /^[^./]/ }, async (a) => {
+      if (a.path.startsWith('node:') || a.pluginData?.own) return undefined;
+      const r = await b.resolve(a.path, { kind: a.kind, resolveDir: here(''), importer: a.importer, pluginData: { own: true } });
+      return r.errors.length ? undefined : { path: r.path, namespace: r.namespace, sideEffects: r.sideEffects };
+    });
+  },
+};
+
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 await build({
@@ -52,7 +66,7 @@ await build({
   format: 'esm',
   target: 'es2022',
   platform: 'browser',
-  plugins: [browserCore],
+  plugins: [browserCore, ownPackages],
   nodePaths: [here('node_modules')],
   legalComments: 'inline',
   logLevel: 'warning',
