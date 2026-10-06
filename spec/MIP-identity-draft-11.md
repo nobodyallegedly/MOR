@@ -72,7 +72,7 @@ A signature always signs the 32-byte act id. SLH-DSA signatures use the context 
 
 Every act is an Envelope MIP act: an outside (signer, binding, commitments, and for a public act its content key), a locked inside (spec, type, prev, objects, payload, position, summary, acks, refs, hint, salt), and a signature. Below, "signer" and "binding" are outside fields; "prev", "objects" and "payload" are inside fields.
 
-**Every act defined by this MIP is public, except a private link:** its content key travels on its outside, so homes, auditors and anyone checking an identity can open it. They are the public face of an identity (F29). A link's claim, confirmation and termination (types 6 to 8) may instead be private, encrypted as the Envelope MIP defines, their key delivered only to whoever should see them (F7, F134). *A link carries no key event, so no home or auditor needs to open it to follow an identity's keys.*
+**Every act defined by this MIP is public, except a private link:** its content key travels on its outside, so homes, auditors and anyone checking an identity can open it. They are the public face of an identity (F29). A link's claim, confirmation and termination (types 6 to 8) may instead be private, encrypted as the Envelope MIP defines, their key delivered only to whoever should see them (F7, F134). A private link act counts only if its sealed form is published where its signer's acts are published (its signer's homes); a verifier shown a private link act it cannot find there treats it as invalid (F152). Only key holders can tell a private act's type, so a verifier that opens a private Identity act of any other type refuses it (F134, F152). *A link carries no key event, so no home or auditor needs to open it to follow an identity's keys. Its content stays private, but its existence is public, so an owner whose stolen key confirmed a link sees an act they did not write and can rotate; a link shown only to one party would let a thief use the key and leave nothing to notice. The stated cost: anyone can see that a private link act exists, never with whom.*
 
 Every act has exactly one signer. An act that needs the agreement of two identities, such as a link, is made of two acts: one by each, the second naming the first.
 
@@ -454,7 +454,7 @@ These rules are part of validity and MUST give the same answer to every conformi
 ### Links and outside identities
 
 23. A link counts only when both sides have signed: the claim and a confirmation, in MOR or through a proof from the other protocol. A claim without a confirmation is not a link, and clients MUST NOT display it next to the identity it names.
-24. Either side MAY end a link alone. Ending stops the link going forward; it does not erase that the link existed.
+24. Either side MAY end a link alone. The ending applies to every act that holds the termination in its history; it does not erase that the link existed (F152). *There is no clock to say what comes after the ending; what an act cites says whether its signer had seen it.*
 25. A link gives no authority. Delegated authority uses grants (Law).
 26. Copies of a private link MUST be encrypted separately, so that stored copies cannot be matched to each other. The owner MAY store a private link under only one identity, or delay the second copy.
 

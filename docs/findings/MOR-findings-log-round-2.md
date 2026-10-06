@@ -1727,10 +1727,19 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Finance draft 6, rule 10 (replacing F141's last clause; where the rail binds them, F141 stands). *To build:* the payment cMIP's resolution for non-binding rails.
 
 
+## F152. A private link's existence is public (review finding 8, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 8):** with F134's private links, a thief holding an owner's signing key could claim and confirm a link privately and hand it to one party (a bank), reaching no relay: the owner never sees it and never rotates. Also, rule 24's "Ending stops the link going forward" is a "when" with no meaning for a party who never received a private termination.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed":** a private link act counts only if its sealed form is published where its signer's acts are published; content stays private, existence is public, so the owner's client sees an act it did not write. Stated cost: others see that a private link act exists, never with whom. Editorial, following F133's working rule: a link's ending applies to every act that holds the termination in its history. The spec now says that only key holders can tell a private act's type, and a verifier that opens a private Identity act other than types 6 to 8 refuses it.
+
+**Core changes:** Identity draft 11, the envelope section and rule 24. *To build:* homes store sealed private link acts; the owner's client warns on an unrecognised act signed with its key; verifiers check publication.
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
 
 **Corrected the same evening by the project lead, as editorial or following the decisions' own stated reasons (no new decision):** F144 now hands out every obligation that binds the collective (done, on its chain, within its signer's powers or adopted), as decided ("the debts that bind the collective"); F142 says "an action of its own key", "wherever it is stored"; F143's italic no longer claims independence from when a verifier is asked; F135's null sentence names keys 5, 6, 7 and 9; the rail-kind field marked format open; the freeze suite's leftover wording follows F140.
 
-**Open for Nobody, allegedly:** findings 1, 2, 3, 5, 6 and 7 decided (F145 to F151); open: findings 8, 10, 16, 17, and the remaining "when" sentences.
+**Open for Nobody, allegedly:** findings 1, 2, 3, 5, 6, 7 and 8 decided (F145 to F152); open: findings 10, 16, 17, and the remaining "when" sentences.
