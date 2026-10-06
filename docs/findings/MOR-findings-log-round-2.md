@@ -1637,3 +1637,14 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): "Agree":** each ending is judged on its own history; one that counts for nothing says so plainly, with its own completeness.
 
 **Core changes:** Law draft 10, after the closing's format ("Judged on its own history"). *To build:* `LawView::closing` and `fork` report completeness as `closed_by` judges it during the choice.
+
+
+## F144. A fork hands out only debts that are the collective's (verifier2, reading C, 6 October 2026)
+
+**Found by verifier2** (reading C, 32 of 4,000 stories; which ending counts changed in 15): a fork must hand out every obligation in its history, "save one sealed neither to every member nor publicly, which is never the collective's (rule 35a)". The reference read the exception by the seal alone, so a debt on no chain (citing no decision), which both verifiers agree binds no one, still had to be handed out, and blocked every fork reaching it until a successor signed for a debt nobody owes. Verifier2 read it by its reason: never the collective's.
+
+**Decided (Nobody, allegedly, 6 October 2026): "I agree":** a fork hands out the debts that bind the collective, done and on its chain; a debt that binds no one cannot block it, and stays visible as what it is.
+
+**Core changes:** Law draft 10, the fork's field 6 (each place it is stated). *To build:* the reference's `to_hand_out` takes only obligations done on the collective's chain.
+
+*Verifier2's three readings are all decided (F142 to F144). Reading D was settled by the text itself; the sentence "its own sequence's previous act counts as cited" to be reworded so it cannot mislead (with the next Law pass).*
