@@ -2844,21 +2844,32 @@ fn ic5_no_successor_owes_a_debt_outside_the_forks_history() {
     assert_eq!(lv.debtors(&d).unwrap(), Some(vec![]));
 }
 
-/// IC10 (F144, verifier2 reading C): a fork hands out only obligations that
-/// are the collective's, done and on its chain. A debt a device signed
-/// citing nothing on the collective's chain binds no one, and a fork whose
-/// line reaches it, handing out nothing, is complete all the same.
+/// IC10 (F144, verifier2 reading C, reworded after the review of F133 to
+/// F144): a fork hands out only obligations that bind the collective: done,
+/// on its chain, and within its signer's powers, or adopted. A debt a
+/// device signed citing nothing on the collective's chain, or one the
+/// Finance lane's holder never signed, binds no one, and a fork whose line
+/// reaches it, handing out nothing, is complete all the same.
 #[test]
-fn ic10_a_fork_hands_out_only_debts_on_the_chain() {
-    let cw = run_col(&two(), &[debt_op(0, false), fork_op(0, DebtsMode::Nothing)], 0);
-    let lv = cw.view();
-    let d = cw.debts[0];
-    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false), "on no chain, it binds no one (rule 35b)");
-    let e = lv.fork(&cw.endings[0].id).unwrap();
-    assert!(e.complete, "{:?}", e.why);
-    assert!(e.unassigned.is_empty());
-    assert_eq!(e.counts, Some(true));
-    assert_eq!(lv.debtors(&d).unwrap(), Some(vec![]));
+fn ic10_a_fork_hands_out_only_debts_that_bind() {
+    let uncited = run_col(&two(), &[debt_op(0, false), fork_op(0, DebtsMode::Nothing)], 0);
+    let lane = Shape { lane: Some((1, 1)), ..two() };
+    let unsigned = run_col(&lane, &[Op::Debt { dev: 0, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: false }, fork_op(0, DebtsMode::Nothing)], 0);
+    for (cw, why) in [(uncited, "on no chain (rule 35b)"), (unsigned, "beyond its signer's powers: the lane never signed it (rule 36a)")] {
+        let lv = cw.view();
+        let d = cw.debts[0];
+        assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false), "it binds no one, {why}");
+        let e = lv.fork(&cw.endings[0].id).unwrap();
+        assert!(e.complete, "{why}: {:?}", e.why);
+        assert!(e.unassigned.is_empty());
+        assert_eq!(e.counts, Some(true));
+        assert_eq!(lv.debtors(&d).unwrap(), Some(vec![]));
+    }
+    // One the lane signed is handed out, or the fork does not take effect.
+    let signed = run_col(&lane, &[debt_op(0, true), fork_op(0, DebtsMode::Nothing)], 0);
+    let lv = signed.view();
+    assert_eq!(lv.obligation_binds(&signed.debts[0]).unwrap(), Some(true));
+    assert!(!lv.fork(&signed.endings[0].id).unwrap().complete);
 }
 
 /// IC6 (determinism): the verifier kept its indexes in arrival order, so a

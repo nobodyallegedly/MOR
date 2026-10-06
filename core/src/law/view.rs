@@ -4275,15 +4275,14 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else { continue };
-            // F144: an obligation sealed neither to every member nor
-            // publicly, or on none of the collective's chains, citing no
-            // decision (rules 35a, 35b), is never the collective's, and is
-            // not handed out.
-            if o.debtor == col.id
-                && self.sealed_to_all(x, t)
-                && self.uncited(col, x, None)?.is_none()
-                && self.before_line(col, x, chain_act, tips)
-            {
+            // F144 (reworded after the review of F133 to F144): an
+            // obligation is handed out only if it binds the collective:
+            // done (sealed to every member or public, and on its chain,
+            // rules 35a and 35b) and within its signer's powers, or adopted
+            // (rules 40 and 42). One that binds no one cannot block a fork,
+            // and stays visible as what it is.
+            let _ = t;
+            if o.debtor == col.id && self.obligation_binds(&x.id)? == Some(true) && self.before_line(col, x, chain_act, tips) {
                 out.push(x.id);
             }
         }
