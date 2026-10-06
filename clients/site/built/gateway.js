@@ -67,6 +67,38 @@ var Verifier = class {
     }
   }
   /**
+   * The standing of an act for everything binding (keeper records,
+   * payments, discharge of debts, agreements, forks, closings): as
+   * `status`, except "unknown" where the answer rests on this client's
+   * own failed attempts to reach homes ("re-homed without audit") or on
+   * what it found at homes (`foundAtHome`), until it no longer does
+   * (Identity, the sentence after rule 17, F153, F159).
+   * Reading and following an identity use `status`.
+   * @param {string} act
+   * @returns {string}
+   */
+  bindingStatus(act) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+      const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_bindingStatus(this.__wbg_ptr, ptr0, len0);
+      var ptr2 = ret[0];
+      var len2 = ret[1];
+      if (ret[3]) {
+        ptr2 = 0;
+        len2 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred3_0 = ptr2;
+      deferred3_1 = len2;
+      return getStringFromWasm0(ptr2, len2);
+    } finally {
+      wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+  }
+  /**
    * Record that this client itself tried and failed to reach an operator's home.
    * @param {string} operator
    */
@@ -74,6 +106,27 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(operator, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_failedToReach(this.__wbg_ptr, ptr0, len0);
+    if (ret[1]) {
+      throw takeFromExternrefTable0(ret[0]);
+    }
+  }
+  /**
+   * Record that this client found the act, in its sealed form, at the
+   * home operated by `home` (the operator's identity hash; for a
+   * self-hosted home, the identity itself). A private link act counts
+   * only if found at a home its signer's chain names at its binding;
+   * otherwise it is unknown, never invalid. What was found is this
+   * client's own input: `bindingStatus` shows an answer resting on it
+   * as unknown (Identity, "The envelope", F152, F159).
+   * @param {string} act
+   * @param {string} home
+   */
+  foundAtHome(act, home) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(home, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_foundAtHome(this.__wbg_ptr, ptr0, len0, ptr1, len1);
     if (ret[1]) {
       throw takeFromExternrefTable0(ret[0]);
     }
@@ -486,21 +539,45 @@ var Verifier = class {
     return v2;
   }
   /**
+   * What is paid toward an obligation, as a binding answer: an error
+   * coded `law/own-attempt` where it rests on this client's own failed
+   * attempts to reach homes, shown as unknown (F153).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {bigint}
+   */
+  lawPaid(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawPaid(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return BigInt.asUintN(64, ret[0]);
+  }
+  /**
    * Payer-side splitting (F124 P2): what a paying wallet reading Law pays
    * each holder for `amount` on the stake in `object` (hex, or null for
-   * the collective itself), or why it cannot.
+   * the collective itself), or why it cannot. Leftovers by largest
+   * remainder, ties ordered by `receipt` (hex: the receipt's hash, or,
+   * for a split from a payer's claim with no receipt, the claim's; or
+   * null: then a tie that decides a unit leaves the split undetermined;
+   * Law rule 15a, F150, F162).
    * @param {any} specs
    * @param {string} agreement
    * @param {string | null | undefined} object
    * @param {bigint} amount
+   * @param {string | null} [receipt]
    * @returns {any}
    */
-  lawPayerSplit(specs, agreement, object, amount) {
+  lawPayerSplit(specs, agreement, object, amount, receipt) {
     const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
+    var ptr2 = isLikeNone(receipt) ? 0 : passStringToWasm0(receipt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len2 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount, ptr2, len2);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -618,6 +695,37 @@ var Verifier = class {
       throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A link between two MOR identities as the act `seenBy` sees it
+   * (Identity rules 23 and 24, F152): "not linked", "linked", "ended"
+   * (`seenBy` holds a termination in its history) or "unknown".
+   * @param {string} claim
+   * @param {string} seen_by
+   * @returns {string}
+   */
+  link(claim, seen_by) {
+    let deferred4_0;
+    let deferred4_1;
+    try {
+      const ptr0 = passStringToWasm0(claim, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ptr1 = passStringToWasm0(seen_by, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len1 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_link(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+      var ptr3 = ret[0];
+      var len3 = ret[1];
+      if (ret[3]) {
+        ptr3 = 0;
+        len3 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred4_0 = ptr3;
+      deferred4_1 = len3;
+      return getStringFromWasm0(ptr3, len3);
+    } finally {
+      wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+    }
   }
   /**
    * A verifier for the given Identity spec hash (`IDENTITY`; a test value
@@ -1200,6 +1308,7 @@ function getDataViewMemory0() {
   }
   return cachedDataViewMemory0;
 }
+var cachedFloat64ArrayMemory0 = null;
 function getStringFromWasm0(ptr, len) {
   return decodeText(ptr >>> 0, len);
 }
@@ -1296,6 +1405,7 @@ function __wbg_finalize_init(instance, module2) {
   wasm = instance.exports;
   wasmModule = module2;
   cachedDataViewMemory0 = null;
+  cachedFloat64ArrayMemory0 = null;
   cachedUint32ArrayMemory0 = null;
   cachedUint8ArrayMemory0 = null;
   wasm.__wbindgen_start();
@@ -2013,6 +2123,13 @@ async function lookUp(identity, hints, via = {}, into) {
       try {
         const rec = await r2.identity(identity);
         keep([...rec.chain, ...rec.receipts, ...rec.routes, ...rec.encryptionKeys, ...rec.evidence, ...rec.otherReceipts]);
+        for (const a of rec.links) {
+          try {
+            const d = describeAct(a);
+            if (!d.public && d.signer === identity) v.foundAtHome(d.id, h.operator ?? identity);
+          } catch {
+          }
+        }
       } catch {
         unreachable.push(h.hint);
         continue;
@@ -2533,6 +2650,537 @@ async function findWithdrawal(publication, signer, forId, hints, via, judge) {
   return null;
 }
 
+// ../longform/src/format.ts
+var MAX_DEPTH = 16;
+var DECLARED = {
+  heading: "# ",
+  rule: "-*",
+  "fence-open": "`",
+  "fence-close": "`",
+  quote: "> ",
+  item: " ",
+  indent: " ",
+  escape: "\\",
+  "code-open": "`",
+  "code-close": "`",
+  "link-open": "<",
+  "link-close": ">",
+  "em-open": "*",
+  "em-close": "*"
+};
+var ESCAPABLE = /* @__PURE__ */ new Set(["\\", "`", "*", "_", "#", "-", "+", ".", ">", "<", "[", "]", "(", ")", "!", "|", "~"]);
+var SPACES = /* @__PURE__ */ new Set([
+  32,
+  160,
+  5760,
+  8192,
+  8193,
+  8194,
+  8195,
+  8196,
+  8197,
+  8198,
+  8199,
+  8200,
+  8201,
+  8202,
+  8239,
+  8287,
+  12288
+]);
+var isSpace = (s, i) => SPACES.has(s.charCodeAt(i));
+var AUTOLINK = /^<((?:https?|mailto):[^ <>]+)>/;
+function parse(source) {
+  const lines = [];
+  let start = 0;
+  for (; ; ) {
+    const lf = source.indexOf("\n", start);
+    if (lf < 0) {
+      lines.push({ from: start, to: source.length });
+      break;
+    }
+    lines.push({ from: start, to: lf });
+    start = lf + 1;
+  }
+  const p = new Parser(source);
+  const blocks = p.blocks(lines, 0);
+  return { source, blocks, marks: p.marks.sort((a, b) => a.span.from - b.span.from) };
+}
+var FENCE = /^(`{3,})([^`]*)$/;
+var HEADING = /^(#{1,6}) (.+)$/;
+var RULE = /^(?:-{3,}|\*{3,})$/;
+var BULLET = /^([-*+]) /;
+var ORDERED = /^([0-9]{1,9}\.) /;
+var Parser = class {
+  constructor(s) {
+    this.s = s;
+  }
+  marks = [];
+  mark(rule, from, to) {
+    if (to > from) this.marks.push({ rule, span: { from, to } });
+  }
+  text(l) {
+    return this.s.slice(l.from, l.to);
+  }
+  /** The item marker a line starts with, if any, and its width including the space. */
+  marker(l) {
+    const x = this.text(l);
+    let m = BULLET.exec(x);
+    if (m) return { kind: m[1], width: 2, marker: { from: l.from, to: l.from + 1 } };
+    m = ORDERED.exec(x);
+    if (m) return { kind: ".", width: m[1].length + 1, marker: { from: l.from, to: l.from + m[1].length } };
+    return null;
+  }
+  /** Does this line open a block other than a paragraph (so it ends one)? */
+  starts(l, depth) {
+    const x = this.text(l);
+    if (FENCE.test(x) || HEADING.test(x) || RULE.test(x)) return true;
+    if (depth < MAX_DEPTH && (x.startsWith(">") || this.marker(l))) return true;
+    return false;
+  }
+  blocks(lines, depth) {
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+      const l = lines[i];
+      const x = this.text(l);
+      if (x === "") {
+        i++;
+        continue;
+      }
+      let m = FENCE.exec(x);
+      if (m) {
+        const n = m[1].length;
+        const label = m[2] === "" ? null : { from: l.from + n, to: l.to };
+        this.mark("fence-open", l.from, l.from + n);
+        const body = [];
+        i++;
+        while (i < lines.length) {
+          const y = this.text(lines[i]);
+          if (/^`+$/.test(y) && y.length >= n) {
+            this.mark("fence-close", lines[i].from, lines[i].to);
+            i++;
+            break;
+          }
+          body.push(lines[i]);
+          i++;
+        }
+        out.push({ t: "code", label, lines: body });
+        continue;
+      }
+      m = HEADING.exec(x);
+      if (m) {
+        const level = m[1].length;
+        this.mark("heading", l.from, l.from + level + 1);
+        out.push({ t: "heading", level, children: this.inline({ from: l.from + level + 1, to: l.to }) });
+        i++;
+        continue;
+      }
+      if (RULE.test(x)) {
+        this.mark("rule", l.from, l.to);
+        out.push({ t: "rule" });
+        i++;
+        continue;
+      }
+      if (depth < MAX_DEPTH && x.startsWith(">")) {
+        const inner = [];
+        while (i < lines.length && this.s[lines[i].from] === ">" && lines[i].from < lines[i].to) {
+          const q = lines[i];
+          const skip = this.s[q.from + 1] === " " && q.from + 1 < q.to ? 2 : 1;
+          this.mark("quote", q.from, q.from + skip);
+          inner.push({ from: q.from + skip, to: q.to });
+          i++;
+        }
+        out.push({ t: "quote", children: this.blocks(inner, depth + 1) });
+        continue;
+      }
+      const first = depth < MAX_DEPTH ? this.marker(l) : null;
+      if (first) {
+        const items = [];
+        while (i < lines.length) {
+          const mk = this.marker(lines[i]);
+          if (!mk || mk.kind !== first.kind) break;
+          const w = mk.width;
+          this.mark("item", lines[i].from + w - 1, lines[i].from + w);
+          const body = [{ from: lines[i].from + w, to: lines[i].to }];
+          i++;
+          const indent = " ".repeat(w);
+          while (i < lines.length) {
+            const y = this.text(lines[i]);
+            if (y.startsWith(indent)) {
+              this.mark("indent", lines[i].from, lines[i].from + w);
+              body.push({ from: lines[i].from + w, to: lines[i].to });
+              i++;
+              continue;
+            }
+            if (y === "") {
+              let j2 = i;
+              while (j2 < lines.length && this.text(lines[j2]) === "") j2++;
+              if (j2 < lines.length && this.text(lines[j2]).startsWith(indent)) {
+                for (; i < j2; i++) body.push({ from: lines[i].from, to: lines[i].to });
+                continue;
+              }
+            }
+            break;
+          }
+          items.push({ marker: mk.marker, children: this.blocks(body, depth + 1) });
+          let j = i;
+          while (j < lines.length && this.text(lines[j]) === "") j++;
+          const next = j < lines.length ? this.marker(lines[j]) : null;
+          if (!next || next.kind !== first.kind) break;
+          i = j;
+        }
+        out.push({ t: "list", ordered: first.kind === ".", items });
+        continue;
+      }
+      const children = [...this.inline(l)];
+      i++;
+      while (i < lines.length && this.text(lines[i]) !== "" && !this.starts(lines[i], depth)) {
+        children.push({ t: "break", at: lines[i - 1].to }, ...this.inline(lines[i]));
+        i++;
+      }
+      out.push({ t: "paragraph", children });
+    }
+    return out;
+  }
+  // -------------------------------------------------------------- inlines
+  /** The inline content of one line (rule 9). */
+  inline(l) {
+    const s = this.s;
+    const toks = [];
+    let run = -1;
+    const flush = (end) => {
+      if (run >= 0 && end > run) toks.push({ k: "node", node: { t: "text", span: { from: run, to: end } } });
+      run = -1;
+    };
+    const lit = (at) => {
+      if (run < 0) run = at;
+    };
+    let p = l.from;
+    while (p < l.to) {
+      const c = s[p];
+      if (c === "\\" && p + 1 < l.to && ESCAPABLE.has(s[p + 1])) {
+        flush(p);
+        this.mark("escape", p, p + 1);
+        run = p + 1;
+        p += 2;
+        continue;
+      }
+      if (c === "`") {
+        let n = 0;
+        while (p + n < l.to && s[p + n] === "`") n++;
+        let q = p + n;
+        let close = -1;
+        while (q < l.to) {
+          if (s[q] !== "`") {
+            q++;
+            continue;
+          }
+          let k = 0;
+          while (q + k < l.to && s[q + k] === "`") k++;
+          if (k === n) {
+            close = q;
+            break;
+          }
+          q += k;
+        }
+        if (close >= 0) {
+          flush(p);
+          this.mark("code-open", p, p + n);
+          this.mark("code-close", close, close + n);
+          toks.push({ k: "node", node: { t: "code", span: { from: p + n, to: close } } });
+          p = close + n;
+        } else {
+          lit(p);
+          p += n;
+        }
+        continue;
+      }
+      if (c === "<") {
+        const m = AUTOLINK.exec(s.slice(p, l.to));
+        if (m) {
+          flush(p);
+          const span = { from: p + 1, to: p + 1 + m[1].length };
+          this.mark("link-open", p, p + 1);
+          this.mark("link-close", span.to, span.to + 1);
+          toks.push({ k: "node", node: { t: "link", href: m[1], span } });
+          p = span.to + 1;
+          continue;
+        }
+        lit(p);
+        p++;
+        continue;
+      }
+      if (c === "*") {
+        let n = 0;
+        while (p + n < l.to && s[p + n] === "*") n++;
+        if (n > 3) {
+          lit(p);
+          p += n;
+          continue;
+        }
+        flush(p);
+        const open = p + n < l.to && !isSpace(s, p + n);
+        const close = p > l.from && !isSpace(s, p - 1);
+        toks.push({ k: "delim", span: { from: p, to: p + n }, n, open, close });
+        p += n;
+        continue;
+      }
+      lit(p);
+      p++;
+    }
+    flush(l.to);
+    const stack = [];
+    toks.forEach((tk, idx) => {
+      if (tk.k !== "delim") return;
+      if (tk.close) {
+        for (let j = stack.length - 1; j >= 0; j--) {
+          const o = toks[stack[j]];
+          if (o.n === tk.n) {
+            o.pair = "open";
+            tk.pair = "close";
+            stack.length = j;
+            return;
+          }
+        }
+      }
+      if (tk.open) stack.push(idx);
+    });
+    for (const j of stack) delete toks[j].pair;
+    const root = [];
+    const frames = [root];
+    const top = () => frames[frames.length - 1];
+    for (const tk of toks) {
+      if (tk.k === "node") {
+        top().push(tk.node);
+      } else if (tk.pair === "open") {
+        this.mark("em-open", tk.span.from, tk.span.to);
+        const outer = [];
+        if (tk.n === 1) {
+          top().push({ t: "em", children: outer });
+          frames.push(outer);
+        } else if (tk.n === 2) {
+          top().push({ t: "strong", children: outer });
+          frames.push(outer);
+        } else {
+          const inner = [];
+          top().push({ t: "strong", children: [{ t: "em", children: inner }] });
+          frames.push(inner);
+        }
+      } else if (tk.pair === "close") {
+        this.mark("em-close", tk.span.from, tk.span.to);
+        frames.pop();
+      } else {
+        top().push({ t: "text", span: tk.span });
+      }
+    }
+    return merge(root);
+  }
+};
+function merge(nodes) {
+  const out = [];
+  for (const n of nodes) {
+    const last = out[out.length - 1];
+    if (n.t === "text" && last?.t === "text" && last.span.to === n.span.from) {
+      last.span = { from: last.span.from, to: n.span.to };
+    } else if (n.t === "em" || n.t === "strong") {
+      out.push({ t: n.t, children: merge(n.children) });
+    } else {
+      out.push(n.t === "text" ? { t: "text", span: { ...n.span } } : n);
+    }
+  }
+  return out;
+}
+function shownIn(doc) {
+  const out = [];
+  let leaf = 0;
+  const span = (x) => {
+    for (let i = x.from; i < x.to; i++) out.push([i, leaf]);
+  };
+  const inl = (ns) => {
+    for (const n of ns) {
+      if (n.t === "text" || n.t === "code" || n.t === "link") span(n.span);
+      else if (n.t === "break") out.push([n.at, leaf]);
+      else inl(n.children);
+    }
+  };
+  const blk = (bs) => {
+    for (const b of bs) {
+      switch (b.t) {
+        case "heading":
+        case "paragraph":
+          leaf++;
+          inl(b.children);
+          break;
+        case "quote":
+          blk(b.children);
+          break;
+        case "list":
+          for (const it of b.items) {
+            leaf++;
+            span(it.marker);
+            blk(it.children);
+          }
+          break;
+        case "code":
+          leaf++;
+          if (b.label) span(b.label);
+          leaf++;
+          b.lines.forEach((l, k) => {
+            span(l);
+            if (k + 1 < b.lines.length) out.push([l.to, leaf]);
+          });
+          break;
+        case "rule":
+          break;
+      }
+    }
+  };
+  blk(doc.blocks);
+  return out;
+}
+function checkBound(doc) {
+  const s = doc.source;
+  const n = s.length;
+  const at = shownIn(doc);
+  const state2 = new Uint8Array(n);
+  const leafOf = new Int32Array(n).fill(-1);
+  let last = -1;
+  for (const [i, leaf] of at) {
+    if (i < 0 || i >= n) return `shows offset ${i}, outside the text`;
+    if (i <= last) return `shows offset ${i} after ${last}: out of the order of the bytes`;
+    last = i;
+    state2[i] = 1;
+    leafOf[i] = leaf;
+  }
+  const said = (i) => JSON.stringify(s[i] ?? "");
+  const lineStart = (i) => s.lastIndexOf("\n", i - 1) + 1;
+  const lineEnd = (i) => {
+    const e = s.indexOf("\n", i);
+    return e < 0 ? n : e;
+  };
+  const markers = new Uint8Array(n);
+  const markerSpans = (bs) => {
+    for (const b of bs) {
+      if (b.t === "quote") markerSpans(b.children);
+      if (b.t === "list")
+        for (const it of b.items) {
+          for (let i = it.marker.from; i < it.marker.to; i++) markers[i] = 1;
+          markerSpans(it.children);
+        }
+    }
+  };
+  markerSpans(doc.blocks);
+  const container = new Uint8Array(n);
+  for (const m of doc.marks)
+    if (m.rule === "quote" || m.rule === "indent" || m.rule === "item")
+      for (let i = m.span.from; i < m.span.to; i++) container[i] = 1;
+  const opensLine = (i) => {
+    for (let j = lineStart(i); j < i; j++) if (!container[j] && !markers[j]) return false;
+    return true;
+  };
+  const escaped = new Uint8Array(n + 1);
+  for (const m of doc.marks) if (m.rule === "escape") escaped[m.span.to] = 1;
+  const run = (i, c) => {
+    let a = i;
+    let b = i;
+    while (a > lineStart(i) && s[a - 1] === c && !escaped[a - 1]) a--;
+    while (b < lineEnd(i) && s[b] === c && !escaped[b]) b++;
+    return { from: a, to: b };
+  };
+  const isSpaceAt = (i) => i >= 0 && i < n && SPACES.has(s.charCodeAt(i));
+  const wholeRun = (m, c) => {
+    const r = run(m.span.from, c);
+    return r.from === m.span.from && r.to === m.span.to;
+  };
+  const sameLine = (a, b) => lineEnd(a.span.from) === lineEnd(b.span.from);
+  const stack = [];
+  let code = null;
+  let link = null;
+  for (const m of doc.marks) {
+    const { from, to } = m.span;
+    if (from < 0 || to > n || from >= to) return `declares markup outside the text at ${from}`;
+    for (let i = from; i < to; i++) {
+      if (state2[i]) return `hides ${said(i)} at ${i}, which it also shows`;
+      if (!DECLARED[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
+      state2[i] = 2;
+    }
+    const text = s.slice(from, to);
+    const fail2 = (why) => `hides ${JSON.stringify(text)} at ${from}, not in a declared position: ${why}`;
+    switch (m.rule) {
+      case "heading":
+        if (!/^#{1,6} $/.test(text) || !opensLine(from) || to >= lineEnd(from)) return fail2("one to six # and a space, opening a line, before some text");
+        break;
+      case "rule":
+        if (!opensLine(from) || to !== lineEnd(from) || !/^(?:-{3,}|\*{3,})$/.test(text)) return fail2("a whole line of three or more - or *");
+        break;
+      case "fence-open":
+        if (!opensLine(from) || to - from < 3 || !wholeRun(m, "`") || s.slice(to, lineEnd(from)).includes("`")) return fail2("three or more backticks opening a line, nothing after them a backtick");
+        break;
+      case "fence-close":
+        if (!opensLine(from) || to !== lineEnd(from)) return fail2("a whole line of backticks");
+        break;
+      case "quote":
+        if (s[from] !== ">" || to - from === 2 && s[from + 1] !== " " || !opensLine(from)) return fail2("a > and one space, opening a line");
+        break;
+      case "item":
+        if (from === 0 || !markers[from - 1] || to - from !== 1) return fail2("the one space after a list marker");
+        break;
+      case "indent":
+        if (!opensLine(from) || !/^ +$/.test(text)) return fail2("spaces opening an item's later line");
+        break;
+      case "escape":
+        if (to - from !== 1 || to >= lineEnd(from) || !ESCAPABLE.has(s[to]) || state2[to] !== 1) return fail2("a backslash before a character it escapes");
+        break;
+      case "code-open":
+        if (code || !wholeRun(m, "`")) return fail2("a whole run of backticks opening a code span");
+        code = m;
+        break;
+      case "code-close":
+        if (!code || !sameLine(code, m) || !wholeRun(m, "`") || to - from !== code.span.to - code.span.from) return fail2("a run of as many backticks closing a code span on its line");
+        code = null;
+        break;
+      case "link-open": {
+        const a = AUTOLINK.exec(s.slice(from, lineEnd(from)));
+        if (!a || link) return fail2("a < opening a link to an https, http or mailto address");
+        link = m;
+        break;
+      }
+      case "link-close": {
+        const a = link && AUTOLINK.exec(s.slice(link.span.from, lineEnd(link.span.from)));
+        if (!link || !a || link.span.from + a[0].length !== to) return fail2("the > closing a link");
+        link = null;
+        break;
+      }
+      case "em-open":
+        if (to - from > 3 || !wholeRun(m, "*") || to >= lineEnd(from) || isSpaceAt(to)) return fail2("a run of one to three * before a character not a space");
+        stack.push(m);
+        break;
+      case "em-close": {
+        const o = stack.pop();
+        if (to - from > 3 || !wholeRun(m, "*") || from <= lineStart(from) || isSpaceAt(from - 1)) return fail2("a run of one to three * after a character not a space");
+        if (!o || !sameLine(o, m) || o.span.to - o.span.from !== to - from) return fail2("no opener of its length on its line");
+        break;
+      }
+    }
+  }
+  if (stack.length || code || link) return "an opening sign is never closed on its line";
+  let prev = -1;
+  const next = new Int32Array(n + 1).fill(-1);
+  for (let i = n - 1; i >= 0; i--) next[i] = state2[i] === 1 ? i : next[i + 1];
+  for (let i = 0; i < n; i++) {
+    if (state2[i] === 1) {
+      prev = i;
+      continue;
+    }
+    if (state2[i] === 2) continue;
+    if (s[i] !== "\n") return `hides ${said(i)} at ${i}, which is not markup`;
+    const after = next[i + 1] ?? -1;
+    if (prev >= 0 && after >= 0 && leafOf[prev] === leafOf[after]) return `hides the LF at ${i}, inside a block`;
+  }
+  return null;
+}
+
 // ../longform/src/html.ts
 var ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 var escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ESC[c]);
@@ -2551,6 +3199,10 @@ var STYLE = `.mor-lf{white-space:pre-wrap;overflow-wrap:anywhere}
 .mor-lf-plain{white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,monospace}
 .mor-lf-ctl{outline:1px solid currentColor;font-size:.8em}`;
 function renderHtml(doc) {
+  const breach = checkBound(doc);
+  if (breach) {
+    return `<div class="mor-lf"><p class="mor-lf-refused">Shown plain: the long-form rendering would break the Text MIP's bound (${escapeHtml(breach)}).</p>${plainHtml(doc.source, { showControls: true })}</div>`;
+  }
   const s = doc.source;
   const text = (x) => escapeHtml(s.slice(x.from, x.to));
   const inl = (ns) => ns.map((n) => {
@@ -2604,312 +3256,6 @@ function plainHtml(source, opts = {}) {
   }
   out += escapeHtml(source.slice(last));
   return `<div class="mor-lf-plain" dir="ltr">${out}</div>`;
-}
-
-// ../longform/src/format.ts
-var MAX_DEPTH = 16;
-var ESCAPABLE = /* @__PURE__ */ new Set(["\\", "`", "*", "_", "#", "-", "+", ".", ">", "<", "[", "]", "(", ")", "!", "|", "~"]);
-var SPACES = /* @__PURE__ */ new Set([
-  32,
-  160,
-  5760,
-  8192,
-  8193,
-  8194,
-  8195,
-  8196,
-  8197,
-  8198,
-  8199,
-  8200,
-  8201,
-  8202,
-  8239,
-  8287,
-  12288
-]);
-var isSpace = (s, i) => SPACES.has(s.charCodeAt(i));
-var AUTOLINK = /^<((?:https?|mailto):[^ <>]+)>/;
-function parse(source) {
-  const lines = [];
-  let start = 0;
-  for (; ; ) {
-    const lf = source.indexOf("\n", start);
-    if (lf < 0) {
-      lines.push({ from: start, to: source.length });
-      break;
-    }
-    lines.push({ from: start, to: lf });
-    start = lf + 1;
-  }
-  return { source, blocks: new Parser(source).blocks(lines, 0) };
-}
-var FENCE = /^(`{3,})([^`]*)$/;
-var HEADING = /^(#{1,6}) (.+)$/;
-var RULE = /^(?:-{3,}|\*{3,})$/;
-var BULLET = /^([-*+]) /;
-var ORDERED = /^([0-9]{1,9}\.) /;
-var Parser = class {
-  constructor(s) {
-    this.s = s;
-  }
-  text(l) {
-    return this.s.slice(l.from, l.to);
-  }
-  /** The item marker a line starts with, if any, and its width including the space. */
-  marker(l) {
-    const x = this.text(l);
-    let m = BULLET.exec(x);
-    if (m) return { kind: m[1], width: 2, marker: { from: l.from, to: l.from + 1 } };
-    m = ORDERED.exec(x);
-    if (m) return { kind: ".", width: m[1].length + 1, marker: { from: l.from, to: l.from + m[1].length } };
-    return null;
-  }
-  /** Does this line open a block other than a paragraph (so it ends one)? */
-  starts(l, depth) {
-    const x = this.text(l);
-    if (FENCE.test(x) || HEADING.test(x) || RULE.test(x)) return true;
-    if (depth < MAX_DEPTH && (x.startsWith(">") || this.marker(l))) return true;
-    return false;
-  }
-  blocks(lines, depth) {
-    const out = [];
-    let i = 0;
-    while (i < lines.length) {
-      const l = lines[i];
-      const x = this.text(l);
-      if (x === "") {
-        i++;
-        continue;
-      }
-      let m = FENCE.exec(x);
-      if (m) {
-        const n = m[1].length;
-        const label = m[2] === "" ? null : { from: l.from + n, to: l.to };
-        const body = [];
-        i++;
-        while (i < lines.length) {
-          const y = this.text(lines[i]);
-          if (/^`+$/.test(y) && y.length >= n) {
-            i++;
-            break;
-          }
-          body.push(lines[i]);
-          i++;
-        }
-        out.push({ t: "code", label, lines: body });
-        continue;
-      }
-      m = HEADING.exec(x);
-      if (m) {
-        const level = m[1].length;
-        out.push({ t: "heading", level, children: this.inline({ from: l.from + level + 1, to: l.to }) });
-        i++;
-        continue;
-      }
-      if (RULE.test(x)) {
-        out.push({ t: "rule" });
-        i++;
-        continue;
-      }
-      if (depth < MAX_DEPTH && x.startsWith(">")) {
-        const inner = [];
-        while (i < lines.length && this.s[lines[i].from] === ">" && lines[i].from < lines[i].to) {
-          const q = lines[i];
-          const skip = this.s[q.from + 1] === " " && q.from + 1 < q.to ? 2 : 1;
-          inner.push({ from: q.from + skip, to: q.to });
-          i++;
-        }
-        out.push({ t: "quote", children: this.blocks(inner, depth + 1) });
-        continue;
-      }
-      const first = depth < MAX_DEPTH ? this.marker(l) : null;
-      if (first) {
-        const items = [];
-        while (i < lines.length) {
-          const mk = this.marker(lines[i]);
-          if (!mk || mk.kind !== first.kind) break;
-          const w = mk.width;
-          const body = [{ from: lines[i].from + w, to: lines[i].to }];
-          i++;
-          const indent = " ".repeat(w);
-          while (i < lines.length) {
-            const y = this.text(lines[i]);
-            if (y.startsWith(indent)) {
-              body.push({ from: lines[i].from + w, to: lines[i].to });
-              i++;
-              continue;
-            }
-            if (y === "") {
-              let j2 = i;
-              while (j2 < lines.length && this.text(lines[j2]) === "") j2++;
-              if (j2 < lines.length && this.text(lines[j2]).startsWith(indent)) {
-                for (; i < j2; i++) body.push({ from: lines[i].from, to: lines[i].to });
-                continue;
-              }
-            }
-            break;
-          }
-          items.push({ marker: mk.marker, children: this.blocks(body, depth + 1) });
-          let j = i;
-          while (j < lines.length && this.text(lines[j]) === "") j++;
-          const next = j < lines.length ? this.marker(lines[j]) : null;
-          if (!next || next.kind !== first.kind) break;
-          i = j;
-        }
-        out.push({ t: "list", ordered: first.kind === ".", items });
-        continue;
-      }
-      const children = [...this.inline(l)];
-      i++;
-      while (i < lines.length && this.text(lines[i]) !== "" && !this.starts(lines[i], depth)) {
-        children.push({ t: "break", at: lines[i - 1].to }, ...this.inline(lines[i]));
-        i++;
-      }
-      out.push({ t: "paragraph", children });
-    }
-    return out;
-  }
-  // -------------------------------------------------------------- inlines
-  /** The inline content of one line (rule 9). */
-  inline(l) {
-    const s = this.s;
-    const toks = [];
-    let run = -1;
-    const flush = (end) => {
-      if (run >= 0 && end > run) toks.push({ k: "node", node: { t: "text", span: { from: run, to: end } } });
-      run = -1;
-    };
-    const lit = (at) => {
-      if (run < 0) run = at;
-    };
-    let p = l.from;
-    while (p < l.to) {
-      const c = s[p];
-      if (c === "\\" && p + 1 < l.to && ESCAPABLE.has(s[p + 1])) {
-        flush(p);
-        run = p + 1;
-        p += 2;
-        continue;
-      }
-      if (c === "`") {
-        let n = 0;
-        while (p + n < l.to && s[p + n] === "`") n++;
-        let q = p + n;
-        let close = -1;
-        while (q < l.to) {
-          if (s[q] !== "`") {
-            q++;
-            continue;
-          }
-          let k = 0;
-          while (q + k < l.to && s[q + k] === "`") k++;
-          if (k === n) {
-            close = q;
-            break;
-          }
-          q += k;
-        }
-        if (close >= 0) {
-          flush(p);
-          toks.push({ k: "node", node: { t: "code", span: { from: p + n, to: close } } });
-          p = close + n;
-        } else {
-          lit(p);
-          p += n;
-        }
-        continue;
-      }
-      if (c === "<") {
-        const m = AUTOLINK.exec(s.slice(p, l.to));
-        if (m) {
-          flush(p);
-          const span = { from: p + 1, to: p + 1 + m[1].length };
-          toks.push({ k: "node", node: { t: "link", href: m[1], span } });
-          p = span.to + 1;
-          continue;
-        }
-        lit(p);
-        p++;
-        continue;
-      }
-      if (c === "*") {
-        let n = 0;
-        while (p + n < l.to && s[p + n] === "*") n++;
-        if (n > 3) {
-          lit(p);
-          p += n;
-          continue;
-        }
-        flush(p);
-        const open = p + n < l.to && !isSpace(s, p + n);
-        const close = p > l.from && !isSpace(s, p - 1);
-        toks.push({ k: "delim", span: { from: p, to: p + n }, n, open, close });
-        p += n;
-        continue;
-      }
-      lit(p);
-      p++;
-    }
-    flush(l.to);
-    const stack = [];
-    toks.forEach((tk, idx) => {
-      if (tk.k !== "delim") return;
-      if (tk.close) {
-        for (let j = stack.length - 1; j >= 0; j--) {
-          const o = toks[stack[j]];
-          if (o.n === tk.n) {
-            o.pair = "open";
-            tk.pair = "close";
-            stack.length = j;
-            return;
-          }
-        }
-      }
-      if (tk.open) stack.push(idx);
-    });
-    for (const j of stack) delete toks[j].pair;
-    const root = [];
-    const frames = [root];
-    const top = () => frames[frames.length - 1];
-    for (const tk of toks) {
-      if (tk.k === "node") {
-        top().push(tk.node);
-      } else if (tk.pair === "open") {
-        const outer = [];
-        if (tk.n === 1) {
-          top().push({ t: "em", children: outer });
-          frames.push(outer);
-        } else if (tk.n === 2) {
-          top().push({ t: "strong", children: outer });
-          frames.push(outer);
-        } else {
-          const inner = [];
-          top().push({ t: "strong", children: [{ t: "em", children: inner }] });
-          frames.push(inner);
-        }
-      } else if (tk.pair === "close") {
-        frames.pop();
-      } else {
-        top().push({ t: "text", span: tk.span });
-      }
-    }
-    return merge(root);
-  }
-};
-function merge(nodes) {
-  const out = [];
-  for (const n of nodes) {
-    const last = out[out.length - 1];
-    if (n.t === "text" && last?.t === "text" && last.span.to === n.span.from) {
-      last.span = { from: last.span.from, to: n.span.to };
-    } else if (n.t === "em" || n.t === "strong") {
-      out.push({ t: n.t, children: merge(n.children) });
-    } else {
-      out.push(n.t === "text" ? { t: "text", span: { ...n.span } } : n);
-    }
-  }
-  return out;
 }
 
 // ../barebone/src/html.ts
