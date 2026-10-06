@@ -75,17 +75,16 @@ pub struct LawView<'a> {
     /// receipt or claim not listed has no rail answer, and pays nothing
     /// toward a debt ([`Self::paid_toward`]).
     pub rail_valid: BTreeMap<Hash, crate::finance::PaidAt>,
-    /// Absence by anchoring (rule 51, F136), for each abandonment
-    /// declaration whose clause names a period of absence (key 2): what the
-    /// anchoring cMIP the agreement names answers, as the caller states it,
-    /// the anchoring and time-reference formats being open. `true`: the
-    /// declaration is anchored on the agreement's time reference, and no
-    /// act of the party on the agreement is anchored within the period
-    /// before it; `false`: one is. A declaration not listed is not anchored,
-    /// or one the anchors cannot place, and does not count. Where the
-    /// clause names no period, the declaration is the authority's judgment,
-    /// and this is not consulted.
-    pub absence_anchored: BTreeMap<Hash, bool>,
+    /// Anchoring (rules 50 and 51; F136, F148): for each act the anchoring
+    /// cMIP the agreement names places on the agreement's time reference,
+    /// the point it places it at, as the caller states it, the anchoring
+    /// and time-reference formats being open; counted in the unit the
+    /// abandonment clause's period (key 2) is written in (reading). Whoever
+    /// anchored the act, it is placed (anyone may anchor anyone's act,
+    /// F148). An act not listed is not anchored, or the anchors cannot
+    /// place it. Consulted only where an abandonment clause names a period
+    /// ([`Self::declaration`]).
+    pub anchors: BTreeMap<Hash, u64>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -234,6 +233,12 @@ pub enum Consent {
     /// A negotiation message (F128, W6): talk, binding nothing, on neither
     /// of the collective's chains; the deal it leads to is an action.
     Talk,
+    /// One of Identity's own everyday acts of the collective (a witness
+    /// act, routes, an encryption key): on neither of its chains, it counts
+    /// for nothing in Law, adopts nothing (F142) and places nothing (F156,
+    /// rule 35b). Identity governs it, and it keeps its Identity role: a
+    /// witness act still keeps the acts it names visible as received.
+    Identity,
     /// The areas reaching it, each counted.
     Areas {
         agreement: Hash,
@@ -369,7 +374,7 @@ impl<'a> LawView<'a> {
             push_rails: BTreeSet::new(),
             rail_invalid: BTreeSet::new(),
             rail_valid: BTreeMap::new(),
-            absence_anchored: BTreeMap::new(),
+            anchors: BTreeMap::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -1214,6 +1219,13 @@ impl<'a> LawView<'a> {
     /// key, or a grant its founding terms carry. Its forks and closings are
     /// decisions too, signed by members; an act acting under one counts for
     /// nothing.
+    /// One of Identity's own everyday acts of the collective (a witness
+    /// act, routes, an encryption key): an Identity act that is no link of
+    /// the collective's identity chain. On neither chain (rule 35b).
+    fn identity_everyday(col: &Col, h: &Held, mips: &Mips) -> bool {
+        h.inside.spec == mips.identity && col.res.position_of(&h.id).is_none()
+    }
+
     fn is_decision(&self, col: &Col, h: &Held) -> bool {
         col.res.position_of(&h.id).is_some()
             || ((self.is_law(h, types::RECORD) || self.is_law(h, types::GRANT) || self.is_law(h, types::REVOCATION))
@@ -1298,7 +1310,8 @@ impl<'a> LawView<'a> {
     fn uncited(&self, col: &Col, x: &Held, b: Option<usize>) -> R<Option<String>> {
         // Identity's own everyday acts (a witness act, routes, an encryption
         // key) carry no objects: Identity governs them, and they are on no
-        // chain of Law's (reading, F127).
+        // chain of Law's (reading, F127); they count for nothing in Law
+        // ([`Consent::Identity`], F156), which `consent` answers first.
         if x.inside.spec == self.mips.identity {
             return Ok(None);
         }
@@ -1451,13 +1464,20 @@ impl<'a> LawView<'a> {
     }
 
     /// The places the collective's acts give a member's signature act `s`
-    /// ("Made before, made after", 2; C1, C2, A2, Flaw M).
+    /// ("Made before, made after", 2; C1, C2, A2, Flaw M): the act of the
+    /// collective it signs, a record naming it, a rotation naming it, and
+    /// an act of the collective on its chain acknowledging it. Identity's
+    /// own everyday acts of the collective, a witness act included, are on
+    /// neither chain and place nothing (F156, rule 35b).
     fn placements(&self, col: &Col, s: &Held) -> Vec<(Line<'a>, bool)> {
         // (where, whether it is a line: lines are not placed by keepers)
         let mut out = vec![];
         if let Ok(signed) = decode_signature(&s.inside) {
             if let Some(a) = self.v.get(&signed) {
-                if Self::own_key(col, a) && self.status(&a.id) == Status::Valid {
+                if Self::own_key(col, a)
+                    && self.status(&a.id) == Status::Valid
+                    && !Self::identity_everyday(col, a, &self.mips)
+                {
                     out.push((Line::Record(a), self.is_law(a, types::RECORD)));
                 }
             }
@@ -1479,7 +1499,7 @@ impl<'a> LawView<'a> {
             }
         }
         for a in self.v.acknowledgements(&s.id) {
-            if Self::own_key(col, a) && self.status(&a.id) == Status::Valid {
+            if Self::own_key(col, a) && self.status(&a.id) == Status::Valid && self.on_chain(col, a) {
                 out.push((Line::Record(a), self.is_law(a, types::RECORD)));
             }
         }
@@ -1491,6 +1511,20 @@ impl<'a> LawView<'a> {
             }
         }
         out
+    }
+
+    /// Whether an act of the collective's own key is on one of its chains
+    /// (rule 35b): a decision, or an action citing the decision it acts
+    /// under. Identity's own everyday acts (a witness act) and negotiation
+    /// messages are on neither (F156, W6).
+    fn on_chain(&self, col: &Col, a: &Held) -> bool {
+        if self.is_decision(col, a) {
+            return true;
+        }
+        if Self::identity_everyday(col, a, &self.mips) || self.is_law(a, types::NEGOTIATION) {
+            return false;
+        }
+        matches!(self.uncited(col, a, col.pos(a)), Ok(None))
     }
 
     /// Whether a member's signature act counts as made before line `l`.
@@ -2068,8 +2102,10 @@ impl<'a> LawView<'a> {
     /// from it, that the party signed; every outcome is one that clause
     /// allows; and its signer can be that clause's authority: the identity
     /// it names, or one of the other parties, whose number is counted where
-    /// the declaration takes effect ([`Self::authority_at`]). Returns the
-    /// declaration and the clause, or why it fails.
+    /// the declaration takes effect ([`Self::authority_at`]); and, where
+    /// the clause names a period of absence, the anchors' checks (F136,
+    /// F148: [`Self::absence_by_anchors`]). Returns the declaration and the
+    /// clause, or why it fails.
     pub fn declaration(&self, id: &Hash) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let h = self.held(id)?;
         if !self.is_law(h, types::DECLARATION) {
@@ -2118,25 +2154,69 @@ impl<'a> LawView<'a> {
         if !ok {
             return Ok(Err("it is not signed by the authority the clause names (rule 51)".into()));
         }
-        // F136: where the clause names a period of absence, the declaration
-        // counts only if the party has no act anchored on the agreement's
-        // time reference within that period before the declaration's own
-        // anchored point; not anchored, or unplaceable, it does not count.
-        // The anchoring cMIP's answer is stated by the caller
-        // (`absence_anchored`), its format being open. With no period, the
+        // F136, F148: where the clause names a period of absence, judged by
+        // anchors alone ([`Self::absence_by_anchors`]). With no period, the
         // declaration is the authority's judgment, a stated cost.
-        if clause.period.is_some() {
-            match self.absence_anchored.get(id) {
-                Some(true) => {}
-                Some(false) => {
-                    return Ok(Err("the clause names a period of absence, and an act of the party on the agreement is anchored on its time reference within that period before the declaration (rule 51, F136)".into()))
-                }
-                None => {
-                    return Ok(Err("the clause names a period of absence, and the declaration is not anchored on the agreement's time reference, or the anchors cannot place it: it does not count (rule 51, F136)".into()))
-                }
+        if let Some(period) = clause.period {
+            let versions: Vec<Hash> = lineage.iter().map(|(v, _)| *v).collect();
+            if let Err(w) = self.absence_by_anchors(id, &d, period, &versions, &lineage[0].1) {
+                return Ok(Err(w));
             }
         }
         Ok(Ok((d, clause)))
+    }
+
+    /// Rule 51's checks under a clause naming a period of absence (F136,
+    /// F148), on the anchors the caller states ([`Self::anchors`]): the
+    /// declaration is anchored, at a point D; no act of the declared party
+    /// on the agreement is anchored within the period before it, from D
+    /// less the period to D; and an acknowledgement of it (Envelope,
+    /// `acks`) by another party of the agreement or by one of its keepers'
+    /// operators is anchored within one further period, from D to D plus
+    /// the period, with no act of the declared party on the agreement
+    /// anchored between the two. Only acts on the agreement count as
+    /// presence (rule 50): acts naming, in `objects`, the agreement or a
+    /// version back through its parents, as chain or predecessor, and
+    /// signature acts signing one; activity elsewhere does not. An act of
+    /// the party that nobody anchored is no presence (a stated cost, rule
+    /// 50). Bounds are taken inclusive, so that an act anchored at the
+    /// declaration's own point, or at its acknowledgement's, protects the
+    /// party (reading).
+    fn absence_by_anchors(&self, decl: &Hash, d: &AbsenceDeclaration, period: u64, versions: &[Hash], terms: &Terms) -> Result<(), String> {
+        let Some(&at) = self.anchors.get(decl) else {
+            return Err("the clause names a period of absence, and the declaration is not anchored on the agreement's time reference, or the anchors cannot place it: it does not count (rule 51, F136); until the anchoring cMIP and the time-reference format exist, the anchors are the caller's statement".into());
+        };
+        let on_agreement = |h: &Held| {
+            h.inside.objects.iter().flatten().any(|o| versions.contains(&o.chain) || versions.contains(&o.predecessor))
+                || (self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).is_ok_and(|x| versions.contains(&x)))
+        };
+        let presence: Vec<u64> = self
+            .v
+            .signed_by(&d.party)
+            .filter(|h| h.id != *decl && self.valid(&h.id) && on_agreement(h))
+            .filter_map(|h| self.anchors.get(&h.id).copied())
+            .collect();
+        if presence.iter().any(|p| *p >= at.saturating_sub(period) && *p <= at) {
+            return Err("the clause names a period of absence, and an act of the party on the agreement is anchored on its time reference within that period before the declaration (rule 51, F136)".into());
+        }
+        let keepers: Vec<Hash> = terms.keepers.iter().flat_map(|k| k.operators.iter().copied()).collect();
+        let ack = self
+            .v
+            .acknowledgements(decl)
+            .filter(|a| self.valid(&a.id))
+            .filter(|a| {
+                a.act.outside.signer.is_some_and(|s| s != d.party && (terms.parties.contains(&s) || keepers.contains(&s)))
+            })
+            .filter_map(|a| self.anchors.get(&a.id).copied())
+            .filter(|p| *p >= at && *p <= at.saturating_add(period))
+            .min();
+        let Some(ack) = ack else {
+            return Err("no acknowledgement of the declaration by another party or by the keeper is anchored within one further period after its own anchor: it does not count, so a declaration cannot be kept and used later (rule 51, F148)".into());
+        };
+        if presence.iter().any(|p| *p >= at && *p <= ack) {
+            return Err("an act of the declared party on the agreement is anchored between the declaration and its acknowledgement: it does not count (rule 51, F148)".into());
+        }
+        Ok(())
     }
 
     /// A threshold authority, counted where the declaration takes effect
@@ -2658,6 +2738,12 @@ impl<'a> LawView<'a> {
         // signed, and that signature is an action.
         if self.is_law(x, types::NEGOTIATION) {
             return Ok(Consent::Talk);
+        }
+        // F156 (rule 35b): Identity's own everyday acts, a witness act of the
+        // collective included, are on neither chain and count for nothing in
+        // Law.
+        if Self::identity_everyday(&col, x, &self.mips) {
+            return Ok(Consent::Identity);
         }
         // F127: an action cites, on the collective's chain, the decision it
         // acts under, and is judged under what its decisions leave in force.
@@ -4510,7 +4596,7 @@ impl<'a> LawView<'a> {
         // Each member's percentage of all the original's income: its stake
         // in itself (Q8, N5), else each member alike (N3).
         let own = t.own_stake().map(|(_, s)| s.clone());
-        let alike = divide(MILLION, &vec![1; voices.len()]);
+        let alike = divide_first(MILLION, &vec![1; voices.len()]);
         let pct = |m: &Hash| -> u64 {
             match &own {
                 Some(st) => st.share_of(&Who::Id(*m)),
@@ -4522,7 +4608,7 @@ impl<'a> LawView<'a> {
             e.by_count = own.is_none();
             weights = f.sides.iter().map(|s| s.members.len() as u64).collect();
         }
-        e.shares = divide(MILLION, &weights);
+        e.shares = divide_first(MILLION, &weights);
         for d in t.departed.iter().flatten() {
             e.kept.push((*d, pct(d)));
         }
@@ -5013,7 +5099,7 @@ impl<'a> LawView<'a> {
             Some(s) => s.shares.clone(),
             None => e.shares.clone(),
         };
-        Ok(Some(divide(held, &sides)))
+        Ok(Some(divide_first(held, &sides)))
     }
 
     /// Who owes an obligation of a collective a fork closed: the successors
@@ -6013,15 +6099,20 @@ impl<'a> LawView<'a> {
     /// Payer-side splitting (F124 P2, F64): where the owners' agreement
     /// names no split service, what a paying wallet that reads Law pays each
     /// holder's own pointer for `amount` on the stake in `object`, by its
-    /// shares, leftovers to the first (rule 15a). A holder that is a
-    /// collective splitting payer-side too is followed to the holders of its
-    /// stake in itself: one flow, holders' identities as destinations.
-    /// `Err` where the agreement names a split service, or no such stake.
-    pub fn payer_split(&self, agreement: &Hash, object: &Who, amount: u64) -> R<Result<Vec<(Hash, u64)>, String>> {
-        self.payer_split_depth(agreement, object, amount, 0)
+    /// shares, leftovers by largest remainder (rule 15a, F150), the order of
+    /// holders deciding nothing. Holders with equal remainders are ordered
+    /// by the hash of the payment's receipt, `receipt`; where they compete
+    /// for a leftover unit and none is given, the split is undetermined
+    /// (`Err`): which hash orders them before a payer-side payment has a
+    /// receipt is open. A holder that is a collective splitting payer-side
+    /// too is followed to the holders of its stake in itself: one flow,
+    /// holders' identities as destinations. `Err` where the agreement names
+    /// a split service, or no such stake.
+    pub fn payer_split(&self, agreement: &Hash, object: &Who, amount: u64, receipt: Option<&Hash>) -> R<Result<Vec<(Hash, u64)>, String>> {
+        self.payer_split_depth(agreement, object, amount, receipt, 0)
     }
 
-    fn payer_split_depth(&self, agreement: &Hash, object: &Who, amount: u64, depth: usize) -> R<Result<Vec<(Hash, u64)>, String>> {
+    fn payer_split_depth(&self, agreement: &Hash, object: &Who, amount: u64, receipt: Option<&Hash>, depth: usize) -> R<Result<Vec<(Hash, u64)>, String>> {
         if depth > 8 {
             return Ok(Err("collectives nested deeper than 8".into()));
         }
@@ -6033,21 +6124,28 @@ impl<'a> LawView<'a> {
             return Ok(Err("the agreement defines no such stake".into()));
         };
         let this = if t.is_collective() { self.collective_of(agreement)? } else { None };
-        let parts = divide(amount, &stake.holders.iter().map(|(_, n)| *n).collect::<Vec<_>>());
+        let mut ids: Vec<(Hash, u64)> = vec![];
+        for (h, n) in &stake.holders {
+            let Some(id) = h.resolve(this.as_ref()) else {
+                return Ok(Err("a holder written null, and the collective is not held".into()));
+            };
+            ids.push((id, *n));
+        }
+        let parts = match divide_stake(amount, &ids, receipt) {
+            Ok(p) => p,
+            Err(w) => return Ok(Err(w)),
+        };
         let mut out: Vec<(Hash, u64)> = vec![];
         let mut add = |h: Hash, n: u64| match out.iter_mut().find(|(x, _)| *x == h) {
             Some(e) => e.1 += n,
             None => out.push((h, n)),
         };
-        for ((h, _), n) in stake.holders.iter().zip(parts) {
-            let Some(id) = h.resolve(this.as_ref()) else {
-                return Ok(Err("a holder written null, and the collective is not held".into()));
-            };
+        for ((id, _), n) in ids.into_iter().zip(parts) {
             let inner = match self.current(&id)? {
                 Some(cur) if Some(id) != this || *object != Who::This => {
                     let ct = self.terms(&cur.agreement)?;
                     if ct.split_grant.is_none() && ct.payee_grants.is_none() && ct.own_stake().is_some() {
-                        Some(self.payer_split_depth(&cur.agreement, &Who::This, n, depth + 1)?)
+                        Some(self.payer_split_depth(&cur.agreement, &Who::This, n, receipt, depth + 1)?)
                     } else {
                         None
                     }
@@ -6507,9 +6605,12 @@ impl<'a> LawView<'a> {
     }
 }
 
-/// `total` divided by `weights`, in whole parts, leftovers to the first
-/// (rule 15a).
-fn divide(total: u64, weights: &[u64]) -> Vec<u64> {
+/// `total` divided by `weights`, in whole parts, leftovers to the first:
+/// a fork's sides, which "Fork (type 19)" still divides "leftovers to the
+/// first side", and a fork's members counted alike. A payment divided on a
+/// stake follows rule 15a instead ([`divide_stake`], F150), its leftovers
+/// ordered by no list.
+fn divide_first(total: u64, weights: &[u64]) -> Vec<u64> {
     let sum: u128 = weights.iter().map(|w| *w as u128).sum();
     if sum == 0 {
         return vec![0; weights.len()];

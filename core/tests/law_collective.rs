@@ -12,7 +12,7 @@
 
 mod common;
 
-use common::{own_home, schnorr, signing_key, Person, Rot, World};
+use common::{law_spec, own_home, schnorr, signing_key, Person, Rot, World};
 use mor_core::sig::SchnorrKey;
 use mor_core::act::Object;
 use mor_core::cbor::Value;
@@ -76,8 +76,9 @@ struct Lab {
     /// a verifier states it after the payment cMIP: valid, and where paid.
     rail_valid: Vec<(Hash, mor_core::finance::PaidAt)>,
     /// The anchoring cMIP's answer on each declaration under a clause
-    /// naming a period (rule 51, F136), as a verifier states it.
-    absence_anchored: Vec<(Hash, bool)>,
+    /// naming a period (rules 50, 51; F136, F148): each anchored act's
+    /// point on the time reference, as a verifier states it.
+    anchors: Vec<(Hash, u64)>,
 }
 
 /// A grant key (F128): made by the grantee, who keeps its secret part; the
@@ -215,7 +216,7 @@ impl Lab {
             keeper,
             keeper_logs: vec![],
             rail_valid: vec![],
-            absence_anchored: vec![],
+            anchors: vec![],
         }
     }
 
@@ -239,7 +240,7 @@ impl Lab {
             v.keeper_logs.insert(*op, log.clone());
         }
         v.rail_valid.extend(self.rail_valid.iter().copied());
-        v.absence_anchored.extend(self.absence_anchored.iter().copied());
+        v.anchors.extend(self.anchors.iter().copied());
         v
     }
 
@@ -361,9 +362,28 @@ impl Lab {
     }
 
     /// The label acknowledges an act by a witness act (Identity type 15),
-    /// on device `d`: on neither chain, it adopts nothing (F142).
+    /// on device `d`: on neither chain, it adopts nothing (F142) and places
+    /// nothing (F156).
     fn ack(&mut self, d: usize, x: Hash) -> Hash {
         self.w.ack(&mut self.c[d], x)
+    }
+
+    /// The label acknowledges an act by an action of its own key on device
+    /// `d`, on its chain (a Law act, type 12, which may carry `acks`, F110):
+    /// how it places a member's signature act before its next line
+    /// ("Made before, made after", 2; C2, F156).
+    fn acknowledge(&mut self, d: usize, x: Hash) -> Hash {
+        let a = self.w.everyday_act(&mut self.c[d], law_spec(), 12, vec![], None, Some(vec![x]));
+        self.w.add(&a)
+    }
+
+    /// The same act citing nothing on the label's chain: an action on no
+    /// chain of the label, which places nothing (rule 35b, F156).
+    fn acknowledge_uncited(&mut self, d: usize, x: Hash) -> Hash {
+        let cite = self.c[d].cite.take();
+        let a = self.w.everyday_act(&mut self.c[d], law_spec(), 12, vec![], None, Some(vec![x]));
+        self.c[d].cite = cite;
+        self.w.add(&a)
     }
 
     /// The label adopts an act (rule 40, F142): an action of its own key on
@@ -867,7 +887,7 @@ fn a_departure_takes_effect_at_the_labels_line() {
     });
     let k2 = lab.propose(CY, &t);
     let sb2 = sign(&mut lab.w, &mut ben_tablet, &k2);
-    lab.ack(0, sb2);
+    lab.acknowledge(0, sb2);
 
     // Ben resigns, from the laptop.
     let res = lab.resign_from(&mut ben_laptop, k, None);
@@ -1024,7 +1044,7 @@ fn a_number_never_asks_for_more_voices_than_remain() {
             let k = lab.propose(BEN, &t);
             let sa = lab.sign(ANA, &k);
             if acked {
-                lab.ack(0, sa);
+                lab.acknowledge(0, sa);
             }
             let mut ana = lab.m[ANA].clone();
             let res = lab.resign_from(&mut ana, f, None);
@@ -2077,15 +2097,15 @@ fn a_declaration_removes_a_voice_at_the_labels_line() {
     );
 }
 
-/// Law rule 51 (F136): where the abandonment clause names a period of
-/// absence on the agreement's time reference, a declaration counts only if
-/// the party has no act anchored within that period before the
-/// declaration's own anchored point. The anchoring cMIP's answer is stated
-/// by the verifier, its format open: unstated, the declaration is not
-/// anchored, or unplaceable, and does not count; stated with an act of the
-/// party within the period, it does not count; stated clear, it counts.
-/// Where the clause names no period, the declaration is the authority's
-/// judgment, as before.
+/// Law rules 50 and 51 (F136, F148): where the abandonment clause names a
+/// period of absence on the agreement's time reference, a declaration
+/// counts only once anchored, with no act of the party on the agreement
+/// anchored within the period before it, and with an acknowledgement of it
+/// by another party or the keeper anchored within one further period
+/// after it. The anchors are stated by the verifier, the anchoring and
+/// time-reference formats being open: an unstated declaration is not
+/// anchored, or unplaceable, and does not count. Where the clause names no
+/// period, the declaration is the authority's judgment, as before.
 #[test]
 fn a_declaration_under_a_period_counts_only_anchored() {
     let mut lab = Lab::new(&|t| {
@@ -2098,16 +2118,22 @@ fn a_declaration_under_a_period_counts_only_anchored() {
     assert!(why(&lab).is_some_and(|w| w.contains("not anchored") && w.contains("F136")), "{:?}", why(&lab));
     let line = lab.record(0, None, &[], vec![d], f);
     assert!(lab.view().record(&lab.c[0].id, &line).unwrap().registers.is_empty(), "the record registers nothing");
-    // Cy signed something within the period: the declaration counts for
-    // nothing.
-    lab.absence_anchored.push((d, false));
-    assert!(why(&lab).is_some_and(|w| w.contains("within that period")), "{:?}", why(&lab));
-    // Nothing of Cy's anchored within the period before it: it counts.
-    lab.absence_anchored.clear();
-    lab.absence_anchored.push((d, true));
-    assert!(lab.view().declaration(&d).unwrap().is_ok());
+    // Anchored at 100, but acknowledged by nobody (F148).
+    lab.anchors.push((d, 100));
+    assert!(why(&lab).is_some_and(|w| w.contains("acknowledgement") && w.contains("F148")), "{:?}", why(&lab));
+    // Ana, another party, acknowledges it, anchored at 120: it counts.
+    let mut ana = lab.m[ANA].clone();
+    let ack = lab.w.ack(&mut ana, d);
+    lab.anchors.push((ack, 120));
+    assert!(lab.view().declaration(&d).unwrap().is_ok(), "{:?}", why(&lab));
     let line = lab.record(0, None, &[], vec![d], f);
     assert_eq!(lab.view().record(&lab.c[0].id, &line).unwrap().registers.len(), 1);
+    // Cy's liveness act on the agreement, anchored at 80, within the
+    // period before it: the declaration counts for nothing.
+    let mut cy = lab.m[CY].clone();
+    let live = law_act(&mut lab.w, &mut cy, 12, vec![], obj(f));
+    lab.anchors.push((live, 80));
+    assert!(why(&lab).is_some_and(|w| w.contains("within that period")), "{:?}", why(&lab));
     // With no period, the authority's judgment stands on its own.
     let mut plain = Lab::new(&|_| {});
     let pf = plain.founding;
@@ -2132,6 +2158,8 @@ fn a_threshold_authority_is_counted_at_the_line() {
         "acknowledged by the record",
         "acknowledged before",
         "acknowledged after",
+        "witnessed before",
+        "acknowledged off the chain",
     ] {
         let mut lab = Lab::new(&|t| {
             t.abandonment = Some(Abandonment {
@@ -2159,13 +2187,30 @@ fn a_threshold_authority_is_counted_at_the_line() {
             match case {
                 "acknowledged by the record" => acks = Some(vec![sb]),
                 "acknowledged before" => {
-                    lab.ack(0, sb);
+                    lab.acknowledge(0, sb);
+                }
+                // F156: a witness act of the label is on neither chain and
+                // places nothing; nor does an action on no chain (rule 35b).
+                "witnessed before" => {
+                    let w = lab.ack(0, sb);
+                    assert_eq!(lab.consent(&w), Consent::Identity, "a witness act counts for nothing in Law (F156)");
+                    assert!(!lab.counts(&w));
+                }
+                "acknowledged off the chain" => {
+                    let a = lab.acknowledge_uncited(0, sb);
+                    assert!(matches!(lab.consent(&a), Consent::Uncited { .. }));
                 }
                 _ => {}
             }
             let r = lab.record_acking(0, None, &[], regs.clone(), f, acks.clone());
+            if matches!(case, "witnessed before" | "acknowledged off the chain") {
+                let e = lab.view().record(&lab.c[0].id, &r).unwrap();
+                assert!(!e.line, "{case}: the signature is not placed before the record (F156)");
+                assert!(e.not_a_line.as_deref().is_some_and(|w| w.contains("1 of the 2")), "{:?}", e.not_a_line);
+                continue;
+            }
             if case == "acknowledged after" {
-                lab.ack(0, sb);
+                lab.acknowledge(0, sb);
                 let e = lab.view().record(&lab.c[0].id, &r).unwrap();
                 assert!(!e.line, "a signature placed after the record completes nothing there");
                 assert!(e.not_a_line.as_deref().is_some_and(|w| w.contains("1 of the 2")), "{:?}", e.not_a_line);
@@ -2264,7 +2309,7 @@ fn a_threshold_declaration_at_the_recovery_rotation() {
         let d = lab.declare(Some(BEN), f, f, ANA, vec![outcomes::VOICE_REMOVED]);
         let sc = lab.sign(CY, &d);
         if case == "placed before" {
-            lab.ack(0, sc);
+            lab.acknowledge(0, sc);
         }
         let ids = lab.ids();
         let keep = vec![ids[BEN], ids[CY]];
@@ -2943,6 +2988,132 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
     assert_eq!(a2.exists, Some(true), "{:?}", a2.invalid);
 }
 
+/// Freeze scenario 1, step 9 (F136, F148; the hostile review of F133 to
+/// F144, finding 3): a deal whose clause names a two-week period on its
+/// block height (here 30 blocks), the keeper's operator the authority on
+/// absence. The verifier states the anchors (formats open). A liveness act
+/// on the deal protects its party once anchored, whoever anchored it; one
+/// nobody anchored does not (a stated cost). Activity elsewhere protects
+/// no one. A declaration anchored during a gap and kept counts only if
+/// another party or the keeper acknowledged it, anchored within one
+/// further period, with no act of the party on the deal anchored between:
+/// published months later, after the party returned, it counts for
+/// nothing.
+#[test]
+fn scenario_1_absence_is_judged_by_anchors() {
+    let mut w = World::new();
+    let mut m: Vec<Person> = ["p1", "p2", "p3"]
+        .iter()
+        .map(|n| w.genesis(n, vec![own_home()], None, None))
+        .collect();
+    let mut keeper = w.genesis("keeper", vec![own_home()], None, None);
+    let mut stranger = w.genesis("a stranger", vec![own_home()], None, None);
+    let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+    let terms = Terms {
+        parties: ids.clone(),
+        text: "The film's contributors share its revenue.".into(),
+        cmips: vec![(6, pay()), (11, anchor())],
+        keepers: Some(Keepers { operators: vec![keeper.id], rule: Rule::All }),
+        field4: Field4::Rule(Rule::All),
+        clone: Rule::All,
+        time: Some((spec("a block height reference"), Value::Uint(0))),
+        abandonment: Some(Abandonment {
+            authority: Authority::Named(keeper.id),
+            outcomes: vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED],
+            period: Some(30),
+        }),
+        parent: None,
+        grammar: None,
+        arbitrators: None,
+        split_grant: None,
+        payee_grants: None,
+        extensions: None,
+        succession: None,
+        constitutional: None,
+        areas: None,
+        area_words: None,
+        chain: None,
+        departed: None,
+        stakes: None,
+        forked_from: None,
+        release_rule: None,
+    };
+    assert_eq!(terms.check(&mips()), Ok(()));
+    let d = law_act(&mut w, &mut m[0], law::types::TERMS, terms.to_map(), None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &d);
+    }
+    // Another agreement p2 is busy on.
+    let elsewhere = law_act(&mut w, &mut m[1], law::types::TERMS, Terms { parties: vec![ids[1]], ..terms.clone() }.to_map(), None);
+    let mut declare = |w: &mut World, party: usize| {
+        let x = AbsenceDeclaration { agreement: d, clause: d, party: ids[party], outcomes: vec![outcomes::STAKE_REDISTRIBUTED] };
+        law_act(w, &mut keeper, law::types::DECLARATION, x.to_map(), obj(d))
+    };
+    let judged = |w: &World, anchors: &[(Hash, u64)], x: &Hash| -> Result<(), String> {
+        let mut v = view(w);
+        v.anchors.extend(anchors.iter().copied());
+        v.declaration(x).unwrap().map(|_| ())
+    };
+
+    // p1, with nothing to sign for months, posts a liveness act on the deal
+    // (type 12, its format open: here it names the deal), anchored at 95 by
+    // a friend: it keeps their vote.
+    let live = law_act(&mut w, &mut m[0], 12, vec![], obj(d));
+    let d1 = declare(&mut w, 0);
+    let ack1 = w.ack(&mut m[1], d1);
+    let base = vec![(d1, 100), (ack1, 110)];
+    let got = judged(&w, &[base.clone(), vec![(live, 95)]].concat(), &d1);
+    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    // The same liveness act, anchored by nobody, protects no one.
+    assert_eq!(judged(&w, &base, &d1), Ok(()));
+    // Anchored before the period, it no longer protects either.
+    assert_eq!(judged(&w, &[base.clone(), vec![(live, 60)]].concat(), &d1), Ok(()));
+
+    // p2 goes silent on the deal while active elsewhere: acts anchored
+    // within the period, but not on the deal, protect nothing.
+    let busy = law_act(&mut w, &mut m[1], 12, vec![], obj(elsewhere));
+    let post = w.post(&mut m[1], "a post far from the film");
+    let d2 = declare(&mut w, 1);
+    let ack2 = w.ack(&mut m[0], d2);
+    let got = judged(&w, &[(busy, 95), (post, 96), (d2, 100), (ack2, 105)], &d2);
+    assert_eq!(got, Ok(()), "activity elsewhere is no presence (rule 50)");
+
+    // p3 is away in January. The operator anchors a declaration at 100,
+    // during the gap, and keeps it to themselves. p3 comes back and works
+    // on the deal every week (anchored at 140, 170, 200...). Published in
+    // October, the declaration is acknowledged then, at 400: too late.
+    let d3 = declare(&mut w, 2);
+    let mut back = vec![];
+    for at in [140, 170, 200, 230] {
+        let x = law_act(&mut w, &mut m[2], 12, vec![], obj(d));
+        back.push((x, at));
+    }
+    let late = w.ack(&mut m[0], d3);
+    let got = judged(&w, &[back.clone(), vec![(d3, 100), (late, 400)]].concat(), &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("one further period") && e.contains("F148")), "{got:?}");
+    // Acknowledged in time, at 125, but p3's act on the deal at 110 lies
+    // between the two: it does not count either.
+    let early = w.ack(&mut m[1], d3);
+    let mut returned = back.clone();
+    returned.push((law_act(&mut w, &mut m[2], 12, vec![], obj(d)), 110));
+    let got = judged(&w, &[returned, vec![(d3, 100), (late, 400), (early, 125)]].concat(), &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("between")), "{got:?}");
+    // With nothing of p3's between, the acknowledgement at 125 makes it
+    // count: p3's later acts cannot undo it (rule 52's contest shows it).
+    assert_eq!(judged(&w, &[back.clone(), vec![(d3, 100), (early, 125)]].concat(), &d3), Ok(()));
+    // An acknowledgement by the declared party, or by a stranger, is none.
+    let own = w.ack(&mut m[2], d3);
+    let odd = w.ack(&mut stranger, d3);
+    let got = judged(&w, &[(d3, 100), (own, 105), (odd, 106)], &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("acknowledgement")), "{got:?}");
+    // The keeper's own acknowledgement counts as the keeper's (F148).
+    let kept = w.ack(&mut keeper, d3);
+    assert_eq!(judged(&w, &[(d3, 100), (kept, 105)], &d3), Ok(()));
+    // Not anchored at all: it does not count (F136).
+    let got = judged(&w, &[(early, 125)], &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("not anchored")), "{got:?}");
+}
+
 /// 3.7n, R4: one cMIP for conversion (Finance) and splitting (Law), the
 /// lanes held by two members: its acts need both.
 #[test]
@@ -3324,8 +3495,11 @@ fn every_payout_matches_its_stake() {
     assert_eq!(e.in_force, f);
     assert!(e.unevidenced.is_empty());
     assert_eq!(e.unplanned, vec![svc.id], "the fee: only the plan, whose format is open, could justify it");
-    // Rounding: 901 leaves 801 to divide; the leftover unit to the first.
+    // Rounding: 901 leaves 801 to divide; the leftover unit to the largest
+    // remainder, Ana's 320.4 (rule 15a, F150).
     let r2 = receipt(&mut lab, &mut svc, 901);
+    let own: Vec<(Hash, u64)> = lab.view().terms(&f).unwrap().own_stake().unwrap().1.holders.iter().map(|(w, n)| (w.resolve(None).unwrap(), *n)).collect();
+    assert_eq!(law::divide_stake(801, &own, Some(&r2)).unwrap(), vec![321, 240, 240]);
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r2, 321, 240, 240).to_map(), None, everyone.clone());
     assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
     // Any deviation, either way, breaks the plan (N10): Cy paid less, Ana
@@ -3670,8 +3844,17 @@ fn payer_side_splitting_follows_the_claim() {
     });
     let f = lab.founding;
     let ids = lab.ids();
-    let got = lab.view().payer_split(&f, &Who::Id(work), 1001).unwrap().unwrap();
+    let got = lab.view().payer_split(&f, &Who::Id(work), 1001, None).unwrap().unwrap();
     assert_eq!(got, vec![(ids[ANA], 501), (ids[BEN], 250), (ids[CY], 250)]);
+    // F150: Ben and Cy tie for 1002's leftover unit. The receipt's hash
+    // orders them (rule 15a); with none, the split is undetermined.
+    let w = lab.view().payer_split(&f, &Who::Id(work), 1002, None).unwrap().unwrap_err();
+    assert!(w.contains("rule 15a"), "{w}");
+    let r = spec("a receipt");
+    let got = lab.view().payer_split(&f, &Who::Id(work), 1002, Some(&r)).unwrap().unwrap();
+    let first = if law::leftover_key(&r, &ids[BEN]) < law::leftover_key(&r, &ids[CY]) { BEN } else { CY };
+    let want: Vec<(Hash, u64)> = [(ANA, 501), (BEN, 250), (CY, 250)].iter().map(|(i, n)| (ids[*i], n + u64::from(*i == first))).collect();
+    assert_eq!(got, want);
     // A deal in which the label holds 60% and a guest 40%.
     let guest = lab.w.genesis("a guest", vec![own_home()], None, None);
     let label = lab.c[0].id;
@@ -3701,8 +3884,63 @@ fn payer_side_splitting_follows_the_claim() {
         release_rule: None,
     };
     let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal.to_map(), None);
-    let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
+    let got = lab.view().payer_split(&d, &Who::Id(work), 1000, None).unwrap().unwrap();
     assert_eq!(got, vec![(ids[ANA], 300), (ids[BEN], 150), (ids[CY], 150), (guest.id, 400)]);
+}
+
+/// Rule 15a (F150; the hostile review of F133 to F144, finding 6): one
+/// unit among holders at 333,333, 333,333 and 333,334 goes to the largest
+/// remainder, the third, however the holders are listed: a clone that only
+/// reorders them moves nothing. F140 gave it to the first listed.
+#[test]
+fn leftovers_go_by_largest_remainder_whatever_the_order() {
+    let work = spec("a work");
+    let mut lab = Lab::new(&|_| {});
+    let ids = lab.ids();
+    let deal = |holders: Vec<(Hash, u64)>| Terms {
+        parties: ids.clone(),
+        text: "A work shared three ways.".into(),
+        cmips: vec![],
+        keepers: None,
+        field4: Field4::Rule(Rule::All),
+        clone: Rule::All,
+        time: None,
+        abandonment: None,
+        parent: None,
+        grammar: None,
+        arbitrators: None,
+        split_grant: None,
+        payee_grants: None,
+        extensions: None,
+        succession: None,
+        constitutional: None,
+        areas: None,
+        area_words: None,
+        chain: None,
+        departed: None,
+        stakes: Some(vec![law::Stake { object: Who::Id(work), holders: holders.into_iter().map(|(h, n)| (Who::Id(h), n)).collect() }]),
+        forked_from: None,
+        release_rule: None,
+    };
+    let listed = [vec![(ids[ANA], 333_333), (ids[BEN], 333_333), (ids[CY], 333_334)], vec![(ids[CY], 333_334), (ids[ANA], 333_333), (ids[BEN], 333_333)]];
+    let r = spec("a receipt for one unit");
+    for holders in listed.iter() {
+        assert_eq!(law::divide_stake(1, holders, Some(&r)).unwrap().iter().zip(holders).find(|(n, _)| **n == 1).map(|(_, h)| h.0), Some(ids[CY]));
+        let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal(holders.clone()).to_map(), None);
+        let mut got = lab.view().payer_split(&d, &Who::Id(work), 1, Some(&r)).unwrap().unwrap();
+        got.sort();
+        let mut want = vec![(ids[ANA], 0), (ids[BEN], 0), (ids[CY], 1)];
+        want.sort();
+        assert_eq!(got, want, "the third holder, wherever listed");
+    }
+    // Two units: the third's remainder first, then Ana and Ben tie; the
+    // receipt's hash orders them, the listing never does.
+    for holders in listed.iter() {
+        let parts = law::divide_stake(2, holders, Some(&r)).unwrap();
+        let of = |h: Hash| parts[holders.iter().position(|x| x.0 == h).unwrap()];
+        let ana_first = law::leftover_key(&r, &ids[ANA]) < law::leftover_key(&r, &ids[BEN]);
+        assert_eq!((of(ids[ANA]), of(ids[BEN]), of(ids[CY])), if ana_first { (1, 0, 1) } else { (0, 1, 1) });
+    }
 }
 
 /// The successor of one side, founded first (N4): founding terms whose

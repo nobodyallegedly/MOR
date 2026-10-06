@@ -522,12 +522,21 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   assert.match(spw, /Paid: 135 to Lou .* \(a departed holder\)/);
   assert.match(spw, /Delivered to every holder it pays/);
   assert.match(spw, /Every payout matches its stake exactly/);
+  // Leftovers by largest remainder (Law rule 15a, F150): 2 units over 40/15/15/15/15 go one to Lea
+  // (0.8) and one to whichever of the four tied at 0.3 the receipt's hash orders first, never both
+  // to the first listed.
+  const small = await sign(c, { kind: 'split', collective: col.id, amount: 102, fee: 100 });
+  assert.match(words(small.review.reading), /the hash of the receipt, once the service signs it, decides which \(Law rule 15a, F150\)/);
+  const smallw = small.done.lines.map((l) => l.text).join('\n');
+  assert.match(smallw, /Paid: 1 to Lea/);
+  assert.equal((smallw.match(/Paid: 1 to /g) ?? []).length, 2, smallw);
+  assert.match(smallw, /Every payout matches its stake exactly/);
   // Any deviation, either way, is shown.
   const bad = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100, amounts: { [three]: 35, [ada]: 460 } });
   assert.match(bad.done.lines.map((l) => l.text).join('\n'), /DOES NOT MATCH ITS STAKE: Lou/);
   s = await state(c);
   col = s.collectives.find((x) => x.name === 'Ledger')!;
-  const checked = await c.ask<{ mismatched: number }>('check-split', { collective: col.id, split: col.splits[1] });
+  const checked = await c.ask<{ mismatched: number }>('check-split', { collective: col.id, split: col.splits[2] });
   assert.equal(checked.mismatched, 2);
 
   // N13: a debt of the collective, sealed to the creditor and every member.

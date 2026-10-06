@@ -77,6 +77,61 @@ pub const TIME_REFERENCE_TASK: u64 = 10;
 /// Stakes and succession shares are written in millionths.
 pub const MILLION: u64 = 1_000_000;
 
+/// The tag of rule 15a's tie key (F150).
+pub const LEFTOVER_TAG: &str = "MOR/law/leftover";
+
+/// Rule 15a's tie key for a holder (F150): `tagged_hash("MOR/law/leftover",
+/// [ receipt hash, holder ])`, the array encoded as CBOR, as Law writes
+/// its arrays (reading: the rule does not say so in words, as Envelope
+/// does for its sealed signature).
+pub fn leftover_key(receipt: &Hash, holder: &Hash) -> Hash {
+    let v = Value::Array(vec![Value::Bytes(receipt.to_vec()), Value::Bytes(holder.to_vec())]);
+    crate::hash::tagged_hash(LEFTOVER_TAG, &cbor::encode(&v))
+}
+
+/// Rule 15a (F150): `total` smallest units of a payment divided among a
+/// stake's `holders` (each its identity and its share), every holder its
+/// exact share rounded down, and the leftover units one each to the
+/// holders whose exact shares have the largest fractional remainders;
+/// holders with equal remainders ordered by [`leftover_key`] with the hash
+/// of the receipt of the payment being divided, smallest first. The order
+/// in which holders are listed decides nothing: the parts come back in the
+/// order given, each holder's the same however they are listed.
+///
+/// Where holders with equal remainders compete for fewer leftover units
+/// than they are, and no receipt is given, the division is undetermined:
+/// `Err`, saying so. Shares need not sum to a million; they are divided
+/// in proportion.
+pub fn divide_stake(total: u64, holders: &[(Hash, u64)], receipt: Option<&Hash>) -> Result<Vec<u64>, String> {
+    let sum: u128 = holders.iter().map(|(_, w)| *w as u128).sum();
+    if sum == 0 {
+        return Ok(vec![0; holders.len()]);
+    }
+    let exact: Vec<u128> = holders.iter().map(|(_, w)| total as u128 * *w as u128).collect();
+    let mut out: Vec<u64> = exact.iter().map(|e| (e / sum) as u64).collect();
+    let rem: Vec<u128> = exact.iter().map(|e| e % sum).collect();
+    let left = (total as u128 - out.iter().map(|x| *x as u128).sum::<u128>()) as usize;
+    if left == 0 {
+        return Ok(out);
+    }
+    let mut order: Vec<usize> = (0..holders.len()).collect();
+    // Largest remainder first; ties by the tie key, smallest first.
+    order.sort_by(|a, b| rem[*b].cmp(&rem[*a]));
+    let cut = rem[order[left - 1]];
+    let competing = order.iter().filter(|i| rem[**i] == cut).count();
+    let above = order.iter().filter(|i| rem[**i] > cut).count();
+    if competing > left - above {
+        let Some(r) = receipt else {
+            return Err("holders with equal remainders compete for the leftover units, and no receipt orders them (rule 15a, F150)".into());
+        };
+        order.sort_by(|a, b| rem[*b].cmp(&rem[*a]).then_with(|| leftover_key(r, &holders[*a].0).cmp(&leftover_key(r, &holders[*b].0))));
+    }
+    for i in &order[..left] {
+        out[*i] += 1;
+    }
+    Ok(out)
+}
+
 /// The layer of a task's MIP (Production, task table).
 pub fn task_layer(task: u64) -> Option<u64> {
     match task {

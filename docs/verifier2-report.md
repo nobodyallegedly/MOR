@@ -62,6 +62,16 @@ On every story, the two verifiers now agree on which ending counts, on every for
 
 To reproduce: as above, with `--handout binding` (now the default); `python3 verifier2/group.py cmp.json` prints the one group.
 
+### Rerun after F156 (6 October 2026)
+
+F156 was decided (option b) and built in the reference: Identity's own everyday acts of a collective, its witness act included, answer `Consent::Identity` and count for nothing in Law, and place no member's signature; only an act of the collective on its chain acknowledging a signature act, or a record, places it. Verifier2 was not changed. The same two runs were exported again from the reference at that commit (seed 1, cases 0 to 2,999; seed 2, cases 0 to 999) and compared with `compare.py` (default readings: `--handout binding`, `--cites strict`).
+
+| Stories | Agree on everything | Differ |
+| --- | --- | --- |
+| 4,000 | 4,000 | 0 |
+
+The stories hold 559 witness acts of the collective (424 in 334 stories of seed 1, 135 in 110 of seed 2); both verifiers now count every one for nothing. Export times in a release build: 1,327 seconds for seed 1, 438 for seed 2.
+
 ## Precisely
 
 ### Files

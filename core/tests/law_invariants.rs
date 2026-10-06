@@ -1493,6 +1493,11 @@ impl ColWorld {
         let col = self.col;
         // Done (rule 35a, F126, F128) and cited (rule 35b, F127).
         for (x, f) in &self.info {
+            // F156 (rule 35b): the collective's witness act is on neither
+            // chain and counts for nothing in Law.
+            if matches!(f.kind, K::Ack { .. }) && lv.consent(x).is_ok_and(|c| c.counts()) {
+                bad.push(format!("WITNESS-COUNTS: a witness act of the collective counts in Law (F156): {x:?} consent={:?}", lv.consent(x)));
+            }
             if f.kind == K::Record || matches!(f.kind, K::Ack { .. }) {
                 continue;
             }
@@ -1859,6 +1864,74 @@ fn collective_promises_hold() {
     });
     col_stats().show("collective_promises_hold");
     known().show("stated costs and open questions met (not failures)");
+    if let Err(e) = r {
+        run.failed(e);
+    }
+}
+
+/// Rule 15a (F150): leftovers by largest remainder, ties by the receipt's
+/// hash with each holder. Over random stakes, amounts and receipts:
+/// listing the holders in another order moves no unit; the parts sum
+/// exactly; each is its exact share rounded down or up; a holder rounded
+/// up never has a smaller remainder than one rounded down, and where the
+/// remainders are equal, never a larger tie key.
+#[test]
+fn leftovers_ignore_the_order_of_holders() {
+    let (mut runner, run) = runner("leftovers_ignore_the_order_of_holders", 2000);
+    let strategy = (
+        prop::collection::vec(1u64..1_000_000, 1..9),
+        prop_oneof![0u64..10, 0u64..1_000_000, any::<u64>()],
+        any::<[u8; 32]>(),
+        any::<u64>(),
+        any::<bool>(),
+    );
+    let r = runner.run(&strategy, |(weights, amount, receipt, shuffle, equal)| {
+        // Shares in millionths summing exactly, equal ones where asked, so
+        // that ties arise.
+        let n = weights.len();
+        let shares: Vec<u64> = if equal {
+            let mut v = vec![1_000_000 / n as u64; n];
+            v[0] += 1_000_000 - v.iter().sum::<u64>();
+            v
+        } else {
+            let total: u64 = weights.iter().sum();
+            let mut v: Vec<u64> = weights.iter().map(|w| w * 1_000_000 / total).collect();
+            let rest = 1_000_000 - v.iter().sum::<u64>();
+            v[n - 1] += rest;
+            v
+        };
+        let holders: Vec<(Hash, u64)> = shares.iter().enumerate().map(|(i, s)| (sha256(format!("holder {i}").as_bytes()), *s)).collect();
+        let parts = law::divide_stake(amount, &holders, Some(&receipt)).map_err(TestCaseError::fail)?;
+        let sum: u128 = parts.iter().map(|p| *p as u128).sum();
+        prop_assert_eq!(sum, amount as u128, "the parts sum exactly (rule 21)");
+        for ((_, s), p) in holders.iter().zip(&parts) {
+            let exact = amount as u128 * *s as u128;
+            let floor = exact / 1_000_000;
+            prop_assert!(*p as u128 == floor || (*p as u128 == floor + 1 && exact % 1_000_000 != 0), "within one unit of its exact share");
+        }
+        let key = |i: usize| law::leftover_key(&receipt, &holders[i].0);
+        let rem = |i: usize| (amount as u128 * holders[i].1 as u128) % 1_000_000;
+        for i in 0..n {
+            for j in 0..n {
+                let up = |k: usize| parts[k] as u128 > (amount as u128 * holders[k].1 as u128) / 1_000_000;
+                if up(i) && !up(j) {
+                    prop_assert!(rem(i) > rem(j) || (rem(i) == rem(j) && key(i) < key(j)), "largest remainder, ties by the smallest key");
+                }
+            }
+        }
+        // Another order: a deterministic shuffle drawn from the case.
+        let mut l = Lcg(shuffle);
+        let mut order: Vec<usize> = (0..n).collect();
+        for k in (1..n).rev() {
+            order.swap(k, l.below(k + 1));
+        }
+        let listed: Vec<(Hash, u64)> = order.iter().map(|i| holders[*i]).collect();
+        let again = law::divide_stake(amount, &listed, Some(&receipt)).map_err(TestCaseError::fail)?;
+        for (k, i) in order.iter().enumerate() {
+            prop_assert_eq!(again[k], parts[*i], "reordering holders moves nothing (F150)");
+        }
+        Ok(())
+    });
     if let Err(e) = r {
         run.failed(e);
     }
@@ -2275,10 +2348,9 @@ impl DealWorld {
                 let amount: u64 = 1000;
                 let fee = (*fee as u64).min(amount);
                 let pot = amount - fee;
-                // Exact shares, rounded down, leftovers to the first holder.
-                let mut each: Vec<u64> = stakes.iter().map(|(_, s)| pot * s / 1_000_000).collect();
-                let rest = pot - each.iter().sum::<u64>();
-                each[0] += rest;
+                // Exact shares, rounded down, leftovers by largest remainder,
+                // ties by the receipt's hash (rule 15a, F150).
+                let mut each: Vec<u64> = law::divide_stake(pot, &stakes, Some(&rc)).expect("a receipt orders every tie");
                 let mut fee_paid = fee;
                 match mode {
                     SplitMode::Exact | SplitMode::Overflow => {}
@@ -2812,7 +2884,11 @@ fn ic3_a_revoked_act_stays_void_inside_a_forks_history() {
 /// IC4 (rule 32a, F127 W2): a sale is recorded by an act of the collective
 /// that acknowledges the payment. One rail payment, two receipts: the
 /// collective acknowledged one; the other was judged "never recorded,
-/// refunded": one payment both a purchase and owed back.
+/// refunded": one payment both a purchase and owed back. The
+/// acknowledgement here is the collective's witness act, which since F156
+/// counts for nothing in Law and records nothing (rule 35b): both receipts
+/// now share one verdict, never recorded before the fork, refunded. (Before
+/// F156 this test had the witness act record both: a purchase.)
 #[test]
 fn ic4_an_acknowledgement_records_the_whole_payment() {
     let shape = Shape { lane: Some((3, 1)), owns_work: true, ..two() };
@@ -2825,7 +2901,9 @@ fn ic4_an_acknowledgement_records_the_whole_payment() {
     let cw = run_col(&shape, &ops, 0);
     let lv = cw.view();
     let verdicts: Vec<law::PurchaseVerdict> = cw.info.iter().filter(|(_, f)| matches!(f.kind, K::Receipt { .. })).map(|(x, _)| lv.purchase(x).unwrap().unwrap().verdict).collect();
-    assert_eq!(verdicts, vec![law::PurchaseVerdict::Purchase; 2]);
+    assert_eq!(verdicts.len(), 2);
+    assert_eq!(verdicts[0], verdicts[1], "one payment, one verdict");
+    assert!(matches!(verdicts[0], law::PurchaseVerdict::NoPurchase { .. }), "the witness act records nothing (F156): {verdicts:?}");
 }
 
 /// IC5 (rule 47a, the tie rule): an obligation outside the history a fork

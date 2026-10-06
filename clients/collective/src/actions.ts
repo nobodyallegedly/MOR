@@ -7,7 +7,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
+import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, lawDivideStake, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestCollective, collectiveTerms, type Governance } from '../../repo/src/collective.ts';
@@ -1881,9 +1881,22 @@ export class Actions {
       if (!service || !this.store.holds(service)) blocking.push('The split service is not held by this program, so it cannot split here.');
     }
     const pool = amount - fee;
-    const auto = own.map(([h, n]) => [h, Math.floor((pool * n) / 1_000_000)] as [string, number]);
-    if (auto.length) auto[0][1] += pool - auto.reduce((x, [, n]) => x + n, 0);
+    // Law rule 15a (F150): each holder its exact share rounded down, the
+    // leftover units one each to the largest remainders, ties ordered by
+    // the receipt's hash, which exists only once the service signs it; the
+    // order of holders decides nothing. The core divides (lawDivideStake).
+    const divide = (receipt: string | null): [string, number][] | null => {
+      try {
+        const parts = lawDivideStake({ total: pool, holders: own, receipt }) as number[] | Float64Array;
+        return own.map(([h], i) => [h, Number(parts[i])] as [string, number]);
+      } catch {
+        return null;
+      }
+    };
+    const tied = own.length > 0 && divide(null) === null;
+    const auto = divide(null) ?? own.map(([h, n]) => [h, Math.floor((pool * n) / 1_000_000)] as [string, number]);
     const payouts: [string, number][] = auto.map(([h, n]) => [h, a.amounts?.[h] ?? n]);
+    const left = pool - auto.reduce((x, [, n]) => x + n, 0);
     const index = this.stakeIndex(c, null);
     const departed = c.f.governance.departed ?? [];
     const reading: Reading = {
@@ -1891,6 +1904,9 @@ export class Actions {
       summary: [
         `The split service ${service ? names(service) : ''} receives ${amount} and takes a fee of ${fee}, named in the split with who received it (F121, Q9).`,
         ...payouts.map(([h, n]) => `${names(h)}: ${n}${departed.includes(h) ? ' (a departed holder)' : ''}.`),
+        ...(tied
+          ? [`${left} leftover unit${left === 1 ? '' : 's'} of rounding go${left === 1 ? 'es' : ''} to holders whose remainders are equal; the hash of the receipt, once the service signs it, decides which (Law rule 15a, F150).`]
+          : []),
         'The split is delivered to every holder it pays (Q9), and Law checks that every payout matches its stake exactly, within one smallest unit of rounding, every fee alike for every stake: any deviation, either way, breaks the plan (F124 N10, rule 26).',
       ],
       sections: [{ heading: 'Simulated', lines: [{ text: 'The split service and the payment are simulated on a test rail: no money moves.', tone: 'warn' }] }],
@@ -1907,11 +1923,13 @@ export class Actions {
         const svc = this.store.identity(service!);
         const relays = col.f.relays;
         const r = await svc.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: svc.f.identity, unit: TEST_RAIL, value: amount, fulfils: col.f.agreement }), { public: true, relays });
+        // With the receipt signed, its hash orders any tie (rule 15a, F150).
+        const final: [string, number][] = (divide(r.id) ?? auto).map(([h, n]) => [h, a.amounts?.[h] ?? n]);
         const ps: PayoutIn[] = [
           ...(fee ? [{ receiver: svc.f.identity, amount: fee, feeModule: TEST_RAIL }] : []),
-          ...payouts.map(([h, n]) => ({ receiver: h, amount: n, stake: index })),
+          ...final.map(([h, n]) => ({ receiver: h, amount: n, stake: index })),
         ];
-        const to = [...new Set(payouts.map(([h]) => h))];
+        const to = [...new Set(final.map(([h]) => h))];
         const x = await svc.publish(REPO_SPECS.law, LAW_TYPES.split, splitPayload({ receipt: r.id, payouts: ps, cmip: TEST_RAIL, agreement: col.f.agreement }), { public: false, to, relays });
         col.f.splits = [...(col.f.splits ?? []), { id: x.id, key: Buffer.from(x.key).toString('base64'), receipt: r.id }];
         this.store.saveCollective(col);
