@@ -65,10 +65,21 @@ jobs:
         run: cd clients/repo && npm ci --no-audit --no-fund && npm test
       - name: clients/site
         if: success() || failure()
-        run: cd clients/site && npm ci --no-audit --no-fund && npm test
+        shell: bash
+        run: |
+          cd clients/site
+          npm ci --no-audit --no-fund
+          npm test 2>&1 | tee ../../test-output.txt; status=${PIPESTATUS[0]}
+          grep -E 'not ok|✖|Error|expected|actual|differ' ../../test-output.txt | head -10 | while IFS= read -r l; do echo "::error::$l"; done
+          exit $status
       - name: modules/jpeg
         if: success() || failure()
         run: cd modules/jpeg && npm ci --no-audit --no-fund && npm test
       - name: Reproducible build of the display client
         if: success() || failure()
-        run: cd clients/site && npm run test:build
+        shell: bash
+        run: |
+          cd clients/site
+          npm run test:build 2>&1 | tee ../../test-output.txt; status=${PIPESTATUS[0]}
+          grep -E 'not ok|✖|Error|expected|actual|differ' ../../test-output.txt | head -10 | while IFS= read -r l; do echo "::error::$l"; done
+          exit $status
