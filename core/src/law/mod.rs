@@ -23,5 +23,5 @@ pub use tiers::{changes, judicial_changes, powers_needed, Change, Tier};
 pub use view::{
     Agreement, AreaCount, Backing, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement,
     DepartureKind, ForkEval, LawView, Mismatch, NegotiationRecord, PointerCheck, RecordEval,
-    ReleaseEval, Role, SplitEval, PurchaseEval, PurchaseVerdict,
+    ReleaseEval, Role, ServiceAccount, SplitEval, PurchaseEval, PurchaseVerdict, Unpaid, Unsplit,
 };

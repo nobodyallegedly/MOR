@@ -2444,28 +2444,42 @@ impl DealWorld {
                     if e.sums != Some(true) {
                         bad.push(format!("SPLIT-SUM: a split whose payouts sum to the amount is not read as summing ({mode:?}): {x:?}"));
                     }
-                    // The oracle, from the text: short of the exact share by a
+                    // The oracle, from the text: the stakes as currently
+                    // held (rule 26), those of the latest version every party
+                    // signed, whichever version the split names (audit,
+                    // October 2026, gap 8); short of the exact share by a
                     // whole unit or more, or over it by as many units as the
-                    // stake has holders or more, breaks the plan.
-                    let t = lv.terms(&e.split.agreement).map_err(|e| format!("{e:?}"))?;
-                    let st = &t.stakes.as_ref().unwrap()[0];
+                    // stake has holders or more, breaks the plan; so does a
+                    // payout to someone who holds no part of it.
+                    let latest = self.latest();
+                    let stakes = &self.versions.iter().find(|v| v.0 == latest).unwrap().2;
                     let pot: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0)).map(|p| p.amount as u128).sum();
-                    let nh = st.holders.len() as u128;
+                    let nh = stakes.len() as u128;
                     let mut expect = BTreeSet::new();
-                    for (h, share) in &st.holders {
-                        let h = *h.id().unwrap();
-                        let paid: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0) && p.receiver == h).map(|p| p.amount as u128).sum();
+                    for (h, share) in stakes {
+                        let paid: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0) && p.receiver == *h).map(|p| p.amount as u128).sum();
                         let exact = pot * *share as u128;
                         if paid * 1_000_000 + 1_000_000 <= exact || paid * 1_000_000 >= exact + nh * 1_000_000 {
-                            expect.insert(h);
+                            expect.insert(*h);
+                        }
+                    }
+                    for p in e.split.payouts.iter().filter(|p| p.stake == Some(0)) {
+                        if !stakes.iter().any(|(h, _)| *h == p.receiver) {
+                            expect.insert(p.receiver);
                         }
                     }
                     let got: BTreeSet<Hash> = e.mismatched.iter().map(|m| m.holder).collect();
                     if got != expect {
                         bad.push(format!("SPLIT-STAKE: payouts judged against their stakes differently from the text ({mode:?}): library {got:?}, text {expect:?}"));
                     }
-                    if matches!(mode, SplitMode::Exact) && !got.is_empty() {
-                        bad.push(format!("SPLIT-EXACT: an exact split is judged as breaking its plan: {got:?}"));
+                    if e.in_force != latest {
+                        bad.push(format!("SPLIT-IN-FORCE: the split is judged against {:?}, not the latest version every party signed {latest:?}", e.in_force));
+                    }
+                    if matches!(mode, SplitMode::Exact) && e.split.agreement == latest && !got.is_empty() {
+                        bad.push(format!("SPLIT-EXACT: an exact split under the version in force is judged as breaking its plan: {got:?}"));
+                    }
+                    if e.split.agreement != latest && !e.problems.iter().any(|p| p.contains("not in force")) {
+                        bad.push(format!("SPLIT-VERSION: a split naming a version the parties have left is not shown so (rule 26): {x:?}"));
                     }
                 }
             }
