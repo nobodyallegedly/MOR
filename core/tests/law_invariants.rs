@@ -3191,3 +3191,10 @@ fn it3_the_payments_claim_decides() {
     }
 }
 
+
+// verifier2 (docs/verifier2-report.md): exports the random collective
+// histories above, and the library's verdicts on them, for the independent
+// verifier in verifier2/ to judge. Ignored unless asked for; changes nothing.
+mod verifier2_export {
+    include!("../../verifier2/export/export.rs");
+}

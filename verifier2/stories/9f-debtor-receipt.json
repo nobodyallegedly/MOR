@@ -30,7 +30,9 @@
    "type": "obligation",
    "signer": "C/d0",
    "prev": "D1",
-   "cites": [],
+   "cites": [
+    "genesis"
+   ],
    "creditor": "fay",
    "amount": 20
   },

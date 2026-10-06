@@ -63,13 +63,15 @@ class Done(unittest.TestCase):
             act("d1", "obligation", cites=["genesis"], creditor="eve", amount=10),
             act("d2", "obligation", prev="d1", creditor="eve", amount=10, sealed_to_all=False),
             act("d3", "obligation", signer="C/d1", creditor="eve", amount=10),  # cites nothing
-            act("d4", "obligation", prev="d2", creditor="eve", amount=10),  # its prev chain reaches genesis
+            act("d4", "obligation", prev="d2", creditor="eve", amount=10),  # its prev chain reaches genesis, its objects name nothing
         ])
         v = verify(s)
         self.assertTrue(v["acts"]["d1"]["counts"])
         self.assertFalse(v["acts"]["d2"]["counts"])
         self.assertFalse(v["acts"]["d3"]["counts"])
-        self.assertTrue(v["acts"]["d4"]["counts"])
+        # Strict: an action names the decision it acts under in its own objects (rule 35b).
+        self.assertFalse(v["acts"]["d4"]["counts"])
+        self.assertTrue(verify(s, cites="loose")["acts"]["d4"]["counts"])
         self.assertIsNone(v["closed_by"])
 
 
@@ -416,7 +418,7 @@ class Closings(unittest.TestCase):
         base = [
             genesis(),
             act("D1", "obligation", cites=["genesis"], creditor="eve", amount=10),
-            act("D2", "obligation", prev="D1", creditor="fay", amount=20),
+            act("D2", "obligation", prev="D1", cites=["genesis"], creditor="fay", amount=20),
             closing("C1", "ana", ["D2"]), sig("ana", "C1", 1), sig("ben", "C1", 1),
         ]
         s = story("9f-owing", ["ana", "ben"], base)

@@ -35,10 +35,29 @@ and its clones (an input flag), successors' founding terms (an input flag), stak
 
 - `law_endings.py`: the verifier. `python3 law_endings.py story.json` prints its verdict;
   `python3 law_endings.py stories/ --out verdicts/ --quiet` judges a directory.
-  `--handout binding` switches one reading (below).
+  `--handout binding` and `--cites loose` switch one reading each (below).
 - `test_law_endings.py`: one test per freeze scenario or smallest story, written from the
   text; running it also writes each story to `stories/`.
 - `stories/`: those stories, as JSON.
+- `export/export.rs`: the exporter, included as a child module at the end of
+  `core/tests/law_invariants.rs` (the one change made there, test-only and ignored unless
+  asked for). It draws the reference's random collective histories from a seed, writes
+  each as a story in the format below, and writes the library's verdicts on it in the same
+  terms. `compare.py` judges each story with this verifier and prints every disagreement;
+  `shrink.py` reduces a disagreeing story to its smallest form by re-exporting it with
+  fewer steps and a smaller shape; `render.py` prints a story and both verdicts in plain
+  words; `group.py` groups a comparison's disagreements by their reasons.
+
+  To reproduce the comparison (`docs/verifier2-report.md`):
+
+  ```
+  cargo test -p mor-core --release --test law_invariants --no-run
+  VERIFIER2_OUT=out VERIFIER2_SEED=1 VERIFIER2_CASES=3000 \
+    target/release/deps/law_invariants-<hash> --ignored --exact verifier2_export::verifier2_export
+  python3 verifier2/compare.py out --quiet --json cmp.json
+  python3 verifier2/group.py cmp.json
+  python3 verifier2/shrink.py out case00446 --seed 1
+  ```
 
 Python 3.11 or later, standard library only.
 
@@ -102,6 +121,23 @@ where the reference read it otherwise.
    (sealed to every member or public, and on the chain), whether or not its area's
    holders signed it or its grant backs it. The alternative (`binding`): only obligations
    that bind the collective.
+1a. **"An action citing no decision"** (`--cites`, rule 35b). Default (`strict`), taken
+   after the comparison: an action's own `objects` name the decision it acts under; one
+   that names nothing is on no chain, whatever its previous act cites. The first version
+   of this verifier read it loosely (`loose`): a decision reached through the action's
+   previous acts in its sequence sufficed, since "its own sequence's previous act counts
+   as cited". The strict reading follows the format sentence, "an action names, in its
+   inside's `objects`, ... the decision it acts under"; the loose one is kept as a switch
+   and the disagreement it made is recorded in the report.
+1b. **The agreement in force** at a record or an ending's line, added after the
+   comparison: the clone written by the done record furthest along in the history that
+   writes one, else the founding agreement (rule 37c, B2). A record naming another
+   agreement is no line; an ending naming another is not complete. Stories that name no
+   agreements skip the check.
+1c. **A grant's acceptance** belongs to the grant key's act (rule 44: "the grant counts
+   ... and its grantee signed to accept it"), not to whether the grant itself counts;
+   changed after the comparison, where the first version folded acceptance into the
+   grant's counting.
 2. **A member's signature on an ending** is their earliest counting chain signature
    naming it; a chain signature by a non-member is no signature on it; a signature act
    (type 1) is none (F132).

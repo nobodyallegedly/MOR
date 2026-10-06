@@ -50,8 +50,10 @@ INF = float("inf")
 class Story:
     """One collective's story, as the verifier reads it."""
 
-    def __init__(self, data: dict):
+    def __init__(self, data: dict, cites: str = "strict"):
+        self.cites = cites  # "strict": an action names the decision it acts under in its own objects; "loose": one reached through its previous acts suffices
         self.collective = data["collective"]
+        self.founding = data.get("founding")  # the founding agreement's id, where the story names agreements
         self.members = list(data["members"])
         rule = data.get("rule") or {"kind": "every"}
         self.rule_kind = rule.get("kind", "every")
@@ -155,6 +157,10 @@ class Story:
                 return False
         if a["prev"] is not None and self.act(a["prev"]) is None:
             return False
+        if self.cites == "strict":
+            # "An action names, in its inside's objects, ... the decision it acts under"
+            # (rule 35b): its own objects name a decision of the collective.
+            return any(self.act(j) is not None and self.act(j)["type"] in DECISIONS for j in a["cites"])
         for j in self.history(i):
             b = self.act(j)
             if b is not None and b["type"] in DECISIONS:
@@ -197,12 +203,45 @@ class Verifier:
 
     # ---- departures and voices ----------------------------------------------------
 
+    def in_force_at(self, hist: set[str]) -> str | None:
+        """The agreement in force for an act whose history is `hist`: the clone written by
+        the record furthest along among the done records in that history that put one
+        in force (rule 37c: only the records before it count), else the founding
+        agreement.  None where the story names no agreements."""
+        if self.s.founding is None:
+            return None
+        best = None
+        for rec in hist:
+            a = self.s.act(rec)
+            if a is None or a["type"] != "record" or not a.get("clone") or not a.get("clone_complete", True):
+                continue
+            if not self.s.done(rec) or not self.record_names_in_force(rec):
+                continue
+            if best is None or len(self.s.history(rec)) > len(self.s.history(best)):
+                best = rec
+        return self.s.acts[best]["clone"] if best else self.s.founding
+
+    def record_names_in_force(self, rec: str) -> bool:
+        """A record naming no clone names the agreement in force for it; one naming a clone
+        names that clone (as chain and predecessor); the clone's parent is the agreement
+        in force for the record (rule 37c)."""
+        a = self.s.acts[rec]
+        named = a.get("agreement")
+        if named is None or self.s.founding is None:
+            return True
+        in_force = self.in_force_at(self.s.history(rec))
+        if a.get("clone"):
+            return named == a["clone"] and a.get("clone_parent", in_force) == in_force
+        return named == in_force
+
     def record_registers(self, rec: str, ending: str | None) -> bool:
-        """A record registers what it names only where it is done (W3) and not after
-        the ending that ended the collective (rule 47a: after its line, the keys count
-        for nothing)."""
+        """A record registers what it names only where it is done (W3), names the
+        agreement in force for it (rule 37c, B2) and is not after the ending that ended
+        the collective (rule 47a: after its line, the keys count for nothing)."""
         a = self.s.act(rec)
         if a is None or a["type"] != "record" or not self.s.done(rec):
+            return False
+        if not self.record_names_in_force(rec):
             return False
         if ending is not None and not self.s.before(rec, ending):
             return False
@@ -378,7 +417,7 @@ class Verifier:
         why: list[str] = []
         if s.names_unheld(e):
             why.append("line: an act the history names is not held")
-        if not a.get("agreement_ok", True):
+        if not a.get("agreement_ok", True) or not self.ending_names_in_force(e):
             why.append("agreement named is not the one in force at its line")
         if not a.get("chain_act_ok", True):
             why.append("chain act does not count in the original's identity chain")
@@ -434,6 +473,14 @@ class Verifier:
                         why.append(f"successor {succ} did not sign for {ob}")
         return (not why), why
 
+    def ending_names_in_force(self, e: str) -> bool:
+        """The agreement an ending names is the one in force at its line, the records
+        before the line counted (rule 37c)."""
+        named = self.s.acts[e].get("agreement")
+        if named is None or self.s.founding is None:
+            return True
+        return named == self.in_force_at(self.s.history(e))
+
     def obligations_to_hand_out(self, e: str) -> list[str]:
         """Every obligation of the original in the history the fork cites, published or
         not, paid or not, save one sealed neither to every member nor publicly, which is
@@ -459,7 +506,7 @@ class Verifier:
         why: list[str] = []
         if s.names_unheld(e):
             why.append("line: an act the history names is not held")
-        if not a.get("agreement_ok", True):
+        if not a.get("agreement_ok", True) or not self.ending_names_in_force(e):
             why.append("agreement named is not the one in force at its line")
         if not a.get("chain_act_ok", True):
             why.append("chain act does not count in the collective's identity chain")
@@ -546,14 +593,14 @@ class Verifier:
                 why.append("not done (rule 35a) or on no chain (rule 35b)")
             if ending is not None and not s.before(i, ending):
                 why.append("outside the ending's history (the tie rule)")
+            if a["type"] == "record" and not self.record_names_in_force(i):
+                why.append("names an agreement that is not the one in force for it (rule 37c)")
             if a["area"]:
                 ok, how = self.consent(i, a, ending, counts, order)
                 if not ok:
                     why.append(how)
                 elif how:
                     adopted = how
-            if a["type"] == "grant" and not a.get("accepted", True):
-                why.append("the grantee did not accept it")
             counts[i] = not why
             out[i] = {"done": s.done(i), "counts": not why, "why": why}
             if adopted:
@@ -573,6 +620,8 @@ class Verifier:
             else:
                 if not counts.get(a["grant"], False):
                     why.append("its grant does not count")
+                if not g.get("accepted", True):
+                    why.append("its grantee did not accept the grant")
                 if a["grant"] not in s.history(i):
                     why.append("does not cite its grant")
                 if not a.get("within_reach", True):
@@ -750,8 +799,8 @@ def later_first(s: Story, ids: list[str]) -> list[str]:
     return sorted(ids, key=lambda i: (-len(hist[i]), i))
 
 
-def verify(data: dict, handout: str = "done") -> dict:
-    return Verifier(Story(data), handout=handout).run().to_json()
+def verify(data: dict, handout: str = "done", cites: str = "strict") -> dict:
+    return Verifier(Story(data, cites=cites), handout=handout).run().to_json()
 
 
 def main(argv=None) -> int:
@@ -759,6 +808,8 @@ def main(argv=None) -> int:
     ap.add_argument("paths", nargs="+", help="story files (.json), or directories of them")
     ap.add_argument("--handout", choices=["done", "binding"], default="done",
                     help="which obligations a fork must hand out: every done one in its history (the text's words), or only binding ones")
+    ap.add_argument("--cites", choices=["strict", "loose"], default="strict",
+                    help="what 'citing no decision' means: the action's own objects name none (strict), or none is reached through its previous acts either (loose)")
     ap.add_argument("--out", help="directory to write one verdict per story into")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args(argv)
@@ -773,7 +824,7 @@ def main(argv=None) -> int:
     for f in files:
         with open(f) as fh:
             data = json.load(fh)
-        verdict = verify(data, handout=args.handout)
+        verdict = verify(data, handout=args.handout, cites=args.cites)
         if args.out:
             with open(os.path.join(args.out, os.path.basename(f)), "w") as fh:
                 json.dump(verdict, fh, indent=1, sort_keys=True)
