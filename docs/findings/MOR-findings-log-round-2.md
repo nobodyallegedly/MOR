@@ -1670,10 +1670,19 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Finance draft 6, rule 15. *To build:* the payment cMIP compares anchors when both acts are anchored; clients write the claim at payment. *Documentation:* the risk and the recommendation, in "Who can earn on MOR" and the case studies that handle value.
 
 
+## F147. An anonymous payer's claim covers its citations; several claims for one payment are read together (review finding 2, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 2):** the key-8 signature of an anonymous payer's claim (F135) covered the payload, not the act's citations or acknowledgements. Since F139 and F146 a claim's history decides good faith, so anyone holding the claim could re-wrap it in a new act citing the owner's rotation (or stripping it), turning the payer's good faith on or off, and could add or remove acknowledgements, making or unmaking a dispute in the payer's name. Also unclear: which of a payer's two claims for one payment counts.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Trusting you on this one. If it fails we'll come back to it":** the key-8 signature also covers the act's `objects`, `acks` and `refs`; the claim's history, for an anonymous payer, is only those covered citations (not `prev`, which is the act signer's). A payer's several claims for one payment are read together: the payment counts as made if any of them meets rule 15's proviso. The decision was the project lead's suggestion, accepted on trust; it is to be revisited if building or review breaks it.
+
+**Core changes:** Finance draft 6, claim format (anonymous signature) and rule 15. *To build:* the anonymous claim's signed bytes; the history walk for anonymous claims; reading a payer's claims for one proof together. *Freeze suite:* step 2.5c (a buyer's claim acknowledging a publication) relies on the covered `acks`.
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
 
 **Corrected the same evening by the project lead, as editorial or following the decisions' own stated reasons (no new decision):** F144 now hands out every obligation that binds the collective (done, on its chain, within its signer's powers or adopted), as decided ("the debts that bind the collective"); F142 says "an action of its own key", "wherever it is stored"; F143's italic no longer claims independence from when a verifier is asked; F135's null sentence names keys 5, 6, 7 and 9; the rail-kind field marked format open; the freeze suite's leftover wording follows F140.
 
-**Open for Nobody, allegedly:** finding 1 decided (F145, F146); open: findings 2, 3, 5, 6, 7, 8, 10, 16, 17, and the remaining "when" sentences.
+**Open for Nobody, allegedly:** findings 1 and 2 decided (F145, F146, F147); open: findings 3, 5, 6, 7, 8, 10, 16, 17, and the remaining "when" sentences.
