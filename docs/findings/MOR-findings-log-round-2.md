@@ -1718,7 +1718,7 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 
 *What turns on it:* only the placement of members' signatures by acknowledgement, and the label a client shows on the witness act; no ending, signature or debt changed in the 4,000 stories. Smallest story: `verifier2/stories/compared/a-witness-act-counts` (seed 1, case 9, steps 10, 11, 18). *For Nobody, allegedly, to decide; neither verifier was changed.*
 
-**Decided (Nobody, allegedly, 6 October 2026): "Agreed", option (b):** a collective's line is how Law orders without a clock, so an act on neither chain has no place on it and cannot give a signature one. A collective's Identity witness act counts for nothing in Law; it adopts nothing (F142) and places nothing. A collective places a member's signature by an action on its chain acknowledging or citing it, or by a record. The witness act keeps its Identity role (keeping an act visible as received).
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed", option (b):** a collective's line is how Law orders without a clock, so an act on neither chain has no place on it and cannot give a signature one. A collective's Identity witness act counts for nothing in Law; it adopts nothing (F142) and places nothing. A collective places a member's signature by an action on its chain acknowledging it, or by a record or rotation naming it ("or citing" corrected, F162). The witness act keeps its Identity role (keeping an act visible as received).
 
 **Core changes:** Law draft 10, rule 35b and "Made before, made after" item 2. *To build:* the reference library stops placing signatures by a collective's witness act (`Consent::NoArea`), so the two verifiers agree; rerun verifier2.
 
@@ -1769,10 +1769,80 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Finance draft 6, rules 14 and 15. *To build:* `pointer_in_force` walks from the payee's own act and takes the latest version up to any fork; obligations' named version becomes informative.
 
 
+## F157. The payee's pointer is found through the payee's own acts only (build of F145 to F156, flaw 1, 6 October 2026)
+
+**Found building F145 and F155** (`docs/review-decisions-build-2026-10-06.md`, flaw 1): "holds" followed every citation, and a signature act must cite the terms it signs. A debtor working with a thief drafts terms citing the thief's pointer; the owner signs; the owner's own signature then holds the thief's pointer, and debts under those terms count on the thief's flow. Likewise an owner's acknowledgement of an IOU held everything its debtor cited. Review finding 1's first story was still open. Pinned by `flaw_the_payees_signature_holds_what_the_drafters_terms_cite`.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed":** for selecting the payee's pointer, the walk passes only through the payee's own acts, never through an act another identity signed. The payee's pointers are acts in the payee's own sequence, so the walk finds the latest one the payee had published when signing.
+
+**Core changes:** Finance draft 6, rule 14. *To build:* `finance::select_pointer` and `law::view::pointer_holding` walk own acts only; the pinning test is turned to expect the fix.
+
+
+## F158. A declaration is acknowledged by someone other than its signer (build of F145 to F156, flaw 2, 6 October 2026)
+
+**Found building F148** (flaw 2): where the keeper's operator is the authority, as in freeze scenario 1, "or by the keeper" let it acknowledge its own declaration, anchor both in January and publish them in October; the kept-for-later attack worked again.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Yes, stated cost is always fine for me. 'Use additional feature or risk'":** the acknowledgement must come from an identity other than the declaration's signer(s) and the declared party. Where none exists (a two-party deal whose other party is the authority, no keeper), a period declaration cannot count, and a client warns at signing that the clause needs a keeper or a third party: a stated cost.
+
+**Working rule (Nobody, allegedly):** a stated cost is acceptable where the safer path is an additional feature the parties can choose ("use additional feature or risk").
+
+**Core changes:** Law draft 10, rules 50 and 51. *To build:* `absence_by_anchors` refuses an acknowledgement by the declaration's signer; client warning at signing; scenario 1 test of the keeper-authority acknowledging itself. Also answers the build's question 4 (the declaring party may not acknowledge its own declaration).
+
+
+## F159. What a verifier found at the homes is an input; which homes count (build of F145 to F156, flaw 3 and question 14, 6 October 2026)
+
+**Found building F152** (flaw 3, question 14): a private link counts only if published at its signer's homes, but F137's list of shared inputs did not name what a verifier found there, so two verifiers holding the same acts could disagree; and which homes count was unstated (a signer who moves homes).
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** what a verifier found at the signer's homes joins the inputs; where it decides anything binding it is treated like a reader's own attempts (F153), shown as unknown until it no longer rests on one verifier's fetch. The homes that count are those the signer's chain names at the link act's binding; a later move does not void the link; a link nobody can fetch is unknown, never invalid. Identity rule 13: a home MUST store and serve sealed private links.
+
+**Working rule (Nobody, allegedly, refining F158's):** "We're more and more in rare cases. A common case would not get the 'argh just use the added stuff' reply." A stated cost, with an additional feature as the safer path, is acceptable for rare cases; a common case must work safely by default.
+
+**Core changes:** Identity draft 11, rule 13, the envelope section, the sentence after rule 17. *To build:* `published_at_home` judged against the homes at the link's binding; the fetch treated as an own-attempt input in `binding_status`.
+
+
+## F160. The vault is selected like the pointer (build of F145 to F156, question A, 6 October 2026)
+
+**Found building F145** (question A): the pointer was selected by the payee's own act, but the vault was "the published vault … in force for that payment", naming no act. The code judged a payment against the vault the payee's chain declares now, so a fan's 900 paid under a 1,000 limit stopped being protected once the owner rotated to a 500 limit.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** the vault and its limits that apply are those held by the payee's own act for the payment (the signature act on the agreement, the offer, or the publication paid), walking through the payee's own acts only (F157). One rule for pointer and vault; a payer is judged by what the payee showed.
+
+**Core changes:** Finance draft 6, rules 12a and 14a. *To build:* the vault check reads the vault selected from the payee's act; a test of the lowered-limit story.
+
+
+## F161. The remaining "when" sentences rewritten (review finding 11, 6 October 2026)
+
+**Found by the hostile review** (finding 11) and proposed by the build of F145 to F156 (`docs/review-decisions-build-2026-10-06.md`, "The 'when' sentences"): sentences still said "in force when", "a later rotation", "an earlier final one".
+
+**Applied by the project lead, as editorial under F133's working rule ("'when' is to be avoided unless anchoring is involved"):** each time replaced by what an act cites or by the selection rules F145, F155, F157: Finance obligation field 3, rule 14's first sentences, rule 15, the vault reasoning; core v21 "Good faith"; Law "Judged on its own history"; freeze scenario 1 step 5c; paper section 5.1. None changes a rule's meaning; the one that would (which vault counts) was decided as F160.
+
+
+## F162. The build's smaller questions answered (build of F145 to F156, 6 October 2026)
+
+**Found building F145 to F156** (`docs/review-decisions-build-2026-10-06.md`, "Questions where the spec is silent or unclear"). The project lead suggested an answer to each; **Nobody, allegedly, 6 October 2026: "All accepted".** Numbers as in the report (4, 14 and 15 settled by F158 and F159):
+
+1. The anonymous signature's bytes as built: fields 0 to 4; 5, 6, 7, 9 or null; inside keys 3, 7, 8 or null, each as the act encodes it.
+2. The reference library may count a period declaration on anchors a test states; the rule runs, its input is stated; the spec keeps FORMAT OPEN for real use.
+3. Anchored points in the period's unit; bounds inclusive: an act anchored at the same point as the declaration protects its party.
+5. Presence: acts naming any version of the agreement, earlier or later by clones, or a signature on one; in a collective, a member's acts on the collective's chain.
+6. Acknowledgement means Envelope `acks`; a keeper record counts once its format exists.
+7. The leftover tie hash's array is encoded in deterministic CBOR.
+8. A wallet dividing before a receipt exists shows that a tied unit is decided by the receipt's hash; at most one unit per tie, shown, satisfies rule 4a.
+9. A split from a payer's claim with no receipt orders ties by the claim's hash.
+10. A fork's division follows F150: largest remainder, ties by the hash of the fork act with each side. Freeze scenario 9 becomes 333,333 / 666,667.
+11. Freeze 7t's wording follows F150; the split check tightens to one unit where the default rule applies; declared remainder rules wait for a reader.
+12. A member's signature is placed by an act on the chain acknowledging it (spec wording); the log's "or citing" corrected.
+13. An Identity-layer area governs the collective's rotations and key events (Identity acts on its decisions chain); everyday Identity acts count for nothing in Law.
+16. "Rests on own attempts" as built (differs from the answer with none of them); the partial case noted as an open edge.
+17. Link acts as built: a confirmation or termination follows its claim in `objects`; either side may end a MOR-to-MOR link.
+18. The long-form markup declaration's two points confirmed (a line break ending a block before another block; an escaped character ends a run).
+
+**Core changes:** Law draft 10, rules 15a, 36a, 50, fork ownership; freeze suite 7t and scenario 9. *To build:* items 3, 5, 8 to 11, 13; others confirm what was built.
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
 
 **Corrected the same evening by the project lead, as editorial or following the decisions' own stated reasons (no new decision):** F144 now hands out every obligation that binds the collective (done, on its chain, within its signer's powers or adopted), as decided ("the debts that bind the collective"); F142 says "an action of its own key", "wherever it is stored"; F143's italic no longer claims independence from when a verifier is asked; F135's null sentence names keys 5, 6, 7 and 9; the rail-kind field marked format open; the freeze suite's leftover wording follows F140.
 
-**Open for Nobody, allegedly:** findings 1, 2, 3, 5, 6, 7, 8, 9, 10, 16 and 17 decided (F145 to F155); open: the remaining "when" sentences.
+**Open for Nobody, allegedly:** findings 1, 2, 3, 5, 6, 7, 8, 9, 10, 16 and 17 decided (F145 to F155); the "when" sentences rewritten (F161). The build of F145 to F156 then found F157 to F160.
