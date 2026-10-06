@@ -1659,10 +1659,21 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Finance draft 6, rules 14 and 15 (replacing F133's and F138's "the agreement act holds"). *To build:* the payment cMIP's `pointer_in_force` reads the payee's signature act or the offer; an IOU without a payee's act counts only to the vault. *Still open:* good faith after a rotation (finding 1, second half; F139).
 
 
+## F146. Good faith after a rotation: the payer's claim as the floor, anchoring where both use it (review finding 1, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 1, second half):** F139 judges good faith by whether the payer's claim cites the rotation, an act the payer signs: a payer colluding with the thief leaves it out, and an honest payer who writes the claim after hearing of the rotation loses protection.
+
+**Considered and set aside:** judging by anchor order alone (the project lead's first suggestion). Nobody, allegedly: anchoring is not a core mechanic and has always been optional, so a Finance rule cannot depend on it. Judging by the owner's own list of accepted payments would put the loss on honest payers, against rule 15.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree. Documentation can outline the risk and recommend anchoring where there is value to protect":** F139 stays as the floor. Where both the payer's claim and the rotation are anchored, anchor order decides. Collusion is the stated cost of an unanchored theft window, borne by the owner and visible. A payer's client writes the claim at the moment it pays (client conformance). Documentation outlines the risk and recommends anchoring wherever there is value to protect.
+
+**Core changes:** Finance draft 6, rule 15. *To build:* the payment cMIP compares anchors when both acts are anchored; clients write the claim at payment. *Documentation:* the risk and the recommendation, in "Who can earn on MOR" and the case studies that handle value.
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
 
 **Corrected the same evening by the project lead, as editorial or following the decisions' own stated reasons (no new decision):** F144 now hands out every obligation that binds the collective (done, on its chain, within its signer's powers or adopted), as decided ("the debts that bind the collective"); F142 says "an action of its own key", "wherever it is stored"; F143's italic no longer claims independence from when a verifier is asked; F135's null sentence names keys 5, 6, 7 and 9; the rail-kind field marked format open; the freeze suite's leftover wording follows F140.
 
-**Open for Nobody, allegedly:** finding 1 (second half: good faith after a rotation; first half decided as F145), findings 2, 3, 5, 6, 7, 8, 10, 16, 17, and the remaining "when" sentences.
+**Open for Nobody, allegedly:** finding 1 decided (F145, F146); open: findings 2, 3, 5, 6, 7, 8, 10, 16, 17, and the remaining "when" sentences.
