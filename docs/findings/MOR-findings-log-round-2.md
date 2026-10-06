@@ -1769,6 +1769,15 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Finance draft 6, rules 14 and 15. *To build:* `pointer_in_force` walks from the payee's own act and takes the latest version up to any fork; obligations' named version becomes informative.
 
 
+## F157. The payee's pointer is found through the payee's own acts only (build of F145 to F156, flaw 1, 6 October 2026)
+
+**Found building F145 and F155** (`docs/review-decisions-build-2026-10-06.md`, flaw 1): "holds" followed every citation, and a signature act must cite the terms it signs. A debtor working with a thief drafts terms citing the thief's pointer; the owner signs; the owner's own signature then holds the thief's pointer, and debts under those terms count on the thief's flow. Likewise an owner's acknowledgement of an IOU held everything its debtor cited. Review finding 1's first story was still open. Pinned by `flaw_the_payees_signature_holds_what_the_drafters_terms_cite`.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed":** for selecting the payee's pointer, the walk passes only through the payee's own acts, never through an act another identity signed. The payee's pointers are acts in the payee's own sequence, so the walk finds the latest one the payee had published when signing.
+
+**Core changes:** Finance draft 6, rule 14. *To build:* `finance::select_pointer` and `law::view::pointer_holding` walk own acts only; the pinning test is turned to expect the fix.
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
