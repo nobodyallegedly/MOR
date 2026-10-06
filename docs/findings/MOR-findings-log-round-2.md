@@ -1800,6 +1800,15 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Identity draft 11, rule 13, the envelope section, the sentence after rule 17. *To build:* `published_at_home` judged against the homes at the link's binding; the fetch treated as an own-attempt input in `binding_status`.
 
 
+## F160. The vault is selected like the pointer (build of F145 to F156, question A, 6 October 2026)
+
+**Found building F145** (question A): the pointer was selected by the payee's own act, but the vault was "the published vault … in force for that payment", naming no act. The code judged a payment against the vault the payee's chain declares now, so a fan's 900 paid under a 1,000 limit stopped being protected once the owner rotated to a 500 limit.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** the vault and its limits that apply are those held by the payee's own act for the payment (the signature act on the agreement, the offer, or the publication paid), walking through the payee's own acts only (F157). One rule for pointer and vault; a payer is judged by what the payee showed.
+
+**Core changes:** Finance draft 6, rules 12a and 14a. *To build:* the vault check reads the vault selected from the payee's act; a test of the lowered-limit story.
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
