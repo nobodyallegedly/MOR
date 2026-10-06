@@ -85,3 +85,12 @@ jobs:
           npm run test:build 2>&1 | tee ../../test-output.txt; status=${PIPESTATUS[0]}
           grep -E 'not ok|Command failed|error\[|error:|stderr|differ|!=|wasm' ../../test-output.txt | grep -v '^ *at \|checkExecSync\|genericNode' | head -10 | while IFS= read -r l; do echo "::error::$l"; done
           exit $status
+      - name: Fingerprints of this machine's build (to compare with built/)
+        if: success() || failure()
+        shell: bash
+        run: |
+          cd clients/site && node --import tsx scripts/build.ts --out "$RUNNER_TEMP/linux-build" >/dev/null
+          cd ../..
+          for f in clients/genesis/wasm/mor_wasm_bg.wasm clients/genesis/wasm/mor_wasm.js "$RUNNER_TEMP/linux-build/gateway.js" "$RUNNER_TEMP/linux-build/mor_wasm_bg.wasm" clients/site/built/gateway.js clients/site/built/mor_wasm_bg.wasm; do
+            echo "::notice::$(sha256sum "$f" | sed "s#$RUNNER_TEMP/##") $(stat -c %s "$f") bytes"
+          done
