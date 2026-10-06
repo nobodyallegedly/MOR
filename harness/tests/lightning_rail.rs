@@ -17,7 +17,7 @@ use mor_core::identity::SigningKey;
 use mor_core::sig::SchnorrKey;
 use mor_core::chain::Status;
 use mor_core::envelope::{self, DecKey, EncryptionKey, Recipient, Routes, SealRandom, Sealed};
-use mor_core::finance::{Anonymous, Payer, 
+use mor_core::finance::{Anonymous, Citations, Payer, 
     self, choose, Amount, Choice, Claim, PayeePointer, Payload, Rail, Receipt, VaultEntry,
 };
 use mor_core::hash::{sha256, Hash};
@@ -199,7 +199,7 @@ impl Held for View<'_> {
             return None;
         }
         let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;
-        finance::check_signer(&p, h.act.outside.signer.as_ref()?).ok()?;
+        finance::check_signer(&p, h.act.outside.signer.as_ref()?, &Citations::of(&h.inside)).ok()?;
         match p {
             Payload::PayeePointer(p) => Some(p),
             _ => None,
@@ -220,20 +220,79 @@ impl Held for View<'_> {
         Some((who, v?))
     }
 
-    fn obligation(&self, id: &Hash) -> Option<mor_payment::HeldObligation> {
+    fn obligation(&self, id: &Hash) -> Option<finance::Obligation> {
         let h = self.0.v.get(id)?;
         if self.0.status(id) != Status::Valid || h.inside.spec != finance() {
             return None;
         }
         let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;
-        finance::check_signer(&p, h.act.outside.signer.as_ref()?).ok()?;
+        finance::check_signer(&p, h.act.outside.signer.as_ref()?, &Citations::of(&h.inside)).ok()?;
         match p {
-            Payload::Obligation(o) => Some(mor_payment::HeldObligation {
-                pointer_cited: finance::pointer_cited(&self.0.v, id, &o),
-                obligation: o,
-            }),
+            Payload::Obligation(o) => Some(o),
             _ => None,
         }
+    }
+
+    /// This wallet reads Finance only: which acts are the payee's own on an
+    /// agreement or offer is Law's (F145), so a payment under one to the
+    /// flow is unknown here. Its payments are tips.
+    fn holding(&self, _: &Hash, _: &Hash) -> Option<finance::Holding> {
+        None
+    }
+
+    fn voided_pointer(&self, id: &Hash) -> Option<(PayeePointer, Hash)> {
+        let h = self.0.v.get(id)?;
+        if !matches!(self.0.status(id), Status::Void | Status::Disputed) || h.inside.spec != finance() {
+            return None;
+        }
+        match Payload::decode(h.inside.type_, &h.inside.payload).ok()? {
+            Payload::PayeePointer(p) if h.act.outside.signer == Some(p.payee) => Some((p, self.0.v.judged_by(id)?)),
+            _ => None,
+        }
+    }
+
+    fn pointers_before(&self, payee: &Hash, rotation: &Hash) -> Vec<(Hash, PayeePointer)> {
+        let res = self.0.v.resolve(payee);
+        let Some(at) = res.position_of(rotation) else { return vec![] };
+        self.0
+            .v
+            .signed_by(payee)
+            .filter(|h| h.inside.spec == finance() && h.inside.type_ == finance::types::PAYEE_POINTER)
+            .filter(|h| h.act.outside.binding.and_then(|b| res.position_of(&b)).is_some_and(|k| k < at))
+            .filter_map(|h| {
+                let p = self
+                    .pointer(&h.id)
+                    .or_else(|| self.voided_pointer(&h.id).filter(|(_, r)| r == rotation).map(|(p, _)| p))?;
+                (&p.payee == payee).then_some((h.id, p))
+            })
+            .collect()
+    }
+
+    /// The payer's claims this reader holds for the payment, each signed
+    /// by its payer; no anchors read.
+    fn payers_claims(&self, proof: &[u8], rotation: &Hash) -> Vec<finance::PayersClaim> {
+        self.0
+            .v
+            .held_acts()
+            .filter(|h| h.inside.spec == finance() && self.0.status(&h.id) == Status::Valid)
+            .filter_map(|h| {
+                let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;
+                finance::check_signer(&p, h.act.outside.signer.as_ref()?, &Citations::of(&h.inside)).ok()?;
+                let Payload::Claim(c) = p else { return None };
+                if c.proof != proof {
+                    return None;
+                }
+                let hist = finance::history(&self.0.v, &h.inside, c.anonymous.is_some());
+                Some(finance::PayersClaim {
+                    holds_rotation: if hist.acts.contains(rotation) {
+                        Some(true)
+                    } else {
+                        hist.complete.then_some(false)
+                    },
+                    anchored_before: None,
+                })
+            })
+            .collect()
     }
 
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
@@ -511,7 +570,8 @@ impl Payment<'_> {
             (Payload::Claim(mut cl), Some(k)) => {
                 cl.anonymous = Some(Anonymous {
                     key: bare(k),
-                    sig: k.sign(&cl.anonymous_message(), &[0; 32]).sig,
+                    // The claim act carries no objects, acks or refs.
+                    sig: k.sign(&cl.anonymous_message(&Citations::default()), &[0; 32]).sig,
                 });
                 Payload::Claim(cl)
             }
@@ -571,12 +631,13 @@ fn check(party: &Party, act: &Hash) -> (Answer, Option<Hash>) {
     let h = party.rd.v.get(act).expect("held");
     let signer = h.act.outside.signer.expect("signed by an identity");
     let p = Payload::decode(h.inside.type_, &h.inside.payload).expect("a Finance act");
-    finance::check_signer(&p, &signer).expect("signed by the right party");
+    let cited = Citations::of(&h.inside);
+    finance::check_signer(&p, &signer, &cited).expect("signed by the right party");
     let ln = Lightning;
     let m = Modules::new().adopt(&ln);
     let v = match &p {
         Payload::Receipt(r) => verify(Record::Receipt(r), &View(&party.rd), &m),
-        Payload::Claim(c) => verify(Record::Claim(c, signer), &View(&party.rd), &m),
+        Payload::Claim(c) => verify(Record::Claim(c, signer, &cited), &View(&party.rd), &m),
         _ => panic!("not a receipt or claim"),
     };
     (v.answer, v.trusted)

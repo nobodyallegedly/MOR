@@ -5842,11 +5842,15 @@ fn a_receipt_pays_a_debt_only_with_the_rails_answer_and_in_its_unit() {
 /// Finance rules 12, 12a, 14 and 14a in Law's discharge (audit, October
 /// 2026, gaps 2 and 6): where the creditor's rules say a payment counts.
 /// The printer has a vault (limit 50 in the debt's unit) and a flow pointer
-/// chain. A payment to the flow counts only for a debt naming that version
-/// or a later one (rule 14); only within the vault's limit (rule 14a); and
-/// only up to a fork of the chain (rule 12): once a thief, with the stolen
-/// signing key, signs a second version 2 naming the same predecessor, a
-/// payment to either version 2 pays nothing.
+/// chain. The label's debts to it are IOUs (no agreement act): each counts
+/// on the printer's flow only once the printer acknowledges it with an act
+/// of its own, and then for the latest version that act holds, or an older
+/// one, whatever the IOU names (rule 14, F145, F155); only within the
+/// vault's limit (rule 14a); and only up to a fork of the chain (rule 12):
+/// once a thief, with the stolen signing key, signs a second version 2
+/// naming the same predecessor, a payment to either version 2 pays
+/// nothing. *Changed by F145: under F133 an IOU citing the pointer it
+/// named counted on that flow without any act of the printer's.*
 #[test]
 fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
     use mor_core::finance::{vault_declaration, Amount, Obligation, PaidAt, PayeePointer, Payload, Rail, VaultEntry};
@@ -5866,8 +5870,7 @@ fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
         lab.w.add(&a)
     };
     let v1 = pointer(&mut lab, &mut printer, 1, None, "the printer's first node");
-    let v2 = pointer(&mut lab, &mut printer, 2, Some(v1), "the printer's second node");
-    // IOUs the label signs, each citing the pointer it names (F133).
+    // IOUs the label signs, naming a pointer (informative only, F155).
     let iou = |lab: &mut Lab, named: Hash, value: u64| {
         let o = Payload::Obligation(Obligation {
             debtor: lab.c[0].id,
@@ -5876,27 +5879,43 @@ fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
             pointer: named,
             agreement: None,
         });
-        let a = lab.w.everyday_act(&mut lab.c[0], fin, 1, o.to_map(), Some(vec![Object { chain: pid, predecessor: named }]), None);
+        let a = lab.w.everyday_act(&mut lab.c[0], fin, 1, o.to_map(), None, None);
         let x = lab.w.add(&a);
         lab.sign(BEN, &x);
         x
+    };
+    // The printer acknowledges a debt with an act of its own (F145).
+    let ack = |lab: &mut Lab, printer: &mut Person, d: Hash| {
+        let a = lab.w.everyday_act(printer, mips().law, law::types::NEGOTIATION, vec![], None, Some(vec![d]));
+        lab.w.add(&a)
     };
     let paid = |lab: &mut Lab, printer: &mut Person, d: Hash, value: u64, at: PaidAt, proof: &str| {
         let r = payment(lab, printer, false, pid, d, spec("a unit"), value, proof.as_bytes());
         lab.rail_valid.push((r, at));
         lab.view().paid_toward(&d)
     };
-    // Rule 14: a debt naming version 1, paid to version 2's flow, pays
-    // nothing; paid to the vault, it pays.
+    // Rule 14: a debt the printer acknowledged while its pointer was
+    // version 1, paid to version 2's flow, pays nothing; paid to the vault,
+    // it pays.
     let old = iou(&mut lab, v1, 40);
+    ack(&mut lab, &mut printer, old);
+    let v2 = pointer(&mut lab, &mut printer, 2, Some(v1), "the printer's second node");
     assert_eq!(paid(&mut lab, &mut printer, old, 40, PaidAt::Flow(v2), "old, to v2"), 0);
     assert_eq!(paid(&mut lab, &mut printer, old, 40, PaidAt::Vault(pid), "old, to the vault"), 40);
+    // F145: a debt the printer has not acknowledged counts on no flow.
+    let bare = iou(&mut lab, v2, 30);
+    assert_eq!(paid(&mut lab, &mut printer, bare, 30, PaidAt::Flow(v2), "bare, to v2"), 0);
+    ack(&mut lab, &mut printer, bare);
+    assert_eq!(lab.view().paid_toward(&bare), 30, "acknowledged by an act holding version 2");
     // Rule 14a: above the vault's limit of 50, paid to the flow, nothing.
     let big = iou(&mut lab, v2, 80);
+    ack(&mut lab, &mut printer, big);
     assert_eq!(paid(&mut lab, &mut printer, big, 80, PaidAt::Flow(v2), "big, to the flow"), 0);
     assert_eq!(paid(&mut lab, &mut printer, big, 80, PaidAt::Vault(pid), "big, to the vault"), 80);
-    // Within the limit, naming version 2, paid to it: it counts...
+    // Within the limit, acknowledged by an act holding version 2, paid to
+    // it: it counts...
     let d = iou(&mut lab, v2, 30);
+    ack(&mut lab, &mut printer, d);
     assert_eq!(paid(&mut lab, &mut printer, d, 30, PaidAt::Flow(v2), "d, to v2"), 30);
     // ...until the thief forks the chain (rule 12). Paid to the thief's
     // version 2, or to the owner's, past the fork, nothing counts; paid to
@@ -5905,6 +5924,7 @@ fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
     let forked = pointer(&mut lab, &mut thief, 2, Some(v1), "the thief's node");
     assert_eq!(lab.view().paid_toward(&d), 0, "the owner's version 2 is past the fork");
     let d2 = iou(&mut lab, v2, 30);
+    ack(&mut lab, &mut printer, d2);
     assert_eq!(paid(&mut lab, &mut thief, d2, 30, PaidAt::Flow(forked), "d2, to the thief"), 0);
     assert_eq!(paid(&mut lab, &mut printer, d2, 30, PaidAt::Flow(v1), "d2, to v1"), 30);
 }

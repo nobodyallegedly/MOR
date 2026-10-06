@@ -7,7 +7,7 @@ use bitcoin::hashes::{sha256 as bh, Hash as _};
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use lightning_invoice::{Bolt11Invoice, Currency, InvoiceBuilder, PaymentSecret};
 use mor_core::act::Scheme;
-use mor_core::finance::{Amount, Anonymous, Claim, PayeePointer, Payer, Rail, Receipt, VaultEntry};
+use mor_core::finance::{Amount, Anonymous, Citations, Claim, PayeePointer, Payer, Rail, Receipt, VaultEntry};
 use mor_core::identity::SigningKey;
 use mor_core::sig::SchnorrKey;
 use mor_core::hash::{sha256, Hash};
@@ -147,8 +147,20 @@ impl Held for World {
     fn vault(&self, id: &Hash) -> Option<(Hash, Vec<VaultEntry>)> {
         (id == &self.vault_id).then(|| (self.payee, self.vault.clone()))
     }
-    fn obligation(&self, _: &Hash) -> Option<mor_payment::HeldObligation> {
+    fn obligation(&self, _: &Hash) -> Option<mor_core::finance::Obligation> {
         None
+    }
+    fn holding(&self, _: &Hash, _: &Hash) -> Option<mor_core::finance::Holding> {
+        None
+    }
+    fn voided_pointer(&self, _: &Hash) -> Option<(PayeePointer, Hash)> {
+        None
+    }
+    fn pointers_before(&self, _: &Hash, _: &Hash) -> Vec<(Hash, PayeePointer)> {
+        vec![]
+    }
+    fn payers_claims(&self, _: &[u8], _: &Hash) -> Vec<mor_core::finance::PayersClaim> {
+        vec![]
     }
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
         if payee == &self.pointer.payee {
@@ -277,7 +289,7 @@ fn answers(w: &World, r: &Receipt, c: &Claim, claimant: Hash) -> (Answer, Answer
     let m = Modules::new().adopt(&ln);
     (
         verify(Record::Receipt(r), w, &m).answer,
-        verify(Record::Claim(c, claimant), w, &m).answer,
+        verify(Record::Claim(c, claimant, &Citations::default()), w, &m).answer,
     )
 }
 
@@ -487,7 +499,7 @@ fn an_anonymous_refund_goes_to_the_committed_key_f113() {
     });
     let sign = |c: &Claim, k: &SchnorrKey| Anonymous {
         key: bare.clone(),
-        sig: k.sign(&c.anonymous_message(), &[0; 32]).sig,
+        sig: k.sign(&c.anonymous_message(&Citations::default()), &[0; 32]).sig,
     };
     let mut payers = c.clone();
     payers.anonymous = Some(sign(&c, &key));
