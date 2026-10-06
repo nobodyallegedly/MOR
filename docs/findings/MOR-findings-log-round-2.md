@@ -1736,10 +1736,19 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Identity draft 11, the envelope section and rule 24. *To build:* homes store sealed private link acts; the owner's client warns on an unrecognised act signed with its key; verifiers check publication.
 
 
+## F153. Nothing binding rests on a reader's own attempts (review finding 9, 6 October 2026)
+
+**Found by the hostile review of F133 to F144 (finding 9):** F137's sentence forbade only keepers, vault payments and agreements from relying on an answer that rests on a verifier's own failed attempts to reach homes, while its italic and paper claim 1 promise "nothing binding". A debt discharged through a pointer only that reader's attempts accepted, and a Law fork or closing counting a member's signature through such a re-homing, slipped through. Since F134, two verifiers can hold the same acts but different content keys, which the list of inputs did not name.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** the MUST NOT is widened to everything binding (keeper records, payments, discharge of debts, agreements, forks, closings); for these, such an answer is shown as unknown until it no longer rests on the verifier's own attempts. Reading and following an identity may still rest on it, the escape from a censor. Editorial: "content keys" joins the inputs.
+
+**Core changes:** Identity draft 11, the sentence after rule 17. *To build:* Finance and Law callers treat an own-attempt identity answer as unknown. Paper claim 1 now matches the text.
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
 
 **Corrected the same evening by the project lead, as editorial or following the decisions' own stated reasons (no new decision):** F144 now hands out every obligation that binds the collective (done, on its chain, within its signer's powers or adopted), as decided ("the debts that bind the collective"); F142 says "an action of its own key", "wherever it is stored"; F143's italic no longer claims independence from when a verifier is asked; F135's null sentence names keys 5, 6, 7 and 9; the rail-kind field marked format open; the freeze suite's leftover wording follows F140.
 
-**Open for Nobody, allegedly:** findings 1, 2, 3, 5, 6, 7 and 8 decided (F145 to F152); open: findings 10, 16, 17, and the remaining "when" sentences.
+**Open for Nobody, allegedly:** findings 1, 2, 3, 5, 6, 7, 8 and 9 decided (F145 to F153); open: findings 10, 16, 17, and the remaining "when" sentences.
