@@ -225,6 +225,12 @@ pub enum Consent {
     /// A negotiation message (F128, W6): talk, binding nothing, on neither
     /// of the collective's chains; the deal it leads to is an action.
     Talk,
+    /// One of Identity's own everyday acts of the collective (a witness
+    /// act, routes, an encryption key): on neither of its chains, it counts
+    /// for nothing in Law, adopts nothing (F142) and places nothing (F156,
+    /// rule 35b). Identity governs it, and it keeps its Identity role: a
+    /// witness act still keeps the acts it names visible as received.
+    Identity,
     /// The areas reaching it, each counted.
     Areas {
         agreement: Hash,
@@ -1127,6 +1133,13 @@ impl<'a> LawView<'a> {
     /// key, or a grant its founding terms carry. Its forks and closings are
     /// decisions too, signed by members; an act acting under one counts for
     /// nothing.
+    /// One of Identity's own everyday acts of the collective (a witness
+    /// act, routes, an encryption key): an Identity act that is no link of
+    /// the collective's identity chain. On neither chain (rule 35b).
+    fn identity_everyday(col: &Col, h: &Held, mips: &Mips) -> bool {
+        h.inside.spec == mips.identity && col.res.position_of(&h.id).is_none()
+    }
+
     fn is_decision(&self, col: &Col, h: &Held) -> bool {
         col.res.position_of(&h.id).is_some()
             || ((self.is_law(h, types::RECORD) || self.is_law(h, types::GRANT) || self.is_law(h, types::REVOCATION))
@@ -1211,7 +1224,8 @@ impl<'a> LawView<'a> {
     fn uncited(&self, col: &Col, x: &Held, b: Option<usize>) -> R<Option<String>> {
         // Identity's own everyday acts (a witness act, routes, an encryption
         // key) carry no objects: Identity governs them, and they are on no
-        // chain of Law's (reading, F127).
+        // chain of Law's (reading, F127); they count for nothing in Law
+        // ([`Consent::Identity`], F156), which `consent` answers first.
         if x.inside.spec == self.mips.identity {
             return Ok(None);
         }
@@ -1364,13 +1378,20 @@ impl<'a> LawView<'a> {
     }
 
     /// The places the collective's acts give a member's signature act `s`
-    /// ("Made before, made after", 2; C1, C2, A2, Flaw M).
+    /// ("Made before, made after", 2; C1, C2, A2, Flaw M): the act of the
+    /// collective it signs, a record naming it, a rotation naming it, and
+    /// an act of the collective on its chain acknowledging it. Identity's
+    /// own everyday acts of the collective, a witness act included, are on
+    /// neither chain and place nothing (F156, rule 35b).
     fn placements(&self, col: &Col, s: &Held) -> Vec<(Line<'a>, bool)> {
         // (where, whether it is a line: lines are not placed by keepers)
         let mut out = vec![];
         if let Ok(signed) = decode_signature(&s.inside) {
             if let Some(a) = self.v.get(&signed) {
-                if Self::own_key(col, a) && self.v.status(&a.id) == Status::Valid {
+                if Self::own_key(col, a)
+                    && self.v.status(&a.id) == Status::Valid
+                    && !Self::identity_everyday(col, a, &self.mips)
+                {
                     out.push((Line::Record(a), self.is_law(a, types::RECORD)));
                 }
             }
@@ -1392,7 +1413,7 @@ impl<'a> LawView<'a> {
             }
         }
         for a in self.v.acknowledgements(&s.id) {
-            if Self::own_key(col, a) && self.v.status(&a.id) == Status::Valid {
+            if Self::own_key(col, a) && self.v.status(&a.id) == Status::Valid && self.on_chain(col, a) {
                 out.push((Line::Record(a), self.is_law(a, types::RECORD)));
             }
         }
@@ -1404,6 +1425,20 @@ impl<'a> LawView<'a> {
             }
         }
         out
+    }
+
+    /// Whether an act of the collective's own key is on one of its chains
+    /// (rule 35b): a decision, or an action citing the decision it acts
+    /// under. Identity's own everyday acts (a witness act) and negotiation
+    /// messages are on neither (F156, W6).
+    fn on_chain(&self, col: &Col, a: &Held) -> bool {
+        if self.is_decision(col, a) {
+            return true;
+        }
+        if Self::identity_everyday(col, a, &self.mips) || self.is_law(a, types::NEGOTIATION) {
+            return false;
+        }
+        matches!(self.uncited(col, a, col.pos(a)), Ok(None))
     }
 
     /// Whether a member's signature act counts as made before line `l`.
@@ -2571,6 +2606,12 @@ impl<'a> LawView<'a> {
         // signed, and that signature is an action.
         if self.is_law(x, types::NEGOTIATION) {
             return Ok(Consent::Talk);
+        }
+        // F156 (rule 35b): Identity's own everyday acts, a witness act of the
+        // collective included, are on neither chain and count for nothing in
+        // Law.
+        if Self::identity_everyday(&col, x, &self.mips) {
+            return Ok(Consent::Identity);
         }
         // F127: an action cites, on the collective's chain, the decision it
         // acts under, and is judged under what its decisions leave in force.

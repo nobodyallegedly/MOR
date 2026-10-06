@@ -1493,6 +1493,11 @@ impl ColWorld {
         let col = self.col;
         // Done (rule 35a, F126, F128) and cited (rule 35b, F127).
         for (x, f) in &self.info {
+            // F156 (rule 35b): the collective's witness act is on neither
+            // chain and counts for nothing in Law.
+            if matches!(f.kind, K::Ack { .. }) && lv.consent(x).is_ok_and(|c| c.counts()) {
+                bad.push(format!("WITNESS-COUNTS: a witness act of the collective counts in Law (F156): {x:?} consent={:?}", lv.consent(x)));
+            }
             if f.kind == K::Record || matches!(f.kind, K::Ack { .. }) {
                 continue;
             }

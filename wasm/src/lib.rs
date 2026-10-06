@@ -2205,6 +2205,10 @@ impl Verifier {
                 o.kind = "talk".into();
                 o.reason = Some("a negotiation message: talk, binding nothing, on neither of the collective's chains (F128, W6)".into());
             }
+            law::Consent::Identity => {
+                o.kind = "identity".into();
+                o.reason = Some("one of Identity's own everyday acts of the collective (a witness act, routes, an encryption key): on neither of its chains, it counts for nothing in Law and places nothing; Identity governs it (rule 35b, F156)".into());
+            }
             law::Consent::Areas { agreement, areas, .. } => {
                 o.kind = "areas".into();
                 o.agreement = Some(hx(&agreement));

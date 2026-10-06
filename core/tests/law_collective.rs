@@ -12,7 +12,7 @@
 
 mod common;
 
-use common::{own_home, schnorr, signing_key, Person, Rot, World};
+use common::{law_spec, own_home, schnorr, signing_key, Person, Rot, World};
 use mor_core::sig::SchnorrKey;
 use mor_core::act::Object;
 use mor_core::cbor::Value;
@@ -361,9 +361,28 @@ impl Lab {
     }
 
     /// The label acknowledges an act by a witness act (Identity type 15),
-    /// on device `d`: on neither chain, it adopts nothing (F142).
+    /// on device `d`: on neither chain, it adopts nothing (F142) and places
+    /// nothing (F156).
     fn ack(&mut self, d: usize, x: Hash) -> Hash {
         self.w.ack(&mut self.c[d], x)
+    }
+
+    /// The label acknowledges an act by an action of its own key on device
+    /// `d`, on its chain (a Law act, type 12, which may carry `acks`, F110):
+    /// how it places a member's signature act before its next line
+    /// ("Made before, made after", 2; C2, F156).
+    fn acknowledge(&mut self, d: usize, x: Hash) -> Hash {
+        let a = self.w.everyday_act(&mut self.c[d], law_spec(), 12, vec![], None, Some(vec![x]));
+        self.w.add(&a)
+    }
+
+    /// The same act citing nothing on the label's chain: an action on no
+    /// chain of the label, which places nothing (rule 35b, F156).
+    fn acknowledge_uncited(&mut self, d: usize, x: Hash) -> Hash {
+        let cite = self.c[d].cite.take();
+        let a = self.w.everyday_act(&mut self.c[d], law_spec(), 12, vec![], None, Some(vec![x]));
+        self.c[d].cite = cite;
+        self.w.add(&a)
     }
 
     /// The label adopts an act (rule 40, F142): an action of its own key on
@@ -867,7 +886,7 @@ fn a_departure_takes_effect_at_the_labels_line() {
     });
     let k2 = lab.propose(CY, &t);
     let sb2 = sign(&mut lab.w, &mut ben_tablet, &k2);
-    lab.ack(0, sb2);
+    lab.acknowledge(0, sb2);
 
     // Ben resigns, from the laptop.
     let res = lab.resign_from(&mut ben_laptop, k, None);
@@ -1024,7 +1043,7 @@ fn a_number_never_asks_for_more_voices_than_remain() {
             let k = lab.propose(BEN, &t);
             let sa = lab.sign(ANA, &k);
             if acked {
-                lab.ack(0, sa);
+                lab.acknowledge(0, sa);
             }
             let mut ana = lab.m[ANA].clone();
             let res = lab.resign_from(&mut ana, f, None);
@@ -2132,6 +2151,8 @@ fn a_threshold_authority_is_counted_at_the_line() {
         "acknowledged by the record",
         "acknowledged before",
         "acknowledged after",
+        "witnessed before",
+        "acknowledged off the chain",
     ] {
         let mut lab = Lab::new(&|t| {
             t.abandonment = Some(Abandonment {
@@ -2159,13 +2180,30 @@ fn a_threshold_authority_is_counted_at_the_line() {
             match case {
                 "acknowledged by the record" => acks = Some(vec![sb]),
                 "acknowledged before" => {
-                    lab.ack(0, sb);
+                    lab.acknowledge(0, sb);
+                }
+                // F156: a witness act of the label is on neither chain and
+                // places nothing; nor does an action on no chain (rule 35b).
+                "witnessed before" => {
+                    let w = lab.ack(0, sb);
+                    assert_eq!(lab.consent(&w), Consent::Identity, "a witness act counts for nothing in Law (F156)");
+                    assert!(!lab.counts(&w));
+                }
+                "acknowledged off the chain" => {
+                    let a = lab.acknowledge_uncited(0, sb);
+                    assert!(matches!(lab.consent(&a), Consent::Uncited { .. }));
                 }
                 _ => {}
             }
             let r = lab.record_acking(0, None, &[], regs.clone(), f, acks.clone());
+            if matches!(case, "witnessed before" | "acknowledged off the chain") {
+                let e = lab.view().record(&lab.c[0].id, &r).unwrap();
+                assert!(!e.line, "{case}: the signature is not placed before the record (F156)");
+                assert!(e.not_a_line.as_deref().is_some_and(|w| w.contains("1 of the 2")), "{:?}", e.not_a_line);
+                continue;
+            }
             if case == "acknowledged after" {
-                lab.ack(0, sb);
+                lab.acknowledge(0, sb);
                 let e = lab.view().record(&lab.c[0].id, &r).unwrap();
                 assert!(!e.line, "a signature placed after the record completes nothing there");
                 assert!(e.not_a_line.as_deref().is_some_and(|w| w.contains("1 of the 2")), "{:?}", e.not_a_line);
@@ -2264,7 +2302,7 @@ fn a_threshold_declaration_at_the_recovery_rotation() {
         let d = lab.declare(Some(BEN), f, f, ANA, vec![outcomes::VOICE_REMOVED]);
         let sc = lab.sign(CY, &d);
         if case == "placed before" {
-            lab.ack(0, sc);
+            lab.acknowledge(0, sc);
         }
         let ids = lab.ids();
         let keep = vec![ids[BEN], ids[CY]];
