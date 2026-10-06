@@ -80,7 +80,7 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 - [ ] Sealed keepers named by the agreement; keepers check homes; recorded acts survive rotation as disputes; a record of an act nobody holds confers nothing (1)
 - [ ] Several keepers with a threshold; a keeper lost, its records surviving in copies (1)
 - [ ] Arbitrator given keys by key delivery to judge content (1)
-- [ ] Stakes in millionths, stake rule, transfer naming both chains; shares refer to stakes and the service pays the buyer; leftovers to the first listed party (1, 3)
+- [ ] Stakes in millionths, stake rule, transfer naming both chains; shares refer to stakes and the service pays the buyer; leftovers to each stake's first holder (F140) (1, 3)
 - [ ] Explicit work claims; a publication that carries or quotes without claiming; conflicting claims; a co-owner's lone sale visible as outside the claiming agreement, never prevented (2)
 - [ ] Public domain, timed: the claim ending at a point on the time reference, the key delivered then by an identity the release names (F124 N11) (2)
 - [ ] Split service named by grant key, in a deal one grant per payee written in its terms, and one per payee for each service the chain of judgment names to take over (F130, H6); every split service's key, a collective's included, signing only receipts for money coming in under the grantor's own claims and offers, never one whose payer is the service, nor a payout the grantor is owed (F129, H4, H5; F130, H7): split per receipt or payer's claim, exact sums, payouts as Finance payments, net of fees within the plan's maximum; amounts too small to send held (1, 2, 7)
