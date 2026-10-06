@@ -150,6 +150,16 @@ impl Held for World {
     fn obligation(&self, _: &Hash) -> Option<mor_payment::HeldObligation> {
         None
     }
+    fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
+        if payee == &self.pointer.payee {
+            vec![(self.pointer_id, self.pointer.clone())]
+        } else {
+            vec![]
+        }
+    }
+    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
+        (payee == &self.payee).then(|| self.vault.clone())
+    }
 }
 
 fn world() -> World {

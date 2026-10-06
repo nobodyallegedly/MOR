@@ -790,6 +790,33 @@ pub fn latest_pointer(held: &[(Hash, PayeePointer)]) -> LatestPointer {
     }
 }
 
+/// Rule 12 applied to a payment: whether the payee pointer `paid` counts,
+/// from the valid pointers held for its payee. It counts only on the
+/// unbroken, unforked chain: the pointer [`latest_pointer`] gives, or one
+/// before it on that chain. *A pointer forked by a second act naming the
+/// same predecessor counts only up to the fork: neither branch counts,
+/// the owner's nor a thief's, until a rotation settles it.* Which pointer
+/// on the chain a debt can be paid to is rule 14's ([`counts_toward`]).
+pub fn pointer_counts(held: &[(Hash, PayeePointer)], paid: &Hash) -> bool {
+    let mut at = latest_pointer(held).act;
+    while let Some(id) = at {
+        if &id == paid {
+            return true;
+        }
+        at = held.iter().find(|(i, _)| *i == id).and_then(|(_, p)| p.previous);
+    }
+    false
+}
+
+/// Where a payment was paid, as its rail proof shows it (the payment
+/// cMIP's `paid-to`): the payee-pointer act whose rail it was paid to, or
+/// the genesis or rotation declaring the vault entry it was paid to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PaidAt {
+    Flow(Hash),
+    Vault(Hash),
+}
+
 // ---------------------------------------------------------------- rule 14a: where a payment may go
 
 /// Where a payment of an amount may be paid, from the payee's vault in

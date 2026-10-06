@@ -72,6 +72,9 @@ struct Lab {
     authority: Person,
     keeper: Person,
     keeper_logs: Vec<(Hash, Vec<Hash>)>,
+    /// The rail's answer for the receipts paying debts (Finance rule 4), as
+    /// a verifier states it after the payment cMIP: valid, and where paid.
+    rail_valid: Vec<(Hash, mor_core::finance::PaidAt)>,
 }
 
 /// A grant key (F128): made by the grantee, who keeps its secret part; the
@@ -208,6 +211,7 @@ impl Lab {
             authority,
             keeper,
             keeper_logs: vec![],
+            rail_valid: vec![],
         }
     }
 
@@ -230,6 +234,7 @@ impl Lab {
         for (op, log) in &self.keeper_logs {
             v.keeper_logs.insert(*op, log.clone());
         }
+        v.rail_valid.extend(self.rail_valid.iter().copied());
         v
     }
 
@@ -2829,8 +2834,18 @@ fn obligation_to(lab: &mut Lab, creditor: Hash, value: u64) -> Hash {
     x
 }
 
-/// A receipt paying `value` toward an obligation, signed by its payee.
-fn receipt(w: &mut World, payee: &mut Person, payer: Hash, obligation: Hash, value: u64) -> Hash {
+/// A receipt paying `value` toward an obligation, signed by its payee,
+/// with the rail's answer stated as valid: paid to the payee's vault
+/// (Finance rules 4 and 14).
+fn receipt(lab: &mut Lab, payee: &mut Person, payer: Hash, obligation: Hash, value: u64) -> Hash {
+    let r = receipt_unanswered(&mut lab.w, payee, payer, obligation, value);
+    lab.rail_valid.push((r, mor_core::finance::PaidAt::Vault(payee.id)));
+    r
+}
+
+/// A receipt paying `value` toward an obligation, signed by its payee; no
+/// rail answer stated.
+fn receipt_unanswered(w: &mut World, payee: &mut Person, payer: Hash, obligation: Hash, value: u64) -> Hash {
     let rc = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
         rail: spec("a rail Module"),
         proof: vec![],
@@ -3481,7 +3496,7 @@ fn a_collective_forks() {
     assert!(e.why.as_deref().is_some_and(|w| w.contains("D5")), "{:?}", e.why);
     drop(v);
     // Side B pays d2 in full; d3's creditor releases it, taking nothing.
-    receipt(&mut lab.w, &mut supplier, sb.id, d2, 300);
+    receipt(&mut lab, &mut supplier, sb.id, d2, 300);
     debt_release(&mut lab.w, &mut hidden, d3, vec![]);
     let v = lab.view();
     assert_eq!(v.owes(&sa.id).unwrap(), Vec::<Hash>::new());
@@ -3965,8 +3980,8 @@ fn a_collective_releases_its_work_and_closes() {
     assert!(e.why.as_deref().is_some_and(|w| w.contains("cannot close while it owes anything")), "{:?}", e.why);
     drop(v);
     // The supplier is paid in full; the printer is paid 30 of 80.
-    receipt(&mut lab.w, &mut supplier, label, d, 100);
-    let part = receipt(&mut lab.w, &mut printer, label, d2, 30);
+    receipt(&mut lab, &mut supplier, label, d, 100);
+    let part = receipt(&mut lab, &mut printer, label, d2, 30);
     let v = lab.view();
     assert_eq!(v.closing(&c1).unwrap().open_debts, vec![d2]);
     assert_eq!(v.paid_toward(&d2), 30);
@@ -4021,7 +4036,7 @@ fn a_bankrupt_collective_settles_by_stakes_and_a_release() {
     let owes = |lab: &Lab| -> Vec<Hash> { view2(lab, d).owes(&lab.c[0].id).unwrap() };
     assert_eq!(owes(&lab), vec![d]);
     // It pays what it can: 300 of 1,000. The debt stays open, visible.
-    let part = receipt(&mut lab.w, &mut lender, label, d, 300);
+    let part = receipt(&mut lab, &mut lender, label, d, 300);
     assert_eq!(owes(&lab), vec![d]);
     // A clone of its agreement gives the lender 40% of the work.
     let lid = lender.id;
@@ -5147,4 +5162,209 @@ fn a_collectives_split_service_signs_only_incoming_receipts() {
     s2.cite = Some((label, vec![g2, rec]));
     let plain = add(&mut lab, &mut s2, rc(spec("the film's service"), film, Some(film), None));
     assert_eq!(reason(&lab, &plain), None);
+}
+
+// ---------------------------------------------------------------- what pays a debt (audit, October 2026)
+
+/// A payment toward a debt as its receiver (a receipt, type 2) or its payer
+/// (a claim, type 3) signs it, with its own rail proof.
+#[allow(clippy::too_many_arguments)]
+fn payment(
+    lab: &mut Lab,
+    signer: &mut Person,
+    claim: bool,
+    payee: Hash,
+    obligation: Hash,
+    unit: Hash,
+    value: u64,
+    proof: &[u8],
+) -> Hash {
+    use mor_core::finance::{Amount, Claim, Payer, Payload, Receipt};
+    let amount = Amount { unit, value };
+    let (t, p) = if claim {
+        (3, Payload::Claim(Claim {
+            rail: spec("a rail Module"),
+            proof: proof.to_vec(),
+            payee,
+            amount,
+            fulfils: obligation,
+            disagrees: None,
+            referral: None,
+            refund: None,
+            anonymous: None,
+            purchase: None,
+        }))
+    } else {
+        (2, Payload::Receipt(Receipt {
+            rail: spec("a rail Module"),
+            proof: proof.to_vec(),
+            payer: Some(Payer::Identity(lab.c[0].id)),
+            payee,
+            amount,
+            fulfils: obligation,
+            previous: None,
+            forward: None,
+            batch: None,
+            purchase: None,
+        }))
+    };
+    let a = lab.w.everyday_act(signer, mips().finance, t, p.to_map(), None, None);
+    lab.w.add(&a)
+}
+
+/// Finance rules 4 and 7 (audit, October 2026, gap 2): a receipt its
+/// creditor signs pays a debt only with the rail's answer, valid, and only
+/// in the debt's unit. A creditor-signed receipt with an empty proof and no
+/// rail answer, or one for 100 of another unit, settles nothing: the
+/// collective still owes, and cannot close.
+#[test]
+fn a_receipt_pays_a_debt_only_with_the_rails_answer_and_in_its_unit() {
+    use mor_core::finance::PaidAt;
+    let mut lab = Lab::new(&|_| {});
+    let label = lab.c[0].id;
+    let mut printer = lab.w.genesis("the printer", vec![own_home()], None, None);
+    let pid = printer.id;
+    let d = obligation_to(&mut lab, pid, 100);
+    // Signed by the creditor, naming the debt, the right amount: no proof,
+    // no rail answer. Nothing paid.
+    receipt_unanswered(&mut lab.w, &mut printer, label, d, 100);
+    assert_eq!(lab.view().paid_toward(&d), 0);
+    assert_eq!(lab.view().owes(&label).unwrap(), vec![d]);
+    // A valid rail answer, but 100 of another unit: nothing paid.
+    let other = payment(&mut lab, &mut printer, false, pid, d, spec("another unit"), 100, b"proof: another unit");
+    lab.rail_valid.push((other, PaidAt::Vault(pid)));
+    assert_eq!(lab.view().paid_toward(&d), 0);
+    assert_eq!(lab.view().owes(&label).unwrap(), vec![d]);
+    // In the debt's unit, with the rail's answer: paid.
+    let good = payment(&mut lab, &mut printer, false, pid, d, spec("a unit"), 100, b"proof: paid");
+    lab.rail_valid.push((good, PaidAt::Vault(pid)));
+    assert_eq!(lab.view().paid_toward(&d), 100);
+    assert_eq!(lab.view().owes(&label).unwrap(), Vec::<Hash>::new());
+}
+
+/// Finance rules 12, 12a, 14 and 14a in Law's discharge (audit, October
+/// 2026, gaps 2 and 6): where the creditor's rules say a payment counts.
+/// The printer has a vault (limit 50 in the debt's unit) and a flow pointer
+/// chain. A payment to the flow counts only for a debt naming that version
+/// or a later one (rule 14); only within the vault's limit (rule 14a); and
+/// only up to a fork of the chain (rule 12): once a thief, with the stolen
+/// signing key, signs a second version 2 naming the same predecessor, a
+/// payment to either version 2 pays nothing.
+#[test]
+fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
+    use mor_core::finance::{vault_declaration, Amount, Obligation, PaidAt, PayeePointer, Payload, Rail, VaultEntry};
+    let mut lab = Lab::new(&|_| {});
+    let fin = mips().finance;
+    let vault = VaultEntry { unit: spec("a unit"), rail_module: spec("a rail Module"), source: b"the printer's vault".to_vec(), limit: 50 };
+    let mut printer = lab.w.genesis_with("the printer", vec![own_home()], None, None, Some(vec![vault_declaration(&fin, &[vault])]), 3);
+    let pid = printer.id;
+    let pointer = |lab: &mut Lab, p: &mut Person, version: u64, previous: Option<Hash>, node: &str| {
+        let x = Payload::PayeePointer(PayeePointer {
+            payee: pid,
+            version,
+            previous,
+            rails: vec![Rail { module: spec("a rail Module"), address: node.as_bytes().to_vec() }],
+        });
+        let a = lab.w.everyday_act(p, fin, 0, x.to_map(), None, None);
+        lab.w.add(&a)
+    };
+    let v1 = pointer(&mut lab, &mut printer, 1, None, "the printer's first node");
+    let v2 = pointer(&mut lab, &mut printer, 2, Some(v1), "the printer's second node");
+    // IOUs the label signs, each citing the pointer it names (F133).
+    let iou = |lab: &mut Lab, named: Hash, value: u64| {
+        let o = Payload::Obligation(Obligation {
+            debtor: lab.c[0].id,
+            creditor: pid,
+            amount: Amount { unit: spec("a unit"), value },
+            pointer: named,
+            agreement: None,
+        });
+        let a = lab.w.everyday_act(&mut lab.c[0], fin, 1, o.to_map(), Some(vec![Object { chain: pid, predecessor: named }]), None);
+        let x = lab.w.add(&a);
+        lab.sign(BEN, &x);
+        x
+    };
+    let paid = |lab: &mut Lab, printer: &mut Person, d: Hash, value: u64, at: PaidAt, proof: &str| {
+        let r = payment(lab, printer, false, pid, d, spec("a unit"), value, proof.as_bytes());
+        lab.rail_valid.push((r, at));
+        lab.view().paid_toward(&d)
+    };
+    // Rule 14: a debt naming version 1, paid to version 2's flow, pays
+    // nothing; paid to the vault, it pays.
+    let old = iou(&mut lab, v1, 40);
+    assert_eq!(paid(&mut lab, &mut printer, old, 40, PaidAt::Flow(v2), "old, to v2"), 0);
+    assert_eq!(paid(&mut lab, &mut printer, old, 40, PaidAt::Vault(pid), "old, to the vault"), 40);
+    // Rule 14a: above the vault's limit of 50, paid to the flow, nothing.
+    let big = iou(&mut lab, v2, 80);
+    assert_eq!(paid(&mut lab, &mut printer, big, 80, PaidAt::Flow(v2), "big, to the flow"), 0);
+    assert_eq!(paid(&mut lab, &mut printer, big, 80, PaidAt::Vault(pid), "big, to the vault"), 80);
+    // Within the limit, naming version 2, paid to it: it counts...
+    let d = iou(&mut lab, v2, 30);
+    assert_eq!(paid(&mut lab, &mut printer, d, 30, PaidAt::Flow(v2), "d, to v2"), 30);
+    // ...until the thief forks the chain (rule 12). Paid to the thief's
+    // version 2, or to the owner's, past the fork, nothing counts; paid to
+    // version 1, the last pointer before the fork, it counts.
+    let mut thief = printer.clone();
+    let forked = pointer(&mut lab, &mut thief, 2, Some(v1), "the thief's node");
+    assert_eq!(lab.view().paid_toward(&d), 0, "the owner's version 2 is past the fork");
+    let d2 = iou(&mut lab, v2, 30);
+    assert_eq!(paid(&mut lab, &mut thief, d2, 30, PaidAt::Flow(forked), "d2, to the thief"), 0);
+    assert_eq!(paid(&mut lab, &mut printer, d2, 30, PaidAt::Flow(v1), "d2, to v1"), 30);
+}
+
+/// Finance rule 10, double entry (audit, October 2026, gap 5): a payer's
+/// valid claim is evidence on equal footing with a receipt. A receiver
+/// that signs no receipt cannot keep the debt open: the claim alone shows
+/// the money arrived. One that signs a receipt for less is outweighed: the
+/// greater amount counts. Both are shown as open questions on the receiver.
+/// A claim without the rail's answer counts for nothing and is not shown.
+#[test]
+fn a_payers_claim_counts_and_shows_what_the_receiver_hides() {
+    use mor_core::finance::{Amount, PaidAt};
+    use mor_core::law::Disagreement;
+    let mut lab = Lab::new(&|_| {});
+    let label = lab.c[0].id;
+    let mut printer = lab.w.genesis("the printer", vec![own_home()], None, None);
+    let pid = printer.id;
+    let unit = spec("a unit");
+    let d = obligation_to(&mut lab, pid, 100);
+    let at = PaidAt::Vault(pid);
+    // The label, paying, signs a claim without the rail's answer: nothing.
+    let mut payer = lab.c[0].clone();
+    let bare = payment(&mut lab, &mut payer, true, pid, d, unit, 100, b"no answer");
+    assert_eq!(lab.view().paid_toward(&d), 0);
+    assert!(lab.view().disagreements(&pid).is_empty());
+    // A claim with the rail's answer for 60: the printer signs no receipt.
+    let c1 = payment(&mut lab, &mut payer, true, pid, d, unit, 60, b"payment one");
+    lab.rail_valid.push((c1, at));
+    assert_eq!(lab.view().paid_toward(&d), 60, "the claim alone shows the money arrived");
+    assert_eq!(lab.view().disagreements(&pid), vec![Disagreement::NoReceipt { claim: c1 }]);
+    // A second payment of 40, claimed; the printer signs a receipt for 10.
+    let c2 = payment(&mut lab, &mut payer, true, pid, d, unit, 40, b"payment two");
+    lab.rail_valid.push((c2, at));
+    let r2 = payment(&mut lab, &mut printer, false, pid, d, unit, 10, b"payment two");
+    lab.rail_valid.push((r2, at));
+    let v = lab.view();
+    assert_eq!(v.paid_toward(&d), 100, "the greater amount counts");
+    assert_eq!(v.owes(&label).unwrap(), Vec::<Hash>::new());
+    let shown = v.disagreements(&pid);
+    assert!(shown.contains(&Disagreement::NoReceipt { claim: c1 }));
+    assert!(shown.contains(&Disagreement::Differs {
+        claim: c2,
+        receipt: r2,
+        claimed: Amount { unit, value: 40 },
+        receipted: Amount { unit, value: 10 },
+        payee: false,
+        fulfils: false,
+    }));
+    assert_eq!(shown.len(), 2);
+    drop(v);
+    // The printer signs a receipt matching the first payment: that question
+    // closes, and the payment is not counted twice.
+    let r1 = payment(&mut lab, &mut printer, false, pid, d, unit, 60, b"payment one");
+    lab.rail_valid.push((r1, at));
+    let v = lab.view();
+    assert_eq!(v.paid_toward(&d), 100);
+    assert!(!v.disagreements(&pid).iter().any(|x| matches!(x, Disagreement::NoReceipt { .. })));
+    let _ = bare;
 }

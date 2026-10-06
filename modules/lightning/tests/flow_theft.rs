@@ -80,6 +80,16 @@ impl Held for Contributor {
     fn obligation(&self, id: &Hash) -> Option<HeldObligation> {
         self.obligations.get(id).cloned()
     }
+    fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
+        self.pointers
+            .iter()
+            .filter(|(_, p)| &p.payee == payee)
+            .map(|(i, p)| (*i, p.clone()))
+            .collect()
+    }
+    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
+        (payee == &self.id).then(|| self.vault.clone())
+    }
 }
 
 struct Story {
@@ -476,5 +486,106 @@ fn an_iou_counts_on_the_flow_only_for_a_pointer_it_cites() {
     let (r, c) = paid(&s, friend, names_thiefs, to_vault(&s), &s.vault_node, sat(5_000));
     for (rail, rule_14) in judged(&s, &r, &c, friend) {
         assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "paid to the vault, it counts");
+    }
+}
+
+/// Finance rule 12 (audit, October 2026, gap 1): the thief does not extend
+/// the chain but forks it. The owner's current pointer is version 2; with
+/// the stolen signing key the thief signs a second version 2 naming the
+/// same predecessor. Rule 14's version compare alone would let every debt
+/// naming the owner's version 2 count on the thief's flow (2 ≥ 2), and the
+/// agreement did cite the owner's pointer (F133). Rule 12: a forked chain
+/// counts only up to the fork. Paid to the thief's fork, the debt counts
+/// for nothing; paid to the last pointer before the fork, or to the vault,
+/// it counts. *Stated cost: until a rotation settles the fork, the owner's
+/// own version 2 does not count either.*
+#[test]
+fn a_thiefs_same_version_pointer_cannot_collect_debts_naming_the_owners() {
+    let mut s = story();
+    let (owner_v2, owner_node) = (h("the owner's own pointer, version 2"), secret("the owner's second node"));
+    s.c.pointers.insert(
+        owner_v2,
+        PayeePointer {
+            payee: s.c.id,
+            version: 2,
+            previous: Some(s.own_pointer),
+            rails: vec![Rail {
+                module: mor_lightning::spec(),
+                address: address(&owner_node),
+            }],
+        },
+    );
+    // `thief_pointer` is also version 2 naming `own_pointer`: a fork.
+    assert!(finance::latest_pointer(&s.c.pointers_of(&s.c.id)).contested);
+    let debt = h("a debt naming the owner's version 2");
+    s.c.obligations.insert(
+        debt,
+        held(
+            Obligation {
+                debtor: s.service,
+                creditor: s.c.id,
+                amount: sat(40_000),
+                pointer: owner_v2,
+                agreement: Some(h("a deal citing the owner's version 2")),
+            },
+            Some(true),
+        ),
+    );
+    let (r, c) = paid(&s, s.service, debt, to_flow(s.thief_pointer), &s.thief_node, sat(40_000));
+    for (rail, rule_12) in judged(&s, &r, &c, s.service) {
+        assert_eq!(rail, Answer::Valid, "the rail itself shows a payment");
+        assert!(
+            matches!(&rule_12, Answer::Invalid(w) if w.contains("rule 12")),
+            "paid to the thief's fork, it must not count: {rule_12}"
+        );
+    }
+    let (r, c) = paid(&s, s.service, debt, to_flow(owner_v2), &owner_node, sat(40_000));
+    for (_, rule_12) in judged(&s, &r, &c, s.service) {
+        assert!(matches!(&rule_12, Answer::Invalid(w) if w.contains("rule 12")), "the owner's branch is past the fork too: {rule_12}");
+    }
+    let (r, c) = paid(&s, s.service, debt, to_flow(s.own_pointer), &s.own_node, sat(40_000));
+    for (rail, rule_12) in judged(&s, &r, &c, s.service) {
+        assert_eq!((rail, rule_12), (Answer::Valid, Answer::Valid), "the last pointer before the fork counts");
+    }
+    let (r, c) = paid(&s, s.service, debt, to_vault(&s), &s.vault_node, sat(40_000));
+    for (rail, rule_12) in judged(&s, &r, &c, s.service) {
+        assert_eq!((rail, rule_12), (Answer::Valid, Answer::Valid), "paid to the vault, it counts");
+    }
+}
+
+/// Finance rules 14a and 15 applied to a payment received (audit, October
+/// 2026, gap 6): a payment to the flow above the vault's limit, or in a
+/// unit the vault does not cover, verifies on the rail and passes rule 14,
+/// but did not follow the published vault: judged beside, it does not
+/// count. Below the limit it does.
+#[test]
+fn the_vault_rules_judge_a_payment_received_on_the_flow() {
+    let mut s = story();
+    let both = |s: &Story, r: &Receipt, c: &Claim| {
+        [
+            mor_payment::beside(Record::Receipt(r), &s.c),
+            mor_payment::beside(Record::Claim(c, s.fan), &s.c),
+        ]
+    };
+    // A tip following the thief's published pointer, under the limit: counts.
+    let (r, c) = paid(&s, s.fan, s.thief_pointer, to_flow(s.thief_pointer), &s.thief_node, sat(2_100));
+    assert_eq!(both(&s, &r, &c), [Answer::Valid, Answer::Valid]);
+    // Above the vault's limit of 100,000: paid to the flow, it does not count.
+    let (r, c) = paid(&s, s.fan, s.thief_pointer, to_flow(s.thief_pointer), &s.thief_node, sat(150_000));
+    for (rail, rule_14) in judged(&s, &r, &c, s.fan) {
+        assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "the rail and rule 14 alone let it through");
+    }
+    for a in both(&s, &r, &c) {
+        assert!(matches!(&a, Answer::Invalid(w) if w.contains("14a")), "above the limit: {a}");
+    }
+    // Paid to the vault instead, it counts.
+    let (r, c) = paid(&s, s.fan, s.thief_pointer, to_vault(&s), &s.vault_node, sat(150_000));
+    assert_eq!(both(&s, &r, &c), [Answer::Valid, Answer::Valid]);
+    // A vault covering only another unit: no payment in sats counts on the
+    // flow, however small (fail closed).
+    s.c.vault[0].unit = h("another unit");
+    let (r, c) = paid(&s, s.fan, s.thief_pointer, to_flow(s.thief_pointer), &s.thief_node, sat(10));
+    for a in both(&s, &r, &c) {
+        assert!(matches!(&a, Answer::Invalid(w) if w.contains("14a")), "a unit the vault does not cover: {a}");
     }
 }

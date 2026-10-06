@@ -62,6 +62,14 @@ pub struct LawView<'a> {
     /// answer, like `push_rails`, a fact the caller states: the core reads
     /// no rail.
     pub rail_invalid: BTreeSet<Hash>,
+    /// Receipts and claims whose rail proof the caller checked under the
+    /// payment cMIP and found valid (Finance rules 2 and 4: `verify`, or
+    /// `verify_under` with the payment cMIP the agreement names), with where
+    /// the proof says the payment was paid (`mor_payment::paid_at`). The
+    /// rail's answer, a fact the caller states: the core reads no rail. A
+    /// receipt or claim not listed has no rail answer, and pays nothing
+    /// toward a debt ([`Self::paid_toward`]).
+    pub rail_valid: BTreeMap<Hash, crate::finance::PaidAt>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -329,6 +337,7 @@ impl<'a> LawView<'a> {
             keeper_logs: BTreeMap::new(),
             push_rails: BTreeSet::new(),
             rail_invalid: BTreeSet::new(),
+            rail_valid: BTreeMap::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -3761,6 +3770,25 @@ pub enum PurchaseVerdict {
     WrongReceipt { why: String },
 }
 
+/// An open question on a receiver (Finance rule 10, double entry): a valid
+/// payer's claim its receiver has signed no matching receipt for.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Disagreement {
+    /// No receipt names the claim's rail proof: the claim alone shows the
+    /// money arrived.
+    NoReceipt { claim: Hash },
+    /// A receipt naming the same rail proof disagrees with the claim: in
+    /// amount, payee or what the payment fulfils.
+    Differs {
+        claim: Hash,
+        receipt: Hash,
+        claimed: crate::finance::Amount,
+        receipted: crate::finance::Amount,
+        payee: bool,
+        fulfils: bool,
+    },
+}
+
 /// A payment for a work, judged (F126).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PurchaseEval {
@@ -4628,33 +4656,200 @@ impl<'a> LawView<'a> {
         Ok(Some(out))
     }
 
-    /// What receipts held pay toward an obligation: the sum of valid
-    /// receipts fulfilling it that end at its creditor, received and signed
-    /// by the creditor the obligation names (Finance rule 7: routes ending
-    /// at the creditor's payee pointer). A receipt anyone else signs naming
-    /// the debt, the debtor's own among them, pays nothing toward it. Found
-    /// by the Law invariants (`docs/law-invariants.md`, IC2).
+    /// What payments held pay toward an obligation (Finance rule 7: valid
+    /// routes ending at the creditor's payee pointer, each naming the
+    /// obligation). A receipt counts when it names the obligation, is
+    /// received and signed by the creditor the obligation names (a receipt
+    /// anyone else signs, the debtor's own among them, pays nothing; Law
+    /// invariants, IC2), and:
+    ///
+    /// - has the rail's answer, valid (rule 4; [`Self::rail_valid`]): no
+    ///   rail answer, nothing counted;
+    /// - is in the debt's unit: 100 of another unit pay nothing;
+    /// - was paid where the creditor's rules let it count for this debt
+    ///   ([`Self::paid_where_it_counts`]: rules 12, 12a, 14 and 14a).
+    ///
+    /// Double entry (rule 10): a valid payer's claim counts on equal footing.
+    /// Where the creditor signed no receipt for its rail proof, the claim
+    /// alone shows the money arrived; where its receipt shows less, the
+    /// greater amount counts. Either is shown as a disagreement on the
+    /// receiver ([`Self::disagreements`]). A claim whose rail proof a receipt
+    /// names for another payee or another obligation, with none matching
+    /// it, is not counted here (see `docs/must-audit-2026-10.md`, Finance,
+    /// U5).
     pub fn paid_toward(&self, obligation: &Hash) -> u64 {
         use crate::finance::Payload as Fin;
-        let creditor = match self.v.get(obligation).map(|o| Fin::decode(o.inside.type_, &o.inside.payload)) {
-            Some(Ok(Fin::Obligation(o))) => o.creditor,
+        let o = match self.v.get(obligation).map(|o| (o, Fin::decode(o.inside.type_, &o.inside.payload))) {
+            Some((x, Ok(Fin::Obligation(o)))) if x.inside.spec == self.mips.finance => o,
             _ => return 0,
         };
-        self.v
-            .held_acts()
-            .filter_map(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
+        let creditor = o.creditor;
+        let counts = |id: &Hash, amount: &crate::finance::Amount| {
+            amount.unit == o.amount.unit
+                && self
+                    .rail_valid
+                    .get(id)
+                    .is_some_and(|at| self.paid_where_it_counts(at, amount, obligation, &o))
+        };
+        let mut receipts: Vec<(Vec<u8>, u64)> = vec![];
+        let mut claims: BTreeMap<Vec<u8>, u64> = BTreeMap::new();
+        for r in self.v.held_acts() {
+            if r.inside.spec != self.mips.finance {
+                continue;
+            }
+            match Fin::decode(r.inside.type_, &r.inside.payload) {
                 Ok(Fin::Receipt(rc))
-                    if r.inside.spec == self.mips.finance
-                        && &rc.fulfils == obligation
+                    if &rc.fulfils == obligation
                         && rc.payee == creditor
                         && r.act.outside.signer == Some(creditor)
-                        && self.valid(&r.id) =>
+                        && self.valid(&r.id)
+                        && counts(&r.id, &rc.amount) =>
                 {
-                    Some(rc.amount.value)
+                    receipts.push((rc.proof, rc.amount.value));
+                }
+                Ok(Fin::Claim(c))
+                    if &c.fulfils == obligation
+                        && c.payee == creditor
+                        && self.payers_claim(r)
+                        && counts(&r.id, &c.amount)
+                        && !self.claim_unsettled(&c) =>
+                {
+                    let m = claims.entry(c.proof).or_default();
+                    *m = (*m).max(c.amount.value);
+                }
+                _ => {}
+            }
+        }
+        let mut sum = receipts.iter().map(|(_, v)| *v).fold(0u64, u64::saturating_add);
+        for (proof, claimed) in claims {
+            let receipted = receipts
+                .iter()
+                .filter(|(p, _)| p == &proof)
+                .map(|(_, v)| *v)
+                .fold(0u64, u64::saturating_add);
+            sum = sum.saturating_add(claimed.saturating_sub(receipted));
+        }
+        sum
+    }
+
+    /// Whether a payment its rail shows paid at `at` can count for the
+    /// obligation `ob` (`o`), by the creditor's rules: Finance rule 12a (the
+    /// creditor's own pointer, in force for that payment by rules 12, 14 and
+    /// 14a; the rail Module and the vault entry are the rail answer's), rule
+    /// 12 (a forked pointer chain counts only up to the fork), rule 14 with
+    /// F133 (a payment to the flow counts only for a debt naming that
+    /// version or a later one, which its agreement act cites), and rule 14a
+    /// (paid to the flow, only within the vault's limit for its unit). A
+    /// payment to the vault counts (rule 14).
+    fn paid_where_it_counts(
+        &self,
+        at: &crate::finance::PaidAt,
+        amount: &crate::finance::Amount,
+        ob: &Hash,
+        o: &crate::finance::Obligation,
+    ) -> bool {
+        use crate::finance::{self as fin, PaidAt, Payload as Fin};
+        let PaidAt::Flow(p) = at else { return true };
+        let pointers = self.pointers_held(&o.creditor).unwrap_or_default();
+        let Some((_, paid)) = pointers.iter().find(|(i, _)| i == p) else { return false };
+        if !fin::pointer_counts(&pointers, p) {
+            return false;
+        }
+        if fin::pointer_cited(self.v, ob, o) != Some(true) {
+            return false;
+        }
+        let named = match self.v.get(&o.pointer).map(|x| (x, Fin::decode(x.inside.type_, &x.inside.payload))) {
+            Some((x, Ok(Fin::PayeePointer(q)))) if x.inside.spec == self.mips.finance && q.payee == o.creditor => q.version,
+            _ => return false,
+        };
+        if !fin::counts_toward(named, fin::PaidInto::Flow(paid.version)) {
+            return false;
+        }
+        let vault = self.vault_in_force(&o.creditor);
+        fin::flow_followed_vault((!vault.is_empty()).then_some(vault.as_slice()), amount)
+    }
+
+    /// Whether `h` is a payer's claim that stands: valid under Identity,
+    /// signed by its payer (or carrying its anonymous payer's key, F113).
+    fn payers_claim(&self, h: &Held) -> bool {
+        use crate::finance::{self as fin, Payload as Fin};
+        let Ok(p @ Fin::Claim(_)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
+        h.inside.spec == self.mips.finance
+            && self.valid(&h.id)
+            && h.act.outside.signer.is_some_and(|s| fin::check_signer(&p, &s).is_ok())
+    }
+
+    /// The receipts held naming a rail proof, each valid under Identity and
+    /// signed by its payee.
+    fn receipts_for_proof(&self, proof: &[u8]) -> Vec<(Hash, crate::finance::Receipt)> {
+        use crate::finance::{self as fin, Payload as Fin};
+        self.v
+            .held_acts()
+            .filter(|r| r.inside.spec == self.mips.finance)
+            .filter_map(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
+                Ok(p @ Fin::Receipt(_))
+                    if self.valid(&r.id)
+                        && r.act.outside.signer.is_some_and(|s| fin::check_signer(&p, &s).is_ok()) =>
+                {
+                    match p {
+                        Fin::Receipt(rc) if rc.proof == proof => Some((r.id, rc)),
+                        _ => None,
+                    }
                 }
                 _ => None,
             })
-            .fold(0u64, u64::saturating_add)
+            .collect()
+    }
+
+    /// A claim whose rail proof receipts name for another payee or another
+    /// act, none of them for its own: Finance rule 10's "the greater
+    /// amount counts as received" does not say toward what, and rule 8a
+    /// counts neither of two acts sharing a proof outside a batch. Left
+    /// uncounted for the author to rule on (audit U5).
+    fn claim_unsettled(&self, c: &crate::finance::Claim) -> bool {
+        let rs = self.receipts_for_proof(&c.proof);
+        !rs.is_empty() && !rs.iter().any(|(_, r)| r.payee == c.payee && r.fulfils == c.fulfils)
+    }
+
+    /// Double entry (Finance rule 10): the open questions on a receiver.
+    /// Each valid payer's claim to `receiver` with the rail's answer, valid
+    /// ([`Self::rail_valid`]), for which the receiver has signed no receipt
+    /// matching it (same rail proof, amount, payee and what it fulfils): no
+    /// receipt at all (the claim alone shows the money arrived), or receipts
+    /// naming the same proof that disagree with it. Until the receiver signs
+    /// a receipt matching the proof, the greater amount counts as received
+    /// ([`Self::paid_toward`]).
+    pub fn disagreements(&self, receiver: &Hash) -> Vec<Disagreement> {
+        use crate::finance::Payload as Fin;
+        let mut out = vec![];
+        for h in self.v.held_acts() {
+            if h.inside.spec != self.mips.finance || !self.rail_valid.contains_key(&h.id) || !self.payers_claim(h) {
+                continue;
+            }
+            let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
+            if &c.payee != receiver {
+                continue;
+            }
+            let rs = self.receipts_for_proof(&c.proof);
+            let same = |r: &crate::finance::Receipt| r.amount == c.amount && r.payee == c.payee && r.fulfils == c.fulfils;
+            if rs.iter().any(|(_, r)| same(r)) {
+                continue;
+            }
+            if rs.is_empty() {
+                out.push(Disagreement::NoReceipt { claim: h.id });
+            }
+            for (id, r) in rs {
+                out.push(Disagreement::Differs {
+                    claim: h.id,
+                    receipt: id,
+                    claimed: c.amount,
+                    receipted: r.amount,
+                    payee: r.payee != c.payee,
+                    fulfils: r.fulfils != c.fulfils,
+                });
+            }
+        }
+        out
     }
 
     /// A creditor's release, judged (Finance type 4, F126; Law rule 47b):
@@ -5267,6 +5462,21 @@ impl<'a> LawView<'a> {
     /// The latest valid payee pointer of an identity that counts: for a
     /// collective, one its Finance lane's consent carries.
     fn pointer_in_force(&self, who: &Hash) -> R<Result<(Hash, crate::finance::PayeePointer), String>> {
+        use crate::finance as fin;
+        let held = self.pointers_held(who)?;
+        let l = fin::latest_pointer(&held);
+        if l.contested {
+            return Ok(Err("a payee pointer chain is contested".into()));
+        }
+        match l.act.and_then(|a| held.into_iter().find(|(i, _)| *i == a)) {
+            Some(x) => Ok(Ok(x)),
+            None => Ok(Err("no payee pointer in force is held".into())),
+        }
+    }
+
+    /// Every valid payee pointer of an identity held: for a collective,
+    /// those its Finance lane's consent carries.
+    fn pointers_held(&self, who: &Hash) -> R<Vec<(Hash, crate::finance::PayeePointer)>> {
         use crate::finance::{self as fin, Payload as Fin};
         let mut held = vec![];
         for h in self.v.signed_by(who) {
@@ -5280,14 +5490,7 @@ impl<'a> LawView<'a> {
                 held.push((h.id, p));
             }
         }
-        let l = fin::latest_pointer(&held);
-        if l.contested {
-            return Ok(Err("a payee pointer chain is contested".into()));
-        }
-        match l.act.and_then(|a| held.into_iter().find(|(i, _)| *i == a)) {
-            Some(x) => Ok(Ok(x)),
-            None => Ok(Err("no payee pointer in force is held".into())),
-        }
+        Ok(held)
     }
 
     /// The vault an identity's chain declares in force (Finance rule 14a):
