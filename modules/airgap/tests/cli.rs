@@ -22,7 +22,12 @@ fn run(dir: &Path, args: &[&str], input: &str) -> (bool, String) {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    c.stdin.take().unwrap().write_all(input.as_bytes()).unwrap();
+    // A signer that refuses before reading (a file it will not sign) may
+    // exit before the input is written: its answer is in its status and
+    // output, so a closed pipe here is no failure.
+    if let Err(e) = c.stdin.take().unwrap().write_all(input.as_bytes()) {
+        assert_eq!(e.kind(), std::io::ErrorKind::BrokenPipe, "{e}");
+    }
     let out = c.wait_with_output().unwrap();
     let text =
         String::from_utf8_lossy(&out.stdout).to_string() + &String::from_utf8_lossy(&out.stderr);
