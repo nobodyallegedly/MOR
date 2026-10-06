@@ -6263,6 +6263,11 @@ fn a_debt_paid_through_a_readers_own_attempt_is_unknown() {
     let a = lab.w.everyday_act(&mut lab.c[0], fin, 1, o.to_map(), Some(vec![Object { chain: pid, predecessor: v1 }]), None);
     let d = lab.w.add(&a);
     lab.sign(BEN, &d);
+    // The printer acknowledges the IOU with an act of its own, which holds
+    // its pointer through its sequence (F145): only then can it count on
+    // the flow.
+    let a = lab.w.everyday_act(&mut p1, mips().law, law::types::NEGOTIATION, vec![], None, Some(vec![d]));
+    lab.w.add(&a);
     let mut payer = lab.c[0].clone();
     let c = payment(&mut lab, &mut payer, true, pid, d, spec("a unit"), 100, b"paid to the new node");
     lab.rail_valid.push((c, PaidAt::Flow(v1)));
