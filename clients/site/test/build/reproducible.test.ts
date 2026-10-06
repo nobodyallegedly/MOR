@@ -32,7 +32,7 @@ const run = (cmd: string, args: string[], cwd: string) =>
 
 /** What the WebAssembly build reads: the Rust workspace and the build script, as committed or changed here. */
 function copySources(to: string): void {
-  const files = run('git', ['ls-files', '-co', '--exclude-standard', 'Cargo.toml', 'Cargo.lock', 'core', 'wasm', 'modules/airgap', 'relay', 'harness', 'clients/genesis/scripts'], root)
+  const files = run('git', ['ls-files', '-co', '--exclude-standard', 'Cargo.toml', 'Cargo.lock', 'core', 'wasm', 'cmips/payment', 'modules/airgap', 'modules/lightning', 'relay', 'harness', 'clients/genesis/scripts'], root)
     .split('\n')
     .filter(Boolean);
   for (const f of files) {
