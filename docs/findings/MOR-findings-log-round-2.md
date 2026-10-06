@@ -1587,3 +1587,12 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): "Agreed":** as for F133, the pointer that counts is the payee's pointer the agreement act or offer holds in its history; no new field. A thief's newer pointer, which the agreement never cited, gains nothing.
 
 **Core changes:** Finance draft 6, rule 15. *To build:* the payment cMIP's `pointer_in_force` reads the pointer the agreement act or offer cites.
+
+
+## F139. Good faith after a rotation, judged by what the payer's claim cites (R14-2, 6 October 2026)
+
+**Found building rule 14 (R14-2), confirmed by the rule audit:** rule 15 protects a payment that followed the published pointer "even if a later rotation invalidates that pointer", but after the rotation a verifier cannot tell a payment made before it, in good faith, from one made after; the code answered "unknown".
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** the payment counts as made if the payer's claim does not hold the owner's rotation in its history (the payer had not seen it). A payer who leaves the rotation out on purpose, colluding with the thief, is the theft window's stated cost, borne by the owner and visible.
+
+**Core changes:** Finance draft 6, rule 15. *To build:* the payment cMIP counts such a payment as made when the claim's history does not hold the rotation; a receipt alone (no payer's claim) is judged as before.
