@@ -129,7 +129,10 @@ Built by the Identity agent and merged (`12abd14`).
 - **GitHub, on the branch** (run 84, at `f7c2ec8`, started by hand).
   - Every test step passed: the Rust workspace, the WebAssembly, the ten clients and the JPEG Module.
   - The two steps that compare the code with the published display client in `clients/site/built/` failed, as by design until the display client is released (as in run 76).
-- **The release.** RELEASE-RESULTS
+- **The release.** Merged into main as `b2b79a8`, its message carrying "[release display client]".
+  - The release workflow (run 57) rebuilt the display client on GitHub's Linux machines, found the release built twice the same, and committed it to main as `9e53e70`.
+  - The tests on the merge commit itself (run 85) passed every test step. The two display-client comparisons failed there, since `built/` was still the old copy at that commit.
+  - This follow-up commit is pushed on top of the release so that the test workflow runs on the released client. Its result is reported to Nobody, allegedly with this session's end; it is not written here, since it comes after this commit.
 
 ## Only reasoned, not run
 
@@ -160,4 +163,4 @@ Built by the Identity agent and merged (`12abd14`).
 ## What changed beside the code
 
 - Nothing in `spec/`, the findings log or the paper.
-- The display client in `clients/site/built/` is released from main by the release workflow (see "Run").
+- The display client in `clients/site/built/` was released from main by the release workflow (`9e53e70`, see "Run").
