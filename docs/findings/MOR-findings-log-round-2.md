@@ -1556,3 +1556,14 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): "Agreed":** the signature covers every field of the claim (0 to 7 and 9, each absent one as null). A format fix with no change in meaning.
 
 **Core changes:** Finance draft 6, the anonymous claim's signed bytes. *To build:* the core library and the payment cMIP sign and check the new array; existing test vectors regenerated.
+
+
+## F136. Absence checked by anchoring where a period is named (rule audit, 6 October 2026)
+
+**Found by the rule audit (Law, unclear: rule 49, line 650):** the abandonment clause may name a period of absence on the agreement's time reference (key 2), but rule 51's checks left it out: the core checked only who signed a declaration. A named authority could declare an active member absent at any moment, removing their voice; liveness acts (rule 50) protected nothing.
+
+**Options:** (a) the declaration is the authority's judgment, a stated cost, visible and contestable; (b) where the clause names a period, the declaration counts only if the party has no act anchored on the time reference within the period before it; with no period, (a).
+
+**Decided (Nobody, allegedly, 6 October 2026): (b), with (a) as the fallback** ("Your suggestion fits"), in line with the working rule of F133: time only where anchoring is involved.
+
+**Core changes:** Law draft 10, rule 51. *To build:* the core reads the clause's period and the anchors of the party's acts and of the declaration on the agreement's time reference; unanchored or unplaceable, the declaration does not count. Depends on the anchoring and time-reference cMIPs, whose formats are open (FORMAT OPEN until then).
