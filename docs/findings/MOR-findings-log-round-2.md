@@ -1718,7 +1718,7 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 
 *What turns on it:* only the placement of members' signatures by acknowledgement, and the label a client shows on the witness act; no ending, signature or debt changed in the 4,000 stories. Smallest story: `verifier2/stories/compared/a-witness-act-counts` (seed 1, case 9, steps 10, 11, 18). *For Nobody, allegedly, to decide; neither verifier was changed.*
 
-**Decided (Nobody, allegedly, 6 October 2026): "Agreed", option (b):** a collective's line is how Law orders without a clock, so an act on neither chain has no place on it and cannot give a signature one. A collective's Identity witness act counts for nothing in Law; it adopts nothing (F142) and places nothing. A collective places a member's signature by an action on its chain acknowledging or citing it, or by a record. The witness act keeps its Identity role (keeping an act visible as received).
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed", option (b):** a collective's line is how Law orders without a clock, so an act on neither chain has no place on it and cannot give a signature one. A collective's Identity witness act counts for nothing in Law; it adopts nothing (F142) and places nothing. A collective places a member's signature by an action on its chain acknowledging it, or by a record or rotation naming it ("or citing" corrected, F162). The witness act keeps its Identity role (keeping an act visible as received).
 
 **Core changes:** Law draft 10, rule 35b and "Made before, made after" item 2. *To build:* the reference library stops placing signatures by a collective's witness act (`Consent::NoArea`), so the two verifiers agree; rerun verifier2.
 
@@ -1814,6 +1814,29 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Found by the hostile review** (finding 11) and proposed by the build of F145 to F156 (`docs/review-decisions-build-2026-10-06.md`, "The 'when' sentences"): sentences still said "in force when", "a later rotation", "an earlier final one".
 
 **Applied by the project lead, as editorial under F133's working rule ("'when' is to be avoided unless anchoring is involved"):** each time replaced by what an act cites or by the selection rules F145, F155, F157: Finance obligation field 3, rule 14's first sentences, rule 15, the vault reasoning; core v21 "Good faith"; Law "Judged on its own history"; freeze scenario 1 step 5c; paper section 5.1. None changes a rule's meaning; the one that would (which vault counts) was decided as F160.
+
+
+## F162. The build's smaller questions answered (build of F145 to F156, 6 October 2026)
+
+**Found building F145 to F156** (`docs/review-decisions-build-2026-10-06.md`, "Questions where the spec is silent or unclear"). The project lead suggested an answer to each; **Nobody, allegedly, 6 October 2026: "All accepted".** Numbers as in the report (4, 14 and 15 settled by F158 and F159):
+
+1. The anonymous signature's bytes as built: fields 0 to 4; 5, 6, 7, 9 or null; inside keys 3, 7, 8 or null, each as the act encodes it.
+2. The reference library may count a period declaration on anchors a test states; the rule runs, its input is stated; the spec keeps FORMAT OPEN for real use.
+3. Anchored points in the period's unit; bounds inclusive: an act anchored at the same point as the declaration protects its party.
+5. Presence: acts naming any version of the agreement, earlier or later by clones, or a signature on one; in a collective, a member's acts on the collective's chain.
+6. Acknowledgement means Envelope `acks`; a keeper record counts once its format exists.
+7. The leftover tie hash's array is encoded in deterministic CBOR.
+8. A wallet dividing before a receipt exists shows that a tied unit is decided by the receipt's hash; at most one unit per tie, shown, satisfies rule 4a.
+9. A split from a payer's claim with no receipt orders ties by the claim's hash.
+10. A fork's division follows F150: largest remainder, ties by the hash of the fork act with each side. Freeze scenario 9 becomes 333,333 / 666,667.
+11. Freeze 7t's wording follows F150; the split check tightens to one unit where the default rule applies; declared remainder rules wait for a reader.
+12. A member's signature is placed by an act on the chain acknowledging it (spec wording); the log's "or citing" corrected.
+13. An Identity-layer area governs the collective's rotations and key events (Identity acts on its decisions chain); everyday Identity acts count for nothing in Law.
+16. "Rests on own attempts" as built (differs from the answer with none of them); the partial case noted as an open edge.
+17. Link acts as built: a confirmation or termination follows its claim in `objects`; either side may end a MOR-to-MOR link.
+18. The long-form markup declaration's two points confirmed (a line break ending a block before another block; an escaped character ends a run).
+
+**Core changes:** Law draft 10, rules 15a, 36a, 50, fork ownership; freeze suite 7t and scenario 9. *To build:* items 3, 5, 8 to 11, 13; others confirm what was built.
 
 
 ## Review of F133 to F144 (6 October 2026, evening)
