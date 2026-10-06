@@ -205,7 +205,7 @@ Signed by the creditor the obligation names, alone; nobody else's signature coun
 
 ### Good faith
 
-15. A receipt or payment claim names the payee-pointer act it followed, directly or through the obligation or agreement. A payment that followed both the published pointer and the published vault counts as made, even if a later rotation invalidates that pointer. The loss from a theft window falls on the owner, never on a payer who followed the published rules. A payment that did not follow them (for example, paid to the flow above the limit) is not protected.
+15. A receipt or payment claim names the payee-pointer act it followed, directly or through the obligation or agreement. For a payment under an agreement or offer with no obligation between, the pointer followed is the payee's pointer that the agreement act or the offer holds in its history (the latest of the payee's chain it holds; F138); rule 14 then applies to it as to an obligation's. A payment that followed both the published pointer and the published vault counts as made, even if a later rotation invalidates that pointer. The loss from a theft window falls on the owner, never on a payer who followed the published rules. A payment that did not follow them (for example, paid to the flow above the limit) is not protected.
 
 ### Undeliverable payments
 

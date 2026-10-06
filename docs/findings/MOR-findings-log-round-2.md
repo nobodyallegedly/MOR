@@ -1578,3 +1578,12 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): (a).**
 
 **Core changes:** Identity draft 11, the sentence closing the validity rules. *To build:* `LawView` and the payment cMIP refuse to rely on an answer whose basis is the reader's own attempt (`Basis::OwnAttempt`), audit gap 4. Paper claim 1 to name its inputs.
+
+
+## F138. A payment under an agreement follows the pointer the agreement cites (R14-3, 6 October 2026)
+
+**Found building rule 14 (R14-3), confirmed by the rule audit:** rule 15 said a payment names its pointer "through the obligation or agreement", but Law's terms name no payee pointer, so a payment under an agreement or offer with no obligation between had nothing to compare; the code answered "unknown".
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agreed":** as for F133, the pointer that counts is the payee's pointer the agreement act or offer holds in its history; no new field. A thief's newer pointer, which the agreement never cited, gains nothing.
+
+**Core changes:** Finance draft 6, rule 15. *To build:* the payment cMIP's `pointer_in_force` reads the pointer the agreement act or offer cites.
