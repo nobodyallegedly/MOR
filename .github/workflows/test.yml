@@ -1,5 +1,6 @@
 # Every test, on GitHub's machines, at each change to main and each pull
-# request: the same command anyone runs locally, scripts/test-all.sh.
+# request: the same steps as scripts/test-all.sh, one named step each, so a
+# failure shows which part failed. Later steps run even when one fails.
 name: tests
 
 on:
@@ -30,4 +31,44 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: scripts/test-all.sh --reproducible
+      - name: Rust workspace
+        run: cargo test --workspace --locked
+      - name: Core library for the clients (WebAssembly)
+        if: success() || failure()
+        run: cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
+      - name: clients/barebone
+        if: success() || failure()
+        run: cd clients/barebone && npm ci --no-audit --no-fund && npm test
+      - name: clients/collective
+        if: success() || failure()
+        run: cd clients/collective && npm ci --no-audit --no-fund && npm test
+      - name: clients/connector
+        if: success() || failure()
+        run: cd clients/connector && npm ci --no-audit --no-fund && npm test
+      - name: clients/desk
+        if: success() || failure()
+        run: cd clients/desk && npm ci --no-audit --no-fund && npm test
+      - name: clients/genesis
+        if: success() || failure()
+        run: cd clients/genesis && npm ci --no-audit --no-fund && npm test
+      - name: clients/longform
+        if: success() || failure()
+        run: cd clients/longform && npm ci --no-audit --no-fund && npm test
+      - name: clients/manage
+        if: success() || failure()
+        run: cd clients/manage && npm ci --no-audit --no-fund && npm test
+      - name: clients/reader
+        if: success() || failure()
+        run: cd clients/reader && npm ci --no-audit --no-fund && npm test
+      - name: clients/repo
+        if: success() || failure()
+        run: cd clients/repo && npm ci --no-audit --no-fund && npm test
+      - name: clients/site
+        if: success() || failure()
+        run: cd clients/site && npm ci --no-audit --no-fund && npm test
+      - name: modules/jpeg
+        if: success() || failure()
+        run: cd modules/jpeg && npm ci --no-audit --no-fund && npm test
+      - name: Reproducible build of the display client
+        if: success() || failure()
+        run: cd clients/site && npm run test:build
