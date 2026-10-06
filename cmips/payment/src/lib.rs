@@ -241,8 +241,9 @@ pub trait Held {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HeldObligation {
     pub obligation: Obligation,
-    /// F133: whether its agreement act holds the pointer it names in its
-    /// history; `None` where the verifier cannot tell.
+    /// F133: whether its agreement act (or, naming none, the obligation
+    /// act itself) holds the pointer it names in its history; `None` where
+    /// the verifier cannot tell.
     pub pointer_cited: Option<bool>,
 }
 
@@ -473,13 +474,13 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
         // F133: a version its agreement act never saw does not count for it.
         Some(HeldObligation { pointer_cited: Some(false), .. }) => {
             return Answer::Invalid(
-                "the obligation names a flow pointer its agreement act does not cite: it counts only if paid to the vault (Finance rule 14, F133)"
+                "the obligation names a flow pointer its agreement act (or, with none, the obligation itself) does not cite: it counts only if paid to the vault (Finance rule 14, F133)"
                     .into(),
             )
         }
         Some(HeldObligation { pointer_cited: None, .. }) => {
             return Answer::Unknown(
-                "whether the obligation's agreement act cites the pointer it names is not known from the acts held (Finance rule 14, F133)"
+                "whether the obligation's agreement act (or, with none, the obligation itself) cites the pointer it names is not known from the acts held (Finance rule 14, F133)"
                     .into(),
             )
         }

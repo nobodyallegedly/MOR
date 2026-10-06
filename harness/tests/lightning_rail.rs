@@ -229,7 +229,7 @@ impl Held for View<'_> {
         finance::check_signer(&p, h.act.outside.signer.as_ref()?).ok()?;
         match p {
             Payload::Obligation(o) => Some(mor_payment::HeldObligation {
-                pointer_cited: finance::pointer_cited(&self.0.v, &o),
+                pointer_cited: finance::pointer_cited(&self.0.v, id, &o),
                 obligation: o,
             }),
             _ => None,

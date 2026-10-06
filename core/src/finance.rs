@@ -941,15 +941,15 @@ pub fn counts_toward(named: u64, into: PaidInto) -> bool {
 /// debt re-signed to name a pointer its agreement act never saw, such as a
 /// thief's newer one, names a version that does not count for it.*
 ///
-/// `None` where it cannot be told from the acts held: the agreement act is
-/// not held, or the walk meets an act not held without finding the
-/// pointer. An obligation naming no agreement act has no history that
-/// could hold the pointer: `Some(false)`, so only the vault counts for it.
-pub fn pointer_cited(v: &crate::chain::Verifier, o: &Obligation) -> Option<bool> {
-    let Some(agreement) = o.agreement else {
-        return Some(false);
-    };
-    let start = v.get(&agreement)?;
+/// For an obligation naming no agreement act (field 4 absent), such as an
+/// IOU its debtor signs alone, the walk starts from the obligation act
+/// itself, `act` (F133, d0b7813).
+///
+/// `None` where it cannot be told from the acts held: the act the walk
+/// starts from is not held, or the walk meets an act not held without
+/// finding the pointer.
+pub fn pointer_cited(v: &crate::chain::Verifier, act: &Hash, o: &Obligation) -> Option<bool> {
+    let start = v.get(o.agreement.as_ref().unwrap_or(act))?;
     let cites = |i: &crate::act::Inside| -> Vec<Hash> {
         let mut out: Vec<Hash> = i.prev.iter().flatten().copied().collect();
         out.extend(i.objects.iter().flatten().map(|x| x.predecessor));
