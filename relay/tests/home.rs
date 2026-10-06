@@ -584,8 +584,10 @@ async fn finding_an_inbox_through_the_home() {
     assert!(rec.receipts.is_empty(), "only the parts asked for");
 }
 
-/// F152: a private link act counts only if its sealed form is published
-/// where its signer's acts are. A home stores an identity's private acts and
+/// F152, F159: a private link act counts only if its sealed form is
+/// published at the homes its signer's chain names at its binding, and a
+/// home MUST store and serve it (Identity rule 13). A home stores an
+/// identity's private acts and
 /// serves them in the identity record's links part, opaque, by their
 /// signer: so a verifier can find them there, and the owner can see one it
 /// did not write. Another identity's private act is not served with it.

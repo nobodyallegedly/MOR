@@ -170,7 +170,8 @@ impl Resolution {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LinkSeen {
     /// No link: the claim is not a valid link claim naming a MOR identity,
-    /// or no valid confirmation by the identity it names is held (rule 23).
+    /// or no confirmation by the identity it names is held that is valid or
+    /// of unknown status (rule 23).
     NotLinked,
     /// Both sides signed, and the act holds no valid termination of the
     /// link in its history.
@@ -178,9 +179,12 @@ pub enum LinkSeen {
     /// Both sides signed, and the act holds a valid termination in its
     /// history: for it, the link has ended (rule 24). It still existed.
     Ended { confirmation: Hash, termination: Hash },
-    /// Both sides signed and a valid termination is held, but whether the
-    /// act holds it cannot be told: its history reaches acts this verifier
-    /// does not hold.
+    /// Cannot be told. Both sides signed and a valid termination is held,
+    /// but whether the act holds it cannot be told: its history reaches
+    /// acts this verifier does not hold. Or the claim, the confirmation,
+    /// or a termination the act holds has an unknown status, such as a
+    /// private link nobody fetched from its signer's homes (F159: unknown,
+    /// never invalid).
     Unknown,
 }
 
@@ -241,10 +245,11 @@ pub struct Verifier {
     proofs: BTreeMap<(Hash, u64), Vec<Hash>>,
     unreachable: BTreeSet<Hash>,
     recorded: BTreeSet<Hash>,
-    /// Private link acts (Identity types 6 to 8) this verifier found, in
-    /// their sealed form, where their signer's acts are published: its
-    /// homes (F152).
-    published: BTreeSet<Hash>,
+    /// What this verifier found at homes (F152, F159): each private link
+    /// act (Identity types 6 to 8), in its sealed form, with the operator
+    /// of the home it was found at (the signer itself for a self-hosted
+    /// home).
+    found: BTreeSet<(Hash, Hash)>,
     cache: RefCell<BTreeMap<Hash, Rc<Resolution>>>,
     /// The same verifier without its own failed attempts to reach homes,
     /// built when first needed (F153).
@@ -322,7 +327,7 @@ impl Verifier {
             proofs: BTreeMap::new(),
             unreachable: BTreeSet::new(),
             recorded: BTreeSet::new(),
-            published: BTreeSet::new(),
+            found: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             without: RefCell::new(None),
         }
@@ -451,34 +456,37 @@ impl Verifier {
     }
 
     /// This verifier found the act `act` in its sealed form (its outside
-    /// and locked bytes, no key) where its signer's acts are published: at
-    /// a home of its signer, which serves an identity's private acts as
+    /// and locked bytes, no key) at the home operated by `home`: the
+    /// operator's identity hash, or, for a self-hosted home, the identity
+    /// that hosts itself. A home serves an identity's private acts as
     /// opaque acts by their signer (relay transport cMIP, identity record
-    /// part 6). A private link act counts only so (Identity, "The
-    /// envelope", F152): one shown to this verifier but not found there is
-    /// invalid. *Like [`Self::failed_to_reach`], a fact the verifier states
-    /// about its own fetching; which of the signer's homes it must be found
-    /// at (those of the act's binding, the current ones, or any declared)
-    /// the texts do not say, so it is recorded per act, not per home.*
-    pub fn published_at_home(&mut self, act: Hash) {
-        self.published.insert(act);
+    /// part 6), and MUST store and serve its private links (Identity rule
+    /// 13, F159).
+    ///
+    /// A private link act counts only if its sealed form is published at
+    /// the homes its signer's chain names at the act's binding, its place
+    /// in that chain; a later move of homes does not void it (Identity,
+    /// "The envelope", F152, F159). Found only elsewhere (a home the chain
+    /// names later, a stranger's relay) or nowhere, it is unknown, never
+    /// invalid. *Like [`Self::failed_to_reach`], a fact the verifier
+    /// states about its own fetching: another verifier may not have found
+    /// it, so nothing binding rests on it alone ([`Self::binding_status`]).*
+    pub fn found_at_home(&mut self, act: Hash, home: Hash) {
+        self.found.insert((act, home));
         self.changed();
     }
 
-    /// Whether this verifier recorded the act as found at its signer's
-    /// homes ([`Self::published_at_home`]).
-    pub fn is_published(&self, act: &Hash) -> bool {
-        self.published.contains(act)
-    }
-
-    /// Whether this verifier made any failed attempt to reach a home of its
-    /// own. Without one, no answer can rest on such attempts (F153).
+    /// Whether this verifier has inputs of its own, that another holding
+    /// the same acts may not have: a failed attempt to reach a home (F153)
+    /// or an act found at a home (F159). Without one, no answer can rest
+    /// on them.
     pub fn has_own_attempts(&self) -> bool {
-        !self.unreachable.is_empty()
+        !self.unreachable.is_empty() || !self.found.is_empty()
     }
 
-    /// The same acts and facts, without this verifier's own failed attempts
-    /// to reach homes: what any verifier holding them would answer.
+    /// The same acts and facts, without this verifier's own inputs: its
+    /// failed attempts to reach homes (F153) and what it found at homes
+    /// (F159). What any verifier holding the same acts would answer.
     pub fn without_own_attempts(&self) -> Rc<Verifier> {
         if let Some(w) = self.without.borrow().as_ref() {
             return w.clone();
@@ -493,7 +501,7 @@ impl Verifier {
             proofs: self.proofs.clone(),
             unreachable: BTreeSet::new(),
             recorded: self.recorded.clone(),
-            published: self.published.clone(),
+            found: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             without: RefCell::new(None),
         });
@@ -501,14 +509,17 @@ impl Verifier {
         w
     }
 
-    /// Whether the standing of an act rests on this verifier's own failed
-    /// attempts to reach homes (Identity, the sentence after rule 17; rule
-    /// 32a; F137, F153): it differs from the standing the same acts and
-    /// facts give without those attempts. *An attempt is the one input
-    /// another reader cannot hold, so an answer that changes with it is
-    /// this reader's alone.* An act bound to a key set by a rotation
-    /// "re-homed without audit", or judged by one, rests on it; an act
-    /// that stands the same either way does not, whatever the chain shows.
+    /// Whether the standing of an act rests on this verifier's own inputs
+    /// (Identity, the sentence after rule 17; rule 32a; F137, F153, F159):
+    /// its failed attempts to reach homes, and what it found at homes. It
+    /// does when the standing differs from the one the same acts and facts
+    /// give without them ([`Self::without_own_attempts`]). *An attempt or a
+    /// fetch is an input another reader may not hold, so an answer that
+    /// changes with it is this reader's alone.* An act bound to a key set
+    /// by a rotation "re-homed without audit", or judged by one, rests on
+    /// it; so does a private link that counts because this verifier found
+    /// it at its signer's homes (F159); an act that stands the same either
+    /// way does not, whatever the chain shows.
     pub fn rests_on_own_attempt(&self, act: &Hash) -> bool {
         self.has_own_attempts() && self.without_own_attempts().status(act) != self.status(act)
     }
@@ -517,10 +528,13 @@ impl Verifier {
     /// sentence after rule 17, F153): keeper records, payments, discharge
     /// of debts, agreements, forks and closings. As [`Self::status`],
     /// except that an answer resting on this verifier's own failed attempts
-    /// to reach homes is unknown, never valid or invalid, until it no
-    /// longer rests on them (a closure by the old home's operator, the
-    /// auditors' absence statements, an escape endorsement, or an objection
-    /// arriving). Reading and following an identity use [`Self::status`]
+    /// to reach homes, or on what it found at homes (F159), is unknown,
+    /// never valid or invalid, until it no longer rests on them (a closure
+    /// by the old home's operator, the auditors' absence statements, an
+    /// escape endorsement, or an objection arriving). *For a private link
+    /// found at its signer's homes, the texts name nothing yet that makes
+    /// it stop resting on the fetch: as built, it stays unknown here.*
+    /// Reading and following an identity use [`Self::status`]
     /// and [`Self::resolve`], which may rest on them: the escape from a
     /// censor.
     pub fn binding_status(&self, act: &Hash) -> Status {
@@ -617,12 +631,25 @@ impl Verifier {
     /// *There is no clock to say what comes after an ending; what an act
     /// cites says whether its signer had seen it.* Each act counts only as
     /// [`Self::status`] judges it: valid (or valid and disputed), a private
-    /// one only if found at its signer's homes (F152). A link to an account
-    /// on another protocol needs that protocol's cMIP: `NotLinked` here.
+    /// one only if found at the homes its signer's chain names at its
+    /// binding (F152, F159). An act whose status is unknown, such as a
+    /// private link nobody fetched from those homes, is never taken as
+    /// absent: a claim or confirmation that is unknown, where no valid one
+    /// decides, makes the link unknown, and so does an unknown termination
+    /// the act holds or may hold (F159: unknown, never invalid). A link to
+    /// an account on another protocol needs that protocol's cMIP:
+    /// `NotLinked` here.
     pub fn link(&self, claim: &Hash, seen_by: &Hash) -> LinkSeen {
         let stands = |id: &Hash| matches!(self.status(id), Status::Valid | Status::Disputed);
+        let unknown_ = |id: &Hash| self.status(id) == Status::Unknown;
         let Some(c) = self.acts.get(claim) else { return LinkSeen::NotLinked };
-        if c.inside.spec != self.identity_spec || c.inside.type_ != types::LINK_CLAIM || !stands(claim) {
+        if c.inside.spec != self.identity_spec || c.inside.type_ != types::LINK_CLAIM {
+            return LinkSeen::NotLinked;
+        }
+        if unknown_(claim) {
+            return LinkSeen::Unknown;
+        }
+        if !stands(claim) {
             return LinkSeen::NotLinked;
         }
         let Some(by) = c.signer().copied() else { return LinkSeen::NotLinked };
@@ -634,33 +661,37 @@ impl Verifier {
             _ => None,
         });
         let Some(other) = other else { return LinkSeen::NotLinked };
-        let naming = |t: u64| {
+        // The acts of type `t` naming the claim, signed by one of `signers`,
+        // that stand or whose status is unknown.
+        let naming = |t: u64, signers: &[Hash]| {
             self.by_type
                 .get(&t)
                 .into_iter()
                 .flatten()
                 .filter(|id| {
                     let h = &self.acts[*id];
-                    h.inside.objects.iter().flatten().any(|o| &o.predecessor == claim) && stands(id)
+                    h.inside.objects.iter().flatten().any(|o| &o.predecessor == claim)
+                        && h.signer().is_some_and(|s| signers.contains(s))
+                        && (stands(id) || unknown_(id))
                 })
                 .copied()
                 .collect::<Vec<Hash>>()
         };
-        let Some(confirmation) = naming(types::LINK_CONFIRMATION)
-            .into_iter()
-            .find(|id| self.acts[id].signer() == Some(&other))
-        else {
-            return LinkSeen::NotLinked;
+        let confirmations = naming(types::LINK_CONFIRMATION, &[other]);
+        let Some(confirmation) = confirmations.iter().copied().find(|id| stands(id)) else {
+            return if confirmations.is_empty() {
+                LinkSeen::NotLinked
+            } else {
+                LinkSeen::Unknown
+            };
         };
         let mut unknown = false;
-        for t in naming(types::LINK_TERMINATION) {
-            if !matches!(self.acts[&t].signer(), Some(s) if *s == by || *s == other) {
-                continue;
-            }
+        for t in naming(types::LINK_TERMINATION, &[by, other]) {
             match self.holds(seen_by, &t) {
-                Some(true) => return LinkSeen::Ended { confirmation, termination: t },
+                Some(true) if stands(&t) => return LinkSeen::Ended { confirmation, termination: t },
                 Some(false) => {}
-                None => unknown = true,
+                // Held but unknown, or whether held cannot be told.
+                Some(true) | None => unknown = true,
             }
         }
         if unknown {
@@ -1435,11 +1466,6 @@ impl Verifier {
             None => return Status::Unknown,
             Some(true) => {}
         }
-        // F152: a private link act counts only if its sealed form is
-        // published where its signer's acts are (its homes).
-        if x.inside.spec == self.identity_spec && !x.act.outside.is_public() && !self.published.contains(&x.id) {
-            return Status::Invalid;
-        }
         match &x.identity {
             Some(Err(_)) => return Status::Invalid,
             Some(Ok(Payload::Genesis(_))) | Some(Ok(Payload::Rotation(_))) | Some(Ok(Payload::ChainSignature(_))) => {
@@ -1474,6 +1500,19 @@ impl Verifier {
         };
         if self.is_chain_signature(&res, k) || !res.states[k].signing_key.made(&x.act.signature) {
             return Status::Invalid;
+        }
+        // F152, F159: a private link act counts only if this verifier found
+        // its sealed form at a home its signer's chain names at the act's
+        // binding (a later move of homes does not void it). Found nowhere
+        // there, it is unknown, never invalid.
+        if x.inside.spec == self.identity_spec && !x.act.outside.is_public() {
+            let found = res.states[k]
+                .homes
+                .iter()
+                .any(|h| self.found.contains(&(x.id, h.operator.unwrap_or(*signer))));
+            if !found {
+                return Status::Unknown;
+            }
         }
         if let Some(j) = self.judging(&res, k) {
             match self.judge(cx, x, &res.links[j].act, signer) {

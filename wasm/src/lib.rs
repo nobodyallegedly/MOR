@@ -1251,8 +1251,9 @@ impl Verifier {
     /// The standing of an act for everything binding (keeper records,
     /// payments, discharge of debts, agreements, forks, closings): as
     /// `status`, except "unknown" where the answer rests on this client's
-    /// own failed attempts to reach homes ("re-homed without audit"),
-    /// until it no longer does (Identity, the sentence after rule 17, F153).
+    /// own failed attempts to reach homes ("re-homed without audit") or on
+    /// what it found at homes (`foundAtHome`), until it no longer does
+    /// (Identity, the sentence after rule 17, F153, F159).
     /// Reading and following an identity use `status`.
     #[wasm_bindgen(js_name = bindingStatus)]
     pub fn binding_status(&self, act: &str) -> R<String> {
@@ -1268,11 +1269,16 @@ impl Verifier {
         .into())
     }
 
-    /// Record that this client found the act, in its sealed form, at a
-    /// home of its signer: a private link act counts only so (F152).
-    #[wasm_bindgen(js_name = publishedAtHome)]
-    pub fn published_at_home(&mut self, act: &str) -> R<()> {
-        self.inner.published_at_home(unhex(act)?);
+    /// Record that this client found the act, in its sealed form, at the
+    /// home operated by `home` (the operator's identity hash; for a
+    /// self-hosted home, the identity itself). A private link act counts
+    /// only if found at a home its signer's chain names at its binding;
+    /// otherwise it is unknown, never invalid. What was found is this
+    /// client's own input: `bindingStatus` shows an answer resting on it
+    /// as unknown (Identity, "The envelope", F152, F159).
+    #[wasm_bindgen(js_name = foundAtHome)]
+    pub fn found_at_home(&mut self, act: &str, home: &str) -> R<()> {
+        self.inner.found_at_home(unhex(act)?, unhex(home)?);
         Ok(())
     }
 
