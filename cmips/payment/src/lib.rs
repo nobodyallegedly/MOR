@@ -231,8 +231,19 @@ pub trait Held {
     /// declared a vault: its identity and the entries.
     fn vault(&self, declared_by: &Hash) -> Option<(Hash, Vec<VaultEntry>)>;
     /// An obligation act by id, valid and signed by its debtor (Finance
-    /// F66), for rule 14 ([`pointer_in_force`]).
-    fn obligation(&self, id: &Hash) -> Option<Obligation>;
+    /// F66), for rule 14 ([`pointer_in_force`]), with whether its agreement
+    /// act cites the pointer it names (F133; the core library's
+    /// [`fin::pointer_cited`] over the verifier's acts).
+    fn obligation(&self, id: &Hash) -> Option<HeldObligation>;
+}
+
+/// An obligation as [`Held`] gives it for rule 14.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HeldObligation {
+    pub obligation: Obligation,
+    /// F133: whether its agreement act holds the pointer it names in its
+    /// history; `None` where the verifier cannot tell.
+    pub pointer_cited: Option<bool>,
 }
 
 /// The rail Modules a verifier has adopted, by spec hash.
@@ -425,7 +436,8 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
 /// paid to was in force for what it fulfils. A payment to the vault always
 /// is. A payment to the flow is only where what it fulfils names that flow
 /// pointer's version or a later one: an obligation (Finance type 1) by its
-/// field 3, a tip by the payee pointer it follows. *A thief who changes the
+/// field 3, a version its agreement act cites (F133), a tip by the payee
+/// pointer it follows. *A thief who changes the
 /// flow pointer cannot collect, through the new flow, an obligation that
 /// names an earlier version: paid there, the payment is refused here; paid
 /// to the vault, it counts.*
@@ -457,8 +469,21 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
     }
     // The flow pointer what the payment fulfils names.
     let named = match held.obligation(fulfils) {
-        Some(o) if &o.creditor != payee => return Answer::Valid,
-        Some(o) => o.pointer,
+        Some(o) if &o.obligation.creditor != payee => return Answer::Valid,
+        // F133: a version its agreement act never saw does not count for it.
+        Some(HeldObligation { pointer_cited: Some(false), .. }) => {
+            return Answer::Invalid(
+                "the obligation names a flow pointer its agreement act does not cite: it counts only if paid to the vault (Finance rule 14, F133)"
+                    .into(),
+            )
+        }
+        Some(HeldObligation { pointer_cited: None, .. }) => {
+            return Answer::Unknown(
+                "whether the obligation's agreement act cites the pointer it names is not known from the acts held (Finance rule 14, F133)"
+                    .into(),
+            )
+        }
+        Some(o) => o.obligation.pointer,
         None => match held.pointer(fulfils) {
             Some(_) => *fulfils,
             None => {

@@ -220,7 +220,7 @@ impl Held for View<'_> {
         Some((who, v?))
     }
 
-    fn obligation(&self, id: &Hash) -> Option<finance::Obligation> {
+    fn obligation(&self, id: &Hash) -> Option<mor_payment::HeldObligation> {
         let h = self.0.v.get(id)?;
         if self.0.status(id) != Status::Valid || h.inside.spec != finance() {
             return None;
@@ -228,7 +228,10 @@ impl Held for View<'_> {
         let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;
         finance::check_signer(&p, h.act.outside.signer.as_ref()?).ok()?;
         match p {
-            Payload::Obligation(o) => Some(o),
+            Payload::Obligation(o) => Some(mor_payment::HeldObligation {
+                pointer_cited: finance::pointer_cited(&self.0.v, &o),
+                obligation: o,
+            }),
             _ => None,
         }
     }
