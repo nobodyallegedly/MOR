@@ -2,7 +2,7 @@
 // fixed at the freeze, and the website cMIP's once its creator is named at
 // the first acts (step 17).
 
-import { SPECS, sha256 } from '../../genesis/src/core.ts';
+import { MIPS, SPECS, sha256 } from '../../genesis/src/core.ts';
 
 const test = (s: string) => sha256(s);
 
@@ -15,6 +15,10 @@ export const SITE_SPECS = {
   /** The website cMIP (cmips/cmip-website-draft-2.md). */
   site: test('website cMIP, draft 2, test value until publication'),
 };
+
+/** The six MIPs, as the core library's Law calls take them (with the site's
+ * Law value), only to tell that a signer is a collective. */
+export const SITE_LAW_SPECS = { ...MIPS, law: SITE_SPECS.law };
 
 /** Envelope types: a publication and a withdrawal. */
 export const PUBLICATION = 0;

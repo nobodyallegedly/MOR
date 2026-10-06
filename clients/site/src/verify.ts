@@ -7,7 +7,7 @@ import { Verifier, cborDecode, describeAct, hex, openMedia, workHash } from '../
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { decodeSite, type FileEntry, type SiteManifest } from './manifest.ts';
-import { PUBLICATION, SITE_SPECS, WITHDRAWAL } from './specs.ts';
+import { PUBLICATION, SITE_LAW_SPECS, SITE_SPECS, WITHDRAWAL } from './specs.ts';
 
 interface Described {
   id: string;
@@ -98,7 +98,7 @@ export async function openVersion(version: string, expected: string, hints: stri
   if (r.standing !== 'valid') fail(`the version is ${r.standing}, not valid, for its signer's identity chain`);
   const res = v.resolve(d.signer) as { links: { act: string }[] };
   for (const link of res.links) {
-    if (v.lawDeclared(SITE_SPECS.law, d.signer, link.act)) {
+    if (v.lawDeclared(SITE_LAW_SPECS, d.signer, link.act)) {
       fail("the signer is a collective (its chain declares an agreement): a collective's site counts only once Law draft 7 is approved, under its Envelope lane (website cMIP, rule 3)");
       break;
     }
