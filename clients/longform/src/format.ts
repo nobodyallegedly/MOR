@@ -4,10 +4,14 @@
 // The parser never fails: every canonical text has exactly one reading, and
 // whatever is not markup is text. Every node keeps the positions of the
 // characters it shows, as offsets into the source, so that `shown()` can
-// list them and `checkBound()` can prove, for any text, what the Text MIP
-// requires of a format: it hides only markup characters, which are never
-// letters or digits, it adds nothing, and it shows the rest in the order of
-// the bytes (F82 M7, F102).
+// list them; every piece of markup it hides is recorded with the entry of
+// the cMIP's markup declaration that hides it. So `checkBound()` can prove,
+// for any text, what the Text MIP requires of a format: it hides only its
+// own declared markup, the characters the cMIP declares, in the positions
+// it declares them (F149, replacing F140's bound by Unicode category), it
+// adds nothing, and it shows the rest in the order of the bytes (F82 M7,
+// F102). A minus sign, a decimal point or a vowel sign is never markup, so
+// never hidden.
 //
 // Offsets are in UTF-16 code units, as JavaScript strings count. Markup is
 // ASCII only, so a split never falls inside a character.
@@ -44,16 +48,74 @@ export type Block =
   | { t: 'code'; label: Span | null; lines: Span[] }
   | { t: 'rule' };
 
+/**
+ * The entries of the cMIP's markup declaration ("Markup declaration"): each
+ * names the characters a rendering may hide and where. An LF needs no
+ * entry of its own: it may be hidden only where a block ends.
+ */
+export type MarkRule =
+  /** `#` signs, one to six, and one space, opening a heading line (rule 3). */
+  | 'heading'
+  /** A whole line of three or more `-`, or of three or more `*` (rule 4). */
+  | 'rule'
+  /** Three or more backticks opening a code block line (rule 2). */
+  | 'fence-open'
+  /** A whole line of backticks, at least as many as opened it (rule 2). */
+  | 'fence-close'
+  /** A `>`, and one space after it if there is one, opening a line (rule 5). */
+  | 'quote'
+  /** The one space after a list marker (rule 6). */
+  | 'item'
+  /** The spaces, as many as the marker and its space are wide, opening a list item's later line (rule 6). */
+  | 'indent'
+  /** A `\` before a character it escapes (rule 8). */
+  | 'escape'
+  /** A run of backticks opening or closing a code span on one line (rule 9). */
+  | 'code-open'
+  | 'code-close'
+  /** The `<` and `>` around a link's address (rule 10). */
+  | 'link-open'
+  | 'link-close'
+  /** A run of one to three `*`, opening or closing emphasis on one line (rule 11). */
+  | 'em-open'
+  | 'em-close';
+
+/** Markup a reading hides: where, and the declaration entry that hides it. */
+export interface Mark {
+  rule: MarkRule;
+  span: Span;
+}
+
 export interface Document {
   source: string;
   blocks: Block[];
+  /** Every piece of markup the reading hides, but LFs (which end blocks). */
+  marks: Mark[];
 }
 
 /** How deep quotes and lists may nest; deeper markers are text (rule 3). */
 export const MAX_DEPTH = 16;
 
-/** The only characters the format ever hides (rule 2). None is a letter or digit. */
+/** The only characters the format ever hides (the cMIP's markup characters). */
 export const MARKUP = new Set(['\n', ' ', '#', '*', '>', '<', '`', '\\', '-']);
+
+/** The characters each declaration entry may hide. */
+const DECLARED: Record<MarkRule, string> = {
+  heading: '# ',
+  rule: '-*',
+  'fence-open': '`',
+  'fence-close': '`',
+  quote: '> ',
+  item: ' ',
+  indent: ' ',
+  escape: '\\',
+  'code-open': '`',
+  'code-close': '`',
+  'link-open': '<',
+  'link-close': '>',
+  'em-open': '*',
+  'em-close': '*',
+};
 
 /** Characters a backslash escapes (rule 8). */
 const ESCAPABLE = new Set(['\\', '`', '*', '_', '#', '-', '+', '.', '>', '<', '[', ']', '(', ')', '!', '|', '~']);
@@ -82,7 +144,9 @@ export function parse(source: string): Document {
     lines.push({ from: start, to: lf });
     start = lf + 1;
   }
-  return { source, blocks: new Parser(source).blocks(lines, 0) };
+  const p = new Parser(source);
+  const blocks = p.blocks(lines, 0);
+  return { source, blocks, marks: p.marks.sort((a, b) => a.span.from - b.span.from) };
 }
 
 const FENCE = /^(`{3,})([^`]*)$/;
@@ -92,7 +156,12 @@ const BULLET = /^([-*+]) /;
 const ORDERED = /^([0-9]{1,9}\.) /;
 
 class Parser {
+  readonly marks: Mark[] = [];
   constructor(readonly s: string) {}
+
+  mark(rule: MarkRule, from: number, to: number): void {
+    if (to > from) this.marks.push({ rule, span: { from, to } });
+  }
 
   text(l: Span): string {
     return this.s.slice(l.from, l.to);
@@ -131,11 +200,13 @@ class Parser {
       if (m) {
         const n = m[1].length;
         const label = m[2] === '' ? null : { from: l.from + n, to: l.to };
+        this.mark('fence-open', l.from, l.from + n);
         const body: Span[] = [];
         i++;
         while (i < lines.length) {
           const y = this.text(lines[i]);
           if (/^`+$/.test(y) && y.length >= n) {
+            this.mark('fence-close', lines[i].from, lines[i].to);
             i++;
             break;
           }
@@ -149,12 +220,14 @@ class Parser {
       m = HEADING.exec(x);
       if (m) {
         const level = m[1].length;
+        this.mark('heading', l.from, l.from + level + 1);
         out.push({ t: 'heading', level, children: this.inline({ from: l.from + level + 1, to: l.to }) });
         i++;
         continue;
       }
       // Rule line (rule 6).
       if (RULE.test(x)) {
+        this.mark('rule', l.from, l.to);
         out.push({ t: 'rule' });
         i++;
         continue;
@@ -165,6 +238,7 @@ class Parser {
         while (i < lines.length && this.s[lines[i].from] === '>' && lines[i].from < lines[i].to) {
           const q = lines[i];
           const skip = this.s[q.from + 1] === ' ' && q.from + 1 < q.to ? 2 : 1;
+          this.mark('quote', q.from, q.from + skip);
           inner.push({ from: q.from + skip, to: q.to });
           i++;
         }
@@ -179,6 +253,7 @@ class Parser {
           const mk = this.marker(lines[i]);
           if (!mk || mk.kind !== first.kind) break;
           const w = mk.width;
+          this.mark('item', lines[i].from + w - 1, lines[i].from + w);
           const body: Span[] = [{ from: lines[i].from + w, to: lines[i].to }];
           i++;
           // Continuation: lines indented by the marker's width; blank lines
@@ -187,6 +262,7 @@ class Parser {
           while (i < lines.length) {
             const y = this.text(lines[i]);
             if (y.startsWith(indent)) {
+              this.mark('indent', lines[i].from, lines[i].from + w);
               body.push({ from: lines[i].from + w, to: lines[i].to });
               i++;
               continue;
@@ -246,6 +322,7 @@ class Parser {
       const c = s[p];
       if (c === '\\' && p + 1 < l.to && ESCAPABLE.has(s[p + 1])) {
         flush(p);
+        this.mark('escape', p, p + 1);
         run = p + 1; // the backslash is hidden, the character shown
         p += 2;
         continue;
@@ -270,6 +347,8 @@ class Parser {
         }
         if (close >= 0) {
           flush(p);
+          this.mark('code-open', p, p + n);
+          this.mark('code-close', close, close + n);
           toks.push({ k: 'node', node: { t: 'code', span: { from: p + n, to: close } } });
           p = close + n;
         } else {
@@ -283,6 +362,8 @@ class Parser {
         if (m) {
           flush(p);
           const span = { from: p + 1, to: p + 1 + m[1].length };
+          this.mark('link-open', p, p + 1);
+          this.mark('link-close', span.to, span.to + 1);
           toks.push({ k: 'node', node: { t: 'link', href: m[1], span } });
           p = span.to + 1;
           continue;
@@ -340,6 +421,7 @@ class Parser {
       if (tk.k === 'node') {
         top().push(tk.node);
       } else if (tk.pair === 'open') {
+        this.mark('em-open', tk.span.from, tk.span.to);
         const outer: Inline[] = [];
         if (tk.n === 1) {
           top().push({ t: 'em', children: outer });
@@ -353,6 +435,7 @@ class Parser {
           frames.push(inner);
         }
       } else if (tk.pair === 'close') {
+        this.mark('em-close', tk.span.from, tk.span.to);
         frames.pop();
       } else {
         top().push({ t: 'text', span: tk.span });
@@ -385,14 +468,23 @@ function merge(nodes: Inline[]): Inline[] {
  * them. Everything else in the source is hidden.
  */
 export function shown(doc: Document): number[] {
-  const out: number[] = [];
+  return shownIn(doc).map(([i]) => i);
+}
+
+/**
+ * The offsets shown, in order, each with the leaf block that shows it: a
+ * heading, a paragraph, a code block's label, its lines, a list marker.
+ */
+function shownIn(doc: Document): [number, number][] {
+  const out: [number, number][] = [];
+  let leaf = 0;
   const span = (x: Span) => {
-    for (let i = x.from; i < x.to; i++) out.push(i);
+    for (let i = x.from; i < x.to; i++) out.push([i, leaf]);
   };
   const inl = (ns: Inline[]) => {
     for (const n of ns) {
       if (n.t === 'text' || n.t === 'code' || n.t === 'link') span(n.span);
-      else if (n.t === 'break') out.push(n.at);
+      else if (n.t === 'break') out.push([n.at, leaf]);
       else inl(n.children);
     }
   };
@@ -401,6 +493,7 @@ export function shown(doc: Document): number[] {
       switch (b.t) {
         case 'heading':
         case 'paragraph':
+          leaf++;
           inl(b.children);
           break;
         case 'quote':
@@ -408,15 +501,18 @@ export function shown(doc: Document): number[] {
           break;
         case 'list':
           for (const it of b.items) {
+            leaf++;
             span(it.marker);
             blk(it.children);
           }
           break;
         case 'code':
+          leaf++;
           if (b.label) span(b.label);
+          leaf++;
           b.lines.forEach((l, k) => {
             span(l);
-            if (k + 1 < b.lines.length) out.push(l.to); // the LF between two lines
+            if (k + 1 < b.lines.length) out.push([l.to, leaf]); // the LF between two lines
           });
           break;
         case 'rule':
@@ -429,25 +525,164 @@ export function shown(doc: Document): number[] {
 }
 
 /**
- * Check the Text MIP's bound on a format (task 4, with F102) for one
- * rendering: every character shown is the source's own, shown once and in
- * the order of the bytes, and every character hidden is markup. Returns the
- * first breach found, or null.
+ * Check the Text MIP's bound on a format (task 4, with F102 and F149) for
+ * one rendering: every character shown is the source's own, shown once and
+ * in the order of the bytes, and every character hidden is the format's own
+ * declared markup, in a position the cMIP's markup declaration declares it
+ * ("Markup declaration"). Each position is checked against the source
+ * itself, never taken from the reading: a rendering that hid a minus sign,
+ * a decimal point, a vowel sign, or a markup character anywhere else (a
+ * `-` before a number, a `*` between spaces, an LF inside a paragraph) is
+ * refused. Returns the first breach found, or null.
  */
 export function checkBound(doc: Document): string | null {
-  const at = shown(doc);
-  const seen = new Uint8Array(doc.source.length);
+  const s = doc.source;
+  const n = s.length;
+  const at = shownIn(doc);
+  // 1 shown, 2 hidden as declared markup.
+  const state = new Uint8Array(n);
+  const leafOf = new Int32Array(n).fill(-1);
   let last = -1;
-  for (const i of at) {
-    if (i < 0 || i >= doc.source.length) return `shows offset ${i}, outside the text`;
+  for (const [i, leaf] of at) {
+    if (i < 0 || i >= n) return `shows offset ${i}, outside the text`;
     if (i <= last) return `shows offset ${i} after ${last}: out of the order of the bytes`;
     last = i;
-    seen[i] = 1;
+    state[i] = 1;
+    leafOf[i] = leaf;
   }
-  for (let i = 0; i < doc.source.length; i++) {
-    if (!seen[i] && !MARKUP.has(doc.source[i])) {
-      return `hides ${JSON.stringify(doc.source[i])} at ${i}, which is not markup`;
+  const said = (i: number) => JSON.stringify(s[i] ?? '');
+  const lineStart = (i: number) => s.lastIndexOf('\n', i - 1) + 1;
+  const lineEnd = (i: number) => {
+    const e = s.indexOf('\n', i);
+    return e < 0 ? n : e;
+  };
+  // Positions that open a line's content: everything before them on their
+  // line is a container's markup (a quote's sign, an item's indentation or
+  // its marker's space) or a list marker, shown as written.
+  const markers = new Uint8Array(n);
+  const markerSpans = (bs: Block[]): void => {
+    for (const b of bs) {
+      if (b.t === 'quote') markerSpans(b.children);
+      if (b.t === 'list')
+        for (const it of b.items) {
+          for (let i = it.marker.from; i < it.marker.to; i++) markers[i] = 1;
+          markerSpans(it.children);
+        }
     }
+  };
+  markerSpans(doc.blocks);
+  const container = new Uint8Array(n);
+  for (const m of doc.marks)
+    if (m.rule === 'quote' || m.rule === 'indent' || m.rule === 'item')
+      for (let i = m.span.from; i < m.span.to; i++) container[i] = 1;
+  const opensLine = (i: number) => {
+    for (let j = lineStart(i); j < i; j++) if (!container[j] && !markers[j]) return false;
+    return true;
+  };
+  // A character a backslash escapes is text: it ends a run of signs
+  // (rule 8 is read before the run starts, left to right).
+  const escaped = new Uint8Array(n + 1);
+  for (const m of doc.marks) if (m.rule === 'escape') escaped[m.span.to] = 1;
+  const run = (i: number, c: string) => {
+    let a = i;
+    let b = i;
+    while (a > lineStart(i) && s[a - 1] === c && !escaped[a - 1]) a--;
+    while (b < lineEnd(i) && s[b] === c && !escaped[b]) b++;
+    return { from: a, to: b };
+  };
+  const isSpaceAt = (i: number) => i >= 0 && i < n && SPACES.has(s.charCodeAt(i));
+  const wholeRun = (m: Mark, c: string) => {
+    const r = run(m.span.from, c);
+    return r.from === m.span.from && r.to === m.span.to;
+  };
+  const sameLine = (a: Mark, b: Mark) => lineEnd(a.span.from) === lineEnd(b.span.from);
+  // Pairs on one line: an opener closed by the next closer of its kind,
+  // emphasis nesting as the reading pairs it.
+  const stack: Mark[] = [];
+  let code: Mark | null = null;
+  let link: Mark | null = null;
+  for (const m of doc.marks) {
+    const { from, to } = m.span;
+    if (from < 0 || to > n || from >= to) return `declares markup outside the text at ${from}`;
+    for (let i = from; i < to; i++) {
+      if (state[i]) return `hides ${said(i)} at ${i}, which it also shows`;
+      if (!DECLARED[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
+      state[i] = 2;
+    }
+    const text = s.slice(from, to);
+    const fail = (why: string) => `hides ${JSON.stringify(text)} at ${from}, not in a declared position: ${why}`;
+    switch (m.rule) {
+      case 'heading':
+        if (!/^#{1,6} $/.test(text) || !opensLine(from) || to >= lineEnd(from)) return fail('one to six # and a space, opening a line, before some text');
+        break;
+      case 'rule':
+        if (!opensLine(from) || to !== lineEnd(from) || !/^(?:-{3,}|\*{3,})$/.test(text)) return fail('a whole line of three or more - or *');
+        break;
+      case 'fence-open':
+        if (!opensLine(from) || to - from < 3 || !wholeRun(m, '`') || s.slice(to, lineEnd(from)).includes('`')) return fail('three or more backticks opening a line, nothing after them a backtick');
+        break;
+      case 'fence-close':
+        if (!opensLine(from) || to !== lineEnd(from)) return fail('a whole line of backticks');
+        break;
+      case 'quote':
+        if (s[from] !== '>' || (to - from === 2 && s[from + 1] !== ' ') || !opensLine(from)) return fail('a > and one space, opening a line');
+        break;
+      case 'item':
+        if (from === 0 || !markers[from - 1] || to - from !== 1) return fail('the one space after a list marker');
+        break;
+      case 'indent':
+        if (!opensLine(from) || !/^ +$/.test(text)) return fail('spaces opening an item\'s later line');
+        break;
+      case 'escape':
+        if (to - from !== 1 || to >= lineEnd(from) || !ESCAPABLE.has(s[to]) || state[to] !== 1) return fail('a backslash before a character it escapes');
+        break;
+      case 'code-open':
+        if (code || !wholeRun(m, '`')) return fail('a whole run of backticks opening a code span');
+        code = m;
+        break;
+      case 'code-close':
+        if (!code || !sameLine(code, m) || !wholeRun(m, '`') || to - from !== code.span.to - code.span.from) return fail('a run of as many backticks closing a code span on its line');
+        code = null;
+        break;
+      case 'link-open': {
+        const a = AUTOLINK.exec(s.slice(from, lineEnd(from)));
+        if (!a || link) return fail('a < opening a link to an https, http or mailto address');
+        link = m;
+        break;
+      }
+      case 'link-close': {
+        const a = link && AUTOLINK.exec(s.slice(link.span.from, lineEnd(link.span.from)));
+        if (!link || !a || link.span.from + a[0].length !== to) return fail('the > closing a link');
+        link = null;
+        break;
+      }
+      case 'em-open':
+        if (to - from > 3 || !wholeRun(m, '*') || to >= lineEnd(from) || isSpaceAt(to)) return fail('a run of one to three * before a character not a space');
+        stack.push(m);
+        break;
+      case 'em-close': {
+        const o = stack.pop();
+        if (to - from > 3 || !wholeRun(m, '*') || from <= lineStart(from) || isSpaceAt(from - 1)) return fail('a run of one to three * after a character not a space');
+        if (!o || !sameLine(o, m) || o.span.to - o.span.from !== to - from) return fail('no opener of its length on its line');
+        break;
+      }
+    }
+  }
+  if (stack.length || code || link) return 'an opening sign is never closed on its line';
+  // An LF is hidden only where a block ends: never between two characters
+  // one block shows, which would join two lines of text into one.
+  let prev = -1;
+  const next = new Int32Array(n + 1).fill(-1);
+  for (let i = n - 1; i >= 0; i--) next[i] = state[i] === 1 ? i : next[i + 1];
+  for (let i = 0; i < n; i++) {
+    if (state[i] === 1) {
+      prev = i;
+      continue;
+    }
+    if (state[i] === 2) continue;
+    if (s[i] !== '\n') return `hides ${said(i)} at ${i}, which is not markup`;
+    const after = next[i + 1] ?? -1;
+    if (prev >= 0 && after >= 0 && leafOf[prev] === leafOf[after]) return `hides the LF at ${i}, inside a block`;
   }
   return null;
 }
@@ -463,5 +698,5 @@ export function shownText(doc: Document): string {
 export function title(doc: Document): string | null {
   const h = doc.blocks.find((b) => b.t === 'heading');
   if (!h || h.t !== 'heading') return null;
-  return shownText({ source: doc.source, blocks: [h] }).trim() || null;
+  return shownText({ ...doc, blocks: [h] }).trim() || null;
 }

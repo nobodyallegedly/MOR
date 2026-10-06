@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { checkBound, MARKUP, parse, shownText, title } from '../src/format.ts';
+import { checkBound, parse, shownText, title, type Document, type Inline, type Mark } from '../src/format.ts';
 import { renderHtml } from '../src/html.ts';
 import { compose } from '../src/text.ts';
 import { checkText } from '../../genesis/src/core.ts';
@@ -120,8 +120,70 @@ test('the title is the first heading', () => {
   assert.equal(title(parse('no heading')), null);
 });
 
-test('hidden characters are markup, never a letter or digit', () => {
-  for (const c of MARKUP) assert.doesNotMatch(c, /[\p{L}\p{N}]/u);
+// F149 (review finding 5): a format may hide only its own declared markup,
+// in the positions it declares it; everything else is shown. Replaces
+// F140's bound by Unicode category (L and N), which let a format hide a
+// minus sign, a decimal point or a vowel sign.
+
+/** The review's stories, each inside every construct that hides markup around it. */
+const STORIES = ['Balance: \u2212250', 'price 10.00', '\u0915\u093E\u092E', 'Balance: -250'];
+
+test('a minus sign, a decimal point, a vowel sign are shown, never hidden (F149)', () => {
+  for (const story of STORIES) {
+    for (const wrap of [(x: string) => x, (x: string) => `# ${x}`, (x: string) => `- ${x}`, (x: string) => `> ${x}`, (x: string) => `*${x}*`, (x: string) => `1. ${x}\n   ${x}`, (x: string) => `\`${x}\``, (x: string) => `\`\`\`\n${x}\n\`\`\``]) {
+      const text = wrap(story);
+      const doc = parse(text);
+      assert.equal(checkBound(doc), null, text);
+      assert.ok(shownText(doc).includes(story), `${JSON.stringify(text)} shows ${JSON.stringify(shownText(doc))}`);
+    }
+  }
+  assert.equal(shownText(parse('\u0915\u093E\u092E')), '\u0915\u093E\u092E', 'work stays work, never less');
+});
+
+/** A reading of `source` that shows every character but those at `hide`, claiming them as `marks`. */
+function tampered(source: string, hide: number[], marks: Mark[] = []): Document {
+  const spans: Inline[] = [];
+  let from = 0;
+  for (const h of [...hide, source.length]) {
+    if (h > from) spans.push({ t: 'text', span: { from, to: h } });
+    from = h + 1;
+  }
+  return { source, blocks: [{ t: 'paragraph', children: spans }], marks };
+}
+
+test('a rendering hiding anything but declared markup, in its declared place, is refused (F149)', () => {
+  const at = (s: string, c: string) => s.indexOf(c);
+  const cases: [string, Document][] = [
+    // The review's stories, hidden outright.
+    ['a minus sign', tampered('Balance: \u2212250', [at('Balance: \u2212250', '\u2212')])],
+    ['a decimal point', tampered('price 10.00', [at('price 10.00', '.')])],
+    ['a vowel sign', tampered('\u0915\u093E\u092E', [1])],
+    // Claimed as markup the declaration does not give that character.
+    ['a decimal point claimed as an escape', tampered('price 10.00', [8], [{ rule: 'escape', span: { from: 8, to: 9 } }])],
+    // Markup characters, but not where the declaration puts them: the bound
+    // by character alone (before F149) let every one of these through.
+    ['a hyphen-minus before a number', tampered('Balance: -250', [9])],
+    ['a hyphen-minus claimed as a rule line', tampered('Balance: -250', [9], [{ rule: 'rule', span: { from: 9, to: 10 } }])],
+    ['a hyphen-minus claimed as a list marker space', tampered('Balance: -250', [9], [{ rule: 'item', span: { from: 9, to: 10 } }])],
+    ['a star between spaces', tampered('2 * 3', [2], [{ rule: 'em-open', span: { from: 2, to: 3 } }])],
+    ['a space between words', tampered('I do not agree', [4])],
+    ['a hash inside a line', tampered('item #1', [5], [{ rule: 'heading', span: { from: 5, to: 6 } }])],
+    ['an LF inside a paragraph, joining 1 and 000', tampered('price 1\n000', [7])],
+  ];
+  for (const [why, doc] of cases) {
+    assert.notEqual(checkBound(doc), null, why);
+  }
+  // The same hyphen, where the declaration puts it (a rule line), is markup.
+  assert.equal(checkBound(parse('---')), null);
+  assert.equal(shownText(parse('---')), '');
+});
+
+test('the renderer refuses a reading that breaks the bound: shown plain, flagged (F149)', () => {
+  const doc = tampered('Balance: -250', [9]);
+  const h = renderHtml(doc);
+  assert.match(h, /Balance: -250/);
+  assert.match(h, /mor-lf-refused/);
+  assert.doesNotMatch(renderHtml(parse('Balance: -250')), /mor-lf-refused/);
 });
 
 // ------------------------------------------------------------ generated texts
