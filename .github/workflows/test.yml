@@ -67,8 +67,9 @@ jobs:
         if: success() || failure()
         shell: bash
         run: |
+          set +e +o pipefail
           cd clients/site
-          npm ci --no-audit --no-fund
+          npm ci --no-audit --no-fund || exit 1
           npm test 2>&1 | tee ../../test-output.txt; status=${PIPESTATUS[0]}
           grep -E 'not ok|✖|Error|expected|actual|differ' ../../test-output.txt | head -10 | while IFS= read -r l; do echo "::error::$l"; done
           exit $status
@@ -79,6 +80,7 @@ jobs:
         if: success() || failure()
         shell: bash
         run: |
+          set +e +o pipefail
           cd clients/site
           npm run test:build 2>&1 | tee ../../test-output.txt; status=${PIPESTATUS[0]}
           grep -E 'not ok|✖|Error|expected|actual|differ' ../../test-output.txt | head -10 | while IFS= read -r l; do echo "::error::$l"; done
