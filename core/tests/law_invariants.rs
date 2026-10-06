@@ -14,6 +14,11 @@
 //!
 //! The number of cases per property is `LAW_INVARIANT_CASES` (default 48,
 //! so that `cargo test` stays quick); the report's runs used thousands.
+//!
+//! Every run prints its random seed, and names it again if it fails. Set
+//! `LAW_INVARIANT_SEED` to that number, with the same `LAW_INVARIANT_CASES`,
+//! to replay the run exactly: the same stories, in the same order, the same
+//! failure shrunk the same way (`docs/law-invariants.md`, "Seeds").
 
 mod common;
 
@@ -32,7 +37,7 @@ use mor_core::lock::ContentKey;
 use mor_core::mmr::Mmr;
 use mor_core::sig::SchnorrKey;
 use proptest::prelude::*;
-use proptest::test_runner::{Config, TestCaseError, TestRunner};
+use proptest::test_runner::{Config, RngAlgorithm, TestCaseError, TestRng, TestRunner};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -77,6 +82,53 @@ fn config(n: u32) -> Config {
         max_shrink_iters: 4096,
         ..Config::default()
     }
+}
+
+/// The seed of a property's run: `LAW_INVARIANT_SEED` where set, otherwise
+/// a fresh one. Nothing else in a story is random: every key, nonce and
+/// shuffle is drawn from the story itself, so the seed and the number of
+/// cases decide the whole run.
+fn seed() -> u64 {
+    match std::env::var("LAW_INVARIANT_SEED") {
+        Ok(s) => s.trim().parse().expect("LAW_INVARIANT_SEED must be a whole number"),
+        Err(_) => {
+            use std::hash::{BuildHasher, Hasher};
+            // The standard library's per-process random keys, and the time.
+            let mut h = std::collections::hash_map::RandomState::new().build_hasher();
+            h.write_u128(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0));
+            h.finish()
+        }
+    }
+}
+
+/// One property's run: its name, seed and number of cases.
+struct Run {
+    name: &'static str,
+    seed: u64,
+    cases: u32,
+}
+
+impl Run {
+    fn replay(&self) -> String {
+        format!(
+            "LAW_INVARIANT_SEED={} LAW_INVARIANT_CASES={} cargo test -p mor-core --test law_invariants -- --exact {} --nocapture",
+            self.seed, self.cases, self.name
+        )
+    }
+
+    /// A failure, naming the seed that replays it.
+    fn failed(&self, e: impl std::fmt::Display) -> ! {
+        panic!("{e}\n[{}] failed with seed {}; replay: {}", self.name, self.seed, self.replay())
+    }
+}
+
+/// A property's runner, from a seed it prints, so the run can be replayed.
+fn runner(name: &'static str, n: u32) -> (TestRunner, Run) {
+    let config = config(n);
+    let run = Run { name, seed: seed(), cases: config.cases };
+    eprintln!("[{name}] seed {}, {} cases; replay: {}", run.seed, run.cases, run.replay());
+    let rng = TestRng::from_seed(RngAlgorithm::ChaCha, &sha256(&run.seed.to_le_bytes()));
+    (TestRunner::new_with_rng(config, rng), run)
 }
 
 fn obj(x: Hash) -> Option<Vec<Object>> {
@@ -1785,7 +1837,7 @@ fn story() -> impl Strategy<Value = (Shape, Vec<Op>, u64)> {
 /// Every promise over random collective histories.
 #[test]
 fn collective_promises_hold() {
-    let mut runner = TestRunner::new(config(48));
+    let (mut runner, run) = runner("collective_promises_hold", 48);
     let r = runner.run(&story(), |(shape, ops, seed)| {
         let cw = run_col(&shape, &ops, seed);
         tally(&cw);
@@ -1794,7 +1846,7 @@ fn collective_promises_hold() {
     col_stats().show("collective_promises_hold");
     known().show("stated costs and open questions met (not failures)");
     if let Err(e) = r {
-        panic!("{e}");
+        run.failed(e);
     }
 }
 
@@ -1802,7 +1854,7 @@ fn collective_promises_hold() {
 /// give the same verdicts; and the same acts always give the same answer.
 #[test]
 fn collective_verdicts_do_not_depend_on_order() {
-    let mut runner = TestRunner::new(config(24));
+    let (mut runner, run) = runner("collective_verdicts_do_not_depend_on_order", 24);
     let r = runner.run(&(story(), any::<u64>(), any::<u64>()), |((shape, ops, seed), s1, s2)| {
         let cw = run_col(&shape, &ops, seed);
         let push = Rails::default();
@@ -1813,7 +1865,7 @@ fn collective_verdicts_do_not_depend_on_order() {
         Ok(())
     });
     if let Err(e) = r {
-        panic!("{e}");
+        run.failed(e);
     }
 }
 
@@ -2481,7 +2533,7 @@ fn deal_story() -> impl Strategy<Value = (DealShape, Vec<DOp>, u64)> {
 /// Every promise over random deals.
 #[test]
 fn deal_promises_hold() {
-    let mut runner = TestRunner::new(config(48));
+    let (mut runner, run) = runner("deal_promises_hold", 48);
     let r = runner.run(&deal_story(), |(shape, ops, seed)| {
         let d = run_deal(&shape, &ops, seed);
         deal_tally(&d);
@@ -2490,14 +2542,14 @@ fn deal_promises_hold() {
     deal_stats().show("deal_promises_hold");
     known().show("stated costs and open questions met (not failures)");
     if let Err(e) = r {
-        panic!("{e}");
+        run.failed(e);
     }
 }
 
 /// Deals: the same acts in any order give the same verdicts.
 #[test]
 fn deal_verdicts_do_not_depend_on_order() {
-    let mut runner = TestRunner::new(config(24));
+    let (mut runner, run) = runner("deal_verdicts_do_not_depend_on_order", 24);
     let r = runner.run(&(deal_story(), any::<u64>(), any::<u64>()), |((shape, ops, seed), s1, s2)| {
         let d = run_deal(&shape, &ops, seed);
         let push: Rails = ([push_rail()].into(), d.wrong.clone());
@@ -2508,7 +2560,7 @@ fn deal_verdicts_do_not_depend_on_order() {
         Ok(())
     });
     if let Err(e) = r {
-        panic!("{e}");
+        run.failed(e);
     }
 }
 
@@ -2623,10 +2675,10 @@ fn stake_check(c: &StakeCase) -> Result<(), String> {
 /// holders included.
 #[test]
 fn collective_stakes_move_only_with_their_holders() {
-    let mut runner = TestRunner::new(config(96));
+    let (mut runner, run) = runner("collective_stakes_move_only_with_their_holders", 96);
     let r = runner.run(&stake_case(), |c| stake_check(&c).map_err(TestCaseError::fail));
     if let Err(e) = r {
-        panic!("{e}");
+        run.failed(e);
     }
 }
 

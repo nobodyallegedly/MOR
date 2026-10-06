@@ -219,6 +219,19 @@ impl Held for View<'_> {
         let v = finance::vault_in(&finance(), &decls).ok()??;
         Some((who, v?))
     }
+
+    fn obligation(&self, id: &Hash) -> Option<finance::Obligation> {
+        let h = self.0.v.get(id)?;
+        if self.0.status(id) != Status::Valid || h.inside.spec != finance() {
+            return None;
+        }
+        let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;
+        finance::check_signer(&p, h.act.outside.signer.as_ref()?).ok()?;
+        match p {
+            Payload::Obligation(o) => Some(o),
+            _ => None,
+        }
+    }
 }
 
 async fn read_payee(rd: &mut Reader, site: &Site, id: &Hash) -> PayeeView {

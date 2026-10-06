@@ -1,6 +1,7 @@
 //! The Finance MIP's formats, the pointer that counts (rule 12), where a
 //! payment may go under the vault (rules 14a and 16, F114), and an
-//! anonymous payer's key (rules 1 and 10a, F113).
+//! anonymous payer's key (rules 1 and 10a, F113), and which flow pointer
+//! version a payment to the flow can count for (rule 14).
 
 use mor_core::act::Scheme;
 use mor_core::cbor::{self, Value};
@@ -365,4 +366,18 @@ fn the_vault_declaration() {
         value: None,
     };
     assert_eq!(vault_in(&fin, &[removal]).unwrap(), Some(None));
+}
+
+/// Rule 14: a payment to the flow counts only for what names that flow
+/// pointer's version or a later one; to the vault, for anything. The story
+/// of freeze scenario 1, step 5c, over a rail, is in
+/// `modules/lightning/tests/flow_theft.rs`.
+#[test]
+fn rule_14_older_obligations_and_the_flow() {
+    assert!(counts_toward(1, PaidInto::Flow(1)));
+    assert!(counts_toward(2, PaidInto::Flow(1)));
+    assert!(!counts_toward(1, PaidInto::Flow(2)));
+    assert!(!counts_toward(1, PaidInto::Flow(u64::MAX)));
+    assert!(counts_toward(1, PaidInto::Vault));
+    assert!(counts_toward(u64::MAX, PaidInto::Vault));
 }

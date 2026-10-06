@@ -147,6 +147,9 @@ impl Held for World {
     fn vault(&self, id: &Hash) -> Option<(Hash, Vec<VaultEntry>)> {
         (id == &self.vault_id).then(|| (self.payee, self.vault.clone()))
     }
+    fn obligation(&self, _: &Hash) -> Option<mor_core::finance::Obligation> {
+        None
+    }
 }
 
 fn world() -> World {
