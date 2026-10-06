@@ -431,6 +431,20 @@ class Verifier:
             why.append("field 4 must name each successor once, never the original")
         if not a.get("successors_ok", True):
             why.append("a successor is not held, or its founding terms do not fit")
+        # N1, N4: each successor's founding terms have exactly that side's members as
+        # parties, and keep every departed holder of the original and every member whose
+        # voice remains on no side (as a departed holder; their share is not modelled).
+        voices_now = self.voices_at_line(e, None)
+        on_no_side = [m for m in voices_now if not any(m in side.get("members", []) for side in sides)]
+        for side in sides:
+            if side.get("parties") is None and side.get("keeps") is None:
+                continue
+            if side.get("parties") is not None and sorted(side["parties"]) != sorted(side.get("members", [])):
+                why.append(f"successor {side['successor']}'s founding terms do not have its side's members as parties")
+            keeps = side.get("keeps") or []
+            for m in on_no_side:
+                if m not in keeps:
+                    why.append(f"successor {side['successor']} does not keep {m}, a member whose voice remains on no side")
         listed: list[str] = []
         for side in sides:
             listed.extend(side.get("members", []))

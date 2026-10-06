@@ -28,6 +28,24 @@ fn hxs(hs: &[Hash]) -> Vec<String> {
     hs.iter().map(hx).collect()
 }
 
+/// The founding agreement a collective's genesis declares (Law kind 0).
+fn founding_of(v: &Verifier, collective: &Hash) -> Option<Hash> {
+    let h = v.get(collective)?;
+    let Some(Ok(mor_core::identity::Payload::Genesis(g))) = &h.identity else { return None };
+    for d in g.declarations.iter().flatten() {
+        if d.spec == mips().law && d.kind == law::kinds::FOUNDING_AGREEMENT {
+            if let Some(Value::Bytes(b)) = &d.value {
+                if b.len() == 32 {
+                    let mut out = [0u8; 32];
+                    out.copy_from_slice(b);
+                    return Some(out);
+                }
+            }
+        }
+    }
+    None
+}
+
 /// The story as verifier2 reads it: one JSON object per collective.
 fn story_json(cw: &ColWorld) -> J {
     let v = &cw.w.v;
@@ -143,7 +161,15 @@ fn story_json(cw: &ColWorld) -> J {
                 m.remove("prev");
                 m.insert("cites".into(), json!([]));
                 m.insert("tips".into(), json!(f.tips.iter().map(|t| hx(&t.act)).collect::<Vec<_>>()));
-                m.insert("sides".into(), json!(f.sides.iter().map(|s| json!({"successor": hx(&s.successor), "members": hxs(&s.members)})).collect::<Vec<_>>()));
+                // Each side's successor: its founding terms' parties and departed
+                // holders (N4), read from the terms its genesis declares.
+                let lv = cw.view();
+                m.insert("sides".into(), json!(f.sides.iter().map(|s| {
+                    let terms = founding_of(v, &s.successor).and_then(|ag| lv.terms(&ag).ok());
+                    json!({"successor": hx(&s.successor), "members": hxs(&s.members),
+                           "parties": terms.as_ref().map(|t| hxs(&t.parties)),
+                           "keeps": terms.as_ref().map(|t| t.departed.as_ref().map(|d| hxs(d)).unwrap_or_default())})
+                }).collect::<Vec<_>>()));
                 m.insert("assigned".into(), json!(f.debts.iter().map(|(d, s)| json!({"obligation": hx(d), "sides": s})).collect::<Vec<_>>()));
                 m.insert("objects".into(), json!(objects));
                 let mut ss = Map::new();
