@@ -1619,3 +1619,12 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): "Agreed"** to the project lead's suggestion, following IT3: the payment's own commitment decides; where a rail binds no payee or purpose, neither counts until the receiver resolves them (rule 8a), the disagreement shown.
 
 **Core changes:** Finance draft 6, rule 10. *Code:* as built (the disagreeing claim adds nothing, the disagreement shown); the commitment check on rails that bind payee and purpose to be confirmed in the next Finance session.
+
+
+## F142. A witness act adopts nothing (verifier2, reading A, 6 October 2026)
+
+**Found by verifier2** (`docs/verifier2-report.md`, reading A, 269 of 4,000 stories): the reference library let an Identity witness act (type 15) by the collective adopt a grant key's act (rule 42); an independent verifier written from the text read rules 35a and 35b first: an act binds the collective only once done, sealed to every member and on its chain, and a witness act is on neither chain, so it adopts nothing.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** adoption binds the collective, so it meets the same bar as everything that binds it ("one thing is to act, one thing is to read", F126). A witness act adopts nothing; the collective adopts by an action citing the act.
+
+**Core changes:** Law draft 10, rule 42. *To build:* `LawView::backing` takes as adopters only acts done on the collective's chain.
