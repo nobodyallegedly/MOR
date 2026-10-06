@@ -1523,3 +1523,14 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 *U4b answered 5 October 2026. Written in on the same branch.*
 - **The two keys renamed (Nobody, allegedly, 5 October 2026, once the safety key also signs endings: "safety key will need a new name"; "signing key and chain key sound good for the two keys, deep key is the close second"):** the safety key becomes the **chain key** (it signs the one line of an identity that never branches: rotations and ending signatures); the everyday key is called the **signing key** throughout. "Deep key" noted as the close second. *To apply:* one rename pass across the MIPs, core, suite, one page, Modules (safety seed words and hex, the air-gapped signer), clients and code, after the session writing F132, not during it.
 - **The three readings taken writing F132 in (Law draft 10, "Open in this draft"):** confirmed, 5 October 2026. The ending act's own drafter signs by a chain signature too, the act itself being the proposal; a successor's signature for its debts stays a signature act; U4 is judged in two steps, first by `objects`, then, among the signatures left, through signers' chains, so that no single late signature voids another member's honest earlier one.
+
+
+## F133. Rule 14 without "when" (rule 14 built, 6 October 2026)
+
+**Found building Finance rule 14 (R14-1):** the rule said the pointer version an obligation names must be "one that counted when the obligation's agreement act was made". With no clock, "when" cannot be checked; a debt re-signed to name a thief's newer flow pointer would let the thief collect it, and nothing refused it.
+
+**Decided (Nobody, allegedly, 6 October 2026):** the version an obligation names must be one its agreement act holds in its history (cites, directly or through what it cites), the same move as the knots and the ending rules. Working rule, in his words: **"'when' is to be avoided unless anchoring is involved."** Every rule judges order by what an act cites; only a named time reference (anchoring) may speak of time.
+
+**Still open, from the same build (for later, not decided):** R14-2, a payment in good faith after the owner's rotation (rule 15) needs the same treatment; R14-3, agreements name no pointer, so payments under them are judged "unknown"; R14-4, freeze scenario 1 step 5c's wording follows rule 14 ("only to the vault, or to the flow pointer the debt names"), a wording fix.
+
+**Core changes:** Finance draft 6, rule 14 (revised in place). To build: the core library checks the cited pointer version (the session that built rule 14, or the next).
