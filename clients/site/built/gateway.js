@@ -585,6 +585,23 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * What a split service owes (Law rule 29): every incoming receipt and
+   * payer's claim without its split, and every payout without the
+   * receiver's receipt, each naming one receiver and one agreement.
+   * @param {any} specs
+   * @param {string} service
+   * @returns {any}
+   */
+  lawServiceAccount(specs, service) {
+    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawServiceAccount(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * A split, judged (rules 20, 21, 26; F121 Q9, F124 N10): whether it
    * sums to what arrived, each fee and who received it, the holders it
    * pays and was not delivered to, and every payout that does not match
