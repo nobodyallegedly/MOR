@@ -54,7 +54,7 @@ def load(out: str, name: str):
 
 def signature(diffs: list[dict]) -> set[tuple]:
     """What kind of disagreement a story shows: (kind, mine, ref) per entry, ids left out."""
-    return {(d["kind"], str(d["mine"]), str(d["ref"])) for d in diffs}
+    return {(d["kind"], str(d["mine"]), str(d["ref"]), "(grant key)" in d["detail"]) for d in diffs}
 
 
 def shape_of(story: dict) -> dict:

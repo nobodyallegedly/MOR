@@ -1,0 +1,105 @@
+{
+  "acts": [
+    {
+      "acks": [
+        "de6b35fe10277a95b0edfcaa652f821fbeb3f6fbedac92daa5a834ce75aeae3f"
+      ],
+      "cites": [],
+      "id": "42dcc46a6581b0aa6a6d43299fd7894ba9b57bf860b201e72a906091ed62b836",
+      "kind": "Ack",
+      "order": 15,
+      "prev": "84996c8e326834011a3203aba2ef432be7341e335c260aafa6cd4fa59fbf1f79",
+      "public": true,
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "type": "publication",
+      "valid": true
+    },
+    {
+      "cites": [],
+      "id": "664f43668854b40c8a20f70cfb62a4e75efe079aa54419d6f8cda41cad9305bd",
+      "order": 6,
+      "public": true,
+      "sealed_to_all": false,
+      "signer": "C",
+      "type": "genesis",
+      "valid": true
+    },
+    {
+      "accepted": true,
+      "cites": [
+        "664f43668854b40c8a20f70cfb62a4e75efe079aa54419d6f8cda41cad9305bd"
+      ],
+      "grantee": "b670cc7050cfa555b2888c3d2925315483874e89f6b3c2657fb5e620cc344094",
+      "id": "84996c8e326834011a3203aba2ef432be7341e335c260aafa6cd4fa59fbf1f79",
+      "kind": "GrantAct",
+      "order": 12,
+      "public": true,
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "sigs": [
+        "b670cc7050cfa555b2888c3d2925315483874e89f6b3c2657fb5e620cc344094"
+      ],
+      "type": "grant",
+      "valid": true
+    },
+    {
+      "agreement": "9f9db297376f121ab84c73958b61816211ed5108038c64466ef348e04914880d",
+      "cites": [
+        "84996c8e326834011a3203aba2ef432be7341e335c260aafa6cd4fa59fbf1f79"
+      ],
+      "grant": "84996c8e326834011a3203aba2ef432be7341e335c260aafa6cd4fa59fbf1f79",
+      "id": "de6b35fe10277a95b0edfcaa652f821fbeb3f6fbedac92daa5a834ce75aeae3f",
+      "kind": "Record",
+      "order": 14,
+      "public": true,
+      "registers": [],
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "84996c8e326834011a3203aba2ef432be7341e335c260aafa6cd4fa59fbf1f79/key",
+      "tips": [],
+      "type": "record",
+      "valid": true,
+      "within_reach": true
+    }
+  ],
+  "areas": {},
+  "collective": "664f43668854b40c8a20f70cfb62a4e75efe079aa54419d6f8cda41cad9305bd",
+  "founding": "9f9db297376f121ab84c73958b61816211ed5108038c64466ef348e04914880d",
+  "members": [
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d"
+  ],
+  "meta": {
+    "name": "case00009.min",
+    "ops": [
+      "10: Grant { dev: 250, agent: 235, in_area: true, accept: true, holders_sign: true }",
+      "11: AgentAct { grant: 176, strand: 44, what: Record, seal: Public }",
+      "18: Ack { dev: 147, target: 198 }"
+    ],
+    "picked": [
+      10,
+      11,
+      18
+    ],
+    "seed": 15889502733649708008,
+    "shape": "Shape { members: 2, devices: 1, member_devices: 1, constitutional: None, lane: None, owns_work: false }"
+  },
+  "names": {
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "ben",
+    "664f43668854b40c8a20f70cfb62a4e75efe079aa54419d6f8cda41cad9305bd": "C",
+    "6b28d8708f75ace421f1d4bceb05466f24f83f66149e7c8c12bf06a14cb27ed1": "creditor0",
+    "84996c8e326834011a3203aba2ef432be7341e335c260aafa6cd4fa59fbf1f79": "G0",
+    "b670cc7050cfa555b2888c3d2925315483874e89f6b3c2657fb5e620cc344094": "agent1",
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "ana",
+    "cc5b8dac2072ef4ac57427c158c8e0bba3483317734ddf48806e33ec380bcb0d": "stranger",
+    "ced9b6a49c3867d8eb4e071b528bea628854b5cd1bb03c3e8afd04dbff132e58": "creditor1",
+    "ef1b35521f7fbdff1030b8a667b2e83c73b40377cfb609f2e397711b80c25439": "agent0"
+  },
+  "rule": {
+    "kind": "every"
+  },
+  "skipped": []
+}

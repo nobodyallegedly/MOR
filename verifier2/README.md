@@ -38,7 +38,8 @@ and its clones (an input flag), successors' founding terms (an input flag), stak
   `--handout binding` and `--cites loose` switch one reading each (below).
 - `test_law_endings.py`: one test per freeze scenario or smallest story, written from the
   text; running it also writes each story to `stories/`.
-- `stories/`: those stories, as JSON.
+- `stories/`: those stories, as JSON; `stories/compared/`: the smallest stories of each
+  disagreement with the reference, as exported, with the reference's verdicts.
 - `export/export.rs`: the exporter, included as a child module at the end of
   `core/tests/law_invariants.rs` (the one change made there, test-only and ignored unless
   asked for). It draws the reference's random collective histories from a seed, writes
@@ -46,7 +47,8 @@ and its clones (an input flag), successors' founding terms (an input flag), stak
   terms. `compare.py` judges each story with this verifier and prints every disagreement;
   `shrink.py` reduces a disagreeing story to its smallest form by re-exporting it with
   fewer steps and a smaller shape; `render.py` prints a story and both verdicts in plain
-  words; `group.py` groups a comparison's disagreements by their reasons.
+  words; `group.py` groups a comparison's disagreements by their reasons; `classify.py`
+  sorts disagreeing stories into the report's findings.
 
   To reproduce the comparison (`docs/verifier2-report.md`):
 
@@ -179,3 +181,13 @@ where the reference read it otherwise.
 14. **A fork listing an obligation outside its history** is not thereby incomplete; that
     obligation is void and no successor owes it; a successor it names must still have
     signed.
+15. **An ending's completeness is judged as if it were the one that counts**: its own
+    line, the debts in its own history, the departures its own history registers; the
+    same judgment whether or not another ending already counts (the report's finding B).
+16. **A fork's successors** (N1, N4): where the story carries each successor's founding
+    parties and departed holders, every successor's parties are exactly its side's
+    members, and every member whose voice remains at the line on no side is among every
+    successor's departed holders; shares are not modelled.
+
+The comparison with the reference, and what it found, is in `docs/verifier2-report.md`;
+the shrunk stories of each finding are in `stories/compared/`.

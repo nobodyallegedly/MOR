@@ -1,0 +1,238 @@
+{
+  "acts": [
+    {
+      "counts": true,
+      "ending": "47329a1c0cae73f71fc2c2701b1c85212d514484ce7a72e148346121d68c0caa",
+      "id": "0847dfe527f7568baf1795631a8002fa71be9baf466792aa42d6ebee5ff5ddd6",
+      "order": 33,
+      "position": 2,
+      "signer": "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "672ac115af52ec0913f63db37bbe6589b6e8e37cf38d59cf099d07a12c379f9a",
+      "id": "417afa5bb014a96ca4053c436c1134cc0389e88b6c314753ed1d3c443b3c23da",
+      "order": 24,
+      "position": 1,
+      "signer": "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "agreement": "17dd05ebdddc7841c7cb5ce0472a53e1074e8aa1691e4d1c63397d714e5da31c",
+      "cites": [],
+      "holds_nothing": true,
+      "id": "47329a1c0cae73f71fc2c2701b1c85212d514484ce7a72e148346121d68c0caa",
+      "objects": [
+        "672ac115af52ec0913f63db37bbe6589b6e8e37cf38d59cf099d07a12c379f9a"
+      ],
+      "order": 31,
+      "public": false,
+      "sealed_to_all": true,
+      "signer": "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+      "tips": [
+        "c80de6bfe65524c643c16353e90e90c7642298324f0533740ae37990c82ffd2b",
+        "4a216263b852193cca23a40161d6a74ce12431a9a2a83f798fdf73ceabff8f04"
+      ],
+      "type": "closing",
+      "valid": true
+    },
+    {
+      "agreement": "17dd05ebdddc7841c7cb5ce0472a53e1074e8aa1691e4d1c63397d714e5da31c",
+      "cites": [],
+      "id": "4a216263b852193cca23a40161d6a74ce12431a9a2a83f798fdf73ceabff8f04",
+      "kind": "Record",
+      "order": 30,
+      "public": true,
+      "registers": [
+        {
+          "area": "finance",
+          "member": "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+          "what": "stepdown"
+        }
+      ],
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "C/d1",
+      "tips": [],
+      "type": "record",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "672ac115af52ec0913f63db37bbe6589b6e8e37cf38d59cf099d07a12c379f9a",
+      "id": "66c17207fa70cc93831af156068fef21c6254c66c85b487cc288b5f9a6c77470",
+      "order": 26,
+      "position": 1,
+      "signer": "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "agreement": "17dd05ebdddc7841c7cb5ce0472a53e1074e8aa1691e4d1c63397d714e5da31c",
+      "assigned": [
+        {
+          "obligation": "c80de6bfe65524c643c16353e90e90c7642298324f0533740ae37990c82ffd2b",
+          "sides": [
+            1
+          ]
+        }
+      ],
+      "cites": [],
+      "id": "672ac115af52ec0913f63db37bbe6589b6e8e37cf38d59cf099d07a12c379f9a",
+      "objects": [],
+      "order": 23,
+      "public": true,
+      "sealed_to_all": false,
+      "sides": [
+        {
+          "keeps": [],
+          "members": [
+            "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf"
+          ],
+          "parties": [
+            "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf"
+          ],
+          "successor": "58d9a303f138df7fa0c0627d9b5668c5269cc4776c887af2d7374a59b2275138"
+        },
+        {
+          "keeps": [],
+          "members": [
+            "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+            "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a"
+          ],
+          "parties": [
+            "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+            "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a"
+          ],
+          "successor": "f7d146593964bee2cc7e6fbb698751ade32562dc5362a599ea97c47555c3109f"
+        }
+      ],
+      "signer": "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+      "sigs": [
+        "f7d146593964bee2cc7e6fbb698751ade32562dc5362a599ea97c47555c3109f",
+        "58d9a303f138df7fa0c0627d9b5668c5269cc4776c887af2d7374a59b2275138"
+      ],
+      "successor_signed": {
+        "58d9a303f138df7fa0c0627d9b5668c5269cc4776c887af2d7374a59b2275138": true,
+        "f7d146593964bee2cc7e6fbb698751ade32562dc5362a599ea97c47555c3109f": true
+      },
+      "tips": [
+        "c80de6bfe65524c643c16353e90e90c7642298324f0533740ae37990c82ffd2b"
+      ],
+      "type": "fork",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "47329a1c0cae73f71fc2c2701b1c85212d514484ce7a72e148346121d68c0caa",
+      "id": "979d2725ad6c47a2fe92930cca96f3503daa1e3262162c027a0a796679f3faea",
+      "order": 34,
+      "position": 2,
+      "signer": "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "672ac115af52ec0913f63db37bbe6589b6e8e37cf38d59cf099d07a12c379f9a",
+      "id": "a272ee5bb1a06d33622e4547f10f30ce2626f37f803f784b2a5e61aff1ecb719",
+      "order": 25,
+      "position": 1,
+      "signer": "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "cites": [],
+      "id": "bad63e05982013529c38353c07327a5b982eb0f48f8524fed167bd7631753305",
+      "order": 8,
+      "public": true,
+      "sealed_to_all": false,
+      "signer": "C",
+      "type": "genesis",
+      "valid": true
+    },
+    {
+      "counts": true,
+      "ending": "47329a1c0cae73f71fc2c2701b1c85212d514484ce7a72e148346121d68c0caa",
+      "id": "c6222704ed3631f155b7391f37f73665d2d6c1fbb1d10fd5624ada5ea1d8aaef",
+      "order": 32,
+      "position": 2,
+      "signer": "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+      "type": "chain_sig",
+      "valid": true
+    },
+    {
+      "amount": 95,
+      "area": "finance",
+      "cites": [
+        "bad63e05982013529c38353c07327a5b982eb0f48f8524fed167bd7631753305"
+      ],
+      "creditor": "9eedb985d001e43aa43719d80036a48a5a6cc3e70028194bbbcf0aca9b1c1620",
+      "id": "c80de6bfe65524c643c16353e90e90c7642298324f0533740ae37990c82ffd2b",
+      "kind": "Debt",
+      "order": 14,
+      "public": true,
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "sigs": [
+        "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf"
+      ],
+      "type": "obligation",
+      "valid": true
+    }
+  ],
+  "areas": {
+    "finance": {
+      "holders": [
+        "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf"
+      ],
+      "threshold": 1
+    }
+  },
+  "collective": "bad63e05982013529c38353c07327a5b982eb0f48f8524fed167bd7631753305",
+  "founding": "17dd05ebdddc7841c7cb5ce0472a53e1074e8aa1691e4d1c63397d714e5da31c",
+  "members": [
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d",
+    "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a"
+  ],
+  "meta": {
+    "name": "case01648.min",
+    "ops": [
+      "7: Debt { dev: 34, seal: Public, cited: true, creditor: 196, amount: 95, lane_sign: true }",
+      "14: Fork { stale: 0, sides: 41, debts: Honest, seal: Public, all_sign: true, succ_sign: true, names: false }",
+      "15: Resign { member: 21, area_only: true, dev: 177, tips: 72, inform: true }",
+      "19: Closing { stale: 0, seal: All, all_sign: true, names: true }"
+    ],
+    "picked": [
+      7,
+      14,
+      15,
+      19
+    ],
+    "seed": 4843114387158810542,
+    "shape": "Shape { members: 3, devices: 2, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false }"
+  },
+  "names": {
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "ben",
+    "58d9a303f138df7fa0c0627d9b5668c5269cc4776c887af2d7374a59b2275138": "S0",
+    "60940203dab5c27a7a331a288ed788d79e6040d156f27a23d89684bbce7b34ce": "creditor1",
+    "677c602d9901746b8de5a097909a0d5782857a1b44d1d9e8a84205d162b581b0": "agent0",
+    "7be126ab081d047d5d48340f7a66e5d94a740b8bca170186d1ce29cd6490c082": "agent1",
+    "7fc9b37d726c86c5f3101de3f0af063ba7ca286cfed0561214b3c04307a9256a": "stranger",
+    "9eedb985d001e43aa43719d80036a48a5a6cc3e70028194bbbcf0aca9b1c1620": "creditor0",
+    "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a": "cy",
+    "bad63e05982013529c38353c07327a5b982eb0f48f8524fed167bd7631753305": "C",
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "ana",
+    "f7d146593964bee2cc7e6fbb698751ade32562dc5362a599ea97c47555c3109f": "S1"
+  },
+  "rule": {
+    "kind": "every"
+  },
+  "skipped": []
+}
