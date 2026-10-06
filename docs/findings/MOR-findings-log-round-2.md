@@ -1628,3 +1628,12 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): "Agree":** adoption binds the collective, so it meets the same bar as everything that binds it ("one thing is to act, one thing is to read", F126). A witness act adopts nothing; the collective adopts by an action citing the act.
 
 **Core changes:** Law draft 10, rule 42. *To build:* `LawView::backing` takes as adopters only acts done on the collective's chain.
+
+
+## F143. An ending is judged on its own history (verifier2, reading B, 6 October 2026)
+
+**Found by verifier2** (reading B, 47 of 4,000 stories): both verifiers always agreed on which ending counts, but the reference reported a later ending's completeness with the first ending already in force (its debts after the first ending void, its records registering nothing), while verifier2 judged every ending as if it were the one that counted. A later closing could show "complete" in one and "incomplete" in the other; the reference's answer depended on whether it was asked during or after its own choice.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** each ending is judged on its own history; one that counts for nothing says so plainly, with its own completeness.
+
+**Core changes:** Law draft 10, after the closing's format ("Judged on its own history"). *To build:* `LawView::closing` and `fork` report completeness as `closed_by` judges it during the choice.
