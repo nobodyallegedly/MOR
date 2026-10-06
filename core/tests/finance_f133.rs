@@ -53,6 +53,9 @@ fn the_pointer_a_debt_names_must_be_one_its_agreement_act_cites() {
     let mut service = w.genesis("the film's split service", vec![own_home()], None, None);
     let fin = finance_spec();
     let id = c.id;
+    // Debts under an agreement are judged from the agreement act: the
+    // obligation act's own id is not used for them.
+    let no_act = h("an obligation act, unused when field 4 is present");
 
     // The contributor's own flow pointer, version 1.
     let a = w.everyday_act(&mut c, fin, 0, pointer(id, 1, None, "own node").to_map(), None, None);
@@ -78,29 +81,61 @@ fn the_pointer_a_debt_names_must_be_one_its_agreement_act_cites() {
     let thiefs = w.add(&a);
 
     // The royalty debt names version 1 under the deal: cited.
-    assert_eq!(pointer_cited(&w.v, &debt(service.id, c.id, own, Some(deal))), Some(true));
-    assert_eq!(pointer_cited(&w.v, &debt(service.id, c.id, own, Some(offer))), Some(true));
+    assert_eq!(pointer_cited(&w.v, &no_act, &debt(service.id, c.id, own, Some(deal))), Some(true));
+    assert_eq!(pointer_cited(&w.v, &no_act, &debt(service.id, c.id, own, Some(offer))), Some(true));
 
     // The debtor re-signs it naming the thief's version 2, under the same
     // deal, which never saw it: the version does not count for it.
-    assert_eq!(pointer_cited(&w.v, &debt(service.id, c.id, thiefs, Some(deal))), Some(false));
-    assert_eq!(pointer_cited(&w.v, &debt(service.id, c.id, thiefs, Some(offer))), Some(false));
+    assert_eq!(pointer_cited(&w.v, &no_act, &debt(service.id, c.id, thiefs, Some(deal))), Some(false));
+    assert_eq!(pointer_cited(&w.v, &no_act, &debt(service.id, c.id, thiefs, Some(offer))), Some(false));
 
     // A deal the thief makes after its pointer cites it: a debt under it
     // naming version 2 counts on that flow (the stream between theft and
     // rotation, a stated cost no clockless rule closes).
     let a = w.everyday_act(&mut thief, deal_spec(), 0, vec![], None, None);
     let later = w.add(&a);
-    assert_eq!(pointer_cited(&w.v, &debt(service.id, c.id, thiefs, Some(later))), Some(true));
+    assert_eq!(pointer_cited(&w.v, &no_act, &debt(service.id, c.id, thiefs, Some(later))), Some(true));
 
-    // A debt naming no agreement act: no history holds its pointer.
-    assert_eq!(pointer_cited(&w.v, &debt(service.id, c.id, own, None)), Some(false));
+    // A debt naming no agreement act, not held: its own history is not
+    // known.
+    assert_eq!(pointer_cited(&w.v, &no_act, &debt(service.id, c.id, own, None)), None);
     // An agreement act not held: not known.
-    assert_eq!(pointer_cited(&w.v, &debt(service.id, c.id, own, Some(h("a deal nobody holds")))), None);
+    assert_eq!(pointer_cited(&w.v, &no_act, &debt(service.id, c.id, own, Some(h("a deal nobody holds")))), None);
     // An agreement whose history passes through an act not held, without
     // reaching the pointer: not known.
     let _unheld = w.everyday_act(&mut service, deal_spec(), 2, vec![], None, None);
     let a = w.everyday_act(&mut service, deal_spec(), 0, vec![], None, None);
     let gap = w.add(&a);
-    assert_eq!(pointer_cited(&w.v, &debt(service.id, c.id, thiefs, Some(gap))), None);
+    assert_eq!(pointer_cited(&w.v, &no_act, &debt(service.id, c.id, thiefs, Some(gap))), None);
+}
+
+/// F133 (d0b7813): an obligation naming no agreement act, an IOU its debtor
+/// signs alone, must hold the pointer version it names in its own history.
+#[test]
+fn an_iou_must_cite_the_pointer_it_names_itself() {
+    let mut w = World::new();
+    let mut c = w.genesis("contributor", vec![own_home()], None, None);
+    let mut friend = w.genesis("a friend who owes", vec![own_home()], None, None);
+    let fin = finance_spec();
+    let id = c.id;
+    let a = w.everyday_act(&mut c, fin, 0, pointer(id, 1, None, "own node").to_map(), None, None);
+    let own = w.add(&a);
+    let mut thief = c.clone();
+    let a = w.everyday_act(&mut thief, fin, 0, pointer(id, 2, Some(own), "thief's node").to_map(), None, None);
+    let thiefs = w.add(&a);
+
+    // The IOU cites the creditor's pointer in its `objects`: cited.
+    let iou = debt(friend.id, id, own, None);
+    let cites_own = Some(vec![mor_core::act::Object { chain: id, predecessor: own }]);
+    let a = w.everyday_act(&mut friend, fin, 1, Payload::Obligation(iou.clone()).to_map(), cites_own, None);
+    let iou_act = w.add(&a);
+    assert_eq!(pointer_cited(&w.v, &iou_act, &iou), Some(true));
+
+    // A second IOU names the thief's pointer, which neither it nor anything
+    // it cites ever saw (its history holds only the first IOU and the
+    // contributor's own pointer): not cited.
+    let other = debt(friend.id, id, thiefs, None);
+    let a = w.everyday_act(&mut friend, fin, 1, Payload::Obligation(other.clone()).to_map(), None, None);
+    let other_act = w.add(&a);
+    assert_eq!(pointer_cited(&w.v, &other_act, &other), Some(false));
 }

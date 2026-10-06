@@ -440,3 +440,41 @@ fn a_debt_resigned_to_the_thiefs_pointer_its_agreement_never_cited_does_not_coun
     let (r, _) = paid(&s, s.service, resigned, to_flow(s.thief_pointer), &s.thief_node, sat(40_000));
     assert!(matches!(pointer_in_force(Record::Receipt(&r), &s.c), Answer::Unknown(_)));
 }
+
+/// F133 (d0b7813): an IOU, an obligation naming no agreement act, must hold
+/// the pointer it names in its own history. One citing the contributor's
+/// pointer counts when paid to that flow; one naming the thief's pointer,
+/// which it never cited, does not count toward the thief's flow, only
+/// through the vault. (Whether an IOU cites its pointer is computed over
+/// real acts in `core/tests/finance_f133.rs`,
+/// `an_iou_must_cite_the_pointer_it_names_itself`.)
+#[test]
+fn an_iou_counts_on_the_flow_only_for_a_pointer_it_cites() {
+    let mut s = story();
+    let friend = h("a friend who owes");
+    let iou = |pointer| Obligation {
+        debtor: friend,
+        creditor: s.c.id,
+        amount: sat(5_000),
+        pointer,
+        agreement: None,
+    };
+    let (cites_own, names_thiefs) = (h("an IOU citing the own pointer"), h("an IOU naming the thief's pointer"));
+    let (a, b) = (iou(s.own_pointer), iou(s.thief_pointer));
+    s.c.obligations.insert(cites_own, held(a, Some(true)));
+    s.c.obligations.insert(names_thiefs, held(b, Some(false)));
+
+    let (r, c) = paid(&s, friend, cites_own, to_flow(s.own_pointer), &s.own_node, sat(5_000));
+    for (rail, rule_14) in judged(&s, &r, &c, friend) {
+        assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "cited, paid to that flow: counts");
+    }
+    let (r, c) = paid(&s, friend, names_thiefs, to_flow(s.thief_pointer), &s.thief_node, sat(5_000));
+    for (rail, rule_14) in judged(&s, &r, &c, friend) {
+        assert_eq!(rail, Answer::Valid, "the rail itself shows a payment");
+        assert!(matches!(&rule_14, Answer::Invalid(w) if w.contains("F133")), "never cited: {rule_14}");
+    }
+    let (r, c) = paid(&s, friend, names_thiefs, to_vault(&s), &s.vault_node, sat(5_000));
+    for (rail, rule_14) in judged(&s, &r, &c, friend) {
+        assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "paid to the vault, it counts");
+    }
+}
