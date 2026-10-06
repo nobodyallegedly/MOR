@@ -3362,8 +3362,11 @@ fn every_payout_matches_its_stake() {
     assert_eq!(e.in_force, f);
     assert!(e.unevidenced.is_empty());
     assert_eq!(e.unplanned, vec![svc.id], "the fee: only the plan, whose format is open, could justify it");
-    // Rounding: 901 leaves 801 to divide; the leftover unit to the first.
+    // Rounding: 901 leaves 801 to divide; the leftover unit to the largest
+    // remainder, Ana's 320.4 (rule 15a, F150).
     let r2 = receipt(&mut lab, &mut svc, 901);
+    let own: Vec<(Hash, u64)> = lab.view().terms(&f).unwrap().own_stake().unwrap().1.holders.iter().map(|(w, n)| (w.resolve(None).unwrap(), *n)).collect();
+    assert_eq!(law::divide_stake(801, &own, Some(&r2)).unwrap(), vec![321, 240, 240]);
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r2, 321, 240, 240).to_map(), None, everyone.clone());
     assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
     // Any deviation, either way, breaks the plan (N10): Cy paid less, Ana
@@ -3708,8 +3711,17 @@ fn payer_side_splitting_follows_the_claim() {
     });
     let f = lab.founding;
     let ids = lab.ids();
-    let got = lab.view().payer_split(&f, &Who::Id(work), 1001).unwrap().unwrap();
+    let got = lab.view().payer_split(&f, &Who::Id(work), 1001, None).unwrap().unwrap();
     assert_eq!(got, vec![(ids[ANA], 501), (ids[BEN], 250), (ids[CY], 250)]);
+    // F150: Ben and Cy tie for 1002's leftover unit. The receipt's hash
+    // orders them (rule 15a); with none, the split is undetermined.
+    let w = lab.view().payer_split(&f, &Who::Id(work), 1002, None).unwrap().unwrap_err();
+    assert!(w.contains("rule 15a"), "{w}");
+    let r = spec("a receipt");
+    let got = lab.view().payer_split(&f, &Who::Id(work), 1002, Some(&r)).unwrap().unwrap();
+    let first = if law::leftover_key(&r, &ids[BEN]) < law::leftover_key(&r, &ids[CY]) { BEN } else { CY };
+    let want: Vec<(Hash, u64)> = [(ANA, 501), (BEN, 250), (CY, 250)].iter().map(|(i, n)| (ids[*i], n + u64::from(*i == first))).collect();
+    assert_eq!(got, want);
     // A deal in which the label holds 60% and a guest 40%.
     let guest = lab.w.genesis("a guest", vec![own_home()], None, None);
     let label = lab.c[0].id;
@@ -3739,8 +3751,63 @@ fn payer_side_splitting_follows_the_claim() {
         release_rule: None,
     };
     let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal.to_map(), None);
-    let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
+    let got = lab.view().payer_split(&d, &Who::Id(work), 1000, None).unwrap().unwrap();
     assert_eq!(got, vec![(ids[ANA], 300), (ids[BEN], 150), (ids[CY], 150), (guest.id, 400)]);
+}
+
+/// Rule 15a (F150; the hostile review of F133 to F144, finding 6): one
+/// unit among holders at 333,333, 333,333 and 333,334 goes to the largest
+/// remainder, the third, however the holders are listed: a clone that only
+/// reorders them moves nothing. F140 gave it to the first listed.
+#[test]
+fn leftovers_go_by_largest_remainder_whatever_the_order() {
+    let work = spec("a work");
+    let mut lab = Lab::new(&|_| {});
+    let ids = lab.ids();
+    let deal = |holders: Vec<(Hash, u64)>| Terms {
+        parties: ids.clone(),
+        text: "A work shared three ways.".into(),
+        cmips: vec![],
+        keepers: None,
+        field4: Field4::Rule(Rule::All),
+        clone: Rule::All,
+        time: None,
+        abandonment: None,
+        parent: None,
+        grammar: None,
+        arbitrators: None,
+        split_grant: None,
+        payee_grants: None,
+        extensions: None,
+        succession: None,
+        constitutional: None,
+        areas: None,
+        area_words: None,
+        chain: None,
+        departed: None,
+        stakes: Some(vec![law::Stake { object: Who::Id(work), holders: holders.into_iter().map(|(h, n)| (Who::Id(h), n)).collect() }]),
+        forked_from: None,
+        release_rule: None,
+    };
+    let listed = [vec![(ids[ANA], 333_333), (ids[BEN], 333_333), (ids[CY], 333_334)], vec![(ids[CY], 333_334), (ids[ANA], 333_333), (ids[BEN], 333_333)]];
+    let r = spec("a receipt for one unit");
+    for holders in listed.iter() {
+        assert_eq!(law::divide_stake(1, holders, Some(&r)).unwrap().iter().zip(holders).find(|(n, _)| **n == 1).map(|(_, h)| h.0), Some(ids[CY]));
+        let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal(holders.clone()).to_map(), None);
+        let mut got = lab.view().payer_split(&d, &Who::Id(work), 1, Some(&r)).unwrap().unwrap();
+        got.sort();
+        let mut want = vec![(ids[ANA], 0), (ids[BEN], 0), (ids[CY], 1)];
+        want.sort();
+        assert_eq!(got, want, "the third holder, wherever listed");
+    }
+    // Two units: the third's remainder first, then Ana and Ben tie; the
+    // receipt's hash orders them, the listing never does.
+    for holders in listed.iter() {
+        let parts = law::divide_stake(2, holders, Some(&r)).unwrap();
+        let of = |h: Hash| parts[holders.iter().position(|x| x.0 == h).unwrap()];
+        let ana_first = law::leftover_key(&r, &ids[ANA]) < law::leftover_key(&r, &ids[BEN]);
+        assert_eq!((of(ids[ANA]), of(ids[BEN]), of(ids[CY])), if ana_first { (1, 0, 1) } else { (0, 1, 1) });
+    }
 }
 
 /// The successor of one side, founded first (N4): founding terms whose

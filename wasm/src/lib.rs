@@ -394,6 +394,28 @@ pub fn act_id(bytes: &[u8]) -> R<String> {
     Ok(hx(&Act::decode(bytes).map_err(err)?.id()))
 }
 
+#[derive(Deserialize)]
+struct DivideIn {
+    total: u64,
+    holders: Vec<(String, u64)>,
+    receipt: Option<String>,
+}
+
+/// Law rule 15a (F150): `{ total, holders: [[hex, share]], receipt }`
+/// divided among the holders by their shares, each holder its exact share
+/// rounded down, leftover units one each to the largest fractional
+/// remainders, ties ordered by `tagged_hash("MOR/law/leftover", [ receipt,
+/// holder ])`, smallest first. The parts, in the holders' order; an error
+/// where a tie decides a unit and no receipt is given.
+#[wasm_bindgen(js_name = lawDivideStake)]
+pub fn law_divide_stake(input: JsValue) -> R<Vec<f64>> {
+    let i: DivideIn = from_js(input)?;
+    let holders = i.holders.iter().map(|(h, n)| Ok((unhex(h)?, *n))).collect::<R<Vec<_>>>()?;
+    let receipt = i.receipt.map(|r| unhex(&r)).transpose()?;
+    let parts = law::divide_stake(i.total, &holders, receipt.as_ref()).map_err(|w| JsError::new(&w))?;
+    Ok(parts.into_iter().map(|n| n as f64).collect())
+}
+
 /// The running summary of a sequence of act ids (Envelope, "Sequences").
 #[wasm_bindgen(js_name = runningSummary)]
 pub fn running_summary(ids: Vec<String>) -> R<String> {
@@ -2403,16 +2425,19 @@ impl Verifier {
 
     /// Payer-side splitting (F124 P2): what a paying wallet reading Law pays
     /// each holder for `amount` on the stake in `object` (hex, or null for
-    /// the collective itself), or why it cannot.
+    /// the collective itself), or why it cannot. Leftovers by largest
+    /// remainder, ties ordered by `receipt` (hex, or null: then a tie that
+    /// decides a unit leaves the split undetermined; Law rule 15a, F150).
     #[wasm_bindgen(js_name = lawPayerSplit)]
-    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64) -> R<JsValue> {
+    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64, receipt: Option<String>) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let o = match object {
             Some(x) => law::Who::Id(unhex(&x)?),
             None => law::Who::This,
         };
-        let r = view.payer_split(&unhex(agreement)?, &o, amount).map_err(lerr)?;
+        let receipt = receipt.map(|r| unhex(&r)).transpose()?;
+        let r = view.payer_split(&unhex(agreement)?, &o, amount, receipt.as_ref()).map_err(lerr)?;
         to_js(&match r {
             Ok(v) => PayerSplitOut { pays: v.iter().map(|(h, n)| (hx(h), *n)).collect(), why: None },
             Err(w) => PayerSplitOut { pays: vec![], why: Some(w) },
