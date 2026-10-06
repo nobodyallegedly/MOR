@@ -17,7 +17,7 @@
 //! payers (F112).
 
 use mor_core::cbor::{self, Value};
-use mor_core::finance::{Amount, Claim, PayeePointer, Payer, Receipt, VaultEntry};
+use mor_core::finance::{self as fin, Amount, Claim, Obligation, PaidInto, PayeePointer, Payer, Receipt, VaultEntry};
 use mor_core::hash::{sha256, tagged_hash, Hash};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -230,6 +230,9 @@ pub trait Held {
     /// A genesis or rotation by id, that counts on its identity's chain and
     /// declared a vault: its identity and the entries.
     fn vault(&self, declared_by: &Hash) -> Option<(Hash, Vec<VaultEntry>)>;
+    /// An obligation act by id, valid and signed by its debtor (Finance
+    /// F66), for rule 14 ([`pointer_in_force`]).
+    fn obligation(&self, id: &Hash) -> Option<Obligation>;
 }
 
 /// The rail Modules a verifier has adopted, by spec hash.
@@ -415,4 +418,73 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
         address: &addr,
         rail_proof: &p.rail,
     })
+}
+
+/// Finance rule 14, judged beside the verification answer ("What
+/// verification does not decide"): whether the flow pointer a payment was
+/// paid to was in force for what it fulfils. A payment to the vault always
+/// is. A payment to the flow is only where what it fulfils names that flow
+/// pointer's version or a later one: an obligation (Finance type 1) by its
+/// field 3, a tip by the payee pointer it follows. *A thief who changes the
+/// flow pointer cannot collect, through the new flow, an obligation that
+/// names an earlier version: paid there, the payment is refused here; paid
+/// to the vault, it counts.*
+///
+/// Valid where rule 14 lets the payment count; invalid where it does not;
+/// unknown where the acts it needs are not held, or what the payment
+/// fulfils (an agreement or an offer) names no flow pointer this verifier
+/// can read. An obligation owed to someone other than this hop's payee is
+/// not this hop's to judge, and answers valid. The rail's own answer is
+/// [`verify`]'s.
+pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
+    let (proof, payee, fulfils) = match &record {
+        Record::Receipt(r) => (&r.proof, &r.payee, &r.fulfils),
+        Record::Claim(c, _) => (&c.proof, &c.payee, &c.fulfils),
+    };
+    let Some(p) = Proof::decode(proof) else {
+        return Answer::Invalid("the proof is not in the payment cMIP's shape".into());
+    };
+    let into = match p.paid_to {
+        PaidTo::Vault { .. } => PaidInto::Vault,
+        PaidTo::Flow { pointer, .. } => match held.pointer(&pointer) {
+            Some(q) if &q.payee == payee => PaidInto::Flow(q.version),
+            Some(_) => return Answer::Invalid("paid to another identity's pointer".into()),
+            None => return Answer::Unknown("the payee pointer it was paid to is not held".into()),
+        },
+    };
+    if into == PaidInto::Vault {
+        return Answer::Valid;
+    }
+    // The flow pointer what the payment fulfils names.
+    let named = match held.obligation(fulfils) {
+        Some(o) if &o.creditor != payee => return Answer::Valid,
+        Some(o) => o.pointer,
+        None => match held.pointer(fulfils) {
+            Some(_) => *fulfils,
+            None => {
+                return Answer::Unknown(
+                    "what it fulfils names no flow pointer this verifier holds (Finance rule 14)".into(),
+                )
+            }
+        },
+    };
+    let version = match held.pointer(&named) {
+        Some(q) if &q.payee == payee => q.version,
+        Some(_) => {
+            return Answer::Invalid(
+                "the obligation names another identity's payee pointer, not its creditor's".into(),
+            )
+        }
+        None => {
+            return Answer::Unknown("the flow pointer the obligation names is not held".into())
+        }
+    };
+    if fin::counts_toward(version, into) {
+        Answer::Valid
+    } else {
+        Answer::Invalid(
+            "it arose under an earlier flow pointer than the one it was paid to: it counts only if paid to the vault (Finance rule 14)"
+                .into(),
+        )
+    }
 }

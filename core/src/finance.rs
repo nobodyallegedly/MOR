@@ -10,7 +10,9 @@
 //! Modules check it (Finance rule 2, F112). This module answers only what
 //! the Finance MIP itself decides: the formats, which pointer counts, and,
 //! from the vault the payee declared, where a payment of a given amount may
-//! be paid (rule 14a), or why it cannot be paid at all (rule 16).
+//! be paid (rule 14a), or why it cannot be paid at all (rule 16); and, from
+//! the flow pointer version an obligation names, whether a payment to the
+//! flow can count for it (rule 14).
 
 use crate::act::Signature;
 use crate::cbor::{self, Value};
@@ -899,4 +901,33 @@ pub fn choose(
 /// (rules 14a and 15): only such a payment is protected by good faith.
 pub fn flow_followed_vault(vault: Option<&[VaultEntry]>, amount: &Amount) -> bool {
     destination(vault, amount) == Destination::Flow
+}
+
+// ---------------------------------------------------------------- rule 14: what arose under an earlier flow pointer
+
+/// Where a payment was paid, as rule 14 reads it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PaidInto {
+    /// The payee's flow pointer of this version.
+    Flow(u64),
+    /// The payee's vault.
+    Vault,
+}
+
+/// Rule 14: whether a payment paid into `into` can count for an obligation
+/// or act that names the payee's flow pointer of version `named`. A payment
+/// to the flow counts only for what names that flow pointer's version or a
+/// later one; anything that arose under an earlier flow pointer counts only
+/// if paid to the vault. *So a thief who changes the flow pointer cannot
+/// collect the backlog through it: every older obligation names an earlier
+/// version, and only the debtor signs one (F34, F66).*
+///
+/// A necessary condition, not a sufficient one: the rail's proof (rule 2),
+/// the rails the payee accepts (rule 12a) and the vault's limits (rule 14a)
+/// are judged on their own.
+pub fn counts_toward(named: u64, into: PaidInto) -> bool {
+    match into {
+        PaidInto::Vault => true,
+        PaidInto::Flow(paid) => named >= paid,
+    }
 }

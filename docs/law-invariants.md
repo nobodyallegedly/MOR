@@ -93,6 +93,18 @@ The generators did not exercise: rotations of a collective (its safety key cerem
 
 Run: `cargo test -p mor-core --test law_invariants` (48 cases per property by default, so the suite stays quick); `LAW_INVARIANT_CASES=5000` for a large run. Failures print the shrunk story; each property also prints how often each kind of event really happened (coverage) and how often each TEXT finding was met.
 
+### Seeds
+
+*Added 6 October 2026.* In plain words: a random run is drawn from one number, its seed. Every run now prints its seed, and a failing run names it again in its failure message. Running again with that seed draws exactly the same stories, in the same order, and shrinks a failure to exactly the same smallest story. Before this, seeds were not recorded, so the large runs reported below cannot be replayed exactly; only their shrunk counterexamples, kept as named tests, can.
+
+Precisely: each of the five random properties (`collective_promises_hold`, `collective_verdicts_do_not_depend_on_order`, `deal_promises_hold`, `deal_verdicts_do_not_depend_on_order`, `collective_stakes_move_only_with_their_holders`) builds its proptest runner from a 64-bit seed: `LAW_INVARIANT_SEED` where it is set, otherwise a fresh one (the standard library's per-process random keys mixed with the time). The runner's generator is ChaCha, keyed by the SHA-256 of the seed's eight little-endian bytes. Nothing else in a story is random (keys, nonces and shuffles are all drawn from the story itself), so the seed and the number of cases decide the whole run. The property prints, before it starts (seen with `--nocapture`, or in the output of a failure):
+
+    [deal_promises_hold] seed 18304839239963118634, 48 cases; replay: LAW_INVARIANT_SEED=18304839239963118634 LAW_INVARIANT_CASES=48 cargo test -p mor-core --test law_invariants -- --exact deal_promises_hold --nocapture
+
+To replay a run, run the printed command: the same seed, the same number of cases, the one property by its exact name. One seed applies to every property run in that process, so to replay one property, name it. Keep the number of cases: with fewer, the run stops before the later stories; with more, it draws the same stories first and then new ones. For a large run, record the printed line beside the result.
+
+Checked on 6 October 2026: `deal_promises_hold`, 30 cases, run twice with seed 12345, printed identical coverage counts, and a different seed different ones; with a deliberate failure put in for the check and then removed, two runs with seed 777 printed the same failure and the same shrunk story, differing only in the thread number.
+
 ### Generators
 
 **The collective world** (`collective_promises_hold`, `collective_verdicts_do_not_depend_on_order`). A shape: 2 to 5 members, each with 1 to 3 devices of their own; the collective signing from 1 to 3 devices; a constitutional change rule of every party or a threshold; optionally a Finance lane (area 2) held by a random non-empty subset with a random threshold; optionally a work the collective owns, in which case it also names a split service by a grant (in its Finance lane where it has one) put in force by a judicial clone every member signs, recorded, with a payee pointer and a publication of the work. Then 1 to 27 steps, each drawn from:
