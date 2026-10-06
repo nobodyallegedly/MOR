@@ -56,7 +56,7 @@ and its clones (an input flag), successors' founding terms (an input flag), stak
   cargo test -p mor-core --release --test law_invariants --no-run
   VERIFIER2_OUT=out VERIFIER2_SEED=1 VERIFIER2_CASES=3000 \
     target/release/deps/law_invariants-<hash> --ignored --exact verifier2_export::verifier2_export
-  python3 verifier2/compare.py out --quiet --json cmp.json
+  python3 verifier2/compare.py out --quiet --json cmp.json     # --handout done: the reading before F144
   python3 verifier2/group.py cmp.json
   python3 verifier2/shrink.py out case00446 --seed 1
   ```
@@ -116,13 +116,15 @@ Where the text left something to the implementer, this is what was taken, so tha
 comparison can tell a reading from a slip. Each is a question for Nobody, allegedly, only
 where the reference read it otherwise.
 
-1. **What a fork must hand out** (`--handout`). The text: "every obligation of the
-   original in that history, published or not, paid or not, save one sealed neither to
-   every member nor publicly, which is never the collective's (rule 35a), one signed with
-   a grant key included". Default (`done`): every obligation in the history that is done
-   (sealed to every member or public, and on the chain), whether or not its area's
-   holders signed it or its grant backs it. The alternative (`binding`): only obligations
-   that bind the collective.
+1. **What a fork must hand out** (`--handout`). The text, since F144 (reworded after
+   the review of F133 to F144): "save one that does not bind the collective: an
+   obligation is handed out only if it binds the collective, that is, done ... and within
+   its signer's powers, or adopted". Default (`binding`): only obligations that bind the
+   collective, as this verifier judges them (done, on the chain, its area's consent met
+   or its grant backing it, or adopted). The first reading (`done`), taken before F144
+   from the text as it then stood ("save one sealed neither to every member nor
+   publicly"): every done obligation, whether or not its area's holders signed it; kept
+   as a switch, with the comparison that found reading C.
 1a. **"An action citing no decision"** (`--cites`, rule 35b). Default (`strict`), taken
    after the comparison: an action's own `objects` name the decision it acts under; one
    that names nothing is on no chain, whatever its previous act cites. The first version
@@ -173,7 +175,9 @@ where the reference read it otherwise.
     which acknowledges it, neither it nor the departure holding the other) set aside.
 11. **Adoption** (rule 40): any act of the collective's own key that counts, a decision
     included, whose history holds the grant key's act or which acknowledges it; where an
-    ending counts, only one in the ending's history.
+    ending counts, only one in the ending's history. An Identity witness act names no
+    decision in its `objects`, so it is on no chain, never counts, and adopts nothing
+    (the report's finding A; decided so by F142).
 12. **Owes nothing:** receipts signed by the creditor, summed, reach the amount, or the
     creditor's release exists; a receipt by anyone else pays nothing (Finance rule 7).
 13. **An act the verifier does not hold:** an ending whose history names one is not
@@ -183,7 +187,8 @@ where the reference read it otherwise.
     signed.
 15. **An ending's completeness is judged as if it were the one that counts**: its own
     line, the debts in its own history, the departures its own history registers; the
-    same judgment whether or not another ending already counts (the report's finding B).
+    same judgment whether or not another ending already counts (the report's finding B;
+    decided so by F143, "Judged on its own history").
 16. **A fork's successors** (N1, N4): where the story carries each successor's founding
     parties and departed holders, every successor's parties are exactly its side's
     members, and every member whose voice remains at the line on no side is among every
