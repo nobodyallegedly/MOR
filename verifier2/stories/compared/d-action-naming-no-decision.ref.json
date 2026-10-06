@@ -1,0 +1,18 @@
+{
+  "acts": {
+    "39e8d363e1b59536a8eee435e9fe683f68f6abdd09aef9aba129e46308bf2818": {
+      "binds": "Ok(Some(false))",
+      "consent": "Ok(Uncited { reason: \"it does not cite, on the collective's chain, the decision it acts under: it is on no chain of the collective, and counts for nothing (F127)\" })",
+      "counts": false,
+      "done": true
+    },
+    "aea806390b0a5324a41247180ce590c976305485cac716fbd9f6f234cc536058": {
+      "consent": "Ok(NoArea { agreement: [159, 157, 178, 151, 55, 111, 18, 26, 184, 76, 115, 149, 139, 97, 129, 98, 17, 237, 81, 8, 3, 140, 100, 70, 110, 243, 72, 224, 73, 20, 136, 13] })",
+      "counts": true,
+      "done": true
+    }
+  },
+  "closed_by": null,
+  "debtors": {},
+  "endings": {}
+}

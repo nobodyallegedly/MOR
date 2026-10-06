@@ -1,0 +1,93 @@
+{
+ "collective": "C",
+ "members": [
+  "ana",
+  "ben"
+ ],
+ "rule": {
+  "kind": "every"
+ },
+ "areas": {},
+ "acts": [
+  {
+   "id": "genesis",
+   "type": "genesis",
+   "signer": "C"
+  },
+  {
+   "id": "D1",
+   "type": "obligation",
+   "signer": "C/d0",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ],
+   "creditor": "eve",
+   "amount": 10
+  },
+  {
+   "id": "D2",
+   "type": "obligation",
+   "signer": "C/d0",
+   "prev": "D1",
+   "cites": [
+    "genesis"
+   ],
+   "creditor": "fay",
+   "amount": 20
+  },
+  {
+   "id": "C1",
+   "type": "closing",
+   "signer": "ana",
+   "tips": [
+    "D2"
+   ],
+   "objects": [],
+   "public": true
+  },
+  {
+   "id": "sig/ana/C1",
+   "type": "chain_sig",
+   "signer": "ana",
+   "ending": "C1",
+   "position": 1,
+   "counts": true
+  },
+  {
+   "id": "sig/ben/C1",
+   "type": "chain_sig",
+   "signer": "ben",
+   "ending": "C1",
+   "position": 1,
+   "counts": true
+  },
+  {
+   "id": "pay1a",
+   "type": "payment",
+   "signer": "eve",
+   "obligation": "D1",
+   "amount": 4
+  },
+  {
+   "id": "pay1b",
+   "type": "payment",
+   "signer": "eve",
+   "obligation": "D1",
+   "amount": 6
+  },
+  {
+   "id": "pay2",
+   "type": "payment",
+   "signer": "fay",
+   "obligation": "D2",
+   "amount": 5
+  },
+  {
+   "id": "rel2",
+   "type": "release",
+   "signer": "fay",
+   "obligation": "D2"
+  }
+ ]
+}

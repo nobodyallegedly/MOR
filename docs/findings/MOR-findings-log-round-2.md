@@ -1619,3 +1619,32 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): "Agreed"** to the project lead's suggestion, following IT3: the payment's own commitment decides; where a rail binds no payee or purpose, neither counts until the receiver resolves them (rule 8a), the disagreement shown.
 
 **Core changes:** Finance draft 6, rule 10. *Code:* as built (the disagreeing claim adds nothing, the disagreement shown); the commitment check on rails that bind payee and purpose to be confirmed in the next Finance session.
+
+
+## F142. A witness act adopts nothing (verifier2, reading A, 6 October 2026)
+
+**Found by verifier2** (`docs/verifier2-report.md`, reading A, 269 of 4,000 stories): the reference library let an Identity witness act (type 15) by the collective adopt a grant key's act (rule 42); an independent verifier written from the text read rules 35a and 35b first: an act binds the collective only once done, sealed to every member and on its chain, and a witness act is on neither chain, so it adopts nothing.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** adoption binds the collective, so it meets the same bar as everything that binds it ("one thing is to act, one thing is to read", F126). A witness act adopts nothing; the collective adopts by an action citing the act.
+
+**Core changes:** Law draft 10, rule 42. *To build:* `LawView::backing` takes as adopters only acts done on the collective's chain.
+
+
+## F143. An ending is judged on its own history (verifier2, reading B, 6 October 2026)
+
+**Found by verifier2** (reading B, 47 of 4,000 stories): both verifiers always agreed on which ending counts, but the reference reported a later ending's completeness with the first ending already in force (its debts after the first ending void, its records registering nothing), while verifier2 judged every ending as if it were the one that counted. A later closing could show "complete" in one and "incomplete" in the other; the reference's answer depended on whether it was asked during or after its own choice.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Agree":** each ending is judged on its own history; one that counts for nothing says so plainly, with its own completeness.
+
+**Core changes:** Law draft 10, after the closing's format ("Judged on its own history"). *To build:* `LawView::closing` and `fork` report completeness as `closed_by` judges it during the choice.
+
+
+## F144. A fork hands out only debts that are the collective's (verifier2, reading C, 6 October 2026)
+
+**Found by verifier2** (reading C, 32 of 4,000 stories; which ending counts changed in 15): a fork must hand out every obligation in its history, "save one sealed neither to every member nor publicly, which is never the collective's (rule 35a)". The reference read the exception by the seal alone, so a debt on no chain (citing no decision), which both verifiers agree binds no one, still had to be handed out, and blocked every fork reaching it until a successor signed for a debt nobody owes. Verifier2 read it by its reason: never the collective's.
+
+**Decided (Nobody, allegedly, 6 October 2026): "I agree":** a fork hands out the debts that bind the collective, done and on its chain; a debt that binds no one cannot block it, and stays visible as what it is.
+
+**Core changes:** Law draft 10, the fork's field 6 (each place it is stated). *To build:* the reference's `to_hand_out` takes only obligations done on the collective's chain.
+
+*Verifier2's three readings are all decided (F142 to F144). Reading D was settled by the text itself; the sentence "its own sequence's previous act counts as cited" to be reworded so it cannot mislead (with the next Law pass).*

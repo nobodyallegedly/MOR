@@ -1,0 +1,24 @@
+{
+  "acts": {
+    "42dcc46a6581b0aa6a6d43299fd7894ba9b57bf860b201e72a906091ed62b836": {
+      "consent": "Ok(NoArea { agreement: [159, 157, 178, 151, 55, 111, 18, 26, 184, 76, 115, 149, 139, 97, 129, 98, 17, 237, 81, 8, 3, 140, 100, 70, 110, 243, 72, 224, 73, 20, 136, 13] })",
+      "counts": true,
+      "done": true
+    },
+    "84996c8e326834011a3203aba2ef432be7341e335c260aafa6cd4fa59fbf1f79": {
+      "consent": "Ok(NoArea { agreement: [159, 157, 178, 151, 55, 111, 18, 26, 184, 76, 115, 149, 139, 97, 129, 98, 17, 237, 81, 8, 3, 140, 100, 70, 110, 243, 72, 224, 73, 20, 136, 13] })",
+      "counts": true,
+      "done": true
+    },
+    "de6b35fe10277a95b0edfcaa652f821fbeb3f6fbedac92daa5a834ce75aeae3f": {
+      "backing": "Ok(NotBacked { grant: [132, 153, 108, 142, 50, 104, 52, 1, 26, 50, 3, 171, 162, 239, 67, 43, 231, 52, 30, 51, 92, 38, 10, 175, 166, 205, 79, 165, 159, 191, 31, 121], reason: \"a grant key signs no decision of its grantor (F128)\" })",
+      "consent": "Ok(Ungranted { grant: [132, 153, 108, 142, 50, 104, 52, 1, 26, 50, 3, 171, 162, 239, 67, 43, 231, 52, 30, 51, 92, 38, 10, 175, 166, 205, 79, 165, 159, 191, 31, 121], reason: \"a grant key signs no decision of its grantor (F128)\" })",
+      "counts": false,
+      "done": true,
+      "record": "Ok((false, Some(\"not in the Law format: record: objects name the clone, or the agreement in force, as chain and predecessor\"), 0))"
+    }
+  },
+  "closed_by": null,
+  "debtors": {},
+  "endings": {}
+}

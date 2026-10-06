@@ -1,0 +1,29 @@
+{
+  "acts": {
+    "fce4337c1ff3320f1e4d04d0ade2e38bb66fbbea7690e0990ffc7413f2ec8366": {
+      "binds": "Ok(Some(false))",
+      "consent": "Ok(Uncited { reason: \"it does not cite, on the collective's chain, the decision it acts under: it is on no chain of the collective, and counts for nothing (F127)\" })",
+      "counts": false,
+      "done": true
+    }
+  },
+  "closed_by": null,
+  "debtors": {},
+  "endings": {
+    "b0f08dacfeee1d6420b0378924d165883c0d2ba937e15bffcdbf3f41c29de17a": {
+      "counts": false,
+      "names": [],
+      "signatures": {
+        "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "counts",
+        "4d758250ef1cb53ff1af5ae49d54e63b64b2d8ef9d134feb042c0f3d20e7aa6d": "counts",
+        "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a": "counts",
+        "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "counts",
+        "de1bb8f465bb7713680fcfd0386c5bef9662bb09b40c3da0fed0b6e2e7937328": "counts"
+      },
+      "status": "incomplete",
+      "why": [
+        "the fork hands out every obligation in the history it cites, or does not take effect (F127)"
+      ]
+    }
+  }
+}

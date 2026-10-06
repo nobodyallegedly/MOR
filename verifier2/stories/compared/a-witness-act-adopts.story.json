@@ -1,0 +1,167 @@
+{
+  "acts": [
+    {
+      "cites": [
+        "9ffc848342051930ad61483e8d464ebf6620b61343583a5731bfc93f6c74802a",
+        "4b396549e0b3681c4eaa976bd816e806a7aa4a2e6e7b505619a9498b7a13595a"
+      ],
+      "id": "2087b1524a2d2ce715926b3684812dea5f03436dec1b9eb5d0ec7c8052e1a762",
+      "kind": "Revocation",
+      "order": 22,
+      "prev": "8e865c1577e586a6e7b69024c0cb9db07abb2b63cbf8d778e8f27cdf6e6d2f1f",
+      "public": true,
+      "revokes": "c58cdbe31e8a25f7bb45fb6103eb939a6ddf537ec5b47b559702e760044ee249",
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "type": "revocation",
+      "valid": true
+    },
+    {
+      "cites": [
+        "9ffc848342051930ad61483e8d464ebf6620b61343583a5731bfc93f6c74802a",
+        "4b396549e0b3681c4eaa976bd816e806a7aa4a2e6e7b505619a9498b7a13595a"
+      ],
+      "id": "29fa90dcd0fe7ac44a2bf01dea1167d82e1e951ffc978e9b5e010c61d02f5929",
+      "kind": "finance type 0",
+      "order": 19,
+      "prev": "4b396549e0b3681c4eaa976bd816e806a7aa4a2e6e7b505619a9498b7a13595a",
+      "public": true,
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "type": "publication",
+      "valid": true
+    },
+    {
+      "agreement": "6f6b95966fdbb64bc184bc294f8e7e7081ed63abc7059d9499315de60e097f95",
+      "cites": [],
+      "clone": "6f6b95966fdbb64bc184bc294f8e7e7081ed63abc7059d9499315de60e097f95",
+      "id": "4b396549e0b3681c4eaa976bd816e806a7aa4a2e6e7b505619a9498b7a13595a",
+      "order": 18,
+      "prev": "c58cdbe31e8a25f7bb45fb6103eb939a6ddf537ec5b47b559702e760044ee249",
+      "public": true,
+      "registers": [],
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "tips": [],
+      "type": "record",
+      "valid": true
+    },
+    {
+      "cites": [
+        "c58cdbe31e8a25f7bb45fb6103eb939a6ddf537ec5b47b559702e760044ee249",
+        "4b396549e0b3681c4eaa976bd816e806a7aa4a2e6e7b505619a9498b7a13595a"
+      ],
+      "grant": "c58cdbe31e8a25f7bb45fb6103eb939a6ddf537ec5b47b559702e760044ee249",
+      "id": "79b33ab9c3be2cb2fc84d033c43060dd5b17a4c68ae41d09d53e0430b559da8b",
+      "kind": "Receipt",
+      "order": 21,
+      "public": true,
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "c58cdbe31e8a25f7bb45fb6103eb939a6ddf537ec5b47b559702e760044ee249/key",
+      "type": "publication",
+      "valid": true,
+      "within_reach": true
+    },
+    {
+      "cites": [
+        "9ffc848342051930ad61483e8d464ebf6620b61343583a5731bfc93f6c74802a",
+        "4b396549e0b3681c4eaa976bd816e806a7aa4a2e6e7b505619a9498b7a13595a"
+      ],
+      "id": "8e865c1577e586a6e7b69024c0cb9db07abb2b63cbf8d778e8f27cdf6e6d2f1f",
+      "kind": "Publication",
+      "order": 20,
+      "prev": "29fa90dcd0fe7ac44a2bf01dea1167d82e1e951ffc978e9b5e010c61d02f5929",
+      "public": true,
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "type": "publication",
+      "valid": true
+    },
+    {
+      "cites": [],
+      "id": "9ffc848342051930ad61483e8d464ebf6620b61343583a5731bfc93f6c74802a",
+      "order": 6,
+      "public": true,
+      "sealed_to_all": false,
+      "signer": "C",
+      "type": "genesis",
+      "valid": true
+    },
+    {
+      "acks": [
+        "79b33ab9c3be2cb2fc84d033c43060dd5b17a4c68ae41d09d53e0430b559da8b"
+      ],
+      "cites": [],
+      "id": "b9827d35a6fd27fefbc83e5a41eb02ffd226d1b2a8be66161f34f715656a2f04",
+      "kind": "Ack",
+      "order": 23,
+      "prev": "2087b1524a2d2ce715926b3684812dea5f03436dec1b9eb5d0ec7c8052e1a762",
+      "public": true,
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "type": "publication",
+      "valid": true
+    },
+    {
+      "accepted": true,
+      "cites": [
+        "9ffc848342051930ad61483e8d464ebf6620b61343583a5731bfc93f6c74802a"
+      ],
+      "grantee": "b73bdcc04ee97be0a697fba0ca55b6645d5b7e55acf8b3c3dd2f2e36853561ed",
+      "id": "c58cdbe31e8a25f7bb45fb6103eb939a6ddf537ec5b47b559702e760044ee249",
+      "kind": "GrantAct",
+      "order": 13,
+      "public": true,
+      "seal": "Public",
+      "sealed_to_all": false,
+      "signer": "C/d0",
+      "sigs": [
+        "b73bdcc04ee97be0a697fba0ca55b6645d5b7e55acf8b3c3dd2f2e36853561ed"
+      ],
+      "type": "grant",
+      "valid": true
+    }
+  ],
+  "areas": {},
+  "collective": "9ffc848342051930ad61483e8d464ebf6620b61343583a5731bfc93f6c74802a",
+  "founding": "005cd03efe7c254d7bf8dc6c9cad65246494786e0b236c54beae337725c10807",
+  "members": [
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf",
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d"
+  ],
+  "meta": {
+    "name": "case00063.min",
+    "ops": [
+      "5: Sale { strand: 135, proof: 2, disguise: None, lane_sign: true, line_current: true }",
+      "10: Revoke { grant: 159, dev: 103, join_strand: false, holders_sign: false }",
+      "18: Ack { dev: 121, target: 246 }"
+    ],
+    "picked": [
+      5,
+      10,
+      18
+    ],
+    "seed": 2438532619017179329,
+    "shape": "Shape { members: 2, devices: 1, member_devices: 1, constitutional: None, lane: None, owns_work: true }"
+  },
+  "names": {
+    "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "ben",
+    "6b28d8708f75ace421f1d4bceb05466f24f83f66149e7c8c12bf06a14cb27ed1": "creditor0",
+    "9ffc848342051930ad61483e8d464ebf6620b61343583a5731bfc93f6c74802a": "C",
+    "b670cc7050cfa555b2888c3d2925315483874e89f6b3c2657fb5e620cc344094": "agent1",
+    "b73bdcc04ee97be0a697fba0ca55b6645d5b7e55acf8b3c3dd2f2e36853561ed": "service",
+    "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "ana",
+    "c58cdbe31e8a25f7bb45fb6103eb939a6ddf537ec5b47b559702e760044ee249": "G0",
+    "cc5b8dac2072ef4ac57427c158c8e0bba3483317734ddf48806e33ec380bcb0d": "stranger",
+    "ced9b6a49c3867d8eb4e071b528bea628854b5cd1bb03c3e8afd04dbff132e58": "creditor1",
+    "ef1b35521f7fbdff1030b8a667b2e83c73b40377cfb609f2e397711b80c25439": "agent0"
+  },
+  "rule": {
+    "kind": "every"
+  },
+  "skipped": []
+}

@@ -1,0 +1,57 @@
+{
+ "collective": "C",
+ "members": [
+  "ana",
+  "ben"
+ ],
+ "rule": {
+  "kind": "every"
+ },
+ "areas": {},
+ "acts": [
+  {
+   "id": "genesis",
+   "type": "genesis",
+   "signer": "C"
+  },
+  {
+   "id": "d1",
+   "type": "obligation",
+   "signer": "C/d0",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ],
+   "creditor": "eve",
+   "amount": 10
+  },
+  {
+   "id": "d2",
+   "type": "obligation",
+   "signer": "C/d0",
+   "prev": "d1",
+   "cites": [],
+   "creditor": "eve",
+   "amount": 10,
+   "sealed_to_all": false
+  },
+  {
+   "id": "d3",
+   "type": "obligation",
+   "signer": "C/d1",
+   "prev": null,
+   "cites": [],
+   "creditor": "eve",
+   "amount": 10
+  },
+  {
+   "id": "d4",
+   "type": "obligation",
+   "signer": "C/d0",
+   "prev": "d2",
+   "cites": [],
+   "creditor": "eve",
+   "amount": 10
+  }
+ ]
+}

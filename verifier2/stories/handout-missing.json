@@ -1,0 +1,100 @@
+{
+ "collective": "C",
+ "members": [
+  "ana",
+  "ben"
+ ],
+ "rule": {
+  "kind": "every"
+ },
+ "areas": {},
+ "acts": [
+  {
+   "id": "genesis",
+   "type": "genesis",
+   "signer": "C"
+  },
+  {
+   "id": "D1",
+   "type": "obligation",
+   "signer": "C/d0",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ],
+   "creditor": "eve",
+   "amount": 5
+  },
+  {
+   "id": "D2",
+   "type": "obligation",
+   "signer": "C/d1",
+   "prev": null,
+   "cites": [
+    "genesis",
+    "D1"
+   ],
+   "creditor": "eve",
+   "amount": 7
+  },
+  {
+   "id": "D3",
+   "type": "obligation",
+   "signer": "C/d2",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ],
+   "creditor": "eve",
+   "amount": 9
+  },
+  {
+   "id": "F1",
+   "type": "fork",
+   "signer": "ana",
+   "tips": [
+    "D2"
+   ],
+   "sides": [
+    {
+     "successor": "S1",
+     "members": [
+      "ana"
+     ]
+    },
+    {
+     "successor": "S2",
+     "members": [
+      "ben"
+     ]
+    }
+   ],
+   "assigned": [
+    {
+     "obligation": "D2",
+     "sides": [
+      1
+     ]
+    }
+   ],
+   "objects": [],
+   "public": true
+  },
+  {
+   "id": "sig/ana/F1",
+   "type": "chain_sig",
+   "signer": "ana",
+   "ending": "F1",
+   "position": 1,
+   "counts": true
+  },
+  {
+   "id": "sig/ben/F1",
+   "type": "chain_sig",
+   "signer": "ben",
+   "ending": "F1",
+   "position": 1,
+   "counts": true
+  }
+ ]
+}

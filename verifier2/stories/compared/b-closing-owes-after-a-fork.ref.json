@@ -1,0 +1,51 @@
+{
+  "acts": {
+    "4a216263b852193cca23a40161d6a74ce12431a9a2a83f798fdf73ceabff8f04": {
+      "after_ending": "672ac115af52ec0913f63db37bbe6589b6e8e37cf38d59cf099d07a12c379f9a",
+      "consent": "Ok(Closed { by: [103, 42, 193, 21, 175, 82, 236, 9, 19, 246, 61, 179, 123, 190, 101, 137, 182, 232, 227, 124, 243, 141, 89, 207, 9, 157, 7, 161, 44, 55, 159, 154] })",
+      "counts": false,
+      "done": true,
+      "record": "Ok((true, None, 1))"
+    },
+    "c80de6bfe65524c643c16353e90e90c7642298324f0533740ae37990c82ffd2b": {
+      "binds": "Ok(Some(true))",
+      "consent": "Ok(Areas { agreement: [23, 221, 5, 235, 221, 220, 120, 65, 199, 203, 92, 224, 71, 42, 83, 225, 7, 78, 138, 161, 105, 30, 77, 28, 99, 57, 125, 113, 78, 93, 163, 28], areas: [AreaCount { area: 2, name: \"Finance\", frozen: false, voices: [[197, 84, 215, 198, 76, 127, 78, 3, 123, 49, 120, 33, 211, 173, 179, 165, 32, 134, 23, 202, 83, 80, 246, 117, 18, 231, 14, 146, 192, 80, 173, 207]], needed: 1, signers: [[197, 84, 215, 198, 76, 127, 78, 3, 123, 49, 120, 33, 211, 173, 179, 165, 32, 134, 23, 202, 83, 80, 246, 117, 18, 231, 14, 146, 192, 80, 173, 207]], met: true }], met: true })",
+      "counts": true,
+      "done": true
+    }
+  },
+  "closed_by": "672ac115af52ec0913f63db37bbe6589b6e8e37cf38d59cf099d07a12c379f9a",
+  "debtors": {
+    "c80de6bfe65524c643c16353e90e90c7642298324f0533740ae37990c82ffd2b": [
+      "f7d146593964bee2cc7e6fbb698751ade32562dc5362a599ea97c47555c3109f"
+    ]
+  },
+  "endings": {
+    "47329a1c0cae73f71fc2c2701b1c85212d514484ce7a72e148346121d68c0caa": {
+      "counts": false,
+      "names": [
+        "672ac115af52ec0913f63db37bbe6589b6e8e37cf38d59cf099d07a12c379f9a"
+      ],
+      "signatures": {
+        "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "counts",
+        "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a": "counts",
+        "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "counts"
+      },
+      "status": "incomplete",
+      "why": [
+        "a collective cannot close while it owes anything: every debt paid or released by its creditor (F125, D5); one that cannot pay stays open, its debts visible"
+      ]
+    },
+    "672ac115af52ec0913f63db37bbe6589b6e8e37cf38d59cf099d07a12c379f9a": {
+      "counts": true,
+      "names": [],
+      "signatures": {
+        "0159cbdae4a11236d86cf5688c108d90c9be305a709260333544a36894b5149d": "counts",
+        "a877f23d829c2c56b6beef50a3f14905bd5deb138d1d517e3b884e82f85c710a": "counts",
+        "c554d7c64c7f4e037b317821d3adb3a5208617ca5350f67512e70e92c050adcf": "counts"
+      },
+      "status": "complete",
+      "why": []
+    }
+  }
+}
