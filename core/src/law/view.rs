@@ -1695,7 +1695,9 @@ impl<'a> LawView<'a> {
 
     fn cited_against_inner(&self, col: &Col, x: &'a Held, l: &'a Held) -> R<bool> {
         for a in self.v.signed_by(&col.id) {
-            if a.id == x.id || a.id == l.id || !Self::own_key(col, a) || self.is_law(a, types::RECORD) || self.citing.borrow().contains(&a.id) {
+            // F142: a citation is an action on the chain; Identity's own
+            // everyday acts are on neither chain.
+            if a.id == x.id || a.id == l.id || !Self::own_key(col, a) || a.inside.spec == self.mips.identity || self.is_law(a, types::RECORD) || self.citing.borrow().contains(&a.id) {
                 continue;
             }
             if !self.before_struct(col, x, Line::Record(a)) || self.before_struct(col, l, Line::Record(a)) {
@@ -3143,17 +3145,21 @@ impl<'a> LawView<'a> {
         // acts the collective never took on. "Cites" as a line does
         // (reading U3, confirmed, F132): the act lies in the citing act's
         // history, so citing the grantee's later act cites it too.
+        // F142 (rule 42): an adopter is an action of the grantor's own key
+        // that counts, done and on its chain; an Identity witness act, on
+        // neither chain, adopts nothing.
+        let on_chain = |a: &Held| a.inside.spec != self.mips.identity;
         let citing: Vec<&Held> = if collective {
             self.v
                 .signed_by(&c)
-                .filter(|a| a.id != y.id && Self::own_key(&col, a) && self.before_struct(&col, y, Line::Record(a)))
+                .filter(|a| a.id != y.id && Self::own_key(&col, a) && on_chain(a) && self.before_struct(&col, y, Line::Record(a)))
                 .collect()
         } else {
             vec![]
         };
         let acked = |before: &dyn Fn(&Held) -> bool| -> R<bool> {
             for a in self.v.acknowledgements(act).into_iter().chain(citing.iter().copied()) {
-                if Self::own_key(&col, a) && self.valid(&a.id) && before(a) && self.consent(&a.id)?.counts() {
+                if Self::own_key(&col, a) && on_chain(a) && self.valid(&a.id) && before(a) && self.consent(&a.id)?.counts() {
                     return Ok(true);
                 }
             }
@@ -3759,6 +3765,10 @@ pub struct ForkEval {
     /// out: while any remains, the fork does not take effect (F127,
     /// replacing F125 D1's joint liability).
     pub unassigned: Vec<Hash>,
+    /// Whether it is the ending that counts (F143): complete, and not made
+    /// to count for nothing by an earlier final ending (F131, IT1). `None`
+    /// while the ending is judged within that choice.
+    pub counts: Option<bool>,
 }
 
 /// A closing act, judged (rule 47a, F124 N9).
@@ -3776,6 +3786,10 @@ pub struct ClosingEval {
     /// line, and those it owes as a fork's successor, that receipts held do
     /// not fulfil in full and no creditor's release ends.
     pub open_debts: Vec<Hash>,
+    /// Whether it is the ending that counts (F143): complete, and not made
+    /// to count for nothing by an earlier final ending (F131, IT1). `None`
+    /// while the ending is judged within that choice.
+    pub counts: Option<bool>,
 }
 
 /// A creditor's release, judged (Finance type 4, F126; rule 47b).
@@ -4261,7 +4275,15 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else { continue };
-            if o.debtor == col.id && self.sealed_to_all(x, t) && self.before_line(col, x, chain_act, tips) {
+            // F144: an obligation sealed neither to every member nor
+            // publicly, or on none of the collective's chains, citing no
+            // decision (rules 35a, 35b), is never the collective's, and is
+            // not handed out.
+            if o.debtor == col.id
+                && self.sealed_to_all(x, t)
+                && self.uncited(col, x, None)?.is_none()
+                && self.before_line(col, x, chain_act, tips)
+            {
                 out.push(x.id);
             }
         }
@@ -4337,6 +4359,30 @@ impl<'a> LawView<'a> {
         if !self.is_law(h, types::FORK) {
             return Err(LawError::Check("not a fork act"));
         }
+        let collective = Fork::decode(&h.inside)?.collective;
+        let (mut e, nested) = self.on_own_history(&collective, |v| v.fork_inner(id))?;
+        if !nested {
+            e.counts = Some(e.complete && self.closed_by(&collective)?.is_some_and(|c| &c.by == id));
+        }
+        Ok(e)
+    }
+
+    /// Judges an ending on its own history (F143): while `f` runs, no
+    /// ending of the collective is in force, as during the choice of the
+    /// one that counts (`closed_by`), so the answer is the same whenever
+    /// a verifier asks. Returns whether the judgment was already nested in
+    /// that choice.
+    fn on_own_history<T>(&self, collective: &Hash, f: impl FnOnce(&Self) -> R<T>) -> R<(T, bool)> {
+        let nested = !self.ending.borrow_mut().insert(*collective);
+        let r = f(self);
+        if !nested {
+            self.ending.borrow_mut().remove(collective);
+        }
+        Ok((r?, nested))
+    }
+
+    fn fork_inner(&self, id: &Hash) -> R<ForkEval> {
+        let h = self.held(id)?;
         let f = Fork::decode(&h.inside)?;
         let mut e = ForkEval {
             id: *id,
@@ -4351,6 +4397,7 @@ impl<'a> LawView<'a> {
             kept: vec![],
             successors: vec![None; f.sides.len()],
             unassigned: vec![],
+            counts: None,
         };
         let fail = |mut e: ForkEval, w: &str| {
             e.why = Some(w.into());
@@ -4536,6 +4583,16 @@ impl<'a> LawView<'a> {
         if !self.is_law(h, types::CLOSING) {
             return Err(LawError::Check("not a closing act"));
         }
+        let collective = Closing::decode(&h.inside)?.collective;
+        let (mut e, nested) = self.on_own_history(&collective, |v| v.closing_inner(id))?;
+        if !nested {
+            e.counts = Some(e.complete && self.closed_by(&collective)?.is_some_and(|c| &c.by == id));
+        }
+        Ok(e)
+    }
+
+    fn closing_inner(&self, id: &Hash) -> R<ClosingEval> {
+        let h = self.held(id)?;
         let c = Closing::decode(&h.inside)?;
         let mut e = ClosingEval {
             id: *id,
@@ -4546,6 +4603,7 @@ impl<'a> LawView<'a> {
             signed: vec![],
             holds: vec![],
             open_debts: vec![],
+            counts: None,
         };
         let fail = |mut e: ClosingEval, w: &str| {
             e.why = Some(w.into());
@@ -4604,15 +4662,18 @@ impl<'a> LawView<'a> {
     /// (U2, confirmed, F132). Two endings each naming the other, through
     /// two signers' chains, are not ordered either.
     pub fn closed_by(&self, collective: &Hash) -> R<Option<Closed>> {
+        // Judging a fork or closing asks for the consent of acts of the same
+        // collective (its signature on a release, say), made before its line:
+        // while it is judged, nothing has ended it yet (F143: an ending is
+        // judged on its own history, whenever a verifier asks, so the
+        // guard comes before the cache).
+        if self.ending.borrow().contains(collective) {
+            return Ok(None);
+        }
         if let Some(e) = self.closed.borrow().get(collective) {
             return Ok(e.clone());
         }
-        // Judging a fork or closing asks for the consent of acts of the same
-        // collective (its signature on a release, say), made before its line:
-        // while it is judged, nothing has ended it yet.
-        if !self.ending.borrow_mut().insert(*collective) {
-            return Ok(None);
-        }
+        self.ending.borrow_mut().insert(*collective);
         let e = self.closed_by_inner(collective);
         self.ending.borrow_mut().remove(collective);
         let e = e?;
@@ -5217,16 +5278,26 @@ impl<'a> LawView<'a> {
             }
             return Ok(*agreement);
         }
-        let mut at = *agreement;
+        // Rule 5b: two clones of one version that exist are a fork of the
+        // deal; with no concurrency rule (terms field 10, format open), the
+        // status quo stands: the parent stays the latest version (audit,
+        // October 2026, R5b). Walked from the deal's founding terms, so
+        // that a version off the line in force is never "latest".
+        let mut at = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
         loop {
-            let next = self.v.held_acts().find(|x| {
-                self.is_law(x, types::TERMS)
-                    && self.terms(&x.id).is_ok_and(|c| c.parent == Some(at))
-                    && self.agreement(&x.id).is_ok_and(|a| a.exists == Some(true))
-            });
-            match next {
-                Some(x) => at = x.id,
-                None => return Ok(at),
+            let next: Vec<Hash> = self
+                .v
+                .held_acts()
+                .filter(|x| {
+                    self.is_law(x, types::TERMS)
+                        && self.terms(&x.id).is_ok_and(|c| c.parent == Some(at))
+                        && self.agreement(&x.id).is_ok_and(|a| a.exists == Some(true))
+                })
+                .map(|x| x.id)
+                .collect();
+            match next.as_slice() {
+                [x] => at = *x,
+                _ => return Ok(at),
             }
         }
     }

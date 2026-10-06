@@ -360,9 +360,21 @@ impl Lab {
         self.w.add(&a)
     }
 
-    /// The label acknowledges an act, on device `d`.
+    /// The label acknowledges an act by a witness act (Identity type 15),
+    /// on device `d`: on neither chain, it adopts nothing (F142).
     fn ack(&mut self, d: usize, x: Hash) -> Hash {
         self.w.ack(&mut self.c[d], x)
+    }
+
+    /// The label adopts an act (rule 40, F142): an action of its own key on
+    /// device `d`, on its chain, whose history holds the act (F131, IT2a).
+    fn adopt(&mut self, d: usize, x: Hash) -> Hash {
+        let o = self.chain(&[x]);
+        let a = self.w.everyday_act(&mut self.c[d], ext(), 0, vec![], Some(o), None);
+        let a = self.w.add(&a);
+        // The Releases area reaches it: its holder signs, so it counts.
+        self.sign(ANA, &a);
+        a
     }
 
     /// A record on device `d`: a clone with the signature acts it names,
@@ -1224,7 +1236,7 @@ fn an_emptied_area_ends_its_grants() {
     let db = under(&mut lab, &mut agent2, env);
     let mut agent3 = lab.strand(g2, &key_of(agent.id));
     let dc = under(&mut lab, &mut agent3, env);
-    lab.ack(0, db);
+    lab.adopt(0, db);
 
     // Ana steps down at once; the label registers it: the area is empty,
     // and every grant in it ends (G2).
@@ -1347,8 +1359,12 @@ fn a_revocation_ends_the_grant_key() {
     s1.cite.as_mut().unwrap().1.push(r);
     let after = act(&mut lab, &mut s1);
     assert!(matches!(lab.view().backing(&after).unwrap(), Backing::NotBacked { .. }));
-    // The label acknowledges the racing act: it adopts it (A6).
+    // A witness act of the label acknowledging the racing act adopts
+    // nothing: on neither chain (F142, rule 42). An action of the label's
+    // own key on its chain, citing it, adopts it (A6; F131, IT2a).
     lab.ack(0, racing);
+    assert!(matches!(lab.view().backing(&racing).unwrap(), Backing::NotBacked { .. }), "a witness act adopts nothing (F142)");
+    lab.adopt(0, racing);
     assert_eq!(lab.view().backing(&racing).unwrap(), Backing::Binds { grant: g });
     // H3 (F129): no handover. Another grantee manages the adopted act
     // under its own grant (scope 1, naming it), with its own grant key;
@@ -1501,8 +1517,8 @@ fn a_grant_reaches_only_its_scope_and_its_limits_answer_unknown() {
     assert!(matches!(lab.view().backing(&within).unwrap(), Backing::Unknown { grant, ref reason } if grant == gc && reason.contains("18d")), "{:?}", lab.view().backing(&within));
     assert!(matches!(lab.consent(&within), Consent::Unknown { .. }));
     assert!(!lab.counts(&within));
-    // The label adopts it by acknowledging it: it binds (rule 40).
-    lab.ack(0, within);
+    // The label adopts it by an action citing it: it binds (rule 40).
+    lab.adopt(0, within);
     assert_eq!(lab.view().backing(&within).unwrap(), Backing::Binds { grant: gc });
 }
 
@@ -4355,6 +4371,51 @@ fn a_release_is_judged_by_the_agreement_in_force() {
     assert!(e.complete, "a separate agreement is judged on its own lineage");
 }
 
+/// Law rule 5b (audit, October 2026, R5b): two clones of one version of a
+/// deal that both exist are a fork of the deal; with no concurrency rule
+/// (terms field 10, format open), the status quo stands: the parent stays
+/// the version in force. A release is judged by it, and a release naming
+/// either rival clone names a version that is not in force.
+#[test]
+fn two_rival_clones_of_a_deal_leave_the_parent_in_force() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let work = spec("a work");
+    let mut t = deal_terms(ana.id, ben.id);
+    t.stakes = Some(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::Id(ana.id), 500_000), (Who::Id(ben.id), 500_000)] }]);
+    t.release_rule = Some(Rule::Threshold(1));
+    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let clone = |w: &mut World, ana: &mut Person, ben: &mut Person, text: &str| {
+        let mut c = t.clone();
+        c.parent = Some(d);
+        c.text = text.into();
+        c.release_rule = Some(Rule::All);
+        c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
+        let k = law_act(w, ana, law::types::TERMS, c.to_map(), obj(d));
+        sign(w, ana, &k);
+        sign(w, ben, &k);
+        k
+    };
+    let k1 = clone(&mut w, &mut ana, &mut ben, "One amendment.");
+    let release = law::Release { work, stakes: vec![(d, 0)], claims: vec![], keys: vec![(spec("a publication carrying it"), vec![7; 32])], timed: None };
+    let r = law_act(&mut w, &mut ana, law::types::RELEASE, release.to_map(), obj(d));
+    assert!(!view(&w).release(&r).unwrap().complete, "one existing clone: its rule, every holder, is in force");
+    // A rival clone of the same parent, which also exists: the status quo
+    // stands, and the parent's rule, any one holder, is in force again.
+    let k2 = clone(&mut w, &mut ana, &mut ben, "Another amendment.");
+    assert_eq!(view(&w).agreement(&k2).unwrap().exists, Some(true));
+    assert!(view(&w).release(&r).unwrap().complete, "the parent stands (rule 5b)");
+    for k in [k1, k2] {
+        let rk = law_act(&mut w, &mut ana, law::types::RELEASE, law::Release { stakes: vec![(k, 0)], ..release.clone() }.to_map(), obj(k));
+        sign(&mut w, &mut ben, &rk);
+        let e = view(&w).release(&rk).unwrap();
+        assert!(!e.complete && e.why.as_deref().is_some_and(|x| x.contains("neither in force")), "{:?}", e.why);
+    }
+}
+
 /// Freeze suite v21, 3.9e (F124 N11): a timed release names a future point
 /// on the agreement's time reference and the identity that delivers the
 /// content key then; the claim ends there, checkably. Without a time
@@ -5098,6 +5159,51 @@ fn a_superseded_claim_settles_on_each_holders_chain() {
     // a purchase under it.
     let invoiced = receipt(&mut w, &mut ana, request, b"invoice");
     assert_eq!(pview(&w, push).purchase(&invoiced).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
+}
+
+/// F143 ("Judged on its own history"): a fork or closing is complete or not
+/// on its own line and history, as if it were the ending that counts,
+/// never with another ending already in force. A closing is complete and
+/// counts; the label then signs a debt; a later closing, naming the first,
+/// whose line holds the debt, owes it on its own history: incomplete, and
+/// counting for nothing, whenever a verifier asks.
+#[test]
+fn an_ending_is_judged_on_its_own_history() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    let close = |lab: &mut Lab| {
+        let c = law::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])] };
+        let eo = ending_obj(lab, f, label);
+        let x = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, c.to_map(), eo);
+        for i in [ANA, BEN, CY] {
+            lab.end(i, &x);
+        }
+        x
+    };
+    let c1 = close(&mut lab);
+    let e = lab.view().closing(&c1).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    assert_eq!(e.counts, Some(true));
+    assert_eq!(lab.view().closed_by(&label).unwrap().map(|c| c.by), Some(c1));
+    // A debt after the first closing's line, sealed to everyone and on the
+    // chain: void under the ending that counts (the tie rule), but in the
+    // second closing's own history, where it binds.
+    let d = obligation(&mut lab, "a supplier", 40);
+    assert_eq!(lab.view().obligation_binds(&d).unwrap(), Some(false), "void after the closing that counts");
+    let c2 = close(&mut lab);
+    let v = lab.view();
+    let e = v.closing(&c2).unwrap();
+    assert!(!e.complete, "on its own history the second closing owes the debt (F143): {:?} {:?} binds {:?}", e.why, e.open_debts, v.obligation_binds(&d));
+    assert_eq!(e.open_debts, vec![d]);
+    assert_eq!(e.counts, Some(false));
+    assert_eq!(v.closed_by(&label).unwrap().map(|c| c.by), Some(c1), "the first closing stays final (IT1)");
+    // The same answer asked again, after the choice.
+    let e = v.closing(&c2).unwrap();
+    assert!(!e.complete);
+    assert_eq!(v.closing(&c1).unwrap().counts, Some(true));
 }
 
 /// Freeze suite v21, 3.9p (F128, W5): a fork or a closing counts only once

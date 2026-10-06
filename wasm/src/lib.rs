@@ -2302,6 +2302,7 @@ impl Verifier {
         let e = view.fork(&unhex(id)?).map_err(lerr)?;
         to_js(&ForkOut {
             complete: e.complete,
+            counts: e.counts,
             why: e.why.clone(),
             agreement: hx(&e.fork.agreement),
             collective: hx(&e.fork.collective),
@@ -2377,6 +2378,7 @@ impl Verifier {
         let e = view.closing(&unhex(id)?).map_err(lerr)?;
         to_js(&ClosingOut {
             complete: e.complete,
+            counts: e.counts,
             why: e.why.clone(),
             collective: hx(&e.closing.collective),
             voices: e.voices.iter().map(hx).collect(),
@@ -2627,6 +2629,8 @@ impl Verifier {
 #[serde(rename_all = "camelCase")]
 struct ForkOut {
     complete: bool,
+    /// Whether it is the ending that counts (F143); null while judged within that choice.
+    counts: Option<bool>,
     why: Option<String>,
     agreement: String,
     collective: String,
@@ -2648,6 +2652,8 @@ struct ForkOut {
 #[serde(rename_all = "camelCase")]
 struct ClosingOut {
     complete: bool,
+    /// Whether it is the ending that counts (F143); null while judged within that choice.
+    counts: Option<bool>,
     why: Option<String>,
     collective: String,
     voices: Vec<String>,

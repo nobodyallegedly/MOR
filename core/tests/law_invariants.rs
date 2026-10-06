@@ -1441,7 +1441,9 @@ impl ColWorld {
         let cites = |a: &Hash| history_of(&self.w.v, &self.col, a).contains(y);
         self.info
             .iter()
-            .filter(|(a, f)| f.kind == K::Ack { target: *y } || (f.grant.is_none() && *a != y && self.w.v.get(a).is_some_and(|h| h.act.outside.signer == Some(self.col)) && cites(a)))
+            // F142 (rule 42): a witness act (K::Ack) is on neither chain, and
+            // adopts nothing; the collective adopts by an action citing it.
+            .filter(|(a, f)| !matches!(f.kind, K::Ack { .. }) && f.grant.is_none() && *a != y && self.w.v.get(a).is_some_and(|h| h.act.outside.signer == Some(self.col)) && cites(a))
             .filter(|(a, _)| lv.consent(a).map(|c| c.counts()).unwrap_or(false) && self.w.v.status(a) == Status::Valid)
             .map(|(a, _)| *a)
             .collect()
@@ -2137,16 +2139,24 @@ impl DealWorld {
         self.p.iter().map(|x| x.id).collect()
     }
 
-    /// The latest version every party signed, as the library reads it.
+    /// The latest version every party signed: from the deal, the one
+    /// existing clone of each version in turn; where two exist, the status
+    /// quo stands (rule 5b: no concurrency rule, its format open).
     fn latest(&self) -> Hash {
         let lv = self.view();
         let mut at = self.deal;
-        for (v, parent, _) in &self.versions {
-            if *parent == Some(at) && lv.agreement(v).is_ok_and(|a| a.exists == Some(true)) {
-                at = *v;
+        loop {
+            let kids: Vec<Hash> = self
+                .versions
+                .iter()
+                .filter(|(v, parent, _)| *parent == Some(at) && lv.agreement(v).is_ok_and(|a| a.exists == Some(true)))
+                .map(|(v, _, _)| *v)
+                .collect();
+            match kids.as_slice() {
+                [k] => at = *k,
+                _ => return at,
             }
         }
-        at
     }
 
     fn apply(&mut self, op: &DOp) {
@@ -2831,6 +2841,23 @@ fn ic5_no_successor_owes_a_debt_outside_the_forks_history() {
     let d = cw.debts[0];
     assert!(lv.fork(&cw.endings[0].id).unwrap().fork.debts.iter().any(|(x, _)| x == &d), "the fork lists it");
     assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
+    assert_eq!(lv.debtors(&d).unwrap(), Some(vec![]));
+}
+
+/// IC10 (F144, verifier2 reading C): a fork hands out only obligations that
+/// are the collective's, done and on its chain. A debt a device signed
+/// citing nothing on the collective's chain binds no one, and a fork whose
+/// line reaches it, handing out nothing, is complete all the same.
+#[test]
+fn ic10_a_fork_hands_out_only_debts_on_the_chain() {
+    let cw = run_col(&two(), &[debt_op(0, false), fork_op(0, DebtsMode::Nothing)], 0);
+    let lv = cw.view();
+    let d = cw.debts[0];
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false), "on no chain, it binds no one (rule 35b)");
+    let e = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    assert!(e.unassigned.is_empty());
+    assert_eq!(e.counts, Some(true));
     assert_eq!(lv.debtors(&d).unwrap(), Some(vec![]));
 }
 
