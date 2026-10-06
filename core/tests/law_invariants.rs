@@ -1441,7 +1441,9 @@ impl ColWorld {
         let cites = |a: &Hash| history_of(&self.w.v, &self.col, a).contains(y);
         self.info
             .iter()
-            .filter(|(a, f)| f.kind == K::Ack { target: *y } || (f.grant.is_none() && *a != y && self.w.v.get(a).is_some_and(|h| h.act.outside.signer == Some(self.col)) && cites(a)))
+            // F142 (rule 42): a witness act (K::Ack) is on neither chain, and
+            // adopts nothing; the collective adopts by an action citing it.
+            .filter(|(a, f)| !matches!(f.kind, K::Ack { .. }) && f.grant.is_none() && *a != y && self.w.v.get(a).is_some_and(|h| h.act.outside.signer == Some(self.col)) && cites(a))
             .filter(|(a, _)| lv.consent(a).map(|c| c.counts()).unwrap_or(false) && self.w.v.status(a) == Status::Valid)
             .map(|(a, _)| *a)
             .collect()
@@ -2137,16 +2139,24 @@ impl DealWorld {
         self.p.iter().map(|x| x.id).collect()
     }
 
-    /// The latest version every party signed, as the library reads it.
+    /// The latest version every party signed: from the deal, the one
+    /// existing clone of each version in turn; where two exist, the status
+    /// quo stands (rule 5b: no concurrency rule, its format open).
     fn latest(&self) -> Hash {
         let lv = self.view();
         let mut at = self.deal;
-        for (v, parent, _) in &self.versions {
-            if *parent == Some(at) && lv.agreement(v).is_ok_and(|a| a.exists == Some(true)) {
-                at = *v;
+        loop {
+            let kids: Vec<Hash> = self
+                .versions
+                .iter()
+                .filter(|(v, parent, _)| *parent == Some(at) && lv.agreement(v).is_ok_and(|a| a.exists == Some(true)))
+                .map(|(v, _, _)| *v)
+                .collect();
+            match kids.as_slice() {
+                [k] => at = *k,
+                _ => return at,
             }
         }
-        at
     }
 
     fn apply(&mut self, op: &DOp) {
@@ -2444,28 +2454,42 @@ impl DealWorld {
                     if e.sums != Some(true) {
                         bad.push(format!("SPLIT-SUM: a split whose payouts sum to the amount is not read as summing ({mode:?}): {x:?}"));
                     }
-                    // The oracle, from the text: short of the exact share by a
+                    // The oracle, from the text: the stakes as currently
+                    // held (rule 26), those of the latest version every party
+                    // signed, whichever version the split names (audit,
+                    // October 2026, gap 8); short of the exact share by a
                     // whole unit or more, or over it by as many units as the
-                    // stake has holders or more, breaks the plan.
-                    let t = lv.terms(&e.split.agreement).map_err(|e| format!("{e:?}"))?;
-                    let st = &t.stakes.as_ref().unwrap()[0];
+                    // stake has holders or more, breaks the plan; so does a
+                    // payout to someone who holds no part of it.
+                    let latest = self.latest();
+                    let stakes = &self.versions.iter().find(|v| v.0 == latest).unwrap().2;
                     let pot: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0)).map(|p| p.amount as u128).sum();
-                    let nh = st.holders.len() as u128;
+                    let nh = stakes.len() as u128;
                     let mut expect = BTreeSet::new();
-                    for (h, share) in &st.holders {
-                        let h = *h.id().unwrap();
-                        let paid: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0) && p.receiver == h).map(|p| p.amount as u128).sum();
+                    for (h, share) in stakes {
+                        let paid: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0) && p.receiver == *h).map(|p| p.amount as u128).sum();
                         let exact = pot * *share as u128;
                         if paid * 1_000_000 + 1_000_000 <= exact || paid * 1_000_000 >= exact + nh * 1_000_000 {
-                            expect.insert(h);
+                            expect.insert(*h);
+                        }
+                    }
+                    for p in e.split.payouts.iter().filter(|p| p.stake == Some(0)) {
+                        if !stakes.iter().any(|(h, _)| *h == p.receiver) {
+                            expect.insert(p.receiver);
                         }
                     }
                     let got: BTreeSet<Hash> = e.mismatched.iter().map(|m| m.holder).collect();
                     if got != expect {
                         bad.push(format!("SPLIT-STAKE: payouts judged against their stakes differently from the text ({mode:?}): library {got:?}, text {expect:?}"));
                     }
-                    if matches!(mode, SplitMode::Exact) && !got.is_empty() {
-                        bad.push(format!("SPLIT-EXACT: an exact split is judged as breaking its plan: {got:?}"));
+                    if e.in_force != latest {
+                        bad.push(format!("SPLIT-IN-FORCE: the split is judged against {:?}, not the latest version every party signed {latest:?}", e.in_force));
+                    }
+                    if matches!(mode, SplitMode::Exact) && e.split.agreement == latest && !got.is_empty() {
+                        bad.push(format!("SPLIT-EXACT: an exact split under the version in force is judged as breaking its plan: {got:?}"));
+                    }
+                    if e.split.agreement != latest && !e.problems.iter().any(|p| p.contains("not in force")) {
+                        bad.push(format!("SPLIT-VERSION: a split naming a version the parties have left is not shown so (rule 26): {x:?}"));
                     }
                 }
             }
@@ -2818,6 +2842,34 @@ fn ic5_no_successor_owes_a_debt_outside_the_forks_history() {
     assert!(lv.fork(&cw.endings[0].id).unwrap().fork.debts.iter().any(|(x, _)| x == &d), "the fork lists it");
     assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
     assert_eq!(lv.debtors(&d).unwrap(), Some(vec![]));
+}
+
+/// IC10 (F144, verifier2 reading C, reworded after the review of F133 to
+/// F144): a fork hands out only obligations that bind the collective: done,
+/// on its chain, and within its signer's powers, or adopted. A debt a
+/// device signed citing nothing on the collective's chain, or one the
+/// Finance lane's holder never signed, binds no one, and a fork whose line
+/// reaches it, handing out nothing, is complete all the same.
+#[test]
+fn ic10_a_fork_hands_out_only_debts_that_bind() {
+    let uncited = run_col(&two(), &[debt_op(0, false), fork_op(0, DebtsMode::Nothing)], 0);
+    let lane = Shape { lane: Some((1, 1)), ..two() };
+    let unsigned = run_col(&lane, &[Op::Debt { dev: 0, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: false }, fork_op(0, DebtsMode::Nothing)], 0);
+    for (cw, why) in [(uncited, "on no chain (rule 35b)"), (unsigned, "beyond its signer's powers: the lane never signed it (rule 36a)")] {
+        let lv = cw.view();
+        let d = cw.debts[0];
+        assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false), "it binds no one, {why}");
+        let e = lv.fork(&cw.endings[0].id).unwrap();
+        assert!(e.complete, "{why}: {:?}", e.why);
+        assert!(e.unassigned.is_empty());
+        assert_eq!(e.counts, Some(true));
+        assert_eq!(lv.debtors(&d).unwrap(), Some(vec![]));
+    }
+    // One the lane signed is handed out, or the fork does not take effect.
+    let signed = run_col(&lane, &[debt_op(0, true), fork_op(0, DebtsMode::Nothing)], 0);
+    let lv = signed.view();
+    assert_eq!(lv.obligation_binds(&signed.debts[0]).unwrap(), Some(true));
+    assert!(!lv.fork(&signed.endings[0].id).unwrap().complete);
 }
 
 /// IC6 (determinism): the verifier kept its indexes in arrival order, so a

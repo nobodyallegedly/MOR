@@ -196,9 +196,9 @@ class Verdict:
 
 
 class Verifier:
-    def __init__(self, story: Story, handout: str = "done"):
+    def __init__(self, story: Story, handout: str = "binding"):
         self.s = story
-        self.handout = handout  # "done": every done obligation in the history; "binding": only binding ones
+        self.handout = handout  # "binding" (F144): only obligations that bind the collective; "done": every done one (the first reading)
         self.verdict = Verdict()
 
     # ---- departures and voices ----------------------------------------------------
@@ -497,8 +497,10 @@ class Verifier:
 
     def obligations_to_hand_out(self, e: str) -> list[str]:
         """Every obligation of the original in the history the fork cites, published or
-        not, paid or not, save one sealed neither to every member nor publicly, which is
-        never the collective's (rule 35a); one signed with a grant key included."""
+        not, paid or not, that binds the collective: done, on its chain, within its
+        signer's powers, or adopted (F144, as reworded after the review of F133 to F144);
+        one signed with a grant key included. The first reading ("done": every done
+        obligation, whether or not its lane signed it) is kept as a switch."""
         hist = self.s.history(e)
         out = []
         if self.handout == "binding":
@@ -813,14 +815,14 @@ def later_first(s: Story, ids: list[str]) -> list[str]:
     return sorted(ids, key=lambda i: (-len(hist[i]), i))
 
 
-def verify(data: dict, handout: str = "done", cites: str = "strict") -> dict:
+def verify(data: dict, handout: str = "binding", cites: str = "strict") -> dict:
     return Verifier(Story(data, cites=cites), handout=handout).run().to_json()
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="verifier2: Law draft 10, collectives' endings")
     ap.add_argument("paths", nargs="+", help="story files (.json), or directories of them")
-    ap.add_argument("--handout", choices=["done", "binding"], default="done",
+    ap.add_argument("--handout", choices=["done", "binding"], default="binding",
                     help="which obligations a fork must hand out: every done one in its history (the text's words), or only binding ones")
     ap.add_argument("--cites", choices=["strict", "loose"], default="strict",
                     help="what 'citing no decision' means: the action's own objects name none (strict), or none is reached through its previous acts either (loose)")

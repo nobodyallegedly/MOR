@@ -1934,8 +1934,14 @@ export class Actions {
       fees: [string, string, number][];
       undelivered: string[];
       mismatched: [number, string, number, number][];
+      problems: string[];
+      unevidenced: string[];
+      unplanned: string[];
     };
     const lines: Line[] = [
+      ...e.problems.map((p) => ({ text: `NOT THE NAMED SERVICE'S SPLIT UNDER THE AGREEMENT IN FORCE: ${p}.`, tone: 'bad' as const })),
+      ...e.unevidenced.map((r) => ({ text: `ROLE SHARE WITHOUT EVIDENCE THAT HOLDS: ${names(r)} (Law rule 22).`, tone: 'bad' as const })),
+      ...e.unplanned.map((r) => ({ text: `Paid to ${names(r)} as a fee or a named receiver: only the split plan, whose format is open, could justify it (rules 26, 27).` })),
       ...e.fees.map(([, r, n]) => ({ text: `Fee: ${n}, received by ${names(r)}.` })),
       ...e.payouts.filter(([, , st]) => st !== null).map(([r, n]) => ({ text: `Paid: ${n} to ${names(r)}${departed.includes(r) ? ' (a departed holder)' : ''}.` })),
       e.sums === false ? { text: 'The payouts do not add up to what arrived (Law rule 21): an invalid split.', tone: 'bad' as const } : { text: 'The payouts add up exactly to what arrived.', tone: 'ok' as const },

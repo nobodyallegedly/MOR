@@ -1339,6 +1339,14 @@ struct SpecsIn {
     /// them (F131, IT3): wrong receipts, counting for nothing.
     #[serde(default)]
     rail_invalid: Vec<String>,
+    /// Absence by anchoring (Law rule 51, F136): for each abandonment
+    /// declaration whose clause names a period, whether the anchoring cMIP
+    /// places it on the agreement's time reference with no act of the
+    /// party within the period before it (true), or finds one (false), as
+    /// the client read the anchors. A declaration not listed does not
+    /// count.
+    #[serde(default)]
+    absence_anchored: std::collections::BTreeMap<String, bool>,
 }
 
 impl SpecsIn {
@@ -1372,6 +1380,9 @@ impl SpecsIn {
         }
         for r in &self.rail_invalid {
             view.rail_invalid.insert(unhex(r)?);
+        }
+        for (d, a) in &self.absence_anchored {
+            view.absence_anchored.insert(unhex(d)?, *a);
         }
         Ok(view)
     }
@@ -2063,7 +2074,8 @@ struct CurrentOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BackingOut {
-    /// "not-under-grant", "backed", "not-backed" or "binds" (F128: no act is undetermined).
+    /// "not-under-grant", "backed", "not-backed", "binds" or "unknown" (rule
+    /// 18d: a grant carrying limits under a cMIP the core does not implement).
     kind: String,
     grant: Option<String>,
     reason: Option<String>,
@@ -2185,6 +2197,10 @@ impl Verifier {
                 o.kind = "ungranted".into();
                 o.reason = Some(format!("signed with the grant key of grant {}, which does not back it: {reason}", hx(&grant)));
             }
+            law::Consent::Unknown { grant, reason } => {
+                o.kind = "unknown".into();
+                o.reason = Some(format!("signed with the grant key of grant {}: whether it backs it is unknown (rule 18d): {reason}", hx(&grant)));
+            }
             law::Consent::Talk => {
                 o.kind = "talk".into();
                 o.reason = Some("a negotiation message: talk, binding nothing, on neither of the collective's chains (F128, W6)".into());
@@ -2263,6 +2279,7 @@ impl Verifier {
             law::Backing::Backed { grant } => ("backed", Some(grant), None),
             law::Backing::NotBacked { grant, reason } => ("not-backed", Some(grant), Some(reason)),
             law::Backing::Binds { grant } => ("binds", Some(grant), None),
+            law::Backing::Unknown { grant, reason } => ("unknown", Some(grant), Some(reason)),
         };
         to_js(&BackingOut {
             kind: kind.into(),
@@ -2285,6 +2302,7 @@ impl Verifier {
         let e = view.fork(&unhex(id)?).map_err(lerr)?;
         to_js(&ForkOut {
             complete: e.complete,
+            counts: e.counts,
             why: e.why.clone(),
             agreement: hx(&e.fork.agreement),
             collective: hx(&e.fork.collective),
@@ -2360,6 +2378,7 @@ impl Verifier {
         let e = view.closing(&unhex(id)?).map_err(lerr)?;
         to_js(&ClosingOut {
             complete: e.complete,
+            counts: e.counts,
             why: e.why.clone(),
             collective: hx(&e.closing.collective),
             voices: e.voices.iter().map(hx).collect(),
@@ -2552,6 +2571,25 @@ impl Verifier {
             undelivered: e.undelivered.iter().map(hx).collect(),
             collective: e.collective.as_ref().map(hx),
             mismatched: e.mismatched.iter().map(|m| (m.stake, hx(&m.holder), m.paid, m.due)).collect(),
+            problems: e.problems.clone(),
+            in_force: hx(&e.in_force),
+            unevidenced: e.unevidenced.iter().map(hx).collect(),
+            unplanned: e.unplanned.iter().map(hx).collect(),
+        })
+    }
+
+    /// What a split service owes (Law rule 29): every incoming receipt and
+    /// payer's claim without its split, and every payout without the
+    /// receiver's receipt, each naming one receiver and one agreement.
+    #[wasm_bindgen(js_name = lawServiceAccount)]
+    pub fn law_service_account(&self, specs: JsValue, service: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let a = view.service_account(&unhex(service)?).map_err(lerr)?;
+        to_js(&ServiceAccountOut {
+            service: hx(&a.service),
+            unsplit: a.unsplit.iter().map(|u| (hx(&u.payment), u.claim, hx(&u.receiver), hx(&u.agreement), hx(&u.amount.unit), u.amount.value)).collect(),
+            unpaid: a.unpaid.iter().map(|u| (hx(&u.split), u.payout, hx(&u.receiver), hx(&u.agreement), u.amount, u.received)).collect(),
         })
     }
 
@@ -2591,6 +2629,8 @@ impl Verifier {
 #[serde(rename_all = "camelCase")]
 struct ForkOut {
     complete: bool,
+    /// Whether it is the ending that counts (F143); null while judged within that choice.
+    counts: Option<bool>,
     why: Option<String>,
     agreement: String,
     collective: String,
@@ -2612,6 +2652,8 @@ struct ForkOut {
 #[serde(rename_all = "camelCase")]
 struct ClosingOut {
     complete: bool,
+    /// Whether it is the ending that counts (F143); null while judged within that choice.
+    counts: Option<bool>,
     why: Option<String>,
     collective: String,
     voices: Vec<String>,
@@ -2674,6 +2716,26 @@ struct SplitOut {
     collective: Option<String>,
     /// (stake index, holder, paid, due) for each payout not matching (N10).
     mismatched: Vec<(u64, String, u64, u64)>,
+    /// What makes it no split of the named service under the agreement in
+    /// force (rules 20, 26): any entry breaks it.
+    problems: Vec<String>,
+    /// The version in force, against which the payouts are judged.
+    in_force: String,
+    /// Receivers of role payouts whose evidence does not hold (rule 22).
+    unevidenced: Vec<String>,
+    /// Receivers of fee and named-receiver payouts, which only the split
+    /// plan (format open) could justify.
+    unplanned: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ServiceAccountOut {
+    service: String,
+    /// (payment, is a payer's claim, receiver, agreement, unit, value).
+    unsplit: Vec<(String, bool, String, String, String, u64)>,
+    /// (split, payout index, receiver, agreement, amount, received).
+    unpaid: Vec<(String, usize, String, String, u64, u64)>,
 }
 
 #[derive(Serialize)]

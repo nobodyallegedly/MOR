@@ -87,7 +87,7 @@ def load_dir(d: str):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("dir")
-    ap.add_argument("--handout", default="done", choices=["done", "binding"])
+    ap.add_argument("--handout", default="binding", choices=["done", "binding"])
     ap.add_argument("--cites", default="strict", choices=["strict", "loose"])
     ap.add_argument("--json")
     ap.add_argument("--quiet", action="store_true")

@@ -50,6 +50,18 @@ Three disagreements of reading, each shown by a story of three or four acts, and
 
 Besides those, a few differences turned out to be slips of mine or gaps in what the abstract model carries, not readings of the text. They were fixed in verifier2 and are listed under "Not disagreements" below, with the reading taken, so that nothing is hidden.
 
+### Rerun after F142 to F144 (6 October 2026, branch `law-gaps-grants-releases-splits`)
+
+The three readings were decided (F142 to F144, F144 reworded after the review of F133 to F144) and built in the reference: a witness act adopts nothing; a fork or closing is judged on its own history, whenever asked; a fork hands out every obligation that binds the collective. Verifier2's default hand-out became `binding` (its reading 1), its readings 11 and 15 now the text's. The same two runs were exported again (seed 1, cases 0 to 2,999; seed 2, cases 0 to 999) and compared.
+
+| Stories | Agree on everything | Differ | Kinds of disagreement |
+| --- | --- | --- | --- |
+| 4,000 | 3,738 | 262 | one |
+
+On every story, the two verifiers now agree on which ending counts, on every fork's and closing's status, on every member's ending signature, on every debt's debtors, and on every act in the collective's name but one kind. The one kind is the collective's own Identity witness act (type 15, the acknowledgement): the reference counts it as the collective's act, which adopts nothing (F142) but still places the members' signature acts it acknowledges; verifier2 counts it for nothing in Law (rule 35b: on neither chain). 333 such acts in 262 stories (257 in 203 of seed 1, 76 in 59 of seed 2). It was the "witness act alone" story of finding A, which F142 did not decide: recorded as **F151**, for Nobody, allegedly. Neither verifier was changed for it.
+
+To reproduce: as above, with `--handout binding` (now the default); `python3 verifier2/group.py cmp.json` prints the one group.
+
 ## Precisely
 
 ### Files
