@@ -1,0 +1,109 @@
+{
+ "collective": "C",
+ "members": [
+  "ana",
+  "ben"
+ ],
+ "rule": {
+  "kind": "every"
+ },
+ "areas": {},
+ "acts": [
+  {
+   "id": "genesis",
+   "type": "genesis",
+   "signer": "C"
+  },
+  {
+   "id": "p1",
+   "type": "publication",
+   "signer": "C/d0",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ]
+  },
+  {
+   "id": "F1",
+   "type": "fork",
+   "signer": "ben",
+   "tips": [
+    "p1"
+   ],
+   "sides": [
+    {
+     "successor": "S1",
+     "members": [
+      "ana"
+     ]
+    },
+    {
+     "successor": "S2",
+     "members": [
+      "ben"
+     ]
+    }
+   ],
+   "assigned": [],
+   "objects": [],
+   "public": true
+  },
+  {
+   "id": "sig/ben/F1",
+   "type": "chain_sig",
+   "signer": "ben",
+   "ending": "F1",
+   "position": 1,
+   "counts": true
+  },
+  {
+   "id": "F2",
+   "type": "fork",
+   "signer": "ben",
+   "tips": [
+    "p1"
+   ],
+   "sides": [
+    {
+     "successor": "S1",
+     "members": [
+      "ana"
+     ]
+    },
+    {
+     "successor": "S2",
+     "members": [
+      "ben"
+     ]
+    }
+   ],
+   "assigned": [],
+   "objects": [],
+   "public": true
+  },
+  {
+   "id": "sig/ana/F2",
+   "type": "chain_sig",
+   "signer": "ana",
+   "ending": "F2",
+   "position": 1,
+   "counts": true
+  },
+  {
+   "id": "sig/ben/F2",
+   "type": "chain_sig",
+   "signer": "ben",
+   "ending": "F2",
+   "position": 2,
+   "counts": true
+  },
+  {
+   "id": "sig/ana/F1",
+   "type": "chain_sig",
+   "signer": "ana",
+   "ending": "F1",
+   "position": 2,
+   "counts": true
+  }
+ ]
+}
