@@ -25,6 +25,11 @@
 //!    its number (flaw C); an area with no voice left is frozen.
 //! 5. An act of the collective that an area reaches counts only with its
 //!    holders' signature acts, meeting the area's number.
+//! 6. Everything Law decides binds, so nothing rests on the verifier's own
+//!    failed attempts to reach homes (Identity, the sentence after rule 17,
+//!    F153): an identity answer resting on them is left aside, and a fork,
+//!    a closing, or what is paid toward a debt that rests on one is unknown
+//!    ([`LawView::binding`]).
 
 use super::formats::*;
 use super::tiers::{changes, powers_needed, Change, Tier};
@@ -89,6 +94,10 @@ pub struct LawView<'a> {
     adopting: RefCell<BTreeSet<Hash>>,
     histories: RefCell<BTreeMap<(Hash, usize, Vec<Hash>), Rc<History>>>,
     ending_sigs: RefCell<BTreeMap<Hash, Rc<EndingSigs>>>,
+    /// F153: whether identity answers resting on the verifier's own failed
+    /// attempts to reach homes are taken as they are. Never for a view a
+    /// caller makes: only for the comparison [`Self::binding`] runs.
+    trust_own_attempts: bool,
 }
 
 /// What a decision cites on the collective's chain (F127): every act it
@@ -369,6 +378,84 @@ impl<'a> LawView<'a> {
             adopting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
             ending_sigs: RefCell::new(BTreeMap::new()),
+            trust_own_attempts: false,
+        }
+    }
+
+    // ------------------------------------------------------------ own attempts (F153)
+
+    /// The standing of an act under Identity, for Law: everything Law
+    /// decides binds, so an answer resting on the verifier's own failed
+    /// attempts to reach homes is unknown (Identity, the sentence after
+    /// rule 17, F153).
+    fn status(&self, id: &Hash) -> Status {
+        if self.trust_own_attempts {
+            self.v.status(id)
+        } else {
+            self.v.binding_status(id)
+        }
+    }
+
+    /// Whether Law leaves aside an identity-chain act (a chain signature, a
+    /// rotation) whose counting rests on the verifier's own attempts (F153).
+    fn refuses(&self, id: &Hash) -> bool {
+        !self.trust_own_attempts && self.v.rests_on_own_attempt(id)
+    }
+
+    /// A view with the same facts over the verifier `v`, with fresh caches.
+    /// Every field is listed, so a field added to [`LawView`] must be
+    /// copied here too.
+    fn sibling<'b>(&self, v: &'b Verifier, trust_own_attempts: bool) -> LawView<'b> {
+        LawView {
+            v,
+            mips: self.mips.clone(),
+            ext_layers: self.ext_layers.clone(),
+            keeper_logs: self.keeper_logs.clone(),
+            push_rails: self.push_rails.clone(),
+            rail_invalid: self.rail_invalid.clone(),
+            rail_valid: self.rail_valid.clone(),
+            absence_anchored: self.absence_anchored.clone(),
+            cache: RefCell::new(BTreeMap::new()),
+            busy: RefCell::new(BTreeSet::new()),
+            closed: RefCell::new(BTreeMap::new()),
+            ending: RefCell::new(BTreeSet::new()),
+            citing: RefCell::new(BTreeSet::new()),
+            adopting: RefCell::new(BTreeSet::new()),
+            histories: RefCell::new(BTreeMap::new()),
+            ending_sigs: RefCell::new(BTreeMap::new()),
+            trust_own_attempts,
+        }
+    }
+
+    /// Whether a binding answer asked now must be compared ([`Self::binding`]):
+    /// this verifier made attempts of its own, this view does not take
+    /// them as they are, and no ending is being judged (whose inner
+    /// questions the outer comparison already covers).
+    fn own_attempts_open(&self) -> bool {
+        !self.trust_own_attempts && self.v.has_own_attempts() && self.ending.borrow().is_empty()
+    }
+
+    /// A binding answer (Identity, the sentence after rule 17, F153): `f`'s
+    /// answer, unless it rests on the verifier's own failed attempts to
+    /// reach homes, when it is unknown ([`LawError::OwnAttempt`]) until it
+    /// no longer does. It rests on them when taking the identity answers
+    /// they give as they are gives another answer than the same acts and
+    /// facts without those attempts. Without any such attempt, `f` alone.
+    /// Forks, closings, which ending closed a collective, and what is paid
+    /// toward a debt ([`Self::paid`]) are judged so; every other answer of
+    /// this view leaves such identity answers aside (never relies on them),
+    /// showing the act as not standing rather than as unknown.
+    pub fn binding<T: PartialEq>(&self, f: impl Fn(&LawView<'_>) -> R<T>) -> R<T> {
+        if self.trust_own_attempts || !self.v.has_own_attempts() {
+            return f(self);
+        }
+        let with = f(&self.sibling(self.v, true));
+        let w = self.v.without_own_attempts();
+        let without = f(&self.sibling(&w, false));
+        if with == without {
+            with
+        } else {
+            Err(LawError::OwnAttempt)
         }
     }
 
@@ -431,13 +518,13 @@ impl<'a> LawView<'a> {
     /// a grant key (Identity's `Scoped`, F128) whose grant itself stands.
     /// Whether the grant backs the act is [`Self::backing`].
     fn valid(&self, id: &Hash) -> bool {
-        match self.v.status(id) {
+        match self.status(id) {
             Status::Valid => true,
             Status::Scoped => self
                 .v
                 .get(id)
                 .and_then(|h| self.key_grant(h))
-                .is_some_and(|(g, _)| self.v.status(&g.id) == Status::Valid),
+                .is_some_and(|(g, _)| self.status(&g.id) == Status::Valid),
             _ => false,
         }
     }
@@ -1370,13 +1457,13 @@ impl<'a> LawView<'a> {
         let mut out = vec![];
         if let Ok(signed) = decode_signature(&s.inside) {
             if let Some(a) = self.v.get(&signed) {
-                if Self::own_key(col, a) && self.v.status(&a.id) == Status::Valid {
+                if Self::own_key(col, a) && self.status(&a.id) == Status::Valid {
                     out.push((Line::Record(a), self.is_law(a, types::RECORD)));
                 }
             }
         }
         for h in self.v.signed_by(&col.id) {
-            if !Self::own_key(col, h) || self.v.status(&h.id) != Status::Valid {
+            if !Self::own_key(col, h) || self.status(&h.id) != Status::Valid {
                 continue;
             }
             if self.is_law(h, types::RECORD) {
@@ -1392,7 +1479,7 @@ impl<'a> LawView<'a> {
             }
         }
         for a in self.v.acknowledgements(&s.id) {
-            if Self::own_key(col, a) && self.v.status(&a.id) == Status::Valid {
+            if Self::own_key(col, a) && self.status(&a.id) == Status::Valid {
                 out.push((Line::Record(a), self.is_law(a, types::RECORD)));
             }
         }
@@ -1546,7 +1633,7 @@ impl<'a> LawView<'a> {
             }
             if a.inside.spec == self.mips.identity && a.inside.type_ == 1 {
                 let res = self.v.resolve(&p);
-                if res.position_of(x).is_none() {
+                if res.position_of(x).is_none() || self.refuses(x) {
                     return no(e, "it registers a rotation that does not count");
                 }
                 e.registers.push(Departure {
@@ -1841,7 +1928,7 @@ impl<'a> LawView<'a> {
     /// under Identity, or kept by C5 (placed before the collective's line
     /// registering the rotation that replaced its key).
     fn sig_counts(&self, col: &Col, s: &Held) -> R<bool> {
-        match self.v.status(&s.id) {
+        match self.status(&s.id) {
             Status::Valid => return Ok(true),
             Status::Void | Status::Disputed => {}
             _ => return Ok(false),
@@ -2810,7 +2897,7 @@ impl<'a> LawView<'a> {
         self.v.signed_by(&g.grantee).any(|h| {
             self.is_law(h, types::SIGNATURE)
                 && decode_signature(&h.inside).ok() == Some(gh.id)
-                && self.v.status(&h.id) == Status::Valid
+                && self.status(&h.id) == Status::Valid
         })
     }
 
@@ -3050,7 +3137,7 @@ impl<'a> LawView<'a> {
             self.valid(&gh.id) && gh.act.outside.is_public()
         } else if founding {
             // Carried by the founding terms every founder signed (D6).
-            self.v.status(&gh.id) == Status::Valid
+            self.status(&gh.id) == Status::Valid
         } else {
             self.valid(&gh.id) && self.consent(&gh.id)?.counts()
         };
@@ -3669,7 +3756,10 @@ impl<'a> LawView<'a> {
         use crate::finance::{self as fin, Payload as Fin};
         let finance = self.mips.finance;
         let res = self.v.resolve(payee);
-        for state in &res.states {
+        for (l, state) in res.links.iter().zip(&res.states) {
+            if self.refuses(&l.act) {
+                break;
+            }
             if let Ok(Some(Some(entries))) = fin::vault_in(&finance, &state.declarations) {
                 if entries.iter().any(|e| &e.rail_module == rail) {
                     return Ok(true);
@@ -4354,6 +4444,11 @@ impl<'a> LawView<'a> {
 
     /// A fork act, judged.
     pub fn fork(&self, id: &Hash) -> R<ForkEval> {
+        // F153: a binding answer, unknown where it rests on the verifier's
+        // own attempts; judged once, from outside any ending's judgment.
+        if self.own_attempts_open() {
+            return self.binding(|v| v.fork(id));
+        }
         let h = self.held(id)?;
         if !self.is_law(h, types::FORK) {
             return Err(LawError::Check("not a fork act"));
@@ -4578,6 +4673,9 @@ impl<'a> LawView<'a> {
 
     /// A closing act, judged (N9).
     pub fn closing(&self, id: &Hash) -> R<ClosingEval> {
+        if self.own_attempts_open() {
+            return self.binding(|v| v.closing(id));
+        }
         let h = self.held(id)?;
         if !self.is_law(h, types::CLOSING) {
             return Err(LawError::Check("not a closing act"));
@@ -4671,6 +4769,13 @@ impl<'a> LawView<'a> {
         }
         if let Some(e) = self.closed.borrow().get(collective) {
             return Ok(e.clone());
+        }
+        if self.own_attempts_open() {
+            let e = self.binding(|v| v.closed_by(collective));
+            if let Ok(x) = &e {
+                self.closed.borrow_mut().insert(*collective, x.clone());
+            }
+            return e;
         }
         self.ending.borrow_mut().insert(*collective);
         let e = self.closed_by_inner(collective);
@@ -4796,6 +4901,12 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let Some(p) = self.v.resolve(&signer).position_of(&x.id) else { continue };
+            // F153: a member's chain signature counting only through the
+            // verifier's own attempts is left aside (the ending is then
+            // judged unknown by `binding`).
+            if self.refuses(&x.id) {
+                continue;
+            }
             let p = p as u64;
             let e = raw.entry((c.signs, signer)).or_insert((x.id, p));
             if p < e.1 {
@@ -5205,7 +5316,19 @@ impl<'a> LawView<'a> {
     /// Whether an obligation is still owed: neither fulfilled in full by
     /// receipts held nor ended by a creditor's release.
     fn still_owed(&self, obligation: &Hash, amount: u64) -> R<bool> {
-        Ok(self.paid_toward(obligation) < amount && self.debt_released(obligation)?.is_none())
+        Ok(self.paid(obligation)? < amount && self.debt_released(obligation)?.is_none())
+    }
+
+    /// What is paid toward an obligation ([`Self::paid_toward`]), as a
+    /// binding answer (F153): unknown ([`LawError::OwnAttempt`]) where it
+    /// rests on the verifier's own failed attempts to reach homes, such as
+    /// a payment to a pointer the creditor published after a rotation only
+    /// those attempts let count.
+    pub fn paid(&self, obligation: &Hash) -> R<u64> {
+        if self.own_attempts_open() {
+            return self.binding(|v| v.paid(obligation));
+        }
+        Ok(self.paid_toward(obligation))
     }
 
     /// What a collective owes (F125, D5): its own obligations that bind,
@@ -5804,7 +5927,11 @@ impl<'a> LawView<'a> {
     fn vault_in_force(&self, who: &Hash) -> Vec<crate::finance::VaultEntry> {
         let res = self.v.resolve(who);
         let mut out = vec![];
-        for st in &res.states {
+        // F153: not past a link counting only through own attempts.
+        for (l, st) in res.links.iter().zip(&res.states) {
+            if self.refuses(&l.act) {
+                break;
+            }
             match crate::finance::vault_in(&self.mips.finance, &st.declarations) {
                 Ok(Some(Some(e))) => out = e,
                 Ok(Some(None)) => out = vec![],

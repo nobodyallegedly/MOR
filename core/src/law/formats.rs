@@ -139,6 +139,11 @@ pub enum LawError {
     /// A case the texts leave unsettled, found while building: refused
     /// rather than guessed (CLAUDE.md: never guess at a rule).
     Unsettled(&'static str),
+    /// Unknown: the answer rests on this verifier's own failed attempts to
+    /// reach a home (an identity "re-homed without audit"), and nothing
+    /// binding rests on them (Identity, the sentence after rule 17, F153).
+    /// It is neither valid nor invalid until it no longer rests on them.
+    OwnAttempt,
 }
 
 impl fmt::Display for LawError {
@@ -155,6 +160,9 @@ impl fmt::Display for LawError {
                 write!(f, " is not held")
             }
             LawError::Unsettled(w) => write!(f, "unsettled by the texts: {w}"),
+            LawError::OwnAttempt => f.write_str(
+                "unknown: it rests on this reader's own failed attempts to reach a home (re-homed without audit), and nothing binding rests on them (F153)",
+            ),
         }
     }
 }
@@ -171,6 +179,7 @@ impl LawError {
             LawError::Check(_) => "check",
             LawError::Missing(_) => "missing",
             LawError::Unsettled(_) => "unsettled",
+            LawError::OwnAttempt => "own-attempt",
         }
     }
 }

@@ -1226,6 +1226,47 @@ impl Verifier {
         .into())
     }
 
+    /// The standing of an act for everything binding (keeper records,
+    /// payments, discharge of debts, agreements, forks, closings): as
+    /// `status`, except "unknown" where the answer rests on this client's
+    /// own failed attempts to reach homes ("re-homed without audit"),
+    /// until it no longer does (Identity, the sentence after rule 17, F153).
+    /// Reading and following an identity use `status`.
+    #[wasm_bindgen(js_name = bindingStatus)]
+    pub fn binding_status(&self, act: &str) -> R<String> {
+        Ok(match self.inner.binding_status(&unhex(act)?) {
+            Status::Valid => "valid",
+            Status::Disputed => "disputed",
+            Status::Void => "void",
+            Status::Pending => "pending",
+            Status::Invalid => "invalid",
+            Status::Unknown => "unknown",
+            Status::Scoped => "scoped",
+        }
+        .into())
+    }
+
+    /// Record that this client found the act, in its sealed form, at a
+    /// home of its signer: a private link act counts only so (F152).
+    #[wasm_bindgen(js_name = publishedAtHome)]
+    pub fn published_at_home(&mut self, act: &str) -> R<()> {
+        self.inner.published_at_home(unhex(act)?);
+        Ok(())
+    }
+
+    /// A link between two MOR identities as the act `seenBy` sees it
+    /// (Identity rules 23 and 24, F152): "not linked", "linked", "ended"
+    /// (`seenBy` holds a termination in its history) or "unknown".
+    pub fn link(&self, claim: &str, seen_by: &str) -> R<String> {
+        Ok(match self.inner.link(&unhex(claim)?, &unhex(seen_by)?) {
+            chain::LinkSeen::NotLinked => "not linked",
+            chain::LinkSeen::Linked { .. } => "linked",
+            chain::LinkSeen::Ended { .. } => "ended",
+            chain::LinkSeen::Unknown => "unknown",
+        }
+        .into())
+    }
+
     /// The routes act (Identity type 3) or encryption-key act (Envelope type
     /// 4) that counts for an identity: its valid acts of that spec and type,
     /// followed from version 1 (Identity, "Routes"; Envelope, "Encryption
@@ -2422,6 +2463,16 @@ impl Verifier {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         view.obligation_binds(&unhex(id)?).map_err(lerr)
+    }
+
+    /// What is paid toward an obligation, as a binding answer: an error
+    /// coded `law/own-attempt` where it rests on this client's own failed
+    /// attempts to reach homes, shown as unknown (F153).
+    #[wasm_bindgen(js_name = lawPaid)]
+    pub fn law_paid(&self, specs: JsValue, id: &str) -> R<u64> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        view.paid(&unhex(id)?).map_err(lerr)
     }
 
     /// Who owes an obligation of a collective a fork closed (N13): the

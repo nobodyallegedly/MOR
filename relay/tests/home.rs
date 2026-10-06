@@ -9,7 +9,7 @@ mod common;
 
 use common::*;
 use mor_core::chain::{How, Status, Stop, Verifier};
-use mor_core::hash::Hash;
+use mor_core::hash::{sha256, Hash};
 use mor_core::identity::{types, HomeRule, Payload};
 use mor_core::merkle;
 use mor_relay::client::ClientError;
@@ -584,12 +584,39 @@ async fn finding_an_inbox_through_the_home() {
     assert!(rec.receipts.is_empty(), "only the parts asked for");
 }
 
+/// F152: a private link act counts only if its sealed form is published
+/// where its signer's acts are. A home stores an identity's private acts and
+/// serves them in the identity record's links part, opaque, by their
+/// signer: so a verifier can find them there, and the owner can see one it
+/// did not write. Another identity's private act is not served with it.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_home_serves_an_identitys_private_acts_with_its_links() {
+    let hs = homes(1).await;
+    let (g, mut ana) = genesis("ana", vec![hs[0].home()], None, None);
+    let (gm, mut thief) = genesis("thief", vec![hs[0].home()], None, None);
+    hs[0].client.put_act(&g.encode()).await.unwrap();
+    hs[0].client.put_act(&gm.encode()).await.unwrap();
+    let bank = sha256(b"a bank");
+    let ids = specs().identity;
+    // A confirmation made with Ana's key, sealed, addressed to a bank only.
+    let claim = everyday(&mut thief, ids, types::LINK_CLAIM, vec![], None, Some(vec![bank]), false);
+    let objects = Some(vec![mor_core::act::Object { chain: claim.id(), predecessor: claim.id() }]);
+    let confirmation = everyday(&mut ana, ids, types::LINK_CONFIRMATION, vec![], objects, Some(vec![bank]), false);
+    hs[0].client.put_act(&claim.encode()).await.unwrap();
+    hs[0].client.put_act(&confirmation.encode()).await.unwrap();
+    let mine = post(&mut ana, "a public post");
+    hs[0].client.put_act(&mine.encode()).await.unwrap();
+    let rec = hs[0].client.identity(&ana.id, Some(&[part::LINKS])).await.unwrap();
+    assert_eq!(rec.links, vec![confirmation.encode()]);
+    let rec = hs[0].client.identity(&thief.id, Some(&[part::LINKS])).await.unwrap();
+    assert_eq!(rec.links, vec![claim.encode()]);
+}
+
 /// A home runs under an operator identity made elsewhere, like anyone's,
 /// holding only its everyday signing key: no class of operator identities,
 /// and no safety key on the server.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_home_runs_under_an_identity_made_elsewhere() {
-    use mor_core::hash::sha256;
     use mor_relay::node::OperatorSetup;
     use mor_relay::operator::Keys;
     use mor_relay::wire::Limits;

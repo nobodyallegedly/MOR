@@ -4233,6 +4233,64 @@ fn what_is_not_a_fork() {
     assert!(lab.counts(&p));
 }
 
+/// F153 (Identity, the sentence after rule 17): a fork that counts a
+/// member's chain signature only through a rotation "re-homed without
+/// audit", which only this reader's own failed attempt to reach the old
+/// home lets count, is unknown: neither complete nor incomplete, and it
+/// closes nothing, until the rotation no longer rests on that attempt.
+/// Reading still follows the member's identity.
+#[test]
+fn a_fork_resting_on_a_readers_own_attempt_is_unknown() {
+    use common::home;
+    use mor_core::chain::{Basis, How};
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let ids = lab.ids();
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    let label = lab.c[0].id;
+    let (sa, _) = found_successor(&mut lab, "side A", &[ANA, BEN], &[], label);
+    let (sb, _) = found_successor(&mut lab, "side B", &[CY], &[], label);
+    // Cy moves to a home, then leaves it by a homeless rotation that only
+    // this reader's failed attempt to reach it lets count.
+    let old = lab.w.operator("cy's old home");
+    let mut new = lab.w.operator("cy's new home");
+    let (_, cy1) = lab.w.rotate(&lab.m[CY], Rot { homes: Some(vec![home(&old)]), ..Default::default() });
+    let (hr, cy2) = lab.w.rotate(&cy1, Rot { homeless: true, homes: Some(vec![home(&new)]), ..Default::default() });
+    lab.w.receipt(&mut new, &ids[CY], &hr, 2);
+    lab.w.v.failed_to_reach(old.id);
+    lab.m[CY] = cy2;
+    let side = |s: &Person, m: Vec<Hash>| law::Side { successor: s.id, members: m };
+    let x = law::Fork {
+        agreement: f,
+        collective: label,
+        chain_act: lab.c[0].binding,
+        tips: vec![tip(&lab.c[0])],
+        sides: vec![side(&sa, vec![ids[ANA], ids[BEN]]), side(&sb, vec![ids[CY]])],
+        shares: vec![],
+        debts: vec![],
+    };
+    let eo = ending_obj(&lab, f, x.collective);
+    let fa = law_act(&mut lab.w, &mut lab.m[ANA], law::types::FORK, x.to_map(), eo);
+    lab.end(ANA, &fa);
+    lab.end(BEN, &fa);
+    let cs = lab.end(CY, &fa);
+    lab.w.receipt(&mut new, &ids[CY], &cs, 3);
+    // Reading follows Cy to the new home, and counts the signature there.
+    let res = lab.w.v.resolve(&ids[CY]);
+    assert_eq!(res.links[2].how, How::Homeless { basis: Basis::OwnAttempt, final_: false });
+    assert_eq!(res.position_of(&cs), Some(3));
+    // The fork counts it only through that rotation: unknown.
+    assert_eq!(lab.view().fork(&fa), Err(LawError::OwnAttempt));
+    assert_eq!(lab.view().closed_by(&label), Err(LawError::OwnAttempt));
+    // The old home's operator closes it: the rotation no longer rests on
+    // the reader's attempt, and the fork is complete and closes the label.
+    lab.w.rotate(&old, Rot { closure: true, ..Default::default() });
+    let e = lab.view().fork(&fa).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    assert_eq!(lab.view().closed_by(&label).unwrap().map(|c| c.by), Some(fa));
+}
+
 /// Freeze suite v21, 3.9c (F121 shape D, F124 N7, N8, N12): a release to
 /// the public domain ends the claim, names the work's history and publishes
 /// its content key; it needs every direct owner's signature, unless the
@@ -5907,6 +5965,59 @@ fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
     let d2 = iou(&mut lab, v2, 30);
     assert_eq!(paid(&mut lab, &mut thief, d2, 30, PaidAt::Flow(forked), "d2, to the thief"), 0);
     assert_eq!(paid(&mut lab, &mut printer, d2, 30, PaidAt::Flow(v1), "d2, to v1"), 30);
+}
+
+/// F153 (Identity, the sentence after rule 17): a debt paid to a pointer
+/// its creditor published after a homeless rotation that only this
+/// reader's own failed attempt to reach the old home lets count is
+/// unknown: neither paid nor unpaid, and nothing binding relies on the
+/// payment. Reading follows the creditor; once the old home's operator
+/// closes it, the payment counts.
+#[test]
+fn a_debt_paid_through_a_readers_own_attempt_is_unknown() {
+    use common::home;
+    use mor_core::finance::{Amount, Obligation, PaidAt, PayeePointer, Payload, Rail};
+    let mut lab = Lab::new(&|_| {});
+    let fin = mips().finance;
+    let old = lab.w.operator("the printer's old home");
+    let mut new = lab.w.operator("the printer's new home");
+    let printer = lab.w.genesis("the printer", vec![home(&old)], None, None);
+    let pid = printer.id;
+    let (hr, mut p1) = lab.w.rotate(&printer, Rot { homeless: true, homes: Some(vec![home(&new)]), ..Default::default() });
+    lab.w.receipt(&mut new, &pid, &hr, 1);
+    lab.w.v.failed_to_reach(old.id);
+    let x = Payload::PayeePointer(PayeePointer {
+        payee: pid,
+        version: 1,
+        previous: None,
+        rails: vec![Rail { module: spec("a rail Module"), address: b"the printer's new node".to_vec() }],
+    });
+    let a = lab.w.everyday_act(&mut p1, fin, 0, x.to_map(), None, None);
+    let v1 = lab.w.add(&a);
+    // The label's IOU, citing the pointer it names (F133), and its payment.
+    let o = Payload::Obligation(Obligation {
+        debtor: lab.c[0].id,
+        creditor: pid,
+        amount: Amount { unit: spec("a unit"), value: 100 },
+        pointer: v1,
+        agreement: None,
+    });
+    let a = lab.w.everyday_act(&mut lab.c[0], fin, 1, o.to_map(), Some(vec![Object { chain: pid, predecessor: v1 }]), None);
+    let d = lab.w.add(&a);
+    lab.sign(BEN, &d);
+    let mut payer = lab.c[0].clone();
+    let c = payment(&mut lab, &mut payer, true, pid, d, spec("a unit"), 100, b"paid to the new node");
+    lab.rail_valid.push((c, PaidAt::Flow(v1)));
+    // Reading follows the printer to its new home: the pointer is valid.
+    assert_eq!(lab.w.v.status(&v1), Status::Valid);
+    // Discharging the debt rests on the attempt: unknown, never paid.
+    let v = lab.view();
+    assert_eq!(v.paid(&d), Err(LawError::OwnAttempt));
+    assert_eq!(v.paid_toward(&d), 0, "nothing binding relies on it");
+    // The old home closes: the payment counts.
+    lab.w.rotate(&old, Rot { closure: true, ..Default::default() });
+    assert_eq!(lab.view().paid(&d), Ok(100));
+    assert_eq!(lab.view().paid_toward(&d), 100);
 }
 
 /// Finance rule 10, double entry (audit, October 2026, gap 5): a payer's

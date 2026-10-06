@@ -189,13 +189,15 @@ struct PayeeView {
 }
 
 /// What a reader holds, as the payment cMIP asks for it: only acts that
-/// count on their signer's chain.
+/// count on their signer's chain, for binding use: an act whose standing
+/// rests on the reader's own failed attempts to reach homes is not given
+/// (F153), so the payment's answer is unknown.
 struct View<'a>(&'a Reader);
 
 impl Held for View<'_> {
     fn pointer(&self, id: &Hash) -> Option<PayeePointer> {
         let h = self.0.v.get(id)?;
-        if self.0.status(id) != Status::Valid || h.inside.spec != finance() {
+        if self.0.v.binding_status(id) != Status::Valid || h.inside.spec != finance() {
             return None;
         }
         let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;
@@ -208,7 +210,7 @@ impl Held for View<'_> {
 
     fn vault(&self, id: &Hash) -> Option<(Hash, Vec<VaultEntry>)> {
         let h = self.0.v.get(id)?;
-        if self.0.status(id) != Status::Valid {
+        if self.0.v.binding_status(id) != Status::Valid {
             return None;
         }
         let (who, decls) = match h.identity.as_ref()?.as_ref().ok()? {
@@ -222,7 +224,7 @@ impl Held for View<'_> {
 
     fn obligation(&self, id: &Hash) -> Option<mor_payment::HeldObligation> {
         let h = self.0.v.get(id)?;
-        if self.0.status(id) != Status::Valid || h.inside.spec != finance() {
+        if self.0.v.binding_status(id) != Status::Valid || h.inside.spec != finance() {
             return None;
         }
         let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;

@@ -223,7 +223,12 @@ pub trait RailModule {
 }
 
 /// What the verifier holds: valid acts, already checked as acts (signature,
-/// signer, standing on the payee's identity chain).
+/// signer, standing on the payee's identity chain). A payment binds, so
+/// "valid" is the standing for binding use (the core library's
+/// `Verifier::binding_status`): an act whose standing rests on the
+/// verifier's own failed attempts to reach homes is not given, and the
+/// answer that needs it is unknown (Identity, the sentence after rule 17,
+/// F153).
 pub trait Held {
     /// A payee-pointer act by id.
     fn pointer(&self, id: &Hash) -> Option<PayeePointer>;
