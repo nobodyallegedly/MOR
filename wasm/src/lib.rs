@@ -2467,8 +2467,10 @@ impl Verifier {
     /// Payer-side splitting (F124 P2): what a paying wallet reading Law pays
     /// each holder for `amount` on the stake in `object` (hex, or null for
     /// the collective itself), or why it cannot. Leftovers by largest
-    /// remainder, ties ordered by `receipt` (hex, or null: then a tie that
-    /// decides a unit leaves the split undetermined; Law rule 15a, F150).
+    /// remainder, ties ordered by `receipt` (hex: the receipt's hash, or,
+    /// for a split from a payer's claim with no receipt, the claim's; or
+    /// null: then a tie that decides a unit leaves the split undetermined;
+    /// Law rule 15a, F150, F162).
     #[wasm_bindgen(js_name = lawPayerSplit)]
     pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64, receipt: Option<String>) -> R<JsValue> {
         let s = specs_of(specs)?;

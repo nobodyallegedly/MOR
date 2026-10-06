@@ -3559,6 +3559,17 @@ fn every_payout_matches_its_stake() {
     assert_eq!(law::divide_stake(801, &own, Some(&r2)).unwrap(), vec![321, 240, 240]);
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r2, 321, 240, 240).to_map(), None, everyone.clone());
     assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
+    // F162 (11): over the exact share by a whole unit or more breaks the
+    // plan, though no other holder is short by one: of 803, Ana's exact
+    // share is 321.2; 323 is 1.8 over. The old tolerance, as many units as
+    // the stake has holders, let it through.
+    let r3 = receipt(&mut lab, &mut svc, 903);
+    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r3, 323, 240, 240).to_map(), None, everyone.clone());
+    let e = lab.view().split(&x).unwrap();
+    assert_eq!(e.sums, Some(true));
+    assert_eq!(e.mismatched.iter().map(|m| m.holder).collect::<Vec<_>>(), vec![ids[ANA]]);
+    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r3, 322, 241, 240).to_map(), None, everyone.clone());
+    assert!(lab.view().split(&x).unwrap().mismatched.is_empty(), "each within one unit");
     // Any deviation, either way, breaks the plan (N10): Cy paid less, Ana
     // more. Not delivered to Cy, whom it pays.
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r1, 430, 270, 200).to_map(), None, vec![ids[ANA], ids[BEN]]);
@@ -4153,12 +4164,12 @@ fn a_collective_forks() {
     assert!(e.complete, "{:?}", e.why);
     assert_eq!(e.voices, vec![ids[ANA], ids[BEN], ids[CY]]);
     assert_eq!(e.successors[1], Some(tb));
-    assert_eq!(e.shares, vec![333_334, 666_666]);
+    assert_eq!(e.shares, vec![333_333, 666_667], "the leftover to the largest remainder (F150, F162)");
     assert_eq!(e.kept, vec![(dee, 250_000)]);
     assert!(!e.by_count);
     assert!(e.unassigned.is_empty());
     let idx = v.terms(&k).unwrap().stake_on(&Who::Id(work)).unwrap().0 as u64;
-    assert_eq!(v.fork_transfer(&fa, &k, idx).unwrap(), Some(vec![333_334, 666_666]));
+    assert_eq!(v.fork_transfer(&fa, &k, idx).unwrap(), Some(vec![333_333, 666_667]));
     // d3, unpublished, is done all the same (sealed to every member, on
     // the chain): it binds, and it is handed out. Where an act is held is
     // never a condition (F128).

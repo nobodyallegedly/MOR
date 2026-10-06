@@ -4644,6 +4644,11 @@ impl<'a> LawView<'a> {
         // Each member's percentage of all the original's income: its stake
         // in itself (Q8, N5), else each member alike (N3).
         let own = t.own_stake().map(|(_, s)| s.clone());
+        // Members counted alike keep "leftovers to the first" (open: ordering
+        // their ties by the fork act's hash is circular, since the
+        // successors' founding terms name each leaving member's share before
+        // the fork act exists; left open by Nobody, allegedly, 6 October
+        // 2026).
         let alike = divide_first(MILLION, &vec![1; voices.len()]);
         let pct = |m: &Hash| -> u64 {
             match &own {
@@ -4656,7 +4661,8 @@ impl<'a> LawView<'a> {
             e.by_count = own.is_none();
             weights = f.sides.iter().map(|s| s.members.len() as u64).collect();
         }
-        e.shares = divide_first(MILLION, &weights);
+        let by_side: Vec<(Hash, u64)> = f.sides.iter().map(|s| s.successor).zip(weights).collect();
+        e.shares = divide_fork(id, MILLION, &by_side);
         for d in t.departed.iter().flatten() {
             e.kept.push((*d, pct(d)));
         }
@@ -5147,7 +5153,8 @@ impl<'a> LawView<'a> {
             Some(s) => s.shares.clone(),
             None => e.shares.clone(),
         };
-        Ok(Some(divide_first(held, &sides)))
+        let by_side: Vec<(Hash, u64)> = e.fork.sides.iter().map(|s| s.successor).zip(sides).collect();
+        Ok(Some(divide_fork(fork, held, &by_side)))
     }
 
     /// Who owes an obligation of a collective a fork closed: the successors
@@ -6390,10 +6397,12 @@ impl<'a> LawView<'a> {
     /// holder's own pointer for `amount` on the stake in `object`, by its
     /// shares, leftovers by largest remainder (rule 15a, F150), the order of
     /// holders deciding nothing. Holders with equal remainders are ordered
-    /// by the hash of the payment's receipt, `receipt`; where they compete
-    /// for a leftover unit and none is given, the split is undetermined
-    /// (`Err`): which hash orders them before a payer-side payment has a
-    /// receipt is open. A holder that is a collective splitting payer-side
+    /// by the hash of the payment's receipt, `receipt`, or, for a split made
+    /// from a payer's claim with no receipt, the claim's hash, which stands
+    /// for it (F162, 9); where they compete for a leftover unit and none is
+    /// given, the split is undetermined (`Err`): a wallet dividing before
+    /// any receipt exists shows that a tied unit is decided by the
+    /// receipt's hash, at most one unit per tie (F162, 8; rule 4a). A holder that is a collective splitting payer-side
     /// too is followed to the holders of its stake in itself: one flow,
     /// holders' identities as destinations. `Err` where the agreement names
     /// a split service, or no such stake.
@@ -6559,14 +6568,16 @@ impl<'a> LawView<'a> {
                 continue;
             };
             let holders: Vec<(Option<Hash>, u64)> = stake.holders.iter().map(|(w, n)| (w.resolve(collective.as_ref()), *n)).collect();
-            let n = holders.len() as u128;
             for (who, share) in &holders {
                 let paid: u128 = paid_on.iter().filter(|p| Some(p.receiver) == *who).map(|p| p.amount as u128).sum();
                 let exact = pot * (*share as u128); // in millionths of a unit
                 let m = MILLION as u128;
                 // Short of its exact share by a whole unit or more, or over
-                // it by more than the leftovers rounding can leave.
-                if paid * m + m <= exact || paid * m >= exact + n * m {
+                // it by a whole unit or more: rule 15a's default gives each
+                // holder its share rounded down, or one unit more (F150,
+                // F162, 11). A split cMIP's declared remainder rule would
+                // need a reader, which none has yet.
+                if paid * m + m <= exact || paid * m >= exact + m {
                     mismatched.push(Mismatch {
                         stake: idx,
                         holder: who.unwrap_or_default(),
@@ -6894,20 +6905,26 @@ impl<'a> LawView<'a> {
     }
 }
 
-/// `total` divided by `weights`, in whole parts, leftovers to the first:
-/// a fork's sides, which "Fork (type 19)" still divides "leftovers to the
-/// first side", and a fork's members counted alike. A payment divided on a
-/// stake follows rule 15a instead ([`divide_stake`], F150), its leftovers
-/// ordered by no list.
+/// `total` divided among a fork's sides (Law, "Fork (type 19)", Ownership;
+/// F150, F162): by largest remainder as rule 15a, each side named by its
+/// successor, ties ordered by tagged_hash("MOR/law/leftover", [ fork act,
+/// successor ]), the fork act standing for rule 15a's receipt (decided by
+/// Nobody, allegedly, 6 October 2026). The order the sides are listed in
+/// decides nothing.
+fn divide_fork(fork: &Hash, total: u64, by: &[(Hash, u64)]) -> Vec<u64> {
+    divide_stake(total, by, Some(fork)).expect("with a tie hash, every division is determined")
+}
+
+/// `total` divided by `weights`, in whole parts, leftovers to the first: a
+/// fork's members counted alike, for the share each leaving member keeps,
+/// which the successors' founding terms name before the fork exists (left
+/// open, see [`divide_fork`]'s caller).
 fn divide_first(total: u64, weights: &[u64]) -> Vec<u64> {
     let sum: u128 = weights.iter().map(|w| *w as u128).sum();
     if sum == 0 {
         return vec![0; weights.len()];
     }
-    let mut out: Vec<u64> = weights
-        .iter()
-        .map(|w| ((total as u128) * (*w as u128) / sum) as u64)
-        .collect();
+    let mut out: Vec<u64> = weights.iter().map(|w| ((total as u128) * (*w as u128) / sum) as u64).collect();
     let left = total - out.iter().sum::<u64>();
     if let Some(f) = out.first_mut() {
         *f += left;

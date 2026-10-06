@@ -161,7 +161,9 @@ fn tip_at(seq: &[Hash], k: usize) -> KeptTip {
     }
 }
 
-/// Divide in millionths, leftovers to the first (rule 15a).
+/// Divide in millionths, leftovers to the first: a fork's members counted
+/// alike, for the share each leaving member keeps (how their ties are
+/// ordered is left open, F162; the library keeps this rule).
 fn alike(n: usize) -> Vec<u64> {
     let each = 1_000_000 / n as u64;
     let mut v = vec![each; n];
@@ -2530,18 +2532,17 @@ impl DealWorld {
                     // held (rule 26), those of the latest version every party
                     // signed, whichever version the split names (audit,
                     // October 2026, gap 8); short of the exact share by a
-                    // whole unit or more, or over it by as many units as the
-                    // stake has holders or more, breaks the plan; so does a
+                    // whole unit or more, or over it by a whole unit or more
+                    // (F162, 11), breaks the plan; so does a
                     // payout to someone who holds no part of it.
                     let latest = self.latest();
                     let stakes = &self.versions.iter().find(|v| v.0 == latest).unwrap().2;
                     let pot: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0)).map(|p| p.amount as u128).sum();
-                    let nh = stakes.len() as u128;
                     let mut expect = BTreeSet::new();
                     for (h, share) in stakes {
                         let paid: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0) && p.receiver == *h).map(|p| p.amount as u128).sum();
                         let exact = pot * *share as u128;
-                        if paid * 1_000_000 + 1_000_000 <= exact || paid * 1_000_000 >= exact + nh * 1_000_000 {
+                        if paid * 1_000_000 + 1_000_000 <= exact || paid * 1_000_000 >= exact + 1_000_000 {
                             expect.insert(*h);
                         }
                     }
