@@ -135,6 +135,20 @@ export async function lookUp(identity: string, hints: string[], via: Via = {}, i
       try {
         const rec = await r.identity(identity);
         keep([...rec.chain, ...rec.receipts, ...rec.routes, ...rec.encryptionKeys, ...rec.evidence, ...rec.otherReceipts]);
+        // F152, F159: a private link act counts only if its sealed form is
+        // published at the homes its signer's chain names at its binding.
+        // A home serves the identity's private acts with its links,
+        // opaque: note each found here, with the home's operator (the
+        // identity itself for a self-hosted home), so that one this reader
+        // holds the key of can count where this home is one of those.
+        for (const a of rec.links) {
+          try {
+            const d = describeAct(a) as Described;
+            if (!d.public && d.signer === identity) v.foundAtHome(d.id, h.operator ?? identity);
+          } catch {
+            // malformed: proves nothing
+          }
+        }
       } catch {
         unreachable.push(h.hint);
         continue;

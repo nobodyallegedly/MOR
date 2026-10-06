@@ -210,6 +210,39 @@ impl Outside {
     }
 }
 
+/// Inside key 3, `objects`, as the act encodes it: `[* [chain, predecessor]]`.
+/// *Also signed by an anonymous payer's key over its claim (Finance, F147).*
+pub fn objects_value(objs: &[Object]) -> Value {
+    Value::Array(
+        objs.iter()
+            .map(|o| Value::Array(vec![hash_v(&o.chain), hash_v(&o.predecessor)]))
+            .collect(),
+    )
+}
+
+/// Inside key 7, `acks`, as the act encodes it.
+pub fn acks_value(acks: &[Hash]) -> Value {
+    hashes_v(acks)
+}
+
+/// Inside key 8, `refs`, as the act encodes it.
+pub fn refs_value(refs: &[Ref]) -> Value {
+    Value::Array(
+        refs.iter()
+            .map(|r| match r {
+                Ref::Act(h) => hash_v(h),
+                Ref::Web { address, hash } => {
+                    let mut v = vec![Value::Text(address.clone())];
+                    if let Some(h) = hash {
+                        v.push(hash_v(h));
+                    }
+                    Value::Array(v)
+                }
+            })
+            .collect(),
+    )
+}
+
 impl Inside {
     pub fn to_value(&self) -> Value {
         let mut m = Vec::new();
@@ -219,11 +252,7 @@ impl Inside {
             put(&mut m, 2, hashes_v(p));
         }
         if let Some(objs) = &self.objects {
-            let a = objs
-                .iter()
-                .map(|o| Value::Array(vec![hash_v(&o.chain), hash_v(&o.predecessor)]))
-                .collect();
-            put(&mut m, 3, Value::Array(a));
+            put(&mut m, 3, objects_value(objs));
         }
         put(&mut m, 4, Value::Map(self.payload.clone()));
         if let Some(p) = self.position {
@@ -233,23 +262,10 @@ impl Inside {
             put(&mut m, 6, hash_v(s));
         }
         if let Some(a) = &self.acks {
-            put(&mut m, 7, hashes_v(a));
+            put(&mut m, 7, acks_value(a));
         }
         if let Some(refs) = &self.refs {
-            let a = refs
-                .iter()
-                .map(|r| match r {
-                    Ref::Act(h) => hash_v(h),
-                    Ref::Web { address, hash } => {
-                        let mut v = vec![Value::Text(address.clone())];
-                        if let Some(h) = hash {
-                            v.push(hash_v(h));
-                        }
-                        Value::Array(v)
-                    }
-                })
-                .collect();
-            put(&mut m, 8, Value::Array(a));
+            put(&mut m, 8, refs_value(refs));
         }
         if let Some(h) = &self.hint {
             put(&mut m, 9, Value::Text(h.clone()));

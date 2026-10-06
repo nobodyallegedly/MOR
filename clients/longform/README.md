@@ -31,7 +31,7 @@ npm run cli -- render examples/sample.md --out sample.html
 ## What the tests show
 
 - Each construct renders as the cMIP says, including everything that must stay text: links with hidden addresses, HTML, `&amp;`, other link schemes, underscores, runs of four stars.
-- The bound holds on every rendering tested: the positions shown are strictly increasing and every position hidden holds a markup character. On 20,000 generated texts, each checked canonical by the core library first, the HTML shows exactly the characters the reading says it shows.
+- The bound holds on every rendering tested: the positions shown are strictly increasing and every position hidden holds markup in a position the cMIP's markup declaration gives it (F149). A minus sign, a decimal point and a Devanagari vowel sign are shown inside every construct; readings tampered to hide them, or to hide a markup character where it is not markup (a `-` before a number, an LF inside a paragraph), are refused. On 20,000 generated texts, each checked canonical by the core library first, the HTML shows exactly the characters the reading says it shows.
 - A test identity publishes the sample as a text act on a relay; a reader who knows only its id and the relay fetches it, the core library judges it valid through the signer's chain, and it renders. A text act naming a format this client lacks is shown plain. A text act whose text is not canonical does not open, and the reader says which rule it breaks.
 
 ## Readings
@@ -40,7 +40,7 @@ Where the texts are silent, this implementation takes these readings. *Confirmed
 
 1. **A document is a text act.** A long-form document is a text act (Text MIP, type 0) whose format field names this cMIP, not a publication with the text as media. *Task 4 is about text acts; a text act is readable by every client. The cost is the act size limit (the cMIP's stated costs).*
 2. **"Adds no text" is read strictly.** A list marker is shown as written. A bullet glyph or a number of the browser's own would be a character not in the bytes, so the stylesheet turns the browser's markers off.
-3. **Which characters are "letters or digits".** The Text MIP does not say; this format needs no answer, since it hides only nine fixed ASCII characters, none of them a letter or a digit. A format hiding non-ASCII signs would need one. *Suggested for the freeze (step 16): Unicode general categories L and N, under the pinned Unicode version, as normalization already is.*
+3. **What a format may hide.** *Superseded by F149 (6 October 2026):* not "anything but letters and digits" (F140's Unicode categories L and N, which let a format hide a minus sign, a decimal point or a vowel sign), but only its own declared markup, in the positions it declares it. The cMIP's markup declaration lists them; `checkBound()` checks every hidden character against it, from the text itself, and `renderHtml()` shows the text plain, flagged, if a reading would break it.
 4. **A line break stays a line break.** Markdown joins the lines of a paragraph; this format shows each LF as a break, as the plain text does.
 5. **Emphasis pairs by length only.** A simpler rule than Markdown's, so any two implementations agree on strange text (the cMIP, rule 11).
 6. **Links: `https:`, `http:` and `mailto:` only.** Any other scheme is text, so no link can run a script in a reader.

@@ -308,6 +308,29 @@ export function uncovered(t: TermsRead): string[] {
  * comes into force, who decides what. From the core's own reading of the
  * exact payload. `parent`: the agreement a clone replaces, if fetched.
  */
+/**
+ * The parties against whom a declaration of absence under a period can
+ * never count (Law rules 50 and 51, F158): its acknowledgement must come
+ * from a party or a keeper's operator other than the declared party and
+ * the declaration's signers (the named authority, or the number of other
+ * parties a threshold needs), and none is left. A client warns at signing.
+ */
+export function unacknowledged(t: Pick<TermsRead, 'abandonment' | 'parties' | 'keepers'>): string[] {
+  const a = t.abandonment;
+  if (!a || a.period == null) return [];
+  const keepers = t.keepers?.[0] ?? [];
+  return t.parties.filter((p) => {
+    const others = t.parties.filter((x) => x !== p);
+    const pool = new Set([...others, ...keepers.filter((k) => k !== p)]);
+    if (a.authority === 'named') {
+      if (a.identity) pool.delete(a.identity);
+      return pool.size === 0;
+    }
+    // A threshold: its signers are that many of the other parties.
+    return pool.size - Math.min(a.threshold ?? 0, others.length) <= 0;
+  });
+}
+
 export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | null): { sections: Section[]; blocking: string[]; plain: Plain[] } {
   const blocking: string[] = [];
   const plain: Plain[] = [];
@@ -480,6 +503,13 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     });
     absence.push({ text: 'Signing agrees to this in advance (Law rule 13). It is a protected clause: a later clone you do not sign cannot change it for you (Law rule 46a).' });
     if (a.period != null) absence.push({ text: `Absence means no act for ${a.period}, measured on the agreement's time reference.` });
+    const alone = unacknowledged(t);
+    if (alone.length) {
+      absence.push({
+        text: `A declaration of absence against ${list(alone.map(names))} can never count: under a period, it needs an acknowledgement by someone other than the absent party and those who sign the declaration, and this agreement has nobody else, no third party and no keeper. Add a keeper or a third party for the clause to work; signing as it is accepts that it cannot (Law rules 50 and 51, F158, a stated cost).`,
+        tone: 'bad',
+      });
+    }
     else absence.push({ text: 'No period is set and no time reference is named, so a missed deadline can never be proven; whoever judges absence judges it (Law rule 33).' });
   } else {
     absence.push({ text: 'No abandonment clause: nobody can declare a party absent.' });

@@ -582,6 +582,43 @@ export class TestIdentity {
   }
 
   /**
+   * Acts its homes hold signed by this identity that this file did not make
+   * (F152): each a warning for the owner. A home takes an act of an
+   * identity it serves only signed with the key its binding set, and serves
+   * the identity's private acts too, sealed, as opaque acts by their signer;
+   * so a private link that a thief confirmed with a stolen signing key
+   * counts only once it is published there, where this shows it. The owner
+   * cannot read it, only see that it exists: if they did not make it
+   * elsewhere, the signing key may be stolen, and a rotation ends its use.
+   * Homes that do not answer are skipped: silence proves nothing.
+   */
+  async unrecognised(): Promise<{ id: string; home: string; private: boolean }[]> {
+    const known = new Set([...this.f.sequence, ...this.chainActs().map((a) => actId(a))]);
+    const out: { id: string; home: string; private: boolean }[] = [];
+    const seen = new Set<string>();
+    for (const h of this.f.homes) {
+      try {
+        let after: number | undefined;
+        for (;;) {
+          const page = await this.relay(h.hint).feed({ signer: this.f.identity, after });
+          for (const it of page.items) {
+            if (it.kind !== 'act') continue;
+            const d = describeAct(it.item) as { id: string; signer?: string; public: boolean };
+            if (d.signer !== this.f.identity || known.has(d.id) || seen.has(d.id)) continue;
+            seen.add(d.id);
+            out.push({ id: d.id, home: h.hint, private: !d.public });
+          }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
+        }
+      } catch {
+        // this home did not answer: nothing learnt from it
+      }
+    }
+    return out;
+  }
+
+  /**
    * Read this identity's inbox: every sealed container addressed to it, opened
    * with its encryption keys (newest first), the sender looked up and its act
    * judged by the core library.

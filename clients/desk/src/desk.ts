@@ -459,6 +459,15 @@ export class Desk {
           problems.push(`${hint}: ${err(e)}`);
         }
       }
+      // F152: a private link counts only once published at its signer's
+      // homes, so a thief using a stolen signing key leaves something here:
+      // any act its homes hold, signed with its key, that this desk did not
+      // make. Content unread; its existence is the warning.
+      for (const u of await me.unrecognised()) {
+        problems.push(
+          `Its home ${u.home} holds ${u.private ? 'a private act' : 'an act'} signed with this identity's key that this desk did not make (${short(u.id)}). If you did not make it elsewhere, the signing key may be stolen: rotate the identity.`,
+        );
+      }
       this.store.saveReceived(identity, rec);
       return { added, problems };
     });

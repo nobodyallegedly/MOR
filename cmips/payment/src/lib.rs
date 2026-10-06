@@ -223,34 +223,55 @@ pub trait RailModule {
 }
 
 /// What the verifier holds: valid acts, already checked as acts (signature,
-/// signer, standing on the payee's identity chain).
+/// signer, standing on the payee's identity chain). A payment binds, so
+/// "valid" is the standing for binding use (the core library's
+/// `Verifier::binding_status`): an act whose standing rests on the
+/// verifier's own failed attempts to reach homes is not given, and the
+/// answer that needs it is unknown (Identity, the sentence after rule 17,
+/// F153).
 pub trait Held {
-    /// A payee-pointer act by id.
+    /// A payee-pointer act by id, valid now.
     fn pointer(&self, id: &Hash) -> Option<PayeePointer>;
     /// A genesis or rotation by id, that counts on its identity's chain and
     /// declared a vault: its identity and the entries.
     fn vault(&self, declared_by: &Hash) -> Option<(Hash, Vec<VaultEntry>)>;
     /// An obligation act by id, valid and signed by its debtor (Finance
-    /// F66), for rule 14 ([`pointer_in_force`]), with whether its agreement
-    /// act cites the pointer it names (F133; the core library's
-    /// [`fin::pointer_cited`] over the verifier's acts).
-    fn obligation(&self, id: &Hash) -> Option<HeldObligation>;
+    /// F66).
+    fn obligation(&self, id: &Hash) -> Option<Obligation>;
+    /// Finance rules 14 and 15 with F145 and F155: the payee's pointer acts
+    /// that the payee's own act holds through its citations, for what a
+    /// payment follows: an obligation owed to `payee` (the payee's
+    /// signature act on its agreement, or its offer; with neither, the
+    /// payee's acts acknowledging it), an agreement (the payee's signature
+    /// act on it) or an offer (the payee's own). Which acts those are is
+    /// Law's: a Law client gives the core library's answer
+    /// (`mor_core::law::LawView::pointer_holding`). `None` where `fulfils`
+    /// is none of these, or this verifier cannot read it (a Finance-only
+    /// client): the payment to the flow is then unknown, never valid.
+    fn holding(&self, fulfils: &Hash, payee: &Hash) -> Option<fin::Holding>;
     /// Every valid payee-pointer act held for this identity, as (act id,
     /// pointer): its chain and any fork of it (Finance rule 12).
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)>;
-    /// The vault this identity's chain declares in force: its entries, or
-    /// `None` where it declares none (Finance rule 14a).
-    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>>;
-}
-
-/// An obligation as [`Held`] gives it for rule 14.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HeldObligation {
-    pub obligation: Obligation,
-    /// F133: whether its agreement act (or, naming none, the obligation
-    /// act itself) holds the pointer it names in its history; `None` where
-    /// the verifier cannot tell.
-    pub pointer_cited: Option<bool>,
+    /// Finance rule 15: a payee-pointer act that a rotation of its signer
+    /// invalidated (voided, or voided and shown as disputed), and that
+    /// rotation (`mor_core::chain::Verifier::judged_by`).
+    fn voided_pointer(&self, id: &Hash) -> Option<(PayeePointer, Hash)>;
+    /// Finance rule 15: the payee's pointers as they stood before the
+    /// rotation `rotation`: bound before it, valid, or invalidated by it.
+    fn pointers_before(&self, payee: &Hash, rotation: &Hash) -> Vec<(Hash, PayeePointer)>;
+    /// Finance rule 15: the payer's claims for the payment carrying this
+    /// rail proof, each verified valid ([`verify`]), as the proviso reads
+    /// them against `rotation`: whether each one's history holds it (for
+    /// an anonymous payer's claim, only what its covered citations hold:
+    /// `mor_core::finance::history`), and the anchor order where both are
+    /// anchored (F139, F146, F147).
+    fn payers_claims(&self, proof: &[u8], rotation: &Hash) -> Vec<fin::PayersClaim>;
+    /// The vault the chain of the act's signer declared at the act's
+    /// binding: its entries, or `None` where it declared none (Finance
+    /// rules 12a and 14a, F160). For a tip, the act is the payee pointer it
+    /// follows, the payee's own act for it; for anything else, the vault
+    /// comes with [`Held::holding`].
+    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>>;
 }
 
 /// The rail Modules a verifier has adopted, by spec hash.
@@ -276,9 +297,11 @@ impl<'a> Modules<'a> {
 #[derive(Clone)]
 pub enum Record<'a> {
     Receipt(&'a Receipt),
-    /// A claim and its signer: the payer, unless the claim carries an
-    /// anonymous payer's key (field 8, F113).
-    Claim(&'a Claim, Hash),
+    /// A claim, its signer, and its act's own `objects`, `acks` and `refs`:
+    /// the payer is the signer, unless the claim carries an anonymous
+    /// payer's key (field 8, F113), which signs the claim with those
+    /// citations (F147).
+    Claim(&'a Claim, Hash, &'a fin::Citations),
 }
 
 /// Find the address the payee signed for this payment: its flow pointer's
@@ -293,9 +316,15 @@ fn address(
 ) -> Result<Vec<u8>, Answer> {
     match paid_to {
         PaidTo::Flow { pointer, rail: i } => {
-            let p = held.pointer(pointer).ok_or_else(|| {
-                Answer::Unknown("the payee pointer it was paid to is not held".into())
-            })?;
+            // A pointer a later rotation invalidated is still the address
+            // the payee's key signed: what the payment counts as is rule
+            // 15's, judged beside ([`pointer_in_force`]).
+            let p = held
+                .pointer(pointer)
+                .or_else(|| held.voided_pointer(pointer).map(|(p, _)| p))
+                .ok_or_else(|| {
+                    Answer::Unknown("the payee pointer it was paid to is not held".into())
+                })?;
             if &p.payee != payee {
                 return Err(Answer::Invalid("paid to another identity's pointer".into()));
             }
@@ -359,7 +388,7 @@ pub fn verify_under(
 ) -> Verification {
     let rail = match &record {
         Record::Receipt(r) => r.rail,
-        Record::Claim(c, _) => c.rail,
+        Record::Claim(c, ..) => c.rail,
     };
     if let (Some(cmip), Some(m)) = (under, modules.get(&rail)) {
         if &m.implements() != cmip {
@@ -381,7 +410,7 @@ pub fn verify_under(
 pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verification {
     let (rail, proof, payee, amount, fulfils, payer, purchase) = match &record {
         Record::Receipt(r) => (&r.rail, &r.proof, &r.payee, &r.amount, &r.fulfils, r.payer.clone(), r.purchase.clone()),
-        Record::Claim(c, signer) => (
+        Record::Claim(c, signer, _) => (
             &c.rail,
             &c.proof,
             &c.payee,
@@ -424,8 +453,8 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
     // a claim signed by anyone else as payer recomputes another commitment,
     // which the rail's rule refuses: a node that learnt the proof on the
     // route cannot claim the payment, nor its refund.
-    if let Record::Claim(c, signer) = &record {
-        if mor_core::finance::check_signer(&mor_core::finance::Payload::Claim((*c).clone()), signer).is_err() {
+    if let Record::Claim(c, signer, cited) = &record {
+        if fin::check_signer(&fin::Payload::Claim((*c).clone()), signer, cited).is_err() {
             return out(Answer::Invalid(
                 "the anonymous payer's key did not sign this claim (Finance rule 1, F113)".into(),
             ));
@@ -444,7 +473,7 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
 pub fn paid_at(record: &Record) -> Option<fin::PaidAt> {
     let proof = match record {
         Record::Receipt(r) => &r.proof,
-        Record::Claim(c, _) => &c.proof,
+        Record::Claim(c, ..) => &c.proof,
     };
     Some(match Proof::decode(proof)?.paid_to {
         PaidTo::Flow { pointer, .. } => fin::PaidAt::Flow(pointer),
@@ -466,16 +495,22 @@ pub fn beside(record: Record, held: &dyn Held) -> Answer {
 
 /// Finance rules 14a and 15, judged beside the verification answer for a
 /// payment received: a payment to the flow counts as paid to the flow only
-/// where the payee's vault in force lets it go there (an entry for its
-/// unit, and no more than that unit's smallest limit, F114); a payment
-/// that did not follow the published vault is not protected (rule 15). A
-/// payment to the vault, or to an identity that declares no vault, is
-/// valid here. *A thief who redirects the flow pointer cannot take a large
-/// payment through it, nor one in a unit the vault does not cover.*
+/// where the payee's vault lets it go there (an entry for its unit, and no
+/// more than that unit's smallest limit, F114); a payment that did not
+/// follow the published vault is not protected (rule 15). The vault that
+/// applies is the one the payee's own act for the payment showed (rules
+/// 12a and 14a, F160): for a tip, the vault at the binding of the payee
+/// pointer it follows; for an obligation, an agreement or an offer, the
+/// one [`Held::holding`] gives. *A payer is judged by what the payee
+/// showed, never by a limit the payee set afterwards.* A payment to the
+/// vault, or to an identity that showed no vault, is valid here; one whose
+/// payee's own act this verifier cannot read is unknown. *A thief who
+/// redirects the flow pointer cannot take a large payment through it, nor
+/// one in a unit the vault does not cover.*
 pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
-    let (proof, payee, amount) = match &record {
-        Record::Receipt(r) => (&r.proof, &r.payee, &r.amount),
-        Record::Claim(c, _) => (&c.proof, &c.payee, &c.amount),
+    let (proof, payee, amount, fulfils) = match &record {
+        Record::Receipt(r) => (&r.proof, &r.payee, &r.amount, &r.fulfils),
+        Record::Claim(c, ..) => (&c.proof, &c.payee, &c.amount, &c.fulfils),
     };
     let Some(p) = Proof::decode(proof) else {
         return Answer::Invalid("the proof is not in the payment cMIP's shape".into());
@@ -483,7 +518,22 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
     if matches!(p.paid_to, PaidTo::Vault { .. }) {
         return Answer::Valid;
     }
-    if fin::flow_followed_vault(held.vault_in_force(payee).as_deref(), amount) {
+    let tip = held.pointer(fulfils).or_else(|| held.voided_pointer(fulfils).map(|(p, _)| p));
+    let vault = match (held.obligation(fulfils), tip) {
+        // Not this hop's to judge, as for the pointer.
+        (Some(o), _) if &o.creditor != payee => return Answer::Valid,
+        (None, Some(_)) => held.vault_at_binding(fulfils),
+        _ => match held.holding(fulfils, payee) {
+            Some(h) => (!h.vault.is_empty()).then_some(h.vault),
+            None => {
+                return Answer::Unknown(
+                    "what it fulfils is no obligation, agreement or offer this verifier can read the payee's own acts on, so the vault they showed is unknown (Finance rules 12a and 14a, F160)"
+                        .into(),
+                )
+            }
+        },
+    };
+    if fin::flow_followed_vault(vault.as_deref(), amount) {
         Answer::Valid
     } else {
         Answer::Invalid(
@@ -493,96 +543,112 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
     }
 }
 
-/// Finance rules 12 and 14, judged beside the verification answer ("What
-/// verification does not decide"): whether the flow pointer a payment was
-/// paid to was in force for what it fulfils. A payment to the vault always
-/// is. A flow pointer counts only on the payee's unbroken, unforked chain
-/// (rule 12): one forked by a second act naming the same predecessor counts
-/// only up to the fork, so a thief's pointer of the same version as the
-/// owner's cannot collect what names the owner's. A payment to the flow is only where what it fulfils names that flow
-/// pointer's version or a later one: an obligation (Finance type 1) by its
-/// field 3, a version its agreement act cites (F133), a tip by the payee
-/// pointer it follows. *A thief who changes the
-/// flow pointer cannot collect, through the new flow, an obligation that
-/// names an earlier version: paid there, the payment is refused here; paid
-/// to the vault, it counts.*
+/// Finance rules 12, 14 and 15, judged beside the verification answer
+/// ("What verification does not decide"): whether the flow pointer a
+/// payment was paid to was in force for what it fulfils. A payment to the
+/// vault always is.
 ///
-/// Valid where rule 14 lets the payment count; invalid where it does not;
-/// unknown where the acts it needs are not held, or what the payment
-/// fulfils (an agreement or an offer) names no flow pointer this verifier
-/// can read. An obligation owed to someone other than this hop's payee is
-/// not this hop's to judge, and answers valid. The rail's own answer is
-/// [`verify`]'s.
+/// - **Rule 12.** A flow pointer counts only on the payee's unbroken,
+///   unforked chain: one forked by a second act naming the same
+///   predecessor counts only up to the fork, so a thief's pointer of the
+///   same version as the owner's cannot collect what the owner's would.
+/// - **Rule 14, F145, F155.** A payment to the flow counts only where the
+///   version that counts for what it fulfils is that version or a later
+///   one: for a tip, the payee pointer it follows; for an obligation, an
+///   agreement or an offer, the latest of the payee's chain that the
+///   payee's own act holds ([`Held::holding`]; the version an obligation
+///   names in field 3 is informative only). Where no act of the payee's
+///   holds one, as for an IOU the payee has not acknowledged, it counts
+///   only if paid to the vault. *A debt re-signed, or terms drafted, to
+///   name a thief's newer pointer gain nothing: the pointer is judged by
+///   the act of the one it pays.*
+/// - **Rule 15.** A payment to a pointer a later rotation invalidated is
+///   judged as the payee's chain stood before that rotation
+///   ([`Held::pointers_before`]), and counts as made only where the
+///   payer's claims for it meet the proviso ([`Held::payers_claims`],
+///   `mor_core::finance::good_faith`): none at all (F154), or one not
+///   holding that rotation in its history, or anchored before it where
+///   both are anchored (F139, F146, F147).
+///
+/// Valid where these rules let the payment count; invalid where they do
+/// not; unknown where the acts they need are not held, or what the payment
+/// fulfils is nothing this verifier can read (a Finance-only client reads
+/// no agreement). An obligation owed to someone other than this hop's
+/// payee is not this hop's to judge, and answers valid. The rail's own
+/// answer is [`verify`]'s; the vault's limits are [`followed_vault`]'s.
 pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
     let (proof, payee, fulfils) = match &record {
         Record::Receipt(r) => (&r.proof, &r.payee, &r.fulfils),
-        Record::Claim(c, _) => (&c.proof, &c.payee, &c.fulfils),
+        Record::Claim(c, ..) => (&c.proof, &c.payee, &c.fulfils),
     };
     let Some(p) = Proof::decode(proof) else {
         return Answer::Invalid("the proof is not in the payment cMIP's shape".into());
     };
-    let into = match p.paid_to {
-        PaidTo::Vault { .. } => PaidInto::Vault,
-        PaidTo::Flow { pointer, .. } => match held.pointer(&pointer) {
-            Some(q) if &q.payee == payee => {
-                if !fin::pointer_counts(&held.pointers_of(payee), &pointer) {
-                    return Answer::Invalid(
-                        "the flow pointer it was paid to is not on the payee's unbroken, unforked chain: a forked chain counts only up to the fork (Finance rule 12)"
-                            .into(),
-                    );
-                }
-                PaidInto::Flow(q.version)
-            }
-            Some(_) => return Answer::Invalid("paid to another identity's pointer".into()),
+    let PaidTo::Flow { pointer, .. } = p.paid_to else {
+        return Answer::Valid;
+    };
+    // The pointer paid to, the payee's chain it is judged on, and the
+    // rotation that invalidated it, if one did (rule 15).
+    let (q, chain, rotation) = match held.pointer(&pointer) {
+        Some(q) => (q, held.pointers_of(payee), None),
+        None => match held.voided_pointer(&pointer) {
+            Some((q, r)) => (q, held.pointers_before(payee, &r), Some(r)),
             None => return Answer::Unknown("the payee pointer it was paid to is not held".into()),
         },
     };
-    if into == PaidInto::Vault {
-        return Answer::Valid;
+    if &q.payee != payee {
+        return Answer::Invalid("paid to another identity's pointer".into());
     }
-    // The flow pointer what the payment fulfils names.
-    let named = match held.obligation(fulfils) {
-        Some(o) if &o.obligation.creditor != payee => return Answer::Valid,
-        // F133: a version its agreement act never saw does not count for it.
-        Some(HeldObligation { pointer_cited: Some(false), .. }) => {
-            return Answer::Invalid(
-                "the obligation names a flow pointer its agreement act (or, with none, the obligation itself) does not cite: it counts only if paid to the vault (Finance rule 14, F133)"
-                    .into(),
-            )
+    if !fin::pointer_counts(&chain, &pointer) {
+        return Answer::Invalid(
+            "the flow pointer it was paid to is not on the payee's unbroken, unforked chain: a forked chain counts only up to the fork (Finance rule 12)"
+                .into(),
+        );
+    }
+    let tip = held
+        .pointer(fulfils)
+        .or_else(|| held.voided_pointer(fulfils).map(|(p, _)| p));
+    let rule_14 = match (held.obligation(fulfils), tip) {
+        (Some(o), _) if &o.creditor != payee => return Answer::Valid,
+        // A tip: the payee pointer it follows, the payee's own act.
+        (None, Some(t)) => {
+            if &t.payee != payee {
+                return Answer::Invalid("it follows another identity's payee pointer".into());
+            }
+            if fin::counts_toward(t.version, PaidInto::Flow(q.version)) {
+                fin::Rule14::Counts
+            } else {
+                fin::Rule14::Vault(
+                    "it follows an earlier flow pointer than the one it was paid to: it counts only if paid to the vault (Finance rule 14)",
+                )
+            }
         }
-        Some(HeldObligation { pointer_cited: None, .. }) => {
-            return Answer::Unknown(
-                "whether the obligation's agreement act (or, with none, the obligation itself) cites the pointer it names is not known from the acts held (Finance rule 14, F133)"
-                    .into(),
-            )
-        }
-        Some(o) => o.obligation.pointer,
-        None => match held.pointer(fulfils) {
-            Some(_) => *fulfils,
+        // An obligation, an agreement or an offer: the payee's own act.
+        _ => match held.holding(fulfils, payee) {
+            Some(h) => fin::rule_14(&h, &chain, q.version),
             None => {
                 return Answer::Unknown(
-                    "what it fulfils names no flow pointer this verifier holds (Finance rule 14)".into(),
+                    "what it fulfils is no obligation, agreement or offer this verifier can read the payee's own acts on (Finance rules 14 and 15, F145)"
+                        .into(),
                 )
             }
         },
     };
-    let version = match held.pointer(&named) {
-        Some(q) if &q.payee == payee => q.version,
-        Some(_) => {
-            return Answer::Invalid(
-                "the obligation names another identity's payee pointer, not its creditor's".into(),
-            )
-        }
-        None => {
-            return Answer::Unknown("the flow pointer the obligation names is not held".into())
-        }
-    };
-    if fin::counts_toward(version, into) {
-        Answer::Valid
-    } else {
-        Answer::Invalid(
-            "it arose under an earlier flow pointer than the one it was paid to: it counts only if paid to the vault (Finance rule 14)"
+    match rule_14 {
+        fin::Rule14::Counts => {}
+        fin::Rule14::Vault(w) => return Answer::Invalid(w.into()),
+        fin::Rule14::Unknown(w) => return Answer::Unknown(w.into()),
+    }
+    let Some(r) = rotation else { return Answer::Valid };
+    match fin::good_faith(&held.payers_claims(proof, &r)) {
+        Some(true) => Answer::Valid,
+        Some(false) => Answer::Invalid(
+            "paid to a pointer a later rotation invalidated, and no claim of the payer's meets the proviso: each holds that rotation in its history, or is anchored after it (Finance rule 15, F139, F146, F147)"
                 .into(),
-        )
+        ),
+        None => Answer::Unknown(
+            "paid to a pointer a later rotation invalidated: whether the payer's claim holds that rotation is not known from the acts held (Finance rule 15)"
+                .into(),
+        ),
     }
 }

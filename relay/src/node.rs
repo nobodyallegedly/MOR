@@ -1779,6 +1779,14 @@ impl Node {
             let own = self.store.acts_by(identity, &ids, &link_types)?;
             let claims: Vec<Hash> = own.iter().map(|(h, _)| *h).collect();
             add(own, &mut rec);
+            // F152, F159: a private link act counts only if its sealed form
+            // is published at the homes its signer's chain names at its
+            // binding, and a home MUST store and serve it (Identity rule
+            // 13), so a home serves the identity's private acts here, as opaque acts by their signer
+            // (cMIP, "Querying an identity", 3). It cannot tell their type:
+            // every private act the identity signed that it holds is served,
+            // so that its owner sees any it did not write.
+            add(self.store.private_acts_by(identity)?, &mut rec);
             add(
                 self.store.acts_about(identity, &ids, &link_types)?,
                 &mut rec,

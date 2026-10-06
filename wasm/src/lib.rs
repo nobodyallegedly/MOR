@@ -394,6 +394,28 @@ pub fn act_id(bytes: &[u8]) -> R<String> {
     Ok(hx(&Act::decode(bytes).map_err(err)?.id()))
 }
 
+#[derive(Deserialize)]
+struct DivideIn {
+    total: u64,
+    holders: Vec<(String, u64)>,
+    receipt: Option<String>,
+}
+
+/// Law rule 15a (F150): `{ total, holders: [[hex, share]], receipt }`
+/// divided among the holders by their shares, each holder its exact share
+/// rounded down, leftover units one each to the largest fractional
+/// remainders, ties ordered by `tagged_hash("MOR/law/leftover", [ receipt,
+/// holder ])`, smallest first. The parts, in the holders' order; an error
+/// where a tie decides a unit and no receipt is given.
+#[wasm_bindgen(js_name = lawDivideStake)]
+pub fn law_divide_stake(input: JsValue) -> R<Vec<f64>> {
+    let i: DivideIn = from_js(input)?;
+    let holders = i.holders.iter().map(|(h, n)| Ok((unhex(h)?, *n))).collect::<R<Vec<_>>>()?;
+    let receipt = i.receipt.map(|r| unhex(&r)).transpose()?;
+    let parts = law::divide_stake(i.total, &holders, receipt.as_ref()).map_err(|w| JsError::new(&w))?;
+    Ok(parts.into_iter().map(|n| n as f64).collect())
+}
+
 /// The running summary of a sequence of act ids (Envelope, "Sequences").
 #[wasm_bindgen(js_name = runningSummary)]
 pub fn running_summary(ids: Vec<String>) -> R<String> {
@@ -1226,6 +1248,53 @@ impl Verifier {
         .into())
     }
 
+    /// The standing of an act for everything binding (keeper records,
+    /// payments, discharge of debts, agreements, forks, closings): as
+    /// `status`, except "unknown" where the answer rests on this client's
+    /// own failed attempts to reach homes ("re-homed without audit") or on
+    /// what it found at homes (`foundAtHome`), until it no longer does
+    /// (Identity, the sentence after rule 17, F153, F159).
+    /// Reading and following an identity use `status`.
+    #[wasm_bindgen(js_name = bindingStatus)]
+    pub fn binding_status(&self, act: &str) -> R<String> {
+        Ok(match self.inner.binding_status(&unhex(act)?) {
+            Status::Valid => "valid",
+            Status::Disputed => "disputed",
+            Status::Void => "void",
+            Status::Pending => "pending",
+            Status::Invalid => "invalid",
+            Status::Unknown => "unknown",
+            Status::Scoped => "scoped",
+        }
+        .into())
+    }
+
+    /// Record that this client found the act, in its sealed form, at the
+    /// home operated by `home` (the operator's identity hash; for a
+    /// self-hosted home, the identity itself). A private link act counts
+    /// only if found at a home its signer's chain names at its binding;
+    /// otherwise it is unknown, never invalid. What was found is this
+    /// client's own input: `bindingStatus` shows an answer resting on it
+    /// as unknown (Identity, "The envelope", F152, F159).
+    #[wasm_bindgen(js_name = foundAtHome)]
+    pub fn found_at_home(&mut self, act: &str, home: &str) -> R<()> {
+        self.inner.found_at_home(unhex(act)?, unhex(home)?);
+        Ok(())
+    }
+
+    /// A link between two MOR identities as the act `seenBy` sees it
+    /// (Identity rules 23 and 24, F152): "not linked", "linked", "ended"
+    /// (`seenBy` holds a termination in its history) or "unknown".
+    pub fn link(&self, claim: &str, seen_by: &str) -> R<String> {
+        Ok(match self.inner.link(&unhex(claim)?, &unhex(seen_by)?) {
+            chain::LinkSeen::NotLinked => "not linked",
+            chain::LinkSeen::Linked { .. } => "linked",
+            chain::LinkSeen::Ended { .. } => "ended",
+            chain::LinkSeen::Unknown => "unknown",
+        }
+        .into())
+    }
+
     /// The routes act (Identity type 3) or encryption-key act (Envelope type
     /// 4) that counts for an identity: its valid acts of that spec and type,
     /// followed from version 1 (Identity, "Routes"; Envelope, "Encryption
@@ -1339,14 +1408,14 @@ struct SpecsIn {
     /// them (F131, IT3): wrong receipts, counting for nothing.
     #[serde(default)]
     rail_invalid: Vec<String>,
-    /// Absence by anchoring (Law rule 51, F136): for each abandonment
-    /// declaration whose clause names a period, whether the anchoring cMIP
-    /// places it on the agreement's time reference with no act of the
-    /// party within the period before it (true), or finds one (false), as
-    /// the client read the anchors. A declaration not listed does not
-    /// count.
+    /// Anchoring (Law rules 50 and 51; F136, F148): for each act the
+    /// anchoring cMIP the agreement names places on its time reference, the
+    /// point it places it at, as the client read the anchors (the formats
+    /// being open), in the unit of the abandonment clause's period. Whoever
+    /// anchored it. An act not listed is not anchored. Under a clause
+    /// naming a period, a declaration counts only on these anchors.
     #[serde(default)]
-    absence_anchored: std::collections::BTreeMap<String, bool>,
+    anchors: std::collections::BTreeMap<String, u64>,
 }
 
 impl SpecsIn {
@@ -1381,8 +1450,8 @@ impl SpecsIn {
         for r in &self.rail_invalid {
             view.rail_invalid.insert(unhex(r)?);
         }
-        for (d, a) in &self.absence_anchored {
-            view.absence_anchored.insert(unhex(d)?, *a);
+        for (d, a) in &self.anchors {
+            view.anchors.insert(unhex(d)?, *a);
         }
         Ok(view)
     }
@@ -2205,6 +2274,10 @@ impl Verifier {
                 o.kind = "talk".into();
                 o.reason = Some("a negotiation message: talk, binding nothing, on neither of the collective's chains (F128, W6)".into());
             }
+            law::Consent::Identity => {
+                o.kind = "identity".into();
+                o.reason = Some("one of Identity's own everyday acts of the collective (a witness act, routes, an encryption key): on neither of its chains, it counts for nothing in Law and places nothing; Identity governs it (rule 35b, F156)".into());
+            }
             law::Consent::Areas { agreement, areas, .. } => {
                 o.kind = "areas".into();
                 o.agreement = Some(hx(&agreement));
@@ -2399,16 +2472,21 @@ impl Verifier {
 
     /// Payer-side splitting (F124 P2): what a paying wallet reading Law pays
     /// each holder for `amount` on the stake in `object` (hex, or null for
-    /// the collective itself), or why it cannot.
+    /// the collective itself), or why it cannot. Leftovers by largest
+    /// remainder, ties ordered by `receipt` (hex: the receipt's hash, or,
+    /// for a split from a payer's claim with no receipt, the claim's; or
+    /// null: then a tie that decides a unit leaves the split undetermined;
+    /// Law rule 15a, F150, F162).
     #[wasm_bindgen(js_name = lawPayerSplit)]
-    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64) -> R<JsValue> {
+    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64, receipt: Option<String>) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let o = match object {
             Some(x) => law::Who::Id(unhex(&x)?),
             None => law::Who::This,
         };
-        let r = view.payer_split(&unhex(agreement)?, &o, amount).map_err(lerr)?;
+        let receipt = receipt.map(|r| unhex(&r)).transpose()?;
+        let r = view.payer_split(&unhex(agreement)?, &o, amount, receipt.as_ref()).map_err(lerr)?;
         to_js(&match r {
             Ok(v) => PayerSplitOut { pays: v.iter().map(|(h, n)| (hx(h), *n)).collect(), why: None },
             Err(w) => PayerSplitOut { pays: vec![], why: Some(w) },
@@ -2422,6 +2500,16 @@ impl Verifier {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         view.obligation_binds(&unhex(id)?).map_err(lerr)
+    }
+
+    /// What is paid toward an obligation, as a binding answer: an error
+    /// coded `law/own-attempt` where it rests on this client's own failed
+    /// attempts to reach homes, shown as unknown (F153).
+    #[wasm_bindgen(js_name = lawPaid)]
+    pub fn law_paid(&self, specs: JsValue, id: &str) -> R<u64> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        view.paid(&unhex(id)?).map_err(lerr)
     }
 
     /// Who owes an obligation of a collective a fork closed (N13): the

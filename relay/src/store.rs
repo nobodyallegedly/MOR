@@ -337,6 +337,15 @@ impl Store {
         )
     }
 
+    /// Private acts `signer` signed, held here, in arrival order: acts whose
+    /// inside this relay cannot open, so whose spec and type it cannot tell.
+    pub fn private_acts_by(&self, signer: &Hash) -> R<Vec<(Hash, Vec<u8>)>> {
+        self.acts(
+            "SELECT id, bytes FROM items WHERE kind = 0 AND signer = ?1 AND spec IS NULL ORDER BY arrival",
+            params![signer.as_slice()],
+        )
+    }
+
     /// Public acts of the given spec and types that concern `target`, in arrival order.
     pub fn acts_about(&self, target: &Hash, spec: &Hash, types: &[u64]) -> R<Vec<(Hash, Vec<u8>)>> {
         let list = types

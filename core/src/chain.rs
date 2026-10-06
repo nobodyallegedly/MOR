@@ -2,12 +2,18 @@
 //! "Validity rules"): which act counts at each position of an identity
 //! chain, and what standing an everyday act has.
 //!
-//! A [`Verifier`] holds the acts a verifier holds, plus the three things a
-//! verifier knows that are not acts: inclusion proofs a home served, the
-//! homes the verifier itself tried and failed to reach, and the acts a
-//! keeper recorded before recording a rotation (Law). Every answer is a pure
-//! function of what it holds: two verifiers holding the same acts and facts
-//! give the same answers.
+//! A [`Verifier`] holds the acts a verifier holds (a private one opened with
+//! its content key), plus the things a verifier knows that are not acts:
+//! inclusion proofs a home served, the homes the verifier itself tried and
+//! failed to reach, the acts a keeper recorded before recording a rotation
+//! (Law), and the private link acts it found at their signer's homes
+//! (F152). Every answer is a pure function of what it holds: two verifiers
+//! holding the same acts and facts give the same answers.
+//!
+//! Its own failed attempts are the one input another verifier cannot hold.
+//! Reading and following an identity may rest on them ([`Verifier::status`],
+//! [`Verifier::resolve`]); nothing binding may ([`Verifier::binding_status`]
+//! shows such an answer as unknown, F153).
 //!
 //! In plain words, for each position of an identity chain:
 //!
@@ -159,6 +165,29 @@ impl Resolution {
     }
 }
 
+/// A link between two MOR identities, as one act sees it (Identity rules
+/// 23 and 24; F152).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LinkSeen {
+    /// No link: the claim is not a valid link claim naming a MOR identity,
+    /// or no confirmation by the identity it names is held that is valid or
+    /// of unknown status (rule 23).
+    NotLinked,
+    /// Both sides signed, and the act holds no valid termination of the
+    /// link in its history.
+    Linked { confirmation: Hash },
+    /// Both sides signed, and the act holds a valid termination in its
+    /// history: for it, the link has ended (rule 24). It still existed.
+    Ended { confirmation: Hash, termination: Hash },
+    /// Cannot be told. Both sides signed and a valid termination is held,
+    /// but whether the act holds it cannot be told: its history reaches
+    /// acts this verifier does not hold. Or the claim, the confirmation,
+    /// or a termination the act holds has an unknown status, such as a
+    /// private link nobody fetched from its signer's homes (F159: unknown,
+    /// never invalid).
+    Unknown,
+}
+
 /// The standing of an act.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
@@ -185,6 +214,12 @@ pub enum Status {
 
 // ---------------------------------------------------------------- the verifier
 
+/// Whether an Identity type is a link's claim, confirmation or termination
+/// (types 6 to 8), the one kind of Identity act that may be private (F134).
+fn is_link_type(t: u64) -> bool {
+    matches!(t, types::LINK_CLAIM | types::LINK_CONFIRMATION | types::LINK_TERMINATION)
+}
+
 /// The position of the first counting rotation of an operator that declares
 /// closure, if any.
 fn closure_at(v: &Verifier, res: &Resolution) -> Option<usize> {
@@ -210,7 +245,15 @@ pub struct Verifier {
     proofs: BTreeMap<(Hash, u64), Vec<Hash>>,
     unreachable: BTreeSet<Hash>,
     recorded: BTreeSet<Hash>,
+    /// What this verifier found at homes (F152, F159): each private link
+    /// act (Identity types 6 to 8), in its sealed form, with the operator
+    /// of the home it was found at (the signer itself for a self-hosted
+    /// home).
+    found: BTreeSet<(Hash, Hash)>,
     cache: RefCell<BTreeMap<Hash, Rc<Resolution>>>,
+    /// The same verifier without its own failed attempts to reach homes,
+    /// built when first needed (F153).
+    without: RefCell<Option<Rc<Verifier>>>,
 }
 
 /// The resolution in progress: which identities are being resolved, to
@@ -284,7 +327,9 @@ impl Verifier {
             proofs: BTreeMap::new(),
             unreachable: BTreeSet::new(),
             recorded: BTreeSet::new(),
+            found: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
+            without: RefCell::new(None),
         }
     }
 
@@ -311,6 +356,7 @@ impl Verifier {
 
     fn changed(&mut self) {
         self.cache.get_mut().clear();
+        *self.without.get_mut() = None;
     }
 
     /// Hold a public act. It is opened with the key on its outside and
@@ -325,8 +371,14 @@ impl Verifier {
         let id = act.id();
         let verdict = sig::verify(&act.signature, &id);
         let identity = (inside.spec == self.identity_spec).then(|| {
-            if !act.outside.is_public() {
-                return Err(IdError::Check("Identity acts are public"));
+            // F134, F152: every Identity act is public except a link's
+            // claim, confirmation and termination. Only a key holder can
+            // tell a private act's type, so it is here, having opened it,
+            // that a verifier refuses any other.
+            if !act.outside.is_public() && !is_link_type(inside.type_) {
+                return Err(IdError::Check(
+                    "a private Identity act must be a link's claim, confirmation or termination (types 6 to 8; F134, F152)",
+                ));
             }
             let p = Payload::decode(inside.type_, &inside.payload)?;
             match &p {
@@ -403,6 +455,96 @@ impl Verifier {
         self.changed();
     }
 
+    /// This verifier found the act `act` in its sealed form (its outside
+    /// and locked bytes, no key) at the home operated by `home`: the
+    /// operator's identity hash, or, for a self-hosted home, the identity
+    /// that hosts itself. A home serves an identity's private acts as
+    /// opaque acts by their signer (relay transport cMIP, identity record
+    /// part 6), and MUST store and serve its private links (Identity rule
+    /// 13, F159).
+    ///
+    /// A private link act counts only if its sealed form is published at
+    /// the homes its signer's chain names at the act's binding, its place
+    /// in that chain; a later move of homes does not void it (Identity,
+    /// "The envelope", F152, F159). Found only elsewhere (a home the chain
+    /// names later, a stranger's relay) or nowhere, it is unknown, never
+    /// invalid. *Like [`Self::failed_to_reach`], a fact the verifier
+    /// states about its own fetching: another verifier may not have found
+    /// it, so nothing binding rests on it alone ([`Self::binding_status`]).*
+    pub fn found_at_home(&mut self, act: Hash, home: Hash) {
+        self.found.insert((act, home));
+        self.changed();
+    }
+
+    /// Whether this verifier has inputs of its own, that another holding
+    /// the same acts may not have: a failed attempt to reach a home (F153)
+    /// or an act found at a home (F159). Without one, no answer can rest
+    /// on them.
+    pub fn has_own_attempts(&self) -> bool {
+        !self.unreachable.is_empty() || !self.found.is_empty()
+    }
+
+    /// The same acts and facts, without this verifier's own inputs: its
+    /// failed attempts to reach homes (F153) and what it found at homes
+    /// (F159). What any verifier holding the same acts would answer.
+    pub fn without_own_attempts(&self) -> Rc<Verifier> {
+        if let Some(w) = self.without.borrow().as_ref() {
+            return w.clone();
+        }
+        let w = Rc::new(Verifier {
+            identity_spec: self.identity_spec,
+            ack_specs: self.ack_specs,
+            acts: self.acts.clone(),
+            by_type: self.by_type.clone(),
+            by_signer: self.by_signer.clone(),
+            acked_by: self.acked_by.clone(),
+            proofs: self.proofs.clone(),
+            unreachable: BTreeSet::new(),
+            recorded: self.recorded.clone(),
+            found: BTreeSet::new(),
+            cache: RefCell::new(BTreeMap::new()),
+            without: RefCell::new(None),
+        });
+        *self.without.borrow_mut() = Some(w.clone());
+        w
+    }
+
+    /// Whether the standing of an act rests on this verifier's own inputs
+    /// (Identity, the sentence after rule 17; rule 32a; F137, F153, F159):
+    /// its failed attempts to reach homes, and what it found at homes. It
+    /// does when the standing differs from the one the same acts and facts
+    /// give without them ([`Self::without_own_attempts`]). *An attempt or a
+    /// fetch is an input another reader may not hold, so an answer that
+    /// changes with it is this reader's alone.* An act bound to a key set
+    /// by a rotation "re-homed without audit", or judged by one, rests on
+    /// it; so does a private link that counts because this verifier found
+    /// it at its signer's homes (F159); an act that stands the same either
+    /// way does not, whatever the chain shows.
+    pub fn rests_on_own_attempt(&self, act: &Hash) -> bool {
+        self.has_own_attempts() && self.without_own_attempts().status(act) != self.status(act)
+    }
+
+    /// The standing of an act for everything binding (Identity, the
+    /// sentence after rule 17, F153): keeper records, payments, discharge
+    /// of debts, agreements, forks and closings. As [`Self::status`],
+    /// except that an answer resting on this verifier's own failed attempts
+    /// to reach homes, or on what it found at homes (F159), is unknown,
+    /// never valid or invalid, until it no longer rests on them (a closure
+    /// by the old home's operator, the auditors' absence statements, an
+    /// escape endorsement, or an objection arriving). *For a private link
+    /// found at its signer's homes, the texts name nothing yet that makes
+    /// it stop resting on the fetch: as built, it stays unknown here.*
+    /// Reading and following an identity use [`Self::status`]
+    /// and [`Self::resolve`], which may rest on them: the escape from a
+    /// censor.
+    pub fn binding_status(&self, act: &Hash) -> Status {
+        if self.rests_on_own_attempt(act) {
+            Status::Unknown
+        } else {
+            self.status(act)
+        }
+    }
+
     /// An act this verifier holds.
     pub fn get(&self, id: &Hash) -> Option<&Held> {
         self.acts.get(id)
@@ -443,6 +585,122 @@ impl Verifier {
         self.line(signer, t)
     }
 
+    /// Whether the act `from` holds `target` in its history: `target` is
+    /// `from` itself, or reachable through its citations, `prev`,
+    /// `objects`, `acks` and `refs`, and theirs (F155: never a hash in a
+    /// payload). `None` where it cannot be told: `from` is not held, or the
+    /// walk meets an act not held without finding `target`.
+    pub fn holds(&self, from: &Hash, target: &Hash) -> Option<bool> {
+        let cites = |i: &Inside| -> Vec<Hash> {
+            let mut out: Vec<Hash> = i.prev.iter().flatten().copied().collect();
+            out.extend(i.objects.iter().flatten().map(|o| o.predecessor));
+            out.extend(i.acks.iter().flatten().copied());
+            out.extend(i.refs.iter().flatten().filter_map(|r| match r {
+                crate::act::Ref::Act(h) => Some(*h),
+                crate::act::Ref::Web { .. } => None,
+            }));
+            out
+        };
+        if from == target {
+            return Some(true);
+        }
+        let mut todo = cites(&self.acts.get(from)?.inside);
+        let mut seen = BTreeSet::new();
+        let mut missing = false;
+        while let Some(x) = todo.pop() {
+            if &x == target {
+                return Some(true);
+            }
+            if !seen.insert(x) {
+                continue;
+            }
+            match self.acts.get(&x) {
+                Some(h) => todo.extend(cites(&h.inside)),
+                None => missing = true,
+            }
+        }
+        (!missing).then_some(false)
+    }
+
+    /// A link between two MOR identities as the act `seen_by` sees it
+    /// (Identity rules 23 and 24, F152). `claim` is a link claim (type 6)
+    /// naming a MOR identity (protocol "mor"); it counts once that identity
+    /// confirms it (type 7, naming the claim in `objects`); either side may
+    /// end it (type 8, naming the claim in `objects`), and the ending
+    /// applies to every act that holds the termination in its history.
+    /// *There is no clock to say what comes after an ending; what an act
+    /// cites says whether its signer had seen it.* Each act counts only as
+    /// [`Self::status`] judges it: valid (or valid and disputed), a private
+    /// one only if found at the homes its signer's chain names at its
+    /// binding (F152, F159). An act whose status is unknown, such as a
+    /// private link nobody fetched from those homes, is never taken as
+    /// absent: a claim or confirmation that is unknown, where no valid one
+    /// decides, makes the link unknown, and so does an unknown termination
+    /// the act holds or may hold (F159: unknown, never invalid). A link to
+    /// an account on another protocol needs that protocol's cMIP:
+    /// `NotLinked` here.
+    pub fn link(&self, claim: &Hash, seen_by: &Hash) -> LinkSeen {
+        let stands = |id: &Hash| matches!(self.status(id), Status::Valid | Status::Disputed);
+        let unknown_ = |id: &Hash| self.status(id) == Status::Unknown;
+        let Some(c) = self.acts.get(claim) else { return LinkSeen::NotLinked };
+        if c.inside.spec != self.identity_spec || c.inside.type_ != types::LINK_CLAIM {
+            return LinkSeen::NotLinked;
+        }
+        if unknown_(claim) {
+            return LinkSeen::Unknown;
+        }
+        if !stands(claim) {
+            return LinkSeen::NotLinked;
+        }
+        let Some(by) = c.signer().copied() else { return LinkSeen::NotLinked };
+        let other = c.inside.payload.iter().find(|(k, _)| *k == crate::cbor::Value::Uint(0)).and_then(|(_, v)| match v {
+            crate::cbor::Value::Array(a) if a.len() == 2 && a[0] == crate::cbor::Value::Text("mor".into()) => match &a[1] {
+                crate::cbor::Value::Bytes(b) => Hash::try_from(b.as_slice()).ok(),
+                _ => None,
+            },
+            _ => None,
+        });
+        let Some(other) = other else { return LinkSeen::NotLinked };
+        // The acts of type `t` naming the claim, signed by one of `signers`,
+        // that stand or whose status is unknown.
+        let naming = |t: u64, signers: &[Hash]| {
+            self.by_type
+                .get(&t)
+                .into_iter()
+                .flatten()
+                .filter(|id| {
+                    let h = &self.acts[*id];
+                    h.inside.objects.iter().flatten().any(|o| &o.predecessor == claim)
+                        && h.signer().is_some_and(|s| signers.contains(s))
+                        && (stands(id) || unknown_(id))
+                })
+                .copied()
+                .collect::<Vec<Hash>>()
+        };
+        let confirmations = naming(types::LINK_CONFIRMATION, &[other]);
+        let Some(confirmation) = confirmations.iter().copied().find(|id| stands(id)) else {
+            return if confirmations.is_empty() {
+                LinkSeen::NotLinked
+            } else {
+                LinkSeen::Unknown
+            };
+        };
+        let mut unknown = false;
+        for t in naming(types::LINK_TERMINATION, &[by, other]) {
+            match self.holds(seen_by, &t) {
+                Some(true) if stands(&t) => return LinkSeen::Ended { confirmation, termination: t },
+                Some(false) => {}
+                // Held but unknown, or whether held cannot be told.
+                Some(true) | None => unknown = true,
+            }
+        }
+        if unknown {
+            LinkSeen::Unknown
+        } else {
+            LinkSeen::Linked { confirmation }
+        }
+    }
+
     /// Resolve an identity chain: which act counts at each position.
     pub fn resolve(&self, identity: &Hash) -> Rc<Resolution> {
         self.resolve_cx(&mut Cx::default(), identity)
@@ -454,6 +712,21 @@ impl Verifier {
             None => Status::Invalid,
             Some(h) => self.status_cx(&mut Cx::default(), h),
         }
+    }
+
+    /// The counting rotation of its signer that judges an everyday act
+    /// (validity rules 15 to 17): the first rotation after the chain act
+    /// that bound the act's key, if one counts. `None` for an act not
+    /// held, an identity-chain act, or one no rotation judges yet. *Finance
+    /// rule 15 names it: the rotation that invalidated a payee pointer.*
+    pub fn judged_by(&self, act: &Hash) -> Option<Hash> {
+        let x = self.acts.get(act)?;
+        if matches!(&x.identity, Some(Ok(Payload::Genesis(_) | Payload::Rotation(_) | Payload::ChainSignature(_)))) {
+            return None;
+        }
+        let res = self.resolve(x.signer()?);
+        let k = res.position_of(x.act.outside.binding.as_ref()?)?;
+        self.judging(&res, k).map(|j| res.links[j].act)
     }
 
     // ------------------------------------------------------------ resolving
@@ -1227,6 +1500,19 @@ impl Verifier {
         };
         if self.is_chain_signature(&res, k) || !res.states[k].signing_key.made(&x.act.signature) {
             return Status::Invalid;
+        }
+        // F152, F159: a private link act counts only if this verifier found
+        // its sealed form at a home its signer's chain names at the act's
+        // binding (a later move of homes does not void it). Found nowhere
+        // there, it is unknown, never invalid.
+        if x.inside.spec == self.identity_spec && !x.act.outside.is_public() {
+            let found = res.states[k]
+                .homes
+                .iter()
+                .any(|h| self.found.contains(&(x.id, h.operator.unwrap_or(*signer))));
+            if !found {
+                return Status::Unknown;
+            }
         }
         if let Some(j) = self.judging(&res, k) {
             match self.judge(cx, x, &res.links[j].act, signer) {

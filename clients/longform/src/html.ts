@@ -3,8 +3,12 @@
 // markers are shown as written, never replaced by a bullet or a number of
 // the browser's own (cMIP, rule 8), so the stylesheet turns the browser's
 // markers off. Spaces are kept as written (`white-space: pre-wrap`).
+//
+// Every reading is checked before it is rendered (F149): one that would
+// hide anything but the format's declared markup, in its declared place,
+// is refused, and the text is shown plain, with a line saying why.
 
-import type { Block, Document, Inline, Span } from './format.ts';
+import { checkBound, type Block, type Document, type Inline, type Span } from './format.ts';
 
 const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const escapeHtml = (s: string): string => s.replace(/[&<>"']/g, (c) => ESC[c]);
@@ -26,6 +30,10 @@ export const STYLE = `.mor-lf{white-space:pre-wrap;overflow-wrap:anywhere}
 .mor-lf-ctl{outline:1px solid currentColor;font-size:.8em}`;
 
 export function renderHtml(doc: Document): string {
+  const breach = checkBound(doc);
+  if (breach) {
+    return `<div class="mor-lf"><p class="mor-lf-refused">Shown plain: the long-form rendering would break the Text MIP's bound (${escapeHtml(breach)}).</p>${plainHtml(doc.source, { showControls: true })}</div>`;
+  }
   const s = doc.source;
   const text = (x: Span) => escapeHtml(s.slice(x.from, x.to));
   const inl = (ns: Inline[]): string =>
