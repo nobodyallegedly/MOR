@@ -2899,6 +2899,13 @@ impl<'a> LawView<'a> {
         if reaching.is_empty() {
             return Ok(Consent::NoArea { agreement: ag });
         }
+        self.count_areas(&col, act, Point::Act(x), ag, reaching)
+    }
+
+    /// Rule 36a: each area reaching `act` counted, under the agreement `ag`
+    /// in force for it, the holders' voices taken at `point`: their valid
+    /// signature acts naming it, meeting the area's number.
+    fn count_areas(&self, col: &Col, act: &Hash, point: Point<'a>, ag: Hash, reaching: Vec<&Area>) -> R<Consent> {
         let lineage: Vec<Hash> = self.lineage(&ag)?.into_iter().map(|(i, _)| i).collect();
         let mut out = vec![];
         for a in reaching {
@@ -2908,14 +2915,14 @@ impl<'a> LawView<'a> {
                 for h in self.v.signed_by(p) {
                     if self.is_law(h, types::SIGNATURE)
                         && decode_signature(&h.inside).ok() == Some(*act)
-                        && self.sig_counts(&col, h)?
+                        && self.sig_counts(col, h)?
                     {
                         by.entry(*p).or_default().push(h.id);
                     }
                 }
             }
             let (voices, remaining) =
-                self.voices(&col, Point::Act(x), &ag, &a.holders, Some(a.id), &by, &[])?;
+                self.voices(col, point, &ag, &a.holders, Some(a.id), &by, &[])?;
             let frozen = remaining.is_empty();
             let needed = a.rule().needed(voices.len());
             let mut signers = vec![];
@@ -2941,6 +2948,45 @@ impl<'a> LawView<'a> {
             areas: out,
             met,
         })
+    }
+
+    /// F162 (13), rule 36a: whether a rotation or chain signature of a
+    /// collective has the consent of the areas over the Identity layer (or
+    /// over its act type) in the agreement in force just before it: valid
+    /// signature acts naming it by those areas' holders whose voice remains
+    /// at it, meeting each area's number. Shown only: what Law does with a
+    /// rotation lacking that consent is open (Nobody, allegedly, 6 October
+    /// 2026); under Identity it counts all the same. `NoArea` where no area
+    /// reaches it; `NotCollective` where the chain declares no agreement
+    /// before it.
+    pub fn rotation_consent(&self, rotation: &Hash) -> R<Consent> {
+        let x = self.held(rotation)?;
+        if !matches!(&x.identity, Some(Ok(Payload::Rotation(_) | Payload::ChainSignature(_)))) {
+            return Err(LawError::Check("not a rotation or chain signature"));
+        }
+        let c = x.act.outside.signer.ok_or(LawError::Check("a rotation names its identity"))?;
+        let col = self.col(&c);
+        let Some(j) = col.res.position_of(rotation).filter(|j| *j > 0) else {
+            return Err(LawError::Check("the rotation does not count on its identity chain"));
+        };
+        if !self.declares(&col, j - 1) {
+            return Ok(Consent::NotCollective);
+        }
+        let base = match self.base(&col, j - 1)? {
+            Ok(b) => b,
+            Err(reason) => return Ok(Consent::Broken { reason }),
+        };
+        let ag = self.in_force_at_rotation(&col, j, base)?.agreement;
+        let t = self.terms(&ag)?;
+        let reaching: Vec<&Area> = t
+            .areas()
+            .iter()
+            .filter(|a| a.kinds.iter().flatten().any(|k| t.kind_reaches(&self.mips, k, &x.inside.spec, x.inside.type_)))
+            .collect();
+        if reaching.is_empty() {
+            return Ok(Consent::NoArea { agreement: ag });
+        }
+        self.count_areas(&col, rotation, Point::Line(Line::Rotation(j)), ag, reaching)
     }
 
     /// A release (type 5), or a signature act naming one.

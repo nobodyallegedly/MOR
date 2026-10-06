@@ -3171,6 +3171,45 @@ fn a_threshold_declarations_signers_do_not_acknowledge_it() {
     assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
 }
 
+/// F162 (13), rule 36a: an area over the Identity layer governs the
+/// collective's rotations and key events. Law shows whether a rotation has
+/// that area's consent, its holders' signature acts meeting its number;
+/// what follows from a rotation lacking it is open (Nobody, allegedly, 6
+/// October 2026), and under Identity it counts all the same. The
+/// collective's everyday Identity acts still count for nothing in Law.
+#[test]
+fn an_identity_area_shows_its_consent_on_a_rotation() {
+    let mut lab = Lab::new(&|t| {
+        let ids = t.parties.clone();
+        t.areas.as_mut().unwrap().push(Area {
+            name: "Keys".into(),
+            holders: vec![ids[BEN], ids[CY]],
+            threshold: 2,
+            kinds: Some(vec![Kind::Layer(law::layers::IDENTITY)]),
+            fields: None,
+            id: 3,
+        });
+    });
+    lab.publish(0);
+    let r = lab.rotate(None, &[0]);
+    let got = lab.view().rotation_consent(&r).unwrap();
+    let Consent::Areas { met, areas, .. } = &got else { panic!("{got:?}") };
+    assert!(!met, "no holder has signed it yet");
+    assert_eq!((areas.len(), areas[0].area), (1, 3), "only the Identity area reaches it");
+    lab.sign(BEN, &r);
+    assert!(!lab.view().rotation_consent(&r).unwrap().counts(), "one of the two");
+    lab.sign(CY, &r);
+    let got = lab.view().rotation_consent(&r).unwrap();
+    assert!(matches!(&got, Consent::Areas { met: true, .. }), "{got:?}");
+    // The rotation counts under Identity either way.
+    assert_eq!(lab.w.v.status(&r), Status::Valid);
+    // An everyday Identity act of the collective, a witness act, counts
+    // for nothing in Law (F156), whatever the Identity area.
+    let x = lab.publish(0);
+    let w = lab.ack(0, x);
+    assert_eq!(lab.consent(&w), Consent::Identity);
+}
+
 /// 3.7n, R4: one cMIP for conversion (Finance) and splitting (Law), the
 /// lanes held by two members: its acts need both.
 #[test]
