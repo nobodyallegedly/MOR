@@ -72,6 +72,16 @@ F156 was decided (option b) and built in the reference: Identity's own everyday 
 
 The stories hold 559 witness acts of the collective (424 in 334 stories of seed 1, 135 in 110 of seed 2); both verifiers now count every one for nothing. Export times in a release build: 1,327 seconds for seed 1, 438 for seed 2.
 
+### Rerun after F157 to F162 (6 October 2026)
+
+F157 to F162 were built in the reference (`docs/decisions-f157-f162-build-2026-10-06.md`); among them, a fork's division among its sides by largest remainder (F162, 10) and an area over the Identity layer shown on rotations (F162, 13). Verifier2 was not changed. It takes stakes, successors' terms, payments and Identity validity as inputs, so it does not check those changes: this rerun checks only that nothing else in collectives' endings moved. The same two runs were exported again from the reference at the session's last code commit (seed 1, cases 0 to 2,999; seed 2, cases 0 to 999) and compared with `compare.py` (default readings).
+
+| Stories | Agree on everything | Differ |
+| --- | --- | --- |
+| 4,000 | 4,000 | 0 |
+
+Export times in a release build: 282 seconds for seed 1, 92 for seed 2. The exports were deleted after the comparison; they can be redrawn from the seeds.
+
 ## Precisely
 
 ### Files
