@@ -1596,3 +1596,17 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Decided (Nobody, allegedly, 6 October 2026): "Agree":** the payment counts as made if the payer's claim does not hold the owner's rotation in its history (the payer had not seen it). A payer who leaves the rotation out on purpose, colluding with the thief, is the theft window's stated cost, borne by the owner and visible.
 
 **Core changes:** Finance draft 6, rule 15. *To build:* the payment cMIP counts such a payment as made when the claim's history does not hold the rotation; a receipt alone (no payer's claim) is judged as before.
+
+
+## F140. Ten unclear rules made checkable (rule audit, 6 October 2026)
+
+**Decided (Nobody, allegedly, 6 October 2026): "All approved"**, as the project lead proposed:
+1. **Rail kind** (payment cMIP): a rail Module declares in its specification whether it is a request or a push rail, in a field clients read.
+2. **Law's act table** follows the fork section (F132): forks and closings are completed by members' chain signatures.
+3. **The absence period** exists "only when the agreement names a time reference".
+4. **Rounding leftovers** go to each stake's first holder (rules 15a and 21, the stakes format), as the code already did; the first party listed may hold no part of that stake.
+5. to 8. **Formats open:** how an identity is marked as a publisher (rule 16), the modules a split ran under (rule 27), a metric and its module (rule 28), the "use record" act (Production rule 17); settled with the split plan's format before freeze.
+9. **A fee to a service the members own** (rule 46b): client conformance; the collective's client discloses ownership to the members.
+10. **Text:** "and similar" and "letters or digits" name exact Unicode categories of the pinned version (Cf, Bidi_Control, Default_Ignorable_Code_Point; L and N).
+
+**Core changes:** Law draft 10 (act table, abandonment clause, rules 15a, 16, 21, 27, 28, 46b, stakes format), Production draft 6 (rule 17), Text draft 6 (rule 5, the format task), payment cMIP draft 2 (rail Modules, item 3). *To build:* rail kind read from the Module's specification instead of `push_rails` by hand.
