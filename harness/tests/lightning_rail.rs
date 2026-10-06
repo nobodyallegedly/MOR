@@ -235,6 +235,22 @@ impl Held for View<'_> {
             _ => None,
         }
     }
+
+    fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
+        self.0
+            .v
+            .signed_by(payee)
+            .filter(|h| h.inside.spec == finance() && h.inside.type_ == finance::types::PAYEE_POINTER)
+            .filter_map(|h| Some((h.id, self.pointer(&h.id)?)))
+            .filter(|(_, p)| &p.payee == payee)
+            .collect()
+    }
+
+    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
+        // The latest chain act that declared one: these identities never
+        // rotate in this test, so it is the genesis.
+        self.vault(payee).map(|(_, v)| v)
+    }
 }
 
 async fn read_payee(rd: &mut Reader, site: &Site, id: &Hash) -> PayeeView {

@@ -552,6 +552,10 @@ struct ColWorld {
     info: BTreeMap<Hash, Info>,
     grants: Vec<GrantInfo>,
     debts: Vec<Hash>,
+    /// Receipts paying debts, with their payee: the rail's answer for each
+    /// is stated valid, paid to the payee's vault (Finance rule 4), so only
+    /// who signed decides (IC2).
+    paid: Vec<(Hash, Hash)>,
     endings: Vec<EndingInfo>,
     /// Every member's ending signature (a chain signature, F132), in the
     /// order made, so in each member's chain order: (member, ending, op
@@ -667,6 +671,7 @@ impl ColWorld {
             info: BTreeMap::new(),
             grants: vec![],
             debts: vec![],
+            paid: vec![],
             endings: vec![],
             end_sigs: vec![],
             step: 0,
@@ -691,7 +696,11 @@ impl ColWorld {
     }
 
     fn view(&self) -> LawView<'_> {
-        LawView::new(&self.w.v, mips())
+        let mut lv = LawView::new(&self.w.v, mips());
+        for (x, payee) in &self.paid {
+            lv.rail_valid.insert(*x, mor_core::finance::PaidAt::Vault(*payee));
+        }
+        lv
     }
 
     /// Members whose voice the generator has registered as gone.
@@ -1241,16 +1250,19 @@ impl ColWorld {
                     PaidBy::Creditor => {
                         let k = self.creditors.iter().position(|c| c.id == creditor).unwrap();
                         let a = self.w.everyday_act(&mut self.creditors[k], mips().finance, 2, rc(creditor, col), None, None);
-                        self.w.add(&a);
+                        let x = self.w.add(&a);
+                        self.paid.push((x, creditor));
                     }
                     PaidBy::Debtor => {
                         let x = self.act_on(Who2::Dev(0), mips().finance, 2, rc(col, col), vec![], &[], true, Seal::Public, None, &[]);
                         self.lane_sign(&x);
+                        self.paid.push((x, col));
                     }
                     PaidBy::Stranger => {
                         let s = self.stranger.id;
                         let a = self.w.everyday_act(&mut self.stranger, mips().finance, 2, rc(s, col), None, None);
-                        self.w.add(&a);
+                        let x = self.w.add(&a);
+                        self.paid.push((x, s));
                     }
                 }
             }

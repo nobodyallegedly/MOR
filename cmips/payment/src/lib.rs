@@ -235,6 +235,12 @@ pub trait Held {
     /// act cites the pointer it names (F133; the core library's
     /// [`fin::pointer_cited`] over the verifier's acts).
     fn obligation(&self, id: &Hash) -> Option<HeldObligation>;
+    /// Every valid payee-pointer act held for this identity, as (act id,
+    /// pointer): its chain and any fork of it (Finance rule 12).
+    fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)>;
+    /// The vault this identity's chain declares in force: its entries, or
+    /// `None` where it declares none (Finance rule 14a).
+    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>>;
 }
 
 /// An obligation as [`Held`] gives it for rule 14.
@@ -267,6 +273,7 @@ impl<'a> Modules<'a> {
 }
 
 /// A receipt or a claim, as signed.
+#[derive(Clone)]
 pub enum Record<'a> {
     Receipt(&'a Receipt),
     /// A claim and its signer: the payer, unless the claim carries an
@@ -432,10 +439,67 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
     })
 }
 
-/// Finance rule 14, judged beside the verification answer ("What
+/// Where a receipt or claim was paid, as its proof shows it; `None` where
+/// the proof is not in this cMIP's shape.
+pub fn paid_at(record: &Record) -> Option<fin::PaidAt> {
+    let proof = match record {
+        Record::Receipt(r) => &r.proof,
+        Record::Claim(c, _) => &c.proof,
+    };
+    Some(match Proof::decode(proof)?.paid_to {
+        PaidTo::Flow { pointer, .. } => fin::PaidAt::Flow(pointer),
+        PaidTo::Vault { declared_by, .. } => fin::PaidAt::Vault(declared_by),
+    })
+}
+
+/// Everything judged beside the verification answer ("What verification
+/// does not decide"): whether the pointer it was paid to was in force for
+/// it (Finance rules 12 and 14, [`pointer_in_force`]), and whether it
+/// followed the vault (rules 14a and 15, [`followed_vault`]). Valid only
+/// where both are; otherwise the first answer that is not.
+pub fn beside(record: Record, held: &dyn Held) -> Answer {
+    match pointer_in_force(record.clone(), held) {
+        Answer::Valid => followed_vault(record, held),
+        a => a,
+    }
+}
+
+/// Finance rules 14a and 15, judged beside the verification answer for a
+/// payment received: a payment to the flow counts as paid to the flow only
+/// where the payee's vault in force lets it go there (an entry for its
+/// unit, and no more than that unit's smallest limit, F114); a payment
+/// that did not follow the published vault is not protected (rule 15). A
+/// payment to the vault, or to an identity that declares no vault, is
+/// valid here. *A thief who redirects the flow pointer cannot take a large
+/// payment through it, nor one in a unit the vault does not cover.*
+pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
+    let (proof, payee, amount) = match &record {
+        Record::Receipt(r) => (&r.proof, &r.payee, &r.amount),
+        Record::Claim(c, _) => (&c.proof, &c.payee, &c.amount),
+    };
+    let Some(p) = Proof::decode(proof) else {
+        return Answer::Invalid("the proof is not in the payment cMIP's shape".into());
+    };
+    if matches!(p.paid_to, PaidTo::Vault { .. }) {
+        return Answer::Valid;
+    }
+    if fin::flow_followed_vault(held.vault_in_force(payee).as_deref(), amount) {
+        Answer::Valid
+    } else {
+        Answer::Invalid(
+            "paid to the flow, but the payee's vault sends this payment to the vault: above the unit's limit, or in a unit the vault does not cover (Finance rules 14a and 15)"
+                .into(),
+        )
+    }
+}
+
+/// Finance rules 12 and 14, judged beside the verification answer ("What
 /// verification does not decide"): whether the flow pointer a payment was
 /// paid to was in force for what it fulfils. A payment to the vault always
-/// is. A payment to the flow is only where what it fulfils names that flow
+/// is. A flow pointer counts only on the payee's unbroken, unforked chain
+/// (rule 12): one forked by a second act naming the same predecessor counts
+/// only up to the fork, so a thief's pointer of the same version as the
+/// owner's cannot collect what names the owner's. A payment to the flow is only where what it fulfils names that flow
 /// pointer's version or a later one: an obligation (Finance type 1) by its
 /// field 3, a version its agreement act cites (F133), a tip by the payee
 /// pointer it follows. *A thief who changes the
@@ -460,7 +524,15 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
     let into = match p.paid_to {
         PaidTo::Vault { .. } => PaidInto::Vault,
         PaidTo::Flow { pointer, .. } => match held.pointer(&pointer) {
-            Some(q) if &q.payee == payee => PaidInto::Flow(q.version),
+            Some(q) if &q.payee == payee => {
+                if !fin::pointer_counts(&held.pointers_of(payee), &pointer) {
+                    return Answer::Invalid(
+                        "the flow pointer it was paid to is not on the payee's unbroken, unforked chain: a forked chain counts only up to the fork (Finance rule 12)"
+                            .into(),
+                    );
+                }
+                PaidInto::Flow(q.version)
+            }
             Some(_) => return Answer::Invalid("paid to another identity's pointer".into()),
             None => return Answer::Unknown("the payee pointer it was paid to is not held".into()),
         },
