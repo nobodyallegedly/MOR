@@ -1778,6 +1778,17 @@ This also settles fix 1 without making the judicial tier need departed holders' 
 **Core changes:** Finance draft 6, rule 14. *To build:* `finance::select_pointer` and `law::view::pointer_holding` walk own acts only; the pinning test is turned to expect the fix.
 
 
+## F158. A declaration is acknowledged by someone other than its signer (build of F145 to F156, flaw 2, 6 October 2026)
+
+**Found building F148** (flaw 2): where the keeper's operator is the authority, as in freeze scenario 1, "or by the keeper" let it acknowledge its own declaration, anchor both in January and publish them in October; the kept-for-later attack worked again.
+
+**Decided (Nobody, allegedly, 6 October 2026): "Yes, stated cost is always fine for me. 'Use additional feature or risk'":** the acknowledgement must come from an identity other than the declaration's signer(s) and the declared party. Where none exists (a two-party deal whose other party is the authority, no keeper), a period declaration cannot count, and a client warns at signing that the clause needs a keeper or a third party: a stated cost.
+
+**Working rule (Nobody, allegedly):** a stated cost is acceptable where the safer path is an additional feature the parties can choose ("use additional feature or risk").
+
+**Core changes:** Law draft 10, rules 50 and 51. *To build:* `absence_by_anchors` refuses an acknowledgement by the declaration's signer; client warning at signing; scenario 1 test of the keeper-authority acknowledging itself. Also answers the build's question 4 (the declaring party may not acknowledge its own declaration).
+
+
 ## Review of F133 to F144 (6 October 2026, evening)
 
 A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`) attacked the twelve decisions together. **Four break:** (1) F133, F138 and F139 judge the pointer and good faith by an act that the party who gains from it signs: the payer, or the debtor drafting terms or an IOU, so a payer colluding with a thief keeps paying the thief's voided pointer after the rotation, and an honest payer who writes a claim after hearing of the rotation loses protection; (2) F135 with F139: an anonymous claim can be re-wrapped with other citations, turning its good faith on or off; (3) F136: a declaration anchored during a gap can be used months later, and unanchored liveness acts protect no one; (4) F144 listed forms, so a debt outside its signer's powers still blocks a fork. Smaller: F140's Unicode bound lets a format hide signs, decimal points and vowel marks; F140's rounding lets a reorder of holders move leftovers; F141 gives a receiver a veto on rails binding no purpose; F134 lets a thief show a private link to one victim; several sentences still say "when".
