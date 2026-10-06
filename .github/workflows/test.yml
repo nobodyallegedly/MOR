@@ -94,3 +94,5 @@ jobs:
           for f in clients/genesis/wasm/mor_wasm_bg.wasm clients/genesis/wasm/mor_wasm.js "$RUNNER_TEMP/linux-build/gateway.js" "$RUNNER_TEMP/linux-build/mor_wasm_bg.wasm" clients/site/built/gateway.js clients/site/built/mor_wasm_bg.wasm; do
             echo "::notice::$(sha256sum "$f" | sed "s#$RUNNER_TEMP/##") $(stat -c %s "$f") bytes"
           done
+          diff clients/site/built/gateway.js "$RUNNER_TEMP/linux-build/gateway.js" | head -8 | cut -c1-300 | while IFS= read -r l; do echo "::warning::gateway.js diff: $l"; done
+          diff <(strings -n 8 clients/site/built/mor_wasm_bg.wasm) <(strings -n 8 "$RUNNER_TEMP/linux-build/mor_wasm_bg.wasm") | head -12 | cut -c1-300 | while IFS= read -r l; do echo "::warning::wasm strings diff: $l"; done
