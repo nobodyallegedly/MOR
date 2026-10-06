@@ -2193,23 +2193,44 @@ impl<'a> LawView<'a> {
     /// on the agreement is anchored within the period before it, from D
     /// less the period to D; and an acknowledgement of it (Envelope,
     /// `acks`) by another party of the agreement or by one of its keepers'
-    /// operators is anchored within one further period, from D to D plus
-    /// the period, with no act of the declared party on the agreement
-    /// anchored between the two. Only acts on the agreement count as
-    /// presence (rule 50): acts naming, in `objects`, the agreement or a
-    /// version back through its parents, as chain or predecessor, and
-    /// signature acts signing one; activity elsewhere does not. An act of
-    /// the party that nobody anchored is no presence (a stated cost, rule
-    /// 50). Bounds are taken inclusive, so that an act anchored at the
-    /// declaration's own point, or at its acknowledgement's, protects the
-    /// party (reading).
+    /// operators, never by the declaration's signer (for a threshold, its
+    /// signers) nor the declared party (F158), is anchored within one
+    /// further period, from D to D plus the period, with no act of the
+    /// declared party on the agreement anchored between the two. Only acts
+    /// on the agreement count as presence (rule 50, F162): acts naming, in
+    /// `objects`, any version of it, earlier or later by clones, as chain
+    /// or predecessor, signature acts signing one, and, in a collective,
+    /// the member's acts on the collective's chain; activity elsewhere does
+    /// not. An act of the party that nobody anchored is no presence (a
+    /// stated cost, rule 50). Bounds are inclusive (F162): an act anchored
+    /// at the declaration's own point, or at its acknowledgement's,
+    /// protects the party.
     fn absence_by_anchors(&self, decl: &Hash, d: &AbsenceDeclaration, period: u64, versions: &[Hash], terms: &Terms) -> Result<(), String> {
         let Some(&at) = self.anchors.get(decl) else {
             return Err("the clause names a period of absence, and the declaration is not anchored on the agreement's time reference, or the anchors cannot place it: it does not count (rule 51, F136); until the anchoring cMIP and the time-reference format exist, the anchors are the caller's statement".into());
         };
+        // F162 (5): any version of the agreement, earlier or later by
+        // clones; in a collective, a member's acts on the collective's
+        // chain.
+        let mut versions: Vec<Hash> = versions.to_vec();
+        loop {
+            let later: Vec<Hash> = self
+                .v
+                .held_acts()
+                .filter(|h| self.is_law(h, types::TERMS) && !versions.contains(&h.id))
+                .filter(|h| self.terms(&h.id).ok().and_then(|t| t.parent).is_some_and(|p| versions.contains(&p)))
+                .map(|h| h.id)
+                .collect();
+            if later.is_empty() {
+                break;
+            }
+            versions.extend(later);
+        }
+        let collective = if terms.is_collective() { versions.first().and_then(|a| self.collective_of(a).ok().flatten()) } else { None };
         let on_agreement = |h: &Held| {
-            h.inside.objects.iter().flatten().any(|o| versions.contains(&o.chain) || versions.contains(&o.predecessor))
-                || (self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).is_ok_and(|x| versions.contains(&x)))
+            h.inside.objects.iter().flatten().any(|o| {
+                versions.contains(&o.chain) || versions.contains(&o.predecessor) || collective.as_ref() == Some(&o.chain)
+            }) || (self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).is_ok_and(|x| versions.contains(&x)))
         };
         let presence: Vec<u64> = self
             .v
@@ -2221,18 +2242,24 @@ impl<'a> LawView<'a> {
             return Err("the clause names a period of absence, and an act of the party on the agreement is anchored on its time reference within that period before the declaration (rule 51, F136)".into());
         }
         let keepers: Vec<Hash> = terms.keepers.iter().flat_map(|k| k.operators.iter().copied()).collect();
+        // F158: never the declaration's signer, nor, for a threshold, its
+        // signers (the other parties whose signature acts name it).
+        let mut signers: Vec<Hash> = self.v.get(decl).and_then(|h| h.act.outside.signer).into_iter().collect();
+        signers.extend(self.signers(decl, &terms.parties));
         let ack = self
             .v
             .acknowledgements(decl)
             .filter(|a| self.valid(&a.id))
             .filter(|a| {
-                a.act.outside.signer.is_some_and(|s| s != d.party && (terms.parties.contains(&s) || keepers.contains(&s)))
+                a.act.outside.signer.is_some_and(|s| {
+                    s != d.party && !signers.contains(&s) && (terms.parties.contains(&s) || keepers.contains(&s))
+                })
             })
             .filter_map(|a| self.anchors.get(&a.id).copied())
             .filter(|p| *p >= at && *p <= at.saturating_add(period))
             .min();
         let Some(ack) = ack else {
-            return Err("no acknowledgement of the declaration by another party or by the keeper is anchored within one further period after its own anchor: it does not count, so a declaration cannot be kept and used later (rule 51, F148)".into());
+            return Err("no acknowledgement of the declaration by another party or by the keeper, other than its signers and the declared party, is anchored within one further period after its own anchor: it does not count, so a declaration cannot be kept and used later (rule 51, F148, F158)".into());
         };
         if presence.iter().any(|p| *p >= at && *p <= ack) {
             return Err("an act of the declared party on the agreement is anchored between the declaration and its acknowledgement: it does not count (rule 51, F148)".into());

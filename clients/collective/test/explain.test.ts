@@ -10,7 +10,7 @@ import { cborDecode, cborEncode, checkTerms, sha256 } from '../../genesis/src/co
 import { plainHtml } from '../../longform/src/html.ts';
 import { collectiveTerms, type Governance } from '../../repo/src/collective.ts';
 import { LAW_SPECS, encodeTerms, type MarkEntry } from '../../repo/src/law.ts';
-import { lawThrown, problemWords, readAgreement, readChanges, rulesHints, termsOf, uncovered, withLaw, type Reading } from '../src/explain.ts';
+import { lawThrown, problemWords, readAgreement, readChanges, rulesHints, termsOf, unacknowledged, uncovered, withLaw, type Reading } from '../src/explain.ts';
 
 const [a, b, c, d] = ['a', 'b', 'c', 'd'].map((x) => sha256(`member ${x}`));
 const NAMES: Record<string, string> = { [a]: 'Ann', [b]: 'Ben', [c]: 'Cy', [d]: 'Di' };
@@ -220,4 +220,31 @@ test("a deal's chain of judgment follows its split service: one grant per payee 
   assert.match(w, /the service granted by .* \(one grant per payee, signed with this deal, F130 H6\) \(after 30 on the time reference\) takes over/);
   // A deal's service taking over is never one grant.
   assert.match(JSON.stringify(termsOf(deal([[2], [[h(9), 30]]])).problem ?? ''), /H6/);
+});
+
+test('F158: a period clause nobody else can acknowledge is warned of at signing, a stated cost', () => {
+  const k = sha256('a keeper');
+  const deal = (authority: 'named' | 'others', keepers: string[] | null, parties = [a, b]) => ({
+    parties,
+    keepers: keepers ? ([keepers, { form: 'all' }] as any) : null,
+    abandonment: { authority, identity: authority === 'named' ? b : null, threshold: authority === 'others' ? 2 : null, outcomes: [0], period: 30 },
+  });
+  // Two parties, the other the authority, no keeper: a declaration against
+  // Ann has no one left to acknowledge it.
+  assert.deepEqual(unacknowledged(deal('named', null)), [a]);
+  assert.deepEqual(unacknowledged(deal('named', [k])), [], 'a keeper can acknowledge');
+  assert.deepEqual(unacknowledged(deal('named', [b])), [a], 'a keeper who is the authority cannot');
+  assert.deepEqual(unacknowledged(deal('named', null, [a, b, c])), [], 'a third party can');
+  // Two of the other two sign: nobody is left without a keeper.
+  assert.deepEqual(unacknowledged(deal('others', null, [a, b, c])), [a, b, c]);
+  assert.deepEqual(unacknowledged(deal('others', [k], [a, b, c])), []);
+  // No period: no acknowledgement is needed, nothing to warn of.
+  assert.deepEqual(unacknowledged({ ...deal('named', null), abandonment: { ...deal('named', null).abandonment, period: null } }), []);
+
+  // In the reading shown before signing.
+  const t = termsOf(encodeTerms(collectiveTerms(g(), [a, b, c], a)));
+  const warned = all(readAgreement({ ...t, keepers: null, abandonment: deal('others', null, [a, b, c]).abandonment as any }, names));
+  assert.match(warned, /can never count: under a period, it needs an acknowledgement by someone other than the absent party and those who sign the declaration.*Add a keeper or a third party.*F158, a stated cost/);
+  const fine = all(readAgreement({ ...t, keepers: [[k], { form: 'all' }] as any, abandonment: deal('others', null, [a, b, c]).abandonment as any }, names));
+  assert.doesNotMatch(fine, /can never count/);
 });

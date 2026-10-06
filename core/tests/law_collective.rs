@@ -3106,12 +3106,69 @@ fn scenario_1_absence_is_judged_by_anchors() {
     let odd = w.ack(&mut stranger, d3);
     let got = judged(&w, &[(d3, 100), (own, 105), (odd, 106)], &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("acknowledgement")), "{got:?}");
-    // The keeper's own acknowledgement counts as the keeper's (F148).
+    // F158: the keeper's operator is the authority here and signed the
+    // declaration: its own acknowledgement is none, or it could anchor both
+    // in January, keep them, and publish them in October.
     let kept = w.ack(&mut keeper, d3);
-    assert_eq!(judged(&w, &[(d3, 100), (kept, 105)], &d3), Ok(()));
+    let got = judged(&w, &[(d3, 100), (kept, 105)], &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("F158")), "{got:?}");
+    // Another party's acknowledgement, anchored as early, counts.
+    let other = w.ack(&mut m[0], d3);
+    assert_eq!(judged(&w, &[(d3, 100), (kept, 105), (other, 106)], &d3), Ok(()));
+    // F162 (3): bounds are inclusive: p3's act on the deal anchored at the
+    // declaration's own point protects p3.
+    let same = law_act(&mut w, &mut m[2], 12, vec![], obj(d));
+    let got = judged(&w, &[(d3, 100), (other, 106), (same, 100)], &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    // F162 (5): an act on a later version of the deal, a clone of it, is
+    // presence on the deal.
+    let mut c = terms.clone();
+    c.parent = Some(d);
+    c.text = "The film's contributors share its revenue, version two.".into();
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(ids.clone()) }]);
+    let later = law_act(&mut w, &mut m[0], law::types::TERMS, c.to_map(), obj(d));
+    let on_later = law_act(&mut w, &mut m[2], 12, vec![], obj(later));
+    let got = judged(&w, &[(d3, 100), (other, 106), (on_later, 90)], &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
     // Not anchored at all: it does not count (F136).
     let got = judged(&w, &[(early, 125)], &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("not anchored")), "{got:?}");
+}
+
+/// F158 and F162 (5) in a collective whose clause names a period, its
+/// authority two of the other members: Ben declares Ana absent and Cy
+/// signs the declaration too. Cy, one of its signers, cannot acknowledge
+/// it (F158); the keeper can. Ana's act on the label's chain, anchored
+/// within the period, is presence on the agreement (F162, 5).
+#[test]
+fn a_threshold_declarations_signers_do_not_acknowledge_it() {
+    let mut lab = Lab::new(&|t| {
+        t.time = Some((spec("a block height reference"), Value::Uint(0)));
+        t.abandonment = Some(Abandonment { authority: Authority::Others(2), outcomes: vec![outcomes::VOICE_REMOVED], period: Some(30) });
+        let ids = t.parties.clone();
+        let g = t.grammar.as_mut().unwrap();
+        g.safety = Holding::Shares { threshold: 2, members: ids };
+        g.recovery = None;
+    });
+    let f = lab.founding;
+    let d = lab.declare(Some(BEN), f, f, ANA, vec![outcomes::VOICE_REMOVED]);
+    lab.sign(CY, &d);
+    let by_cy = lab.w.ack(&mut lab.m[CY], d);
+    let by_keeper = lab.w.ack(&mut lab.keeper, d);
+    let judged = |lab: &Lab, anchors: &[(Hash, u64)]| -> Result<(), String> {
+        let mut v = lab.view();
+        v.anchors.extend(anchors.iter().copied());
+        v.declaration(&d).unwrap().map(|_| ())
+    };
+    let got = judged(&lab, &[(d, 100), (by_cy, 105)]);
+    assert!(got.as_ref().is_err_and(|e| e.contains("F158")), "a signer's acknowledgement is none: {got:?}");
+    assert_eq!(judged(&lab, &[(d, 100), (by_cy, 105), (by_keeper, 106)]), Ok(()));
+    // Ana works on the label's chain: an act of hers naming it in
+    // `objects`, anchored at 95.
+    let label = lab.c[0].id;
+    let on_chain = law_act(&mut lab.w, &mut lab.m[ANA], 12, vec![], Some(vec![Object { chain: label, predecessor: label }]));
+    let got = judged(&lab, &[(d, 100), (by_keeper, 106), (on_chain, 95)]);
+    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
 }
 
 /// 3.7n, R4: one cMIP for conversion (Finance) and splitting (Law), the
