@@ -100,7 +100,7 @@ export const MAX_DEPTH = 16;
 export const MARKUP = new Set(['\n', ' ', '#', '*', '>', '<', '`', '\\', '-']);
 
 /** The characters each declaration entry may hide. */
-const DECLARED: Record<MarkRule, string> = {
+export const DECLARED: Readonly<Record<MarkRule, string>> = {
   heading: '# ',
   rule: '-*',
   'fence-open': '`',
@@ -524,6 +524,68 @@ function shownIn(doc: Document): [number, number][] {
   return out;
 }
 
+// ---------------------------------------------------------------- the floor
+
+// F167: the format's author writes its markup declaration, and a hostile
+// author could declare a decimal point or a minus sign as markup. So under
+// every declaration lies a floor the Text MIP sets: characters no format
+// hides, whatever its declaration says. The floor is written here apart
+// from this format's own declaration, so it holds for any declaration.
+
+/**
+ * The percent and per-mille signs (F167): the characters Unicode names a
+ * PERCENT SIGN or a PER MILLE SIGN. They are punctuation (Po), so the
+ * categories below do not cover them. The per-ten-thousand signs (U+2031,
+ * U+060A) are not named by the rule and are left out.
+ */
+export const PERCENT_SIGNS = new Set([0x0025, 0x066a, 0xfe6a, 0xff05, 0x2030, 0x0609]);
+
+/** The plus and minus signs the floor names (F167): + - and U+2212. */
+export const SIGNS = new Set([0x002b, 0x002d, 0x2212]);
+
+/** Letters, digits and combining marks; currency and mathematical signs (F167). */
+const FLOOR_CATEGORY = /^[\p{L}\p{N}\p{M}\p{Sc}\p{Sm}]$/u;
+
+/**
+ * A digit, for "between two digits" and "before a digit": any character of
+ * category N, as the rule itself reads "a digit" as N. So Arabic-Indic and
+ * Devanagari digits count, and so do ½ and Ⅻ (F167).
+ */
+const DIGIT = /^\p{N}$/u;
+
+/** The character at offset `i`, whole even where `i` falls inside a surrogate pair. */
+function charAt(s: string, i: number): { c: string; from: number; to: number } | null {
+  if (i < 0 || i >= s.length) return null;
+  let from = i;
+  const u = s.charCodeAt(i);
+  if (u >= 0xdc00 && u <= 0xdfff && i > 0) {
+    const h = s.charCodeAt(i - 1);
+    if (h >= 0xd800 && h <= 0xdbff) from = i - 1;
+  }
+  const c = String.fromCodePoint(s.codePointAt(from)!);
+  return { c, from, to: from + c.length };
+}
+
+/**
+ * Why the character at offset `i` of `s` lies under the Text MIP's floor
+ * (F167), so that no format may hide it, or null if a format may. Its
+ * neighbours are the characters directly before and after it in the text.
+ */
+export function underFloor(s: string, i: number): string | null {
+  const here = charAt(s, i);
+  if (!here) return null;
+  const { c } = here;
+  if (FLOOR_CATEGORY.test(c)) return 'a letter, digit, combining mark, currency or mathematical sign';
+  const cp = c.codePointAt(0)!;
+  if (PERCENT_SIGNS.has(cp)) return 'a percent or per-mille sign';
+  const before = here.from > 0 ? charAt(s, here.from - 1) : null;
+  const after = charAt(s, here.to);
+  const digitAfter = after !== null && DIGIT.test(after.c);
+  if (digitAfter && before !== null && DIGIT.test(before.c)) return 'a character between two digits';
+  if (digitAfter && SIGNS.has(cp)) return 'a plus or minus sign directly before a digit';
+  return null;
+}
+
 /**
  * Check the Text MIP's bound on a format (task 4, with F102 and F149) for
  * one rendering: every character shown is the source's own, shown once and
@@ -533,9 +595,15 @@ function shownIn(doc: Document): [number, number][] {
  * itself, never taken from the reading: a rendering that hid a minus sign,
  * a decimal point, a vowel sign, or a markup character anywhere else (a
  * `-` before a number, a `*` between spaces, an LF inside a paragraph) is
- * refused. Returns the first breach found, or null.
+ * refused. And whatever the declaration says, nothing under the Text MIP's
+ * floor is hidden (F167, `underFloor()`). Returns the first breach found,
+ * or null.
+ *
+ * `declared` is the declaration's table of characters, this cMIP's own
+ * unless given: the floor holds whatever table a check is handed, which a
+ * test shows by handing it a hostile one.
  */
-export function checkBound(doc: Document): string | null {
+export function checkBound(doc: Document, declared: Readonly<Record<MarkRule, string>> = DECLARED): string | null {
   const s = doc.source;
   const n = s.length;
   const at = shownIn(doc);
@@ -549,6 +617,13 @@ export function checkBound(doc: Document): string | null {
     last = i;
     state[i] = 1;
     leafOf[i] = leaf;
+  }
+  // The floor first (F167): every character not shown is hidden, whether a
+  // declaration entry claims it, an LF ends a block, or nothing claims it.
+  for (let i = 0; i < n; i++) {
+    if (state[i]) continue;
+    const why = underFloor(s, i);
+    if (why) return `hides ${JSON.stringify(s[i])} at ${i}, which no format may hide (F167): ${why}`;
   }
   const said = (i: number) => JSON.stringify(s[i] ?? '');
   const lineStart = (i: number) => s.lastIndexOf('\n', i - 1) + 1;
@@ -606,7 +681,7 @@ export function checkBound(doc: Document): string | null {
     if (from < 0 || to > n || from >= to) return `declares markup outside the text at ${from}`;
     for (let i = from; i < to; i++) {
       if (state[i]) return `hides ${said(i)} at ${i}, which it also shows`;
-      if (!DECLARED[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
+      if (!declared[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
       state[i] = 2;
     }
     const text = s.slice(from, to);
