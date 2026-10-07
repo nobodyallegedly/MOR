@@ -256,4 +256,11 @@ test('Law rule 49 (F172, F178 item 11): before signing terms with an abandonment
   assert.equal(k3.abandonment?.proof, Buffer.from(h).toString('hex'));
   assert.match(section(readAgreement(k3, names), 'If someone disappears'), /An absence-proof cMIP stands between/);
   assert.throws(() => termsOf(withKey(2, 30)), /law\/shape: .*abandonment key 2 .*F172/);
+
+  // F182 item 16: this client implements no absence-proof cMIP, so it refuses to sign terms naming one, as it
+  // refuses an unknown extension; terms naming none it signs. (Removal check: without the refusal, nothing blocks.)
+  const blocked = readAgreement(k3, names).blocking;
+  assert.equal(blocked.filter((b) => /absence-proof cMIP this client does not implement .*task 14.*MUST NOT sign/.test(b)).length, 1, blocked.join('\n'));
+  assert.match(section(readAgreement(k3, names), 'If someone disappears'), /This client does not implement the absence-proof cMIP the clause names/);
+  assert.ok(!readAgreement(t, names).blocking.some((b) => /absence-proof/.test(b)), 'no absence-proof cMIP named: nothing to refuse');
 });

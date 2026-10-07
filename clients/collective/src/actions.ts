@@ -2011,10 +2011,10 @@ export class Actions {
    * one as it arrives. The split must cite the latest split delivered to
    * it for the stake (none, for the first), and carry the count that one
    * carries plus this split's leftover units; one that does not is a
-   * deviation that breaks the plan, shown. Either way the arriving split is
-   * now the latest, as Law rule 15a reads "the latest receipt for its
-   * stake", and the next is checked against it, as the core checks a split
-   * against the one it cites. Unlike a verifier holding a set of acts, the
+   * deviation that breaks the plan, shown. After a deviation the reference
+   * stays the last split that continued the chain, so a deviating split
+   * never becomes the baseline, and the next split is checked against that
+   * one (Law rule 15a, F182). Unlike a verifier holding a set of acts, the
    * holder's client knows which came second: the one that arrived after
    * the chain had moved on.
    */
@@ -2044,18 +2044,26 @@ export class Actions {
       this.store.saveKept(a.holder, kept);
       return { text: `${who}'s client: it keeps the chain from this split on; the earlier splits for the stake were never delivered to it, so this count is not checked here (Law rule 15a, F171).`, tone: 'warn' };
     }
-    const citesLatest = mine ? e.cites.includes(mine.tip) : true;
-    kept[key] = { tip: a.split, counts: carried ?? [] };
-    this.store.saveKept(a.holder, kept);
+    // The reference: the last split that continued the chain (none yet: the
+    // split must cite none, as the first does).
+    const citesLatest = mine ? (mine.tip === null ? !e.cites.some((x) => knownSplits.has(x)) : e.cites.includes(mine.tip)) : true;
     if (citesLatest && sameCount) {
+      kept[key] = { tip: a.split, counts: carried ?? [] };
+      this.store.saveKept(a.holder, kept);
       return { text: `${who}'s client: the split continues the chain it keeps, citing the latest split it holds for the stake, its count adding up (Law rule 15a, F171).`, tone: 'ok' };
     }
+    // F182: a deviating split never becomes the reference.
+    if (!mine) {
+      kept[key] = { tip: null, counts: [] };
+      this.store.saveKept(a.holder, kept);
+    }
+    const reference = mine?.tip ? short(mine.tip) : null;
     const why = [
-      ...(citesLatest ? [] : [`it does not cite ${short(mine!.tip)}, the latest split this client holds for the stake`]),
+      ...(citesLatest ? [] : [reference ? `it does not cite ${reference}, the last split that continued the chain this client keeps for the stake` : 'it cites a previous split, though none has continued the chain this client keeps for the stake']),
       ...(sameCount ? [] : [carried ? 'its running count is not the one kept plus its own leftover units' : 'it carries no running count for the stake']),
     ];
     return {
-      text: `${who}'s client: THE SPLIT DOES NOT CONTINUE THE CHAIN IT KEEPS: ${why.join('; ')}. A deviation that breaks the plan (Law rule 15a, rule 46b, F171), kept as shown; the next split is checked against this one, now the latest.`,
+      text: `${who}'s client: THE SPLIT DOES NOT CONTINUE THE CHAIN IT KEEPS: ${why.join('; ')}. A deviation that breaks the plan (Law rule 15a, rule 46b, F171), shown. The chain this client keeps stays at ${reference ?? 'its start'}, the last split that continued it: the next split is checked against that one, never against this (F182).`,
       tone: 'bad',
     };
   }
