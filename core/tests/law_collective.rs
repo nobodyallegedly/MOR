@@ -2097,15 +2097,15 @@ fn a_declaration_removes_a_voice_at_the_labels_line() {
     );
 }
 
-/// Law rules 50 and 51 (F136, F148): where the abandonment clause names a
+/// Law rules 50 and 51 (F136, F166): where the abandonment clause names a
 /// period of absence on the agreement's time reference, a declaration
 /// counts only once anchored, with no act of the party on the agreement
-/// anchored within the period before it, and with an acknowledgement of it
-/// by another party or the keeper anchored within one further period
-/// after it. The anchors are stated by the verifier, the anchoring and
-/// time-reference formats being open: an unstated declaration is not
-/// anchored, or unplaceable, and does not count. Where the clause names no
-/// period, the declaration is the authority's judgment, as before.
+/// anchored within the period before it, and only while none is anchored
+/// after it; no acknowledgement is needed (F166 withdrew F148's). The
+/// anchors are stated by the verifier, the anchoring and time-reference
+/// formats being open: an unstated declaration is not anchored, or
+/// unplaceable, and does not count. Where the clause names no period, the
+/// declaration is the authority's judgment, as before.
 #[test]
 fn a_declaration_under_a_period_counts_only_anchored() {
     let mut lab = Lab::new(&|t| {
@@ -2118,13 +2118,8 @@ fn a_declaration_under_a_period_counts_only_anchored() {
     assert!(why(&lab).is_some_and(|w| w.contains("not anchored") && w.contains("F136")), "{:?}", why(&lab));
     let line = lab.record(0, None, &[], vec![d], f);
     assert!(lab.view().record(&lab.c[0].id, &line).unwrap().registers.is_empty(), "the record registers nothing");
-    // Anchored at 100, but acknowledged by nobody (F148).
+    // Anchored at 100, acknowledged by nobody: it counts (F166).
     lab.anchors.push((d, 100));
-    assert!(why(&lab).is_some_and(|w| w.contains("acknowledgement") && w.contains("F148")), "{:?}", why(&lab));
-    // Ana, another party, acknowledges it, anchored at 120: it counts.
-    let mut ana = lab.m[ANA].clone();
-    let ack = lab.w.ack(&mut ana, d);
-    lab.anchors.push((ack, 120));
     assert!(lab.view().declaration(&d).unwrap().is_ok(), "{:?}", why(&lab));
     let line = lab.record(0, None, &[], vec![d], f);
     assert_eq!(lab.view().record(&lab.c[0].id, &line).unwrap().registers.len(), 1);
@@ -2139,6 +2134,62 @@ fn a_declaration_under_a_period_counts_only_anchored() {
     let pf = plain.founding;
     let d2 = plain.declare(None, pf, pf, CY, vec![outcomes::VOICE_REMOVED]);
     assert!(plain.view().declaration(&d2).unwrap().is_ok());
+}
+
+/// Law rule 51 (F166) at a collective's line: the declaration against Cy
+/// is anchored at 100, with no act of Cy's anchored in the thirty before
+/// it. The label draws a record registering it and putting in force a
+/// clone without Cy's voice (a new arbitrator, signed by Ana and Ben).
+/// Cy then comes back: an act on the agreement anchored at 140. Shown
+/// now, the declaration does not count; but a record anchored at 110,
+/// drawn while it counted, keeps what it put in force: its registration
+/// and its clone are never undone ("Made before, made after", Q28). A
+/// record anchored at Cy's own point or after, or not anchored at all,
+/// cannot be shown to come before the return: there the declaration does
+/// not count, and the record is no line (reading, to confirm: a line is
+/// placed against the return by its own anchor).
+#[test]
+fn a_return_defeats_a_declaration_and_never_undoes_its_line() {
+    for (line_at, stands) in [(Some(110), true), (Some(139), true), (Some(140), false), (Some(150), false), (None, false)] {
+        let mut lab = Lab::new(&|t| {
+            t.time = Some((spec("a block height reference"), Value::Uint(0)));
+            t.abandonment.as_mut().unwrap().period = Some(30);
+        });
+        let f = lab.founding;
+        let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+        lab.anchors.push((d, 100));
+        let t1 = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN])], &|t| {
+            t.arbitrators = Some(vec![spec("another arbitrator")]);
+        });
+        let k = lab.propose(ANA, &t1);
+        let sa = lab.sign(ANA, &k);
+        let sb = lab.sign(BEN, &k);
+        let line = lab.record(0, Some((k, vec![sa, sb])), &[], vec![d], k);
+        if let Some(at) = line_at {
+            lab.anchors.push((line, at));
+        }
+        // Before Cy's return is shown, the line stands wherever it lies.
+        let e = lab.view().record(&lab.c[0].id, &line).unwrap();
+        assert!(e.line && e.registers.len() == 1, "{line_at:?}: {:?}", e.not_a_line);
+        assert_eq!(puts(&lab, &line), Some(k), "{line_at:?}");
+        // Cy comes back: an act on the label's agreement, anchored at 140.
+        let back = law_act(&mut lab.w, &mut lab.m[CY], 12, vec![], obj(f));
+        lab.anchors.push((back, 140));
+        let shown = lab.view().declaration(&d).unwrap();
+        assert!(shown.as_ref().is_err_and(|w| w.contains("F166")), "shown now, it does not count: {shown:?}");
+        let e = lab.view().record(&lab.c[0].id, &line).unwrap();
+        if stands {
+            assert!(e.line, "{line_at:?}: drawn while it counted, never undone: {:?}", e.not_a_line);
+            assert_eq!(e.registers.len(), 1, "{line_at:?}");
+            assert_eq!(puts(&lab, &line), Some(k), "{line_at:?}: its clone stays in force");
+            let x = lab.cmip_act(0, pay());
+            assert_eq!(lab.in_force(&x), k, "{line_at:?}");
+        } else {
+            assert!(!e.line, "{line_at:?}: not shown to come before Cy's return");
+            assert!(e.not_a_line.as_ref().is_some_and(|w| w.contains("F166")), "{line_at:?}: {:?}", e.not_a_line);
+            assert_eq!(puts(&lab, &line), None, "{line_at:?}");
+        }
+    }
 }
 
 /// Q37, flaw C, B15: a threshold authority of two of the other parties.
@@ -2346,6 +2397,71 @@ fn a_threshold_declaration_at_the_recovery_rotation() {
                 matches!(&got, Ok(Consent::Broken { reason }) if reason.contains("B18")),
                 "{case}: {got:?}"
             ),
+        }
+    }
+}
+
+/// F166 at C7's recovery rotation: under a period clause, Ben declares
+/// Ana, the sole holder of the label's signing key, absent, anchored at
+/// 100; Cy's co-signature is placed before the rotation. The recovery
+/// rotation removing Ana is the declaration's line. Ana then comes back,
+/// an act on the agreement anchored at 140. A rotation anchored at 110,
+/// made while the declaration counted, keeps its clone in force; one
+/// anchored after her return, or not anchored, cannot be shown to come
+/// before it: there Ana is still counted and the clone she did not sign
+/// is not complete (reading, to confirm, as for a record).
+#[test]
+fn a_return_never_undoes_the_recovery_rotation() {
+    for (rot_at, stands) in [(Some(110), true), (Some(150), false), (None, false)] {
+        let mut lab = Lab::new(&|t| {
+            let ids = t.parties.clone();
+            t.time = Some((spec("a block height reference"), Value::Uint(0)));
+            t.abandonment = Some(Abandonment {
+                authority: Authority::Others(2),
+                outcomes: vec![outcomes::VOICE_REMOVED],
+                period: Some(30),
+            });
+            let g = t.grammar.as_mut().unwrap();
+            g.signing = Holding::One(ids[ANA]);
+            g.safety = Holding::Shares { threshold: 2, members: ids };
+            g.recovery = None;
+        });
+        let f = lab.founding;
+        let d = lab.declare(Some(BEN), f, f, ANA, vec![outcomes::VOICE_REMOVED]);
+        lab.anchors.push((d, 100));
+        let sc = lab.sign(CY, &d);
+        lab.acknowledge(0, sc);
+        let ids = lab.ids();
+        let keep = vec![ids[BEN], ids[CY]];
+        let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![BEN, CY]), (Power::Judicial, vec![BEN, CY])], &|t| {
+            t.parties = keep.clone();
+            t.abandonment.as_mut().unwrap().authority = Authority::Others(1);
+            let g = t.grammar.as_mut().unwrap();
+            g.signing = Holding::One(keep[0]);
+            g.safety = Holding::Shares { threshold: 1, members: keep.clone() };
+            t.areas.as_mut().unwrap()[0].holders = vec![keep[1]];
+        });
+        let k = lab.propose(BEN, &t);
+        let s1 = lab.sign(BEN, &k);
+        let s2 = lab.sign(CY, &k);
+        let rot = lab.rotate(Some((k, vec![s1, s2])), &[0]);
+        if let Some(at) = rot_at {
+            lab.anchors.push((rot, at));
+        }
+        let y = lab.publish(0);
+        lab.sign(CY, &y);
+        assert_eq!(lab.in_force(&y), k, "{rot_at:?}: before Ana's return is shown");
+        let back = law_act(&mut lab.w, &mut lab.m[ANA], 12, vec![], obj(f));
+        lab.anchors.push((back, 140));
+        let got = lab.view().consent(&y);
+        if stands {
+            assert!(matches!(&got, Ok(c) if c.counts()), "{rot_at:?}: never undone: {got:?}");
+            assert_eq!(lab.in_force(&y), k, "{rot_at:?}");
+        } else {
+            assert!(
+                matches!(&got, Ok(Consent::Broken { reason }) if reason.contains("not complete")),
+                "{rot_at:?}: Ana is counted again at the rotation: {got:?}"
+            );
         }
     }
 }
@@ -2988,17 +3104,17 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
     assert_eq!(a2.exists, Some(true), "{:?}", a2.invalid);
 }
 
-/// Freeze scenario 1, step 9 (F136, F148; the hostile review of F133 to
-/// F144, finding 3): a deal whose clause names a two-week period on its
-/// block height (here 30 blocks), the keeper's operator the authority on
-/// absence. The verifier states the anchors (formats open). A liveness act
-/// on the deal protects its party once anchored, whoever anchored it; one
-/// nobody anchored does not (a stated cost). Activity elsewhere protects
-/// no one. A declaration anchored during a gap and kept counts only if
-/// another party or the keeper acknowledged it, anchored within one
-/// further period, with no act of the party on the deal anchored between:
-/// published months later, after the party returned, it counts for
-/// nothing.
+/// Freeze scenario 1, step 9 (F136, F148, F166; the hostile reviews of
+/// F133 to F144, finding 3, and of F145 to F162, finding 5): a deal whose
+/// clause names a two-week period on its block height (here 30 blocks),
+/// the keeper's operator the authority on absence. The verifier states the
+/// anchors (formats open; F162 item 2). A liveness act on the deal
+/// protects its party once anchored, whoever anchored it; one nobody
+/// anchored does not (a stated cost). Activity elsewhere protects no one.
+/// A declaration counts only while the declared party has no act on the
+/// deal anchored after its own anchor (F166): one anchored during a gap,
+/// kept, acknowledged by an accomplice, and published months later, after
+/// the party came back, counts for nothing.
 #[test]
 fn scenario_1_absence_is_judged_by_anchors() {
     let mut w = World::new();
@@ -3060,8 +3176,7 @@ fn scenario_1_absence_is_judged_by_anchors() {
     // a friend: it keeps their vote.
     let live = law_act(&mut w, &mut m[0], 12, vec![], obj(d));
     let d1 = declare(&mut w, 0);
-    let ack1 = w.ack(&mut m[1], d1);
-    let base = vec![(d1, 100), (ack1, 110)];
+    let base = vec![(d1, 100)];
     let got = judged(&w, &[base.clone(), vec![(live, 95)]].concat(), &d1);
     assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
     // The same liveness act, anchored by nobody, protects no one.
@@ -3074,74 +3189,145 @@ fn scenario_1_absence_is_judged_by_anchors() {
     let busy = law_act(&mut w, &mut m[1], 12, vec![], obj(elsewhere));
     let post = w.post(&mut m[1], "a post far from the film");
     let d2 = declare(&mut w, 1);
-    let ack2 = w.ack(&mut m[0], d2);
-    let got = judged(&w, &[(busy, 95), (post, 96), (d2, 100), (ack2, 105)], &d2);
+    let got = judged(&w, &[(busy, 95), (post, 96), (d2, 100)], &d2);
     assert_eq!(got, Ok(()), "activity elsewhere is no presence (rule 50)");
 
-    // p3 is away in January. The operator anchors a declaration at 100,
-    // during the gap, and keeps it to themselves. p3 comes back and works
-    // on the deal every week (anchored at 140, 170, 200...). Published in
-    // October, the declaration is acknowledged then, at 400: too late.
+    // The kept declaration (the review of F145 to F162, finding 5): p3,
+    // contributor C, is away three weeks in January, their last act on the
+    // deal anchored at 60. The operator anchors a declaration against C at
+    // 100, during the gap; p1, who wants C's stake, anchors an
+    // acknowledgement of it at 102, and the operator its own at 103.
+    // Neither publishes anything.
+    let before = law_act(&mut w, &mut m[2], 12, vec![], obj(d));
     let d3 = declare(&mut w, 2);
+    let accomplice = w.ack(&mut m[0], d3);
+    let own = w.ack(&mut keeper, d3);
+    let odd = w.ack(&mut stranger, d3);
+    let kept = vec![(before, 60), (d3, 100), (accomplice, 102), (own, 103), (odd, 104)];
+    // Had C not come back, it would count, acknowledged or not (F166).
+    assert_eq!(judged(&w, &kept, &d3), Ok(()));
+    assert_eq!(judged(&w, &[(before, 60), (d3, 100)], &d3), Ok(()));
+    // C comes back and works on the deal every week until October,
+    // anchored at 140, 170, 200 and on to 380. In October the operator
+    // publishes the declaration and the acknowledgements: it does not
+    // count. Every check of F148 and F158 would have passed.
     let mut back = vec![];
-    for at in [140, 170, 200, 230] {
+    for at in (140..=380).step_by(30) {
         let x = law_act(&mut w, &mut m[2], 12, vec![], obj(d));
         back.push((x, at));
     }
-    let late = w.ack(&mut m[0], d3);
-    let got = judged(&w, &[back.clone(), vec![(d3, 100), (late, 400)]].concat(), &d3);
-    assert!(got.as_ref().is_err_and(|e| e.contains("one further period") && e.contains("F148")), "{got:?}");
-    // Acknowledged in time, at 125, but p3's act on the deal at 110 lies
-    // between the two: it does not count either.
-    let early = w.ack(&mut m[1], d3);
-    let mut returned = back.clone();
-    returned.push((law_act(&mut w, &mut m[2], 12, vec![], obj(d)), 110));
-    let got = judged(&w, &[returned, vec![(d3, 100), (late, 400), (early, 125)]].concat(), &d3);
-    assert!(got.as_ref().is_err_and(|e| e.contains("between")), "{got:?}");
-    // With nothing of p3's between, the acknowledgement at 125 makes it
-    // count: p3's later acts cannot undo it (rule 52's contest shows it).
-    assert_eq!(judged(&w, &[back.clone(), vec![(d3, 100), (early, 125)]].concat(), &d3), Ok(()));
-    // An acknowledgement by the declared party, or by a stranger, is none.
-    let own = w.ack(&mut m[2], d3);
-    let odd = w.ack(&mut stranger, d3);
-    let got = judged(&w, &[(d3, 100), (own, 105), (odd, 106)], &d3);
-    assert!(got.as_ref().is_err_and(|e| e.contains("acknowledgement")), "{got:?}");
-    // F158: the keeper's operator is the authority here and signed the
-    // declaration: its own acknowledgement is none, or it could anchor both
-    // in January, keep them, and publish them in October.
-    let kept = w.ack(&mut keeper, d3);
-    let got = judged(&w, &[(d3, 100), (kept, 105)], &d3);
-    assert!(got.as_ref().is_err_and(|e| e.contains("F158")), "{got:?}");
-    // Another party's acknowledgement, anchored as early, counts.
-    let other = w.ack(&mut m[0], d3);
-    assert_eq!(judged(&w, &[(d3, 100), (kept, 105), (other, 106)], &d3), Ok(()));
-    // F162 (3): bounds are inclusive: p3's act on the deal anchored at the
-    // declaration's own point protects p3.
+    let got = judged(&w, &[kept.clone(), back.clone()].concat(), &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("F166")), "a kept declaration, shown after C came back: {got:?}");
+    // One return is enough: C's first week back alone.
+    let got = judged(&w, &[kept.clone(), vec![back[0]]].concat(), &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("F166")), "{got:?}");
+    // C's acts that nobody anchored are no presence (rule 50, a stated
+    // cost): above, with only `kept` stated, every act of C's exists and
+    // the declaration counts.
+
+    // F162 (3): bounds are inclusive. C's act anchored at the declaration's
+    // own point protects C, by the period check; the next point defeats
+    // the declaration (F166); the period's first point, 70, protects, and
+    // 69 lies before the period.
     let same = law_act(&mut w, &mut m[2], 12, vec![], obj(d));
-    let got = judged(&w, &[(d3, 100), (other, 106), (same, 100)], &d3);
+    let got = judged(&w, &[(d3, 100), (same, 100)], &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    let got = judged(&w, &[(d3, 100), (same, 101)], &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("F166")), "{got:?}");
+    let got = judged(&w, &[(d3, 100), (same, 70)], &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    assert_eq!(judged(&w, &[(d3, 100), (same, 69)], &d3), Ok(()));
     // F162 (5): an act on a later version of the deal, a clone of it, is
-    // presence on the deal.
+    // presence on the deal, before the declaration or after it.
     let mut c = terms.clone();
     c.parent = Some(d);
     c.text = "The film's contributors share its revenue, version two.".into();
     c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(ids.clone()) }]);
     let later = law_act(&mut w, &mut m[0], law::types::TERMS, c.to_map(), obj(d));
     let on_later = law_act(&mut w, &mut m[2], 12, vec![], obj(later));
-    let got = judged(&w, &[(d3, 100), (other, 106), (on_later, 90)], &d3);
+    let got = judged(&w, &[(d3, 100), (on_later, 90)], &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    let got = judged(&w, &[(d3, 100), (on_later, 150)], &d3);
+    assert!(got.as_ref().is_err_and(|e| e.contains("F166")), "{got:?}");
     // Not anchored at all: it does not count (F136).
-    let got = judged(&w, &[(early, 125)], &d3);
+    let got = judged(&w, &[(accomplice, 102)], &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("not anchored")), "{got:?}");
 }
 
-/// F158 and F162 (5) in a collective whose clause names a period, its
-/// authority two of the other members: Ben declares Ana absent and Cy
-/// signs the declaration too. Cy, one of its signers, cannot acknowledge
-/// it (F158); the keeper can. Ana's act on the label's chain, anchored
-/// within the period, is presence on the agreement (F162, 5).
+/// F166, the review of F145 to F162, finding 6: a duo. Two musicians sign a
+/// deal whose clause names a period of absence, the authority one of them
+/// (p1), with no keeper and no third party. p2 goes quiet: their last act
+/// on the deal is anchored at 50, and p1's declaration at 100. It counts,
+/// though nobody but its signer and the declared party exists to
+/// acknowledge it (F158 made it count for nothing). p2's later anchored
+/// act on the deal defeats it, whenever it is shown.
 #[test]
-fn a_threshold_declarations_signers_do_not_acknowledge_it() {
+fn a_duos_period_clause_works_with_no_third_party() {
+    let mut w = World::new();
+    let mut m: Vec<Person> = ["p1", "p2"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+    let terms = Terms {
+        parties: ids.clone(),
+        text: "The duo shares its recordings' revenue.".into(),
+        cmips: vec![(6, pay()), (11, anchor())],
+        keepers: None,
+        field4: Field4::Rule(Rule::All),
+        clone: Rule::All,
+        time: Some((spec("a block height reference"), Value::Uint(0))),
+        abandonment: Some(Abandonment {
+            authority: Authority::Named(ids[0]),
+            outcomes: vec![outcomes::VOICE_REMOVED],
+            period: Some(30),
+        }),
+        parent: None,
+        grammar: None,
+        arbitrators: None,
+        split_grant: None,
+        payee_grants: None,
+        extensions: None,
+        succession: None,
+        constitutional: None,
+        areas: None,
+        area_words: None,
+        chain: None,
+        departed: None,
+        stakes: None,
+        forked_from: None,
+        release_rule: None,
+    };
+    assert_eq!(terms.check(&mips()), Ok(()));
+    let d = law_act(&mut w, &mut m[0], law::types::TERMS, terms.to_map(), None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &d);
+    }
+    let quiet = law_act(&mut w, &mut m[1], 12, vec![], obj(d));
+    let x = AbsenceDeclaration { agreement: d, clause: d, party: ids[1], outcomes: vec![outcomes::VOICE_REMOVED] };
+    let decl = law_act(&mut w, &mut m[0], law::types::DECLARATION, x.to_map(), obj(d));
+    let judged = |w: &World, anchors: &[(Hash, u64)]| -> Result<(), String> {
+        let mut v = view(w);
+        v.anchors.extend(anchors.iter().copied());
+        v.declaration(&decl).unwrap().map(|_| ())
+    };
+    assert_eq!(judged(&w, &[(quiet, 50), (decl, 100)]), Ok(()), "no third party is needed (F166)");
+    // p2 comes back: an act on the deal anchored at 131.
+    let back = law_act(&mut w, &mut m[1], 12, vec![], obj(d));
+    let got = judged(&w, &[(quiet, 50), (decl, 100), (back, 131)]);
+    assert!(got.as_ref().is_err_and(|e| e.contains("F166")), "the return defeats it: {got:?}");
+    // A signature on a version of the deal is presence too (F162, 5).
+    let again = sign(&mut w, &mut m[1], &d);
+    let got = judged(&w, &[(quiet, 50), (decl, 100), (again, 400)]);
+    assert!(got.as_ref().is_err_and(|e| e.contains("F166")), "{got:?}");
+}
+
+/// F166 and F162 (5) in a collective whose clause names a period, its
+/// authority two of the other members: Ben declares Ana absent and Cy
+/// signs the declaration too. It counts with no acknowledgement by anyone;
+/// one by Cy, or by the keeper, changes nothing (F166 withdrew F148's and
+/// F158's). Ana's acts on the label's chain are presence on the agreement
+/// (F162, 5): anchored within the period before the declaration, they keep
+/// it from counting; anchored after it, they defeat it (F166).
+#[test]
+fn a_threshold_declaration_needs_no_acknowledgement() {
     let mut lab = Lab::new(&|t| {
         t.time = Some((spec("a block height reference"), Value::Uint(0)));
         t.abandonment = Some(Abandonment { authority: Authority::Others(2), outcomes: vec![outcomes::VOICE_REMOVED], period: Some(30) });
@@ -3160,15 +3346,15 @@ fn a_threshold_declarations_signers_do_not_acknowledge_it() {
         v.anchors.extend(anchors.iter().copied());
         v.declaration(&d).unwrap().map(|_| ())
     };
-    let got = judged(&lab, &[(d, 100), (by_cy, 105)]);
-    assert!(got.as_ref().is_err_and(|e| e.contains("F158")), "a signer's acknowledgement is none: {got:?}");
+    assert_eq!(judged(&lab, &[(d, 100)]), Ok(()), "no acknowledgement is needed (F166)");
     assert_eq!(judged(&lab, &[(d, 100), (by_cy, 105), (by_keeper, 106)]), Ok(()));
-    // Ana works on the label's chain: an act of hers naming it in
-    // `objects`, anchored at 95.
+    // Ana works on the label's chain: acts of hers naming it in `objects`.
     let label = lab.c[0].id;
     let on_chain = law_act(&mut lab.w, &mut lab.m[ANA], 12, vec![], Some(vec![Object { chain: label, predecessor: label }]));
-    let got = judged(&lab, &[(d, 100), (by_keeper, 106), (on_chain, 95)]);
+    let got = judged(&lab, &[(d, 100), (on_chain, 95)]);
     assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    let got = judged(&lab, &[(d, 100), (by_keeper, 106), (on_chain, 130)]);
+    assert!(got.as_ref().is_err_and(|e| e.contains("F166")), "her return on the label's chain defeats it: {got:?}");
 }
 
 /// F162 (13), rule 36a: an area over the Identity layer governs the

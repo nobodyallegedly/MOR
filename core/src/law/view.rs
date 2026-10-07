@@ -83,7 +83,9 @@ pub struct LawView<'a> {
     /// anchored the act, it is placed (anyone may anchor anyone's act,
     /// F148). An act not listed is not anchored, or the anchors cannot
     /// place it. Consulted only where an abandonment clause names a period
-    /// ([`Self::declaration`]).
+    /// ([`Self::declaration`]): for the declaration, the declared party's
+    /// acts on the agreement, and the collective's line (record or
+    /// rotation) where the declaration is judged to take effect (F166).
     pub anchors: BTreeMap<Hash, u64>,
     /// Good faith after a rotation (Finance rule 15, F164), for a payer's
     /// claim and the rotation that invalidated the pointer its payment was
@@ -893,7 +895,12 @@ impl<'a> LawView<'a> {
             let mut gone = false;
             // B19: the authority is one identity, which signs alone; terms
             // naming a threshold of the parties are invalid in a deal.
-            for (x, _, _, _) in self.declarations_against(p, up, &parent.parties)? {
+            // F166: judged as shown now, every anchored return of the party
+            // defeating it, so a clone completed without the party while it
+            // counted needs the party again once its return is shown. How a
+            // deal's clone is placed against the return is open (question
+            // for Nobody, allegedly; rule 51 says it is never undone).
+            for (x, _, _, _) in self.declarations_against(p, up, &parent.parties, None)? {
                 let placed = self
                     .valid_sigs(id, &[*p])
                     .iter()
@@ -1023,7 +1030,7 @@ impl<'a> LawView<'a> {
                             "a rotation declares only a clone that changes the constitutional tier (rule 37, B5)".into(),
                         ));
                     }
-                    if let Some(w) = self.recovery_signatures(&at.agreement, &d.agreement, d.absence.as_deref())? {
+                    if let Some(w) = self.recovery_signatures(&at.agreement, &d.agreement, d.absence.as_deref(), self.rotation_anchor(col, j))? {
                         return Ok(Err(w));
                     }
                     let own = self.recovery_departures(col, j, &at.agreement, &d.agreement)?;
@@ -1710,10 +1717,13 @@ impl<'a> LawView<'a> {
         }
         // Declarations removing a voice (rule 53, B12), their authority
         // counted at this line (Q37), with the record's resignations and
-        // steppings down in effect, other declarations not.
+        // steppings down in effect, other declarations not. Under a period
+        // clause, judged at this record's own anchor: a return of the party
+        // anchored after it does not undo what the record put in force
+        // (rule 51, F166; reading, to confirm).
         let others = e.registers.clone();
         for (x, p) in declarations {
-            let (d, clause) = match self.declaration(&x)? {
+            let (d, clause) = match self.declaration_at(&x, self.anchors.get(&h.id).copied())? {
                 Ok(v) => v,
                 Err(w) => return no(e, &format!("it registers a declaration that fails: {w}")),
             };
@@ -2133,9 +2143,18 @@ impl<'a> LawView<'a> {
     /// it names, or one of the other parties, whose number is counted where
     /// the declaration takes effect ([`Self::authority_at`]); and, where
     /// the clause names a period of absence, the anchors' checks (F136,
-    /// F148: [`Self::absence_by_anchors`]). Returns the declaration and the
-    /// clause, or why it fails.
+    /// F166: [`Self::absence_by_anchors`]). Returns the declaration and the
+    /// clause, or why it fails. Judged as shown now: every anchored return
+    /// of the party defeats it (F166).
     pub fn declaration(&self, id: &Hash) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
+        self.declaration_at(id, None)
+    }
+
+    /// [`Self::declaration`], judged at a line anchored at `until`, where
+    /// the declaration takes effect: a return of the party anchored after
+    /// the line does not undo what the line put in force (rule 51, F166;
+    /// [`Self::absence_by_anchors`]).
+    fn declaration_at(&self, id: &Hash, until: Option<u64>) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let h = self.held(id)?;
         if !self.is_law(h, types::DECLARATION) {
             return Ok(Err("not an abandonment declaration (type 13)".into()));
@@ -2183,12 +2202,12 @@ impl<'a> LawView<'a> {
         if !ok {
             return Ok(Err("it is not signed by the authority the clause names (rule 51)".into()));
         }
-        // F136, F148: where the clause names a period of absence, judged by
+        // F136, F166: where the clause names a period of absence, judged by
         // anchors alone ([`Self::absence_by_anchors`]). With no period, the
         // declaration is the authority's judgment, a stated cost.
         if let Some(period) = clause.period {
             let versions: Vec<Hash> = lineage.iter().map(|(v, _)| *v).collect();
-            if let Err(w) = self.absence_by_anchors(id, &d, period, &versions, &lineage[0].1) {
+            if let Err(w) = self.absence_by_anchors(id, &d, period, &versions, &lineage[0].1, until) {
                 return Ok(Err(w));
             }
         }
@@ -2196,24 +2215,37 @@ impl<'a> LawView<'a> {
     }
 
     /// Rule 51's checks under a clause naming a period of absence (F136,
-    /// F148), on the anchors the caller states ([`Self::anchors`]): the
+    /// F166), on the anchors the caller states ([`Self::anchors`]): the
     /// declaration is anchored, at a point D; no act of the declared party
     /// on the agreement is anchored within the period before it, from D
-    /// less the period to D; and an acknowledgement of it (Envelope,
-    /// `acks`) by another party of the agreement or by one of its keepers'
-    /// operators, never by the declaration's signer (for a threshold, its
-    /// signers) nor the declared party (F158), is anchored within one
-    /// further period, from D to D plus the period, with no act of the
-    /// declared party on the agreement anchored between the two. Only acts
-    /// on the agreement count as presence (rule 50, F162): acts naming, in
-    /// `objects`, any version of it, earlier or later by clones, as chain
-    /// or predecessor, signature acts signing one, and, in a collective,
-    /// the member's acts on the collective's chain; activity elsewhere does
-    /// not. An act of the party that nobody anchored is no presence (a
-    /// stated cost, rule 50). Bounds are inclusive (F162): an act anchored
-    /// at the declaration's own point, or at its acknowledgement's,
-    /// protects the party.
-    fn absence_by_anchors(&self, decl: &Hash, d: &AbsenceDeclaration, period: u64, versions: &[Hash], terms: &Terms) -> Result<(), String> {
+    /// less the period to D; and none is anchored after D: the party's own
+    /// anchored return defeats the declaration whenever it is shown, so a
+    /// declaration cannot be kept and used against a party who came back
+    /// (F166). No acknowledgement is needed, so a duo's period clause works
+    /// with no third party (F166, withdrawing F148's acknowledgement and
+    /// F158).
+    ///
+    /// Only acts on the agreement count as presence (rule 50, F162): acts
+    /// naming, in `objects`, any version of it, earlier or later by clones,
+    /// as chain or predecessor, signature acts signing one, and, in a
+    /// collective, the member's acts on the collective's chain; activity
+    /// elsewhere does not. An act of the party that nobody anchored is no
+    /// presence (a stated cost, rule 50). Bounds are inclusive (F162): an
+    /// act anchored at the declaration's own point protects the party, by
+    /// the period check; so every act of the party on the agreement
+    /// anchored from D less the period on keeps the declaration from
+    /// counting.
+    ///
+    /// `until` is the anchored point of the line at which the caller
+    /// judges the declaration to take effect: a return anchored after that
+    /// point does not defeat it at that line, since what was put in force
+    /// while it counted is never undone (rule 51, "Made before, made
+    /// after", Q28; F166). A return anchored at the line's own point
+    /// defeats it there (bounds inclusive, after F162 item 3). With `until`
+    /// `None` (a line not anchored, a deal, or the declaration as shown
+    /// now) every anchored return counts. Reading, to confirm: a line is
+    /// placed against the party's return by the line's own anchor.
+    fn absence_by_anchors(&self, decl: &Hash, d: &AbsenceDeclaration, period: u64, versions: &[Hash], terms: &Terms, until: Option<u64>) -> Result<(), String> {
         let Some(&at) = self.anchors.get(decl) else {
             return Err("the clause names a period of absence, and the declaration is not anchored on the agreement's time reference, or the anchors cannot place it: it does not count (rule 51, F136); until the anchoring cMIP and the time-reference format exist, the anchors are the caller's statement".into());
         };
@@ -2249,28 +2281,11 @@ impl<'a> LawView<'a> {
         if presence.iter().any(|p| *p >= at.saturating_sub(period) && *p <= at) {
             return Err("the clause names a period of absence, and an act of the party on the agreement is anchored on its time reference within that period before the declaration (rule 51, F136)".into());
         }
-        let keepers: Vec<Hash> = terms.keepers.iter().flat_map(|k| k.operators.iter().copied()).collect();
-        // F158: never the declaration's signer, nor, for a threshold, its
-        // signers (the other parties whose signature acts name it).
-        let mut signers: Vec<Hash> = self.v.get(decl).and_then(|h| h.act.outside.signer).into_iter().collect();
-        signers.extend(self.signers(decl, &terms.parties));
-        let ack = self
-            .v
-            .acknowledgements(decl)
-            .filter(|a| self.valid(&a.id))
-            .filter(|a| {
-                a.act.outside.signer.is_some_and(|s| {
-                    s != d.party && !signers.contains(&s) && (terms.parties.contains(&s) || keepers.contains(&s))
-                })
-            })
-            .filter_map(|a| self.anchors.get(&a.id).copied())
-            .filter(|p| *p >= at && *p <= at.saturating_add(period))
-            .min();
-        let Some(ack) = ack else {
-            return Err("no acknowledgement of the declaration by another party or by the keeper, other than its signers and the declared party, is anchored within one further period after its own anchor: it does not count, so a declaration cannot be kept and used later (rule 51, F148, F158)".into());
-        };
-        if presence.iter().any(|p| *p >= at && *p <= ack) {
-            return Err("an act of the declared party on the agreement is anchored between the declaration and its acknowledgement: it does not count (rule 51, F148)".into());
+        // F166: the party's own anchored return, after the declaration's
+        // anchor, defeats it whenever the declaration is shown; judged at a
+        // line, only a return anchored by the line's own point.
+        if presence.iter().any(|p| *p > at && until.is_none_or(|u| *p <= u)) {
+            return Err("the declared party has an act on the agreement anchored after the declaration's own anchor: its return defeats the declaration, whenever it is shown (rule 51, F166)".into());
         }
         Ok(())
     }
@@ -2348,8 +2363,10 @@ impl<'a> LawView<'a> {
 
     /// The declarations against `party` that its possible authorities
     /// signed, under the clauses of `lineage`: the identities they name, or
-    /// the other parties of `parties`. Checked on their own only.
-    fn declarations_against(&self, party: &Hash, lineage: &[(Hash, Terms)], parties: &[Hash]) -> R<Vec<(Hash, AbsenceDeclaration, Abandonment, Hash)>> {
+    /// the other parties of `parties`. Checked on their own only, at a line
+    /// anchored at `until` where one is given ([`Self::declaration_at`],
+    /// F166).
+    fn declarations_against(&self, party: &Hash, lineage: &[(Hash, Terms)], parties: &[Hash], until: Option<u64>) -> R<Vec<(Hash, AbsenceDeclaration, Abandonment, Hash)>> {
         let mut who: Vec<Hash> = vec![];
         for (_, t) in lineage {
             match t.abandonment.as_ref().map(|a| &a.authority) {
@@ -2366,7 +2383,7 @@ impl<'a> LawView<'a> {
                 if !self.is_law(h, types::DECLARATION) || !seen.insert(h.id) {
                     continue;
                 }
-                if let Ok((d, c)) = self.declaration(&h.id)? {
+                if let Ok((d, c)) = self.declaration_at(&h.id, until)? {
                     if &d.party == party
                         && d.outcomes.contains(&outcomes::VOICE_REMOVED)
                         && ids.contains(&d.agreement)
@@ -2377,6 +2394,13 @@ impl<'a> LawView<'a> {
             }
         }
         Ok(out)
+    }
+
+    /// The anchored point of the collective's rotation at link `j`, where
+    /// the caller states one ([`Self::anchors`]): where a declaration taking
+    /// effect there is judged (rule 51, F166).
+    fn rotation_anchor(&self, col: &Col, j: usize) -> Option<u64> {
+        col.res.links.get(j).and_then(|l| self.anchors.get(&l.act).copied())
     }
 
     /// C7: where the declared party is one the collective's signing key
@@ -2395,7 +2419,7 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let mut open = None;
-            for (x, d, clause, signer) in self.declarations_against(p, &lineage, &t.parties)? {
+            for (x, d, clause, signer) in self.declarations_against(p, &lineage, &t.parties, self.rotation_anchor(col, j))? {
                 match self.authority_at(col, Point::Line(Line::Rotation(j)), at, &clause, &d, &x, &signer, &[]) {
                     Ok(Ok(())) => {
                         out.push(Departure {
@@ -2424,7 +2448,7 @@ impl<'a> LawView<'a> {
     /// the collective's signing key cannot be produced without under the
     /// agreement in force `at` (C7, B16). Naming any other act puts nothing
     /// in force, as for the clone's own signatures (Flaw M).
-    fn recovery_signatures(&self, at: &Hash, k: &Hash, absence: Option<&[Hash]>) -> R<Option<String>> {
+    fn recovery_signatures(&self, at: &Hash, k: &Hash, absence: Option<&[Hash]>, until: Option<u64>) -> R<Option<String>> {
         let Some(absence) = absence else { return Ok(None) };
         let t = self.terms(at)?;
         let kt = self.terms(k)?;
@@ -2445,7 +2469,7 @@ impl<'a> LawView<'a> {
                 None
             };
             let ok = match on {
-                Some(x) => match self.declaration(&x) {
+                Some(x) => match self.declaration_at(&x, until) {
                     Ok(Ok((d, _))) => removed.contains(&d.party),
                     _ => false,
                 },

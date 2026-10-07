@@ -1416,12 +1416,13 @@ struct SpecsIn {
     /// them (F131, IT3): wrong receipts, counting for nothing.
     #[serde(default)]
     rail_invalid: Vec<String>,
-    /// Anchoring (Law rules 50 and 51; F136, F148): for each act the
+    /// Anchoring (Law rules 50 and 51; F136, F148, F166): for each act the
     /// anchoring cMIP the agreement names places on its time reference, the
     /// point it places it at, as the client read the anchors (the formats
     /// being open), in the unit of the abandonment clause's period. Whoever
     /// anchored it. An act not listed is not anchored. Under a clause
-    /// naming a period, a declaration counts only on these anchors.
+    /// naming a period, a declaration counts only on these anchors, and the
+    /// declared party's act anchored after it defeats it (F166).
     #[serde(default)]
     anchors: std::collections::BTreeMap<String, u64>,
 }
