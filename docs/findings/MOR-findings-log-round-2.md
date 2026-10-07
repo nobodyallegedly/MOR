@@ -1963,6 +1963,17 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Law draft 10, rule 15a. *To build:* delivery of every receipt to every holder; the deviation check; a test of a reset and a fork.
 
 
+## F172. Absence returns to the members' chosen judgment; proof by time becomes a module (review of F163 to F168, findings 8 and 9, 7 October 2026)
+
+**Found by the hostile review of F163 to F168:** (8) F166 did not say what a defeated declaration undoes, and the declaration format's "a record naming it counts for nothing" contradicted "never undone"; (9) a duo's period clause became a hair-trigger, and a contest became a defeat even of a rightful declaration.
+
+**Zoomed out at Nobody, allegedly's request ("Let's zoom out on this one too… How did we get to this?"):** the rule approved on 5 October was the authority's judgment, a stated cost accepted by signing the clause, with a visible contest. F136 made absence provable from anchored time; each later fix (F148, F158, F166) answered the one before, and the duo problem was created by F158, not by the original design. Nobody, allegedly: "So, we have an agreement of collaboration, this agreement has a field relating to absence used to define what can be done if a person goes missing. So, how it is setup from various options is the members responsibility."
+
+**Decided (Nobody, allegedly, 7 October 2026): "Yes":** the core returns to the original rule: the declaration is the authority's judgment, checked for signer, outcome and version, a stated cost the party accepted, shown with any contest. Proof of absence by time becomes an optional **absence-proof cMIP** the clause may name (key 3, with its parameters; key 2 retired); where named, the declaration counts only if the cMIP accepts it. A declaration moves nothing by itself: its outcomes take effect only through a record, rotation or clone put in force under it, judged where that act uses it, and no later act undoes it. F136, F148, F158 and F166 (and F162 items 3, 5, 6) move to the absence-proof task.
+
+**Core changes:** Law draft 10, abandonment clause format, rules 50 and 51, the declaration format's record sentence, Tasks; freeze suite scenario 1 step 9 and its pass condition. *To build:* revert `absence_by_anchors` from the core path (keep it as a reference absence-proof module, if useful), remove the collective client's period warnings, retire key 2.
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
