@@ -2083,6 +2083,29 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Finance draft 6, the clock format, rules 12a, 14b and 15, scenario list; core v21; freeze suite 5c. **With F179 to F181 the rule 15 review is answered.**
 
 
+## F182. The F169 to F181 build's questions (7 October 2026, afternoon)
+
+**Found building F169 to F181** (`docs/decisions-f169-f181-build-2026-10-07.md`; merged `427e5c7`, display client released `65cbafe`, main green at `3701a14`; Rust 403, TypeScript 172, verifier2 0 disagreements on 4,000 histories). **Suggested by the project lead in one batch, weighted words called out; Nobody, allegedly, 7 October 2026: "All agreed."**
+
+1. A lock change anchored only on the backup: a claim anchored on the main reference counts, whatever its point.
+2. A homeless rotation's point is read from the new homes' quorum under the new rule.
+3. A payment a lock change affects stays affected, even if a later rotation would let it follow the chain again.
+4. The entry-less vault payment form is dropped (test-only).
+5. The running count is split key 4, `[+ [ stake, [+ [ holder, count ]] ]]`, the count after this split.
+6. "Receipt" in rule 15a means the split act.
+7. A reset or fork is shown on every split involved; each holder's client names the second.
+8. After a deviation, the reference stays the last split that continued the chain; splits from a payer's claim are in the chain; a new holder starts with a warning.
+9, 11. Where the floor forbids hiding a markup character, the format shows it as text rather than refusing the document.
+10. A block break inside a run between digits: the whole run is excepted, as built.
+12. The readings confirmed; the minus look-alikes U+2010, U+2011, U+2012, U+2796 join the floor; "- 5" stays a stated miss (it is also list markup).
+13, 15. Confirmed as built.
+14. Absence proof is task 14; a chain of judgment names it as any judge.
+16. A client **MUST NOT** sign terms naming an absence-proof cMIP it does not implement.
+17. The reference absence-proof module stays in the repository as an example, not a specification.
+
+**Core changes:** Finance draft 6, rule 15; Law draft 10, rule 15a and Tasks; Text draft 6, the format task. *To build:* 1, 2, 4, 8, 9 to 12, 14, 16.
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
