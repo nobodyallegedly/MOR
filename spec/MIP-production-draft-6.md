@@ -98,9 +98,10 @@ The tasks the core defines:
 | 8 | Law | Split | an amount received and a split plan | payouts summing exactly, with third-party evidence |
 | 9 | Law | Condition evaluation | a condition and the acts it refers to | true, false, pending or unknown |
 | 10 | Law | Time reference | a point on the reference and an act | before, after or undetermined |
-| 11 | Law | Anchoring | an act id | a proof it existed at a point on a time reference |
+| 11 | Envelope | Anchoring (F173) | an act id | a proof it existed at a point on a named time reference |
 | 12 | Law | Grant limits | a grant and an act under it | within limits, or not |
 | 13 | Law | Work claims | a work hash and a claim | a claim, optionally with a pre-publication commitment |
+| 14 | Law | Absence proof (F172, F178) | an abandonment declaration, the clause's parameters, and the acts the record's history holds | accepted, refused or unknown |
 
 ### Extensions
 

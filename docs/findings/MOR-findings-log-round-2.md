@@ -1922,8 +1922,177 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **All decided:** findings 1 to 14 as F163 to F168; the build's questions as F168 (B2 answered during the build).
 
 
+## F169. Theft: anchor or bear the loss (the theft window from first principles, 7 October 2026)
+
+**Found:** four rounds of fixes on one question (F133, F138, F139, F145 to F147, F154, F157, F160, F163, F164) each broke in a new place; the second Fable review showed F164 gave the owner a lever. The project lead set out a baseline and a ledger (`docs/theft-window-baseline-2026-10-07.md`), and Nobody, allegedly, took the question "removed from the protocol".
+
+**The principle, decided step by step by Nobody, allegedly (7 October 2026):**
+- "Who bears the theft? Of what… a signing key? The owner of the key, no?" The owner bears what the stolen key did.
+- "Locks changed, security patched. The person did the work… so the change of lock acts as the 'reported it'."
+- "The app is guilty, but cannot be made to bear the loss. So, buyer's choice of app becomes the 'mistake'. In both cases the problem is acting on outdated information."
+- On the grey zone (a payment that may have been in the window or after): "a client that plans to execute many transactions and most likely take a cut is responsible to execute it properly. We're back to 'you should anchor, we just don't specify how'."
+- "Agreed. But walk it all again one more time yourself to verify the logic." The walk-through withdrew the project lead's refinement (that only voiding a wallet, not lowering a limit, counts as a lock change), since a stolen phone holding the everyday wallet is changed by switching it off; added that an unanchored lock change leaves the owner bearing the window, and that incomparable anchors favour the payer; and stated that an old payment never anchored nor receipted can be put in doubt by a later lock change.
+- "Yes, a theft scenario justifies stating 'anchor or bear the loss'."
+
+**Decided:** a lock change is a rotation that voids a payee pointer or lowers or removes a vault limit. Unanchored, the owner bears (payments that followed what was published count). Anchored, a payment it affects counts only where the payee's own receipt (kept line, or split service grant key) or a payer's claim anchored before it shows it. Anchors compare only on one reference; incomparable favours the payer. Clients write the claim at payment and should anchor promptly; how is the anchoring cMIP's business. Stated costs: the owner's lever (bounded by the earlier limit, visible, beaten by prompt anchoring); old unanchored, unreceipted payments.
+
+**Working rule (Nobody, allegedly, 7 October 2026):** "stating that a core action is recommended even if the core does not specify how is fine. Money moves and core never specify how, media moves and the core never specifies how exactly." Anchoring joins rails and media types: the core names the task and what it must deliver; cMIPs and Modules decide how.
+
+**Replaces:** F139, F146, F154 and the rule of F164 (F147's anonymous signature over citations stands; reading several claims together is moot). F160 stays withdrawn.
+
+**Core changes:** Finance draft 6, rules 14a and 15; core v21 "Good faith"; paper section 5.1 and claim 2. *Next:* one hostile review of the whole set by Fable before building.
+
+
+## F170. Re-pointing deals during the window is the window's cost (review of F163 to F168, findings 5 and 6, 7 October 2026)
+
+**Found by the hostile review of F163 to F168:** (5) F168 item 11's "any later act of the payee's on the agreement" lets a thief holding the signing key sign one act per deal citing the thief's pointer, re-pointing every royalty that falls due in the window, which F157 had closed and which the core, Finance's reasoning and the paper still promised; (6) F163's client rule, in the window, makes the owner's honest device cite the thief's pointer, and "where the payee's pointers are published" was not named in Finance.
+
+**Considered:** (b) requiring the debtor's acknowledgement before a deal is re-pointed (friction on every honest wallet change, partial protection). Asked "All these findings still apply under the changes?", the project lead found that 5 and 6 now fall under F169's principle (the owner bears what the stolen key did until the lock change).
+
+**Decided (Nobody, allegedly, 7 October 2026): "Yes":** both are the window's cost, borne by the owner, bounded per payment by the vault limits; the backlog is protected after the lock change, not during the window. The promises are corrected in the core, Finance's reasoning and the paper. F163's place is named: where the payee's routes act says its Finance acts are found.
+
+**Core changes:** core v21 "Flow and vault"; Finance draft 6, rule 14 and the vault reasoning; paper section 5.1.
+
+
+## F171. Every holder keeps the tally chain; a reset or fork breaks the plan (review of F163 to F168, finding 7, 7 October 2026)
+
+**Found by the hostile review of F163 to F168** (finding 7): F165's tally chain had no rule for a receipt that cites no previous receipt or forks the chain, so a service could reset the count each time and hand every tie to one holder; two consecutive receipts show consistency, not truth; and a holder paid nothing receives no receipt, so the loser never holds the evidence.
+
+**Decided (Nobody, allegedly, 7 October 2026): "Agreed"** (after "So basically stakeholders build reference chains that is then used to check that the latest receipts are sound?" — yes): the split service delivers every receipt for a stake to every holder, paid or not (client conformance); each holder keeps the chain and checks each receipt on arrival; a receipt not citing the latest for its stake, or two citing the same one, is a deviation that breaks the plan (rule 46b).
+
+**Core changes:** Law draft 10, rule 15a. *To build:* delivery of every receipt to every holder; the deviation check; a test of a reset and a fork.
+
+
+## F172. Absence returns to the members' chosen judgment; proof by time becomes a module (review of F163 to F168, findings 8 and 9, 7 October 2026)
+
+**Found by the hostile review of F163 to F168:** (8) F166 did not say what a defeated declaration undoes, and the declaration format's "a record naming it counts for nothing" contradicted "never undone"; (9) a duo's period clause became a hair-trigger, and a contest became a defeat even of a rightful declaration.
+
+**Zoomed out at Nobody, allegedly's request ("Let's zoom out on this one too… How did we get to this?"):** the rule approved on 5 October was the authority's judgment, a stated cost accepted by signing the clause, with a visible contest. F136 made absence provable from anchored time; each later fix (F148, F158, F166) answered the one before, and the duo problem was created by F158, not by the original design. Nobody, allegedly: "So, we have an agreement of collaboration, this agreement has a field relating to absence used to define what can be done if a person goes missing. So, how it is setup from various options is the members responsibility."
+
+**Decided (Nobody, allegedly, 7 October 2026): "Yes":** the core returns to the original rule: the declaration is the authority's judgment, checked for signer, outcome and version, a stated cost the party accepted, shown with any contest. Proof of absence by time becomes an optional **absence-proof cMIP** the clause may name (key 3, with its parameters; key 2 retired); where named, the declaration counts only if the cMIP accepts it. A declaration moves nothing by itself: its outcomes take effect only through a record, rotation or clone put in force under it, judged where that act uses it, and no later act undoes it. F136, F148, F158 and F166 (and F162 items 3, 5, 6) move to the absence-proof task.
+
+**Core changes:** Law draft 10, abandonment clause format, rules 50 and 51, the declaration format's record sentence, Tasks; freeze suite scenario 1 step 9 and its pass condition. *To build:* revert `absence_by_anchors` from the core path (keep it as a reference absence-proof module, if useful), remove the collective client's period warnings, retire key 2.
+
+
+## F173. Anchoring moves to the Envelope (review of F163 to F168, finding 2, 7 October 2026)
+
+**Found by the hostile review of F163 to F168** (finding 2): anchoring was a Law task, while Finance (F169's lock change) and rotations rely on anchors; Finance promises never to depend on Law, and "anchored" named no reference.
+
+**Decided (Nobody, allegedly, 7 October 2026): "Agreed. It fits as it is 'media' and then all layers after it can leverage it":** the anchoring task moves to the Envelope: a cMIP accepts any act id and produces proof that it existed by a point on a named time reference; anchors compare only on the same reference; anyone may anchor any act. Law keeps its time references and deadlines on top of it. Identity's validity still does not depend on it (F63).
+
+**Core changes:** Envelope draft 7, Tasks; Law draft 10, Tasks. *To build:* the anchoring interface in the core library's Envelope part.
+
+
+## F174. The second review's smaller findings (review of F163 to F168, findings 3, 10 to 14, 7 October 2026)
+
+**Suggested by the project lead in one batch; Nobody, allegedly, 7 October 2026: "All agreed."**
+
+- **3.** A payee's own receipt also counts when signed with a key its chain binds after the rotation; "a grant key the chain still holds" becomes "a grant key whose grant still stands".
+- **10.** The text floor forbids hiding a mathematical sign only next to a digit, so `<` and `>` stay usable as quote and link markup; currency signs stay always protected.
+- **11.** The floor also covers a plus or minus before a currency sign or after a digit, a full stop or comma before a digit, brackets around an amount, a space or apostrophe between two letters, and question and exclamation marks.
+- **12, 13.** Rule 15 points to rule 14's selection; a refund to a bare key is carried into rule 7 (and so outside rule 12a).
+- **14.** Freeze scenario 1 step 5c follows F169 and says the rotation is anchored; the stake line and Law's reasoning heading say "turns"; the paper's claim 2 states that a thief's offer acknowledged after the rotation stays visible as disputed, though no money under it counts against the owner once the rotation is anchored.
+
+**Core changes:** Finance draft 6, rules 7 and 15; Text draft 6, the format task; Law draft 10, reasoning; freeze suite; paper claim 2.
+
+**With F169 to F174 the second review's findings are all decided.**
+
+
+## F175. The F163 to F168 build's remaining questions (7 October 2026)
+
+**Found building F163 to F168** (`docs/decisions-f163-f168-build-2026-10-07.md`, on branch `build-f163-f168`): the report reached the project lead after F169 to F174 were decided; checked against them, its F166 questions (8 to 12) are moot under F172, question 14 is settled by F174, question 6 by F171, F167 questions 1 and most of 5 by F174.
+
+**Suggested by the project lead; Nobody, allegedly, 7 October 2026: "All agreed":**
+- **F167 (2, 3, 4, 5).** A line break that ends a block may be hidden between two digits (a new block is shown); emphasis or code markup between two digits is refused; any run of hidden characters between two digits is covered; the dash-like minus signs (U+2013, U+FE63, U+FF0D) and the per-ten-thousand sign join the floor.
+- **F165 (7).** Under the default rule every leftover unit goes exactly where rule 15a sends it; a unit sent elsewhere is a deviation (as built).
+- **F169 (from 13).** Where several anchored lock changes affect a payment, it counts only if the claim is anchored before the first of them.
+
+**Core changes:** Text draft 6, the format task; Finance draft 6, rule 15; Law draft 10, rule 21.
+
+
+## F176. Name your services, name your clock (whole-set review, finding 1, 7 October 2026)
+
+**Found by the whole-set review** (`docs/reviews/whole-set-review-2026-10-07.md`, finding 1): nothing named the reference a lock change and a claim are compared on, and incomparable anchors favoured the payer, so a colluding payer anchored on a reference the owner never used and the owner bore the window despite anchoring.
+
+**Decided (Nobody, allegedly, 7 October 2026), after a walk: "Yes, name your services, name your clock.":** the owner declares the clock (the anchoring references, each an anchoring cMIP and its time reference) in the identity chain's declarations slot with the safety key, as the vault (Finance kind 1). A lock change counts as anchored only on a declared reference; after it, a claim anchored on none of them is not protected; a payee with no declared clock has chosen no protection and bears; a payer's client must read the clock before paying.
+
+**Working rule (Nobody, allegedly):** "name your services, name your clock": what is compared between parties is named in advance by the party a thief cannot be.
+
+**Core changes:** Finance draft 6, the clock declaration and rule 15. *To build:* the clock declaration, the comparison on declared references, the payer's client reading it.
+
+
+## F177. The locks count as changed when a home's receipt is anchored (whole-set review, finding 2, 7 October 2026)
+
+**Found by the whole-set review** (finding 2): an anchor proves an act existed by a point, not that anyone could see it; an owner could sign and anchor a lock change on Monday, keep it back, receive payments all week from promptly anchoring clients, and publish it on Saturday, putting every payment after the lock change.
+
+**Decided (Nobody, allegedly, 7 October 2026): "We can assume that a sub fork will align on important matters such as clocks. It's a bit like signed receipts on important letters. It is not when you send the letter that matters, but when the receiving has been confirmed.":** a lock change's point is the earliest anchored home receipt for its rotation, on the declared clock; a rotation kept back has no point. For a self-hosted identity, the rotation's own anchor is its point, a stated cost of that trust model. Recorded with it: communities are expected to align on common clocks, so incomparable references should be rare in practice.
+
+**Core changes:** Finance draft 6, rule 15. *To build:* the lock change point read from anchored home receipts.
+
+
+## F178. The whole-set review's wording and small calls (findings 3 to 17, 7 October 2026)
+
+**Suggested by the project lead in one batch; Nobody, allegedly, 7 October 2026: "English is my third language, even though I am more than fluent. These kind of small corrections get approved with curiosity."**
+
+- **3, 4.** Where rule 15 counts a payment as made, its version is selected from the payee's acts as they stood before the lock change, voided ones included, so a debtor who paid a deal re-pointed in the window does not pay twice; otherwise, for money, an act the rotation did not keep holds no pointer, signs no receipt and selects no version, whatever acknowledgement keeps it visible.
+- **5.** A lock change is defined by its effect: any rotation after which a payment that followed the chain as published before no longer follows it after.
+- **6.** "Before or at the lock change's point"; each act judged by its earliest anchor.
+- **7.** The owner's lever stated at its true size: every unreceipted, unanchored payment the lock change affects.
+- **8, 9, 10, 13.** The paper's claims 2 and 5, the Production task table (anchoring under Envelope; absence proof as task 14), the core's task and judge lists, and freeze scenario 9b follow F172 and F173; period mentions removed.
+- **11.** Before a party signs terms with an abandonment clause, its client must show in plain words who may declare it absent, with which outcomes, and whether an absence-proof cMIP stands between (rule 49).
+- **12.** An absence-proof cMIP judges only the acts the history of the record or clone using the declaration holds, so "never undone" stays true.
+- **14.** Absence proof is a judicial task: a judge never handles what it judges, and the chain of judgment applies.
+- **15.** The running count is a field of the split act; the split format's rounding sentence follows F175.
+- **16.** Each format's declaration says which of its hidden characters end a block; the percent signs are listed by code point.
+- **17.** The long-form format shows a link's closing `>` next to a digit (cosmetic; the format may choose another closer).
+
+**Core changes:** Finance draft 6, rule 15; Law draft 10, rules 15a, 49, Tasks, split format; Text draft 6; Production draft 6, task table; core v21; freeze suite 9b; paper claims 2 and 5. *Next:* one more hostile pass on rule 15 alone before building, as the review suggests.
+
+
+## F179. One clock, with a backup used only when it fails (rule 15 review, finding 1, 7 October 2026)
+
+**Found by the rule 15 review** (finding 1): a clock naming several references let a payer anchor on the one the owner did not, and the rule named no reference that decides.
+
+**Considered:** one clock only (a single point of failure: a dead clock at a theft leaves the owner bearing); several clocks all anchored (heavier). Asked "When would the need of anchoring on ALL clocks truly surface?", the project lead answered: only with a theft and a dead clock at once, or payers on another clock.
+
+**Decided (Nobody, allegedly, 7 October 2026): "Can we have a back up clock? And only anchor that one rarely when truly needed?" … "Back up service as added security. We used it in the last didn't we?":** the clock names a main reference and, optionally, a backup, in order, with the safety key. Comparison is on the main one where the lock change is anchored there; otherwise on the backup, and then a payer's claim anchored on the main one also counts. The owner's client anchors on the main one, and on the backup only where it cannot use the main one. The same pattern as the chain of judgment (F121), a deal's backup split service (F130) and the vault's several entries per unit.
+
+**Core changes:** Finance draft 6, the clock format and rule 15.
+
+
+## F180. The locks count as changed when the home quorum is met (rule 15 review, finding 2, 7 October 2026)
+
+**Found by the rule 15 review** (finding 2): "the earliest anchored home receipt" let a home the owner runs receipt a rotation days before the public homes held it, so the point came before the rotation counted under its home rule and before payers could see it.
+
+**Decided (Nobody, allegedly, 7 October 2026): "Or when Home quorum is met. (If that is the right word)":** the lock change's point is when its home quorum is met and anchored: the receipts the home rule requires for the rotation to count are all anchored, each passing Identity's checks; with a single home, that home's receipt. "Quorum" is the right word: the smallest number of homes whose receipts make the rotation count.
+
+**Core changes:** Finance draft 6, rule 15 (refining F177).
+
+
+## F181. The rule 15 review's remaining findings (findings 3 to 8, 7 October 2026)
+
+**Suggested by the project lead in one batch, weighted words called out; Nobody, allegedly, 7 October 2026: "Agreed"** (after asking "Is the disowning a problem in itself?": no; disowning is needed because a thief signs on the owner's own kept line, and its abuse is the owner's lever, public forever, needing the safety key, beaten by an anchored claim).
+
+- **3.** The owner's lever stated at its true size: every affected payment whose receipt the rotation did not keep, disowning its own receipt included, and whose claim is not anchored by the point.
+- **4.** One reach: a lock change affects a payment that followed the chain as published immediately before it and no longer follows it after.
+- **5.** Rule 12a reads the pointer and vault rule 15 selects for that payment, as the chain stood for it.
+- **6.** After a lock change, the owner's client **MUST** obtain the quorum's home receipts and anchor them on the main reference (client conformance); before genesis or a rotation leaving no clock, the client **SHOULD** say plainly that a theft's loss will be the owner's.
+- **7.** A clock entry names the anchoring cMIP and its parameters (one time reference), as Law's time reference does.
+- **8.** Editorial: the core's "Good faith" and "Flow and vault", the freeze suite's step 5c (the contributor declares a clock) and Finance's scenario list follow F176 to F181; rule 15 says what "anchored" means at its first use.
+
+**Core changes:** Finance draft 6, the clock format, rules 12a, 14b and 15, scenario list; core v21; freeze suite 5c. **With F179 to F181 the rule 15 review is answered.**
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
 
-**Open for Nobody, allegedly:** findings 1 to 14. The building session for F163 to F168, launched the same morning, builds the text as it stood.
+**All decided** as F169 to F174 (the building session for F163 to F168, launched the same morning, built the text as it stood and was asked to hold F164, F166 and F168 item 11).
+
+## Whole-set review (7 October 2026, late morning)
+
+Fable's review of the whole set after the reset (`docs/reviews/whole-set-review-2026-10-07.md`): absence (F172) and "the core names a task, not how" hold as principles; the theft principle (F169) is judged right, its rule not yet delivering it (findings 1 and 2, decisions; 3 to 10, wording). Findings 1 and 2 decided as F176 and F177; 3 to 17 as F178; 18 to 20 held. **Next:** one hostile pass on Finance rule 15 alone, then building.
+
+## Rule 15 review (7 October 2026, midday)
+
+Fable's review of Finance rule 15 alone (`docs/reviews/rule-15-review-2026-10-07.md`): "the principle is now mostly delivered"; the three doors of the whole-set review are shut, and everything the thief can reach with the signing key alone is shut out after an anchored lock change. Two real findings: (1) a clock naming several references lets a payer anchor on the one the owner did not; (2) "the earliest anchored home receipt" lets the owner's own home set the point before the rotation counts under its home rule. Smaller: the owner can disown its own receipt (3); the lock change's reach defined twice (4); rule 12a judges rails against the chain now (5); nobody is told to anchor (6); the clock cannot name a time reference's parameters (7); the core and suite lag (8). All decided as F179 to F181.

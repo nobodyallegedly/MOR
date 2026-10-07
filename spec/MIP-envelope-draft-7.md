@@ -276,6 +276,7 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 ## Tasks
 
 - **Media interpretation, per type.** A cMIP accepts a media object (bytes, or a manifest of parts) and produces its interpretation for display or play. It defines segmentation, chunk fingerprints, streaming and live media for its type.
+- **Anchoring** (F173, moved from Law). A cMIP accepts any act id and produces a proof that the act existed by a point on a named time reference. Two anchors are compared only on the same reference; anchors on references that cannot be compared order nothing. Anyone may anchor any act. *MOR has no clock, but anchoring to one is a task the core defines and accepts; it does not specify how (Nobody, allegedly). Every layer above may rely on it: Finance for a lock change after a theft (rule 15), Law for agreements' deadlines and time references, absence-proof modules for presence. A client that relies on an anchor carries the anchoring cMIP it names, as it carries a rail or media Module.*
 
 ## Reasoning
 
