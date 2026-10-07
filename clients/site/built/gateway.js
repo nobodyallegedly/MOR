@@ -810,8 +810,9 @@ var Verifier = class {
    * receipts the home rule in effect before it requires, each passing
    * the receipt checks, per home operator, and how many operators are
    * needed. `kind` is "own" (it counts on its own signatures: anchor the
-   * rotation itself), "homes" or "homeless"; null where it is not a
-   * counting rotation. *The owner's client anchors these after a lock
+   * rotation itself), "homes", or "homeless" (the new homes' receipts,
+   * under the new home rule, F182); null where it is not a counting
+   * rotation. *The owner's client anchors these after a lock
    * change (Finance rule 15, F181).*
    * @param {string} identity
    * @param {string} rotation
@@ -2789,6 +2790,9 @@ var isSpace = (s, i) => SPACES.has(s.charCodeAt(i));
 function linkCloseShown(s, i) {
   return isDigit(charBefore(s, i)) || isDigit(charAt(s, i + 1));
 }
+function linkOpenShown(s, i) {
+  return underFloor(s, i) !== null;
+}
 var AUTOLINK = /^<((?:https?|mailto):[^ <>]+)>/;
 function parse(source) {
   const lines = [];
@@ -2835,8 +2839,17 @@ var Parser = class {
   starts(l, depth) {
     const x = this.text(l);
     if (FENCE.test(x) || HEADING.test(x) || RULE.test(x)) return true;
-    if (depth < MAX_DEPTH && (x.startsWith(">") || this.marker(l))) return true;
+    if (depth < MAX_DEPTH && (this.quoteOpens(l) || this.marker(l))) return true;
     return false;
+  }
+  /**
+   * Does this line open a quote? A `>` opening it does, unless the Text
+   * MIP's floor forbids hiding it (a mathematical sign directly before a
+   * digit, `>5`): then it is shown as text, and the line is no quote
+   * (F182).
+   */
+  quoteOpens(l) {
+    return l.from < l.to && this.s[l.from] === ">" && underFloor(this.s, l.from) === null;
   }
   blocks(lines, depth) {
     const out = [];
@@ -2882,9 +2895,9 @@ var Parser = class {
         i++;
         continue;
       }
-      if (depth < MAX_DEPTH && x.startsWith(">")) {
+      if (depth < MAX_DEPTH && this.quoteOpens(l)) {
         const inner = [];
-        while (i < lines.length && this.s[lines[i].from] === ">" && lines[i].from < lines[i].to) {
+        while (i < lines.length && this.quoteOpens(lines[i])) {
           const q = lines[i];
           const skip = this.s[q.from + 1] === " " && q.from + 1 < q.to ? 2 : 1;
           this.mark("quote", q.from, q.from + skip);
@@ -2944,8 +2957,48 @@ var Parser = class {
     return out;
   }
   // -------------------------------------------------------------- inlines
-  /** The inline content of one line (rule 9). */
+  /**
+   * The inline content of one line (rule 9). Where the Text MIP's floor
+   * forbids hiding a piece of emphasis, code or link markup (a run of
+   * hidden markup between two digits, `1*2*3`, `1`2`3`), that piece is
+   * shown as text rather than the document refused (F175, F182): the line
+   * is read again with it as text, until no hidden run lies between two
+   * digits.
+   */
   inline(l) {
+    const literal = /* @__PURE__ */ new Set();
+    for (; ; ) {
+      const from = this.marks.length;
+      const nodes = this.inlineOnce(l, literal);
+      const at = this.betweenDigits(from);
+      if (at === null) return nodes;
+      this.marks.length = from;
+      literal.add(at);
+    }
+  }
+  /**
+   * The first run of markup hidden since mark `from` that lies between two
+   * digits, as the offset to read as text instead: an emphasis run, a code
+   * span's or a link's opening sign. Null if none.
+   */
+  betweenDigits(from) {
+    const s = this.s;
+    const ms = this.marks.slice(from).sort((a, b) => a.span.from - b.span.from);
+    for (let i = 0; i < ms.length; ) {
+      let j = i;
+      while (j + 1 < ms.length && ms[j + 1].span.from === ms[j].span.to) j++;
+      if (isDigit(charBefore(s, ms[i].span.from)) && isDigit(charAt(s, ms[j].span.to))) {
+        const m = ms.slice(i, j + 1).find((x) => x.rule !== "escape") ?? ms[i];
+        if (m.rule === "code-close") return [...ms].reverse().find((x) => x.rule === "code-open" && x.span.from < m.span.from).span.from;
+        if (m.rule === "link-close") return s.lastIndexOf("<", m.span.from);
+        return m.span.from;
+      }
+      i = j + 1;
+    }
+    return null;
+  }
+  /** One reading of a line's inline content, with the offsets in `literal` read as text. */
+  inlineOnce(l, literal) {
     const s = this.s;
     const toks = [];
     let run = -1;
@@ -2959,7 +3012,7 @@ var Parser = class {
     let p = l.from;
     while (p < l.to) {
       const c = s[p];
-      if (c === "\\" && p + 1 < l.to && ESCAPABLE.has(s[p + 1])) {
+      if (c === "\\" && p + 1 < l.to && ESCAPABLE.has(s[p + 1]) && !literal.has(p)) {
         flush(p);
         this.mark("escape", p, p + 1);
         run = p + 1;
@@ -2969,6 +3022,11 @@ var Parser = class {
       if (c === "`") {
         let n = 0;
         while (p + n < l.to && s[p + n] === "`") n++;
+        if (literal.has(p)) {
+          lit(p);
+          p += n;
+          continue;
+        }
         let q = p + n;
         let close = -1;
         while (q < l.to) {
@@ -2997,11 +3055,16 @@ var Parser = class {
         continue;
       }
       if (c === "<") {
-        const m = AUTOLINK.exec(s.slice(p, l.to));
+        const m = literal.has(p) ? null : AUTOLINK.exec(s.slice(p, l.to));
         if (m) {
-          flush(p);
           const span = { from: p + 1, to: p + 1 + m[1].length };
-          this.mark("link-open", p, p + 1);
+          if (linkOpenShown(s, p)) {
+            lit(p);
+            flush(p + 1);
+          } else {
+            flush(p);
+            this.mark("link-open", p, p + 1);
+          }
           toks.push({ k: "node", node: { t: "link", href: m[1], span } });
           p = span.to + 1;
           if (linkCloseShown(s, span.to)) lit(span.to);
@@ -3015,7 +3078,7 @@ var Parser = class {
       if (c === "*") {
         let n = 0;
         while (p + n < l.to && s[p + n] === "*") n++;
-        if (n > 3) {
+        if (n > 3 || literal.has(p)) {
           lit(p);
           p += n;
           continue;
@@ -3141,7 +3204,7 @@ function shownIn(doc) {
   return out;
 }
 var PERCENT_SIGNS = /* @__PURE__ */ new Set([37, 1642, 65130, 65285, 8240, 1545, 8241]);
-var SIGNS = /* @__PURE__ */ new Set([43, 45, 8722, 8211, 65123, 65293]);
+var SIGNS = /* @__PURE__ */ new Set([43, 45, 8722, 8208, 8209, 8210, 8211, 10134, 65123, 65293]);
 var STOPS = /* @__PURE__ */ new Set([
   // Full stops.
   46,
@@ -3462,8 +3525,10 @@ function checkBound(doc, declared = DECLARED, endsBlock = ENDS_BLOCK) {
         break;
       }
       case "link-close": {
-        const a = link && AUTOLINK.exec(s.slice(link.span.from, lineEnd(link.span.from)));
-        if (!link || !a || link.span.from + a[0].length !== to) return fail2("the > closing a link");
+        const o = link ? link.span.from : s.lastIndexOf("<", from);
+        if (!link && !(o >= lineStart(from) && state2[o] === 1 && linkOpenShown(s, o))) return fail2("the > closing a link");
+        const a = AUTOLINK.exec(s.slice(o, lineEnd(o)));
+        if (!a || o + a[0].length !== to) return fail2("the > closing a link");
         if (closeShown(from)) return fail2("the > closing a link, next to a digit, is shown");
         link = null;
         break;
