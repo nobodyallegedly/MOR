@@ -3838,6 +3838,7 @@ fn every_payout_matches_its_stake() {
         ],
         cmip: spec("a split cMIP"),
         agreement: f,
+        tally: None,
     };
     let everyone = ids.clone();
     let r1 = receipt(&mut lab, &mut svc, 1000);
@@ -3896,159 +3897,234 @@ fn every_payout_matches_its_stake() {
     assert_eq!(lab.view().split(&x).unwrap().sums, Some(false));
 }
 
-/// F165 (review of F145 to F162, finding 4): leftover ties take turns,
-/// counted along the split service's own receipts. A duo's work at
-/// 500,000 / 500,000 earns one-unit payments, so every unit is a tie.
-/// Under F150 the receipt's hash decided it, and the service, which signs
-/// the receipt and picks its salt, could sign one receipt after another
-/// until the hash fell its way. Now:
+/// A duo's work at 500,000 / 500,000, named to a split service the member
+/// owns (F165, F171): every one-unit payment is a tie. The lab, the
+/// service, the agreement in force, the stake, and the members' identity
+/// hashes, smaller first.
+fn duo() -> (Lab, Person, Hash, u64, Hash, Hash) {
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 500_000)])]);
+    });
+    let ids = lab.ids();
+    let svc = lab.w.genesis("a split service the member owns", vec![own_home()], None, None);
+    let g = lab.grant(&plain_grant(svc.id, false));
+    let t = lab.clone_terms(&lab.founding.clone(), vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| t.split_grant = Some(g));
+    let f = lab.propose(ANA, &t);
+    let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &f)).collect();
+    lab.record(0, Some((f, sigs)), &[], vec![], f);
+    let stake = lab.view().terms(&f).unwrap().own_stake().unwrap().0 as u64;
+    let (low, high) = if ids[ANA] < ids[BEN] { (ids[ANA], ids[BEN]) } else { (ids[BEN], ids[ANA]) };
+    (lab, svc, f, stake, low, high)
+}
+
+/// A one-unit receipt of the duo's service, with its own salt.
+fn unit_receipt(lab: &mut Lab, svc: &mut Person) -> Hash {
+    let r = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
+        rail: spec("a rail Module"),
+        proof: vec![],
+        payer: Some(mor_core::finance::Payer::Identity(spec("a listener"))),
+        payee: svc.id,
+        amount: mor_core::finance::Amount { unit: spec("a unit"), value: 1 },
+        fulfils: spec("a stream"),
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: None,
+    });
+    let a = lab.w.everyday_act(svc, mips().finance, 2, r.to_map(), None, None);
+    lab.w.add(&a)
+}
+
+/// The service's split of a one-unit `receipt`, paying the unit to `to`
+/// on `stake`, citing `previous` in `refs`, carrying `count` as the stake's
+/// running count (field 4, PROPOSED format), delivered to both members
+/// (F171: every holder, paid or not).
+#[allow(clippy::too_many_arguments)]
+fn unit_split(lab: &mut Lab, svc: &mut Person, f: Hash, stake: u64, receipt: Hash, to: Hash, previous: Option<Hash>, count: Option<Vec<(Hash, u64)>>) -> Hash {
+    use mor_core::act::Ref;
+    let s = law::Split {
+        receipt,
+        payouts: vec![law::Payout { receiver: to, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None }],
+        cmip: spec("a split cMIP"),
+        agreement: f,
+        tally: count.map(|c| vec![(stake, c)]),
+    };
+    let everyone = lab.ids()[..2].to_vec();
+    lab.w.private_act_refs(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone, previous.map(|p| vec![Ref::Act(p)]))
+}
+
+/// F165 (review of F145 to F162, finding 4), as F171 builds it: leftover
+/// ties take turns, counted in the running count each split act carries
+/// (field 4, PROPOSED format) and checked from two acts: the split and the
+/// previous one it cites for the stake. A duo's work at 500,000 / 500,000
+/// earns one-unit payments, so every unit is a tie. Under F150 the
+/// receipt's hash decided it, and the service, which signs the receipt and
+/// picks its salt, could sign one receipt after another until the hash
+/// fell its way. Now:
 ///
 /// - re-signing the receipt with twenty different salts changes nothing:
-///   with no earlier receipt, the unit goes to the smaller identity hash,
+///   with no earlier split, the unit goes to the smaller identity hash,
 ///   and a split giving it to the other member is shown as a deviation;
-/// - each receipt citing the previous one for the stake, the units
+/// - each split citing the previous one for the stake, the units
 ///   alternate: the member with fewer leftover units so far takes the next;
-/// - a receipt citing an act the verifier does not hold leaves the tied
-///   unit unknown, never the rest of the payment.
+/// - a verifier holding only the previous split checks the tie, and the
+///   running count;
+/// - a running count that is not the previous one plus this split's
+///   leftover units breaks the plan;
+/// - a split citing an act the verifier does not hold leaves the tied unit
+///   and the count unknown, never the rest of the payment.
 ///
 /// Before F165 was built, the split check allowed each holder one unit
 /// either way, so a tied unit could be given to either member.
 #[test]
 fn a_split_service_cannot_steer_ties_by_grinding_salts() {
-    use mor_core::act::Ref;
-    let mut lab = Lab::new(&|t| {
-        let p = t.parties.clone();
-        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 500_000)])]);
-    });
-    let ids = lab.ids();
-    let mut svc = lab.w.genesis("a split service the member owns", vec![own_home()], None, None);
-    let g = lab.grant(&plain_grant(svc.id, false));
-    let t = lab.clone_terms(&lab.founding.clone(), vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| t.split_grant = Some(g));
-    let f = lab.propose(ANA, &t);
-    let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &f)).collect();
-    lab.record(0, Some((f, sigs)), &[], vec![], f);
-    let stake = lab.view().terms(&f).unwrap().own_stake().unwrap().0 as u64;
-    // A one-unit receipt of the service, citing `previous` in `refs`.
-    let receipt = |lab: &mut Lab, svc: &mut Person, previous: Option<Hash>| {
-        let r = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
-            rail: spec("a rail Module"),
-            proof: vec![],
-            payer: Some(mor_core::finance::Payer::Identity(spec("a listener"))),
-            payee: svc.id,
-            amount: mor_core::finance::Amount { unit: spec("a unit"), value: 1 },
-            fulfils: spec("a stream"),
-            previous: None,
-            forward: None,
-            batch: None,
-            purchase: None,
-        });
-        let refs = previous.map(|p| vec![Ref::Act(p)]);
-        let a = lab.w.everyday_act_refs(svc, mips().finance, 2, r.to_map(), None, None, refs);
-        lab.w.add(&a)
-    };
-    let everyone = ids.clone();
-    let split = |lab: &mut Lab, svc: &mut Person, receipt: Hash, to: Hash| {
-        let s = law::Split {
-            receipt,
-            payouts: vec![law::Payout { receiver: to, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None }],
-            cmip: spec("a split cMIP"),
-            agreement: f,
-        };
-        lab.w.private_act(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone.clone())
-    };
-    let (low, high) = if ids[ANA] < ids[BEN] { (ids[ANA], ids[BEN]) } else { (ids[BEN], ids[ANA]) };
-
+    let (mut lab, mut svc, f, stake, low, high) = duo();
     // Grinding: twenty receipts for the first payment, each with its own
-    // salt. Every one sends the unit to the smaller identity hash.
+    // salt, each split as the first. Every one sends the unit to the
+    // smaller identity hash. (Twenty first splits reset the count each
+    // time: the next test shows that.)
     for _ in 0..20 {
-        let r = receipt(&mut lab, &mut svc, None);
-        let steered = split(&mut lab, &mut svc, r, high);
+        let r = unit_receipt(&mut lab, &mut svc);
+        let steered = unit_split(&mut lab, &mut svc, f, stake, r, high, None, Some(vec![(high, 1)]));
         let e = lab.view().split(&steered).unwrap();
         assert!(!e.mismatched.is_empty(), "a tied unit steered by the receipt's salt is a deviation");
         assert!(e.turns_unknown.is_empty());
-        let x = split(&mut lab, &mut svc, r, low);
+        let x = unit_split(&mut lab, &mut svc, f, stake, r, low, None, Some(vec![(low, 1)]));
         assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
     }
-    // The first payment, divided once, as the service must.
-    let r1 = receipt(&mut lab, &mut svc, None);
-    split(&mut lab, &mut svc, r1, low);
 
-    // Turns: each receipt cites the previous one for the stake.
-    let r2 = receipt(&mut lab, &mut svc, Some(r1));
-    let x = split(&mut lab, &mut svc, r2, high);
-    assert!(lab.view().split(&x).unwrap().mismatched.is_empty(), "the member with fewer leftover units takes the next");
-    let y = split(&mut lab, &mut svc, r2, low);
-    assert!(!lab.view().split(&y).unwrap().mismatched.is_empty());
-    // The rejected split `y` above also names r2: a receipt two splits of
-    // the service divide cannot be counted from, so the next turn cites a
-    // receipt divided once.
-    let r2b = receipt(&mut lab, &mut svc, Some(r1));
-    split(&mut lab, &mut svc, r2b, high);
-    let r3 = receipt(&mut lab, &mut svc, Some(r2b));
-    let counts = lab.view().turns(&svc.id, &f, stake, &[(low, 500_000), (high, 500_000)], Some(&r3)).unwrap();
-    assert_eq!(counts, Some(vec![1, 1]), "one leftover unit each so far");
-    let x = split(&mut lab, &mut svc, r3, low);
-    assert!(lab.view().split(&x).unwrap().mismatched.is_empty(), "equal counts: the smaller identity hash again");
-    let x = split(&mut lab, &mut svc, r3, high);
-    assert!(!lab.view().split(&x).unwrap().mismatched.is_empty());
+    // Turns, on a service that has split nothing yet: each split cites the
+    // previous one for the stake and carries the running count.
+    let (mut lab, mut svc, f, stake, low, high) = duo();
+    let r1 = unit_receipt(&mut lab, &mut svc);
+    let s1 = unit_split(&mut lab, &mut svc, f, stake, r1, low, None, Some(vec![(low, 1), (high, 0)]));
+    let e = lab.view().split(&s1).unwrap();
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty() && e.count_unknown.is_empty(), "{e:?}");
+    let r2 = unit_receipt(&mut lab, &mut svc);
+    let s2 = unit_split(&mut lab, &mut svc, f, stake, r2, high, Some(s1), Some(vec![(low, 1), (high, 1)]));
+    let e = lab.view().split(&s2).unwrap();
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "the member with fewer leftover units takes the next: {e:?}");
+    assert_eq!(lab.view().turns(&svc.id, &f, stake, &[(low, 500_000), (high, 500_000)], Some(&s2)).unwrap(), Some(vec![1, 1]), "one leftover unit each so far");
+    let r3 = unit_receipt(&mut lab, &mut svc);
+    let s3 = unit_split(&mut lab, &mut svc, f, stake, r3, low, Some(s2), Some(vec![(low, 2), (high, 1)]));
+    let e = lab.view().split(&s3).unwrap();
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "equal counts: the smaller identity hash again: {e:?}");
+    let r4 = unit_receipt(&mut lab, &mut svc);
+    // The fourth carries a count that lies: the unit goes to the member
+    // with fewer, as it should, but the count says nobody had any before.
+    let s4 = unit_split(&mut lab, &mut svc, f, stake, r4, high, Some(s3), Some(vec![(low, 0), (high, 1)]));
+    let e = lab.view().split(&s4).unwrap();
+    assert!(e.mismatched.is_empty());
+    assert_eq!(
+        e.breaks,
+        vec![law::ChainBreak::Count { stake, carried: vec![(low, 0), (high, 1)], expected: std::collections::BTreeMap::from([(low, 2), (high, 2)]).into_iter().collect() }],
+        "the running count is checked from two acts"
+    );
 
-    // A receipt citing an act not held: the tied unit is unknown, and
-    // either member's payout is within one unit; the rest still checked.
-    let r4 = receipt(&mut lab, &mut svc, Some(spec("a receipt this verifier does not hold")));
-    let x = split(&mut lab, &mut svc, r4, high);
+    // From two acts: a verifier holding s3 but neither s1 nor s2 still
+    // checks s4's count, and a tie after s3.
+    let mut v = mor_core::chain::Verifier::with_mips(common::identity_spec(), common::finance_spec(), law_spec());
+    for (a, key) in &lab.w.log {
+        if a.id() != s1 && a.id() != s2 {
+            v.add_with_key(a.clone(), key.as_ref()).unwrap();
+        }
+    }
+    let mut lv = LawView::new(&v, mips());
+    lv.ext_layers.insert(ext(), vec![]);
+    let e = lv.split(&s4).unwrap();
+    assert!(matches!(e.breaks.as_slice(), [law::ChainBreak::Count { .. }]), "{:?}", e.breaks);
+    assert_eq!(lv.turns(&svc.id, &f, stake, &[(low, 500_000), (high, 500_000)], Some(&s3)).unwrap(), Some(vec![2, 1]));
+    let e = lv.split(&s3).unwrap();
+    assert_eq!(e.count_unknown, vec![stake], "s3's own previous, s2, is not held: its count is unknown, never a deviation");
+    assert_eq!(e.turns_unknown, vec![stake]);
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "{e:?}");
+
+    // A split citing an act not held: the tied unit and the count are
+    // unknown, and either member's payout is within one unit; the rest
+    // still checked.
+    let r5 = unit_receipt(&mut lab, &mut svc);
+    let x = unit_split(&mut lab, &mut svc, f, stake, r5, high, Some(spec("a split this verifier does not hold")), Some(vec![(high, 9)]));
     let e = lab.view().split(&x).unwrap();
     assert_eq!(e.turns_unknown, vec![stake]);
-    assert!(e.mismatched.is_empty());
+    assert_eq!(e.count_unknown, vec![stake]);
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "{e:?}");
 }
 
-/// F165, a flaw found building it, pinned for Nobody, allegedly: the
-/// turns are counted back from the previous receipt the service's own
-/// receipt cites, and nothing makes it cite the latest one. A service
-/// that wants every tied unit to go to the smaller identity hash signs
-/// each receipt citing no previous one: every count is then zero. Its
-/// receipts for the stake fork (two of them start the count), which a
-/// verifier holding both can see; what follows from that fork, the text
-/// does not say. This test shows the steer working, so that it fails once
-/// the rule closes it.
+/// F171 (review of F163 to F168, finding 7): a split citing no previous
+/// split for the stake, when the service has split on it before, resets
+/// the count, and breaks the plan (rule 15a, rule 46b). F165 left it open:
+/// a service that wanted every tied unit to go to the smaller identity hash
+/// signed each split as if it were the first, every count then zero, each
+/// split passing (the test this one replaces,
+/// `flaw_a_service_citing_no_previous_receipt_restarts_the_turns`).
+///
+/// A verifier holding two first splits cannot tell from the acts which
+/// came later, so each is shown, naming the other; the holder's client,
+/// keeping the chain as the splits arrive, names the second.
 #[test]
-fn flaw_a_service_citing_no_previous_receipt_restarts_the_turns() {
-    let mut lab = Lab::new(&|t| {
-        let p = t.parties.clone();
-        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 500_000)])]);
-    });
-    let ids = lab.ids();
-    let mut svc = lab.w.genesis("a split service the member owns", vec![own_home()], None, None);
-    let g = lab.grant(&plain_grant(svc.id, false));
-    let t = lab.clone_terms(&lab.founding.clone(), vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| t.split_grant = Some(g));
-    let f = lab.propose(ANA, &t);
-    let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &f)).collect();
-    lab.record(0, Some((f, sigs)), &[], vec![], f);
-    let stake = lab.view().terms(&f).unwrap().own_stake().unwrap().0 as u64;
-    let low = ids[ANA].min(ids[BEN]);
-    for _ in 0..5 {
-        let r = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
-            rail: spec("a rail Module"),
-            proof: vec![],
-            payer: Some(mor_core::finance::Payer::Identity(spec("a listener"))),
-            payee: svc.id,
-            amount: mor_core::finance::Amount { unit: spec("a unit"), value: 1 },
-            fulfils: spec("a stream"),
-            previous: None,
-            forward: None,
-            batch: None,
-            purchase: None,
-        });
-        let a = lab.w.everyday_act(&mut svc, mips().finance, 2, r.to_map(), None, None);
-        let r = lab.w.add(&a);
-        let s = law::Split {
-            receipt: r,
-            payouts: vec![law::Payout { receiver: low, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None }],
-            cmip: spec("a split cMIP"),
-            agreement: f,
-        };
-        let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, s.to_map(), None, ids.clone());
-        assert!(lab.view().split(&x).unwrap().mismatched.is_empty(), "the flaw: every unit to the same member, each split passing");
+fn a_split_service_citing_no_previous_split_resets_the_count_a_deviation() {
+    let (mut lab, mut svc, f, stake, low, _high) = duo();
+    let mut firsts: Vec<Hash> = vec![];
+    for i in 0..5 {
+        let r = unit_receipt(&mut lab, &mut svc);
+        let x = unit_split(&mut lab, &mut svc, f, stake, r, low, None, Some(vec![(low, 1)]));
+        let e = lab.view().split(&x).unwrap();
+        assert!(e.mismatched.is_empty(), "each split, judged alone, pays the tie as a first split would");
+        if i == 0 {
+            assert!(e.breaks.is_empty(), "the first split for the stake cites none: {:?}", e.breaks);
+        } else {
+            let mut with = firsts.clone();
+            with.sort();
+            assert_eq!(e.breaks, vec![law::ChainBreak::Reset { stake, with }], "a reset: the plan is broken");
+        }
+        firsts.push(x);
     }
+    // The first, judged now, shares its start with the resets.
+    let e = lab.view().split(&firsts[0]).unwrap();
+    assert!(matches!(e.breaks.as_slice(), [law::ChainBreak::Reset { with, .. }] if with.len() == 4), "{:?}", e.breaks);
+}
+
+/// F171: two splits citing the same previous split for the stake fork the
+/// chain, and break the plan (rule 15a, rule 46b), even where each is
+/// consistent with the previous one: two consecutive acts show
+/// consistency, not truth. A split that cites an earlier split than the
+/// latest is seen this way: it shares its previous with the split after it.
+#[test]
+fn two_splits_citing_the_same_previous_fork_the_chain_a_deviation() {
+    let (mut lab, mut svc, f, stake, low, high) = duo();
+    let r1 = unit_receipt(&mut lab, &mut svc);
+    let s1 = unit_split(&mut lab, &mut svc, f, stake, r1, low, None, Some(vec![(low, 1), (high, 0)]));
+    let r2 = unit_receipt(&mut lab, &mut svc);
+    let s2 = unit_split(&mut lab, &mut svc, f, stake, r2, high, Some(s1), Some(vec![(low, 1), (high, 1)]));
+    assert!(lab.view().split(&s2).unwrap().breaks.is_empty());
+    let r3 = unit_receipt(&mut lab, &mut svc);
+    let s3 = unit_split(&mut lab, &mut svc, f, stake, r3, low, Some(s2), Some(vec![(low, 2), (high, 1)]));
+    // The fork: a second split citing s2, paying the unit to the low
+    // member as s3 did, and carrying the count s3 carries. Judged against
+    // s2 alone it is right; the low member has now had two units of three
+    // from s2's position, which the chain would have shown.
+    let r4 = unit_receipt(&mut lab, &mut svc);
+    let s3b = unit_split(&mut lab, &mut svc, f, stake, r4, low, Some(s2), Some(vec![(low, 2), (high, 1)]));
+    let e = lab.view().split(&s3b).unwrap();
+    assert!(e.mismatched.is_empty(), "consistent with the previous split: {e:?}");
+    assert_eq!(e.breaks, vec![law::ChainBreak::Fork { stake, previous: s2, with: vec![s3] }], "a fork: the plan is broken");
+    let e = lab.view().split(&s3).unwrap();
+    assert_eq!(e.breaks, vec![law::ChainBreak::Fork { stake, previous: s2, with: vec![s3b] }], "shown on both: the acts carry no order to trust");
+    // A split citing the latest, s3, continues the chain.
+    let r5 = unit_receipt(&mut lab, &mut svc);
+    let s4 = unit_split(&mut lab, &mut svc, f, stake, r5, high, Some(s3), Some(vec![(low, 2), (high, 2)]));
+    let e = lab.view().split(&s4).unwrap();
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "{e:?}");
+    // A split carrying no count for the stake breaks the plan too (rule
+    // 15a: each split carries it); the next one's count is then unknown.
+    let r6 = unit_receipt(&mut lab, &mut svc);
+    let s5 = unit_split(&mut lab, &mut svc, f, stake, r6, low, Some(s4), None);
+    assert_eq!(lab.view().split(&s5).unwrap().breaks, vec![law::ChainBreak::NoCount { stake }]);
+    let r7 = unit_receipt(&mut lab, &mut svc);
+    let s6 = unit_split(&mut lab, &mut svc, f, stake, r7, high, Some(s5), Some(vec![(low, 3), (high, 3)]));
+    let e = lab.view().split(&s6).unwrap();
+    assert_eq!((e.count_unknown, e.turns_unknown, e.breaks), (vec![stake], vec![stake], vec![]));
 }
 
 /// The split, as rule 20, 22 and 26 bind it (audit, October 2026, gap 8).
@@ -4102,7 +4178,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     assert!(matches!(lab.view().backing(&incoming).unwrap(), Backing::Backed { .. }));
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement };
+    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None };
     let by_stakes = vec![pay(ids[ANA], 400), pay(ids[BEN], 300), pay(ids[CY], 300)];
     let everyone = ids.clone();
     // The service's own split, naming the version in force: no problem.
@@ -4219,7 +4295,7 @@ fn a_split_service_is_held_to_account() {
     assert!(account.unpaid.is_empty());
     let stake = lab.view().terms(&k).unwrap().own_stake().unwrap().0 as u64;
     let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k };
+    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None };
     // A stranger's split names it: the service still owes a split.
     let _ = lab.w.private_act(&mut stranger, mips().law, law::types::SPLIT, split(r1).to_map(), None, ids.clone());
     assert_eq!(lab.view().service_account(&svc.id).unwrap().unsplit.len(), 1);
@@ -6244,6 +6320,7 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
         payouts: vec![law::Payout { receiver: bid, amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None }],
         cmip: spec("a split cMIP"),
         agreement: deal,
+        tally: None,
     };
     let sp = law_act(&mut w, &mut svc, law::types::SPLIT, split.to_map(), None);
     let named = add(&mut w, &mut sb, rc(bid, fid, sp, None, None));

@@ -143,8 +143,11 @@ export interface CollectiveFile {
   records?: string[];
   /** Kept by the collective client: the fork or closing that ended the collective (Law rule 47a, F121, F124 N9), once complete. */
   closed?: string;
-  /** Kept by the collective client: splits its simulated split service made, with their content keys (base64). */
-  splits?: { id: string; key: string; receipt: string }[];
+  /**
+   * Kept by the collective client: splits its simulated split service made, with their content keys (base64);
+   * the service, the stake (its index), and the previous split it cites for the stake (Law rule 15a, F171).
+   */
+  splits?: { id: string; key: string; receipt: string; service?: string; stake?: number; previous?: string | null }[];
   /** Kept by the collective client: debts the collective signed, private, with their content keys (base64) (F124 N13). */
   debts?: { id: string; key: string; creditor: string }[];
   /** Kept by the collective client: its payee pointers, newest last. */

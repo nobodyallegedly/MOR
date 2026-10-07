@@ -2006,6 +2006,18 @@ enum SplitMode {
     Overflow,
 }
 
+/// Which previous split a split cites for the stake (rule 15a, F171).
+#[derive(Clone, Copy, Debug)]
+enum SplitCite {
+    /// The latest split made so far: the chain continues.
+    Latest,
+    /// None: a reset, once any split exists.
+    Reset,
+    /// The one the latest cites: a fork with the latest (a reset where the
+    /// latest cites none).
+    Fork,
+}
+
 #[derive(Clone, Debug)]
 enum DOp {
     /// A new version: new shares, signed by some parties, some signatures a
@@ -2019,11 +2031,14 @@ enum DOp {
     /// A push-rail payment: each payee in the mask signs its own receipt
     /// for the same rail proof.
     Push { proof: u8, payees: u8, line_latest: bool },
-    Split { receipt: u8, mode: SplitMode, fee: u16, deliver_all: bool },
+    /// A split; `cite` its previous split for the stake; `lie`: the running
+    /// count it carries is one too many for the first holder (F171).
+    Split { receipt: u8, mode: SplitMode, fee: u16, deliver_all: bool, cite: SplitCite, lie: bool },
 }
 
 fn dop() -> impl Strategy<Value = DOp> {
     let disguise = prop_oneof![5 => Just(DealDisguise::None), 1 => Just(DealDisguise::PayerIsService), 1 => Just(DealDisguise::Batch), 1 => Just(DealDisguise::OtherPayee), 1 => Just(DealDisguise::OtherDeal)];
+    let cite = prop_oneof![6 => Just(SplitCite::Latest), 1 => Just(SplitCite::Reset), 1 => Just(SplitCite::Fork)];
     let mode = prop_oneof![3 => Just(SplitMode::Exact), 3 => (any::<u8>(), -3i8..=3).prop_map(|(i, d)| SplitMode::Perturb(i, d)), 1 => Just(SplitMode::Overflow)];
     prop_oneof![
         3 => (prop::collection::vec(1u16..1000, 4), prop_oneof![3 => Just(0xffu8), 2 => any::<u8>()], prop_oneof![4 => Just(0u8), 1 => any::<u8>()], any::<bool>())
@@ -2032,7 +2047,8 @@ fn dop() -> impl Strategy<Value = DOp> {
         1 => (any::<u8>(), any::<bool>()).prop_map(|(payee, cite_last)| DOp::Revoke { payee, cite_last }),
         4 => (any::<u8>(), any::<bool>(), disguise, 0u8..3, any::<bool>()).prop_map(|(payee, backup, disguise, proof, line_latest)| DOp::Receipt { payee, backup, disguise, proof, line_latest }),
         2 => (3u8..6, any::<u8>(), any::<bool>()).prop_map(|(proof, payees, line_latest)| DOp::Push { proof, payees, line_latest }),
-        3 => (any::<u8>(), mode, 0u16..50, prop::bool::weighted(0.8)).prop_map(|(receipt, mode, fee, deliver_all)| DOp::Split { receipt, mode, fee, deliver_all }),
+        3 => (any::<u8>(), mode, 0u16..50, prop::bool::weighted(0.8), cite, prop::bool::weighted(0.1))
+            .prop_map(|(receipt, mode, fee, deliver_all, cite, lie)| DOp::Split { receipt, mode, fee, deliver_all, cite, lie }),
     ]
 }
 
@@ -2092,6 +2108,10 @@ struct DealWorld {
     wrong: BTreeSet<Hash>,
     revocations: Vec<(Hash, usize)>,
     splits: Vec<(Hash, SplitMode, bool, u64)>,
+    /// Each split's place in the service's tally chain for the stake
+    /// (F171): the previous split it cites, the running count it carries,
+    /// and whether that count lies.
+    links: BTreeMap<Hash, (Option<Hash>, Vec<(Hash, u64)>, bool)>,
     rng: Lcg,
     seed: u64,
 }
@@ -2201,6 +2221,7 @@ impl DealWorld {
             wrong: BTreeSet::new(),
             revocations: vec![],
             splits: vec![],
+            links: BTreeMap::new(),
             rng: Lcg(seed),
             seed,
         }
@@ -2341,7 +2362,7 @@ impl DealWorld {
                     }
                 }
             }
-            DOp::Split { receipt, mode, fee, deliver_all } => {
+            DOp::Split { receipt, mode, fee, deliver_all, cite, lie } => {
                 let Some(sv) = self.svc.clone() else { return };
                 let incoming: Vec<Hash> = self.receipts.iter().map(|r| r.0).collect();
                 if incoming.is_empty() {
@@ -2353,11 +2374,22 @@ impl DealWorld {
                 let amount: u64 = 1000;
                 let fee = (*fee as u64).min(amount);
                 let pot = amount - fee;
+                // The previous split it cites for the stake (F171): the
+                // latest, none (a reset), or the latest's own previous (a
+                // fork).
+                let latest_split = self.splits.last().map(|x| x.0);
+                let previous = match cite {
+                    SplitCite::Latest => latest_split,
+                    SplitCite::Reset => None,
+                    SplitCite::Fork => latest_split.and_then(|l| self.links[&l].0),
+                };
+                let before: Vec<(Hash, u64)> = previous.map(|p| self.links[&p].1.clone()).unwrap_or_default();
+                let count_of = |h: &Hash| before.iter().filter(|(x, _)| x == h).map(|(_, n)| *n).sum::<u64>();
                 // Exact shares, rounded down, leftovers by largest remainder,
-                // ties by turns (rule 15a, F165): these receipts cite no
-                // earlier one, so every count is zero, and a tie goes to the
-                // smallest identity hash.
-                let mut each: Vec<u64> = law::divide_stake(pot, &stakes, law::Ties::Turns(&[])).expect("turns settle every tie");
+                // ties by turns (rule 15a, F165), counted as the previous
+                // split carries them (F171).
+                let turns: Vec<u64> = stakes.iter().map(|(h, _)| count_of(h)).collect();
+                let mut each: Vec<u64> = law::divide_stake(pot, &stakes, law::Ties::Turns(&turns)).expect("turns settle every tie");
                 let mut fee_paid = fee;
                 match mode {
                     SplitMode::Exact | SplitMode::Overflow => {}
@@ -2381,12 +2413,36 @@ impl DealWorld {
                     payouts[0].amount = u64::MAX - 1;
                     payouts[1].amount = u64::MAX - 1;
                 }
-                let s = law::Split { receipt: rc, payouts, cmip: spec("a split cMIP"), agreement: latest };
+                // The running count it carries (F171): the previous one plus
+                // what each holder was paid above its share rounded down,
+                // reckoned here from the text, not by the library; one too
+                // many for the first holder where it lies. An overflowing
+                // split carries the previous count as it is.
+                // Every holder is named, a zero count included.
+                let mut carried: BTreeMap<Hash, u64> = before.iter().copied().collect();
+                for (h, _) in &stakes {
+                    carried.entry(*h).or_insert(0);
+                }
+                if !matches!(mode, SplitMode::Overflow) {
+                    // What the split pays the stake, a perturbed payout included.
+                    let paid_pot: u128 = each.iter().map(|a| *a as u128).sum();
+                    let sum: u128 = stakes.iter().map(|(_, n)| *n as u128).sum::<u128>().max(1);
+                    for ((h, n), a) in stakes.iter().zip(&each) {
+                        let floor = (paid_pot * *n as u128 / sum) as u64;
+                        *carried.entry(*h).or_insert(0) += a.saturating_sub(floor);
+                    }
+                }
+                if *lie {
+                    *carried.entry(stakes[0].0).or_insert(0) += 1;
+                }
+                let carried: Vec<(Hash, u64)> = carried.into_iter().collect();
+                let s = law::Split { receipt: rc, payouts, cmip: spec("a split cMIP"), agreement: latest, tally: Some(vec![(0, carried.clone())]) };
                 let to: Vec<Hash> = if *deliver_all { ids.clone() } else { ids[1..].to_vec() };
                 let mut svp = self.svc.take().unwrap();
-                let x = self.w.private_act(&mut svp, mips().law, law::types::SPLIT, s.to_map(), None, to);
+                let x = self.w.private_act_refs(&mut svp, mips().law, law::types::SPLIT, s.to_map(), None, to, previous.map(|p| vec![mor_core::act::Ref::Act(p)]));
                 self.svc = Some(svp);
                 self.splits.push((x, *mode, *deliver_all, pot));
+                self.links.insert(x, (previous, carried, *lie));
             }
         }
     }
@@ -2538,10 +2594,10 @@ impl DealWorld {
                     // signed, whichever version the split names (audit,
                     // October 2026, gap 8); each holder is owed its share
                     // rounded down, the leftover units one each by largest
-                    // remainder, ties by turns (rule 15a, F165: these
-                    // receipts cite no earlier one, so every count is zero
-                    // and a tie goes to the smallest identity hash); any
-                    // other amount breaks the plan; so does a payout to
+                    // remainder, ties by turns (rule 15a, F165): the fewest
+                    // leftover units so far, as the previous split it cites
+                    // carries them (F171), then the smallest identity hash;
+                    // any other amount breaks the plan; so does a payout to
                     // someone who holds no part of it.
                     let latest = self.latest();
                     let stakes = &self.versions.iter().find(|v| v.0 == latest).unwrap().2;
@@ -2550,7 +2606,10 @@ impl DealWorld {
                     let mut owed: Vec<(Hash, u128, u128)> = stakes.iter().map(|(h, n)| (*h, pot * *n as u128 / sum, pot * *n as u128 % sum)).collect();
                     let left = pot - owed.iter().map(|o| o.1).sum::<u128>();
                     let mut by: Vec<usize> = (0..owed.len()).collect();
-                    by.sort_by(|a, b| owed[*b].2.cmp(&owed[*a].2).then(owed[*a].0.cmp(&owed[*b].0)));
+                    let (previous, _, _) = &self.links[x];
+                    let before: Vec<(Hash, u64)> = previous.map(|p| self.links[&p].1.clone()).unwrap_or_default();
+                    let so_far = |h: &Hash| before.iter().filter(|(y, _)| y == h).map(|(_, n)| *n).sum::<u64>();
+                    by.sort_by(|a, b| owed[*b].2.cmp(&owed[*a].2).then(so_far(&owed[*a].0).cmp(&so_far(&owed[*b].0))).then(owed[*a].0.cmp(&owed[*b].0)));
                     for i in by.into_iter().take(left as usize) {
                         owed[i].1 += 1;
                     }
@@ -2581,6 +2640,44 @@ impl DealWorld {
                     }
                 }
             }
+            // The tally chain (rule 15a, rule 46b, F171): a split citing no
+            // previous one while another does too is a reset; two citing the
+            // same one, a fork; a count that is not the previous one plus
+            // this split's leftover units, a break; each shown on every
+            // split of the pair, naming the others. Every split here is held.
+            {
+                let (previous, _, lie) = &self.links[x];
+                let mut with: Vec<Hash> = self.links.iter().filter(|(y, l)| *y != x && l.0 == *previous).map(|(y, _)| *y).collect();
+                with.sort();
+                let mut expect: Vec<String> = vec![];
+                if !with.is_empty() {
+                    expect.push(match previous {
+                        None => format!("{:?}", law::ChainBreak::Reset { stake: 0, with: with.clone() }),
+                        Some(p) => format!("{:?}", law::ChainBreak::Fork { stake: 0, previous: *p, with: with.clone() }),
+                    });
+                }
+                // A split under a version since left is judged against the
+                // stakes in force (rule 26), its count with them: already
+                // shown broken, its count is not foreseen here.
+                let unforeseen = matches!(mode, SplitMode::Overflow) || e.split.agreement != self.latest();
+                let mut got: Vec<String> = vec![];
+                let mut counted = false;
+                for b in &e.breaks {
+                    match b {
+                        law::ChainBreak::Count { .. } => counted = true,
+                        other => got.push(format!("{other:?}")),
+                    }
+                }
+                if got != expect {
+                    bad.push(format!("SPLIT-CHAIN: a split's place in the tally chain judged differently from the text: library {got:?}, text {expect:?}"));
+                }
+                if !unforeseen && counted != *lie {
+                    bad.push(format!("SPLIT-COUNT: a running count {} is {} as one: {x:?} {:?}", if *lie { "that lies" } else { "that is right" }, if *lie { "not shown" } else { "shown" }, e.breaks));
+                }
+                if !e.count_unknown.is_empty() || !e.turns_unknown.is_empty() {
+                    bad.push(format!("SPLIT-UNKNOWN: every act is held, yet a count is unknown: {x:?}"));
+                }
+            }
             let first = ids[0];
             let owed_first = e.split.payouts.iter().any(|p| p.stake.is_some() && p.receiver == first);
             if !*all && owed_first && !e.undelivered.contains(&first) {
@@ -2604,7 +2701,7 @@ fn run_deal(s: &DealShape, ops: &[DOp], seed: u64) -> DealWorld {
 
 fn deal_stats() -> &'static Stats {
     static S: std::sync::OnceLock<Stats> = std::sync::OnceLock::new();
-    S.get_or_init(|| Stats::new(&["cases", "acts", "versions_exist", "versions_draft", "thief_voided", "service_binds", "service_refused", "purchase", "refund", "unrecorded", "wrong_receipt", "splits", "split_mismatch"]))
+    S.get_or_init(|| Stats::new(&["cases", "acts", "versions_exist", "versions_draft", "thief_voided", "service_binds", "service_refused", "purchase", "refund", "unrecorded", "wrong_receipt", "splits", "split_mismatch", "split_reset", "split_fork", "split_count"]))
 }
 
 fn deal_tally(d: &DealWorld) {
@@ -2646,6 +2743,15 @@ fn deal_tally(d: &DealWorld) {
         s.hit("splits");
         if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| lv.split(x).is_ok_and(|e| !e.mismatched.is_empty()))).unwrap_or(false) {
             s.hit("split_mismatch");
+        }
+        if let Ok(Ok(e)) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| lv.split(x))) {
+            for b in &e.breaks {
+                s.hit(match b {
+                    law::ChainBreak::Reset { .. } => "split_reset",
+                    law::ChainBreak::Fork { .. } => "split_fork",
+                    _ => "split_count",
+                });
+            }
         }
     }
 }
@@ -2987,7 +3093,7 @@ fn ic7_sums_that_overflow_never_pass() {
     let shape = DealShape { parties: 2, shares: vec![1, 1, 1, 1], service: true, backup: false, all_found: true };
     let ops = [
         DOp::Receipt { payee: 0, backup: false, disguise: DealDisguise::None, proof: 0, line_latest: false },
-        DOp::Split { receipt: 0, mode: SplitMode::Overflow, fee: 0, deliver_all: true },
+        DOp::Split { receipt: 0, mode: SplitMode::Overflow, fee: 0, deliver_all: true, cite: SplitCite::Latest, lie: false },
     ];
     let d = run_deal(&shape, &ops, 0);
     assert_eq!(d.view().split(&d.splits[0].0).unwrap().sums, Some(false));

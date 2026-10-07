@@ -5,6 +5,7 @@
 //   settings.json         homes, relays, other ways to reach an address, the checkout
 //   identities/ID.json    test identity files (the genesis client's format)
 //   collectives/ID.json   test collective files (the repo client's format)
+//   kept/ID.json          each holder's kept tally chains (Law rule 15a, F171)
 //   history.jsonl         what was signed, when, and its digest
 //   access.json           the browsers paired with this program
 //
@@ -45,6 +46,17 @@ export interface Settings {
   checkout: string | null;
 }
 
+/**
+ * What a holder's client keeps of a split service's tally chain for one
+ * stake (Law rule 15a, F171): the latest split it received that continued
+ * the chain, and the running count that split carries. Keyed by
+ * `service collective stake`.
+ */
+export interface KeptTally {
+  tip: string;
+  counts: [string, number][];
+}
+
 export interface Signed {
   time: number;
   kind: string;
@@ -63,6 +75,7 @@ export class Store {
   constructor(readonly dir: string) {
     mkdirSync(join(dir, 'identities'), { recursive: true, mode: 0o700 });
     mkdirSync(join(dir, 'collectives'), { recursive: true, mode: 0o700 });
+    mkdirSync(join(dir, 'kept'), { recursive: true, mode: 0o700 });
     chmodSync(dir, 0o700);
     if (!existsSync(this.path('book.json'))) {
       writeJson(this.path('book.json'), { label: BOOK_LABEL, identities: [], collectives: [], names: {} } satisfies Book);
@@ -129,6 +142,21 @@ export class Store {
 
   saveCollective(c: TestCollective): void {
     c.save(this.collectivePath(c.identity));
+  }
+
+  /** A holder's kept tally chains (Law rule 15a, F171): its client's own record of every split delivered to it. */
+  kept(holder: string): Record<string, KeptTally> {
+    const p = this.keptPath(holder);
+    return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')) as Record<string, KeptTally>) : {};
+  }
+
+  saveKept(holder: string, k: Record<string, KeptTally>): void {
+    writeJson(this.keptPath(holder), k);
+  }
+
+  private keptPath(id: string): string {
+    if (!/^[0-9a-f]{64}$/.test(id)) throw new Error('not an identity');
+    return this.path('kept', `${id}.json`);
   }
 
   /**

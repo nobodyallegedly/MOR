@@ -95,9 +95,9 @@ pub fn leftover_key(act: &Hash, holder: &Hash) -> Hash {
 #[derive(Clone, Copy, Debug)]
 pub enum Ties<'a> {
     /// Take turns (F165): each holder's leftover units from this stake so
-    /// far, counted along the dividing split service's own receipts, in the
-    /// holders' order; the fewest first, and where counts are equal, the
-    /// smallest identity hash.
+    /// far, as the split service's previous split act for the stake
+    /// carries them (F171), in the holders' order; the fewest first, and
+    /// where counts are equal, the smallest identity hash.
     Turns(&'a [u64]),
     /// A fork's sides: by [`leftover_key`] with the fork act (F162, 10).
     Hash(&'a Hash),
@@ -3000,23 +3000,87 @@ pub struct Split {
     pub cmip: Hash,
     /// 3: the owners' agreement whose stakes it pays.
     pub agreement: Hash,
+    /// 4: the tally (rule 15a; F165, F171, F178 item 15): for each stake it
+    /// pays, the running count of leftover units each holder has received
+    /// from the service's splits for that stake, this split's included.
+    /// The split act also cites, in its envelope, the service's previous
+    /// split act for each stake, so a tie is checked from two acts.
+    ///
+    /// *PROPOSED format, to confirm with Nobody, allegedly (the spec gives
+    /// the field, not its key):* `? 4 => [+ [stake: uint, [+ [holder:
+    /// hash, count: uint]]]]`, stakes distinct, each stake's holders
+    /// distinct. A holder not listed counts zero.
+    pub tally: Option<Vec<(u64, Vec<(Hash, u64)>)>>,
+}
+
+/// Each holder's leftover units in what a split pays a stake (rule 15a,
+/// F165): what it was paid above its exact share rounded down, its share
+/// of `pot`, the sum of the split's payouts on the stake, among `holders`
+/// (each its identity and share). `paid` is each receiver's payouts on the
+/// stake; a receiver that holds no part of the stake is left out, and a
+/// holder paid less than its share rounded down has none.
+pub fn leftovers(pot: u64, holders: &[(Hash, u64)], paid: &[(Hash, u64)]) -> Vec<(Hash, u64)> {
+    let sum: u128 = holders.iter().map(|(_, w)| *w as u128).sum::<u128>().max(1);
+    let mut out: Vec<(Hash, u64)> = vec![];
+    for (who, _) in holders {
+        if out.iter().any(|(x, _)| x == who) {
+            continue;
+        }
+        let got: u64 = paid.iter().filter(|(x, _)| x == who).map(|(_, n)| *n).fold(0, u64::saturating_add);
+        let floor: u128 = holders.iter().filter(|(w, _)| w == who).map(|(_, n)| pot as u128 * *n as u128 / sum).sum();
+        out.push((*who, got.saturating_sub(u64::try_from(floor).unwrap_or(u64::MAX))));
+    }
+    out
+}
+
+/// The running count after a split (rule 15a, F171): `before`, the count
+/// the previous split for the stake carried (empty for the first), plus
+/// `add`, this split's [`leftovers`]. Every holder named in either, by
+/// identity hash; a holder named in neither counts zero.
+pub fn running_count(before: &[(Hash, u64)], add: &[(Hash, u64)]) -> Vec<(Hash, u64)> {
+    let mut out: std::collections::BTreeMap<Hash, u64> = std::collections::BTreeMap::new();
+    for (h, n) in before.iter().chain(add) {
+        let e = out.entry(*h).or_insert(0);
+        *e = e.saturating_add(*n);
+    }
+    out.into_iter().collect()
+}
+
+/// Whether two running counts are the same, a holder not named counting
+/// zero.
+pub fn same_count(a: &[(Hash, u64)], b: &[(Hash, u64)]) -> bool {
+    let get = |v: &[(Hash, u64)], h: &Hash| v.iter().filter(|(x, _)| x == h).map(|(_, n)| *n).fold(0, u64::saturating_add);
+    a.iter().chain(b).all(|(h, _)| get(a, h) == get(b, h))
 }
 
 impl Split {
+    /// The count the split carries for stake `idx` (field 4), if any.
+    pub fn tally_of(&self, idx: u64) -> Option<&[(Hash, u64)]> {
+        self.tally.as_ref()?.iter().find(|(s, _)| *s == idx).map(|(_, v)| v.as_slice())
+    }
+
     pub fn to_map(&self) -> Vec<(Value, Value)> {
-        vec![
+        let mut m = vec![
             (Value::Uint(0), b(&self.receipt)),
             (Value::Uint(1), Value::Array(self.payouts.iter().map(Payout::to_value).collect())),
             (Value::Uint(2), b(&self.cmip)),
             (Value::Uint(3), b(&self.agreement)),
-        ]
+        ];
+        if let Some(t) = &self.tally {
+            let v = t
+                .iter()
+                .map(|(s, hs)| Value::Array(vec![Value::Uint(*s), Value::Array(hs.iter().map(|(h, n)| Value::Array(vec![b(h), Value::Uint(*n)])).collect())]))
+                .collect();
+            m.push((Value::Uint(4), Value::Array(v)));
+        }
+        m
     }
 
     pub fn decode(p: &[(Value, Value)]) -> R<Split> {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in p {
             match k {
-                Value::Uint(n) if *n <= 3 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 4 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("split: unknown field")),
             }
         }
@@ -3056,8 +3120,35 @@ impl Split {
             payouts,
             cmip: hash(req(2, "split: the split cMIP")?, "split: the split cMIP")?,
             agreement: hash(req(3, "split: the agreement")?, "split: the agreement")?,
+            tally: get(4).map(decode_tally).transpose()?,
         })
     }
+}
+
+/// Field 4 of a split, the tally (PROPOSED format, to confirm with Nobody,
+/// allegedly: the spec gives the field, not its key).
+fn decode_tally(v: &Value) -> R<Vec<(u64, Vec<(Hash, u64)>)>> {
+    let mut out: Vec<(u64, Vec<(Hash, u64)>)> = vec![];
+    for e in nonempty(v, "split: the tally")? {
+        let Value::Array(pair) = e else { return Err(LawError::Shape("split: a stake's tally")) };
+        let [s, hs] = pair.as_slice() else { return Err(LawError::Shape("split: a stake's tally")) };
+        let stake = uint(s, "split: the tally's stake")?;
+        if out.iter().any(|(x, _)| *x == stake) {
+            return Err(LawError::Shape("split: a stake tallied twice"));
+        }
+        let mut holders: Vec<(Hash, u64)> = vec![];
+        for x in nonempty(hs, "split: a stake's tally")? {
+            let Value::Array(hn) = x else { return Err(LawError::Shape("split: a holder's count")) };
+            let [h, n] = hn.as_slice() else { return Err(LawError::Shape("split: a holder's count")) };
+            let h = hash(h, "split: the tally's holder")?;
+            if holders.iter().any(|(y, _)| *y == h) {
+                return Err(LawError::Shape("split: a holder counted twice"));
+            }
+            holders.push((h, uint(n, "split: the tally's count")?));
+        }
+        out.push((stake, holders));
+    }
+    Ok(out)
 }
 
 // ---------------------------------------------------------------- decoding helpers

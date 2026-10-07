@@ -398,9 +398,10 @@ pub fn act_id(bytes: &[u8]) -> R<String> {
 struct DivideIn {
     total: u64,
     holders: Vec<(String, u64)>,
-    /// Each holder's leftover units from this stake so far, along the
-    /// split service's receipts, in the holders' order (F165): from
-    /// `Verifier.lawSplitTurns`. Absent: a tie is reported, not settled.
+    /// Each holder's leftover units from this stake so far, as the split
+    /// service's previous split act for the stake carries them, in the
+    /// holders' order (F165, F171): from `Verifier.lawSplitTurns`. Absent:
+    /// a tie is reported, not settled.
     #[serde(default)]
     turns: Option<Vec<u64>>,
 }
@@ -422,6 +423,37 @@ pub fn law_divide_stake(input: JsValue) -> R<Vec<f64>> {
     };
     let parts = law::divide_stake(i.total, &holders, ties).map_err(|w| JsError::new(&w))?;
     Ok(parts.into_iter().map(|n| n as f64).collect())
+}
+
+#[derive(Deserialize)]
+struct TallyIn {
+    /// What the split pays the stake.
+    pot: u64,
+    /// The stake's holders, each `[hex, share]`.
+    holders: Vec<(String, u64)>,
+    /// What the split pays each receiver on the stake, `[hex, amount]`.
+    paid: Vec<(String, u64)>,
+    /// The running count the previous split for the stake carries, `[hex,
+    /// count]`; empty for the first.
+    #[serde(default)]
+    before: Vec<(String, u64)>,
+}
+
+/// Law rule 15a (F165, F171): the running count a split act carries for a
+/// stake (field 4, PROPOSED format, to confirm with Nobody, allegedly):
+/// `{ pot, holders, paid, before }` gives `before` plus each holder's
+/// leftover units in `paid` (what it was paid above its exact share of
+/// `pot` rounded down), every holder named, as `[hex, count]` sorted by
+/// identity hash.
+#[wasm_bindgen(js_name = lawSplitTally)]
+pub fn law_split_tally(input: JsValue) -> R<JsValue> {
+    let i: TallyIn = from_js(input)?;
+    let pairs = |v: &[(String, u64)]| v.iter().map(|(h, n)| Ok((unhex(h)?, *n))).collect::<R<Vec<_>>>();
+    let holders = pairs(&i.holders)?;
+    let mut before = pairs(&i.before)?;
+    before.extend(holders.iter().map(|(h, _)| (*h, 0)));
+    let c = law::running_count(&before, &law::leftovers(i.pot, &holders, &pairs(&i.paid)?));
+    to_js(&c.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>())
 }
 
 /// The running summary of a sequence of act ids (Envelope, "Sequences").
@@ -2536,12 +2568,14 @@ impl Verifier {
         })
     }
 
-    /// Rule 15a's turns (F165): for `stake` (its index) of `agreement`'s
-    /// version in force, the leftover units each holder has received so
-    /// far along `service`'s receipts, from `previous` (the receipt the
-    /// next one will cite as the previous for the stake) back; in the
-    /// order of `holders` (hex). Null where they cannot be counted from the
-    /// acts held. A split service's next receipt cites `previous`.
+    /// Rule 15a's turns (F165, F171): for `stake` (its index) of
+    /// `agreement`'s version in force, the leftover units each holder has
+    /// received so far from `service`'s splits, as `previous` (the
+    /// service's latest split act for the stake, which its next split
+    /// cites) carries them in its running count; null `previous`: no split
+    /// yet, every count zero. In the order of `holders` (hex). Null where
+    /// `previous` is not held, not one of the service's splits for the
+    /// stake, or carries no count.
     #[wasm_bindgen(js_name = lawSplitTurns)]
     pub fn law_split_turns(&self, specs: JsValue, service: &str, agreement: &str, stake: u64, holders: Vec<String>, previous: Option<String>) -> R<Option<Vec<f64>>> {
         let s = specs_of(specs)?;
@@ -2740,6 +2774,24 @@ impl Verifier {
             unevidenced: e.unevidenced.iter().map(hx).collect(),
             unplanned: e.unplanned.iter().map(hx).collect(),
             turns_unknown: e.turns_unknown.clone(),
+            breaks: e
+                .breaks
+                .iter()
+                .map(|b| {
+                    let pairs = |v: &[(mor_core::hash::Hash, u64)]| v.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>();
+                    match b {
+                        law::ChainBreak::Reset { stake, with } => BreakOut { stake: *stake, kind: "reset".into(), with: with.iter().map(hx).collect(), ..Default::default() },
+                        law::ChainBreak::Fork { stake, previous, with } => {
+                            BreakOut { stake: *stake, kind: "fork".into(), previous: Some(hx(previous)), with: with.iter().map(hx).collect(), ..Default::default() }
+                        }
+                        law::ChainBreak::Count { stake, carried, expected } => BreakOut { stake: *stake, kind: "count".into(), carried: pairs(carried), expected: pairs(expected), ..Default::default() },
+                        law::ChainBreak::NoCount { stake } => BreakOut { stake: *stake, kind: "no-count".into(), ..Default::default() },
+                    }
+                })
+                .collect(),
+            count_unknown: e.count_unknown.clone(),
+            cites: e.cites.iter().map(hx).collect(),
+            tally: e.split.tally.iter().flatten().map(|(st, v)| (*st, v.iter().map(|(h, n)| (hx(h), *n)).collect())).collect(),
         })
     }
 
@@ -2891,9 +2943,33 @@ struct SplitOut {
     /// Receivers of fee and named-receiver payouts, which only the split
     /// plan (format open) could justify.
     unplanned: Vec<String>,
-    /// Stakes whose tied leftover units cannot be checked: the turns along
-    /// the service's receipts cannot be counted from the acts held (F165).
+    /// Stakes whose tied leftover units cannot be checked: the turns cannot
+    /// be read from the previous split act for the stake (F165, F171).
     turns_unknown: Vec<u64>,
+    /// Breaks of the service's tally chain (rule 15a, rule 46b, F171): any
+    /// breaks the plan.
+    breaks: Vec<BreakOut>,
+    /// Stakes whose running count cannot be checked from the acts held.
+    count_unknown: Vec<u64>,
+    /// The acts the split's envelope cites.
+    cites: Vec<String>,
+    /// The running count it carries, per stake: `[stake, [[hex, count]]]`
+    /// (field 4, PROPOSED format).
+    tally: Vec<(u64, Vec<(String, u64)>)>,
+}
+
+/// A break of a split service's tally chain (F171): `kind` "reset" (it and
+/// `with` cite no previous split), "fork" (it and `with` cite `previous`),
+/// "count" (it carries `carried`, the text gives `expected`), "no-count".
+#[derive(Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct BreakOut {
+    stake: u64,
+    kind: String,
+    with: Vec<String>,
+    previous: Option<String>,
+    carried: Vec<(String, u64)>,
+    expected: Vec<(String, u64)>,
 }
 
 #[derive(Serialize)]

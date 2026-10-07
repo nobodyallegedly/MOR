@@ -7,7 +7,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, lawDivideStake, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
+import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, lawDivideStake, lawSplitTally, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestCollective, collectiveTerms, type Governance } from '../../repo/src/collective.ts';
@@ -1873,10 +1873,15 @@ export class Actions {
    * A payment of `amount` to the collective, received and split by its
    * split service (simulated here): the service signs a receipt, then a
    * split paying each holder of the collective's stake in itself, and a
-   * fee to itself, delivered to every holder it pays (F121, Q9). `amounts`
-   * overrides the computed payouts (to show a deviation the core shows).
+   * fee to itself. The split cites the service's previous split for the
+   * stake and carries the running count of leftover units (Law rule 15a,
+   * F165, F171), and is delivered to every holder of the stake, paid or
+   * not (client conformance, F171); each holder's client held here checks
+   * it against the chain it keeps. `amounts` overrides the computed
+   * payouts, and `cite` the split it cites ("none": a reset;
+   * "before-latest": a fork), to show a deviation the core shows.
    */
-  async prepareSplit(a: { collective: string; amount: number; fee: number; amounts?: Record<string, number> }) {
+  async prepareSplit(a: { collective: string; amount: number; fee: number; amounts?: Record<string, number>; cite?: 'latest' | 'none' | 'before-latest' }) {
     const names = this.store.names();
     const c = this.store.collective(a.collective);
     const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
@@ -1896,20 +1901,32 @@ export class Actions {
     }
     const pool = amount - fee;
     const index = this.stakeIndex(c, null);
-    // Law rule 15a (F165): each holder its exact share rounded down, the
-    // leftover units one each to the largest remainders; holders with equal
-    // remainders take turns, the fewest leftover units from this stake so
-    // far, counted along the service's own receipts, then the smallest
-    // identity hash. The service's next receipt cites its previous one for
-    // the stake; the core counts the turns (lawSplitTurns) and divides
-    // (lawDivideStake). The order of holders decides nothing.
-    const previous = c.f.splits?.at(-1)?.receipt ?? null;
+    // Law rule 15a (F165, F171): each holder its exact share rounded down,
+    // the leftover units one each to the largest remainders; holders with
+    // equal remainders take turns, the fewest leftover units from this
+    // stake so far, then the smallest identity hash. The count is a field
+    // of the split act: the service's next split cites its previous one for
+    // the stake and carries the running count, so a tie is checked from two
+    // acts; the core reads the turns from the previous split
+    // (lawSplitTurns), divides (lawDivideStake) and adds this split's
+    // leftover units to the count (lawSplitTally). The order of holders
+    // decides nothing.
+    const chain = (c.f.splits ?? []).filter((x) => (x.service ?? service) === service && (x.stake ?? index) === index);
+    const latest = chain.at(-1) ?? null;
+    const cite = a.cite ?? 'latest';
+    const previous = cite === 'none' ? null : cite === 'before-latest' ? (latest?.previous ?? null) : (latest?.id ?? null);
     let turns: number[] | null = null;
+    let before: [string, number][] | null = null;
     if (own.length && service) {
       const { v, specs } = await this.lawVerifier(c, this.concerned(c));
       const t = v.lawSplitTurns(specs, service, c.f.agreement, BigInt(index), own.map(([h]) => h), previous) as Float64Array | number[] | undefined | null;
       turns = t ? Array.from(t, Number) : null;
-      if (!turns) blocking.push("The turns of tied leftover units cannot be counted from the acts this program holds: the service's previous receipt for the stake is missing (Law rule 15a, F165).");
+      if (previous === null) before = [];
+      else {
+        const e = v.lawSplit(specs, previous) as { tally: [number, [string, number][]][] };
+        before = e.tally.find(([st]) => st === index)?.[1] ?? null;
+      }
+      if (!turns || !before) blocking.push("The turns of tied leftover units cannot be read: the service's previous split for the stake is not held, or carries no count (Law rule 15a, F171).");
     }
     const divide = (): [string, number][] | null => {
       try {
@@ -1937,9 +1954,11 @@ export class Actions {
         `The split service ${service ? names(service) : ''} receives ${amount} and takes a fee of ${fee}, named in the split with who received it (F121, Q9).`,
         ...payouts.map(([h, n]) => `${names(h)}: ${n}${departed.includes(h) ? ' (a departed holder)' : ''}.`),
         ...(tied
-          ? [`${left} leftover unit${left === 1 ? '' : 's'} of rounding: holders whose remainders are equal take turns, the one with the fewest leftover units from this stake so far first, counted along the service's receipts, then the smallest identity hash (Law rule 15a, F165).`]
+          ? [`${left} leftover unit${left === 1 ? '' : 's'} of rounding: holders whose remainders are equal take turns, the one with the fewest leftover units from this stake so far first, as the service's previous split counts them, then the smallest identity hash (Law rule 15a, F165).`]
           : []),
-        'The split is delivered to every holder it pays (Q9), and Law checks that every payout matches its stake exactly, within one smallest unit of rounding, every fee alike for every stake: any deviation, either way, breaks the plan (F124 N10, rule 26).',
+        `The split cites ${previous ? `the service's previous split for the stake, ${short(previous)}` : 'no previous split: the first for the stake'}, and carries the running count of leftover units each holder has received (Law rule 15a, F171).`,
+        'The split is delivered to every holder of the stake, paid or not, and each holder keeps the chain and checks each split as it arrives: a split not citing the latest, or two citing the same one, breaks the plan (Law rule 15a, rule 46b, F171).',
+        'Law checks that every payout matches its stake exactly, every fee alike for every stake: any deviation, either way, breaks the plan (F124 N10, rule 26).',
       ],
       sections: [{ heading: 'Simulated', lines: [{ text: 'The split service and the payment are simulated on a test rail: no money moves.', tone: 'warn' }] }],
       plain: [],
@@ -1947,34 +1966,102 @@ export class Actions {
     };
     return this.plan({
       kind: 'split',
-      digest: digestOf('split', a.collective, String(amount), String(fee), JSON.stringify(payouts)),
+      digest: digestOf('split', a.collective, String(amount), String(fee), JSON.stringify(payouts), String(previous)),
       reading,
       depends: [a.collective, ...(service ? [service] : [])],
       run: async () => {
         const col = this.store.collective(a.collective);
         const svc = this.store.identity(service!);
         const relays = col.f.relays;
-        // The receipt cites the service's previous receipt for the stake,
-        // so a tie is checked along them (rule 15a, F165).
-        const r = await svc.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: svc.f.identity, unit: TEST_RAIL, value: amount, fulfils: col.f.agreement }), { public: true, relays, refs: previous ? [previous] : undefined });
+        const r = await svc.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: svc.f.identity, unit: TEST_RAIL, value: amount, fulfils: col.f.agreement }), { public: true, relays });
         const final: [string, number][] = payouts;
         const ps: PayoutIn[] = [
           ...(fee ? [{ receiver: svc.f.identity, amount: fee, feeModule: TEST_RAIL }] : []),
           ...final.map(([h, n]) => ({ receiver: h, amount: n, stake: index })),
         ];
-        const to = [...new Set(final.map(([h]) => h))];
-        const x = await svc.publish(REPO_SPECS.law, LAW_TYPES.split, splitPayload({ receipt: r.id, payouts: ps, cmip: TEST_RAIL, agreement: col.f.agreement }), { public: false, to, relays });
-        col.f.splits = [...(col.f.splits ?? []), { id: x.id, key: Buffer.from(x.key).toString('base64'), receipt: r.id }];
+        // The running count after this split: the previous one plus what
+        // each holder was paid above its share rounded down (F171).
+        const pot = final.reduce((x, [, n]) => x + n, 0);
+        const tally = lawSplitTally({ pot, holders: own, paid: final, before: before ?? [] }) as [string, number][];
+        // Delivered to every holder of the stake, paid or not (F171).
+        const to = [...new Set(own.map(([h]) => h))];
+        const x = await svc.publish(
+          REPO_SPECS.law,
+          LAW_TYPES.split,
+          splitPayload({ receipt: r.id, payouts: ps, cmip: TEST_RAIL, agreement: col.f.agreement, tally: [[index, tally]] }),
+          { public: false, to, relays, refs: previous ? [previous] : undefined },
+        );
+        col.f.splits = [...(col.f.splits ?? []), { id: x.id, key: Buffer.from(x.key).toString('base64'), receipt: r.id, service: service!, stake: index, previous }];
         this.store.saveCollective(col);
         this.store.saveIdentity(svc);
         const judged = await this.checkSplit({ collective: a.collective, split: x.id });
-        return { title: 'The payment is split', lines: [{ text: `Receipt ${r.id}; split ${x.id}.`, tone: 'ok' }, ...judged.reading.sections.flatMap((s) => s.lines)], acts: [r.id, x.id] };
+        // Each holder's client held here receives it and checks it against
+        // the chain it keeps (client conformance, F171).
+        const arrived: Line[] = [];
+        for (const h of to) if (this.store.holds(h)) arrived.push(await this.receiveSplit({ holder: h, collective: a.collective, split: x.id }));
+        return { title: 'The payment is split', lines: [{ text: `Receipt ${r.id}; split ${x.id}.`, tone: 'ok' }, ...judged.reading.sections.flatMap((s) => s.lines), ...arrived], acts: [r.id, x.id] };
       },
     });
   }
 
+  /**
+   * A holder's client receiving a split (Law rule 15a, F171, client
+   * conformance): it keeps the service's tally chain for each stake it
+   * holds, from every split delivered to it, paid or not, and checks each
+   * one as it arrives. The split must cite the latest split delivered to
+   * it for the stake (none, for the first), and carry the count that one
+   * carries plus this split's leftover units; one that does not is a
+   * deviation that breaks the plan, shown. Either way the arriving split is
+   * now the latest, as Law rule 15a reads "the latest receipt for its
+   * stake", and the next is checked against it, as the core checks a split
+   * against the one it cites. Unlike a verifier holding a set of acts, the
+   * holder's client knows which came second: the one that arrived after
+   * the chain had moved on.
+   */
+  async receiveSplit(a: { holder: string; collective: string; split: string }): Promise<Line> {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const { v, specs } = await this.lawVerifier(c, this.concerned(c));
+    const e = v.lawSplit(specs, a.split) as { payouts: [string, number, number | null, string | null][]; cites: string[]; tally: [number, [string, number][]][] };
+    const entry = (c.f.splits ?? []).find((x) => x.id === a.split);
+    const index = entry?.stake ?? this.stakeIndex(c, null);
+    const own = this.ownStake(c);
+    const key = `${entry?.service ?? ''} ${a.collective} ${index}`;
+    const kept = this.store.kept(a.holder);
+    const mine = kept[key] ?? null;
+    const who = names(a.holder);
+    const carried = e.tally.find(([st]) => st === index)?.[1] ?? null;
+    const paid = e.payouts.filter(([, , st]) => st === index).map(([h, n]) => [h, Number(n)] as [string, number]);
+    const pot = paid.reduce((x, [, n]) => x + n, 0);
+    const expected = lawSplitTally({ pot, holders: own, paid, before: mine?.counts ?? [] }) as [string, number][];
+    const count = (v: [string, number][], h: string) => v.filter(([x]) => x === h).reduce((s, [, n]) => s + Number(n), 0);
+    const sameCount = carried !== null && [...carried, ...expected].every(([h]) => count(carried, h) === count(expected, h));
+    const knownSplits = new Set((c.f.splits ?? []).map((x) => x.id));
+    if (!mine && e.cites.some((x) => knownSplits.has(x))) {
+      // A holder that joined the stake after the chain began: it keeps the
+      // chain from here, and cannot check this first count.
+      kept[key] = { tip: a.split, counts: carried ?? [] };
+      this.store.saveKept(a.holder, kept);
+      return { text: `${who}'s client: it keeps the chain from this split on; the earlier splits for the stake were never delivered to it, so this count is not checked here (Law rule 15a, F171).`, tone: 'warn' };
+    }
+    const citesLatest = mine ? e.cites.includes(mine.tip) : true;
+    kept[key] = { tip: a.split, counts: carried ?? [] };
+    this.store.saveKept(a.holder, kept);
+    if (citesLatest && sameCount) {
+      return { text: `${who}'s client: the split continues the chain it keeps, citing the latest split it holds for the stake, its count adding up (Law rule 15a, F171).`, tone: 'ok' };
+    }
+    const why = [
+      ...(citesLatest ? [] : [`it does not cite ${short(mine!.tip)}, the latest split this client holds for the stake`]),
+      ...(sameCount ? [] : [carried ? 'its running count is not the one kept plus its own leftover units' : 'it carries no running count for the stake']),
+    ];
+    return {
+      text: `${who}'s client: THE SPLIT DOES NOT CONTINUE THE CHAIN IT KEEPS: ${why.join('; ')}. A deviation that breaks the plan (Law rule 15a, rule 46b, F171), kept as shown; the next split is checked against this one, now the latest.`,
+      tone: 'bad',
+    };
+  }
+
   /** A split, as the core library judges it: its fees and their receivers, delivery, every payout matching its stake (F121 Q9, F124 N10). */
-  async checkSplit(a: { collective: string; split: string }): Promise<{ reading: Reading; mismatched: number }> {
+  async checkSplit(a: { collective: string; split: string }): Promise<{ reading: Reading; mismatched: number; breaks: number }> {
     const names = this.store.names();
     const c = this.store.collective(a.collective);
     const departed = c.f.governance.departed ?? [];
@@ -1989,7 +2076,10 @@ export class Actions {
       unevidenced: string[];
       unplanned: string[];
       turnsUnknown: number[];
+      breaks: { stake: number; kind: string; with: string[]; previous: string | null }[];
+      countUnknown: number[];
     };
+    const others = (hs: string[]) => list(hs.map(short));
     const lines: Line[] = [
       ...e.problems.map((p) => ({ text: `NOT THE NAMED SERVICE'S SPLIT UNDER THE AGREEMENT IN FORCE: ${p}.`, tone: 'bad' as const })),
       ...e.unevidenced.map((r) => ({ text: `ROLE SHARE WITHOUT EVIDENCE THAT HOLDS: ${names(r)} (Law rule 22).`, tone: 'bad' as const })),
@@ -2004,11 +2094,27 @@ export class Actions {
         ? e.mismatched.map(([, h, paid, due]) => ({ text: `DOES NOT MATCH ITS STAKE: ${names(h)} is paid ${paid}, their share is ${due} (F124 N10, rule 26).`, tone: 'bad' as const }))
         : [{ text: 'Every payout matches its stake exactly, every fee alike for every stake, member or departed (F124 N10).', tone: 'ok' as const }]),
       ...(e.turnsUnknown.length
-        ? [{ text: "Who should have had a tied leftover unit is unknown: the service's earlier receipts for the stake are not all held, so the turns cannot be counted (Law rule 15a, F165). The rest is checked.", tone: 'warn' as const }]
+        ? [{ text: "Who should have had a tied leftover unit is unknown: the service's previous split for the stake is not held, or carries no count, so the turns cannot be read (Law rule 15a, F165, F171). The rest is checked.", tone: 'warn' as const }]
         : []),
+      ...(e.countUnknown.length && !e.turnsUnknown.length
+        ? [{ text: "The running count cannot be checked: the service's previous split for the stake is not held, or carries no count (Law rule 15a, F171). The rest is checked.", tone: 'warn' as const }]
+        : []),
+      // The tally chain (Law rule 15a, rule 46b, F171): each break breaks the plan.
+      ...e.breaks.map((b) => ({
+        text:
+          b.kind === 'reset'
+            ? `THE TALLY CHAIN IS RESET: this split and ${others(b.with)} each cite no previous split for the stake, so one of them restarts the count (Law rule 15a, rule 46b, F171).`
+            : b.kind === 'fork'
+              ? `THE TALLY CHAIN FORKS: this split and ${others(b.with)} both cite ${short(b.previous ?? '')} as the previous split for the stake (Law rule 15a, rule 46b, F171).`
+              : b.kind === 'count'
+                ? "THE RUNNING COUNT DOES NOT ADD UP: it is not the previous split's count plus this split's leftover units (Law rule 15a, rule 46b, F171)."
+                : 'THE SPLIT CARRIES NO RUNNING COUNT for a stake it pays (Law rule 15a, F171).',
+        tone: 'bad' as const,
+      })),
     ];
     return {
       mismatched: e.mismatched.length,
+      breaks: e.breaks.length,
       reading: { title: `The split ${short(a.split)}`, summary: [], sections: [{ heading: 'What the core library finds', lines }], plain: [], blocking: [] },
     };
   }

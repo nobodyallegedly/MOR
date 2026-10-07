@@ -264,26 +264,34 @@ export interface PayoutIn {
   feeModule?: string;
 }
 
-export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: string; agreement: string }): Uint8Array {
-  return cborEncode(
-    new Map<number, unknown>([
-      [0, unhex(s.receipt)],
-      [
-        1,
-        s.payouts.map((p) => {
-          const m = new Map<number, unknown>([
-            [0, unhex(p.receiver)],
-            [1, p.amount],
-          ]);
-          if (p.stake !== undefined) m.set(2, p.stake);
-          if (p.feeModule) m.set(5, unhex(p.feeModule));
-          return m;
-        }),
-      ],
-      [2, unhex(s.cmip)],
-      [3, unhex(s.agreement)],
-    ]),
-  );
+/**
+ * A split (Law type 8). `tally`: for each stake it pays, the running count
+ * of leftover units each holder has received from the service's splits for
+ * that stake, this one included, as `[stake, [[holder, count]]]` (Law rule
+ * 15a, F165, F171, F178 item 15): field 4, a PROPOSED format, to confirm
+ * with Nobody, allegedly (the spec gives the field, not its key). The split
+ * act cites, in `refs`, the service's previous split for each stake.
+ */
+export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: string; agreement: string; tally?: [number, [string, number][]][] }): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, unhex(s.receipt)],
+    [
+      1,
+      s.payouts.map((p) => {
+        const x = new Map<number, unknown>([
+          [0, unhex(p.receiver)],
+          [1, p.amount],
+        ]);
+        if (p.stake !== undefined) x.set(2, p.stake);
+        if (p.feeModule) x.set(5, unhex(p.feeModule));
+        return x;
+      }),
+    ],
+    [2, unhex(s.cmip)],
+    [3, unhex(s.agreement)],
+  ]);
+  if (s.tally?.length) m.set(4, s.tally.map(([stake, hs]) => [stake, hs.map(([h, n]) => [unhex(h), n])]));
+  return cborEncode(m);
 }
 
 /** A grant (Law type 9) to act for the grantor: here, a split service's.

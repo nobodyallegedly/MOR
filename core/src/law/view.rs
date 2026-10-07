@@ -4186,10 +4186,72 @@ pub struct SplitEval {
     /// as right.
     pub unplanned: Vec<Hash>,
     /// Stakes whose tied leftover units cannot be checked (F165): the turns
-    /// along the service's receipts cannot be counted from the acts held,
+    /// cannot be read from the previous split act for the stake (F171),
     /// so who should have had a tied unit is unknown; the rest of the
     /// payment is checked all the same, each tied holder within one unit.
     pub turns_unknown: Vec<u64>,
+    /// Where the split's place in the service's tally chain breaks the plan
+    /// (rule 15a, rule 46b, F171): a reset, a fork, a running count that
+    /// is not the previous one plus this split's leftover units, or no
+    /// count carried. Any entry breaks the plan, as a mismatched payout
+    /// does.
+    pub breaks: Vec<ChainBreak>,
+    /// Stakes whose running count cannot be checked (F171): the act the
+    /// split cites as its previous one is not held, two are cited, or the
+    /// previous carries no count; shown as unknown, never as a deviation.
+    pub count_unknown: Vec<u64>,
+    /// The acts the split's envelope cites (`objects`, `acks`, `refs`):
+    /// among them, the service's previous split act for each stake.
+    pub cites: Vec<Hash>,
+}
+
+/// A break in a split service's tally chain for a stake (rule 15a, rule
+/// 46b, F171). The service's split acts for a stake form one chain, each
+/// citing the previous one and carrying the running count of leftover
+/// units.
+///
+/// *What "the latest" is, a verifier can tell only from the acts it holds:
+/// a split citing an earlier one than the latest shares its previous with
+/// the split that does cite it (a fork), and a split citing none shares
+/// the start with the first (a reset). The acts carry no order a verifier
+/// could trust between two splits the service signed, so each split of the
+/// pair is shown, naming the other: the plan is broken either way. The
+/// holder's client, which keeps the chain as the splits arrive, names the
+/// one that came second.*
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ChainBreak {
+    /// The split cites no previous split for the stake, and so does each
+    /// of `with`: two splits start the count, one of them resetting it.
+    Reset { stake: u64, with: Vec<Hash> },
+    /// The split cites `previous` for the stake, and so does each of
+    /// `with`: the chain forks.
+    Fork { stake: u64, previous: Hash, with: Vec<Hash> },
+    /// The running count carried is not the previous split's plus this
+    /// split's leftover units: `carried`, `expected` (a holder not named
+    /// counts zero).
+    Count { stake: u64, carried: Vec<(Hash, u64)>, expected: Vec<(Hash, u64)> },
+    /// The split carries no running count for a stake it pays.
+    NoCount { stake: u64 },
+}
+
+impl ChainBreak {
+    pub fn stake(&self) -> u64 {
+        match self {
+            ChainBreak::Reset { stake, .. } | ChainBreak::Fork { stake, .. } | ChainBreak::Count { stake, .. } | ChainBreak::NoCount { stake } => *stake,
+        }
+    }
+}
+
+/// Where a split sits in its service's tally chain for a stake (F171).
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Prior {
+    /// It cites no previous split for the stake, and every act it cites is
+    /// held: the first, by its own word.
+    First,
+    /// It cites this one, held.
+    After(Hash),
+    /// It cites an act not held, or two previous splits for the stake.
+    Unknown,
 }
 
 /// What a split service owes (rule 29; audit, October 2026, gap 3): every
@@ -6683,6 +6745,8 @@ impl<'a> LawView<'a> {
         }
         let mut mismatched = vec![];
         let mut turns_unknown = vec![];
+        let mut breaks = vec![];
+        let mut count_unknown = vec![];
         let mut idxs: Vec<u64> = s.payouts.iter().filter_map(|p| p.stake).collect();
         idxs.sort();
         idxs.dedup();
@@ -6699,23 +6763,28 @@ impl<'a> LawView<'a> {
             // Rule 15a's default (rule 21: no split cMIP's declared
             // remainder rule has a reader yet): each holder its share
             // rounded down, leftovers by largest remainder, ties by turns
-            // along the service's receipts (F165); where the money came by
-            // a payer's claim with no receipt, the payer decides a tied unit
-            // (F168, 10); where the turns cannot be counted from the acts
-            // held, a tied unit is unknown, never the rest (F165).
+            // as the previous split act for the stake counts them (F165,
+            // F171); where the money came by a payer's claim with no
+            // receipt, the payer decides a tied unit (F168, 10); where the
+            // turns cannot be read from the acts held, a tied unit is
+            // unknown, never the rest (F165).
             let ids: Option<Vec<(Hash, u64)>> = holders.iter().map(|(w, n)| w.map(|w| (w, *n))).collect();
             let range: Option<Vec<(Hash, u64, u64)>> = match &ids {
                 Some(ids) => {
                     let pot64 = u64::try_from(pot).unwrap_or(u64::MAX);
                     let rounded = round_stake(pot64, ids);
                     let by_receipt = self.v.get(&s.receipt).is_some_and(|r| r.inside.spec == self.mips.finance && r.inside.type_ == crate::finance::types::RECEIPT);
+                    // The tally chain (rule 15a, F171): the previous split
+                    // act for the stake, the count it carries, and this
+                    // split's place after it.
+                    let before = match h.act.outside.signer {
+                        Some(service) => self.tally_check(h, &s, &service, &in_force, idx, ids, pot64, &paid_on, &mut breaks, &mut count_unknown)?,
+                        None => None,
+                    };
                     let turns = if rounded.units == 0 || !by_receipt {
                         None
                     } else {
-                        match h.act.outside.signer {
-                            Some(service) => self.turns(&service, &in_force, idx, ids, Some(&s.receipt))?,
-                            None => None,
-                        }
+                        before.map(|b| ids.iter().map(|(w, _)| b.iter().filter(|(x, _)| x == w).map(|(_, n)| *n).sum()).collect::<Vec<u64>>())
                     };
                     if rounded.units > 0 && by_receipt && turns.is_none() && !turns_unknown.contains(&idx) {
                         turns_unknown.push(idx);
@@ -6783,89 +6852,153 @@ impl<'a> LawView<'a> {
             unevidenced,
             unplanned,
             turns_unknown,
+            breaks,
+            count_unknown,
+            cites: crate::finance::Citations::of(&h.inside).acts(),
         })
     }
 
-    /// Rule 15a's turns (F165): for stake `idx` of the agreement in force
-    /// `in_force`, the leftover units each of `holders` has received so far
-    /// along `service`'s own receipts, from the receipt `from` back: the
-    /// previous receipt for the stake is the one `from` cites (in
-    /// `objects`, `acks` or `refs`) that a split of the service's names,
-    /// paying that stake; its split's leftover units (what each holder was
-    /// paid above its share rounded down) are counted, then its own
-    /// previous one, and so on to a receipt citing none. `None` where the
-    /// count cannot be told from the acts held: a receipt or a cited act
-    /// not held, a receipt citing two previous ones for the stake, or one
-    /// two splits of the service divide (shown as unknown, F165). With no
-    /// `from`, no receipt so far: every count is zero.
+    /// Rule 15a's turns (F165, F171): for stake `idx` of the agreement in
+    /// force `in_force`, the leftover units each of `holders` has received
+    /// so far from `service`'s splits, as the split act `previous` (the
+    /// service's latest split for the stake, which its next split cites)
+    /// carries them in its running count (field 4); in the holders' order.
+    /// With no `previous`, no split so far: every count is zero. `None`
+    /// where `previous` is not held, is not one of the service's splits
+    /// for the stake under that agreement, or carries no count for it:
+    /// shown as unknown, never guessed.
     ///
-    /// *The count is carried here by walking the receipts; each receipt
-    /// carrying its running count, so that a tie is checked from two acts,
-    /// waits for the field's format (FORMAT OPEN, F165).*
-    pub fn turns(&self, service: &Hash, in_force: &Hash, idx: u64, holders: &[(Hash, u64)], from: Option<&Hash>) -> R<Option<Vec<u64>>> {
-        let mut counts = vec![0u64; holders.len()];
-        let mut seen = BTreeSet::new();
-        let Some(mut cur) = from.copied() else { return Ok(Some(counts)) };
-        loop {
-            if !seen.insert(cur) {
-                return Ok(None);
-            }
-            let Some(r) = self.v.get(&cur) else { return Ok(None) };
-            let mut previous = vec![];
-            for c in crate::finance::Citations::of(&r.inside).acts() {
-                let Some(x) = self.v.get(&c) else { return Ok(None) };
-                if x.inside.spec != self.mips.finance || x.inside.type_ != crate::finance::types::RECEIPT {
-                    continue;
-                }
-                let splits = self.service_splits(service, in_force, idx, &c)?;
-                match splits.len() {
-                    0 => {}
-                    1 => previous.push((c, splits[0].clone())),
-                    _ => return Ok(None),
-                }
-            }
-            let (c, split) = match previous.len() {
-                0 => return Ok(Some(counts)),
-                1 => previous.remove(0),
-                _ => return Ok(None),
-            };
-            let paid_on: Vec<&Payout> = split.payouts.iter().filter(|p| p.stake == Some(idx)).collect();
-            let pot: u64 = paid_on.iter().map(|p| p.amount).fold(0, u64::saturating_add);
-            // What each holder was paid above its share rounded down.
-            let sum: u128 = holders.iter().map(|(_, w)| *w as u128).sum::<u128>().max(1);
-            let mut done: Vec<Hash> = vec![];
-            for (i, (who, _)) in holders.iter().enumerate() {
-                if done.contains(who) {
-                    continue;
-                }
-                done.push(*who);
-                let paid: u64 = paid_on.iter().filter(|p| p.receiver == *who).map(|p| p.amount).fold(0, u64::saturating_add);
-                let floor: u128 = holders.iter().filter(|(w, _)| w == who).map(|(_, n)| pot as u128 * *n as u128 / sum).sum();
-                counts[i] = counts[i].saturating_add(paid.saturating_sub(u64::try_from(floor).unwrap_or(u64::MAX)));
-            }
-            cur = c;
-        }
+    /// *Since F171 the count is read from two acts; F165's walk back
+    /// through every earlier receipt is gone.*
+    pub fn turns(&self, service: &Hash, in_force: &Hash, idx: u64, holders: &[(Hash, u64)], previous: Option<&Hash>) -> R<Option<Vec<u64>>> {
+        let Some(p) = previous else { return Ok(Some(vec![0; holders.len()])) };
+        let Some(ph) = self.v.get(p) else { return Ok(None) };
+        let Some(split) = self.tally_member(ph, service, in_force, idx)? else { return Ok(None) };
+        let Some(count) = split.tally_of(idx) else { return Ok(None) };
+        Ok(Some(holders.iter().map(|(w, _)| count.iter().filter(|(x, _)| x == w).map(|(_, n)| *n).sum()).collect()))
     }
 
-    /// The splits `service` signed with its own key dividing the receipt
-    /// `receipt` on stake `idx` of an agreement whose version in force is
-    /// `in_force` (F165).
-    fn service_splits(&self, service: &Hash, in_force: &Hash, idx: u64, receipt: &Hash) -> R<Vec<Split>> {
-        let mut out = vec![];
-        for y in self.v.signed_by(service) {
-            if !self.is_law(y, types::SPLIT) || !self.valid(&y.id) || self.key_grant(y).is_some() {
-                continue;
-            }
-            let Ok(x) = Split::decode(&y.inside.payload) else { continue };
-            if &x.receipt != receipt || !x.payouts.iter().any(|p| p.stake == Some(idx)) {
-                continue;
-            }
-            if self.latest_version(&x.agreement).ok().as_ref() != Some(in_force) {
-                continue;
-            }
-            out.push(x);
+    /// The split `h` as a link of `service`'s tally chain for stake `idx`
+    /// under the agreement in force `in_force` (F171): one of the service's
+    /// splits, valid and signed with its own key, paying that stake, under
+    /// an agreement whose version in force is `in_force`. `None` otherwise.
+    fn tally_member(&self, h: &Held, service: &Hash, in_force: &Hash, idx: u64) -> R<Option<Split>> {
+        if h.act.outside.signer.as_ref() != Some(service) || !self.is_law(h, types::SPLIT) || !self.valid(&h.id) || self.key_grant(h).is_some() {
+            return Ok(None);
         }
-        Ok(out)
+        let Ok(x) = Split::decode(&h.inside.payload) else { return Ok(None) };
+        if !x.payouts.iter().any(|p| p.stake == Some(idx)) {
+            return Ok(None);
+        }
+        if self.latest_version(&x.agreement).ok().as_ref() != Some(in_force) {
+            return Ok(None);
+        }
+        Ok(Some(x))
+    }
+
+    /// Where `h` sits in `service`'s tally chain for stake `idx` (F171):
+    /// the previous split for the stake its envelope cites.
+    fn prior(&self, h: &Held, service: &Hash, in_force: &Hash, idx: u64) -> R<Prior> {
+        let mut found = vec![];
+        for c in crate::finance::Citations::of(&h.inside).acts() {
+            let Some(x) = self.v.get(&c) else { return Ok(Prior::Unknown) };
+            if self.tally_member(x, service, in_force, idx)?.is_some() && !found.contains(&c) {
+                found.push(c);
+            }
+        }
+        Ok(match found.as_slice() {
+            [] => Prior::First,
+            [p] => Prior::After(*p),
+            _ => Prior::Unknown,
+        })
+    }
+
+    /// Rule 15a's tally chain, for the split `h` (decoded `s`) of `service`
+    /// on stake `idx` (F171): finds the previous split it cites; pushes to
+    /// `breaks` a reset or a fork the acts held show, a running count that
+    /// is not the previous one plus this split's leftover units, or a
+    /// count missing; pushes the stake to `count_unknown` where the
+    /// previous count cannot be read. Returns the count before this split
+    /// (empty for the first), from which its ties take turns; `None` where
+    /// unknown.
+    #[allow(clippy::too_many_arguments)]
+    fn tally_check(
+        &self,
+        h: &Held,
+        s: &Split,
+        service: &Hash,
+        in_force: &Hash,
+        idx: u64,
+        ids: &[(Hash, u64)],
+        pot: u64,
+        paid_on: &[&Payout],
+        breaks: &mut Vec<ChainBreak>,
+        count_unknown: &mut Vec<u64>,
+    ) -> R<Option<Vec<(Hash, u64)>>> {
+        // A split that is not the service's own (rule 20) is in no chain:
+        // its problems say so.
+        if self.tally_member(h, service, in_force, idx)?.is_none() {
+            return Ok(None);
+        }
+        let prior = self.prior(h, service, in_force, idx)?;
+        // The other splits of the chain held, and what each cites: a second
+        // start is a reset, a second split citing the same previous one a
+        // fork (rule 15a, rule 46b, F171).
+        let mut first_too = vec![];
+        let mut same_previous = vec![];
+        for y in self.v.signed_by(service) {
+            if y.id == h.id || self.tally_member(y, service, in_force, idx)?.is_none() {
+                continue;
+            }
+            match &prior {
+                Prior::First => {
+                    if self.prior(y, service, in_force, idx)? == Prior::First {
+                        first_too.push(y.id);
+                    }
+                }
+                Prior::After(p) => {
+                    if crate::finance::Citations::of(&y.inside).acts().contains(p) {
+                        same_previous.push(y.id);
+                    }
+                }
+                Prior::Unknown => {}
+            }
+        }
+        first_too.sort();
+        same_previous.sort();
+        if !first_too.is_empty() {
+            breaks.push(ChainBreak::Reset { stake: idx, with: first_too });
+        }
+        if let Prior::After(p) = &prior {
+            if !same_previous.is_empty() {
+                breaks.push(ChainBreak::Fork { stake: idx, previous: *p, with: same_previous });
+            }
+        }
+        let before: Option<Vec<(Hash, u64)>> = match &prior {
+            Prior::First => Some(vec![]),
+            Prior::After(p) => self.v.get(p).and_then(|x| Split::decode(&x.inside.payload).ok()).and_then(|x| x.tally_of(idx).map(|c| c.to_vec())),
+            Prior::Unknown => None,
+        };
+        let carried = s.tally_of(idx);
+        if carried.is_none() {
+            breaks.push(ChainBreak::NoCount { stake: idx });
+        }
+        match (&before, carried) {
+            (None, _) => {
+                if !count_unknown.contains(&idx) {
+                    count_unknown.push(idx);
+                }
+            }
+            (Some(b), Some(c)) => {
+                let paid: Vec<(Hash, u64)> = paid_on.iter().map(|p| (p.receiver, p.amount)).collect();
+                let expected = running_count(b, &leftovers(pot, ids, &paid));
+                if !same_count(c, &expected) {
+                    breaks.push(ChainBreak::Count { stake: idx, carried: c.to_vec(), expected });
+                }
+            }
+            (Some(_), None) => {}
+        }
+        Ok(before)
     }
 
     /// The split services an agreement's terms name (rule 18): in a
