@@ -2120,6 +2120,23 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **With F183 the theft, absence, splits and text work of 6 and 7 October is decided and built.**
 
 
+## F184. Rewarding the helpers along the pipe (7 October 2026, evening; open, high priority)
+
+**The question, from Nobody, allegedly:** "The water has to reward everyone along the pipe if wished to." Can a split plan pay every party that helped a payment happen, including ones not known when the plan was written (a reposter, the client used to read)?
+
+**What the core already gives** (Law draft 10, Finance draft 6): stakes; a named receiver holding no stake (`[ 2, receiver, part ]`), which covers helpers known at publication (the publishing client, the formats and cMIPs used, the homes, a community fund); a collective as a stake holder, so money flows upstream; small shares held as open obligations (scenario 4d); every split shown to every holder. Role shares (`[ 1, role, part ]`) pay a role filled at payment time, on evidence signed by someone other than the split service and the payee (rule 22).
+
+**The gaps found:**
+1. **One referral per claim** (Finance, claim key 6): only one helper known at payment time can be evidenced, so a chain of reposts pays only its last link, and the reader's client has no slot at all. The gap was filled by assumption, never decided: that "last click" is enough, and that clients earn outside payments.
+2. **No reward by contribution over time.** A split divides each payment as it arrives; a split cMIP declares only its remainder rule (rule 21), never weights drawn from evidence. A community can collect a fund but cannot share it out by counted work (for example, a relay fund shared by deliveries) inside MOR.
+3. **Rewarding helpers who do not exist yet.** Rewarding the past is one thing; the plan must also be able to promise a reward to helpers yet unknown, and keep that promise checkable.
+
+**Stated cost to be written down whatever is chosen:** the payer's client writes the evidence for payment-time roles. A dishonest client can name its own operator or fake helpers; this hurts the owners and the real helpers, never the payer, so the payer has no reason to police it. The owners' only bound is the size of the parts they offer. (The self-referral was accepted as a cost in the author's earlier work on Nostr.)
+
+**Decided by Nobody, allegedly:** the core stays out of defining participants, but **the grammar to support those who will must be in the core.** Role names belong to cMIPs. Looking forward, to helpers not yet known, is the key requirement. A high priority.
+
+**Suggested by the project lead, not decided:** the claim's referral becomes a list `[+ [ role, identity, evidence ]]`, signed by the payer; a way for a split cMIP to weight payouts by evidence over a period. Neither is to be written until Nobody, allegedly, has fleshed out the principle; then one hostile review of the incentive layer as a whole, not item by item.
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
