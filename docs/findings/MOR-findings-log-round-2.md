@@ -1998,6 +1998,18 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **With F169 to F174 the second review's findings are all decided.**
 
 
+## F175. The F163 to F168 build's remaining questions (7 October 2026)
+
+**Found building F163 to F168** (`docs/decisions-f163-f168-build-2026-10-07.md`, on branch `build-f163-f168`): the report reached the project lead after F169 to F174 were decided; checked against them, its F166 questions (8 to 12) are moot under F172, question 14 is settled by F174, question 6 by F171, F167 questions 1 and most of 5 by F174.
+
+**Suggested by the project lead; Nobody, allegedly, 7 October 2026: "All agreed":**
+- **F167 (2, 3, 4, 5).** A line break that ends a block may be hidden between two digits (a new block is shown); emphasis or code markup between two digits is refused; any run of hidden characters between two digits is covered; the dash-like minus signs (U+2013, U+FE63, U+FF0D) and the per-ten-thousand sign join the floor.
+- **F165 (7).** Under the default rule every leftover unit goes exactly where rule 15a sends it; a unit sent elsewhere is a deviation (as built).
+- **F169 (from 13).** Where several anchored lock changes affect a payment, it counts only if the claim is anchored before the first of them.
+
+**Core changes:** Text draft 6, the format task; Finance draft 6, rule 15; Law draft 10, rule 21.
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
