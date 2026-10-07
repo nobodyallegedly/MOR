@@ -159,8 +159,8 @@ impl Held for World {
     fn pointers_before(&self, _: &Hash, _: &Hash) -> Vec<(Hash, PayeePointer)> {
         vec![]
     }
-    fn payers_claims(&self, _: &[u8], _: &Hash) -> Vec<mor_core::finance::PayersClaim> {
-        vec![]
+    fn evidence(&self, _: &[u8], _: &Hash, _: &Hash) -> mor_core::finance::Evidence {
+        Default::default()
     }
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
         if payee == &self.pointer.payee {
@@ -169,9 +169,13 @@ impl Held for World {
             vec![]
         }
     }
-    /// The payee's one vault, at the binding of its pointer (F160).
-    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>> {
-        (act == &self.pointer_id).then(|| self.vault.clone())
+    /// The payee's one vault, declared by its one chain act.
+    fn vaults_of(&self, payee: &Hash) -> Vec<(Hash, Option<Vec<VaultEntry>>)> {
+        if payee == &self.payee {
+            vec![(self.vault_id, Some(self.vault.clone()))]
+        } else {
+            vec![]
+        }
     }
 }
 

@@ -1064,8 +1064,8 @@ pub fn holds(v: &crate::chain::Verifier, from: Vec<Hash>) -> Holds {
     out
 }
 
-/// What the acts `from` hold for selecting `own`'s pointer and vault
-/// (rules 12a, 14 and 14a, F157, F160): as [`holds`], but the walk passes
+/// What the acts `from` hold for selecting `own`'s pointer (rule 14,
+/// F157): as [`holds`], but the walk passes
 /// only through acts `own` signed, never through an act another identity
 /// signed, so what a drafter's terms or a debtor's IOU cite never reaches
 /// it. An act of another's met on the way is left out, and not followed.
@@ -1109,11 +1109,13 @@ pub fn history(v: &crate::chain::Verifier, inside: &Inside, anonymous: bool) -> 
     holds(v, from)
 }
 
-/// The payee's pointer acts that the payee's own act, or acts, hold, for
-/// a payment or an obligation (rules 14 and 15, F145): the payee's
-/// signature act on the agreement, or the offer the agreement accepts; for
-/// an obligation with neither, the payee's own acts acknowledging it.
-/// Which acts those are is Law's to say (a Law client checks it, F66).
+/// The payee's pointer acts that the payee's own acts hold, for a payment
+/// or an obligation (rules 14 and 15, F145, F168): the payee's acts on the
+/// agreement (its signature acts, its offer where it signed the offer, its
+/// signature accepting an offer another signed, and any later act of its
+/// on the agreement); for an obligation with none, the payee's own acts
+/// acknowledging it. Which acts those are is Law's to say (a Law client
+/// checks it, F66).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Holding {
     /// The payee's payee-pointer acts they hold, whatever their standing
@@ -1121,13 +1123,6 @@ pub struct Holding {
     pub pointers: Vec<Hash>,
     /// Every walk was complete ([`Holds::complete`]).
     pub complete: bool,
-    /// The vault, with its limits, that applies to the payment (rules 12a
-    /// and 14a, F160): the one the payee's chain declared at the binding of
-    /// the payee's own act for it, the latest such binding where it has
-    /// several; empty where that chain declared none, or the payee has no
-    /// such act. *A payer is judged by what the payee showed, never by a
-    /// limit the payee set afterwards.*
-    pub vault: Vec<VaultEntry>,
 }
 
 /// Rules 12 and 14 with F145 and F155: the version that counts, the latest
@@ -1179,47 +1174,110 @@ pub fn rule_14(holding: &Holding, chain: &[(Hash, PayeePointer)], paid: u64) -> 
     }
 }
 
+// ---------------------------------------------------------------- rules 14a and 15: limits a rotation changed
+
+/// The vault an identity's chain declares at each of its links, in chain
+/// order: each genesis or rotation that counts, with the vault in force
+/// there (`None`: no vault). The last is the vault in force (rule 14a).
+pub type Vaults = [(Hash, Option<Vec<VaultEntry>>)];
+
+/// Rule 14a with F164: whether a payment to the flow of `amount` follows
+/// the vault the payee's chain declares, and if not, which rotation's
+/// change of limits it falls under.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Limits {
+    /// It follows the vault in force: it may go to the flow.
+    Followed,
+    /// It followed the vault declared before the rotation `0`, and no
+    /// vault since: a payment under earlier limits, which counts as made
+    /// only as rule 15 says (F164).
+    ChangedBy(Hash),
+    /// It followed no vault the chain ever declared: not protected.
+    Never,
+}
+
+/// The vault in force: the last of `vaults`, `None` where it declares
+/// none, or nothing is known of the chain.
+pub fn vault_now(vaults: &Vaults) -> Option<&[VaultEntry]> {
+    vaults.last().and_then(|(_, v)| v.as_deref())
+}
+
+/// Rule 14a with F164 (withdrawing F160): the vault applies as the payee's
+/// chain declares it, so a change by rotation, flow off included, applies
+/// at once to every payment not yet shown as made. A payment that does
+/// not follow the vault in force but followed an earlier one falls under
+/// the latest rotation that changed the limits so it no longer does
+/// ([`Limits::ChangedBy`]); rule 15 then decides whether it was made
+/// before ([`good_faith`]).
+pub fn limits(vaults: &Vaults, amount: &Amount) -> Limits {
+    let follows = |k: usize| flow_followed_vault(vaults[k].1.as_deref(), amount);
+    if vaults.is_empty() || follows(vaults.len() - 1) {
+        return Limits::Followed;
+    }
+    match (0..vaults.len() - 1).rev().find(|&k| follows(k)) {
+        Some(k) => Limits::ChangedBy(vaults[k + 1].0),
+        None => Limits::Never,
+    }
+}
+
 /// A payer's claim for a payment, as rule 15's proviso reads it (F139,
-/// F146, F147).
+/// F147, F164).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PayersClaim {
     /// Whether the claim's history ([`history`]) holds the rotation that
-    /// invalidated the pointer it was paid to; `None` where it cannot be
-    /// told (the walk met an act not held without finding it).
+    /// invalidated the pointer it was paid to, or changed the limits it
+    /// was paid under; `None` where it cannot be told (the walk met an act
+    /// not held without finding it).
     pub holds_rotation: Option<bool>,
-    /// Where both the claim and that rotation are anchored, and the anchors
-    /// place them: whether the claim is anchored before the rotation.
-    /// `None` where either is not anchored, or the anchors cannot place
-    /// them. The anchoring cMIP's answer, which the caller states: its
-    /// format is open.
+    /// Whether the claim is anchored before that rotation: `Some(true)`
+    /// where both are anchored and the anchors place the claim first;
+    /// `Some(false)` where they place it at or after the rotation; `None`
+    /// where the claim is not anchored, or the anchors cannot place them.
+    /// The anchoring cMIP's answer, which the caller states: its format is
+    /// open.
     pub anchored_before: Option<bool>,
 }
 
-impl PayersClaim {
-    /// Whether this claim meets rule 15's proviso: anchored, by the anchor
-    /// order (F146); otherwise, by whether its history holds the rotation
-    /// (F139).
-    pub fn meets(&self) -> Option<bool> {
-        match self.anchored_before {
-            Some(b) => Some(b),
-            None => self.holds_rotation.map(|h| !h),
-        }
-    }
+/// What rule 15 reads, for one payment (one rail proof) against the
+/// rotation that voided the pointer it was paid to, or changed the limits
+/// it was paid under (F164).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Evidence {
+    /// (a) The payee's own receipt shows the payment: a receipt of the
+    /// payee's, naming its rail proof, on a line of the payee's that the
+    /// rotation kept (valid under Identity), or signed by the payee's
+    /// split service with a grant key the payee's chain still holds.
+    pub receipt: bool,
+    /// Whether the rotation is anchored, as the caller states it (the
+    /// anchoring format being open).
+    pub rotation_anchored: bool,
+    /// (b) The payer's claims for the payment.
+    pub claims: Vec<PayersClaim>,
 }
 
-/// Rule 15, good faith after a rotation: whether a payment that followed
-/// the published pointer and vault counts as made although a later
-/// rotation invalidated that pointer, from the payer's claims for that one
-/// payment (one rail proof). With none, it counts (F154). Read together, it
-/// counts if any of them meets the proviso (F147): the claim does not hold
-/// the rotation in its history (F139), or, where both are anchored, the
-/// claim is anchored before the rotation (F146). `None` where none meets
-/// it and whether one does cannot be told.
-pub fn good_faith(claims: &[PayersClaim]) -> Option<bool> {
-    if claims.is_empty() {
+/// Rule 15 with F164: whether a payment to a pointer a rotation voided, or
+/// under limits a rotation changed, counts as made: (a) the payee's own
+/// receipt shows it; or (b) on the payer's word: where the rotation is not
+/// anchored, a claim of the payer's that does not hold the rotation (F139),
+/// several claims read together, any one sufficing (F147), and a payment
+/// with no claim judged as if its claim cited nothing (F154); where the
+/// rotation is anchored, only a claim anchored before it (F164, replacing
+/// F146). `None` where neither shows it and whether a claim meets (b)
+/// cannot be told. *The payer's word cannot be refused, since a payer can
+/// always write a claim citing nothing, so it counts until the owner
+/// anchors the rotation; anchoring shuts the window to every claim not
+/// anchored before it, a colluding payer's included.*
+pub fn good_faith(e: &Evidence) -> Option<bool> {
+    if e.receipt {
         return Some(true);
     }
-    let answers: Vec<Option<bool>> = claims.iter().map(PayersClaim::meets).collect();
+    if e.rotation_anchored {
+        return Some(e.claims.iter().any(|c| c.anchored_before == Some(true)));
+    }
+    if e.claims.is_empty() {
+        return Some(true);
+    }
+    let answers: Vec<Option<bool>> = e.claims.iter().map(|c| c.holds_rotation.map(|h| !h)).collect();
     if answers.contains(&Some(true)) {
         Some(true)
     } else if answers.contains(&None) {

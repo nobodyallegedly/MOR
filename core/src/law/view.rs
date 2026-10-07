@@ -85,15 +85,21 @@ pub struct LawView<'a> {
     /// place it. Consulted only where an abandonment clause names a period
     /// ([`Self::declaration`]).
     pub anchors: BTreeMap<Hash, u64>,
-    /// Good faith after a rotation (Finance rule 15, F146), for a payer's
-    /// claim and the rotation that invalidated the pointer its payment
-    /// was paid to, keyed `(claim, rotation)`: where both are anchored and
-    /// the anchors place them, whether the claim is anchored before the
-    /// rotation. What the anchoring cMIP answers, as the caller states it,
-    /// the anchoring format being open, as for `anchors`. A pair
-    /// not listed is not both anchored, or the anchors cannot place it:
-    /// the claim's history decides (F139).
+    /// Good faith after a rotation (Finance rule 15, F164), for a payer's
+    /// claim and the rotation that invalidated the pointer its payment was
+    /// paid to, or changed the limits it was paid under, keyed `(claim,
+    /// rotation)`: where both are anchored and the anchors place them,
+    /// whether the claim is anchored before the rotation. What the
+    /// anchoring cMIP answers, as the caller states it, the anchoring
+    /// format being open, as for `anchors`. A pair not listed is not both
+    /// anchored, or the anchors cannot place it: no claim anchored before.
     pub anchored_before: BTreeMap<(Hash, Hash), bool>,
+    /// The rotations the anchoring cMIP shows anchored, as the caller
+    /// states it (Finance rule 15, F164): once a rotation is anchored, a
+    /// payment it voided the pointer of, or changed the limits of, counts
+    /// on the payer's word only through a claim anchored before it
+    /// ([`Self::anchored_before`]). A rotation not listed is not anchored.
+    pub anchored_rotations: BTreeSet<Hash>,
     /// The rail Modules this verifier read, in their specifications, as
     /// binding no payee or purpose (Finance rule 10, F151): their proof
     /// commits to neither the payee nor what the payment fulfils. Every
@@ -393,6 +399,7 @@ impl<'a> LawView<'a> {
             rail_valid: BTreeMap::new(),
             anchors: BTreeMap::new(),
             anchored_before: BTreeMap::new(),
+            anchored_rotations: BTreeSet::new(),
             unbound_rails: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
@@ -440,6 +447,7 @@ impl<'a> LawView<'a> {
             rail_valid: self.rail_valid.clone(),
             anchors: self.anchors.clone(),
             anchored_before: self.anchored_before.clone(),
+            anchored_rotations: self.anchored_rotations.clone(),
             unbound_rails: self.unbound_rails.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
@@ -5344,16 +5352,19 @@ impl<'a> LawView<'a> {
     /// rules: Finance rule 12a (the creditor's own pointer, in force for
     /// that payment by rules 12, 14 and 14a; the rail Module and the vault
     /// entry are the rail answer's), rule 12 (a forked pointer chain counts
-    /// only up to the fork), rule 14 with F145 and F155 (a payment to the
-    /// flow counts only where the version the creditor's own act holds,
-    /// [`Self::pointer_holding`], is that version or a later one; the
-    /// version the obligation names is informative only), rule 14a (paid to
-    /// the flow, only within the vault's limit for its unit) and rule 15 (a
-    /// payment to a pointer a later rotation invalidated counts as made in
-    /// good faith, judged as the chain stood before that rotation, where
-    /// the payer's claims meet the proviso: [`Self::payers_claims`] and
-    /// [`crate::finance::good_faith`]). A payment to the vault counts
-    /// (rule 14).
+    /// only up to the fork), rule 14 with F145, F155 and F168 (a payment to
+    /// the flow counts only where the version the creditor's own acts on
+    /// the agreement hold, [`Self::pointer_holding`], is that version or a
+    /// later one; the version the obligation names is informative only),
+    /// rule 14a with F164 (paid to the flow, only within the limits of the
+    /// vault the creditor's chain declares: a change by rotation applies at
+    /// once) and rule 15 with F164 (a payment to a pointer a rotation
+    /// invalidated, judged as the chain stood before it, or under limits a
+    /// rotation changed, counts as made where the creditor's own receipt
+    /// shows it, or on the payer's word until the creditor anchors the
+    /// rotation, and after that only by a claim anchored before it:
+    /// [`Self::evidence`] and [`crate::finance::good_faith`]). A payment
+    /// to the vault counts (rule 14).
     fn paid_where_it_counts(
         &self,
         at: &crate::finance::PaidAt,
@@ -5362,7 +5373,7 @@ impl<'a> LawView<'a> {
         ob: &Hash,
         o: &crate::finance::Obligation,
     ) -> bool {
-        use crate::finance::{self as fin, PaidAt};
+        use crate::finance::{self as fin, Limits, PaidAt};
         let PaidAt::Flow(p) = at else { return true };
         let creditor = &o.creditor;
         let valid = self.pointers_held(creditor).unwrap_or_default();
@@ -5382,37 +5393,42 @@ impl<'a> LawView<'a> {
         if fin::rule_14(&holding, &chain, paid.version) != fin::Rule14::Counts {
             return false;
         }
-        // F160: the vault the creditor's own act for the debt showed.
-        let vault = &holding.vault;
-        if !fin::flow_followed_vault((!vault.is_empty()).then_some(vault.as_slice()), amount) {
-            return false;
+        // F164: the vault as the creditor's chain declares it; a payment
+        // under limits a rotation changed counts only as rule 15 says.
+        let mut need: Vec<Hash> = rotation.into_iter().collect();
+        match fin::limits(&self.vaults(creditor), amount) {
+            Limits::Followed => {}
+            Limits::ChangedBy(r) => {
+                if !need.contains(&r) {
+                    need.push(r);
+                }
+            }
+            Limits::Never => return false,
         }
-        match rotation {
-            None => true,
-            Some(r) => fin::good_faith(&self.payers_claims(proof, &r)) == Some(true),
-        }
+        need.iter().all(|r| fin::good_faith(&self.evidence(proof, creditor, r)) == Some(true))
     }
 
     /// The payee's pointer acts that the payee's own acts hold, for what a
-    /// payment or a debt follows (Finance rules 14 and 15, F145, F155):
+    /// payment or a debt follows (Finance rules 14 and 15, F145, F155,
+    /// F168):
     ///
-    /// - an obligation owed to `payee`: from the payee's signature act on
-    ///   the agreement it names (field 4, Law type 1, signed by the payee),
-    ///   or the offer it names where the payee signed it (Law type 6); with
-    ///   neither, as for an IOU naming no agreement (field 4 absent), from
-    ///   the payee's own acts acknowledging the obligation (`acks`): until
-    ///   one does, none, and the debt counts only if paid to the vault;
-    /// - an agreement (Law type 0): from the payee's signature acts on it;
-    /// - an offer (Law type 6): the offer itself, where the payee signed it.
+    /// - an obligation owed to `payee`: from the payee's acts on the
+    ///   agreement or offer it names (field 4, [`Self::payees_acts_on`]);
+    ///   with none, as for an IOU naming no agreement (field 4 absent),
+    ///   from the payee's own acts acknowledging the obligation (`acks`):
+    ///   until one does, none, and the debt counts only if paid to the
+    ///   vault;
+    /// - an agreement (Law type 0) or an offer (Law type 6): from the
+    ///   payee's acts on it.
     ///
     /// Each such act counts only while valid under Identity. Where the
-    /// payee has several, what any of them holds counts (the latest is
-    /// taken). What an act holds is what its citations reach through the
-    /// payee's own acts only, never through an act another identity signed
-    /// (F157, [`crate::finance::holds_own`]), and never a hash in a
-    /// payload. The vault that applies is the one the payee's chain
-    /// declared at the latest binding of those acts (F160). `None` where
-    /// `fulfils` is none of these, or an obligation owed to another.
+    /// payee has several, what any of them holds counts (the latest
+    /// pointer is taken, F168, 11). What an act holds is what its
+    /// citations reach through the payee's own acts only, never through an
+    /// act another identity signed (F157, [`crate::finance::holds_own`]),
+    /// and never a hash in a payload; a payee's client cites its latest
+    /// pointer in `refs` when signing (F163). `None` where `fulfils` is
+    /// none of these, or an obligation owed to another.
     pub fn pointer_holding(&self, fulfils: &Hash, payee: &Hash) -> Option<crate::finance::Holding> {
         use crate::finance::{self as fin, Payload as Fin};
         let x = self.v.get(fulfils)?;
@@ -5448,14 +5464,6 @@ impl<'a> LawView<'a> {
             self.payees_acts_on(fulfils, payee)?
         };
         let mut pointers = vec![];
-        // F160: the vault the payee's chain declared at the latest binding
-        // among its own acts for the payment.
-        let res = self.v.resolve(payee);
-        let shown = acts
-            .iter()
-            .filter_map(|a| self.v.get(a)?.act.outside.binding.and_then(|b| res.position_of(&b)))
-            .max();
-        let vault = shown.map(|k| self.vault_at(payee, k)).unwrap_or_default();
         for a in acts {
             let Some(h) = self.v.get(&a) else { continue };
             // F157: through the payee's own acts only.
@@ -5473,15 +5481,17 @@ impl<'a> LawView<'a> {
                 }
             }
         }
-        Some(fin::Holding { pointers, complete, vault })
+        Some(fin::Holding { pointers, complete })
     }
 
-    /// The payee's own acts on an agreement or offer `a` (F145, F168 13):
-    /// its valid signature acts naming the agreement (Law type 0); for an
-    /// offer (Law type 6), the offer itself where the payee signed it, and
-    /// the payee's valid signature acts accepting it: an offer another
-    /// identity signed is not the payee's act, its acceptance is. `None`
-    /// where `a` is not held, or is neither.
+    /// The payee's own acts on an agreement or offer `a` (F145, F168, 11
+    /// and 13): every valid act of the payee's on it, naming it as the
+    /// chain in `objects` (Law rule 5): its signature acts, its acceptance
+    /// of an offer another identity signed, and any later act of its on
+    /// the agreement, such as one its client signs to cite a new pointer;
+    /// and the offer itself (Law type 6) where the payee signed it. An
+    /// offer another identity signed is not the payee's act (F168, 13).
+    /// `None` where `a` is not held, or is neither.
     fn payees_acts_on(&self, a: &Hash, payee: &Hash) -> Option<Vec<Hash>> {
         let x = self.v.get(a)?;
         if !self.is_law(x, types::TERMS) && !self.is_law(x, types::STANDING_OFFER) {
@@ -5494,7 +5504,7 @@ impl<'a> LawView<'a> {
         out.extend(
             self.v
                 .signed_by(payee)
-                .filter(|h| self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).ok() == Some(*a) && self.valid(&h.id))
+                .filter(|h| h.inside.objects.iter().flatten().any(|o| &o.chain == a) && self.valid(&h.id))
                 .map(|h| h.id),
         );
         Some(out)
@@ -5547,18 +5557,31 @@ impl<'a> LawView<'a> {
         out
     }
 
-    /// The payer's claims for one payment, its rail proof `proof`, as
-    /// Finance rule 15's proviso reads them against the rotation `r` (F139,
-    /// F146, F147): each payer's claim that stands ([`Self::payers_claim`])
-    /// with the rail's answer, valid ([`Self::rail_valid`]: on a rail whose
-    /// commitment carries the payer, a claim anyone else signs fails it),
-    /// with whether its history holds `r` (for an anonymous payer's claim,
-    /// only what its covered citations hold, never its `prev`:
-    /// [`crate::finance::history`]), and the anchor order where the caller
-    /// states one ([`Self::anchored_before`]).
-    pub fn payers_claims(&self, proof: &[u8], r: &Hash) -> Vec<crate::finance::PayersClaim> {
+    /// What Finance rule 15 reads for one payment, its rail proof `proof`,
+    /// owed to `payee`, against the rotation `r` that voided the pointer it
+    /// was paid to or changed the limits it was paid under (F139, F147,
+    /// F154, F164): (a) whether a receipt of the payee's for that proof
+    /// shows it, valid under Identity (on a line of the payee's that the
+    /// rotation kept), or signed by the payee's split service with a grant
+    /// key the payee's chain still holds ([`Self::backing`]: granted);
+    /// whether `r` is anchored ([`Self::anchored_rotations`]); and (b) the
+    /// payer's claims, each that stands ([`Self::payers_claim`]) with the
+    /// rail's answer, valid ([`Self::rail_valid`]), with whether its
+    /// history holds `r` (for an anonymous payer's claim, only what its
+    /// covered citations hold: [`crate::finance::history`]) and whether it
+    /// is anchored before `r` ([`Self::anchored_before`]).
+    pub fn evidence(&self, proof: &[u8], payee: &Hash, r: &Hash) -> crate::finance::Evidence {
         use crate::finance::{self as fin, Payload as Fin};
-        let mut out = vec![];
+        let receipt = self.receipts_for_proof(proof).iter().any(|(id, rc)| {
+            &rc.payee == payee
+                && self.v.get(id).is_some_and(|h| h.act.outside.signer.as_ref() == Some(payee))
+                && match self.status(id) {
+                    Status::Valid => true,
+                    Status::Scoped => matches!(self.backing(id), Ok(Backing::Backed { .. })),
+                    _ => false,
+                }
+        });
+        let mut claims = vec![];
         for h in self.v.held_acts() {
             if h.inside.spec != self.mips.finance || !self.rail_valid.contains_key(&h.id) || !self.payers_claim(h) {
                 continue;
@@ -5568,7 +5591,7 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let hist = fin::history(self.v, &h.inside, c.anonymous.is_some());
-            out.push(fin::PayersClaim {
+            claims.push(fin::PayersClaim {
                 holds_rotation: if hist.acts.contains(r) {
                     Some(true)
                 } else if hist.complete {
@@ -5579,7 +5602,7 @@ impl<'a> LawView<'a> {
                 anchored_before: self.anchored_before.get(&(h.id, *r)).copied(),
             });
         }
-        out
+        fin::Evidence { receipt, rotation_anchored: self.anchored_rotations.contains(r), claims }
     }
 
     /// Whether `h` is a payer's claim that stands: valid under Identity,
@@ -6363,24 +6386,27 @@ impl<'a> LawView<'a> {
     /// The vault an identity's chain declares in force (Finance rule 14a):
     /// its entries, none where it declares no vault.
     fn vault_in_force(&self, who: &Hash) -> Vec<crate::finance::VaultEntry> {
-        self.vault_at(who, usize::MAX)
+        crate::finance::vault_now(&self.vaults(who)).map(<[_]>::to_vec).unwrap_or_default()
     }
 
-    /// The vault an identity's chain declares at its link `k` (Finance
-    /// rules 12a and 14a, F160): what an act bound there showed.
-    fn vault_at(&self, who: &Hash, k: usize) -> Vec<crate::finance::VaultEntry> {
+    /// The vault an identity's chain declares at each of its links, in
+    /// order (Finance rules 14a and 15, F164): each genesis or rotation
+    /// with the vault in force there; the last is the vault in force.
+    /// F153: not past a link counting only through own attempts.
+    pub fn vaults(&self, who: &Hash) -> Vec<(Hash, Option<Vec<crate::finance::VaultEntry>>)> {
         let res = self.v.resolve(who);
         let mut out = vec![];
-        // F153: not past a link counting only through own attempts.
-        for (l, st) in res.links.iter().zip(&res.states).take(k.saturating_add(1)) {
+        let mut vault: Option<Vec<crate::finance::VaultEntry>> = None;
+        for (l, st) in res.links.iter().zip(&res.states) {
             if self.refuses(&l.act) {
                 break;
             }
             match crate::finance::vault_in(&self.mips.finance, &st.declarations) {
-                Ok(Some(Some(e))) => out = e,
-                Ok(Some(None)) => out = vec![],
+                Ok(Some(Some(e))) => vault = Some(e),
+                Ok(Some(None)) => vault = None,
                 _ => {}
             }
+            out.push((l.act, vault.clone()));
         }
         out
     }

@@ -270,31 +270,34 @@ impl Held for View<'_> {
             .collect()
     }
 
-    /// The payer's claims this reader holds for the payment, each signed
-    /// by its payer; no anchors read.
-    fn payers_claims(&self, proof: &[u8], rotation: &Hash) -> Vec<finance::PayersClaim> {
-        self.0
-            .v
-            .held_acts()
-            .filter(|h| h.inside.spec == finance() && self.0.status(&h.id) == Status::Valid)
-            .filter_map(|h| {
-                let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;
-                finance::check_signer(&p, h.act.outside.signer.as_ref()?, &Citations::of(&h.inside)).ok()?;
-                let Payload::Claim(c) = p else { return None };
-                if c.proof != proof {
-                    return None;
+    /// Rule 15 (F164): a receipt of the payee's this reader holds for the
+    /// payment, valid; the payer's claims, each signed by its payer. This
+    /// reader reads no anchors: nothing is anchored for it.
+    fn evidence(&self, proof: &[u8], payee: &Hash, rotation: &Hash) -> finance::Evidence {
+        let mut e = finance::Evidence::default();
+        for h in self.0.v.held_acts().filter(|h| h.inside.spec == finance() && self.0.status(&h.id) == Status::Valid) {
+            let Ok(p) = Payload::decode(h.inside.type_, &h.inside.payload) else { continue };
+            let Some(signer) = h.act.outside.signer else { continue };
+            if finance::check_signer(&p, &signer, &Citations::of(&h.inside)).is_err() {
+                continue;
+            }
+            match p {
+                Payload::Receipt(r) if r.proof == proof && &r.payee == payee && &signer == payee => e.receipt = true,
+                Payload::Claim(c) if c.proof == proof => {
+                    let hist = finance::history(&self.0.v, &h.inside, c.anonymous.is_some());
+                    e.claims.push(finance::PayersClaim {
+                        holds_rotation: if hist.acts.contains(rotation) {
+                            Some(true)
+                        } else {
+                            hist.complete.then_some(false)
+                        },
+                        anchored_before: None,
+                    });
                 }
-                let hist = finance::history(&self.0.v, &h.inside, c.anonymous.is_some());
-                Some(finance::PayersClaim {
-                    holds_rotation: if hist.acts.contains(rotation) {
-                        Some(true)
-                    } else {
-                        hist.complete.then_some(false)
-                    },
-                    anchored_before: None,
-                })
-            })
-            .collect()
+                _ => {}
+            }
+        }
+        e
     }
 
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
@@ -307,11 +310,19 @@ impl Held for View<'_> {
             .collect()
     }
 
-    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>> {
-        // The chain act the act is bound to (F160): these identities never
-        // rotate in this test, so it is the genesis, which declared it.
-        let b = self.0.v.get(act)?.act.outside.binding?;
-        self.vault(&b).map(|(_, v)| v)
+    fn vaults_of(&self, payee: &Hash) -> Vec<(Hash, Option<Vec<VaultEntry>>)> {
+        let res = self.0.v.resolve(payee);
+        let mut v = None;
+        let mut out = vec![];
+        for (l, st) in res.links.iter().zip(&res.states) {
+            match finance::vault_in(&finance(), &st.declarations) {
+                Ok(Some(Some(e))) => v = Some(e),
+                Ok(Some(None)) => v = None,
+                _ => {}
+            }
+            out.push((l.act, v.clone()));
+        }
+        out
     }
 }
 

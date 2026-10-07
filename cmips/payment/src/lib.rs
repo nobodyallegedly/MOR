@@ -259,19 +259,24 @@ pub trait Held {
     /// Finance rule 15: the payee's pointers as they stood before the
     /// rotation `rotation`: bound before it, valid, or invalidated by it.
     fn pointers_before(&self, payee: &Hash, rotation: &Hash) -> Vec<(Hash, PayeePointer)>;
-    /// Finance rule 15: the payer's claims for the payment carrying this
-    /// rail proof, each verified valid ([`verify`]), as the proviso reads
-    /// them against `rotation`: whether each one's history holds it (for
-    /// an anonymous payer's claim, only what its covered citations hold:
-    /// `mor_core::finance::history`), and the anchor order where both are
-    /// anchored (F139, F146, F147).
-    fn payers_claims(&self, proof: &[u8], rotation: &Hash) -> Vec<fin::PayersClaim>;
-    /// The vault the chain of the act's signer declared at the act's
-    /// binding: its entries, or `None` where it declared none (Finance
-    /// rules 12a and 14a, F160). For a tip, the act is the payee pointer it
-    /// follows, the payee's own act for it; for anything else, the vault
-    /// comes with [`Held::holding`].
-    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>>;
+    /// Finance rule 15 with F164: what decides whether a payment to
+    /// `payee` carrying this rail proof counts as made against `rotation`,
+    /// the rotation that voided the pointer it was paid to or changed the
+    /// limits it was paid under: (a) whether a receipt of the payee's shows
+    /// it, valid on a line the rotation kept, or signed by its split
+    /// service with a grant key its chain still holds; whether the rotation
+    /// is anchored; (b) the payer's claims, each verified valid
+    /// ([`verify`]), with whether its history holds the rotation (for an
+    /// anonymous payer's claim, only what its covered citations hold:
+    /// `mor_core::finance::history`) and whether it is anchored before it.
+    /// A Law client gives the core library's answer
+    /// (`mor_core::law::LawView::evidence`).
+    fn evidence(&self, proof: &[u8], payee: &Hash, rotation: &Hash) -> fin::Evidence;
+    /// The vault this identity's chain declares at each of its links, in
+    /// order: each genesis or rotation that counts, with the vault in force
+    /// there (`None`: none); the last is the vault in force (Finance rules
+    /// 14a and 15, F164; `mor_core::law::LawView::vaults`).
+    fn vaults_of(&self, payee: &Hash) -> Vec<(Hash, Option<Vec<VaultEntry>>)>;
 }
 
 /// The rail Modules a verifier has adopted, by spec hash.
@@ -496,17 +501,19 @@ pub fn beside(record: Record, held: &dyn Held) -> Answer {
 /// Finance rules 14a and 15, judged beside the verification answer for a
 /// payment received: a payment to the flow counts as paid to the flow only
 /// where the payee's vault lets it go there (an entry for its unit, and no
-/// more than that unit's smallest limit, F114); a payment that did not
-/// follow the published vault is not protected (rule 15). The vault that
-/// applies is the one the payee's own act for the payment showed (rules
-/// 12a and 14a, F160): for a tip, the vault at the binding of the payee
-/// pointer it follows; for an obligation, an agreement or an offer, the
-/// one [`Held::holding`] gives. *A payer is judged by what the payee
-/// showed, never by a limit the payee set afterwards.* A payment to the
-/// vault, or to an identity that showed no vault, is valid here; one whose
-/// payee's own act this verifier cannot read is unknown. *A thief who
+/// more than that unit's smallest limit, F114). The vault that applies is
+/// the one the payee's chain declares (rule 14a, F164, withdrawing F160):
+/// a change by rotation, flow off included, applies at once. A payment
+/// that followed an earlier vault, under limits a rotation changed,
+/// counts as made only as rule 15 says ([`Held::evidence`],
+/// `mor_core::finance::good_faith`): the payee's own receipt shows it, or
+/// the payer's word until the payee anchors the rotation, and after the
+/// anchor only a claim anchored before it. A payment that followed no
+/// vault the chain declared is not protected. A payment to the vault, or
+/// to an identity that declares no vault, is valid here. *A thief who
 /// redirects the flow pointer cannot take a large payment through it, nor
-/// one in a unit the vault does not cover.*
+/// one in a unit the vault does not cover; an owner who turns the flow off
+/// after a theft turns it off for every payment not yet shown as made.*
 pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
     let (proof, payee, amount, fulfils) = match &record {
         Record::Receipt(r) => (&r.proof, &r.payee, &r.amount, &r.fulfils),
@@ -518,28 +525,34 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
     if matches!(p.paid_to, PaidTo::Vault { .. }) {
         return Answer::Valid;
     }
-    let tip = held.pointer(fulfils).or_else(|| held.voided_pointer(fulfils).map(|(p, _)| p));
-    let vault = match (held.obligation(fulfils), tip) {
-        // Not this hop's to judge, as for the pointer.
-        (Some(o), _) if &o.creditor != payee => return Answer::Valid,
-        (None, Some(_)) => held.vault_at_binding(fulfils),
-        _ => match held.holding(fulfils, payee) {
-            Some(h) => (!h.vault.is_empty()).then_some(h.vault),
-            None => {
-                return Answer::Unknown(
-                    "what it fulfils is no obligation, agreement or offer this verifier can read the payee's own acts on, so the vault they showed is unknown (Finance rules 12a and 14a, F160)"
-                        .into(),
-                )
-            }
-        },
-    };
-    if fin::flow_followed_vault(vault.as_deref(), amount) {
-        Answer::Valid
-    } else {
-        Answer::Invalid(
+    // Not this hop's to judge, as for the pointer.
+    if held.obligation(fulfils).is_some_and(|o| &o.creditor != payee) {
+        return Answer::Valid;
+    }
+    match fin::limits(&held.vaults_of(payee), amount) {
+        fin::Limits::Followed => Answer::Valid,
+        fin::Limits::Never => Answer::Invalid(
             "paid to the flow, but the payee's vault sends this payment to the vault: above the unit's limit, or in a unit the vault does not cover (Finance rules 14a and 15)"
                 .into(),
-        )
+        ),
+        fin::Limits::ChangedBy(r) => good_faith(&held.evidence(proof, payee, &r), "under limits a later rotation of the payee's changed"),
+    }
+}
+
+/// Rule 15's answer (F164) for a payment a rotation voided the pointer of,
+/// or changed the limits of (`what`).
+fn good_faith(e: &fin::Evidence, what: &str) -> Answer {
+    match fin::good_faith(e) {
+        Some(true) => Answer::Valid,
+        Some(false) if e.rotation_anchored => Answer::Invalid(format!(
+            "paid {what}, the rotation is anchored, and neither a receipt of the payee's nor a claim of the payer's anchored before it shows the payment (Finance rule 15, F164)"
+        )),
+        Some(false) => Answer::Invalid(format!(
+            "paid {what}, and no receipt of the payee's shows it, and every claim of the payer's holds that rotation in its history (Finance rule 15, F139, F147, F164)"
+        )),
+        None => Answer::Unknown(format!(
+            "paid {what}: whether the payer's claim holds that rotation is not known from the acts held (Finance rule 15)"
+        )),
     }
 }
 
@@ -565,10 +578,10 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
 /// - **Rule 15.** A payment to a pointer a later rotation invalidated is
 ///   judged as the payee's chain stood before that rotation
 ///   ([`Held::pointers_before`]), and counts as made only where the
-///   payer's claims for it meet the proviso ([`Held::payers_claims`],
-///   `mor_core::finance::good_faith`): none at all (F154), or one not
-///   holding that rotation in its history, or anchored before it where
-///   both are anchored (F139, F146, F147).
+///   payee's own receipt shows it, or, until the payee anchors the
+///   rotation, on the payer's word (no claim at all, F154, or one not
+///   holding that rotation, F139, F147); after the anchor, only a claim
+///   anchored before it ([`Held::evidence`], F164).
 ///
 /// Valid where these rules let the payment count; invalid where they do
 /// not; unknown where the acts they need are not held, or what the payment
@@ -640,15 +653,5 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
         fin::Rule14::Unknown(w) => return Answer::Unknown(w.into()),
     }
     let Some(r) = rotation else { return Answer::Valid };
-    match fin::good_faith(&held.payers_claims(proof, &r)) {
-        Some(true) => Answer::Valid,
-        Some(false) => Answer::Invalid(
-            "paid to a pointer a later rotation invalidated, and no claim of the payer's meets the proviso: each holds that rotation in its history, or is anchored after it (Finance rule 15, F139, F146, F147)"
-                .into(),
-        ),
-        None => Answer::Unknown(
-            "paid to a pointer a later rotation invalidated: whether the payer's claim holds that rotation is not known from the acts held (Finance rule 15)"
-                .into(),
-        ),
-    }
+    good_faith(&held.evidence(proof, payee, &r), "to a pointer a later rotation of the payee's invalidated")
 }
