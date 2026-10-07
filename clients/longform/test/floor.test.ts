@@ -76,6 +76,13 @@ const PROTECTED: [string, string, string][] = [
   ['a small hyphen-minus', '﹣5', 'FF'],
   ['a fullwidth hyphen-minus', '－5', 'FF'],
   ['an en dash after a digit', '5–', 'FF'],
+  // The minus look-alikes F182 adds (item 12): a hyphen, a non-breaking hyphen, a figure dash, a heavy minus sign.
+  ['a hyphen used as a minus', '‐5', 'FF'],
+  ['a non-breaking hyphen used as a minus', '‑5', 'FF'],
+  ['a figure dash used as a minus', '‒5', 'FF'],
+  ['a heavy minus sign (So)', '➖5', 'FF'],
+  ['a figure dash after a digit', '5‒', 'FF'],
+  ['a hyphen before a currency sign', '‐$5', 'FFF'],
   ['brackets for a negative amount', '(5)', 'FFF'],
   ['brackets around a currency amount', '($1,250.00)', 'FFFFFFFFFFF'],
   ['brackets around a spaced amount', '(1 000 €)', 'FFFFFF.FF'],
@@ -137,7 +144,7 @@ const PROTECTED: [string, string, string][] = [
   ['an interrobang', '‽', 'F'],
 ];
 
-test('the floor, character by character (F167, F174, F175, F178)', () => {
+test('the floor, character by character (F167, F174, F175, F178, F182)', () => {
   for (const [why, s, want] of PROTECTED) assert.equal(floorOf(s), want, `${why}: ${JSON.stringify(s)}`);
 });
 
@@ -150,10 +157,6 @@ const NOT_COVERED: [string, string, string][] = [
   ['a times sign between spaced digits', '5 × 3', 'F...F'],
   ['a less-than sign between spaced digits', '5 < 6', 'F...F'],
   ['the Arabic-Indic per-ten-thousand sign (not in the list)', '5؊', 'F.'],
-  ['a figure dash used as a minus', '‒5', '.F'],
-  ['a hyphen used as a minus', '‐5', '.F'],
-  ['a non-breaking hyphen used as a minus', '‑5', '.F'],
-  ['a heavy minus sign (So)', '➖5', '.F'],
   ['brackets around an amount with a currency code', '(5 EUR)', '.F.FFF.'],
   ['a zero width non-joiner in Persian', 'می‌خ', 'FF.F'],
   ['a zero width joiner in Devanagari', 'क्‍ष', 'FF.F'],
@@ -300,15 +303,23 @@ test('a line break that ends a block may stand between two digits; one inside a 
   assert.ok(checkBound(comma, DECLARED, '\n,')?.endsWith('a character between two digits'));
 });
 
-test('emphasis or code markup between two digits is refused, and shown plain (F175)', () => {
+test('emphasis or code markup between two digits is shown as text, not refused (F175, F182 items 9 and 11)', () => {
   for (const text of ['1*2*3', 'Pay 1**000**0', '1`2`3', 'Code 5``6``']) {
     const doc = parse(text);
-    const breach = checkBound(doc);
-    assert.ok(breach?.endsWith('emphasis or code markup between two digits'), `${text}: ${breach}`);
-    const h = renderHtml(doc);
-    assert.match(h, /mor-lf-refused/);
-    assert.ok(h.includes(text), text);
+    assert.equal(checkBound(doc), null, text);
+    assert.equal(shownText(doc), text, `${text}: every sign between the digits is shown`);
+    assert.doesNotMatch(renderHtml(doc), /mor-lf-refused/);
   }
+  // Pieces of markup that together stand between two digits: the first piece becomes text, the line is read
+  // again, and what is left hidden no longer stands between them. Here the emphasis's closing * is shown, so its
+  // opening one is text too, and the code span stays.
+  const mixed = parse('*a1*`2`');
+  assert.equal(checkBound(mixed), null);
+  assert.equal(shownText(mixed), '*a1*2');
+  assert.ok(mixed.blocks[0].t === 'paragraph' && mixed.blocks[0].children.some((n) => n.t === 'code'));
+  // A reading that hid them would still be refused.
+  const hid: Document = { source: '1*2*3', blocks: [{ t: 'paragraph', children: [{ t: 'text', span: { from: 0, to: 1 } }, { t: 'em', children: [{ t: 'text', span: { from: 2, to: 3 } }] }, { t: 'text', span: { from: 4, to: 5 } }] }], marks: [{ rule: 'em-open', span: { from: 1, to: 2 } }, { rule: 'em-close', span: { from: 3, to: 4 } }] };
+  assert.ok(checkBound(hid)?.endsWith('emphasis or code markup between two digits'), String(checkBound(hid)));
   // Emphasis next to a digit, not between two, is markup as before.
   for (const text of ['*5*', 'Pay **1,000** now', '`-5`', 'Total: *5* and *6*']) assert.equal(checkBound(parse(text)), null, text);
 });
@@ -447,26 +458,56 @@ test('the floor leaves the long-form markup hideable where the format puts it (F
 });
 
 /**
- * The long-form markup the floor still forbids, as the Text MIP decides it
- * or where the format's text has not followed it (questions for Nobody,
- * allegedly): emphasis or code markup between two digits (decided, F175); a
- * quote's > directly before a digit, and a link's < directly after one
- * (Sm next to a digit; the format has decided only the link's closing >,
- * F178 item 17). Each such text is shown plain, flagged.
+ * The long-form markup the floor forbids hiding, shown as text rather than
+ * the document refused (Text MIP, the Text format task; F182 items 9 and
+ * 11): emphasis or code markup between two digits; a quote's > directly
+ * before a digit, the line then no quote; a link's < directly after a
+ * digit, the address still the link. Each: the text, what it shows, and the
+ * markup still hidden. *Removal check: with the format hiding these as
+ * before, each is refused (804 of the 20,000 generated texts).*
  */
-const FORBIDDEN: [string, string][] = [
-  ['1*2*3', 'emphasis or code markup between two digits'],
-  ['1`2`3', 'emphasis or code markup between two digits'],
-  ['>5 apples', 'a mathematical sign next to a digit'],
-  ['>50% agreed', 'a mathematical sign next to a digit'],
-  ['item 5<https://a.b/c>', 'a mathematical sign next to a digit'],
+const SHOWN_AS_TEXT: [string, string][] = [
+  ['1*2*3', '1*2*3'],
+  ['1`2`3', '1`2`3'],
+  ['>5 apples', '>5 apples'],
+  ['>50% agreed', '>50% agreed'],
+  ['> >5', '>5'],
+  ['a\n>5', 'a\n>5'],
+  ['item 5<https://a.b/c>', 'item 5<https://a.b/c'],
+  ['5<https://a.b/5>', '5<https://a.b/5>'],
 ];
 
-test('the long-form markup the floor forbids is refused and shown plain (F175; questions)', () => {
-  for (const [text, clause] of FORBIDDEN) {
+test('the long-form markup the floor forbids hiding is shown as text, not refused (F182 items 9 and 11)', () => {
+  for (const [text, shows] of SHOWN_AS_TEXT) {
     const doc = parse(text);
-    const breach = checkBound(doc);
-    assert.ok(breach?.endsWith(clause), `${text}: ${breach}`);
-    assert.match(renderHtml(doc), /mor-lf-refused/);
+    assert.equal(checkBound(doc), null, text);
+    assert.equal(shownText(doc), shows, text);
+    assert.doesNotMatch(renderHtml(doc), /mor-lf-refused/);
   }
+  // ">5" opens no quote; "> 5" does.
+  assert.equal(parse('>5 apples').blocks[0].t, 'paragraph');
+  assert.equal(parse('> 5 apples').blocks[0].t, 'quote');
+  // The link after a digit is still a link, its < shown.
+  const p = parse('item 5<https://a.b/c>').blocks[0];
+  assert.ok(p.t === 'paragraph' && p.children.some((n) => n.t === 'link' && n.href === 'https://a.b/c'), JSON.stringify(p));
+  assert.match(renderHtml(parse('item 5<https://a.b/c>')), /item 5&lt;<a href="https:\/\/a.b\/c"/);
+  // A reading that hid the < after the digit is refused.
+  const source = 'item 5<https://a.b/c>';
+  const hid: Document = {
+    source,
+    blocks: [{ t: 'paragraph', children: [{ t: 'text', span: { from: 0, to: 6 } }, { t: 'link', href: 'https://a.b/c', span: { from: 7, to: source.length - 1 } }] }],
+    marks: [
+      { rule: 'link-open', span: { from: 6, to: 7 } },
+      { rule: 'link-close', span: { from: source.length - 1, to: source.length } },
+    ],
+  };
+  assert.ok(checkBound(hid)?.endsWith('a mathematical sign next to a digit'), String(checkBound(hid)));
+  // A reading that hid the closing > of a link whose < is shown, where that < is not next to a digit, is refused.
+  const s2 = 'item <https://a.b/c>';
+  const odd: Document = {
+    source: s2,
+    blocks: [{ t: 'paragraph', children: [{ t: 'text', span: { from: 0, to: 6 } }, { t: 'link', href: 'https://a.b/c', span: { from: 6, to: s2.length - 1 } }] }],
+    marks: [{ rule: 'link-close', span: { from: s2.length - 1, to: s2.length } }],
+  };
+  assert.ok(checkBound(odd)?.includes('the > closing a link'), String(checkBound(odd)));
 });

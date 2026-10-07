@@ -206,23 +206,15 @@ const PIECES = [
 ];
 
 /**
- * The only refusals the generated texts may meet: the Text MIP's floor
- * (F167, F174, F175) under the format's own markup where the format still
- * puts it, in three ways. A quote's > directly before a digit, or a link's
- * < directly after one, is a mathematical sign next to a digit (the format
- * shows only a link's closing > there, F178 item 17; the other two are
- * questions in the build's report); emphasis or code markup between two
- * digits is refused (F175). Every other check passes on every text.
+ * Where the floor forbids hiding a markup character, the format shows it as
+ * text rather than refusing the document (F182 items 9 and 11), so no
+ * generated text is refused. *Removal check: with the format hiding such
+ * markup as before, 804 of them were refused (650 for a link's < after a
+ * digit, 127 for a quote's > before one, 27 for emphasis or code between
+ * two digits), and this test fails.*
  */
-const FLOOR_REFUSALS: [RegExp, string][] = [
-  [/^hides "<" at \d+, which no format may hide \(F167\): a mathematical sign next to a digit$/, 'a link\'s < after a digit'],
-  [/^hides ">" at \d+, which no format may hide \(F167\): a mathematical sign next to a digit$/, 'a quote\'s > before a digit'],
-  [/^hides "[*`]" at \d+, which no format may hide \(F167\): emphasis or code markup between two digits$/, 'emphasis or code between two digits'],
-];
-
-test('the bound holds on 20,000 generated canonical texts; the floor refuses only what it must', () => {
+test('the bound holds on 20,000 generated canonical texts; none is refused (F182)', () => {
   const r = rng(0x5eed);
-  const refused = new Map<string, number>();
   for (let n = 0; n < 20000; n++) {
     let s = '';
     const len = Math.floor(r() * 40);
@@ -230,24 +222,10 @@ test('the bound holds on 20,000 generated canonical texts; the floor refuses onl
     const text = compose(s).text;
     checkText(text); // canonical, by the core library's own check
     const doc = parse(text);
-    const breach = checkBound(doc);
-    if (breach !== null) {
-      const kind = FLOOR_REFUSALS.find(([re]) => re.test(breach));
-      assert.ok(kind, `${breach} in ${JSON.stringify(text)}`);
-      refused.set(kind[1], (refused.get(kind[1]) ?? 0) + 1);
-      // Refused: shown plain, flagged.
-      assert.match(renderHtml(doc), /mor-lf-refused/);
-      continue;
-    }
+    assert.equal(checkBound(doc), null, JSON.stringify(text));
     // The HTML shows exactly what the tree says it shows.
     assert.equal(htmlText(renderHtml(doc)), shownText(doc), `HTML differs for ${JSON.stringify(text)}`);
   }
-  // Recorded in the build's report (10,936 before F174 and F175 decided the floor).
-  assert.deepEqual(Object.fromEntries(refused), {
-    "a link's < after a digit": 650,
-    "a quote's > before a digit": 127,
-    'emphasis or code between two digits': 27,
-  });
 });
 
 test('the vectors', () => {
