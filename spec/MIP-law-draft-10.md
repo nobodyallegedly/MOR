@@ -674,7 +674,7 @@ A clone needing several powers comes into force only when each is met, all at on
 - **Condition evaluation.** A cMIP accepts a condition and the acts it refers to, and produces true, false, pending or unknown.
 - **Time reference.** A cMIP accepts a point on its reference (for example a block height) and an act, and produces whether the act is before, after, or undetermined.
 - **Absence proof** (F172). A cMIP accepts an abandonment declaration, the clause's parameters and the acts a verifier holds, and answers whether the party's absence is shown (accepted, refused, or unknown). It may use anchors, liveness acts and acknowledgements as it defines; a declaration it refuses or cannot judge does not count. *Proving absence from time needs a clock the core does not have (F136 to F166 each found a new way around a time check), so the core keeps the members' chosen judgment and leaves proof to modules that compete on it.*
-- **Anchoring.** A cMIP accepts an act id and produces a proof that it existed at a point on a time reference. *Anchoring is Law's tool for Law's purposes (deadlines, claim priority); Identity does not depend on it (F63).*
+- **Anchoring** is an Envelope task (F173); Law uses it for deadlines, time references and claim priority, an agreement naming the anchoring cMIP and the time reference it relies on. *Identity's validity does not depend on it (F63).*
 - **Grant limits.** A cMIP defines how a grant's limits are expressed and checked.
 - **Work claims.** A cMIP MAY define pre-publication commitments carried by a claim.
 

@@ -1974,6 +1974,15 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Law draft 10, abandonment clause format, rules 50 and 51, the declaration format's record sentence, Tasks; freeze suite scenario 1 step 9 and its pass condition. *To build:* revert `absence_by_anchors` from the core path (keep it as a reference absence-proof module, if useful), remove the collective client's period warnings, retire key 2.
 
 
+## F173. Anchoring moves to the Envelope (review of F163 to F168, finding 2, 7 October 2026)
+
+**Found by the hostile review of F163 to F168** (finding 2): anchoring was a Law task, while Finance (F169's lock change) and rotations rely on anchors; Finance promises never to depend on Law, and "anchored" named no reference.
+
+**Decided (Nobody, allegedly, 7 October 2026): "Agreed. It fits as it is 'media' and then all layers after it can leverage it":** the anchoring task moves to the Envelope: a cMIP accepts any act id and produces proof that it existed by a point on a named time reference; anchors compare only on the same reference; anyone may anchor any act. Law keeps its time references and deadlines on top of it. Identity's validity still does not depend on it (F63).
+
+**Core changes:** Envelope draft 7, Tasks; Law draft 10, Tasks. *To build:* the anchoring interface in the core library's Envelope part.
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
