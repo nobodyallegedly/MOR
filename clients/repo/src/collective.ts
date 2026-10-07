@@ -143,8 +143,11 @@ export interface CollectiveFile {
   records?: string[];
   /** Kept by the collective client: the fork or closing that ended the collective (Law rule 47a, F121, F124 N9), once complete. */
   closed?: string;
-  /** Kept by the collective client: splits its simulated split service made, with their content keys (base64). */
-  splits?: { id: string; key: string; receipt: string }[];
+  /**
+   * Kept by the collective client: splits its simulated split service made, with their content keys (base64);
+   * the service, the stake (its index), and the previous split it cites for the stake (Law rule 15a, F171).
+   */
+  splits?: { id: string; key: string; receipt: string; service?: string; stake?: number; previous?: string | null }[];
   /** Kept by the collective client: debts the collective signed, private, with their content keys (base64) (F124 N13). */
   debts?: { id: string; key: string; creditor: string }[];
   /** Kept by the collective client: its payee pointers, newest last. */
@@ -168,6 +171,11 @@ export function governanceText(g: Omit<Governance, 'text'>): string {
   return `The MOR test collective. It publishes releases of the MOR code and nothing else. Test acts only, wiped before the first real acts. Its everyday key is held by its first member; its safety key is split among the members, any ${g.safetyThreshold} of whom rebuild it. Releases are an area held by every member: a release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members, these rules and the release area change by a clone signed by ${constitution} and by each member who joins, and a rotation of the collective declaring it. Other changes need any ${g.cloneThreshold} members, and are recorded by the collective at once. A member may leave alone at any time, keeping what they own. The other members together decide whether a member is absent; the outcome is that member losing their voice.`;
 }
 
+/** The abandonment clause these rules write: any `abandonmentOthers` of the other members, outcome 0, no absence-proof cMIP. */
+export function abandonmentOf(g: Omit<Governance, 'text'>): CollectiveTerms['abandonment'] {
+  return { others: g.abandonmentOthers, outcomes: [0] };
+}
+
 /** The terms of a founding agreement (no parent) or of a clone, from its rules. */
 export function collectiveTerms(g: Governance, members: string[], holder: string, parent?: string, mark?: MarkEntry[]): CollectiveTerms {
   const rule = (k: number): Rule => ({ threshold: k });
@@ -183,7 +191,7 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
     // signature acts (F100, F103).
     releases: { holders: members, threshold: g.releaseThreshold, words: g.releaseWords },
     // Outcome 0, a voice removed: every member is covered (F105).
-    abandonment: { others: g.abandonmentOthers, outcomes: [0] },
+    abandonment: abandonmentOf(g),
     extensions: [REPO_SPECS.manifest],
     parent,
     mark,

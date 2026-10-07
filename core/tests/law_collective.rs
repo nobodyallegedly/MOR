@@ -75,10 +75,9 @@ struct Lab {
     /// The rail's answer for the receipts paying debts (Finance rule 4), as
     /// a verifier states it after the payment cMIP: valid, and where paid.
     rail_valid: Vec<(Hash, mor_core::finance::PaidAt)>,
-    /// The anchoring cMIP's answer on each declaration under a clause
-    /// naming a period (rules 50, 51; F136, F148): each anchored act's
-    /// point on the time reference, as a verifier states it.
-    anchors: Vec<(Hash, u64)>,
+    /// The absence-proof cMIP's answer (rule 51, F172), as a verifier
+    /// states it: each `(declaration, act using it)` it accepted.
+    accepted: Vec<(Hash, Hash)>,
 }
 
 /// A grant key (F128): made by the grantee, who keeps its secret part; the
@@ -106,7 +105,7 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         abandonment: Some(Abandonment {
             authority: Authority::Named(authority),
             outcomes: vec![outcomes::VOICE_REMOVED],
-            period: None,
+            proof: None,
         }),
         parent: None,
         grammar: Some(KeyGrammar {
@@ -216,7 +215,7 @@ impl Lab {
             keeper,
             keeper_logs: vec![],
             rail_valid: vec![],
-            anchors: vec![],
+            accepted: vec![],
         }
     }
 
@@ -240,7 +239,7 @@ impl Lab {
             v.keeper_logs.insert(*op, log.clone());
         }
         v.rail_valid.extend(self.rail_valid.iter().copied());
-        v.anchors.extend(self.anchors.iter().copied());
+        v.absence_accepted.extend(self.accepted.iter().copied());
         v
     }
 
@@ -2097,48 +2096,222 @@ fn a_declaration_removes_a_voice_at_the_labels_line() {
     );
 }
 
-/// Law rules 50 and 51 (F136, F148): where the abandonment clause names a
-/// period of absence on the agreement's time reference, a declaration
-/// counts only once anchored, with no act of the party on the agreement
-/// anchored within the period before it, and with an acknowledgement of it
-/// by another party or the keeper anchored within one further period
-/// after it. The anchors are stated by the verifier, the anchoring and
-/// time-reference formats being open: an unstated declaration is not
-/// anchored, or unplaceable, and does not count. Where the clause names no
-/// period, the declaration is the authority's judgment, as before.
+/// Law rules 50 to 52 (F172): with no absence-proof cMIP in the clause, a
+/// declaration is the authority's judgment, checked for signer, outcome
+/// and version only: the core reads no time. The label names a time
+/// reference and nobody anchors anything; the declaration still counts and
+/// the record registers it. Cy's liveness act on the agreement, made
+/// before it, does not stop it: presence is shown, never proven by time in
+/// the core (rule 50); a contest shows a wrongful declaration (rule 52).
 #[test]
-fn a_declaration_under_a_period_counts_only_anchored() {
+fn a_declaration_is_the_authoritys_judgment_with_no_anchors() {
     let mut lab = Lab::new(&|t| {
         t.time = Some((spec("a block height reference"), Value::Uint(0)));
-        t.abandonment.as_mut().unwrap().period = Some(30);
+    });
+    let f = lab.founding;
+    let mut cy = lab.m[CY].clone();
+    law_act(&mut lab.w, &mut cy, 12, vec![], obj(f));
+    lab.m[CY] = cy;
+    let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    assert!(lab.view().declaration(&d).unwrap().is_ok(), "{:?}", lab.view().declaration(&d).unwrap().err());
+    let line = lab.record(0, None, &[], vec![d], f);
+    let e = lab.view().record(&lab.c[0].id, &line).unwrap();
+    assert!(e.line, "{:?}", e.not_a_line);
+    assert_eq!(e.registers.len(), 1, "the record registers it, no anchor stated");
+    // Cy's signature counts for nothing after the line.
+    let x = lab.cmip_act(0, pay());
+    lab.sign(BEN, &x);
+    lab.sign(CY, &x);
+    assert_eq!(areas(&lab.consent(&x))[0].3, vec![lab.m[BEN].id]);
+}
+
+/// The reference absence-proof module, a period on the time reference
+/// (F172): the clause names it in key 3. The core takes its answer from
+/// the caller and reads no anchor itself: accepted for the record, the
+/// declaration counts with no anchor stated to the core at all.
+#[test]
+fn under_a_period_module_the_core_reads_no_anchor() {
+    use law::view::reference_absence_proof as reference;
+    let mut lab = Lab::new(&|t| {
+        t.time = Some((spec("a block height reference"), Value::Uint(0)));
+        t.abandonment.as_mut().unwrap().proof = Some((reference::spec(), reference::params(30)));
     });
     let f = lab.founding;
     let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
-    let why = |lab: &Lab| lab.view().declaration(&d).unwrap().err();
-    assert!(why(&lab).is_some_and(|w| w.contains("not anchored") && w.contains("F136")), "{:?}", why(&lab));
+    assert!(lab.view().declaration(&d).unwrap().is_ok(), "{:?}", lab.view().declaration(&d).unwrap().err());
     let line = lab.record(0, None, &[], vec![d], f);
-    assert!(lab.view().record(&lab.c[0].id, &line).unwrap().registers.is_empty(), "the record registers nothing");
-    // Anchored at 100, but acknowledged by nobody (F148).
-    lab.anchors.push((d, 100));
-    assert!(why(&lab).is_some_and(|w| w.contains("acknowledgement") && w.contains("F148")), "{:?}", why(&lab));
-    // Ana, another party, acknowledges it, anchored at 120: it counts.
-    let mut ana = lab.m[ANA].clone();
-    let ack = lab.w.ack(&mut ana, d);
-    lab.anchors.push((ack, 120));
-    assert!(lab.view().declaration(&d).unwrap().is_ok(), "{:?}", why(&lab));
-    let line = lab.record(0, None, &[], vec![d], f);
-    assert_eq!(lab.view().record(&lab.c[0].id, &line).unwrap().registers.len(), 1);
-    // Cy's liveness act on the agreement, anchored at 80, within the
-    // period before it: the declaration counts for nothing.
-    let mut cy = lab.m[CY].clone();
-    let live = law_act(&mut lab.w, &mut cy, 12, vec![], obj(f));
-    lab.anchors.push((live, 80));
-    assert!(why(&lab).is_some_and(|w| w.contains("within that period")), "{:?}", why(&lab));
-    // With no period, the authority's judgment stands on its own.
-    let mut plain = Lab::new(&|_| {});
-    let pf = plain.founding;
-    let d2 = plain.declare(None, pf, pf, CY, vec![outcomes::VOICE_REMOVED]);
-    assert!(plain.view().declaration(&d2).unwrap().is_ok());
+    lab.accepted.push((d, line));
+    let e = lab.view().record(&lab.c[0].id, &line).unwrap();
+    assert_eq!(e.registers.len(), 1, "{:?}", e.not_a_line);
+}
+
+/// Law draft 10, the abandonment format (F172): key 2, the period of
+/// absence (F140), is retired and never reused: terms carrying it are
+/// invalid, signed by every party or not. Key 3 is an absence-proof cMIP
+/// and its parameters, `[hash, any]`, the parameters the cMIP's own.
+#[test]
+fn abandonment_key_2_is_retired_and_key_3_names_a_cmip() {
+    let lab = Lab::new(&|_| {});
+    let t = lab.view().terms(&lab.founding).unwrap();
+    let with = |extra: (Value, Value)| -> Vec<(Value, Value)> {
+        let mut m = t.to_map();
+        for (k, v) in m.iter_mut() {
+            if *k == Value::Uint(9) {
+                let Value::Map(a) = v else { panic!("a map") };
+                a.push(extra.clone());
+            }
+        }
+        m
+    };
+    // Key 2: invalid.
+    let got = Terms::decode(&(with((Value::Uint(2), Value::Uint(30)))));
+    assert!(matches!(&got, Err(LawError::Shape(w)) if w.contains("key 2") && w.contains("F172")), "{got:?}");
+    // Key 3: a cMIP and any parameters, carried as they are.
+    let params = Value::Map(vec![(Value::Text("period".into()), Value::Uint(30))]);
+    let pair = Value::Array(vec![Value::Bytes(spec("an absence-proof cMIP").to_vec()), params.clone()]);
+    let got = Terms::decode(&(with((Value::Uint(3), pair)))).unwrap();
+    assert_eq!(got.abandonment.as_ref().unwrap().proof, Some((spec("an absence-proof cMIP"), params)));
+    assert_eq!(got.check(&mips()), Ok(()));
+    // Not a pair, or no hash: invalid.
+    for bad in [Value::Uint(30), Value::Array(vec![Value::Uint(1), Value::Uint(2)])] {
+        assert!(Terms::decode(&(with((Value::Uint(3), bad.clone())))).is_err(), "{bad:?}");
+    }
+    // Signed by every member, terms carrying key 2 are still no agreement.
+    let mut w = World::new();
+    let mut m: Vec<Person> = ["a", "b"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let map = with((Value::Uint(2), Value::Uint(30)));
+    let x = law_act(&mut w, &mut m[0], law::types::TERMS, map, None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &x);
+    }
+    assert!(view(&w).agreement(&x).is_err(), "key 2 makes the terms invalid");
+}
+
+/// F172, F178 (14): absence proof is a judicial task. The cMIP the clause
+/// names for it serves no other task and is no extension.
+#[test]
+fn the_absence_proof_cmip_is_a_judge() {
+    for (case, cmip) in [("the anchoring cMIP", anchor()), ("the payment cMIP", pay()), ("an extension", ext())] {
+        let lab = Lab::new(&|_| {});
+        let mut t = lab.view().terms(&lab.founding).unwrap();
+        t.abandonment.as_mut().unwrap().proof = Some((cmip, Value::Null));
+        let got = t.check(&mips());
+        assert!(matches!(&got, Err(LawError::Check(w)) if w.contains("absence-proof")), "{case}: {got:?}");
+    }
+}
+
+/// Law rule 51 (F172; F178 item 12): where the clause names an
+/// absence-proof cMIP (key 3), the declaration counts only where that cMIP
+/// accepted it, for the act using it. The core reads no cMIP: the
+/// caller states its answer. Not accepted, or accepted for another act,
+/// the record registers nothing; accepted for this record, it does. In a
+/// deal, the same for the clone put in force under it.
+#[test]
+fn under_an_absence_proof_cmip_a_declaration_counts_only_where_accepted() {
+    let proof = spec("an absence-proof cMIP");
+    let mut lab = Lab::new(&|t| {
+        t.abandonment.as_mut().unwrap().proof = Some((proof, Value::Text("its own parameters".into())));
+    });
+    let f = lab.founding;
+    let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    // Its own checks pass: signer, outcome, version.
+    assert!(lab.view().declaration(&d).unwrap().is_ok());
+    let r1 = lab.record(0, None, &[], vec![d], f);
+    let e = lab.view().record(&lab.c[0].id, &r1).unwrap();
+    assert!(e.registers.is_empty() && !e.line, "not accepted: it does not count");
+    assert!(e.not_a_line.as_deref().is_some_and(|w| w.contains("absence-proof")), "{:?}", e.not_a_line);
+    // Accepted for another act only: still nothing here.
+    lab.accepted.push((d, spec("another record")));
+    assert!(lab.view().record(&lab.c[0].id, &r1).unwrap().registers.is_empty());
+    // Accepted for this record: it registers it.
+    lab.accepted.push((d, r1));
+    let e = lab.view().record(&lab.c[0].id, &r1).unwrap();
+    assert_eq!(e.registers.len(), 1, "{:?}", e.not_a_line);
+
+    // A deal: the clone without p3 completes only where the cMIP accepted
+    // the declaration for that clone.
+    let mut w = World::new();
+    let mut m: Vec<Person> = ["p1", "p2", "p3"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let mut keeper = w.genesis("keeper", vec![own_home()], None, None);
+    let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+    let mut deal = deal_terms(ids[0], ids[1]);
+    deal.parties = ids.clone();
+    deal.keepers = Some(Keepers { operators: vec![keeper.id], rule: Rule::All });
+    deal.abandonment = Some(Abandonment {
+        authority: Authority::Named(keeper.id),
+        outcomes: vec![outcomes::VOICE_REMOVED],
+        proof: Some((proof, Value::Null)),
+    });
+    assert_eq!(deal.check(&mips()), Ok(()));
+    let x = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &x);
+    }
+    let mut c = deal.clone();
+    c.parent = Some(x);
+    c.text = "Two of us carry on.".into();
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ids[0], ids[1]]) }]);
+    let two = law_act(&mut w, &mut m[0], law::types::TERMS, c.to_map(), obj(x));
+    sign(&mut w, &mut m[0], &two);
+    sign(&mut w, &mut m[1], &two);
+    let decl = AbsenceDeclaration { agreement: x, clause: x, party: ids[2], outcomes: vec![outcomes::VOICE_REMOVED] };
+    let dx = law_act(&mut w, &mut keeper, law::types::DECLARATION, decl.to_map(), obj(x));
+    let mut v = view(&w);
+    v.keeper_logs.insert(keeper.id, vec![dx]);
+    assert!(v.agreement(&two).unwrap().invalid.is_some(), "not accepted: p3 still counts");
+    let mut v = view(&w);
+    v.keeper_logs.insert(keeper.id, vec![dx]);
+    v.absence_accepted.insert((dx, two));
+    let a = v.agreement(&two).unwrap();
+    assert_eq!(a.exists, Some(true), "{:?}", a.invalid);
+}
+
+/// Law rule 51 (F172): a declaration moves nothing by itself; what is put
+/// in force under it is judged where that act uses it, and no later act of
+/// the party undoes it. Ana last signed the founding terms (the treasurer
+/// alone signed the area clone recorded since); the authority declares her
+/// absent and the label's record registers it. Ana then comes back: a
+/// liveness act, a contest, and her signature on the area clone she had
+/// never signed, all after the line, which no act of the label places
+/// before it. The record still registers the declaration, and her voice
+/// stays gone.
+#[test]
+fn a_later_act_of_the_party_never_undoes_the_line() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let k = lab.propose(BEN, &t);
+    let sk = lab.sign(BEN, &k);
+    let r0 = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
+    assert_eq!(puts(&lab, &r0), Some(k));
+    let d = lab.declare(None, k, f, ANA, vec![outcomes::VOICE_REMOVED]);
+    let line = lab.record(0, None, &[], vec![d], k);
+    let registered = |lab: &Lab| lab.view().record(&lab.c[0].id, &line).unwrap().registers.len();
+    assert_eq!(registered(&lab), 1);
+    // Ana comes back.
+    law_act(&mut lab.w, &mut lab.m[ANA].clone(), 12, vec![], obj(k));
+    let contest = law_act(&mut lab.w, &mut lab.m[ANA].clone(), 14, vec![], obj(d));
+    assert!(lab.w.v.get(&contest).is_some(), "the contest is held, shown beside the declaration");
+    lab.sign(ANA, &k);
+    assert_eq!(registered(&lab), 1, "a later act of the party never undoes the line (rule 51, F172)");
+    let x = lab.cmip_act(0, pay());
+    lab.sign(ANA, &x);
+    assert!(!lab.counts(&x), "her voice stays gone");
+    // A signature of hers on that clone that the label placed before the
+    // line would have made the founding terms no longer the last version
+    // she signed: the declaration then names the wrong version there.
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let k = lab.propose(BEN, &t);
+    let sk = lab.sign(BEN, &k);
+    lab.record(0, Some((k, vec![sk])), &[], vec![], k);
+    let sa = lab.sign(ANA, &k);
+    lab.acknowledge(0, sa);
+    let d = lab.declare(None, k, f, ANA, vec![outcomes::VOICE_REMOVED]);
+    let line = lab.record(0, None, &[], vec![d], k);
+    let e = lab.view().record(&lab.c[0].id, &line).unwrap();
+    assert!(e.registers.is_empty(), "placed before the line, her signature on the clone counts");
 }
 
 /// Q37, flaw C, B15: a threshold authority of two of the other parties.
@@ -2165,7 +2338,7 @@ fn a_threshold_authority_is_counted_at_the_line() {
             t.abandonment = Some(Abandonment {
                 authority: Authority::Others(2),
                 outcomes: vec![outcomes::VOICE_REMOVED],
-                period: None,
+                proof: None,
             });
             let ids = t.parties.clone();
             let g = t.grammar.as_mut().unwrap();
@@ -2298,7 +2471,7 @@ fn a_threshold_declaration_at_the_recovery_rotation() {
             t.abandonment = Some(Abandonment {
                 authority: Authority::Others(2),
                 outcomes: vec![outcomes::VOICE_REMOVED],
-                period: None,
+                proof: None,
             });
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::One(ids[ANA]);
@@ -2360,7 +2533,7 @@ fn only_the_recovery_rotation_names_a_declarations_signatures() {
         t.abandonment = Some(Abandonment {
             authority: Authority::Others(2),
             outcomes: vec![outcomes::VOICE_REMOVED],
-            period: None,
+            proof: None,
         });
         let g = t.grammar.as_mut().unwrap();
         g.safety = Holding::Shares { threshold: 2, members: ids };
@@ -2845,7 +3018,7 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             abandonment: Some(Abandonment {
                 authority: Authority::Named(authority.id),
                 outcomes: vec![outcomes::VOICE_REMOVED],
-                period: None,
+                proof: None,
             }),
             parent: None,
             grammar: None,
@@ -2939,7 +3112,7 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         field4: Field4::Rule(Rule::All),
         clone: Rule::All,
         time: None,
-        abandonment: Some(Abandonment { authority, outcomes: vec![outcomes::VOICE_REMOVED], period: None }),
+        abandonment: Some(Abandonment { authority, outcomes: vec![outcomes::VOICE_REMOVED], proof: None }),
         parent: None,
         grammar: None,
         arbitrators: None,
@@ -2988,19 +3161,103 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
     assert_eq!(a2.exists, Some(true), "{:?}", a2.invalid);
 }
 
-/// Freeze scenario 1, step 9 (F136, F148; the hostile review of F133 to
-/// F144, finding 3): a deal whose clause names a two-week period on its
-/// block height (here 30 blocks), the keeper's operator the authority on
-/// absence. The verifier states the anchors (formats open). A liveness act
-/// on the deal protects its party once anchored, whoever anchored it; one
-/// nobody anchored does not (a stated cost). Activity elsewhere protects
-/// no one. A declaration anchored during a gap and kept counts only if
-/// another party or the keeper acknowledged it, anchored within one
-/// further period, with no act of the party on the deal anchored between:
-/// published months later, after the party returned, it counts for
-/// nothing.
+/// Freeze scenario 1, step 9, and its pass condition (F172): the deal's
+/// clause names the keeper's operator as the authority on absence, with
+/// no absence-proof cMIP, so the declaration is that identity's judgment
+/// (one identity, Flaw B19), checked for signer, outcome and version, no
+/// anchor read. p1, with nothing to sign for months, posts a liveness act:
+/// shown beside any declaration. p2 goes silent on the deal while active
+/// elsewhere; the operator declares p2 absent, removing the voice and
+/// redistributing the stake. The declaration moves nothing until a clone
+/// puts its outcome in force: the deal's terms stay as they were, and the
+/// clone without p2, no clone before, completes. p2 then contests it
+/// and comes back on the deal: nothing undoes the clone (rule 51). A
+/// declaration by anyone else is none.
 #[test]
-fn scenario_1_absence_is_judged_by_anchors() {
+fn scenario_1_step_9_absence_is_the_authoritys_judgment() {
+    let mut w = World::new();
+    let mut m: Vec<Person> = ["p1", "p2", "p3"]
+        .iter()
+        .map(|n| w.genesis(n, vec![own_home()], None, None))
+        .collect();
+    let mut keeper = w.genesis("keeper", vec![own_home()], None, None);
+    let mut stranger = w.genesis("a stranger", vec![own_home()], None, None);
+    let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+    let mut terms = deal_terms(ids[0], ids[1]);
+    terms.parties = ids.clone();
+    terms.text = "The film's contributors share its revenue.".into();
+    terms.keepers = Some(Keepers { operators: vec![keeper.id], rule: Rule::All });
+    terms.time = Some((spec("a block height reference"), Value::Uint(0)));
+    terms.abandonment = Some(Abandonment {
+        authority: Authority::Named(keeper.id),
+        outcomes: vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED],
+        proof: None,
+    });
+    assert_eq!(terms.check(&mips()), Ok(()));
+    let d = law_act(&mut w, &mut m[0], law::types::TERMS, terms.to_map(), None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &d);
+    }
+    // p1's liveness act on the deal.
+    let live = law_act(&mut w, &mut m[0], 12, vec![], obj(d));
+    // p2, busy elsewhere.
+    let elsewhere = law_act(&mut w, &mut m[1], law::types::TERMS, Terms { parties: vec![ids[1]], ..terms.clone() }.to_map(), None);
+    law_act(&mut w, &mut m[1], 12, vec![], obj(elsewhere));
+    // p1 and p3 sign a clone without p2, redistributing the stake.
+    let mut c = terms.clone();
+    c.parent = Some(d);
+    c.parties = vec![ids[0], ids[2]];
+    c.text = "The film's contributors share its revenue; p2's share is redistributed.".into();
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ids[0], ids[2]]) }]);
+    let k = law_act(&mut w, &mut m[0], law::types::TERMS, c.to_map(), obj(d));
+    sign(&mut w, &mut m[0], &k);
+    sign(&mut w, &mut m[2], &k);
+    assert!(view(&w).agreement(&k).unwrap().invalid.is_some(), "no declaration yet: p2 still counts");
+    // A stranger's declaration is none.
+    let decl = AbsenceDeclaration {
+        agreement: d,
+        clause: d,
+        party: ids[1],
+        outcomes: vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED],
+    };
+    let odd = law_act(&mut w, &mut stranger, law::types::DECLARATION, decl.to_map(), obj(d));
+    assert!(view(&w).declaration(&odd).unwrap().is_err());
+    // The operator's, with no anchor anywhere, counts.
+    let x = law_act(&mut w, &mut keeper, law::types::DECLARATION, decl.to_map(), obj(d));
+    assert!(view(&w).declaration(&x).unwrap().is_ok(), "{:?}", view(&w).declaration(&x).unwrap().err());
+    let judged = |w: &World, log: Vec<Hash>| {
+        let mut v = view(w);
+        v.keeper_logs.insert(keeper.id, log);
+        v.agreement(&k).unwrap()
+    };
+    // The declaration moves nothing by itself: the deal's own terms still
+    // name p2; what changes is the clone it lets complete, from the
+    // declaration on (rule 53, Q28).
+    assert!(view(&w).terms(&d).unwrap().parties.contains(&ids[1]));
+    assert_eq!(judged(&w, vec![odd, x]).exists, Some(true), "{:?}", judged(&w, vec![odd, x]).invalid);
+    // p2 contests and comes back: the clone stands.
+    let contest = law_act(&mut w, &mut m[1], 14, vec![], obj(x));
+    law_act(&mut w, &mut m[1], 12, vec![], obj(d));
+    sign(&mut w, &mut m[1], &k);
+    assert!(w.v.get(&contest).is_some() && w.v.get(&live).is_some(), "both held, shown beside the declaration");
+    let after = judged(&w, vec![odd, x]);
+    assert_eq!(after.exists, Some(true), "no later act undoes it (F172): {:?}", after.invalid);
+}
+
+/// The reference absence-proof module (experimental, outside the core
+/// path; F172), on what was freeze scenario 1, step 9 under F136 and F148:
+/// a deal whose clause names the module in key 3, with a two-week period
+/// on its block height (here 30 blocks), the keeper's operator the
+/// authority on absence. The caller states the anchors (formats open) to
+/// the module, never to the core. A liveness act on the deal protects its
+/// party once anchored, whoever anchored it; one nobody anchored does not.
+/// Activity elsewhere protects no one. A declaration anchored during a gap
+/// and kept is accepted only if another party or the keeper acknowledged
+/// it, anchored within one further period, with no act of the party on
+/// the deal anchored between.
+#[test]
+fn the_reference_absence_proof_module_judges_by_anchors() {
+    use law::view::reference_absence_proof as reference;
     let mut w = World::new();
     let mut m: Vec<Person> = ["p1", "p2", "p3"]
         .iter()
@@ -3020,7 +3277,7 @@ fn scenario_1_absence_is_judged_by_anchors() {
         abandonment: Some(Abandonment {
             authority: Authority::Named(keeper.id),
             outcomes: vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED],
-            period: Some(30),
+            proof: Some((reference::spec(), reference::params(30))),
         }),
         parent: None,
         grammar: None,
@@ -3050,9 +3307,8 @@ fn scenario_1_absence_is_judged_by_anchors() {
         law_act(w, &mut keeper, law::types::DECLARATION, x.to_map(), obj(d))
     };
     let judged = |w: &World, anchors: &[(Hash, u64)], x: &Hash| -> Result<(), String> {
-        let mut v = view(w);
-        v.anchors.extend(anchors.iter().copied());
-        v.declaration(x).unwrap().map(|_| ())
+        let anchors: std::collections::BTreeMap<Hash, u64> = anchors.iter().copied().collect();
+        view(w).reference_absence_proof(x, &anchors).unwrap()
     };
 
     // p1, with nothing to sign for months, posts a liveness act on the deal
@@ -3063,7 +3319,7 @@ fn scenario_1_absence_is_judged_by_anchors() {
     let ack1 = w.ack(&mut m[1], d1);
     let base = vec![(d1, 100), (ack1, 110)];
     let got = judged(&w, &[base.clone(), vec![(live, 95)]].concat(), &d1);
-    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
     // The same liveness act, anchored by nobody, protects no one.
     assert_eq!(judged(&w, &base, &d1), Ok(()));
     // Anchored before the period, it no longer protects either.
@@ -3119,7 +3375,7 @@ fn scenario_1_absence_is_judged_by_anchors() {
     // declaration's own point protects p3.
     let same = law_act(&mut w, &mut m[2], 12, vec![], obj(d));
     let got = judged(&w, &[(d3, 100), (other, 106), (same, 100)], &d3);
-    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
     // F162 (5): an act on a later version of the deal, a clone of it, is
     // presence on the deal.
     let mut c = terms.clone();
@@ -3129,22 +3385,28 @@ fn scenario_1_absence_is_judged_by_anchors() {
     let later = law_act(&mut w, &mut m[0], law::types::TERMS, c.to_map(), obj(d));
     let on_later = law_act(&mut w, &mut m[2], 12, vec![], obj(later));
     let got = judged(&w, &[(d3, 100), (other, 106), (on_later, 90)], &d3);
-    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
     // Not anchored at all: it does not count (F136).
     let got = judged(&w, &[(early, 125)], &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("not anchored")), "{got:?}");
 }
 
-/// F158 and F162 (5) in a collective whose clause names a period, its
+/// The reference absence-proof module (F172), F158 and F162 (5), in a
+/// collective whose clause names it with a period, its
 /// authority two of the other members: Ben declares Ana absent and Cy
 /// signs the declaration too. Cy, one of its signers, cannot acknowledge
 /// it (F158); the keeper can. Ana's act on the label's chain, anchored
 /// within the period, is presence on the agreement (F162, 5).
 #[test]
 fn a_threshold_declarations_signers_do_not_acknowledge_it() {
+    use law::view::reference_absence_proof as reference;
     let mut lab = Lab::new(&|t| {
         t.time = Some((spec("a block height reference"), Value::Uint(0)));
-        t.abandonment = Some(Abandonment { authority: Authority::Others(2), outcomes: vec![outcomes::VOICE_REMOVED], period: Some(30) });
+        t.abandonment = Some(Abandonment {
+            authority: Authority::Others(2),
+            outcomes: vec![outcomes::VOICE_REMOVED],
+            proof: Some((reference::spec(), reference::params(30))),
+        });
         let ids = t.parties.clone();
         let g = t.grammar.as_mut().unwrap();
         g.safety = Holding::Shares { threshold: 2, members: ids };
@@ -3156,9 +3418,8 @@ fn a_threshold_declarations_signers_do_not_acknowledge_it() {
     let by_cy = lab.w.ack(&mut lab.m[CY], d);
     let by_keeper = lab.w.ack(&mut lab.keeper, d);
     let judged = |lab: &Lab, anchors: &[(Hash, u64)]| -> Result<(), String> {
-        let mut v = lab.view();
-        v.anchors.extend(anchors.iter().copied());
-        v.declaration(&d).unwrap().map(|_| ())
+        let anchors: std::collections::BTreeMap<Hash, u64> = anchors.iter().copied().collect();
+        lab.view().reference_absence_proof(&d, &anchors).unwrap()
     };
     let got = judged(&lab, &[(d, 100), (by_cy, 105)]);
     assert!(got.as_ref().is_err_and(|e| e.contains("F158")), "a signer's acknowledgement is none: {got:?}");
@@ -3168,7 +3429,7 @@ fn a_threshold_declarations_signers_do_not_acknowledge_it() {
     let label = lab.c[0].id;
     let on_chain = law_act(&mut lab.w, &mut lab.m[ANA], 12, vec![], Some(vec![Object { chain: label, predecessor: label }]));
     let got = judged(&lab, &[(d, 100), (by_keeper, 106), (on_chain, 95)]);
-    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
 }
 
 /// F162 (13), rule 36a: an area over the Identity layer governs the
@@ -3577,6 +3838,7 @@ fn every_payout_matches_its_stake() {
         ],
         cmip: spec("a split cMIP"),
         agreement: f,
+        tally: None,
     };
     let everyone = ids.clone();
     let r1 = receipt(&mut lab, &mut svc, 1000);
@@ -3595,7 +3857,7 @@ fn every_payout_matches_its_stake() {
     // remainder, Ana's 320.4 (rule 15a, F150).
     let r2 = receipt(&mut lab, &mut svc, 901);
     let own: Vec<(Hash, u64)> = lab.view().terms(&f).unwrap().own_stake().unwrap().1.holders.iter().map(|(w, n)| (w.resolve(None).unwrap(), *n)).collect();
-    assert_eq!(law::divide_stake(801, &own, Some(&r2)).unwrap(), vec![321, 240, 240]);
+    assert_eq!(law::divide_stake(801, &own, law::Ties::Open).unwrap(), vec![321, 240, 240], "no tie: the remainders decide");
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r2, 321, 240, 240).to_map(), None, everyone.clone());
     assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
     // F162 (11): over the exact share by a whole unit or more breaks the
@@ -3606,9 +3868,18 @@ fn every_payout_matches_its_stake() {
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r3, 323, 240, 240).to_map(), None, everyone.clone());
     let e = lab.view().split(&x).unwrap();
     assert_eq!(e.sums, Some(true));
-    assert_eq!(e.mismatched.iter().map(|m| m.holder).collect::<Vec<_>>(), vec![ids[ANA]]);
+    // Since F165 every unit is rule 15a's: Ben and Cy, owed 241 each, are
+    // short too.
+    assert_eq!(e.mismatched.iter().map(|m| m.holder).collect::<Vec<_>>(), vec![ids[ANA], ids[BEN], ids[CY]]);
+    // F165: rule 15a decides every unit. Of 803, Ben and Cy (240.9 each)
+    // take the two leftover units, by largest remainder: 321, 241, 241.
+    // Giving one of them to Ana instead leaves every holder within one
+    // unit of its exact share, and is a deviation all the same.
+    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r3, 321, 241, 241).to_map(), None, everyone.clone());
+    assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r3, 322, 241, 240).to_map(), None, everyone.clone());
-    assert!(lab.view().split(&x).unwrap().mismatched.is_empty(), "each within one unit");
+    let who: Vec<Hash> = lab.view().split(&x).unwrap().mismatched.iter().map(|m| m.holder).collect();
+    assert_eq!(std::collections::BTreeSet::from_iter(who), std::collections::BTreeSet::from([ids[ANA], ids[CY]]), "a leftover unit steered to Ana");
     // Any deviation, either way, breaks the plan (N10): Cy paid less, Ana
     // more. Not delivered to Cy, whom it pays.
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r1, 430, 270, 200).to_map(), None, vec![ids[ANA], ids[BEN]]);
@@ -3624,6 +3895,236 @@ fn every_payout_matches_its_stake() {
     // A split that does not sum exactly is shown so (rule 21).
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r1, 300, 270, 270).to_map(), None, everyone);
     assert_eq!(lab.view().split(&x).unwrap().sums, Some(false));
+}
+
+/// A duo's work at 500,000 / 500,000, named to a split service the member
+/// owns (F165, F171): every one-unit payment is a tie. The lab, the
+/// service, the agreement in force, the stake, and the members' identity
+/// hashes, smaller first.
+fn duo() -> (Lab, Person, Hash, u64, Hash, Hash) {
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 500_000)])]);
+    });
+    let ids = lab.ids();
+    let svc = lab.w.genesis("a split service the member owns", vec![own_home()], None, None);
+    let g = lab.grant(&plain_grant(svc.id, false));
+    let t = lab.clone_terms(&lab.founding.clone(), vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| t.split_grant = Some(g));
+    let f = lab.propose(ANA, &t);
+    let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &f)).collect();
+    lab.record(0, Some((f, sigs)), &[], vec![], f);
+    let stake = lab.view().terms(&f).unwrap().own_stake().unwrap().0 as u64;
+    let (low, high) = if ids[ANA] < ids[BEN] { (ids[ANA], ids[BEN]) } else { (ids[BEN], ids[ANA]) };
+    (lab, svc, f, stake, low, high)
+}
+
+/// A one-unit receipt of the duo's service, with its own salt.
+fn unit_receipt(lab: &mut Lab, svc: &mut Person) -> Hash {
+    let r = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
+        rail: spec("a rail Module"),
+        proof: vec![],
+        payer: Some(mor_core::finance::Payer::Identity(spec("a listener"))),
+        payee: svc.id,
+        amount: mor_core::finance::Amount { unit: spec("a unit"), value: 1 },
+        fulfils: spec("a stream"),
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: None,
+    });
+    let a = lab.w.everyday_act(svc, mips().finance, 2, r.to_map(), None, None);
+    lab.w.add(&a)
+}
+
+/// The service's split of a one-unit `receipt`, paying the unit to `to`
+/// on `stake`, citing `previous` in `refs`, carrying `count` as the stake's
+/// running count (field 4, PROPOSED format), delivered to both members
+/// (F171: every holder, paid or not).
+#[allow(clippy::too_many_arguments)]
+fn unit_split(lab: &mut Lab, svc: &mut Person, f: Hash, stake: u64, receipt: Hash, to: Hash, previous: Option<Hash>, count: Option<Vec<(Hash, u64)>>) -> Hash {
+    use mor_core::act::Ref;
+    let s = law::Split {
+        receipt,
+        payouts: vec![law::Payout { receiver: to, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None }],
+        cmip: spec("a split cMIP"),
+        agreement: f,
+        tally: count.map(|c| vec![(stake, c)]),
+    };
+    let everyone = lab.ids()[..2].to_vec();
+    lab.w.private_act_refs(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone, previous.map(|p| vec![Ref::Act(p)]))
+}
+
+/// F165 (review of F145 to F162, finding 4), as F171 builds it: leftover
+/// ties take turns, counted in the running count each split act carries
+/// (field 4, PROPOSED format) and checked from two acts: the split and the
+/// previous one it cites for the stake. A duo's work at 500,000 / 500,000
+/// earns one-unit payments, so every unit is a tie. Under F150 the
+/// receipt's hash decided it, and the service, which signs the receipt and
+/// picks its salt, could sign one receipt after another until the hash
+/// fell its way. Now:
+///
+/// - re-signing the receipt with twenty different salts changes nothing:
+///   with no earlier split, the unit goes to the smaller identity hash,
+///   and a split giving it to the other member is shown as a deviation;
+/// - each split citing the previous one for the stake, the units
+///   alternate: the member with fewer leftover units so far takes the next;
+/// - a verifier holding only the previous split checks the tie, and the
+///   running count;
+/// - a running count that is not the previous one plus this split's
+///   leftover units breaks the plan;
+/// - a split citing an act the verifier does not hold leaves the tied unit
+///   and the count unknown, never the rest of the payment.
+///
+/// Before F165 was built, the split check allowed each holder one unit
+/// either way, so a tied unit could be given to either member.
+#[test]
+fn a_split_service_cannot_steer_ties_by_grinding_salts() {
+    let (mut lab, mut svc, f, stake, low, high) = duo();
+    // Grinding: twenty receipts for the first payment, each with its own
+    // salt, each split as the first. Every one sends the unit to the
+    // smaller identity hash. (Twenty first splits reset the count each
+    // time: the next test shows that.)
+    for _ in 0..20 {
+        let r = unit_receipt(&mut lab, &mut svc);
+        let steered = unit_split(&mut lab, &mut svc, f, stake, r, high, None, Some(vec![(high, 1)]));
+        let e = lab.view().split(&steered).unwrap();
+        assert!(!e.mismatched.is_empty(), "a tied unit steered by the receipt's salt is a deviation");
+        assert!(e.turns_unknown.is_empty());
+        let x = unit_split(&mut lab, &mut svc, f, stake, r, low, None, Some(vec![(low, 1)]));
+        assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
+    }
+
+    // Turns, on a service that has split nothing yet: each split cites the
+    // previous one for the stake and carries the running count.
+    let (mut lab, mut svc, f, stake, low, high) = duo();
+    let r1 = unit_receipt(&mut lab, &mut svc);
+    let s1 = unit_split(&mut lab, &mut svc, f, stake, r1, low, None, Some(vec![(low, 1), (high, 0)]));
+    let e = lab.view().split(&s1).unwrap();
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty() && e.count_unknown.is_empty(), "{e:?}");
+    let r2 = unit_receipt(&mut lab, &mut svc);
+    let s2 = unit_split(&mut lab, &mut svc, f, stake, r2, high, Some(s1), Some(vec![(low, 1), (high, 1)]));
+    let e = lab.view().split(&s2).unwrap();
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "the member with fewer leftover units takes the next: {e:?}");
+    assert_eq!(lab.view().turns(&svc.id, &f, stake, &[(low, 500_000), (high, 500_000)], Some(&s2)).unwrap(), Some(vec![1, 1]), "one leftover unit each so far");
+    let r3 = unit_receipt(&mut lab, &mut svc);
+    let s3 = unit_split(&mut lab, &mut svc, f, stake, r3, low, Some(s2), Some(vec![(low, 2), (high, 1)]));
+    let e = lab.view().split(&s3).unwrap();
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "equal counts: the smaller identity hash again: {e:?}");
+    let r4 = unit_receipt(&mut lab, &mut svc);
+    // The fourth carries a count that lies: the unit goes to the member
+    // with fewer, as it should, but the count says nobody had any before.
+    let s4 = unit_split(&mut lab, &mut svc, f, stake, r4, high, Some(s3), Some(vec![(low, 0), (high, 1)]));
+    let e = lab.view().split(&s4).unwrap();
+    assert!(e.mismatched.is_empty());
+    assert_eq!(
+        e.breaks,
+        vec![law::ChainBreak::Count { stake, carried: vec![(low, 0), (high, 1)], expected: std::collections::BTreeMap::from([(low, 2), (high, 2)]).into_iter().collect() }],
+        "the running count is checked from two acts"
+    );
+
+    // From two acts: a verifier holding s3 but neither s1 nor s2 still
+    // checks s4's count, and a tie after s3.
+    let mut v = mor_core::chain::Verifier::with_mips(common::identity_spec(), common::finance_spec(), law_spec());
+    for (a, key) in &lab.w.log {
+        if a.id() != s1 && a.id() != s2 {
+            v.add_with_key(a.clone(), key.as_ref()).unwrap();
+        }
+    }
+    let mut lv = LawView::new(&v, mips());
+    lv.ext_layers.insert(ext(), vec![]);
+    let e = lv.split(&s4).unwrap();
+    assert!(matches!(e.breaks.as_slice(), [law::ChainBreak::Count { .. }]), "{:?}", e.breaks);
+    assert_eq!(lv.turns(&svc.id, &f, stake, &[(low, 500_000), (high, 500_000)], Some(&s3)).unwrap(), Some(vec![2, 1]));
+    let e = lv.split(&s3).unwrap();
+    assert_eq!(e.count_unknown, vec![stake], "s3's own previous, s2, is not held: its count is unknown, never a deviation");
+    assert_eq!(e.turns_unknown, vec![stake]);
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "{e:?}");
+
+    // A split citing an act not held: the tied unit and the count are
+    // unknown, and either member's payout is within one unit; the rest
+    // still checked.
+    let r5 = unit_receipt(&mut lab, &mut svc);
+    let x = unit_split(&mut lab, &mut svc, f, stake, r5, high, Some(spec("a split this verifier does not hold")), Some(vec![(high, 9)]));
+    let e = lab.view().split(&x).unwrap();
+    assert_eq!(e.turns_unknown, vec![stake]);
+    assert_eq!(e.count_unknown, vec![stake]);
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "{e:?}");
+}
+
+/// F171 (review of F163 to F168, finding 7): a split citing no previous
+/// split for the stake, when the service has split on it before, resets
+/// the count, and breaks the plan (rule 15a, rule 46b). F165 left it open:
+/// a service that wanted every tied unit to go to the smaller identity hash
+/// signed each split as if it were the first, every count then zero, each
+/// split passing (the test this one replaces,
+/// `flaw_a_service_citing_no_previous_receipt_restarts_the_turns`).
+///
+/// A verifier holding two first splits cannot tell from the acts which
+/// came later, so each is shown, naming the other; the holder's client,
+/// keeping the chain as the splits arrive, names the second.
+#[test]
+fn a_split_service_citing_no_previous_split_resets_the_count_a_deviation() {
+    let (mut lab, mut svc, f, stake, low, _high) = duo();
+    let mut firsts: Vec<Hash> = vec![];
+    for i in 0..5 {
+        let r = unit_receipt(&mut lab, &mut svc);
+        let x = unit_split(&mut lab, &mut svc, f, stake, r, low, None, Some(vec![(low, 1)]));
+        let e = lab.view().split(&x).unwrap();
+        assert!(e.mismatched.is_empty(), "each split, judged alone, pays the tie as a first split would");
+        if i == 0 {
+            assert!(e.breaks.is_empty(), "the first split for the stake cites none: {:?}", e.breaks);
+        } else {
+            let mut with = firsts.clone();
+            with.sort();
+            assert_eq!(e.breaks, vec![law::ChainBreak::Reset { stake, with }], "a reset: the plan is broken");
+        }
+        firsts.push(x);
+    }
+    // The first, judged now, shares its start with the resets.
+    let e = lab.view().split(&firsts[0]).unwrap();
+    assert!(matches!(e.breaks.as_slice(), [law::ChainBreak::Reset { with, .. }] if with.len() == 4), "{:?}", e.breaks);
+}
+
+/// F171: two splits citing the same previous split for the stake fork the
+/// chain, and break the plan (rule 15a, rule 46b), even where each is
+/// consistent with the previous one: two consecutive acts show
+/// consistency, not truth. A split that cites an earlier split than the
+/// latest is seen this way: it shares its previous with the split after it.
+#[test]
+fn two_splits_citing_the_same_previous_fork_the_chain_a_deviation() {
+    let (mut lab, mut svc, f, stake, low, high) = duo();
+    let r1 = unit_receipt(&mut lab, &mut svc);
+    let s1 = unit_split(&mut lab, &mut svc, f, stake, r1, low, None, Some(vec![(low, 1), (high, 0)]));
+    let r2 = unit_receipt(&mut lab, &mut svc);
+    let s2 = unit_split(&mut lab, &mut svc, f, stake, r2, high, Some(s1), Some(vec![(low, 1), (high, 1)]));
+    assert!(lab.view().split(&s2).unwrap().breaks.is_empty());
+    let r3 = unit_receipt(&mut lab, &mut svc);
+    let s3 = unit_split(&mut lab, &mut svc, f, stake, r3, low, Some(s2), Some(vec![(low, 2), (high, 1)]));
+    // The fork: a second split citing s2, paying the unit to the low
+    // member as s3 did, and carrying the count s3 carries. Judged against
+    // s2 alone it is right; the low member has now had two units of three
+    // from s2's position, which the chain would have shown.
+    let r4 = unit_receipt(&mut lab, &mut svc);
+    let s3b = unit_split(&mut lab, &mut svc, f, stake, r4, low, Some(s2), Some(vec![(low, 2), (high, 1)]));
+    let e = lab.view().split(&s3b).unwrap();
+    assert!(e.mismatched.is_empty(), "consistent with the previous split: {e:?}");
+    assert_eq!(e.breaks, vec![law::ChainBreak::Fork { stake, previous: s2, with: vec![s3] }], "a fork: the plan is broken");
+    let e = lab.view().split(&s3).unwrap();
+    assert_eq!(e.breaks, vec![law::ChainBreak::Fork { stake, previous: s2, with: vec![s3b] }], "shown on both: the acts carry no order to trust");
+    // A split citing the latest, s3, continues the chain.
+    let r5 = unit_receipt(&mut lab, &mut svc);
+    let s4 = unit_split(&mut lab, &mut svc, f, stake, r5, high, Some(s3), Some(vec![(low, 2), (high, 2)]));
+    let e = lab.view().split(&s4).unwrap();
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "{e:?}");
+    // A split carrying no count for the stake breaks the plan too (rule
+    // 15a: each split carries it); the next one's count is then unknown.
+    let r6 = unit_receipt(&mut lab, &mut svc);
+    let s5 = unit_split(&mut lab, &mut svc, f, stake, r6, low, Some(s4), None);
+    assert_eq!(lab.view().split(&s5).unwrap().breaks, vec![law::ChainBreak::NoCount { stake }]);
+    let r7 = unit_receipt(&mut lab, &mut svc);
+    let s6 = unit_split(&mut lab, &mut svc, f, stake, r7, high, Some(s5), Some(vec![(low, 3), (high, 3)]));
+    let e = lab.view().split(&s6).unwrap();
+    assert_eq!((e.count_unknown, e.turns_unknown, e.breaks), (vec![stake], vec![stake], vec![]));
 }
 
 /// The split, as rule 20, 22 and 26 bind it (audit, October 2026, gap 8).
@@ -3677,7 +4178,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     assert!(matches!(lab.view().backing(&incoming).unwrap(), Backing::Backed { .. }));
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement };
+    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None };
     let by_stakes = vec![pay(ids[ANA], 400), pay(ids[BEN], 300), pay(ids[CY], 300)];
     let everyone = ids.clone();
     // The service's own split, naming the version in force: no problem.
@@ -3794,7 +4295,7 @@ fn a_split_service_is_held_to_account() {
     assert!(account.unpaid.is_empty());
     let stake = lab.view().terms(&k).unwrap().own_stake().unwrap().0 as u64;
     let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k };
+    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None };
     // A stranger's split names it: the service still owes a split.
     let _ = lab.w.private_act(&mut stranger, mips().law, law::types::SPLIT, split(r1).to_map(), None, ids.clone());
     assert_eq!(lab.view().service_account(&svc.id).unwrap().unsplit.len(), 1);
@@ -3951,15 +4452,14 @@ fn payer_side_splitting_follows_the_claim() {
     });
     let f = lab.founding;
     let ids = lab.ids();
-    let got = lab.view().payer_split(&f, &Who::Id(work), 1001, None).unwrap().unwrap();
+    let got = lab.view().payer_split(&f, &Who::Id(work), 1001).unwrap().unwrap();
     assert_eq!(got, vec![(ids[ANA], 501), (ids[BEN], 250), (ids[CY], 250)]);
-    // F150: Ben and Cy tie for 1002's leftover unit. The receipt's hash
-    // orders them (rule 15a); with none, the split is undetermined.
-    let w = lab.view().payer_split(&f, &Who::Id(work), 1002, None).unwrap().unwrap_err();
-    assert!(w.contains("rule 15a"), "{w}");
-    let r = spec("a receipt");
-    let got = lab.view().payer_split(&f, &Who::Id(work), 1002, Some(&r)).unwrap().unwrap();
-    let first = if law::leftover_key(&r, &ids[BEN]) < law::leftover_key(&r, &ids[CY]) { BEN } else { CY };
+    // F168 (10): Ben and Cy tie for 1002's leftover unit. The payer
+    // decides, at most one unit per tie, a stated cost; no receipt exists
+    // yet, so no hash can (F162's undetermined answer withdrawn). This
+    // wallet gives it to the smaller identity hash, a choice, not a rule.
+    let got = lab.view().payer_split(&f, &Who::Id(work), 1002).unwrap().unwrap();
+    let first = if ids[BEN] < ids[CY] { BEN } else { CY };
     let want: Vec<(Hash, u64)> = [(ANA, 501), (BEN, 250), (CY, 250)].iter().map(|(i, n)| (ids[*i], n + u64::from(*i == first))).collect();
     assert_eq!(got, want);
     // A deal in which the label holds 60% and a guest 40%.
@@ -3991,7 +4491,7 @@ fn payer_side_splitting_follows_the_claim() {
         release_rule: None,
     };
     let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal.to_map(), None);
-    let got = lab.view().payer_split(&d, &Who::Id(work), 1000, None).unwrap().unwrap();
+    let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
     assert_eq!(got, vec![(ids[ANA], 300), (ids[BEN], 150), (ids[CY], 150), (guest.id, 400)]);
 }
 
@@ -4030,22 +4530,22 @@ fn leftovers_go_by_largest_remainder_whatever_the_order() {
         release_rule: None,
     };
     let listed = [vec![(ids[ANA], 333_333), (ids[BEN], 333_333), (ids[CY], 333_334)], vec![(ids[CY], 333_334), (ids[ANA], 333_333), (ids[BEN], 333_333)]];
-    let r = spec("a receipt for one unit");
     for holders in listed.iter() {
-        assert_eq!(law::divide_stake(1, holders, Some(&r)).unwrap().iter().zip(holders).find(|(n, _)| **n == 1).map(|(_, h)| h.0), Some(ids[CY]));
+        assert_eq!(law::divide_stake(1, holders, law::Ties::Open).unwrap().iter().zip(holders).find(|(n, _)| **n == 1).map(|(_, h)| h.0), Some(ids[CY]));
         let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal(holders.clone()).to_map(), None);
-        let mut got = lab.view().payer_split(&d, &Who::Id(work), 1, Some(&r)).unwrap().unwrap();
+        let mut got = lab.view().payer_split(&d, &Who::Id(work), 1).unwrap().unwrap();
         got.sort();
         let mut want = vec![(ids[ANA], 0), (ids[BEN], 0), (ids[CY], 1)];
         want.sort();
         assert_eq!(got, want, "the third holder, wherever listed");
     }
-    // Two units: the third's remainder first, then Ana and Ben tie; the
-    // receipt's hash orders them, the listing never does.
+    // Two units: the third's remainder first, then Ana and Ben tie; they
+    // take turns (F165), equal counts to the smaller identity hash, the
+    // listing never deciding.
     for holders in listed.iter() {
-        let parts = law::divide_stake(2, holders, Some(&r)).unwrap();
+        let parts = law::divide_stake(2, holders, law::Ties::Turns(&[0, 0, 0])).unwrap();
         let of = |h: Hash| parts[holders.iter().position(|x| x.0 == h).unwrap()];
-        let ana_first = law::leftover_key(&r, &ids[ANA]) < law::leftover_key(&r, &ids[BEN]);
+        let ana_first = ids[ANA] < ids[BEN];
         assert_eq!((of(ids[ANA]), of(ids[BEN]), of(ids[CY])), if ana_first { (1, 0, 1) } else { (0, 1, 1) });
     }
 }
@@ -5820,6 +6320,7 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
         payouts: vec![law::Payout { receiver: bid, amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None }],
         cmip: spec("a split cMIP"),
         agreement: deal,
+        tally: None,
     };
     let sp = law_act(&mut w, &mut svc, law::types::SPLIT, split.to_map(), None);
     let named = add(&mut w, &mut sb, rc(bid, fid, sp, None, None));

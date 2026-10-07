@@ -68,6 +68,8 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(fw, /Any member can leave alone, at any time/);
   assert.match(fw, /any 2 of the other parties together may declare them absent/);
   assert.match(fw, /their voice is removed \(they no longer count in any rule or area\)/);
+  // Law rule 49 (F172, F178 item 11): before signing, whether an absence-proof cMIP stands between.
+  assert.match(fw, /No absence-proof cMIP stands between: their word alone is enough.*\(Law rules 49 and 51, a stated cost\)/);
   assert.match(fw, /Every member with a say in the constitution is covered/);
   assert.match(fw, /Their consent is simulated/);
   assert.match(fw, /release manifest cMIP/);
@@ -339,6 +341,8 @@ test('a judicial change: who judges absence, every member signing, recorded at o
   assert.match(jw, /The clone is marked with the judicial tier's power and signed by .*: every member whose voice remains/);
   assert.match(jw, /one version for everyone: the new clause judges each member \(Law draft 10, F121\)/);
   assert.match(jw, /Absence is now judged by any 1 of the other parties \(was any 2 of the other parties\)/);
+  // Law rule 49: the clause as it will read, before anyone signs the clone.
+  assert.match(jw, /any 1 of the other parties together may declare them absent\. What may then follow: their voice is removed .*\. No absence-proof cMIP stands between/);
   assert.match(jw, /A change to .*: judicial, a protected clause/);
   assert.match(jw, /Its mark names exactly that/);
   assert.match(jw, /no rotation, no new keys \(Law rule 37c, Q8\)/);
@@ -522,22 +526,55 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   assert.match(spw, /Paid: 135 to Lou .* \(a departed holder\)/);
   assert.match(spw, /Delivered to every holder it pays/);
   assert.match(spw, /Every payout matches its stake exactly/);
+  // F171: the first split for the stake cites none and carries the running count; delivered to every
+  // holder of the stake, paid or not, each holder's client keeps the chain and checks it on arrival.
+  assert.match(words(sp.review.reading), /cites no previous split: the first for the stake/);
+  for (const n of ['Lea', 'Lee', 'Lou', 'Lyn', 'Lia']) assert.match(spw, new RegExp(`${n} \\[[^\\]]*\\]'s client: the split continues the chain it keeps`), spw);
+  assert.doesNotMatch(spw, /TALLY CHAIN|RUNNING COUNT|DOES NOT CONTINUE/);
   // Leftovers by largest remainder (Law rule 15a, F150): 2 units over 40/15/15/15/15 go one to Lea
-  // (0.8) and one to whichever of the four tied at 0.3 the receipt's hash orders first, never both
-  // to the first listed.
+  // (0.8) and one to the four tied at 0.3 by turns along the service's receipts, then the smallest
+  // identity hash (F165), never both to the first listed.
   const small = await sign(c, { kind: 'split', collective: col.id, amount: 102, fee: 100 });
-  assert.match(words(small.review.reading), /the hash of the receipt, once the service signs it, decides which \(Law rule 15a, F150\)/);
+  assert.match(words(small.review.reading), /take turns, the one with the fewest leftover units from this stake so far first.*\(Law rule 15a, F165\)/);
   const smallw = small.done.lines.map((l) => l.text).join('\n');
   assert.match(smallw, /Paid: 1 to Lea/);
   assert.equal((smallw.match(/Paid: 1 to /g) ?? []).length, 2, smallw);
   assert.match(smallw, /Every payout matches its stake exactly/);
+  // The second split cites the first, and the turns are read from the count the first carries (F171).
+  assert.match(words(small.review.reading), /cites the service's previous split for the stake/);
+  assert.equal((smallw.match(/'s client: the split continues the chain it keeps/g) ?? []).length, 5, smallw);
   // Any deviation, either way, is shown.
   const bad = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100, amounts: { [three]: 35, [ada]: 460 } });
   assert.match(bad.done.lines.map((l) => l.text).join('\n'), /DOES NOT MATCH ITS STAKE: Lou/);
   s = await state(c);
   col = s.collectives.find((x) => x.name === 'Ledger')!;
-  const checked = await c.ask<{ mismatched: number }>('check-split', { collective: col.id, split: col.splits[2] });
+  const checked = await c.ask<{ mismatched: number; breaks: number }>('check-split', { collective: col.id, split: col.splits[2] });
   assert.equal(checked.mismatched, 2);
+  assert.equal(checked.breaks, 0, 'a payout off its stake, but the chain continued: the count adds up what was paid');
+
+  // F171: a split citing the latest split's own previous forks the chain; one citing none resets it. Each breaks
+  // the plan (Law rule 15a, rule 46b): the core shows the pair, and every holder's client, keeping the chain as
+  // the splits arrive, refuses the newcomer and keeps its chain as it was.
+  const fork = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100, cite: 'before-latest' });
+  const forkw = fork.done.lines.map((l) => l.text).join('\n');
+  assert.match(forkw, /THE TALLY CHAIN FORKS: this split and .* both cite/, forkw);
+  assert.equal((forkw.match(/'s client: THE SPLIT DOES NOT CONTINUE THE CHAIN IT KEEPS: it does not cite/g) ?? []).length, 5, forkw);
+  const reset = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100, cite: 'none' });
+  const resetw = reset.done.lines.map((l) => l.text).join('\n');
+  assert.match(words(reset.review.reading), /cites no previous split/);
+  assert.match(resetw, /THE TALLY CHAIN IS RESET: this split and .* each cite no previous split for the stake/, resetw);
+  assert.match(resetw, /Lou \[[^\]]*\]'s client: THE SPLIT DOES NOT CONTINUE THE CHAIN IT KEEPS/, resetw);
+  s = await state(c);
+  col = s.collectives.find((x) => x.name === 'Ledger')!;
+  // The first split is now shown with the reset: a verifier holding both cannot tell from the acts which came later.
+  const first = await c.ask<{ breaks: number }>('check-split', { collective: col.id, split: col.splits[0] });
+  assert.equal(first.breaks, 1);
+  // The next split cites the reset, now the latest for the stake, and carries its count plus its own leftover
+  // units: the chain goes on from there, the reset still shown.
+  const resumed = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100 });
+  const resumedw = resumed.done.lines.map((l) => l.text).join('\n');
+  assert.doesNotMatch(resumedw, /THE TALLY CHAIN|DOES NOT CONTINUE/, resumedw);
+  assert.equal((resumedw.match(/'s client: the split continues the chain it keeps/g) ?? []).length, 5, resumedw);
 
   // N13: a debt of the collective, sealed to the creditor and every member.
   const debt = await sign(c, { kind: 'debt', collective: col.id, creditor: supplier, amount: 50 });

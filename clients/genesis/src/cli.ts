@@ -121,6 +121,9 @@ async function main() {
         scheme: one('scheme') === '3' ? 3 : 2,
         via,
       });
+      // Finance rule 14b (F181): said plainly before a genesis with no clock.
+      const warning = t.clockWarning();
+      if (warning) console.log(`WARNING: ${warning}`);
       t.save(file);
       console.log(`TEST identity ${t.id}`);
       report('genesis', await t.publishGenesis());
@@ -150,14 +153,17 @@ async function main() {
       const t = load();
       if (!t.f.pending) {
         const homes = opts.home ? await homesOf(opts.home, via) : undefined;
+        const warning = t.clockWarning();
+        if (warning) console.log(`WARNING: ${warning}`);
         const id = t.prepareRotation({ homes, rule: one('rule') === 'majority' ? [] : rule(one('rule')) });
         t.save(need('file')); // before sending: a retry sends the same bytes
         console.log(`rotation ${id} signed with the safety key (held in software)`);
       } else console.log(`rotation ${t.f.pending.id} pending: sending the same bytes again`);
       report('rotation', await t.submitRotation());
-      const { counts, lookup } = await t.settleRotation();
+      const { counts, lookup, unanchored } = await t.settleRotation();
       t.save(need('file'));
       console.log(counts ? 'it counts: new keys in use' : `it does not count yet (${lookup.resolution.stop}); run rotate again`);
+      if (unanchored) console.log(`WARNING: ${unanchored}`);
       break;
     }
     case 'spread': {

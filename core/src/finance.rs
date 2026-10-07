@@ -13,16 +13,19 @@
 //! be paid (rule 14a), or why it cannot be paid at all (rule 16); which
 //! flow pointer version counts for a payment or a debt, the latest the
 //! payee's own act holds through its citations (rule 14, F145, F155), and
-//! whether a payment to the flow can count for it; and whether a payment
-//! made in good faith counts after a rotation, from the payer's claims
-//! (rule 15, F139, F146, F147, F154). Which acts are the payee's own is
-//! Law's to say (the Law view).
+//! whether a payment to the flow can count for it; the clock the owner
+//! declares, and whether a payment a lock change affects counts as made:
+//! anchor or bear the loss (rule 15, F169, F176 to F181). Which acts are
+//! the payee's own, and which lock changes affect a payment, is Law's to
+//! read (the Law view).
 
 use crate::act::{Inside, Object, Ref, Signature};
 use crate::cbor::{self, Value};
 use crate::hash::{tagged_hash, Hash};
 use crate::identity::{self, Declaration, SigningKey};
 use crate::sig::{self, Verdict};
+use crate::chain::Quorum;
+use crate::envelope::anchoring::{Anchors, Reference};
 use std::fmt;
 
 /// The types this MIP defines (Finance, "Act formats").
@@ -874,7 +877,12 @@ pub fn pointer_counts(held: &[(Hash, PayeePointer)], paid: &Hash) -> bool {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PaidAt {
     Flow(Hash),
+    /// The vault, its entry not stated: the act declaring it.
     Vault(Hash),
+    /// The vault entry at this index of the vault the act declared (the
+    /// payment cMIP's `paid-to` says which, F169: replacing an entry or its
+    /// source is a lock change for a payment to it).
+    VaultEntry(Hash, u64),
 }
 
 // ---------------------------------------------------------------- rule 14a: where a payment may go
@@ -1065,7 +1073,7 @@ pub fn holds(v: &crate::chain::Verifier, from: Vec<Hash>) -> Holds {
 }
 
 /// What the acts `from` hold for selecting `own`'s pointer and vault
-/// (rules 12a, 14 and 14a, F157, F160): as [`holds`], but the walk passes
+/// (rules 12a, 14 and 15, F157): as [`holds`], but the walk passes
 /// only through acts `own` signed, never through an act another identity
 /// signed, so what a drafter's terms or a debtor's IOU cite never reaches
 /// it. An act of another's met on the way is left out, and not followed.
@@ -1121,13 +1129,6 @@ pub struct Holding {
     pub pointers: Vec<Hash>,
     /// Every walk was complete ([`Holds::complete`]).
     pub complete: bool,
-    /// The vault, with its limits, that applies to the payment (rules 12a
-    /// and 14a, F160): the one the payee's chain declared at the binding of
-    /// the payee's own act for it, the latest such binding where it has
-    /// several; empty where that chain declared none, or the payee has no
-    /// such act. *A payer is judged by what the payee showed, never by a
-    /// limit the payee set afterwards.*
-    pub vault: Vec<VaultEntry>,
 }
 
 /// Rules 12 and 14 with F145 and F155: the version that counts, the latest
@@ -1179,52 +1180,156 @@ pub fn rule_14(holding: &Holding, chain: &[(Hash, PayeePointer)], paid: u64) -> 
     }
 }
 
-/// A payer's claim for a payment, as rule 15's proviso reads it (F139,
-/// F146, F147).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PayersClaim {
-    /// Whether the claim's history ([`history`]) holds the rotation that
-    /// invalidated the pointer it was paid to; `None` where it cannot be
-    /// told (the walk met an act not held without finding it).
-    pub holds_rotation: Option<bool>,
-    /// Where both the claim and that rotation are anchored, and the anchors
-    /// place them: whether the claim is anchored before the rotation.
-    /// `None` where either is not anchored, or the anchors cannot place
-    /// them. The anchoring cMIP's answer, which the caller states: its
-    /// format is open.
-    pub anchored_before: Option<bool>,
+// ---------------------------------------------------------------- rule 15: theft, anchor or bear the loss
+
+/// The clock's kind in the Identity declarations slot (Finance, "The
+/// clock", F176).
+pub const CLOCK_KIND: u64 = 1;
+
+/// `clock = [ FINANCE, 1, [ main: [ hash, any ], ? backup: [ hash, any ] ] ]`:
+/// the main anchoring reference and, optionally, a backup, each an
+/// anchoring cMIP and its parameters naming one time reference (F176,
+/// F179, F181). Declared with the safety key, as the vault is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Clock {
+    pub main: Reference,
+    pub backup: Option<Reference>,
 }
 
-impl PayersClaim {
-    /// Whether this claim meets rule 15's proviso: anchored, by the anchor
-    /// order (F146); otherwise, by whether its history holds the rotation
-    /// (F139).
-    pub fn meets(&self) -> Option<bool> {
-        match self.anchored_before {
-            Some(b) => Some(b),
-            None => self.holds_rotation.map(|h| !h),
+impl Clock {
+    pub fn decode(v: &Value) -> R<Self> {
+        let bad = || FinError::Shape("the clock");
+        let Value::Array(a) = v else { return Err(bad()) };
+        let r = |x: &Value| Reference::decode(x).ok_or_else(bad);
+        match a.as_slice() {
+            [m] => Ok(Clock { main: r(m)?, backup: None }),
+            [m, b] => Ok(Clock { main: r(m)?, backup: Some(r(b)?) }),
+            _ => Err(bad()),
+        }
+    }
+
+    pub fn to_value(&self) -> Value {
+        let mut a = vec![self.main.to_value()];
+        a.extend(self.backup.iter().map(Reference::to_value));
+        Value::Array(a)
+    }
+}
+
+/// A clock declaration for an identity's genesis or rotation.
+pub fn clock_declaration(finance: &Hash, clock: &Clock) -> Declaration {
+    Declaration {
+        spec: *finance,
+        kind: CLOCK_KIND,
+        value: Some(clock.to_value()),
+    }
+}
+
+/// What a genesis or rotation says about the clock: `None` if nothing,
+/// `Some(None)` if it removes the clock, `Some(Some(clock))` if it sets it.
+pub fn clock_in(finance: &Hash, declarations: &[Declaration]) -> R<Option<Option<Clock>>> {
+    match declarations.iter().find(|d| &d.spec == finance && d.kind == CLOCK_KIND) {
+        None => Ok(None),
+        Some(Declaration { value: None, .. }) => Ok(Some(None)),
+        Some(Declaration { value: Some(v), .. }) => Ok(Some(Some(Clock::decode(v)?))),
+    }
+}
+
+/// The point at which a rotation's home quorum is met and anchored on one
+/// reference (rule 15, F177, F180): the earliest point by which the
+/// receipts the home rule requires are all anchored there, each judged by
+/// its earliest anchor (F178). With homes of `need` distinct operators
+/// required, each operator's earliest anchored receipt, and the `need`-th
+/// earliest of those. For an identity that counts on its own signatures,
+/// the rotation's own anchor (a stated cost of that trust model). `None`
+/// where the quorum is not anchored there: a rotation kept back, or held by
+/// fewer homes than the rule requires, has no point yet. A homeless
+/// rotation's quorum is not read (`None`).
+pub fn quorum_point(q: &Quorum, rotation: &Hash, anchors: &Anchors, on: &Reference) -> Option<u64> {
+    match q {
+        Quorum::Own => anchors.earliest(rotation, on),
+        Quorum::Homeless => None,
+        Quorum::Homes { need, supports } => {
+            let mut firsts: Vec<u64> = supports
+                .iter()
+                .filter_map(|rs| rs.iter().filter_map(|r| anchors.earliest(r, on)).min())
+                .collect();
+            firsts.sort_unstable();
+            let need = (*need).max(1) as usize;
+            firsts.get(need - 1).copied()
         }
     }
 }
 
-/// Rule 15, good faith after a rotation: whether a payment that followed
-/// the published pointer and vault counts as made although a later
-/// rotation invalidated that pointer, from the payer's claims for that one
-/// payment (one rail proof). With none, it counts (F154). Read together, it
-/// counts if any of them meets the proviso (F147): the claim does not hold
-/// the rotation in its history (F139), or, where both are anchored, the
-/// claim is anchored before the rotation (F146). `None` where none meets
-/// it and whether one does cannot be told.
-pub fn good_faith(claims: &[PayersClaim]) -> Option<bool> {
-    if claims.is_empty() {
-        return Some(true);
+/// Where a lock change is anchored, on the clock the payee declared before
+/// it (rule 15, F176, F179).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LockPoint {
+    /// Not anchored on a reference that clock names, or no clock was
+    /// declared: the owner bears the theft window.
+    NotAnchored,
+    /// Its quorum is anchored on the main reference, at this point.
+    Main(u64),
+    /// Not on the main reference, but on the backup, at this point.
+    Backup(u64),
+}
+
+/// A lock change's point (rule 15): on the main reference where its quorum
+/// is anchored there; otherwise on the backup.
+pub fn lock_point(clock: Option<&Clock>, q: &Quorum, rotation: &Hash, anchors: &Anchors) -> LockPoint {
+    let Some(c) = clock else { return LockPoint::NotAnchored };
+    if let Some(p) = quorum_point(q, rotation, anchors, &c.main) {
+        return LockPoint::Main(p);
     }
-    let answers: Vec<Option<bool>> = claims.iter().map(PayersClaim::meets).collect();
-    if answers.contains(&Some(true)) {
-        Some(true)
-    } else if answers.contains(&None) {
-        None
-    } else {
-        Some(false)
+    match c.backup.as_ref().and_then(|b| quorum_point(q, rotation, anchors, b)) {
+        Some(p) => LockPoint::Backup(p),
+        None => LockPoint::NotAnchored,
     }
+}
+
+/// Rule 15 (b): whether a payer's claim is anchored in time against a lock
+/// change at `at`, on `clock`, the one declared before it: before or at its
+/// point on the main reference, by the claim's earliest anchor there; where
+/// the lock change is anchored only on the backup, before or at its point
+/// there, or anchored on the main reference at all (F179). A claim anchored
+/// on neither is not protected.
+pub fn claim_in_time(at: LockPoint, clock: &Clock, claim: &Hash, anchors: &Anchors) -> bool {
+    match at {
+        LockPoint::NotAnchored => true,
+        LockPoint::Main(p) => anchors.earliest(claim, &clock.main).is_some_and(|x| x <= p),
+        LockPoint::Backup(p) => {
+            anchors.earliest(claim, &clock.main).is_some()
+                || clock.backup.as_ref().and_then(|b| anchors.earliest(claim, b)).is_some_and(|x| x <= p)
+        }
+    }
+}
+
+/// One lock change affecting a payment, as rule 15 reads it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LockChange {
+    /// The rotation.
+    pub rotation: Hash,
+    /// The clock the payee's chain declared before it, if any.
+    pub clock: Option<Clock>,
+    /// Its home quorum ([`crate::chain::Verifier::quorum`]).
+    pub quorum: Quorum,
+}
+
+/// Rule 15, theft: anchor or bear the loss (F169, F176 to F181). A payment
+/// that followed the payee's chain as published before the lock changes
+/// listed (each one after which it no longer follows it) counts as made
+/// where every one of them that is anchored is answered: by the payee's own
+/// receipt for it (`receipt`: on a line the rotation kept, signed with a
+/// key bound after it, or by its split service with a grant key whose grant
+/// still stands), or by a payer's claim anchored before or at its point
+/// (`claims`, by act id). An unanchored lock change leaves the payment
+/// counting: the owner bears the window. *Where several anchored lock
+/// changes affect a payment, it counts only if the claim is anchored before
+/// the first of them (F175): requiring every one is the same.*
+pub fn rule_15(changes: &[LockChange], receipt: bool, claims: &[Hash], anchors: &Anchors) -> bool {
+    changes.iter().all(|c| {
+        let at = lock_point(c.clock.as_ref(), &c.quorum, &c.rotation, anchors);
+        at == LockPoint::NotAnchored
+            || receipt
+            || c.clock.as_ref().is_some_and(|k| claims.iter().any(|x| claim_in_time(at, k, x, anchors)))
+    })
 }

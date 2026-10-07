@@ -99,6 +99,12 @@
       "shown": "https://dubsar.org mailto:x@example.org"
     },
     {
+      "name": "a link's closing > next to a digit is shown (F178)",
+      "text": "<https://dubsar.org/item/5> and <https://dubsar.org/a>5",
+      "html": "<div class=\"mor-lf\"><p dir=\"auto\"><a href=\"https://dubsar.org/item/5\" rel=\"nofollow noopener noreferrer\">https://dubsar.org/item/5</a>&gt; and <a href=\"https://dubsar.org/a\" rel=\"nofollow noopener noreferrer\">https://dubsar.org/a</a>&gt;5</p></div>",
+      "shown": "https://dubsar.org/item/5> and https://dubsar.org/a>5"
+    },
+    {
       "name": "other schemes are text",
       "text": "<javascript:alert(1)>",
       "html": "<div class=\"mor-lf\"><p dir=\"auto\">&lt;javascript:alert(1)&gt;</p></div>",

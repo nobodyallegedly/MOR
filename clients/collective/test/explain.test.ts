@@ -10,7 +10,7 @@ import { cborDecode, cborEncode, checkTerms, sha256 } from '../../genesis/src/co
 import { plainHtml } from '../../longform/src/html.ts';
 import { collectiveTerms, type Governance } from '../../repo/src/collective.ts';
 import { LAW_SPECS, encodeTerms, type MarkEntry } from '../../repo/src/law.ts';
-import { lawThrown, problemWords, readAgreement, readChanges, rulesHints, termsOf, unacknowledged, uncovered, withLaw, type Reading } from '../src/explain.ts';
+import { absenceWarning, lawThrown, problemWords, readAgreement, readChanges, rulesHints, termsOf, uncovered, withLaw, type Reading } from '../src/explain.ts';
 
 const [a, b, c, d] = ['a', 'b', 'c', 'd'].map((x) => sha256(`member ${x}`));
 const NAMES: Record<string, string> = { [a]: 'Ann', [b]: 'Ben', [c]: 'Cy', [d]: 'Di' };
@@ -222,29 +222,38 @@ test("a deal's chain of judgment follows its split service: one grant per payee 
   assert.match(JSON.stringify(termsOf(deal([[2], [[h(9), 30]]])).problem ?? ''), /H6/);
 });
 
-test('F158: a period clause nobody else can acknowledge is warned of at signing, a stated cost', () => {
-  const k = sha256('a keeper');
-  const deal = (authority: 'named' | 'others', keepers: string[] | null, parties = [a, b]) => ({
-    parties,
-    keepers: keepers ? ([keepers, { form: 'all' }] as any) : null,
-    abandonment: { authority, identity: authority === 'named' ? b : null, threshold: authority === 'others' ? 2 : null, outcomes: [0], period: 30 },
-  });
-  // Two parties, the other the authority, no keeper: a declaration against
-  // Ann has no one left to acknowledge it.
-  assert.deepEqual(unacknowledged(deal('named', null)), [a]);
-  assert.deepEqual(unacknowledged(deal('named', [k])), [], 'a keeper can acknowledge');
-  assert.deepEqual(unacknowledged(deal('named', [b])), [a], 'a keeper who is the authority cannot');
-  assert.deepEqual(unacknowledged(deal('named', null, [a, b, c])), [], 'a third party can');
-  // Two of the other two sign: nobody is left without a keeper.
-  assert.deepEqual(unacknowledged(deal('others', null, [a, b, c])), [a, b, c]);
-  assert.deepEqual(unacknowledged(deal('others', [k], [a, b, c])), []);
-  // No period: no acknowledgement is needed, nothing to warn of.
-  assert.deepEqual(unacknowledged({ ...deal('named', null), abandonment: { ...deal('named', null).abandonment, period: null } }), []);
-
-  // In the reading shown before signing.
+test('Law rule 49 (F172, F178 item 11): before signing terms with an abandonment clause, who may declare a party absent, with which outcomes, and whether an absence-proof cMIP stands between', () => {
+  // A collective's terms, read from their bytes: no absence-proof cMIP.
   const t = termsOf(encodeTerms(collectiveTerms(g(), [a, b, c], a)));
-  const warned = all(readAgreement({ ...t, keepers: null, abandonment: deal('others', null, [a, b, c]).abandonment as any }, names));
-  assert.match(warned, /can never count: under a period, it needs an acknowledgement by someone other than the absent party and those who sign the declaration.*Add a keeper or a third party.*F158, a stated cost/);
-  const fine = all(readAgreement({ ...t, keepers: [[k], { form: 'all' }] as any, abandonment: deal('others', null, [a, b, c]).abandonment as any }, names));
-  assert.doesNotMatch(fine, /can never count/);
+  assert.equal(t.abandonment?.proof ?? null, null);
+  const r = readAgreement(t, names);
+  const absence = section(r, 'If someone disappears');
+  assert.match(
+    absence,
+    /If a party stops acting on the agreement, any 2 of the other parties together may declare them absent\. What may then follow: their voice is removed .*\. No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or your activity\. Signing accepts that \(Law rules 49 and 51, a stated cost\); if they declare you absent wrongly, you can only contest it, in public \(Law rule 52\)\./,
+  );
+  assert.equal(r.sections.find((s) => s.heading === 'If someone disappears')?.lines[0].tone, 'warn');
+  assert.doesNotMatch(all(r), /period|acknowledgement|F158/, 'no period, no acknowledgement window (F172)');
+
+  // A clause naming a person and an absence-proof cMIP, as the core reads them.
+  const p = sha256('an absence-proof cMIP');
+  const named = { ...t, abandonment: { authority: 'named' as const, identity: d, outcomes: [0, 1], proof: p } };
+  const w = absenceWarning(named, names);
+  assert.match(w!.text, /Di may declare them absent\. What may then follow: their voice is removed .* and their stake is shared among the remaining holders\./);
+  assert.match(w!.text, /An absence-proof cMIP stands between their word and your stake: an unknown specification \(.*\)\. A declaration counts only if it accepts it \(Law rule 51\)\./);
+  assert.equal(absenceWarning({ abandonment: null }, names), null, 'no clause, nothing to warn of');
+
+  // Key 3 read from the bytes; key 2 (a period) refused by Law (F172).
+  const bytes = encodeTerms(collectiveTerms(g(), [a, b, c], a));
+  const withKey = (k: number, v: unknown) => {
+    const m = cborDecode(bytes) as Map<number, unknown>;
+    (m.get(9) as Map<number, unknown>).set(k, v);
+    return cborEncode(m);
+  };
+  const h = new Uint8Array(32).fill(5);
+  const k3 = termsOf(withKey(3, [h, ['any', 'parameters']]));
+  assert.ok(!k3.problem, JSON.stringify(k3.problem));
+  assert.equal(k3.abandonment?.proof, Buffer.from(h).toString('hex'));
+  assert.match(section(readAgreement(k3, names), 'If someone disappears'), /An absence-proof cMIP stands between/);
+  assert.throws(() => termsOf(withKey(2, 30)), /law\/shape: .*abandonment key 2 .*F172/);
 });

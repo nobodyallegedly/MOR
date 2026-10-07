@@ -256,22 +256,19 @@ pub trait Held {
     /// invalidated (voided, or voided and shown as disputed), and that
     /// rotation (`mor_core::chain::Verifier::judged_by`).
     fn voided_pointer(&self, id: &Hash) -> Option<(PayeePointer, Hash)>;
-    /// Finance rule 15: the payee's pointers as they stood before the
-    /// rotation `rotation`: bound before it, valid, or invalidated by it.
-    fn pointers_before(&self, payee: &Hash, rotation: &Hash) -> Vec<(Hash, PayeePointer)>;
-    /// Finance rule 15: the payer's claims for the payment carrying this
-    /// rail proof, each verified valid ([`verify`]), as the proviso reads
-    /// them against `rotation`: whether each one's history holds it (for
-    /// an anonymous payer's claim, only what its covered citations hold:
-    /// `mor_core::finance::history`), and the anchor order where both are
-    /// anchored (F139, F146, F147).
-    fn payers_claims(&self, proof: &[u8], rotation: &Hash) -> Vec<fin::PayersClaim>;
-    /// The vault the chain of the act's signer declared at the act's
-    /// binding: its entries, or `None` where it declared none (Finance
-    /// rules 12a and 14a, F160). For a tip, the act is the payee pointer it
-    /// follows, the payee's own act for it; for anything else, the vault
-    /// comes with [`Held::holding`].
-    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>>;
+    /// The vault the payee's chain declares in force: its entries, or
+    /// `None` where it declares none (Finance rule 14a: the vault applies
+    /// as the chain declares it, F169; F160 withdrawn).
+    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>>;
+    /// Finance rules 12 to 15 over the payee's whole chain, for a payment
+    /// that does not follow the chain as it stands now: whether it counts as
+    /// made, because it followed the chain as published before and every
+    /// anchored lock change since is answered by the payee's own receipt or
+    /// a payer's claim anchored by its point (theft: anchor or bear the
+    /// loss; F169, F176 to F181). A Law client gives the core library's
+    /// answer (`mor_core::law::LawView::payment_counts`). `None` where this
+    /// verifier cannot read it (a Finance-only client).
+    fn payment_counts(&self, payee: &Hash, paid_at: &fin::PaidAt, amount: &Amount, proof: &[u8], fulfils: &Hash) -> Option<bool>;
 }
 
 /// The rail Modules a verifier has adopted, by spec hash.
@@ -477,76 +474,104 @@ pub fn paid_at(record: &Record) -> Option<fin::PaidAt> {
     };
     Some(match Proof::decode(proof)?.paid_to {
         PaidTo::Flow { pointer, .. } => fin::PaidAt::Flow(pointer),
-        PaidTo::Vault { declared_by, .. } => fin::PaidAt::Vault(declared_by),
+        PaidTo::Vault { declared_by, entry } => fin::PaidAt::VaultEntry(declared_by, entry),
     })
 }
 
 /// Everything judged beside the verification answer ("What verification
-/// does not decide"): whether the pointer it was paid to was in force for
-/// it (Finance rules 12 and 14, [`pointer_in_force`]), and whether it
-/// followed the vault (rules 14a and 15, [`followed_vault`]). Valid only
-/// where both are; otherwise the first answer that is not.
+/// does not decide"): whether the payment follows the payee's chain as it
+/// stands now (Finance rules 12 and 14, [`pointer_in_force`]; rule 14a,
+/// [`followed_vault`]), and, where it does not, rule 15: whether it counts
+/// as made all the same, because it followed the chain as published before
+/// and no anchored lock change since is left unanswered
+/// ([`Held::payment_counts`]). Valid where it counts; otherwise the first
+/// answer, for the chain now, that is not valid, or unknown where rule 15
+/// cannot be read.
 pub fn beside(record: Record, held: &dyn Held) -> Answer {
-    match pointer_in_force(record.clone(), held) {
-        Answer::Valid => followed_vault(record, held),
+    let now = match pointer_in_force(record.clone(), held) {
+        Answer::Valid => followed_vault(record.clone(), held),
         a => a,
+    };
+    if now == Answer::Valid {
+        return now;
     }
-}
-
-/// Finance rules 14a and 15, judged beside the verification answer for a
-/// payment received: a payment to the flow counts as paid to the flow only
-/// where the payee's vault lets it go there (an entry for its unit, and no
-/// more than that unit's smallest limit, F114); a payment that did not
-/// follow the published vault is not protected (rule 15). The vault that
-/// applies is the one the payee's own act for the payment showed (rules
-/// 12a and 14a, F160): for a tip, the vault at the binding of the payee
-/// pointer it follows; for an obligation, an agreement or an offer, the
-/// one [`Held::holding`] gives. *A payer is judged by what the payee
-/// showed, never by a limit the payee set afterwards.* A payment to the
-/// vault, or to an identity that showed no vault, is valid here; one whose
-/// payee's own act this verifier cannot read is unknown. *A thief who
-/// redirects the flow pointer cannot take a large payment through it, nor
-/// one in a unit the vault does not cover.*
-pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
     let (proof, payee, amount, fulfils) = match &record {
         Record::Receipt(r) => (&r.proof, &r.payee, &r.amount, &r.fulfils),
         Record::Claim(c, ..) => (&c.proof, &c.payee, &c.amount, &c.fulfils),
     };
-    let Some(p) = Proof::decode(proof) else {
-        return Answer::Invalid("the proof is not in the payment cMIP's shape".into());
-    };
-    if matches!(p.paid_to, PaidTo::Vault { .. }) {
+    if held.obligation(fulfils).is_some_and(|o| &o.creditor != payee) {
         return Answer::Valid;
     }
-    let tip = held.pointer(fulfils).or_else(|| held.voided_pointer(fulfils).map(|(p, _)| p));
-    let vault = match (held.obligation(fulfils), tip) {
-        // Not this hop's to judge, as for the pointer.
-        (Some(o), _) if &o.creditor != payee => return Answer::Valid,
-        (None, Some(_)) => held.vault_at_binding(fulfils),
-        _ => match held.holding(fulfils, payee) {
-            Some(h) => (!h.vault.is_empty()).then_some(h.vault),
-            None => {
-                return Answer::Unknown(
-                    "what it fulfils is no obligation, agreement or offer this verifier can read the payee's own acts on, so the vault they showed is unknown (Finance rules 12a and 14a, F160)"
-                        .into(),
-                )
-            }
+    let Some(at) = paid_at(&record) else { return now };
+    match held.payment_counts(payee, &at, amount, proof, fulfils) {
+        Some(true) => Answer::Valid,
+        Some(false) => match now {
+            Answer::Invalid(w) => Answer::Invalid(format!(
+                "{w}; nor does it count under Finance rule 15: it followed no earlier state of the payee's chain, or an anchored lock change affects it with no receipt of the payee's and no payer's claim anchored by its point (F169, F176 to F181)"
+            )),
+            a => a,
         },
-    };
-    if fin::flow_followed_vault(vault.as_deref(), amount) {
-        Answer::Valid
-    } else {
-        Answer::Invalid(
-            "paid to the flow, but the payee's vault sends this payment to the vault: above the unit's limit, or in a unit the vault does not cover (Finance rules 14a and 15)"
-                .into(),
-        )
+        None => match now {
+            Answer::Invalid(w) => Answer::Unknown(format!(
+                "{w}, as the payee's chain stands now; whether it counts under Finance rule 15 (theft: anchor or bear the loss) is unknown to this verifier"
+            )),
+            a => a,
+        },
     }
 }
 
-/// Finance rules 12, 14 and 15, judged beside the verification answer
-/// ("What verification does not decide"): whether the flow pointer a
-/// payment was paid to was in force for what it fulfils. A payment to the
-/// vault always is.
+/// Finance rule 14a, judged beside the verification answer for a payment
+/// received, on the payee's chain as it stands now: a payment to the flow
+/// counts as paid to the flow only where the vault in force lets it go
+/// there (an entry for its unit, and no more than that unit's smallest
+/// limit, F114). The vault applies as the chain declares it, so a change
+/// applies at once (F169; F160 withdrawn); a payment that followed an
+/// earlier vault is rule 15's ([`beside`]). A payment to the vault, or to
+/// an identity that declares no vault, is valid here. *A thief who
+/// redirects the flow pointer cannot take a large payment through it, nor
+/// one in a unit the vault does not cover.*
+pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
+    let (proof, payee, amount) = match &record {
+        Record::Receipt(r) => (&r.proof, &r.payee, &r.amount),
+        Record::Claim(c, ..) => (&c.proof, &c.payee, &c.amount),
+    };
+    let Some(p) = Proof::decode(proof) else {
+        return Answer::Invalid("the proof is not in the payment cMIP's shape".into());
+    };
+    match p.paid_to {
+        PaidTo::Vault { declared_by, entry } => {
+            // The entry paid to must still be in the vault in force: one a
+            // rotation replaced is rule 15's.
+            let Some((_, declared)) = held.vault(&declared_by) else {
+                return Answer::Unknown("the act declaring the vault it was paid to is not held".into());
+            };
+            let Some(e) = declared.get(entry as usize) else {
+                return Answer::Invalid("the vault has no such entry".into());
+            };
+            let now = held.vault_in_force(payee).unwrap_or_default();
+            if now.iter().any(|x| x.unit == e.unit && x.rail_module == e.rail_module && x.source == e.source) {
+                Answer::Valid
+            } else {
+                Answer::Invalid("paid to a vault entry the payee's chain no longer declares: a rotation replaced it (Finance rules 14a and 15)".into())
+            }
+        }
+        PaidTo::Flow { .. } => {
+            if fin::flow_followed_vault(held.vault_in_force(payee).as_deref(), amount) {
+                Answer::Valid
+            } else {
+                Answer::Invalid(
+                    "paid to the flow, but the payee's vault sends this payment to the vault: above the unit's limit, or in a unit the vault does not cover (Finance rule 14a)"
+                        .into(),
+                )
+            }
+        }
+    }
+}
+
+/// Finance rules 12 and 14, judged beside the verification answer
+/// ("What verification does not decide"), on the payee's chain as it
+/// stands now: whether the flow pointer a payment was paid to is in force
+/// for what it fulfils. A payment to the vault always is.
 ///
 /// - **Rule 12.** A flow pointer counts only on the payee's unbroken,
 ///   unforked chain: one forked by a second act naming the same
@@ -562,13 +587,8 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
 ///   only if paid to the vault. *A debt re-signed, or terms drafted, to
 ///   name a thief's newer pointer gain nothing: the pointer is judged by
 ///   the act of the one it pays.*
-/// - **Rule 15.** A payment to a pointer a later rotation invalidated is
-///   judged as the payee's chain stood before that rotation
-///   ([`Held::pointers_before`]), and counts as made only where the
-///   payer's claims for it meet the proviso ([`Held::payers_claims`],
-///   `mor_core::finance::good_faith`): none at all (F154), or one not
-///   holding that rotation in its history, or anchored before it where
-///   both are anchored (F139, F146, F147).
+/// - **A pointer a rotation voided** is in force for nothing now: whether
+///   a payment to it counts is rule 15's ([`beside`]).
 ///
 /// Valid where these rules let the payment count; invalid where they do
 /// not; unknown where the acts they need are not held, or what the payment
@@ -587,18 +607,21 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
     let PaidTo::Flow { pointer, .. } = p.paid_to else {
         return Answer::Valid;
     };
-    // The pointer paid to, the payee's chain it is judged on, and the
-    // rotation that invalidated it, if one did (rule 15).
-    let (q, chain, rotation) = match held.pointer(&pointer) {
-        Some(q) => (q, held.pointers_of(payee), None),
+    let q = match held.pointer(&pointer) {
+        Some(q) => q,
         None => match held.voided_pointer(&pointer) {
-            Some((q, r)) => (q, held.pointers_before(payee, &r), Some(r)),
+            Some(_) => {
+                return Answer::Invalid(
+                    "paid to a payee pointer a rotation of the payee voided: in force for nothing now (Finance rules 12 and 15)".into(),
+                )
+            }
             None => return Answer::Unknown("the payee pointer it was paid to is not held".into()),
         },
     };
     if &q.payee != payee {
         return Answer::Invalid("paid to another identity's pointer".into());
     }
+    let chain = held.pointers_of(payee);
     if !fin::pointer_counts(&chain, &pointer) {
         return Answer::Invalid(
             "the flow pointer it was paid to is not on the payee's unbroken, unforked chain: a forked chain counts only up to the fork (Finance rule 12)"
@@ -635,20 +658,8 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
         },
     };
     match rule_14 {
-        fin::Rule14::Counts => {}
-        fin::Rule14::Vault(w) => return Answer::Invalid(w.into()),
-        fin::Rule14::Unknown(w) => return Answer::Unknown(w.into()),
-    }
-    let Some(r) = rotation else { return Answer::Valid };
-    match fin::good_faith(&held.payers_claims(proof, &r)) {
-        Some(true) => Answer::Valid,
-        Some(false) => Answer::Invalid(
-            "paid to a pointer a later rotation invalidated, and no claim of the payer's meets the proviso: each holds that rotation in its history, or is anchored after it (Finance rule 15, F139, F146, F147)"
-                .into(),
-        ),
-        None => Answer::Unknown(
-            "paid to a pointer a later rotation invalidated: whether the payer's claim holds that rotation is not known from the acts held (Finance rule 15)"
-                .into(),
-        ),
+        fin::Rule14::Counts => Answer::Valid,
+        fin::Rule14::Vault(w) => Answer::Invalid(w.into()),
+        fin::Rule14::Unknown(w) => Answer::Unknown(w.into()),
     }
 }

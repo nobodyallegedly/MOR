@@ -7,7 +7,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, lawDivideStake, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
+import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, lawDivideStake, lawSplitTally, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestCollective, collectiveTerms, type Governance } from '../../repo/src/collective.ts';
@@ -48,6 +48,8 @@ import {
 } from '../../repo/src/release.ts';
 import { FINANCE_TYPES, LAW_TYPES, REPO_SPECS, TEST_RAIL } from '../../repo/src/specs.ts';
 import {
+  absenceSection,
+  collectiveClause,
   count,
   lawThrown,
   list,
@@ -1067,9 +1069,10 @@ export class Actions {
     const g: Governance = { ...c.f.governance, releaseWords: text };
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
     let changes: Line[] = [];
+    let after: TermsRead | null = null;
     if (signers.length && text) {
       // Terms with nobody in the mark are not even in Law's format: read only what could be signed.
-      const after = this.read(payload);
+      after = this.read(payload);
       const hints = this.hintsOf(c);
       const before = await this.termsAct(c.f.agreement, hints);
       if (!before) blocking.push(`The agreement in force (${short(c.f.agreement)}) could not be fetched from ${hints.join(', ')}, so what changes cannot be shown.`);
@@ -1087,6 +1090,8 @@ export class Actions {
       ],
       sections: [
         { heading: 'What changes', lines: [...changes, ...(await this.unheard(c))] },
+        // Law rule 49: every clone carries the abandonment clause; shown before signing.
+        ...absenceSection(after ?? { abandonment: collectiveClause(g.abandonmentOthers) }, names),
         {
           heading: 'Signed on this device',
           lines: [
@@ -1157,8 +1162,9 @@ export class Actions {
     const mark: MarkEntry[] = [{ power: { judicial: true }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
     let changes: Line[] = [];
+    let after: TermsRead | null = null;
     if (signers.length && !hints.length) {
-      const after = this.read(payload);
+      after = this.read(payload);
       const at = this.hintsOf(c);
       const before = await this.termsAct(c.f.agreement, at);
       if (!before) blocking.push(`The agreement in force (${short(c.f.agreement)}) could not be fetched from ${at.join(', ')}, so what changes cannot be shown.`);
@@ -1185,6 +1191,8 @@ export class Actions {
       ],
       sections: [
         { heading: 'What changes', lines: [...changes, ...notes, ...(await this.unheard(c))] },
+        // Law rule 49: the clause as it will read, shown before signing.
+        ...absenceSection(after ?? { abandonment: collectiveClause(others) }, names, 'If someone disappears, after the change'),
         {
           heading: 'Signed on this device',
           lines: [
@@ -1665,6 +1673,8 @@ export class Actions {
         "An ordinary change outside every area, under the clone rule, written on the collective's record at once; no rotation (Law rules 37c, 44c).",
       ],
       sections: [
+        // Law rule 49: the clone carries the abandonment clause, unchanged; shown before signing.
+        ...absenceSection({ abandonment: collectiveClause(g.abandonmentOthers) }, names),
         {
           heading: 'Signed on this device',
           lines: [
@@ -1722,7 +1732,11 @@ export class Actions {
         'Every split is delivered to every holder it pays, and names each fee and who received it (F121, Q9). A collective naming no split service is paid payer-side instead: a wallet reading Law pays each holder by the stakes (F124 P2).',
         `The grant hands ${names(a.service)} a grant key: a key of the collective scoped to the grant, which the service makes and keeps, and signs to accept (F128). What the service signs with it, its receipts among them, is the collective's own act, a strand of its actions chain; a revocation removes the key.`,
       ],
-      sections: [{ heading: 'Signed on this device', lines: [{ text: 'The collective signs the grant; every member signs the clone; the collective records it. Test identities: consent simulated.', tone: 'warn' }] }],
+      sections: [
+        // Law rule 49: the clone carries the abandonment clause, unchanged; shown before signing.
+        ...absenceSection({ abandonment: collectiveClause(c.f.governance.abandonmentOthers) }, names),
+        { heading: 'Signed on this device', lines: [{ text: 'The collective signs the grant; every member signs the clone; the collective records it. Test identities: consent simulated.', tone: 'warn' }] },
+      ],
       plain: [],
       blocking,
     };
@@ -1859,10 +1873,15 @@ export class Actions {
    * A payment of `amount` to the collective, received and split by its
    * split service (simulated here): the service signs a receipt, then a
    * split paying each holder of the collective's stake in itself, and a
-   * fee to itself, delivered to every holder it pays (F121, Q9). `amounts`
-   * overrides the computed payouts (to show a deviation the core shows).
+   * fee to itself. The split cites the service's previous split for the
+   * stake and carries the running count of leftover units (Law rule 15a,
+   * F165, F171), and is delivered to every holder of the stake, paid or
+   * not (client conformance, F171); each holder's client held here checks
+   * it against the chain it keeps. `amounts` overrides the computed
+   * payouts, and `cite` the split it cites ("none": a reset;
+   * "before-latest": a fork), to show a deviation the core shows.
    */
-  async prepareSplit(a: { collective: string; amount: number; fee: number; amounts?: Record<string, number> }) {
+  async prepareSplit(a: { collective: string; amount: number; fee: number; amounts?: Record<string, number>; cite?: 'latest' | 'none' | 'before-latest' }) {
     const names = this.store.names();
     const c = this.store.collective(a.collective);
     const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
@@ -1881,23 +1900,53 @@ export class Actions {
       if (!service || !this.store.holds(service)) blocking.push('The split service is not held by this program, so it cannot split here.');
     }
     const pool = amount - fee;
-    // Law rule 15a (F150): each holder its exact share rounded down, the
-    // leftover units one each to the largest remainders, ties ordered by
-    // the receipt's hash, which exists only once the service signs it; the
-    // order of holders decides nothing. The core divides (lawDivideStake).
-    const divide = (receipt: string | null): [string, number][] | null => {
+    const index = this.stakeIndex(c, null);
+    // Law rule 15a (F165, F171): each holder its exact share rounded down,
+    // the leftover units one each to the largest remainders; holders with
+    // equal remainders take turns, the fewest leftover units from this
+    // stake so far, then the smallest identity hash. The count is a field
+    // of the split act: the service's next split cites its previous one for
+    // the stake and carries the running count, so a tie is checked from two
+    // acts; the core reads the turns from the previous split
+    // (lawSplitTurns), divides (lawDivideStake) and adds this split's
+    // leftover units to the count (lawSplitTally). The order of holders
+    // decides nothing.
+    const chain = (c.f.splits ?? []).filter((x) => (x.service ?? service) === service && (x.stake ?? index) === index);
+    const latest = chain.at(-1) ?? null;
+    const cite = a.cite ?? 'latest';
+    const previous = cite === 'none' ? null : cite === 'before-latest' ? (latest?.previous ?? null) : (latest?.id ?? null);
+    let turns: number[] | null = null;
+    let before: [string, number][] | null = null;
+    if (own.length && service) {
+      const { v, specs } = await this.lawVerifier(c, this.concerned(c));
+      const t = v.lawSplitTurns(specs, service, c.f.agreement, BigInt(index), own.map(([h]) => h), previous) as Float64Array | number[] | undefined | null;
+      turns = t ? Array.from(t, Number) : null;
+      if (previous === null) before = [];
+      else {
+        const e = v.lawSplit(specs, previous) as { tally: [number, [string, number][]][] };
+        before = e.tally.find(([st]) => st === index)?.[1] ?? null;
+      }
+      if (!turns || !before) blocking.push("The turns of tied leftover units cannot be read: the service's previous split for the stake is not held, or carries no count (Law rule 15a, F171).");
+    }
+    const divide = (): [string, number][] | null => {
       try {
-        const parts = lawDivideStake({ total: pool, holders: own, receipt }) as number[] | Float64Array;
+        const parts = lawDivideStake({ total: pool, holders: own, turns: turns ?? undefined }) as number[] | Float64Array;
         return own.map(([h], i) => [h, Number(parts[i])] as [string, number]);
       } catch {
         return null;
       }
     };
-    const tied = own.length > 0 && divide(null) === null;
-    const auto = divide(null) ?? own.map(([h, n]) => [h, Math.floor((pool * n) / 1_000_000)] as [string, number]);
+    const tied = own.length > 0 && (() => {
+      try {
+        lawDivideStake({ total: pool, holders: own });
+        return false;
+      } catch {
+        return true;
+      }
+    })();
+    const auto = divide() ?? own.map(([h, n]) => [h, Math.floor((pool * n) / 1_000_000)] as [string, number]);
     const payouts: [string, number][] = auto.map(([h, n]) => [h, a.amounts?.[h] ?? n]);
-    const left = pool - auto.reduce((x, [, n]) => x + n, 0);
-    const index = this.stakeIndex(c, null);
+    const left = pool - own.map(([, n]) => Math.floor((pool * n) / 1_000_000)).reduce((x, n) => x + n, 0);
     const departed = c.f.governance.departed ?? [];
     const reading: Reading = {
       title: `A payment of ${amount} to “${cname}”, split`,
@@ -1905,9 +1954,11 @@ export class Actions {
         `The split service ${service ? names(service) : ''} receives ${amount} and takes a fee of ${fee}, named in the split with who received it (F121, Q9).`,
         ...payouts.map(([h, n]) => `${names(h)}: ${n}${departed.includes(h) ? ' (a departed holder)' : ''}.`),
         ...(tied
-          ? [`${left} leftover unit${left === 1 ? '' : 's'} of rounding go${left === 1 ? 'es' : ''} to holders whose remainders are equal; the hash of the receipt, once the service signs it, decides which (Law rule 15a, F150).`]
+          ? [`${left} leftover unit${left === 1 ? '' : 's'} of rounding: holders whose remainders are equal take turns, the one with the fewest leftover units from this stake so far first, as the service's previous split counts them, then the smallest identity hash (Law rule 15a, F165).`]
           : []),
-        'The split is delivered to every holder it pays (Q9), and Law checks that every payout matches its stake exactly, within one smallest unit of rounding, every fee alike for every stake: any deviation, either way, breaks the plan (F124 N10, rule 26).',
+        `The split cites ${previous ? `the service's previous split for the stake, ${short(previous)}` : 'no previous split: the first for the stake'}, and carries the running count of leftover units each holder has received (Law rule 15a, F171).`,
+        'The split is delivered to every holder of the stake, paid or not, and each holder keeps the chain and checks each split as it arrives: a split not citing the latest, or two citing the same one, breaks the plan (Law rule 15a, rule 46b, F171).',
+        'Law checks that every payout matches its stake exactly, every fee alike for every stake: any deviation, either way, breaks the plan (F124 N10, rule 26).',
       ],
       sections: [{ heading: 'Simulated', lines: [{ text: 'The split service and the payment are simulated on a test rail: no money moves.', tone: 'warn' }] }],
       plain: [],
@@ -1915,7 +1966,7 @@ export class Actions {
     };
     return this.plan({
       kind: 'split',
-      digest: digestOf('split', a.collective, String(amount), String(fee), JSON.stringify(payouts)),
+      digest: digestOf('split', a.collective, String(amount), String(fee), JSON.stringify(payouts), String(previous)),
       reading,
       depends: [a.collective, ...(service ? [service] : [])],
       run: async () => {
@@ -1923,25 +1974,94 @@ export class Actions {
         const svc = this.store.identity(service!);
         const relays = col.f.relays;
         const r = await svc.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: svc.f.identity, unit: TEST_RAIL, value: amount, fulfils: col.f.agreement }), { public: true, relays });
-        // With the receipt signed, its hash orders any tie (rule 15a, F150).
-        const final: [string, number][] = (divide(r.id) ?? auto).map(([h, n]) => [h, a.amounts?.[h] ?? n]);
+        const final: [string, number][] = payouts;
         const ps: PayoutIn[] = [
           ...(fee ? [{ receiver: svc.f.identity, amount: fee, feeModule: TEST_RAIL }] : []),
           ...final.map(([h, n]) => ({ receiver: h, amount: n, stake: index })),
         ];
-        const to = [...new Set(final.map(([h]) => h))];
-        const x = await svc.publish(REPO_SPECS.law, LAW_TYPES.split, splitPayload({ receipt: r.id, payouts: ps, cmip: TEST_RAIL, agreement: col.f.agreement }), { public: false, to, relays });
-        col.f.splits = [...(col.f.splits ?? []), { id: x.id, key: Buffer.from(x.key).toString('base64'), receipt: r.id }];
+        // The running count after this split: the previous one plus what
+        // each holder was paid above its share rounded down (F171).
+        const pot = final.reduce((x, [, n]) => x + n, 0);
+        const tally = lawSplitTally({ pot, holders: own, paid: final, before: before ?? [] }) as [string, number][];
+        // Delivered to every holder of the stake, paid or not (F171).
+        const to = [...new Set(own.map(([h]) => h))];
+        const x = await svc.publish(
+          REPO_SPECS.law,
+          LAW_TYPES.split,
+          splitPayload({ receipt: r.id, payouts: ps, cmip: TEST_RAIL, agreement: col.f.agreement, tally: [[index, tally]] }),
+          { public: false, to, relays, refs: previous ? [previous] : undefined },
+        );
+        col.f.splits = [...(col.f.splits ?? []), { id: x.id, key: Buffer.from(x.key).toString('base64'), receipt: r.id, service: service!, stake: index, previous }];
         this.store.saveCollective(col);
         this.store.saveIdentity(svc);
         const judged = await this.checkSplit({ collective: a.collective, split: x.id });
-        return { title: 'The payment is split', lines: [{ text: `Receipt ${r.id}; split ${x.id}.`, tone: 'ok' }, ...judged.reading.sections.flatMap((s) => s.lines)], acts: [r.id, x.id] };
+        // Each holder's client held here receives it and checks it against
+        // the chain it keeps (client conformance, F171).
+        const arrived: Line[] = [];
+        for (const h of to) if (this.store.holds(h)) arrived.push(await this.receiveSplit({ holder: h, collective: a.collective, split: x.id }));
+        return { title: 'The payment is split', lines: [{ text: `Receipt ${r.id}; split ${x.id}.`, tone: 'ok' }, ...judged.reading.sections.flatMap((s) => s.lines), ...arrived], acts: [r.id, x.id] };
       },
     });
   }
 
+  /**
+   * A holder's client receiving a split (Law rule 15a, F171, client
+   * conformance): it keeps the service's tally chain for each stake it
+   * holds, from every split delivered to it, paid or not, and checks each
+   * one as it arrives. The split must cite the latest split delivered to
+   * it for the stake (none, for the first), and carry the count that one
+   * carries plus this split's leftover units; one that does not is a
+   * deviation that breaks the plan, shown. Either way the arriving split is
+   * now the latest, as Law rule 15a reads "the latest receipt for its
+   * stake", and the next is checked against it, as the core checks a split
+   * against the one it cites. Unlike a verifier holding a set of acts, the
+   * holder's client knows which came second: the one that arrived after
+   * the chain had moved on.
+   */
+  async receiveSplit(a: { holder: string; collective: string; split: string }): Promise<Line> {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const { v, specs } = await this.lawVerifier(c, this.concerned(c));
+    const e = v.lawSplit(specs, a.split) as { payouts: [string, number, number | null, string | null][]; cites: string[]; tally: [number, [string, number][]][] };
+    const entry = (c.f.splits ?? []).find((x) => x.id === a.split);
+    const index = entry?.stake ?? this.stakeIndex(c, null);
+    const own = this.ownStake(c);
+    const key = `${entry?.service ?? ''} ${a.collective} ${index}`;
+    const kept = this.store.kept(a.holder);
+    const mine = kept[key] ?? null;
+    const who = names(a.holder);
+    const carried = e.tally.find(([st]) => st === index)?.[1] ?? null;
+    const paid = e.payouts.filter(([, , st]) => st === index).map(([h, n]) => [h, Number(n)] as [string, number]);
+    const pot = paid.reduce((x, [, n]) => x + n, 0);
+    const expected = lawSplitTally({ pot, holders: own, paid, before: mine?.counts ?? [] }) as [string, number][];
+    const count = (v: [string, number][], h: string) => v.filter(([x]) => x === h).reduce((s, [, n]) => s + Number(n), 0);
+    const sameCount = carried !== null && [...carried, ...expected].every(([h]) => count(carried, h) === count(expected, h));
+    const knownSplits = new Set((c.f.splits ?? []).map((x) => x.id));
+    if (!mine && e.cites.some((x) => knownSplits.has(x))) {
+      // A holder that joined the stake after the chain began: it keeps the
+      // chain from here, and cannot check this first count.
+      kept[key] = { tip: a.split, counts: carried ?? [] };
+      this.store.saveKept(a.holder, kept);
+      return { text: `${who}'s client: it keeps the chain from this split on; the earlier splits for the stake were never delivered to it, so this count is not checked here (Law rule 15a, F171).`, tone: 'warn' };
+    }
+    const citesLatest = mine ? e.cites.includes(mine.tip) : true;
+    kept[key] = { tip: a.split, counts: carried ?? [] };
+    this.store.saveKept(a.holder, kept);
+    if (citesLatest && sameCount) {
+      return { text: `${who}'s client: the split continues the chain it keeps, citing the latest split it holds for the stake, its count adding up (Law rule 15a, F171).`, tone: 'ok' };
+    }
+    const why = [
+      ...(citesLatest ? [] : [`it does not cite ${short(mine!.tip)}, the latest split this client holds for the stake`]),
+      ...(sameCount ? [] : [carried ? 'its running count is not the one kept plus its own leftover units' : 'it carries no running count for the stake']),
+    ];
+    return {
+      text: `${who}'s client: THE SPLIT DOES NOT CONTINUE THE CHAIN IT KEEPS: ${why.join('; ')}. A deviation that breaks the plan (Law rule 15a, rule 46b, F171), kept as shown; the next split is checked against this one, now the latest.`,
+      tone: 'bad',
+    };
+  }
+
   /** A split, as the core library judges it: its fees and their receivers, delivery, every payout matching its stake (F121 Q9, F124 N10). */
-  async checkSplit(a: { collective: string; split: string }): Promise<{ reading: Reading; mismatched: number }> {
+  async checkSplit(a: { collective: string; split: string }): Promise<{ reading: Reading; mismatched: number; breaks: number }> {
     const names = this.store.names();
     const c = this.store.collective(a.collective);
     const departed = c.f.governance.departed ?? [];
@@ -1955,7 +2075,11 @@ export class Actions {
       problems: string[];
       unevidenced: string[];
       unplanned: string[];
+      turnsUnknown: number[];
+      breaks: { stake: number; kind: string; with: string[]; previous: string | null }[];
+      countUnknown: number[];
     };
+    const others = (hs: string[]) => list(hs.map(short));
     const lines: Line[] = [
       ...e.problems.map((p) => ({ text: `NOT THE NAMED SERVICE'S SPLIT UNDER THE AGREEMENT IN FORCE: ${p}.`, tone: 'bad' as const })),
       ...e.unevidenced.map((r) => ({ text: `ROLE SHARE WITHOUT EVIDENCE THAT HOLDS: ${names(r)} (Law rule 22).`, tone: 'bad' as const })),
@@ -1969,9 +2093,28 @@ export class Actions {
       ...(e.mismatched.length
         ? e.mismatched.map(([, h, paid, due]) => ({ text: `DOES NOT MATCH ITS STAKE: ${names(h)} is paid ${paid}, their share is ${due} (F124 N10, rule 26).`, tone: 'bad' as const }))
         : [{ text: 'Every payout matches its stake exactly, every fee alike for every stake, member or departed (F124 N10).', tone: 'ok' as const }]),
+      ...(e.turnsUnknown.length
+        ? [{ text: "Who should have had a tied leftover unit is unknown: the service's previous split for the stake is not held, or carries no count, so the turns cannot be read (Law rule 15a, F165, F171). The rest is checked.", tone: 'warn' as const }]
+        : []),
+      ...(e.countUnknown.length && !e.turnsUnknown.length
+        ? [{ text: "The running count cannot be checked: the service's previous split for the stake is not held, or carries no count (Law rule 15a, F171). The rest is checked.", tone: 'warn' as const }]
+        : []),
+      // The tally chain (Law rule 15a, rule 46b, F171): each break breaks the plan.
+      ...e.breaks.map((b) => ({
+        text:
+          b.kind === 'reset'
+            ? `THE TALLY CHAIN IS RESET: this split and ${others(b.with)} each cite no previous split for the stake, so one of them restarts the count (Law rule 15a, rule 46b, F171).`
+            : b.kind === 'fork'
+              ? `THE TALLY CHAIN FORKS: this split and ${others(b.with)} both cite ${short(b.previous ?? '')} as the previous split for the stake (Law rule 15a, rule 46b, F171).`
+              : b.kind === 'count'
+                ? "THE RUNNING COUNT DOES NOT ADD UP: it is not the previous split's count plus this split's leftover units (Law rule 15a, rule 46b, F171)."
+                : 'THE SPLIT CARRIES NO RUNNING COUNT for a stake it pays (Law rule 15a, F171).',
+        tone: 'bad' as const,
+      })),
     ];
     return {
       mismatched: e.mismatched.length,
+      breaks: e.breaks.length,
       reading: { title: `The split ${short(a.split)}`, summary: [], sections: [{ heading: 'What the core library finds', lines }], plain: [], blocking: [] },
     };
   }
@@ -2100,7 +2243,17 @@ export class Actions {
         "The fork cites the collective's history up to its line, and hands out every debt in it, or it does not take effect (F127). Whatever the collective's keys sign that the fork's history does not include is void: the ending wins.",
         'Every grant of the collective ends, its split service\'s included; its open offers are withdrawn; payment follows the work\'s current claim, to the successors (F124 N14).',
       ],
-      sections: [{ heading: 'Signed on this device', lines: [{ text: 'Every member and each successor here is held by this program: their consent is simulated (test only).', tone: 'warn' }] }],
+      sections: [
+        // Law rule 49: each side signs its successor's founding terms, which carry an abandonment clause.
+        ...sides.flatMap((side, i) =>
+          absenceSection(
+            { abandonment: collectiveClause(Math.max(1, Math.min(c.f.governance.abandonmentOthers, side.length - 1))) },
+            names,
+            `If someone disappears from the successor of side ${i + 1}`,
+          ),
+        ),
+        { heading: 'Signed on this device', lines: [{ text: 'Every member and each successor here is held by this program: their consent is simulated (test only).', tone: 'warn' }] },
+      ],
       plain: [],
       blocking,
     };

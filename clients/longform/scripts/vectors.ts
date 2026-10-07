@@ -28,6 +28,7 @@ const cases: [string, string][] = [
   ['unclosed backtick', '`open'],
   ['escapes', '\\*literal\\* and a\\b'],
   ['autolinks', '<https://dubsar.org> <mailto:x@example.org>'],
+  ['a link\'s closing > next to a digit is shown (F178)', '<https://dubsar.org/item/5> and <https://dubsar.org/a>5'],
   ['other schemes are text', '<javascript:alert(1)>'],
   ['bracket links are text', '[text](https://x.org)'],
   ['HTML and entities are text', '<b>html</b> &amp;'],

@@ -57,6 +57,9 @@ test('found, release, sign, verify from the command line', async () => {
     '--relay', relay.base, '--scheme', '3',
   );
   assert.match(found, /founding agreement [0-9a-f]{64}, signed by 3 members/);
+  // Law rule 49 (F172, F178 item 11): the abandonment clause in plain words, before anything is signed.
+  assert.match(found, /Absence: any 2 of the other members together may declare a member absent\. What may then follow: the member loses their voice .*\. No absence-proof cMIP stands between: their word alone is enough/);
+  assert.ok(found.indexOf('No absence-proof cMIP stands between') < found.search(/founding agreement [0-9a-f]{64}/), 'shown before the signatures');
   assert.equal((found.match(/: receipt/g) ?? []).length, 3);
   assert.match(readFileSync(c, 'utf8'), /MOR TEST COLLECTIVE/);
 

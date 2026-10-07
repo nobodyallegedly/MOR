@@ -253,50 +253,6 @@ impl Held for View<'_> {
         }
     }
 
-    fn pointers_before(&self, payee: &Hash, rotation: &Hash) -> Vec<(Hash, PayeePointer)> {
-        let res = self.0.v.resolve(payee);
-        let Some(at) = res.position_of(rotation) else { return vec![] };
-        self.0
-            .v
-            .signed_by(payee)
-            .filter(|h| h.inside.spec == finance() && h.inside.type_ == finance::types::PAYEE_POINTER)
-            .filter(|h| h.act.outside.binding.and_then(|b| res.position_of(&b)).is_some_and(|k| k < at))
-            .filter_map(|h| {
-                let p = self
-                    .pointer(&h.id)
-                    .or_else(|| self.voided_pointer(&h.id).filter(|(_, r)| r == rotation).map(|(p, _)| p))?;
-                (&p.payee == payee).then_some((h.id, p))
-            })
-            .collect()
-    }
-
-    /// The payer's claims this reader holds for the payment, each signed
-    /// by its payer; no anchors read.
-    fn payers_claims(&self, proof: &[u8], rotation: &Hash) -> Vec<finance::PayersClaim> {
-        self.0
-            .v
-            .held_acts()
-            .filter(|h| h.inside.spec == finance() && self.0.status(&h.id) == Status::Valid)
-            .filter_map(|h| {
-                let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;
-                finance::check_signer(&p, h.act.outside.signer.as_ref()?, &Citations::of(&h.inside)).ok()?;
-                let Payload::Claim(c) = p else { return None };
-                if c.proof != proof {
-                    return None;
-                }
-                let hist = finance::history(&self.0.v, &h.inside, c.anonymous.is_some());
-                Some(finance::PayersClaim {
-                    holds_rotation: if hist.acts.contains(rotation) {
-                        Some(true)
-                    } else {
-                        hist.complete.then_some(false)
-                    },
-                    anchored_before: None,
-                })
-            })
-            .collect()
-    }
-
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
         self.0
             .v
@@ -307,11 +263,24 @@ impl Held for View<'_> {
             .collect()
     }
 
-    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>> {
-        // The chain act the act is bound to (F160): these identities never
-        // rotate in this test, so it is the genesis, which declared it.
-        let b = self.0.v.get(act)?.act.outside.binding?;
-        self.vault(&b).map(|(_, v)| v)
+    /// The vault the payee's chain declares in force (Finance rule 14a,
+    /// F169): the latest counting chain act that sets or removes it.
+    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
+        let res = self.0.v.resolve(payee);
+        let mut out = None;
+        for st in &res.states {
+            if let Ok(Some(v)) = finance::vault_in(&finance(), &st.declarations) {
+                out = v;
+            }
+        }
+        out
+    }
+
+    /// This wallet reads Finance only: which lock changes affect a payment,
+    /// and the anchors on the payee's clock, are read with Law's view of
+    /// the payee's acts (rule 15), so it does not judge them.
+    fn payment_counts(&self, _: &Hash, _: &finance::PaidAt, _: &Amount, _: &[u8], _: &Hash) -> Option<bool> {
+        None
     }
 }
 

@@ -82,6 +82,26 @@ F157 to F162 were built in the reference (`docs/decisions-f157-f162-build-2026-1
 
 Export times in a release build: 282 seconds for seed 1, 92 for seed 2. The exports were deleted after the comparison; they can be redrawn from the seeds.
 
+### Rerun after F163 to F168 (7 October 2026)
+
+F163, F165 and F168 items 9, 10, 13, B4 and B5 were built in the reference (`docs/decisions-f163-f168-build-2026-10-07.md`): among them, ties among a stake's holders by turns along the split service's receipts, and the split check holding every unit to rule 15a (F165). F164, F166 and F168 item 11 are held on a separate branch and not in this run. Verifier2 was not changed. It takes payments, stakes and Identity validity as inputs, so it does not check these changes: this rerun checks only that nothing else in collectives' endings moved. The same two runs were exported again from the reference at the branch's code commit (seed 1, cases 0 to 2,999; seed 2, cases 0 to 999) and compared with `compare.py` (default readings).
+
+| Stories | Agree on everything | Differ |
+| --- | --- | --- |
+| 4,000 | 4,000 | 0 |
+
+Export times in a release build: 333 seconds for seed 1, 110 for seed 2. The exports were deleted after the comparison; they can be redrawn from the seeds.
+
+### Rerun after F169 to F181 (7 October 2026)
+
+F169 to F181 were built in the reference (`docs/decisions-f169-f181-build-2026-10-07.md`): Finance rule 15 with the clock and the home quorum's anchored point, anchoring in the Envelope, absence returned to the authority's judgment with proof by time moved out of the core path (F172), the tally chain of split acts (F171), and the text floor. Verifier2 was not changed. It takes payments, stakes, absence declarations and Identity validity as inputs, so it does not check these changes: this rerun checks only that nothing else in collectives' endings moved. The same two runs were exported again from the reference at the branch's code commit `c611b1f` (seed 1, cases 0 to 2,999; seed 2, cases 0 to 999) and compared with `compare.py` (default readings).
+
+| Stories | Agree on everything | Differ |
+| --- | --- | --- |
+| 4,000 | 4,000 | 0 |
+
+Export times in a release build: 254 seconds for seed 1, 84 for seed 2. The exports were deleted after the comparison; they can be redrawn from the seeds.
+
 ## Precisely
 
 ### Files

@@ -158,7 +158,9 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
             if (a.amounts && typeof a.amounts === 'object') {
               for (const [k, v] of Object.entries(a.amounts as Record<string, unknown>)) if (v !== '' && v !== null) amounts[k] = Number(v);
             }
-            return actions.prepareSplit({ collective: text(a.collective), amount: Number(a.amount), fee: Number(a.fee ?? 0), amounts });
+            // To show a deviation the core shows (F171): the split cites no previous split, or the latest's own previous.
+            const cite = a.cite === 'none' || a.cite === 'before-latest' ? a.cite : 'latest';
+            return actions.prepareSplit({ collective: text(a.collective), amount: Number(a.amount), fee: Number(a.fee ?? 0), amounts, cite });
           }
           case 'fork': {
             const debts: Record<string, number[]> = {};

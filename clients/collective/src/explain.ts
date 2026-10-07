@@ -102,7 +102,8 @@ export interface TermsRead {
     identity?: string | null;
     threshold?: number | null;
     outcomes: number[];
-    period?: number | null;
+    /** Key 3: the absence-proof cMIP standing between the authority's word and the party's stake, if any (F172). */
+    proof?: string | null;
   } | null;
   parent: string | null;
   grammar: {
@@ -304,33 +305,52 @@ export function uncovered(t: TermsRead): string[] {
 }
 
 /**
+ * The abandonment clause in plain words, shown before a party signs terms
+ * carrying one (Law rule 49, client conformance; F172, F178 item 11): who
+ * may declare a party absent, with which outcomes, and whether an
+ * absence-proof cMIP stands between that authority's word and the party's
+ * stake. Without one, the declaration is the authority's judgment alone, a
+ * stated cost the party accepts by signing (rule 51), which a contest only
+ * shows (rule 52). Null when the terms carry no clause.
+ */
+export function absenceWarning(t: Pick<TermsRead, 'abandonment'>, names: Names): Line | null {
+  const a = t.abandonment;
+  if (!a) return null;
+  const by = a.authority === 'named' ? names(a.identity!) : `any ${a.threshold} of the other parties together`;
+  const outcomes = list(a.outcomes.map((o) => OUTCOMES[o] ?? `outcome ${o}`));
+  const between = a.proof
+    ? `An absence-proof cMIP stands between their word and your stake: ${specName(a.proof)}. A declaration counts only if it accepts it (Law rule 51).`
+    : `No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or your activity. Signing accepts that (Law rules 49 and 51, a stated cost); if they declare you absent wrongly, you can only contest it, in public (Law rule 52).`;
+  return {
+    text: `If a party stops acting on the agreement, ${by} may declare them absent. What may then follow: ${outcomes}. ${between}`,
+    tone: 'warn',
+  };
+}
+
+/**
+ * The abandonment clause this client writes into a collective's terms
+ * (`collectiveTerms`): any `others` of the other members, the voice
+ * removed, no absence-proof cMIP. For readings made before the exact
+ * terms exist (a split service's clone, a fork's successors).
+ */
+export const collectiveClause = (others: number): NonNullable<TermsRead['abandonment']> => ({
+  authority: 'others',
+  threshold: others,
+  outcomes: [0],
+  proof: null,
+});
+
+/** The section shown before signing terms that carry an abandonment clause (Law rule 49); none without one. */
+export function absenceSection(t: Pick<TermsRead, 'abandonment'>, names: Names, heading = 'If someone disappears'): Section[] {
+  const w = absenceWarning(t, names);
+  return w ? [{ heading, lines: [w] }] : [];
+}
+
+/**
  * An agreement, founding or clone, in plain words: who is bound, how it
  * comes into force, who decides what. From the core's own reading of the
  * exact payload. `parent`: the agreement a clone replaces, if fetched.
  */
-/**
- * The parties against whom a declaration of absence under a period can
- * never count (Law rules 50 and 51, F158): its acknowledgement must come
- * from a party or a keeper's operator other than the declared party and
- * the declaration's signers (the named authority, or the number of other
- * parties a threshold needs), and none is left. A client warns at signing.
- */
-export function unacknowledged(t: Pick<TermsRead, 'abandonment' | 'parties' | 'keepers'>): string[] {
-  const a = t.abandonment;
-  if (!a || a.period == null) return [];
-  const keepers = t.keepers?.[0] ?? [];
-  return t.parties.filter((p) => {
-    const others = t.parties.filter((x) => x !== p);
-    const pool = new Set([...others, ...keepers.filter((k) => k !== p)]);
-    if (a.authority === 'named') {
-      if (a.identity) pool.delete(a.identity);
-      return pool.size === 0;
-    }
-    // A threshold: its signers are that many of the other parties.
-    return pool.size - Math.min(a.threshold ?? 0, others.length) <= 0;
-  });
-}
-
 export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | null): { sections: Section[]; blocking: string[]; plain: Plain[] } {
   const blocking: string[] = [];
   const plain: Plain[] = [];
@@ -495,22 +515,11 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
 
   const a = t.abandonment;
   const absence: Line[] = [];
-  if (a) {
-    const by = a.authority === 'named' ? names(a.identity!) : `any ${a.threshold} of the other parties together`;
-    absence.push({
-      text: `If a party stops acting on the agreement, ${by} may declare them absent. What may then follow: ${list(a.outcomes.map((o) => OUTCOMES[o] ?? `outcome ${o}`))}.`,
-      tone: 'warn',
-    });
+  const warning = absenceWarning(t, names);
+  if (warning) {
+    absence.push(warning);
     absence.push({ text: 'Signing agrees to this in advance (Law rule 13). It is a protected clause: a later clone you do not sign cannot change it for you (Law rule 46a).' });
-    if (a.period != null) absence.push({ text: `Absence means no act for ${a.period}, measured on the agreement's time reference.` });
-    const alone = unacknowledged(t);
-    if (alone.length) {
-      absence.push({
-        text: `A declaration of absence against ${list(alone.map(names))} can never count: under a period, it needs an acknowledgement by someone other than the absent party and those who sign the declaration, and this agreement has nobody else, no third party and no keeper. Add a keeper or a third party for the clause to work; signing as it is accepts that it cannot (Law rules 50 and 51, F158, a stated cost).`,
-        tone: 'bad',
-      });
-    }
-    else absence.push({ text: 'No period is set and no time reference is named, so a missed deadline can never be proven; whoever judges absence judges it (Law rule 33).' });
+    absence.push({ text: 'A declaration moves nothing by itself: what follows takes effect only through a record, rotation or clone put in force under it, and no later act undoes that (Law rule 51).' });
   } else {
     absence.push({ text: 'No abandonment clause: nobody can declare a party absent.' });
   }

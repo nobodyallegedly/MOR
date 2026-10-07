@@ -100,7 +100,7 @@ export const MAX_DEPTH = 16;
 export const MARKUP = new Set(['\n', ' ', '#', '*', '>', '<', '`', '\\', '-']);
 
 /** The characters each declaration entry may hide. */
-const DECLARED: Record<MarkRule, string> = {
+export const DECLARED: Readonly<Record<MarkRule, string>> = {
   heading: '# ',
   rule: '-*',
   'fence-open': '`',
@@ -117,6 +117,14 @@ const DECLARED: Record<MarkRule, string> = {
   'em-close': '*',
 };
 
+/**
+ * The hidden characters that end a block (Text MIP, the Text format task,
+ * F178 item 16; the cMIP's markup declaration): the LF, and only the LF.
+ * Every other character this format hides is markup inside a block, or at
+ * a block's start.
+ */
+export const ENDS_BLOCK = '\n';
+
 /** Characters a backslash escapes (rule 8). */
 const ESCAPABLE = new Set(['\\', '`', '*', '_', '#', '-', '+', '.', '>', '<', '[', ']', '(', ')', '!', '|', '~']);
 
@@ -126,6 +134,16 @@ const SPACES = new Set([
   0x202f, 0x205f, 0x3000,
 ]);
 const isSpace = (s: string, i: number): boolean => SPACES.has(s.charCodeAt(i));
+
+/**
+ * Is a link's closing `>`, at `i`, next to a digit (a character of category
+ * N directly before or after it)? Then it is shown, not hidden: a
+ * mathematical sign next to a digit lies under the Text MIP's floor
+ * (F174 item 10, F178 item 17).
+ */
+export function linkCloseShown(s: string, i: number): boolean {
+  return isDigit(charBefore(s, i)) || isDigit(charAt(s, i + 1));
+}
 
 /** Link schemes shown as links (rule 9). */
 const AUTOLINK = /^<((?:https?|mailto):[^ <>]+)>/;
@@ -363,9 +381,11 @@ class Parser {
           flush(p);
           const span = { from: p + 1, to: p + 1 + m[1].length };
           this.mark('link-open', p, p + 1);
-          this.mark('link-close', span.to, span.to + 1);
           toks.push({ k: 'node', node: { t: 'link', href: m[1], span } });
           p = span.to + 1;
+          // The closing > next to a digit is shown, as text (F178 item 17).
+          if (linkCloseShown(s, span.to)) lit(span.to);
+          else this.mark('link-close', span.to, span.to + 1);
           continue;
         }
         lit(p);
@@ -524,6 +544,194 @@ function shownIn(doc: Document): [number, number][] {
   return out;
 }
 
+// ---------------------------------------------------------------- the floor
+
+// F167, F174 items 10 and 11, F175, F178 items 16 and 17 (Text MIP draft 6,
+// the Text format task): the format's author writes its markup declaration,
+// and a hostile author could declare a decimal point or a minus sign as
+// markup. So under every declaration lies a floor the Text MIP sets:
+// characters no format hides, whatever its declaration says. The floor is
+// written here apart from this format's own declaration, so it holds for any
+// declaration. Each part below is one clause of the Text MIP's list.
+
+/**
+ * The percent, per-mille and per-ten-thousand signs, by code point as the
+ * Text MIP lists them (F178 item 16): U+0025, U+066A, U+FE6A, U+FF05,
+ * U+2030, U+0609, U+2031. They are punctuation (Po), so no category covers
+ * them. (U+060A, the Arabic-Indic per-ten-thousand sign, is not in the
+ * list.)
+ */
+export const PERCENT_SIGNS = new Set([0x0025, 0x066a, 0xfe6a, 0xff05, 0x2030, 0x0609, 0x2031]);
+
+/**
+ * The plus and minus signs the floor names (F167, F175): + - U+2212, and
+ * the dash-like minus signs U+2013 (en dash), U+FE63 (small hyphen-minus)
+ * and U+FF0D (fullwidth hyphen-minus).
+ */
+export const SIGNS = new Set([0x002b, 0x002d, 0x2212, 0x2013, 0xfe63, 0xff0d]);
+
+/**
+ * Full stops and commas (F174 item 11): the punctuation characters (Po)
+ * Unicode names FULL STOP or COMMA, and the Arabic decimal and thousands
+ * separators (U+066B, U+066C), which do their work in Arabic-Indic numbers.
+ */
+export const STOPS = new Set([
+  // Full stops.
+  0x002e, 0x0589, 0x06d4, 0x0701, 0x0702, 0x1362, 0x166e, 0x1803, 0x1809, 0x2cf9, 0x2cfe, 0x2e3c, 0x3002, 0xa4ff, 0xa60e, 0xa6f3,
+  0xfe12, 0xfe52, 0xff0e, 0xff61, 0x16af5, 0x16e98, 0x1bc9f, 0x1da88,
+  // Commas.
+  0x002c, 0x055d, 0x060c, 0x07f8, 0x1363, 0x1802, 0x1808, 0x2e32, 0x2e34, 0x2e41, 0x2e49, 0x2e4c, 0x3001, 0xa4fe, 0xa60d, 0xa6f5,
+  0xfe10, 0xfe11, 0xfe50, 0xfe51, 0xff0c, 0xff64, 0x1144d, 0x1145a, 0x16e97, 0x1da87,
+  // The Arabic decimal and thousands separators.
+  0x066b, 0x066c,
+]);
+
+/**
+ * Apostrophes (F174 item 11): U+0027, U+2019 (the typographic apostrophe),
+ * U+055A (Armenian) and U+FF07 (fullwidth). U+02BC, the modifier letter
+ * apostrophe, is a letter (Lm), so always under the floor.
+ */
+export const APOSTROPHES = new Set([0x0027, 0x2019, 0x055a, 0xff07]);
+
+/**
+ * Question and exclamation marks (F174 item 11): the punctuation characters
+ * (Po) Unicode names QUESTION MARK or EXCLAMATION MARK, and the interrobangs
+ * (U+203D, U+2E18).
+ */
+export const MARKS_QE = new Set([
+  0x003f, 0x00bf, 0x037e, 0x055e, 0x061f, 0x1367, 0x1945, 0x2047, 0x2049, 0x2cfa, 0x2cfb, 0x2e2e, 0x2e54, 0xa60f, 0xa6f7, 0xfe16,
+  0xfe56, 0xff1f, 0x11143, 0x1e95f,
+  0x0021, 0x00a1, 0x055c, 0x07f9, 0x1944, 0x203c, 0x2048, 0x2e53, 0xfe15, 0xfe57, 0xff01, 0x1e95e,
+  0x203d, 0x2e18,
+]);
+
+/**
+ * A digit, for "next to", "between two digits", "before a digit": any
+ * character of category N, as the rule reads "a digit" in the same breath
+ * as N. So Arabic-Indic and Devanagari digits count, and so do ½ and Ⅻ.
+ */
+const DIGIT = /^\p{N}$/u;
+const LETTER = /^\p{L}$/u;
+const MARK = /^\p{M}$/u;
+const ALWAYS = /^[\p{L}\p{N}\p{M}]$/u;
+const CURRENCY = /^\p{Sc}$/u;
+const MATHS = /^\p{Sm}$/u;
+const OPEN_BRACKET = /^\p{Ps}$/u;
+const CLOSE_BRACKET = /^\p{Pe}$/u;
+
+/** The character at offset `i`, whole even where `i` falls inside a surrogate pair. */
+function charAt(s: string, i: number): { c: string; from: number; to: number } | null {
+  if (i < 0 || i >= s.length) return null;
+  let from = i;
+  const u = s.charCodeAt(i);
+  if (u >= 0xdc00 && u <= 0xdfff && i > 0) {
+    const h = s.charCodeAt(i - 1);
+    if (h >= 0xd800 && h <= 0xdbff) from = i - 1;
+  }
+  const c = String.fromCodePoint(s.codePointAt(from)!);
+  return { c, from, to: from + c.length };
+}
+
+/** The character ending just before offset `i`, whole. */
+const charBefore = (s: string, i: number) => (i > 0 ? charAt(s, i - 1) : null);
+
+const isDigit = (x: { c: string } | null): boolean => x !== null && DIGIT.test(x.c);
+
+/**
+ * A letter, for "between two letters", on the side before: a letter, or a
+ * letter followed by its combining marks, so that the space after "हिंदी"
+ * (whose last character is a vowel sign) or after a decomposed "é" lies
+ * between two letters.
+ */
+function letterBefore(s: string, i: number): boolean {
+  let x = charBefore(s, i);
+  while (x && MARK.test(x.c)) x = charBefore(s, x.from);
+  return x !== null && LETTER.test(x.c);
+}
+
+/** The characters of an amount, for "a bracket directly around an amount". */
+function inAmount(c: string): boolean {
+  const cp = c.codePointAt(0)!;
+  return DIGIT.test(c) || CURRENCY.test(c) || SIGNS.has(cp) || STOPS.has(cp) || PERCENT_SIGNS.has(cp) || APOSTROPHES.has(cp) || SPACES.has(cp);
+}
+
+/**
+ * Is the bracket at [from, to) directly around an amount? An opening
+ * bracket (Ps) directly before an amount and a closing bracket (Pe)
+ * directly after it, as "(5)", "(−2.50)", "($5)" or "(1 000 €)": between
+ * them only digits, currency, plus and minus signs, full stops and commas,
+ * percent signs, apostrophes and spaces, at least one digit, and no space
+ * directly inside either bracket.
+ */
+function aroundAmount(s: string, from: number, to: number, open: boolean): boolean {
+  let digits = 0;
+  let edge: { c: string; from: number; to: number } | null = null;
+  let x = open ? charAt(s, to) : charBefore(s, from);
+  const first = x;
+  while (x && inAmount(x.c)) {
+    if (DIGIT.test(x.c)) digits++;
+    edge = x;
+    x = open ? charAt(s, x.to) : charBefore(s, x.from);
+  }
+  if (!x || !digits || !first || !edge) return false;
+  if (SPACES.has(first.c.codePointAt(0)!) || SPACES.has(edge.c.codePointAt(0)!)) return false;
+  return open ? CLOSE_BRACKET.test(x.c) : OPEN_BRACKET.test(x.c);
+}
+
+/** One character in its place: itself and its neighbours in the text. */
+interface Here {
+  s: string;
+  c: string;
+  cp: number;
+  from: number;
+  to: number;
+  before: { c: string; from: number; to: number } | null;
+  after: { c: string; from: number; to: number } | null;
+}
+
+/**
+ * The floor, clause by clause, in the Text MIP's order: each clause names
+ * why a character lies under it, and says whether this one does. A clause
+ * that needs the rendering (a run of hidden characters between two digits,
+ * emphasis or code markup between two digits) is checked in `checkBound()`.
+ */
+export const FLOOR: readonly [string, (h: Here) => boolean][] = [
+  ['a letter, a digit or a combining mark', (h) => ALWAYS.test(h.c)],
+  ['a currency sign', (h) => CURRENCY.test(h.c)],
+  ['a mathematical sign next to a digit', (h) => MATHS.test(h.c) && (isDigit(h.before) || isDigit(h.after))],
+  ['a percent, per-mille or per-ten-thousand sign', (h) => PERCENT_SIGNS.has(h.cp)],
+  ['a character between two digits', (h) => isDigit(h.before) && isDigit(h.after)],
+  [
+    'a plus or minus sign directly before a digit or a currency sign, or directly after a digit',
+    (h) => SIGNS.has(h.cp) && (isDigit(h.after) || (h.after !== null && CURRENCY.test(h.after.c)) || isDigit(h.before)),
+  ],
+  ['a full stop or comma directly before a digit', (h) => STOPS.has(h.cp) && isDigit(h.after)],
+  [
+    'a bracket directly around an amount',
+    (h) => (OPEN_BRACKET.test(h.c) && aroundAmount(h.s, h.from, h.to, true)) || (CLOSE_BRACKET.test(h.c) && aroundAmount(h.s, h.from, h.to, false)),
+  ],
+  [
+    'a space or apostrophe between two letters',
+    (h) => (SPACES.has(h.cp) || APOSTROPHES.has(h.cp)) && h.after !== null && LETTER.test(h.after.c) && letterBefore(h.s, h.from),
+  ],
+  ['a question or exclamation mark', (h) => MARKS_QE.has(h.cp)],
+];
+
+/**
+ * Why the character at offset `i` of `s` lies under the Text MIP's floor,
+ * so that no format may hide it, or null if a format may. Its neighbours
+ * are the characters directly before and after it in the text. A line
+ * break between two digits is reported here; `checkBound()` lets a format
+ * hide it where it ends a block (F175).
+ */
+export function underFloor(s: string, i: number): string | null {
+  const here = charAt(s, i);
+  if (!here) return null;
+  const h: Here = { s, c: here.c, cp: here.c.codePointAt(0)!, from: here.from, to: here.to, before: charBefore(s, here.from), after: charAt(s, here.to) };
+  for (const [why, holds] of FLOOR) if (holds(h)) return why;
+  return null;
+}
+
 /**
  * Check the Text MIP's bound on a format (task 4, with F102 and F149) for
  * one rendering: every character shown is the source's own, shown once and
@@ -533,9 +741,22 @@ function shownIn(doc: Document): [number, number][] {
  * itself, never taken from the reading: a rendering that hid a minus sign,
  * a decimal point, a vowel sign, or a markup character anywhere else (a
  * `-` before a number, a `*` between spaces, an LF inside a paragraph) is
- * refused. Returns the first breach found, or null.
+ * refused. And whatever the declaration says, nothing under the Text MIP's
+ * floor is hidden (F167, `underFloor()`). Returns the first breach found,
+ * or null.
+ *
+ * `declared` is the declaration's table of characters, and `endsBlock` the
+ * hidden characters it says end a block, this cMIP's own unless given: the
+ * floor holds whatever declaration a check is handed, which a test shows by
+ * handing it a hostile one. Only a line break is ever let through between
+ * two digits for ending a block, and only where the rendering does show a
+ * new block after it (F175).
  */
-export function checkBound(doc: Document): string | null {
+export function checkBound(
+  doc: Document,
+  declared: Readonly<Record<MarkRule, string>> = DECLARED,
+  endsBlock: string = ENDS_BLOCK,
+): string | null {
   const s = doc.source;
   const n = s.length;
   const at = shownIn(doc);
@@ -549,6 +770,60 @@ export function checkBound(doc: Document): string | null {
     last = i;
     state[i] = 1;
     leafOf[i] = leaf;
+  }
+  // The floor first (F167, F174, F175): every character not shown is
+  // hidden, whether a declaration entry claims it, it ends a block, or
+  // nothing claims it.
+  const prevShown = new Int32Array(n + 1).fill(-1);
+  for (let i = 0; i < n; i++) prevShown[i + 1] = state[i] ? i : prevShown[i];
+  const nextShown = new Int32Array(n + 1).fill(-1);
+  for (let i = n - 1; i >= 0; i--) nextShown[i] = state[i] ? i : nextShown[i + 1];
+  // A line break the declaration says ends a block, after which the
+  // rendering does show another block: hidden, it joins nothing.
+  const endsABlock = (i: number) => {
+    if (s[i] !== '\n' || !endsBlock.includes('\n')) return false;
+    const a = prevShown[i];
+    const b = nextShown[i];
+    return a >= 0 && b >= 0 && leafOf[a] !== leafOf[b];
+  };
+  const floor = (i: number, why: string) => `hides ${JSON.stringify(s[i])} at ${i}, which no format may hide (F167): ${why}`;
+  const ruleAt = new Map<number, MarkRule>();
+  for (const m of doc.marks) for (let i = m.span.from; i < m.span.to; i++) ruleAt.set(i, m.rule);
+  const emphasisOrCode = (i: number) => {
+    const rule = ruleAt.get(i);
+    return rule === 'em-open' || rule === 'em-close' || rule === 'code-open' || rule === 'code-close';
+  };
+  const BETWEEN = 'a character between two digits';
+  for (let i = 0; i < n; i++) {
+    if (state[i]) continue;
+    const why = underFloor(s, i);
+    if (why === BETWEEN && endsABlock(i)) continue;
+    if (why === BETWEEN && emphasisOrCode(i)) return floor(i, 'emphasis or code markup between two digits');
+    if (why) return floor(i, why);
+  }
+  // Any run of hidden characters between two digits, and emphasis or code
+  // markup between two digits (F175): "1, 2" must never read "12", nor
+  // "1*2*3" read "123". A run with a line break that ends a block is
+  // excepted, since a new block is shown, not hidden: the two digits are
+  // never read as one number. (Read for the whole run, so a heading's, a
+  // quote's, a fence's or a rule line's markup may stand between two
+  // digits in two blocks; a question in the build's report.)
+  for (let a = 0; a < n; ) {
+    if (state[a]) {
+      a++;
+      continue;
+    }
+    let b = a;
+    while (b < n && !state[b]) b++;
+    const before = charBefore(s, a);
+    const after = charAt(s, b);
+    let newBlock = false;
+    for (let i = a; i < b && !newBlock; i++) newBlock = endsABlock(i);
+    if (isDigit(before) && isDigit(after) && !newBlock) {
+      for (let i = a; i < b; i++) if (emphasisOrCode(i)) return floor(i, 'emphasis or code markup between two digits');
+      return floor(a, 'a run of hidden characters between two digits');
+    }
+    a = b;
   }
   const said = (i: number) => JSON.stringify(s[i] ?? '');
   const lineStart = (i: number) => s.lastIndexOf('\n', i - 1) + 1;
@@ -596,6 +871,7 @@ export function checkBound(doc: Document): string | null {
     return r.from === m.span.from && r.to === m.span.to;
   };
   const sameLine = (a: Mark, b: Mark) => lineEnd(a.span.from) === lineEnd(b.span.from);
+  const closeShown = (i: number) => linkCloseShown(s, i);
   // Pairs on one line: an opener closed by the next closer of its kind,
   // emphasis nesting as the reading pairs it.
   const stack: Mark[] = [];
@@ -606,7 +882,7 @@ export function checkBound(doc: Document): string | null {
     if (from < 0 || to > n || from >= to) return `declares markup outside the text at ${from}`;
     for (let i = from; i < to; i++) {
       if (state[i]) return `hides ${said(i)} at ${i}, which it also shows`;
-      if (!DECLARED[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
+      if (!declared[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
       state[i] = 2;
     }
     const text = s.slice(from, to);
@@ -647,12 +923,18 @@ export function checkBound(doc: Document): string | null {
       case 'link-open': {
         const a = AUTOLINK.exec(s.slice(from, lineEnd(from)));
         if (!a || link) return fail('a < opening a link to an https, http or mailto address');
-        link = m;
+        // The closing > next to a digit is shown (F178 item 17): then no
+        // closing mark follows.
+        const close = from + a[0].length - 1;
+        if (state[close] === 1) {
+          if (!closeShown(close)) return fail('a link whose closing > is shown, though not next to a digit');
+        } else link = m;
         break;
       }
       case 'link-close': {
         const a = link && AUTOLINK.exec(s.slice(link.span.from, lineEnd(link.span.from)));
         if (!link || !a || link.span.from + a[0].length !== to) return fail('the > closing a link');
+        if (closeShown(from)) return fail('the > closing a link, next to a digit, is shown');
         link = null;
         break;
       }
@@ -680,7 +962,7 @@ export function checkBound(doc: Document): string | null {
       continue;
     }
     if (state[i] === 2) continue;
-    if (s[i] !== '\n') return `hides ${said(i)} at ${i}, which is not markup`;
+    if (!endsBlock.includes(s[i])) return `hides ${said(i)} at ${i}, which is not markup`;
     const after = next[i + 1] ?? -1;
     if (prev >= 0 && after >= 0 && leafOf[prev] === leafOf[after]) return `hides the LF at ${i}, inside a block`;
   }

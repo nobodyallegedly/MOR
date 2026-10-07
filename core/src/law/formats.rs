@@ -81,55 +81,105 @@ pub const MILLION: u64 = 1_000_000;
 pub const LEFTOVER_TAG: &str = "MOR/law/leftover";
 
 /// Rule 15a's tie key for a holder (F150): `tagged_hash("MOR/law/leftover",
-/// [ receipt hash, holder ])`, the array encoded as CBOR, as Law writes
-/// its arrays (reading: the rule does not say so in words, as Envelope
-/// does for its sealed signature).
-pub fn leftover_key(receipt: &Hash, holder: &Hash) -> Hash {
-    let v = Value::Array(vec![Value::Bytes(receipt.to_vec()), Value::Bytes(holder.to_vec())]);
+/// [ act hash, holder ])`, the array encoded as CBOR, as Law writes its
+/// arrays (F162, 7). Since F165 it orders only a fork's sides, by the fork
+/// act every member signs (F162, 10): a split service's receipt no longer
+/// orders ties, since its signer picks its salt (F165).
+pub fn leftover_key(act: &Hash, holder: &Hash) -> Hash {
+    let v = Value::Array(vec![Value::Bytes(act.to_vec()), Value::Bytes(holder.to_vec())]);
     crate::hash::tagged_hash(LEFTOVER_TAG, &cbor::encode(&v))
 }
 
-/// Rule 15a (F150): `total` smallest units of a payment divided among a
-/// stake's `holders` (each its identity and its share), every holder its
-/// exact share rounded down, and the leftover units one each to the
-/// holders whose exact shares have the largest fractional remainders;
-/// holders with equal remainders ordered by [`leftover_key`] with the hash
-/// of the receipt of the payment being divided, smallest first. The order
-/// in which holders are listed decides nothing: the parts come back in the
-/// order given, each holder's the same however they are listed.
-///
-/// Where holders with equal remainders compete for fewer leftover units
-/// than they are, and no receipt is given, the division is undetermined:
-/// `Err`, saying so. Shares need not sum to a million; they are divided
-/// in proportion.
-pub fn divide_stake(total: u64, holders: &[(Hash, u64)], receipt: Option<&Hash>) -> Result<Vec<u64>, String> {
+/// How rule 15a settles holders with equal remainders competing for fewer
+/// leftover units than they are.
+#[derive(Clone, Copy, Debug)]
+pub enum Ties<'a> {
+    /// Take turns (F165): each holder's leftover units from this stake so
+    /// far, as the split service's previous split act for the stake
+    /// carries them (F171), in the holders' order; the fewest first, and
+    /// where counts are equal, the smallest identity hash.
+    Turns(&'a [u64]),
+    /// A fork's sides: by [`leftover_key`] with the fork act (F162, 10).
+    Hash(&'a Hash),
+    /// Nothing given decides them: a tie that decides a unit is reported,
+    /// not settled ([`divide_stake`] answers `Err`).
+    Open,
+}
+
+/// Rule 15a before ties: every holder its exact share rounded down, the
+/// leftover units one each to the holders whose exact shares have the
+/// largest fractional remainders, as far as remainders decide. `tied` are
+/// the holders (indexes) with equal remainders at the cut, competing for
+/// the `units` leftover units remainders do not decide; empty where none.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Rounded {
+    pub parts: Vec<u64>,
+    pub tied: Vec<usize>,
+    pub units: usize,
+}
+
+/// [`Rounded`] for `total` among `holders` (each its identity and share).
+/// Shares need not sum to a million; they are divided in proportion. The
+/// order in which holders are listed decides nothing (F150).
+pub fn round_stake(total: u64, holders: &[(Hash, u64)]) -> Rounded {
     let sum: u128 = holders.iter().map(|(_, w)| *w as u128).sum();
     if sum == 0 {
-        return Ok(vec![0; holders.len()]);
+        return Rounded { parts: vec![0; holders.len()], tied: vec![], units: 0 };
     }
     let exact: Vec<u128> = holders.iter().map(|(_, w)| total as u128 * *w as u128).collect();
-    let mut out: Vec<u64> = exact.iter().map(|e| (e / sum) as u64).collect();
+    let mut parts: Vec<u64> = exact.iter().map(|e| (e / sum) as u64).collect();
     let rem: Vec<u128> = exact.iter().map(|e| e % sum).collect();
-    let left = (total as u128 - out.iter().map(|x| *x as u128).sum::<u128>()) as usize;
+    let left = (total as u128 - parts.iter().map(|x| *x as u128).sum::<u128>()) as usize;
     if left == 0 {
-        return Ok(out);
+        return Rounded { parts, tied: vec![], units: 0 };
     }
     let mut order: Vec<usize> = (0..holders.len()).collect();
-    // Largest remainder first; ties by the tie key, smallest first.
     order.sort_by(|a, b| rem[*b].cmp(&rem[*a]));
     let cut = rem[order[left - 1]];
-    let competing = order.iter().filter(|i| rem[**i] == cut).count();
-    let above = order.iter().filter(|i| rem[**i] > cut).count();
-    if competing > left - above {
-        let Some(r) = receipt else {
-            return Err("holders with equal remainders compete for the leftover units, and no receipt orders them (rule 15a, F150)".into());
-        };
-        order.sort_by(|a, b| rem[*b].cmp(&rem[*a]).then_with(|| leftover_key(r, &holders[*a].0).cmp(&leftover_key(r, &holders[*b].0))));
+    let above: Vec<usize> = order.iter().copied().filter(|i| rem[*i] > cut).collect();
+    let at_cut: Vec<usize> = order.iter().copied().filter(|i| rem[*i] == cut).collect();
+    for i in &above {
+        parts[*i] += 1;
     }
-    for i in &order[..left] {
-        out[*i] += 1;
+    let units = left - above.len();
+    if at_cut.len() == units {
+        for i in &at_cut {
+            parts[*i] += 1;
+        }
+        return Rounded { parts, tied: vec![], units: 0 };
     }
-    Ok(out)
+    let mut tied = at_cut;
+    tied.sort();
+    Rounded { parts, tied, units }
+}
+
+/// Rule 15a (F150, F165): `total` smallest units of a payment divided
+/// among a stake's `holders` (each its identity and its share), every
+/// holder its exact share rounded down, and the leftover units one each to
+/// the holders whose exact shares have the largest fractional remainders
+/// ([`round_stake`]); holders with equal remainders settled by `ties`. The
+/// parts come back in the order given, each holder's the same however they
+/// are listed.
+///
+/// With [`Ties::Open`], a tie that decides a unit is undetermined: `Err`,
+/// saying so.
+pub fn divide_stake(total: u64, holders: &[(Hash, u64)], ties: Ties) -> Result<Vec<u64>, String> {
+    let Rounded { mut parts, mut tied, units } = round_stake(total, holders);
+    if units == 0 {
+        return Ok(parts);
+    }
+    match ties {
+        Ties::Open => return Err("holders with equal remainders compete for the leftover units, and nothing given settles the tie (rule 15a, F165)".into()),
+        Ties::Turns(counts) => {
+            let count = |i: usize| counts.get(i).copied().unwrap_or(0);
+            tied.sort_by(|a, b| count(*a).cmp(&count(*b)).then_with(|| holders[*a].0.cmp(&holders[*b].0)));
+        }
+        Ties::Hash(h) => tied.sort_by_key(|i| leftover_key(h, &holders[*i].0)),
+    }
+    for i in &tied[..units] {
+        parts[*i] += 1;
+    }
+    Ok(parts)
 }
 
 /// The layer of a task's MIP (Production, task table).
@@ -446,13 +496,19 @@ pub mod outcomes {
     pub const AGREEMENT_CLOSED: u64 = 4;
 }
 
-/// `abandonment`: the authority, the outcomes allowed, ascending, and the
-/// period of absence on the agreement's time reference.
+/// `abandonment`: the authority, the outcomes allowed, ascending, and,
+/// optionally, the absence-proof cMIP standing between the authority's word
+/// and the party's stake (key 3, F172). Key 2, the period of absence
+/// (F140), is retired and never reused: terms carrying it are invalid.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Abandonment {
     pub authority: Authority,
     pub outcomes: Vec<u64>,
-    pub period: Option<u64>,
+    /// Key 3: an absence-proof cMIP and its parameters, `[ hash, any ]`
+    /// (task "Absence proof", F172). Where named, a declaration counts only
+    /// if that cMIP accepts it (rule 51). The parameters are the cMIP's own
+    /// (a period, a time reference): the core reads none of them.
+    pub proof: Option<(Hash, Value)>,
 }
 
 impl Abandonment {
@@ -468,8 +524,8 @@ impl Abandonment {
                 Value::Array(self.outcomes.iter().map(|o| Value::Uint(*o)).collect()),
             ),
         ];
-        if let Some(p) = self.period {
-            m.push((Value::Uint(2), Value::Uint(p)));
+        if let Some((h, params)) = &self.proof {
+            m.push((Value::Uint(3), Value::Array(vec![b(h), params.clone()])));
         }
         Value::Map(m)
     }
@@ -1398,9 +1454,6 @@ impl Terms {
                     "the abandonment clause lists unknown or repeated outcomes",
                 ));
             }
-            if a.period.is_some() && self.time.is_none() && self.cmip(TIME_REFERENCE_TASK).is_none() {
-                return Err(LawError::Check("an absence period needs a time reference"));
-            }
         }
         for s in self.succession.iter().flatten() {
             // M1 (F124): a departed holder's plan keeps only its stake part,
@@ -1485,6 +1538,20 @@ impl Terms {
             if self.extensions().contains(j) {
                 return Err(LawError::Check(
                     "a judge never handles what it judges: a specification named for a judicial task is no extension (Q25)",
+                ));
+            }
+        }
+        // F172, F178 (14): absence proof is a judicial task. The cMIP the
+        // abandonment clause names for it (key 3) serves no other task, is
+        // not the time reference, and is no extension (core v21, "A judge
+        // never handles what it judges").
+        if let Some((p, _)) = self.abandonment.as_ref().and_then(|a| a.proof.as_ref()) {
+            let elsewhere = self.cmips.iter().any(|(_, c)| c == p)
+                || self.time.as_ref().is_some_and(|(t, _)| t == p)
+                || self.extensions().contains(p);
+            if elsewhere {
+                return Err(LawError::Check(
+                    "a judge never handles what it judges: the absence-proof cMIP the abandonment clause names serves no other task and is no extension (F172, F178)",
                 ));
             }
         }
@@ -1587,6 +1654,7 @@ impl Terms {
                     let elsewhere = self.cmips.iter().any(|(_, c)| c == h)
                         || self.time.as_ref().is_some_and(|(t, _)| t == h)
                         || self.extensions().contains(h)
+                        || self.abandonment.as_ref().and_then(|a| a.proof.as_ref()).is_some_and(|(p, _)| p == h)
                         || fallbacks.contains(h);
                     if elsewhere {
                         return Err(LawError::Check(
@@ -2932,23 +3000,87 @@ pub struct Split {
     pub cmip: Hash,
     /// 3: the owners' agreement whose stakes it pays.
     pub agreement: Hash,
+    /// 4: the tally (rule 15a; F165, F171, F178 item 15): for each stake it
+    /// pays, the running count of leftover units each holder has received
+    /// from the service's splits for that stake, this split's included.
+    /// The split act also cites, in its envelope, the service's previous
+    /// split act for each stake, so a tie is checked from two acts.
+    ///
+    /// *PROPOSED format, to confirm with Nobody, allegedly (the spec gives
+    /// the field, not its key):* `? 4 => [+ [stake: uint, [+ [holder:
+    /// hash, count: uint]]]]`, stakes distinct, each stake's holders
+    /// distinct. A holder not listed counts zero.
+    pub tally: Option<Vec<(u64, Vec<(Hash, u64)>)>>,
+}
+
+/// Each holder's leftover units in what a split pays a stake (rule 15a,
+/// F165): what it was paid above its exact share rounded down, its share
+/// of `pot`, the sum of the split's payouts on the stake, among `holders`
+/// (each its identity and share). `paid` is each receiver's payouts on the
+/// stake; a receiver that holds no part of the stake is left out, and a
+/// holder paid less than its share rounded down has none.
+pub fn leftovers(pot: u64, holders: &[(Hash, u64)], paid: &[(Hash, u64)]) -> Vec<(Hash, u64)> {
+    let sum: u128 = holders.iter().map(|(_, w)| *w as u128).sum::<u128>().max(1);
+    let mut out: Vec<(Hash, u64)> = vec![];
+    for (who, _) in holders {
+        if out.iter().any(|(x, _)| x == who) {
+            continue;
+        }
+        let got: u64 = paid.iter().filter(|(x, _)| x == who).map(|(_, n)| *n).fold(0, u64::saturating_add);
+        let floor: u128 = holders.iter().filter(|(w, _)| w == who).map(|(_, n)| pot as u128 * *n as u128 / sum).sum();
+        out.push((*who, got.saturating_sub(u64::try_from(floor).unwrap_or(u64::MAX))));
+    }
+    out
+}
+
+/// The running count after a split (rule 15a, F171): `before`, the count
+/// the previous split for the stake carried (empty for the first), plus
+/// `add`, this split's [`leftovers`]. Every holder named in either, by
+/// identity hash; a holder named in neither counts zero.
+pub fn running_count(before: &[(Hash, u64)], add: &[(Hash, u64)]) -> Vec<(Hash, u64)> {
+    let mut out: std::collections::BTreeMap<Hash, u64> = std::collections::BTreeMap::new();
+    for (h, n) in before.iter().chain(add) {
+        let e = out.entry(*h).or_insert(0);
+        *e = e.saturating_add(*n);
+    }
+    out.into_iter().collect()
+}
+
+/// Whether two running counts are the same, a holder not named counting
+/// zero.
+pub fn same_count(a: &[(Hash, u64)], b: &[(Hash, u64)]) -> bool {
+    let get = |v: &[(Hash, u64)], h: &Hash| v.iter().filter(|(x, _)| x == h).map(|(_, n)| *n).fold(0, u64::saturating_add);
+    a.iter().chain(b).all(|(h, _)| get(a, h) == get(b, h))
 }
 
 impl Split {
+    /// The count the split carries for stake `idx` (field 4), if any.
+    pub fn tally_of(&self, idx: u64) -> Option<&[(Hash, u64)]> {
+        self.tally.as_ref()?.iter().find(|(s, _)| *s == idx).map(|(_, v)| v.as_slice())
+    }
+
     pub fn to_map(&self) -> Vec<(Value, Value)> {
-        vec![
+        let mut m = vec![
             (Value::Uint(0), b(&self.receipt)),
             (Value::Uint(1), Value::Array(self.payouts.iter().map(Payout::to_value).collect())),
             (Value::Uint(2), b(&self.cmip)),
             (Value::Uint(3), b(&self.agreement)),
-        ]
+        ];
+        if let Some(t) = &self.tally {
+            let v = t
+                .iter()
+                .map(|(s, hs)| Value::Array(vec![Value::Uint(*s), Value::Array(hs.iter().map(|(h, n)| Value::Array(vec![b(h), Value::Uint(*n)])).collect())]))
+                .collect();
+            m.push((Value::Uint(4), Value::Array(v)));
+        }
+        m
     }
 
     pub fn decode(p: &[(Value, Value)]) -> R<Split> {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in p {
             match k {
-                Value::Uint(n) if *n <= 3 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 4 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("split: unknown field")),
             }
         }
@@ -2988,8 +3120,35 @@ impl Split {
             payouts,
             cmip: hash(req(2, "split: the split cMIP")?, "split: the split cMIP")?,
             agreement: hash(req(3, "split: the agreement")?, "split: the agreement")?,
+            tally: get(4).map(decode_tally).transpose()?,
         })
     }
+}
+
+/// Field 4 of a split, the tally (PROPOSED format, to confirm with Nobody,
+/// allegedly: the spec gives the field, not its key).
+fn decode_tally(v: &Value) -> R<Vec<(u64, Vec<(Hash, u64)>)>> {
+    let mut out: Vec<(u64, Vec<(Hash, u64)>)> = vec![];
+    for e in nonempty(v, "split: the tally")? {
+        let Value::Array(pair) = e else { return Err(LawError::Shape("split: a stake's tally")) };
+        let [s, hs] = pair.as_slice() else { return Err(LawError::Shape("split: a stake's tally")) };
+        let stake = uint(s, "split: the tally's stake")?;
+        if out.iter().any(|(x, _)| *x == stake) {
+            return Err(LawError::Shape("split: a stake tallied twice"));
+        }
+        let mut holders: Vec<(Hash, u64)> = vec![];
+        for x in nonempty(hs, "split: a stake's tally")? {
+            let Value::Array(hn) = x else { return Err(LawError::Shape("split: a holder's count")) };
+            let [h, n] = hn.as_slice() else { return Err(LawError::Shape("split: a holder's count")) };
+            let h = hash(h, "split: the tally's holder")?;
+            if holders.iter().any(|(y, _)| *y == h) {
+                return Err(LawError::Shape("split: a holder counted twice"));
+            }
+            holders.push((h, uint(n, "split: the tally's count")?));
+        }
+        out.push((stake, holders));
+    }
+    Ok(out)
 }
 
 // ---------------------------------------------------------------- decoding helpers
@@ -3243,7 +3402,12 @@ fn succession_plan(v: &Value) -> R<SuccessionPlan> {
 }
 
 fn abandonment(v: &Value) -> R<Abandonment> {
-    let f = map_fields(v, 3, "abandonment")?;
+    let f = map_fields(v, 4, "abandonment")?;
+    if field(&f, 2).is_some() {
+        return Err(LawError::Shape(
+            "abandonment key 2 (the period of absence, F140) is retired and never reused: terms carrying it are invalid (F172)",
+        ));
+    }
     let a = nonempty(
         field(&f, 0).ok_or(LawError::Shape("abandonment authority"))?,
         "abandonment authority",
@@ -3262,8 +3426,11 @@ fn abandonment(v: &Value) -> R<Abandonment> {
         .iter()
         .map(|x| uint(x, "abandonment outcome"))
         .collect::<R<_>>()?,
-        period: field(&f, 2)
-            .map(|x| uint(x, "abandonment period"))
+        proof: field(&f, 3)
+            .map(|x| {
+                let p = tuple(x, 2, "abandonment: an absence-proof cMIP and its parameters (key 3)")?;
+                Ok((hash(&p[0], "abandonment: the absence-proof cMIP (key 3)")?, p[1].clone()))
+            })
             .transpose()?,
     })
 }

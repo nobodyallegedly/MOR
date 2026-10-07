@@ -398,22 +398,62 @@ pub fn act_id(bytes: &[u8]) -> R<String> {
 struct DivideIn {
     total: u64,
     holders: Vec<(String, u64)>,
-    receipt: Option<String>,
+    /// Each holder's leftover units from this stake so far, as the split
+    /// service's previous split act for the stake carries them, in the
+    /// holders' order (F165, F171): from `Verifier.lawSplitTurns`. Absent:
+    /// a tie is reported, not settled.
+    #[serde(default)]
+    turns: Option<Vec<u64>>,
 }
 
-/// Law rule 15a (F150): `{ total, holders: [[hex, share]], receipt }`
+/// Law rule 15a (F150, F165): `{ total, holders: [[hex, share]], turns }`
 /// divided among the holders by their shares, each holder its exact share
 /// rounded down, leftover units one each to the largest fractional
-/// remainders, ties ordered by `tagged_hash("MOR/law/leftover", [ receipt,
-/// holder ])`, smallest first. The parts, in the holders' order; an error
-/// where a tie decides a unit and no receipt is given.
+/// remainders; holders with equal remainders take turns: the fewest
+/// leftover units so far (`turns`) first, then the smallest identity hash.
+/// The parts, in the holders' order; an error where a tie decides a unit
+/// and no turns are given.
 #[wasm_bindgen(js_name = lawDivideStake)]
 pub fn law_divide_stake(input: JsValue) -> R<Vec<f64>> {
     let i: DivideIn = from_js(input)?;
     let holders = i.holders.iter().map(|(h, n)| Ok((unhex(h)?, *n))).collect::<R<Vec<_>>>()?;
-    let receipt = i.receipt.map(|r| unhex(&r)).transpose()?;
-    let parts = law::divide_stake(i.total, &holders, receipt.as_ref()).map_err(|w| JsError::new(&w))?;
+    let ties = match &i.turns {
+        Some(t) => law::Ties::Turns(t),
+        None => law::Ties::Open,
+    };
+    let parts = law::divide_stake(i.total, &holders, ties).map_err(|w| JsError::new(&w))?;
     Ok(parts.into_iter().map(|n| n as f64).collect())
+}
+
+#[derive(Deserialize)]
+struct TallyIn {
+    /// What the split pays the stake.
+    pot: u64,
+    /// The stake's holders, each `[hex, share]`.
+    holders: Vec<(String, u64)>,
+    /// What the split pays each receiver on the stake, `[hex, amount]`.
+    paid: Vec<(String, u64)>,
+    /// The running count the previous split for the stake carries, `[hex,
+    /// count]`; empty for the first.
+    #[serde(default)]
+    before: Vec<(String, u64)>,
+}
+
+/// Law rule 15a (F165, F171): the running count a split act carries for a
+/// stake (field 4, PROPOSED format, to confirm with Nobody, allegedly):
+/// `{ pot, holders, paid, before }` gives `before` plus each holder's
+/// leftover units in `paid` (what it was paid above its exact share of
+/// `pot` rounded down), every holder named, as `[hex, count]` sorted by
+/// identity hash.
+#[wasm_bindgen(js_name = lawSplitTally)]
+pub fn law_split_tally(input: JsValue) -> R<JsValue> {
+    let i: TallyIn = from_js(input)?;
+    let pairs = |v: &[(String, u64)]| v.iter().map(|(h, n)| Ok((unhex(h)?, *n))).collect::<R<Vec<_>>>();
+    let holders = pairs(&i.holders)?;
+    let mut before = pairs(&i.before)?;
+    before.extend(holders.iter().map(|(h, _)| (*h, 0)));
+    let c = law::running_count(&before, &law::leftovers(i.pot, &holders, &pairs(&i.paid)?));
+    to_js(&c.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>())
 }
 
 /// The running summary of a sequence of act ids (Envelope, "Sequences").
@@ -505,6 +545,10 @@ struct DeclIn {
     /// taking effect there, which it places (Law draft 9, Flaw B18): the
     /// value is `[clone, [+ hash], [+ hash]]`.
     absence: Option<Vec<String>>,
+    /// Any other value, as its deterministic CBOR (Finance's clock, F176):
+    /// given instead of `value`.
+    #[serde(default)]
+    cbor: Option<serde_bytes::ByteBuf>,
 }
 
 fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaration>>> {
@@ -512,6 +556,16 @@ fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaratio
         .map(|v| {
             v.iter()
                 .map(|x| {
+                    if let Some(c) = &x.cbor {
+                        if x.value.is_some() || x.signatures.is_some() || x.absence.is_some() {
+                            return Err(JsError::new("a declaration's value is given once: as a hash or as CBOR"));
+                        }
+                        return Ok(identity::Declaration {
+                            spec: unhex(&x.spec)?,
+                            kind: x.kind,
+                            value: Some(cbor::decode(c).map_err(|e| JsError::new(&format!("the declaration's CBOR: {e}")))?),
+                        });
+                    }
                     Ok(identity::Declaration {
                         spec: unhex(&x.spec)?,
                         kind: x.kind,
@@ -1175,6 +1229,28 @@ impl Verifier {
         Ok(())
     }
 
+    /// The home quorum of a counting rotation (Finance rule 15, F180): the
+    /// receipts the home rule in effect before it requires, each passing
+    /// the receipt checks, per home operator, and how many operators are
+    /// needed. `kind` is "own" (it counts on its own signatures: anchor the
+    /// rotation itself), "homes" or "homeless"; null where it is not a
+    /// counting rotation. *The owner's client anchors these after a lock
+    /// change (Finance rule 15, F181).*
+    pub fn quorum(&self, identity: &str, rotation: &str) -> R<JsValue> {
+        #[derive(Serialize)]
+        struct Out {
+            kind: &'static str,
+            need: u64,
+            supports: Vec<Vec<String>>,
+        }
+        let q = self.inner.quorum(&unhex(identity)?, &unhex(rotation)?);
+        to_js(&q.map(|q| match q {
+            chain::Quorum::Own => Out { kind: "own", need: 1, supports: vec![vec![rotation.to_string()]] },
+            chain::Quorum::Homeless => Out { kind: "homeless", need: 0, supports: vec![] },
+            chain::Quorum::Homes { need, supports } => Out { kind: "homes", need, supports: supports.iter().map(|s| s.iter().map(hx).collect()).collect() },
+        }))
+    }
+
     /// Which act counts at each position of an identity chain.
     pub fn resolve(&self, identity: &str) -> R<JsValue> {
         let res = self.inner.resolve(&unhex(identity)?);
@@ -1408,14 +1484,13 @@ struct SpecsIn {
     /// them (F131, IT3): wrong receipts, counting for nothing.
     #[serde(default)]
     rail_invalid: Vec<String>,
-    /// Anchoring (Law rules 50 and 51; F136, F148): for each act the
-    /// anchoring cMIP the agreement names places on its time reference, the
-    /// point it places it at, as the client read the anchors (the formats
-    /// being open), in the unit of the abandonment clause's period. Whoever
-    /// anchored it. An act not listed is not anchored. Under a clause
-    /// naming a period, a declaration counts only on these anchors.
+    /// Absence proof (Law rule 51, F172): pairs `[declaration, act]`, an
+    /// abandonment declaration and the record or clone using it, that the
+    /// absence-proof cMIP its clause names (key 3) accepted, as the client
+    /// read that cMIP's answer. Under such a clause a declaration counts
+    /// only where listed; with none, it is the authority's judgment.
     #[serde(default)]
-    anchors: std::collections::BTreeMap<String, u64>,
+    absence_accepted: Vec<(String, String)>,
 }
 
 impl SpecsIn {
@@ -1450,8 +1525,8 @@ impl SpecsIn {
         for r in &self.rail_invalid {
             view.rail_invalid.insert(unhex(r)?);
         }
-        for (d, a) in &self.anchors {
-            view.anchors.insert(unhex(d)?, *a);
+        for (d, by) in &self.absence_accepted {
+            view.absence_accepted.insert((unhex(d)?, unhex(by)?));
         }
         Ok(view)
     }
@@ -1537,7 +1612,9 @@ struct AbandonmentOut {
     identity: Option<String>,
     threshold: Option<u64>,
     outcomes: Vec<u64>,
-    period: Option<u64>,
+    /// Key 3: the absence-proof cMIP standing between the authority's word
+    /// and the party's stake, if the clause names one (F172).
+    proof: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -1763,7 +1840,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 identity,
                 threshold,
                 outcomes: a.outcomes.clone(),
-                period: a.period,
+                proof: a.proof.as_ref().map(|(h, _)| hx(h)),
             }
         }),
         parent: t.parent.as_ref().map(hx),
@@ -2473,24 +2550,41 @@ impl Verifier {
     /// Payer-side splitting (F124 P2): what a paying wallet reading Law pays
     /// each holder for `amount` on the stake in `object` (hex, or null for
     /// the collective itself), or why it cannot. Leftovers by largest
-    /// remainder, ties ordered by `receipt` (hex: the receipt's hash, or,
-    /// for a split from a payer's claim with no receipt, the claim's; or
-    /// null: then a tie that decides a unit leaves the split undetermined;
-    /// Law rule 15a, F150, F162).
+    /// remainder; a tied unit is the payer's to decide, at most one per tie
+    /// (Law rule 15a, F165, F168): this wallet gives it to the tied holder
+    /// with the smallest identity hash, a choice, not a rule.
     #[wasm_bindgen(js_name = lawPayerSplit)]
-    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64, receipt: Option<String>) -> R<JsValue> {
+    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let o = match object {
             Some(x) => law::Who::Id(unhex(&x)?),
             None => law::Who::This,
         };
-        let receipt = receipt.map(|r| unhex(&r)).transpose()?;
-        let r = view.payer_split(&unhex(agreement)?, &o, amount, receipt.as_ref()).map_err(lerr)?;
+        let r = view.payer_split(&unhex(agreement)?, &o, amount).map_err(lerr)?;
         to_js(&match r {
             Ok(v) => PayerSplitOut { pays: v.iter().map(|(h, n)| (hx(h), *n)).collect(), why: None },
             Err(w) => PayerSplitOut { pays: vec![], why: Some(w) },
         })
+    }
+
+    /// Rule 15a's turns (F165, F171): for `stake` (its index) of
+    /// `agreement`'s version in force, the leftover units each holder has
+    /// received so far from `service`'s splits, as `previous` (the
+    /// service's latest split act for the stake, which its next split
+    /// cites) carries them in its running count; null `previous`: no split
+    /// yet, every count zero. In the order of `holders` (hex). Null where
+    /// `previous` is not held, not one of the service's splits for the
+    /// stake, or carries no count.
+    #[wasm_bindgen(js_name = lawSplitTurns)]
+    pub fn law_split_turns(&self, specs: JsValue, service: &str, agreement: &str, stake: u64, holders: Vec<String>, previous: Option<String>) -> R<Option<Vec<f64>>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let in_force = view.version_in_force(&unhex(agreement)?).map_err(lerr)?;
+        let holders = holders.iter().map(|h| Ok((unhex(h)?, 0))).collect::<R<Vec<_>>>()?;
+        let previous = previous.map(|p| unhex(&p)).transpose()?;
+        let t = view.turns(&unhex(service)?, &in_force, stake, &holders, previous.as_ref()).map_err(lerr)?;
+        Ok(t.map(|v| v.into_iter().map(|n| n as f64).collect()))
     }
 
     /// Whether an obligation binds its debtor: for a collective, once done
@@ -2510,6 +2604,22 @@ impl Verifier {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         view.paid(&unhex(id)?).map_err(lerr)
+    }
+
+    /// The payee's pointer acts its own acts hold, for what a payment
+    /// follows (an obligation, an agreement or an offer; Finance rule 14,
+    /// F145, F157, F163, F168): `{ pointers, complete }`, or null where
+    /// `fulfils` is none of these.
+    #[wasm_bindgen(js_name = lawPointerHolding)]
+    pub fn law_pointer_holding(&self, specs: JsValue, fulfils: &str, payee: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        #[derive(Serialize)]
+        struct Out {
+            pointers: Vec<String>,
+            complete: bool,
+        }
+        to_js(&view.pointer_holding(&unhex(fulfils)?, &unhex(payee)?).map(|h| Out { pointers: h.pointers.iter().map(hx).collect(), complete: h.complete }))
     }
 
     /// Who owes an obligation of a collective a fork closed (N13): the
@@ -2663,6 +2773,25 @@ impl Verifier {
             in_force: hx(&e.in_force),
             unevidenced: e.unevidenced.iter().map(hx).collect(),
             unplanned: e.unplanned.iter().map(hx).collect(),
+            turns_unknown: e.turns_unknown.clone(),
+            breaks: e
+                .breaks
+                .iter()
+                .map(|b| {
+                    let pairs = |v: &[(mor_core::hash::Hash, u64)]| v.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>();
+                    match b {
+                        law::ChainBreak::Reset { stake, with } => BreakOut { stake: *stake, kind: "reset".into(), with: with.iter().map(hx).collect(), ..Default::default() },
+                        law::ChainBreak::Fork { stake, previous, with } => {
+                            BreakOut { stake: *stake, kind: "fork".into(), previous: Some(hx(previous)), with: with.iter().map(hx).collect(), ..Default::default() }
+                        }
+                        law::ChainBreak::Count { stake, carried, expected } => BreakOut { stake: *stake, kind: "count".into(), carried: pairs(carried), expected: pairs(expected), ..Default::default() },
+                        law::ChainBreak::NoCount { stake } => BreakOut { stake: *stake, kind: "no-count".into(), ..Default::default() },
+                    }
+                })
+                .collect(),
+            count_unknown: e.count_unknown.clone(),
+            cites: e.cites.iter().map(hx).collect(),
+            tally: e.split.tally.iter().flatten().map(|(st, v)| (*st, v.iter().map(|(h, n)| (hx(h), *n)).collect())).collect(),
         })
     }
 
@@ -2814,6 +2943,33 @@ struct SplitOut {
     /// Receivers of fee and named-receiver payouts, which only the split
     /// plan (format open) could justify.
     unplanned: Vec<String>,
+    /// Stakes whose tied leftover units cannot be checked: the turns cannot
+    /// be read from the previous split act for the stake (F165, F171).
+    turns_unknown: Vec<u64>,
+    /// Breaks of the service's tally chain (rule 15a, rule 46b, F171): any
+    /// breaks the plan.
+    breaks: Vec<BreakOut>,
+    /// Stakes whose running count cannot be checked from the acts held.
+    count_unknown: Vec<u64>,
+    /// The acts the split's envelope cites.
+    cites: Vec<String>,
+    /// The running count it carries, per stake: `[stake, [[hex, count]]]`
+    /// (field 4, PROPOSED format).
+    tally: Vec<(u64, Vec<(String, u64)>)>,
+}
+
+/// A break of a split service's tally chain (F171): `kind` "reset" (it and
+/// `with` cite no previous split), "fork" (it and `with` cite `previous`),
+/// "count" (it carries `carried`, the text gives `expected`), "no-count".
+#[derive(Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct BreakOut {
+    stake: u64,
+    kind: String,
+    with: Vec<String>,
+    previous: Option<String>,
+    carried: Vec<(String, u64)>,
+    expected: Vec<(String, u64)>,
 }
 
 #[derive(Serialize)]

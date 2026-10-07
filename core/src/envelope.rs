@@ -27,6 +27,8 @@ use crate::sig::{self, SchnorrKey, Verdict};
 use crate::xwing::{self, XWingError};
 use std::fmt;
 
+pub mod anchoring;
+
 /// The types this MIP defines (Envelope, "Types defined by this MIP").
 pub mod types {
     pub const PUBLICATION: u64 = 0;

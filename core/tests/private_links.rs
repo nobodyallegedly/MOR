@@ -249,3 +249,43 @@ fn a_links_ending_applies_to_every_act_holding_the_termination() {
     assert_eq!(w.v.status(&fake), Status::Valid);
     assert_eq!(w.v.link(&claim, &fake), LinkSeen::Linked { confirmation });
 }
+
+/// F168 (B4): a scoped key never signs an Identity act (rule 1a), so a
+/// private link act signed by one, a key whose binding is an act of a
+/// higher MIP such as a grant, is invalid. Before, it showed as "scoped",
+/// with no home requirement at all.
+#[test]
+fn a_private_link_signed_by_a_scoped_key_is_invalid() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let ben = w.genesis("ben", vec![own_home()], None, None);
+    // An act of a higher MIP, standing for the grant that installs a key.
+    let g = w.everyday_act(&mut ana, law_spec(), 9, vec![], None, None);
+    let grant = w.add(&g);
+    let mut scoped = ana.clone();
+    scoped.binding = grant;
+    scoped.seq.clear();
+    let public = w.everyday_act(&mut scoped, finance_spec(), 2, vec![], None, None);
+    let public = w.add(&public);
+    assert_eq!(w.v.status(&public), Status::Scoped, "a scoped key signs a higher MIP's act");
+    let claim = w.private_act(&mut scoped, identity_spec(), types::LINK_CLAIM, claim_payload(&ben.id), None, vec![ben.id]);
+    w.v.found_at_home(claim, ana.id);
+    assert_eq!(w.v.status(&claim), Status::Invalid);
+}
+
+/// F168 (B5): a private link act a rotation voids is void whether or not
+/// it was fetched: the rotation is judged first. Before, a voided link
+/// nobody fetched showed as unknown, the home check running first.
+#[test]
+fn a_private_link_a_rotation_voids_is_void_whether_or_not_fetched() {
+    let mut w = World::new();
+    let ana = w.genesis("ana", vec![own_home()], None, None);
+    let ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut thief = ana.clone();
+    let claim = w.private_act(&mut thief, identity_spec(), types::LINK_CLAIM, claim_payload(&ben.id), None, vec![ben.id]);
+    assert_eq!(w.v.status(&claim), Status::Unknown, "nobody fetched it");
+    let (_, _) = w.rotate(&ana, Rot { disowned: Some(vec![claim]), ..Default::default() });
+    assert_eq!(w.v.status(&claim), Status::Void, "the rotation is judged first");
+    w.v.found_at_home(claim, ana.id);
+    assert_eq!(w.v.status(&claim), Status::Void);
+}

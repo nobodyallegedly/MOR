@@ -38,6 +38,11 @@ use crate::hash::Hash;
 use crate::identity::{KeptTip, Payload, Rotation};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
+
+/// A reference absence-proof module, experimental, outside the core path
+/// (F172): the time checks the core used before, for a caller to compute
+/// [`LawView::absence_accepted`] with.
+pub mod reference_absence_proof;
 use std::rc::Rc;
 
 /// Read Law from what a verifier holds.
@@ -75,25 +80,25 @@ pub struct LawView<'a> {
     /// receipt or claim not listed has no rail answer, and pays nothing
     /// toward a debt ([`Self::paid_toward`]).
     pub rail_valid: BTreeMap<Hash, crate::finance::PaidAt>,
-    /// Anchoring (rules 50 and 51; F136, F148): for each act the anchoring
-    /// cMIP the agreement names places on the agreement's time reference,
-    /// the point it places it at, as the caller states it, the anchoring
-    /// and time-reference formats being open; counted in the unit the
-    /// abandonment clause's period (key 2) is written in (reading). Whoever
-    /// anchored the act, it is placed (anyone may anchor anyone's act,
-    /// F148). An act not listed is not anchored, or the anchors cannot
-    /// place it. Consulted only where an abandonment clause names a period
-    /// ([`Self::declaration`]).
-    pub anchors: BTreeMap<Hash, u64>,
-    /// Good faith after a rotation (Finance rule 15, F146), for a payer's
-    /// claim and the rotation that invalidated the pointer its payment
-    /// was paid to, keyed `(claim, rotation)`: where both are anchored and
-    /// the anchors place them, whether the claim is anchored before the
-    /// rotation. What the anchoring cMIP answers, as the caller states it,
-    /// the anchoring format being open, as for `anchors`. A pair
-    /// not listed is not both anchored, or the anchors cannot place it:
-    /// the claim's history decides (F139).
-    pub anchored_before: BTreeMap<(Hash, Hash), bool>,
+    /// Absence proof (rule 51, task "Absence proof"; F172, F178 item 12):
+    /// for an abandonment declaration under a clause naming an
+    /// absence-proof cMIP (key 3), and the act that uses it (the record
+    /// registering it, or the clone put in force under it: a deal's clone,
+    /// or the clone a recovery rotation declares), keyed `(declaration,
+    /// act)`: that cMIP accepted it, judging the acts that act's history
+    /// holds. The cMIP's answer, a fact the caller states, like
+    /// `rail_valid`: the core reads no cMIP. A pair not listed was refused,
+    /// or answered unknown, or not judged: there the declaration does not
+    /// count ("a declaration it refuses or cannot judge does not count").
+    /// Consulted only where the clause names such a cMIP; with none, the
+    /// declaration is the authority's judgment, a stated cost.
+    pub absence_accepted: BTreeSet<(Hash, Hash)>,
+    /// The anchors this verifier checked (Envelope, task "Anchoring",
+    /// F173), each act judged by its earliest anchor on each reference:
+    /// with an anchoring cMIP it carries (`Anchors::add_proof`), or as the
+    /// caller states them. Finance rule 15 reads them on the clock the
+    /// payee declared (F169, F176 to F181).
+    pub anchored: crate::envelope::anchoring::Anchors,
     /// The rail Modules this verifier read, in their specifications, as
     /// binding no payee or purpose (Finance rule 10, F151): their proof
     /// commits to neither the payee nor what the payment fulfils. Every
@@ -391,8 +396,8 @@ impl<'a> LawView<'a> {
             push_rails: BTreeSet::new(),
             rail_invalid: BTreeSet::new(),
             rail_valid: BTreeMap::new(),
-            anchors: BTreeMap::new(),
-            anchored_before: BTreeMap::new(),
+            absence_accepted: BTreeSet::new(),
+            anchored: Default::default(),
             unbound_rails: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
@@ -438,8 +443,8 @@ impl<'a> LawView<'a> {
             push_rails: self.push_rails.clone(),
             rail_invalid: self.rail_invalid.clone(),
             rail_valid: self.rail_valid.clone(),
-            anchors: self.anchors.clone(),
-            anchored_before: self.anchored_before.clone(),
+            absence_accepted: self.absence_accepted.clone(),
+            anchored: self.anchored.clone(),
             unbound_rails: self.unbound_rails.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
@@ -885,7 +890,7 @@ impl<'a> LawView<'a> {
             let mut gone = false;
             // B19: the authority is one identity, which signs alone; terms
             // naming a threshold of the parties are invalid in a deal.
-            for (x, _, _, _) in self.declarations_against(p, up, &parent.parties)? {
+            for (x, _, _, _) in self.declarations_against(p, up, &parent.parties, id, None)? {
                 let placed = self
                     .valid_sigs(id, &[*p])
                     .iter()
@@ -1015,7 +1020,7 @@ impl<'a> LawView<'a> {
                             "a rotation declares only a clone that changes the constitutional tier (rule 37, B5)".into(),
                         ));
                     }
-                    if let Some(w) = self.recovery_signatures(&at.agreement, &d.agreement, d.absence.as_deref())? {
+                    if let Some(w) = self.recovery_signatures(col, j, &at.agreement, &d.agreement, d.absence.as_deref())? {
                         return Ok(Err(w));
                     }
                     let own = self.recovery_departures(col, j, &at.agreement, &d.agreement)?;
@@ -1705,7 +1710,7 @@ impl<'a> LawView<'a> {
         // steppings down in effect, other declarations not.
         let others = e.registers.clone();
         for (x, p) in declarations {
-            let (d, clause) = match self.declaration(&x)? {
+            let (d, clause) = match self.declaration_used(&x, &h.id, Some((col, Line::Record(h), &at)))? {
                 Ok(v) => v,
                 Err(w) => return no(e, &format!("it registers a declaration that fails: {w}")),
             };
@@ -2123,11 +2128,23 @@ impl<'a> LawView<'a> {
     /// from it, that the party signed; every outcome is one that clause
     /// allows; and its signer can be that clause's authority: the identity
     /// it names, or one of the other parties, whose number is counted where
-    /// the declaration takes effect ([`Self::authority_at`]); and, where
-    /// the clause names a period of absence, the anchors' checks (F136,
-    /// F148: [`Self::absence_by_anchors`]). Returns the declaration and the
-    /// clause, or why it fails.
+    /// the declaration takes effect ([`Self::authority_at`]). Nothing else:
+    /// otherwise the declaration is the authority's judgment, a stated cost
+    /// the party accepted by signing the clause, and a contest shows it
+    /// (rules 51, 52; F172). No time is read here: proof of absence by time
+    /// is an absence-proof cMIP's, where the clause names one, judged where
+    /// an act uses the declaration ([`Self::declaration_used`]). Returns the
+    /// declaration and the clause, or why it fails. Every signature the
+    /// party made counts here; where an act of a collective uses the
+    /// declaration, only those placed at or before its line do.
     pub fn declaration(&self, id: &Hash) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
+        self.declaration_as(id, &|_| Ok(true))
+    }
+
+    /// [`Self::declaration`], where a signature act `s` of the declared
+    /// party on a version later than the one field 1 names makes field 1
+    /// no longer the last version it signed only where `counts(s)`.
+    fn declaration_as(&self, id: &Hash, counts: &dyn Fn(&Hash) -> R<bool>) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let h = self.held(id)?;
         if !self.is_law(h, types::DECLARATION) {
             return Ok(Err("not an abandonment declaration (type 13)".into()));
@@ -2143,17 +2160,47 @@ impl<'a> LawView<'a> {
         if !lineage[0].1.parties.contains(&d.party) {
             return Ok(Err("the party declared absent is not a party of the agreement it names".into()));
         }
-        let Some((version, vt)) = lineage
-            .iter()
-            .find(|(v, _)| !self.signers(v, &[d.party]).is_empty())
-        else {
-            return Ok(Err("the party signed no version of the agreement it names".into()));
+        // Field 1 is the last version, back from field 0, that the party
+        // signed (rule 51), judged where the declaration is used (F172): a
+        // signature on a later version counts against it only where
+        // `counts` places it there, so a later act of the party never
+        // undoes what was put in force.
+        let sigs_on = |v: &Hash| -> Vec<Hash> {
+            self.v
+                .signed_by(&d.party)
+                .filter(|s| {
+                    self.is_law(s, types::SIGNATURE) && decode_signature(&s.inside).ok() == Some(*v) && self.valid(&s.id)
+                })
+                .map(|s| s.id)
+                .collect()
         };
-        if version != &d.clause {
-            return Ok(Err(
-                "the clause it applies is not the last version of the agreement the party signed (rule 46a)".into(),
-            ));
+        let mut found = None;
+        let mut signed_any = false;
+        for (v, vt) in &lineage {
+            let sigs = sigs_on(v);
+            if sigs.is_empty() {
+                continue;
+            }
+            signed_any = true;
+            if v == &d.clause {
+                found = Some(vt);
+                break;
+            }
+            for s in &sigs {
+                if counts(s)? {
+                    return Ok(Err(
+                        "the clause it applies is not the last version of the agreement the party signed (rule 46a)".into(),
+                    ));
+                }
+            }
         }
+        let Some(vt) = found else {
+            return Ok(Err(if signed_any {
+                "the clause it applies is not the last version of the agreement the party signed (rule 46a)".into()
+            } else {
+                "the party signed no version of the agreement it names".into()
+            }));
+        };
         if vt.abandonment.is_none() {
             return Ok(Err("the version the party signed carries no abandonment clause".into()));
         }
@@ -2175,96 +2222,41 @@ impl<'a> LawView<'a> {
         if !ok {
             return Ok(Err("it is not signed by the authority the clause names (rule 51)".into()));
         }
-        // F136, F148: where the clause names a period of absence, judged by
-        // anchors alone ([`Self::absence_by_anchors`]). With no period, the
-        // declaration is the authority's judgment, a stated cost.
-        if let Some(period) = clause.period {
-            let versions: Vec<Hash> = lineage.iter().map(|(v, _)| *v).collect();
-            if let Err(w) = self.absence_by_anchors(id, &d, period, &versions, &lineage[0].1) {
-                return Ok(Err(w));
-            }
-        }
         Ok(Ok((d, clause)))
     }
 
-    /// Rule 51's checks under a clause naming a period of absence (F136,
-    /// F148), on the anchors the caller states ([`Self::anchors`]): the
-    /// declaration is anchored, at a point D; no act of the declared party
-    /// on the agreement is anchored within the period before it, from D
-    /// less the period to D; and an acknowledgement of it (Envelope,
-    /// `acks`) by another party of the agreement or by one of its keepers'
-    /// operators, never by the declaration's signer (for a threshold, its
-    /// signers) nor the declared party (F158), is anchored within one
-    /// further period, from D to D plus the period, with no act of the
-    /// declared party on the agreement anchored between the two. Only acts
-    /// on the agreement count as presence (rule 50, F162): acts naming, in
-    /// `objects`, any version of it, earlier or later by clones, as chain
-    /// or predecessor, signature acts signing one, and, in a collective,
-    /// the member's acts on the collective's chain; activity elsewhere does
-    /// not. An act of the party that nobody anchored is no presence (a
-    /// stated cost, rule 50). Bounds are inclusive (F162): an act anchored
-    /// at the declaration's own point, or at its acknowledgement's,
-    /// protects the party.
-    fn absence_by_anchors(&self, decl: &Hash, d: &AbsenceDeclaration, period: u64, versions: &[Hash], terms: &Terms) -> Result<(), String> {
-        let Some(&at) = self.anchors.get(decl) else {
-            return Err("the clause names a period of absence, and the declaration is not anchored on the agreement's time reference, or the anchors cannot place it: it does not count (rule 51, F136); until the anchoring cMIP and the time-reference format exist, the anchors are the caller's statement".into());
+    /// A declaration as the act `by` uses it (rule 51, F172): the record
+    /// registering it, or the clone put in force under it (a deal's clone,
+    /// or the clone a recovery rotation declares). Its own checks
+    /// ([`Self::declaration`]), and, where the clause in force names an
+    /// absence-proof cMIP (key 3), that cMIP's acceptance for that act, as
+    /// the caller states it ([`Self::absence_accepted`]): a declaration it
+    /// refused, or could not judge, does not count there. Judged at that
+    /// act and nowhere else: the cMIP judges the acts that act's history
+    /// holds (F178 item 12), so a later act of the party, or a later
+    /// contest, never undoes what was put in force there. In a collective,
+    /// `at` is the line where it takes effect, with the agreement in force
+    /// there: the party's signature on a later version than field 1 counts
+    /// against field 1 only where the collective placed it at or before
+    /// that line ("Made before, made after", 2), never by its making.
+    fn declaration_used(&self, id: &Hash, by: &Hash, at: Option<(&Col, Line<'a>, &Hash)>) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
+        let got = match at {
+            None => self.declaration(id)?,
+            Some((col, l, ag)) => self.declaration_as(id, &|s| {
+                let h = self.held(s)?;
+                self.placed_at(col, h, l, ag)
+            })?,
         };
-        // F162 (5): any version of the agreement, earlier or later by
-        // clones; in a collective, a member's acts on the collective's
-        // chain.
-        let mut versions: Vec<Hash> = versions.to_vec();
-        loop {
-            let later: Vec<Hash> = self
-                .v
-                .held_acts()
-                .filter(|h| self.is_law(h, types::TERMS) && !versions.contains(&h.id))
-                .filter(|h| self.terms(&h.id).ok().and_then(|t| t.parent).is_some_and(|p| versions.contains(&p)))
-                .map(|h| h.id)
-                .collect();
-            if later.is_empty() {
-                break;
-            }
-            versions.extend(later);
-        }
-        let collective = if terms.is_collective() { versions.first().and_then(|a| self.collective_of(a).ok().flatten()) } else { None };
-        let on_agreement = |h: &Held| {
-            h.inside.objects.iter().flatten().any(|o| {
-                versions.contains(&o.chain) || versions.contains(&o.predecessor) || collective.as_ref() == Some(&o.chain)
-            }) || (self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).is_ok_and(|x| versions.contains(&x)))
+        let (d, clause) = match got {
+            Ok(v) => v,
+            Err(w) => return Ok(Err(w)),
         };
-        let presence: Vec<u64> = self
-            .v
-            .signed_by(&d.party)
-            .filter(|h| h.id != *decl && self.valid(&h.id) && on_agreement(h))
-            .filter_map(|h| self.anchors.get(&h.id).copied())
-            .collect();
-        if presence.iter().any(|p| *p >= at.saturating_sub(period) && *p <= at) {
-            return Err("the clause names a period of absence, and an act of the party on the agreement is anchored on its time reference within that period before the declaration (rule 51, F136)".into());
+        if clause.proof.is_some() && !self.absence_accepted.contains(&(*id, *by)) {
+            return Ok(Err(
+                "the clause names an absence-proof cMIP, and it has not accepted the declaration for this act: it refused it, or could not judge it, so it does not count here (rule 51, task \"Absence proof\", F172)".into(),
+            ));
         }
-        let keepers: Vec<Hash> = terms.keepers.iter().flat_map(|k| k.operators.iter().copied()).collect();
-        // F158: never the declaration's signer, nor, for a threshold, its
-        // signers (the other parties whose signature acts name it).
-        let mut signers: Vec<Hash> = self.v.get(decl).and_then(|h| h.act.outside.signer).into_iter().collect();
-        signers.extend(self.signers(decl, &terms.parties));
-        let ack = self
-            .v
-            .acknowledgements(decl)
-            .filter(|a| self.valid(&a.id))
-            .filter(|a| {
-                a.act.outside.signer.is_some_and(|s| {
-                    s != d.party && !signers.contains(&s) && (terms.parties.contains(&s) || keepers.contains(&s))
-                })
-            })
-            .filter_map(|a| self.anchors.get(&a.id).copied())
-            .filter(|p| *p >= at && *p <= at.saturating_add(period))
-            .min();
-        let Some(ack) = ack else {
-            return Err("no acknowledgement of the declaration by another party or by the keeper, other than its signers and the declared party, is anchored within one further period after its own anchor: it does not count, so a declaration cannot be kept and used later (rule 51, F148, F158)".into());
-        };
-        if presence.iter().any(|p| *p >= at && *p <= ack) {
-            return Err("an act of the declared party on the agreement is anchored between the declaration and its acknowledgement: it does not count (rule 51, F148)".into());
-        }
-        Ok(())
+        Ok(Ok((d, clause)))
     }
 
     /// A threshold authority, counted where the declaration takes effect
@@ -2313,19 +2305,7 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let h = self.held(&s)?;
-            let mut placed = false;
-            for (p, is_line) in self.placements(col, h) {
-                placed |= match (p, l) {
-                    (Line::Record(a), Line::Record(b)) if a.id == b.id => true,
-                    (Line::Rotation(i), Line::Rotation(j)) if i == j => true,
-                    (Line::Record(a), _) if !is_line => self.keepers_place(col, a, l, Some(*ag))?,
-                    _ => self.line_before(col, p, l),
-                };
-                if placed {
-                    break;
-                }
-            }
-            if placed {
+            if self.placed_at(col, h, l, ag)? {
                 signed.push(who);
             }
         }
@@ -2338,10 +2318,31 @@ impl<'a> LawView<'a> {
         )))
     }
 
+    /// Whether the collective placed a member's signature act `h` at line
+    /// `l` or before it ("Made before, made after", 2): at that same line,
+    /// at an earlier one, or by an act of its own the keepers of `ag`, the
+    /// agreement in force there, recorded before it.
+    fn placed_at(&self, col: &Col, h: &Held, l: Line<'a>, ag: &Hash) -> R<bool> {
+        for (p, is_line) in self.placements(col, h) {
+            let placed = match (p, l) {
+                (Line::Record(a), Line::Record(b)) if a.id == b.id => true,
+                (Line::Rotation(i), Line::Rotation(j)) if i == j => true,
+                (Line::Record(a), _) if !is_line => self.keepers_place(col, a, l, Some(*ag))?,
+                _ => self.line_before(col, p, l),
+            };
+            if placed {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
     /// The declarations against `party` that its possible authorities
     /// signed, under the clauses of `lineage`: the identities they name, or
-    /// the other parties of `parties`. Checked on their own only.
-    fn declarations_against(&self, party: &Hash, lineage: &[(Hash, Terms)], parties: &[Hash]) -> R<Vec<(Hash, AbsenceDeclaration, Abandonment, Hash)>> {
+    /// the other parties of `parties`. Checked on their own, and as the act
+    /// `by` uses them (the clone put in force under them: absence proof,
+    /// [`Self::declaration_used`]).
+    fn declarations_against(&self, party: &Hash, lineage: &[(Hash, Terms)], parties: &[Hash], by: &Hash, at: Option<(&Col, Line<'a>, &Hash)>) -> R<Vec<(Hash, AbsenceDeclaration, Abandonment, Hash)>> {
         let mut who: Vec<Hash> = vec![];
         for (_, t) in lineage {
             match t.abandonment.as_ref().map(|a| &a.authority) {
@@ -2358,7 +2359,7 @@ impl<'a> LawView<'a> {
                 if !self.is_law(h, types::DECLARATION) || !seen.insert(h.id) {
                     continue;
                 }
-                if let Ok((d, c)) = self.declaration(&h.id)? {
+                if let Ok((d, c)) = self.declaration_used(&h.id, by, at)? {
                     if &d.party == party
                         && d.outcomes.contains(&outcomes::VOICE_REMOVED)
                         && ids.contains(&d.agreement)
@@ -2387,7 +2388,7 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let mut open = None;
-            for (x, d, clause, signer) in self.declarations_against(p, &lineage, &t.parties)? {
+            for (x, d, clause, signer) in self.declarations_against(p, &lineage, &t.parties, k, Some((col, Line::Rotation(j), at)))? {
                 match self.authority_at(col, Point::Line(Line::Rotation(j)), at, &clause, &d, &x, &signer, &[]) {
                     Ok(Ok(())) => {
                         out.push(Departure {
@@ -2416,7 +2417,7 @@ impl<'a> LawView<'a> {
     /// the collective's signing key cannot be produced without under the
     /// agreement in force `at` (C7, B16). Naming any other act puts nothing
     /// in force, as for the clone's own signatures (Flaw M).
-    fn recovery_signatures(&self, at: &Hash, k: &Hash, absence: Option<&[Hash]>) -> R<Option<String>> {
+    fn recovery_signatures(&self, col: &Col, j: usize, at: &Hash, k: &Hash, absence: Option<&[Hash]>) -> R<Option<String>> {
         let Some(absence) = absence else { return Ok(None) };
         let t = self.terms(at)?;
         let kt = self.terms(k)?;
@@ -2437,7 +2438,7 @@ impl<'a> LawView<'a> {
                 None
             };
             let ok = match on {
-                Some(x) => match self.declaration(&x) {
+                Some(x) => match self.declaration_used(&x, k, Some((col, Line::Rotation(j), at))) {
                     Ok(Ok((d, _))) => removed.contains(&d.party),
                     _ => false,
                 },
@@ -4142,7 +4143,9 @@ pub struct Mismatch {
     /// Who was paid, or should have been.
     pub holder: Hash,
     pub paid: u64,
-    /// Its exact share, rounded down.
+    /// What rule 15a gives it (F150, F165): its share rounded down, with
+    /// its leftover unit where it has one; where a tied unit is the payer's
+    /// to decide or unknown, its share rounded down.
     pub due: u64,
 }
 
@@ -4182,6 +4185,73 @@ pub struct SplitEval {
     /// (terms field 8), so the core cannot check them: shown, never passed
     /// as right.
     pub unplanned: Vec<Hash>,
+    /// Stakes whose tied leftover units cannot be checked (F165): the turns
+    /// cannot be read from the previous split act for the stake (F171),
+    /// so who should have had a tied unit is unknown; the rest of the
+    /// payment is checked all the same, each tied holder within one unit.
+    pub turns_unknown: Vec<u64>,
+    /// Where the split's place in the service's tally chain breaks the plan
+    /// (rule 15a, rule 46b, F171): a reset, a fork, a running count that
+    /// is not the previous one plus this split's leftover units, or no
+    /// count carried. Any entry breaks the plan, as a mismatched payout
+    /// does.
+    pub breaks: Vec<ChainBreak>,
+    /// Stakes whose running count cannot be checked (F171): the act the
+    /// split cites as its previous one is not held, two are cited, or the
+    /// previous carries no count; shown as unknown, never as a deviation.
+    pub count_unknown: Vec<u64>,
+    /// The acts the split's envelope cites (`objects`, `acks`, `refs`):
+    /// among them, the service's previous split act for each stake.
+    pub cites: Vec<Hash>,
+}
+
+/// A break in a split service's tally chain for a stake (rule 15a, rule
+/// 46b, F171). The service's split acts for a stake form one chain, each
+/// citing the previous one and carrying the running count of leftover
+/// units.
+///
+/// *What "the latest" is, a verifier can tell only from the acts it holds:
+/// a split citing an earlier one than the latest shares its previous with
+/// the split that does cite it (a fork), and a split citing none shares
+/// the start with the first (a reset). The acts carry no order a verifier
+/// could trust between two splits the service signed, so each split of the
+/// pair is shown, naming the other: the plan is broken either way. The
+/// holder's client, which keeps the chain as the splits arrive, names the
+/// one that came second.*
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ChainBreak {
+    /// The split cites no previous split for the stake, and so does each
+    /// of `with`: two splits start the count, one of them resetting it.
+    Reset { stake: u64, with: Vec<Hash> },
+    /// The split cites `previous` for the stake, and so does each of
+    /// `with`: the chain forks.
+    Fork { stake: u64, previous: Hash, with: Vec<Hash> },
+    /// The running count carried is not the previous split's plus this
+    /// split's leftover units: `carried`, `expected` (a holder not named
+    /// counts zero).
+    Count { stake: u64, carried: Vec<(Hash, u64)>, expected: Vec<(Hash, u64)> },
+    /// The split carries no running count for a stake it pays.
+    NoCount { stake: u64 },
+}
+
+impl ChainBreak {
+    pub fn stake(&self) -> u64 {
+        match self {
+            ChainBreak::Reset { stake, .. } | ChainBreak::Fork { stake, .. } | ChainBreak::Count { stake, .. } | ChainBreak::NoCount { stake } => *stake,
+        }
+    }
+}
+
+/// Where a split sits in its service's tally chain for a stake (F171).
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Prior {
+    /// It cites no previous split for the stake, and every act it cites is
+    /// held: the first, by its own word.
+    First,
+    /// It cites this one, held.
+    After(Hash),
+    /// It cites an act not held, or two previous splits for the stake.
+    Unknown,
 }
 
 /// What a split service owes (rule 29; audit, October 2026, gap 3): every
@@ -5334,19 +5404,7 @@ impl<'a> LawView<'a> {
 
     /// Whether a payment its rail shows paid at `at`, with rail proof
     /// `proof`, can count for the obligation `ob` (`o`), by the creditor's
-    /// rules: Finance rule 12a (the creditor's own pointer, in force for
-    /// that payment by rules 12, 14 and 14a; the rail Module and the vault
-    /// entry are the rail answer's), rule 12 (a forked pointer chain counts
-    /// only up to the fork), rule 14 with F145 and F155 (a payment to the
-    /// flow counts only where the version the creditor's own act holds,
-    /// [`Self::pointer_holding`], is that version or a later one; the
-    /// version the obligation names is informative only), rule 14a (paid to
-    /// the flow, only within the vault's limit for its unit) and rule 15 (a
-    /// payment to a pointer a later rotation invalidated counts as made in
-    /// good faith, judged as the chain stood before that rotation, where
-    /// the payer's claims meet the proviso: [`Self::payers_claims`] and
-    /// [`crate::finance::good_faith`]). A payment to the vault counts
-    /// (rule 14).
+    /// rules ([`Self::payment_counts`]).
     fn paid_where_it_counts(
         &self,
         at: &crate::finance::PaidAt,
@@ -5355,35 +5413,155 @@ impl<'a> LawView<'a> {
         ob: &Hash,
         o: &crate::finance::Obligation,
     ) -> bool {
-        use crate::finance::{self as fin, PaidAt};
-        let PaidAt::Flow(p) = at else { return true };
-        let creditor = &o.creditor;
-        let valid = self.pointers_held(creditor).unwrap_or_default();
-        let (chain, rotation) = if valid.iter().any(|(i, _)| i == p) {
-            (valid, None)
-        } else {
-            match self.voided_pointer(p, creditor) {
-                Some(r) => (self.pointers_before(creditor, &r), Some(r)),
-                None => return false,
+        self.payment_counts(&o.creditor, at, amount, proof, ob)
+    }
+
+    /// Finance rules 12, 12a, 14, 14a and 15 for one payment to `payee`,
+    /// paid at `at` (the rail's answer), with rail proof `proof`, toward
+    /// `fulfils` (an obligation owed to the payee, an agreement, an offer,
+    /// or a payee pointer of its for a tip).
+    ///
+    /// - **It follows the chain as published** at a link of the payee's
+    ///   chain ([`Self::follows_at`]): paid to the flow, the pointer stood
+    ///   there, on the unbroken chain (rule 12), the version the payee's own
+    ///   acts as they stood there select is that one or later (rule 14), and
+    ///   the vault in force there lets it go to the flow (rule 14a); paid to
+    ///   the vault, the entry is still in the vault there.
+    /// - **A lock change** (F178, F181) is a rotation after which a payment
+    ///   that followed the chain as published immediately before it no
+    ///   longer follows it. Where none affects it, the payment counts if it
+    ///   follows the chain now.
+    /// - **Rule 15** ([`crate::finance::rule_15`]): where lock changes
+    ///   affect it, it counts where each that is anchored (its home quorum
+    ///   anchored on the clock declared before it, [`Self::anchored`]) is
+    ///   answered by the payee's own receipt, valid now, or by a payer's
+    ///   claim anchored by its point. An unanchored one leaves it counting:
+    ///   the owner bears.
+    ///
+    /// The version a payment counting under rule 15 was paid under is
+    /// selected from the payee's acts as they stood before the lock change,
+    /// those it voided included (F178); now, an act a rotation did not keep
+    /// holds no pointer and selects no version (rule 15, F178), and its
+    /// receipt is no receipt.
+    pub fn payment_counts(&self, payee: &Hash, at: &crate::finance::PaidAt, amount: &crate::finance::Amount, proof: &[u8], fulfils: &Hash) -> bool {
+        use crate::finance as fin;
+        let res = self.v.resolve(payee);
+        // F153: not past a link counting only through own attempts.
+        let n = res.links.iter().take_while(|l| !self.refuses(&l.act)).count();
+        if n == 0 {
+            return false;
+        }
+        let follows: Vec<bool> = (0..n).map(|j| self.follows_at(payee, at, amount, fulfils, j)).collect();
+        let changes: Vec<usize> = (1..n).filter(|&k| follows[k - 1] && !follows[k]).collect();
+        if changes.is_empty() {
+            return follows[n - 1];
+        }
+        let changes: Vec<fin::LockChange> = changes
+            .into_iter()
+            .map(|k| fin::LockChange {
+                rotation: res.links[k].act,
+                clock: self.clock_at(payee, k - 1),
+                quorum: self.v.quorum(payee, &res.links[k].act).unwrap_or(crate::chain::Quorum::Homeless),
+            })
+            .collect();
+        let receipt = self.receipts_for_proof(proof).iter().any(|(_, r)| &r.payee == payee);
+        fin::rule_15(&changes, receipt, &self.payers_claims(proof), &self.anchored)
+    }
+
+    /// The lock changes affecting a payment, by rotation (Finance rule 15,
+    /// F181): each rotation of the payee's chain after which the payment
+    /// that followed the chain as published immediately before it no longer
+    /// follows it. For a client showing why a payment needs an anchor.
+    pub fn lock_changes(&self, payee: &Hash, at: &crate::finance::PaidAt, amount: &crate::finance::Amount, fulfils: &Hash) -> Vec<Hash> {
+        let res = self.v.resolve(payee);
+        let n = res.links.iter().take_while(|l| !self.refuses(&l.act)).count();
+        let follows: Vec<bool> = (0..n).map(|j| self.follows_at(payee, at, amount, fulfils, j)).collect();
+        (1..n).filter(|&k| follows[k - 1] && !follows[k]).map(|k| res.links[k].act).collect()
+    }
+
+    /// Whether a payment follows the payee's chain as published at its link
+    /// `j` (Finance rule 15: "the chain as published"): rules 12, 14 and 14a
+    /// read on the payee's acts as they stood there ([`Self::stood_at`]).
+    fn follows_at(&self, payee: &Hash, at: &crate::finance::PaidAt, amount: &crate::finance::Amount, fulfils: &Hash, j: usize) -> bool {
+        use crate::finance::{self as fin, PaidAt, Payload as Fin};
+        let vault = self.vault_at(payee, j);
+        let vault = (!vault.is_empty()).then_some(vault.as_slice());
+        let same = |a: &fin::VaultEntry, b: &fin::VaultEntry| a.unit == b.unit && a.rail_module == b.rail_module && a.source == b.source;
+        let res = self.v.resolve(payee);
+        match at {
+            PaidAt::Flow(p) => {
+                let chain = self.pointers_at(payee, j);
+                let Some((_, q)) = chain.iter().find(|(i, _)| i == p) else { return false };
+                if !fin::pointer_counts(&chain, p) {
+                    return false;
+                }
+                // A tip: the payee pointer it follows, the payee's own act.
+                let tip = self.v.get(fulfils).filter(|x| x.inside.spec == self.mips.finance).and_then(|x| match Fin::decode(x.inside.type_, &x.inside.payload) {
+                    Ok(Fin::PayeePointer(t)) if &t.payee == payee && x.act.outside.signer.as_ref() == Some(payee) => Some(t),
+                    _ => None,
+                });
+                let r14 = match tip {
+                    Some(t) => self.stood_at(fulfils, &res, j) && fin::counts_toward(t.version, fin::PaidInto::Flow(q.version)),
+                    None => match self.pointer_holding_at(fulfils, payee, Some(j)) {
+                        Some(h) => fin::rule_14(&h, &chain, q.version) == fin::Rule14::Counts,
+                        None => false,
+                    },
+                };
+                r14 && fin::flow_followed_vault(vault, amount)
             }
-        };
-        let Some((_, paid)) = chain.iter().find(|(i, _)| i == p) else { return false };
-        if !fin::pointer_counts(&chain, p) {
+            PaidAt::Vault(d) | PaidAt::VaultEntry(d, _) => {
+                // The act declaring it, if it is a link of the payee's
+                // chain declaring a vault; otherwise the vault entry is the
+                // rail answer's, as before any lock change.
+                let Some(k) = res.position_of(d) else { return true };
+                let Ok(Some(Some(declared))) = fin::vault_in(&self.mips.finance, &res.states[k].declarations) else { return true };
+                if k > j {
+                    return false;
+                }
+                let now = vault.unwrap_or(&[]);
+                match at {
+                    PaidAt::VaultEntry(_, i) => declared.get(*i as usize).is_some_and(|e| now.iter().any(|x| same(x, e))),
+                    _ => declared.iter().all(|e| now.iter().any(|x| same(x, e))),
+                }
+            }
+        }
+    }
+
+    /// Whether an act of the payee's stood at its chain's link `j`: bound
+    /// at that link or before it, and valid then: valid now, or voided (or
+    /// voided and shown as disputed) only by a rotation after `j`.
+    fn stood_at(&self, id: &Hash, res: &crate::chain::Resolution, j: usize) -> bool {
+        let Some(h) = self.v.get(id) else { return false };
+        if !h.act.outside.binding.and_then(|b| res.position_of(&b)).is_some_and(|k| k <= j) {
             return false;
         }
-        let Some(holding) = self.pointer_holding(ob, creditor) else { return false };
-        if fin::rule_14(&holding, &chain, paid.version) != fin::Rule14::Counts {
-            return false;
+        match self.status(id) {
+            Status::Valid | Status::Scoped => self.valid(id),
+            Status::Void | Status::Disputed => self.v.judged_by(id).and_then(|r| res.position_of(&r)).is_some_and(|k| k > j),
+            _ => false,
         }
-        // F160: the vault the creditor's own act for the debt showed.
-        let vault = &holding.vault;
-        if !fin::flow_followed_vault((!vault.is_empty()).then_some(vault.as_slice()), amount) {
-            return false;
+    }
+
+    /// The payee's pointers as they stood at its chain's link `j` (Finance
+    /// rule 15): bound there or before, valid then ([`Self::stood_at`]); for
+    /// a collective, those its Finance lane's consent carries. *A payment is
+    /// judged against the chain the payer could see: a pointer the owner
+    /// published after a rotation, of the same version as a thief's, is no
+    /// fork of it before that rotation.*
+    fn pointers_at(&self, payee: &Hash, j: usize) -> Vec<(Hash, crate::finance::PayeePointer)> {
+        use crate::finance::{self as fin, Payload as Fin};
+        let res = self.v.resolve(payee);
+        let mut out = vec![];
+        for h in self.v.signed_by(payee) {
+            if h.inside.spec != self.mips.finance || h.inside.type_ != fin::types::PAYEE_POINTER {
+                continue;
+            }
+            let Ok(Fin::PayeePointer(q)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
+            if &q.payee == payee && self.stood_at(&h.id, &res, j) && (self.status(&h.id) != Status::Valid || self.consent(&h.id).is_ok_and(|c| c.counts())) {
+                out.push((h.id, q));
+            }
         }
-        match rotation {
-            None => true,
-            Some(r) => fin::good_faith(&self.payers_claims(proof, &r)) == Some(true),
-        }
+        out
     }
 
     /// The payee's pointer acts that the payee's own acts hold, for what a
@@ -5398,16 +5576,30 @@ impl<'a> LawView<'a> {
     /// - an agreement (Law type 0): from the payee's signature acts on it;
     /// - an offer (Law type 6): the offer itself, where the payee signed it.
     ///
-    /// Each such act counts only while valid under Identity. Where the
+    /// Each such act counts only while valid under Identity: an act a
+    /// rotation did not keep holds no pointer (rule 15, F178). Where the
     /// payee has several, what any of them holds counts (the latest is
     /// taken). What an act holds is what its citations reach through the
     /// payee's own acts only, never through an act another identity signed
     /// (F157, [`crate::finance::holds_own`]), and never a hash in a
-    /// payload. The vault that applies is the one the payee's chain
-    /// declared at the latest binding of those acts (F160). `None` where
-    /// `fulfils` is none of these, or an obligation owed to another.
+    /// payload. `None` where `fulfils` is none of these, or an obligation
+    /// owed to another. *The vault is not here: it applies as the payee's
+    /// chain declares it (rule 14a; F160 withdrawn, F164, F169).*
     pub fn pointer_holding(&self, fulfils: &Hash, payee: &Hash) -> Option<crate::finance::Holding> {
+        self.pointer_holding_at(fulfils, payee, None)
+    }
+
+    /// [`Self::pointer_holding`], with the payee's acts as they stood at its
+    /// chain's link `j` where given ([`Self::stood_at`]): for a payment that
+    /// followed the chain as published there, those a later rotation voided
+    /// included (rule 15, F178).
+    fn pointer_holding_at(&self, fulfils: &Hash, payee: &Hash, j: Option<usize>) -> Option<crate::finance::Holding> {
         use crate::finance::{self as fin, Payload as Fin};
+        let res = self.v.resolve(payee);
+        let ok = |a: &Hash| match j {
+            None => self.valid(a),
+            Some(j) => self.stood_at(a, &res, j),
+        };
         let x = self.v.get(fulfils)?;
         let mut complete = true;
         let acts: Vec<Hash> = if x.inside.spec == self.mips.finance {
@@ -5417,7 +5609,7 @@ impl<'a> LawView<'a> {
             }
             let mut acts = match &o.agreement {
                 None => vec![],
-                Some(a) => match self.payees_acts_on(a, payee) {
+                Some(a) => match self.payees_acts_on(a, payee, &ok) {
                     Some(acts) => acts,
                     None => {
                         // What field 4 names is not held, or is no
@@ -5432,23 +5624,15 @@ impl<'a> LawView<'a> {
                 acts = self
                     .v
                     .signed_by(payee)
-                    .filter(|h| h.inside.acks.iter().flatten().any(|a| a == fulfils) && self.valid(&h.id))
+                    .filter(|h| h.inside.acks.iter().flatten().any(|a| a == fulfils) && ok(&h.id))
                     .map(|h| h.id)
                     .collect();
             }
             acts
         } else {
-            self.payees_acts_on(fulfils, payee)?
+            self.payees_acts_on(fulfils, payee, &ok)?
         };
         let mut pointers = vec![];
-        // F160: the vault the payee's chain declared at the latest binding
-        // among its own acts for the payment.
-        let res = self.v.resolve(payee);
-        let shown = acts
-            .iter()
-            .filter_map(|a| self.v.get(a)?.act.outside.binding.and_then(|b| res.position_of(&b)))
-            .max();
-        let vault = shown.map(|k| self.vault_at(payee, k)).unwrap_or_default();
         for a in acts {
             let Some(h) = self.v.get(&a) else { continue };
             // F157: through the payee's own acts only.
@@ -5466,110 +5650,63 @@ impl<'a> LawView<'a> {
                 }
             }
         }
-        Some(fin::Holding { pointers, complete, vault })
+        Some(fin::Holding { pointers, complete })
     }
 
-    /// The payee's own acts on an agreement or offer `a` (F145): its valid
-    /// signature acts naming the agreement (Law type 0); the offer itself
-    /// (Law type 6) where the payee signed it and it is valid. `None` where
-    /// `a` is not held, or is neither.
-    fn payees_acts_on(&self, a: &Hash, payee: &Hash) -> Option<Vec<Hash>> {
+    /// The payee's own acts on an agreement or offer `a` (F145, F168 13):
+    /// its signature acts naming the agreement (Law type 0); for an offer
+    /// (Law type 6), the offer itself where the payee signed it, and the
+    /// payee's signature acts accepting it: an offer another identity
+    /// signed is not the payee's act, its acceptance is. Each where `ok`
+    /// says it stands. `None` where `a` is not held, or is neither.
+    fn payees_acts_on(&self, a: &Hash, payee: &Hash, ok: &dyn Fn(&Hash) -> bool) -> Option<Vec<Hash>> {
         let x = self.v.get(a)?;
-        if self.is_law(x, types::TERMS) {
-            Some(
-                self.v
-                    .signed_by(payee)
-                    .filter(|h| self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).ok() == Some(*a) && self.valid(&h.id))
-                    .map(|h| h.id)
-                    .collect(),
-            )
-        } else if self.is_law(x, types::STANDING_OFFER) {
-            Some(if x.act.outside.signer.as_ref() == Some(payee) && self.valid(a) { vec![*a] } else { vec![] })
-        } else {
-            None
-        }
-    }
-
-    /// Where `p` is a payee pointer of `payee` that a rotation of its
-    /// invalidated (voided, or voided and shown as disputed: Identity rules
-    /// 15 to 17), that rotation (Finance rule 15).
-    fn voided_pointer(&self, p: &Hash, payee: &Hash) -> Option<Hash> {
-        use crate::finance::{self as fin, Payload as Fin};
-        let h = self.v.get(p)?;
-        if h.inside.spec != self.mips.finance
-            || h.inside.type_ != fin::types::PAYEE_POINTER
-            || h.act.outside.signer.as_ref() != Some(payee)
-            || !matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::PayeePointer(q)) if &q.payee == payee)
-            || !matches!(self.status(p), Status::Void | Status::Disputed)
-        {
+        if !self.is_law(x, types::TERMS) && !self.is_law(x, types::STANDING_OFFER) {
             return None;
         }
-        self.v.judged_by(p)
+        let mut out: Vec<Hash> = vec![];
+        if self.is_law(x, types::STANDING_OFFER) && x.act.outside.signer.as_ref() == Some(payee) && ok(a) {
+            out.push(*a);
+        }
+        out.extend(
+            self.v
+                .signed_by(payee)
+                .filter(|h| self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).ok() == Some(*a) && ok(&h.id))
+                .map(|h| h.id),
+        );
+        Some(out)
     }
 
-    /// The payee's pointers as they stood before the rotation `r` (Finance
-    /// rule 15): those bound before it, valid, or invalidated by `r`
-    /// itself. *A good-faith payment is judged against the chain the payer
-    /// could see: a pointer the owner published after the rotation, of the
-    /// same version as the thief's, is no fork of it then.*
-    fn pointers_before(&self, payee: &Hash, r: &Hash) -> Vec<(Hash, crate::finance::PayeePointer)> {
-        use crate::finance::{self as fin, Payload as Fin};
-        let res = self.v.resolve(payee);
-        let Some(at) = res.position_of(r) else { return vec![] };
-        let mut out = vec![];
-        for h in self.v.signed_by(payee) {
-            if h.inside.spec != self.mips.finance || h.inside.type_ != fin::types::PAYEE_POINTER {
-                continue;
+    /// The clock the payee's chain declared at its link `k` (Finance, "The
+    /// clock", F176): the one in force there, `None` where none is.
+    fn clock_at(&self, who: &Hash, k: usize) -> Option<crate::finance::Clock> {
+        let res = self.v.resolve(who);
+        let mut out = None;
+        for (l, st) in res.links.iter().zip(&res.states).take(k.saturating_add(1)) {
+            if self.refuses(&l.act) {
+                break;
             }
-            let Ok(Fin::PayeePointer(q)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
-            if &q.payee != payee || !h.act.outside.binding.and_then(|b| res.position_of(&b)).is_some_and(|k| k < at) {
-                continue;
-            }
-            let stands = match self.status(&h.id) {
-                Status::Valid => self.valid(&h.id) && self.consent(&h.id).is_ok_and(|c| c.counts()),
-                Status::Void | Status::Disputed => self.v.judged_by(&h.id).as_ref() == Some(r),
-                _ => false,
-            };
-            if stands {
-                out.push((h.id, q));
+            match crate::finance::clock_in(&self.mips.finance, &st.declarations) {
+                Ok(Some(c)) => out = c,
+                _ => {}
             }
         }
         out
     }
 
-    /// The payer's claims for one payment, its rail proof `proof`, as
-    /// Finance rule 15's proviso reads them against the rotation `r` (F139,
-    /// F146, F147): each payer's claim that stands ([`Self::payers_claim`])
-    /// with the rail's answer, valid ([`Self::rail_valid`]: on a rail whose
-    /// commitment carries the payer, a claim anyone else signs fails it),
-    /// with whether its history holds `r` (for an anonymous payer's claim,
-    /// only what its covered citations hold, never its `prev`:
-    /// [`crate::finance::history`]), and the anchor order where the caller
-    /// states one ([`Self::anchored_before`]).
-    pub fn payers_claims(&self, proof: &[u8], r: &Hash) -> Vec<crate::finance::PayersClaim> {
-        use crate::finance::{self as fin, Payload as Fin};
-        let mut out = vec![];
-        for h in self.v.held_acts() {
-            if h.inside.spec != self.mips.finance || !self.rail_valid.contains_key(&h.id) || !self.payers_claim(h) {
-                continue;
-            }
-            let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
-            if c.proof != proof {
-                continue;
-            }
-            let hist = fin::history(self.v, &h.inside, c.anonymous.is_some());
-            out.push(fin::PayersClaim {
-                holds_rotation: if hist.acts.contains(r) {
-                    Some(true)
-                } else if hist.complete {
-                    Some(false)
-                } else {
-                    None
-                },
-                anchored_before: self.anchored_before.get(&(h.id, *r)).copied(),
-            });
-        }
-        out
+    /// The payer's claims for one payment, its rail proof `proof`, that
+    /// stand ([`Self::payers_claim`]) with the rail's answer, valid
+    /// ([`Self::rail_valid`]: on a rail whose commitment carries the payer,
+    /// a claim anyone else signs fails it): their act ids, which rule 15
+    /// compares by their anchors (F169, F178).
+    pub fn payers_claims(&self, proof: &[u8]) -> Vec<Hash> {
+        use crate::finance::Payload as Fin;
+        self.v
+            .held_acts()
+            .filter(|h| h.inside.spec == self.mips.finance && self.rail_valid.contains_key(&h.id) && self.payers_claim(h))
+            .filter(|h| matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::Claim(c)) if c.proof == proof))
+            .map(|h| h.id)
+            .collect()
     }
 
     /// Whether `h` is a payer's claim that stands: valid under Identity,
@@ -5807,6 +5944,12 @@ impl<'a> LawView<'a> {
             self.is_law(x, types::TERMS)
                 && self.terms(&x.id).is_ok_and(|t| t.stake_on(&Who::Id(*work)).is_some())
         })
+    }
+
+    /// The version in force of an agreement, against which a split of it
+    /// is judged (rule 26): [`Self::latest_version`].
+    pub fn version_in_force(&self, agreement: &Hash) -> R<Hash> {
+        self.latest_version(agreement)
     }
 
     /// The latest version of an agreement that exists: for a collective's
@@ -6350,8 +6493,8 @@ impl<'a> LawView<'a> {
         self.vault_at(who, usize::MAX)
     }
 
-    /// The vault an identity's chain declares at its link `k` (Finance
-    /// rules 12a and 14a, F160): what an act bound there showed.
+    /// The vault an identity's chain declares in force at its link `k`
+    /// (Finance rules 14a and 15: the chain as published there).
     fn vault_at(&self, who: &Hash, k: usize) -> Vec<crate::finance::VaultEntry> {
         let res = self.v.resolve(who);
         let mut out = vec![];
@@ -6442,21 +6585,20 @@ impl<'a> LawView<'a> {
     /// names no split service, what a paying wallet that reads Law pays each
     /// holder's own pointer for `amount` on the stake in `object`, by its
     /// shares, leftovers by largest remainder (rule 15a, F150), the order of
-    /// holders deciding nothing. Holders with equal remainders are ordered
-    /// by the hash of the payment's receipt, `receipt`, or, for a split made
-    /// from a payer's claim with no receipt, the claim's hash, which stands
-    /// for it (F162, 9); where they compete for a leftover unit and none is
-    /// given, the split is undetermined (`Err`): a wallet dividing before
-    /// any receipt exists shows that a tied unit is decided by the
-    /// receipt's hash, at most one unit per tie (F162, 8; rule 4a). A holder that is a collective splitting payer-side
+    /// holders deciding nothing. Where holders with equal remainders compete
+    /// for a leftover unit, the payer decides, at most one unit per tie, a
+    /// stated cost (F165, F168, 10: no receipt exists when the payer
+    /// divides, so no hash can); this wallet gives it to the tied holder
+    /// whose identity hash is smallest, a choice, not a rule: any other is
+    /// as conforming. A holder that is a collective splitting payer-side
     /// too is followed to the holders of its stake in itself: one flow,
     /// holders' identities as destinations. `Err` where the agreement names
     /// a split service, or no such stake.
-    pub fn payer_split(&self, agreement: &Hash, object: &Who, amount: u64, receipt: Option<&Hash>) -> R<Result<Vec<(Hash, u64)>, String>> {
-        self.payer_split_depth(agreement, object, amount, receipt, 0)
+    pub fn payer_split(&self, agreement: &Hash, object: &Who, amount: u64) -> R<Result<Vec<(Hash, u64)>, String>> {
+        self.payer_split_depth(agreement, object, amount, 0)
     }
 
-    fn payer_split_depth(&self, agreement: &Hash, object: &Who, amount: u64, receipt: Option<&Hash>, depth: usize) -> R<Result<Vec<(Hash, u64)>, String>> {
+    fn payer_split_depth(&self, agreement: &Hash, object: &Who, amount: u64, depth: usize) -> R<Result<Vec<(Hash, u64)>, String>> {
         if depth > 8 {
             return Ok(Err("collectives nested deeper than 8".into()));
         }
@@ -6475,7 +6617,8 @@ impl<'a> LawView<'a> {
             };
             ids.push((id, *n));
         }
-        let parts = match divide_stake(amount, &ids, receipt) {
+        // The payer decides a tied unit (F168, 10): this wallet's choice.
+        let parts = match divide_stake(amount, &ids, Ties::Turns(&[])) {
             Ok(p) => p,
             Err(w) => return Ok(Err(w)),
         };
@@ -6489,7 +6632,7 @@ impl<'a> LawView<'a> {
                 Some(cur) if Some(id) != this || *object != Who::This => {
                     let ct = self.terms(&cur.agreement)?;
                     if ct.split_grant.is_none() && ct.payee_grants.is_none() && ct.own_stake().is_some() {
-                        Some(self.payer_split_depth(&cur.agreement, &Who::This, n, receipt, depth + 1)?)
+                        Some(self.payer_split_depth(&cur.agreement, &Who::This, n, depth + 1)?)
                     } else {
                         None
                     }
@@ -6601,6 +6744,9 @@ impl<'a> LawView<'a> {
             }
         }
         let mut mismatched = vec![];
+        let mut turns_unknown = vec![];
+        let mut breaks = vec![];
+        let mut count_unknown = vec![];
         let mut idxs: Vec<u64> = s.payouts.iter().filter_map(|p| p.stake).collect();
         idxs.sort();
         idxs.dedup();
@@ -6614,22 +6760,77 @@ impl<'a> LawView<'a> {
                 continue;
             };
             let holders: Vec<(Option<Hash>, u64)> = stake.holders.iter().map(|(w, n)| (w.resolve(collective.as_ref()), *n)).collect();
-            for (who, share) in &holders {
-                let paid: u128 = paid_on.iter().filter(|p| Some(p.receiver) == *who).map(|p| p.amount as u128).sum();
-                let exact = pot * (*share as u128); // in millionths of a unit
-                let m = MILLION as u128;
-                // Short of its exact share by a whole unit or more, or over
-                // it by a whole unit or more: rule 15a's default gives each
-                // holder its share rounded down, or one unit more (F150,
-                // F162, 11). A split cMIP's declared remainder rule would
-                // need a reader, which none has yet.
-                if paid * m + m <= exact || paid * m >= exact + m {
-                    mismatched.push(Mismatch {
-                        stake: idx,
-                        holder: who.unwrap_or_default(),
-                        paid: paid as u64,
-                        due: (exact / m) as u64,
-                    });
+            // Rule 15a's default (rule 21: no split cMIP's declared
+            // remainder rule has a reader yet): each holder its share
+            // rounded down, leftovers by largest remainder, ties by turns
+            // as the previous split act for the stake counts them (F165,
+            // F171); where the money came by a payer's claim with no
+            // receipt, the payer decides a tied unit (F168, 10); where the
+            // turns cannot be read from the acts held, a tied unit is
+            // unknown, never the rest (F165).
+            let ids: Option<Vec<(Hash, u64)>> = holders.iter().map(|(w, n)| w.map(|w| (w, *n))).collect();
+            let range: Option<Vec<(Hash, u64, u64)>> = match &ids {
+                Some(ids) => {
+                    let pot64 = u64::try_from(pot).unwrap_or(u64::MAX);
+                    let rounded = round_stake(pot64, ids);
+                    let by_receipt = self.v.get(&s.receipt).is_some_and(|r| r.inside.spec == self.mips.finance && r.inside.type_ == crate::finance::types::RECEIPT);
+                    // The tally chain (rule 15a, F171): the previous split
+                    // act for the stake, the count it carries, and this
+                    // split's place after it.
+                    let before = match h.act.outside.signer {
+                        Some(service) => self.tally_check(h, &s, &service, &in_force, idx, ids, pot64, &paid_on, &mut breaks, &mut count_unknown)?,
+                        None => None,
+                    };
+                    let turns = if rounded.units == 0 || !by_receipt {
+                        None
+                    } else {
+                        before.map(|b| ids.iter().map(|(w, _)| b.iter().filter(|(x, _)| x == w).map(|(_, n)| *n).sum()).collect::<Vec<u64>>())
+                    };
+                    if rounded.units > 0 && by_receipt && turns.is_none() && !turns_unknown.contains(&idx) {
+                        turns_unknown.push(idx);
+                    }
+                    let parts = match &turns {
+                        Some(counts) => divide_stake(pot64, ids, Ties::Turns(counts)).unwrap_or(rounded.parts.clone()),
+                        None => rounded.parts.clone(),
+                    };
+                    let free = turns.is_none();
+                    let mut out: Vec<(Hash, u64, u64)> = vec![];
+                    for (i, (who, _)) in ids.iter().enumerate() {
+                        let up = u64::from(free && rounded.tied.contains(&i));
+                        match out.iter_mut().find(|(x, _, _)| x == who) {
+                            Some(e) => {
+                                e.1 += parts[i];
+                                e.2 += parts[i] + up;
+                            }
+                            None => out.push((*who, parts[i], parts[i] + up)),
+                        }
+                    }
+                    Some(out)
+                }
+                None => None,
+            };
+            if let Some(range) = range {
+                for (who, lo, hi) in range {
+                    let paid: u128 = paid_on.iter().filter(|p| p.receiver == who).map(|p| p.amount as u128).sum();
+                    if paid < lo as u128 || paid > hi as u128 {
+                        mismatched.push(Mismatch { stake: idx, holder: who, paid: paid as u64, due: lo });
+                    }
+                }
+            } else {
+                for (who, share) in &holders {
+                    let paid: u128 = paid_on.iter().filter(|p| Some(p.receiver) == *who).map(|p| p.amount as u128).sum();
+                    let exact = pot * (*share as u128); // in millionths of a unit
+                    let m = MILLION as u128;
+                    // Short of its exact share by a whole unit or more, or
+                    // over it by a whole unit or more (F150, F162, 11).
+                    if paid * m + m <= exact || paid * m >= exact + m {
+                        mismatched.push(Mismatch {
+                            stake: idx,
+                            holder: who.unwrap_or_default(),
+                            paid: paid as u64,
+                            due: (exact / m) as u64,
+                        });
+                    }
                 }
             }
             for p in paid_on {
@@ -6650,7 +6851,154 @@ impl<'a> LawView<'a> {
             in_force,
             unevidenced,
             unplanned,
+            turns_unknown,
+            breaks,
+            count_unknown,
+            cites: crate::finance::Citations::of(&h.inside).acts(),
         })
+    }
+
+    /// Rule 15a's turns (F165, F171): for stake `idx` of the agreement in
+    /// force `in_force`, the leftover units each of `holders` has received
+    /// so far from `service`'s splits, as the split act `previous` (the
+    /// service's latest split for the stake, which its next split cites)
+    /// carries them in its running count (field 4); in the holders' order.
+    /// With no `previous`, no split so far: every count is zero. `None`
+    /// where `previous` is not held, is not one of the service's splits
+    /// for the stake under that agreement, or carries no count for it:
+    /// shown as unknown, never guessed.
+    ///
+    /// *Since F171 the count is read from two acts; F165's walk back
+    /// through every earlier receipt is gone.*
+    pub fn turns(&self, service: &Hash, in_force: &Hash, idx: u64, holders: &[(Hash, u64)], previous: Option<&Hash>) -> R<Option<Vec<u64>>> {
+        let Some(p) = previous else { return Ok(Some(vec![0; holders.len()])) };
+        let Some(ph) = self.v.get(p) else { return Ok(None) };
+        let Some(split) = self.tally_member(ph, service, in_force, idx)? else { return Ok(None) };
+        let Some(count) = split.tally_of(idx) else { return Ok(None) };
+        Ok(Some(holders.iter().map(|(w, _)| count.iter().filter(|(x, _)| x == w).map(|(_, n)| *n).sum()).collect()))
+    }
+
+    /// The split `h` as a link of `service`'s tally chain for stake `idx`
+    /// under the agreement in force `in_force` (F171): one of the service's
+    /// splits, valid and signed with its own key, paying that stake, under
+    /// an agreement whose version in force is `in_force`. `None` otherwise.
+    fn tally_member(&self, h: &Held, service: &Hash, in_force: &Hash, idx: u64) -> R<Option<Split>> {
+        if h.act.outside.signer.as_ref() != Some(service) || !self.is_law(h, types::SPLIT) || !self.valid(&h.id) || self.key_grant(h).is_some() {
+            return Ok(None);
+        }
+        let Ok(x) = Split::decode(&h.inside.payload) else { return Ok(None) };
+        if !x.payouts.iter().any(|p| p.stake == Some(idx)) {
+            return Ok(None);
+        }
+        if self.latest_version(&x.agreement).ok().as_ref() != Some(in_force) {
+            return Ok(None);
+        }
+        Ok(Some(x))
+    }
+
+    /// Where `h` sits in `service`'s tally chain for stake `idx` (F171):
+    /// the previous split for the stake its envelope cites.
+    fn prior(&self, h: &Held, service: &Hash, in_force: &Hash, idx: u64) -> R<Prior> {
+        let mut found = vec![];
+        for c in crate::finance::Citations::of(&h.inside).acts() {
+            let Some(x) = self.v.get(&c) else { return Ok(Prior::Unknown) };
+            if self.tally_member(x, service, in_force, idx)?.is_some() && !found.contains(&c) {
+                found.push(c);
+            }
+        }
+        Ok(match found.as_slice() {
+            [] => Prior::First,
+            [p] => Prior::After(*p),
+            _ => Prior::Unknown,
+        })
+    }
+
+    /// Rule 15a's tally chain, for the split `h` (decoded `s`) of `service`
+    /// on stake `idx` (F171): finds the previous split it cites; pushes to
+    /// `breaks` a reset or a fork the acts held show, a running count that
+    /// is not the previous one plus this split's leftover units, or a
+    /// count missing; pushes the stake to `count_unknown` where the
+    /// previous count cannot be read. Returns the count before this split
+    /// (empty for the first), from which its ties take turns; `None` where
+    /// unknown.
+    #[allow(clippy::too_many_arguments)]
+    fn tally_check(
+        &self,
+        h: &Held,
+        s: &Split,
+        service: &Hash,
+        in_force: &Hash,
+        idx: u64,
+        ids: &[(Hash, u64)],
+        pot: u64,
+        paid_on: &[&Payout],
+        breaks: &mut Vec<ChainBreak>,
+        count_unknown: &mut Vec<u64>,
+    ) -> R<Option<Vec<(Hash, u64)>>> {
+        // A split that is not the service's own (rule 20) is in no chain:
+        // its problems say so.
+        if self.tally_member(h, service, in_force, idx)?.is_none() {
+            return Ok(None);
+        }
+        let prior = self.prior(h, service, in_force, idx)?;
+        // The other splits of the chain held, and what each cites: a second
+        // start is a reset, a second split citing the same previous one a
+        // fork (rule 15a, rule 46b, F171).
+        let mut first_too = vec![];
+        let mut same_previous = vec![];
+        for y in self.v.signed_by(service) {
+            if y.id == h.id || self.tally_member(y, service, in_force, idx)?.is_none() {
+                continue;
+            }
+            match &prior {
+                Prior::First => {
+                    if self.prior(y, service, in_force, idx)? == Prior::First {
+                        first_too.push(y.id);
+                    }
+                }
+                Prior::After(p) => {
+                    if crate::finance::Citations::of(&y.inside).acts().contains(p) {
+                        same_previous.push(y.id);
+                    }
+                }
+                Prior::Unknown => {}
+            }
+        }
+        first_too.sort();
+        same_previous.sort();
+        if !first_too.is_empty() {
+            breaks.push(ChainBreak::Reset { stake: idx, with: first_too });
+        }
+        if let Prior::After(p) = &prior {
+            if !same_previous.is_empty() {
+                breaks.push(ChainBreak::Fork { stake: idx, previous: *p, with: same_previous });
+            }
+        }
+        let before: Option<Vec<(Hash, u64)>> = match &prior {
+            Prior::First => Some(vec![]),
+            Prior::After(p) => self.v.get(p).and_then(|x| Split::decode(&x.inside.payload).ok()).and_then(|x| x.tally_of(idx).map(|c| c.to_vec())),
+            Prior::Unknown => None,
+        };
+        let carried = s.tally_of(idx);
+        if carried.is_none() {
+            breaks.push(ChainBreak::NoCount { stake: idx });
+        }
+        match (&before, carried) {
+            (None, _) => {
+                if !count_unknown.contains(&idx) {
+                    count_unknown.push(idx);
+                }
+            }
+            (Some(b), Some(c)) => {
+                let paid: Vec<(Hash, u64)> = paid_on.iter().map(|p| (p.receiver, p.amount)).collect();
+                let expected = running_count(b, &leftovers(pot, ids, &paid));
+                if !same_count(c, &expected) {
+                    breaks.push(ChainBreak::Count { stake: idx, carried: c.to_vec(), expected });
+                }
+            }
+            (Some(_), None) => {}
+        }
+        Ok(before)
     }
 
     /// The split services an agreement's terms name (rule 18): in a
@@ -6958,7 +7306,7 @@ impl<'a> LawView<'a> {
 /// Nobody, allegedly, 6 October 2026). The order the sides are listed in
 /// decides nothing.
 fn divide_fork(fork: &Hash, total: u64, by: &[(Hash, u64)]) -> Vec<u64> {
-    divide_stake(total, by, Some(fork)).expect("with a tie hash, every division is determined")
+    divide_stake(total, by, Ties::Hash(fork)).expect("with a tie hash, every division is determined")
 }
 
 /// `total` divided by `weights`, in whole parts, leftovers to the first: a

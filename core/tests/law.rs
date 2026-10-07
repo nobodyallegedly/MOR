@@ -53,7 +53,7 @@ fn label() -> Terms {
         abandonment: Some(Abandonment {
             authority: Authority::Named(h(AUTHORITY)),
             outcomes: vec![outcomes::VOICE_REMOVED],
-            period: None,
+            proof: None,
         }),
         parent: None,
         grammar: Some(KeyGrammar {

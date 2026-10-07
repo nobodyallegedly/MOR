@@ -446,6 +446,21 @@ impl World {
         objects: Option<Vec<Object>>,
         to: Vec<Hash>,
     ) -> Hash {
+        self.private_act_refs(p, spec, type_, payload, objects, to, None)
+    }
+
+    /// [`Self::private_act`], naming other acts in `refs`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn private_act_refs(
+        &mut self,
+        p: &mut Person,
+        spec: Hash,
+        type_: u64,
+        payload: Vec<(Value, Value)>,
+        objects: Option<Vec<Object>>,
+        to: Vec<Hash>,
+        refs: Option<Vec<act::Ref>>,
+    ) -> Hash {
         let salt = self.fresh().2;
         let objects = cited(p, &spec, type_, objects);
         let inside = Inside {
@@ -461,7 +476,7 @@ impl World {
                 Mmr::from_ids(&p.seq).root()
             }),
             acks: None,
-            refs: None,
+            refs,
             hint: None,
             salt,
         };
