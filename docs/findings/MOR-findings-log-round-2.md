@@ -1983,8 +1983,23 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Envelope draft 7, Tasks; Law draft 10, Tasks. *To build:* the anchoring interface in the core library's Envelope part.
 
 
+## F174. The second review's smaller findings (review of F163 to F168, findings 3, 10 to 14, 7 October 2026)
+
+**Suggested by the project lead in one batch; Nobody, allegedly, 7 October 2026: "All agreed."**
+
+- **3.** A payee's own receipt also counts when signed with a key its chain binds after the rotation; "a grant key the chain still holds" becomes "a grant key whose grant still stands".
+- **10.** The text floor forbids hiding a mathematical sign only next to a digit, so `<` and `>` stay usable as quote and link markup; currency signs stay always protected.
+- **11.** The floor also covers a plus or minus before a currency sign or after a digit, a full stop or comma before a digit, brackets around an amount, a space or apostrophe between two letters, and question and exclamation marks.
+- **12, 13.** Rule 15 points to rule 14's selection; a refund to a bare key is carried into rule 7 (and so outside rule 12a).
+- **14.** Freeze scenario 1 step 5c follows F169 and says the rotation is anchored; the stake line and Law's reasoning heading say "turns"; the paper's claim 2 states that a thief's offer acknowledged after the rotation stays visible as disputed, though no money under it counts against the owner once the rotation is anchored.
+
+**Core changes:** Finance draft 6, rules 7 and 15; Text draft 6, the format task; Law draft 10, reasoning; freeze suite; paper claim 2.
+
+**With F169 to F174 the second review's findings are all decided.**
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
 
-**Open for Nobody, allegedly:** findings 1 to 14. The building session for F163 to F168, launched the same morning, builds the text as it stood.
+**All decided** as F169 to F174 (the building session for F163 to F168, launched the same morning, built the text as it stood and was asked to hold F164, F166 and F168 item 11).
