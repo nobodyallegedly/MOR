@@ -2010,8 +2010,23 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Text draft 6, the format task; Finance draft 6, rule 15; Law draft 10, rule 21.
 
 
+## F176. Name your services, name your clock (whole-set review, finding 1, 7 October 2026)
+
+**Found by the whole-set review** (`docs/reviews/whole-set-review-2026-10-07.md`, finding 1): nothing named the reference a lock change and a claim are compared on, and incomparable anchors favoured the payer, so a colluding payer anchored on a reference the owner never used and the owner bore the window despite anchoring.
+
+**Decided (Nobody, allegedly, 7 October 2026), after a walk: "Yes, name your services, name your clock.":** the owner declares the clock (the anchoring references, each an anchoring cMIP and its time reference) in the identity chain's declarations slot with the safety key, as the vault (Finance kind 1). A lock change counts as anchored only on a declared reference; after it, a claim anchored on none of them is not protected; a payee with no declared clock has chosen no protection and bears; a payer's client must read the clock before paying.
+
+**Working rule (Nobody, allegedly):** "name your services, name your clock": what is compared between parties is named in advance by the party a thief cannot be.
+
+**Core changes:** Finance draft 6, the clock declaration and rule 15. *To build:* the clock declaration, the comparison on declared references, the payer's client reading it.
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
 
 **All decided** as F169 to F174 (the building session for F163 to F168, launched the same morning, built the text as it stood and was asked to hold F164, F166 and F168 item 11).
+
+## Whole-set review (7 October 2026, late morning)
+
+Fable's review of the whole set after the reset (`docs/reviews/whole-set-review-2026-10-07.md`): absence (F172) and "the core names a task, not how" hold as principles; the theft principle (F169) is judged right, its rule not yet delivering it (findings 1 and 2, decisions; 3 to 10, wording). Finding 1 decided as F176. **Open for Nobody, allegedly:** finding 2 (which act's anchor is the lock change's point), then 3 to 20 as the review's suggested order.
