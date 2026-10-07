@@ -8,7 +8,8 @@ import { resolve } from 'node:path';
 import { TestIdentity, type Home } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { hex } from '../../genesis/src/core.ts';
-import { TestCollective, governanceText, type Governance } from './collective.ts';
+import { TestCollective, abandonmentOf, governanceText, type Governance } from './collective.ts';
+import { absenceNotice } from './law.ts';
 import { compareWithTree, gitFiles, gitSource, publishRelease, signRelease, verifyRelease, type Verified } from './release.ts';
 
 const HELP = `mor-repo: MOR governs its own code. A test collective publishes releases
@@ -119,6 +120,8 @@ async function main() {
       const governance: Governance = { ...rules, text: governanceText(rules) };
       console.log('The founding agreement, as every member signs it:\n');
       console.log(governance.text + '\n');
+      // Law rule 49: before signing terms carrying an abandonment clause.
+      console.log(absenceNotice(abandonmentOf(rules)) + '\n');
       const got = await TestCollective.found({
         members,
         homes,
@@ -148,6 +151,8 @@ async function main() {
         const out = new Set([...(opts.remove ?? []), ...leaving.map((l) => l.id)]);
         const members = [...c.f.members.filter((x) => !out.has(x)), ...join.map((j) => j.id)];
         for (const s of stay) if (!c.f.members.includes(s.id)) throw new Error(`${s.id} is not a member`);
+        // Law rule 49: the clone carries the abandonment clause; shown before it is signed.
+        console.log(absenceNotice(abandonmentOf(c.f.governance)) + '\n');
         const got = await c.changeMembers({
           members,
           proposer: stay[0],
@@ -175,6 +180,8 @@ async function main() {
       const c = TestCollective.load(file, via);
       const paths = opts.member ?? [];
       const signers = paths.map(member);
+      // Law rule 49: the clone carries the abandonment clause; shown before it is signed.
+      console.log(absenceNotice(abandonmentOf(c.f.governance)) + '\n');
       const got = await c.changeReleaseWords({ words: need('text'), proposer: signers[0], signers });
       c.save(file);
       paths.forEach((p, i) => signers[i].save(p));

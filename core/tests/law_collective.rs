@@ -75,10 +75,9 @@ struct Lab {
     /// The rail's answer for the receipts paying debts (Finance rule 4), as
     /// a verifier states it after the payment cMIP: valid, and where paid.
     rail_valid: Vec<(Hash, mor_core::finance::PaidAt)>,
-    /// The anchoring cMIP's answer on each declaration under a clause
-    /// naming a period (rules 50, 51; F136, F148): each anchored act's
-    /// point on the time reference, as a verifier states it.
-    anchors: Vec<(Hash, u64)>,
+    /// The absence-proof cMIP's answer (rule 51, F172), as a verifier
+    /// states it: each `(declaration, act using it)` it accepted.
+    accepted: Vec<(Hash, Hash)>,
 }
 
 /// A grant key (F128): made by the grantee, who keeps its secret part; the
@@ -106,7 +105,7 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         abandonment: Some(Abandonment {
             authority: Authority::Named(authority),
             outcomes: vec![outcomes::VOICE_REMOVED],
-            period: None,
+            proof: None,
         }),
         parent: None,
         grammar: Some(KeyGrammar {
@@ -216,7 +215,7 @@ impl Lab {
             keeper,
             keeper_logs: vec![],
             rail_valid: vec![],
-            anchors: vec![],
+            accepted: vec![],
         }
     }
 
@@ -240,7 +239,7 @@ impl Lab {
             v.keeper_logs.insert(*op, log.clone());
         }
         v.rail_valid.extend(self.rail_valid.iter().copied());
-        v.anchors.extend(self.anchors.iter().copied());
+        v.absence_accepted.extend(self.accepted.iter().copied());
         v
     }
 
@@ -2097,48 +2096,222 @@ fn a_declaration_removes_a_voice_at_the_labels_line() {
     );
 }
 
-/// Law rules 50 and 51 (F136, F148): where the abandonment clause names a
-/// period of absence on the agreement's time reference, a declaration
-/// counts only once anchored, with no act of the party on the agreement
-/// anchored within the period before it, and with an acknowledgement of it
-/// by another party or the keeper anchored within one further period
-/// after it. The anchors are stated by the verifier, the anchoring and
-/// time-reference formats being open: an unstated declaration is not
-/// anchored, or unplaceable, and does not count. Where the clause names no
-/// period, the declaration is the authority's judgment, as before.
+/// Law rules 50 to 52 (F172): with no absence-proof cMIP in the clause, a
+/// declaration is the authority's judgment, checked for signer, outcome
+/// and version only: the core reads no time. The label names a time
+/// reference and nobody anchors anything; the declaration still counts and
+/// the record registers it. Cy's liveness act on the agreement, made
+/// before it, does not stop it: presence is shown, never proven by time in
+/// the core (rule 50); a contest shows a wrongful declaration (rule 52).
 #[test]
-fn a_declaration_under_a_period_counts_only_anchored() {
+fn a_declaration_is_the_authoritys_judgment_with_no_anchors() {
     let mut lab = Lab::new(&|t| {
         t.time = Some((spec("a block height reference"), Value::Uint(0)));
-        t.abandonment.as_mut().unwrap().period = Some(30);
+    });
+    let f = lab.founding;
+    let mut cy = lab.m[CY].clone();
+    law_act(&mut lab.w, &mut cy, 12, vec![], obj(f));
+    lab.m[CY] = cy;
+    let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    assert!(lab.view().declaration(&d).unwrap().is_ok(), "{:?}", lab.view().declaration(&d).unwrap().err());
+    let line = lab.record(0, None, &[], vec![d], f);
+    let e = lab.view().record(&lab.c[0].id, &line).unwrap();
+    assert!(e.line, "{:?}", e.not_a_line);
+    assert_eq!(e.registers.len(), 1, "the record registers it, no anchor stated");
+    // Cy's signature counts for nothing after the line.
+    let x = lab.cmip_act(0, pay());
+    lab.sign(BEN, &x);
+    lab.sign(CY, &x);
+    assert_eq!(areas(&lab.consent(&x))[0].3, vec![lab.m[BEN].id]);
+}
+
+/// The reference absence-proof module, a period on the time reference
+/// (F172): the clause names it in key 3. The core takes its answer from
+/// the caller and reads no anchor itself: accepted for the record, the
+/// declaration counts with no anchor stated to the core at all.
+#[test]
+fn under_a_period_module_the_core_reads_no_anchor() {
+    use law::view::reference_absence_proof as reference;
+    let mut lab = Lab::new(&|t| {
+        t.time = Some((spec("a block height reference"), Value::Uint(0)));
+        t.abandonment.as_mut().unwrap().proof = Some((reference::spec(), reference::params(30)));
     });
     let f = lab.founding;
     let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
-    let why = |lab: &Lab| lab.view().declaration(&d).unwrap().err();
-    assert!(why(&lab).is_some_and(|w| w.contains("not anchored") && w.contains("F136")), "{:?}", why(&lab));
+    assert!(lab.view().declaration(&d).unwrap().is_ok(), "{:?}", lab.view().declaration(&d).unwrap().err());
     let line = lab.record(0, None, &[], vec![d], f);
-    assert!(lab.view().record(&lab.c[0].id, &line).unwrap().registers.is_empty(), "the record registers nothing");
-    // Anchored at 100, but acknowledged by nobody (F148).
-    lab.anchors.push((d, 100));
-    assert!(why(&lab).is_some_and(|w| w.contains("acknowledgement") && w.contains("F148")), "{:?}", why(&lab));
-    // Ana, another party, acknowledges it, anchored at 120: it counts.
-    let mut ana = lab.m[ANA].clone();
-    let ack = lab.w.ack(&mut ana, d);
-    lab.anchors.push((ack, 120));
-    assert!(lab.view().declaration(&d).unwrap().is_ok(), "{:?}", why(&lab));
-    let line = lab.record(0, None, &[], vec![d], f);
-    assert_eq!(lab.view().record(&lab.c[0].id, &line).unwrap().registers.len(), 1);
-    // Cy's liveness act on the agreement, anchored at 80, within the
-    // period before it: the declaration counts for nothing.
-    let mut cy = lab.m[CY].clone();
-    let live = law_act(&mut lab.w, &mut cy, 12, vec![], obj(f));
-    lab.anchors.push((live, 80));
-    assert!(why(&lab).is_some_and(|w| w.contains("within that period")), "{:?}", why(&lab));
-    // With no period, the authority's judgment stands on its own.
-    let mut plain = Lab::new(&|_| {});
-    let pf = plain.founding;
-    let d2 = plain.declare(None, pf, pf, CY, vec![outcomes::VOICE_REMOVED]);
-    assert!(plain.view().declaration(&d2).unwrap().is_ok());
+    lab.accepted.push((d, line));
+    let e = lab.view().record(&lab.c[0].id, &line).unwrap();
+    assert_eq!(e.registers.len(), 1, "{:?}", e.not_a_line);
+}
+
+/// Law draft 10, the abandonment format (F172): key 2, the period of
+/// absence (F140), is retired and never reused: terms carrying it are
+/// invalid, signed by every party or not. Key 3 is an absence-proof cMIP
+/// and its parameters, `[hash, any]`, the parameters the cMIP's own.
+#[test]
+fn abandonment_key_2_is_retired_and_key_3_names_a_cmip() {
+    let lab = Lab::new(&|_| {});
+    let t = lab.view().terms(&lab.founding).unwrap();
+    let with = |extra: (Value, Value)| -> Vec<(Value, Value)> {
+        let mut m = t.to_map();
+        for (k, v) in m.iter_mut() {
+            if *k == Value::Uint(9) {
+                let Value::Map(a) = v else { panic!("a map") };
+                a.push(extra.clone());
+            }
+        }
+        m
+    };
+    // Key 2: invalid.
+    let got = Terms::decode(&(with((Value::Uint(2), Value::Uint(30)))));
+    assert!(matches!(&got, Err(LawError::Shape(w)) if w.contains("key 2") && w.contains("F172")), "{got:?}");
+    // Key 3: a cMIP and any parameters, carried as they are.
+    let params = Value::Map(vec![(Value::Text("period".into()), Value::Uint(30))]);
+    let pair = Value::Array(vec![Value::Bytes(spec("an absence-proof cMIP").to_vec()), params.clone()]);
+    let got = Terms::decode(&(with((Value::Uint(3), pair)))).unwrap();
+    assert_eq!(got.abandonment.as_ref().unwrap().proof, Some((spec("an absence-proof cMIP"), params)));
+    assert_eq!(got.check(&mips()), Ok(()));
+    // Not a pair, or no hash: invalid.
+    for bad in [Value::Uint(30), Value::Array(vec![Value::Uint(1), Value::Uint(2)])] {
+        assert!(Terms::decode(&(with((Value::Uint(3), bad.clone())))).is_err(), "{bad:?}");
+    }
+    // Signed by every member, terms carrying key 2 are still no agreement.
+    let mut w = World::new();
+    let mut m: Vec<Person> = ["a", "b"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let map = with((Value::Uint(2), Value::Uint(30)));
+    let x = law_act(&mut w, &mut m[0], law::types::TERMS, map, None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &x);
+    }
+    assert!(view(&w).agreement(&x).is_err(), "key 2 makes the terms invalid");
+}
+
+/// F172, F178 (14): absence proof is a judicial task. The cMIP the clause
+/// names for it serves no other task and is no extension.
+#[test]
+fn the_absence_proof_cmip_is_a_judge() {
+    for (case, cmip) in [("the anchoring cMIP", anchor()), ("the payment cMIP", pay()), ("an extension", ext())] {
+        let lab = Lab::new(&|_| {});
+        let mut t = lab.view().terms(&lab.founding).unwrap();
+        t.abandonment.as_mut().unwrap().proof = Some((cmip, Value::Null));
+        let got = t.check(&mips());
+        assert!(matches!(&got, Err(LawError::Check(w)) if w.contains("absence-proof")), "{case}: {got:?}");
+    }
+}
+
+/// Law rule 51 (F172; F178 item 12): where the clause names an
+/// absence-proof cMIP (key 3), the declaration counts only where that cMIP
+/// accepted it, for the act using it. The core reads no cMIP: the
+/// caller states its answer. Not accepted, or accepted for another act,
+/// the record registers nothing; accepted for this record, it does. In a
+/// deal, the same for the clone put in force under it.
+#[test]
+fn under_an_absence_proof_cmip_a_declaration_counts_only_where_accepted() {
+    let proof = spec("an absence-proof cMIP");
+    let mut lab = Lab::new(&|t| {
+        t.abandonment.as_mut().unwrap().proof = Some((proof, Value::Text("its own parameters".into())));
+    });
+    let f = lab.founding;
+    let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    // Its own checks pass: signer, outcome, version.
+    assert!(lab.view().declaration(&d).unwrap().is_ok());
+    let r1 = lab.record(0, None, &[], vec![d], f);
+    let e = lab.view().record(&lab.c[0].id, &r1).unwrap();
+    assert!(e.registers.is_empty() && !e.line, "not accepted: it does not count");
+    assert!(e.not_a_line.as_deref().is_some_and(|w| w.contains("absence-proof")), "{:?}", e.not_a_line);
+    // Accepted for another act only: still nothing here.
+    lab.accepted.push((d, spec("another record")));
+    assert!(lab.view().record(&lab.c[0].id, &r1).unwrap().registers.is_empty());
+    // Accepted for this record: it registers it.
+    lab.accepted.push((d, r1));
+    let e = lab.view().record(&lab.c[0].id, &r1).unwrap();
+    assert_eq!(e.registers.len(), 1, "{:?}", e.not_a_line);
+
+    // A deal: the clone without p3 completes only where the cMIP accepted
+    // the declaration for that clone.
+    let mut w = World::new();
+    let mut m: Vec<Person> = ["p1", "p2", "p3"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let mut keeper = w.genesis("keeper", vec![own_home()], None, None);
+    let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+    let mut deal = deal_terms(ids[0], ids[1]);
+    deal.parties = ids.clone();
+    deal.keepers = Some(Keepers { operators: vec![keeper.id], rule: Rule::All });
+    deal.abandonment = Some(Abandonment {
+        authority: Authority::Named(keeper.id),
+        outcomes: vec![outcomes::VOICE_REMOVED],
+        proof: Some((proof, Value::Null)),
+    });
+    assert_eq!(deal.check(&mips()), Ok(()));
+    let x = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &x);
+    }
+    let mut c = deal.clone();
+    c.parent = Some(x);
+    c.text = "Two of us carry on.".into();
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ids[0], ids[1]]) }]);
+    let two = law_act(&mut w, &mut m[0], law::types::TERMS, c.to_map(), obj(x));
+    sign(&mut w, &mut m[0], &two);
+    sign(&mut w, &mut m[1], &two);
+    let decl = AbsenceDeclaration { agreement: x, clause: x, party: ids[2], outcomes: vec![outcomes::VOICE_REMOVED] };
+    let dx = law_act(&mut w, &mut keeper, law::types::DECLARATION, decl.to_map(), obj(x));
+    let mut v = view(&w);
+    v.keeper_logs.insert(keeper.id, vec![dx]);
+    assert!(v.agreement(&two).unwrap().invalid.is_some(), "not accepted: p3 still counts");
+    let mut v = view(&w);
+    v.keeper_logs.insert(keeper.id, vec![dx]);
+    v.absence_accepted.insert((dx, two));
+    let a = v.agreement(&two).unwrap();
+    assert_eq!(a.exists, Some(true), "{:?}", a.invalid);
+}
+
+/// Law rule 51 (F172): a declaration moves nothing by itself; what is put
+/// in force under it is judged where that act uses it, and no later act of
+/// the party undoes it. Ana last signed the founding terms (the treasurer
+/// alone signed the area clone recorded since); the authority declares her
+/// absent and the label's record registers it. Ana then comes back: a
+/// liveness act, a contest, and her signature on the area clone she had
+/// never signed, all after the line, which no act of the label places
+/// before it. The record still registers the declaration, and her voice
+/// stays gone.
+#[test]
+fn a_later_act_of_the_party_never_undoes_the_line() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let k = lab.propose(BEN, &t);
+    let sk = lab.sign(BEN, &k);
+    let r0 = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
+    assert_eq!(puts(&lab, &r0), Some(k));
+    let d = lab.declare(None, k, f, ANA, vec![outcomes::VOICE_REMOVED]);
+    let line = lab.record(0, None, &[], vec![d], k);
+    let registered = |lab: &Lab| lab.view().record(&lab.c[0].id, &line).unwrap().registers.len();
+    assert_eq!(registered(&lab), 1);
+    // Ana comes back.
+    law_act(&mut lab.w, &mut lab.m[ANA].clone(), 12, vec![], obj(k));
+    let contest = law_act(&mut lab.w, &mut lab.m[ANA].clone(), 14, vec![], obj(d));
+    assert!(lab.w.v.get(&contest).is_some(), "the contest is held, shown beside the declaration");
+    lab.sign(ANA, &k);
+    assert_eq!(registered(&lab), 1, "a later act of the party never undoes the line (rule 51, F172)");
+    let x = lab.cmip_act(0, pay());
+    lab.sign(ANA, &x);
+    assert!(!lab.counts(&x), "her voice stays gone");
+    // A signature of hers on that clone that the label placed before the
+    // line would have made the founding terms no longer the last version
+    // she signed: the declaration then names the wrong version there.
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let k = lab.propose(BEN, &t);
+    let sk = lab.sign(BEN, &k);
+    lab.record(0, Some((k, vec![sk])), &[], vec![], k);
+    let sa = lab.sign(ANA, &k);
+    lab.acknowledge(0, sa);
+    let d = lab.declare(None, k, f, ANA, vec![outcomes::VOICE_REMOVED]);
+    let line = lab.record(0, None, &[], vec![d], k);
+    let e = lab.view().record(&lab.c[0].id, &line).unwrap();
+    assert!(e.registers.is_empty(), "placed before the line, her signature on the clone counts");
 }
 
 /// Q37, flaw C, B15: a threshold authority of two of the other parties.
@@ -2165,7 +2338,7 @@ fn a_threshold_authority_is_counted_at_the_line() {
             t.abandonment = Some(Abandonment {
                 authority: Authority::Others(2),
                 outcomes: vec![outcomes::VOICE_REMOVED],
-                period: None,
+                proof: None,
             });
             let ids = t.parties.clone();
             let g = t.grammar.as_mut().unwrap();
@@ -2298,7 +2471,7 @@ fn a_threshold_declaration_at_the_recovery_rotation() {
             t.abandonment = Some(Abandonment {
                 authority: Authority::Others(2),
                 outcomes: vec![outcomes::VOICE_REMOVED],
-                period: None,
+                proof: None,
             });
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::One(ids[ANA]);
@@ -2360,7 +2533,7 @@ fn only_the_recovery_rotation_names_a_declarations_signatures() {
         t.abandonment = Some(Abandonment {
             authority: Authority::Others(2),
             outcomes: vec![outcomes::VOICE_REMOVED],
-            period: None,
+            proof: None,
         });
         let g = t.grammar.as_mut().unwrap();
         g.safety = Holding::Shares { threshold: 2, members: ids };
@@ -2845,7 +3018,7 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             abandonment: Some(Abandonment {
                 authority: Authority::Named(authority.id),
                 outcomes: vec![outcomes::VOICE_REMOVED],
-                period: None,
+                proof: None,
             }),
             parent: None,
             grammar: None,
@@ -2939,7 +3112,7 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         field4: Field4::Rule(Rule::All),
         clone: Rule::All,
         time: None,
-        abandonment: Some(Abandonment { authority, outcomes: vec![outcomes::VOICE_REMOVED], period: None }),
+        abandonment: Some(Abandonment { authority, outcomes: vec![outcomes::VOICE_REMOVED], proof: None }),
         parent: None,
         grammar: None,
         arbitrators: None,
@@ -2988,19 +3161,103 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
     assert_eq!(a2.exists, Some(true), "{:?}", a2.invalid);
 }
 
-/// Freeze scenario 1, step 9 (F136, F148; the hostile review of F133 to
-/// F144, finding 3): a deal whose clause names a two-week period on its
-/// block height (here 30 blocks), the keeper's operator the authority on
-/// absence. The verifier states the anchors (formats open). A liveness act
-/// on the deal protects its party once anchored, whoever anchored it; one
-/// nobody anchored does not (a stated cost). Activity elsewhere protects
-/// no one. A declaration anchored during a gap and kept counts only if
-/// another party or the keeper acknowledged it, anchored within one
-/// further period, with no act of the party on the deal anchored between:
-/// published months later, after the party returned, it counts for
-/// nothing.
+/// Freeze scenario 1, step 9, and its pass condition (F172): the deal's
+/// clause names the keeper's operator as the authority on absence, with
+/// no absence-proof cMIP, so the declaration is that identity's judgment
+/// (one identity, Flaw B19), checked for signer, outcome and version, no
+/// anchor read. p1, with nothing to sign for months, posts a liveness act:
+/// shown beside any declaration. p2 goes silent on the deal while active
+/// elsewhere; the operator declares p2 absent, removing the voice and
+/// redistributing the stake. The declaration moves nothing until a clone
+/// puts its outcome in force: the deal's terms stay as they were, and the
+/// clone without p2, no clone before, completes. p2 then contests it
+/// and comes back on the deal: nothing undoes the clone (rule 51). A
+/// declaration by anyone else is none.
 #[test]
-fn scenario_1_absence_is_judged_by_anchors() {
+fn scenario_1_step_9_absence_is_the_authoritys_judgment() {
+    let mut w = World::new();
+    let mut m: Vec<Person> = ["p1", "p2", "p3"]
+        .iter()
+        .map(|n| w.genesis(n, vec![own_home()], None, None))
+        .collect();
+    let mut keeper = w.genesis("keeper", vec![own_home()], None, None);
+    let mut stranger = w.genesis("a stranger", vec![own_home()], None, None);
+    let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+    let mut terms = deal_terms(ids[0], ids[1]);
+    terms.parties = ids.clone();
+    terms.text = "The film's contributors share its revenue.".into();
+    terms.keepers = Some(Keepers { operators: vec![keeper.id], rule: Rule::All });
+    terms.time = Some((spec("a block height reference"), Value::Uint(0)));
+    terms.abandonment = Some(Abandonment {
+        authority: Authority::Named(keeper.id),
+        outcomes: vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED],
+        proof: None,
+    });
+    assert_eq!(terms.check(&mips()), Ok(()));
+    let d = law_act(&mut w, &mut m[0], law::types::TERMS, terms.to_map(), None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &d);
+    }
+    // p1's liveness act on the deal.
+    let live = law_act(&mut w, &mut m[0], 12, vec![], obj(d));
+    // p2, busy elsewhere.
+    let elsewhere = law_act(&mut w, &mut m[1], law::types::TERMS, Terms { parties: vec![ids[1]], ..terms.clone() }.to_map(), None);
+    law_act(&mut w, &mut m[1], 12, vec![], obj(elsewhere));
+    // p1 and p3 sign a clone without p2, redistributing the stake.
+    let mut c = terms.clone();
+    c.parent = Some(d);
+    c.parties = vec![ids[0], ids[2]];
+    c.text = "The film's contributors share its revenue; p2's share is redistributed.".into();
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ids[0], ids[2]]) }]);
+    let k = law_act(&mut w, &mut m[0], law::types::TERMS, c.to_map(), obj(d));
+    sign(&mut w, &mut m[0], &k);
+    sign(&mut w, &mut m[2], &k);
+    assert!(view(&w).agreement(&k).unwrap().invalid.is_some(), "no declaration yet: p2 still counts");
+    // A stranger's declaration is none.
+    let decl = AbsenceDeclaration {
+        agreement: d,
+        clause: d,
+        party: ids[1],
+        outcomes: vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED],
+    };
+    let odd = law_act(&mut w, &mut stranger, law::types::DECLARATION, decl.to_map(), obj(d));
+    assert!(view(&w).declaration(&odd).unwrap().is_err());
+    // The operator's, with no anchor anywhere, counts.
+    let x = law_act(&mut w, &mut keeper, law::types::DECLARATION, decl.to_map(), obj(d));
+    assert!(view(&w).declaration(&x).unwrap().is_ok(), "{:?}", view(&w).declaration(&x).unwrap().err());
+    let judged = |w: &World, log: Vec<Hash>| {
+        let mut v = view(w);
+        v.keeper_logs.insert(keeper.id, log);
+        v.agreement(&k).unwrap()
+    };
+    // The declaration moves nothing by itself: the deal's own terms still
+    // name p2; what changes is the clone it lets complete, from the
+    // declaration on (rule 53, Q28).
+    assert!(view(&w).terms(&d).unwrap().parties.contains(&ids[1]));
+    assert_eq!(judged(&w, vec![odd, x]).exists, Some(true), "{:?}", judged(&w, vec![odd, x]).invalid);
+    // p2 contests and comes back: the clone stands.
+    let contest = law_act(&mut w, &mut m[1], 14, vec![], obj(x));
+    law_act(&mut w, &mut m[1], 12, vec![], obj(d));
+    sign(&mut w, &mut m[1], &k);
+    assert!(w.v.get(&contest).is_some() && w.v.get(&live).is_some(), "both held, shown beside the declaration");
+    let after = judged(&w, vec![odd, x]);
+    assert_eq!(after.exists, Some(true), "no later act undoes it (F172): {:?}", after.invalid);
+}
+
+/// The reference absence-proof module (experimental, outside the core
+/// path; F172), on what was freeze scenario 1, step 9 under F136 and F148:
+/// a deal whose clause names the module in key 3, with a two-week period
+/// on its block height (here 30 blocks), the keeper's operator the
+/// authority on absence. The caller states the anchors (formats open) to
+/// the module, never to the core. A liveness act on the deal protects its
+/// party once anchored, whoever anchored it; one nobody anchored does not.
+/// Activity elsewhere protects no one. A declaration anchored during a gap
+/// and kept is accepted only if another party or the keeper acknowledged
+/// it, anchored within one further period, with no act of the party on
+/// the deal anchored between.
+#[test]
+fn the_reference_absence_proof_module_judges_by_anchors() {
+    use law::view::reference_absence_proof as reference;
     let mut w = World::new();
     let mut m: Vec<Person> = ["p1", "p2", "p3"]
         .iter()
@@ -3020,7 +3277,7 @@ fn scenario_1_absence_is_judged_by_anchors() {
         abandonment: Some(Abandonment {
             authority: Authority::Named(keeper.id),
             outcomes: vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED],
-            period: Some(30),
+            proof: Some((reference::spec(), reference::params(30))),
         }),
         parent: None,
         grammar: None,
@@ -3050,9 +3307,8 @@ fn scenario_1_absence_is_judged_by_anchors() {
         law_act(w, &mut keeper, law::types::DECLARATION, x.to_map(), obj(d))
     };
     let judged = |w: &World, anchors: &[(Hash, u64)], x: &Hash| -> Result<(), String> {
-        let mut v = view(w);
-        v.anchors.extend(anchors.iter().copied());
-        v.declaration(x).unwrap().map(|_| ())
+        let anchors: std::collections::BTreeMap<Hash, u64> = anchors.iter().copied().collect();
+        view(w).reference_absence_proof(x, &anchors).unwrap()
     };
 
     // p1, with nothing to sign for months, posts a liveness act on the deal
@@ -3063,7 +3319,7 @@ fn scenario_1_absence_is_judged_by_anchors() {
     let ack1 = w.ack(&mut m[1], d1);
     let base = vec![(d1, 100), (ack1, 110)];
     let got = judged(&w, &[base.clone(), vec![(live, 95)]].concat(), &d1);
-    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
     // The same liveness act, anchored by nobody, protects no one.
     assert_eq!(judged(&w, &base, &d1), Ok(()));
     // Anchored before the period, it no longer protects either.
@@ -3119,7 +3375,7 @@ fn scenario_1_absence_is_judged_by_anchors() {
     // declaration's own point protects p3.
     let same = law_act(&mut w, &mut m[2], 12, vec![], obj(d));
     let got = judged(&w, &[(d3, 100), (other, 106), (same, 100)], &d3);
-    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
     // F162 (5): an act on a later version of the deal, a clone of it, is
     // presence on the deal.
     let mut c = terms.clone();
@@ -3129,22 +3385,28 @@ fn scenario_1_absence_is_judged_by_anchors() {
     let later = law_act(&mut w, &mut m[0], law::types::TERMS, c.to_map(), obj(d));
     let on_later = law_act(&mut w, &mut m[2], 12, vec![], obj(later));
     let got = judged(&w, &[(d3, 100), (other, 106), (on_later, 90)], &d3);
-    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
     // Not anchored at all: it does not count (F136).
     let got = judged(&w, &[(early, 125)], &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("not anchored")), "{got:?}");
 }
 
-/// F158 and F162 (5) in a collective whose clause names a period, its
+/// The reference absence-proof module (F172), F158 and F162 (5), in a
+/// collective whose clause names it with a period, its
 /// authority two of the other members: Ben declares Ana absent and Cy
 /// signs the declaration too. Cy, one of its signers, cannot acknowledge
 /// it (F158); the keeper can. Ana's act on the label's chain, anchored
 /// within the period, is presence on the agreement (F162, 5).
 #[test]
 fn a_threshold_declarations_signers_do_not_acknowledge_it() {
+    use law::view::reference_absence_proof as reference;
     let mut lab = Lab::new(&|t| {
         t.time = Some((spec("a block height reference"), Value::Uint(0)));
-        t.abandonment = Some(Abandonment { authority: Authority::Others(2), outcomes: vec![outcomes::VOICE_REMOVED], period: Some(30) });
+        t.abandonment = Some(Abandonment {
+            authority: Authority::Others(2),
+            outcomes: vec![outcomes::VOICE_REMOVED],
+            proof: Some((reference::spec(), reference::params(30))),
+        });
         let ids = t.parties.clone();
         let g = t.grammar.as_mut().unwrap();
         g.safety = Holding::Shares { threshold: 2, members: ids };
@@ -3156,9 +3418,8 @@ fn a_threshold_declarations_signers_do_not_acknowledge_it() {
     let by_cy = lab.w.ack(&mut lab.m[CY], d);
     let by_keeper = lab.w.ack(&mut lab.keeper, d);
     let judged = |lab: &Lab, anchors: &[(Hash, u64)]| -> Result<(), String> {
-        let mut v = lab.view();
-        v.anchors.extend(anchors.iter().copied());
-        v.declaration(&d).unwrap().map(|_| ())
+        let anchors: std::collections::BTreeMap<Hash, u64> = anchors.iter().copied().collect();
+        lab.view().reference_absence_proof(&d, &anchors).unwrap()
     };
     let got = judged(&lab, &[(d, 100), (by_cy, 105)]);
     assert!(got.as_ref().is_err_and(|e| e.contains("F158")), "a signer's acknowledgement is none: {got:?}");
@@ -3168,7 +3429,7 @@ fn a_threshold_declarations_signers_do_not_acknowledge_it() {
     let label = lab.c[0].id;
     let on_chain = law_act(&mut lab.w, &mut lab.m[ANA], 12, vec![], Some(vec![Object { chain: label, predecessor: label }]));
     let got = judged(&lab, &[(d, 100), (by_keeper, 106), (on_chain, 95)]);
-    assert!(got.as_ref().is_err_and(|e| e.contains("within that period")), "{got:?}");
+    assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
 }
 
 /// F162 (13), rule 36a: an area over the Identity layer governs the

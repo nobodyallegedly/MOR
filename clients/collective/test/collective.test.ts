@@ -68,6 +68,8 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(fw, /Any member can leave alone, at any time/);
   assert.match(fw, /any 2 of the other parties together may declare them absent/);
   assert.match(fw, /their voice is removed \(they no longer count in any rule or area\)/);
+  // Law rule 49 (F172, F178 item 11): before signing, whether an absence-proof cMIP stands between.
+  assert.match(fw, /No absence-proof cMIP stands between: their word alone is enough.*\(Law rules 49 and 51, a stated cost\)/);
   assert.match(fw, /Every member with a say in the constitution is covered/);
   assert.match(fw, /Their consent is simulated/);
   assert.match(fw, /release manifest cMIP/);
@@ -339,6 +341,8 @@ test('a judicial change: who judges absence, every member signing, recorded at o
   assert.match(jw, /The clone is marked with the judicial tier's power and signed by .*: every member whose voice remains/);
   assert.match(jw, /one version for everyone: the new clause judges each member \(Law draft 10, F121\)/);
   assert.match(jw, /Absence is now judged by any 1 of the other parties \(was any 2 of the other parties\)/);
+  // Law rule 49: the clause as it will read, before anyone signs the clone.
+  assert.match(jw, /any 1 of the other parties together may declare them absent\. What may then follow: their voice is removed .*\. No absence-proof cMIP stands between/);
   assert.match(jw, /A change to .*: judicial, a protected clause/);
   assert.match(jw, /Its mark names exactly that/);
   assert.match(jw, /no rotation, no new keys \(Law rule 37c, Q8\)/);

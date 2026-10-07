@@ -98,6 +98,32 @@ export interface Stake {
 
 const who = (h: string | null) => (h === null ? null : unhex(h));
 
+/** The outcomes an abandonment clause may allow (Law rule 53), in plain words. */
+const ABSENCE_OUTCOMES = [
+  'the member loses their voice (they no longer count in any rule or area)',
+  'their stake is shared among the remaining holders',
+  'their stake is transferred to parties named or defined by role',
+  'their obligations are redirected or held',
+  'the agreement is closed',
+];
+
+/**
+ * The abandonment clause in plain words, shown before a member signs terms
+ * carrying it (Law rule 49, client conformance; F172, F178 item 11): who
+ * may declare a member absent, with which outcomes, and whether an
+ * absence-proof cMIP stands between. This client writes none (clause key
+ * 3), so the declaration is the authority's judgment alone, a stated cost.
+ */
+export function absenceNotice(a: CollectiveTerms['abandonment']): string {
+  const outcomes = a.outcomes.map((o) => ABSENCE_OUTCOMES[o] ?? `outcome ${o}`);
+  const listed = outcomes.length <= 1 ? outcomes.join('') : `${outcomes.slice(0, -1).join(', ')} and ${outcomes[outcomes.length - 1]}`;
+  return (
+    `Absence: any ${a.others} of the other members together may declare a member absent. What may then follow: ${listed}. ` +
+    'No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or the member\'s activity. ' +
+    'Signing accepts that (Law rules 49 and 51, a stated cost); a member declared absent wrongly can only contest it, in public (Law rule 52).'
+  );
+}
+
 /** The terms payload, as CBOR, checked by the core library. */
 export function termsPayload(t: CollectiveTerms): Uint8Array {
   const payload = encodeTerms(t);

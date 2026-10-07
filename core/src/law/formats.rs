@@ -496,13 +496,19 @@ pub mod outcomes {
     pub const AGREEMENT_CLOSED: u64 = 4;
 }
 
-/// `abandonment`: the authority, the outcomes allowed, ascending, and the
-/// period of absence on the agreement's time reference.
+/// `abandonment`: the authority, the outcomes allowed, ascending, and,
+/// optionally, the absence-proof cMIP standing between the authority's word
+/// and the party's stake (key 3, F172). Key 2, the period of absence
+/// (F140), is retired and never reused: terms carrying it are invalid.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Abandonment {
     pub authority: Authority,
     pub outcomes: Vec<u64>,
-    pub period: Option<u64>,
+    /// Key 3: an absence-proof cMIP and its parameters, `[ hash, any ]`
+    /// (task "Absence proof", F172). Where named, a declaration counts only
+    /// if that cMIP accepts it (rule 51). The parameters are the cMIP's own
+    /// (a period, a time reference): the core reads none of them.
+    pub proof: Option<(Hash, Value)>,
 }
 
 impl Abandonment {
@@ -518,8 +524,8 @@ impl Abandonment {
                 Value::Array(self.outcomes.iter().map(|o| Value::Uint(*o)).collect()),
             ),
         ];
-        if let Some(p) = self.period {
-            m.push((Value::Uint(2), Value::Uint(p)));
+        if let Some((h, params)) = &self.proof {
+            m.push((Value::Uint(3), Value::Array(vec![b(h), params.clone()])));
         }
         Value::Map(m)
     }
@@ -1448,9 +1454,6 @@ impl Terms {
                     "the abandonment clause lists unknown or repeated outcomes",
                 ));
             }
-            if a.period.is_some() && self.time.is_none() && self.cmip(TIME_REFERENCE_TASK).is_none() {
-                return Err(LawError::Check("an absence period needs a time reference"));
-            }
         }
         for s in self.succession.iter().flatten() {
             // M1 (F124): a departed holder's plan keeps only its stake part,
@@ -1535,6 +1538,20 @@ impl Terms {
             if self.extensions().contains(j) {
                 return Err(LawError::Check(
                     "a judge never handles what it judges: a specification named for a judicial task is no extension (Q25)",
+                ));
+            }
+        }
+        // F172, F178 (14): absence proof is a judicial task. The cMIP the
+        // abandonment clause names for it (key 3) serves no other task, is
+        // not the time reference, and is no extension (core v21, "A judge
+        // never handles what it judges").
+        if let Some((p, _)) = self.abandonment.as_ref().and_then(|a| a.proof.as_ref()) {
+            let elsewhere = self.cmips.iter().any(|(_, c)| c == p)
+                || self.time.as_ref().is_some_and(|(t, _)| t == p)
+                || self.extensions().contains(p);
+            if elsewhere {
+                return Err(LawError::Check(
+                    "a judge never handles what it judges: the absence-proof cMIP the abandonment clause names serves no other task and is no extension (F172, F178)",
                 ));
             }
         }
@@ -1637,6 +1654,7 @@ impl Terms {
                     let elsewhere = self.cmips.iter().any(|(_, c)| c == h)
                         || self.time.as_ref().is_some_and(|(t, _)| t == h)
                         || self.extensions().contains(h)
+                        || self.abandonment.as_ref().and_then(|a| a.proof.as_ref()).is_some_and(|(p, _)| p == h)
                         || fallbacks.contains(h);
                     if elsewhere {
                         return Err(LawError::Check(
@@ -3293,7 +3311,12 @@ fn succession_plan(v: &Value) -> R<SuccessionPlan> {
 }
 
 fn abandonment(v: &Value) -> R<Abandonment> {
-    let f = map_fields(v, 3, "abandonment")?;
+    let f = map_fields(v, 4, "abandonment")?;
+    if field(&f, 2).is_some() {
+        return Err(LawError::Shape(
+            "abandonment key 2 (the period of absence, F140) is retired and never reused: terms carrying it are invalid (F172)",
+        ));
+    }
     let a = nonempty(
         field(&f, 0).ok_or(LawError::Shape("abandonment authority"))?,
         "abandonment authority",
@@ -3312,8 +3335,11 @@ fn abandonment(v: &Value) -> R<Abandonment> {
         .iter()
         .map(|x| uint(x, "abandonment outcome"))
         .collect::<R<_>>()?,
-        period: field(&f, 2)
-            .map(|x| uint(x, "abandonment period"))
+        proof: field(&f, 3)
+            .map(|x| {
+                let p = tuple(x, 2, "abandonment: an absence-proof cMIP and its parameters (key 3)")?;
+                Ok((hash(&p[0], "abandonment: the absence-proof cMIP (key 3)")?, p[1].clone()))
+            })
             .transpose()?,
     })
 }

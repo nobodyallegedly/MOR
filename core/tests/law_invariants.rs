@@ -600,7 +600,7 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         field4: Field4::Rule(Rule::All),
         clone: Rule::Threshold(ids.len().min(2) as u64),
         time: None,
-        abandonment: Some(Abandonment { authority: Authority::Named(authority), outcomes: vec![outcomes::VOICE_REMOVED], period: None }),
+        abandonment: Some(Abandonment { authority: Authority::Named(authority), outcomes: vec![outcomes::VOICE_REMOVED], proof: None }),
         parent: None,
         grammar: Some(KeyGrammar {
             signing: Holding::Shares { threshold: 1, members: ids.to_vec() },

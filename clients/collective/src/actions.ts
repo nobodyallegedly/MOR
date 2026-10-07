@@ -48,6 +48,8 @@ import {
 } from '../../repo/src/release.ts';
 import { FINANCE_TYPES, LAW_TYPES, REPO_SPECS, TEST_RAIL } from '../../repo/src/specs.ts';
 import {
+  absenceSection,
+  collectiveClause,
   count,
   lawThrown,
   list,
@@ -1067,9 +1069,10 @@ export class Actions {
     const g: Governance = { ...c.f.governance, releaseWords: text };
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
     let changes: Line[] = [];
+    let after: TermsRead | null = null;
     if (signers.length && text) {
       // Terms with nobody in the mark are not even in Law's format: read only what could be signed.
-      const after = this.read(payload);
+      after = this.read(payload);
       const hints = this.hintsOf(c);
       const before = await this.termsAct(c.f.agreement, hints);
       if (!before) blocking.push(`The agreement in force (${short(c.f.agreement)}) could not be fetched from ${hints.join(', ')}, so what changes cannot be shown.`);
@@ -1087,6 +1090,8 @@ export class Actions {
       ],
       sections: [
         { heading: 'What changes', lines: [...changes, ...(await this.unheard(c))] },
+        // Law rule 49: every clone carries the abandonment clause; shown before signing.
+        ...absenceSection(after ?? { abandonment: collectiveClause(g.abandonmentOthers) }, names),
         {
           heading: 'Signed on this device',
           lines: [
@@ -1157,8 +1162,9 @@ export class Actions {
     const mark: MarkEntry[] = [{ power: { judicial: true }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
     let changes: Line[] = [];
+    let after: TermsRead | null = null;
     if (signers.length && !hints.length) {
-      const after = this.read(payload);
+      after = this.read(payload);
       const at = this.hintsOf(c);
       const before = await this.termsAct(c.f.agreement, at);
       if (!before) blocking.push(`The agreement in force (${short(c.f.agreement)}) could not be fetched from ${at.join(', ')}, so what changes cannot be shown.`);
@@ -1185,6 +1191,8 @@ export class Actions {
       ],
       sections: [
         { heading: 'What changes', lines: [...changes, ...notes, ...(await this.unheard(c))] },
+        // Law rule 49: the clause as it will read, shown before signing.
+        ...absenceSection(after ?? { abandonment: collectiveClause(others) }, names, 'If someone disappears, after the change'),
         {
           heading: 'Signed on this device',
           lines: [
@@ -1665,6 +1673,8 @@ export class Actions {
         "An ordinary change outside every area, under the clone rule, written on the collective's record at once; no rotation (Law rules 37c, 44c).",
       ],
       sections: [
+        // Law rule 49: the clone carries the abandonment clause, unchanged; shown before signing.
+        ...absenceSection({ abandonment: collectiveClause(g.abandonmentOthers) }, names),
         {
           heading: 'Signed on this device',
           lines: [
@@ -1722,7 +1732,11 @@ export class Actions {
         'Every split is delivered to every holder it pays, and names each fee and who received it (F121, Q9). A collective naming no split service is paid payer-side instead: a wallet reading Law pays each holder by the stakes (F124 P2).',
         `The grant hands ${names(a.service)} a grant key: a key of the collective scoped to the grant, which the service makes and keeps, and signs to accept (F128). What the service signs with it, its receipts among them, is the collective's own act, a strand of its actions chain; a revocation removes the key.`,
       ],
-      sections: [{ heading: 'Signed on this device', lines: [{ text: 'The collective signs the grant; every member signs the clone; the collective records it. Test identities: consent simulated.', tone: 'warn' }] }],
+      sections: [
+        // Law rule 49: the clone carries the abandonment clause, unchanged; shown before signing.
+        ...absenceSection({ abandonment: collectiveClause(c.f.governance.abandonmentOthers) }, names),
+        { heading: 'Signed on this device', lines: [{ text: 'The collective signs the grant; every member signs the clone; the collective records it. Test identities: consent simulated.', tone: 'warn' }] },
+      ],
       plain: [],
       blocking,
     };
@@ -2123,7 +2137,17 @@ export class Actions {
         "The fork cites the collective's history up to its line, and hands out every debt in it, or it does not take effect (F127). Whatever the collective's keys sign that the fork's history does not include is void: the ending wins.",
         'Every grant of the collective ends, its split service\'s included; its open offers are withdrawn; payment follows the work\'s current claim, to the successors (F124 N14).',
       ],
-      sections: [{ heading: 'Signed on this device', lines: [{ text: 'Every member and each successor here is held by this program: their consent is simulated (test only).', tone: 'warn' }] }],
+      sections: [
+        // Law rule 49: each side signs its successor's founding terms, which carry an abandonment clause.
+        ...sides.flatMap((side, i) =>
+          absenceSection(
+            { abandonment: collectiveClause(Math.max(1, Math.min(c.f.governance.abandonmentOthers, side.length - 1))) },
+            names,
+            `If someone disappears from the successor of side ${i + 1}`,
+          ),
+        ),
+        { heading: 'Signed on this device', lines: [{ text: 'Every member and each successor here is held by this program: their consent is simulated (test only).', tone: 'warn' }] },
+      ],
       plain: [],
       blocking,
     };

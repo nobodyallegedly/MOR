@@ -1452,14 +1452,13 @@ struct SpecsIn {
     /// them (F131, IT3): wrong receipts, counting for nothing.
     #[serde(default)]
     rail_invalid: Vec<String>,
-    /// Anchoring (Law rules 50 and 51; F136, F148): for each act the
-    /// anchoring cMIP the agreement names places on its time reference, the
-    /// point it places it at, as the client read the anchors (the formats
-    /// being open), in the unit of the abandonment clause's period. Whoever
-    /// anchored it. An act not listed is not anchored. Under a clause
-    /// naming a period, a declaration counts only on these anchors.
+    /// Absence proof (Law rule 51, F172): pairs `[declaration, act]`, an
+    /// abandonment declaration and the record or clone using it, that the
+    /// absence-proof cMIP its clause names (key 3) accepted, as the client
+    /// read that cMIP's answer. Under such a clause a declaration counts
+    /// only where listed; with none, it is the authority's judgment.
     #[serde(default)]
-    anchors: std::collections::BTreeMap<String, u64>,
+    absence_accepted: Vec<(String, String)>,
 }
 
 impl SpecsIn {
@@ -1494,8 +1493,8 @@ impl SpecsIn {
         for r in &self.rail_invalid {
             view.rail_invalid.insert(unhex(r)?);
         }
-        for (d, a) in &self.anchors {
-            view.anchors.insert(unhex(d)?, *a);
+        for (d, by) in &self.absence_accepted {
+            view.absence_accepted.insert((unhex(d)?, unhex(by)?));
         }
         Ok(view)
     }
@@ -1581,7 +1580,9 @@ struct AbandonmentOut {
     identity: Option<String>,
     threshold: Option<u64>,
     outcomes: Vec<u64>,
-    period: Option<u64>,
+    /// Key 3: the absence-proof cMIP standing between the authority's word
+    /// and the party's stake, if the clause names one (F172).
+    proof: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -1807,7 +1808,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 identity,
                 threshold,
                 outcomes: a.outcomes.clone(),
-                period: a.period,
+                proof: a.proof.as_ref().map(|(h, _)| hx(h)),
             }
         }),
         parent: t.parent.as_ref().map(hx),
