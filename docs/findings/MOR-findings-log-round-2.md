@@ -1888,9 +1888,18 @@ A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`)
 **Core changes:** Law draft 10, rules 50 and 51. *To build:* `absence_by_anchors` drops the acknowledgement and checks for a later anchored act of the party; scenario 1's tests follow; the collective client's F158 warning is removed. *For the building session:* what a defeated declaration's outcomes mean for splits paid while it counted, read through "Made before, made after".
 
 
+## F167. A floor under every format's declaration (review of F145 to F162, finding 7, 7 October 2026)
+
+**Found by the hostile review of F145 to F162** (finding 7): under F149 a format may hide only its declared markup, but the format's author writes the declaration, so a hostile format declares the decimal point or the minus sign as markup and a conforming check passes.
+
+**Decided (Nobody, allegedly, 7 October 2026): "Ok, so narrowing the list looking at what is used in the stuff we're trying to protect from being hidden." "Yes, let's try it, the session will check the details":** whatever its declaration says, a format never hides a letter, digit or combining mark (L, N, M), a currency or mathematical sign (Sc, Sm), the percent and per-mille signs, a character between two digits, or a plus or minus sign directly before a digit. Fable's alternative (ban every P and S) was set aside because markup is itself punctuation. Caveat recorded: a list can miss a case (the project lead first put `%` among maths signs; it is punctuation, Po); a miss weakens protection only against a hostile format, for that character, and plain display stays the fallback.
+
+**Core changes:** Text draft 6, the format task and its reasoning. *To build:* the floor check in the long-form client's `checkBound()`; tests over amounts, dates, percentages and scripts with vowel marks; the building session checks the floor's details and reports any case it misses or any markup it wrongly forbids.
+
+
 ## Review of F145 to F162 (7 October 2026, morning)
 
 A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-review.md`), attacked the eighteen decisions together, after F145 to F162 were built and merged (`docs/decisions-f157-f162-build-2026-10-06.md`, main `b2b79a8`, display client released `9e53e70`). **Six break, two in common cases:** (1) F160: an individual's everyday acts never cite the identity chain where the vault is declared, so no act "holds" a vault; read through the binding, a vault lowered after a theft protects nothing already signed; (2) F157: a person with two devices has two sequences, and the walk follows one, so a deal signed on the phone holds no pointer published from the laptop; (3) F146, F147, F154: a payer can always add a claim citing nothing, and an owner cannot anchor the payer's claim, so the proviso excludes only honest payers and the theft window never shuts; (4) F150: the receipt's signer chooses its salt, so it can choose the tie; (5) F148, F158: a declaration acknowledged by one accomplice can still be kept and used later; (6) F149: a format declares its own bound. Smaller: findings 6 to 14. The build session's own questions (its report, "Questions") are open too. *The decisions were made fast, mostly on the project lead's suggestions; the two common-case breaks follow from his suggestions (F157, F160).*
 
-**Open for Nobody, allegedly:** findings 7 to 14 of the review (findings 1 to 6 decided as F163 to F166), and the build's questions 1 to 5.
+**Open for Nobody, allegedly:** findings 8 to 14 of the review (findings 1 to 7 decided as F163 to F167), and the build's questions 1 to 5.
 
