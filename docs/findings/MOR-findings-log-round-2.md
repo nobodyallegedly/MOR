@@ -2137,6 +2137,10 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **Suggested by the project lead, not decided:** the claim's referral becomes a list `[+ [ role, identity, evidence ]]`, signed by the payer; a way for a split cMIP to weight payouts by evidence over a period. Neither is to be written until Nobody, allegedly, has fleshed out the principle; then one hostile review of the incentive layer as a whole, not item by item.
 
+**Tracing the chain (same evening).** A free video with donations, a lone poster, free clients and relays: (a) a lone poster has no Law agreement, so a tip has no split plan and rewards nobody but the poster, the most common case failing by default; (b) Law names "a relay's signed delivery record" as evidence (rule 19), but no MIP or cMIP defines it; (c) what happens when the video is watched (the reading client, the serving relay, the repost followed) leaves no evidence of its own, but is known to the payer's client at the moment of paying, and is written there, in the claim, on the payer's word; (d) a repost is "a reference to a publication" (Envelope rule 5), so a chain of reposts forms only by client habit: nothing gives a reference the meaning "I came through this one", and a reposter may cite any repost.
+
+**Principle, stated by Nobody, allegedly:** "We cannot force people to use it only in a healthy manner, but we can make it legible." The incentive layer is left to the developers who think about rewarding the pipe; his expectation is that they make the most productive area of the network, and over time possibly the healthiest. *Project lead's caution, recorded with it: legible is not the same as deterred (Steem's curation was on a public chain and was still gamed), so the expectation is a hypothesis to be stated as one, and legibility counts only where a client shows it and the cost of gaming falls on whoever chose the plan.*
+
 **Next, decided by Nobody, allegedly:** taken up on 8 October 2026, straight after the collective client human test (step 11b).
 
 ## Review of F163 to F168 (7 October 2026, morning)
