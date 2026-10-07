@@ -66,10 +66,15 @@ pub mod layers {
 }
 
 /// The highest task number (Production, task table).
-pub const LAST_TASK: u64 = 13;
+pub const LAST_TASK: u64 = 14;
 
-/// The judicial tasks: condition evaluation, time reference, anchoring.
-pub const JUDICIAL_TASKS: [u64; 3] = [9, 10, 11];
+/// The judicial tasks: condition evaluation, time reference, anchoring,
+/// absence proof (F178, F182).
+pub const JUDICIAL_TASKS: [u64; 4] = [9, 10, 11, 14];
+
+/// The absence-proof task (F172, F182): the abandonment clause's key 3
+/// names its cMIP, and a chain of judgment names it as `[ 0, 14 ]`.
+pub const ABSENCE_PROOF_TASK: u64 = 14;
 
 /// The time reference task (field 6 is a naming for it, Q25).
 pub const TIME_REFERENCE_TASK: u64 = 10;
@@ -188,7 +193,7 @@ pub fn task_layer(task: u64) -> Option<u64> {
         1..=3 => Some(layers::IDENTITY),
         4 | 5 => Some(layers::ENVELOPE_AND_TEXT),
         6 | 7 => Some(layers::FINANCE),
-        8..=13 => Some(layers::LAW),
+        8..=14 => Some(layers::LAW),
         _ => None,
     }
 }
@@ -707,8 +712,9 @@ impl Field4 {
 /// `judge`: a judge a chain of judgment follows (F121; terms field 21).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Judge {
-    /// `[ 0, task ]`: the specification named for judicial task 9, 10 or
-    /// 11 (field 2, or field 6 for the time reference).
+    /// `[ 0, task ]`: the specification named for judicial task 9, 10, 11
+    /// or 14 (field 2, field 6 for the time reference, or the abandonment
+    /// clause's key 3 for absence proof, F182).
     Task(u64),
     /// `[ 1, identity ]`: an identity the terms name as a keeper's
     /// operator, an arbitrator or verifier, or the abandonment authority.
@@ -1336,6 +1342,13 @@ impl Terms {
                     "a cMIP names a task number that does not exist",
                 ));
             }
+            // The abandonment clause names the absence-proof cMIP (key 3,
+            // rule 51), and only there (a reading, F182).
+            if *t == ABSENCE_PROOF_TASK {
+                return Err(LawError::Check(
+                    "the absence-proof cMIP is named by the abandonment clause (key 3), not in field 2 (F172, F182)",
+                ));
+            }
             if *t <= last {
                 return Err(LawError::Check("at most one cMIP per task"));
             }
@@ -1558,6 +1571,16 @@ impl Terms {
         Ok(())
     }
 
+    /// The specification the terms name for task `t`: field 2's, field 6's
+    /// for the time reference (Q25), or the abandonment clause's key 3 for
+    /// absence proof (task 14, F182).
+    fn task_judge(&self, t: u64) -> Option<Hash> {
+        if t == ABSENCE_PROOF_TASK {
+            return self.abandonment.as_ref().and_then(|a| a.proof.as_ref()).map(|(h, _)| *h);
+        }
+        self.cmip(t).copied().or_else(|| (t == TIME_REFERENCE_TASK).then(|| self.time.as_ref().map(|(h, _)| *h)).flatten())
+    }
+
     /// The chain of judgment (field 21, F121): each judge it follows is one
     /// the terms name, once, the links ascending by the judge's encoding;
     /// those that take over are distinct, and none is the judge itself. A
@@ -1581,10 +1604,7 @@ impl Terms {
         for l in chain {
             let judge: Hash = match &l.judge {
                 Judge::Task(t) => {
-                    let named = self.cmip(*t).copied().or_else(|| {
-                        (*t == TIME_REFERENCE_TASK).then(|| self.time.as_ref().map(|(h, _)| *h)).flatten()
-                    });
-                    match named {
+                    match self.task_judge(*t) {
                         Some(h) if JUDICIAL_TASKS.contains(t) => h,
                         _ => {
                             return Err(LawError::Check(
@@ -1743,9 +1763,7 @@ impl Terms {
     /// `None` when the terms name no such judge.
     pub fn chain_of(&self, judge: &Judge) -> Option<Vec<Hash>> {
         let first = match judge {
-            Judge::Task(t) => self.cmip(*t).copied().or_else(|| {
-                (*t == TIME_REFERENCE_TASK).then(|| self.time.as_ref().map(|(h, _)| *h)).flatten()
-            })?,
+            Judge::Task(t) => self.task_judge(*t)?,
             Judge::Identity(x) => *x,
             Judge::SplitService => self.split_grant?,
         };

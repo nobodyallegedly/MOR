@@ -438,6 +438,25 @@ fn the_backup_clock_is_used_only_when_the_main_one_is_not() {
     assert_eq!(t.l.paid(&t.debt), 0, "anchored on the main reference: the backup orders nothing");
 }
 
+/// F182 item 1: where the lock change is anchored only on the backup, a
+/// claim anchored on the main reference counts as made whatever its point:
+/// the two references cannot be compared, so a main anchor long after the
+/// backup point still counts, and one anchored only on the backup must be
+/// before or at its point. *Removal check: comparing the main anchor's
+/// point with the backup point, as if on one reference, the second
+/// assertion fails.*
+#[test]
+fn a_main_clock_claim_counts_when_the_lock_change_is_anchored_only_on_the_backup() {
+    let mut t = theft(Some(Lab::new().clock(true)));
+    let (_, r) = lock_change(&mut t);
+    t.l.anchor(r[0], "backup", 50);
+    t.l.anchor(r[1], "backup", 50);
+    t.l.anchor(t.claim, "backup", 51);
+    assert_eq!(t.l.paid(&t.debt), 0, "on the backup, after its point");
+    t.l.anchor(t.claim, "main", 1_000_000);
+    assert_eq!(t.l.paid(&t.debt), 70, "on the main reference: counts, whatever its point (F182)");
+}
+
 /// F176: a payee that declared no clock has chosen no protection: its lock
 /// changes count as not anchored, whatever is anchored where. *Removal
 /// check: reading a lock change without a clock as anchored on whatever
@@ -514,6 +533,36 @@ fn a_rotation_held_back_has_no_point_until_its_quorum_is_anchored() {
     t.l.anchor(r[0], "main", 80);
     t.l.anchor(r[1], "main", 80);
     assert_eq!(t.l.paid(&t.debt), 70, "the point is 80, not the rotation's own 10");
+}
+
+/// F182 item 2: a lock change made by a homeless rotation (here an escape
+/// with both keys, to three new homes, two of three required) takes its
+/// point from the new homes' quorum under the new home rule: the second of
+/// the new homes' anchored receipts. *Removal check: with a homeless
+/// rotation's quorum left unread (no point), the lock change counts as
+/// unanchored and the first assertion after the anchors fails.*
+#[test]
+fn a_homeless_rotations_point_is_read_from_the_new_homes_quorum() {
+    let mut t = theft(Some(Lab::new().clock(false)));
+    let mut new: Vec<Person> = ["new home one", "new home two", "new home three"].iter().map(|n| t.l.w.operator(n)).collect();
+    let (rot, owner) = t.l.w.rotate(
+        &t.owner,
+        Rot { homeless: true, homes: Some(new.iter().map(home).collect()), disowned: Some(vec![t.v2, t.thiefs_signature]), ..Default::default() },
+    );
+    t.l.w.endorse(&mut t.owner, &rot, None);
+    let r: Vec<Hash> = new.iter_mut().take(2).map(|op| t.l.w.receipt(op, &owner.id, &rot, 1)).collect();
+    t.owner = owner;
+    assert_eq!(t.l.w.v.resolve(&t.owner.id).position_of(&rot), Some(1), "the escape counts");
+    assert_eq!(t.l.w.v.status(&t.v2), Status::Void);
+    let q = t.l.w.v.quorum(&t.owner.id, &rot).unwrap();
+    assert!(matches!(&q, Quorum::Homeless { need: 2, supports } if supports.len() == 3), "{q:?}");
+    t.l.anchor(r[0], "main", 100);
+    assert_eq!(t.l.paid(&t.debt), 70, "one new home's receipt is no quorum: no point yet");
+    t.l.anchor(r[1], "main", 120);
+    assert_eq!(fin::quorum_point(&q, &rot, &t.l.anchors, &t.l.main.reference()), Some(120));
+    assert_eq!(t.l.paid(&t.debt), 0, "anchored at 120, the claim is not: the payer bears");
+    t.l.anchor(t.claim, "main", 110);
+    assert_eq!(t.l.paid(&t.debt), 70, "the claim anchored before the new homes' quorum");
 }
 
 /// F177: for a self-hosted identity, which counts on its rotation alone,
@@ -620,6 +669,43 @@ fn a_lock_change_is_defined_by_its_effect() {
     assert_eq!(l.paid(&vault), 0, "paid to a replaced entry, its claim not anchored");
     assert_eq!(l.paid(&flow), 900, "the flow payment is untouched");
     let _ = raised;
+}
+
+/// F182 item 4: the entry-less vault payment form is dropped. A payment to
+/// the vault names the entry it was paid to, as the payment cMIP's
+/// `paid-to` does, and only that entry is read: here, entry 1 of a vault of
+/// two, its sibling's source replaced. *Removal check: this test stops
+/// compiling if the form returns, since the match below names every form;
+/// judged against the whole vault the act declared, as the dropped form
+/// was, the rotation is a lock change for it and the `lock_changes`
+/// assertion fails.*
+#[test]
+fn a_vault_payment_names_its_entry() {
+    fn entry(at: &PaidAt) -> Option<u64> {
+        match at {
+            PaidAt::Flow(_) => None,
+            PaidAt::VaultEntry(_, i) => Some(*i),
+        }
+    }
+    let mut l = Lab::new();
+    let c = l.clock(false);
+    let two = |a: &str| fin::vault_declaration(&mips().finance, &[VaultEntry { unit: unit(), rail_module: rail(), source: a.as_bytes().to_vec(), limit: 1_000 }, VaultEntry { unit: unit(), rail_module: rail(), source: b"the kept vault".to_vec(), limit: 1_000 }]);
+    let mut owner = l.owner("owner", vec![clock_decl(&c), two("the old vault")], None);
+    let mut debtor = l.person("debtor");
+    let oid = owner.id;
+    let v1 = l.pointer(&mut owner, oid, 1, None, "the owner's node");
+    let deal = l.terms(&mut debtor);
+    l.sign(&mut owner, deal, vec![v1]);
+    let d = l.debt(&mut debtor, oid, 5_000, v1, deal);
+    let at = PaidAt::VaultEntry(oid, 1);
+    assert_eq!(entry(&at), Some(1));
+    l.claim(&mut debtor, oid, d, 5_000, "to the kept entry", at);
+    let (_, _, r) = l.rotate(&owner, Rot { declarations: Some(vec![two("a new vault")]), ..Default::default() }, &[0, 1]);
+    for x in &r {
+        l.anchor(*x, "main", 100);
+    }
+    assert!(l.view().lock_changes(&oid, &at, &amount(5_000), &d).is_empty(), "the entry paid to is untouched");
+    assert_eq!(l.paid(&d), 5_000);
 }
 
 /// F175: where several anchored lock changes affect a payment, it counts

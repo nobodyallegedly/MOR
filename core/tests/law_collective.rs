@@ -2200,6 +2200,42 @@ fn the_absence_proof_cmip_is_a_judge() {
     }
 }
 
+/// F182 item 14: absence proof is task 14, and a chain of judgment names
+/// its cMIP as any judge: `[ 0, 14 ]` follows the cMIP the clause names in
+/// key 3, and the specification taking over from it is a judge too, named
+/// nowhere else. Field 2 does not name it: the clause does (a reading, in
+/// the build's report). *Removal check: with task 14 not a judicial task a
+/// chain can follow, the first assertion fails ("names no judge").*
+#[test]
+fn absence_proof_is_task_14_in_the_chain_of_judgment() {
+    use mor_core::law::{ChainLink, Judge, ABSENCE_PROOF_TASK};
+    assert_eq!(ABSENCE_PROOF_TASK, 14);
+    let proof = spec("an absence-proof cMIP");
+    let next = spec("an absence-proof cMIP taking over");
+    let lab = Lab::new(&|_| {});
+    let mut t = lab.view().terms(&lab.founding).unwrap();
+    t.abandonment.as_mut().unwrap().proof = Some((proof, Value::Null));
+    t.chain = Some(vec![ChainLink { judge: Judge::Task(14), next: vec![(next.into(), 30)] }]);
+    assert_eq!(t.check(&mips()), Ok(()));
+    assert_eq!(t.chain_of(&Judge::Task(14)), Some(vec![proof, next]));
+    let back = Terms::decode(&t.to_map()).unwrap();
+    assert_eq!(back.chain_of(&Judge::Task(14)), Some(vec![proof, next]), "read back from its bytes");
+    // The one taking over is named nowhere else.
+    let mut u = t.clone();
+    u.cmips.push((9, next));
+    u.cmips.sort();
+    assert!(matches!(u.check(&mips()), Err(LawError::Check(w)) if w.contains("named nowhere else")));
+    // No absence-proof cMIP in the clause: the chain follows no judge.
+    let mut u = t.clone();
+    u.abandonment.as_mut().unwrap().proof = None;
+    assert!(matches!(u.check(&mips()), Err(LawError::Check(w)) if w.contains("no judge")));
+    // Field 2 does not name it.
+    let mut u = t.clone();
+    u.cmips.push((14, proof));
+    u.cmips.sort();
+    assert!(matches!(u.check(&mips()), Err(LawError::Check(w)) if w.contains("key 3")), "{:?}", u.check(&mips()));
+}
+
 /// Law rule 51 (F172; F178 item 12): where the clause names an
 /// absence-proof cMIP (key 3), the declaration counts only where that cMIP
 /// accepted it, for the act using it. The core reads no cMIP: the
@@ -3567,7 +3603,7 @@ fn obligation_to(lab: &mut Lab, creditor: Hash, value: u64) -> Hash {
 /// (Finance rules 4 and 14).
 fn receipt(lab: &mut Lab, payee: &mut Person, payer: Hash, obligation: Hash, value: u64) -> Hash {
     let r = receipt_unanswered(&mut lab.w, payee, payer, obligation, value);
-    lab.rail_valid.push((r, mor_core::finance::PaidAt::Vault(payee.id)));
+    lab.rail_valid.push((r, mor_core::finance::PaidAt::VaultEntry(payee.id, 0)));
     r
 }
 
@@ -6733,12 +6769,12 @@ fn a_receipt_pays_a_debt_only_with_the_rails_answer_and_in_its_unit() {
     assert_eq!(lab.view().owes(&label).unwrap(), vec![d]);
     // A valid rail answer, but 100 of another unit: nothing paid.
     let other = payment(&mut lab, &mut printer, false, pid, d, spec("another unit"), 100, b"proof: another unit");
-    lab.rail_valid.push((other, PaidAt::Vault(pid)));
+    lab.rail_valid.push((other, PaidAt::VaultEntry(pid, 0)));
     assert_eq!(lab.view().paid_toward(&d), 0);
     assert_eq!(lab.view().owes(&label).unwrap(), vec![d]);
     // In the debt's unit, with the rail's answer: paid.
     let good = payment(&mut lab, &mut printer, false, pid, d, spec("a unit"), 100, b"proof: paid");
-    lab.rail_valid.push((good, PaidAt::Vault(pid)));
+    lab.rail_valid.push((good, PaidAt::VaultEntry(pid, 0)));
     assert_eq!(lab.view().paid_toward(&d), 100);
     assert_eq!(lab.view().owes(&label).unwrap(), Vec::<Hash>::new());
 }
@@ -6805,7 +6841,7 @@ fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
     ack(&mut lab, &mut printer, old);
     let v2 = pointer(&mut lab, &mut printer, 2, Some(v1), "the printer's second node");
     assert_eq!(paid(&mut lab, &mut printer, old, 40, PaidAt::Flow(v2), "old, to v2"), 0);
-    assert_eq!(paid(&mut lab, &mut printer, old, 40, PaidAt::Vault(pid), "old, to the vault"), 40);
+    assert_eq!(paid(&mut lab, &mut printer, old, 40, PaidAt::VaultEntry(pid, 0), "old, to the vault"), 40);
     // F145: a debt the printer has not acknowledged counts on no flow.
     let bare = iou(&mut lab, v2, 30);
     assert_eq!(paid(&mut lab, &mut printer, bare, 30, PaidAt::Flow(v2), "bare, to v2"), 0);
@@ -6815,7 +6851,7 @@ fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
     let big = iou(&mut lab, v2, 80);
     ack(&mut lab, &mut printer, big);
     assert_eq!(paid(&mut lab, &mut printer, big, 80, PaidAt::Flow(v2), "big, to the flow"), 0);
-    assert_eq!(paid(&mut lab, &mut printer, big, 80, PaidAt::Vault(pid), "big, to the vault"), 80);
+    assert_eq!(paid(&mut lab, &mut printer, big, 80, PaidAt::VaultEntry(pid, 0), "big, to the vault"), 80);
     // Within the limit, acknowledged by an act holding version 2, paid to
     // it: it counts...
     let d = iou(&mut lab, v2, 30);
@@ -6907,7 +6943,7 @@ fn a_payers_claim_counts_and_shows_what_the_receiver_hides() {
     let pid = printer.id;
     let unit = spec("a unit");
     let d = obligation_to(&mut lab, pid, 100);
-    let at = PaidAt::Vault(pid);
+    let at = PaidAt::VaultEntry(pid, 0);
     // The label, paying, signs a claim without the rail's answer: nothing.
     let mut payer = lab.c[0].clone();
     let bare = payment(&mut lab, &mut payer, true, pid, d, unit, 100, b"no answer");

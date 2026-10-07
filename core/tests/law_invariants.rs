@@ -700,7 +700,7 @@ impl ColWorld {
     fn view(&self) -> LawView<'_> {
         let mut lv = LawView::new(&self.w.v, mips());
         for (x, payee) in &self.paid {
-            lv.rail_valid.insert(*x, mor_core::finance::PaidAt::Vault(*payee));
+            lv.rail_valid.insert(*x, mor_core::finance::PaidAt::VaultEntry(*payee, 0));
         }
         lv
     }
