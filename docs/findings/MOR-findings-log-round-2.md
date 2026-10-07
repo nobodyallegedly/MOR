@@ -2106,6 +2106,20 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Finance draft 6, rule 15; Law draft 10, rule 15a and Tasks; Text draft 6, the format task. *To build:* 1, 2, 4, 8, 9 to 12, 14, 16.
 
 
+## F183. The F182 build's questions (7 October 2026, afternoon)
+
+**Found building F182** (`docs/decisions-f182-build-2026-10-07.md`; merged `229c1d6`, display client released `3c5efb0`, main green at `51c04ba`; Rust 407, TypeScript 172, verifier2 0 disagreements). **Suggested by the project lead; Nobody, allegedly, 7 October 2026: "All agreed."**
+
+1. An absence-proof cMIP is named only in the abandonment clause's key 3; terms field 2 naming task 14 is refused (as built).
+2. Law's `judge` CDDL comment names task 14 (editorial, done).
+3. A line starting `>` before a digit is not a quote; the `>` is text.
+4. Several pieces of markup between two digits: the first piece on the line becomes text (long-form cMIP rule 11a).
+5. A holder whose first split deviates keeps "no good split yet"; the next split must cite none.
+6. The long-form cMIP's revision in place (rules 5, 10, 11a and the markup declaration) is approved.
+
+**With F183 the theft, absence, splits and text work of 6 and 7 October is decided and built.**
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).

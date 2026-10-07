@@ -148,7 +148,7 @@ chain    = [ judge, next: [+ [ hash / [+ hash], period: uint ]] ]
                                       ; a judge the terms name, and in order those that take over from it, each with the
                                       ;   period, on the time reference, the one before it has to act once asked (Q7);
                                       ;   a list only for a deal's split service: one service, by one grant per payee (F130, H6)
-judge    = [ 0, task: uint ]          ; the specification named for judicial task 9, 10 or 11 (field 2, or field 6 for 10): next are specifications
+judge    = [ 0, task: uint ]          ; the specification named for judicial task 9, 10, 11 or 14 (field 2, field 6 for 10, or the abandonment clause's key 3 for 14; F183): next are specifications
          / [ 1, identity: hash ]      ; a keeper's operator, an arbitrator or verifier, or the abandonment authority the terms name: next are identities
          / [ 2 ]                      ; the split service (field 14): next are grants naming the services that take over:
                                       ;   in a collective one grant each; in a deal, for each service, its grants, one per payee,
