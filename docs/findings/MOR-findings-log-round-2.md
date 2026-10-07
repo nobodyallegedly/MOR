@@ -1943,6 +1943,17 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Finance draft 6, rules 14a and 15; core v21 "Good faith"; paper section 5.1 and claim 2. *Next:* one hostile review of the whole set by Fable before building.
 
 
+## F170. Re-pointing deals during the window is the window's cost (review of F163 to F168, findings 5 and 6, 7 October 2026)
+
+**Found by the hostile review of F163 to F168:** (5) F168 item 11's "any later act of the payee's on the agreement" lets a thief holding the signing key sign one act per deal citing the thief's pointer, re-pointing every royalty that falls due in the window, which F157 had closed and which the core, Finance's reasoning and the paper still promised; (6) F163's client rule, in the window, makes the owner's honest device cite the thief's pointer, and "where the payee's pointers are published" was not named in Finance.
+
+**Considered:** (b) requiring the debtor's acknowledgement before a deal is re-pointed (friction on every honest wallet change, partial protection). Asked "All these findings still apply under the changes?", the project lead found that 5 and 6 now fall under F169's principle (the owner bears what the stolen key did until the lock change).
+
+**Decided (Nobody, allegedly, 7 October 2026): "Yes":** both are the window's cost, borne by the owner, bounded per payment by the vault limits; the backlog is protected after the lock change, not during the window. The promises are corrected in the core, Finance's reasoning and the paper. F163's place is named: where the payee's routes act says its Finance acts are found.
+
+**Core changes:** core v21 "Flow and vault"; Finance draft 6, rule 14 and the vault reasoning; paper section 5.1.
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
