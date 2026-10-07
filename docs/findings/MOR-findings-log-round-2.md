@@ -1936,6 +1936,8 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **Decided:** a lock change is a rotation that voids a payee pointer or lowers or removes a vault limit. Unanchored, the owner bears (payments that followed what was published count). Anchored, a payment it affects counts only where the payee's own receipt (kept line, or split service grant key) or a payer's claim anchored before it shows it. Anchors compare only on one reference; incomparable favours the payer. Clients write the claim at payment and should anchor promptly; how is the anchoring cMIP's business. Stated costs: the owner's lever (bounded by the earlier limit, visible, beaten by prompt anchoring); old unanchored, unreceipted payments.
 
+**Working rule (Nobody, allegedly, 7 October 2026):** "stating that a core action is recommended even if the core does not specify how is fine. Money moves and core never specify how, media moves and the core never specifies how exactly." Anchoring joins rails and media types: the core names the task and what it must deliver; cMIPs and Modules decide how.
+
 **Replaces:** F139, F146, F154 and the rule of F164 (F147's anonymous signature over citations stands; reading several claims together is moot). F160 stays withdrawn.
 
 **Core changes:** Finance draft 6, rules 14a and 15; core v21 "Good faith"; paper section 5.1 and claim 2. *Next:* one hostile review of the whole set by Fable before building.
