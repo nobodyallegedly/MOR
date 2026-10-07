@@ -1897,9 +1897,27 @@ A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`)
 **Core changes:** Text draft 6, the format task and its reasoning. *To build:* the floor check in the long-form client's `checkBound()`; tests over amounts, dates, percentages and scripts with vowel marks; the building session checks the floor's details and reports any case it misses or any markup it wrongly forbids.
 
 
+## F168. The review's smaller findings and the build's questions answered (review of F145 to F162, findings 8 to 14; build of F157 to F162, questions 1, 3 to 5; 7 October 2026)
+
+**Suggested by the project lead, in one batch; Nobody, allegedly, 7 October 2026: "Agreed."**
+
+- **8.** A link gives no authority (rule 25), so it never decides anything binding, and a fetch's standing is never needed; Identity rule 26 follows F152 (each half counts once published at its signer's homes; holding one back delays the link).
+- **9.** A refund under rule 10a is outside rule 14's pointer selection: its creditor is a bare key.
+- **10.** Where the payer divides, the payer decides each tied unit, at most one per tie, a stated cost; no hash.
+- **11.** The latest pointer held by any of the payee's own acts on the agreement counts (signature acts, its own offer, later acts); a payee changing wallet has its client sign one act on each agreement citing the new pointer, no clone; rule 12a's reasoning says so.
+- **12.** On a rail that binds nothing, a payer can relabel a payment: a stated cost, rare; a rail Module declares whether it binds (FORMAT OPEN).
+- **13.** An offer is the payee's own act only if the payee signed it; otherwise the payee's act is its signature accepting it.
+- **14.** Editorial: "afterwards" removed from rule 14a; "until" made "unless" in rule 14; freeze scenario 1 follows F166 and runs on stated anchors; the paper's claim 6 tolerance is one unit.
+- **B1.** At a fork, members counted alike give leftovers to the first as listed in the agreement in force, an order every member signed.
+- **B3.** Answered by 8. **B4.** A private link act signed by a scoped key is invalid (rule 1a); the code refuses it. **B5.** A private link voided by a rotation is void whether or not fetched; the rotation is judged first.
+- (B2, a rotation lacking its Identity area's consent, was answered during the build: shown only.)
+
+**Core changes:** Identity draft 11 (envelope section, rule 26); Finance draft 6 (rules 10, 10a, 12a, 14, 14a); Law draft 10 (rule 15a); freeze suite scenario 1; paper claim 6. *To build:* items 9 to 11, 13, B4, B5.
+
+
 ## Review of F145 to F162 (7 October 2026, morning)
 
 A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-review.md`), attacked the eighteen decisions together, after F145 to F162 were built and merged (`docs/decisions-f157-f162-build-2026-10-06.md`, main `b2b79a8`, display client released `9e53e70`). **Six break, two in common cases:** (1) F160: an individual's everyday acts never cite the identity chain where the vault is declared, so no act "holds" a vault; read through the binding, a vault lowered after a theft protects nothing already signed; (2) F157: a person with two devices has two sequences, and the walk follows one, so a deal signed on the phone holds no pointer published from the laptop; (3) F146, F147, F154: a payer can always add a claim citing nothing, and an owner cannot anchor the payer's claim, so the proviso excludes only honest payers and the theft window never shuts; (4) F150: the receipt's signer chooses its salt, so it can choose the tie; (5) F148, F158: a declaration acknowledged by one accomplice can still be kept and used later; (6) F149: a format declares its own bound. Smaller: findings 6 to 14. The build session's own questions (its report, "Questions") are open too. *The decisions were made fast, mostly on the project lead's suggestions; the two common-case breaks follow from his suggestions (F157, F160).*
 
-**Open for Nobody, allegedly:** findings 8 to 14 of the review (findings 1 to 7 decided as F163 to F167), and the build's questions 1 to 5.
+**All decided:** findings 1 to 14 as F163 to F168; the build's questions as F168 (B2 answered during the build).
 
