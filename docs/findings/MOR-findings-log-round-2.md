@@ -1879,9 +1879,18 @@ A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`)
 **Core changes:** Law draft 10, rule 15a and its reasoning. *To build:* the tally in split services' receipts (format open), the turn rule in `divide_stake`, a test that a service cannot steer ties.
 
 
+## F166. Coming back defeats an absence declaration (review of F145 to F162, findings 5 and 6, 7 October 2026)
+
+**Found by the hostile review of F145 to F162:** (5) with one accomplice acknowledging it, a declaration anchored during a holiday could be kept and shown months after the party returned (F148 and F158 bound when acts existed, not when they were shown); (6) F158 made a duo's period clause need a keeper or third party, though every collective must carry an absence clause, so a common case needed an added feature, against F159's working rule.
+
+**Decided (Nobody, allegedly, 7 October 2026): "Agree":** a declaration under a period clause counts only while the declared party has no act on the agreement anchored after the declaration's anchor; the party's own anchored act defeats it whenever it is shown. What was put in force while it counted (a clone without the party, at a line or by signatures a keeper recorded) is never undone (Q28). The acknowledgement requirement of F148 and F158, and F158's client warning, are withdrawn; a duo's period clause works with no third party.
+
+**Core changes:** Law draft 10, rules 50 and 51. *To build:* `absence_by_anchors` drops the acknowledgement and checks for a later anchored act of the party; scenario 1's tests follow; the collective client's F158 warning is removed. *For the building session:* what a defeated declaration's outcomes mean for splits paid while it counted, read through "Made before, made after".
+
+
 ## Review of F145 to F162 (7 October 2026, morning)
 
 A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-review.md`), attacked the eighteen decisions together, after F145 to F162 were built and merged (`docs/decisions-f157-f162-build-2026-10-06.md`, main `b2b79a8`, display client released `9e53e70`). **Six break, two in common cases:** (1) F160: an individual's everyday acts never cite the identity chain where the vault is declared, so no act "holds" a vault; read through the binding, a vault lowered after a theft protects nothing already signed; (2) F157: a person with two devices has two sequences, and the walk follows one, so a deal signed on the phone holds no pointer published from the laptop; (3) F146, F147, F154: a payer can always add a claim citing nothing, and an owner cannot anchor the payer's claim, so the proviso excludes only honest payers and the theft window never shuts; (4) F150: the receipt's signer chooses its salt, so it can choose the tie; (5) F148, F158: a declaration acknowledged by one accomplice can still be kept and used later; (6) F149: a format declares its own bound. Smaller: findings 6 to 14. The build session's own questions (its report, "Questions") are open too. *The decisions were made fast, mostly on the project lead's suggestions; the two common-case breaks follow from his suggestions (F157, F160).*
 
-**Open for Nobody, allegedly:** findings 5 to 14 of the review (findings 1 to 4 decided as F163 to F165), and the build's questions 1 to 5.
+**Open for Nobody, allegedly:** findings 7 to 14 of the review (findings 1 to 6 decided as F163 to F166), and the build's questions 1 to 5.
 
