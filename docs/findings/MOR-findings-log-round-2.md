@@ -1859,9 +1859,20 @@ A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`)
 **Core changes:** Finance draft 6, rule 14. *To build:* clients that sign terms or offers fetch and cite the latest pointer; a test with two devices.
 
 
+## F164. Good faith after a theft: the payee's receipt, the payer's word until the owner anchors (review of F145 to F162, findings 1 and 3, 7 October 2026)
+
+**Found by the hostile review of F145 to F162:** (1) F160 froze the vault into each act the payee had signed, so flow off after a theft protected nothing already signed (and read literally, no act holds a vault at all); (3) the good-faith proviso rests on the payer's claim, which a colluding payer can always write citing nothing, and the owner cannot anchor the payer's claim, so the theft window never shut. One problem: without a clock, "already made" and "still to come" need evidence.
+
+**Considered:** the project lead's first suggestion (the payee's receipt, or the payer's word until the owner anchors) was put with a cost called rare; asked "What sort of scenario creates the rare case?", the lead found it is every honest payer between the theft and the rotation, and that it changes rule 15's principle ("the loss from a theft window falls on the owner, never on a payer who followed the rules"). Two options were then put: (a) keep the principle, collusion an unbounded stated cost; (b) let the owner shut the window by anchoring.
+
+**Decided (Nobody, allegedly, 7 October 2026): (b): "Basically this says to the client dev, anchor your users payment or they'll risk." "Yes. And it is why the idea was to create the clusterfrick of paying via LN and then anchoring on chain pooled":** F160 is withdrawn: the vault applies as the payee's chain declares it, so a change applies at once. A payment to a pointer a rotation voided, or under earlier limits, counts as made where (a) the payee's own receipt shows it (on a kept line, or the payee's split service's grant key), or (b) on the payer's word (F139, F147, F154) until the owner anchors the rotation; after the anchor, only a payer's claim anchored before it. Clients write the claim at payment and should anchor it, pooled. Stated cost: an honest payer in the window with no receipt and no anchored claim, once the owner anchors. The design intent recorded: paying over Lightning and anchoring claims on chain, pooled.
+
+**Core changes:** Finance draft 6, rules 12a, 14a, 15 (F146's both-anchored sentence replaced; F160 withdrawn); core v21 "Good faith"; paper section 5.1. *To build:* the receipt test in good faith; the anchored-rotation cut-off; undo `vault_at` selection.
+
+
 ## Review of F145 to F162 (7 October 2026, morning)
 
 A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-review.md`), attacked the eighteen decisions together, after F145 to F162 were built and merged (`docs/decisions-f157-f162-build-2026-10-06.md`, main `b2b79a8`, display client released `9e53e70`). **Six break, two in common cases:** (1) F160: an individual's everyday acts never cite the identity chain where the vault is declared, so no act "holds" a vault; read through the binding, a vault lowered after a theft protects nothing already signed; (2) F157: a person with two devices has two sequences, and the walk follows one, so a deal signed on the phone holds no pointer published from the laptop; (3) F146, F147, F154: a payer can always add a claim citing nothing, and an owner cannot anchor the payer's claim, so the proviso excludes only honest payers and the theft window never shuts; (4) F150: the receipt's signer chooses its salt, so it can choose the tie; (5) F148, F158: a declaration acknowledged by one accomplice can still be kept and used later; (6) F149: a format declares its own bound. Smaller: findings 6 to 14. The build session's own questions (its report, "Questions") are open too. *The decisions were made fast, mostly on the project lead's suggestions; the two common-case breaks follow from his suggestions (F157, F160).*
 
-**Open for Nobody, allegedly:** findings 1 and 3 to 14 of the review (finding 2 decided as F163), and the build's questions 1 to 5.
+**Open for Nobody, allegedly:** findings 4 to 14 of the review (findings 1 to 3 decided as F163, F164), and the build's questions 1 to 5.
 
