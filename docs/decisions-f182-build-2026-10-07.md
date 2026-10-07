@@ -152,4 +152,6 @@
 - **Run 124 on the branch** (`6503432`, every code change of this build):
   - every test step passed: the Rust workspace, the WebAssembly, and all eleven TypeScript packages;
   - the two display-client comparison steps failed, as they do by design on a branch until a release. The client built twice was the same (`b3699901…`); it differed only from the copy published in `built/`.
-- **Merged into main,** its message carrying "[release display client]"; the release and the run on the released client follow.
+- **Merged into main** as `229c1d6`, its message carrying "[release display client]". Run 125 on the merge: every test step passed; the two display-client comparison steps failed, as expected before the release, `built/` still holding the old client.
+- **Released.** The release workflow rebuilt the display client on GitHub (Linux x86-64), checked it was the same built twice, and committed it as `3c5efb0`.
+- **This report is the follow-up commit,** so the tests run once more on main with the released client in `built/`. Its result comes after this commit, so it is reported to Nobody, allegedly with the session's end, not written here.
