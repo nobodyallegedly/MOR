@@ -2060,6 +2060,15 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Finance draft 6, the clock format and rule 15.
 
 
+## F180. The locks count as changed when the home quorum is met (rule 15 review, finding 2, 7 October 2026)
+
+**Found by the rule 15 review** (finding 2): "the earliest anchored home receipt" let a home the owner runs receipt a rotation days before the public homes held it, so the point came before the rotation counted under its home rule and before payers could see it.
+
+**Decided (Nobody, allegedly, 7 October 2026): "Or when Home quorum is met. (If that is the right word)":** the lock change's point is when its home quorum is met and anchored: the receipts the home rule requires for the rotation to count are all anchored, each passing Identity's checks; with a single home, that home's receipt. "Quorum" is the right word: the smallest number of homes whose receipts make the rotation count.
+
+**Core changes:** Finance draft 6, rule 15 (refining F177).
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
@@ -2072,4 +2081,4 @@ Fable's review of the whole set after the reset (`docs/reviews/whole-set-review-
 
 ## Rule 15 review (7 October 2026, midday)
 
-Fable's review of Finance rule 15 alone (`docs/reviews/rule-15-review-2026-10-07.md`): "the principle is now mostly delivered"; the three doors of the whole-set review are shut, and everything the thief can reach with the signing key alone is shut out after an anchored lock change. Two real findings: (1) a clock naming several references lets a payer anchor on the one the owner did not; (2) "the earliest anchored home receipt" lets the owner's own home set the point before the rotation counts under its home rule. Smaller: the owner can disown its own receipt (3); the lock change's reach defined twice (4); rule 12a judges rails against the chain now (5); nobody is told to anchor (6); the clock cannot name a time reference's parameters (7); the core and suite lag (8). Finding 1 decided as F179. **Open for Nobody, allegedly:** 2 to 8.
+Fable's review of Finance rule 15 alone (`docs/reviews/rule-15-review-2026-10-07.md`): "the principle is now mostly delivered"; the three doors of the whole-set review are shut, and everything the thief can reach with the signing key alone is shut out after an anchored lock change. Two real findings: (1) a clock naming several references lets a payer anchor on the one the owner did not; (2) "the earliest anchored home receipt" lets the owner's own home set the point before the rotation counts under its home rule. Smaller: the owner can disown its own receipt (3); the lock change's reach defined twice (4); rule 12a judges rails against the chain now (5); nobody is told to anchor (6); the clock cannot name a time reference's parameters (7); the core and suite lag (8). Findings 1 and 2 decided as F179 and F180. **Open for Nobody, allegedly:** 3 to 8.
