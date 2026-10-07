@@ -11,11 +11,12 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { ml_kem768_x25519 as noble } from '@noble/post-quantum/hybrid.js';
 import { start, type Running } from './world.ts';
 import { TestIdentity, lookUp, receive, TEST_LABEL } from '../src/identity.ts';
-import { SPECS, WITNESS_EXPLANATION, cborEncode, openWithKey, xwingDecapsulate, xwingEncapsulate } from '../src/core.ts';
+import { SPECS, WITNESS_EXPLANATION, actId, cborEncode, openWithKey, xwingDecapsulate, xwingEncapsulate } from '../src/core.ts';
 import { kexLog } from '../src/kex.ts';
 import { relayAt } from '../src/transport.ts';
 
@@ -303,4 +304,82 @@ test('every key exchange in these tests agrees with a second implementation (nob
       assert.deepEqual(xwingDecapsulate(e.secret, e.ct), noble.decapsulate(e.ct, e.secret));
     }
   }
+});
+
+// ------------------------------------------------------------ the clock (Finance rule 15, F176 to F181)
+
+/** A test anchoring cMIP on one reference: it records what it anchors. */
+function testAnchoring(name: string, fails = false) {
+  const reference = { cmip: sha256Hex('a test anchoring cMIP'), params: Buffer.from(cborEncode(name)).toString('hex') };
+  const anchored: string[] = [];
+  return {
+    reference,
+    anchored,
+    async anchor(act: string): Promise<Uint8Array> {
+      if (fails) throw new Error(`${name} is down`);
+      anchored.push(act);
+      return Uint8Array.from(Buffer.from(`${name}:${act}`));
+    },
+  };
+}
+
+function sha256Hex(s: string): string {
+  return createHash('sha256').update(s).digest('hex');
+}
+
+test('after a rotation the owner\'s client anchors its home quorum on the declared clock, the backup only when the main fails (F179, F181)', async () => {
+  const main = testAnchoring('the main clock');
+  const backup = testAnchoring('the backup clock');
+  const t = TestIdentity.create({ homes: homes.map((h) => h.home), clock: { main: main.reference, backup: backup.reference } });
+  assert.equal(t.clockWarning(), null);
+  for (const s of await t.publishGenesis()) assert.ok(s.result?.receipt, s.error);
+  const l0 = await lookUp(t.id, hints());
+  assert.equal(l0.verifier.status(t.id), 'valid', 'the genesis carrying a clock is valid');
+
+  const r1 = t.prepareRotation();
+  const sent = await t.submitRotation();
+  const receipts = sent.map((s) => actId(s.result!.receipt as Uint8Array)).sort();
+  const one = await t.settleRotation([main, backup]);
+  assert.ok(one.counts);
+  assert.equal(one.unanchored, undefined);
+  // The quorum the core names: each home's receipt for the rotation.
+  const q = one.lookup.verifier.quorum(t.id, r1) as { kind: string; need: number; supports: string[][] };
+  assert.equal(q.kind, 'homes');
+  assert.equal(q.need, 2);
+  assert.deepEqual(q.supports.flat().sort(), receipts);
+  assert.deepEqual([...main.anchored].sort(), receipts, 'every receipt of the quorum, on the main clock');
+  assert.deepEqual(backup.anchored, [], 'never on the backup while the main one works');
+  assert.ok(one.anchored.every((a) => a.on === 'main'));
+  assert.equal(t.f.anchored?.length, 3);
+
+  // The main clock is down: the backup, once.
+  const down = testAnchoring('the main clock', true);
+  t.prepareRotation();
+  const sent2 = await t.submitRotation();
+  const two = await t.settleRotation([down, backup]);
+  assert.ok(two.counts);
+  assert.deepEqual([...backup.anchored].sort(), sent2.map((s) => actId(s.result!.receipt as Uint8Array)).sort());
+  assert.ok(two.anchored.every((a) => a.on === 'backup'));
+  // Neither: the rotation counts, and the owner is told it is not anchored.
+  t.prepareRotation();
+  await t.submitRotation();
+  const three = await t.settleRotation([]);
+  assert.ok(three.counts);
+  assert.match(three.unanchored ?? '', /could not be anchored/);
+});
+
+test('before a genesis or rotation leaving no clock, the client says plainly that a theft\'s loss will be the owner\'s (Finance rule 14b, F181)', async () => {
+  const main = testAnchoring('the main clock');
+  const t = TestIdentity.create({ homes: homes.map((h) => h.home) });
+  assert.match(t.clockWarning() ?? '', /no clock.*your loss/s);
+  assert.equal(t.clockWarning({ main: main.reference }), null, 'a rotation declaring one');
+  const c = TestIdentity.create({ homes: homes.map((h) => h.home), clock: { main: main.reference } });
+  assert.match(c.clockWarning(null) ?? '', /no clock/, 'a rotation removing it');
+  for (const s of await t.publishGenesis()) assert.ok(s.result?.receipt, s.error);
+  t.prepareRotation();
+  await t.submitRotation();
+  const r = await t.settleRotation([main]);
+  assert.ok(r.counts);
+  assert.deepEqual(r.anchored, [], 'no clock declared: nothing to compare on');
+  assert.deepEqual(main.anchored, []);
 });

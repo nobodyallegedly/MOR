@@ -165,6 +165,24 @@ impl Resolution {
     }
 }
 
+/// Which receipts make a counting rotation count (Finance rule 15, F180;
+/// [`Verifier::quorum`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Quorum {
+    /// It counts on its own signatures: a self-hosted identity (rule 22a),
+    /// or one accepted on its own signatures. The rotation stands for its
+    /// receipts.
+    Own,
+    /// Under the home rule in effect before it: homes of `need` distinct
+    /// operators must hold it. For each operator, the receipts of its that
+    /// support the rotation and pass the receipt checks (for a self-hosted
+    /// home beside others, the rotation itself); possibly none.
+    Homes { need: u64, supports: Vec<Vec<Hash>> },
+    /// A homeless rotation: its receipts come from the new homes it
+    /// declares (F86). Not read here.
+    Homeless,
+}
+
 /// A link between two MOR identities, as one act sees it (Identity rules
 /// 23 and 24; F152).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -727,6 +745,53 @@ impl Verifier {
         let res = self.resolve(x.signer()?);
         let k = res.position_of(x.act.outside.binding.as_ref()?)?;
         self.judging(&res, k).map(|j| res.links[j].act)
+    }
+
+    /// The home quorum of a counting rotation (Finance rule 15, F180): the
+    /// receipts the home rule in effect before it requires for it to
+    /// count, each passing the receipt checks. `None` where `rotation` is
+    /// not a counting rotation or chain signature of `identity` (genesis
+    /// included). *A lock change's point is when its quorum is met and
+    /// anchored; this says which receipts make up the quorum, the anchors
+    /// are Finance's.*
+    pub fn quorum(&self, identity: &Hash, rotation: &Hash) -> Option<Quorum> {
+        let res = self.resolve(identity);
+        let k = res.position_of(rotation)?;
+        if k == 0 {
+            return None;
+        }
+        Some(match res.links[k].how {
+            How::Genesis => return None,
+            How::OwnSignatures => Quorum::Own,
+            How::Homeless { .. } => Quorum::Homeless,
+            How::Homes => {
+                let st = &res.states[k - 1];
+                let (voters, need) = match st.effective() {
+                    Effective::Single(op) => (vec![op], 1),
+                    Effective::Threshold(t) => (st.operators(), t),
+                };
+                if voters == [Operator::Own] {
+                    return Some(Quorum::Own);
+                }
+                let mut cx = Cx::default();
+                let audit = res.states[k].audit.clone();
+                let supports = voters
+                    .into_iter()
+                    .filter(|op| !res.dishonest.iter().any(|(d, p)| d == op && *p < k as u64))
+                    .map(|op| match op {
+                        // A self-hosted home: the rotation it serves stands
+                        // in for its receipt (rule 22a).
+                        Operator::Own => vec![*rotation],
+                        Operator::Id(o) => self
+                            .receipts(&o, identity, rotation, k as u64)
+                            .filter(|r| matches!(self.judge_receipt(&mut cx, r, audit.as_ref()), Judged::Support { .. }))
+                            .map(|r| r.id)
+                            .collect(),
+                    })
+                    .collect();
+                Quorum::Homes { need, supports }
+            }
+        })
     }
 
     // ------------------------------------------------------------ resolving

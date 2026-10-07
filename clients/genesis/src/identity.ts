@@ -57,6 +57,62 @@ interface Safety {
   seeds: string;
 }
 
+/**
+ * One anchoring reference: an anchoring cMIP and its parameters, naming one
+ * time reference (Envelope, task "Anchoring"; Finance's clock, F181). The
+ * parameters are deterministic CBOR, hex.
+ */
+export interface ClockRef {
+  cmip: string;
+  params: string;
+}
+
+/**
+ * The clock the owner declares with the safety key (Finance, "The clock",
+ * F176, F179): a main anchoring reference and, optionally, a backup. A lock
+ * change is compared with payers' claims on it (Finance rule 15). Public.
+ */
+export interface Clock {
+  main: ClockRef;
+  backup?: ClockRef;
+}
+
+/**
+ * An anchoring cMIP this client carries, on one reference: it anchors an
+ * act id and returns the proof that it existed by a point on that
+ * reference. How is the cMIP's business (F169, F173).
+ */
+export interface Anchoring {
+  reference: ClockRef;
+  anchor(act: string): Promise<Uint8Array>;
+}
+
+/** An anchor this client obtained: the act, which reference, the proof. */
+export interface Anchored {
+  act: string;
+  on: 'main' | 'backup';
+  proof: Uint8Array;
+}
+
+/** Finance's clock kind in the declarations slot (F176). */
+export const CLOCK_KIND = 1;
+
+/**
+ * Said plainly before a genesis or a rotation that leaves the identity with
+ * no declared clock (Finance rule 14b, F181: client conformance).
+ */
+export const NO_CLOCK_WARNING =
+  'This identity declares no clock. If its signing key is ever stolen, what the thief does with it until you change your keys, and every payment made to what the thief published, will be your loss, whatever you anchor: payers are compared with your key change only on a clock you named in advance (Finance rule 15).';
+
+const sameRef = (a: ClockRef, b: ClockRef) => a.cmip === b.cmip && a.params === b.params;
+
+/** The clock as a declaration (Identity's declarations slot): null removes it. */
+export function clockDeclaration(c: Clock | null): { spec: string; kind: number; cbor?: Uint8Array } {
+  if (!c) return { spec: MIPS.finance, kind: CLOCK_KIND };
+  const ref = (r: ClockRef) => [unhex(r.cmip), cborDecode(unhex(r.params))];
+  return { spec: MIPS.finance, kind: CLOCK_KIND, cbor: cborEncode([ref(c.main), ...(c.backup ? [ref(c.backup)] : [])]) };
+}
+
 interface Pending {
   /** The rotation's exact bytes, base64: resubmitted unchanged (Identity rule 8a). */
   rotation: string;
@@ -65,6 +121,8 @@ interface Pending {
   safety: Safety;
   homes: Home[];
   rule: number[] | null;
+  /** The clock in force once it counts; absent where the rotation leaves it unchanged. */
+  clock?: Clock | null;
 }
 
 /** The test identity file. Everything in it is secret except where noted. */
@@ -81,6 +139,10 @@ export interface IdentityFile {
   chain: string[];
   homes: Home[];
   rule: number[] | null;
+  /** The clock its chain declares (Finance, F176), public; absent or null: none. */
+  clock?: Clock | null;
+  /** The anchors this client obtained after its lock changes (Finance rule 15, F181). */
+  anchored?: { act: string; on: 'main' | 'backup'; proof: string }[];
   /** The everyday sequence, act ids, oldest first. */
   sequence: string[];
   routes: { version: number; act: string } | null;
@@ -149,7 +211,7 @@ export class TestIdentity {
    * software and committed by hash, and a genesis naming its homes. Nothing
    * is sent yet: save the file first, then `publishGenesis`.
    */
-  static create(opts: { homes: Home[]; rule?: number[]; scheme?: 2 | 3; via?: Via }): TestIdentity {
+  static create(opts: { homes: Home[]; rule?: number[]; scheme?: 2 | 3; via?: Via; clock?: Clock }): TestIdentity {
     if (!opts.homes.length) throw new Error('a genesis declares at least one home');
     const signingSecret = newSigningSecret();
     const safety = newTestSafetyKey(opts.scheme ?? 2);
@@ -160,6 +222,7 @@ export class TestIdentity {
       safetyCommit: safety.commit,
       homes: opts.homes,
       rule: opts.rule,
+      declarations: opts.clock ? [clockDeclaration(opts.clock)] : undefined,
     });
     const id = actId(genesis);
     return new TestIdentity(
@@ -173,6 +236,7 @@ export class TestIdentity {
         chain: [b64(genesis)],
         homes: opts.homes,
         rule: opts.rule ?? null,
+        clock: opts.clock ?? null,
         sequence: [],
         routes: null,
         encryption: [],
@@ -334,7 +398,7 @@ export class TestIdentity {
    * current chain act committed. The rotation is stored as pending; save
    * the file before submitting, so that a retry sends the same bytes.
    */
-  prepareRotation(opts: { homes?: Home[]; rule?: number[]; scheme?: 2 | 3 } = {}): string {
+  prepareRotation(opts: { homes?: Home[]; rule?: number[]; scheme?: 2 | 3; clock?: Clock | null } = {}): string {
     if (this.f.pending) throw new Error('a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)');
     const newSigning = newSigningSecret();
     const next = newTestSafetyKey(opts.scheme ?? (this.f.safety.scheme as 2 | 3));
@@ -359,6 +423,7 @@ export class TestIdentity {
       kept,
       homes: opts.homes,
       rule: opts.rule,
+      declarations: opts.clock !== undefined ? [clockDeclaration(opts.clock)] : undefined,
     });
     const id = actId(rotation);
     this.f.pending = {
@@ -368,8 +433,19 @@ export class TestIdentity {
       safety: { scheme: next.scheme, seeds: hex(next.seeds) },
       homes: opts.homes ?? this.f.homes,
       rule: opts.rule === undefined ? this.f.rule : opts.rule.length ? opts.rule : null,
+      clock: opts.clock,
     };
     return id;
+  }
+
+  /**
+   * What to say plainly before a genesis or a rotation, where it leaves the
+   * identity with no clock (Finance rule 14b, F181): `NO_CLOCK_WARNING`, or
+   * null. `clock` is what the act would declare (undefined: unchanged).
+   */
+  clockWarning(clock?: Clock | null): string | null {
+    const after = clock === undefined ? this.f.clock : clock;
+    return after ? null : NO_CLOCK_WARNING;
   }
 
   /**
@@ -388,12 +464,15 @@ export class TestIdentity {
    * Look the identity up as any reader would, and if the pending rotation
    * now counts, take on its keys. Returns whether it counts.
    */
-  async settleRotation(): Promise<{ counts: boolean; lookup: Lookup }> {
+  async settleRotation(anchoring: Anchoring[] = []): Promise<{ counts: boolean; lookup: Lookup; anchored: Anchored[]; unanchored?: string }> {
     const p = this.f.pending;
     if (!p) throw new Error('no rotation pending');
     const lookup = await lookUp(this.f.identity, [...this.f.homes, ...p.homes].map((h) => h.hint), this.via);
     const links = lookup.resolution.links;
     const counts = links.some((l) => l.act === p.id);
+    const before = this.f.clock ?? null;
+    let anchored: Anchored[] = [];
+    let unanchored: string | undefined;
     if (counts) {
       this.f.chain.push(p.rotation);
       this.f.position = this.f.chain.length - 1;
@@ -402,12 +481,54 @@ export class TestIdentity {
       this.f.safety = p.safety;
       this.f.homes = p.homes;
       this.f.rule = p.rule;
+      if (p.clock !== undefined) this.f.clock = p.clock;
       this.f.pending = null;
       // A rotation is a decision: a collective's next actions cite it (F127).
       if (this.f.cites) this.f.cites = [p.id];
       await this.spread(lookup);
+      // Finance rule 15 (F181, client conformance): after a lock change,
+      // obtain the home receipts that make up the rotation's quorum and
+      // anchor them on the main reference of the clock declared before it;
+      // on the backup only where the main one cannot be used. Any rotation
+      // can be a lock change (it voids what its kept line does not hold,
+      // and whatever it changes in the vault), so every one is anchored.
+      try {
+        anchored = await this.anchorQuorum(lookup, p.id, before, anchoring);
+        this.f.anchored = [...(this.f.anchored ?? []), ...anchored.map((a) => ({ act: a.act, on: a.on, proof: b64(a.proof) }))];
+      } catch (e) {
+        unanchored = (e as Error).message;
+      }
     }
-    return { counts, lookup };
+    return { counts, lookup, anchored, unanchored };
+  }
+
+  /**
+   * Anchor a counting rotation's home quorum on `clock` (Finance rule 15,
+   * F180, F181): every receipt the core library names as supporting it
+   * under the home rule before it (for a self-hosted identity, the rotation
+   * itself), on the main reference, or, where no anchoring for it is given
+   * or it fails, on the backup. Nothing where no clock was declared: there
+   * is nothing to compare on, and the owner bears (said by `clockWarning`).
+   */
+  async anchorQuorum(lookup: Lookup, rotation: string, clock: Clock | null, anchoring: Anchoring[]): Promise<Anchored[]> {
+    if (!clock) return [];
+    const q = lookup.verifier.quorum(this.f.identity, rotation) as { kind: string; need: number; supports: string[][] } | null;
+    if (!q || q.kind === 'homeless') return [];
+    const acts = q.supports.flat();
+    const tryOn = async (ref: ClockRef | undefined, on: 'main' | 'backup'): Promise<Anchored[] | null> => {
+      const a = ref && anchoring.find((x) => sameRef(x.reference, ref));
+      if (!a) return null;
+      try {
+        const out: Anchored[] = [];
+        for (const act of acts) out.push({ act, on, proof: await a.anchor(act) });
+        return out;
+      } catch {
+        return null;
+      }
+    };
+    const done = (await tryOn(clock.main, 'main')) ?? (await tryOn(clock.backup, 'backup'));
+    if (!done) throw new Error('the rotation counts, but its home quorum could not be anchored on the declared clock: anchor it before relying on it (Finance rule 15)');
+    return done;
   }
 
   /**

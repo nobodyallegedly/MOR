@@ -26,3 +26,6 @@ hex = "0.4"
 # The second, independent BOLT 11 decoder the tests check every invoice against.
 lightning-invoice = "0.33"
 bitcoin = "0.32"
+# The core's test world (`core/tests/common`), shared by the stolen-phone
+# story: it checks every SLH-DSA signature against this second implementation.
+slh-dsa = "=0.2.0-rc.5"

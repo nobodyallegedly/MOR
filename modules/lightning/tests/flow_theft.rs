@@ -6,9 +6,10 @@
 //! stolen key is no obligation; one the debtor re-signs to name the thief's
 //! pointer counts for nothing there, since the pointer is judged by the
 //! contributor's own act (F145, F155); a fan's tip that followed the
-//! published pointer counts, and still counts after the rotation that
-//! invalidates it, where the fan's claims meet rule 15's proviso (F139,
-//! F146, F147, F154).
+//! published pointer and vault counts; after the rotation that invalidates
+//! it, whether it still counts is rule 15's (theft: anchor or bear the
+//! loss, F169, F176 to F181), which the core library reads over the payee's
+//! chain and the anchors (`core/tests/finance_rule_15.rs`).
 //!
 //! Without a node: invoices are made and signed by `lightning-invoice`, as
 //! in `rule.rs`. What the verifier holds is stated by hand ([`Contributor`]);
@@ -19,14 +20,14 @@ use bitcoin::hashes::{sha256 as bh, Hash as _};
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
 use mor_core::finance::{
-    self, Amount, Citations, Claim, Holding, Obligation, PayeePointer, Payer, PayersClaim, Payload, Rail, Receipt,
+    self, Amount, Citations, Claim, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt,
     VaultEntry,
 };
 use mor_core::hash::{sha256, Hash};
 use mor_lightning::bolt11::Network;
 use mor_lightning::{unit, Lightning, LnAddress, LnProof};
 use mor_payment::{beside, pointer_in_force, verify, Answer, Commitment, Held, Modules, PaidTo, Proof, Record};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 fn h(label: &str) -> Hash {
@@ -60,34 +61,29 @@ fn holds(pointers: &[Hash]) -> Holding {
     Holding {
         pointers: pointers.to_vec(),
         complete: true,
-        vault: vec![],
     }
 }
 
 /// What a verifier holds of the contributor: two flow pointers (its own,
 /// then the thief's), its vault, the obligations owed to it, what its own
 /// acts hold for each, and, once it rotates, the pointers that rotation
-/// invalidated and the payers' claims rule 15 reads.
+/// invalidated and the core library's rule 15 answer for each payment.
 struct Contributor {
     id: Hash,
     /// Valid now.
     pointers: BTreeMap<Hash, PayeePointer>,
-    /// Pointers published after the rotation, among `pointers`.
-    after_rotation: BTreeSet<Hash>,
     /// Invalidated by the rotation, with it.
     voided: BTreeMap<Hash, (PayeePointer, Hash)>,
     obligations: BTreeMap<Hash, Obligation>,
     /// For each obligation, agreement or offer: what the contributor's own
     /// act holds (F145).
     holdings: BTreeMap<Hash, Holding>,
-    /// The payers' claims for each rail proof, as rule 15 reads them.
-    claims: BTreeMap<Vec<u8>, Vec<PayersClaim>>,
+    /// The core library's rule 15 answer for each payment, by rail proof
+    /// (`LawView::payment_counts`), where this verifier reads it.
+    rule_15: BTreeMap<Vec<u8>, bool>,
     genesis: Hash,
     /// The vault its chain declares now.
     vault: Vec<VaultEntry>,
-    /// Where an act of its own showed another vault than `vault`, at its
-    /// binding (F160): by what the payment fulfils.
-    shown: BTreeMap<Hash, Vec<VaultEntry>>,
 }
 
 impl Held for Contributor {
@@ -100,12 +96,8 @@ impl Held for Contributor {
     fn obligation(&self, id: &Hash) -> Option<Obligation> {
         self.obligations.get(id).cloned()
     }
-    /// The vault the contributor's own act for it showed (F160): `vault`,
-    /// unless `shown` says otherwise.
     fn holding(&self, fulfils: &Hash, payee: &Hash) -> Option<Holding> {
-        let mut h = (payee == &self.id).then(|| self.holdings.get(fulfils).cloned()).flatten()?;
-        h.vault = self.shown.get(fulfils).unwrap_or(&self.vault).clone();
-        Some(h)
+        (payee == &self.id).then(|| self.holdings.get(fulfils).cloned()).flatten()
     }
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)> {
         self.pointers
@@ -117,26 +109,11 @@ impl Held for Contributor {
     fn voided_pointer(&self, id: &Hash) -> Option<(PayeePointer, Hash)> {
         self.voided.get(id).cloned()
     }
-    fn pointers_before(&self, payee: &Hash, rotation: &Hash) -> Vec<(Hash, PayeePointer)> {
-        let mut out: Vec<_> = self
-            .pointers_of(payee)
-            .into_iter()
-            .filter(|(i, _)| !self.after_rotation.contains(i))
-            .collect();
-        out.extend(
-            self.voided
-                .iter()
-                .filter(|(_, (p, r))| &p.payee == payee && r == rotation)
-                .map(|(i, (p, _))| (*i, p.clone())),
-        );
-        out
+    fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
+        (payee == &self.id).then(|| self.vault.clone())
     }
-    fn payers_claims(&self, proof: &[u8], _: &Hash) -> Vec<PayersClaim> {
-        self.claims.get(proof).cloned().unwrap_or_default()
-    }
-    fn vault_at_binding(&self, act: &Hash) -> Option<Vec<VaultEntry>> {
-        let mine = self.pointers.get(act).or_else(|| self.voided.get(act).map(|(p, _)| p));
-        mine.filter(|p| p.payee == self.id).map(|_| self.shown.get(act).unwrap_or(&self.vault).clone())
+    fn payment_counts(&self, _: &Hash, _: &PaidAt, _: &Amount, proof: &[u8], _: &Hash) -> Option<bool> {
+        self.rule_15.get(proof).copied()
     }
 }
 
@@ -202,11 +179,10 @@ fn story() -> Story {
         c: Contributor {
             id,
             pointers,
-            after_rotation: BTreeSet::new(),
             voided: BTreeMap::new(),
             obligations,
             holdings,
-            claims: BTreeMap::new(),
+            rule_15: BTreeMap::new(),
             genesis: h("the contributor's genesis"),
             vault: vec![VaultEntry {
                 unit: unit(Network::Regtest),
@@ -214,7 +190,6 @@ fn story() -> Story {
                 source: address(&vault_node),
                 limit: 100_000,
             }],
-            shown: BTreeMap::new(),
         },
         service,
         fan: h("a fan"),
@@ -443,7 +418,7 @@ fn what_rule_14_cannot_read_is_never_valid() {
             agreement: Some(h("a deal not held")),
         },
     );
-    s.c.holdings.insert(unheld, Holding { pointers: vec![], complete: false, vault: vec![] });
+    s.c.holdings.insert(unheld, Holding { pointers: vec![], complete: false });
     let (r, _) = paid(&s, s.service, unheld, to_flow(s.own_pointer), &s.own_node, sat(10));
     assert!(matches!(pointer_in_force(Record::Receipt(&r), &s.c), Answer::Unknown(_)));
     let wrong = h("names someone else's pointer, under a deal the contributor never signed");
@@ -632,6 +607,9 @@ fn the_vault_rules_judge_a_payment_received_on_the_flow() {
     for (rail, rule_14) in judged(&s, &r, &c, s.fan) {
         assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid), "the rail and rule 14 alone let it through");
     }
+    // The core library, reading the chain, finds it followed no state of
+    // it: no lock change protects it (rule 15).
+    s.c.rule_15.insert(r.proof.clone(), false);
     for a in both(&s, &r, &c) {
         assert!(matches!(&a, Answer::Invalid(w) if w.contains("14a")), "above the limit: {a}");
     }
@@ -642,6 +620,7 @@ fn the_vault_rules_judge_a_payment_received_on_the_flow() {
     // flow, however small (fail closed).
     s.c.vault[0].unit = h("another unit");
     let (r, c) = paid(&s, s.fan, s.thief_pointer, to_flow(s.thief_pointer), &s.thief_node, sat(10));
+    s.c.rule_15.insert(r.proof.clone(), false);
     for a in both(&s, &r, &c) {
         assert!(matches!(&a, Answer::Invalid(w) if w.contains("14a")), "a unit the vault does not cover: {a}");
     }
@@ -669,90 +648,55 @@ fn rotate(s: &mut Story) -> Hash {
             }],
         },
     );
-    s.c.after_rotation.insert(new_v2);
     rotation
 }
 
-/// Rule 15 (F139, F146, F147, F154): the fan's tip to the thief's pointer,
-/// made before the rotation, is judged after it. With no payer's claim
-/// held, it counts as made (F154); with a claim not holding the rotation,
-/// too (F139); with only a claim holding it, not; the honest payer whose
-/// client wrote a second claim later, citing the rotation, still counts
-/// (read together, F147); anchored, the anchor order decides (F146); where
-/// a claim's history cannot be told, unknown. The rail's own answer stays
-/// valid: the payee's key signed that address. Before rule 15 was built, a
-/// payment to the voided pointer was unknown: its pointer not held.
+/// Rule 15 (F169, F176 to F181): the fan's tip to the thief's pointer,
+/// made before the rotation, is judged after it. On the chain as it stands
+/// now the voided pointer is in force for nothing; whether the payment
+/// counts all the same is the core library's answer over the payee's
+/// chain and anchors, which the payment cMIP asks for beside. Where the
+/// verifier cannot read it (a Finance-only wallet), unknown, never valid.
+/// The rail's own answer stays valid: the payee's key signed that address.
 #[test]
-fn a_tip_paid_before_the_rotation_is_judged_by_the_payers_claims() {
+fn after_the_rotation_a_tip_to_the_voided_pointer_is_rule_15s() {
     let mut s = story();
     let (r, c) = paid(&s, s.fan, s.thief_pointer, to_flow(s.thief_pointer), &s.thief_node, sat(2_100));
-    let rotation = rotate(&mut s);
-    let claim = |holds_rotation, anchored_before| PayersClaim { holds_rotation, anchored_before };
-    let answers = |s: &Story| judged(s, &r, &c, s.fan);
-    // No payer's claim held (a receipt alone, or a silent wallet): made.
-    for (rail, rule_15) in answers(&s) {
-        assert_eq!((rail, rule_15), (Answer::Valid, Answer::Valid), "F154");
+    let none = Citations::default();
+    let both = |s: &Story| [beside(Record::Receipt(&r), &s.c), beside(Record::Claim(&c, s.fan, &none), &s.c)];
+    assert_eq!(both(&s), [Answer::Valid, Answer::Valid], "before the rotation");
+    rotate(&mut s);
+    for (rail, now) in judged(&s, &r, &c, s.fan) {
+        assert_eq!(rail, Answer::Valid);
+        assert!(matches!(&now, Answer::Invalid(w) if w.contains("voided")), "{now}");
     }
-    let mut set = |claims: Vec<PayersClaim>| {
-        s.c.claims.insert(r.proof.clone(), claims);
-        answers(&s).map(|(rail, a)| {
-            assert_eq!(rail, Answer::Valid);
-            a
-        })
-    };
-    assert_eq!(set(vec![claim(Some(false), None)]), [Answer::Valid, Answer::Valid], "F139");
-    for a in set(vec![claim(Some(true), None)]) {
+    for a in both(&s) {
+        assert!(matches!(&a, Answer::Unknown(w) if w.contains("rule 15")), "a Finance-only wallet: {a}");
+    }
+    s.c.rule_15.insert(r.proof.clone(), true);
+    assert_eq!(both(&s), [Answer::Valid, Answer::Valid], "the core says it counts: the lock change is not anchored, or the claim is");
+    s.c.rule_15.insert(r.proof.clone(), false);
+    for a in both(&s) {
         assert!(matches!(&a, Answer::Invalid(w) if w.contains("rule 15")), "{a}");
     }
-    assert_eq!(set(vec![claim(Some(false), None), claim(Some(true), None)]), [Answer::Valid, Answer::Valid], "F147");
-    for a in set(vec![claim(Some(false), Some(false))]) {
-        assert!(matches!(&a, Answer::Invalid(_)), "anchored after the rotation: {a}");
-    }
-    assert_eq!(set(vec![claim(Some(true), Some(true))]), [Answer::Valid, Answer::Valid], "anchored before: F146");
-    for a in set(vec![claim(None, None)]) {
-        assert!(matches!(&a, Answer::Unknown(_)), "{a}");
-    }
-    let _ = rotation;
 }
 
-/// Rule 15 judges the payment as the chain stood before the rotation: the
-/// contributor's own new version 2, published after it, makes no fork of
-/// the thief's version 2 for a payment made before. But rule 14 still
-/// applies to it: royalties whose contributor's act holds only version 1,
-/// paid to the voided version 2, count for nothing.
+/// F169 (Finance rule 14a; F160 withdrawn): the vault applies as the
+/// payee's chain declares it, so a lower limit applies at once. The
+/// contributor signed the film's deal under a limit of 100,000 sat, then
+/// lowers it to 10,000: royalties of 40,000 paid to its flow no longer
+/// follow the chain now. Whether they count is rule 15's: the lowering is a
+/// lock change for them.
 #[test]
-fn good_faith_does_not_lift_rule_14() {
+fn a_lowered_vault_applies_at_once_and_what_followed_the_old_one_is_rule_15s() {
     let mut s = story();
-    let (r, c) = paid(&s, s.service, s.royalties, to_flow(s.thief_pointer), &s.thief_node, sat(40_000));
-    rotate(&mut s);
-    for (rail, a) in judged(&s, &r, &c, s.service) {
-        assert_eq!(rail, Answer::Valid);
-        assert!(matches!(&a, Answer::Invalid(w) if w.contains("rule 14")), "{a}");
-    }
-}
-
-/// F160 (Finance rules 12a and 14a): the vault a payment is judged by is
-/// the one the payee's own act for it showed, never one set afterwards.
-/// The contributor signed the film's deal under a limit of 100,000 sat;
-/// it then lowers its vault to 10,000. Royalties of 40,000 paid to its
-/// own flow followed the vault its signature showed: they count. A tip of
-/// 40,000 following a pointer the contributor publishes under the new
-/// vault does not: that pointer showed the limit of 10,000.
-#[test]
-fn a_flow_payment_is_judged_by_the_vault_the_payees_act_showed() {
-    let mut s = story();
-    let shown = s.c.vault.clone();
-    s.c.vault[0].limit = 10_000;
-    s.c.shown.insert(s.royalties, shown.clone());
-    s.c.shown.insert(s.own_pointer, shown);
     let (r, c) = paid(&s, s.service, s.royalties, to_flow(s.own_pointer), &s.own_node, sat(40_000));
-    assert!(!finance::flow_followed_vault(Some(&s.c.vault), &r.amount), "above the limit set afterwards");
     let none = Citations::default();
-    assert_eq!(beside(Record::Receipt(&r), &s.c), Answer::Valid, "the limit the signature showed applies");
+    assert_eq!(beside(Record::Receipt(&r), &s.c), Answer::Valid, "under the limit of 100,000");
+    s.c.vault[0].limit = 10_000;
+    assert!(matches!(mor_payment::followed_vault(Record::Receipt(&r), &s.c), Answer::Invalid(w) if w.contains("14a")));
+    assert!(matches!(beside(Record::Receipt(&r), &s.c), Answer::Unknown(_)));
+    s.c.rule_15.insert(r.proof.clone(), true);
+    assert_eq!(beside(Record::Receipt(&r), &s.c), Answer::Valid);
     assert_eq!(beside(Record::Claim(&c, s.service, &none), &s.c), Answer::Valid);
-    // A pointer published under the lowered vault shows 10,000.
-    s.c.shown.remove(&s.own_pointer);
-    let (r, c) = paid(&s, s.fan, s.own_pointer, to_flow(s.own_pointer), &s.own_node, sat(40_000));
-    assert!(matches!(beside(Record::Receipt(&r), &s.c), Answer::Invalid(w) if w.contains("vault")), "above the limit that pointer showed");
-    assert!(matches!(beside(Record::Claim(&c, s.fan, &none), &s.c), Answer::Invalid(w) if w.contains("vault")));
 }

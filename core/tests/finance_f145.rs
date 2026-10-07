@@ -9,9 +9,9 @@
 //!   holds through its citations: its signature act on the agreement, or
 //!   its offer; for an IOU, an act of its own acknowledging it. The
 //!   version the debt names is informative only.
-//! - Rule 15 (F139, F146, F147, F154): a payment to a pointer a later
-//!   rotation invalidated counts as made where a payer's claim for it does
-//!   not hold the rotation, or is anchored before it.
+//! - Rule 15 is in `finance_rule_15.rs` (F169, F176 to F181: theft,
+//!   anchor or bear the loss), which replaces the tests of F139, F146,
+//!   F147's reading together and F160 that were here.
 //! - Rule 10 (F151): where the rail binds no payee or purpose, the payer's
 //!   claim decides what the payment fulfils.
 //!
@@ -19,14 +19,12 @@
 
 mod common;
 
-use common::{own_home, Person, Rot, World};
+use common::{own_home, Person, World};
 use mor_core::act::{Object, Ref};
 use mor_core::chain::Status;
-use mor_core::finance::{self as fin, Amount, Anonymous, Claim, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt};
+use mor_core::finance::{self as fin, Amount, Claim, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt};
 use mor_core::hash::{sha256, Hash};
-use mor_core::identity::SigningKey;
 use mor_core::law::{self, Disagreement, LawView, Mips};
-use mor_core::sig::SchnorrKey;
 use std::collections::{BTreeMap, BTreeSet};
 
 fn mips() -> Mips {
@@ -62,19 +60,17 @@ fn amount(value: u64) -> Amount {
 struct Lab {
     w: World,
     rail_valid: BTreeMap<Hash, PaidAt>,
-    anchored_before: BTreeMap<(Hash, Hash), bool>,
     unbound: BTreeSet<Hash>,
 }
 
 impl Lab {
     fn new() -> Self {
-        Lab { w: World::new(), rail_valid: BTreeMap::new(), anchored_before: BTreeMap::new(), unbound: BTreeSet::new() }
+        Lab { w: World::new(), rail_valid: BTreeMap::new(), unbound: BTreeSet::new() }
     }
 
     fn view(&self) -> LawView<'_> {
         let mut v = LawView::new(&self.w.v, mips());
         v.rail_valid = self.rail_valid.clone();
-        v.anchored_before = self.anchored_before.clone();
         v.unbound_rails = self.unbound.clone();
         v
     }
@@ -287,51 +283,6 @@ fn the_payees_pointer_is_found_through_its_own_acts_only() {
     assert_eq!(l.paid(&iou), 0);
 }
 
-/// F160 (question A of the build of F145 to F156, decided by Nobody,
-/// allegedly): the vault and its limits that apply to a payment are those
-/// the payee's own act for it showed, read at that act's binding (decided
-/// this session: a vault is declared only in a genesis or rotation, which
-/// no citation reaches). The smallest story: the owner's vault limit is
-/// 1,000; it signs a deal; a payment of 900 under it goes to the flow; the
-/// owner then rotates to a limit of 500. The 900 still followed the vault
-/// the owner showed. A deal the owner signs after the rotation shows the
-/// limit of 500: 900 to the flow does not count there, to the vault it
-/// does.
-#[test]
-fn a_limit_lowered_after_the_payment_does_not_reach_back() {
-    use common::Rot;
-    let mut l = Lab::new();
-    let entry = |limit| fin::VaultEntry { unit: unit(), rail_module: rail(), source: b"the owner's vault".to_vec(), limit };
-    let vault = |limit| vec![fin::vault_declaration(&mips().finance, &[entry(limit)])];
-    let mut owner = l.w.genesis_with("owner", vec![own_home()], None, None, Some(vault(1_000)), 3);
-    let mut debtor = l.person("debtor");
-    let oid = owner.id;
-    let v1 = l.pointer(&mut owner, oid, 1, None, "the owner's node");
-    let deal = l.terms(&mut debtor, vec![]);
-    l.sign(&mut debtor, deal);
-    l.sign(&mut owner, deal);
-    let d = l.debt(&mut debtor, oid, 900, v1, Some(deal), vec![]);
-    l.claim(&mut debtor, oid, d, 900, "900 to the flow", PaidAt::Flow(v1), vec![]);
-    assert_eq!(l.paid(&d), 900, "within the limit of 1,000 the owner showed");
-
-    // The owner lowers its limit to 500 by rotation.
-    let (_, mut owner) = l.w.rotate(&owner, Rot { declarations: Some(vault(500)), ..Default::default() });
-    assert_eq!(l.w.v.status(&v1), Status::Valid);
-    assert_eq!(l.view().pointer_holding(&deal, &oid).unwrap().vault, vec![entry(1_000)]);
-    assert_eq!(l.paid(&d), 900, "a limit set afterwards does not reach back");
-
-    // A deal signed after the rotation shows the limit of 500.
-    let later = l.terms(&mut debtor, vec![]);
-    l.sign(&mut debtor, later);
-    l.sign(&mut owner, later);
-    assert_eq!(l.view().pointer_holding(&later, &oid).unwrap().vault, vec![entry(500)]);
-    let d2 = l.debt(&mut debtor, oid, 900, v1, Some(later), vec![]);
-    l.claim(&mut debtor, oid, d2, 900, "900 to the flow, later", PaidAt::Flow(v1), vec![]);
-    assert_eq!(l.paid(&d2), 0, "above the limit the owner's act showed");
-    l.claim(&mut debtor, oid, d2, 900, "900 to the vault", PaidAt::Vault(oid), vec![]);
-    assert_eq!(l.paid(&d2), 900);
-}
-
 /// F145 (review finding 1, the IOU story): an obligation naming no
 /// agreement act (field 4 absent), such as an IOU or a refund its debtor
 /// signs alone, counts only if paid to the vault, until the creditor
@@ -352,7 +303,7 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     // The refund IOU cites and names the thief's version 3, and is paid
     // there: nothing.
     let iou = l.debt(&mut debtor, cid, 50, v3, None, vec![v3]);
-    assert_eq!(l.view().pointer_holding(&iou, &cid).unwrap(), fin::Holding { pointers: vec![], complete: true, vault: vec![] });
+    assert_eq!(l.view().pointer_holding(&iou, &cid).unwrap(), fin::Holding { pointers: vec![], complete: true });
     l.claim(&mut debtor, cid, iou, 50, "iou to v3", PaidAt::Flow(v3), vec![]);
     assert_eq!(l.paid(&iou), 0, "no act of the creditor's: only the vault");
 
@@ -465,138 +416,6 @@ fn a_payee_accepting_anothers_offer_is_paid_by_what_its_acceptance_holds() {
     let d = l.debt(&mut buyer, rid, 100, v1, Some(bounty), vec![]);
     l.claim(&mut buyer, rid, d, 100, "the bounty", PaidAt::Flow(v1), vec![]);
     assert_eq!(l.paid(&d), 100);
-}
-
-// ---------------------------------------------------------------- rule 15: good faith after a rotation
-
-/// The good-faith story: the owner's device synced the thief's version 3
-/// and built on it, so the owner's signature act on a deal holds it; the
-/// owner then rotates, keeping its own acts and disowning version 3. The
-/// debtor paid version 3, the published pointer, before the rotation.
-struct Rotated {
-    l: Lab,
-    debtor: Person,
-    oid: Hash,
-    deal: Hash,
-    v3: Hash,
-    rotation: Hash,
-}
-
-fn rotated() -> Rotated {
-    let mut l = Lab::new();
-    let mut owner = l.person("owner");
-    let mut debtor = l.person("debtor");
-    let oid = owner.id;
-    let v1 = l.pointer(&mut owner, oid, 1, None, "the owner's first node");
-    let v2 = l.pointer(&mut owner, oid, 2, Some(v1), "the owner's second node");
-    let mut thief = owner.clone();
-    let v3 = l.pointer(&mut thief, oid, 3, Some(v2), "the thief's node");
-    // The owner's device syncs version 3 and builds on it.
-    owner.seq.push(v3);
-    let deal = l.terms(&mut debtor, vec![]);
-    l.sign(&mut debtor, deal);
-    l.sign(&mut owner, deal);
-    let (rotation, owner) = l.w.rotate(&owner, Rot { disowned: Some(vec![v3]), ..Default::default() });
-    assert_eq!(l.w.v.status(&v3), Status::Void);
-    assert_eq!(l.w.v.judged_by(&v3), Some(rotation));
-    // After it, the owner publishes its own version 3: the chain the payer
-    // saw had no fork.
-    let mut owner = owner;
-    l.pointer(&mut owner, oid, 3, Some(v2), "the owner's new node");
-    Rotated { l, debtor, oid, deal, v3, rotation }
-}
-
-/// Rule 15 (F139, F147; review finding 1, second story): a payment to the
-/// pointer a later rotation invalidated counts as made where the payer's
-/// claim does not hold that rotation. The honest payer's client wrote a
-/// second claim later, citing the rotation: read together, the payment
-/// still counts. A payment whose only claim cites the rotation does not.
-/// Before F139 was built, nothing paid to a voided pointer counted.
-#[test]
-fn good_faith_after_a_rotation_reads_the_payers_claims_together() {
-    let Rotated { mut l, mut debtor, oid, deal, v3, rotation } = rotated();
-    let d = l.debt(&mut debtor, oid, 70, v3, Some(deal), vec![]);
-    l.claim(&mut debtor, oid, d, 70, "paid before the rotation", PaidAt::Flow(v3), vec![]);
-    assert_eq!(l.paid(&d), 70, "the claim does not hold the rotation");
-    // The second claim, written a week later, holds the rotation.
-    l.claim(&mut debtor, oid, d, 70, "paid before the rotation", PaidAt::Flow(v3), vec![rotation]);
-    assert_eq!(l.view().payers_claims(b"paid before the rotation", &rotation).len(), 2);
-    assert_eq!(l.paid(&d), 70, "any claim meeting the proviso is enough (F147)");
-    // Another payment, its only claim holding the rotation: not made.
-    let d2 = l.debt(&mut debtor, oid, 70, v3, Some(deal), vec![]);
-    l.claim(&mut debtor, oid, d2, 70, "paid after seeing the rotation", PaidAt::Flow(v3), vec![rotation]);
-    assert_eq!(l.paid(&d2), 0);
-}
-
-/// Rule 15 (F146): where both the claim and the rotation are anchored,
-/// the anchor order decides instead of what the claim holds.
-#[test]
-fn where_both_are_anchored_the_anchor_order_decides() {
-    let Rotated { mut l, mut debtor, oid, deal, v3, rotation } = rotated();
-    let d = l.debt(&mut debtor, oid, 70, v3, Some(deal), vec![]);
-    let c = l.claim(&mut debtor, oid, d, 70, "p1", PaidAt::Flow(v3), vec![]);
-    assert_eq!(l.paid(&d), 70);
-    l.anchored_before.insert((c, rotation), false);
-    assert_eq!(l.paid(&d), 0, "anchored after the rotation: not in good faith");
-    let d2 = l.debt(&mut debtor, oid, 70, v3, Some(deal), vec![]);
-    let c2 = l.claim(&mut debtor, oid, d2, 70, "p2", PaidAt::Flow(v3), vec![rotation]);
-    assert_eq!(l.paid(&d2), 0);
-    l.anchored_before.insert((c2, rotation), true);
-    assert_eq!(l.paid(&d2), 70, "anchored before the rotation: it counts, whatever it cites");
-}
-
-/// The anonymous payer's claim (F113) carried by `carrier`, signed by
-/// `key` over its own citations `refs`.
-fn anonymous_claim(l: &mut Lab, carrier: &mut Person, key: &SchnorrKey, payee: Hash, fulfils: Hash, proof: &str, refs: Vec<Hash>, sign_refs: Vec<Hash>) -> Hash {
-    let mut c = claim_payload(payee, fulfils, 70, proof);
-    let signed = fin::Citations { objects: None, acks: None, refs: (!sign_refs.is_empty()).then(|| sign_refs.into_iter().map(Ref::Act).collect()) };
-    c.anonymous = Some(Anonymous {
-        key: SigningKey { scheme: mor_core::act::Scheme::Founding(1), key: key.public().to_vec() },
-        sig: key.sign(&c.anonymous_message(&signed), &[0; 32]).sig,
-    });
-    let refs = (!refs.is_empty()).then(|| refs.into_iter().map(Ref::Act).collect());
-    let id = l.act(carrier, mips().finance, fin::types::CLAIM, Payload::Claim(c).to_map(), None, None, refs);
-    l.rail_valid.insert(id, PaidAt::Flow(h("unused")));
-    id
-}
-
-/// F147 (review finding 2): an anonymous payer's claim is judged by the
-/// citations its key signed, never by the `prev` of whoever carried it;
-/// and nobody can re-wrap it with other citations to turn its good faith
-/// on or off: a re-wrapped claim's key 8 fails, and it is no claim.
-#[test]
-fn an_anonymous_claims_history_is_only_what_its_key_signed() {
-    let Rotated { mut l, mut debtor, oid, deal, v3, rotation } = rotated();
-    let key = SchnorrKey::from_secret(&h("the payer's one-time key")).unwrap();
-    // The one-time identity carrying the claim saw the rotation before
-    // (its previous act cites it): that is the carrier's, not the payer's.
-    let mut carrier = l.person("a one-time identity");
-    l.act(&mut carrier, mips().law, law::types::NEGOTIATION, vec![], None, None, Some(vec![Ref::Act(rotation)]));
-    let d = l.debt(&mut debtor, oid, 70, v3, Some(deal), vec![]);
-    let c = anonymous_claim(&mut l, &mut carrier, &key, oid, d, "anonymous, before", vec![], vec![]);
-    l.rail_valid.insert(c, PaidAt::Flow(v3));
-    assert_eq!(l.paid(&d), 70, "its covered citations do not hold the rotation");
-    // The owner, who would rather not owe, re-wraps the payload and key 8
-    // in an act citing the rotation: no claim at all.
-    let mut owner2 = l.person("a sock puppet");
-    let x = l.w.v.get(&c).unwrap().inside.payload.clone();
-    let wrapped = l.act(&mut owner2, mips().finance, fin::types::CLAIM, x, None, None, Some(vec![Ref::Act(rotation)]));
-    l.rail_valid.insert(wrapped, PaidAt::Flow(v3));
-    assert_eq!(l.view().payers_claims(b"anonymous, before", &rotation).len(), 1, "the re-wrapped act is no claim");
-    assert_eq!(l.paid(&d), 70);
-
-    // The reverse: a payer whose only claim cites the rotation (signed
-    // over it); a thief strips the citation by re-wrapping: still no claim.
-    let d2 = l.debt(&mut debtor, oid, 70, v3, Some(deal), vec![]);
-    let mut carrier2 = l.person("another one-time identity");
-    let c2 = anonymous_claim(&mut l, &mut carrier2, &key, oid, d2, "anonymous, after", vec![rotation], vec![rotation]);
-    l.rail_valid.insert(c2, PaidAt::Flow(v3));
-    assert_eq!(l.paid(&d2), 0, "its signed citations hold the rotation");
-    let x = l.w.v.get(&c2).unwrap().inside.payload.clone();
-    let mut thief = l.person("the thief's one-time identity");
-    let stripped = l.act(&mut thief, mips().finance, fin::types::CLAIM, x, None, None, None);
-    l.rail_valid.insert(stripped, PaidAt::Flow(v3));
-    assert_eq!(l.paid(&d2), 0, "stripped of its citations, key 8 fails: it counts for nothing");
 }
 
 // ---------------------------------------------------------------- rule 10: who decides the purpose (F151)

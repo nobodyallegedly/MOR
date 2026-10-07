@@ -513,6 +513,10 @@ struct DeclIn {
     /// taking effect there, which it places (Law draft 9, Flaw B18): the
     /// value is `[clone, [+ hash], [+ hash]]`.
     absence: Option<Vec<String>>,
+    /// Any other value, as its deterministic CBOR (Finance's clock, F176):
+    /// given instead of `value`.
+    #[serde(default)]
+    cbor: Option<serde_bytes::ByteBuf>,
 }
 
 fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaration>>> {
@@ -520,6 +524,16 @@ fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaratio
         .map(|v| {
             v.iter()
                 .map(|x| {
+                    if let Some(c) = &x.cbor {
+                        if x.value.is_some() || x.signatures.is_some() || x.absence.is_some() {
+                            return Err(JsError::new("a declaration's value is given once: as a hash or as CBOR"));
+                        }
+                        return Ok(identity::Declaration {
+                            spec: unhex(&x.spec)?,
+                            kind: x.kind,
+                            value: Some(cbor::decode(c).map_err(|e| JsError::new(&format!("the declaration's CBOR: {e}")))?),
+                        });
+                    }
                     Ok(identity::Declaration {
                         spec: unhex(&x.spec)?,
                         kind: x.kind,
@@ -1181,6 +1195,28 @@ impl Verifier {
     pub fn failed_to_reach(&mut self, operator: &str) -> R<()> {
         self.inner.failed_to_reach(unhex(operator)?);
         Ok(())
+    }
+
+    /// The home quorum of a counting rotation (Finance rule 15, F180): the
+    /// receipts the home rule in effect before it requires, each passing
+    /// the receipt checks, per home operator, and how many operators are
+    /// needed. `kind` is "own" (it counts on its own signatures: anchor the
+    /// rotation itself), "homes" or "homeless"; null where it is not a
+    /// counting rotation. *The owner's client anchors these after a lock
+    /// change (Finance rule 15, F181).*
+    pub fn quorum(&self, identity: &str, rotation: &str) -> R<JsValue> {
+        #[derive(Serialize)]
+        struct Out {
+            kind: &'static str,
+            need: u64,
+            supports: Vec<Vec<String>>,
+        }
+        let q = self.inner.quorum(&unhex(identity)?, &unhex(rotation)?);
+        to_js(&q.map(|q| match q {
+            chain::Quorum::Own => Out { kind: "own", need: 1, supports: vec![vec![rotation.to_string()]] },
+            chain::Quorum::Homeless => Out { kind: "homeless", need: 0, supports: vec![] },
+            chain::Quorum::Homes { need, supports } => Out { kind: "homes", need, supports: supports.iter().map(|s| s.iter().map(hx).collect()).collect() },
+        }))
     }
 
     /// Which act counts at each position of an identity chain.
