@@ -2030,6 +2030,25 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Finance draft 6, rule 15. *To build:* the lock change point read from anchored home receipts.
 
 
+## F178. The whole-set review's wording and small calls (findings 3 to 17, 7 October 2026)
+
+**Suggested by the project lead in one batch; Nobody, allegedly, 7 October 2026: "English is my third language, even though I am more than fluent. These kind of small corrections get approved with curiosity."**
+
+- **3, 4.** Where rule 15 counts a payment as made, its version is selected from the payee's acts as they stood before the lock change, voided ones included, so a debtor who paid a deal re-pointed in the window does not pay twice; otherwise, for money, an act the rotation did not keep holds no pointer, signs no receipt and selects no version, whatever acknowledgement keeps it visible.
+- **5.** A lock change is defined by its effect: any rotation after which a payment that followed the chain as published before no longer follows it after.
+- **6.** "Before or at the lock change's point"; each act judged by its earliest anchor.
+- **7.** The owner's lever stated at its true size: every unreceipted, unanchored payment the lock change affects.
+- **8, 9, 10, 13.** The paper's claims 2 and 5, the Production task table (anchoring under Envelope; absence proof as task 14), the core's task and judge lists, and freeze scenario 9b follow F172 and F173; period mentions removed.
+- **11.** Before a party signs terms with an abandonment clause, its client must show in plain words who may declare it absent, with which outcomes, and whether an absence-proof cMIP stands between (rule 49).
+- **12.** An absence-proof cMIP judges only the acts the history of the record or clone using the declaration holds, so "never undone" stays true.
+- **14.** Absence proof is a judicial task: a judge never handles what it judges, and the chain of judgment applies.
+- **15.** The running count is a field of the split act; the split format's rounding sentence follows F175.
+- **16.** Each format's declaration says which of its hidden characters end a block; the percent signs are listed by code point.
+- **17.** The long-form format shows a link's closing `>` next to a digit (cosmetic; the format may choose another closer).
+
+**Core changes:** Finance draft 6, rule 15; Law draft 10, rules 15a, 49, Tasks, split format; Text draft 6; Production draft 6, task table; core v21; freeze suite 9b; paper claims 2 and 5. *Next:* one more hostile pass on rule 15 alone before building, as the review suggests.
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
@@ -2038,4 +2057,4 @@ A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four o
 
 ## Whole-set review (7 October 2026, late morning)
 
-Fable's review of the whole set after the reset (`docs/reviews/whole-set-review-2026-10-07.md`): absence (F172) and "the core names a task, not how" hold as principles; the theft principle (F169) is judged right, its rule not yet delivering it (findings 1 and 2, decisions; 3 to 10, wording). Findings 1 and 2 decided as F176 and F177. **Open for Nobody, allegedly:** findings 3 to 20, as the review's suggested order.
+Fable's review of the whole set after the reset (`docs/reviews/whole-set-review-2026-10-07.md`): absence (F172) and "the core names a task, not how" hold as principles; the theft principle (F169) is judged right, its rule not yet delivering it (findings 1 and 2, decisions; 3 to 10, wording). Findings 1 and 2 decided as F176 and F177; 3 to 17 as F178; 18 to 20 held. **Next:** one hostile pass on Finance rule 15 alone, then building.
