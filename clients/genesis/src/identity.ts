@@ -505,15 +505,16 @@ export class TestIdentity {
   /**
    * Anchor a counting rotation's home quorum on `clock` (Finance rule 15,
    * F180, F181): every receipt the core library names as supporting it
-   * under the home rule before it (for a self-hosted identity, the rotation
-   * itself), on the main reference, or, where no anchoring for it is given
+   * under the home rule before it (for a homeless rotation, the new homes'
+   * receipts under the new rule, F182; for a self-hosted identity, the
+   * rotation itself), on the main reference, or, where no anchoring for it is given
    * or it fails, on the backup. Nothing where no clock was declared: there
    * is nothing to compare on, and the owner bears (said by `clockWarning`).
    */
   async anchorQuorum(lookup: Lookup, rotation: string, clock: Clock | null, anchoring: Anchoring[]): Promise<Anchored[]> {
     if (!clock) return [];
     const q = lookup.verifier.quorum(this.f.identity, rotation) as { kind: string; need: number; supports: string[][] } | null;
-    if (!q || q.kind === 'homeless') return [];
+    if (!q) return [];
     const acts = q.supports.flat();
     const tryOn = async (ref: ClockRef | undefined, on: 'main' | 'backup'): Promise<Anchored[] | null> => {
       const a = ref && anchoring.find((x) => sameRef(x.reference, ref));

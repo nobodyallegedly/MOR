@@ -49,11 +49,13 @@ export interface Settings {
 /**
  * What a holder's client keeps of a split service's tally chain for one
  * stake (Law rule 15a, F171): the latest split it received that continued
- * the chain, and the running count that split carries. Keyed by
+ * the chain, and the running count that split carries; a split that
+ * deviates never becomes the reference (F182). `tip` is null where the
+ * chain was kept from its start and no split has continued it yet. Keyed by
  * `service collective stake`.
  */
 export interface KeptTally {
-  tip: string;
+  tip: string | null;
   counts: [string, number][];
 }
 

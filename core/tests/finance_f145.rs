@@ -228,7 +228,7 @@ fn the_pointer_is_judged_by_the_payees_own_signature_act() {
     let d2 = l.debt(&mut debtor, oid, 40, v3, Some(deal), vec![v3]);
     l.claim(&mut debtor, oid, d2, 40, "d2 to v3", PaidAt::Flow(v3), vec![]);
     assert_eq!(l.paid(&d2), 0, "the owner's own act never held version 3");
-    l.claim(&mut debtor, oid, d2, 40, "d2 to the vault", PaidAt::Vault(oid), vec![]);
+    l.claim(&mut debtor, oid, d2, 40, "d2 to the vault", PaidAt::VaultEntry(oid, 0), vec![]);
     assert_eq!(l.paid(&d2), 40, "paid to the vault, it counts");
 
     // Terms the debtor drafts citing version 3, which the owner never
@@ -311,7 +311,7 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     let old = l.debt(&mut debtor, cid, 50, v1, None, vec![v1]);
     l.claim(&mut debtor, cid, old, 50, "old to v1", PaidAt::Flow(v1), vec![]);
     assert_eq!(l.paid(&old), 0, "an IOU's own citations choose nothing");
-    l.claim(&mut debtor, cid, old, 50, "old to the vault", PaidAt::Vault(cid), vec![]);
+    l.claim(&mut debtor, cid, old, 50, "old to the vault", PaidAt::VaultEntry(cid, 0), vec![]);
     assert_eq!(l.paid(&old), 50);
 
     // The creditor acknowledges an IOU of a second debtor, whose own
@@ -435,7 +435,7 @@ fn the_payers_claim_decides_the_purpose_where_the_rail_binds_none() {
     let cid = creditor.id;
     let tip_pointer = l.pointer(&mut creditor, cid, 1, None, "the creditor's node");
     let d = l.debt(&mut debtor, cid, 500, tip_pointer, None, vec![]);
-    let at = PaidAt::Vault(cid);
+    let at = PaidAt::VaultEntry(cid, 0);
     l.unbound.insert(rail());
     let c = l.claim(&mut debtor, cid, d, 500, "500", at, vec![]);
     let r = l.receipt(&mut creditor, debtor.id, tip_pointer, 500, "500", Some(at));

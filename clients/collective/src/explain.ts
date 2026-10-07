@@ -150,6 +150,9 @@ const KNOWN: Record<string, string> = {
 /** Extensions this client implements: it can sign agreements that name them (Law rule 2). */
 const EXTENSIONS = new Set([REPO_SPECS.manifest]);
 
+/** Absence-proof cMIPs this client implements (Law, task 14): none, so it signs no terms naming one (F182). */
+const ABSENCE_PROOFS = new Set<string>();
+
 const specName = (h: string) => KNOWN[h] ?? `an unknown specification (${short(h)})`;
 
 export function list(xs: string[]): string {
@@ -518,6 +521,10 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   const warning = absenceWarning(t, names);
   if (warning) {
     absence.push(warning);
+    if (a?.proof && !ABSENCE_PROOFS.has(a.proof)) {
+      absence.push({ text: `This client does not implement the absence-proof cMIP the clause names (${short(a.proof)}): it cannot show how absence would be judged.`, tone: 'bad' });
+      blocking.push(`It names an absence-proof cMIP this client does not implement (${short(a.proof)}, task 14); a client MUST NOT sign terms naming one it does not implement, as for an unknown extension (Law, task "Absence proof", F182).`);
+    }
     absence.push({ text: 'Signing agrees to this in advance (Law rule 13). It is a protected clause: a later clone you do not sign cannot change it for you (Law rule 46a).' });
     absence.push({ text: 'A declaration moves nothing by itself: what follows takes effect only through a record, rotation or clone put in force under it, and no later act undoes that (Law rule 51).' });
   } else {

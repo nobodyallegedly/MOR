@@ -877,8 +877,6 @@ pub fn pointer_counts(held: &[(Hash, PayeePointer)], paid: &Hash) -> bool {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PaidAt {
     Flow(Hash),
-    /// The vault, its entry not stated: the act declaring it.
-    Vault(Hash),
     /// The vault entry at this index of the vault the act declared (the
     /// payment cMIP's `paid-to` says which, F169: replacing an entry or its
     /// source is a lock change for a payment to it).
@@ -1243,12 +1241,12 @@ pub fn clock_in(finance: &Hash, declarations: &[Declaration]) -> R<Option<Option
 /// the rotation's own anchor (a stated cost of that trust model). `None`
 /// where the quorum is not anchored there: a rotation kept back, or held by
 /// fewer homes than the rule requires, has no point yet. A homeless
-/// rotation's quorum is not read (`None`).
+/// rotation's quorum is read from the new homes it declares, under the new
+/// home rule (F182).
 pub fn quorum_point(q: &Quorum, rotation: &Hash, anchors: &Anchors, on: &Reference) -> Option<u64> {
     match q {
         Quorum::Own => anchors.earliest(rotation, on),
-        Quorum::Homeless => None,
-        Quorum::Homes { need, supports } => {
+        Quorum::Homes { need, supports } | Quorum::Homeless { need, supports } => {
             let mut firsts: Vec<u64> = supports
                 .iter()
                 .filter_map(|rs| rs.iter().filter_map(|r| anchors.earliest(r, on)).min())
@@ -1290,8 +1288,9 @@ pub fn lock_point(clock: Option<&Clock>, q: &Quorum, rotation: &Hash, anchors: &
 /// change at `at`, on `clock`, the one declared before it: before or at its
 /// point on the main reference, by the claim's earliest anchor there; where
 /// the lock change is anchored only on the backup, before or at its point
-/// there, or anchored on the main reference at all (F179). A claim anchored
-/// on neither is not protected.
+/// there, or anchored on the main reference at all, whatever its point,
+/// since the two references cannot be compared (F179, F182). A claim
+/// anchored on neither is not protected.
 pub fn claim_in_time(at: LockPoint, clock: &Clock, claim: &Hash, anchors: &Anchors) -> bool {
     match at {
         LockPoint::NotAnchored => true,

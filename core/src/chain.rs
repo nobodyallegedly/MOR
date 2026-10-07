@@ -179,8 +179,10 @@ pub enum Quorum {
     /// home beside others, the rotation itself); possibly none.
     Homes { need: u64, supports: Vec<Vec<Hash>> },
     /// A homeless rotation: its receipts come from the new homes it
-    /// declares (F86). Not read here.
-    Homeless,
+    /// declares (F86), so its quorum is read under the new home rule it
+    /// declares (F182): homes of `need` distinct operators of the new set
+    /// must hold it, `supports` as for [`Quorum::Homes`].
+    Homeless { need: u64, supports: Vec<Vec<Hash>> },
 }
 
 /// A link between two MOR identities, as one act sees it (Identity rules
@@ -763,35 +765,49 @@ impl Verifier {
         Some(match res.links[k].how {
             How::Genesis => return None,
             How::OwnSignatures => Quorum::Own,
-            How::Homeless { .. } => Quorum::Homeless,
-            How::Homes => {
-                let st = &res.states[k - 1];
-                let (voters, need) = match st.effective() {
-                    Effective::Single(op) => (vec![op], 1),
-                    Effective::Threshold(t) => (st.operators(), t),
-                };
-                if voters == [Operator::Own] {
-                    return Some(Quorum::Own);
-                }
-                let mut cx = Cx::default();
-                let audit = res.states[k].audit.clone();
-                let supports = voters
-                    .into_iter()
-                    .filter(|op| !res.dishonest.iter().any(|(d, p)| d == op && *p < k as u64))
-                    .map(|op| match op {
-                        // A self-hosted home: the rotation it serves stands
-                        // in for its receipt (rule 22a).
-                        Operator::Own => vec![*rotation],
-                        Operator::Id(o) => self
-                            .receipts(&o, identity, rotation, k as u64)
-                            .filter(|r| matches!(self.judge_receipt(&mut cx, r, audit.as_ref()), Judged::Support { .. }))
-                            .map(|r| r.id)
-                            .collect(),
-                    })
-                    .collect();
-                Quorum::Homes { need, supports }
-            }
+            // Under the home rule in effect before it.
+            How::Homes => match self.supports(&res, identity, rotation, k, &res.states[k - 1]) {
+                None => Quorum::Own,
+                Some((need, supports)) => Quorum::Homes { need, supports },
+            },
+            // F182: from the new homes it declares, under the new home rule
+            // (homeless procedure, step 5; F86).
+            How::Homeless { .. } => match self.supports(&res, identity, rotation, k, &res.states[k]) {
+                None => Quorum::Own,
+                Some((need, supports)) => Quorum::Homeless { need, supports },
+            },
         })
+    }
+
+    /// The receipts of the homes of `st` supporting the rotation at `k`,
+    /// per operator, each passing the receipt checks, and how many
+    /// operators must hold it; `None` where `st`'s only home is self-hosted
+    /// (the rotation stands for its receipts, rule 22a).
+    fn supports(&self, res: &Resolution, identity: &Hash, rotation: &Hash, k: usize, st: &ChainState) -> Option<(u64, Vec<Vec<Hash>>)> {
+        let (voters, need) = match st.effective() {
+            Effective::Single(op) => (vec![op], 1),
+            Effective::Threshold(t) => (st.operators(), t),
+        };
+        if voters == [Operator::Own] {
+            return None;
+        }
+        let mut cx = Cx::default();
+        let audit = res.states[k].audit.clone();
+        let supports = voters
+            .into_iter()
+            .filter(|op| !res.dishonest.iter().any(|(d, p)| d == op && *p < k as u64))
+            .map(|op| match op {
+                // A self-hosted home: the rotation it serves stands
+                // in for its receipt (rule 22a).
+                Operator::Own => vec![*rotation],
+                Operator::Id(o) => self
+                    .receipts(&o, identity, rotation, k as u64)
+                    .filter(|r| matches!(self.judge_receipt(&mut cx, r, audit.as_ref()), Judged::Support { .. }))
+                    .map(|r| r.id)
+                    .collect(),
+            })
+            .collect();
+        Some((need, supports))
     }
 
     // ------------------------------------------------------------ resolving

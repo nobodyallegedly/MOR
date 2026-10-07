@@ -145,6 +145,15 @@ export function linkCloseShown(s: string, i: number): boolean {
   return isDigit(charBefore(s, i)) || isDigit(charAt(s, i + 1));
 }
 
+/**
+ * Is a link's opening `<`, at `i`, one the Text MIP's floor forbids hiding
+ * (a mathematical sign directly after a digit)? Then it is shown, as text,
+ * and the address is still the link (F182).
+ */
+export function linkOpenShown(s: string, i: number): boolean {
+  return underFloor(s, i) !== null;
+}
+
 /** Link schemes shown as links (rule 9). */
 const AUTOLINK = /^<((?:https?|mailto):[^ <>]+)>/;
 
@@ -199,8 +208,18 @@ class Parser {
   starts(l: Span, depth: number): boolean {
     const x = this.text(l);
     if (FENCE.test(x) || HEADING.test(x) || RULE.test(x)) return true;
-    if (depth < MAX_DEPTH && (x.startsWith('>') || this.marker(l))) return true;
+    if (depth < MAX_DEPTH && (this.quoteOpens(l) || this.marker(l))) return true;
     return false;
+  }
+
+  /**
+   * Does this line open a quote? A `>` opening it does, unless the Text
+   * MIP's floor forbids hiding it (a mathematical sign directly before a
+   * digit, `>5`): then it is shown as text, and the line is no quote
+   * (F182).
+   */
+  quoteOpens(l: Span): boolean {
+    return l.from < l.to && this.s[l.from] === '>' && underFloor(this.s, l.from) === null;
   }
 
   blocks(lines: Span[], depth: number): Block[] {
@@ -251,9 +270,9 @@ class Parser {
         continue;
       }
       // Quote (rule 7).
-      if (depth < MAX_DEPTH && x.startsWith('>')) {
+      if (depth < MAX_DEPTH && this.quoteOpens(l)) {
         const inner: Span[] = [];
-        while (i < lines.length && this.s[lines[i].from] === '>' && lines[i].from < lines[i].to) {
+        while (i < lines.length && this.quoteOpens(lines[i])) {
           const q = lines[i];
           const skip = this.s[q.from + 1] === ' ' && q.from + 1 < q.to ? 2 : 1;
           this.mark('quote', q.from, q.from + skip);
@@ -320,8 +339,50 @@ class Parser {
 
   // -------------------------------------------------------------- inlines
 
-  /** The inline content of one line (rule 9). */
+  /**
+   * The inline content of one line (rule 9). Where the Text MIP's floor
+   * forbids hiding a piece of emphasis, code or link markup (a run of
+   * hidden markup between two digits, `1*2*3`, `1`2`3`), that piece is
+   * shown as text rather than the document refused (F175, F182): the line
+   * is read again with it as text, until no hidden run lies between two
+   * digits.
+   */
   inline(l: Span): Inline[] {
+    const literal = new Set<number>();
+    for (;;) {
+      const from = this.marks.length;
+      const nodes = this.inlineOnce(l, literal);
+      const at = this.betweenDigits(from);
+      if (at === null) return nodes;
+      this.marks.length = from;
+      literal.add(at);
+    }
+  }
+
+  /**
+   * The first run of markup hidden since mark `from` that lies between two
+   * digits, as the offset to read as text instead: an emphasis run, a code
+   * span's or a link's opening sign. Null if none.
+   */
+  betweenDigits(from: number): number | null {
+    const s = this.s;
+    const ms = this.marks.slice(from).sort((a, b) => a.span.from - b.span.from);
+    for (let i = 0; i < ms.length; ) {
+      let j = i;
+      while (j + 1 < ms.length && ms[j + 1].span.from === ms[j].span.to) j++;
+      if (isDigit(charBefore(s, ms[i].span.from)) && isDigit(charAt(s, ms[j].span.to))) {
+        const m = ms.slice(i, j + 1).find((x) => x.rule !== 'escape') ?? ms[i];
+        if (m.rule === 'code-close') return [...ms].reverse().find((x) => x.rule === 'code-open' && x.span.from < m.span.from)!.span.from;
+        if (m.rule === 'link-close') return s.lastIndexOf('<', m.span.from);
+        return m.span.from;
+      }
+      i = j + 1;
+    }
+    return null;
+  }
+
+  /** One reading of a line's inline content, with the offsets in `literal` read as text. */
+  inlineOnce(l: Span, literal: Set<number>): Inline[] {
     const s = this.s;
     type Tok =
       | { k: 'node'; node: Inline }
@@ -338,7 +399,7 @@ class Parser {
     let p = l.from;
     while (p < l.to) {
       const c = s[p];
-      if (c === '\\' && p + 1 < l.to && ESCAPABLE.has(s[p + 1])) {
+      if (c === '\\' && p + 1 < l.to && ESCAPABLE.has(s[p + 1]) && !literal.has(p)) {
         flush(p);
         this.mark('escape', p, p + 1);
         run = p + 1; // the backslash is hidden, the character shown
@@ -348,6 +409,11 @@ class Parser {
       if (c === '`') {
         let n = 0;
         while (p + n < l.to && s[p + n] === '`') n++;
+        if (literal.has(p)) {
+          lit(p);
+          p += n;
+          continue;
+        }
         let q = p + n;
         let close = -1;
         while (q < l.to) {
@@ -376,11 +442,18 @@ class Parser {
         continue;
       }
       if (c === '<') {
-        const m = AUTOLINK.exec(s.slice(p, l.to));
+        const m = literal.has(p) ? null : AUTOLINK.exec(s.slice(p, l.to));
         if (m) {
-          flush(p);
           const span = { from: p + 1, to: p + 1 + m[1].length };
-          this.mark('link-open', p, p + 1);
+          // The opening < after a digit is shown, as text (F182), as the
+          // closing > next to one is (F178 item 17).
+          if (linkOpenShown(s, p)) {
+            lit(p);
+            flush(p + 1);
+          } else {
+            flush(p);
+            this.mark('link-open', p, p + 1);
+          }
           toks.push({ k: 'node', node: { t: 'link', href: m[1], span } });
           p = span.to + 1;
           // The closing > next to a digit is shown, as text (F178 item 17).
@@ -395,7 +468,7 @@ class Parser {
       if (c === '*') {
         let n = 0;
         while (p + n < l.to && s[p + n] === '*') n++;
-        if (n > 3) {
+        if (n > 3 || literal.has(p)) {
           lit(p);
           p += n;
           continue;
@@ -564,11 +637,12 @@ function shownIn(doc: Document): [number, number][] {
 export const PERCENT_SIGNS = new Set([0x0025, 0x066a, 0xfe6a, 0xff05, 0x2030, 0x0609, 0x2031]);
 
 /**
- * The plus and minus signs the floor names (F167, F175): + - U+2212, and
- * the dash-like minus signs U+2013 (en dash), U+FE63 (small hyphen-minus)
- * and U+FF0D (fullwidth hyphen-minus).
+ * The plus and minus signs the floor names (F167, F175, F182): + - U+2212,
+ * and the dash-like minus signs U+2010 (hyphen), U+2011 (non-breaking
+ * hyphen), U+2012 (figure dash), U+2013 (en dash), U+2796 (heavy minus
+ * sign), U+FE63 (small hyphen-minus) and U+FF0D (fullwidth hyphen-minus).
  */
-export const SIGNS = new Set([0x002b, 0x002d, 0x2212, 0x2013, 0xfe63, 0xff0d]);
+export const SIGNS = new Set([0x002b, 0x002d, 0x2212, 0x2010, 0x2011, 0x2012, 0x2013, 0x2796, 0xfe63, 0xff0d]);
 
 /**
  * Full stops and commas (F174 item 11): the punctuation characters (Po)
@@ -807,7 +881,7 @@ export function checkBound(
   // excepted, since a new block is shown, not hidden: the two digits are
   // never read as one number. (Read for the whole run, so a heading's, a
   // quote's, a fence's or a rule line's markup may stand between two
-  // digits in two blocks; a question in the build's report.)
+  // digits in two blocks: confirmed, F182 item 10.)
   for (let a = 0; a < n; ) {
     if (state[a]) {
       a++;
@@ -932,8 +1006,12 @@ export function checkBound(
         break;
       }
       case 'link-close': {
-        const a = link && AUTOLINK.exec(s.slice(link.span.from, lineEnd(link.span.from)));
-        if (!link || !a || link.span.from + a[0].length !== to) return fail('the > closing a link');
+        // Its opening <: hidden (the link-open mark), or shown because the
+        // floor forbids hiding it (F182).
+        const o = link ? link.span.from : s.lastIndexOf('<', from);
+        if (!link && !(o >= lineStart(from) && state[o] === 1 && linkOpenShown(s, o))) return fail('the > closing a link');
+        const a = AUTOLINK.exec(s.slice(o, lineEnd(o)));
+        if (!a || o + a[0].length !== to) return fail('the > closing a link');
         if (closeShown(from)) return fail('the > closing a link, next to a digit, is shown');
         link = null;
         break;

@@ -1233,8 +1233,9 @@ impl Verifier {
     /// receipts the home rule in effect before it requires, each passing
     /// the receipt checks, per home operator, and how many operators are
     /// needed. `kind` is "own" (it counts on its own signatures: anchor the
-    /// rotation itself), "homes" or "homeless"; null where it is not a
-    /// counting rotation. *The owner's client anchors these after a lock
+    /// rotation itself), "homes", or "homeless" (the new homes' receipts,
+    /// under the new home rule, F182); null where it is not a counting
+    /// rotation. *The owner's client anchors these after a lock
     /// change (Finance rule 15, F181).*
     pub fn quorum(&self, identity: &str, rotation: &str) -> R<JsValue> {
         #[derive(Serialize)]
@@ -1246,7 +1247,7 @@ impl Verifier {
         let q = self.inner.quorum(&unhex(identity)?, &unhex(rotation)?);
         to_js(&q.map(|q| match q {
             chain::Quorum::Own => Out { kind: "own", need: 1, supports: vec![vec![rotation.to_string()]] },
-            chain::Quorum::Homeless => Out { kind: "homeless", need: 0, supports: vec![] },
+            chain::Quorum::Homeless { need, supports } => Out { kind: "homeless", need, supports: supports.iter().map(|s| s.iter().map(hx).collect()).collect() },
             chain::Quorum::Homes { need, supports } => Out { kind: "homes", need, supports: supports.iter().map(|s| s.iter().map(hx).collect()).collect() },
         }))
     }

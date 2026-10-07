@@ -569,12 +569,21 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   // The first split is now shown with the reset: a verifier holding both cannot tell from the acts which came later.
   const first = await c.ask<{ breaks: number }>('check-split', { collective: col.id, split: col.splits[0] });
   assert.equal(first.breaks, 1);
-  // The next split cites the reset, now the latest for the stake, and carries its count plus its own leftover
-  // units: the chain goes on from there, the reset still shown.
+  // F182 item 8: after a deviation, the reference stays the last split that continued the chain, so a deviating
+  // split never becomes the baseline. The service's next split cites the reset, its own latest, and carries its
+  // count: the core, holding the two acts, sees nothing wrong with that link, but every holder's client, checking
+  // it against the last split that continued the chain it keeps (the one before the fork), shows it as a deviation.
+  // (Removal check: with the arriving split taken as the new reference, every holder's client accepts it.)
   const resumed = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100 });
   const resumedw = resumed.done.lines.map((l) => l.text).join('\n');
-  assert.doesNotMatch(resumedw, /THE TALLY CHAIN|DOES NOT CONTINUE/, resumedw);
-  assert.equal((resumedw.match(/'s client: the split continues the chain it keeps/g) ?? []).length, 5, resumedw);
+  assert.doesNotMatch(resumedw, /THE TALLY CHAIN/, resumedw);
+  assert.doesNotMatch(resumedw, /'s client: the split continues the chain it keeps/, resumedw);
+  const lastGood = col.splits[2].slice(0, 8);
+  assert.equal(
+    (resumedw.match(new RegExp(`'s client: THE SPLIT DOES NOT CONTINUE THE CHAIN IT KEEPS: it does not cite ${lastGood}[^,]*, the last split that continued the chain this client keeps for the stake.*The chain this client keeps stays at ${lastGood}`, 'g')) ?? []).length,
+    5,
+    resumedw,
+  );
 
   // N13: a debt of the collective, sealed to the creditor and every member.
   const debt = await sign(c, { kind: 'debt', collective: col.id, creditor: supplier, amount: 50 });

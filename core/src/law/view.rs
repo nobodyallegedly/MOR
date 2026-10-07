@@ -5461,7 +5461,9 @@ impl<'a> LawView<'a> {
             .map(|k| fin::LockChange {
                 rotation: res.links[k].act,
                 clock: self.clock_at(payee, k - 1),
-                quorum: self.v.quorum(payee, &res.links[k].act).unwrap_or(crate::chain::Quorum::Homeless),
+                // A counting rotation always has a quorum; were none read,
+                // no receipt supports it, so it has no point.
+                quorum: self.v.quorum(payee, &res.links[k].act).unwrap_or(crate::chain::Quorum::Homes { need: 1, supports: vec![] }),
             })
             .collect();
         let receipt = self.receipts_for_proof(proof).iter().any(|(_, r)| &r.payee == payee);
@@ -5509,7 +5511,7 @@ impl<'a> LawView<'a> {
                 };
                 r14 && fin::flow_followed_vault(vault, amount)
             }
-            PaidAt::Vault(d) | PaidAt::VaultEntry(d, _) => {
+            PaidAt::VaultEntry(d, i) => {
                 // The act declaring it, if it is a link of the payee's
                 // chain declaring a vault; otherwise the vault entry is the
                 // rail answer's, as before any lock change.
@@ -5519,10 +5521,7 @@ impl<'a> LawView<'a> {
                     return false;
                 }
                 let now = vault.unwrap_or(&[]);
-                match at {
-                    PaidAt::VaultEntry(_, i) => declared.get(*i as usize).is_some_and(|e| now.iter().any(|x| same(x, e))),
-                    _ => declared.iter().all(|e| now.iter().any(|x| same(x, e))),
-                }
+                declared.get(*i as usize).is_some_and(|e| now.iter().any(|x| same(x, e)))
             }
         }
     }
