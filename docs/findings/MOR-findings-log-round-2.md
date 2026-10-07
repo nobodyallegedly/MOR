@@ -1848,9 +1848,20 @@ A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`)
 **Open for Nobody, allegedly:** findings 1, 2, 3, 5, 6, 7, 8, 9, 10, 16 and 17 decided (F145 to F155); the "when" sentences rewritten (F161). The build of F145 to F156 then found F157 to F160.
 
 
+## F163. A payee's client cites its latest pointer when signing what pays it (review of F145 to F162, finding 2, 7 October 2026)
+
+**Found by the hostile review of F145 to F162** (finding 2, common case): an identity keeps one sequence per device (Envelope, "Sequences"), and F157's walk through the payee's own acts follows only the signing device's line, so a deal signed on the phone holds no pointer published from the laptop; its royalties could go only to the vault, or with no vault nowhere.
+
+**Considered and set aside:** selecting the newest pointer published anywhere, which would also pick a thief's pointer and reopen the backlog; having homes serve the latest payee pointer (the project lead's suggestion). Nobody, allegedly: "It does make sense to keep them together on the home, but these are separate layers Identity and Finance."
+
+**Decided (Nobody, allegedly, 7 October 2026): "Agreed", then "Fetch it from where the finance decision was published":** a payee's client signing an act that can pay it (its signature on terms, its offer) cites in `refs` the latest of the payee's pointers, fetched from where the pointers are published, whichever device published it (client conformance). Verifiers are unchanged: the walk through the payee's own acts finds it. Where a client fails, rule 14's remedy applies: the payee signs an act on the deal citing a pointer; until then payments go only to the vault. **Correction recorded:** the project lead first said the client would fetch from the homes, which do not store pointers (Identity rule 13).
+
+**Core changes:** Finance draft 6, rule 14. *To build:* clients that sign terms or offers fetch and cite the latest pointer; a test with two devices.
+
+
 ## Review of F145 to F162 (7 October 2026, morning)
 
 A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-review.md`), attacked the eighteen decisions together, after F145 to F162 were built and merged (`docs/decisions-f157-f162-build-2026-10-06.md`, main `b2b79a8`, display client released `9e53e70`). **Six break, two in common cases:** (1) F160: an individual's everyday acts never cite the identity chain where the vault is declared, so no act "holds" a vault; read through the binding, a vault lowered after a theft protects nothing already signed; (2) F157: a person with two devices has two sequences, and the walk follows one, so a deal signed on the phone holds no pointer published from the laptop; (3) F146, F147, F154: a payer can always add a claim citing nothing, and an owner cannot anchor the payer's claim, so the proviso excludes only honest payers and the theft window never shuts; (4) F150: the receipt's signer chooses its salt, so it can choose the tie; (5) F148, F158: a declaration acknowledged by one accomplice can still be kept and used later; (6) F149: a format declares its own bound. Smaller: findings 6 to 14. The build session's own questions (its report, "Questions") are open too. *The decisions were made fast, mostly on the project lead's suggestions; the two common-case breaks follow from his suggestions (F157, F160).*
 
-**Open for Nobody, allegedly:** findings 1 to 14 of the review, and the build's questions 1 to 5.
+**Open for Nobody, allegedly:** findings 1 and 3 to 14 of the review (finding 2 decided as F163), and the build's questions 1 to 5.
 
