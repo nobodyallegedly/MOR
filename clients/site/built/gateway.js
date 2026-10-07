@@ -559,25 +559,21 @@ var Verifier = class {
    * Payer-side splitting (F124 P2): what a paying wallet reading Law pays
    * each holder for `amount` on the stake in `object` (hex, or null for
    * the collective itself), or why it cannot. Leftovers by largest
-   * remainder, ties ordered by `receipt` (hex: the receipt's hash, or,
-   * for a split from a payer's claim with no receipt, the claim's; or
-   * null: then a tie that decides a unit leaves the split undetermined;
-   * Law rule 15a, F150, F162).
+   * remainder; a tied unit is the payer's to decide, at most one per tie
+   * (Law rule 15a, F165, F168): this wallet gives it to the tied holder
+   * with the smallest identity hash, a choice, not a rule.
    * @param {any} specs
    * @param {string} agreement
    * @param {string | null | undefined} object
    * @param {bigint} amount
-   * @param {string | null} [receipt]
    * @returns {any}
    */
-  lawPayerSplit(specs, agreement, object, amount, receipt) {
+  lawPayerSplit(specs, agreement, object, amount) {
     const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len1 = WASM_VECTOR_LEN;
-    var ptr2 = isLikeNone(receipt) ? 0 : passStringToWasm0(receipt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount, ptr2, len2);
+    const ret = wasm.verifier_lawPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -599,6 +595,27 @@ var Verifier = class {
     const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_lawPointerCheck(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee's pointer acts its own acts hold, for what a payment
+   * follows (an obligation, an agreement or an offer; Finance rule 14,
+   * F145, F157, F163, F168): `{ pointers, complete }`, or null where
+   * `fulfils` is none of these.
+   * @param {any} specs
+   * @param {string} fulfils
+   * @param {string} payee
+   * @returns {any}
+   */
+  lawPointerHolding(specs, fulfils, payee) {
+    const ptr0 = passStringToWasm0(fulfils, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawPointerHolding(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -679,6 +696,43 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * Rule 15a's turns (F165, F171): for `stake` (its index) of
+   * `agreement`'s version in force, the leftover units each holder has
+   * received so far from `service`'s splits, as `previous` (the
+   * service's latest split act for the stake, which its next split
+   * cites) carries them in its running count; null `previous`: no split
+   * yet, every count zero. In the order of `holders` (hex). Null where
+   * `previous` is not held, not one of the service's splits for the
+   * stake, or carries no count.
+   * @param {any} specs
+   * @param {string} service
+   * @param {string} agreement
+   * @param {bigint} stake
+   * @param {string[]} holders
+   * @param {string | null} [previous]
+   * @returns {Float64Array | undefined}
+   */
+  lawSplitTurns(specs, service, agreement, stake, holders, previous) {
+    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(holders, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    var ptr3 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len3 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v5;
+    if (ret[0] !== 0) {
+      v5 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+      wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    }
+    return v5;
+  }
+  /**
    * A split, judged (rules 20, 21, 26; F121 Q9, F124 N10): whether it
    * sums to what arrived, each fee and who received it, the holders it
    * pays and was not delivered to, and every payout that does not match
@@ -750,6 +804,29 @@ var Verifier = class {
     this.__wbg_ptr = ret[0];
     VerifierFinalization.register(this, this.__wbg_ptr, this);
     return this;
+  }
+  /**
+   * The home quorum of a counting rotation (Finance rule 15, F180): the
+   * receipts the home rule in effect before it requires, each passing
+   * the receipt checks, per home operator, and how many operators are
+   * needed. `kind` is "own" (it counts on its own signatures: anchor the
+   * rotation itself), "homes" or "homeless"; null where it is not a
+   * counting rotation. *The owner's client anchors these after a lock
+   * change (Finance rule 15, F181).*
+   * @param {string} identity
+   * @param {string} rotation
+   * @returns {any}
+   */
+  quorum(identity, rotation) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(rotation, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_quorum(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
   }
   /**
    * Which act counts at each position of an identity chain.
@@ -1287,6 +1364,10 @@ ${val.stack}`;
   }
   return className;
 }
+function getArrayF64FromWasm0(ptr, len) {
+  ptr = ptr >>> 0;
+  return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
+}
 function getArrayJsValueFromWasm0(ptr, len) {
   ptr = ptr >>> 0;
   const mem = getDataViewMemory0();
@@ -1309,6 +1390,12 @@ function getDataViewMemory0() {
   return cachedDataViewMemory0;
 }
 var cachedFloat64ArrayMemory0 = null;
+function getFloat64ArrayMemory0() {
+  if (cachedFloat64ArrayMemory0 === null || cachedFloat64ArrayMemory0.byteLength === 0) {
+    cachedFloat64ArrayMemory0 = new Float64Array(wasm.memory.buffer);
+  }
+  return cachedFloat64ArrayMemory0;
+}
 function getStringFromWasm0(ptr, len) {
   return decodeText(ptr >>> 0, len);
 }
@@ -1335,6 +1422,15 @@ function passArray8ToWasm0(arg, malloc) {
   const ptr = malloc(arg.length * 1, 1) >>> 0;
   getUint8ArrayMemory0().set(arg, ptr / 1);
   WASM_VECTOR_LEN = arg.length;
+  return ptr;
+}
+function passArrayJsValueToWasm0(array, malloc) {
+  const ptr = malloc(array.length * 4, 4) >>> 0;
+  for (let i = 0; i < array.length; i++) {
+    const add = addToExternrefTable0(array[i]);
+    getDataViewMemory0().setUint32(ptr + 4 * i, add, true);
+  }
+  WASM_VECTOR_LEN = array.length;
   return ptr;
 }
 function passStringToWasm0(arg, malloc, realloc) {
@@ -2668,6 +2764,7 @@ var DECLARED = {
   "em-open": "*",
   "em-close": "*"
 };
+var ENDS_BLOCK = "\n";
 var ESCAPABLE = /* @__PURE__ */ new Set(["\\", "`", "*", "_", "#", "-", "+", ".", ">", "<", "[", "]", "(", ")", "!", "|", "~"]);
 var SPACES = /* @__PURE__ */ new Set([
   32,
@@ -2689,6 +2786,9 @@ var SPACES = /* @__PURE__ */ new Set([
   12288
 ]);
 var isSpace = (s, i) => SPACES.has(s.charCodeAt(i));
+function linkCloseShown(s, i) {
+  return isDigit(charBefore(s, i)) || isDigit(charAt(s, i + 1));
+}
 var AUTOLINK = /^<((?:https?|mailto):[^ <>]+)>/;
 function parse(source) {
   const lines = [];
@@ -2902,9 +3002,10 @@ var Parser = class {
           flush(p);
           const span = { from: p + 1, to: p + 1 + m[1].length };
           this.mark("link-open", p, p + 1);
-          this.mark("link-close", span.to, span.to + 1);
           toks.push({ k: "node", node: { t: "link", href: m[1], span } });
           p = span.to + 1;
+          if (linkCloseShown(s, span.to)) lit(span.to);
+          else this.mark("link-close", span.to, span.to + 1);
           continue;
         }
         lit(p);
@@ -3039,7 +3140,175 @@ function shownIn(doc) {
   blk(doc.blocks);
   return out;
 }
-function checkBound(doc) {
+var PERCENT_SIGNS = /* @__PURE__ */ new Set([37, 1642, 65130, 65285, 8240, 1545, 8241]);
+var SIGNS = /* @__PURE__ */ new Set([43, 45, 8722, 8211, 65123, 65293]);
+var STOPS = /* @__PURE__ */ new Set([
+  // Full stops.
+  46,
+  1417,
+  1748,
+  1793,
+  1794,
+  4962,
+  5742,
+  6147,
+  6153,
+  11513,
+  11518,
+  11836,
+  12290,
+  42239,
+  42510,
+  42739,
+  65042,
+  65106,
+  65294,
+  65377,
+  92917,
+  93848,
+  113823,
+  121480,
+  // Commas.
+  44,
+  1373,
+  1548,
+  2040,
+  4963,
+  6146,
+  6152,
+  11826,
+  11828,
+  11841,
+  11849,
+  11852,
+  12289,
+  42238,
+  42509,
+  42741,
+  65040,
+  65041,
+  65104,
+  65105,
+  65292,
+  65380,
+  70733,
+  70746,
+  93847,
+  121479,
+  // The Arabic decimal and thousands separators.
+  1643,
+  1644
+]);
+var APOSTROPHES = /* @__PURE__ */ new Set([39, 8217, 1370, 65287]);
+var MARKS_QE = /* @__PURE__ */ new Set([
+  63,
+  191,
+  894,
+  1374,
+  1567,
+  4967,
+  6469,
+  8263,
+  8265,
+  11514,
+  11515,
+  11822,
+  11860,
+  42511,
+  42743,
+  65046,
+  65110,
+  65311,
+  69955,
+  125279,
+  33,
+  161,
+  1372,
+  2041,
+  6468,
+  8252,
+  8264,
+  11859,
+  65045,
+  65111,
+  65281,
+  125278,
+  8253,
+  11800
+]);
+var DIGIT = /^\p{N}$/u;
+var LETTER = /^\p{L}$/u;
+var MARK = /^\p{M}$/u;
+var ALWAYS = /^[\p{L}\p{N}\p{M}]$/u;
+var CURRENCY = /^\p{Sc}$/u;
+var MATHS = /^\p{Sm}$/u;
+var OPEN_BRACKET = /^\p{Ps}$/u;
+var CLOSE_BRACKET = /^\p{Pe}$/u;
+function charAt(s, i) {
+  if (i < 0 || i >= s.length) return null;
+  let from = i;
+  const u = s.charCodeAt(i);
+  if (u >= 56320 && u <= 57343 && i > 0) {
+    const h = s.charCodeAt(i - 1);
+    if (h >= 55296 && h <= 56319) from = i - 1;
+  }
+  const c = String.fromCodePoint(s.codePointAt(from));
+  return { c, from, to: from + c.length };
+}
+var charBefore = (s, i) => i > 0 ? charAt(s, i - 1) : null;
+var isDigit = (x) => x !== null && DIGIT.test(x.c);
+function letterBefore(s, i) {
+  let x = charBefore(s, i);
+  while (x && MARK.test(x.c)) x = charBefore(s, x.from);
+  return x !== null && LETTER.test(x.c);
+}
+function inAmount(c) {
+  const cp = c.codePointAt(0);
+  return DIGIT.test(c) || CURRENCY.test(c) || SIGNS.has(cp) || STOPS.has(cp) || PERCENT_SIGNS.has(cp) || APOSTROPHES.has(cp) || SPACES.has(cp);
+}
+function aroundAmount(s, from, to, open) {
+  let digits = 0;
+  let edge = null;
+  let x = open ? charAt(s, to) : charBefore(s, from);
+  const first = x;
+  while (x && inAmount(x.c)) {
+    if (DIGIT.test(x.c)) digits++;
+    edge = x;
+    x = open ? charAt(s, x.to) : charBefore(s, x.from);
+  }
+  if (!x || !digits || !first || !edge) return false;
+  if (SPACES.has(first.c.codePointAt(0)) || SPACES.has(edge.c.codePointAt(0))) return false;
+  return open ? CLOSE_BRACKET.test(x.c) : OPEN_BRACKET.test(x.c);
+}
+var FLOOR = [
+  ["a letter, a digit or a combining mark", (h) => ALWAYS.test(h.c)],
+  ["a currency sign", (h) => CURRENCY.test(h.c)],
+  ["a mathematical sign next to a digit", (h) => MATHS.test(h.c) && (isDigit(h.before) || isDigit(h.after))],
+  ["a percent, per-mille or per-ten-thousand sign", (h) => PERCENT_SIGNS.has(h.cp)],
+  ["a character between two digits", (h) => isDigit(h.before) && isDigit(h.after)],
+  [
+    "a plus or minus sign directly before a digit or a currency sign, or directly after a digit",
+    (h) => SIGNS.has(h.cp) && (isDigit(h.after) || h.after !== null && CURRENCY.test(h.after.c) || isDigit(h.before))
+  ],
+  ["a full stop or comma directly before a digit", (h) => STOPS.has(h.cp) && isDigit(h.after)],
+  [
+    "a bracket directly around an amount",
+    (h) => OPEN_BRACKET.test(h.c) && aroundAmount(h.s, h.from, h.to, true) || CLOSE_BRACKET.test(h.c) && aroundAmount(h.s, h.from, h.to, false)
+  ],
+  [
+    "a space or apostrophe between two letters",
+    (h) => (SPACES.has(h.cp) || APOSTROPHES.has(h.cp)) && h.after !== null && LETTER.test(h.after.c) && letterBefore(h.s, h.from)
+  ],
+  ["a question or exclamation mark", (h) => MARKS_QE.has(h.cp)]
+];
+function underFloor(s, i) {
+  const here = charAt(s, i);
+  if (!here) return null;
+  const h = { s, c: here.c, cp: here.c.codePointAt(0), from: here.from, to: here.to, before: charBefore(s, here.from), after: charAt(s, here.to) };
+  for (const [why, holds] of FLOOR) if (holds(h)) return why;
+  return null;
+}
+function checkBound(doc, declared = DECLARED, endsBlock = ENDS_BLOCK) {
   const s = doc.source;
   const n = s.length;
   const at = shownIn(doc);
@@ -3052,6 +3321,48 @@ function checkBound(doc) {
     last = i;
     state2[i] = 1;
     leafOf[i] = leaf;
+  }
+  const prevShown = new Int32Array(n + 1).fill(-1);
+  for (let i = 0; i < n; i++) prevShown[i + 1] = state2[i] ? i : prevShown[i];
+  const nextShown = new Int32Array(n + 1).fill(-1);
+  for (let i = n - 1; i >= 0; i--) nextShown[i] = state2[i] ? i : nextShown[i + 1];
+  const endsABlock = (i) => {
+    if (s[i] !== "\n" || !endsBlock.includes("\n")) return false;
+    const a = prevShown[i];
+    const b = nextShown[i];
+    return a >= 0 && b >= 0 && leafOf[a] !== leafOf[b];
+  };
+  const floor = (i, why) => `hides ${JSON.stringify(s[i])} at ${i}, which no format may hide (F167): ${why}`;
+  const ruleAt = /* @__PURE__ */ new Map();
+  for (const m of doc.marks) for (let i = m.span.from; i < m.span.to; i++) ruleAt.set(i, m.rule);
+  const emphasisOrCode = (i) => {
+    const rule = ruleAt.get(i);
+    return rule === "em-open" || rule === "em-close" || rule === "code-open" || rule === "code-close";
+  };
+  const BETWEEN = "a character between two digits";
+  for (let i = 0; i < n; i++) {
+    if (state2[i]) continue;
+    const why = underFloor(s, i);
+    if (why === BETWEEN && endsABlock(i)) continue;
+    if (why === BETWEEN && emphasisOrCode(i)) return floor(i, "emphasis or code markup between two digits");
+    if (why) return floor(i, why);
+  }
+  for (let a = 0; a < n; ) {
+    if (state2[a]) {
+      a++;
+      continue;
+    }
+    let b = a;
+    while (b < n && !state2[b]) b++;
+    const before = charBefore(s, a);
+    const after = charAt(s, b);
+    let newBlock = false;
+    for (let i = a; i < b && !newBlock; i++) newBlock = endsABlock(i);
+    if (isDigit(before) && isDigit(after) && !newBlock) {
+      for (let i = a; i < b; i++) if (emphasisOrCode(i)) return floor(i, "emphasis or code markup between two digits");
+      return floor(a, "a run of hidden characters between two digits");
+    }
+    a = b;
   }
   const said = (i) => JSON.stringify(s[i] ?? "");
   const lineStart = (i) => s.lastIndexOf("\n", i - 1) + 1;
@@ -3094,6 +3405,7 @@ function checkBound(doc) {
     return r.from === m.span.from && r.to === m.span.to;
   };
   const sameLine = (a, b) => lineEnd(a.span.from) === lineEnd(b.span.from);
+  const closeShown = (i) => linkCloseShown(s, i);
   const stack = [];
   let code = null;
   let link = null;
@@ -3102,7 +3414,7 @@ function checkBound(doc) {
     if (from < 0 || to > n || from >= to) return `declares markup outside the text at ${from}`;
     for (let i = from; i < to; i++) {
       if (state2[i]) return `hides ${said(i)} at ${i}, which it also shows`;
-      if (!DECLARED[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
+      if (!declared[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
       state2[i] = 2;
     }
     const text = s.slice(from, to);
@@ -3143,12 +3455,16 @@ function checkBound(doc) {
       case "link-open": {
         const a = AUTOLINK.exec(s.slice(from, lineEnd(from)));
         if (!a || link) return fail2("a < opening a link to an https, http or mailto address");
-        link = m;
+        const close = from + a[0].length - 1;
+        if (state2[close] === 1) {
+          if (!closeShown(close)) return fail2("a link whose closing > is shown, though not next to a digit");
+        } else link = m;
         break;
       }
       case "link-close": {
         const a = link && AUTOLINK.exec(s.slice(link.span.from, lineEnd(link.span.from)));
         if (!link || !a || link.span.from + a[0].length !== to) return fail2("the > closing a link");
+        if (closeShown(from)) return fail2("the > closing a link, next to a digit, is shown");
         link = null;
         break;
       }
@@ -3174,7 +3490,7 @@ function checkBound(doc) {
       continue;
     }
     if (state2[i] === 2) continue;
-    if (s[i] !== "\n") return `hides ${said(i)} at ${i}, which is not markup`;
+    if (!endsBlock.includes(s[i])) return `hides ${said(i)} at ${i}, which is not markup`;
     const after = next[i + 1] ?? -1;
     if (prev >= 0 && after >= 0 && leafOf[prev] === leafOf[after]) return `hides the LF at ${i}, inside a block`;
   }
