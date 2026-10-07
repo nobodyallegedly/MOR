@@ -266,4 +266,9 @@
 
 ## GitHub and the release
 
-*Written below once the runs are known.*
+- **Run 119 on the branch** (`c611b1f`, every code change of this build):
+  - every test step passed: the Rust workspace, the WebAssembly, and all eleven TypeScript packages;
+  - the two display-client comparison steps failed, as they do by design on a branch until a release. The client built twice was the same; it differed only from the copy published in `built/`.
+- **Merged into main** as `427e5c7`, its message carrying "[release display client]".
+- **Released.** The release workflow rebuilt the display client on GitHub (Linux x86-64), checked it was the same built twice, and committed it as `65cbafe`.
+- **This report is the follow-up commit,** so the tests run once more on main with the released client in `built/`. Its result comes after this commit, so it is reported to Nobody, allegedly with the session's end, not written here.
