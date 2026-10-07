@@ -206,7 +206,7 @@
   - after merging main, before any change: 385 passed;
   - after everything: **403 passed, 0 failed**.
 - **WebAssembly and TypeScript** (the WebAssembly rebuilt; Chromium for the site's browser test): **172 tests, 0 failed**: barebone 9, collective 21, connector 12, desk 10, genesis 17, longform 26, manage 7, reader 16, repo 13, site 27, jpeg 14.
-- **Verifier2:** see `docs/verifier2-report.md`, "Rerun after F169 to F181".
+- **Verifier2:** its own tests unchanged; rerun on this code (`c611b1f`) over the same 4,000 histories (seed 1, cases 0 to 2,999; seed 2, cases 0 to 999): **0 disagreements** (`docs/verifier2-report.md`, "Rerun after F169 to F181"). It covers collectives' endings only, so this checks that nothing there moved.
 - **GitHub:** see "GitHub and the release" below.
 
 ## Only reasoned, not run
