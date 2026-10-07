@@ -1922,6 +1922,25 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **All decided:** findings 1 to 14 as F163 to F168; the build's questions as F168 (B2 answered during the build).
 
 
+## F169. Theft: anchor or bear the loss (the theft window from first principles, 7 October 2026)
+
+**Found:** four rounds of fixes on one question (F133, F138, F139, F145 to F147, F154, F157, F160, F163, F164) each broke in a new place; the second Fable review showed F164 gave the owner a lever. The project lead set out a baseline and a ledger (`docs/theft-window-baseline-2026-10-07.md`), and Nobody, allegedly, took the question "removed from the protocol".
+
+**The principle, decided step by step by Nobody, allegedly (7 October 2026):**
+- "Who bears the theft? Of what… a signing key? The owner of the key, no?" The owner bears what the stolen key did.
+- "Locks changed, security patched. The person did the work… so the change of lock acts as the 'reported it'."
+- "The app is guilty, but cannot be made to bear the loss. So, buyer's choice of app becomes the 'mistake'. In both cases the problem is acting on outdated information."
+- On the grey zone (a payment that may have been in the window or after): "a client that plans to execute many transactions and most likely take a cut is responsible to execute it properly. We're back to 'you should anchor, we just don't specify how'."
+- "Agreed. But walk it all again one more time yourself to verify the logic." The walk-through withdrew the project lead's refinement (that only voiding a wallet, not lowering a limit, counts as a lock change), since a stolen phone holding the everyday wallet is changed by switching it off; added that an unanchored lock change leaves the owner bearing the window, and that incomparable anchors favour the payer; and stated that an old payment never anchored nor receipted can be put in doubt by a later lock change.
+- "Yes, a theft scenario justifies stating 'anchor or bear the loss'."
+
+**Decided:** a lock change is a rotation that voids a payee pointer or lowers or removes a vault limit. Unanchored, the owner bears (payments that followed what was published count). Anchored, a payment it affects counts only where the payee's own receipt (kept line, or split service grant key) or a payer's claim anchored before it shows it. Anchors compare only on one reference; incomparable favours the payer. Clients write the claim at payment and should anchor promptly; how is the anchoring cMIP's business. Stated costs: the owner's lever (bounded by the earlier limit, visible, beaten by prompt anchoring); old unanchored, unreceipted payments.
+
+**Replaces:** F139, F146, F154 and the rule of F164 (F147's anonymous signature over citations stands; reading several claims together is moot). F160 stays withdrawn.
+
+**Core changes:** Finance draft 6, rules 14a and 15; core v21 "Good faith"; paper section 5.1 and claim 2. *Next:* one hostile review of the whole set by Fable before building.
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
