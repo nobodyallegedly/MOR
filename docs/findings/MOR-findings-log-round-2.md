@@ -2069,6 +2069,20 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **Core changes:** Finance draft 6, rule 15 (refining F177).
 
 
+## F181. The rule 15 review's remaining findings (findings 3 to 8, 7 October 2026)
+
+**Suggested by the project lead in one batch, weighted words called out; Nobody, allegedly, 7 October 2026: "Agreed"** (after asking "Is the disowning a problem in itself?": no; disowning is needed because a thief signs on the owner's own kept line, and its abuse is the owner's lever, public forever, needing the safety key, beaten by an anchored claim).
+
+- **3.** The owner's lever stated at its true size: every affected payment whose receipt the rotation did not keep, disowning its own receipt included, and whose claim is not anchored by the point.
+- **4.** One reach: a lock change affects a payment that followed the chain as published immediately before it and no longer follows it after.
+- **5.** Rule 12a reads the pointer and vault rule 15 selects for that payment, as the chain stood for it.
+- **6.** After a lock change, the owner's client **MUST** obtain the quorum's home receipts and anchor them on the main reference (client conformance); before genesis or a rotation leaving no clock, the client **SHOULD** say plainly that a theft's loss will be the owner's.
+- **7.** A clock entry names the anchoring cMIP and its parameters (one time reference), as Law's time reference does.
+- **8.** Editorial: the core's "Good faith" and "Flow and vault", the freeze suite's step 5c (the contributor declares a clock) and Finance's scenario list follow F176 to F181; rule 15 says what "anchored" means at its first use.
+
+**Core changes:** Finance draft 6, the clock format, rules 12a, 14b and 15, scenario list; core v21; freeze suite 5c. **With F179 to F181 the rule 15 review is answered.**
+
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
@@ -2081,4 +2095,4 @@ Fable's review of the whole set after the reset (`docs/reviews/whole-set-review-
 
 ## Rule 15 review (7 October 2026, midday)
 
-Fable's review of Finance rule 15 alone (`docs/reviews/rule-15-review-2026-10-07.md`): "the principle is now mostly delivered"; the three doors of the whole-set review are shut, and everything the thief can reach with the signing key alone is shut out after an anchored lock change. Two real findings: (1) a clock naming several references lets a payer anchor on the one the owner did not; (2) "the earliest anchored home receipt" lets the owner's own home set the point before the rotation counts under its home rule. Smaller: the owner can disown its own receipt (3); the lock change's reach defined twice (4); rule 12a judges rails against the chain now (5); nobody is told to anchor (6); the clock cannot name a time reference's parameters (7); the core and suite lag (8). Findings 1 and 2 decided as F179 and F180. **Open for Nobody, allegedly:** 3 to 8.
+Fable's review of Finance rule 15 alone (`docs/reviews/rule-15-review-2026-10-07.md`): "the principle is now mostly delivered"; the three doors of the whole-set review are shut, and everything the thief can reach with the signing key alone is shut out after an anchored lock change. Two real findings: (1) a clock naming several references lets a payer anchor on the one the owner did not; (2) "the earliest anchored home receipt" lets the owner's own home set the point before the rotation counts under its home rule. Smaller: the owner can disown its own receipt (3); the lock change's reach defined twice (4); rule 12a judges rails against the chain now (5); nobody is told to anchor (6); the clock cannot name a time reference's parameters (7); the core and suite lag (8). All decided as F179 to F181.
