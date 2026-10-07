@@ -102,6 +102,16 @@ F169 to F181 were built in the reference (`docs/decisions-f169-f181-build-2026-1
 
 Export times in a release build: 254 seconds for seed 1, 84 for seed 2. The exports were deleted after the comparison; they can be redrawn from the seeds.
 
+### Rerun after F182 (7 October 2026, afternoon)
+
+F182 items 1, 2, 4, 8, 9 to 12, 14 and 16 were built in the reference (`docs/decisions-f182-build-2026-10-07.md`): Finance rule 15's backup and homeless points, the vault entry always named, absence proof as task 14, and changes to the collective client and the long-form format. Verifier2 was not changed, and does not check these changes; this rerun checks only that nothing in collectives' endings moved. The same two runs were exported again from the reference at the branch's code commit `6503432` (seed 1, cases 0 to 2,999; seed 2, cases 0 to 999) and compared with `compare.py` (default readings).
+
+| Stories | Agree on everything | Differ |
+| --- | --- | --- |
+| 4,000 | 4,000 | 0 |
+
+Export times in a release build: 286 seconds for seed 1, 95 for seed 2. The exports were deleted after the comparison; they can be redrawn from the seeds.
+
 ## Precisely
 
 ### Files

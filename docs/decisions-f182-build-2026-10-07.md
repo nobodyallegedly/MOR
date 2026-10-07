@@ -130,7 +130,7 @@
 
 - **Rust workspace** (`cargo test --workspace --locked --no-fail-fast`): **407 passed, 0 failed**. That is 403 before, plus four new tests.
 - **WebAssembly and TypeScript** (the WebAssembly rebuilt; Chromium for the site's browser test): **172 tests, 0 failed**: barebone 9, collective 21, connector 12, desk 10, genesis 17, longform 26, manage 7, reader 16, repo 13, site 27, jpeg 14.
-- **Verifier2:** see "Verifier2" below.
+- **Verifier2:** its own tests are unchanged. It was rerun on this code (`6503432`) over the same 4,000 histories (seed 1, cases 0 to 2,999; seed 2, cases 0 to 999): **0 disagreements** (`docs/verifier2-report.md`, "Rerun after F182"). It covers collectives' endings only, so this checks that nothing there moved.
 - **GitHub:** see "GitHub and the release" below.
 
 ## Only reasoned, not run
@@ -147,10 +147,9 @@
 5. **A holder whose very first split deviates.** As built, the client keeps "no good split yet": the next split must cite none, as a first split does. A split citing the deviating first one is then a deviation too. Confirm.
 6. **The revised long-form cMIP** (rules 5, 10, 11a and the declaration) awaits approval, together with the earlier F178 revision.
 
-## Verifier2
-
-*To be filled in once the rerun finishes.*
-
 ## GitHub and the release
 
-*To be filled in from the runs on GitHub.*
+- **Run 124 on the branch** (`6503432`, every code change of this build):
+  - every test step passed: the Rust workspace, the WebAssembly, and all eleven TypeScript packages;
+  - the two display-client comparison steps failed, as they do by design on a branch until a release. The client built twice was the same (`b3699901…`); it differed only from the copy published in `built/`.
+- **Merged into main,** its message carrying "[release display client]"; the release and the run on the released client follow.
