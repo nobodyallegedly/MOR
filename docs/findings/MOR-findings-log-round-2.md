@@ -2058,3 +2058,7 @@ A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four o
 ## Whole-set review (7 October 2026, late morning)
 
 Fable's review of the whole set after the reset (`docs/reviews/whole-set-review-2026-10-07.md`): absence (F172) and "the core names a task, not how" hold as principles; the theft principle (F169) is judged right, its rule not yet delivering it (findings 1 and 2, decisions; 3 to 10, wording). Findings 1 and 2 decided as F176 and F177; 3 to 17 as F178; 18 to 20 held. **Next:** one hostile pass on Finance rule 15 alone, then building.
+
+## Rule 15 review (7 October 2026, midday)
+
+Fable's review of Finance rule 15 alone (`docs/reviews/rule-15-review-2026-10-07.md`): "the principle is now mostly delivered"; the three doors of the whole-set review are shut, and everything the thief can reach with the signing key alone is shut out after an anchored lock change. Two real findings: (1) a clock naming several references lets a payer anchor on the one the owner did not; (2) "the earliest anchored home receipt" lets the owner's own home set the point before the rotation counts under its home rule. Smaller: the owner can disown its own receipt (3); the lock change's reach defined twice (4); rule 12a judges rails against the chain now (5); nobody is told to anchor (6); the clock cannot name a time reference's parameters (7); the core and suite lag (8). **Open for Nobody, allegedly.**
