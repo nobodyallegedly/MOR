@@ -1492,8 +1492,11 @@ impl Verifier {
             if res.waiting().contains(binding) {
                 return Status::Pending;
             }
-            // F128: a scoped key, installed by an act of a higher MIP.
+            // F128: a scoped key, installed by an act of a higher MIP. A
+            // scoped key never signs an Identity act (rule 1a): a private
+            // link act signed by one is invalid (F168, B4).
             return match self.acts.get(binding) {
+                Some(_) if x.inside.spec == self.identity_spec && !x.act.outside.is_public() => Status::Invalid,
                 Some(b) if b.inside.spec != self.identity_spec && b.id != x.id => Status::Scoped,
                 _ => Status::Invalid,
             };
@@ -1501,6 +1504,16 @@ impl Verifier {
         if self.is_chain_signature(&res, k) || !res.states[k].signing_key.made(&x.act.signature) {
             return Status::Invalid;
         }
+        // The rotation is judged first (F168, B5): an act it voids is void
+        // whether or not anything was fetched.
+        let judged = match self.judging(&res, k) {
+            Some(j) => match self.judge(cx, x, &res.links[j].act, signer) {
+                Judgement::Kept => Status::Valid,
+                Judgement::Disputed => Status::Disputed,
+                Judgement::Void => return Status::Void,
+            },
+            None => Status::Valid,
+        };
         // F152, F159: a private link act counts only if this verifier found
         // its sealed form at a home its signer's chain names at the act's
         // binding (a later move of homes does not void it). Found nowhere
@@ -1514,14 +1527,6 @@ impl Verifier {
                 return Status::Unknown;
             }
         }
-        if let Some(j) = self.judging(&res, k) {
-            match self.judge(cx, x, &res.links[j].act, signer) {
-                Judgement::Kept => Status::Valid,
-                Judgement::Disputed => Status::Disputed,
-                Judgement::Void => Status::Void,
-            }
-        } else {
-            Status::Valid
-        }
+        judged
     }
 }

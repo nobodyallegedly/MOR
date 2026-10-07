@@ -3595,7 +3595,7 @@ fn every_payout_matches_its_stake() {
     // remainder, Ana's 320.4 (rule 15a, F150).
     let r2 = receipt(&mut lab, &mut svc, 901);
     let own: Vec<(Hash, u64)> = lab.view().terms(&f).unwrap().own_stake().unwrap().1.holders.iter().map(|(w, n)| (w.resolve(None).unwrap(), *n)).collect();
-    assert_eq!(law::divide_stake(801, &own, Some(&r2)).unwrap(), vec![321, 240, 240]);
+    assert_eq!(law::divide_stake(801, &own, law::Ties::Open).unwrap(), vec![321, 240, 240], "no tie: the remainders decide");
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r2, 321, 240, 240).to_map(), None, everyone.clone());
     assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
     // F162 (11): over the exact share by a whole unit or more breaks the
@@ -3606,9 +3606,18 @@ fn every_payout_matches_its_stake() {
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r3, 323, 240, 240).to_map(), None, everyone.clone());
     let e = lab.view().split(&x).unwrap();
     assert_eq!(e.sums, Some(true));
-    assert_eq!(e.mismatched.iter().map(|m| m.holder).collect::<Vec<_>>(), vec![ids[ANA]]);
+    // Since F165 every unit is rule 15a's: Ben and Cy, owed 241 each, are
+    // short too.
+    assert_eq!(e.mismatched.iter().map(|m| m.holder).collect::<Vec<_>>(), vec![ids[ANA], ids[BEN], ids[CY]]);
+    // F165: rule 15a decides every unit. Of 803, Ben and Cy (240.9 each)
+    // take the two leftover units, by largest remainder: 321, 241, 241.
+    // Giving one of them to Ana instead leaves every holder within one
+    // unit of its exact share, and is a deviation all the same.
+    let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r3, 321, 241, 241).to_map(), None, everyone.clone());
+    assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r3, 322, 241, 240).to_map(), None, everyone.clone());
-    assert!(lab.view().split(&x).unwrap().mismatched.is_empty(), "each within one unit");
+    let who: Vec<Hash> = lab.view().split(&x).unwrap().mismatched.iter().map(|m| m.holder).collect();
+    assert_eq!(std::collections::BTreeSet::from_iter(who), std::collections::BTreeSet::from([ids[ANA], ids[CY]]), "a leftover unit steered to Ana");
     // Any deviation, either way, breaks the plan (N10): Cy paid less, Ana
     // more. Not delivered to Cy, whom it pays.
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r1, 430, 270, 200).to_map(), None, vec![ids[ANA], ids[BEN]]);
@@ -3624,6 +3633,161 @@ fn every_payout_matches_its_stake() {
     // A split that does not sum exactly is shown so (rule 21).
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, split(r1, 300, 270, 270).to_map(), None, everyone);
     assert_eq!(lab.view().split(&x).unwrap().sums, Some(false));
+}
+
+/// F165 (review of F145 to F162, finding 4): leftover ties take turns,
+/// counted along the split service's own receipts. A duo's work at
+/// 500,000 / 500,000 earns one-unit payments, so every unit is a tie.
+/// Under F150 the receipt's hash decided it, and the service, which signs
+/// the receipt and picks its salt, could sign one receipt after another
+/// until the hash fell its way. Now:
+///
+/// - re-signing the receipt with twenty different salts changes nothing:
+///   with no earlier receipt, the unit goes to the smaller identity hash,
+///   and a split giving it to the other member is shown as a deviation;
+/// - each receipt citing the previous one for the stake, the units
+///   alternate: the member with fewer leftover units so far takes the next;
+/// - a receipt citing an act the verifier does not hold leaves the tied
+///   unit unknown, never the rest of the payment.
+///
+/// Before F165 was built, the split check allowed each holder one unit
+/// either way, so a tied unit could be given to either member.
+#[test]
+fn a_split_service_cannot_steer_ties_by_grinding_salts() {
+    use mor_core::act::Ref;
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 500_000)])]);
+    });
+    let ids = lab.ids();
+    let mut svc = lab.w.genesis("a split service the member owns", vec![own_home()], None, None);
+    let g = lab.grant(&plain_grant(svc.id, false));
+    let t = lab.clone_terms(&lab.founding.clone(), vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| t.split_grant = Some(g));
+    let f = lab.propose(ANA, &t);
+    let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &f)).collect();
+    lab.record(0, Some((f, sigs)), &[], vec![], f);
+    let stake = lab.view().terms(&f).unwrap().own_stake().unwrap().0 as u64;
+    // A one-unit receipt of the service, citing `previous` in `refs`.
+    let receipt = |lab: &mut Lab, svc: &mut Person, previous: Option<Hash>| {
+        let r = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
+            rail: spec("a rail Module"),
+            proof: vec![],
+            payer: Some(mor_core::finance::Payer::Identity(spec("a listener"))),
+            payee: svc.id,
+            amount: mor_core::finance::Amount { unit: spec("a unit"), value: 1 },
+            fulfils: spec("a stream"),
+            previous: None,
+            forward: None,
+            batch: None,
+            purchase: None,
+        });
+        let refs = previous.map(|p| vec![Ref::Act(p)]);
+        let a = lab.w.everyday_act_refs(svc, mips().finance, 2, r.to_map(), None, None, refs);
+        lab.w.add(&a)
+    };
+    let everyone = ids.clone();
+    let split = |lab: &mut Lab, svc: &mut Person, receipt: Hash, to: Hash| {
+        let s = law::Split {
+            receipt,
+            payouts: vec![law::Payout { receiver: to, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None }],
+            cmip: spec("a split cMIP"),
+            agreement: f,
+        };
+        lab.w.private_act(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone.clone())
+    };
+    let (low, high) = if ids[ANA] < ids[BEN] { (ids[ANA], ids[BEN]) } else { (ids[BEN], ids[ANA]) };
+
+    // Grinding: twenty receipts for the first payment, each with its own
+    // salt. Every one sends the unit to the smaller identity hash.
+    for _ in 0..20 {
+        let r = receipt(&mut lab, &mut svc, None);
+        let steered = split(&mut lab, &mut svc, r, high);
+        let e = lab.view().split(&steered).unwrap();
+        assert!(!e.mismatched.is_empty(), "a tied unit steered by the receipt's salt is a deviation");
+        assert!(e.turns_unknown.is_empty());
+        let x = split(&mut lab, &mut svc, r, low);
+        assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
+    }
+    // The first payment, divided once, as the service must.
+    let r1 = receipt(&mut lab, &mut svc, None);
+    split(&mut lab, &mut svc, r1, low);
+
+    // Turns: each receipt cites the previous one for the stake.
+    let r2 = receipt(&mut lab, &mut svc, Some(r1));
+    let x = split(&mut lab, &mut svc, r2, high);
+    assert!(lab.view().split(&x).unwrap().mismatched.is_empty(), "the member with fewer leftover units takes the next");
+    let y = split(&mut lab, &mut svc, r2, low);
+    assert!(!lab.view().split(&y).unwrap().mismatched.is_empty());
+    // The rejected split `y` above also names r2: a receipt two splits of
+    // the service divide cannot be counted from, so the next turn cites a
+    // receipt divided once.
+    let r2b = receipt(&mut lab, &mut svc, Some(r1));
+    split(&mut lab, &mut svc, r2b, high);
+    let r3 = receipt(&mut lab, &mut svc, Some(r2b));
+    let counts = lab.view().turns(&svc.id, &f, stake, &[(low, 500_000), (high, 500_000)], Some(&r3)).unwrap();
+    assert_eq!(counts, Some(vec![1, 1]), "one leftover unit each so far");
+    let x = split(&mut lab, &mut svc, r3, low);
+    assert!(lab.view().split(&x).unwrap().mismatched.is_empty(), "equal counts: the smaller identity hash again");
+    let x = split(&mut lab, &mut svc, r3, high);
+    assert!(!lab.view().split(&x).unwrap().mismatched.is_empty());
+
+    // A receipt citing an act not held: the tied unit is unknown, and
+    // either member's payout is within one unit; the rest still checked.
+    let r4 = receipt(&mut lab, &mut svc, Some(spec("a receipt this verifier does not hold")));
+    let x = split(&mut lab, &mut svc, r4, high);
+    let e = lab.view().split(&x).unwrap();
+    assert_eq!(e.turns_unknown, vec![stake]);
+    assert!(e.mismatched.is_empty());
+}
+
+/// F165, a flaw found building it, pinned for Nobody, allegedly: the
+/// turns are counted back from the previous receipt the service's own
+/// receipt cites, and nothing makes it cite the latest one. A service
+/// that wants every tied unit to go to the smaller identity hash signs
+/// each receipt citing no previous one: every count is then zero. Its
+/// receipts for the stake fork (two of them start the count), which a
+/// verifier holding both can see; what follows from that fork, the text
+/// does not say. This test shows the steer working, so that it fails once
+/// the rule closes it.
+#[test]
+fn flaw_a_service_citing_no_previous_receipt_restarts_the_turns() {
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 500_000)])]);
+    });
+    let ids = lab.ids();
+    let mut svc = lab.w.genesis("a split service the member owns", vec![own_home()], None, None);
+    let g = lab.grant(&plain_grant(svc.id, false));
+    let t = lab.clone_terms(&lab.founding.clone(), vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| t.split_grant = Some(g));
+    let f = lab.propose(ANA, &t);
+    let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &f)).collect();
+    lab.record(0, Some((f, sigs)), &[], vec![], f);
+    let stake = lab.view().terms(&f).unwrap().own_stake().unwrap().0 as u64;
+    let low = ids[ANA].min(ids[BEN]);
+    for _ in 0..5 {
+        let r = mor_core::finance::Payload::Receipt(mor_core::finance::Receipt {
+            rail: spec("a rail Module"),
+            proof: vec![],
+            payer: Some(mor_core::finance::Payer::Identity(spec("a listener"))),
+            payee: svc.id,
+            amount: mor_core::finance::Amount { unit: spec("a unit"), value: 1 },
+            fulfils: spec("a stream"),
+            previous: None,
+            forward: None,
+            batch: None,
+            purchase: None,
+        });
+        let a = lab.w.everyday_act(&mut svc, mips().finance, 2, r.to_map(), None, None);
+        let r = lab.w.add(&a);
+        let s = law::Split {
+            receipt: r,
+            payouts: vec![law::Payout { receiver: low, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None }],
+            cmip: spec("a split cMIP"),
+            agreement: f,
+        };
+        let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, s.to_map(), None, ids.clone());
+        assert!(lab.view().split(&x).unwrap().mismatched.is_empty(), "the flaw: every unit to the same member, each split passing");
+    }
 }
 
 /// The split, as rule 20, 22 and 26 bind it (audit, October 2026, gap 8).
@@ -3951,15 +4115,14 @@ fn payer_side_splitting_follows_the_claim() {
     });
     let f = lab.founding;
     let ids = lab.ids();
-    let got = lab.view().payer_split(&f, &Who::Id(work), 1001, None).unwrap().unwrap();
+    let got = lab.view().payer_split(&f, &Who::Id(work), 1001).unwrap().unwrap();
     assert_eq!(got, vec![(ids[ANA], 501), (ids[BEN], 250), (ids[CY], 250)]);
-    // F150: Ben and Cy tie for 1002's leftover unit. The receipt's hash
-    // orders them (rule 15a); with none, the split is undetermined.
-    let w = lab.view().payer_split(&f, &Who::Id(work), 1002, None).unwrap().unwrap_err();
-    assert!(w.contains("rule 15a"), "{w}");
-    let r = spec("a receipt");
-    let got = lab.view().payer_split(&f, &Who::Id(work), 1002, Some(&r)).unwrap().unwrap();
-    let first = if law::leftover_key(&r, &ids[BEN]) < law::leftover_key(&r, &ids[CY]) { BEN } else { CY };
+    // F168 (10): Ben and Cy tie for 1002's leftover unit. The payer
+    // decides, at most one unit per tie, a stated cost; no receipt exists
+    // yet, so no hash can (F162's undetermined answer withdrawn). This
+    // wallet gives it to the smaller identity hash, a choice, not a rule.
+    let got = lab.view().payer_split(&f, &Who::Id(work), 1002).unwrap().unwrap();
+    let first = if ids[BEN] < ids[CY] { BEN } else { CY };
     let want: Vec<(Hash, u64)> = [(ANA, 501), (BEN, 250), (CY, 250)].iter().map(|(i, n)| (ids[*i], n + u64::from(*i == first))).collect();
     assert_eq!(got, want);
     // A deal in which the label holds 60% and a guest 40%.
@@ -3991,7 +4154,7 @@ fn payer_side_splitting_follows_the_claim() {
         release_rule: None,
     };
     let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal.to_map(), None);
-    let got = lab.view().payer_split(&d, &Who::Id(work), 1000, None).unwrap().unwrap();
+    let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
     assert_eq!(got, vec![(ids[ANA], 300), (ids[BEN], 150), (ids[CY], 150), (guest.id, 400)]);
 }
 
@@ -4030,22 +4193,22 @@ fn leftovers_go_by_largest_remainder_whatever_the_order() {
         release_rule: None,
     };
     let listed = [vec![(ids[ANA], 333_333), (ids[BEN], 333_333), (ids[CY], 333_334)], vec![(ids[CY], 333_334), (ids[ANA], 333_333), (ids[BEN], 333_333)]];
-    let r = spec("a receipt for one unit");
     for holders in listed.iter() {
-        assert_eq!(law::divide_stake(1, holders, Some(&r)).unwrap().iter().zip(holders).find(|(n, _)| **n == 1).map(|(_, h)| h.0), Some(ids[CY]));
+        assert_eq!(law::divide_stake(1, holders, law::Ties::Open).unwrap().iter().zip(holders).find(|(n, _)| **n == 1).map(|(_, h)| h.0), Some(ids[CY]));
         let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal(holders.clone()).to_map(), None);
-        let mut got = lab.view().payer_split(&d, &Who::Id(work), 1, Some(&r)).unwrap().unwrap();
+        let mut got = lab.view().payer_split(&d, &Who::Id(work), 1).unwrap().unwrap();
         got.sort();
         let mut want = vec![(ids[ANA], 0), (ids[BEN], 0), (ids[CY], 1)];
         want.sort();
         assert_eq!(got, want, "the third holder, wherever listed");
     }
-    // Two units: the third's remainder first, then Ana and Ben tie; the
-    // receipt's hash orders them, the listing never does.
+    // Two units: the third's remainder first, then Ana and Ben tie; they
+    // take turns (F165), equal counts to the smaller identity hash, the
+    // listing never deciding.
     for holders in listed.iter() {
-        let parts = law::divide_stake(2, holders, Some(&r)).unwrap();
+        let parts = law::divide_stake(2, holders, law::Ties::Turns(&[0, 0, 0])).unwrap();
         let of = |h: Hash| parts[holders.iter().position(|x| x.0 == h).unwrap()];
-        let ana_first = law::leftover_key(&r, &ids[ANA]) < law::leftover_key(&r, &ids[BEN]);
+        let ana_first = ids[ANA] < ids[BEN];
         assert_eq!((of(ids[ANA]), of(ids[BEN]), of(ids[CY])), if ana_first { (1, 0, 1) } else { (0, 1, 1) });
     }
 }

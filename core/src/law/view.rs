@@ -4142,7 +4142,9 @@ pub struct Mismatch {
     /// Who was paid, or should have been.
     pub holder: Hash,
     pub paid: u64,
-    /// Its exact share, rounded down.
+    /// What rule 15a gives it (F150, F165): its share rounded down, with
+    /// its leftover unit where it has one; where a tied unit is the payer's
+    /// to decide or unknown, its share rounded down.
     pub due: u64,
 }
 
@@ -4182,6 +4184,11 @@ pub struct SplitEval {
     /// (terms field 8), so the core cannot check them: shown, never passed
     /// as right.
     pub unplanned: Vec<Hash>,
+    /// Stakes whose tied leftover units cannot be checked (F165): the turns
+    /// along the service's receipts cannot be counted from the acts held,
+    /// so who should have had a tied unit is unknown; the rest of the
+    /// payment is checked all the same, each tied holder within one unit.
+    pub turns_unknown: Vec<u64>,
 }
 
 /// What a split service owes (rule 29; audit, October 2026, gap 3): every
@@ -5469,25 +5476,28 @@ impl<'a> LawView<'a> {
         Some(fin::Holding { pointers, complete, vault })
     }
 
-    /// The payee's own acts on an agreement or offer `a` (F145): its valid
-    /// signature acts naming the agreement (Law type 0); the offer itself
-    /// (Law type 6) where the payee signed it and it is valid. `None` where
-    /// `a` is not held, or is neither.
+    /// The payee's own acts on an agreement or offer `a` (F145, F168 13):
+    /// its valid signature acts naming the agreement (Law type 0); for an
+    /// offer (Law type 6), the offer itself where the payee signed it, and
+    /// the payee's valid signature acts accepting it: an offer another
+    /// identity signed is not the payee's act, its acceptance is. `None`
+    /// where `a` is not held, or is neither.
     fn payees_acts_on(&self, a: &Hash, payee: &Hash) -> Option<Vec<Hash>> {
         let x = self.v.get(a)?;
-        if self.is_law(x, types::TERMS) {
-            Some(
-                self.v
-                    .signed_by(payee)
-                    .filter(|h| self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).ok() == Some(*a) && self.valid(&h.id))
-                    .map(|h| h.id)
-                    .collect(),
-            )
-        } else if self.is_law(x, types::STANDING_OFFER) {
-            Some(if x.act.outside.signer.as_ref() == Some(payee) && self.valid(a) { vec![*a] } else { vec![] })
-        } else {
-            None
+        if !self.is_law(x, types::TERMS) && !self.is_law(x, types::STANDING_OFFER) {
+            return None;
         }
+        let mut out: Vec<Hash> = vec![];
+        if self.is_law(x, types::STANDING_OFFER) && x.act.outside.signer.as_ref() == Some(payee) && self.valid(a) {
+            out.push(*a);
+        }
+        out.extend(
+            self.v
+                .signed_by(payee)
+                .filter(|h| self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).ok() == Some(*a) && self.valid(&h.id))
+                .map(|h| h.id),
+        );
+        Some(out)
     }
 
     /// Where `p` is a payee pointer of `payee` that a rotation of its
@@ -5807,6 +5817,12 @@ impl<'a> LawView<'a> {
             self.is_law(x, types::TERMS)
                 && self.terms(&x.id).is_ok_and(|t| t.stake_on(&Who::Id(*work)).is_some())
         })
+    }
+
+    /// The version in force of an agreement, against which a split of it
+    /// is judged (rule 26): [`Self::latest_version`].
+    pub fn version_in_force(&self, agreement: &Hash) -> R<Hash> {
+        self.latest_version(agreement)
     }
 
     /// The latest version of an agreement that exists: for a collective's
@@ -6442,21 +6458,20 @@ impl<'a> LawView<'a> {
     /// names no split service, what a paying wallet that reads Law pays each
     /// holder's own pointer for `amount` on the stake in `object`, by its
     /// shares, leftovers by largest remainder (rule 15a, F150), the order of
-    /// holders deciding nothing. Holders with equal remainders are ordered
-    /// by the hash of the payment's receipt, `receipt`, or, for a split made
-    /// from a payer's claim with no receipt, the claim's hash, which stands
-    /// for it (F162, 9); where they compete for a leftover unit and none is
-    /// given, the split is undetermined (`Err`): a wallet dividing before
-    /// any receipt exists shows that a tied unit is decided by the
-    /// receipt's hash, at most one unit per tie (F162, 8; rule 4a). A holder that is a collective splitting payer-side
+    /// holders deciding nothing. Where holders with equal remainders compete
+    /// for a leftover unit, the payer decides, at most one unit per tie, a
+    /// stated cost (F165, F168, 10: no receipt exists when the payer
+    /// divides, so no hash can); this wallet gives it to the tied holder
+    /// whose identity hash is smallest, a choice, not a rule: any other is
+    /// as conforming. A holder that is a collective splitting payer-side
     /// too is followed to the holders of its stake in itself: one flow,
     /// holders' identities as destinations. `Err` where the agreement names
     /// a split service, or no such stake.
-    pub fn payer_split(&self, agreement: &Hash, object: &Who, amount: u64, receipt: Option<&Hash>) -> R<Result<Vec<(Hash, u64)>, String>> {
-        self.payer_split_depth(agreement, object, amount, receipt, 0)
+    pub fn payer_split(&self, agreement: &Hash, object: &Who, amount: u64) -> R<Result<Vec<(Hash, u64)>, String>> {
+        self.payer_split_depth(agreement, object, amount, 0)
     }
 
-    fn payer_split_depth(&self, agreement: &Hash, object: &Who, amount: u64, receipt: Option<&Hash>, depth: usize) -> R<Result<Vec<(Hash, u64)>, String>> {
+    fn payer_split_depth(&self, agreement: &Hash, object: &Who, amount: u64, depth: usize) -> R<Result<Vec<(Hash, u64)>, String>> {
         if depth > 8 {
             return Ok(Err("collectives nested deeper than 8".into()));
         }
@@ -6475,7 +6490,8 @@ impl<'a> LawView<'a> {
             };
             ids.push((id, *n));
         }
-        let parts = match divide_stake(amount, &ids, receipt) {
+        // The payer decides a tied unit (F168, 10): this wallet's choice.
+        let parts = match divide_stake(amount, &ids, Ties::Turns(&[])) {
             Ok(p) => p,
             Err(w) => return Ok(Err(w)),
         };
@@ -6489,7 +6505,7 @@ impl<'a> LawView<'a> {
                 Some(cur) if Some(id) != this || *object != Who::This => {
                     let ct = self.terms(&cur.agreement)?;
                     if ct.split_grant.is_none() && ct.payee_grants.is_none() && ct.own_stake().is_some() {
-                        Some(self.payer_split_depth(&cur.agreement, &Who::This, n, receipt, depth + 1)?)
+                        Some(self.payer_split_depth(&cur.agreement, &Who::This, n, depth + 1)?)
                     } else {
                         None
                     }
@@ -6601,6 +6617,7 @@ impl<'a> LawView<'a> {
             }
         }
         let mut mismatched = vec![];
+        let mut turns_unknown = vec![];
         let mut idxs: Vec<u64> = s.payouts.iter().filter_map(|p| p.stake).collect();
         idxs.sort();
         idxs.dedup();
@@ -6614,22 +6631,72 @@ impl<'a> LawView<'a> {
                 continue;
             };
             let holders: Vec<(Option<Hash>, u64)> = stake.holders.iter().map(|(w, n)| (w.resolve(collective.as_ref()), *n)).collect();
-            for (who, share) in &holders {
-                let paid: u128 = paid_on.iter().filter(|p| Some(p.receiver) == *who).map(|p| p.amount as u128).sum();
-                let exact = pot * (*share as u128); // in millionths of a unit
-                let m = MILLION as u128;
-                // Short of its exact share by a whole unit or more, or over
-                // it by a whole unit or more: rule 15a's default gives each
-                // holder its share rounded down, or one unit more (F150,
-                // F162, 11). A split cMIP's declared remainder rule would
-                // need a reader, which none has yet.
-                if paid * m + m <= exact || paid * m >= exact + m {
-                    mismatched.push(Mismatch {
-                        stake: idx,
-                        holder: who.unwrap_or_default(),
-                        paid: paid as u64,
-                        due: (exact / m) as u64,
-                    });
+            // Rule 15a's default (rule 21: no split cMIP's declared
+            // remainder rule has a reader yet): each holder its share
+            // rounded down, leftovers by largest remainder, ties by turns
+            // along the service's receipts (F165); where the money came by
+            // a payer's claim with no receipt, the payer decides a tied unit
+            // (F168, 10); where the turns cannot be counted from the acts
+            // held, a tied unit is unknown, never the rest (F165).
+            let ids: Option<Vec<(Hash, u64)>> = holders.iter().map(|(w, n)| w.map(|w| (w, *n))).collect();
+            let range: Option<Vec<(Hash, u64, u64)>> = match &ids {
+                Some(ids) => {
+                    let pot64 = u64::try_from(pot).unwrap_or(u64::MAX);
+                    let rounded = round_stake(pot64, ids);
+                    let by_receipt = self.v.get(&s.receipt).is_some_and(|r| r.inside.spec == self.mips.finance && r.inside.type_ == crate::finance::types::RECEIPT);
+                    let turns = if rounded.units == 0 || !by_receipt {
+                        None
+                    } else {
+                        match h.act.outside.signer {
+                            Some(service) => self.turns(&service, &in_force, idx, ids, Some(&s.receipt))?,
+                            None => None,
+                        }
+                    };
+                    if rounded.units > 0 && by_receipt && turns.is_none() && !turns_unknown.contains(&idx) {
+                        turns_unknown.push(idx);
+                    }
+                    let parts = match &turns {
+                        Some(counts) => divide_stake(pot64, ids, Ties::Turns(counts)).unwrap_or(rounded.parts.clone()),
+                        None => rounded.parts.clone(),
+                    };
+                    let free = turns.is_none();
+                    let mut out: Vec<(Hash, u64, u64)> = vec![];
+                    for (i, (who, _)) in ids.iter().enumerate() {
+                        let up = u64::from(free && rounded.tied.contains(&i));
+                        match out.iter_mut().find(|(x, _, _)| x == who) {
+                            Some(e) => {
+                                e.1 += parts[i];
+                                e.2 += parts[i] + up;
+                            }
+                            None => out.push((*who, parts[i], parts[i] + up)),
+                        }
+                    }
+                    Some(out)
+                }
+                None => None,
+            };
+            if let Some(range) = range {
+                for (who, lo, hi) in range {
+                    let paid: u128 = paid_on.iter().filter(|p| p.receiver == who).map(|p| p.amount as u128).sum();
+                    if paid < lo as u128 || paid > hi as u128 {
+                        mismatched.push(Mismatch { stake: idx, holder: who, paid: paid as u64, due: lo });
+                    }
+                }
+            } else {
+                for (who, share) in &holders {
+                    let paid: u128 = paid_on.iter().filter(|p| Some(p.receiver) == *who).map(|p| p.amount as u128).sum();
+                    let exact = pot * (*share as u128); // in millionths of a unit
+                    let m = MILLION as u128;
+                    // Short of its exact share by a whole unit or more, or
+                    // over it by a whole unit or more (F150, F162, 11).
+                    if paid * m + m <= exact || paid * m >= exact + m {
+                        mismatched.push(Mismatch {
+                            stake: idx,
+                            holder: who.unwrap_or_default(),
+                            paid: paid as u64,
+                            due: (exact / m) as u64,
+                        });
+                    }
                 }
             }
             for p in paid_on {
@@ -6650,7 +6717,90 @@ impl<'a> LawView<'a> {
             in_force,
             unevidenced,
             unplanned,
+            turns_unknown,
         })
+    }
+
+    /// Rule 15a's turns (F165): for stake `idx` of the agreement in force
+    /// `in_force`, the leftover units each of `holders` has received so far
+    /// along `service`'s own receipts, from the receipt `from` back: the
+    /// previous receipt for the stake is the one `from` cites (in
+    /// `objects`, `acks` or `refs`) that a split of the service's names,
+    /// paying that stake; its split's leftover units (what each holder was
+    /// paid above its share rounded down) are counted, then its own
+    /// previous one, and so on to a receipt citing none. `None` where the
+    /// count cannot be told from the acts held: a receipt or a cited act
+    /// not held, a receipt citing two previous ones for the stake, or one
+    /// two splits of the service divide (shown as unknown, F165). With no
+    /// `from`, no receipt so far: every count is zero.
+    ///
+    /// *The count is carried here by walking the receipts; each receipt
+    /// carrying its running count, so that a tie is checked from two acts,
+    /// waits for the field's format (FORMAT OPEN, F165).*
+    pub fn turns(&self, service: &Hash, in_force: &Hash, idx: u64, holders: &[(Hash, u64)], from: Option<&Hash>) -> R<Option<Vec<u64>>> {
+        let mut counts = vec![0u64; holders.len()];
+        let mut seen = BTreeSet::new();
+        let Some(mut cur) = from.copied() else { return Ok(Some(counts)) };
+        loop {
+            if !seen.insert(cur) {
+                return Ok(None);
+            }
+            let Some(r) = self.v.get(&cur) else { return Ok(None) };
+            let mut previous = vec![];
+            for c in crate::finance::Citations::of(&r.inside).acts() {
+                let Some(x) = self.v.get(&c) else { return Ok(None) };
+                if x.inside.spec != self.mips.finance || x.inside.type_ != crate::finance::types::RECEIPT {
+                    continue;
+                }
+                let splits = self.service_splits(service, in_force, idx, &c)?;
+                match splits.len() {
+                    0 => {}
+                    1 => previous.push((c, splits[0].clone())),
+                    _ => return Ok(None),
+                }
+            }
+            let (c, split) = match previous.len() {
+                0 => return Ok(Some(counts)),
+                1 => previous.remove(0),
+                _ => return Ok(None),
+            };
+            let paid_on: Vec<&Payout> = split.payouts.iter().filter(|p| p.stake == Some(idx)).collect();
+            let pot: u64 = paid_on.iter().map(|p| p.amount).fold(0, u64::saturating_add);
+            // What each holder was paid above its share rounded down.
+            let sum: u128 = holders.iter().map(|(_, w)| *w as u128).sum::<u128>().max(1);
+            let mut done: Vec<Hash> = vec![];
+            for (i, (who, _)) in holders.iter().enumerate() {
+                if done.contains(who) {
+                    continue;
+                }
+                done.push(*who);
+                let paid: u64 = paid_on.iter().filter(|p| p.receiver == *who).map(|p| p.amount).fold(0, u64::saturating_add);
+                let floor: u128 = holders.iter().filter(|(w, _)| w == who).map(|(_, n)| pot as u128 * *n as u128 / sum).sum();
+                counts[i] = counts[i].saturating_add(paid.saturating_sub(u64::try_from(floor).unwrap_or(u64::MAX)));
+            }
+            cur = c;
+        }
+    }
+
+    /// The splits `service` signed with its own key dividing the receipt
+    /// `receipt` on stake `idx` of an agreement whose version in force is
+    /// `in_force` (F165).
+    fn service_splits(&self, service: &Hash, in_force: &Hash, idx: u64, receipt: &Hash) -> R<Vec<Split>> {
+        let mut out = vec![];
+        for y in self.v.signed_by(service) {
+            if !self.is_law(y, types::SPLIT) || !self.valid(&y.id) || self.key_grant(y).is_some() {
+                continue;
+            }
+            let Ok(x) = Split::decode(&y.inside.payload) else { continue };
+            if &x.receipt != receipt || !x.payouts.iter().any(|p| p.stake == Some(idx)) {
+                continue;
+            }
+            if self.latest_version(&x.agreement).ok().as_ref() != Some(in_force) {
+                continue;
+            }
+            out.push(x);
+        }
+        Ok(out)
     }
 
     /// The split services an agreement's terms name (rule 18): in a
@@ -6958,7 +7108,7 @@ impl<'a> LawView<'a> {
 /// Nobody, allegedly, 6 October 2026). The order the sides are listed in
 /// decides nothing.
 fn divide_fork(fork: &Hash, total: u64, by: &[(Hash, u64)]) -> Vec<u64> {
-    divide_stake(total, by, Some(fork)).expect("with a tie hash, every division is determined")
+    divide_stake(total, by, Ties::Hash(fork)).expect("with a tie hash, every division is determined")
 }
 
 /// `total` divided by `weights`, in whole parts, leftovers to the first: a

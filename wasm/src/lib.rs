@@ -398,21 +398,29 @@ pub fn act_id(bytes: &[u8]) -> R<String> {
 struct DivideIn {
     total: u64,
     holders: Vec<(String, u64)>,
-    receipt: Option<String>,
+    /// Each holder's leftover units from this stake so far, along the
+    /// split service's receipts, in the holders' order (F165): from
+    /// `Verifier.lawSplitTurns`. Absent: a tie is reported, not settled.
+    #[serde(default)]
+    turns: Option<Vec<u64>>,
 }
 
-/// Law rule 15a (F150): `{ total, holders: [[hex, share]], receipt }`
+/// Law rule 15a (F150, F165): `{ total, holders: [[hex, share]], turns }`
 /// divided among the holders by their shares, each holder its exact share
 /// rounded down, leftover units one each to the largest fractional
-/// remainders, ties ordered by `tagged_hash("MOR/law/leftover", [ receipt,
-/// holder ])`, smallest first. The parts, in the holders' order; an error
-/// where a tie decides a unit and no receipt is given.
+/// remainders; holders with equal remainders take turns: the fewest
+/// leftover units so far (`turns`) first, then the smallest identity hash.
+/// The parts, in the holders' order; an error where a tie decides a unit
+/// and no turns are given.
 #[wasm_bindgen(js_name = lawDivideStake)]
 pub fn law_divide_stake(input: JsValue) -> R<Vec<f64>> {
     let i: DivideIn = from_js(input)?;
     let holders = i.holders.iter().map(|(h, n)| Ok((unhex(h)?, *n))).collect::<R<Vec<_>>>()?;
-    let receipt = i.receipt.map(|r| unhex(&r)).transpose()?;
-    let parts = law::divide_stake(i.total, &holders, receipt.as_ref()).map_err(|w| JsError::new(&w))?;
+    let ties = match &i.turns {
+        Some(t) => law::Ties::Turns(t),
+        None => law::Ties::Open,
+    };
+    let parts = law::divide_stake(i.total, &holders, ties).map_err(|w| JsError::new(&w))?;
     Ok(parts.into_iter().map(|n| n as f64).collect())
 }
 
@@ -2473,24 +2481,39 @@ impl Verifier {
     /// Payer-side splitting (F124 P2): what a paying wallet reading Law pays
     /// each holder for `amount` on the stake in `object` (hex, or null for
     /// the collective itself), or why it cannot. Leftovers by largest
-    /// remainder, ties ordered by `receipt` (hex: the receipt's hash, or,
-    /// for a split from a payer's claim with no receipt, the claim's; or
-    /// null: then a tie that decides a unit leaves the split undetermined;
-    /// Law rule 15a, F150, F162).
+    /// remainder; a tied unit is the payer's to decide, at most one per tie
+    /// (Law rule 15a, F165, F168): this wallet gives it to the tied holder
+    /// with the smallest identity hash, a choice, not a rule.
     #[wasm_bindgen(js_name = lawPayerSplit)]
-    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64, receipt: Option<String>) -> R<JsValue> {
+    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let o = match object {
             Some(x) => law::Who::Id(unhex(&x)?),
             None => law::Who::This,
         };
-        let receipt = receipt.map(|r| unhex(&r)).transpose()?;
-        let r = view.payer_split(&unhex(agreement)?, &o, amount, receipt.as_ref()).map_err(lerr)?;
+        let r = view.payer_split(&unhex(agreement)?, &o, amount).map_err(lerr)?;
         to_js(&match r {
             Ok(v) => PayerSplitOut { pays: v.iter().map(|(h, n)| (hx(h), *n)).collect(), why: None },
             Err(w) => PayerSplitOut { pays: vec![], why: Some(w) },
         })
+    }
+
+    /// Rule 15a's turns (F165): for `stake` (its index) of `agreement`'s
+    /// version in force, the leftover units each holder has received so
+    /// far along `service`'s receipts, from `previous` (the receipt the
+    /// next one will cite as the previous for the stake) back; in the
+    /// order of `holders` (hex). Null where they cannot be counted from the
+    /// acts held. A split service's next receipt cites `previous`.
+    #[wasm_bindgen(js_name = lawSplitTurns)]
+    pub fn law_split_turns(&self, specs: JsValue, service: &str, agreement: &str, stake: u64, holders: Vec<String>, previous: Option<String>) -> R<Option<Vec<f64>>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let in_force = view.version_in_force(&unhex(agreement)?).map_err(lerr)?;
+        let holders = holders.iter().map(|h| Ok((unhex(h)?, 0))).collect::<R<Vec<_>>>()?;
+        let previous = previous.map(|p| unhex(&p)).transpose()?;
+        let t = view.turns(&unhex(service)?, &in_force, stake, &holders, previous.as_ref()).map_err(lerr)?;
+        Ok(t.map(|v| v.into_iter().map(|n| n as f64).collect()))
     }
 
     /// Whether an obligation binds its debtor: for a collective, once done
@@ -2510,6 +2533,22 @@ impl Verifier {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         view.paid(&unhex(id)?).map_err(lerr)
+    }
+
+    /// The payee's pointer acts its own acts hold, for what a payment
+    /// follows (an obligation, an agreement or an offer; Finance rule 14,
+    /// F145, F157, F163, F168): `{ pointers, complete }`, or null where
+    /// `fulfils` is none of these.
+    #[wasm_bindgen(js_name = lawPointerHolding)]
+    pub fn law_pointer_holding(&self, specs: JsValue, fulfils: &str, payee: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        #[derive(Serialize)]
+        struct Out {
+            pointers: Vec<String>,
+            complete: bool,
+        }
+        to_js(&view.pointer_holding(&unhex(fulfils)?, &unhex(payee)?).map(|h| Out { pointers: h.pointers.iter().map(hx).collect(), complete: h.complete }))
     }
 
     /// Who owes an obligation of a collective a fork closed (N13): the
@@ -2663,6 +2702,7 @@ impl Verifier {
             in_force: hx(&e.in_force),
             unevidenced: e.unevidenced.iter().map(hx).collect(),
             unplanned: e.unplanned.iter().map(hx).collect(),
+            turns_unknown: e.turns_unknown.clone(),
         })
     }
 
@@ -2814,6 +2854,9 @@ struct SplitOut {
     /// Receivers of fee and named-receiver payouts, which only the split
     /// plan (format open) could justify.
     unplanned: Vec<String>,
+    /// Stakes whose tied leftover units cannot be checked: the turns along
+    /// the service's receipts cannot be counted from the acts held (F165).
+    turns_unknown: Vec<u64>,
 }
 
 #[derive(Serialize)]

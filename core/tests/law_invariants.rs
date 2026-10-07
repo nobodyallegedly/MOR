@@ -1903,7 +1903,9 @@ fn leftovers_ignore_the_order_of_holders() {
             v
         };
         let holders: Vec<(Hash, u64)> = shares.iter().enumerate().map(|(i, s)| (sha256(format!("holder {i}").as_bytes()), *s)).collect();
-        let parts = law::divide_stake(amount, &holders, Some(&receipt)).map_err(TestCaseError::fail)?;
+        // Turns so far (F165), drawn from the case.
+        let counts: Vec<u64> = (0..n).map(|i| u64::from(receipt[i % 32] % 3)).collect();
+        let parts = law::divide_stake(amount, &holders, law::Ties::Turns(&counts)).map_err(TestCaseError::fail)?;
         let sum: u128 = parts.iter().map(|p| *p as u128).sum();
         prop_assert_eq!(sum, amount as u128, "the parts sum exactly (rule 21)");
         for ((_, s), p) in holders.iter().zip(&parts) {
@@ -1911,13 +1913,13 @@ fn leftovers_ignore_the_order_of_holders() {
             let floor = exact / 1_000_000;
             prop_assert!(*p as u128 == floor || (*p as u128 == floor + 1 && exact % 1_000_000 != 0), "within one unit of its exact share");
         }
-        let key = |i: usize| law::leftover_key(&receipt, &holders[i].0);
+        let key = |i: usize| (counts[i], holders[i].0);
         let rem = |i: usize| (amount as u128 * holders[i].1 as u128) % 1_000_000;
         for i in 0..n {
             for j in 0..n {
                 let up = |k: usize| parts[k] as u128 > (amount as u128 * holders[k].1 as u128) / 1_000_000;
                 if up(i) && !up(j) {
-                    prop_assert!(rem(i) > rem(j) || (rem(i) == rem(j) && key(i) < key(j)), "largest remainder, ties by the smallest key");
+                    prop_assert!(rem(i) > rem(j) || (rem(i) == rem(j) && key(i) < key(j)), "largest remainder, ties by turns: the fewest so far, then the smallest identity hash (F165)");
                 }
             }
         }
@@ -1928,7 +1930,8 @@ fn leftovers_ignore_the_order_of_holders() {
             order.swap(k, l.below(k + 1));
         }
         let listed: Vec<(Hash, u64)> = order.iter().map(|i| holders[*i]).collect();
-        let again = law::divide_stake(amount, &listed, Some(&receipt)).map_err(TestCaseError::fail)?;
+        let listed_counts: Vec<u64> = order.iter().map(|i| counts[*i]).collect();
+        let again = law::divide_stake(amount, &listed, law::Ties::Turns(&listed_counts)).map_err(TestCaseError::fail)?;
         for (k, i) in order.iter().enumerate() {
             prop_assert_eq!(again[k], parts[*i], "reordering holders moves nothing (F150)");
         }
@@ -2351,8 +2354,10 @@ impl DealWorld {
                 let fee = (*fee as u64).min(amount);
                 let pot = amount - fee;
                 // Exact shares, rounded down, leftovers by largest remainder,
-                // ties by the receipt's hash (rule 15a, F150).
-                let mut each: Vec<u64> = law::divide_stake(pot, &stakes, Some(&rc)).expect("a receipt orders every tie");
+                // ties by turns (rule 15a, F165): these receipts cite no
+                // earlier one, so every count is zero, and a tie goes to the
+                // smallest identity hash.
+                let mut each: Vec<u64> = law::divide_stake(pot, &stakes, law::Ties::Turns(&[])).expect("turns settle every tie");
                 let mut fee_paid = fee;
                 match mode {
                     SplitMode::Exact | SplitMode::Overflow => {}
@@ -2531,18 +2536,28 @@ impl DealWorld {
                     // The oracle, from the text: the stakes as currently
                     // held (rule 26), those of the latest version every party
                     // signed, whichever version the split names (audit,
-                    // October 2026, gap 8); short of the exact share by a
-                    // whole unit or more, or over it by a whole unit or more
-                    // (F162, 11), breaks the plan; so does a
-                    // payout to someone who holds no part of it.
+                    // October 2026, gap 8); each holder is owed its share
+                    // rounded down, the leftover units one each by largest
+                    // remainder, ties by turns (rule 15a, F165: these
+                    // receipts cite no earlier one, so every count is zero
+                    // and a tie goes to the smallest identity hash); any
+                    // other amount breaks the plan; so does a payout to
+                    // someone who holds no part of it.
                     let latest = self.latest();
                     let stakes = &self.versions.iter().find(|v| v.0 == latest).unwrap().2;
                     let pot: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0)).map(|p| p.amount as u128).sum();
+                    let sum: u128 = stakes.iter().map(|(_, n)| *n as u128).sum::<u128>().max(1);
+                    let mut owed: Vec<(Hash, u128, u128)> = stakes.iter().map(|(h, n)| (*h, pot * *n as u128 / sum, pot * *n as u128 % sum)).collect();
+                    let left = pot - owed.iter().map(|o| o.1).sum::<u128>();
+                    let mut by: Vec<usize> = (0..owed.len()).collect();
+                    by.sort_by(|a, b| owed[*b].2.cmp(&owed[*a].2).then(owed[*a].0.cmp(&owed[*b].0)));
+                    for i in by.into_iter().take(left as usize) {
+                        owed[i].1 += 1;
+                    }
                     let mut expect = BTreeSet::new();
-                    for (h, share) in stakes {
+                    for (h, due, _) in &owed {
                         let paid: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0) && p.receiver == *h).map(|p| p.amount as u128).sum();
-                        let exact = pot * *share as u128;
-                        if paid * 1_000_000 + 1_000_000 <= exact || paid * 1_000_000 >= exact + 1_000_000 {
+                        if paid != *due {
                             expect.insert(*h);
                         }
                     }

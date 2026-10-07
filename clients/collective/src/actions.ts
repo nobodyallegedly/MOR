@@ -1881,23 +1881,41 @@ export class Actions {
       if (!service || !this.store.holds(service)) blocking.push('The split service is not held by this program, so it cannot split here.');
     }
     const pool = amount - fee;
-    // Law rule 15a (F150): each holder its exact share rounded down, the
-    // leftover units one each to the largest remainders, ties ordered by
-    // the receipt's hash, which exists only once the service signs it; the
-    // order of holders decides nothing. The core divides (lawDivideStake).
-    const divide = (receipt: string | null): [string, number][] | null => {
+    const index = this.stakeIndex(c, null);
+    // Law rule 15a (F165): each holder its exact share rounded down, the
+    // leftover units one each to the largest remainders; holders with equal
+    // remainders take turns, the fewest leftover units from this stake so
+    // far, counted along the service's own receipts, then the smallest
+    // identity hash. The service's next receipt cites its previous one for
+    // the stake; the core counts the turns (lawSplitTurns) and divides
+    // (lawDivideStake). The order of holders decides nothing.
+    const previous = c.f.splits?.at(-1)?.receipt ?? null;
+    let turns: number[] | null = null;
+    if (own.length && service) {
+      const { v, specs } = await this.lawVerifier(c, this.concerned(c));
+      const t = v.lawSplitTurns(specs, service, c.f.agreement, BigInt(index), own.map(([h]) => h), previous) as Float64Array | number[] | undefined | null;
+      turns = t ? Array.from(t, Number) : null;
+      if (!turns) blocking.push("The turns of tied leftover units cannot be counted from the acts this program holds: the service's previous receipt for the stake is missing (Law rule 15a, F165).");
+    }
+    const divide = (): [string, number][] | null => {
       try {
-        const parts = lawDivideStake({ total: pool, holders: own, receipt }) as number[] | Float64Array;
+        const parts = lawDivideStake({ total: pool, holders: own, turns: turns ?? undefined }) as number[] | Float64Array;
         return own.map(([h], i) => [h, Number(parts[i])] as [string, number]);
       } catch {
         return null;
       }
     };
-    const tied = own.length > 0 && divide(null) === null;
-    const auto = divide(null) ?? own.map(([h, n]) => [h, Math.floor((pool * n) / 1_000_000)] as [string, number]);
+    const tied = own.length > 0 && (() => {
+      try {
+        lawDivideStake({ total: pool, holders: own });
+        return false;
+      } catch {
+        return true;
+      }
+    })();
+    const auto = divide() ?? own.map(([h, n]) => [h, Math.floor((pool * n) / 1_000_000)] as [string, number]);
     const payouts: [string, number][] = auto.map(([h, n]) => [h, a.amounts?.[h] ?? n]);
-    const left = pool - auto.reduce((x, [, n]) => x + n, 0);
-    const index = this.stakeIndex(c, null);
+    const left = pool - own.map(([, n]) => Math.floor((pool * n) / 1_000_000)).reduce((x, n) => x + n, 0);
     const departed = c.f.governance.departed ?? [];
     const reading: Reading = {
       title: `A payment of ${amount} to “${cname}”, split`,
@@ -1905,7 +1923,7 @@ export class Actions {
         `The split service ${service ? names(service) : ''} receives ${amount} and takes a fee of ${fee}, named in the split with who received it (F121, Q9).`,
         ...payouts.map(([h, n]) => `${names(h)}: ${n}${departed.includes(h) ? ' (a departed holder)' : ''}.`),
         ...(tied
-          ? [`${left} leftover unit${left === 1 ? '' : 's'} of rounding go${left === 1 ? 'es' : ''} to holders whose remainders are equal; the hash of the receipt, once the service signs it, decides which (Law rule 15a, F150).`]
+          ? [`${left} leftover unit${left === 1 ? '' : 's'} of rounding: holders whose remainders are equal take turns, the one with the fewest leftover units from this stake so far first, counted along the service's receipts, then the smallest identity hash (Law rule 15a, F165).`]
           : []),
         'The split is delivered to every holder it pays (Q9), and Law checks that every payout matches its stake exactly, within one smallest unit of rounding, every fee alike for every stake: any deviation, either way, breaks the plan (F124 N10, rule 26).',
       ],
@@ -1922,9 +1940,10 @@ export class Actions {
         const col = this.store.collective(a.collective);
         const svc = this.store.identity(service!);
         const relays = col.f.relays;
-        const r = await svc.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: svc.f.identity, unit: TEST_RAIL, value: amount, fulfils: col.f.agreement }), { public: true, relays });
-        // With the receipt signed, its hash orders any tie (rule 15a, F150).
-        const final: [string, number][] = (divide(r.id) ?? auto).map(([h, n]) => [h, a.amounts?.[h] ?? n]);
+        // The receipt cites the service's previous receipt for the stake,
+        // so a tie is checked along them (rule 15a, F165).
+        const r = await svc.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: svc.f.identity, unit: TEST_RAIL, value: amount, fulfils: col.f.agreement }), { public: true, relays, refs: previous ? [previous] : undefined });
+        const final: [string, number][] = payouts;
         const ps: PayoutIn[] = [
           ...(fee ? [{ receiver: svc.f.identity, amount: fee, feeModule: TEST_RAIL }] : []),
           ...final.map(([h, n]) => ({ receiver: h, amount: n, stake: index })),
@@ -1955,6 +1974,7 @@ export class Actions {
       problems: string[];
       unevidenced: string[];
       unplanned: string[];
+      turnsUnknown: number[];
     };
     const lines: Line[] = [
       ...e.problems.map((p) => ({ text: `NOT THE NAMED SERVICE'S SPLIT UNDER THE AGREEMENT IN FORCE: ${p}.`, tone: 'bad' as const })),
@@ -1969,6 +1989,9 @@ export class Actions {
       ...(e.mismatched.length
         ? e.mismatched.map(([, h, paid, due]) => ({ text: `DOES NOT MATCH ITS STAKE: ${names(h)} is paid ${paid}, their share is ${due} (F124 N10, rule 26).`, tone: 'bad' as const }))
         : [{ text: 'Every payout matches its stake exactly, every fee alike for every stake, member or departed (F124 N10).', tone: 'ok' as const }]),
+      ...(e.turnsUnknown.length
+        ? [{ text: "Who should have had a tied leftover unit is unknown: the service's earlier receipts for the stake are not all held, so the turns cannot be counted (Law rule 15a, F165). The rest is checked.", tone: 'warn' as const }]
+        : []),
     ];
     return {
       mismatched: e.mismatched.length,

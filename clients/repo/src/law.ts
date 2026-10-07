@@ -6,6 +6,8 @@
 
 import {
   MIPS,
+  SPECS,
+  Verifier,
   cborDecode,
   cborEncode,
   checkTerms,
@@ -381,14 +383,94 @@ export async function proposePayload(by: TestIdentity, payload: Uint8Array, pare
   return by.publish(REPO_SPECS.law, LAW_TYPES.terms, payload, { public: true, relays, objects });
 }
 
-/** Sign an act: a Law signature act that follows the act it signs. */
+/**
+ * The latest of `by`'s own payee pointers (Finance type 0) found on
+ * `relays`, where its pointers are published, whichever of its devices
+ * published it (Finance rule 14, F163): each pointer valid on `by`'s chain,
+ * naming `by` as its payee; the latest of the unbroken chain, or at a fork
+ * the last before it (rule 12). Null where none is found.
+ */
+export async function latestPointer(by: TestIdentity, relays: string[]): Promise<string | null> {
+  const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+  for (const a of by.chainActs()) v.add(a);
+  const found = new Map<string, { version: number; previous: string | null }>();
+  for (const h of relays) {
+    let after: number | undefined;
+    try {
+      for (;;) {
+        const page = await relayAt(h, by.via).feed({ signer: by.id, after });
+        for (const it of page.items) {
+          if (it.kind !== 'act') continue;
+          try {
+            const d = describeAct(it.item) as { id: string; spec?: string; type?: number; payload?: Uint8Array };
+            if (d.spec !== MIPS.finance || d.type !== FINANCE_POINTER || !d.payload) continue;
+            const m = cborDecode(d.payload) as Map<number, unknown>;
+            const payee = m.get(0);
+            if (!(payee instanceof Uint8Array) || hex(payee) !== by.id) continue;
+            const id = v.add(it.item);
+            if (v.status(id) !== 'valid') continue;
+            const prev = m.get(2);
+            found.set(id, { version: Number(m.get(1)), previous: prev instanceof Uint8Array ? hex(prev) : null });
+          } catch {
+            // not one of ours, or malformed
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+      // that relay is away: the others may hold them
+    }
+  }
+  // Rule 12: from the one first version, follow the one next version.
+  const firsts = [...found].filter(([, p]) => p.version === 1 && p.previous === null);
+  if (firsts.length !== 1) return null;
+  let [at, p] = firsts[0];
+  for (;;) {
+    const next = [...found].filter(([, q]) => q.previous === at && q.version === p.version + 1);
+    if (next.length !== 1) return at;
+    [at, p] = next[0];
+  }
+}
+
+/** Finance's payee pointer type (Finance draft 6, type 0). */
+const FINANCE_POINTER = 0;
+
+/**
+ * Sign an act: a Law signature act that follows the act it signs. Where it
+ * signs terms or an offer, which can pay its signer, it cites in `refs` the
+ * latest of the signer's payee pointers found on `relays` (Finance rule 14,
+ * F163, client conformance): an identity keeps one sequence per device, so
+ * a deal signed on one device finds a wallet published from another.
+ */
 export async function sign(by: TestIdentity, act: string, relays: string[]) {
   await carryChain(by, relays);
+  let refs: string[] | undefined;
+  if (await canPaySigner(act, relays, by.via)) {
+    const p = await latestPointer(by, relays);
+    if (p) refs = [p];
+  }
   return by.publish(REPO_SPECS.law, LAW_TYPES.signature, signaturePayload(act), {
     public: true,
     relays,
     objects: [[act, act]],
+    refs,
   });
+}
+
+/** Whether the act signed is terms or a standing offer (Law types 0 and 6), as a relay holding it shows. */
+async function canPaySigner(act: string, relays: string[], via: Via): Promise<boolean> {
+  for (const h of relays) {
+    try {
+      const a = await relayAt(h, via).getAct(act);
+      if (!a) continue;
+      const d = describeAct(a) as { spec?: string; type?: number };
+      return d.spec === REPO_SPECS.law && (d.type === LAW_TYPES.terms || d.type === LAW_TYPES.offer);
+    } catch {
+      // that relay is away
+    }
+  }
+  return false;
 }
 
 /**

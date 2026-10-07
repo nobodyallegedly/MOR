@@ -113,6 +113,15 @@ impl Lab {
         self.act(p, mips().law, law::types::SIGNATURE, law::signature_payload(&terms), o, None, None)
     }
 
+    /// `p`'s signature act (Law type 1) on `terms`, citing `refs` in
+    /// `refs`, as a conforming client cites the payee's latest pointer
+    /// (F163).
+    fn sign_citing(&mut self, p: &mut Person, terms: Hash, refs: Vec<Hash>) -> Hash {
+        let o = Some(vec![Object { chain: terms, predecessor: terms }]);
+        let refs = Some(refs.into_iter().map(Ref::Act).collect());
+        self.act(p, mips().law, law::types::SIGNATURE, law::signature_payload(&terms), o, None, refs)
+    }
+
     /// An obligation signed by its debtor, naming `named` in field 3.
     fn debt(&mut self, debtor: &mut Person, creditor: Hash, value: u64, named: Hash, agreement: Option<Hash>, refs: Vec<Hash>) -> Hash {
         let o = Payload::Obligation(Obligation { debtor: debtor.id, creditor, amount: amount(value), pointer: named, agreement });
@@ -394,6 +403,68 @@ fn an_offer_is_the_payees_own_act_only_when_the_payee_signed_it() {
     let d2 = l.debt(&mut buyer, sid, 5, v1, Some(not_hers), vec![]);
     l.claim(&mut buyer, sid, d2, 5, "d2 to v1", PaidAt::Flow(v1), vec![]);
     assert_eq!(l.paid(&d2), 0);
+}
+
+// ---------------------------------------------------------------- rule 14: two devices (F163), offers (F168, 13)
+
+/// F163 (review of F145 to F162, finding 2, a common case): an identity
+/// keeps one sequence per device. Ana publishes her wallet from her laptop
+/// and signs a film deal from her phone. The walk through her own acts
+/// follows the phone's line only, so a signature citing nothing holds no
+/// pointer, and the royalties can go only to the vault. Her client, signing
+/// what can pay her, cites in `refs` the latest of her pointers it finds
+/// where they are published, whichever device published it (client
+/// conformance): then the laptop's wallet counts. Verifiers are unchanged.
+#[test]
+fn a_deal_signed_on_the_phone_finds_the_wallet_published_on_the_laptop() {
+    let mut l = Lab::new();
+    let mut laptop = l.person("Ana");
+    let mut phone = laptop.clone();
+    phone.seq.clear();
+    let mut label = l.person("a label");
+    let aid = laptop.id;
+    let v1 = l.pointer(&mut laptop, aid, 1, None, "Ana's wallet, set up on the laptop");
+    assert_eq!(l.w.v.status(&v1), Status::Valid);
+
+    // Without the citation: the phone's line holds no pointer.
+    let deal = l.terms(&mut label, vec![]);
+    l.sign(&mut label, deal);
+    let bare = l.sign(&mut phone, deal);
+    assert_eq!(l.w.v.status(&bare), Status::Valid, "a second device's sequence");
+    assert_eq!(l.view().pointer_holding(&deal, &aid).unwrap().pointers, Vec::<Hash>::new());
+    let d = l.debt(&mut label, aid, 300, v1, Some(deal), vec![]);
+    l.claim(&mut label, aid, d, 300, "royalty, uncited", PaidAt::Flow(v1), vec![]);
+    assert_eq!(l.paid(&d), 0, "nothing of Ana's on the phone holds the laptop's wallet: only the vault");
+
+    // A conforming client cites the latest pointer when signing.
+    let film = l.terms(&mut label, vec![]);
+    l.sign(&mut label, film);
+    l.sign_citing(&mut phone, film, vec![v1]);
+    assert_eq!(l.view().pointer_holding(&film, &aid).unwrap().pointers, vec![v1]);
+    let d = l.debt(&mut label, aid, 300, v1, Some(film), vec![]);
+    l.claim(&mut label, aid, d, 300, "royalty, cited", PaidAt::Flow(v1), vec![]);
+    assert_eq!(l.paid(&d), 300, "the laptop's wallet counts for the deal signed on the phone");
+}
+
+/// F168 (13): an offer is the payee's own act only if the payee signed
+/// it. A buyer's bounty ("I pay 100 for a remix") is the buyer's act; the
+/// payee's act is its signature accepting it, and the pointer that
+/// signature holds counts. Before F168, an offer another identity signed
+/// gave the payee no act at all, and payment under it went to the vault.
+#[test]
+fn a_payee_accepting_anothers_offer_is_paid_by_what_its_acceptance_holds() {
+    let mut l = Lab::new();
+    let mut remixer = l.person("a remixer");
+    let mut buyer = l.person("a buyer posting a bounty");
+    let rid = remixer.id;
+    let v1 = l.pointer(&mut remixer, rid, 1, None, "the remixer's node");
+    let bounty = l.act(&mut buyer, mips().law, law::types::STANDING_OFFER, vec![], None, None, Some(vec![Ref::Act(v1)]));
+    assert!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers.is_empty(), "the buyer's citation chooses nothing");
+    l.sign_citing(&mut remixer, bounty, vec![v1]);
+    assert_eq!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers, vec![v1]);
+    let d = l.debt(&mut buyer, rid, 100, v1, Some(bounty), vec![]);
+    l.claim(&mut buyer, rid, d, 100, "the bounty", PaidAt::Flow(v1), vec![]);
+    assert_eq!(l.paid(&d), 100);
 }
 
 // ---------------------------------------------------------------- rule 15: good faith after a rotation

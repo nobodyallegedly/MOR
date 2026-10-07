@@ -81,55 +81,105 @@ pub const MILLION: u64 = 1_000_000;
 pub const LEFTOVER_TAG: &str = "MOR/law/leftover";
 
 /// Rule 15a's tie key for a holder (F150): `tagged_hash("MOR/law/leftover",
-/// [ receipt hash, holder ])`, the array encoded as CBOR, as Law writes
-/// its arrays (reading: the rule does not say so in words, as Envelope
-/// does for its sealed signature).
-pub fn leftover_key(receipt: &Hash, holder: &Hash) -> Hash {
-    let v = Value::Array(vec![Value::Bytes(receipt.to_vec()), Value::Bytes(holder.to_vec())]);
+/// [ act hash, holder ])`, the array encoded as CBOR, as Law writes its
+/// arrays (F162, 7). Since F165 it orders only a fork's sides, by the fork
+/// act every member signs (F162, 10): a split service's receipt no longer
+/// orders ties, since its signer picks its salt (F165).
+pub fn leftover_key(act: &Hash, holder: &Hash) -> Hash {
+    let v = Value::Array(vec![Value::Bytes(act.to_vec()), Value::Bytes(holder.to_vec())]);
     crate::hash::tagged_hash(LEFTOVER_TAG, &cbor::encode(&v))
 }
 
-/// Rule 15a (F150): `total` smallest units of a payment divided among a
-/// stake's `holders` (each its identity and its share), every holder its
-/// exact share rounded down, and the leftover units one each to the
-/// holders whose exact shares have the largest fractional remainders;
-/// holders with equal remainders ordered by [`leftover_key`] with the hash
-/// of the receipt of the payment being divided, smallest first. The order
-/// in which holders are listed decides nothing: the parts come back in the
-/// order given, each holder's the same however they are listed.
-///
-/// Where holders with equal remainders compete for fewer leftover units
-/// than they are, and no receipt is given, the division is undetermined:
-/// `Err`, saying so. Shares need not sum to a million; they are divided
-/// in proportion.
-pub fn divide_stake(total: u64, holders: &[(Hash, u64)], receipt: Option<&Hash>) -> Result<Vec<u64>, String> {
+/// How rule 15a settles holders with equal remainders competing for fewer
+/// leftover units than they are.
+#[derive(Clone, Copy, Debug)]
+pub enum Ties<'a> {
+    /// Take turns (F165): each holder's leftover units from this stake so
+    /// far, counted along the dividing split service's own receipts, in the
+    /// holders' order; the fewest first, and where counts are equal, the
+    /// smallest identity hash.
+    Turns(&'a [u64]),
+    /// A fork's sides: by [`leftover_key`] with the fork act (F162, 10).
+    Hash(&'a Hash),
+    /// Nothing given decides them: a tie that decides a unit is reported,
+    /// not settled ([`divide_stake`] answers `Err`).
+    Open,
+}
+
+/// Rule 15a before ties: every holder its exact share rounded down, the
+/// leftover units one each to the holders whose exact shares have the
+/// largest fractional remainders, as far as remainders decide. `tied` are
+/// the holders (indexes) with equal remainders at the cut, competing for
+/// the `units` leftover units remainders do not decide; empty where none.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Rounded {
+    pub parts: Vec<u64>,
+    pub tied: Vec<usize>,
+    pub units: usize,
+}
+
+/// [`Rounded`] for `total` among `holders` (each its identity and share).
+/// Shares need not sum to a million; they are divided in proportion. The
+/// order in which holders are listed decides nothing (F150).
+pub fn round_stake(total: u64, holders: &[(Hash, u64)]) -> Rounded {
     let sum: u128 = holders.iter().map(|(_, w)| *w as u128).sum();
     if sum == 0 {
-        return Ok(vec![0; holders.len()]);
+        return Rounded { parts: vec![0; holders.len()], tied: vec![], units: 0 };
     }
     let exact: Vec<u128> = holders.iter().map(|(_, w)| total as u128 * *w as u128).collect();
-    let mut out: Vec<u64> = exact.iter().map(|e| (e / sum) as u64).collect();
+    let mut parts: Vec<u64> = exact.iter().map(|e| (e / sum) as u64).collect();
     let rem: Vec<u128> = exact.iter().map(|e| e % sum).collect();
-    let left = (total as u128 - out.iter().map(|x| *x as u128).sum::<u128>()) as usize;
+    let left = (total as u128 - parts.iter().map(|x| *x as u128).sum::<u128>()) as usize;
     if left == 0 {
-        return Ok(out);
+        return Rounded { parts, tied: vec![], units: 0 };
     }
     let mut order: Vec<usize> = (0..holders.len()).collect();
-    // Largest remainder first; ties by the tie key, smallest first.
     order.sort_by(|a, b| rem[*b].cmp(&rem[*a]));
     let cut = rem[order[left - 1]];
-    let competing = order.iter().filter(|i| rem[**i] == cut).count();
-    let above = order.iter().filter(|i| rem[**i] > cut).count();
-    if competing > left - above {
-        let Some(r) = receipt else {
-            return Err("holders with equal remainders compete for the leftover units, and no receipt orders them (rule 15a, F150)".into());
-        };
-        order.sort_by(|a, b| rem[*b].cmp(&rem[*a]).then_with(|| leftover_key(r, &holders[*a].0).cmp(&leftover_key(r, &holders[*b].0))));
+    let above: Vec<usize> = order.iter().copied().filter(|i| rem[*i] > cut).collect();
+    let at_cut: Vec<usize> = order.iter().copied().filter(|i| rem[*i] == cut).collect();
+    for i in &above {
+        parts[*i] += 1;
     }
-    for i in &order[..left] {
-        out[*i] += 1;
+    let units = left - above.len();
+    if at_cut.len() == units {
+        for i in &at_cut {
+            parts[*i] += 1;
+        }
+        return Rounded { parts, tied: vec![], units: 0 };
     }
-    Ok(out)
+    let mut tied = at_cut;
+    tied.sort();
+    Rounded { parts, tied, units }
+}
+
+/// Rule 15a (F150, F165): `total` smallest units of a payment divided
+/// among a stake's `holders` (each its identity and its share), every
+/// holder its exact share rounded down, and the leftover units one each to
+/// the holders whose exact shares have the largest fractional remainders
+/// ([`round_stake`]); holders with equal remainders settled by `ties`. The
+/// parts come back in the order given, each holder's the same however they
+/// are listed.
+///
+/// With [`Ties::Open`], a tie that decides a unit is undetermined: `Err`,
+/// saying so.
+pub fn divide_stake(total: u64, holders: &[(Hash, u64)], ties: Ties) -> Result<Vec<u64>, String> {
+    let Rounded { mut parts, mut tied, units } = round_stake(total, holders);
+    if units == 0 {
+        return Ok(parts);
+    }
+    match ties {
+        Ties::Open => return Err("holders with equal remainders compete for the leftover units, and nothing given settles the tie (rule 15a, F165)".into()),
+        Ties::Turns(counts) => {
+            let count = |i: usize| counts.get(i).copied().unwrap_or(0);
+            tied.sort_by(|a, b| count(*a).cmp(&count(*b)).then_with(|| holders[*a].0.cmp(&holders[*b].0)));
+        }
+        Ties::Hash(h) => tied.sort_by_key(|i| leftover_key(h, &holders[*i].0)),
+    }
+    for i in &tied[..units] {
+        parts[*i] += 1;
+    }
+    Ok(parts)
 }
 
 /// The layer of a task's MIP (Production, task table).

@@ -523,10 +523,10 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   assert.match(spw, /Delivered to every holder it pays/);
   assert.match(spw, /Every payout matches its stake exactly/);
   // Leftovers by largest remainder (Law rule 15a, F150): 2 units over 40/15/15/15/15 go one to Lea
-  // (0.8) and one to whichever of the four tied at 0.3 the receipt's hash orders first, never both
-  // to the first listed.
+  // (0.8) and one to the four tied at 0.3 by turns along the service's receipts, then the smallest
+  // identity hash (F165), never both to the first listed.
   const small = await sign(c, { kind: 'split', collective: col.id, amount: 102, fee: 100 });
-  assert.match(words(small.review.reading), /the hash of the receipt, once the service signs it, decides which \(Law rule 15a, F150\)/);
+  assert.match(words(small.review.reading), /take turns, the one with the fewest leftover units from this stake so far first.*\(Law rule 15a, F165\)/);
   const smallw = small.done.lines.map((l) => l.text).join('\n');
   assert.match(smallw, /Paid: 1 to Lea/);
   assert.equal((smallw.match(/Paid: 1 to /g) ?? []).length, 2, smallw);
