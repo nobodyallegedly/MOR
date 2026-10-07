@@ -75,7 +75,7 @@ The admission test for the core is: *something belongs in the core only if it is
 
 ### 3.4 No clock
 
-MOR has no clock: timestamps are hints, never load-bearing. Two acts are ordered only where one cites the other, directly or through what it cites, the happened-before relation of Lamport [Lamport 1978]. Where one identity's act names another's, their chains knot, and order carries across through the knots. Agreements that need real deadlines name a **time reference**, such as a block height. So every rule is stated in terms of what cites what, never of when; section 5.4 shows what that costs where several people act as one.
+MOR has no clock: timestamps are hints, never load-bearing. Two acts are ordered only where one cites the other, directly or through what it cites, the happened-before relation of Lamport [Lamport 1978]. Where one identity's act names another's, their chains knot, and order carries across through the knots. Agreements that need real deadlines name a **time reference**, such as a block height. So every rule is stated in terms of what cites what, never of when; section 5.4 shows what that costs where several people act as one. In the author's words: *MOR has no clock, but anchoring to one is a task the core defines and accepts; we simply do not wish to specify how.* Where a rule depends on a time, as after the theft of a key (section 5.1), the core states what an anchor must prove and leaves how to anchor to the modules that compete to do it, as it does for payment rails and media formats.
 
 ## 4. Identity that survives key theft
 
