@@ -196,7 +196,7 @@ Each claim is marked **run**, where the reference implementation exercises it in
 - **No protection against collusion of an ending's signers** who draw a fork's line early on purpose (section 5.4): a stated, visible cost.
 - **No fair exchange** between the signers of an agreement (section 5.2).
 - **No forward secrecy.** Private content is sealed to an identity's encryption key; whoever steals that key can open what was sealed to that key before.
-- **No metadata privacy.** An addressed act shows its recipient; who talks to whom is visible to relays. That is left to relay operators and cMIPs.
+- **Partial metadata privacy.** MOR hides the sender of private messages, not the recipient. A private act delivered in a sealed container shows relays only its recipients and its size: the container is signed with a one-time key that belongs to no identity, and the sender is known only inside it (Envelope, "Sealed containers"). A delivery to a bare key shows neither. A public act addressed to someone, or a private act stored openly with its recipients listed, shows both signer and recipients, on purpose. Timing and size are always visible, and the network can betray a sender: a relay sees the address a container came from. Hiding that, and who receives, is left to the transport (onion addresses, mixing relays) and to relay operators and cMIPs.
 - **No protection for a lost chain key.** Back up both seeds.
 - **No proof of distinct persons.** The protocol cannot tell whether two identities are one person, or two home operators one company.
 - **Timing, load and denial of service** are relay-market concerns, outside the core.
