@@ -2141,6 +2141,8 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **Principle, stated by Nobody, allegedly:** "We cannot force people to use it only in a healthy manner, but we can make it legible." The incentive layer is left to the developers who think about rewarding the pipe; his expectation is that they make the most productive area of the network, and over time possibly the healthiest. *Project lead's caution, recorded with it: legible is not the same as deterred (Steem's curation was on a public chain and was still gamed), so the expectation is a hypothesis to be stated as one, and legibility counts only where a client shows it and the cost of gaming falls on whoever chose the plan.*
 
+**The building ground, stated by Nobody, allegedly:** "When I look at MOR I imagine a diversity of ethos and wish to see them compete. It's a building ground." *Test drawn from it for the grammar, suggested by the project lead: it must let opposite ethos be built on it with equal ease (pay the whole pipe, pay only the poster, pay by contribution over time), favouring none, and must let anyone leave one for another, taking their work and agreements with them.*
+
 **Next, decided by Nobody, allegedly:** taken up on 8 October 2026, straight after the collective client human test (step 11b).
 
 ## Review of F163 to F168 (7 October 2026, morning)
