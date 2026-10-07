@@ -1870,9 +1870,18 @@ A hostile review by a separate Opus session (`docs/reviews/f133-f144-review.md`)
 **Core changes:** Finance draft 6, rules 12a, 14a, 15 (F146's both-anchored sentence replaced; F160 withdrawn); core v21 "Good faith"; paper section 5.1. *To build:* the receipt test in good faith; the anchored-rotation cut-off; undo `vault_at` selection.
 
 
+## F165. Leftover ties take turns, counted along the split service's receipts (review of F145 to F162, finding 4, 7 October 2026)
+
+**Found by the hostile review of F145 to F162** (finding 4): F150's tie hash is of the receipt, whose signer (the split service) picks its 16-byte salt and can grind the hash until each tie falls where it wants; with equal shares and small payments every payment is a tie.
+
+**Decided (Nobody, allegedly, 7 October 2026): "It does. Extra acts are fine as long as the process doesn't bloat the clients too much":** ties take turns: a tied unit goes to the tied holder with the fewest leftover units from this stake so far, counted along the split service's receipts; equal counts go to the smallest identity hash. Each receipt carries the running count per stake and cites the previous receipt for that stake, so checking a tie needs two acts; a verifier missing the previous one shows that unit as unknown. Payer-side splits keep the hash (the payer steers at most a unit per tie, a stated cost); forks keep the fork act's hash (every member signs it). Asked "How costly is the cost?", the project lead answered: a few hundred bytes per receipt, one extra field, one extra act to check.
+
+**Core changes:** Law draft 10, rule 15a and its reasoning. *To build:* the tally in split services' receipts (format open), the turn rule in `divide_stake`, a test that a service cannot steer ties.
+
+
 ## Review of F145 to F162 (7 October 2026, morning)
 
 A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-review.md`), attacked the eighteen decisions together, after F145 to F162 were built and merged (`docs/decisions-f157-f162-build-2026-10-06.md`, main `b2b79a8`, display client released `9e53e70`). **Six break, two in common cases:** (1) F160: an individual's everyday acts never cite the identity chain where the vault is declared, so no act "holds" a vault; read through the binding, a vault lowered after a theft protects nothing already signed; (2) F157: a person with two devices has two sequences, and the walk follows one, so a deal signed on the phone holds no pointer published from the laptop; (3) F146, F147, F154: a payer can always add a claim citing nothing, and an owner cannot anchor the payer's claim, so the proviso excludes only honest payers and the theft window never shuts; (4) F150: the receipt's signer chooses its salt, so it can choose the tie; (5) F148, F158: a declaration acknowledged by one accomplice can still be kept and used later; (6) F149: a format declares its own bound. Smaller: findings 6 to 14. The build session's own questions (its report, "Questions") are open too. *The decisions were made fast, mostly on the project lead's suggestions; the two common-case breaks follow from his suggestions (F157, F160).*
 
-**Open for Nobody, allegedly:** findings 4 to 14 of the review (findings 1 to 3 decided as F163, F164), and the build's questions 1 to 5.
+**Open for Nobody, allegedly:** findings 5 to 14 of the review (findings 1 to 4 decided as F163 to F165), and the build's questions 1 to 5.
 
