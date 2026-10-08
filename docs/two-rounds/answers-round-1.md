@@ -17,3 +17,5 @@
 **B3.** "Yes, but let's explore how it can be leveraged in bad faith." *(Exploration follows in the conversation; final word recorded below.)*
 
 **B3, final word.** "The problem is… it is a possible scenario. So, a solution has to be found. And this one is a problem tomorrow me will solve and whatever I told you before on instinct stands." (The instinct: yes.)
+
+**B4.** No round-1 answer: "Oh tomorrow me… 's a lucky guy…. With his cofeee"
