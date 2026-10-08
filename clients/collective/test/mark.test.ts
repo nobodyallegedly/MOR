@@ -8,13 +8,9 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
-import { cborEncode, describeAct } from '../../genesis/src/core.ts';
 import { gitFiles, prepareRelease, publishPrepared, verifyRelease } from '../../repo/src/release.ts';
-import { LAW_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
-const unhex = (h: string) => Uint8Array.from(h.match(/../g)!.map((x) => parseInt(x, 16)));
 import type { State } from '../src/page/api.ts';
-import { commit, prepare, sign, state, words, world, type World } from './setup.ts';
+import { commit, lossy, prepare, sign, state, words, world, type World } from './setup.ts';
 
 let w: World;
 before(async () => {
@@ -78,44 +74,6 @@ test('found by four, one removed with the release rule set to one, then set back
   const v = await verifyRelease(relId, [w.relay.base]);
   assert.equal(v.ok, true, v.problems.join('; '));
 });
-
-/**
- * A relay in front of another: everything passes, except that while `drop`
- * is set a record of a collective (Law type 17) is answered as taken and
- * never passed on. What a person sees when a relay loses an act: the
- * client was told it arrived.
- */
-async function lossy(target: string): Promise<{ base: string; drop: boolean; close(): Promise<void> }> {
-  const state = { drop: false };
-  const server = createServer(async (req, res) => {
-    const chunks: Buffer[] = [];
-    for await (const ch of req) chunks.push(ch as Buffer);
-    const body = Buffer.concat(chunks);
-    if (state.drop && req.method === 'POST' && req.url === '/acts') {
-      const d = describeAct(new Uint8Array(body)) as { id: string; spec?: string; type?: number };
-      if (d.spec === REPO_SPECS.law && d.type === LAW_TYPES.record) {
-        res.writeHead(200, { 'content-type': 'application/cbor' });
-        res.end(Buffer.from(cborEncode(new Map<number, unknown>([[0, unhex(d.id)], [1, 0]]))));
-        return;
-      }
-    }
-    const r = await fetch(target + req.url, { method: req.method, headers: { 'content-type': req.headers['content-type'] ?? 'application/cbor' }, body: req.method === 'GET' ? undefined : body });
-    res.writeHead(r.status, { 'content-type': r.headers.get('content-type') ?? 'application/cbor' });
-    res.end(Buffer.from(await r.arrayBuffer()));
-  });
-  await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok));
-  const port = (server.address() as { port: number }).port;
-  return {
-    base: `http://127.0.0.1:${port}`,
-    get drop() {
-      return state.drop;
-    },
-    set drop(x: boolean) {
-      state.drop = x;
-    },
-    close: () => new Promise<void>((ok) => server.close(() => ok())),
-  };
-}
 
 // The same removal, but the record registering the resignation never
 // reaches the collective's relay, though the relay said it did. Law, which

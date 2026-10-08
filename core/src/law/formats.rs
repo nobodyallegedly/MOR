@@ -2434,12 +2434,23 @@ impl Revocation {
 /// A collective's Law declaration of kind 0: at genesis, the founding terms;
 /// at a rotation, a constitutional clone and the signature acts completing
 /// it (Flaw M), and, at a recovery rotation, the signature acts on the
-/// declaration taking effect there (Flaw B18).
+/// declaration taking effect there (Flaw B18); at a rollback (rule 37d,
+/// F185), the broken act it names and the departures it registers.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Declared {
     pub agreement: Hash,
     pub signatures: Option<Vec<Hash>>,
     pub absence: Option<Vec<Hash>>,
+    pub rollback: Option<Rollback>,
+}
+
+/// What a rollback names beside its clone and signatures (rule 37d, F185):
+/// the broken act, a rotation of the collective, by its id; and the
+/// resignations and steppings down (type 16) it registers, possibly none.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Rollback {
+    pub broken: Hash,
+    pub registers: Vec<Hash>,
 }
 
 /// The Law declaration of kind 0 among these declarations, decoded. `None`
@@ -2455,6 +2466,24 @@ pub fn declared_in(ds: &[Declaration], law: &Hash) -> Option<R<Declared>> {
                     .map_err(|_| LawError::Shape("Law declaration"))?,
                 signatures: None,
                 absence: None,
+                rollback: None,
+            }),
+            // A rollback: `[clone, [+ hash], broken, [* hash]]`, its third
+            // element a hash, where the recovery form has a list (F185).
+            Some(Value::Array(a)) if a.len() == 4 => Ok(Declared {
+                agreement: hash(&a[0], "Law declaration: the clone")?,
+                signatures: Some(hashes(&a[1], "Law declaration: signatures")?),
+                absence: None,
+                rollback: Some(Rollback {
+                    broken: hash(&a[2], "Law declaration: the broken act")?,
+                    registers: match &a[3] {
+                        Value::Array(x) => x
+                            .iter()
+                            .map(|h| hash(h, "Law declaration: what a rollback registers"))
+                            .collect::<R<_>>()?,
+                        _ => return Err(LawError::Shape("Law declaration: what a rollback registers")),
+                    },
+                }),
             }),
             Some(Value::Array(a)) if a.len() == 2 || a.len() == 3 => Ok(Declared {
                 agreement: hash(&a[0], "Law declaration: the clone")?,
@@ -2463,6 +2492,7 @@ pub fn declared_in(ds: &[Declaration], law: &Hash) -> Option<R<Declared>> {
                     .get(2)
                     .map(|x| hashes(x, "Law declaration: signatures on a declaration"))
                     .transpose()?,
+                rollback: None,
             }),
             _ => Err(LawError::Shape("Law declaration")),
         })
@@ -2496,6 +2526,23 @@ pub fn recovery_declaration(law: &Hash, clone: &Hash, signatures: &[Hash], absen
         spec: *law,
         kind: kinds::FOUNDING_AGREEMENT,
         value: Some(Value::Array(vec![b(clone), hashes_value(signatures), hashes_value(absence)])),
+    }
+}
+
+/// The declaration a rollback carries (rule 37d, F185): the clone of the
+/// agreement in force just before the broken act, the signature acts that
+/// complete it, the broken act it names, and the resignations and
+/// steppings down it registers, possibly none.
+pub fn rollback_declaration(law: &Hash, clone: &Hash, signatures: &[Hash], broken: &Hash, registers: &[Hash]) -> Declaration {
+    Declaration {
+        spec: *law,
+        kind: kinds::FOUNDING_AGREEMENT,
+        value: Some(Value::Array(vec![
+            b(clone),
+            hashes_value(signatures),
+            b(broken),
+            Value::Array(registers.iter().map(b).collect()),
+        ])),
     }
 }
 

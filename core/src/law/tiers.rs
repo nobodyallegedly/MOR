@@ -212,6 +212,20 @@ fn lies_in(
     Ok((areas, nowhere))
 }
 
+/// The powers a rollback's mark names (rule 37d, F185): the constitutional
+/// change rule of the agreement in force just before the broken act, its
+/// parent, and, where the rollback also changes the judicial tier, the
+/// judicial tier's rule too (rules 44c.1, 46a), whatever its other changes;
+/// a rollback may change nothing.
+pub fn rollback_powers(parent: &Terms, clone: &Terms) -> Vec<Power> {
+    let mut out = vec![Power::Constitutional];
+    if changes(parent, clone).iter().any(|c| c.tier() == Tier::Judicial) {
+        out.push(Power::Judicial);
+    }
+    out.sort_by_key(|p| p.encoding());
+    out
+}
+
 /// The powers a clone of a collective's agreement needs, from its changes
 /// alone (rule 44c, 1 and 2), ascending as a mark lists them. A deal's
 /// clone needs the clone rule, every party (rule 45b). `ext_layers` gives

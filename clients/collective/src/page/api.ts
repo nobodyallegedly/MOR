@@ -151,7 +151,7 @@ export interface State {
      * could be had. While either is set, the rules shown are this device's
      * copy, not the rules in force.
      */
-    law: { broken: string | null; unread: string | null };
+    law: { broken: string | null; unread: string | null; rollback: boolean };
     departed: { id: string; name: string; record: string; stillParty: boolean }[];
     steppedDown: { id: string; name: string; area: number; record: string }[];
     records: number;

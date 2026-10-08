@@ -565,7 +565,10 @@ export async function verifyRelease(
     // No signature can make it a release: say what Law reads, as a sentence.
     fail(
       consent.kind === 'broken'
-        ? `Law reads the collective that published it as broken: no agreement can be found in force for it, so no member's signature can make this a release. Law's reason: ${consent.reason ?? 'none given'}`
+        ? v.lawBroken(LAW_SPECS, d.signer)
+          ? `Law reads the collective that published it as broken: no agreement can be found in force for it, so no member's signature can make this a release. Law's reason: ${consent.reason ?? 'none given'}`
+          : // Rolled back since (Law rule 37d, F185): the act stays in the broken stretch.
+            `It was published while Law read the collective that published it as broken, before the rollback that brought the collective back: it counts for nothing, for good, so no member's signature can make this a release (Law rule 37d). Law's reason for the broken act: ${consent.reason ?? 'none given'}`
         : `Law counts it as no release of its publisher, whatever signatures it gathers: ${consent.reason ?? consent.kind}`,
     );
   } else if (!consent.met) {

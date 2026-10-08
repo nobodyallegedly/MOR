@@ -131,6 +131,10 @@ export interface CollectiveFile {
   departed?: {
     member: string;
     resignation?: string;
+    /** The agreement the resignation names: during a broken stretch, the one in force just before the broken act (Law rule 37a, F185). */
+    named?: string;
+    /** The rollback that registered the resignation, its line (Law rule 37d, F185). */
+    rollback?: string;
     declaration?: string;
     record?: string;
     signatures?: string[];
@@ -152,6 +156,13 @@ export interface CollectiveFile {
   debts?: { id: string; key: string; creditor: string }[];
   /** Kept by the collective client: its payee pointers, newest last. */
   pointers?: string[];
+  /**
+   * Kept by this client (F185), absent in older files: the rules of each
+   * agreement put in force from this device, by its id, so that a rollback
+   * can rebuild the agreement in force just before a broken act (Law rule
+   * 37d).
+   */
+  rules?: Record<string, { governance: Governance; members: string[]; signingHolder: string }>;
 }
 
 /** What happened to one act the members signed. */
@@ -265,14 +276,36 @@ export class TestCollective {
    * as departed in the departed members entry, nothing else (Law rules
    * 37a, 46b; F121, F124 N5).
    */
-  departedAfter(g: Governance, members: string[]): Governance {
+  departedAfter(g: Governance, members: string[], from: string[] = this.f.members): Governance {
     const own = g.stakes?.find((x) => x.object === null);
     const departed = [...(g.departed ?? [])];
-    for (const m of this.f.members.filter((x) => !members.includes(x))) {
+    for (const m of from.filter((x) => !members.includes(x))) {
       const share = own?.holders.find(([h]) => h === m)?.[1] ?? 0;
       if (share > 0 && !departed.includes(m)) departed.push(m);
     }
     return departed.length ? { ...g, departed } : g;
+  }
+
+  /** Keep the rules of the agreement now in force (F185): what a rollback rebuilds. */
+  remember(): void {
+    this.f.rules = { ...(this.f.rules ?? {}), [this.f.agreement]: { governance: this.f.governance, members: [...this.f.members], signingHolder: this.f.signingHolder } };
+  }
+
+  /**
+   * The rules a rollback writes (Law rule 37d, F185): those of `before`,
+   * the agreement in force just before the broken act, as this device kept
+   * them, without the members in `leaving`, whose resignations the
+   * rollback registers. Null where this device kept no rules for it.
+   */
+  rollbackRules(before: string, leaving: string[]): { governance: Governance; members: string[]; holder: string } | null {
+    const r = this.f.rules?.[before];
+    if (!r) return null;
+    const members = r.members.filter((m) => !leaving.includes(m));
+    return {
+      governance: this.departedAfter(r.governance, members, r.members),
+      members,
+      holder: members.includes(r.signingHolder) ? r.signingHolder : members[0],
+    };
   }
 
   /** Who holds the everyday key after a member change: the holder if they stay, else the first member. */
@@ -364,6 +397,7 @@ export class TestCollective {
       },
       opts.via ?? {},
     );
+    c.remember();
     const sent = await c.id.publishGenesis();
     await c.id.publishRoutes([{ scope: null, hints: opts.relays }]);
     return { collective: c, agreement: proposed.id, signed, sent };
@@ -444,13 +478,43 @@ export class TestCollective {
     const unsent = await opts.beforeSend?.(proposed.id);
     if (unsent) return stop(unsent, proposed.id, signed);
 
+    const declaration = {
+      spec: LAW_SPECS.law,
+      kind: FOUNDING_AGREEMENT,
+      value: proposed.id,
+      signatures: signed.map((s) => s.act),
+      ...(absence.length ? { absence } : {}),
+    };
+    const { id, sent, at } = await this.rotateTo({ agreement: proposed.id, members: opts.members, governance, holder, rebuilders: opts.rebuilders, declaration });
+    for (const d of recovered) {
+      d.rotation = id;
+      d.at = at;
+    }
+    return { clone: proposed.id, rotation: id, record: line, resigned, signed, sent };
+  }
+
+  /**
+   * Rotate the collective to declare a clone (Law rule 37, Flaw M): the
+   * current safety key, rebuilt from the shares of `rebuilders` (a
+   * leaving member hands over nothing), signs a rotation carrying
+   * `declaration` and committing to a next key dealt to `members` only.
+   * The change waits in `pending` until the homes count it ([`settle`]).
+   */
+  private async rotateTo(o: {
+    agreement: string;
+    members: string[];
+    governance: Governance;
+    holder: string;
+    rebuilders: string[];
+    declaration: Record<string, unknown>;
+  }): Promise<{ id: string; sent: Submitted[]; at: number }> {
     // The rotating device: rebuild the current key from k shares of members who stay.
     const shares = this.f.safety.shares
-      .filter((s) => opts.rebuilders.includes(s.holder))
+      .filter((s) => o.rebuilders.includes(s.holder))
       .slice(0, this.f.safety.threshold)
       .map((s) => unb64(s.share));
     const current = rebuildSafety(shares) as { scheme: number; seeds: Uint8Array; commit: string };
-    const dealt = deal(opts.members, governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
+    const dealt = deal(o.members, o.governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
 
     const f = this.f.identity;
     const newSigning = newSigningSecret();
@@ -463,29 +527,15 @@ export class TestCollective {
       identity: f.identity,
       previous: actId(this.id.chainActs()[f.position]),
       position: f.position + 1,
-      safetyScheme: current.scheme,
       safetySeeds: current.seeds,
+      safetyScheme: current.scheme,
       newSigningPublic: signingPublic(newSigning),
       nextSafetyScheme: dealt.scheme,
       nextSafetyCommit: dealt.commit,
       kept,
-      // The clone, and the signature acts that complete it (Flaw M).
-      // At a recovery rotation, also the signature acts on the declaration (Flaw B18).
-      declarations: [
-        {
-          spec: LAW_SPECS.law,
-          kind: FOUNDING_AGREEMENT,
-          value: proposed.id,
-          signatures: signed.map((s) => s.act),
-          ...(absence.length ? { absence } : {}),
-        },
-      ],
+      declarations: [o.declaration],
     });
     const id = actId(rotation);
-    for (const d of recovered) {
-      d.rotation = id;
-      d.at = seq.length;
-    }
     f.pending = {
       rotation: b64(rotation),
       id,
@@ -494,10 +544,66 @@ export class TestCollective {
       homes: f.homes,
       rule: f.rule,
     };
-    this.f.pending = { safety: dealt, agreement: proposed.id, members: opts.members, governance: governance === this.f.governance ? undefined : governance };
-    this.f.signingHolder = holder;
+    this.f.pending = { safety: dealt, agreement: o.agreement, members: o.members, governance: o.governance === this.f.governance ? undefined : o.governance };
+    this.f.signingHolder = o.holder;
     const sent = await this.id.submitRotation();
-    return { clone: proposed.id, rotation: id, record: line, resigned, signed, sent };
+    return { id, sent, at: seq.length };
+  }
+
+  /**
+   * Roll a broken collective back (Law rule 37d, F185): a clone of
+   * `before`, the agreement in force just before the broken act, rebuilt
+   * from the rules this device kept for it ([`rollbackRules`]), without the
+   * members in `leaving`, whose resignations (`registers`) it registers;
+   * its mark as the caller had Law count it (the constitutional change
+   * rule of `before`, counted among the voices that remain); signed by
+   * `signers`; then a rotation declaring it as a rollback, naming the
+   * broken act. The rotation is signed with the keys the broken stretch
+   * holds, rebuilt from the shares of `rebuilders`, and deals a fresh
+   * safety key to the members after. Nothing is erased: the broken act and
+   * everything after it stay shown, counting for nothing. Save every file
+   * after.
+   */
+  async rollback(opts: {
+    broken: string;
+    before: string;
+    leaving: string[];
+    registers: string[];
+    proposer: TestIdentity;
+    signers: TestIdentity[];
+    rebuilders: string[];
+    mark: MarkEntry[];
+    /** New rules, where the members chose new numbers for the members left: otherwise those of `before`. */
+    governance?: Governance;
+    /** The exact clone payload shown to the members: refused if the clone made now differs. */
+    expect?: Uint8Array;
+    beforeClone?: () => Promise<string | null>;
+    beforeSend?: (clone: string) => Promise<string | null>;
+  }): Promise<{ clone: string; rotation: string; signed: Signed[]; sent: Submitted[]; stopped?: string }> {
+    if (this.f.pending || this.f.identity.pending) throw new Error('a member change is already pending: resend it');
+    const kept = this.rollbackRules(opts.before, opts.leaving);
+    if (!kept) throw new Error('this device kept no rules for the agreement in force before the broken act');
+    const r = opts.governance ? { ...kept, governance: opts.governance } : kept;
+    const payload = termsPayload(collectiveTerms(r.governance, r.members, r.holder, opts.before, opts.mark));
+    if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
+    const stop = (stopped: string, clone = '', signed: Signed[] = []) => ({ clone, rotation: '', signed, sent: [], stopped });
+    const ahead = await opts.beforeClone?.();
+    if (ahead) return stop(ahead);
+    const proposed = await proposePayload(opts.proposer, payload, opts.before, this.f.relays);
+    const signed: Signed[] = [];
+    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
+    const unsent = await opts.beforeSend?.(proposed.id);
+    if (unsent) return stop(unsent, proposed.id, signed);
+    const declaration = {
+      spec: LAW_SPECS.law,
+      kind: FOUNDING_AGREEMENT,
+      value: proposed.id,
+      signatures: signed.map((s) => s.act),
+      broken: opts.broken,
+      registers: opts.registers,
+    };
+    const { id, sent } = await this.rotateTo({ agreement: proposed.id, members: r.members, governance: r.governance, holder: r.holder, rebuilders: opts.rebuilders, declaration });
+    return { clone: proposed.id, rotation: id, signed, sent };
   }
 
   /**
@@ -599,6 +705,7 @@ export class TestCollective {
     this.f.governance = opts.governance;
     this.f.agreement = proposed.id;
     this.f.agreements.push(proposed.id);
+    this.remember();
     return { clone: proposed.id, record: r.id, signed };
   }
 
@@ -677,6 +784,7 @@ export class TestCollective {
       this.f.members = p.members;
       if (p.governance) this.f.governance = p.governance;
       this.f.pending = null;
+      this.remember();
     }
     return counts;
   }

@@ -32,7 +32,7 @@
 //!    ([`LawView::binding`]).
 
 use super::formats::*;
-use super::tiers::{changes, powers_needed, Change, Tier};
+use super::tiers::{changes, powers_needed, rollback_powers, Change, Tier};
 use crate::chain::{Resolution, Status, Verifier, Held};
 use crate::hash::Hash;
 use crate::identity::{KeptTip, Payload, Rotation};
@@ -115,6 +115,9 @@ pub struct LawView<'a> {
     adopting: RefCell<BTreeSet<Hash>>,
     histories: RefCell<BTreeMap<(Hash, usize, Vec<Hash>), Rc<History>>>,
     ending_sigs: RefCell<BTreeMap<Hash, Rc<EndingSigs>>>,
+    /// The chain read up to each link ([`LawView::chain_state`]), by
+    /// collective and link: it depends on what the verifier holds alone.
+    chains: RefCell<BTreeMap<(Hash, usize), ChainState>>,
     /// F153: whether identity answers resting on the verifier's own failed
     /// attempts to reach homes are taken as they are. Never for a view a
     /// caller makes: only for the comparison [`Self::binding`] runs.
@@ -151,6 +154,29 @@ pub struct Agreement {
     /// adds or makes a holder, has a valid signature act on it, so a record
     /// or rotation naming them could put it in force.
     pub ready: bool,
+}
+
+/// The collective's chain read up to a link (rules 37, 37d).
+#[derive(Clone)]
+enum ChainState {
+    /// The agreement its declarations put in force there.
+    InForce(Hash),
+    /// Broken: Law's reason; and, where a rollback can bring it back
+    /// (F185), the broken act's link and the agreement in force just
+    /// before it.
+    Broken { reason: String, act: Option<(usize, Hash)> },
+}
+
+/// A broken collective's broken act, where a rollback can bring it back
+/// (rule 37d, F185; [`LawView::broken_act`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BrokenAct {
+    /// The broken act: a rotation of the collective, by its id.
+    pub act: Hash,
+    /// The agreement in force just before it: a rollback's parent.
+    pub before: Hash,
+    /// Why Law reads the rotation as failing rule 37.
+    pub reason: String,
 }
 
 /// What a clone is at a record or rotation (rules 45, 45a, A2, Flaw M).
@@ -407,6 +433,7 @@ impl<'a> LawView<'a> {
             adopting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
             ending_sigs: RefCell::new(BTreeMap::new()),
+            chains: RefCell::new(BTreeMap::new()),
             trust_own_attempts: false,
         }
     }
@@ -454,6 +481,7 @@ impl<'a> LawView<'a> {
             adopting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
             ending_sigs: RefCell::new(BTreeMap::new()),
+            chains: RefCell::new(BTreeMap::new()),
             trust_own_attempts,
         }
     }
@@ -654,25 +682,41 @@ impl<'a> LawView<'a> {
     /// The checks a clone needs against its parent and lineage (rules 44c,
     /// 45a, 45b; "Areas"; Q26, Q32), without signatures. Returns the
     /// powers needed.
-    fn clone_static(&self, parent: &Terms, clone: &Terms, lineage: &[(Hash, Terms)]) -> R<Result<Vec<Power>, String>> {
+    /// With `rollback`, the clone is a rollback's (rule 37d, F185): its mark
+    /// names the powers [`rollback_powers`] gives, never a succession plan.
+    fn clone_static(&self, parent: &Terms, clone: &Terms, lineage: &[(Hash, Terms)], rollback: bool) -> R<Result<Vec<Power>, String>> {
         if parent.is_collective() != clone.is_collective() {
             return Ok(Err("a clone keeps the parent's kind: a collective, or a deal".into()));
         }
         let Some(mark) = clone.field4.mark() else {
             return Ok(Err("a clone carries a mark".into()));
         };
+        if rollback && !parent.is_collective() {
+            return Ok(Err("only a collective is rolled back (rule 37d)".into()));
+        }
         if mark.iter().any(|e| matches!(e.power, Power::Plan(_))) {
             if !parent.is_collective() {
                 return Ok(Err("a deal's clone names the clone rule (rule 45b)".into()));
             }
+            if rollback {
+                return Ok(Err(
+                    "a rollback's mark names the constitutional change rule, never a succession plan (rule 37d)".into(),
+                ));
+            }
             return Ok(Self::plan_static(parent, clone, mark));
         }
-        let needs = powers_needed(parent, clone, &self.mips, &self.ext())?;
+        let needs = if rollback {
+            rollback_powers(parent, clone)
+        } else {
+            powers_needed(parent, clone, &self.mips, &self.ext())?
+        };
         let named: Vec<Power> = mark.iter().map(|e| e.power.clone()).collect();
         if named != needs {
-            return Ok(Err(
-                "the mark names other powers than those the clone's changes require (rule 45a)".into(),
-            ));
+            return Ok(Err(if rollback {
+                "a rollback's mark names the constitutional change rule, and the judicial tier's rule where it changes a judge, nothing else (rule 37d)".into()
+            } else {
+                "the mark names other powers than those the clone's changes require (rule 45a)".into()
+            }));
         }
         if !parent.is_collective() {
             // Every party whose voice remains: checked with the
@@ -794,6 +838,17 @@ impl<'a> LawView<'a> {
     /// An agreement: its terms, who signed, and what can be said of it
     /// without a collective's sequence.
     pub fn agreement(&self, id: &Hash) -> R<Agreement> {
+        self.agreement_as(id, false)
+    }
+
+    /// A clone read as a rollback's (rule 37d, F185): as [`Self::agreement`],
+    /// its mark checked against the powers a rollback names. Whether a
+    /// rotation declares it so is the chain's, not the terms'.
+    pub fn rollback_agreement(&self, id: &Hash) -> R<Agreement> {
+        self.agreement_as(id, true)
+    }
+
+    fn agreement_as(&self, id: &Hash, rollback: bool) -> R<Agreement> {
         let lineage = self.lineage(id)?;
         let terms = lineage[0].1.clone();
         let signed = self.signers(id, &terms.parties);
@@ -810,7 +865,7 @@ impl<'a> LawView<'a> {
             });
         };
         let parent = &lineage[1].1;
-        let st = self.clone_static(parent, &terms, &lineage[1..])?;
+        let st = self.clone_static(parent, &terms, &lineage[1..], rollback)?;
         let (needs, mut invalid) = match st {
             Ok(n) => (Some(n), None),
             Err(e) => (None, Some(e)),
@@ -960,14 +1015,63 @@ impl<'a> LawView<'a> {
     }
 
     /// The agreement in force at link `k` from the chain's declarations
-    /// alone (before any record under that key), checked (rule 37, Flaw M).
+    /// alone (before any record under that key), checked (rule 37, Flaw M);
+    /// in a broken stretch, why Law reads the collective as broken (rule
+    /// 37d, F185).
     fn base(&self, col: &Col, k: usize) -> R<Result<Hash, String>> {
+        Ok(match self.chain_state(col, k)? {
+            ChainState::InForce(h) => Ok(h),
+            ChainState::Broken { reason, .. } => Err(reason),
+        })
+    }
+
+    /// The chain read up to link `k` (rules 37, 37d): the agreement it
+    /// declares in force there, or the collective broken. A rotation whose
+    /// declared agreement fails rule 37 is the broken act; from it on,
+    /// only a rollback naming it brings the collective back (F185). A
+    /// rotation declaring no Law agreement, or one in neither form, leaves
+    /// it broken with no way back (RB4, open).
+    fn chain_state(&self, col: &Col, k: usize) -> R<ChainState> {
+        if let Some(x) = self.chains.borrow().get(&(col.id, k)) {
+            return Ok(x.clone());
+        }
+        let x = self.chain_state_inner(col, k)?;
+        self.chains.borrow_mut().insert((col.id, k), x.clone());
+        Ok(x)
+    }
+
+    fn chain_state_inner(&self, col: &Col, k: usize) -> R<ChainState> {
         let mut cur: Option<Hash> = None;
+        // In a broken stretch: the broken act's link, the agreement in
+        // force just before it, and Law's reason.
+        let mut broken: Option<(usize, Hash, String)> = None;
         for j in 0..=k {
-            let d = match declared_in(&col.res.states[j].declarations, &self.law()) {
+            let dd = declared_in(&col.res.states[j].declarations, &self.law());
+            if let Some((bj, before, _)) = &broken {
+                // Every rotation of the broken stretch counts for nothing,
+                // save a rollback naming the broken act that completes.
+                if let Some(Ok(d)) = &dd {
+                    if let (Some(rb), Some(sigs)) = (&d.rollback, &d.signatures) {
+                        if rb.broken == col.res.links[*bj].act
+                            && self.rollback_at(col, j, before, &d.agreement, sigs, &rb.registers)?.is_ok()
+                        {
+                            cur = Some(d.agreement);
+                            broken = None;
+                        }
+                    }
+                }
+                continue;
+            }
+            let d = match dd {
                 None if cur.is_none() => continue,
-                None => return Ok(Err("a collective removed its agreement".into())),
-                Some(Err(_)) => return Ok(Err("a Law declaration in neither form".into())),
+                None => return Ok(ChainState::Broken {
+                    reason: "a collective removed its agreement".into(),
+                    act: None,
+                }),
+                Some(Err(_)) => return Ok(ChainState::Broken {
+                    reason: "a Law declaration in neither form".into(),
+                    act: None,
+                }),
                 Some(Ok(d)) => d,
             };
             let changed = j == 0
@@ -982,60 +1086,244 @@ impl<'a> LawView<'a> {
                 // declaration keep counting ([`Self::records_since`]).
                 continue;
             }
-            match (cur, &d.signatures) {
-                (None, None) => {
-                    let a = self.agreement(&d.agreement)?;
-                    if a.terms.parent.is_some() {
-                        return Ok(Err("the first declared agreement is not founding terms".into()));
-                    }
-                    if !a.terms.is_collective() {
-                        return Ok(Err("the declared agreement has no key grammar".into()));
-                    }
-                    if a.exists != Some(true) {
+            let Some(c) = cur else {
+                if d.signatures.is_some() {
+                    return Ok(ChainState::Broken {
+                        reason: "a genesis declares founding terms; a rotation declares a clone with its signature acts (Flaw M)".into(),
+                        act: None,
+                    });
+                }
+                let a = self.agreement(&d.agreement)?;
+                let why = if a.terms.parent.is_some() {
+                    Some("the first declared agreement is not founding terms")
+                } else if !a.terms.is_collective() {
+                    Some("the declared agreement has no key grammar")
+                } else if a.exists != Some(true) {
+                    Some("the founding agreement does not exist: a founder has not signed (Q11)")
+                } else {
+                    None
+                };
+                if let Some(w) = why {
+                    return Ok(ChainState::Broken { reason: w.into(), act: None });
+                }
+                cur = Some(d.agreement);
+                continue;
+            };
+            // A rotation after the agreement in force: its declared
+            // agreement meets rule 37, or this rotation is the broken act.
+            if let Some(w) = self.rotation_fails(col, j, c, &d)? {
+                let before = self.in_force_at_rotation(col, j, c)?.agreement;
+                broken = Some((j, before, w));
+                continue;
+            }
+            cur = Some(d.agreement);
+        }
+        if let Some((bj, before, reason)) = broken {
+            return Ok(ChainState::Broken {
+                reason,
+                act: Some((bj, before)),
+            });
+        }
+        Ok(match cur {
+            Some(h) => ChainState::InForce(h),
+            None => ChainState::Broken {
+                reason: "no agreement declared".into(),
+                act: None,
+            },
+        })
+    }
+
+    /// Why rotation `j`'s declared agreement fails rule 37, the agreement
+    /// `c` being declared in force before it; `None` when it meets it.
+    fn rotation_fails(&self, col: &Col, j: usize, c: Hash, d: &Declared) -> R<Option<String>> {
+        let Some(sigs) = &d.signatures else {
+            return Ok(Some(
+                "a genesis declares founding terms; a rotation declares a clone with its signature acts (Flaw M)".into(),
+            ));
+        };
+        if d.rollback.is_some() {
+            return Ok(Some("a rotation declares a rollback where the collective is not broken (rule 37d)".into()));
+        }
+        let at = self.in_force_at_rotation(col, j, c)?;
+        let k_terms = self.terms(&d.agreement)?;
+        if k_terms.parent != Some(at.agreement) {
+            return Ok(Some(
+                "the declared clone does not descend from the agreement in force at the rotation (rule 37)".into(),
+            ));
+        }
+        let parent = self.terms(&at.agreement)?;
+        if !changes(&parent, &k_terms)
+            .iter()
+            .any(|c| c.tier() == Tier::Constitutional)
+        {
+            return Ok(Some("a rotation declares only a clone that changes the constitutional tier (rule 37, B5)".into()));
+        }
+        if let Some(w) = self.recovery_signatures(col, j, &at.agreement, &d.agreement, d.absence.as_deref())? {
+            return Ok(Some(w));
+        }
+        let own = self.recovery_departures(col, j, &at.agreement, &d.agreement)?;
+        Ok(match self.clone_at(col, &d.agreement, sigs, Line::Rotation(j), &own)? {
+            CloneState::Complete => None,
+            CloneState::Draft(w) | CloneState::Invalid(w) => Some(format!(
+                "the rotation's declared clone is not complete with the signature acts it names: {w}"
+            )),
+        })
+    }
+
+    /// A rollback at rotation `r` (rule 37d, F185): its clone `k` is a clone
+    /// of `before`, the agreement in force just before the broken act,
+    /// marked with the rollback's powers, and complete at `r` with the
+    /// signature acts `sigs` alone, counted among the voices that remain
+    /// there, the departures it registers in effect. Why not, otherwise.
+    fn rollback_at(&self, col: &Col, r: usize, before: &Hash, k: &Hash, sigs: &[Hash], registers: &[Hash]) -> R<Result<(), String>> {
+        if self.terms(k)?.parent.as_ref() != Some(before) {
+            return Ok(Err(
+                "the rollback's clone is not a clone of the agreement in force just before the broken act (rule 37d)".into(),
+            ));
+        }
+        let own = match self.rollback_departures(before, registers)? {
+            Ok(x) => x,
+            Err(w) => return Ok(Err(w)),
+        };
+        Ok(match self.clone_at_as(col, k, sigs, Line::Rotation(r), &own, true)? {
+            CloneState::Complete => Ok(()),
+            CloneState::Draft(w) | CloneState::Invalid(w) => Err(format!(
+                "the rollback's clone is not complete with the signature acts it names: {w}"
+            )),
+        })
+    }
+
+    /// The departures a rollback registers (rule 37d, "Collectives in the
+    /// identity chain"): resignations and steppings down (type 16) by
+    /// parties of `before`, naming it or an agreement it descends from by
+    /// clones. Anything else there, a declaration of absence included
+    /// (RB3, open), and the rollback puts nothing in force.
+    fn rollback_departures(&self, before: &Hash, registers: &[Hash]) -> R<Result<Vec<Departure>, String>> {
+        let t = self.terms(before)?;
+        let lineage: Vec<Hash> = self.lineage(before)?.into_iter().map(|(i, _)| i).collect();
+        let mut out = vec![];
+        for x in registers {
+            let Some(a) = self.v.get(x) else {
+                return Ok(Err("the rollback registers an act this verifier does not hold".into()));
+            };
+            if !self.is_law(a, types::RESIGNATION) {
+                return Ok(Err(
+                    "a rollback registers resignations and steppings down only (rule 37d; a declaration of absence is open, RB3)".into(),
+                ));
+            }
+            let Some(p) = a.act.outside.signer.filter(|p| t.parties.contains(p)) else {
+                return Ok(Err(
+                    "the rollback registers a resignation of someone who is not a party of the agreement in force just before the broken act".into(),
+                ));
+            };
+            if !self.valid(x) {
+                return Ok(Err("the rollback registers a resignation that is not valid".into()));
+            }
+            let Ok(res) = Resignation::decode(&a.inside) else {
+                return Ok(Err("the rollback registers a resignation not in the format".into()));
+            };
+            if !lineage.contains(&res.agreement) {
+                return Ok(Err(
+                    "the rollback registers a resignation from an agreement not in force just before the broken act (rule 37a)".into(),
+                ));
+            }
+            let kind = match res.area {
+                None => DepartureKind::Resigned { agreement: res.agreement },
+                Some(area) => {
+                    if !self.terms(&res.agreement)?.area(area).is_some_and(|ar| ar.holders.contains(&p)) {
                         return Ok(Err(
-                            "the founding agreement does not exist: a founder has not signed (Q11)".into(),
+                            "the rollback registers a stepping down from an area its signer does not hold".into(),
                         ));
                     }
-                    cur = Some(d.agreement);
+                    DepartureKind::SteppedDown { agreement: res.agreement, area }
                 }
-                (Some(_), None) | (None, Some(_)) => {
-                    return Ok(Err(
-                        "a genesis declares founding terms; a rotation declares a clone with its signature acts (Flaw M)".into(),
-                    ))
-                }
-                (Some(c), Some(sigs)) => {
-                    let at = self.in_force_at_rotation(col, j, c)?;
-                    let k_terms = self.terms(&d.agreement)?;
-                    if k_terms.parent != Some(at.agreement) {
-                        return Ok(Err(
-                            "the declared clone does not descend from the agreement in force at the rotation (rule 37)".into(),
-                        ));
-                    }
-                    let parent = self.terms(&at.agreement)?;
-                    if !changes(&parent, &k_terms)
-                        .iter()
-                        .any(|c| c.tier() == Tier::Constitutional)
-                    {
-                        return Ok(Err(
-                            "a rotation declares only a clone that changes the constitutional tier (rule 37, B5)".into(),
-                        ));
-                    }
-                    if let Some(w) = self.recovery_signatures(col, j, &at.agreement, &d.agreement, d.absence.as_deref())? {
-                        return Ok(Err(w));
-                    }
-                    let own = self.recovery_departures(col, j, &at.agreement, &d.agreement)?;
-                    match self.clone_at(col, &d.agreement, sigs, Line::Rotation(j), &own)? {
-                        CloneState::Complete => cur = Some(d.agreement),
-                        CloneState::Draft(w) | CloneState::Invalid(w) => {
-                            return Ok(Err(format!(
-                                "the rotation's declared clone is not complete with the signature acts it names: {w}"
-                            )))
-                        }
-                    }
-                }
+            };
+            out.push(Departure { act: *x, party: p, kind });
+        }
+        Ok(Ok(out))
+    }
+
+    /// The rollbacks that count up to link `upto`, each the rotation's link
+    /// and the departures it registers, which take effect there (rule 37d):
+    /// rotations whose Law declaration is a rollback, new at that link, and
+    /// at which the chain is in force.
+    fn rollback_lines(&self, col: &Col, upto: usize) -> R<Vec<(usize, Hash, Vec<Departure>)>> {
+        let mut out = vec![];
+        for m in 1..=upto.min(col.res.states.len().saturating_sub(1)) {
+            let Some(Ok(d)) = declared_in(&col.res.states[m].declarations, &self.law()) else {
+                continue;
+            };
+            let Some(rb) = &d.rollback else { continue };
+            if self.declared_at(col, m) != m || self.base(col, m)?.is_err() {
+                continue;
+            }
+            let Some(before) = self.terms(&d.agreement)?.parent else { continue };
+            if let Ok(own) = self.rollback_departures(&before, &rb.registers)? {
+                out.push((m, d.agreement, own));
             }
         }
-        Ok(cur.ok_or_else(|| "no agreement declared".to_string()))
+        Ok(out)
+    }
+
+    /// Where Law reads the collective as broken, and a rollback can bring it
+    /// back (rule 37d, F185): the broken act (a rotation, by its id), the
+    /// agreement in force just before it, and Law's reason. `None` where it
+    /// is not broken, is no collective, or is broken with no way back.
+    pub fn broken_act(&self, collective: &Hash) -> R<Option<BrokenAct>> {
+        let col = self.col(collective);
+        if col.res.links.is_empty() {
+            return Ok(None);
+        }
+        let b = col.res.links.len() - 1;
+        if !self.declares(&col, b) {
+            return Ok(None);
+        }
+        Ok(match self.chain_state(&col, b)? {
+            ChainState::Broken { reason, act: Some((j, before)) } => Some(BrokenAct {
+                act: col.res.links[j].act,
+                before,
+                reason,
+            }),
+            _ => None,
+        })
+    }
+
+    /// Who counts for a power of the agreement in force just before the
+    /// broken act, at a rollback made next (rules 37d, 44d): as
+    /// [`Self::next_voices`] counts it at the next line, the departures
+    /// registered on lines before the broken act in effect, none of the
+    /// broken stretch's, and `leaving` taken out (the parties whose
+    /// resignations the rollback will register). What a client names in a
+    /// rollback's mark. Err: why there is no such count (not broken, or
+    /// broken with no way back).
+    pub fn rollback_voices(&self, collective: &Hash, power: &Power, leaving: &[Hash]) -> R<Result<NextVoices, String>> {
+        let col = self.col(collective);
+        let Some(b) = self.broken_act(collective)? else {
+            return Ok(Err(match self.broken(collective)? {
+                Some(w) => format!("broken with no way back by a rollback: {w}"),
+                None => "not broken: there is nothing to roll back".into(),
+            }));
+        };
+        let parent = self.terms(&b.before)?;
+        let Some((among, rule)) = power_base(&parent, power) else {
+            return Ok(Err("a succession plan is counted as rule 48c says, not here".into()));
+        };
+        if matches!(power, Power::Area(a) if parent.area(*a).is_none()) {
+            return Ok(Err("that agreement has no such area".into()));
+        }
+        let area = match power {
+            Power::Area(a) => Some(*a),
+            _ => None,
+        };
+        let (voices, _) = self.voices(&col, Point::Tip, &b.before, &among, area, &BTreeMap::new(), &[])?;
+        let voices: Vec<Hash> = voices.into_iter().filter(|v| !leaving.contains(v)).collect();
+        let needed = rule.needed(voices.len());
+        Ok(Ok(NextVoices {
+            agreement: b.before,
+            among,
+            voices,
+            needed,
+        }))
     }
 
     /// The agreement in force just before rotation `j`: the one declared
@@ -1430,7 +1718,9 @@ impl<'a> LawView<'a> {
             Line::Record(r) => Ok(self.record_eval(col, r)?.in_force_at),
             Line::Rotation(j) => match self.base(col, j - 1)? {
                 Ok(b) => Ok(Some(self.in_force_at_rotation(col, j, b)?.agreement)),
-                Err(_) => Ok(None),
+                // A rollback's line: the agreement in force just before the
+                // broken act, its clone's parent (rule 37d, F185).
+                Err(_) => Ok(self.rollback_lines(col, j)?.into_iter().find(|(m, _, _)| *m == j).and_then(|(_, k, _)| self.terms(&k).ok()?.parent)),
             },
         }
     }
@@ -1560,11 +1850,28 @@ impl<'a> LawView<'a> {
                 Line::Record(h) if !is_line => self.before(col, h, l)?,
                 _ => self.line_before(col, p, l),
             };
-            if yes {
+            // An act of the broken stretch places nothing: it counts for
+            // nothing in Law (rule 37d, F185). Asked only of a placement
+            // before the line, so never of the line being judged.
+            if yes && !self.in_broken_stretch(col, p)? {
                 return Ok(true);
             }
         }
         Ok(false)
+    }
+
+    /// Whether an act of the collective, or a rotation, lies in a broken
+    /// stretch: bound to a link (or, for a rotation, at a link) where Law
+    /// finds no agreement in force (rule 37d, F185).
+    fn in_broken_stretch(&self, col: &Col, p: Line) -> R<bool> {
+        let k = match p {
+            Line::Record(h) => match col.pos(h) {
+                Some(k) => k,
+                None => return Ok(false),
+            },
+            Line::Rotation(j) => j,
+        };
+        Ok(self.base(col, k)?.is_err())
     }
 
     // ------------------------------------------------------------ records and departures
@@ -1818,6 +2125,14 @@ impl<'a> LawView<'a> {
                 }
             }
         }
+        // A rollback is a line: the departures it registers take effect
+        // there (rule 37d, F185). One at this point's own link is before
+        // it: an act or record bound to its key comes after it.
+        for (m, _, ds) in self.rollback_lines(col, limit)? {
+            for d in ds {
+                out.push((Line::Rotation(m), d));
+            }
+        }
         if let Point::Line(l) = point {
             for d in own {
                 out.push((l, d.clone()));
@@ -2024,13 +2339,26 @@ impl<'a> LawView<'a> {
         at: Line<'a>,
         own: &[Departure],
     ) -> R<CloneState> {
+        self.clone_at_as(col, k, sigs, at, own, false)
+    }
+
+    /// [`Self::clone_at`], for a rollback's clone with `rollback` (rule 37d).
+    fn clone_at_as(
+        &self,
+        col: &Col,
+        k: &Hash,
+        sigs: &[Hash],
+        at: Line<'a>,
+        own: &[Departure],
+        rollback: bool,
+    ) -> R<CloneState> {
         let lineage = self.lineage(k)?;
         let clone = &lineage[0].1;
         let Some(pid) = clone.parent else {
             return Ok(CloneState::Invalid("not a clone".into()));
         };
         let parent = &lineage[1].1;
-        let needs = match self.clone_static(parent, clone, &lineage[1..])? {
+        let needs = match self.clone_static(parent, clone, &lineage[1..], rollback)? {
             Ok(n) => n,
             Err(w) => return Ok(CloneState::Invalid(w)),
         };
@@ -3071,6 +3399,19 @@ impl<'a> LawView<'a> {
                 }
             }
         }
+        // A rollback registering the departure of an area's last holder
+        // whose voice there remained freezes it at its line (rules 37b, 37d).
+        for (m, k, own) in self.rollback_lines(col, col.res.links.len().saturating_sub(1))? {
+            if own.is_empty() || out.iter().any(|l| matches!(l, Line::Rotation(x) if *x == m)) {
+                continue;
+            }
+            if let Some(a) = self.terms(&k)?.area(area) {
+                let (_, remaining) = self.voices(col, Point::Line(Line::Rotation(m)), &k, &a.holders, Some(area), &BTreeMap::new(), &own)?;
+                if remaining.is_empty() {
+                    out.push(Line::Rotation(m));
+                }
+            }
+        }
         Ok(out)
     }
 
@@ -3651,6 +3992,10 @@ impl<'a> LawView<'a> {
                     all.extend(e.registers.iter().cloned());
                 }
             }
+        }
+        // A rollback registers departures too (rule 37d, F185).
+        for (_, _, ds) in self.rollback_lines(&col, b)? {
+            all.extend(ds);
         }
         for d in all {
             match d.kind {

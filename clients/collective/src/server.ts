@@ -136,6 +136,10 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
             return actions.prepareSign({ member: text(a.member), release: text(a.release).trim().toLowerCase(), at: list(a.at) });
           case 'leave':
             return actions.prepareLeave({ collective: text(a.collective), member: text(a.member) });
+          case 'rollback': {
+            const c = store.collective(text(a.collective));
+            return actions.prepareRollback({ collective: text(a.collective), rules: a.rules ? rulesOf(a.rules, c.f.members.length) : undefined });
+          }
           case 'stepdown':
             return actions.prepareStepDown({ collective: text(a.collective), member: text(a.member) });
           case 'declare':

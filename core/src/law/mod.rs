@@ -19,9 +19,9 @@ pub mod tiers;
 pub mod view;
 
 pub use formats::*;
-pub use tiers::{changes, judicial_changes, powers_needed, Change, Tier};
+pub use tiers::{changes, judicial_changes, powers_needed, rollback_powers, Change, Tier};
 pub use view::{
     Agreement, AreaCount, Backing, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement,
-    ChainBreak, DepartureKind, ForkEval, LawView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,
+    BrokenAct, ChainBreak, DepartureKind, ForkEval, LawView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,
     ReleaseEval, Role, ServiceAccount, SplitEval, PurchaseEval, PurchaseVerdict, Unpaid, Unsplit,
 };

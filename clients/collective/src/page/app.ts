@@ -136,6 +136,10 @@ app.addEventListener('click', async (ev) => {
     case 'stepdown':
       await prepare({ kind: 'stepdown', collective: d.collective, member: d.member });
       break;
+    case 'rollback':
+      // A broken collective's way back (Law rule 37d, F185): reviewed in plain words before anything is signed.
+      await prepare({ kind: 'rollback', collective: d.collective });
+      break;
     case 'declare':
       // Absence, judged by the other members under the clause the member signed (Law rules 49, 53; B15).
       await prepare({ kind: 'declare', collective: d.collective, member: d.member });
@@ -241,6 +245,7 @@ app.addEventListener('submit', async (ev) => {
   if (form.classList.contains('debt-release')) return prepare({ kind: 'debt-release', debt: words(d.get('debt')) });
   if (form.classList.contains('release')) return prepare({ kind: 'release', publisher: collective, version: words(d.get('version')) });
   if (form.classList.contains('words')) return prepare({ kind: 'words', collective, text: words(d.get('text')) });
+  if (form.classList.contains('rollback')) return prepare({ kind: 'rollback', collective, rules: rulesOf(d) });
   if (form.classList.contains('change')) {
     return prepare({ kind: 'change', collective, join: d.getAll('join').map(String), leave: d.getAll('leave').map(String), rules: rulesOf(d), words: words(d.get('words')) });
   }

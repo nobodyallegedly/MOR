@@ -545,6 +545,13 @@ struct DeclIn {
     /// taking effect there, which it places (Law draft 9, Flaw B18): the
     /// value is `[clone, [+ hash], [+ hash]]`.
     absence: Option<Vec<String>>,
+    /// For a rollback (Law rule 37d, F185): the broken act it names, a
+    /// rotation of the collective, by its id; the value is then
+    /// `[clone, [+ hash], broken, [* hash]]`, with `registers`.
+    broken: Option<String>,
+    /// For a rollback: the resignations and steppings down it registers,
+    /// possibly none.
+    registers: Option<Vec<String>>,
     /// Any other value, as its deterministic CBOR (Finance's clock, F176):
     /// given instead of `value`.
     #[serde(default)]
@@ -557,13 +564,40 @@ fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaratio
             v.iter()
                 .map(|x| {
                     if let Some(c) = &x.cbor {
-                        if x.value.is_some() || x.signatures.is_some() || x.absence.is_some() {
+                        if x.value.is_some() || x.signatures.is_some() || x.absence.is_some() || x.broken.is_some() {
                             return Err(JsError::new("a declaration's value is given once: as a hash or as CBOR"));
                         }
                         return Ok(identity::Declaration {
                             spec: unhex(&x.spec)?,
                             kind: x.kind,
                             value: Some(cbor::decode(c).map_err(|e| JsError::new(&format!("the declaration's CBOR: {e}")))?),
+                        });
+                    }
+                    if x.registers.is_some() && x.broken.is_none() {
+                        return Err(JsError::new("a rollback's registrations go with the broken act it names (rule 37d)"));
+                    }
+                    if let Some(broken) = &x.broken {
+                        let (Some(h), Some(sigs), None) = (&x.value, &x.signatures, &x.absence) else {
+                            return Err(JsError::new(
+                                "a rollback names its clone, the signature acts that complete it, and the broken act (rule 37d)",
+                            ));
+                        };
+                        let list = |v: &[String]| -> R<Value> {
+                            Ok(Value::Array(
+                                v.iter()
+                                    .map(|x| Ok(Value::Bytes(unhex(x)?.to_vec())))
+                                    .collect::<R<_>>()?,
+                            ))
+                        };
+                        return Ok(identity::Declaration {
+                            spec: unhex(&x.spec)?,
+                            kind: x.kind,
+                            value: Some(Value::Array(vec![
+                                Value::Bytes(unhex(h)?.to_vec()),
+                                list(sigs)?,
+                                Value::Bytes(unhex(broken)?.to_vec()),
+                                list(x.registers.as_deref().unwrap_or(&[]))?,
+                            ])),
                         });
                     }
                     Ok(identity::Declaration {
@@ -1979,6 +2013,23 @@ pub fn law_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<JsValue>
     })
 }
 
+/// The powers a rollback's mark names (Law rule 37d, F185), from the terms
+/// of the agreement in force just before the broken act and the rollback's
+/// clone: the constitutional change rule, and the judicial tier's rule
+/// where the clone changes a judge, whatever its other changes.
+#[wasm_bindgen(js_name = lawRollbackPlan)]
+pub fn law_rollback_plan(parent: &[u8], clone: &[u8]) -> R<JsValue> {
+    let p = law::Terms::decode(&payload_of(parent)?).map_err(lerr)?;
+    let c = law::Terms::decode(&payload_of(clone)?).map_err(lerr)?;
+    #[derive(Serialize)]
+    struct Out {
+        needs: Vec<PowerOut>,
+    }
+    to_js(&Out {
+        needs: law::rollback_powers(&p, &c).iter().map(power_out).collect(),
+    })
+}
+
 /// A signature payload (Law type 1), as CBOR. The act carries, in
 /// `objects`, `[signed, signed]`: a signature follows the act it signs.
 #[wasm_bindgen(js_name = signaturePayload)]
@@ -2269,6 +2320,27 @@ impl Verifier {
         })
     }
 
+    /// A clone read as a rollback's (Law rule 37d, F185): as `lawAgreement`,
+    /// its mark checked against the powers a rollback names.
+    #[wasm_bindgen(js_name = lawRollbackAgreement)]
+    pub fn law_rollback_agreement(&self, specs: JsValue, id: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let a = view.rollback_agreement(&unhex(id)?).map_err(lerr)?;
+        to_js(&AgreementOut {
+            id: hx(&a.id),
+            parties: a.terms.parties.iter().map(hx).collect(),
+            signed: a.signed.iter().map(hx).collect(),
+            exists: a.exists,
+            ready: a.ready,
+            needs: a.needs.as_ref().map(|n| n.iter().map(power_out).collect()),
+            invalid: a.invalid.clone(),
+            parent: a.terms.parent.as_ref().map(hx),
+            text: a.terms.text.clone(),
+            collective: a.terms.is_collective(),
+        })
+    }
+
     /// The agreement an identity's chain declares at the chain act
     /// `binding`, if any (for a rotation: the clone it declares).
     #[wasm_bindgen(js_name = lawDeclared)]
@@ -2455,6 +2527,60 @@ impl Verifier {
         };
         let leaving = leaving.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
         match view.next_voices(&unhex(collective)?, &power, &leaving).map_err(lerr)? {
+            Err(error) => to_js(&NextVoicesOut { error: Some(error), ..Default::default() }),
+            Ok(n) => to_js(&NextVoicesOut {
+                error: None,
+                agreement: Some(hx(&n.agreement)),
+                among: n.among.iter().map(hx).collect(),
+                voices: n.voices.iter().map(hx).collect(),
+                needed: n.needed,
+            }),
+        }
+    }
+
+    /// Where Law reads a collective as broken and a rollback can bring it
+    /// back (Law rule 37d, F185): `{ act, before, reason }`, the broken act
+    /// (a rotation of the collective), the agreement in force just before
+    /// it, a rollback's parent, and Law's reason; null otherwise.
+    #[wasm_bindgen(js_name = lawBrokenAct)]
+    pub fn law_broken_act(&self, specs: JsValue, collective: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        #[derive(Serialize)]
+        struct Out {
+            act: String,
+            before: String,
+            reason: String,
+        }
+        match view.broken_act(&unhex(collective)?).map_err(lerr)? {
+            None => Ok(JsValue::NULL),
+            Some(b) => to_js(&Out {
+                act: hx(&b.act),
+                before: hx(&b.before),
+                reason: b.reason,
+            }),
+        }
+    }
+
+    /// Who counts for a power (`{ form, area }`) of the agreement in force
+    /// just before a broken collective's broken act, at a rollback made
+    /// next (Law rules 37d, 44d), `leaving` taken out (the parties whose
+    /// resignations the rollback registers): as `lawNextVoices`; or
+    /// `{ error }`, why there is no such count.
+    #[wasm_bindgen(js_name = lawRollbackVoices)]
+    pub fn law_rollback_voices(&self, specs: JsValue, collective: &str, power: JsValue, leaving: Vec<String>) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let p: PowerIn = from_js(power)?;
+        let power = match (p.form.as_str(), p.area) {
+            ("constitutional", _) => law::Power::Constitutional,
+            ("clone", _) => law::Power::Clone,
+            ("judicial", _) => law::Power::Judicial,
+            ("area", Some(a)) => law::Power::Area(a),
+            _ => return Err(JsError::new("a power is constitutional, clone, judicial, or an area with its id")),
+        };
+        let leaving = leaving.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
+        match view.rollback_voices(&unhex(collective)?, &power, &leaving).map_err(lerr)? {
             Err(error) => to_js(&NextVoicesOut { error: Some(error), ..Default::default() }),
             Ok(n) => to_js(&NextVoicesOut {
                 error: None,

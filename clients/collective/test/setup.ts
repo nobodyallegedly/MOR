@@ -4,10 +4,13 @@
 // Node, whose WebCrypto has Ed25519 too). Nothing is mocked.
 
 import { execFileSync } from 'node:child_process';
+import { createServer } from 'node:http';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { cborEncode, describeAct } from '../../genesis/src/core.ts';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
+import { LAW_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Client, newKey, type Done, type Reading, type Review, type State } from '../src/page/api.ts';
 
@@ -80,3 +83,47 @@ export async function sign(c: Client, args: object): Promise<{ review: Review; d
 }
 
 export const state = (c: Client) => c.ask<State>('state');
+
+const unhex = (h: string) => Uint8Array.from(h.match(/../g)!.map((x) => parseInt(x, 16)));
+
+/**
+ * A relay in front of another: everything passes, except that while `drop`
+ * is set a record of a collective (Law type 17) is answered as taken and
+ * never passed on. What a person sees when a relay loses an act: the
+ * client was told it arrived.
+ */
+export async function lossy(target: string): Promise<{ base: string; drop: boolean; close(): Promise<void> }> {
+  const state = { drop: false };
+  const server = createServer(async (req, res) => {
+    const chunks: Buffer[] = [];
+    for await (const ch of req) chunks.push(ch as Buffer);
+    const body = Buffer.concat(chunks);
+    if (state.drop && req.method === 'POST' && req.url === '/acts') {
+      const d = describeAct(new Uint8Array(body)) as { id: string; spec?: string; type?: number };
+      if (d.spec === REPO_SPECS.law && d.type === LAW_TYPES.record) {
+        res.writeHead(200, { 'content-type': 'application/cbor' });
+        res.end(Buffer.from(cborEncode(new Map<number, unknown>([[0, unhex(d.id)], [1, 0]]))));
+        return;
+      }
+    }
+    const r = await fetch(target + req.url, { method: req.method, headers: { 'content-type': req.headers['content-type'] ?? 'application/cbor' }, body: req.method === 'GET' ? undefined : body });
+    res.writeHead(r.status, { 'content-type': r.headers.get('content-type') ?? 'application/cbor' });
+    res.end(Buffer.from(await r.arrayBuffer()));
+  });
+  await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok));
+  const port = (server.address() as { port: number }).port;
+  return {
+    base: `http://127.0.0.1:${port}`,
+    get drop() {
+      return state.drop;
+    },
+    set drop(x: boolean) {
+      state.drop = x;
+    },
+    close: () =>
+      new Promise<void>((ok) => {
+        server.close(() => ok());
+        server.closeAllConnections();
+      }),
+  };
+}
