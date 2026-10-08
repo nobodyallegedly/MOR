@@ -26,6 +26,8 @@
 - (b) they count, as done under the version they named;
 - (c) something else.
 
+*Clarification asked in round 1, given again in round 2 with the question:* "things done under a branch" are acts that name one branch's version as the one they follow: a payment, a split, a sale. Either case can happen: the app making them saw only that branch, or it saw both and followed one anyway. The question covers both.
+
 ## Part B. A broken collective (F185's open questions, RB1 to RB6)
 
 **Background, the same both rounds.** A collective is broken when its keys moved by a rotation whose new agreement fails Law. From that act on, the broken stretch, everything signed in the collective's name counts for nothing, until a rollback restores the agreement in force just before the broken act, with that agreement's constitutional powers.
