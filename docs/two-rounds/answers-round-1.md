@@ -7,3 +7,5 @@
 **A2.** "I lean a. Mistake once, ok. Mistake twice?!?!"
 
 **A3.** "A. Settle is final. It adresses a situation that should not exist. 1 angreement v2 becomes 2 agreements v3A and v3B. Only one survives at 3. Matter closed"
+
+**A4.** (after two clarifications, now in the questions file, and the remark "2 is in force, but the payment cannot be stopped. So count for nothing is a claim I have difficulties grasping") "Both have signed the deal, so it hold. It's not recommended practice but it works. For a short span, they agreed to two deals. This can be leveraged for market research but shhhhh"
