@@ -89,6 +89,33 @@ async function showActs(frame: HTMLIFrameElement, settings: SiteSettings): Promi
 }
 
 /**
+ * Make the page's frame as tall as the page, now and whenever the page grows
+ * or shrinks (an act shown, a turned phone), so that nothing scrolls inside
+ * it: the browser's own scrolling is the only one. Capped, so that a page
+ * whose height follows its frame's cannot grow it without end.
+ */
+function fitFrame(frame: HTMLIFrameElement): void {
+  const doc = frame.contentDocument;
+  if (!doc) return;
+  const fit = () => {
+    const h = Math.min(Math.ceil(doc.documentElement.getBoundingClientRect().height), 100_000);
+    if (Math.abs(frame.clientHeight - h) > 1) frame.style.height = `${h}px`;
+  };
+  fit();
+  new ResizeObserver(fit).observe(doc.documentElement);
+}
+
+/** The page's icon on the browser tab: the picture's checked bytes, never an address (rule 16a). */
+function showIcon(bytes: Uint8Array): void {
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]') ?? document.head.appendChild(document.createElement('link'));
+  link.rel = 'icon';
+  link.type = 'image/jpeg';
+  link.href = `data:image/jpeg;base64,${btoa(s)}`;
+}
+
+/**
  * Look for later versions of the site, whatever the gateway's setting, and
  * say when a newer one exists (cMIP rule 24). The page is already shown:
  * this never holds it back.
@@ -170,8 +197,16 @@ async function main(): Promise<void> {
     frame.setAttribute('sandbox', 'allow-same-origin allow-top-navigation-by-user-activation allow-popups allow-popups-to-escape-sandbox');
     frame.setAttribute('title', prepared.title ?? entry.path);
     frame.id = 'mor-page';
-    frame.addEventListener('load', () => void showActs(frame, settings), { once: true });
+    frame.addEventListener(
+      'load',
+      () => {
+        fitFrame(frame);
+        void showActs(frame, settings);
+      },
+      { once: true },
+    );
     frame.srcdoc = prepared.html;
+    if (prepared.icon) showIcon(prepared.icon);
     view.replaceChildren(frame);
     void lookForLater(version);
     return;

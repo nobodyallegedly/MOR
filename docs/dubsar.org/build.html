@@ -5,21 +5,75 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Build · dubsar.org</title>
 <link rel="stylesheet" href="site.css">
+<!-- The browser-tab icon: the KI sign cut in clay, as a JPEG (website cMIP draft 3, rule 16a; drawn from
+     docs/marks/ki-icon.svg by clients/site/scripts/marks.ts). -->
+<link rel="icon" href="icon.jpg">
 </head>
 <body>
 <main>
 <p class="back"><a href="./">dubsar.org</a></p>
 <h1>Build</h1>
-<p class="placeholder">Placeholder, for Nobody, allegedly, to write: a few words on what this door is for.</p>
-<!-- Each item leads to signed acts on MOR, opened in the reader. The acts are published at step 17;
-     until then each link is a placeholder. -->
+<p class="line">Every technical document: the protocol, why each rule exists, how it is tested, and the code.</p>
+<!-- Each item is to lead to its signed act on MOR, opened in the reader. The acts are published at step 17;
+     until then the items are placeholders. -->
+<p class="placeholder">Placeholder: each item will lead to its act in the reader once it is published, at step 17.</p>
+<h2>The protocol</h2>
 <ul class="items">
-<li>The six MIPs: Identity, Text, Envelope, Finance, Law, Production. <span class="placeholder">Placeholder: link to its act in the reader, at step 17.</span></li>
-<li>The freeze test suite, and the freeze report. <span class="placeholder">Placeholder: link to its act in the reader, at step 17.</span></li>
-<li>The findings: why each rule exists. <span class="placeholder">Placeholder: link to its act in the reader, at step 17.</span></li>
-<li>The test vectors. <span class="placeholder">Placeholder: link to its act in the reader, at step 17.</span></li>
-<li>The code repository, on GitHub: <a href="https://github.com/nobodyallegedly/mor">https://github.com/nobodyallegedly/mor</a>, and its releases on MOR. <span class="placeholder">Placeholder: link to its act in the reader, at step 17.</span></li>
+<li>The core document: the map of all six MIPs.</li>
+<li>The Identity MIP: identities, keys, rotation, homes and receipts.</li>
+<li>The Text MIP: canonical text, and the bound on formats.</li>
+<li>The Envelope MIP: acts, locking, sealed containers, media and relays.</li>
+<li>The Finance MIP: receipts, obligations, the vault, payment rails.</li>
+<li>The Law MIP: agreements, stakes, splits, keepers and collectives.</li>
+<li>The Production MIP: specifications, tasks and verification.</li>
+<li>The freeze test suite, and the freeze report.</li>
+</ul>
+<h2>Why each rule exists</h2>
+<ul class="items">
+<li>The findings logs.</li>
+</ul>
+<h2>The founding cMIPs</h2>
+<ul class="items">
+<li>Relay transport: publishing, fetching and following acts.</li>
+<li>Release manifest: releases of code, with members’ visible signatures.</li>
+<li>Payment: how payment rails plug in. <small>Experimental.</small></li>
+<li>Long-form text format: formatted documents on canonical text.</li>
+<li>Website: sites on MOR, and the gateways that serve them.</li>
+</ul>
+<h2>The founding Modules</h2>
+<ul class="items">
+<li>The offline safety signer.</li>
+<li>The safety seed as 24 words, and as hexadecimal.</li>
+<li>The Lightning rail. <small>Experimental.</small></li>
+<li>Bitcoin units.</li>
+<li>JPEG pictures.</li>
+</ul>
+<h2>Reviews and checks</h2>
+<ul class="items">
+<li>The paper: design, claims, threat model and open problems; and a hostile review of its first draft.</li>
+<li>Every rule of the MIPs mapped to the code and tests that check it.</li>
+<li>An independent verifier, written from the text alone.</li>
+<li>The adversarial test plan.</li>
+</ul>
+<h2>The plan and the record</h2>
+<ul class="items">
+<li>The build brief, and the roadmap.</li>
+<li>The reports of building sessions.</li>
+</ul>
+<h2>The code</h2>
+<ul class="items">
+<li>The code repository, on GitHub: <a href="https://github.com/nobodyallegedly/mor">https://github.com/nobodyallegedly/mor</a>, and its releases on MOR.</li>
+<li>The test vectors.</li>
+<li>The freeze-suite harness, which runs the identity gauntlet against real homes.</li>
 </ul>
 </main>
+<footer>
+<p><a href="mailto:nobodyallegedly@dubsar.org">nobodyallegedly@dubsar.org</a></p>
+<p><a href="https://reader.dubsar.org/">A sealed message, through the reader</a></p>
+<!-- The clay tablet, "scribe of Enki" (dub-sar {d}en-ki-ka), the very last thing on the page. A JPEG cannot be
+     see-through, so it is drawn twice, on the page's light and dark colours, and the stylesheet shows one. -->
+<img class="tablet light" src="tablet-light.jpg" alt="A clay tablet inscribed in cuneiform: dub-sar den-ki-ka, scribe of Enki">
+<img class="tablet dark" src="tablet-dark.jpg" alt="A clay tablet inscribed in cuneiform: dub-sar den-ki-ka, scribe of Enki">
+</footer>
 </body>
 </html>

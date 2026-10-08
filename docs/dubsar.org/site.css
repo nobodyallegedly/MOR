@@ -1,23 +1,35 @@
 /* dubsar.org: the look of the pages. A site's pages run no code and load
    nothing from elsewhere (website cMIP, rules 11 and 12): no fonts, no
-   pictures from this file, only what is written here. */
-:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 20%,transparent);--soft:color-mix(in srgb,CanvasText 65%,Canvas)}
+   pictures from this file, only what is written here.
+   The page's colours are fixed, light and dark, because the clay tablet is a
+   JPEG drawn on exactly these two colours (clients/site/scripts/marks.ts):
+   --page is #ffffff in light and #121212 in dark, in both places. */
+:root{color-scheme:light dark;--page:#ffffff;--text:#1b1b1b;--soft:#5c5c5c;--line:#d9d9d9}
+@media (prefers-color-scheme:dark){:root{--page:#121212;--text:#ebe9e6;--soft:#a7a5a2;--line:#3a3a3a}}
 *{box-sizing:border-box}
-body{margin:0;background:Canvas;color:CanvasText;font:18px/1.6 Georgia,'Times New Roman',serif}
+html,body{background:var(--page);color:var(--text)}
+body{margin:0;font:18px/1.6 Georgia,'Times New Roman',serif}
 main,footer{max-width:40em;margin:0 auto;padding:24px 16px}
-h1{font-weight:normal;font-size:1.6em;margin:.5em 0}
+a{color:inherit}
+h1{font-weight:normal;font-size:1.6em;margin:.5em 0 .2em}
 .back{font:14px system-ui,sans-serif}
-.back a{color:inherit}
-.first-act{margin:8px 0 32px}
-.one-page{margin:24px 0;text-align:center}
-.button{display:inline-block;padding:12px 28px;border:2px solid CanvasText;border-radius:999px;color:inherit;text-decoration:none;font:600 18px/1.3 system-ui,sans-serif}
-.button:hover,.button:focus{background:CanvasText;color:Canvas}
+.line{margin:0 0 1em;color:var(--soft)}
+.first-act{margin:0 0 24px}
+.shortcuts{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:24px 0}
+.button{display:inline-block;padding:12px 24px;border:2px solid var(--text);border-radius:999px;text-decoration:none;text-align:center;font:600 17px/1.3 system-ui,sans-serif}
+.button:hover,.button:focus{background:var(--text);color:var(--page)}
 .doors{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:12px;margin:24px 0}
-.doors a{display:block;padding:16px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none}
-.doors a:hover{border-color:CanvasText}
+.doors a{display:block;padding:16px;border:1px solid var(--line);border-radius:10px;text-decoration:none}
+.doors a:hover,.doors a:focus{border-color:var(--text)}
 .door{display:block;font-size:1.4em}
 .what{display:block;font:15px/1.4 system-ui,sans-serif;color:var(--soft);margin-top:4px}
-.items li{margin:.4em 0}
+h2{font:600 16px/1.4 system-ui,sans-serif;color:var(--soft);margin:1.6em 0 .4em}
+.items{padding-left:1.2em;margin:.4em 0}
+.items li{margin:.35em 0}
+.items small{font:14px/1.4 system-ui,sans-serif;color:var(--soft)}
 .placeholder{font-family:system-ui,sans-serif;font-size:.85em;color:var(--soft);border-left:3px solid var(--line);padding-left:8px}
-footer{border-top:1px solid var(--line);font:14px/1.5 system-ui,sans-serif;color:var(--soft)}
-footer a{color:inherit}
+footer{border-top:1px solid var(--line);font:15px/1.5 system-ui,sans-serif;color:var(--soft);text-align:center;padding-bottom:32px}
+footer p{margin:.3em 0}
+.tablet{display:block;width:240px;max-width:100%;height:auto;margin:20px auto 0}
+.tablet.dark{display:none}
+@media (prefers-color-scheme:dark){.tablet.light{display:none}.tablet.dark{display:block}}

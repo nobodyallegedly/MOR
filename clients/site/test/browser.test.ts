@@ -17,7 +17,8 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { Gateway } from '../src/gateway.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
-import { gatewayFor, phone, world, type World } from './world.ts';
+import { post } from '../../barebone/src/post.ts';
+import { gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -43,6 +44,7 @@ const HOSTILE = `<!doctype html>
 <link rel="stylesheet" href="https://example.org/evil.css">
 <link rel="stylesheet" href="look.css">
 <link rel="prefetch" href="https://example.org/track">
+<link rel="icon" href="https://example.org/icon.jpg">
 <style>body{display:none}</style>
 <script>document.documentElement.dataset.ran = 'head';</script>
 </head>
@@ -157,11 +159,21 @@ test('the front page opens on the first act, shown as the act, verified, with it
   await inner.waitForSelector('.mor-post img');
   assert.match((await inner.textContent('.mor-post-by'))!, /verified/);
   assert.match((await inner.textContent('.mor-post'))!, /Thank you for the shower/);
-  // A clear button to MOR in one page, opening the reader apart from the site; its act is a placeholder until step 17.
-  const onePage = f.locator('.one-page a.button');
+  // Two shortcuts before the sections, opening the reader apart from the site: MOR in one page, and the full
+  // shower text; their acts are placeholders until step 17 (layout decided by Nobody, allegedly, 7 October 2026).
+  const onePage = f.locator('.shortcuts a.button#one-page');
   assert.equal(await onePage.textContent(), 'MOR in one page');
   assert.equal(await onePage.getAttribute('href'), 'https://reader.dubsar.org/#ONE-PAGE');
   assert.equal(await onePage.getAttribute('target'), '_blank');
+  const shower = f.locator('.shortcuts a.button#shower-text');
+  assert.equal(await shower.textContent(), 'Thank you for the shower');
+  assert.equal(await shower.getAttribute('href'), 'https://reader.dubsar.org/#SHOWER-TEXT');
+  // Nothing under the first act: the shortcuts come right after it, then the four sections.
+  assert.deepEqual(
+    await f.$$eval('main > *', (els) => els.map((e) => e.className || e.localName)),
+    ['first-act', 'shortcuts', 'doors'],
+  );
+  assert.deepEqual(await f.$$eval('.doors .door', (els) => els.map((e) => e.textContent)), ['Read', 'Build', 'Run', 'Use']);
   const size = await inner.$eval('.mor-post img', (i) => (i as HTMLImageElement).naturalWidth);
   assert.ok(size > 0, 'the picture is shown');
   await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
@@ -170,6 +182,115 @@ test('the front page opens on the first act, shown as the act, verified, with it
   await shot(page, 'front-first-act');
   assert.deepEqual(problems, []);
   await ctx.close();
+});
+
+/** A large JPEG, as the photograph of the Earth is: drawn by the browser, stripped to the picture alone. */
+async function largeJpeg(): Promise<Uint8Array> {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const bytes = await page.evaluate(async () => {
+    const c = document.createElement('canvas');
+    c.width = 2400;
+    c.height = 2400;
+    const x = c.getContext('2d')!;
+    x.fillStyle = '#0b3d91';
+    x.fillRect(0, 0, 2400, 2400);
+    const b: Blob = await new Promise((r) => c.toBlob((b) => r(b!), 'image/jpeg', 0.8));
+    return [...new Uint8Array(await b.arrayBuffer())];
+  });
+  await ctx.close();
+  return strip(new Uint8Array(bytes)).bytes;
+}
+
+test("the first act's photograph scales to the page's width, whole, and nothing scrolls inside the page", async () => {
+  // "Image needs a better fit. Now it shows pixel per pixel in a scrollable box" (Nobody, allegedly, 7 October 2026).
+  const act = (await post(w.owner, { text: 'Thank you for the shower… (a large picture)', jpeg: await largeJpeg(), relays: [w.relay.base] })).id;
+  const v = await publishSite(w.owner, { name: 'dubsar.org', files: readFolder(siteCopy(act)), relays: [w.relay.base] });
+  const g = new Gateway(gatewayFor(w, v.id, { serve: 'pinned' }), join(here, 'dist'), { extraConnect: LOCAL });
+  try {
+    assert.ok(await ok(g));
+    const at = await g.listen('127.0.0.1', 0);
+    for (const width of [390, 1280]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 800 } });
+      const page = await ctx.newPage();
+      await page.goto(at + '/');
+      await page.waitForSelector('#mor-bar.ok', { timeout: 60_000 });
+      const f = await pageFrame(page);
+      const inner = (await (await f.waitForSelector('.mor-act iframe', { timeout: 60_000 })).contentFrame())!;
+      await inner.waitForSelector('.mor-post img');
+      await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
+      await page.waitForTimeout(300);
+      const m = await page.evaluate(() => {
+        const frame = document.getElementById('mor-page') as HTMLIFrameElement;
+        const d = frame.contentDocument!;
+        const actFrame = d.querySelector('.mor-act iframe') as HTMLIFrameElement;
+        const a = actFrame.contentDocument!;
+        const img = a.querySelector('.mor-post img') as HTMLImageElement;
+        const box = a.querySelector('.mor-post') as HTMLElement;
+        return {
+          natural: img.naturalWidth,
+          shown: img.getBoundingClientRect().width,
+          room: box.clientWidth - parseFloat(getComputedStyle(box).paddingLeft) - parseFloat(getComputedStyle(box).paddingRight),
+          actScroll: [a.documentElement.scrollWidth, a.documentElement.clientWidth, a.documentElement.scrollHeight, actFrame.clientHeight],
+          pageScroll: [d.documentElement.scrollWidth, d.documentElement.clientWidth, d.documentElement.scrollHeight, frame.clientHeight],
+          top: [document.documentElement.scrollWidth, window.innerWidth],
+        };
+      });
+      assert.equal(m.natural, 2400);
+      assert.ok(Math.abs(m.shown - m.room) < 1, `the picture fills the width it has (${m.shown} of ${m.room})`);
+      assert.ok(m.shown < width, 'and is shown whole, not pixel per pixel');
+      assert.ok(m.actScroll[0] <= m.actScroll[1] && m.actScroll[2] <= m.actScroll[3] + 1, `the act's frame does not scroll (${m.actScroll})`);
+      assert.ok(m.pageScroll[0] <= m.pageScroll[1] && m.pageScroll[2] <= m.pageScroll[3] + 1, `the page's frame does not scroll: it is as tall as the page (${m.pageScroll})`);
+      assert.ok(m.top[0] <= m.top[1], 'nothing wider than the window');
+      await shot(page, `front-large-picture-${width}`);
+      await ctx.close();
+    }
+  } finally {
+    g.close();
+  }
+});
+
+test('the footer: only the contact and the sealed message, then the clay tablet, the very last thing, on light and dark; the KI icon on the tab', async () => {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    for (const path of ['/', '/read.html', '/build.html', '/run.html', '/use.html']) {
+      const ctx = await browser.newContext({ colorScheme });
+      const page = await ctx.newPage();
+      await page.goto(base + path);
+      await page.waitForSelector('#mor-bar.ok', { timeout: 60_000 });
+      const f = await pageFrame(page);
+      const links = await f.$$eval('footer a', (as) => as.map((a) => [a.textContent, a.getAttribute('href')]));
+      assert.deepEqual(links, [
+        ['nobodyallegedly@dubsar.org', 'mailto:nobodyallegedly@dubsar.org'],
+        ['A sealed message, through the reader', 'https://reader.dubsar.org/'],
+      ]);
+      const tablet = await f.evaluate(() => {
+        const shown = [...document.querySelectorAll<HTMLImageElement>('footer img.tablet')].filter((i) => getComputedStyle(i).display !== 'none');
+        // Every other thing shown, the boxes holding the tablet aside, ends above it.
+        const tablet = shown[0];
+        const others = [...document.body.querySelectorAll('*')].filter(
+          (e) => e !== tablet && !e.contains(tablet) && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0,
+        );
+        const lowest = Math.max(...others.map((e) => e.getBoundingClientRect().bottom));
+        return {
+          shown: shown.map((i) => ({ cls: i.className, width: i.getBoundingClientRect().width, loaded: i.complete && i.naturalWidth > 0 })),
+          last: tablet ? tablet.getBoundingClientRect().top >= lowest : false,
+          page: getComputedStyle(document.body).backgroundColor,
+        };
+      });
+      assert.equal(tablet.shown.length, 1, 'one tablet shown');
+      assert.equal(tablet.shown[0].cls, `tablet ${colorScheme}`, 'the one drawn on this colour');
+      assert.ok(tablet.shown[0].loaded, 'its checked bytes shown');
+      assert.ok(tablet.shown[0].width >= 120, `about 120 px wide or more (${tablet.shown[0].width})`);
+      assert.ok(tablet.last, 'the very last thing on the page');
+      // The tablet is drawn on exactly the page's colour (scripts/marks.ts).
+      assert.equal(tablet.page, colorScheme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(18, 18, 18)');
+      // The tab's icon: the site's icon.jpg, as the bytes the display client checked.
+      const icon = await page.getAttribute('link[rel="icon"]', 'href');
+      assert.equal(icon, `data:image/jpeg;base64,${readFileSync(join(w.dir, 'icon.jpg')).toString('base64')}`);
+      if (path === '/') await shot(page, `footer-${colorScheme}`);
+      await ctx.close();
+    }
+  }
 });
 
 test("a door opens its page through the display client, checked again", async () => {
@@ -272,6 +393,7 @@ test('a page runs no code and loads nothing from elsewhere, whatever it tries; w
   assert.equal(await f.$eval('#title', (h) => getComputedStyle(h).backgroundImage), 'none', 'its url() is inert');
   await shot(page, 'hostile');
   assert.deepEqual(elsewhere, [], 'nothing fetched from elsewhere');
+  assert.equal(await page.getAttribute('link[rel="icon"]', 'href'), 'data:,', 'an icon from elsewhere is not the tab icon');
   assert.deepEqual(problems, []);
   assert.ok(hostileCsp.every((m) => /base URI|inline style/.test(m)), hostileCsp.join('\n'));
   await ctx.close();
