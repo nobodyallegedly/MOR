@@ -23,3 +23,7 @@
 *A misunderstanding, corrected at once: round 1 continues.*
 
 **B5.** "Absolutely. The monarch has no partner or no heir."
+
+**B6.** "No. If they want to push an official act, they ha e to fix the issue first."
+
+**Round 1 complete** (B4 left to round 2).
