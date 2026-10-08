@@ -28,6 +28,8 @@
 
 *Clarification asked in round 1, given again in round 2 with the question:* "things done under a branch" are acts that name one branch's version as the one they follow: a payment, a split, a sale. Either case can happen: the app making them saw only that branch, or it saw both and followed one anyway. The question covers both.
 
+*Second clarification asked in round 1, given again in round 2:* an example. Ana and Ben's deal sells a song. Version 3A says the price is 100; version 3B says 120. A buyer's app follows 3B and pays 120. Later 3A is the one in force. Under (a), the purchase under 3B counts for nothing in Law (it is not a purchase under the deal in force), but the 120 that arrived is still on record as received money in Finance, so what is owed back or credited can be worked out from it. Under (b), the purchase stands as made under 3B's terms, even though 3B is not in force.
+
 ## Part B. A broken collective (F185's open questions, RB1 to RB6)
 
 **Background, the same both rounds.** A collective is broken when its keys moved by a rotation whose new agreement fails Law. From that act on, the broken stretch, everything signed in the collective's name counts for nothing, until a rollback restores the agreement in force just before the broken act, with that agreement's constitutional powers.
