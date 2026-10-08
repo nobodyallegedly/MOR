@@ -15,3 +15,5 @@
 **B2.** "Quarantined. Anew. Clients can build interfaces to bridge the gap and clone them."
 
 **B3.** "Yes, but let's explore how it can be leveraged in bad faith." *(Exploration follows in the conversation; final word recorded below.)*
+
+**B3, final word.** "The problem is… it is a possible scenario. So, a solution has to be found. And this one is a problem tomorrow me will solve and whatever I told you before on instinct stands." (The instinct: yes.)
