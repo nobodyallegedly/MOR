@@ -7206,6 +7206,16 @@ fn a_rollback_may_change_nothing_and_needs_every_voice_that_remains() {
     let n = v.next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
     assert_eq!((n.agreement, sorted(n.voices)), (r2, sorted(vec![ids[ANA], ids[BEN]])));
     assert_eq!(v.current(&col).unwrap().unwrap().departed, vec![ids[CY]]);
+    drop(v);
+
+    // F185: a rollback voids only an act Law reads as broken. An attempt on
+    // the working collective, naming an act already repaired, puts nothing
+    // in force and is itself a broken act, repaired by a rollback to just
+    // before it.
+    let attempt = lab.rotate_with(Some(vec![law::rollback_declaration(&law, &r2, &[u1, u2], &rot1, &[])]), &[0]);
+    let b = lab.view().broken_act(&col).unwrap().expect("the attempt breaks the collective");
+    assert_eq!((b.act, b.before), (attempt, r2));
+    assert!(b.reason.contains("not broken"), "{}", b.reason);
 }
 
 /// Rule 37d with rule 44d: a resignation in the broken stretch cannot make
