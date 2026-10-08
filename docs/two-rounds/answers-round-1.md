@@ -20,4 +20,4 @@
 
 **B4.** No round-1 answer: "Oh tomorrow me… 's a lucky guy…. With his cofeee"
 
-**Round 1 closed here** ("there is nothing to decide tonight"). B5 and B6 not asked in round 1.
+*A misunderstanding, corrected at once: round 1 continues.*
