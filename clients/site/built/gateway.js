@@ -216,6 +216,24 @@ var Verifier = class {
     return ret[0] !== 0;
   }
   /**
+   * Where Law reads a collective as broken and a rollback can bring it
+   * back (Law rule 37d, F185): `{ act, before, reason }`, the broken act
+   * (a rotation of the collective), the agreement in force just before
+   * it, a rollback's parent, and Law's reason; null otherwise.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  lawBrokenAct(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawBrokenAct(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Why Law reads a collective as broken (the agreement its latest key
    * lives under cannot be found: a rotation's declared clone incomplete,
    * a false mark, rules 37 and 45a), or null where it reads it as working.
@@ -718,6 +736,45 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_lawRelease(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A clone read as a rollback's (Law rule 37d, F185): as `lawAgreement`,
+   * its mark checked against the powers a rollback names.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  lawRollbackAgreement(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawRollbackAgreement(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who counts for a power (`{ form, area }`) of the agreement in force
+   * just before a broken collective's broken act, at a rollback made
+   * next (Law rules 37d, 44d), `leaving` taken out (the parties whose
+   * resignations the rollback registers): as `lawNextVoices`; or
+   * `{ error }`, why there is no such count.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {any} power
+   * @param {string[]} leaving
+   * @returns {any}
+   */
+  lawRollbackVoices(specs, collective, power, leaving) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawRollbackVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
