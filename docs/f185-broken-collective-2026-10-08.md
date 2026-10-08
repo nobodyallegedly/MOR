@@ -69,13 +69,13 @@
 
 ## Tests
 
-- **Rust workspace:** RESULT_RUST. Three new tests in `core/tests/law_collective.rs`:
+- **Rust workspace:** 411 passed, none failed (408 before). The two checks added after that run, inside existing tests, pass in `law_collective` (101 of 101). Three new tests in `core/tests/law_collective.rs`:
   - `a_broken_collective_rolls_back` (step 3.7w). Six rollbacks that put nothing in force: naming another act as the broken act, too few voices, registering what is no resignation, a clone of the broken clone, marked with the clone rule, and an ordinary clone declaration. Then the rollback that works.
   - `a_rollback_may_change_nothing_and_needs_every_voice_that_remains`, including a second broken act after a rollback, and a rollback's registration staying in effect.
   - `no_rollback_once_every_voice_has_resigned`.
   - Also: a rollback that registers a real declaration of absence puts nothing in force (RB3), and an attempt to roll back a working collective breaks it (F185, repair not undo).
-- **Collective client:** RESULT_COLLECTIVE, including the new `test/rollback.test.ts`. It covers 3.7w end to end against real homes and a relay, the last voice in a working collective, and the last voice in a broken one.
-- **Other clients:** RESULT_OTHERS.
+- **Collective client:** 27 of 27 (24 before), the browser test included, including the new `test/rollback.test.ts`. It covers 3.7w end to end against real homes and a relay, the last voice in a working collective, and the last voice in a broken one.
+- **Other clients:** repo 13, connector 12, desk 10, genesis 17, reader 16, site 27, barebone 9, manage 7, longform 26, JPEG module 14: all passing (`scripts/test-all.sh`).
 
 ## Questions for Nobody, allegedly
 
@@ -112,7 +112,7 @@ Also still to be checked, as F185 said: whether money keeps flowing through a sp
 
 ## Release
 
-**The WebAssembly changed** (new Law reading and four new bindings), so **the display client must be released again**. This build's `mor_wasm_bg.wasm`, built here on Linux: sha256 `WASM_SHA`. The published build is made on GitHub, so its hash is the one to record at release.
+**The WebAssembly changed** (new Law reading and four new bindings), so **the display client must be released again**. This build's `mor_wasm_bg.wasm`, built here on Linux: sha256 `f0154a78066d859b289299b9f45640d4add4b3aeaaa5d4dde10b52e05e3b4d76`. The published build is made on GitHub, so its hash is the one to record at release.
 
 ## Next
 
