@@ -46,6 +46,8 @@
 
 **B4. Other ways of breaking.** Today a collective has a way back only if the failed rotation declared an agreement that fails Law's checks. If a rotation declares no agreement at all, or a malformed one, should that also be a broken act with a rollback, or a collective broken for good?
 
+*Clarification asked in round 1, given again in round 2:* in plain words, yes, all of them are failures. The difference is only in the wording F185 was written in: "a rotation whose declared agreement fails Law". A rotation that drops the collective's agreement altogether (declares none, where earlier ones did), or whose declaration cannot even be read, has no declared agreement to fail, so the building session read it as outside F185 and left it broken with no way back. A rotation that simply repeats the agreement in force is not a failure at all: it carries that agreement forward.
+
 **B5. The last voice.** Some collectives give constitutional power to some members only (say, the two founders), while others keep voices in their areas. When the last of those named members leaves, the constitution freezes while other members still act in their areas. Should the "last voice" warning be given then too?
 
 **B6. Ending a broken collective.** Can a broken collective fork or close without rolling back first?
