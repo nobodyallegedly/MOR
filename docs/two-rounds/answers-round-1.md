@@ -5,3 +5,5 @@
 **A1.** "A) the two branches indicates a situation that should not have happened."
 
 **A2.** "I lean a. Mistake once, ok. Mistake twice?!?!"
+
+**A3.** "A. Settle is final. It adresses a situation that should not exist. 1 angreement v2 becomes 2 agreements v3A and v3B. Only one survives at 3. Matter closed"
