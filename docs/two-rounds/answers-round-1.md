@@ -19,3 +19,5 @@
 **B3, final word.** "The problem is… it is a possible scenario. So, a solution has to be found. And this one is a problem tomorrow me will solve and whatever I told you before on instinct stands." (The instinct: yes.)
 
 **B4.** No round-1 answer: "Oh tomorrow me… 's a lucky guy…. With his cofeee"
+
+**Round 1 closed here** ("there is nothing to decide tonight"). B5 and B6 not asked in round 1.
