@@ -2151,6 +2151,16 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **Next, decided by Nobody, allegedly:** taken up on 8 October 2026, straight after the collective client human test (step 11b).
 
+## F185. A broken collective, and its way back (8 October 2026, evening)
+
+**Found building the fix for the step 11b human test** (`docs/step-11b-false-mark-2026-10-08.md`, merged `b081a50`): rule 37 says that where a rotation declares an agreement that fails it, "the collective's acts that need member signatures count for nothing", and says nothing of what comes next. The core reads such a collective as broken for good.
+
+**What broken is, set out by the project lead:** the collective's keys moved (Identity counts the rotation) without the consent Law requires (the agreement it declares fails rule 37): Identity and Law no longer agree on who is in. Breaking the collective is what makes such a move worthless, where ignoring the failed declaration would let the holders of the safety key rotate a member out of the keys at no cost.
+
+**Decided by Nobody, allegedly, in principle:** technical errors will happen, so a broken collective has a way back, and that way back is **a rollback**: "The chain needs to fork from one act before the corrupted one, all while showing the corrupted one. I'm not saying mechanically that is what happens, but that is what the collective faces, a rollback." Nothing is erased: the corrupted acts stay visible, counting for nothing.
+
+**Mechanics suggested by the project lead, not yet decided:** the identity chain cannot un-rotate (its keys moved, and an identity fork is a conflict), so the rollback happens in Law: a later rotation declares a clone whose parent is **the last valid agreement**, skipping the failed one, complete with the signatures that agreement requires (its own voices, so a member rotated out without consent must sign the way back). The agreement's lineage forks from before the corruption; the identity chain carries on; every act of the broken stretch stays shown and counts for nothing in Law.
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
