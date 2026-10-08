@@ -216,6 +216,28 @@ var Verifier = class {
     return ret[0] !== 0;
   }
   /**
+   * Why Law reads a collective as broken (the agreement its latest key
+   * lives under cannot be found: a rotation's declared clone incomplete,
+   * a false mark, rules 37 and 45a), or null where it reads it as working.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {string | undefined}
+   */
+  lawBroken(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawBroken(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
+  }
+  /**
    * Whether a claim on a work is shown as made after its release: the
    * release, if so (F121, D).
    * @param {any} specs
@@ -502,6 +524,29 @@ var Verifier = class {
     var v3 = getArrayJsValueFromWasm0(ret[0], ret[1]);
     wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
     return v3;
+  }
+  /**
+   * Who counts for a power (`{ form, area }`, as `lawClonePlan` gives
+   * it) of the collective's agreement in force, at its next line, after
+   * every act held (rule 44d), `leaving` taken out: the agreement, the
+   * parties counted among, the voices that remain, and how many meet it
+   * (null where none remains); or `{ error }`, why there is no such count.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {any} power
+   * @param {string[]} leaving
+   * @returns {any}
+   */
+  lawNextVoices(specs, collective, power, leaving) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawNextVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
   }
   /**
    * Whether an obligation binds its debtor: for a collective, once done
