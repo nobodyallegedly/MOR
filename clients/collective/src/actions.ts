@@ -7,14 +7,13 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, lawDivideStake, lawSplitTally, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
+import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, lawClonePlan, lawDivideStake, lawSplitTally, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestCollective, collectiveTerms, type Governance } from '../../repo/src/collective.ts';
 import {
   LAW_SPECS,
   RELEASE_AREA,
-  clonePlan,
   closingPayload,
   debtReleasePayload,
   encodeTerms,
@@ -136,6 +135,134 @@ const fromRules = (r: Rules) => ({
   ...(r.constitution !== undefined ? { constitutionalThreshold: whole(r.constitution, 'the signatures a change of the constitution needs') } : {}),
 });
 
+/** Law's own reading of a collective ([`Actions.lawOf`]). */
+export interface LawOf {
+  v: Verifier;
+  broken: string | null;
+  unread?: string;
+  agreement: string | null;
+  terms: { payload: Uint8Array; t: TermsRead } | null;
+  departed: string[];
+  steppedDown: [number, string][];
+  frozen: number[];
+  closed: string | null;
+  fork: boolean;
+}
+
+/** A collective as the page shows it: Law's reading, or this device's copy where Law has none, said so. */
+interface Shown {
+  broken: string | null;
+  unread: string | null;
+  agreement: string;
+  members: { id: string; left: boolean }[];
+  holder: string;
+  rules: Rules;
+  words: string;
+  shares: { threshold: number; of: number };
+  area: { holders: { id: string; voice: boolean; steppedDown: boolean }[]; threshold: number; needed: number; frozen: boolean; words: string };
+}
+
+const ruleNumber = (r: { form: string; threshold?: number | null } | null | undefined, all: number): number | undefined =>
+  !r ? undefined : r.form === 'threshold' && r.threshold ? r.threshold : r.form === 'all' ? all : undefined;
+
+/** What the page shows: from Law's reading of the agreement in force where it has one, else from this device's copy. */
+function shownOf(c: TestCollective, law: LawOf): Shown {
+  if (law.agreement && law.terms) {
+    const t = law.terms.t;
+    const area = t.areas.find((a) => a.id === RELEASE_AREA);
+    const downIn = (m: string) => law.steppedDown.some(([a, p]) => a === RELEASE_AREA && p === m);
+    let voices: string[] = [];
+    let need = 0;
+    if (area) {
+      const nv = law.v.lawNextVoices(LAW_SPECS, c.identity, { form: 'area', area: RELEASE_AREA }, []) as { error: string | null; voices: string[]; needed: number | null };
+      if (!nv.error) {
+        voices = nv.voices;
+        need = nv.needed ?? 0;
+      }
+    }
+    const safety = t.grammar?.safety;
+    const signing = t.grammar?.signing;
+    const parties = t.parties.length;
+    return {
+      broken: null,
+      unread: null,
+      agreement: law.agreement,
+      // Left: gone as Law counts it, or declared absent while holding the
+      // everyday key, the declaration signed and taking effect at the
+      // recovery rotation (C7, B16), where Law still counts them until then.
+      members: t.parties.map((m) => ({ id: m, left: law.departed.includes(m) || c.recovering().some((d) => d.member === m) })),
+      holder: signing?.form === 'one' && signing.holder ? signing.holder : c.f.signingHolder,
+      rules: {
+        safety: safety?.threshold ?? c.f.governance.safetyThreshold,
+        release: area?.threshold ?? c.f.governance.releaseThreshold,
+        clone: ruleNumber(t.clone, parties) ?? c.f.governance.cloneThreshold,
+        others: t.abandonment?.threshold ?? Math.max(parties - 1, 1),
+        ...(ruleNumber(t.constitutional, parties) !== undefined && t.constitutional?.form === 'threshold' ? { constitution: ruleNumber(t.constitutional, parties)! } : {}),
+      },
+      words: t.text,
+      shares: { threshold: safety?.threshold ?? c.f.safety.threshold, of: safety?.members?.length ?? c.f.safety.shares.length },
+      area: {
+        holders: (area?.holders ?? []).map((h) => ({ id: h, voice: voices.includes(h), steppedDown: downIn(h) })),
+        threshold: area?.threshold ?? 0,
+        needed: need,
+        frozen: !voices.length,
+        words: t.areaWords.find(([a]) => a === RELEASE_AREA)?.[1] ?? '',
+      },
+    };
+  }
+  // No reading from Law: this device's copy, which the page labels as such.
+  const departed = departedOf(c);
+  const voices = releaseVoicesOf(c);
+  return {
+    broken: law.broken,
+    unread: law.broken ? null : (law.unread ?? 'no reading'),
+    agreement: c.f.agreement,
+    members: c.f.members.map((m) => ({ id: m, left: departed.some((d) => d.member === m) })),
+    holder: c.f.signingHolder,
+    rules: toRules(c.f.governance),
+    words: c.f.governance.text,
+    shares: { threshold: c.f.safety.threshold, of: c.f.safety.shares.length },
+    area: {
+      holders: c.f.members.map((m) => ({ id: m, voice: voices.includes(m), steppedDown: steppedDownOf(c).some((d) => d.member === m && d.area === RELEASE_AREA) })),
+      threshold: c.f.governance.releaseThreshold,
+      needed: needed(c.f.governance.releaseThreshold, voices.length),
+      frozen: !voices.length,
+      words: c.f.governance.releaseWords ?? '',
+    },
+  };
+}
+
+/** A change Law would not count, stopped before its clone or before the record putting it in force. */
+function stoppedDone(title: string, got: { clone: string; signed: { act: string }[]; stopped?: string }): Done {
+  return {
+    title: `${title}: stopped, nothing in force`,
+    lines: [
+      got.clone ? { text: `Clone ${got.clone}, signed by ${got.signed.length}: a draft, never put in force; no record was written.` } : { text: 'No clone was proposed or signed.' },
+      { text: `Law would not count it: ${got.stopped}`, tone: 'bad' },
+    ],
+    acts: [...(got.clone ? [got.clone] : []), ...got.signed.map((x) => x.act)],
+  };
+}
+
+/** A power of a clone plan (`lawClonePlan`) as a mark entry names it. */
+const powerOf = (n: { form: string; area?: number }): MarkEntry['power'] =>
+  n.form === 'area' ? { area: n.area! } : n.form === 'constitutional' ? { constitutional: true } : n.form === 'judicial' ? { judicial: true } : { clone: true };
+
+/** A power in words. */
+function powerWords(p: MarkEntry['power']): string {
+  if ('constitutional' in p) return 'the constitutional change rule';
+  if ('judicial' in p) return "the judicial tier's rule";
+  if ('area' in p) return p.area === RELEASE_AREA ? "the Releases area's power" : `the power of area ${p.area}`;
+  return 'the clone rule';
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** A collective Law reads as broken, in a plain sentence: what it means, and Law's reason. */
+export function brokenWords(it: string, reason: string): string {
+  return `Law reads ${it} as broken: no agreement can be found in force for it, so nothing signed in its name counts, and no change of it can come into force. Law's reason: ${reason}.`;
+}
+
 /** The departures a collective file keeps (Law draft 7), with defaults for older files. */
 const departedOf = (c: TestCollective) => c.f.departed ?? [];
 const steppedDownOf = (c: TestCollective) => c.f.steppedDown ?? [];
@@ -163,6 +290,7 @@ const PLAN_LIFE = 15 * 60_000;
 
 export class Actions {
   private plans = new Map<string, Plan>();
+  private shownCache = new Map<string, { stamp: string; at: number; shown: Shown }>();
   /** One signing operation at a time. */
   private busy: Promise<unknown> = Promise.resolve();
 
@@ -321,7 +449,7 @@ export class Actions {
     };
   }
 
-  prepareRelease(a: { publisher: string; version: string; name?: string }) {
+  async prepareRelease(a: { publisher: string; version: string; name?: string }) {
     const names = this.store.names();
     const { p, save, collective } = this.publisher(a.publisher);
     const version = a.version.trim();
@@ -330,8 +458,28 @@ export class Actions {
     if (!version) blocking.push('Give the release a version, for example 11b.1.');
     if (!p.relays.length) blocking.push('Name at least one relay first, under Settings: the files go there.');
     if (collective?.f.pending) blocking.push('A member change of this collective is still waiting for its homes. Send it again first: a release signed with the old key would be void once the change counts.');
-    const voices = collective ? releaseVoicesOf(collective) : [];
-    if (collective && !voices.length) {
+    // Who must sign, as Law counts the Releases area's holders whose voice
+    // remains in the agreement in force (rules 36a, 44d), never this
+    // device's copy; nothing in the name of a collective Law reads as broken.
+    let voices: string[] = [];
+    let need = 0;
+    let threshold = 0;
+    let counted = false;
+    if (collective) {
+      const law = await this.lawOf(collective);
+      const cname = this.store.book().collectives.find((x) => x.id === collective.identity)?.name;
+      if (law.broken) blocking.push(brokenWords(cname ? `“${cname}”` : 'this collective', law.broken));
+      else if (!law.terms) blocking.push(`Law's own reading of the collective could not be had (${law.unread ?? 'nothing found'}), so who must sign cannot be told.`);
+      else {
+        threshold = law.terms.t.areas.find((x) => x.id === RELEASE_AREA)?.threshold ?? 0;
+        const nv = law.v.lawNextVoices(LAW_SPECS, collective.identity, { form: 'area', area: RELEASE_AREA }, []) as { error: string | null; voices: string[]; needed: number | null };
+        if (nv.error) blocking.push(`Law cannot count the Releases area's holders: ${nv.error}.`);
+        voices = nv.voices ?? [];
+        need = nv.needed ?? 0;
+        counted = !nv.error;
+      }
+    }
+    if (collective && counted && !voices.length) {
       blocking.push(
         'The Releases area has no holder left whose voice remains: it is frozen, and a release would count for nothing until the members refit it, by a change of members or rules that gives the area a holder again (Law rule 37b).',
       );
@@ -342,10 +490,10 @@ export class Actions {
     const who: Line[] = collective
       ? [
           {
-            text: `It is published by ${names(a.publisher)}, signed with its everyday key. It is not a release yet: it counts once ${anyOf(needed(collective.f.governance.releaseThreshold, voices.length), voices, names)}, the holders of its Releases area whose voice remains, have signed it, each with an act of their own (agreement in force ${short(collective.f.agreement)}).`,
+            text: `It is published by ${names(a.publisher)}, signed with its everyday key. It is not a release yet: it counts once ${anyOf(need, voices, names)}, the holders of its Releases area whose voice remains, have signed it, each with an act of their own (agreement in force ${short(collective.f.agreement)}).`,
           },
-          ...(voices.length < collective.f.governance.releaseThreshold && voices.length
-            ? [{ text: `The area asks for ${collective.f.governance.releaseThreshold}; fewer holders remain, so all of them together meet it (Law rule 44d).` }]
+          ...(voices.length < threshold && voices.length
+            ? [{ text: `The area asks for ${threshold}; fewer holders remain, so all of them together meet it (Law rule 44d).` }]
             : []),
         ]
       : [
@@ -378,7 +526,7 @@ export class Actions {
             { text: `Release ${out.id}.`, tone: 'ok' },
             { text: `${count(out.manifest.files.length, 'file')}, ${out.uploaded} uploaded new.` },
             ...out.refused.map((r) => ({ text: `Refused by ${r}`, tone: 'warn' as const })),
-            ...(collective ? [{ text: `It counts once ${anyOf(needed(collective.f.governance.releaseThreshold, voices.length), voices, names)} sign it.` }] : []),
+            ...(collective ? [{ text: `It counts once ${anyOf(need, voices, names)} sign it.` }] : []),
           ],
           acts: [out.id],
         };
@@ -406,6 +554,201 @@ export class Actions {
     const d = describeAct(a) as { public: boolean; spec?: string; type?: number; payload?: Uint8Array };
     if (!d.public || d.spec !== REPO_SPECS.law || d.type !== 0 || !d.payload) return null;
     return { payload: d.payload, t: termsOf(d.payload) };
+  }
+
+  /**
+   * Law's own reading of a collective, from a verifier holding what its
+   * relays and homes hold (never this device's copy of it): the agreement
+   * in force and its bytes, who left, who stepped down from which area,
+   * which areas are frozen; or why Law reads it as broken. `unread`: why
+   * no reading could be had (its relays and homes away).
+   */
+  async lawOf(c: TestCollective, extra: string[] = []): Promise<LawOf> {
+    const hints = this.hintsOf(c);
+    const ids = new Set([c.identity, ...extra, ...c.f.members, ...departedOf(c).map((d) => d.member), ...(c.f.governance.departed ?? [])]);
+    for (const a of c.f.agreements) for (const p of (await this.termsAct(a, hints))?.t.parties ?? []) ids.add(p);
+    const { v } = await this.lawVerifier(c, [...ids]);
+    const none = { v, broken: null, agreement: null, terms: null, departed: [], steppedDown: [], frozen: [], closed: null, fork: false };
+    let broken: string | null;
+    try {
+      broken = v.lawBroken(LAW_SPECS, c.identity) ?? null;
+    } catch (e) {
+      return { ...none, unread: e instanceof Error ? e.message : String(e) };
+    }
+    if (broken) return { ...none, broken };
+    const cur = v.lawCurrent(LAW_SPECS, c.identity) as {
+      agreement: string;
+      departed: string[];
+      steppedDown: [number, string][];
+      frozen: number[];
+      closed: string | null;
+      fork: boolean;
+    } | null;
+    if (!cur) return { ...none, unread: `the collective's chain was not found at ${hints.join(', ')}` };
+    const terms = await this.termsAct(cur.agreement, hints);
+    if (!terms) return { ...none, unread: `its agreement in force (${short(cur.agreement)}) was not found at ${hints.join(', ')}` };
+    return { v, broken: null, agreement: cur.agreement, terms, departed: cur.departed, steppedDown: cur.steppedDown, frozen: cur.frozen, closed: cur.closed, fork: cur.fork };
+  }
+
+  /**
+   * A clone's mark as Law asks it (rules 44c, 44d, 45a): the powers its
+   * changes need, from the agreement in force as Law finds it and the
+   * clone's own bytes (`lawClonePlan`), and for each the voices Law counts
+   * at the collective's next line (`lawNextVoices`), less `leaving`, whose
+   * resignations a record of this change registers first. Each power is
+   * named with the voices held here (`take`: only as many as it needs, else
+   * all of them). Where Law cannot count, or too few of its voices sign
+   * here, the review is blocked, in plain words. `lines`: what Law counts,
+   * for the review.
+   */
+  private lawMark(
+    c: TestCollective,
+    law: LawOf,
+    clone: (mark: MarkEntry[]) => Uint8Array,
+    leaving: string[],
+    names: (id: string) => string,
+    take: 'all' | 'needed' = 'all',
+  ): { mark: MarkEntry[]; blocking: string[]; lines: Line[]; counts: { power: MarkEntry['power']; voices: string[]; needed: number }[] } {
+    const counts: { power: MarkEntry['power']; voices: string[]; needed: number }[] = [];
+    const blocking: string[] = [];
+    const cname = this.store.book().collectives.find((x) => x.id === c.identity)?.name;
+    const it = cname ? `“${cname}”` : 'this collective';
+    if (law.broken) return { mark: [], blocking: [brokenWords(it, law.broken)], lines: [], counts };
+    if (!law.agreement || !law.terms) {
+      return { mark: [], blocking: [`Law's own reading of ${it} could not be had (${law.unread ?? 'nothing found'}), so who must sign cannot be counted: nothing is signed until it can.`], lines: [], counts };
+    }
+    if (law.agreement !== c.f.agreement) {
+      return {
+        mark: [],
+        blocking: [`This device holds ${short(c.f.agreement)} as the agreement in force, but Law finds ${short(law.agreement)} in force at the collective's relays and homes: a clone of the wrong agreement would count for nothing. Bring this device up to date first.`],
+        lines: [],
+        counts,
+      };
+    }
+    let needs: { form: string; area?: number }[];
+    try {
+      const placeholder: MarkEntry[] = [{ power: { clone: true }, signers: [c.f.members[0]] }];
+      needs = (lawClonePlan(law.terms.payload, clone(placeholder), LAW_SPECS) as { needs: { form: string; area?: number }[] }).needs;
+    } catch {
+      // Terms Law refuses: the review already says why, with Law's own words.
+      return { mark: [], blocking: [], lines: [], counts };
+    }
+    const mark: MarkEntry[] = [];
+    const lines: Line[] = [];
+    for (const n of needs) {
+      const power = powerOf(n);
+      const what = powerWords(power);
+      const nv = law.v.lawNextVoices(LAW_SPECS, c.identity, { form: n.form, area: n.area }, leaving) as {
+        error: string | null;
+        voices: string[];
+        needed: number | null;
+      };
+      if (nv.error) {
+        blocking.push(`Law cannot count ${what} in ${it}: ${nv.error}.`);
+        continue;
+      }
+      if (nv.needed === null) {
+        blocking.push(`Nobody's voice remains for ${what}, so nothing can meet it (Law rule 44d): ${n.form === 'area' ? 'the area is frozen until the members refit it (rule 37b)' : 'no change of this kind can come into force'}.`);
+        continue;
+      }
+      counts.push({ power, voices: nv.voices, needed: nv.needed });
+      const held = nv.voices.filter((m) => this.store.holds(m));
+      const signers = take === 'needed' ? held.slice(0, nv.needed) : held;
+      lines.push({ text: `Law counts, for ${what}: ${anyOf(nv.needed, nv.voices, names)} (Law rule 44d). Its mark names ${list(signers.map(names)) || 'nobody'}.` });
+      if (held.length < nv.needed) {
+        const away = nv.voices.filter((m) => !this.store.holds(m));
+        blocking.push(
+          `${cap(what)} needs ${anyOf(nv.needed, nv.voices, names)}, as Law counts the voices that remain (rule 44d); only ${held.length} of them sign here${away.length ? ` (${list(away.map(names))} ${away.length === 1 ? 'is' : 'are'} not held by this program)` : ''}. A mark naming fewer would be false, and the clone invalid whatever signatures it gathers (Law rule 45a).`,
+        );
+      }
+      mark.push({ power, signers });
+    }
+    return { mark, blocking, lines, counts };
+  }
+
+  /**
+   * Before a clone is proposed, and again once it is signed, before the
+   * record or rotation that would put it in force is sent: Law's own count
+   * from a fresh reading of the relays and homes, never this device's
+   * copy. Null when the mark names, for each power, voices Law counts there
+   * and enough of them; else why not, in plain words. With `clone`, also
+   * that Law finds it valid and every signature it needs held.
+   */
+  private async markHolds(
+    c: TestCollective,
+    mark: MarkEntry[],
+    names: (id: string) => string,
+    o: { clone?: string; joining?: string[]; leaving?: string[] } = {},
+  ): Promise<string | null> {
+    const law = await this.lawOf(c, o.joining);
+    if (law.broken) return brokenWords('the collective', law.broken);
+    if (!law.agreement) return `Law's own reading of the collective could not be had (${law.unread ?? 'nothing found'}).`;
+    for (const e of mark) {
+      const what = powerWords(e.power);
+      const p = 'area' in e.power ? { form: 'area', area: e.power.area } : { form: Object.keys(e.power)[0] };
+      const nv = law.v.lawNextVoices(LAW_SPECS, c.identity, p, o.leaving ?? []) as { error: string | null; voices: string[]; needed: number | null };
+      if (nv.error) return `Law cannot count ${what}: ${nv.error}.`;
+      const out = e.signers.filter((s) => !nv.voices.includes(s));
+      if (out.length) return `The mark names ${list(out.map(names))} for ${what}, whose voice Law does not count there (rule 44d).`;
+      if (nv.needed === null || e.signers.length < nv.needed) {
+        return `The mark names ${e.signers.length} for ${what}, but Law counts ${anyOf(nv.needed ?? 0, nv.voices, names)} there (rules 44d, 45a): the clone would be invalid.`;
+      }
+    }
+    if (o.clone) {
+      const a = law.v.lawAgreement(LAW_SPECS, o.clone) as { invalid: string | null; ready: boolean };
+      if (a.invalid) return `Law finds the clone invalid: ${a.invalid}.`;
+      if (!a.ready) return 'Not every signature the clone needs is held at the relays yet.';
+    }
+    return null;
+  }
+
+  /**
+   * Who counts in a collective, as Law reads it now from what its relays
+   * and homes hold (rule 44d), never this device's copy: the members whose
+   * voice remains, the Releases area's holders whose voice remains and how
+   * many of them a release needs, and the constitutional change rule's
+   * number. `problem`: why Law has no count (the collective broken, or not
+   * readable); the lists are then empty.
+   */
+  private async counted(c: TestCollective): Promise<{
+    voices: string[];
+    releaseVoices: string[];
+    releaseNeeded: number;
+    releaseThreshold: number;
+    constitution?: number;
+    clone: number;
+    safety: number;
+    problem: string | null;
+  }> {
+    const law = await this.lawOf(c);
+    const cname = this.store.book().collectives.find((x) => x.id === c.identity)?.name;
+    const it = cname ? `“${cname}”` : 'this collective';
+    const none = { voices: [], releaseVoices: [], releaseNeeded: 0, releaseThreshold: 0, clone: 0, safety: 0 };
+    if (law.broken) return { ...none, problem: brokenWords(it, law.broken) };
+    if (!law.terms) return { ...none, problem: `Law's own reading of ${it} could not be had (${law.unread ?? 'nothing found'}), so who counts cannot be told.` };
+    type NV = { error: string | null; voices: string[]; needed: number | null };
+    const all = law.v.lawNextVoices(LAW_SPECS, c.identity, { form: 'judicial' }, []) as NV;
+    const area = law.v.lawNextVoices(LAW_SPECS, c.identity, { form: 'area', area: RELEASE_AREA }, []) as NV;
+    const k = law.terms.t.constitutional;
+    return {
+      voices: all.voices ?? [],
+      releaseVoices: area.error ? [] : area.voices,
+      releaseNeeded: area.needed ?? 0,
+      releaseThreshold: law.terms.t.areas.find((x) => x.id === RELEASE_AREA)?.threshold ?? 0,
+      ...(k?.form === 'threshold' && k.threshold ? { constitution: k.threshold } : {}),
+      clone: law.terms.t.clone.form === 'threshold' && law.terms.t.clone.threshold ? law.terms.t.clone.threshold : law.terms.t.parties.length,
+      safety: law.terms.t.grammar?.safety.threshold ?? 0,
+      problem: all.error ? `Law cannot count the members of ${it}: ${all.error}.` : null,
+    };
+  }
+
+  /** The checks a change written on the record passes to the repo client: the mark as Law counted it, and Law counting again before the clone and before the record. */
+  private gates(col: TestCollective, mark: MarkEntry[], names: (id: string) => string) {
+    return {
+      mark,
+      beforeClone: () => this.markHolds(col, mark, names),
+      beforeSend: (clone: string) => this.markHolds(col, mark, names, { clone }),
+    };
   }
 
   /** Read terms this client made, or say plainly why Law cannot. */
@@ -635,21 +978,8 @@ export class Actions {
     // Removed members who have not left yet: held here, they resign first; otherwise they keep their voice for this clone.
     const resigning = [...leave].filter((l) => c.f.members.includes(l) && !departed.has(l) && this.store.holds(l));
     const removedUnheld = [...leave].filter((l) => c.f.members.includes(l) && !departed.has(l) && !this.store.holds(l));
-    const signersStaying = staying.filter((m) => this.store.holds(m) && !departed.has(m));
-    // The constitutional change rule, counted among the voices that remain at the rotation (rule 44d).
-    const voices = c.f.members.filter((m) => !departed.has(m) && !resigning.includes(m));
-    const k = c.f.governance.constitutionalThreshold;
-    if (!k) {
-      const missing = voices.filter((v) => !signersStaying.includes(v));
-      if (missing.length) {
-        blocking.push(
-          `A change of members needs every member whose voice remains (the constitutional change rule); ${list(missing.map(names))} cannot sign here: not held by this program${removedUnheld.length ? ', and removed without resigning' : ''}.`,
-        );
-      }
-    } else {
-      const need = needed(k, voices.length);
-      const have = signersStaying.filter((m) => voices.includes(m)).length;
-      if (have < need) blocking.push(`A change of members needs any ${need} of the ${voices.length} members whose voice remains (the constitutional change rule); only ${have} sign here.`);
+    if (removedUnheld.length) {
+      blocking.push(`${list(removedUnheld.map(names))} ${removedUnheld.length === 1 ? 'is' : 'are'} removed without resigning and not held by this program, so ${removedUnheld.length === 1 ? 'their voice remains' : 'their voices remain'} for this change, and ${removedUnheld.length === 1 ? 'they' : 'each'} cannot sign here.`);
     }
 
     const current = c.f.governance;
@@ -668,17 +998,19 @@ export class Actions {
     );
 
     const holder = c.nextHolder(members);
-    const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: signersStaying }];
-    // F122: a version that also changes a judge (who judges absence, here)
-    // needs every member whose voice remains for it, its mark naming both.
-    const parentTerms = collectiveTerms(current, c.f.members, c.f.signingHolder);
-    if (clonePlan(parentTerms, collectiveTerms(g, members, holder, c.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
-      mark.push({ power: { judicial: true }, signers: signersStaying.filter((m) => voices.includes(m)) });
-      const missing = voices.filter((v) => !signersStaying.includes(v));
-      if (missing.length) {
-        blocking.push(`This change also changes a judge (who judges absence), which needs every member whose voice remains (Law draft 10, F122); ${list(missing.map(names))} cannot sign here.`);
-      }
-    }
+    // The mark as Law asks it (rules 44c, 44d, 45a): the powers from the
+    // agreement in force as Law finds it, each named with the voices Law
+    // counts at the rotation, the members resigning first left out. A
+    // version that also changes a judge names the judicial tier's rule too
+    // (F122): Law's plan says so, not this client.
+    const law = await this.lawOf(c);
+    // Leaving the count too: a member declared absent while holding the
+    // everyday key, whose declaration takes effect at this rotation (C7, B16).
+    const recoveringOut = c.recovering().filter((d) => leave.has(d.member)).map((d) => d.member);
+    const lm = this.lawMark(c, law, (m) => encodeTerms(collectiveTerms(g, members, holder, c.f.agreement, m)), [...resigning, ...recoveringOut], names);
+    blocking.push(...lm.blocking);
+    const mark: MarkEntry[] = lm.mark.length ? lm.mark : [{ power: { constitutional: true }, signers: staying.filter((m) => this.store.holds(m) && !departed.has(m)) }];
+    const signersStaying = [...new Set(mark.flatMap((e) => e.signers))];
     const payload = encodeTerms(collectiveTerms(g, members, holder, c.f.agreement, mark));
     const after = this.read(payload);
     const hints = this.hintsOf(c);
@@ -733,12 +1065,14 @@ export class Actions {
     const releaseArea = (t: TermsRead) => t.areas.find((x) => x.id === RELEASE_AREA);
     const areaChanged = !!before && JSON.stringify(releaseArea(before.t)) !== JSON.stringify(releaseArea(after));
     const down = steppedDownOf(c).filter((d) => d.area === RELEASE_AREA && members.includes(d.member));
+    const areaVoices = law.agreement ? (law.v.lawNextVoices(LAW_SPECS, c.identity, { form: 'area', area: RELEASE_AREA }, []) as { voices?: string[] }).voices : undefined;
+    const areaFrozen = areaVoices ? !areaVoices.length : !releaseVoicesOf(c).length;
     if (down.length) {
       notes.push(
         areaChanged
           ? { text: `${list(down.map((d) => names(d.member)))} stepped down from the Releases area. This change redraws the area, so whoever it names as a holder and signs it holds the area again (Law rules 37b, 44d).` }
           : {
-              text: `${list(down.map((d) => names(d.member)))} stepped down from the Releases area. This change leaves the area's entry as it is, so it does not refit the area (Law rule 37b): they stay stepped down${releaseVoicesOf(c).length ? '' : ', and the area stays frozen'}. Change the number of members a release needs, or its holders, to refit it.`,
+              text: `${list(down.map((d) => names(d.member)))} stepped down from the Releases area. This change leaves the area's entry as it is, so it does not refit the area (Law rule 37b): they stay stepped down${areaFrozen ? ', and the area stays frozen' : ''}. Change the number of members a release needs, or its holders, to refit it.`,
               tone: 'warn',
             },
       );
@@ -748,7 +1082,7 @@ export class Actions {
       title,
       summary,
       sections: [
-        { heading: 'What changes', lines: [...changes, ...notes, ...warnings] },
+        { heading: 'What changes', lines: [...changes, ...lm.lines, ...notes, ...warnings] },
         ...read.sections.map((s) => ({ ...s, heading: `After the change: ${s.heading.charAt(0).toLowerCase()}${s.heading.slice(1)}` })),
         {
           heading: 'Signed on this device',
@@ -785,7 +1119,31 @@ export class Actions {
           leaving,
           governance: changedGovernance ? g : undefined,
           expect: payload,
+          mark,
+          // Law counts again, from what the relays and homes now hold, once
+          // the resignations are registered and once the clone is signed:
+          // nothing more is signed, and no rotation sent, unless Law would
+          // count this mark (rules 44d, 45a).
+          beforeClone: () => this.markHolds(col, mark, names, { leaving: recoveringOut }),
+          beforeSend: (clone) => this.markHolds(col, mark, names, { clone, joining: join, leaving: recoveringOut }),
         });
+        if (got.stopped) {
+          if (got.record) {
+            col.f.records = [...(col.f.records ?? []), got.record];
+            col.f.departed = [...departedOf(col), ...got.resigned.map((r) => ({ member: r.member, resignation: r.act, record: got.record! }))];
+          }
+          this.store.saveCollective(col);
+          for (const i of [...stay, ...joining, ...leaving]) this.store.saveIdentity(i);
+          return {
+            title: `${title}: stopped, nothing in force`,
+            lines: [
+              ...got.resigned.map((r) => ({ text: `Resignation ${r.act} by ${names(r.member)}, registered by record ${got.record}: they have left (Law rule 37a).` })),
+              ...(got.clone ? [{ text: `Clone ${got.clone}, signed by ${got.signed.length}: a draft, never put in force; no rotation was sent.` }] : [{ text: 'No clone was proposed or signed.' }]),
+              { text: `Law would not count it: ${got.stopped}`, tone: 'bad' as const },
+            ],
+            acts: [...got.resigned.map((r) => r.act), ...(got.record ? [got.record] : []), ...(got.clone ? [got.clone] : []), ...got.signed.map((x) => x.act)],
+          };
+        }
         if (got.record) {
           col.f.records = [...(col.f.records ?? []), got.record];
           col.f.departed = [...departedOf(col), ...got.resigned.map((r) => ({ member: r.member, resignation: r.act, record: got.record! }))];
@@ -856,12 +1214,16 @@ export class Actions {
   }
 
   /** Who decides, from a line on, in plain words: the constitution, the Releases area, other changes (rule 44d). */
-  private decidersAfter(c: TestCollective, voices: string[], releaseVoices: string[], names: (id: string) => string): Line[] {
-    const g = c.f.governance;
+  private decidersAfter(
+    g: { constitution?: number; releaseThreshold: number; clone: number },
+    voices: string[],
+    releaseVoices: string[],
+    names: (id: string) => string,
+  ): Line[] {
     const out: Line[] = [
       {
-        text: g.constitutionalThreshold
-          ? `A change of the constitution (members, rules, keys, areas) needs ${anyOf(needed(g.constitutionalThreshold, voices.length), voices, names)}.`
+        text: g.constitution
+          ? `A change of the constitution (members, rules, keys, areas) needs ${anyOf(needed(g.constitution, voices.length), voices, names)}.`
           : `A change of the constitution (members, rules, keys, areas) needs every member whose voice remains: ${list(voices.map(names)) || 'nobody'}.`,
       },
     ];
@@ -874,7 +1236,7 @@ export class Actions {
       });
     }
     out.push({ text: `A change of who judges (the protected clauses) needs every member whose voice remains: ${list(voices.map(names)) || 'nobody'} (Law rule 46a, F121).` });
-    out.push({ text: `Other changes need ${anyOf(needed(g.cloneThreshold, voices.length), voices, names)}.` });
+    out.push({ text: `Other changes need ${anyOf(needed(g.clone, voices.length), voices, names)}.` });
     return out;
   }
 
@@ -889,8 +1251,11 @@ export class Actions {
     const blocking: string[] = [];
     const { c, cname, names } = this.memberOf(a.collective, a.member, blocking);
     const who = names(a.member);
-    const voices = voicesOf(c).filter((m) => m !== a.member);
-    const releaseVoices = releaseVoicesOf(c).filter((m) => m !== a.member);
+    // Who remains, as Law counts it. Leaving is never blocked (rule 37a);
+    // where Law has no count, the review says so.
+    const n = await this.counted(c);
+    const voices = n.voices.filter((m) => m !== a.member);
+    const releaseVoices = n.releaseVoices.filter((m) => m !== a.member);
     const mine = !!this.store.book().identities.find((i) => i.id === a.member)?.mine;
     const what: Line[] = [
       { text: `${who} keeps what they own, and stays bound by what they signed (Law rule 37a).` },
@@ -905,9 +1270,10 @@ export class Actions {
         text: `The members who stay then refit the collective: Change members, removing ${who}, rotates it to keys ${who} never held, and deals the safety key afresh among those who stay (Law rule 37).`,
       },
     ];
-    if (voices.length && c.f.governance.safetyThreshold >= voices.length) {
+    if (n.problem) what.push({ text: n.problem, tone: 'warn' });
+    if (voices.length && n.safety >= voices.length) {
       then.push({
-        text: `With ${voices.length} member${voices.length === 1 ? '' : 's'} left, a safety key needing ${c.f.governance.safetyThreshold} of them would be lost with any one of them: the refit must ask fewer to rebuild it (F96).`,
+        text: `With ${voices.length} member${voices.length === 1 ? '' : 's'} left, a safety key needing ${n.safety} of them would be lost with any one of them: the refit must ask fewer to rebuild it (F96).`,
         tone: 'warn',
       });
     }
@@ -921,7 +1287,7 @@ export class Actions {
       ],
       sections: [
         { heading: 'What leaving means', lines: what },
-        { heading: 'Who decides from the line on', lines: this.decidersAfter(c, voices, releaseVoices, names) },
+        { heading: 'Who decides from the line on', lines: this.decidersAfter(n, voices, releaseVoices, names) },
         { heading: 'Then', lines: then },
         {
           heading: 'Signed on this device',
@@ -974,12 +1340,15 @@ export class Actions {
     const { c, cname, names } = this.memberOf(a.collective, a.member, blocking);
     const who = names(a.member);
     if (steppedDownOf(c).some((d) => d.member === a.member && d.area === RELEASE_AREA)) blocking.push(`${who} already stepped down from the Releases area.`);
-    const releaseVoices = releaseVoicesOf(c).filter((m) => m !== a.member);
+    // The Releases area's holders whose voice remains, as Law counts them (rules 37b, 44d).
+    const n = await this.counted(c);
+    if (n.problem) blocking.push(n.problem);
+    const releaseVoices = n.releaseVoices.filter((m) => m !== a.member);
     const payload = resignationPayload(c.f.agreement, RELEASE_AREA);
     const area: Line[] = releaseVoices.length
       ? [
           {
-            text: `The other holders carry on: a release needs ${anyOf(needed(c.f.governance.releaseThreshold, releaseVoices.length), releaseVoices, names)}${releaseVoices.length < c.f.governance.releaseThreshold ? `; the area asks for ${c.f.governance.releaseThreshold}, and when fewer remain all of them together meet it (Law rule 44d)` : ''}.`,
+            text: `The other holders carry on: a release needs ${anyOf(needed(n.releaseThreshold, releaseVoices.length), releaseVoices, names)}${releaseVoices.length < n.releaseThreshold ? `; the area asks for ${n.releaseThreshold}, and when fewer remain all of them together meet it (Law rule 44d)` : ''}.`,
           },
         ]
       : [
@@ -1024,7 +1393,8 @@ export class Actions {
         col.f.steppedDown = [...steppedDownOf(col), { member: a.member, area: RELEASE_AREA, resignation: r.id, record: line.id }];
         col.f.records = [...(col.f.records ?? []), line.id];
         this.store.saveCollective(col);
-        const frozen = !releaseVoicesOf(col).length;
+        const after = await this.counted(col);
+        const frozen = !after.problem && !after.releaseVoices.length;
         return {
           title: `${who} stepped down from the Releases area`,
           lines: [
@@ -1032,7 +1402,9 @@ export class Actions {
             { text: `Record ${line.id}: the collective's line.`, tone: 'ok' },
             frozen
               ? { text: 'The Releases area has no holder left: it is frozen until the members refit it.', tone: 'warn' }
-              : { text: `A release now needs ${anyOf(needed(col.f.governance.releaseThreshold, releaseVoicesOf(col).length), releaseVoicesOf(col), names)}.` },
+              : after.problem
+                ? { text: after.problem, tone: 'bad' }
+                : { text: `A release now needs ${anyOf(after.releaseNeeded, after.releaseVoices, names)}.` },
           ],
           acts: [r.id, line.id],
         };
@@ -1056,17 +1428,24 @@ export class Actions {
     blocking.push(...this.awaitingRecovery(c, names));
     if (!text) blocking.push('Write the words.');
     if (text && text === (c.f.governance.releaseWords ?? '')) blocking.push('Nothing changes: these are the area’s words already.');
-    const voices = releaseVoicesOf(c);
-    const k = needed(c.f.governance.releaseThreshold, voices.length);
-    if (!voices.length) blocking.push('The Releases area is frozen: nobody holds it, so nobody can change its words until the members refit it (Law rule 37b).');
-    const signers = a.signers?.length ? [...new Set(a.signers)] : voices.filter((m) => this.store.holds(m)).slice(0, k);
-    for (const s of signers) {
-      if (!voices.includes(s)) blocking.push(`${names(s)} does not hold the Releases area with a voice that remains, so their signature cannot meet its power.`);
-      else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
-    }
-    if (voices.length && signers.length < k) blocking.push(`Its words change with ${anyOf(k, voices, names)}; only ${signers.length} sign here.`);
-    const mark: MarkEntry[] = [{ power: { area: RELEASE_AREA }, signers }];
     const g: Governance = { ...c.f.governance, releaseWords: text };
+    // Who must sign, as Law counts the area's holders whose voice remains (rules 37b, 44d).
+    const law = await this.lawOf(c);
+    const lm = this.lawMark(c, law, (m) => encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, m)), [], names, 'needed');
+    const areaCount = lm.counts.find((x) => 'area' in x.power);
+    const voices: string[] = areaCount?.voices ?? [];
+    const k = areaCount?.needed ?? 0;
+    if (law.agreement && !law.broken && !voices.length) blocking.push('The Releases area is frozen: nobody holds it, so nobody can change its words until the members refit it (Law rule 37b).');
+    else blocking.push(...lm.blocking);
+    const signers = a.signers?.length ? [...new Set(a.signers)] : (lm.mark.find((e) => 'area' in e.power)?.signers ?? []);
+    if (a.signers?.length) {
+      for (const s of signers) {
+        if (!voices.includes(s)) blocking.push(`${names(s)} does not hold the Releases area with a voice that remains, as Law counts it, so their signature cannot meet its power.`);
+        else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
+      }
+      if (voices.length && signers.length < k) blocking.push(`Its words change with ${anyOf(k, voices, names)}; only ${signers.length} sign here.`);
+    }
+    const mark: MarkEntry[] = [{ power: { area: RELEASE_AREA }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
     let changes: Line[] = [];
     let after: TermsRead | null = null;
@@ -1114,7 +1493,11 @@ export class Actions {
       run: async () => {
         const col = this.store.collective(a.collective);
         const ids = signers.map((s) => this.store.identity(s));
-        const got = await col.changeReleaseWords({ words: text, proposer: ids[0], signers: ids, expect: payload });
+        const got = await col.changeReleaseWords({ words: text, proposer: ids[0], signers: ids, expect: payload, ...this.gates(col, mark, names) });
+        if (got.stopped) {
+          for (const i of ids) this.store.saveIdentity(i);
+          return stoppedDone(`New words for the Releases area of “${cname}”`, got);
+        }
         col.f.records = [...(col.f.records ?? []), got.record];
         this.store.saveCollective(col);
         for (const i of ids) this.store.saveIdentity(i);
@@ -1149,16 +1532,23 @@ export class Actions {
     const old = c.f.governance.abandonmentOthers;
     const others = whole(a.others, 'who judges absence');
     if (others === old) blocking.push('Nothing changes: this is who judges absence already.');
-    const voices = voicesOf(c);
-    const signers = a.signers?.length ? [...new Set(a.signers)] : voices.filter((m) => this.store.holds(m));
-    for (const s of signers) {
-      if (!voices.includes(s)) blocking.push(`${names(s)} is not a member whose voice remains, so their signature cannot meet the judicial tier's rule.`);
-      else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
-    }
-    const missing = voices.filter((v) => !signers.includes(v));
-    if (missing.length) blocking.push(`A judicial change needs every member whose voice remains (Law rule 46a, F121); ${list(missing.map(names))} ${missing.length === 1 ? 'does' : 'do'} not sign here.`);
     const g: Governance = { ...c.f.governance, abandonmentOthers: others };
     const hints = rulesHints(toRules(g), c.f.members.length);
+    // Every member whose voice remains, as Law counts them (rules 44d, 46a, F121).
+    const law = await this.lawOf(c);
+    const lm = hints.length ? null : this.lawMark(c, law, (m) => encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, m)), [], names);
+    const voices: string[] = lm?.counts.find((x) => 'judicial' in x.power)?.voices ?? [];
+    const signers = a.signers?.length ? [...new Set(a.signers)] : (lm?.mark.find((e) => 'judicial' in e.power)?.signers ?? []);
+    if (lm) {
+      if (a.signers?.length) {
+        for (const s of signers) {
+          if (!voices.includes(s)) blocking.push(`${names(s)} is not a member whose voice remains, as Law counts it, so their signature cannot meet the judicial tier's rule.`);
+          else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
+        }
+        const missing = voices.filter((v) => !signers.includes(v));
+        if (missing.length) blocking.push(`A judicial change needs every member whose voice remains (Law rule 46a, F121); ${list(missing.map(names))} ${missing.length === 1 ? 'does' : 'do'} not sign here.`);
+      } else blocking.push(...lm.blocking);
+    }
     const mark: MarkEntry[] = [{ power: { judicial: true }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
     let changes: Line[] = [];
@@ -1212,7 +1602,11 @@ export class Actions {
       run: async () => {
         const col = this.store.collective(a.collective);
         const ids = signers.map((s) => this.store.identity(s));
-        const got = await col.changeAbsenceRule({ others, proposer: ids[0], signers: ids, expect: payload });
+        const got = await col.changeAbsenceRule({ others, proposer: ids[0], signers: ids, expect: payload, ...this.gates(col, mark, names) });
+        if (got.stopped) {
+          for (const i of ids) this.store.saveIdentity(i);
+          return stoppedDone(`Who judges absence in “${cname}”`, got);
+        }
         col.f.records = [...(col.f.records ?? []), got.record];
         this.store.saveCollective(col);
         for (const i of ids) this.store.saveIdentity(i);
@@ -1262,7 +1656,10 @@ export class Actions {
       blocking.push(`The clause ${who} signed does not let the other members remove a voice, so this client cannot declare it.`);
     }
     const k = ab?.threshold ?? c.f.governance.abandonmentOthers;
-    const others = voicesOf(c).filter((m) => m !== a.member);
+    // The other members whose voice remains, as Law counts them (rules 44d, 49).
+    const n = await this.counted(c);
+    if (n.problem) blocking.push(n.problem);
+    const others = n.voices.filter((m) => m !== a.member);
     const need = needed(k, others.length);
     if (!others.length) blocking.push('No other member whose voice remains can judge absence.');
     const signers = a.signers?.length ? [...new Set(a.signers)] : others.filter((m) => this.store.holds(m)).slice(0, need);
@@ -1274,7 +1671,7 @@ export class Actions {
     const payload: Uint8Array = clause ? await c.declarationFor(a.member, this.via) : new Uint8Array();
     const [by, ...cosigners] = signers;
     const voices = others;
-    const releaseVoices = releaseVoicesOf(c).filter((m) => m !== a.member);
+    const releaseVoices = n.releaseVoices.filter((m) => m !== a.member);
     const reading: Reading = {
       title: `${who} is declared absent from “${cname}”`,
       summary: [
@@ -1295,7 +1692,7 @@ export class Actions {
             { text: `${who}'s share of the current safety key exists until the refit; the rotation that follows fences it off (F100).`, tone: 'warn' },
           ],
         },
-        { heading: 'Who decides from the line on', lines: this.decidersAfter(c, voices, releaseVoices, names) },
+        { heading: 'Who decides from the line on', lines: this.decidersAfter(n, voices, releaseVoices, names) },
         {
           heading: 'Then',
           lines: [{ text: `The members who remain refit the collective: Change members, removing ${who}, rotates it to keys ${who} never held (Law rules 37, 53).` }],
@@ -1411,7 +1808,8 @@ export class Actions {
     const v = await verifyRelease(a.release, at, { via: this.via });
     const blocking: string[] = [];
     const onlyUnsigned = v.problems.every((p) => p.startsWith('not a release:'));
-    if (!v.manifest || !onlyUnsigned) blocking.push(`The release does not check: ${v.problems.join('; ')}`);
+    if (v.law?.kind === 'broken') blocking.push(`No signature can make it a release. ${v.problems.find((p) => p.startsWith('Law reads'))}.`);
+    else if (!v.manifest || !onlyUnsigned) blocking.push(`The release does not check: ${v.problems.join('; ')}`);
     const checks: Line[] = [];
     if (v.agreement) {
       const t = await this.termsAct(v.agreement, at);
@@ -1439,8 +1837,8 @@ export class Actions {
           }
         }
       }
-    } else if (v.manifest) {
-      blocking.push('It is not a collective’s release: nobody else’s signature is asked for.');
+    } else if (v.manifest && v.law?.kind === 'not-collective') {
+      blocking.push('It is published under its signer’s own name, not by a collective: no member’s signature is asked for.');
     }
     if (v.signers.includes(member.id)) blocking.push(`${names(member.id)} has already signed it.`);
     if (v.manifest) {
@@ -1637,7 +2035,9 @@ export class Actions {
     const blocking: string[] = [...this.closedBlock(c)];
     if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
     blocking.push(...this.awaitingRecovery(c, names));
-    const voices = voicesOf(c);
+    // The members whose voice remains, as Law reads the collective (rule 44d).
+    const law = await this.lawOf(c);
+    const voices = law.terms ? law.terms.t.parties.filter((p) => !law.departed.includes(p)) : voicesOf(c);
     const departed = c.f.governance.departed ?? [];
     const holders = [...voices, ...departed];
     for (const k of Object.keys(a.shares)) if (!holders.includes(k)) blocking.push(`${names(k)} is neither a member whose voice remains nor a departed holder.`);
@@ -1657,10 +2057,11 @@ export class Actions {
       if (w && !works.some((x) => x.object === w.work)) works.push({ object: w.work, holders: [[null, 1_000_000]] });
     }
     const stakes: Stake[] = [{ object: null, holders: millionths }, ...works];
-    const signers = voices.filter((x) => this.store.holds(x));
-    if (signers.length < Math.min(c.f.governance.cloneThreshold, voices.length)) blocking.push('Too few members can sign here for the clone rule.');
     const g: Governance = { ...c.f.governance, stakes };
-    const mark: MarkEntry[] = [{ power: { clone: true }, signers }];
+    const lm = this.lawMark(c, law, (mk) => encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mk)), [], names);
+    blocking.push(...lm.blocking);
+    const signers = lm.mark.find((e) => 'clone' in e.power)?.signers ?? voices.filter((x) => this.store.holds(x));
+    const mark: MarkEntry[] = lm.mark.length ? lm.mark : [{ power: { clone: true }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.signingHolder, c.f.agreement, mark));
     if (!blocking.length) blocking.push(...withLaw([], readAgreement(this.read(payload), names).blocking));
     const reading: Reading = {
@@ -1694,7 +2095,11 @@ export class Actions {
       run: async () => {
         const col = this.store.collective(a.collective);
         const ids = signers.map((x) => this.store.identity(x));
-        const got = await col.setStakes({ stakes, proposer: ids[0], signers: ids, expect: payload });
+        const got = await col.setStakes({ stakes, proposer: ids[0], signers: ids, expect: payload, ...this.gates(col, mark, names) });
+        if (got.stopped) {
+          for (const i of ids) this.store.saveIdentity(i);
+          return stoppedDone(`The stakes in “${cname}”`, got);
+        }
         col.f.records = [...(col.f.records ?? []), got.record];
         this.store.saveCollective(col);
         for (const i of ids) this.store.saveIdentity(i);
@@ -1720,9 +2125,13 @@ export class Actions {
     if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
     blocking.push(...this.awaitingRecovery(c, names));
     if (!this.store.holds(a.service) || this.store.isCollective(a.service)) blocking.push('The split service must be a test identity this program holds (it is simulated here).');
-    const voices = voicesOf(c);
-    const missing = voices.filter((m) => !this.store.holds(m));
-    if (missing.length) blocking.push(`A judicial change needs every member whose voice remains (Law rule 46a, F121); ${list(missing.map(names))} cannot sign here.`);
+    // Every member whose voice remains, as Law counts them (rules 44d, 46a,
+    // F121); the grant is made at signing, so its place is held by zeros here:
+    // who must sign does not depend on which grant is named.
+    const law = await this.lawOf(c);
+    const lm = this.lawMark(c, law, (m) => encodeTerms(collectiveTerms({ ...c.f.governance, splitGrant: '0'.repeat(64) }, c.f.members, c.f.signingHolder, c.f.agreement, m)), [], names);
+    blocking.push(...lm.blocking);
+    const voices = lm.mark.flatMap((e) => e.signers);
     const reading: Reading = {
       title: `A split service for “${cname}”`,
       summary: [
@@ -1756,7 +2165,11 @@ export class Actions {
         await lawSign(service, g.id, col.f.relays);
         this.store.saveIdentity(service);
         const ids = voices.map((x) => this.store.identity(x));
-        const got = await col.nameSplitService({ grant: g.id, proposer: ids[0], signers: ids });
+        const got = await col.nameSplitService({ grant: g.id, proposer: ids[0], signers: ids, ...this.gates(col, lm.mark, names) });
+        if (got.stopped) {
+          for (const i of ids) this.store.saveIdentity(i);
+          return stoppedDone(`A split service for “${cname}”`, got);
+        }
         col.f.records = [...(col.f.records ?? []), got.record];
         this.store.saveCollective(col);
         for (const i of ids) this.store.saveIdentity(i);
@@ -2190,7 +2603,10 @@ export class Actions {
     const blocking: string[] = [...this.closedBlock(c)];
     if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first.');
     const sides = a.sides.map((s) => [...new Set(s)]).filter((s) => s.length);
-    const voices = voicesOf(c);
+    // The members whose voice remains, and the constitutional change rule, as Law reads them (rule 44d, F124 N1).
+    const n = await this.counted(c);
+    if (n.problem) blocking.push(n.problem);
+    const voices = n.voices;
     if (sides.length < 2) blocking.push('A fork has at least two sides.');
     if (sides.some((x) => x.length < 2)) blocking.push("This client founds collectives of two members or more (absence is judged by a threshold of the other members): put two members on each side.");
     const listed = sides.flat();
@@ -2201,7 +2617,7 @@ export class Actions {
       else if (!this.store.holds(m)) blocking.push(`${names(m)} cannot sign here.`);
     }
     // N1: the constitutional change rule, every member whose voice remains by default.
-    const k = c.f.governance.constitutionalThreshold;
+    const k = n.constitution;
     const needed = k ? Math.min(k, voices.length) : voices.length;
     if (listed.filter((m) => voices.includes(m)).length < needed) {
       blocking.push(
@@ -2417,8 +2833,11 @@ export class Actions {
     const c = this.store.collective(a.collective);
     const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
     const blocking: string[] = [...this.closedBlock(c)];
-    const voices = voicesOf(c);
-    const k = c.f.governance.constitutionalThreshold;
+    // The members whose voice remains, and the constitutional change rule, as Law reads them (rule 44d, F124 N9).
+    const n = await this.counted(c);
+    if (n.problem) blocking.push(n.problem);
+    const voices = n.voices;
+    const k = n.constitution;
     const signers = voices.filter((m) => this.store.holds(m));
     if (signers.length < (k ? Math.min(k, voices.length) : voices.length)) blocking.push(`A closing follows the constitutional change rule (F124 N9); ${list(voices.filter((m) => !this.store.holds(m)).map(names))} cannot sign here.`);
     // D5: a collective cannot close while it owes anything, its own debts
@@ -2536,10 +2955,28 @@ export class Actions {
 
   // ------------------------------------------------------------ what the page shows
 
-  state() {
+  /**
+   * What the page shows of a collective's rules, members and release area:
+   * Law's own reading of what its relays and homes hold ([`Actions.lawOf`]),
+   * never this device's copy, so the two cannot disagree. Kept until the
+   * collective's file changes, or for a minute.
+   */
+  private async shown(c: TestCollective): Promise<Shown> {
+    const stamp = this.store.stamp([c.identity]);
+    const hit = this.shownCache.get(c.identity);
+    if (hit && hit.stamp === stamp && Date.now() - hit.at < 60_000) return hit.shown;
+    const law = await this.lawOf(c);
+    const shown = shownOf(c, law);
+    this.shownCache.set(c.identity, { stamp, at: Date.now(), shown });
+    return shown;
+  }
+
+  async state() {
     const b = this.store.book();
     const s = this.store.settings();
     const names = this.store.names();
+    const shown = new Map<string, Shown>();
+    for (const x of b.collectives) shown.set(x.id, await this.shown(this.store.collective(x.id)));
     return {
       settings: { ...s, checkoutDefault: ROOT },
       identities: b.identities.map((i) => ({
@@ -2552,37 +2989,35 @@ export class Actions {
         const c = this.store.collective(x.id);
         const departed = departedOf(c);
         const down = steppedDownOf(c);
-        const voices = releaseVoicesOf(c);
+        const w = shown.get(x.id)!;
         return {
           id: x.id,
           name: x.name,
-          members: c.f.members.map((m) => ({ id: m, name: names(m), held: this.store.holds(m), left: departed.some((d) => d.member === m) })),
+          // Law's reading: where Law reads the collective as broken, or
+          // could not be read, the box says so; what follows is then this
+          // device's copy, labelled as such on the page.
+          law: { broken: w.broken, unread: w.unread },
+          members: w.members.map((m) => ({ id: m.id, name: names(m.id), held: this.store.holds(m.id), left: m.left })),
           areas: [
             {
               id: RELEASE_AREA,
               name: 'Releases',
-              holders: c.f.members.map((m) => ({
-                id: m,
-                name: names(m),
-                held: this.store.holds(m),
-                voice: voices.includes(m),
-                steppedDown: down.some((d) => d.member === m && d.area === RELEASE_AREA),
-              })),
-              threshold: c.f.governance.releaseThreshold,
-              needed: needed(c.f.governance.releaseThreshold, voices.length),
-              frozen: !voices.length,
-              words: c.f.governance.releaseWords ?? '',
+              holders: w.area.holders.map((h) => ({ ...h, name: names(h.id), held: this.store.holds(h.id) })),
+              threshold: w.area.threshold,
+              needed: w.area.needed,
+              frozen: w.area.frozen,
+              words: w.area.words,
             },
           ],
-          departed: departed.map((d) => ({ id: d.member, name: names(d.member), record: d.record, stillParty: c.f.members.includes(d.member) })),
+          departed: departed.map((d) => ({ id: d.member, name: names(d.member), record: d.record, stillParty: w.members.some((m) => m.id === d.member) })),
           steppedDown: down.map((d) => ({ id: d.member, name: names(d.member), area: d.area, record: d.record })),
           records: (c.f.records ?? []).length,
-          holder: names(c.f.signingHolder),
-          agreement: c.f.agreement,
-          agreements: c.f.agreements.length,
-          rules: toRules(c.f.governance),
-          words: c.f.governance.text,
-          shares: { threshold: c.f.safety.threshold, of: c.f.safety.shares.length },
+          holder: names(w.holder),
+          agreement: w.agreement,
+          agreements: c.f.agreements.indexOf(w.agreement) + 1 || c.f.agreements.length,
+          rules: w.rules,
+          words: w.words,
+          shares: w.shares,
           relays: c.f.relays,
           releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })),
           pending: !!c.f.pending,

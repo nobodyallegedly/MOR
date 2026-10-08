@@ -6983,3 +6983,63 @@ fn a_payers_claim_counts_and_shows_what_the_receiver_hides() {
     assert!(!v.disagreements(&pid).iter().any(|x| matches!(x, Disagreement::NoReceipt { .. })));
     let _ = bare;
 }
+
+/// Step 11b, human test of 8 October 2026: a client composing a clone's
+/// mark asks Law who counts at the collective's next line (rule 44d,
+/// `next_voices`), and Law says why it reads a collective as broken
+/// (`broken`). A removal whose record never reached Law: Law still counts
+/// the member's voice, so a mark naming only those who stay is false
+/// (rule 45a), and the rotation declaring it leaves the collective broken.
+#[test]
+fn the_next_line_counts_the_voices_a_mark_names() {
+    for drawn in [true, false] {
+        let mut lab = Lab::new(&|_| {});
+        let f = lab.founding;
+        let col = lab.c[0].id;
+        let ids = lab.ids();
+        let all = sorted(vec![ids[ANA], ids[BEN], ids[CY]]);
+        let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+        assert_eq!(n.agreement, f);
+        assert_eq!(sorted(n.voices.clone()), all);
+        assert_eq!(n.needed, Some(3), "every party whose voice remains");
+        // Those whose resignations a record of the change will register first are left out.
+        let n = lab.view().next_voices(&col, &Power::Constitutional, &[ids[BEN]]).unwrap().unwrap();
+        assert_eq!((sorted(n.voices), n.needed), (sorted(vec![ids[ANA], ids[CY]]), Some(2)));
+
+        let mut ben = lab.m[BEN].clone();
+        let res = lab.resign_from(&mut ben, f, None);
+        if drawn {
+            lab.record(0, None, &[], vec![res], f);
+        }
+        let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+        assert_eq!(n.voices.contains(&ids[BEN]), !drawn, "a resignation counts at the record registering it, not before");
+
+        // The clone removing Ben, marked with Ana and Cy only.
+        let stay = vec![ids[ANA], ids[CY]];
+        let auth = lab.authority.id;
+        let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, CY])], &|t| {
+            t.parties = stay.clone();
+            let g = t.grammar.as_mut().unwrap();
+            g.signing = Holding::Shares { threshold: 2, members: stay.clone() };
+            g.safety = Holding::Shares { threshold: 2, members: stay.clone() };
+            g.recovery = Some(Recovery::Escrow { authority: auth });
+            for a in t.areas.as_mut().unwrap() {
+                a.holders.retain(|h| stay.contains(h));
+            }
+        });
+        let k = lab.propose(ANA, &t);
+        let sa = lab.sign(ANA, &k);
+        let sc = lab.sign(CY, &k);
+        lab.rotate(Some((k, vec![sa, sc])), &[0]);
+        let broken = lab.view().broken(&col).unwrap();
+        if drawn {
+            assert_eq!(broken, None);
+            let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+            assert_eq!((n.agreement, sorted(n.voices)), (k, sorted(stay)));
+        } else {
+            let w = broken.expect("the rotation's clone names too few signers");
+            assert!(w.contains("the mark names too few signers to meet the power (rule 45a)"), "{w}");
+            assert_eq!(lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap_err(), w);
+        }
+    }
+}

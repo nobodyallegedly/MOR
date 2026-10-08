@@ -93,7 +93,7 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
         access.pair(key, text(a.code), text(a.label));
         return {};
       case 'state':
-        return { ...actions.state(), paired: access.paired().map((p) => ({ ...p, you: p.key === key })) };
+        return { ...(await actions.state()), paired: access.paired().map((p) => ({ ...p, you: p.key === key })) };
       case 'settings': {
         const via: Record<string, string> = {};
         for (const line of list(a.via)) {

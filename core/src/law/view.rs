@@ -1780,13 +1780,14 @@ impl<'a> LawView<'a> {
         // Judged for an act only: a line's own judgment is part of judging
         // the ending, and the ending is judged before any act (`consent`).
         let ended = match point {
-            Point::Act(_) => self.closed_by(&col.id)?,
+            Point::Act(_) | Point::Tip => self.closed_by(&col.id)?,
             Point::Line(_) => None,
         };
         let (limit, me): (usize, Option<&'a Held>) = match point {
             Point::Act(x) => (self.link(col, x).unwrap_or(0), None),
             Point::Line(Line::Record(r)) => (col.pos(r).unwrap_or(0), Some(r)),
             Point::Line(Line::Rotation(j)) => (j - 1, None),
+            Point::Tip => (col.res.links.len().saturating_sub(1), None),
         };
         for k in 0..=limit.min(col.res.links.len().saturating_sub(1)) {
             for r in self.records_at(col, k) {
@@ -1880,6 +1881,7 @@ impl<'a> LawView<'a> {
             Point::Line(Line::Record(p)) => p.id == l.id || self.before_struct(col, l, Line::Record(p)),
             Point::Line(Line::Rotation(j)) => self.before_struct(col, l, Line::Rotation(j)),
             Point::Act(x) => !self.before(col, x, Line::Record(l))?,
+            Point::Tip => true,
         })
     }
 
@@ -3688,6 +3690,95 @@ impl<'a> LawView<'a> {
             closed: self.closed_by(collective)?.map(|e| e.by),
         }))
     }
+
+    /// Why Law reads a collective as broken: why the agreement its latest
+    /// key lives under cannot be found from its chain and its records (a
+    /// founding that does not exist, a rotation declaring a clone it does
+    /// not complete, a false mark, rules 37 and 45a). `None` when Law reads
+    /// it as working, or when it is not a collective.
+    pub fn broken(&self, collective: &Hash) -> R<Option<String>> {
+        let col = self.col(collective);
+        if col.res.links.is_empty() {
+            return Ok(None);
+        }
+        let b = col.res.links.len() - 1;
+        if !self.declares(&col, b) {
+            return Ok(None);
+        }
+        Ok(self.base(&col, b)?.err())
+    }
+
+    /// Who counts for a power of the collective's agreement in force at its
+    /// next line, not made yet, after every act held under its latest key
+    /// (rule 44d): the agreement, the parties the power is counted among in
+    /// it, the voices that remain among them, `leaving` taken out (parties
+    /// whose resignations a record will register before that line, rule
+    /// 37a), and how many of those voices meet it; `None` where no voice
+    /// remains (an area frozen, rule 37b). What a client names in a clone's
+    /// mark (rules 44c, 45a), computed before anything is signed. Err: why
+    /// there is no such count: the collective broken, ended, or its record
+    /// forked, or the power none of that agreement's.
+    pub fn next_voices(&self, collective: &Hash, power: &Power, leaving: &[Hash]) -> R<Result<NextVoices, String>> {
+        let col = self.col(collective);
+        if col.res.links.is_empty() {
+            return Ok(Err("not an identity this verifier holds".into()));
+        }
+        let b = col.res.links.len() - 1;
+        if !self.declares(&col, b) {
+            return Ok(Err("not a collective: its chain declares no agreement".into()));
+        }
+        let base = match self.base(&col, b)? {
+            Ok(x) => x,
+            Err(w) => return Ok(Err(w)),
+        };
+        if self.closed_by(collective)?.is_some() {
+            return Ok(Err("ended by its fork or closing (rule 47a)".into()));
+        }
+        let mut puts = vec![];
+        for r in self.records_since(&col, b) {
+            let e = self.record_eval(&col, r)?;
+            if let Some(k) = e.puts {
+                puts.push((k, e.resolves));
+            }
+        }
+        let f = self.fold(base, &puts)?;
+        if f.fork {
+            return Ok(Err("its record forks: two clones of one agreement on lines neither before the other (rule 47, A4)".into()));
+        }
+        let parent = self.terms(&f.agreement)?;
+        let Some((among, rule)) = power_base(&parent, power) else {
+            return Ok(Err("a succession plan is counted as rule 48c says, not here".into()));
+        };
+        if matches!(power, Power::Area(a) if parent.area(*a).is_none()) {
+            return Ok(Err("the agreement in force has no such area".into()));
+        }
+        let area = match power {
+            Power::Area(a) => Some(*a),
+            _ => None,
+        };
+        let (voices, _) = self.voices(&col, Point::Tip, &f.agreement, &among, area, &BTreeMap::new(), &[])?;
+        let voices: Vec<Hash> = voices.into_iter().filter(|v| !leaving.contains(v)).collect();
+        let needed = rule.needed(voices.len());
+        Ok(Ok(NextVoices {
+            agreement: f.agreement,
+            among,
+            voices,
+            needed,
+        }))
+    }
+}
+
+/// Who counts for a power at a collective's next line ([`LawView::next_voices`]).
+#[derive(Clone, Debug)]
+pub struct NextVoices {
+    /// The agreement in force, the clone's parent.
+    pub agreement: Hash,
+    /// The parties the power is counted among in it (rule 44d).
+    pub among: Vec<Hash>,
+    /// Those whose voice remains there.
+    pub voices: Vec<Hash>,
+    /// How many of them meet it; `None` where no voice remains.
+    pub needed: Option<usize>,
 }
 
 /// A point at which voices are counted: an act of the collective, or a
@@ -3696,6 +3787,9 @@ impl<'a> LawView<'a> {
 enum Point<'h> {
     Act(&'h Held),
     Line(Line<'h>),
+    /// The collective's next line, not made yet: after every act held
+    /// under its latest key, every record held counting before it.
+    Tip,
 }
 
 /// Whether the collective's signing key cannot be produced without `p`

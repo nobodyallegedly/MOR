@@ -145,6 +145,13 @@ export interface State {
       frozen: boolean;
       words: string;
     }[];
+    /**
+     * Law's own reading of the collective, from what its relays and homes
+     * hold: `broken`, why Law reads it as broken; `unread`, why no reading
+     * could be had. While either is set, the rules shown are this device's
+     * copy, not the rules in force.
+     */
+    law: { broken: string | null; unread: string | null };
     departed: { id: string; name: string; record: string; stillParty: boolean }[];
     steppedDown: { id: string; name: string; area: number; record: string }[];
     records: number;

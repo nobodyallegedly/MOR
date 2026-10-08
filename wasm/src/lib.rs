@@ -2205,6 +2205,22 @@ fn record_out(e: &law::RecordEval) -> RecordOut {
     }
 }
 
+#[derive(Deserialize)]
+struct PowerIn {
+    form: String,
+    area: Option<u64>,
+}
+
+#[derive(Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct NextVoicesOut {
+    error: Option<String>,
+    agreement: Option<String>,
+    among: Vec<String>,
+    voices: Vec<String>,
+    needed: Option<usize>,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct CurrentOut {
@@ -2406,6 +2422,46 @@ impl Verifier {
                 records: c.records.iter().map(record_out).collect(),
                 fork: c.fork,
                 closed: c.closed.as_ref().map(hx),
+            }),
+        }
+    }
+
+    /// Why Law reads a collective as broken (the agreement its latest key
+    /// lives under cannot be found: a rotation's declared clone incomplete,
+    /// a false mark, rules 37 and 45a), or null where it reads it as working.
+    #[wasm_bindgen(js_name = lawBroken)]
+    pub fn law_broken(&self, specs: JsValue, collective: &str) -> R<Option<String>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        view.broken(&unhex(collective)?).map_err(lerr)
+    }
+
+    /// Who counts for a power (`{ form, area }`, as `lawClonePlan` gives
+    /// it) of the collective's agreement in force, at its next line, after
+    /// every act held (rule 44d), `leaving` taken out: the agreement, the
+    /// parties counted among, the voices that remain, and how many meet it
+    /// (null where none remains); or `{ error }`, why there is no such count.
+    #[wasm_bindgen(js_name = lawNextVoices)]
+    pub fn law_next_voices(&self, specs: JsValue, collective: &str, power: JsValue, leaving: Vec<String>) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let p: PowerIn = from_js(power)?;
+        let power = match (p.form.as_str(), p.area) {
+            ("constitutional", _) => law::Power::Constitutional,
+            ("clone", _) => law::Power::Clone,
+            ("judicial", _) => law::Power::Judicial,
+            ("area", Some(a)) => law::Power::Area(a),
+            _ => return Err(JsError::new("a power is constitutional, clone, judicial, or an area with its id")),
+        };
+        let leaving = leaving.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
+        match view.next_voices(&unhex(collective)?, &power, &leaving).map_err(lerr)? {
+            Err(error) => to_js(&NextVoicesOut { error: Some(error), ..Default::default() }),
+            Ok(n) => to_js(&NextVoicesOut {
+                error: None,
+                agreement: Some(hx(&n.agreement)),
+                among: n.among.iter().map(hx).collect(),
+                voices: n.voices.iter().map(hx).collect(),
+                needed: n.needed,
             }),
         }
     }

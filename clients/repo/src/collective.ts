@@ -176,6 +176,18 @@ export function abandonmentOf(g: Omit<Governance, 'text'>): CollectiveTerms['aba
   return { others: g.abandonmentOthers, outcomes: [0] };
 }
 
+/**
+ * What a client that had Law count a change passes to it: the mark as Law
+ * counted it (rules 44c, 44d, 45a), used as given; a check before the clone
+ * is proposed, and one once it is signed, before the record or rotation that
+ * would put it in force is sent. A problem stops the change there.
+ */
+export interface Gates {
+  mark?: MarkEntry[];
+  beforeClone?: () => Promise<string | null>;
+  beforeSend?: (clone: string) => Promise<string | null>;
+}
+
 /** The terms of a founding agreement (no parent) or of a clone, from its rules. */
 export function collectiveTerms(g: Governance, members: string[], holder: string, parent?: string, mark?: MarkEntry[]): CollectiveTerms {
   const rule = (k: number): Rule => ({ threshold: k });
@@ -382,7 +394,13 @@ export class TestCollective {
     governance?: Governance;
     /** The exact clone payload shown to the members: refused if the clone made now differs. */
     expect?: Uint8Array;
-  }): Promise<{ clone: string; rotation: string; record?: string; resigned: Signed[]; signed: Signed[]; sent: Submitted[] }> {
+    /** The mark, as the caller had Law count it (rules 44c, 44d): used as given. */
+    mark?: MarkEntry[];
+    /** Asked once the resignations are registered, before the clone is proposed: a problem stops the change there. */
+    beforeClone?: () => Promise<string | null>;
+    /** Asked once the clone is signed, before the rotation is sent: a problem stops the change there, nothing sent. */
+    beforeSend?: (clone: string) => Promise<string | null>;
+  }): Promise<{ clone: string; rotation: string; record?: string; resigned: Signed[]; signed: Signed[]; sent: Submitted[]; stopped?: string }> {
     if (this.f.pending || this.f.identity.pending) throw new Error('a member change is already pending: resend it');
     const governance = this.departedAfter(opts.governance ?? this.f.governance, opts.members);
     const holder = this.nextHolder(opts.members);
@@ -400,22 +418,31 @@ export class TestCollective {
     // members' signature acts on the declaration.
     const recovered = this.recovering().filter((d) => !opts.members.includes(d.member));
     const absence = recovered.flatMap((d) => d.signatures ?? []);
-    const voices = opts.signers.map((m) => m.id).filter((id) => this.f.members.includes(id) && !left.has(id));
-    const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: voices }];
-    const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
-    // F122: a version that also changes a judge needs every member for it.
-    if (clonePlan(parent, collectiveTerms(governance, opts.members, holder, this.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
-      mark.push({ power: { judicial: true }, signers: voices });
+    let mark: MarkEntry[];
+    if (opts.mark) mark = opts.mark;
+    else {
+      const voices = opts.signers.map((m) => m.id).filter((id) => this.f.members.includes(id) && !left.has(id));
+      mark = [{ power: { constitutional: true }, signers: voices }];
+      const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+      // F122: a version that also changes a judge needs every member for it.
+      if (clonePlan(parent, collectiveTerms(governance, opts.members, holder, this.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
+        mark.push({ power: { judicial: true }, signers: voices });
+      }
+      if (!markMatches(mark, clonePlan(parent, collectiveTerms(governance, opts.members, holder, this.f.agreement, mark)).needs)) {
+        throw new Error('a member change is constitutional: its mark names the constitutional change rule');
+      }
     }
     const next = collectiveTerms(governance, opts.members, holder, this.f.agreement, mark);
-    if (!markMatches(mark, clonePlan(parent, next).needs)) {
-      throw new Error('a member change is constitutional: its mark names the constitutional change rule');
-    }
     const payload = termsPayload(next);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
+    const stop = (stopped: string, clone = '', signed: Signed[] = []) => ({ clone, rotation: '', record: line, resigned, signed, sent: [], stopped });
+    const before = await opts.beforeClone?.();
+    if (before) return stop(before);
     const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
     const signed: Signed[] = [];
     for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
+    const unsent = await opts.beforeSend?.(proposed.id);
+    if (unsent) return stop(unsent, proposed.id, signed);
 
     // The rotating device: rebuild the current key from k shares of members who stay.
     const shares = this.f.safety.shares
@@ -485,7 +512,7 @@ export class TestCollective {
     signers: TestIdentity[];
     /** The exact clone payload shown to the holders: refused if the clone made now differs. */
     expect?: Uint8Array;
-  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+  } & Gates): Promise<{ clone: string; record: string; signed: Signed[]; stopped?: string }> {
     const governance = { ...this.f.governance, releaseWords: opts.words };
     return this.recordChange({ ...opts, governance, power: { area: 1 }, what: 'not an ordinary change of the release area' });
   }
@@ -502,7 +529,7 @@ export class TestCollective {
     proposer: TestIdentity;
     signers: TestIdentity[];
     expect?: Uint8Array;
-  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+  } & Gates): Promise<{ clone: string; record: string; signed: Signed[]; stopped?: string }> {
     const governance = { ...this.f.governance, abandonmentOthers: opts.others };
     return this.recordChange({ ...opts, governance, power: { judicial: true }, what: 'not a judicial change of who judges absence' });
   }
@@ -518,7 +545,7 @@ export class TestCollective {
     proposer: TestIdentity;
     signers: TestIdentity[];
     expect?: Uint8Array;
-  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+  } & Gates): Promise<{ clone: string; record: string; signed: Signed[]; stopped?: string }> {
     const governance = { ...this.f.governance, stakes: opts.stakes };
     return this.recordChange({ ...opts, governance, power: { clone: true }, what: 'not an ordinary change of the stakes' });
   }
@@ -533,7 +560,7 @@ export class TestCollective {
     proposer: TestIdentity;
     signers: TestIdentity[];
     expect?: Uint8Array;
-  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+  } & Gates): Promise<{ clone: string; record: string; signed: Signed[]; stopped?: string }> {
     const governance = { ...this.f.governance, splitGrant: opts.grant };
     return this.recordChange({ ...opts, governance, power: { judicial: true }, what: 'not a judicial change naming the split service' });
   }
@@ -551,17 +578,23 @@ export class TestCollective {
     proposer: TestIdentity;
     signers: TestIdentity[];
     expect?: Uint8Array;
-  }): Promise<{ clone: string; record: string; signed: Signed[] }> {
+  } & Gates): Promise<{ clone: string; record: string; signed: Signed[]; stopped?: string }> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
-    const mark: MarkEntry[] = [{ power: opts.power, signers: opts.signers.map((m) => m.id) }];
-    const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+    const mark: MarkEntry[] = opts.mark ?? [{ power: opts.power, signers: opts.signers.map((m) => m.id) }];
     const next = collectiveTerms(opts.governance, this.f.members, this.f.signingHolder, this.f.agreement, mark);
-    if (!markMatches(mark, clonePlan(parent, next).needs)) throw new Error(opts.what);
+    if (!opts.mark) {
+      const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+      if (!markMatches(mark, clonePlan(parent, next).needs)) throw new Error(opts.what);
+    }
     const payload = termsPayload(next);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
+    const before = await opts.beforeClone?.();
+    if (before) return { clone: '', record: '', signed: [], stopped: before };
     const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
     const signed: Signed[] = [];
     for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
+    const unsent = await opts.beforeSend?.(proposed.id);
+    if (unsent) return { clone: proposed.id, record: '', signed, stopped: unsent };
     const r = await record(this.id, { clone: proposed.id, signatures: signed.map((s) => s.act), inForce: this.f.agreement }, this.f.relays);
     this.f.governance = opts.governance;
     this.f.agreement = proposed.id;

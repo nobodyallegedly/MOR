@@ -347,6 +347,8 @@ export interface Verified {
   /** Law's answer: under which agreement, which rule, who signed. */
   agreement?: string;
   rule?: string;
+  /** Law's verdict on it as an act of its publisher (`lawConsent`): its kind ("areas", "no-area", "not-collective", "broken", …) and Law's reason. */
+  law?: { kind: string; reason?: string };
   signers: string[];
   manifest?: Manifest;
   /** Files checked against their hashes. */
@@ -545,8 +547,10 @@ export async function verifyRelease(
     return fail(`Law: ${e instanceof Error ? e.message : e}`);
   }
   r.agreement = consent.agreement;
+  r.law = { kind: consent.kind, ...(consent.reason ? { reason: consent.reason } : {}) };
   r.signers = consent.areas.flatMap((a) => a.signers);
   const area = consent.areas[0];
+  const counted = ['areas', 'no-area', 'not-collective'].includes(consent.kind);
   r.rule =
     consent.kind === 'areas'
       ? area.frozen
@@ -556,8 +560,15 @@ export async function verifyRelease(
         ? "the collective's own signature (no area of its agreement reaches publications)"
         : consent.kind === 'not-collective'
           ? "its signer's own signature (not a collective)"
-          : `nothing: ${consent.reason ?? consent.kind}`;
-  if (!consent.met) {
+          : undefined;
+  if (!counted) {
+    // No signature can make it a release: say what Law reads, as a sentence.
+    fail(
+      consent.kind === 'broken'
+        ? `Law reads the collective that published it as broken: no agreement can be found in force for it, so no member's signature can make this a release. Law's reason: ${consent.reason ?? 'none given'}`
+        : `Law counts it as no release of its publisher, whatever signatures it gathers: ${consent.reason ?? consent.kind}`,
+    );
+  } else if (!consent.met) {
     fail(`not a release: ${r.rule} must sign it; ${r.signers.length} did (${r.signers.join(', ') || 'none'})`);
   }
 

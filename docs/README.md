@@ -35,6 +35,7 @@ Each records what a session built, what it found, and what it left open. They ar
 | [law-draft-10.md](law-draft-10.md) | Law draft 10, pass by pass (F118 to F130), and the set approved on 5 October 2026. |
 | [law-invariants.md](law-invariants.md) | Law stress testing: invariant hunting over random histories, F131 and F132. |
 | [small-fixes-2026-10-04.md](small-fixes-2026-10-04.md) | Small client fixes. |
+| [step-11b-false-mark-2026-10-08.md](step-11b-false-mark-2026-10-08.md) | The collective client's false clone mark from the human test of 8 October 2026: marks and the collective's box from Law's own reading. |
 | [adversarial-test-plan-v2.md](adversarial-test-plan-v2.md), [v3](adversarial-test-plan-v3.md) | Earlier versions of the test plan. |
 | [project-lead-prompt.md](project-lead-prompt.md) | The brief the AI project lead worked from. |
 

@@ -163,14 +163,20 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
         .join('');
       const others = s.identities.filter((i) => !c.members.some((m) => m.id === i.id));
       const mine = c.members.filter((m) => !m.left && s.identities.find((i) => i.id === m.id)?.mine);
+      const lawNote = c.law.broken
+        ? note('error', `<strong>Law reads this collective as broken.</strong> No agreement can be found in force for it, so nothing signed in its name counts, and no change of it can come into force. Law's reason: ${e(c.law.broken)}. <span class="small">The rules below are this device's copy, not rules in force.</span>`)
+        : c.law.unread
+          ? note('warn', `Law's own reading of this collective could not be had (${e(c.law.unread)}). <span class="small">The rules below are this device's copy; nothing is signed until Law can count.</span>`)
+          : '';
       return `<div class="card" data-collective="${e(c.id)}"><h3>${e(c.name)}</h3>
+${lawNote}
 <dl class="facts"><dt>Collective</dt><dd>${fp(c.id)}</dd>
 <dt>Members</dt><dd>${c.members.map((m) => `${e(m.name)}${m.left ? ' <span class="tag">left: a party until the members refit the collective</span>' : ''}`).join('<br>')}</dd>
 <dt>Everyday key</dt><dd>${e(c.holder)}</dd>
 <dt>Safety key</dt><dd>${c.shares.of} shares, any ${c.shares.threshold} rebuild it</dd>
 <dt>A change of members or rules needs</dt><dd>${c.rules.constitution ? `any ${c.rules.constitution} members` : 'every member whose voice remains'}</dd>
 <dt>Any other change needs</dt><dd>${c.rules.clone} members' signatures</dd>
-<dt>Agreement in force</dt><dd>${fp(c.agreement)} (${c.agreements === 1 ? 'the founding agreement' : `clone ${c.agreements - 1}`})</dd>
+<dt>${c.law.broken || c.law.unread ? 'Agreement this device holds' : 'Agreement in force (as Law reads it)'}</dt><dd>${fp(c.agreement)} (${c.agreements === 1 ? 'the founding agreement' : `clone ${c.agreements - 1}`})</dd>
 <dt>Records drawn</dt><dd>${c.records}${c.departed.length ? `; left: ${c.departed.map((d) => e(d.name)).join(', ')}` : ''}${c.steppedDown.length ? `; stepped down: ${c.steppedDown.map((d) => e(d.name)).join(', ')}` : ''}</dd>
 <dt>Relays</dt><dd>${c.relays.map(e).join('<br>')}</dd></dl>
 ${releaseArea(s, c)}
