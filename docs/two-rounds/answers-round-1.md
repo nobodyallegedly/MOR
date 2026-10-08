@@ -13,3 +13,5 @@
 **B1.** "The collectives is quarantined. So, count for nothing, grants still work after rollback. It's a « you f'd up, fix it now » scenario."
 
 **B2.** "Quarantined. Anew. Clients can build interfaces to bridge the gap and clone them."
+
+**B3.** "Yes, but let's explore how it can be leveraged in bad faith." *(Exploration follows in the conversation; final word recorded below.)*
