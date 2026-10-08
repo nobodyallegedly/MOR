@@ -21,3 +21,5 @@
 **B4.** No round-1 answer: "Oh tomorrow me… 's a lucky guy…. With his cofeee"
 
 *A misunderstanding, corrected at once: round 1 continues.*
+
+**B5.** "Absolutely. The monarch has no partner or no heir."
