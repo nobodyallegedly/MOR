@@ -79,8 +79,12 @@ export interface Governance {
    * the areas): any k of the parties. Absent: every party whose voice
    * remains (F103), the default nobody loses their say under. */
   constitutionalThreshold?: number;
+  /** The constitutional change rule naming the members who hold constitutional power (a rule `named`, terms field 18): set by another client, or by tests of Law rule 37a's last voice (RB5). Absent: the threshold above. */
+  constitutionalNamed?: string[];
   /** The release area's own words (terms field 20), changed by its holders. */
   releaseWords?: string;
+  /** Members who do not hold the release area: a stepping down a rollback registers (Law rules 37b, 37d; F187, 8). Absent: every member holds it. */
+  releaseOut?: string[];
   /** A threshold of the other parties decides absence. */
   abandonmentOthers: number;
   text: string;
@@ -142,7 +146,14 @@ export interface CollectiveFile {
     at?: number;
   }[];
   /** Kept by the collective client: holders who stepped down from an area (rule 37b), each registered at once by a record. */
-  steppedDown?: { member: string; area: number; resignation: string; record: string }[];
+  /**
+   * Kept by the collective client: steppings down from an area (Law rule
+   * 37b), each registered by a record, its line; or, during a broken
+   * stretch, naming the agreement in force just before the broken act
+   * (`named`), with no record, registered by the rollback (`rollback`;
+   * Law rules 37a, 37d; F187, 8).
+   */
+  steppedDown?: { member: string; area: number; resignation: string; record?: string; named?: string; rollback?: string }[];
   /** Kept by the collective client: the records the collective drew, its everyday lines (Law type 17), oldest first. */
   records?: string[];
   /** Kept by the collective client: the fork or closing that ended the collective (Law rule 47a, F121, F124 N9), once complete. */
@@ -206,13 +217,13 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
     parties: members,
     text: g.text,
     clone: rule(g.cloneThreshold),
-    constitutional: g.constitutionalThreshold ? rule(g.constitutionalThreshold) : undefined,
+    constitutional: g.constitutionalNamed?.length ? { named: g.constitutionalNamed } : g.constitutionalThreshold ? rule(g.constitutionalThreshold) : undefined,
     signingHolder: holder,
     safety: { threshold: g.safetyThreshold, members },
     // A release is a publication of the collective (Envelope type 0): an
     // area held by every member, counting with this many members' own
     // signature acts (F100, F103).
-    releases: { holders: members, threshold: g.releaseThreshold, words: g.releaseWords },
+    releases: { holders: members.filter((m) => !(g.releaseOut ?? []).includes(m)), threshold: g.releaseThreshold, words: g.releaseWords },
     // Outcome 0, a voice removed: every member is covered (F105).
     abandonment: abandonmentOf(g),
     extensions: [REPO_SPECS.manifest],
@@ -295,12 +306,17 @@ export class TestCollective {
    * The rules a rollback writes (Law rule 37d, F185): those of `before`,
    * the agreement in force just before the broken act, as this device kept
    * them, without the members in `leaving`, whose resignations the
-   * rollback registers. Null where this device kept no rules for it.
+   * rollback registers, and, given Law's count of the voices that remain
+   * there (`voices`), without anyone else Law no longer counts (F187, 1).
+   * Null where this device kept no rules for it.
    */
-  rollbackRules(before: string, leaving: string[]): { governance: Governance; members: string[]; holder: string } | null {
+  rollbackRules(before: string, leaving: string[], voices?: string[]): { governance: Governance; members: string[]; holder: string } | null {
     const r = this.f.rules?.[before];
     if (!r) return null;
-    const members = r.members.filter((m) => !leaving.includes(m));
+    // F187 (1): the members are Law's voices, never this device's copy: a
+    // member whose departure a line registered before the broken act is no
+    // longer one, and is written to the departed entry, as at any change.
+    const members = r.members.filter((m) => !leaving.includes(m) && (!voices || voices.includes(m)));
     return {
       governance: this.departedAfter(r.governance, members, r.members),
       members,
@@ -569,6 +585,8 @@ export class TestCollective {
     before: string;
     leaving: string[];
     registers: string[];
+    /** Law's count of the voices that remain at the rollback: the members are among them (F187, 1). */
+    voices?: string[];
     proposer: TestIdentity;
     signers: TestIdentity[];
     rebuilders: string[];
@@ -581,7 +599,7 @@ export class TestCollective {
     beforeSend?: (clone: string) => Promise<string | null>;
   }): Promise<{ clone: string; rotation: string; signed: Signed[]; sent: Submitted[]; stopped?: string }> {
     if (this.f.pending || this.f.identity.pending) throw new Error('a member change is already pending: resend it');
-    const kept = this.rollbackRules(opts.before, opts.leaving);
+    const kept = this.rollbackRules(opts.before, opts.leaving, opts.voices);
     if (!kept) throw new Error('this device kept no rules for the agreement in force before the broken act');
     const r = opts.governance ? { ...kept, governance: opts.governance } : kept;
     const payload = termsPayload(collectiveTerms(r.governance, r.members, r.holder, opts.before, opts.mark));
@@ -714,16 +732,20 @@ export class TestCollective {
    * version of the agreement chain, up to the agreement in force, that the
    * member signed (Law rule 51, B12).
    */
-  async clauseOf(member: string, via: Via = {}): Promise<string | null> {
-    const chain = this.f.agreements.slice(0, this.f.agreements.indexOf(this.f.agreement) + 1);
+  async clauseOf(member: string, via: Via = {}, upTo: string = this.f.agreement): Promise<string | null> {
+    const chain = this.f.agreements.slice(0, this.f.agreements.indexOf(upTo) + 1);
     return (await signedVersions(member, chain, this.f.relays, via)).at(-1) ?? null;
   }
 
-  /** A declaration's payload against `member`, outcome 0, under the clause they signed last. */
-  async declarationFor(member: string, via: Via = {}): Promise<Uint8Array> {
-    const clause = await this.clauseOf(member, via);
+  /**
+   * A declaration's payload against `member`, outcome 0, under the clause
+   * they signed last; naming `agreement`, the agreement in force (during a
+   * broken stretch, the one in force just before the broken act: RB3).
+   */
+  async declarationFor(member: string, via: Via = {}, agreement: string = this.f.agreement): Promise<Uint8Array> {
+    const clause = await this.clauseOf(member, via, agreement);
     if (!clause) throw new Error('that member signed no version of the agreement');
-    return declarationPayload(this.f.agreement, clause, member, Uint32Array.from([0]));
+    return declarationPayload(agreement, clause, member, Uint32Array.from([0]));
   }
 
   /**
@@ -744,15 +766,27 @@ export class TestCollective {
     cosigners: TestIdentity[];
     expect?: Uint8Array;
     via?: Via;
+    /**
+     * During a broken stretch (Law rule 37d, RB3): the agreement in force
+     * just before the broken act, which the declaration names. No record is
+     * drawn: the rollback registers the declaration, naming the signature
+     * acts beside it.
+     */
+    broken?: { before: string };
   }): Promise<{ declaration: string; signed: Signed[]; record?: string }> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
-    if (this.recovering().length) throw new Error('the everyday key\'s holder was declared absent: refit the collective first');
-    const payload = await this.declarationFor(opts.member, opts.via);
+    if (!opts.broken && this.recovering().length) throw new Error('the everyday key\'s holder was declared absent: refit the collective first');
+    const named = opts.broken?.before ?? this.f.agreement;
+    const payload = await this.declarationFor(opts.member, opts.via, named);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the declaration is not the one shown: nothing signed');
-    const clause = await this.clauseOf(opts.member, opts.via);
-    const d = await declare(opts.by, { agreement: this.f.agreement, clause: clause!, party: opts.member, outcomes: [0] }, this.f.relays);
+    const clause = await this.clauseOf(opts.member, opts.via, named);
+    const d = await declare(opts.by, { agreement: named, clause: clause!, party: opts.member, outcomes: [0] }, this.f.relays);
     const signed: Signed[] = [];
     for (const m of opts.cosigners) signed.push({ member: m.id, act: (await sign(m, d.id, this.f.relays)).id });
+    if (opts.broken) {
+      this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, signatures: signed.map((s) => s.act), named }];
+      return { declaration: d.id, signed };
+    }
     if (opts.member === this.f.signingHolder) {
       this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, signatures: signed.map((s) => s.act) }];
       return { declaration: d.id, signed };

@@ -1796,6 +1796,9 @@ struct TermsOut {
     forked_from: Option<String>,
     /// The release rule (field 24); null: every holder.
     release_rule: Option<RuleOut>,
+    /// In a deal's clone settling a fork, the other branch's tip it settles
+    /// (field 26, F186); null otherwise.
+    settles: Option<String>,
     /// Why the terms fail the checks that need no other act, or null.
     problem: Option<ProblemOut>,
 }
@@ -1933,6 +1936,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             .collect(),
         forked_from: t.forked_from.as_ref().map(hx),
         release_rule: t.release_rule.as_ref().map(rule_out),
+        settles: t.settles.as_ref().map(hx),
         problem: t.check(&s.mips()?).err().map(|e| problem(&e)),
     })
 }
@@ -2592,6 +2596,121 @@ impl Verifier {
         }
     }
 
+    /// What a rollback made next would register (rule 37d, RB3; F187 2),
+    /// checked from what this verifier holds: `{ error, departures }`, each
+    /// departure `{ act, party, kind }` ("resigned", "stepped-down",
+    /// "declared"). A client asks it from a fresh reading of the relays
+    /// before it sends the rollback's rotation.
+    #[wasm_bindgen(js_name = lawRollbackRegisters)]
+    pub fn law_rollback_registers(&self, specs: JsValue, collective: &str, registers: Vec<String>) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let registers = registers.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
+        Ok(match view.rollback_registers(&unhex(collective)?, &registers).map_err(lerr)? {
+            Err(error) => to_js(&RollbackRegistersOut { error: Some(error), departures: vec![] })?,
+            Ok(ds) => to_js(&RollbackRegistersOut {
+                error: None,
+                departures: ds.iter().map(departure_out).collect(),
+            })?,
+        })
+    }
+
+    /// The resignations the parties of a collective's agreement published,
+    /// registered or not (rule 37a; F187, 3): departures `{ act, party,
+    /// kind, agreement }`. What a client reads beside Law's count of the
+    /// voices that remain, to warn the last voice.
+    #[wasm_bindgen(js_name = lawPublishedResignations)]
+    pub fn law_published_resignations(&self, specs: JsValue, collective: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let ds = view.published_resignations(&unhex(collective)?).map_err(lerr)?;
+        to_js(&ds.iter().map(departure_out).collect::<Vec<_>>())
+    }
+
+    /// The declarations of absence naming `party` this verifier holds (RB3,
+    /// client conformance): `{ act, signer, agreement, clause, outcomes }`.
+    #[wasm_bindgen(js_name = lawDeclarationsNaming)]
+    pub fn law_declarations_naming(&self, specs: JsValue, party: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let out: Vec<DeclarationNamingOut> = view
+            .declarations_naming(&unhex(party)?)
+            .iter()
+            .map(|(act, signer, d)| DeclarationNamingOut {
+                act: hx(act),
+                signer: hx(signer),
+                agreement: hx(&d.agreement),
+                clause: hx(&d.clause),
+                outcomes: d.outcomes.clone(),
+            })
+            .collect();
+        to_js(&out)
+    }
+
+    /// The payments a collective received during a broken stretch and owes
+    /// back, the sale not signed anew after the rollback (rule 37d, RB2):
+    /// open obligations, each `{ payment, to, unit, value, stillBroken }`.
+    #[wasm_bindgen(js_name = lawOwedBack)]
+    pub fn law_owed_back(&self, specs: JsValue, collective: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let out: Vec<OwedBackOut> = view
+            .owed_back(&unhex(collective)?)
+            .map_err(lerr)?
+            .iter()
+            .map(|o| OwedBackOut {
+                payment: hx(&o.payment),
+                to: match &o.to {
+                    finance::RefundTo::Identity(h) => Some(hx(h)),
+                    finance::RefundTo::Key(_) => Some("the key the payment committed to".into()),
+                    finance::RefundTo::Nobody => None,
+                },
+                unit: hx(&o.amount.unit),
+                value: o.amount.value,
+                still_broken: o.still_broken,
+            })
+            .collect();
+        to_js(&out)
+    }
+
+    /// Where a deal stands forked (rule 45b, F186): `{ reference, branches }`,
+    /// each branch its versions from the split to its latest; null where it
+    /// is not forked. Throws where the shape is not decided (refused rather
+    /// than guessed).
+    #[wasm_bindgen(js_name = lawDealFork)]
+    pub fn law_deal_fork(&self, specs: JsValue, agreement: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        match view.deal_fork(&unhex(agreement)?).map_err(lerr)? {
+            None => Ok(JsValue::NULL),
+            Some(f) => to_js(&DealForkOut {
+                reference: hx(&f.reference),
+                branches: f.branches.iter().map(|b| b.iter().map(hx).collect()).collect(),
+            }),
+        }
+    }
+
+    /// Client conformance (rule 45b, F186): the alarm a seller's client and
+    /// a split service raise when a payment names a version of the deal that
+    /// does not descend from the version they hold. Null where it does;
+    /// else `{ named, held, shared, fork, heldLine, namedLine }`.
+    #[wasm_bindgen(js_name = lawForkAlarm)]
+    pub fn law_fork_alarm(&self, specs: JsValue, payment: &str, held: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        match view.fork_alarm(&unhex(payment)?, &unhex(held)?).map_err(lerr)? {
+            None => Ok(JsValue::NULL),
+            Some(a) => to_js(&ForkAlarmOut {
+                named: hx(&a.named),
+                held: hx(&a.held),
+                shared: hx(&a.shared),
+                fork: a.fork,
+                held_line: a.held_line.iter().map(hx).collect(),
+                named_line: a.named_line.iter().map(hx).collect(),
+            }),
+        }
+    }
+
     /// Whether the collective's act `x` counts as made before the line
     /// `line` (a record or a rotation of it), on its own sequences (F109).
     #[wasm_bindgen(js_name = lawBefore)]
@@ -3067,6 +3186,48 @@ struct ClosingOut {
 struct DoneOut {
     done: bool,
     why: Option<String>,
+}
+
+#[derive(Serialize)]
+struct DeclarationNamingOut {
+    act: String,
+    signer: String,
+    agreement: String,
+    clause: String,
+    outcomes: Vec<u64>,
+}
+
+#[derive(Serialize)]
+struct RollbackRegistersOut {
+    error: Option<String>,
+    departures: Vec<DepartureOut>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OwedBackOut {
+    payment: String,
+    to: Option<String>,
+    unit: String,
+    value: u64,
+    still_broken: bool,
+}
+
+#[derive(Serialize)]
+struct DealForkOut {
+    reference: String,
+    branches: Vec<Vec<String>>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ForkAlarmOut {
+    named: String,
+    held: String,
+    shared: String,
+    fork: bool,
+    held_line: Vec<String>,
+    named_line: Vec<String>,
 }
 
 #[derive(Serialize)]

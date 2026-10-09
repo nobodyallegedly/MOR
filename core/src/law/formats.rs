@@ -1006,6 +1006,10 @@ pub struct Terms {
     /// holders must sign its release to the public domain (F121, D);
     /// absent: every holder. A clone every owner signs may change it (N8).
     pub release_rule: Option<Rule>,
+    /// 26: in a deal's clone settling a fork of two complete versions, the
+    /// other branch's tip it settles, beside its one parent (rule 45b,
+    /// F186, decided 9 October 2026).
+    pub settles: Option<Hash>,
 }
 
 impl Terms {
@@ -1170,6 +1174,9 @@ impl Terms {
         if let Some(r) = &self.release_rule {
             m.push((Value::Uint(24), r.to_value()));
         }
+        if let Some(x) = &self.settles {
+            m.push((Value::Uint(26), b(x)));
+        }
         m
     }
 
@@ -1205,7 +1212,7 @@ impl Terms {
                         "terms field 25 (the relays) is withdrawn: an act is done by its signatures, seals and citations, wherever held (F128)",
                     ))
                 }
-                Value::Uint(n) if *n <= 24 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 24 || *n == 26 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("terms: unknown field")),
             }
         }
@@ -1312,6 +1319,7 @@ impl Terms {
                 .transpose()?,
             forked_from: get(23).map(|v| hash(v, "forked from")).transpose()?,
             release_rule: get(24).map(rule).transpose()?,
+            settles: get(26).map(|v| hash(v, "settles")).transpose()?,
         })
     }
 
@@ -1444,6 +1452,16 @@ impl Terms {
             };
             if !ok {
                 return Err(LawError::Check("the release rule is a rule among a stake's holders"));
+            }
+        }
+        if let Some(x) = &self.settles {
+            if self.parent.is_none() || self.is_collective() {
+                return Err(LawError::Check(
+                    "only a deal's clone names the branch it settles (field 26, rule 45b, F186); a collective's forks are settled by its records (rule 47)",
+                ));
+            }
+            if self.parent.as_ref() == Some(x) {
+                return Err(LawError::Check("a version settles the other branch, never its own parent (field 26, F186)"));
             }
         }
         if self.forked_from.is_some() && (self.parent.is_some() || !self.is_collective()) {

@@ -14,6 +14,7 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
 import { record as recordKex } from '../../genesis/src/kex.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
+import { sellerAlarm } from '../../repo/src/deal.ts';
 import type { Line, Section } from '../../collective/src/explain.ts';
 import {
   ANSWER_LABEL,
@@ -553,7 +554,18 @@ export class Desk {
     else if (d.spec === SPECS.envelope && d.type === ENVELOPE_TYPES.keyDelivery) item.kind = 'key delivery';
     if (d.spec === SPECS.identity && d.type === IDENTITY_TYPES.witness) item.witness = true;
     if (!acksAllowed && d.acks?.length) item.problem = 'It carries acknowledgements, which only Identity, Finance and Law acts may carry (Envelope rule 4a, F110): it is invalid, and acknowledges nothing.';
-    if (item.kind === 'payment') item.problem = 'A Finance act (a payment claim, a receipt or an obligation): this desk does not read Finance yet, nor check a rail’s proof (Lightning module, roadmap step 12). It is shown as received, not as paid.';
+    if (item.kind === 'payment') {
+      item.problem = 'A Finance act (a payment claim, a receipt or an obligation): this desk does not read Finance yet, nor check a rail’s proof (Lightning module, roadmap step 12). It is shown as received, not as paid. It does check the version of a deal a payment names.';
+      // Client conformance (Law rule 45b, F186): a seller's client raises
+      // the alarm when a payment names a version of the deal that does not
+      // descend from the version it holds, showing both branches.
+      try {
+        const alarm = await sellerAlarm(me, act, hints, this.via);
+        if (alarm) item.alarm = alarm.words.join(' ');
+      } catch (e) {
+        item.alarm = `The version of the deal this payment names could not be checked (${err(e)}): look at the deal before relying on it (Law rule 45b, F186).`;
+      }
+    }
     if (d.spec === REPO_SPECS.law) item.problem = 'A Law act: read it in the collective client.';
     return item;
   }

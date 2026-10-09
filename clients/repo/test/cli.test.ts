@@ -85,3 +85,16 @@ test('found, release, sign, verify from the command line', async () => {
   writeFileSync(join(tree, 'src/main.rs'), 'fn main() { evil() }\n');
   await assert.rejects(cli('sign', '--member', files[1], '--release', id, '--at', relay.base, '--against', tree), /differs from your checkout/);
 });
+
+// F187 (9): the command line is a test tool, not a client. It marks a
+// member change from this device's copy of the collective, never asking
+// Law first, so it can sign a mark Law calls false (the step 11b fault);
+// its help says so before anything else, and points to the collective
+// client.
+test('the command line says it is a test tool, not a client', async () => {
+  const help = await cli('help');
+  assert.match(help.split('\n').slice(0, 6).join('\n'), /A TEST TOOL, NOT A CLIENT/);
+  assert.match(help, /marks a member change from this device's copy of the collective, without asking Law first/);
+  assert.match(help, /clients\/collective/);
+  assert.match(readFileSync(join(here, 'README.md'), 'utf8'), /The command line is a test tool, not a client/);
+});

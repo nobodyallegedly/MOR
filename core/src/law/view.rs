@@ -1029,8 +1029,8 @@ impl<'a> LawView<'a> {
     /// declares in force there, or the collective broken. A rotation whose
     /// declared agreement fails rule 37 is the broken act; from it on,
     /// only a rollback naming it brings the collective back (F185). A
-    /// rotation declaring no Law agreement, or one in neither form, leaves
-    /// it broken with no way back (RB4, open).
+    /// rotation whose Law declaration is missing or in neither form is a
+    /// broken act too, with the same way back (RB4).
     fn chain_state(&self, col: &Col, k: usize) -> R<ChainState> {
         if let Some(x) = self.chains.borrow().get(&(col.id, k)) {
             return Ok(x.clone());
@@ -1053,7 +1053,7 @@ impl<'a> LawView<'a> {
                 if let Some(Ok(d)) = &dd {
                     if let (Some(rb), Some(sigs)) = (&d.rollback, &d.signatures) {
                         if rb.broken == col.res.links[*bj].act
-                            && self.rollback_at(col, j, before, &d.agreement, sigs, &rb.registers)?.is_ok()
+                            && self.rollback_at(col, j, *bj, before, &d.agreement, sigs, &rb.registers)?.is_ok()
                         {
                             cur = Some(d.agreement);
                             broken = None;
@@ -1062,17 +1062,26 @@ impl<'a> LawView<'a> {
                 }
                 continue;
             }
-            let d = match dd {
-                None if cur.is_none() => continue,
-                None => return Ok(ChainState::Broken {
-                    reason: "a collective removed its agreement".into(),
-                    act: None,
-                }),
-                Some(Err(_)) => return Ok(ChainState::Broken {
+            let d = match (dd, cur) {
+                (None, None) => continue,
+                (Some(Err(_)), None) => return Ok(ChainState::Broken {
                     reason: "a Law declaration in neither form".into(),
                     act: None,
                 }),
-                Some(Ok(d)) => d,
+                // RB4 (decided 9 October 2026): a rotation whose Law
+                // declaration is missing or unreadable is a broken act, a
+                // technical one, with the same way back.
+                (None, Some(c)) => {
+                    let before = self.in_force_at_rotation(col, j, c)?.agreement;
+                    broken = Some((j, before, "a rotation removed the collective's agreement: its Law declaration is missing (rule 37d, RB4)".into()));
+                    continue;
+                }
+                (Some(Err(_)), Some(c)) => {
+                    let before = self.in_force_at_rotation(col, j, c)?.agreement;
+                    broken = Some((j, before, "a rotation's Law declaration cannot be read: it is in neither form (rule 37d, RB4)".into()));
+                    continue;
+                }
+                (Some(Ok(d)), _) => d,
             };
             let changed = j == 0
                 || declared_in(&col.res.states[j - 1].declarations, &self.law())
@@ -1174,14 +1183,24 @@ impl<'a> LawView<'a> {
     /// of `before`, the agreement in force just before the broken act,
     /// marked with the rollback's powers, and complete at `r` with the
     /// signature acts `sigs` alone, counted among the voices that remain
-    /// there, the departures it registers in effect. Why not, otherwise.
-    fn rollback_at(&self, col: &Col, r: usize, before: &Hash, k: &Hash, sigs: &[Hash], registers: &[Hash]) -> R<Result<(), String>> {
+    /// there, the departures it registers in effect; never the clone the
+    /// broken act at link `bj` declared, which stays on its own branch,
+    /// never in force (F187, 5). Why not, otherwise.
+    #[allow(clippy::too_many_arguments)]
+    fn rollback_at(&self, col: &Col, r: usize, bj: usize, before: &Hash, k: &Hash, sigs: &[Hash], registers: &[Hash]) -> R<Result<(), String>> {
+        if let Some(Ok(d)) = declared_in(&col.res.states[bj].declarations, &self.law()) {
+            if &d.agreement == k {
+                return Ok(Err(
+                    "the rollback's clone is the clone the broken act declared, which stays on its own branch, never in force (rule 37d, F187)".into(),
+                ));
+            }
+        }
         if self.terms(k)?.parent.as_ref() != Some(before) {
             return Ok(Err(
                 "the rollback's clone is not a clone of the agreement in force just before the broken act (rule 37d)".into(),
             ));
         }
-        let own = match self.rollback_departures(before, registers)? {
+        let own = match self.rollback_departures(col, Some(r), before, registers)? {
             Ok(x) => x,
             Err(w) => return Ok(Err(w)),
         };
@@ -1196,19 +1215,41 @@ impl<'a> LawView<'a> {
     /// The departures a rollback registers (rule 37d, "Collectives in the
     /// identity chain"): resignations and steppings down (type 16) by
     /// parties of `before`, naming it or an agreement it descends from by
-    /// clones. Anything else there, a declaration of absence included
-    /// (RB3, open), and the rollback puts nothing in force.
-    fn rollback_departures(&self, before: &Hash, registers: &[Hash]) -> R<Result<Vec<Departure>, String>> {
+    /// clones; and declarations of absence (type 13) with outcome 0 against
+    /// such a party, under the clause of `before` or an agreement it
+    /// descends from, made during the broken stretch or before it (RB3,
+    /// decided 9 October 2026), each with the signature acts of the other
+    /// parties it needs, which the rollback names beside it and places
+    /// (as a recovery rotation does, Flaw B18). The declarations' authority
+    /// is counted at the rollback at link `at`, the resignations it
+    /// registers in effect, other declarations not, as a record counts it;
+    /// with `at` none, at a rollback made next, every signature act it names
+    /// placed there (what a client checks before the rotation, F187 2).
+    /// Anything else there, and the rollback puts nothing in force.
+    fn rollback_departures(&self, col: &Col, at: Option<usize>, before: &Hash, registers: &[Hash]) -> R<Result<Vec<Departure>, String>> {
         let t = self.terms(before)?;
         let lineage: Vec<Hash> = self.lineage(before)?.into_iter().map(|(i, _)| i).collect();
         let mut out = vec![];
+        let mut declarations: Vec<(Hash, Hash)> = vec![];
+        let mut cosigned: Vec<Hash> = vec![];
         for x in registers {
             let Some(a) = self.v.get(x) else {
                 return Ok(Err("the rollback registers an act this verifier does not hold".into()));
             };
+            if self.is_law(a, types::DECLARATION) {
+                let Some(p) = a.act.outside.signer else {
+                    return Ok(Err("the rollback registers a declaration with no signer".into()));
+                };
+                declarations.push((*x, p));
+                continue;
+            }
+            if self.is_law(a, types::SIGNATURE) {
+                cosigned.push(*x);
+                continue;
+            }
             if !self.is_law(a, types::RESIGNATION) {
                 return Ok(Err(
-                    "a rollback registers resignations and steppings down only (rule 37d; a declaration of absence is open, RB3)".into(),
+                    "a rollback registers resignations, steppings down and declarations of absence, with the signature acts on those declarations (rule 37d, RB3)".into(),
                 ));
             }
             let Some(p) = a.act.outside.signer.filter(|p| t.parties.contains(p)) else {
@@ -1240,7 +1281,90 @@ impl<'a> LawView<'a> {
             };
             out.push(Departure { act: *x, party: p, kind });
         }
+        // Each signature act it names must be a valid signature on one of
+        // the declarations it registers (Flaw B18's rule, at the rollback).
+        for s in &cosigned {
+            let named = decode_signature(&self.held(s)?.inside).ok();
+            if !self.valid(s) || !named.is_some_and(|n| declarations.iter().any(|(d, _)| *d == n)) {
+                return Ok(Err(
+                    "the rollback names a signature act that is no valid signature on a declaration it registers (rule 37d, RB3)".into(),
+                ));
+            }
+        }
+        let others = out.clone();
+        for (x, signer) in declarations {
+            let by = match at {
+                Some(r) => col.res.links[r].act,
+                None => x,
+            };
+            let used = match at {
+                Some(r) => self.declaration_used(&x, &by, Some((col, Line::Rotation(r), before)))?,
+                None => self.declaration(&x)?,
+            };
+            let (d, clause) = match used {
+                Ok(v) => v,
+                Err(w) => return Ok(Err(format!("the rollback registers a declaration that fails: {w}"))),
+            };
+            if !t.parties.contains(&d.party) {
+                return Ok(Err(
+                    "the rollback registers a declaration against someone who is not a party of the agreement in force just before the broken act".into(),
+                ));
+            }
+            if !d.outcomes.contains(&outcomes::VOICE_REMOVED) {
+                return Ok(Err("the rollback registers a declaration that removes no voice (outcome 0)".into()));
+            }
+            if !lineage.contains(&d.agreement) {
+                return Ok(Err(
+                    "the rollback registers a declaration in an agreement not in force just before the broken act".into(),
+                ));
+            }
+            let counted = match at {
+                Some(r) => self.authority_at(col, Point::Line(Line::Rotation(r)), before, &clause, &d, &x, &signer, &others)?,
+                None => self.authority_next(col, before, &clause, &d, &x, &signer, &others, &cosigned)?,
+            };
+            if let Err(w) = counted {
+                return Ok(Err(format!("the rollback registers a declaration whose authority is not met: {w}")));
+            }
+            out.push(Departure {
+                act: x,
+                party: d.party,
+                kind: DepartureKind::Declared { agreement: d.agreement },
+            });
+        }
         Ok(Ok(out))
+    }
+
+    /// A declaration's authority at a rollback made next (RB3, F187 2): as
+    /// [`Self::authority_at`] counts it, among the other parties of
+    /// `before` whose voice remains, the signer with the signers of the
+    /// signature acts `named` on it, each placed by the rollback.
+    #[allow(clippy::too_many_arguments)]
+    fn authority_next(&self, col: &Col, before: &Hash, clause: &Abandonment, d: &AbsenceDeclaration, decl: &Hash, signer: &Hash, own: &[Departure], named: &[Hash]) -> R<Result<(), String>> {
+        let Authority::Others(k) = clause.authority else {
+            return Ok(Ok(()));
+        };
+        let t = self.terms(before)?;
+        let others: Vec<Hash> = t.parties.iter().filter(|p| **p != d.party).copied().collect();
+        let (_, remaining) = self.voices(col, Point::Tip, before, &others, None, &BTreeMap::new(), own)?;
+        if !remaining.contains(signer) {
+            return Ok(Err("its signer is not among the other parties whose voice remains at the line (rule 49, Q37)".into()));
+        }
+        let Some(need) = Rule::Threshold(k).needed(remaining.len()) else {
+            return Ok(Err("no other voice remains to declare absence".into()));
+        };
+        let mut signed = vec![*signer];
+        for (who, s) in self.valid_sigs(decl, &remaining) {
+            if !signed.contains(&who) && named.contains(&s) {
+                signed.push(who);
+            }
+        }
+        if signed.len() >= need {
+            return Ok(Ok(()));
+        }
+        Ok(Err(format!(
+            "it has {} of the {need} signatures of the other parties its number needs, named by the rollback (rule 49, B15; rule 37d, RB3)",
+            signed.len()
+        )))
     }
 
     /// The rollbacks that count up to link `upto`, each the rotation's link
@@ -1258,7 +1382,7 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let Some(before) = self.terms(&d.agreement)?.parent else { continue };
-            if let Ok(own) = self.rollback_departures(&before, &rb.registers)? {
+            if let Ok(own) = self.rollback_departures(col, Some(m), &before, &rb.registers)? {
                 out.push((m, d.agreement, own));
             }
         }
@@ -1324,6 +1448,130 @@ impl<'a> LawView<'a> {
             voices,
             needed,
         }))
+    }
+
+    /// What a rollback made next would register (rule 37d, RB3), checked
+    /// from what this verifier holds: each act `registers` names held, a
+    /// resignation or stepping down of a party of the agreement in force
+    /// just before the broken act, or a declaration of absence with the
+    /// signature acts its authority needs. What a client asks before it
+    /// sends the rotation (F187, 2). Err: why a rollback registering them
+    /// would put nothing in force, or why there is no rollback to make.
+    pub fn rollback_registers(&self, collective: &Hash, registers: &[Hash]) -> R<Result<Vec<Departure>, String>> {
+        let col = self.col(collective);
+        let Some(b) = self.broken_act(collective)? else {
+            return Ok(Err("not broken with a way back: there is nothing to roll back".into()));
+        };
+        self.rollback_departures(&col, None, &b.before, registers)
+    }
+
+    /// The resignations the parties of a collective's agreement have
+    /// published, registered or not (rule 37a; F187, 3): each a valid
+    /// resignation of the whole voice (type 16, no area) by a party of the
+    /// agreement in force, or, during a broken stretch, of the agreement in
+    /// force just before the broken act, naming it or an agreement it
+    /// descends from. Law counts a resignation only once a line registers
+    /// it; a client reads these too, so that the last voice is warned when
+    /// the others resigned from other devices. Empty where the collective
+    /// has no agreement Law can name.
+    pub fn published_resignations(&self, collective: &Hash) -> R<Vec<Departure>> {
+        let ag = match self.broken_act(collective)? {
+            Some(b) => b.before,
+            None => match self.current(collective) {
+                Ok(Some(c)) => c.agreement,
+                _ => return Ok(vec![]),
+            },
+        };
+        let t = self.terms(&ag)?;
+        let lineage: Vec<Hash> = self.lineage(&ag)?.into_iter().map(|(i, _)| i).collect();
+        let mut out = vec![];
+        for p in &t.parties {
+            for h in self.v.signed_by(p) {
+                if !self.is_law(h, types::RESIGNATION) || !self.valid(&h.id) {
+                    continue;
+                }
+                let Ok(r) = Resignation::decode(&h.inside) else { continue };
+                if r.area.is_none() && lineage.contains(&r.agreement) {
+                    out.push(Departure { act: h.id, party: *p, kind: DepartureKind::Resigned { agreement: r.agreement } });
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// The declarations of absence naming `party` that this verifier holds
+    /// (type 13, rule 51), valid under Identity, each with its signer, as
+    /// held: client conformance (RB3, decided 9 October 2026): a
+    /// declaration naming a party MUST always be shown to that party, broken
+    /// collective or not, with the way to contest it (rule 52).
+    pub fn declarations_naming(&self, party: &Hash) -> Vec<(Hash, Hash, AbsenceDeclaration)> {
+        let mut out = vec![];
+        for h in self.v.held_acts() {
+            if !self.is_law(h, types::DECLARATION) || !self.valid(&h.id) {
+                continue;
+            }
+            let Ok(d) = AbsenceDeclaration::decode(&h.inside) else { continue };
+            if &d.party == party {
+                out.push((h.id, h.act.outside.signer.unwrap_or_default(), d));
+            }
+        }
+        out
+    }
+
+    /// The broken stretches of a collective's chain (rule 37d): each broken
+    /// act's link, and the link of the rollback that ended it, if any.
+    fn stretches(&self, col: &Col) -> R<Vec<(usize, Option<usize>)>> {
+        let mut out: Vec<(usize, Option<usize>)> = vec![];
+        for k in 0..col.res.links.len() {
+            match self.chain_state(col, k)? {
+                ChainState::Broken { act: Some((bj, _)), .. } => {
+                    if out.last().is_none_or(|(b, r)| *b != bj || r.is_some()) {
+                        out.push((bj, None));
+                    }
+                }
+                ChainState::InForce(_) => {
+                    if let Some(last) = out.last_mut() {
+                        if last.1.is_none() {
+                            last.1 = Some(k);
+                        }
+                    }
+                }
+                ChainState::Broken { act: None, .. } => {}
+            }
+        }
+        Ok(out)
+    }
+
+    /// Why a grantee's act `y` (F128) lies in a broken stretch of the
+    /// collective (rule 37d, RB1): its place on the collective's chain is
+    /// after the broken act (neither the broken act's history nor that of
+    /// an act of the collective's own key before it holds it) and before
+    /// the rollback (it cites neither the rollback nor any
+    /// later decision of the collective). `None` otherwise.
+    fn in_a_stretch(&self, col: &Col, y: &Held) -> R<Option<String>> {
+        let Some(at) = self.link(col, y) else { return Ok(None) };
+        for (bj, rj) in self.stretches(col)? {
+            if rj.is_some_and(|r| at >= r) || self.before_struct(col, y, Line::Rotation(bj)) {
+                continue;
+            }
+            // Held by the history of an act of the collective's own key
+            // under a key before the broken act: before it, as every act
+            // under an earlier key is ("Made before, made after", 1).
+            let held = self.v.signed_by(&col.id).any(|a| {
+                Self::own_key(col, a)
+                    && col.pos(a).is_some_and(|k| k < bj)
+                    && self.valid(&a.id)
+                    && self.before_struct(col, y, Line::Record(a))
+            });
+            if held {
+                continue;
+            }
+            return Ok(Some(match rj {
+                None => "the collective is broken: a grantee's act of the broken stretch counts for nothing (rule 37d, RB1)".into(),
+                Some(_) => "made during a broken stretch since rolled back: a grantee's act of the stretch counts for nothing, for good; what is still wanted is signed anew, citing the rollback (rule 37d, RB1, RB2)".into(),
+            }));
+        }
+        Ok(None)
     }
 
     /// The agreement in force just before rotation `j`: the one declared
@@ -1821,7 +2069,10 @@ impl<'a> LawView<'a> {
         }
         for j in 1..col.res.links.len() {
             if let Some(Ok(d)) = declared_in(&col.res.states[j].declarations, &self.law()) {
-                if d.signatures.iter().chain(d.absence.iter()).flatten().any(|x| x == &s.id) {
+                // A rollback places the signature acts on the declarations
+                // it registers, which it names beside them (RB3).
+                let regs = d.rollback.as_ref().map(|rb| &rb.registers);
+                if d.signatures.iter().chain(d.absence.iter()).chain(regs).flatten().any(|x| x == &s.id) {
                     out.push((Line::Rotation(j), true));
                 }
             }
@@ -2654,13 +2905,17 @@ impl<'a> LawView<'a> {
     /// agreement in force there, recorded before it.
     fn placed_at(&self, col: &Col, h: &Held, l: Line<'a>, ag: &Hash) -> R<bool> {
         for (p, is_line) in self.placements(col, h) {
-            let placed = match (p, l) {
-                (Line::Record(a), Line::Record(b)) if a.id == b.id => true,
-                (Line::Rotation(i), Line::Rotation(j)) if i == j => true,
-                (Line::Record(a), _) if !is_line => self.keepers_place(col, a, l, Some(*ag))?,
-                _ => self.line_before(col, p, l),
+            let (placed, same) = match (p, l) {
+                (Line::Record(a), Line::Record(b)) if a.id == b.id => (true, true),
+                (Line::Rotation(i), Line::Rotation(j)) if i == j => (true, true),
+                (Line::Record(a), _) if !is_line => (self.keepers_place(col, a, l, Some(*ag))?, false),
+                _ => (self.line_before(col, p, l), false),
             };
-            if placed {
+            // An act of the broken stretch places nothing, a declaration's
+            // signatures included (rule 37d, F187 7): only the line being
+            // judged, a record or the rollback registering it, places them
+            // there. Never asked of that line itself.
+            if placed && (same || !self.in_broken_stretch(col, p)?) {
                 return Ok(true);
             }
         }
@@ -3677,6 +3932,14 @@ impl<'a> LawView<'a> {
         }
         if let Some(w) = self.uncited(&col, y, None)? {
             return not(&w);
+        }
+        // RB1 (decided 8 and 9 October 2026): a broken collective is
+        // quarantined; its grantees' acts of the broken stretch count for
+        // nothing, and are signed anew after the rollback, never adopted.
+        if collective {
+            if let Some(w) = self.in_a_stretch(&col, y)? {
+                return not(&w);
+            }
         }
         // A grant key never signs a decision: records, grants, revocations
         // and identity-chain acts are signed with the grantor's own key.
@@ -4827,6 +5090,63 @@ pub struct PurchaseEval {
     pub verdict: PurchaseVerdict,
     /// Who a refund would be owed to (Finance rule 10a).
     pub refund_to: crate::finance::RefundTo,
+}
+
+/// A deal read as rule 45b reads its forks (F186).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DealState {
+    /// One version in force.
+    InForce(Hash),
+    /// Two complete versions of one version, not settled: the version
+    /// before the split is the reference; each branch from the split to its
+    /// latest version.
+    Forked { reference: Hash, branches: Vec<Vec<Hash>> },
+}
+
+/// A deal standing forked (rule 45b, F186).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DealFork {
+    /// The version before the split: the last version every party agrees
+    /// on, what a verifier reports as the unforked state, and the point
+    /// the settling version names.
+    pub reference: Hash,
+    /// Each branch, from the split to its latest version.
+    pub branches: Vec<Vec<Hash>>,
+}
+
+/// The alarm a seller's client and a split service raise (rule 45b, F186,
+/// client conformance): a payment names a version of the deal that does
+/// not descend from the version they hold.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ForkAlarm {
+    /// The version the payment names.
+    pub named: Hash,
+    /// The version the seller or service holds.
+    pub held: Hash,
+    /// The last version both lines share.
+    pub shared: Hash,
+    /// Whether the two lines part after `shared` (a fork); false where the
+    /// payment names an older version of the line held.
+    pub fork: bool,
+    /// The versions after `shared` up to `held`, in order.
+    pub held_line: Vec<Hash>,
+    /// The versions after `shared` up to `named`, in order.
+    pub named_line: Vec<Hash>,
+}
+
+/// A payment a collective received during a broken stretch, owed back to
+/// its payer until the sale is signed anew after the rollback (rule 37d,
+/// RB2): a visible open obligation.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OwedBack {
+    /// The receipt or claim of the payment, as held.
+    pub payment: Hash,
+    /// Who it is owed back to (Finance rule 10a).
+    pub to: crate::finance::RefundTo,
+    /// Its amount.
+    pub amount: crate::finance::Amount,
+    /// Whether the collective is still broken (no rollback yet).
+    pub still_broken: bool,
 }
 
 /// The constitutional change rule, counted among the voices that remain
@@ -6392,7 +6712,9 @@ impl<'a> LawView<'a> {
 
     /// The latest version of an agreement that exists: for a collective's
     /// own agreement, the one in force at its current state; for a deal,
-    /// the furthest version every party signed.
+    /// the version in force as rule 45b reads its forks (F186): while two
+    /// complete versions of one version stand unsettled, the version before
+    /// the split, the reference.
     fn latest_version(&self, agreement: &Hash) -> R<Hash> {
         let t = self.terms(agreement)?;
         if t.is_collective() {
@@ -6403,28 +6725,208 @@ impl<'a> LawView<'a> {
             }
             return Ok(*agreement);
         }
-        // Rule 5b: two clones of one version that exist are a fork of the
-        // deal; with no concurrency rule (terms field 10, format open), the
-        // status quo stands: the parent stays the latest version (audit,
-        // October 2026, R5b). Walked from the deal's founding terms, so
-        // that a version off the line in force is never "latest".
-        let mut at = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
+        let root = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
+        Ok(match self.deal_state(&root)? {
+            DealState::InForce(h) => h,
+            DealState::Forked { reference, .. } => reference,
+        })
+    }
+
+    /// The version an act naming the version `named` of an agreement is
+    /// judged against (rules 26, 17; F186): the version in force; or, while
+    /// a deal stands forked, the latest version of the branch `named` lies
+    /// on, since a new act may follow either branch and counts (the buyer
+    /// is protected), and the reference for a version before the split.
+    fn version_for(&self, named: &Hash) -> R<Hash> {
+        let t = self.terms(named)?;
+        if t.is_collective() {
+            return self.latest_version(named);
+        }
+        let root = self.lineage(named)?.pop().expect("a lineage has a root").0;
+        Ok(match self.deal_state(&root)? {
+            DealState::InForce(h) => h,
+            DealState::Forked { reference, branches } => branches
+                .iter()
+                .find(|b| b.contains(named))
+                .and_then(|b| b.last().copied())
+                .unwrap_or(reference),
+        })
+    }
+
+    /// The complete versions of a deal cloning `at` (rule 45b): clones of
+    /// it every party whose voice remains signed, valid.
+    fn complete_clones(&self, at: &Hash) -> Vec<Hash> {
+        self.v
+            .held_acts()
+            .filter(|x| {
+                self.is_law(x, types::TERMS)
+                    && self.terms(&x.id).is_ok_and(|c| c.parent == Some(*at))
+                    && self.agreement(&x.id).is_ok_and(|a| a.exists == Some(true))
+            })
+            .map(|x| x.id)
+            .collect()
+    }
+
+    /// A deal read from its founding terms `root` (rule 45b, F186, decided
+    /// 9 October 2026): followed one complete version at a time; where one
+    /// version has two complete clones, neither descending from the other,
+    /// the deal is forked, the version before the split its reference, until
+    /// a complete version names both branches: beside its one parent, the
+    /// latest version of one branch, the other branch's tip it settles
+    /// (field 26). That version is in force from then on, for good; the
+    /// other branch never comes back (settlement is final). Shapes F186
+    /// does not decide are refused rather than guessed ("Open in this
+    /// draft"): a version with three complete clones, a branch that forks
+    /// again, two versions settling one fork, a version settling from
+    /// below its branch's latest version, and a settled version this
+    /// verifier does not hold.
+    pub fn deal_state(&self, root: &Hash) -> R<DealState> {
+        let mut at = *root;
         loop {
-            let next: Vec<Hash> = self
-                .v
-                .held_acts()
-                .filter(|x| {
-                    self.is_law(x, types::TERMS)
-                        && self.terms(&x.id).is_ok_and(|c| c.parent == Some(at))
-                        && self.agreement(&x.id).is_ok_and(|a| a.exists == Some(true))
-                })
-                .map(|x| x.id)
-                .collect();
-            match next.as_slice() {
-                [x] => at = *x,
-                _ => return Ok(at),
+            let kids = self.complete_clones(&at);
+            match kids.len() {
+                0 => return Ok(DealState::InForce(at)),
+                1 => {
+                    at = kids[0];
+                    continue;
+                }
+                2 => {}
+                _ => {
+                    return Err(LawError::Unsettled(
+                        "three or more complete versions of one version of a deal: F186 decides two branches (\"Open in this draft\")",
+                    ))
+                }
+            }
+            let side = |x: &Hash| -> R<Option<usize>> {
+                let ls = self.lineage(x)?;
+                Ok(kids.iter().position(|k| ls.iter().any(|(i, _)| i == k)))
+            };
+            // The versions settling this fork: complete, naming as parent a
+            // version of one branch and as settled one of the other.
+            let mut settling = vec![];
+            for x in self.v.held_acts() {
+                if !self.is_law(x, types::TERMS) {
+                    continue;
+                }
+                let Ok(t) = self.terms(&x.id) else { continue };
+                let (Some(par), Some(other)) = (t.parent, t.settles) else { continue };
+                let Some(i) = side(&par)? else { continue };
+                if self.v.get(&other).is_none() {
+                    return Err(LawError::Unsettled(
+                        "a version settles a branch of a deal's fork this verifier does not hold: it holds that version before answering (F186)",
+                    ));
+                }
+                if side(&other)? != Some(1 - i) {
+                    continue;
+                }
+                if self.agreement(&x.id).is_ok_and(|a| a.exists == Some(true)) {
+                    settling.push((x.id, par, i));
+                }
+            }
+            // Each branch, followed one complete version at a time.
+            let mut branches: Vec<Vec<Hash>> = vec![];
+            for k in &kids {
+                let mut b = vec![*k];
+                let mut x = *k;
+                loop {
+                    let next: Vec<Hash> = self
+                        .complete_clones(&x)
+                        .into_iter()
+                        .filter(|n| !settling.iter().any(|(s, _, _)| s == n))
+                        .collect();
+                    match next.as_slice() {
+                        [] => break,
+                        [n] => {
+                            b.push(*n);
+                            x = *n;
+                        }
+                        _ => {
+                            return Err(LawError::Unsettled(
+                                "a branch of a deal's fork that forks again: how it is counted is not decided (F186, \"Open in this draft\")",
+                            ))
+                        }
+                    }
+                }
+                branches.push(b);
+            }
+            match settling.as_slice() {
+                [] => return Ok(DealState::Forked { reference: at, branches }),
+                [(s, par, i)] => {
+                    if branches[*i].last() != Some(par) {
+                        return Err(LawError::Unsettled(
+                            "a version settles a deal's fork from below its own branch's latest version: not decided (F186, \"Open in this draft\")",
+                        ));
+                    }
+                    at = *s;
+                }
+                _ => {
+                    return Err(LawError::Unsettled(
+                        "two versions settle one fork of a deal: not decided (F186, \"Open in this draft\")",
+                    ))
+                }
             }
         }
+    }
+
+    /// Where a deal stands forked (rule 45b, F186): the reference, the
+    /// version before the split, and each branch's versions from the split
+    /// to its latest. `None` where it is not forked, or is a collective's.
+    pub fn deal_fork(&self, agreement: &Hash) -> R<Option<DealFork>> {
+        let t = self.terms(agreement)?;
+        if t.is_collective() {
+            return Ok(None);
+        }
+        let root = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
+        Ok(match self.deal_state(&root)? {
+            DealState::InForce(_) => None,
+            DealState::Forked { reference, branches } => Some(DealFork { reference, branches }),
+        })
+    }
+
+    /// Client conformance (rule 45b, F186, decided 9 October 2026): a
+    /// seller's client, and a split service, MUST raise the alarm when a
+    /// payment names a version of the deal that does not descend from the
+    /// version they hold. Given the payment (a receipt or claim naming the
+    /// claim it pays under, field 9) and the version `held`: `None` where
+    /// the version it names descends from `held` (or is `held`), or names
+    /// no version of the same agreement; otherwise both lines from the last
+    /// version they share, to show both branches and point to settling the
+    /// fork.
+    pub fn fork_alarm(&self, payment: &Hash, held: &Hash) -> R<Option<ForkAlarm>> {
+        use crate::finance::Payload as Fin;
+        let x = self.held(payment)?;
+        if x.inside.spec != self.mips.finance {
+            return Ok(None);
+        }
+        let named = match Fin::decode(x.inside.type_, &x.inside.payload) {
+            Ok(Fin::Receipt(r)) => r.purchase.map(|p| p.line),
+            Ok(Fin::Claim(c)) => c.purchase.map(|p| p.line),
+            _ => None,
+        };
+        let Some(named) = named else { return Ok(None) };
+        if self.v.get(&named).is_none_or(|l| !self.is_law(l, types::TERMS)) {
+            return Ok(None);
+        }
+        let ln: Vec<Hash> = self.lineage(&named)?.into_iter().map(|(i, _)| i).collect();
+        let lh: Vec<Hash> = self.lineage(held)?.into_iter().map(|(i, _)| i).collect();
+        if ln.contains(held) {
+            return Ok(None);
+        }
+        let Some(shared) = lh.iter().find(|h| ln.contains(h)).copied() else {
+            return Ok(None);
+        };
+        let line = |l: &[Hash]| -> Vec<Hash> {
+            let k = l.iter().position(|h| *h == shared).unwrap_or(0);
+            l[..k].iter().rev().copied().collect()
+        };
+        Ok(Some(ForkAlarm {
+            named,
+            held: *held,
+            shared,
+            fork: shared != named,
+            held_line: line(&lh),
+            named_line: line(&ln),
+        }))
     }
 
     /// The act at which a work's claim under `agreement` is current, as this
@@ -6432,7 +6934,7 @@ impl<'a> LawView<'a> {
     /// where a collective holding the work's stake in it was ended by a fork
     /// or closing, that act; or the work's release.
     fn claim_line(&self, agreement: &Hash, work: Option<&Hash>) -> R<Hash> {
-        let v = self.latest_version(agreement)?;
+        let v = self.version_for(agreement)?;
         if let Some(w) = work {
             if let Some(r) = self.released(w)? {
                 return Ok(r.id);
@@ -6532,8 +7034,34 @@ impl<'a> LawView<'a> {
         if !in_history {
             return no(e, "the line it names carries none of that agreement's claims");
         }
-        let current = self.claim_line(&p.agreement, work.as_ref())?;
+        // F186: while a deal stands forked, a purchase may follow either
+        // branch, judged against that branch's latest version.
+        let named = match self.v.get(&p.line) {
+            Some(l) if self.is_law(l, types::TERMS) => p.line,
+            _ => p.agreement,
+        };
+        let current = self.claim_line(&named, work.as_ref())?;
         let sellers = self.sellers(&p, work.as_ref())?;
+        // RB2 (decided 9 October 2026): a payment a collective seller
+        // received during a broken stretch is no purchase, owed back to the
+        // payer, unless the sale is signed anew after the rollback: a receipt
+        // of the collective for the same payment that counts. An
+        // acknowledgement adopting the stretch's receipt is not signing anew.
+        let payee = match crate::finance::Payload::decode(x.inside.type_, &x.inside.payload) {
+            Ok(crate::finance::Payload::Receipt(r)) => Some(r.payee),
+            Ok(crate::finance::Payload::Claim(c)) => Some(c.payee),
+            _ => None,
+        };
+        for c in sellers.iter().chain(payee.iter().filter(|p| !sellers.contains(p))) {
+            if let Some(anew) = self.received_in_stretch(id, c)? {
+                if !anew {
+                    return no(
+                        e,
+                        "received while the collective that sells it was broken: no purchase, owed back to the payer unless the sale is signed anew after the rollback (rule 37d, RB2)",
+                    );
+                }
+            }
+        }
         if !self.push_rails.contains(&rail) {
             // W4 (F128), request rails: the claim the payment names is the
             // one the seller's request committed to, so a buyer cannot pay a
@@ -6611,6 +7139,84 @@ impl<'a> LawView<'a> {
             e.verdict = PurchaseVerdict::Unrecorded;
         }
         Ok(Some(e))
+    }
+
+    /// Where collective `c` received the payment `id` during a broken
+    /// stretch (rule 37d, RB2): its receipt for it, by its own key or a grant
+    /// key of its, the payment itself or one carrying the same rail proof,
+    /// lies in a stretch. `Some(true)` where a receipt of `c` for the same
+    /// payment counts, signed anew after the rollback; `Some(false)` where
+    /// none does; `None` where `c` received it in no stretch.
+    fn received_in_stretch(&self, id: &Hash, c: &Hash) -> R<Option<bool>> {
+        use crate::finance::Payload as Fin;
+        let col = self.col(c);
+        if !(0..col.res.links.len()).any(|k| self.declares(&col, k)) {
+            return Ok(None);
+        }
+        let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
+            _ => None,
+        };
+        let Some(x) = self.v.get(id) else { return Ok(None) };
+        let mine = proof(x);
+        let receipts: Vec<&Held> = self
+            .v
+            .signed_by(c)
+            .filter(|h| {
+                h.inside.spec == self.mips.finance
+                    && h.inside.type_ == crate::finance::types::RECEIPT
+                    && self.valid(&h.id)
+                    && !self.rail_invalid.contains(&h.id)
+                    && (h.id == *id || mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m)))
+            })
+            .collect();
+        let mut stretch = false;
+        let mut anew = false;
+        for h in receipts {
+            let in_stretch = match col.pos(h) {
+                Some(k) => self.base(&col, k)?.is_err() && (0..=k).any(|j| self.declares(&col, j)),
+                None => self.in_a_stretch(&col, h)?.is_some(),
+            };
+            if in_stretch {
+                stretch = true;
+            } else if self.consent(&h.id)?.counts() {
+                anew = true;
+            }
+        }
+        Ok(stretch.then_some(anew))
+    }
+
+    /// The payments a collective received during a broken stretch and owes
+    /// back, the sale not signed anew after the rollback (rule 37d, RB2): a
+    /// visible open obligation, one entry per payment (its first receipt or
+    /// claim held). The network records and shows the debt; it cannot force
+    /// a payment back.
+    pub fn owed_back(&self, collective: &Hash) -> R<Vec<OwedBack>> {
+        use crate::finance::Payload as Fin;
+        let col = self.col(collective);
+        let still_broken = self.broken(collective)?.is_some();
+        let mut out = vec![];
+        let mut seen: Vec<(Hash, Vec<u8>)> = vec![];
+        let held: Vec<&Held> = self.v.held_acts().filter(|h| h.inside.spec == self.mips.finance).collect();
+        for h in held {
+            let (payee, amount, key) = match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::Receipt(r)) => (r.payee, r.amount, (r.rail, r.proof)),
+                Ok(Fin::Claim(r)) => (r.payee, r.amount, (r.rail, r.proof)),
+                _ => continue,
+            };
+            if payee != col.id || (!key.1.is_empty() && seen.contains(&key)) {
+                continue;
+            }
+            let Some(e) = self.purchase(&h.id)? else { continue };
+            if let PurchaseVerdict::NoPurchase { why } = &e.verdict {
+                if why.contains("RB2") {
+                    seen.push(key);
+                    out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken });
+                }
+            }
+        }
+        Ok(out)
     }
 
     /// The other receipts and claims of the same rail payment as `id` (one
@@ -7125,7 +7731,7 @@ impl<'a> LawView<'a> {
         // Rule 26: the stakes as currently held, those of the agreement in
         // force (audit, October 2026, gap 8). A split naming an older
         // version is judged against the version in force all the same.
-        let in_force = self.latest_version(&s.agreement)?;
+        let in_force = self.version_for(&s.agreement)?;
         let t = self.terms(&in_force)?;
         let collective = if t.is_collective() { self.collective_of(&in_force)? } else { None };
         let mut problems = vec![];
@@ -7328,7 +7934,7 @@ impl<'a> LawView<'a> {
         if !x.payouts.iter().any(|p| p.stake == Some(idx)) {
             return Ok(None);
         }
-        if self.latest_version(&x.agreement).ok().as_ref() != Some(in_force) {
+        if self.version_for(&x.agreement).ok().as_ref() != Some(in_force) {
             return Ok(None);
         }
         Ok(Some(x))
@@ -7661,7 +8267,7 @@ impl<'a> LawView<'a> {
             // version the release names must be, or one it descends from
             // (audit, October 2026, gap 7: naming an older, looser version
             // ends nothing).
-            let current = self.latest_version(ag)?;
+            let current = self.version_for(ag)?;
             let in_force = self.lineage(&current)?;
             if !in_force.iter().any(|(x, _)| x == ag) {
                 return fail(e, "a release names a version of the claiming agreement that is neither in force nor one the version in force descends from (rule 17)");

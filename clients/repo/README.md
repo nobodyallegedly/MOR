@@ -2,6 +2,8 @@
 
 The repo client, in TypeScript, with the core library through WebAssembly. Roadmap step 5a: MOR governs its own code.
 
+**The command line is a test tool, not a client** (F187, 9). `src/cli.ts` drives this package's mechanics for tests and scripts: it marks a member change from this device's copy of the collective, without asking Law first, so it can sign and publish a clone whose mark Law calls false, which breaks the collective (Law rule 37d; the step 11b fault). The collective client (`clients/collective`) is the client: it takes every mark from Law's own count and asks Law again before anything is sent.
+
 **Test collectives only.** A test collective holds every key in software, in its file: its everyday key and every member's share of its safety key. Its members are simulated identities, all held by whoever runs it, so the mechanics run (the release rule, visible signatures, clone, rotation) while independent consent does not; the freeze report says so. The real collective is created at step 17 the same way, with each member's share on that member's own offline device.
 
 ## In plain words
@@ -22,7 +24,7 @@ The code of MOR is published as releases. A release is a list of every file with
 | `src/law.ts` | Law draft 7 acts as the collective makes them: founding terms (the release rule as an area, the abandonment clause removing a voice) and clones with their marks (checked by the core library's `checkTerms` and `lawClonePlan` before signing), signature acts, resignations, records; carrying an identity's chain to the relays it publishes on. |
 | `src/collective.ts` | The test collective file; founding (agreement signed by every founder, dealing, genesis declaring the agreement, routes); member change (resignations registered by a record, clone marked with the constitutional change rule, signatures, rotation from the staying members' shares declaring the clone with its signature acts, next key dealt to the new members); an ordinary change recorded at once; settling. |
 | `src/release.ts` | The manifest (release manifest cMIP draft 1): encoding, strict decoding, files from `git ls-files`, dependencies from `Cargo.lock` and every `package-lock.json`; publishing a release; a member's signature; verifying a release as a fresh machine; comparing a checkout. |
-| `src/cli.ts` | The command line (`npm run cli -- help`). |
+| `src/cli.ts` | The command line (`npm run cli -- help`): a test tool, not a client. |
 
 It reuses the genesis client (`../genesis/src`) for identities, the relay transport and the WebAssembly. What the core library does, through `mor-wasm`: Law's formats and checks (`core/src/law/`: terms, areas and marks, key grammars with F96 and F105, the powers a clone needs, records and lines on the collective's own sequence, which agreement is in force, the consent an area requires), media locking and work hashes, and the air-gapped Module's share dealing (`modules/airgap/src/shares.rs`: Pedersen dealing, each holder's check, the rebuild check).
 

@@ -116,6 +116,8 @@ export interface Rules {
   others: number;
   /** The constitutional change rule: any k members. Absent: every member whose voice remains (F103). */
   constitution?: number;
+  /** The constitutional change rule naming the members who hold constitutional power (Law rule 44c): only some members change the constitution (RB5). */
+  constitutionNamed?: string[];
 }
 
 const toRules = (g: Governance): Rules => ({
@@ -124,6 +126,7 @@ const toRules = (g: Governance): Rules => ({
   clone: g.cloneThreshold,
   others: g.abandonmentOthers,
   ...(g.constitutionalThreshold ? { constitution: g.constitutionalThreshold } : {}),
+  ...(g.constitutionalNamed?.length ? { constitutionNamed: g.constitutionalNamed } : {}),
 });
 
 /** The numbers of a Governance from the rules typed on the page. */
@@ -133,6 +136,7 @@ const fromRules = (r: Rules) => ({
   cloneThreshold: whole(r.clone, 'the signatures a change needs'),
   abandonmentOthers: whole(r.others, 'who judges absence'),
   ...(r.constitution !== undefined ? { constitutionalThreshold: whole(r.constitution, 'the signatures a change of the constitution needs') } : {}),
+  ...(r.constitutionNamed?.length ? { constitutionalNamed: r.constitutionNamed } : {}),
 });
 
 /** Law's own reading of a collective ([`Actions.lawOf`]). */
@@ -171,10 +175,23 @@ interface Shown {
   words: string;
   shares: { threshold: number; of: number };
   area: { holders: { id: string; voice: boolean; steppedDown: boolean }[]; threshold: number; needed: number; frozen: boolean; words: string };
+  /** Payments received during a broken stretch, owed back until the sale is signed anew after the rollback (Law rule 37d, RB2). */
+  owedBack?: { payment: string; to: string | null; unit: string; value: number; stillBroken: boolean }[];
+  /** Declarations of absence naming a member, as Law's verifier holds them (RB3, client conformance). */
+  declared?: { member: string; act: string; signer: string; agreement: string; outcomes: number[] }[];
 }
 
 const ruleNumber = (r: { form: string; threshold?: number | null } | null | undefined, all: number): number | undefined =>
   !r ? undefined : r.form === 'threshold' && r.threshold ? r.threshold : r.form === 'all' ? all : undefined;
+
+/**
+ * A declaration of absence as the member it names is shown it, with the way
+ * to contest it (RB3, client conformance; Law rules 51, 52, 53; F172).
+ */
+function contestWords(who: string, by: string, d: { act: string; agreement: string; outcomes: number[] }): string {
+  const outs = d.outcomes.map((o) => (o === 0 ? 'voice removed' : o === 1 ? 'stake redistributed' : o === 2 ? 'stake transferred' : o === 3 ? 'obligations redirected' : `outcome ${o}`)).join(', ');
+  return `${who} is named as absent by a declaration ${short(d.act)}, signed by ${by}, under the agreement ${short(d.agreement)} (outcomes: ${outs}). It moves nothing by itself: it takes effect only where a line of the collective registers it (a record, or a rollback). To contest it: ${who} signs a contest act (Law rule 52), shown beside the declaration to everyone who reads it; a contest shows the declaration, it does not void it. A voice removed comes back only by a later version of the agreement naming ${who}, signed under the collective's rules. The contest act's format (Law type 14) is still open, so this client cannot sign one yet.`;
+}
 
 /** What the page shows: from Law's reading of the agreement in force where it has one, else from this device's copy. */
 function shownOf(c: TestCollective, law: LawOf): Shown {
@@ -732,12 +749,14 @@ export class Actions {
     clone: number;
     safety: number;
     problem: string | null;
+    /** Law reads the collective as broken (Law rule 37d). */
+    broken?: boolean;
   }> {
     const law = await this.lawOf(c);
     const cname = this.store.book().collectives.find((x) => x.id === c.identity)?.name;
     const it = cname ? `“${cname}”` : 'this collective';
     const none = { voices: [], releaseVoices: [], releaseNeeded: 0, releaseThreshold: 0, clone: 0, safety: 0 };
-    if (law.broken) return { ...none, problem: brokenWords(it, law.broken) };
+    if (law.broken) return { ...none, problem: brokenWords(it, law.broken), broken: true };
     if (!law.terms) return { ...none, problem: `Law's own reading of ${it} could not be had (${law.unread ?? 'nothing found'}), so who counts cannot be told.` };
     type NV = { error: string | null; voices: string[]; needed: number | null };
     const all = law.v.lawNextVoices(LAW_SPECS, c.identity, { form: 'judicial' }, []) as NV;
@@ -1275,17 +1294,31 @@ export class Actions {
     const law = await this.lawOf(c);
     const b = law.brokenAct;
     const n = await this.counted(c);
-    let voices = n.voices.filter((m) => m !== a.member);
+    // F187 (3): resignations published from other devices count only once a
+    // line registers them, so Law's count still has them; the relays hold
+    // them, and they are read too, so that the last voice is warned.
+    const published = (law.agreement || b ? ((law.v.lawPublishedResignations(LAW_SPECS, c.identity) as { party: string }[]) ?? []) : []).map((d) => d.party);
+    const otherDevices: string[] = [];
+    const remaining = (vs: string[]) => {
+      const out = vs.filter((m) => m !== a.member && !published.includes(m));
+      for (const m of vs) if (m !== a.member && published.includes(m) && !otherDevices.includes(m)) otherDevices.push(m);
+      return out;
+    };
+    let voices = remaining(n.voices);
     let last = n.voices.includes(a.member) && !voices.length;
+    // F187 (4): the resignation names the agreement Law finds in force (in
+    // a broken stretch, the one in force just before the broken act); this
+    // device's copy only where Law cannot be read, and the review says so.
+    const named = b ? b.before : (law.agreement ?? c.f.agreement);
+    const blind = !b && !law.agreement;
     // In a broken stretch: who remains for the rollback, those whose
     // resignations it will register taken out (rules 37a, 37d, 44d).
-    const named = b ? b.before : c.f.agreement;
     let rollbackLine: Line = { text: '' };
     if (b) {
       const waiting = departedOf(c).filter((d) => d.resignation && d.member !== a.member).map((d) => d.member);
       const rv = law.v.lawRollbackVoices(LAW_SPECS, c.identity, { form: 'judicial' }, waiting) as { error: string | null; voices: string[] };
       if (!rv.error) {
-        voices = rv.voices.filter((m) => m !== a.member);
+        voices = remaining(rv.voices);
         last = rv.voices.includes(a.member) && !voices.length;
       }
       const k = law.v.lawRollbackVoices(LAW_SPECS, c.identity, { form: 'constitutional' }, [...waiting, a.member]) as { error: string | null; voices: string[]; needed: number | null };
@@ -1294,6 +1327,18 @@ export class Actions {
         : k.needed == null
           ? { text: 'Nobody would be left to roll the collective back: it would stay broken (Law rules 37d, 44d).', tone: 'bad' }
           : { text: `A rollback would need the constitutional change rule of the agreement before the broken act: ${anyOf(k.needed, k.voices, names)} (Law rules 37d, 44d).` };
+    }
+    // RB5 (decided 8 and 9 October 2026): where the constitutional change
+    // rule names some members only, the last of them leaving freezes the
+    // constitution while the others keep their voices in their areas: the
+    // client says so too, before signing.
+    let lastConstitutional = false;
+    if (!last && voices.length && (law.agreement || b)) {
+      const waiting = departedOf(c).filter((d) => d.resignation && d.member !== a.member).map((d) => d.member);
+      const kv = (b
+        ? law.v.lawRollbackVoices(LAW_SPECS, c.identity, { form: 'constitutional' }, waiting)
+        : law.v.lawNextVoices(LAW_SPECS, c.identity, { form: 'constitutional' }, [])) as { error: string | null; voices: string[] };
+      if (!kv.error && kv.voices.includes(a.member) && !remaining(kv.voices).length) lastConstitutional = true;
     }
     const releaseVoices = n.releaseVoices.filter((m) => m !== a.member);
     const mine = !!this.store.book().identities.find((i) => i.id === a.member)?.mine;
@@ -1325,8 +1370,12 @@ export class Actions {
     }
     // Client conformance (Law rule 37a, F185): the last voice is told, in
     // plain words, before anything is signed.
+    const fromElsewhere = otherDevices.length
+      ? [`${list(otherDevices.map(names))} ${otherDevices.length === 1 ? 'has' : 'have'} signed a resignation that no line has registered yet, published from another device: once yours is registered with theirs, no voice remains.`]
+      : [];
     const lastWords = [
       `${who} is the last voice that remains in “${cname}”: nobody else's voice counts there any more (Law rule 44d).`,
+      ...fromElsewhere,
       `If ${who} leaves, the collective's works will be frozen as they stand: nobody will be able to change, release or move them, ever. Nothing can be decided in its name again${b ? ', and the collective can no longer be rolled back: it stays broken' : ''}.`,
       `${who} keeps their stake, as a departed holder (Law rule 46b). Someone with stakes in works worth keeping does not resign. Leaving is still ${who}'s alone to decide.`,
     ];
@@ -1339,16 +1388,33 @@ export class Actions {
           'Nothing else changes now: no rule is rewritten, no key rotates.',
         ]
       : [
-          `${who} signs a resignation from the agreement in force (${short(c.f.agreement)}), alone: nobody else's signature is asked for, and nobody can stop it (Law rule 37a).`,
+          `${who} signs a resignation from the agreement in force (${short(named)}), alone: nobody else's signature is asked for, and nobody can stop it (Law rule 37a).`,
           `The collective then registers it at once by a record, its line, signed with its everyday key. From that line on, ${who}'s signature counts toward no rule and no area of the collective (F109).`,
           'Nothing else changes now: no rule is rewritten, no key rotates.',
         ];
-    if (last) summary.unshift(...lastWords.slice(0, 2));
+    const constitutionWords = [
+      'You are about to break the collective.',
+      `${who} holds the last constitutional voice that remains in “${cname}”: its constitutional change rule names no other member whose voice remains (Law rules 44c, 44d).`,
+      `If ${who} leaves, its constitution freezes as it stands: nobody will be able to add or remove a member, redraw an area or change any rule of the constitution again${b ? ', and the collective can no longer be rolled back: it stays broken' : ''}. The other members keep their voices in their areas, under rules nobody can change.`,
+      ...fromElsewhere,
+      `${who} keeps their stake, as a departed holder (Law rule 46b). Leaving is still ${who}'s alone to decide.`,
+    ];
+    if (last) summary.unshift(...lastWords.slice(0, 2 + fromElsewhere.length));
+    else if (lastConstitutional) summary.unshift(...constitutionWords.slice(0, 3));
+    if (blind) {
+      summary.unshift(
+        law.broken
+          ? `Law reads “${cname}” as broken with no way back by a rollback (${law.broken}): the resignation names this device's copy of the agreement in force (${short(named)}), which may not be the one Law finds; if it is not, no line can register it, and it must be signed again.`
+          : `Law's own reading of “${cname}” could not be had (${law.unread ?? 'nothing found'}): the resignation names this device's copy of the agreement in force (${short(named)}), which may not be the one Law finds; if it is not, no line can register it, and it must be signed again.`,
+        'No last-voice warning can be given without Law\'s count of the voices that remain: if this member is the last voice, the collective\'s works will be frozen as they stand.',
+      );
+    }
     const reading: Reading = {
       title: `${who} leaves “${cname}”`,
       summary,
       sections: [
         ...(last ? [{ heading: 'The last voice', lines: lastWords.map((text) => ({ text, tone: 'bad' as const })) }] : []),
+        ...(lastConstitutional ? [{ heading: 'The last constitutional voice', lines: constitutionWords.map((text) => ({ text, tone: 'bad' as const })) }] : []),
         ...(b ? [{ heading: 'A broken collective', lines: [{ text: brokenWords(`“${cname}”`, b.reason), tone: 'warn' as const }] }] : []),
         { heading: 'What leaving means', lines: what },
         b ? { heading: 'Who decides the rollback', lines: [rollbackLine] } : { heading: 'Who decides from the line on', lines: this.decidersAfter(n, voices, releaseVoices, names) },
@@ -1368,7 +1434,7 @@ export class Actions {
     };
     return this.plan({
       kind: 'leave',
-      digest: digestOf('leave', a.collective, a.member, payload, last ? 'last voice' : ''),
+      digest: digestOf('leave', a.collective, a.member, payload, last ? 'last voice' : lastConstitutional ? 'last constitutional voice' : ''),
       reading,
       depends: [a.collective, a.member],
       run: async () => {
@@ -1389,7 +1455,7 @@ export class Actions {
             acts: [r.id],
           };
         }
-        const line = await record(col.id, { registers: [r.id], inForce: col.f.agreement }, col.f.relays);
+        const line = await record(col.id, { registers: [r.id], inForce: named }, col.f.relays);
         col.f.departed = [...departedOf(col), { member: a.member, resignation: r.id, named, record: line.id }];
         col.f.records = [...(col.f.records ?? []), line.id];
         this.store.saveCollective(col);
@@ -1434,7 +1500,7 @@ export class Actions {
     if (!b) {
       blocking.push(
         law.broken
-          ? `Law reads ${it} as broken in a way a rollback cannot repair: ${law.broken}. Whether such a collective has a way back is an open question for Nobody, allegedly (Law, “Open in this draft”, RB4).`
+          ? `Law reads ${it} as broken in a way a rollback cannot repair: ${law.broken}. There is no agreement in force before it to roll back to (Law rule 37d).`
           : law.unread
             ? `Law's own reading of ${it} could not be had (${law.unread}), so whether it is broken cannot be told.`
             : `Law does not read ${it} as broken: there is nothing to roll back.`,
@@ -1458,14 +1524,44 @@ export class Actions {
       x = (law.v.lawAgreement(LAW_SPECS, x) as { parent: string | null }).parent;
     }
     const all = law.v.lawRollbackVoices(LAW_SPECS, c.identity, { form: 'judicial' }, []) as { error: string | null; voices: string[] };
-    const registering: { member: string; resignation: string }[] = [];
+    if (all.error) blocking.push(`Law cannot count the voices that remain for the rollback: ${all.error}.`);
+    const registering: { member: string; resignation: string; area?: number }[] = [];
     for (const d of departedOf(c)) {
       if (!d.resignation || !all.voices?.includes(d.member)) continue;
       const nm = d.named ?? (await this.resignationNames(d.resignation, hints));
       if (nm && lineage.includes(nm)) registering.push({ member: d.member, resignation: d.resignation });
     }
-    const leaving = registering.map((r) => r.member);
-    const kept0 = c.rollbackRules(b.before, leaving);
+    // Declarations of absence made during the broken stretch, with no
+    // record: the rollback registers each, naming the other members'
+    // signature acts on it beside it (RB3, decided 9 October 2026).
+    const extra: Record<string, string[]> = {};
+    for (const d of departedOf(c)) {
+      if (!d.declaration || d.record || d.rollback || d.rotation || !all.voices?.includes(d.member)) continue;
+      if (d.named && !lineage.includes(d.named)) continue;
+      registering.push({ member: d.member, resignation: d.declaration });
+      extra[d.declaration] = d.signatures ?? [];
+    }
+    // Steppings down signed during the broken stretch, with no record: the
+    // rollback registers them too (Law rules 37a, 37b, 37d; F187, 8).
+    for (const d of steppedDownOf(c)) {
+      if (d.record || d.rollback || !all.voices?.includes(d.member)) continue;
+      const nm = d.named ?? (await this.resignationNames(d.resignation, hints));
+      if (nm && lineage.includes(nm)) registering.push({ member: d.member, resignation: d.resignation, area: d.area });
+    }
+    const leaving = registering.filter((r) => r.area === undefined).map((r) => r.member);
+    const steppingDown = registering.filter((r) => r.area !== undefined).map((r) => r.member);
+    const regs = registering.flatMap((r) => [r.resignation, ...(extra[r.resignation] ?? [])]);
+    const declared = registering.filter((r) => extra[r.resignation]).map((r) => r.member);
+    // F187 (2): Law, reading what the relays hold, checks every act the
+    // rollback would register before anything is signed; a lost act would
+    // make the whole rollback put nothing in force.
+    if (regs.length) {
+      const rr = law.v.lawRollbackRegisters(LAW_SPECS, c.identity, regs) as { error: string | null };
+      if (rr.error) blocking.push(`Law refuses what the rollback would register: ${rr.error}. Every act it registers must be held at the collective's relays first: an act they lost is sent again (or, if this device no longer has it, signed again) before the rollback.`);
+    }
+    // F187 (1): the members after the rollback are the voices Law counts
+    // there, never this device's copy of who was a member.
+    const kept0 = c.rollbackRules(b.before, leaving, all.error ? undefined : all.voices);
     // New numbers, where the members give them: the rules before the broken
     // act may not fit the members left after the rollback (F96).
     let rules = kept0;
@@ -1475,6 +1571,11 @@ export class Actions {
       const text = g0.text === standardWords(cname, g0) ? standardWords(cname, next) : g0.text;
       rules = { ...kept0, governance: { ...next, text } };
     }
+    // F187 (8): a member who stepped down during the stretch is left out
+    // of the Releases area by the rollback's clone, which registers the
+    // stepping down; named there and signing it, they would hold the area
+    // again (Law rules 37b, 44d).
+    if (rules && steppingDown.length) rules = { ...rules, governance: { ...rules.governance, releaseOut: [...new Set([...(rules.governance.releaseOut ?? []), ...steppingDown])] } };
     const members = rules?.members ?? [];
     if (rules && !members.length) blocking.push('Every member whose voice remains has resigned: nobody is left to roll the collective back, and its works stay frozen as they stand (Law rules 37a, 37d).');
     const fit = rules && members.length ? rulesHints(toRules(rules.governance), members.length) : [];
@@ -1519,6 +1620,16 @@ export class Actions {
     }
     const payload = rules && members.length && !fit.length ? termsOf(mark.length ? mark : [{ power: { constitutional: true }, signers: [members[0]] }]) : new Uint8Array();
     const changes = before && payload.length ? readChanges(before.payload, payload, names) : [];
+    // A rollback that redraws the Releases area gives it back to whoever it
+    // names as a holder and signs it, a member who stepped down included
+    // (Law rules 37b, 44d), as any change redrawing it does.
+    if (steppingDown.length && before && payload.length) {
+      const area = (t: TermsRead) => JSON.stringify(t.areas.find((x) => x.id === RELEASE_AREA));
+      const holders = this.read(payload).areas.find((x) => x.id === RELEASE_AREA)?.holders ?? [];
+      if (area(before.t) !== area(this.read(payload)) && steppingDown.some((m) => holders.includes(m))) {
+        changes.push({ text: `${list(steppingDown.map(names))} stepped down from the Releases area, and this rollback redraws the area: whoever it names as a holder and signs it holds the area again (Law rules 37b, 44d).`, tone: 'warn' });
+      }
+    }
     const signers = [...new Set(mark.flatMap((e) => e.signers))];
     const rebuilders = c.f.safety.shares.filter((x) => this.store.holds(x.holder) && !leaving.includes(x.holder)).map((x) => x.holder);
     const usedRebuilders = rebuilders.slice(0, c.f.safety.threshold);
@@ -1530,7 +1641,9 @@ export class Actions {
       summary: [
         `Law reads ${it} as broken since the rotation ${short(b.act)}, the broken act: ${b.reason}. Since then nothing signed in its name counts.`,
         `The way back is a rollback (Law rule 37d): a new rotation of the collective declares a new version of the agreement that was in force just before the broken act (${short(b.before)}), and names the broken act. The collective keeps its identity; nothing is erased.`,
-        `It needs that agreement's constitutional change rule, counted among the voices that remain${leaving.length ? `; ${list(leaving.map(names))} resigned, and the rollback registers ${leaving.length === 1 ? 'that resignation' : 'those resignations'}, so ${leaving.length === 1 ? 'they no longer count' : 'they no longer count'}` : ''}.`,
+        `It needs that agreement's constitutional change rule, counted among the voices that remain${leaving.length ? `; ${list(leaving.map(names))} resigned or ${leaving.length === 1 ? 'was' : 'were'} declared absent, and the rollback registers ${leaving.length === 1 ? 'that act' : 'those acts'}, so they no longer count` : ''}.`,
+        ...(declared.length ? [`${list(declared.map(names))} ${declared.length === 1 ? 'was' : 'were'} declared absent during the broken stretch, under the clause of the agreement in force just before the broken act; the rollback registers ${declared.length === 1 ? 'that declaration' : 'those declarations'} with the other members' signatures on ${declared.length === 1 ? 'it' : 'them'}, exactly as a record would (RB3). Each is shown to the member it names, with the way to contest it.`] : []),
+        ...(steppingDown.length ? [`${list(steppingDown.map(names))} stepped down from the Releases area during the broken stretch; the rollback registers ${steppingDown.length === 1 ? 'it' : 'them'} too (Law rules 37b, 37d).`] : []),
         `Members after the rollback: ${list(members.map(names)) || 'nobody'}.`,
       ],
       sections: [
@@ -1543,7 +1656,7 @@ export class Actions {
           heading: 'What stays as it was',
           lines: [
             { text: `The broken act and every act signed in the collective's name since (records, releases, changes) stay shown, and count for nothing, for good (Law rule 37d). Sign again, after the rollback, what is still wanted.`, tone: 'warn' },
-            { text: 'Whether the collective may instead adopt an act a counterparty relied on during the broken stretch is an open question for Nobody, allegedly (RB2); so is what happens to grants made before the broken act (RB1).' },
+            { text: 'What a counterparty relied on during the broken stretch is signed anew after the rollback, never adopted (RB2). A payment the collective received during the stretch is owed back to its payer unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (RB2). Grants made before the broken act work again after the rollback; what grantees signed during the stretch counts for nothing (RB1). The rollback restores every condition as at the act before the break.' },
           ],
         },
         {
@@ -1570,7 +1683,8 @@ export class Actions {
           broken: b.act,
           before: b.before,
           leaving,
-          registers: registering.map((r) => r.resignation),
+          registers: regs,
+          voices: all.error ? undefined : all.voices,
           proposer: ids[0],
           signers: ids,
           rebuilders: usedRebuilders,
@@ -1579,21 +1693,37 @@ export class Actions {
           expect: payload,
           // Law counts again, from what the relays and homes hold, before
           // the clone is proposed and before the rotation is sent.
-          beforeClone: () => this.rollbackHolds(col, b, mark, leaving, names),
-          beforeSend: (clone) => this.rollbackHolds(col, b, mark, leaving, names, clone),
+          beforeClone: () => this.rollbackHolds(col, b, mark, leaving, names, regs),
+          beforeSend: (clone) => this.rollbackHolds(col, b, mark, leaving, names, regs, clone),
         });
         for (const i of ids) this.store.saveIdentity(i);
         if (got.stopped) {
           this.store.saveCollective(col);
           return stoppedDone(title, got);
         }
-        col.f.departed = departedOf(col).map((d) => (registering.some((r) => r.resignation === d.resignation) ? { ...d, rollback: got.rotation } : d));
+        col.f.departed = departedOf(col).map((d) => (registering.some((r) => r.resignation === (d.resignation ?? d.declaration)) ? { ...d, rollback: got.rotation } : d));
+        col.f.steppedDown = steppedDownOf(col).map((d) => (registering.some((r) => r.resignation === d.resignation) ? { ...d, rollback: got.rotation } : d));
         this.store.saveCollective(col);
         const counts = await col.settle();
         if (counts) this.afterRefit(col, []);
         this.store.saveCollective(col);
+        // F187 (2): done is what Law reads, from the relays, not what the
+        // homes counted: the rotation counts in Identity even where the
+        // rollback puts nothing in force in Law.
+        const after = counts ? await this.lawOf(col) : null;
+        const repaired = !!after && !after.broken && !after.unread && after.agreement === got.clone;
+        const lawLine: Line | null = !after
+          ? null
+          : repaired
+            ? null
+            : {
+                text: after.broken
+                  ? `The homes took the rotation, but Law still reads the collective as broken: ${after.broken}. Nothing signed in its name counts yet.`
+                  : `The homes took the rotation, but Law's own reading could not confirm the rollback (${after.unread ?? `it finds ${short(after.agreement ?? '')} in force`}).`,
+                tone: 'bad',
+              };
         return {
-          title: counts ? `${title}: done` : `${title}: waiting for the homes`,
+          title: !counts ? `${title}: waiting for the homes` : repaired ? `${title}: done` : `${title}: not repaired`,
           lines: [
             { text: `Clone ${got.clone} of ${short(b.before)}, signed by ${got.signed.length}.` },
             { text: `Rotation ${got.rotation}: the rollback, naming the broken act ${short(b.act)}${registering.length ? ` and registering ${registering.length === 1 ? 'one resignation' : `${registering.length} resignations`}` : ''}.` },
@@ -1601,9 +1731,10 @@ export class Actions {
               text: `${x.home}: ${x.result?.receipt ? 'receipt signed' : `refused (${x.code ?? '?'}) ${x.error ?? ''}`}`,
               tone: (x.result?.receipt ? 'ok' : 'bad') as Line['tone'],
             })),
-            counts
-              ? { text: `The collective works again. Members now: ${col.f.members.map(names).join(', ')}.`, tone: 'ok' }
-              : { text: 'Not counted yet: too few homes took the rotation. Send it again once they are back (the same bytes; nothing new is signed).', tone: 'warn' },
+            lawLine ??
+              (counts
+                ? { text: `Law reads the collective as working again. Members now: ${col.f.members.map(names).join(', ')}.`, tone: 'ok' }
+                : { text: 'Not counted yet: too few homes took the rotation. Send it again once they are back (the same bytes; nothing new is signed).', tone: 'warn' }),
           ],
           acts: [got.clone, ...got.signed.map((x) => x.act), got.rotation],
         };
@@ -1630,10 +1761,15 @@ export class Actions {
    * rollback, and enough of them; with `clone`, also that Law finds it a
    * valid rollback with every signature it needs held.
    */
-  private async rollbackHolds(c: TestCollective, b: BrokenAct, mark: MarkEntry[], leaving: string[], names: (id: string) => string, clone?: string): Promise<string | null> {
+  private async rollbackHolds(c: TestCollective, b: BrokenAct, mark: MarkEntry[], leaving: string[], names: (id: string) => string, registers: string[], clone?: string): Promise<string | null> {
     const law = await this.lawOf(c);
     if (!law.brokenAct) return law.broken ? `Law reads the collective as broken in a way a rollback cannot repair: ${law.broken}.` : 'Law no longer reads the collective as broken: there is nothing to roll back.';
     if (law.brokenAct.act !== b.act || law.brokenAct.before !== b.before) return 'Law now reads another broken act: review the rollback again.';
+    // F187 (2): every act the rollback registers, as Law reads it from the relays.
+    if (registers.length) {
+      const rr = law.v.lawRollbackRegisters(LAW_SPECS, c.identity, registers) as { error: string | null };
+      if (rr.error) return `Law refuses what the rollback would register: ${rr.error}.`;
+    }
     for (const e of mark) {
       const what = powerWords(e.power);
       const p = 'area' in e.power ? { form: 'area', area: e.power.area } : { form: Object.keys(e.power)[0] };
@@ -1662,15 +1798,28 @@ export class Actions {
     const { c, cname, names } = this.memberOf(a.collective, a.member, blocking);
     const who = names(a.member);
     if (steppedDownOf(c).some((d) => d.member === a.member && d.area === RELEASE_AREA)) blocking.push(`${who} already stepped down from the Releases area.`);
+    // During a broken stretch (Law rules 37a, 37d; F187, 8): stepping down
+    // is treated as resigning is: it names the agreement in force just
+    // before the broken act, no record is drawn, and the rollback registers
+    // it. Leaving an area is never blocked by the break.
+    const law = await this.lawOf(c);
+    const b = law.brokenAct;
     // The Releases area's holders whose voice remains, as Law counts them (rules 37b, 44d).
     const n = await this.counted(c);
-    if (n.problem) blocking.push(n.problem);
-    const releaseVoices = n.releaseVoices.filter((m) => m !== a.member);
-    const payload = resignationPayload(c.f.agreement, RELEASE_AREA);
+    if (n.problem && !b) blocking.push(n.problem);
+    let releaseVoices = n.releaseVoices.filter((m) => m !== a.member);
+    let threshold = n.releaseThreshold;
+    if (b) {
+      const rv = law.v.lawRollbackVoices(LAW_SPECS, c.identity, { form: 'area', area: RELEASE_AREA }, []) as { error: string | null; voices: string[] };
+      releaseVoices = rv.error ? [] : rv.voices.filter((m) => m !== a.member && !steppedDownOf(c).some((d) => d.member === m && d.area === RELEASE_AREA));
+      threshold = c.f.rules?.[b.before]?.governance.releaseThreshold ?? threshold;
+    }
+    const named = b ? b.before : (law.agreement ?? c.f.agreement);
+    const payload = resignationPayload(named, RELEASE_AREA);
     const area: Line[] = releaseVoices.length
       ? [
           {
-            text: `The other holders carry on: a release needs ${anyOf(needed(n.releaseThreshold, releaseVoices.length), releaseVoices, names)}${releaseVoices.length < n.releaseThreshold ? `; the area asks for ${n.releaseThreshold}, and when fewer remain all of them together meet it (Law rule 44d)` : ''}.`,
+            text: `The other holders carry on${b ? ' once the collective is rolled back' : ''}: a release needs ${anyOf(needed(threshold, releaseVoices.length), releaseVoices, names)}${releaseVoices.length < threshold ? `; the area asks for ${threshold}, and when fewer remain all of them together meet it (Law rule 44d)` : ''}.`,
           },
         ]
       : [
@@ -1682,17 +1831,24 @@ export class Actions {
     area.push({ text: `A signature of ${who}'s on a release made before the line still counts for it (Law, “Made before, made after”, C1).` });
     const reading: Reading = {
       title: `${who} steps down from the Releases area of “${cname}”`,
-      summary: [
-        `${who} signs a resignation naming the Releases area (area ${RELEASE_AREA}), alone: nobody else's signature is asked for (Law rule 37b, “Stepping down at once”).`,
-        `The collective registers it at once by a record, its line. From that line on, ${who}'s signature counts for nothing in the Releases area.`,
-        `${who} keeps the rest of their voice, as a member, and what they own.`,
-      ],
+      summary: b
+        ? [
+            `Law reads “${cname}” as broken since the rotation ${short(b.act)}: ${b.reason}.`,
+            `${who} signs a resignation naming the Releases area (area ${RELEASE_AREA}) of the agreement in force just before that broken act (${short(b.before)}), alone: nobody else's signature is asked for (Law rules 37a, 37b).`,
+            `No record is drawn: a record made while the collective is broken counts for nothing (Law rule 37d). The stepping down takes effect at the collective's next valid line, normally the rollback, which registers it; from there, ${who}'s signature counts for nothing in the Releases area.`,
+            `${who} keeps the rest of their voice, as a member, and what they own.`,
+          ]
+        : [
+            `${who} signs a resignation naming the Releases area (area ${RELEASE_AREA}), alone: nobody else's signature is asked for (Law rule 37b, “Stepping down at once”).`,
+            `The collective registers it at once by a record, its line. From that line on, ${who}'s signature counts for nothing in the Releases area.`,
+            `${who} keeps the rest of their voice, as a member, and what they own.`,
+          ],
       sections: [
         { heading: 'The Releases area from the line on', lines: area },
         {
           heading: 'Signed on this device',
           lines: [
-            { text: `${who} signs the stepping down here; the collective's everyday key, kept in this program's folder, signs the record.` },
+            { text: b ? `${who} signs the stepping down here; no record is drawn.` : `${who} signs the stepping down here; the collective's everyday key, kept in this program's folder, signs the record.` },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
             ...(await this.unheard(c)),
           ],
@@ -1703,15 +1859,27 @@ export class Actions {
     };
     return this.plan({
       kind: 'stepdown',
-      digest: digestOf('stepdown', a.collective, a.member, payload),
+      digest: digestOf('stepdown', a.collective, a.member, payload, b ? 'broken' : ''),
       reading,
       depends: [a.collective, a.member],
       run: async () => {
         const col = this.store.collective(a.collective);
         const m = this.store.identity(a.member);
-        const r = await resign(m, col.f.agreement, col.f.relays, RELEASE_AREA);
+        const r = await resign(m, named, col.f.relays, RELEASE_AREA);
         this.store.saveIdentity(m);
-        const line = await record(col.id, { registers: [r.id], inForce: col.f.agreement }, col.f.relays);
+        if (b) {
+          col.f.steppedDown = [...steppedDownOf(col), { member: a.member, area: RELEASE_AREA, resignation: r.id, named }];
+          this.store.saveCollective(col);
+          return {
+            title: `${who} stepped down from the Releases area`,
+            lines: [
+              { text: `Stepping down ${r.id}, signed by ${who} alone, from the agreement in force just before the broken act (${short(named)}).` },
+              { text: "No record was drawn: it takes effect at the collective's next valid line, normally the rollback, which registers it (Law rules 37a, 37b, 37d).", tone: 'ok' },
+            ],
+            acts: [r.id],
+          };
+        }
+        const line = await record(col.id, { registers: [r.id], inForce: named }, col.f.relays);
         col.f.steppedDown = [...steppedDownOf(col), { member: a.member, area: RELEASE_AREA, resignation: r.id, record: line.id }];
         col.f.records = [...(col.f.records ?? []), line.id];
         this.store.saveCollective(col);
@@ -1967,9 +2135,16 @@ export class Actions {
     // C7, B16, B18: the collective cannot draw its line without the holder
     // of its everyday key; the declaration takes effect at the recovery
     // rotation, which names the others' signature acts on it.
-    const holder = c.f.signingHolder === a.member;
+    // RB3 (decided 9 October 2026): during a broken stretch, the
+    // declaration names the agreement in force just before the broken act,
+    // under its clause, exactly as outside the stretch; no record is drawn,
+    // and the rollback registers it, naming the others' signature acts.
+    const law = await this.lawOf(c);
+    const b = law.brokenAct;
+    const holder = !b && c.f.signingHolder === a.member;
     const at = this.hintsOf(c);
-    const clause = c.f.members.includes(a.member) ? await c.clauseOf(a.member, this.via) : null;
+    const named = b ? b.before : c.f.agreement;
+    const clause = c.f.members.includes(a.member) ? await c.clauseOf(a.member, this.via, named) : null;
     const version = clause ? await this.termsAct(clause, at) : null;
     if (c.f.members.includes(a.member) && !clause) blocking.push(`${who} signed no version of the agreement that this program can find on ${at.join(', ')}.`);
     else if (clause && !version) blocking.push(`The version ${who} signed last (${short(clause)}) could not be fetched from ${at.join(', ')}, so its clause cannot be read.`);
@@ -1980,8 +2155,14 @@ export class Actions {
     const k = ab?.threshold ?? c.f.governance.abandonmentOthers;
     // The other members whose voice remains, as Law counts them (rules 44d, 49).
     const n = await this.counted(c);
-    if (n.problem) blocking.push(n.problem);
-    const others = n.voices.filter((m) => m !== a.member);
+    if (n.problem && !b) blocking.push(n.problem);
+    let others = n.voices.filter((m) => m !== a.member);
+    if (b) {
+      const waiting = departedOf(c).filter((d) => d.member !== a.member && !d.record && !d.rollback).map((d) => d.member);
+      const rv = law.v.lawRollbackVoices(LAW_SPECS, c.identity, { form: 'judicial' }, waiting) as { error: string | null; voices: string[] };
+      if (rv.error) blocking.push(`Law cannot count the other members whose voice remains for the rollback: ${rv.error}.`);
+      others = (rv.voices ?? []).filter((m) => m !== a.member);
+    }
     const need = needed(k, others.length);
     if (!others.length) blocking.push('No other member whose voice remains can judge absence.');
     const signers = a.signers?.length ? [...new Set(a.signers)] : others.filter((m) => this.store.holds(m)).slice(0, need);
@@ -1990,21 +2171,24 @@ export class Actions {
       else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
     }
     if (others.length && signers.length < need) blocking.push(`The declaration needs ${anyOf(need, others, names)} (the clause ${who} signed); only ${signers.length} sign here.`);
-    const payload: Uint8Array = clause ? await c.declarationFor(a.member, this.via) : new Uint8Array();
+    const payload: Uint8Array = clause ? await c.declarationFor(a.member, this.via, named) : new Uint8Array();
     const [by, ...cosigners] = signers;
     const voices = others;
     const releaseVoices = n.releaseVoices.filter((m) => m !== a.member);
     const reading: Reading = {
       title: `${who} is declared absent from “${cname}”`,
       summary: [
-        `${by ? names(by) : 'One of the other members'} signs a declaration that ${who} is absent, with one outcome: ${who}'s voice removed (Law rules 49, 51, 53; F105). It applies the clause ${who} signed last (${clause ? short(clause) : 'none'}), and names the agreement in force (${short(c.f.agreement)}): a declaration can never pick a friendlier clause (Law rule 46a).`,
+        ...(b ? [`Law reads “${cname}” as broken since the rotation ${short(b.act)}: ${b.reason}.`] : []),
+        `${by ? names(by) : 'One of the other members'} signs a declaration that ${who} is absent, with one outcome: ${who}'s voice removed (Law rules 49, 51, 53; F105). It applies the clause ${who} signed last (${clause ? short(clause) : 'none'}), and names the agreement in force${b ? ' just before the broken act' : ''} (${short(named)}): a declaration can never pick a friendlier clause (Law rule 46a).`,
         need > 1
           ? `The clause asks for ${anyOf(need, others, names)}: ${list(cosigners.map(names)) || 'nobody else'} add${cosigners.length === 1 ? 's' : ''} a signature act naming it, as for terms. It counts once ${need} have signed (Law draft 8, B15).`
           : `The clause asks for one of the other members${k > need ? ` (it names ${k}, and when fewer remain all of them together meet it, Law rule 44d)` : ''}: ${by ? names(by) : 'one of them'} alone.`,
-        holder
+        b
+          ? `No record is drawn: a record made while the collective is broken counts for nothing (Law rule 37d). The rollback registers the declaration${cosigners.length ? ', naming those signature acts beside it, so that they count there' : ''}, exactly as a record would outside the broken stretch (RB3): from the rollback on, ${who}'s signature counts toward no rule and no area, and ${who} no longer blocks the way back.`
+          : holder
           ? `${who} holds the collective's everyday key, so the collective cannot draw its line without them: no record is made now. The declaration takes effect at the recovery rotation, the member change that removes ${who} (Change members), which rotates the collective to keys ${who} never held${cosigners.length ? ' and names those signature acts beside the clone’s, so that they count there' : ''} (Law, “Made before, made after”, C7, B16; Law draft 9, B18). From that rotation on, ${who}'s signature counts toward no rule and no area.`
           : `The collective registers it at once by a record, its line, signed with its everyday key${cosigners.length ? ', acknowledging those signatures so that they count at the line' : ''}. From that line on, ${who}'s signature counts toward no rule and no area (F109).`,
-        `${who} keeps what they own: outcome 0 removes the voice, never the stake. ${who} may contest it (Law rule 52); a contest is shown alongside it and changes nothing by itself.`,
+        `${who} keeps what they own: outcome 0 removes the voice, never the stake. ${who} may contest it (Law rule 52); a contest is shown alongside it and changes nothing by itself. ${who}'s client shows ${who} this declaration, with the way to contest it (client conformance, RB3).`,
       ],
       sections: [
         {
@@ -2037,13 +2221,13 @@ export class Actions {
     };
     return this.plan({
       kind: 'declare',
-      digest: digestOf('declare', a.collective, a.member, ...signers, payload),
+      digest: digestOf('declare', a.collective, a.member, ...signers, payload, b ? b.act : ''),
       reading,
       depends: [a.collective, ...signers.filter((s) => this.store.holds(s))],
       run: async () => {
         const col = this.store.collective(a.collective);
         const ids = signers.map((s) => this.store.identity(s));
-        const got = await col.declareAbsent({ member: a.member, by: ids[0], cosigners: ids.slice(1), expect: payload, via: this.via });
+        const got = await col.declareAbsent({ member: a.member, by: ids[0], cosigners: ids.slice(1), expect: payload, via: this.via, ...(b ? { broken: { before: b.before } } : {}) });
         this.store.saveCollective(col);
         for (const i of ids) this.store.saveIdentity(i);
         return {
@@ -2053,7 +2237,9 @@ export class Actions {
             ...got.signed.map((x) => ({ text: `Signature ${x.act}, by ${names(x.member)}, naming the declaration.` })),
             got.record
               ? { text: `Record ${got.record}: the collective's line, from which ${who}'s signature counts for nothing.`, tone: 'ok' as const }
-              : { text: `No record: ${who} holds the everyday key. The declaration takes effect at the recovery rotation.`, tone: 'warn' as const },
+              : b
+                ? { text: 'No record: the collective is broken. The rollback registers the declaration (Law rule 37d, RB3).', tone: 'ok' as const }
+                : { text: `No record: ${who} holds the everyday key. The declaration takes effect at the recovery rotation.`, tone: 'warn' as const },
             {
               text: got.record
                 ? `Next: the members who remain refit the collective (Change members: remove ${who}).`
@@ -2928,6 +3114,7 @@ export class Actions {
     // The members whose voice remains, and the constitutional change rule, as Law reads them (rule 44d, F124 N1).
     const n = await this.counted(c);
     if (n.problem) blocking.push(n.problem);
+    if (n.broken) blocking.push('A broken collective cannot fork or close before it is fixed: the members roll it back first (Law rule 37d, RB6).');
     const voices = n.voices;
     if (sides.length < 2) blocking.push('A fork has at least two sides.');
     if (sides.some((x) => x.length < 2)) blocking.push("This client founds collectives of two members or more (absence is judged by a threshold of the other members): put two members on each side.");
@@ -3158,6 +3345,7 @@ export class Actions {
     // The members whose voice remains, and the constitutional change rule, as Law reads them (rule 44d, F124 N9).
     const n = await this.counted(c);
     if (n.problem) blocking.push(n.problem);
+    if (n.broken) blocking.push('A broken collective cannot fork or close before it is fixed: the members roll it back first (Law rule 37d, RB6).');
     const voices = n.voices;
     const k = n.constitution;
     const signers = voices.filter((m) => this.store.holds(m));
@@ -3289,6 +3477,20 @@ export class Actions {
     if (hit && hit.stamp === stamp && Date.now() - hit.at < 60_000) return hit.shown;
     const law = await this.lawOf(c);
     const shown = shownOf(c, law);
+    // RB2: what the collective received during a broken stretch and owes back.
+    // RB3: every declaration of absence naming a member is shown, with the way
+    // to contest it, broken collective or not (client conformance).
+    if (!law.unread) {
+      try {
+        shown.owedBack = law.v.lawOwedBack(LAW_SPECS, c.identity) as Shown['owedBack'];
+      } catch {
+        shown.owedBack = [];
+      }
+      const parties = new Set([...c.f.members, ...departedOf(c).map((d) => d.member)]);
+      shown.declared = [...parties].flatMap((m) =>
+        ((law.v.lawDeclarationsNaming(LAW_SPECS, m) as { act: string; signer: string; agreement: string; outcomes: number[] }[]) ?? []).map((d) => ({ member: m, ...d })),
+      );
+    }
     this.shownCache.set(c.identity, { stamp, at: Date.now(), shown });
     return shown;
   }
@@ -3350,6 +3552,22 @@ export class Actions {
           splitService: !!c.f.governance.splitGrant,
           splits: (c.f.splits ?? []).map((x) => x.id),
           debts: this.debtsOf(c).map((d) => ({ id: d.id, creditor: d.creditor, creditorName: names(d.creditor), creditorHeld: this.store.holds(d.creditor), inherited: d.inherited })),
+          owedBack: (w.owedBack ?? []).map((o) => ({
+            payment: o.payment,
+            to: o.to,
+            toName: o.to && /^[0-9a-f]{64}$/.test(o.to) ? names(o.to) : (o.to ?? 'nobody named'),
+            value: o.value,
+            unit: o.unit,
+            text: `${o.value} (unit ${short(o.unit)}) received ${o.stillBroken ? 'while the collective is broken' : 'during a broken stretch since rolled back'}: no purchase, owed back to ${o.to && /^[0-9a-f]{64}$/.test(o.to) ? names(o.to) : (o.to ?? 'nobody named')} unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (Law rule 37d, RB2). Shown here as an open obligation: the network records and shows it; it cannot force a payment back.`,
+          })),
+          declared: (w.declared ?? []).map((d) => ({
+            member: d.member,
+            name: names(d.member),
+            held: this.store.holds(d.member),
+            act: d.act,
+            by: names(d.signer),
+            text: contestWords(names(d.member), names(d.signer), d),
+          })),
         };
       }),
       history: this.store.history().slice(-50).reverse(),

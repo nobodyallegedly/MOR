@@ -280,5 +280,6 @@ function rulesOf(v: unknown, members: number) {
     clone: n(r.clone, 2),
     others: n(r.others, Math.max(members - 1, 1)),
     ...(empty(r.constitution) ? {} : { constitution: Number(r.constitution) }),
+    ...(Array.isArray(r.constitutionNamed) && r.constitutionNamed.length ? { constitutionNamed: r.constitutionNamed.map(String) } : {}),
   };
 }

@@ -23,5 +23,6 @@ pub use tiers::{changes, judicial_changes, powers_needed, rollback_powers, Chang
 pub use view::{
     Agreement, AreaCount, Backing, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement,
     BrokenAct, ChainBreak, DepartureKind, ForkEval, LawView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,
-    ReleaseEval, Role, ServiceAccount, SplitEval, PurchaseEval, PurchaseVerdict, Unpaid, Unsplit,
+    ReleaseEval, Role, ServiceAccount, SplitEval, PurchaseEval, PurchaseVerdict, Unpaid, Unsplit, DealFork, DealState, ForkAlarm,
+    OwedBack,
 };

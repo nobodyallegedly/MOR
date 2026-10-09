@@ -166,6 +166,7 @@ function item(identity: string, x: Item): string {
     .map(([s, w]) => `<button class="quiet" data-action="sort" data-identity="${e(identity)}" data-key="${e(x.key)}" data-sorted="${e(s)}" aria-pressed="${x.sorted === s}">${e(w)}</button>`)
     .join('');
   return `<div class="item" data-item="${e(x.key)}" data-kind="${e(x.kind)}"><strong>${e(KIND[x.kind])}</strong> <span class="small">${facts.join(' ')}</span>
+${x.alarm ? note('error', e(x.alarm)) : ''}
 ${x.problem ? note('warn', e(x.problem)) : ''}
 ${x.text !== undefined ? plain(x.text) : ''}
 <div class="sorts">${sorts}</div>
