@@ -70,6 +70,8 @@ export interface Item {
   refs: string[];
   /** What could not be read. */
   problem?: string;
+  /** A payment naming a version of a deal that does not descend from the version this identity holds: the seller's alarm (Law rule 45b, F186, client conformance). */
+  alarm?: string;
   /** When this desk first found it (this machine's clock: a hint, never part of any act). */
   found: number;
   sorted: Sorted;
