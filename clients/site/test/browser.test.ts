@@ -1,4 +1,5 @@
-// The gateway's display client in a real browser (headless Chromium), on a
+// The gateway's display client in a real browser (headless Chromium, or
+// WebKit, Safari's engine, with MOR_BROWSER=webkit), on a
 // fresh profile each time, as a fresh device would open the site: the built
 // display client, served by the gateway with its headers, checks the version
 // against local relays with the core library's WebAssembly, then each page
@@ -12,7 +13,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium, type Browser, type Frame, type Page } from 'playwright-core';
+import { chromium, webkit, type Browser, type Frame, type Page } from 'playwright-core';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { Gateway } from '../src/gateway.ts';
@@ -22,6 +23,8 @@ import { gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+/** WebKit is Safari's engine, which every browser on an iPhone uses: Playwright's own build of it, installed with `npx playwright-core install webkit`. */
+const WEBKIT = process.env.MOR_BROWSER === 'webkit';
 const shots = process.env.MOR_SCREENSHOTS;
 const LOCAL = ['http://127.0.0.1:*'];
 
@@ -82,7 +85,7 @@ before(async () => {
   assert.ok(await ok(hostile));
   hostileBase = await hostile.listen('127.0.0.1', 0);
 
-  browser = await chromium.launch({ executablePath: CHROMIUM });
+  browser = WEBKIT ? await webkit.launch() : await chromium.launch({ executablePath: CHROMIUM });
 });
 
 after(async () => {
@@ -98,18 +101,31 @@ async function open(url: string, refusals = csp) {
   const page = await ctx.newPage();
   const problems: string[] = [];
   const elsewhere: string[] = [];
+  /** WebKit's reports of the page's sandbox refusing a script, or a navigation without a click: the sandbox at work. */
+  const sandbox: string[] = [];
   page.on('console', (m) => {
     if (/Content.Security.Policy/i.test(m.text())) refusals.push(m.text());
-    else if (m.type() === 'error') problems.push(m.text());
+    else if (/sandboxed/.test(m.text())) sandbox.push(m.text());
+    else if (m.type() === 'error' && !benign(m.text())) problems.push(m.text());
   });
-  page.on('pageerror', (e) => problems.push(String(e)));
+  page.on('pageerror', (e) => {
+    if (/sandboxed/.test(String(e))) sandbox.push(String(e));
+    else if (!benign(String(e))) problems.push(String(e));
+  });
   page.on('request', (r) => {
     if (!/^(http:\/\/127\.0\.0\.1:|blob:|data:|about:)/.test(r.url())) elsewhere.push(r.url());
   });
   await page.goto(url);
   await page.waitForSelector('#mor-bar.ok, #mor-bar.bad', { timeout: 60_000 });
-  return { page, ctx, problems, elsewhere };
+  return { page, ctx, problems, elsewhere, sandbox };
 }
+
+/**
+ * WebKit's notice that a frame's size changed again while being fitted: the
+ * remaining notices come at the next frame, as the observer's rules say, so
+ * nothing is lost.
+ */
+const benign = (m: string) => /ResizeObserver loop completed with undelivered notifications/.test(m);
 
 const standing = (page: Page) => page.textContent('#mor-standing');
 const fp = async (page: Page) => (await page.textContent('#mor-signer'))!.replace(/ /g, '');
@@ -135,8 +151,9 @@ test('a fresh browser shows each page of the site as verified, and signed by the
     ['/use.html', 'Use · dubsar.org · dubsar.org', 'use'],
   ];
   for (const [address, title, name] of pages) {
-    const { page, ctx, problems, elsewhere } = await open(base + address);
-    assert.match((await standing(page))!, /^Verified: this page is exactly what was signed by the identity this gateway names as Nobody, allegedly\. Checked in this browser\./, address);
+    const { page, ctx, problems, elsewhere, sandbox } = await open(base + address);
+    const why = (await page.locator('#mor-reasons').count()) ? await page.textContent('#mor-reasons') : '';
+    assert.match((await standing(page))!, /^Verified: this page is exactly what was signed by the identity this gateway names as Nobody, allegedly\. Checked in this browser\./, `${address}: ${why} ${problems.join(' ')}`);
     assert.equal(await fp(page), w.owner.id, `${address}: the whole fingerprint of the signer`);
     assert.equal(await page.textContent('#mor-version'), w.site.id);
     assert.equal(await page.title(), title);
@@ -147,6 +164,7 @@ test('a fresh browser shows each page of the site as verified, and signed by the
     await shot(page, `page-${name}`);
     assert.deepEqual(problems, [], address);
     assert.deepEqual(elsewhere, [], `${address}: nothing fetched from elsewhere`);
+    assert.deepEqual(sandbox, [], `${address}: the display client tries nothing the page's sandbox refuses`);
     await ctx.close();
   }
 });
@@ -176,6 +194,14 @@ test('the front page opens on the first act, shown as the act, verified, with it
   assert.deepEqual(await f.$$eval('.doors .door', (els) => els.map((e) => e.textContent)), ['Read', 'Build', 'Run', 'Use']);
   const size = await inner.$eval('.mor-post img', (i) => (i as HTMLImageElement).naturalWidth);
   assert.ok(size > 0, 'the picture is shown');
+  // A little less than fully opaque (asked for by Nobody, allegedly, 9 October 2026): the value is the site
+  // stylesheet's, so the test follows it rather than fixing a number.
+  const opacity = await f.$eval('.first-act .mor-act', (b) => [
+    getComputedStyle(b).opacity,
+    getComputedStyle(document.documentElement).getPropertyValue('--first-act-opacity').trim(),
+  ]);
+  assert.equal(Number(opacity[0]), Number(opacity[1]), `the first act shown at the stylesheet's opacity (${opacity})`);
+  assert.ok(Number(opacity[0]) > 0.5 && Number(opacity[0]) < 1, `a little less than fully opaque (${opacity[0]})`);
   await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
   const acts = (await page.textContent('#mor-acts'))!;
   assert.ok(acts.includes(w.firstAct) && acts.replace(/ /g, '').includes(w.owner.id), 'the bar names the act, its standing and signer');
@@ -254,6 +280,8 @@ test('the footer: only the contact and the sealed message, then the clay tablet,
   for (const colorScheme of ['light', 'dark'] as const) {
     for (const path of ['/', '/read.html', '/build.html', '/run.html', '/use.html']) {
       const ctx = await browser.newContext({ colorScheme });
+      // The icon as it is when the window finishes loading, which is when Safari's engine reads it, once.
+      await ctx.addInitScript("addEventListener('load', () => { window.morIconAtLoad = document.querySelector('link[rel=\"icon\"]')?.getAttribute('href') ?? null; });");
       const page = await ctx.newPage();
       await page.goto(base + path);
       await page.waitForSelector('#mor-bar.ok', { timeout: 60_000 });
@@ -287,6 +315,10 @@ test('the footer: only the contact and the sealed message, then the clay tablet,
       // The tab's icon: the site's icon.jpg, as the bytes the display client checked.
       const icon = await page.getAttribute('link[rel="icon"]', 'href');
       assert.equal(icon, `data:image/jpeg;base64,${readFileSync(join(w.dir, 'icon.jpg')).toString('base64')}`);
+      // Already there when the window finished loading: the display client holds the load until the icon is
+      // checked and set, since WebKit reads it then and never again.
+      assert.equal(await page.evaluate(() => (window as { morIconAtLoad?: string | null }).morIconAtLoad), icon, 'the icon set before the window finished loading');
+      assert.equal(await page.locator('iframe[aria-hidden]').count(), 0, 'the hold is gone once released');
       if (path === '/') await shot(page, `footer-${colorScheme}`);
       await ctx.close();
     }
@@ -294,14 +326,21 @@ test('the footer: only the contact and the sealed message, then the clay tablet,
 });
 
 test("a door opens its page through the display client, checked again", async () => {
-  const { page, ctx, problems } = await open(base + '/');
+  const { page, ctx, problems, sandbox } = await open(base + '/');
   const f = await pageFrame(page);
   assert.equal(await f.getAttribute('.doors a:nth-child(3)', 'href'), '/run.html');
-  await Promise.all([page.waitForURL(base + '/run.html'), f.click('.doors a:nth-child(3)')]);
+  // A plain click of the mouse, as a visitor's: Playwright's own click adds listeners inside the page's
+  // frame, which WebKit's sandbox refuses, and reports.
+  await f.locator('.doors a:nth-child(3)').scrollIntoViewIfNeeded();
+  const door = (await f.locator('.doors a:nth-child(3)').boundingBox())!;
+  await Promise.all([page.waitForURL(base + '/run.html'), page.mouse.click(door.x + door.width / 2, door.y + door.height / 2)]);
   await page.waitForSelector('#mor-bar.ok, #mor-bar.bad', { timeout: 60_000 });
   assert.match((await standing(page))!, /^Verified/);
   assert.equal(await (await pageFrame(page)).textContent('h1'), 'Run');
   assert.deepEqual(problems, []);
+  // Only the sandbox at work: the test's own helpers refused inside the page's frame, and WebKit reporting
+  // its rule for leaving the page (only on a click) before it follows the click.
+  assert.ok(sandbox.every((m) => /^Blocked script execution in 'about:srcdoc'|initiate navigation .* sandboxed/s.test(m)), sandbox.join('\n'));
   await ctx.close();
 });
 

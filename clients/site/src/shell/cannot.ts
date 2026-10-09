@@ -3,8 +3,10 @@
 // levels), or the core library does not start for another reason. Without
 // the core library nothing can be checked, so nothing from the site is
 // shown; the bar says why, and how to see the site, instead of loading
-// forever (onion check, 1 October 2026). Imports nothing, so that it works
-// before the core library has started.
+// forever (onion check, 1 October 2026). Imports only the load hold, which
+// imports nothing, so that it works before the core library has started.
+
+import { releaseLoad } from './hold.ts';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -23,6 +25,7 @@ const ANOTHER_WAY =
 
 /** Say on the bar that this page cannot be checked in this browser, and why. */
 export function cannotCheck(err: unknown): void {
+  releaseLoad();
   const bar = document.getElementById('mor-bar');
   if (!bar) return;
   const why = err instanceof Error ? err.message : String(err);

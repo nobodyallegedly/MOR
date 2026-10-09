@@ -1,0 +1,66 @@
+# The site's browser tests in WebKit, Safari's engine, which every browser on
+# an iPhone uses, beside the same tests in Chromium: the display client must
+# behave the same in both (roadmap step 10a, machine session of 9 October
+# 2026: two faults seen in Safari only). Playwright's build of WebKit is
+# downloaded here, on GitHub's machines. Runs on every push and pull request
+# that changes the display client, the site or the code they share, and by hand.
+name: site in WebKit
+
+on:
+  push:
+    paths:
+      - clients/site/**
+      - clients/barebone/**
+      - clients/reader/**
+      - clients/longform/**
+      - clients/genesis/**
+      - modules/jpeg/**
+      - docs/dubsar.org/**
+      - .github/workflows/site-webkit.yml
+  pull_request:
+    paths:
+      - clients/site/**
+      - clients/barebone/**
+      - clients/reader/**
+      - clients/longform/**
+      - clients/genesis/**
+      - modules/jpeg/**
+      - docs/dubsar.org/**
+      - .github/workflows/site-webkit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MOR_CHROMIUM: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Core library for the clients (WebAssembly), and the packages the site's code shares
+        run: |
+          cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
+          for p in barebone reader longform site; do (cd ../$p && npm ci --no-audit --no-fund); done
+          cd ../../modules/jpeg && npm ci --no-audit --no-fund
+          cd ../.. && cargo build -q -p mor-relay
+      - name: WebKit, Playwright's build
+        run: cd clients/site && npx playwright-core install --with-deps webkit
+      - name: Browser tests in WebKit (Safari's engine)
+        run: cd clients/site && MOR_BROWSER=webkit node --import tsx --test test/browser.test.ts
+      - name: Browser tests in Chromium
+        if: success() || failure()
+        run: cd clients/site && node --import tsx --test test/browser.test.ts
