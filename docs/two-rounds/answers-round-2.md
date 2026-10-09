@@ -23,3 +23,7 @@ This one makes the whole thing sort of absurd. They have to count, both versions
 **B4.** "To me, if Law looks at the content of an act and finds a malformed one, or a referenced but empty one, Law does not have what it needs to allow the act and consider the chain broken. It is a break, this one is technical, the previous one was human error."
 
 **B5.** "Yes. « You are about to break the collective »"
+
+**B6.** "No. A broken collective is broken until fixed. Quarantined as much as possible"
+
+**Round 2 complete.**
