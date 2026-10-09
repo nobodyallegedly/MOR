@@ -2239,6 +2239,14 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **With BQ4, every question of the F186, RB and F187 build is decided** (DQ1 to DQ8, BQ1 to BQ6, the eight readings). Next: one building session writes F188 in and builds it, after Fable's review of the build, so both can go into one session.
 
+## F189. Fable's review of the F186, RB and F187 build (9 October 2026, afternoon)
+
+**Review:** `docs/reviews/f186-rb-f187-review-2026-10-09.md` (merged `ab99c7e`). Every BREAKS and CONFLICTS was reproduced by a test. The build holds where it was aimed: no rollback undoes a valid act, a key grab by rollback gains nothing, and the nine F187 fixes close what they targeted.
+
+**Answered by the day's decisions, accepted by Nobody, allegedly, 9 October 2026 ("Yes"), for the next building session to fix:** (1) a resignation is spent once its signer comes back by signing a version that names them (B10): a line registers only a resignation signed after the member's latest return, so an old resignation cannot take a returned member's voice again, by a record or a rollback; (2) a version is checked to be complete and to belong to the deal before it is read as settling a fork, so no draft or stranger's act makes a forked deal unreadable; (3) a payment naming a version the seller does not hold raises the alarm: an unknown version is the hidden fork the alarm exists for; (4) settlement is final in the code as in the text (A3): nothing that grows on a discarded branch unsettles the deal; (5) field 26 names the tip of the discarded branch (F188); (6) a settling version also cites the settled version in `objects`, so verifiers that fetch by citation find it.
+
+**For Nobody, allegedly:** (7) a broken collective can close on the line before the broken act (finding 5); (8) a declaration of absence can be kept from the party it names (finding 8).
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
