@@ -88,19 +88,20 @@ const unhex = (h: string) => Uint8Array.from(h.match(/../g)!.map((x) => parseInt
 
 /**
  * A relay in front of another: everything passes, except that while `drop`
- * is set a record of a collective (Law type 17) is answered as taken and
- * never passed on. What a person sees when a relay loses an act: the
- * client was told it arrived.
+ * is set a Law act of one of the types in `types` (by default a record of
+ * a collective, Law type 17) is answered as taken and never passed on.
+ * What a person sees when a relay loses an act: the client was told it
+ * arrived.
  */
-export async function lossy(target: string): Promise<{ base: string; drop: boolean; close(): Promise<void> }> {
-  const state = { drop: false };
+export async function lossy(target: string): Promise<{ base: string; drop: boolean; types: number[]; close(): Promise<void> }> {
+  const state = { drop: false, types: [LAW_TYPES.record] as number[] };
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];
     for await (const ch of req) chunks.push(ch as Buffer);
     const body = Buffer.concat(chunks);
     if (state.drop && req.method === 'POST' && req.url === '/acts') {
       const d = describeAct(new Uint8Array(body)) as { id: string; spec?: string; type?: number };
-      if (d.spec === REPO_SPECS.law && d.type === LAW_TYPES.record) {
+      if (d.spec === REPO_SPECS.law && d.type !== undefined && state.types.includes(d.type)) {
         res.writeHead(200, { 'content-type': 'application/cbor' });
         res.end(Buffer.from(cborEncode(new Map<number, unknown>([[0, unhex(d.id)], [1, 0]]))));
         return;
@@ -119,6 +120,12 @@ export async function lossy(target: string): Promise<{ base: string; drop: boole
     },
     set drop(x: boolean) {
       state.drop = x;
+    },
+    get types() {
+      return state.types;
+    },
+    set types(x: number[]) {
+      state.types = x;
     },
     close: () =>
       new Promise<void>((ok) => {

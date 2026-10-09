@@ -1,7 +1,8 @@
 #!/usr/bin/env -S node --import tsx
 // mor-repo: the test collective and releases of the code, from the command
 // line (roadmap step 5a). Test collectives only: every key and share is in
-// the collective's file.
+// the collective's file. A test tool, not a client (F187, 9): its member
+// changes are marked from this device's copy, never asked of Law first.
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -14,6 +15,12 @@ import { compareWithTree, gitFiles, gitSource, publishRelease, signRelease, veri
 
 const HELP = `mor-repo: MOR governs its own code. A test collective publishes releases
 as signed manifests; anyone fetches one and verifies every file.
+
+A TEST TOOL, NOT A CLIENT (F187, 9). It drives the repo client's mechanics
+for tests. It marks a member change from this device's copy of the collective, without asking Law first,
+so it can sign and publish a clone whose mark Law calls false, breaking the
+collective (Law rule 37d). To manage a collective, use the collective
+client (clients/collective), which asks Law before anything is signed.
 
 A TEST COLLECTIVE HOLDS EVERY KEY IN SOFTWARE, in its file: its everyday key
 and every member's share of its safety key. A prototype, never for a real

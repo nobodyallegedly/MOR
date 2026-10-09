@@ -168,8 +168,18 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
         : c.law.unread
           ? note('warn', `Law's own reading of this collective could not be had (${e(c.law.unread)}). <span class="small">The rules below are this device's copy; nothing is signed until Law can count.</span>`)
           : '';
+      // RB3: a declaration naming a member is always shown, with the way to contest it.
+      const declaredNote = (c.declared ?? []).length
+        ? note('warn', `<strong>Declared absent.</strong><br>${c.declared.map((d) => e(d.text)).join('<br>')}`)
+        : '';
+      // RB2: payments received during a broken stretch, owed back.
+      const owedNote = (c.owedBack ?? []).length
+        ? note('warn', `<strong>Owed back.</strong><br>${c.owedBack.map((o) => `${fp(o.payment)}: ${e(o.text)}`).join('<br>')}`)
+        : '';
       return `<div class="card" data-collective="${e(c.id)}"><h3>${e(c.name)}</h3>
 ${lawNote}
+${declaredNote}
+${owedNote}
 <dl class="facts"><dt>Collective</dt><dd>${fp(c.id)}</dd>
 <dt>Members</dt><dd>${c.members.map((m) => `${e(m.name)}${m.left ? ' <span class="tag">left: a party until the members refit the collective</span>' : ''}`).join('<br>')}</dd>
 <dt>Everyday key</dt><dd>${e(c.holder)}</dd>
