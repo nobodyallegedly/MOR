@@ -109,7 +109,8 @@ async function open(url: string, refusals = csp) {
     else if (m.type() === 'error' && !benign(m.text())) problems.push(m.text());
   });
   page.on('pageerror', (e) => {
-    if (!benign(String(e))) problems.push(String(e));
+    if (/sandboxed/.test(String(e))) sandbox.push(String(e));
+    else if (!benign(String(e))) problems.push(String(e));
   });
   page.on('request', (r) => {
     if (!/^(http:\/\/127\.0\.0\.1:|blob:|data:|about:)/.test(r.url())) elsewhere.push(r.url());
@@ -324,7 +325,7 @@ test('the footer: only the contact and the sealed message, then the clay tablet,
 });
 
 test("a door opens its page through the display client, checked again", async () => {
-  const { page, ctx, problems } = await open(base + '/');
+  const { page, ctx, problems, sandbox } = await open(base + '/');
   const f = await pageFrame(page);
   assert.equal(await f.getAttribute('.doors a:nth-child(3)', 'href'), '/run.html');
   // A plain click of the mouse, as a visitor's: Playwright's own click adds listeners inside the page's
@@ -336,6 +337,9 @@ test("a door opens its page through the display client, checked again", async ()
   assert.match((await standing(page))!, /^Verified/);
   assert.equal(await (await pageFrame(page)).textContent('h1'), 'Run');
   assert.deepEqual(problems, []);
+  // Only the sandbox at work: the test's own helpers refused inside the page's frame, and WebKit reporting
+  // its rule for leaving the page (only on a click) before it follows the click.
+  assert.ok(sandbox.every((m) => /^Blocked script execution in 'about:srcdoc'|initiate navigation .* sandboxed/s.test(m)), sandbox.join('\n'));
   await ctx.close();
 });
 
