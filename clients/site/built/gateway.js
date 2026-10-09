@@ -349,6 +349,24 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * Where a deal stands forked (rule 45b, F186): `{ reference, branches }`,
+   * each branch its versions from the split to its latest; null where it
+   * is not forked. Throws where the shape is not decided (refused rather
+   * than guessed).
+   * @param {any} specs
+   * @param {string} agreement
+   * @returns {any}
+   */
+  lawDealFork(specs, agreement) {
+    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawDealFork(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * A creditor's release, judged (Finance type 4, F126; rule 47b):
    * whether it ends the obligation it names (signed by that obligation's
    * creditor, a collective by its Finance lane).
@@ -386,6 +404,22 @@ var Verifier = class {
       wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
     }
     return v2;
+  }
+  /**
+   * The declarations of absence naming `party` this verifier holds (RB3,
+   * client conformance): `{ act, signer, agreement, clause, outcomes }`.
+   * @param {any} specs
+   * @param {string} party
+   * @returns {any}
+   */
+  lawDeclarationsNaming(specs, party) {
+    const ptr0 = passStringToWasm0(party, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawDeclarationsNaming(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
   }
   /**
    * The agreement an identity's chain declares at the chain act
@@ -446,6 +480,27 @@ var Verifier = class {
     var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
     wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
     return v2;
+  }
+  /**
+   * Client conformance (rule 45b, F186): the alarm a seller's client and
+   * a split service raise when a payment names a version of the deal that
+   * does not descend from the version they hold. Null where it does;
+   * else `{ named, held, shared, fork, heldLine, namedLine }`.
+   * @param {any} specs
+   * @param {string} payment
+   * @param {string} held
+   * @returns {any}
+   */
+  lawForkAlarm(specs, payment, held) {
+    const ptr0 = passStringToWasm0(payment, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(held, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawForkAlarm(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
   }
   /**
    * A fork of a collective, judged (rule 47a, F121 shape B, F124):
@@ -583,6 +638,23 @@ var Verifier = class {
     return ret[0] === 16777215 ? void 0 : ret[0] !== 0;
   }
   /**
+   * The payments a collective received during a broken stretch and owes
+   * back, the sale not signed anew after the rollback (rule 37d, RB2):
+   * open obligations, each `{ payment, to, unit, value, stillBroken }`.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  lawOwedBack(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawOwedBack(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * What a collective owes now (F125, D5): its obligations that bind,
    * and those it owes as a fork's successor, neither paid in full by the
    * receipts held nor ended by a creditor's release.
@@ -685,6 +757,24 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * The resignations the parties of a collective's agreement published,
+   * registered or not (rule 37a; F187, 3): departures `{ act, party,
+   * kind, agreement }`. What a client reads beside Law's count of the
+   * voices that remain, to warn the last voice.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  lawPublishedResignations(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawPublishedResignations(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * A payment for a work, judged (F126, F127 W2, F128 W4): "purchase",
    * "no-purchase" (a refund owed to the payer, with why), or "unrecorded"
    * (on a request rail, a collective seller's actions chain has not
@@ -752,6 +842,28 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_lawRollbackAgreement(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * What a rollback made next would register (rule 37d, RB3; F187 2),
+   * checked from what this verifier holds: `{ error, departures }`, each
+   * departure `{ act, party, kind }` ("resigned", "stepped-down",
+   * "declared"). A client asks it from a fresh reading of the relays
+   * before it sends the rollback's rotation.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {string[]} registers
+   * @returns {any}
+   */
+  lawRollbackRegisters(specs, collective, registers) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(registers, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawRollbackRegisters(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
