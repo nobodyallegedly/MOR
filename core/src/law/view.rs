@@ -1053,7 +1053,7 @@ impl<'a> LawView<'a> {
                 if let Some(Ok(d)) = &dd {
                     if let (Some(rb), Some(sigs)) = (&d.rollback, &d.signatures) {
                         if rb.broken == col.res.links[*bj].act
-                            && self.rollback_at(col, j, before, &d.agreement, sigs, &rb.registers)?.is_ok()
+                            && self.rollback_at(col, j, *bj, before, &d.agreement, sigs, &rb.registers)?.is_ok()
                         {
                             cur = Some(d.agreement);
                             broken = None;
@@ -1174,8 +1174,18 @@ impl<'a> LawView<'a> {
     /// of `before`, the agreement in force just before the broken act,
     /// marked with the rollback's powers, and complete at `r` with the
     /// signature acts `sigs` alone, counted among the voices that remain
-    /// there, the departures it registers in effect. Why not, otherwise.
-    fn rollback_at(&self, col: &Col, r: usize, before: &Hash, k: &Hash, sigs: &[Hash], registers: &[Hash]) -> R<Result<(), String>> {
+    /// there, the departures it registers in effect; never the clone the
+    /// broken act at link `bj` declared, which stays on its own branch,
+    /// never in force (F187, 5). Why not, otherwise.
+    #[allow(clippy::too_many_arguments)]
+    fn rollback_at(&self, col: &Col, r: usize, bj: usize, before: &Hash, k: &Hash, sigs: &[Hash], registers: &[Hash]) -> R<Result<(), String>> {
+        if let Some(Ok(d)) = declared_in(&col.res.states[bj].declarations, &self.law()) {
+            if &d.agreement == k {
+                return Ok(Err(
+                    "the rollback's clone is the clone the broken act declared, which stays on its own branch, never in force (rule 37d, F187)".into(),
+                ));
+            }
+        }
         if self.terms(k)?.parent.as_ref() != Some(before) {
             return Ok(Err(
                 "the rollback's clone is not a clone of the agreement in force just before the broken act (rule 37d)".into(),
@@ -2654,13 +2664,17 @@ impl<'a> LawView<'a> {
     /// agreement in force there, recorded before it.
     fn placed_at(&self, col: &Col, h: &Held, l: Line<'a>, ag: &Hash) -> R<bool> {
         for (p, is_line) in self.placements(col, h) {
-            let placed = match (p, l) {
-                (Line::Record(a), Line::Record(b)) if a.id == b.id => true,
-                (Line::Rotation(i), Line::Rotation(j)) if i == j => true,
-                (Line::Record(a), _) if !is_line => self.keepers_place(col, a, l, Some(*ag))?,
-                _ => self.line_before(col, p, l),
+            let (placed, same) = match (p, l) {
+                (Line::Record(a), Line::Record(b)) if a.id == b.id => (true, true),
+                (Line::Rotation(i), Line::Rotation(j)) if i == j => (true, true),
+                (Line::Record(a), _) if !is_line => (self.keepers_place(col, a, l, Some(*ag))?, false),
+                _ => (self.line_before(col, p, l), false),
             };
-            if placed {
+            // An act of the broken stretch places nothing, a declaration's
+            // signatures included (rule 37d, F187 7): only the line being
+            // judged, a record or the rollback registering it, places them
+            // there. Never asked of that line itself.
+            if placed && (same || !self.in_broken_stretch(col, p)?) {
                 return Ok(true);
             }
         }

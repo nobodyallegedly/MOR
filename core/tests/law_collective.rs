@@ -7255,3 +7255,146 @@ fn no_rollback_once_every_voice_has_resigned() {
     // collective stays broken, its reason still the broken act's.
     assert_eq!(lab.view().broken_act(&col).unwrap().map(|b| b.act), Some(rot1));
 }
+
+// ---------------------------------------------------------------- F187, RB1 to RB6 (9 October 2026)
+
+/// The broken act of `a_broken_collective_rolls_back`: Ben resigns, the
+/// record is lost, the rotation removing him names too few signers. The
+/// clone it declared (`k1`, marked with Ana and Cy), its signature acts,
+/// Ben's resignation and the broken act.
+fn break_by_lost_record(lab: &mut Lab) -> (Hash, Vec<Hash>, Hash, Hash) {
+    let f = lab.founding;
+    let ids = lab.ids();
+    let auth = lab.authority.id;
+    let stay = vec![ids[ANA], ids[CY]];
+    let mut ben = lab.m[BEN].clone();
+    let res_b = lab.resign_from(&mut ben, f, None);
+    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, CY])], &move |t| {
+        t.parties = stay.clone();
+        let g = t.grammar.as_mut().unwrap();
+        g.signing = Holding::Shares { threshold: 2, members: stay.clone() };
+        g.safety = Holding::Shares { threshold: 2, members: stay.clone() };
+        g.recovery = Some(Recovery::Escrow { authority: auth });
+        for a in t.areas.as_mut().unwrap() {
+            a.holders.retain(|h| stay.contains(h));
+        }
+    });
+    let k1 = lab.propose(ANA, &t);
+    let sigs = vec![lab.sign(ANA, &k1), lab.sign(CY, &k1)];
+    let rot1 = lab.rotate(Some((k1, sigs.clone())), &[0]);
+    (k1, sigs, res_b, rot1)
+}
+
+/// Absence judged by two of the other members; the safety key two of
+/// three, so that no escrowed share is needed.
+fn others_judge_absence(t: &mut Terms) {
+    let ids = t.parties.clone();
+    t.abandonment.as_mut().unwrap().authority = Authority::Others(2);
+    let g = t.grammar.as_mut().unwrap();
+    g.safety = Holding::Shares { threshold: 2, members: ids };
+    g.recovery = None;
+}
+
+/// A rotation declaring a rollback.
+fn roll_back(lab: &mut Lab, k: Hash, sigs: &[Hash], broken: Hash, regs: &[Hash]) -> Hash {
+    let law = mips().law;
+    lab.rotate_with(Some(vec![law::rollback_declaration(&law, &k, sigs, &broken, regs)]), &[0])
+}
+
+/// F187 (5), rule 37d: "the broken clone stays on its own branch, never in
+/// force". The clone the broken act declared is refused as a rollback's
+/// clone, even where its mark happens to equal a rollback's.
+#[test]
+fn f187_5_the_broken_clone_is_never_the_rollbacks_clone() {
+    let mut lab = Lab::new(&|_| {});
+    let col = lab.c[0].id;
+    let (k1, sigs, res_b, rot1) = break_by_lost_record(&mut lab);
+    roll_back(&mut lab, k1, &sigs, rot1, &[res_b]);
+    assert_eq!(
+        lab.view().broken_act(&col).unwrap().map(|b| b.act),
+        Some(rot1),
+        "the broken clone itself puts nothing in force"
+    );
+    // A new clone of the same agreement, the same rules, signed afresh: the way back.
+    let f = lab.founding;
+    let r = lab.view().terms(&k1).unwrap();
+    let r = lab.propose(ANA, &r);
+    let rs = vec![lab.sign(ANA, &r), lab.sign(CY, &r)];
+    assert_eq!(lab.view().terms(&r).unwrap().parent, Some(f));
+    roll_back(&mut lab, r, &rs, rot1, &[res_b]);
+    assert_eq!(lab.view().broken(&col).unwrap(), None);
+    assert_eq!(lab.view().current(&col).unwrap().unwrap().agreement, r);
+}
+
+/// F187 (6), rule 37d and C2: a departing member's signature that the
+/// collective placed before the rollback counts there as at every other
+/// line. A constitutional clone of the founding agreement, signed by all
+/// three and acknowledged by the label before the broken act, is declared
+/// as the rollback's clone while the rollback registers Cy's resignation:
+/// Cy still counts for it, so a mark naming Ana and Ben alone is too few,
+/// and one naming all three completes it. (The text said "counts for
+/// nothing there"; it now says what the core does. No code changed.)
+#[test]
+fn f187_6_a_departing_members_placed_signature_counts_at_the_rollback() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let drafted = |lab: &mut Lab, mark: Vec<usize>| -> (Hash, Vec<Hash>) {
+        let t = lab.clone_terms(&f, vec![(Power::Constitutional, mark)], &|t| t.text = "Drafted before the break.".into());
+        let k = lab.propose(ANA, &t);
+        let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &k)).collect();
+        for x in &s {
+            lab.acknowledge(0, *x);
+        }
+        (k, s)
+    };
+    let (two, s2) = drafted(&mut lab, vec![ANA, BEN]);
+    let (three, s3) = drafted(&mut lab, vec![ANA, BEN, CY]);
+    // Broken by a clone marked with the clone rule (rule 37, B5).
+    let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
+    let k1 = lab.propose(ANA, &k1);
+    let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
+    let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    let mut cy = lab.m[CY].clone();
+    let res_c = lab.resign_from(&mut cy, f, None);
+    roll_back(&mut lab, two, &s2[..2], rot1, &[res_c]);
+    let b = lab.view().broken_act(&col).unwrap();
+    assert_eq!(b.map(|b| b.act), Some(rot1), "Cy's placed signature counts: two is too few");
+    roll_back(&mut lab, three, &s3, rot1, &[res_c]);
+    assert_eq!(lab.view().broken(&col).unwrap(), None);
+    assert_eq!(lab.view().current(&col).unwrap().unwrap().agreement, three);
+    assert_eq!(lab.view().current(&col).unwrap().unwrap().departed, vec![lab.m[CY].id]);
+}
+
+/// F187 (7), rule 37d: an act of the broken stretch places no signature
+/// at all, a declaration of absence's included. Ben's signature act on
+/// Ana's declaration of Cy's absence, acknowledged by the label during the
+/// broken stretch, does not count at a record after the rollback; the
+/// same acknowledgement made after the rollback does.
+#[test]
+fn f187_7_a_stretch_acknowledgement_places_no_signature_on_a_declaration() {
+    let mut lab = Lab::new(&others_judge_absence);
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
+    let k1 = lab.propose(ANA, &k1);
+    let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
+    let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    let d = lab.declare(Some(ANA), f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    let sb = lab.sign(BEN, &d);
+    lab.acknowledge(0, sb);
+    // The rollback restores the founding agreement, every voice signing.
+    let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
+    let r = lab.propose(ANA, &same);
+    let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
+    roll_back(&mut lab, r, &rs, rot1, &[]);
+    assert_eq!(lab.view().broken(&col).unwrap(), None);
+    let rec = lab.record(0, None, &[], vec![d], r);
+    let e = lab.view().record(&col, &rec).unwrap();
+    assert!(!e.line, "Ben's signature, acknowledged only during the broken stretch, is not placed");
+    assert!(e.not_a_line.as_deref().is_some_and(|w| w.contains("1 of the 2")), "{:?}", e.not_a_line);
+    lab.acknowledge(0, sb);
+    let rec = lab.record(0, None, &[], vec![d], r);
+    let e = lab.view().record(&col, &rec).unwrap();
+    assert!(e.line, "{:?}", e.not_a_line);
+}
