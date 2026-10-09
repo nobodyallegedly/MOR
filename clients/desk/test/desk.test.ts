@@ -382,4 +382,11 @@ test('splits whose numbers skip raise the holder\'s alarm at the desk', async ()
   assert.equal(splits.length, 2);
   const alarm = splits.map((x) => x.alarm ?? '').join(' ');
   assert.match(alarm, /ALARM .*split numbered 2 .*not shown/);
+  // QF4 (decided by Nobody, allegedly, 9 October 2026, F190): a repeated
+  // number is a deviation that breaks the plan.
+  const s = splitPayload({ receipt: '9'.padStart(64, '0'), payouts: [{ receiver: machine, amount: 1, stake: 0 }], cmip: 'c'.repeat(64), agreement: p.id, number: 3 });
+  await service.publish(REPO_SPECS.law, LAW_TYPES.split, s, { public: true, relays, to: [machine] });
+  await w.client.ask('refresh', { identity: machine });
+  const again = (await state(w.client)).identities.find((i) => i.id === machine)!.received.filter((x) => x.from === service.id);
+  assert.match(again.map((x) => x.alarm ?? '').join(' '), /number 3 is carried by 2 splits: a deviation that breaks the plan/);
 });

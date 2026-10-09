@@ -1014,10 +1014,14 @@ pub struct Terms {
     /// holders must sign its release to the public domain (F121, D);
     /// absent: every holder. A clone every owner signs may change it (N8).
     pub release_rule: Option<Rule>,
-    /// 26: in a deal's clone settling a fork of two complete versions, the
-    /// other branch's tip it settles, beside its one parent (rule 45b,
-    /// F186, decided 9 October 2026).
-    pub settles: Option<Hash>,
+    /// 26: in a deal's clone settling a fork, every tip it discards, beside
+    /// its one parent, ascending, none twice (rule 45b, F186; QF3, F190,
+    /// decided 9 October 2026: a list, so a tangled deal settles cleanly).
+    pub settles: Option<Vec<Hash>>,
+    /// 27: in a deal, the judge that settles its forks, one identity of
+    /// field 13 (rule 45b, DQ8; QF2, F190, decided 9 October 2026); absent,
+    /// no judge settles them, and the deal waits on its reference.
+    pub fork_judge: Option<Hash>,
 }
 
 impl Terms {
@@ -1183,7 +1187,10 @@ impl Terms {
             m.push((Value::Uint(24), r.to_value()));
         }
         if let Some(x) = &self.settles {
-            m.push((Value::Uint(26), b(x)));
+            m.push((Value::Uint(26), hashes_value(x)));
+        }
+        if let Some(x) = &self.fork_judge {
+            m.push((Value::Uint(27), b(x)));
         }
         m
     }
@@ -1220,7 +1227,7 @@ impl Terms {
                         "terms field 25 (the relays) is withdrawn: an act is done by its signatures, seals and citations, wherever held (F128)",
                     ))
                 }
-                Value::Uint(n) if *n <= 24 || *n == 26 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 24 || *n == 26 || *n == 27 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("terms: unknown field")),
             }
         }
@@ -1327,7 +1334,8 @@ impl Terms {
                 .transpose()?,
             forked_from: get(23).map(|v| hash(v, "forked from")).transpose()?,
             release_rule: get(24).map(rule).transpose()?,
-            settles: get(26).map(|v| hash(v, "settles")).transpose()?,
+            settles: get(26).map(|v| hashes(v, "settles")).transpose()?,
+            fork_judge: get(27).map(|v| hash(v, "the judge of forks")).transpose()?,
         })
     }
 
@@ -1465,11 +1473,26 @@ impl Terms {
         if let Some(x) = &self.settles {
             if self.parent.is_none() || self.is_collective() {
                 return Err(LawError::Check(
-                    "only a deal's clone names the branch it settles (field 26, rule 45b, F186); a collective's forks are settled by its records (rule 47)",
+                    "only a deal's clone names the tips it settles (field 26, rule 45b, F186); a collective's forks are settled by its records (rule 47)",
                 ));
             }
-            if self.parent.as_ref() == Some(x) {
-                return Err(LawError::Check("a version settles the other branch, never its own parent (field 26, F186)"));
+            if self.parent.as_ref().is_some_and(|p| x.contains(p)) {
+                return Err(LawError::Check("a version settles the other branches, never its own parent (field 26, F186)"));
+            }
+            if !x.windows(2).all(|w| w[0] < w[1]) {
+                return Err(LawError::Check("the tips a version settles are ascending, none twice (field 26, QF3)"));
+            }
+        }
+        if let Some(j) = &self.fork_judge {
+            if self.is_collective() {
+                return Err(LawError::Check(
+                    "only a deal names the judge of its forks (field 27, QF2); a collective's forks are settled by its records (rule 47)",
+                ));
+            }
+            if !self.arbitrators.iter().flatten().any(|a| a == j) {
+                return Err(LawError::Check(
+                    "the judge of a deal's forks is one of its arbitrators or verifiers (field 27 among field 13, QF2)",
+                ));
             }
         }
         if self.forked_from.is_some() && (self.parent.is_some() || !self.is_collective()) {
@@ -2071,18 +2094,64 @@ pub(crate) fn check_terms_inside(inside: &Inside, t: &Terms) -> R<()> {
             Ok(_) => Ok(()),
             Err(_) => Err(LawError::Shape("terms without a parent name no chain")),
         },
-        // F189 (6): a settling version also cites the version it settles,
-        // `[settled, settled]`, after its parent, so that a verifier
-        // fetching by citation finds it.
-        Some(p) => match (&t.settles, chain_citations(o, if t.settles.is_some() { 2 } else { 1 })) {
-            (None, Ok((own, _))) if own.len() == 1 && &own[0].chain == p => Ok(()),
-            (Some(x), Ok((own, _))) if own.len() == 2 && &own[0].chain == p && own[1].chain == *x && own[1].predecessor == *x => Ok(()),
-            (Some(_), _) => Err(LawError::Shape(
-                "a settling version names its parent's chain in objects, then the version it settles as chain and predecessor (F189, 6)",
-            )),
-            _ => Err(LawError::Shape("a clone names its parent's chain in objects, once")),
-        },
+        // F189 (6): a settling version also cites each tip it settles,
+        // `[tip, tip]`, after its parent, in field 26's order, so that a
+        // verifier fetching by citation finds them (QF3: every tip).
+        Some(p) => {
+            let tips = t.settles.as_deref().unwrap_or(&[]);
+            let n = 1 + tips.len();
+            let own_ok = o.len() >= n
+                && &o[0].chain == p
+                && o[1..n].iter().zip(tips).all(|(e, x)| e.chain == *x && e.predecessor == *x);
+            if !own_ok {
+                return Err(LawError::Shape(if tips.is_empty() {
+                    "a clone names its parent's chain in objects, once"
+                } else {
+                    "a settling version names its parent's chain in objects, then each tip it settles as chain and predecessor (F189, 6)"
+                }));
+            }
+            let rest = &o[n..];
+            if t.is_collective() {
+                return match chain_citations(rest, 0) {
+                    Ok(_) if !rest.iter().any(|e| &e.chain == p) => Ok(()),
+                    _ => Err(LawError::Shape("a clone names its parent's chain in objects, once")),
+                };
+            }
+            // A deal's version may cite acts it was made after, each
+            // `[act, act]`, none twice: a settlement it follows shows so
+            // (QF1, F190: a version citing the settlement is plainly after
+            // it); then, proposed by a collective, its chain citations (F127).
+            let k = rest.iter().take_while(|e| e.chain == e.predecessor).count();
+            let cited: Vec<Hash> = rest[..k].iter().map(|e| e.predecessor).collect();
+            let fine = distinct(&cited)
+                && !cited.contains(p)
+                && !cited.iter().any(|c| tips.contains(c))
+                && chain_citations(&rest[k..], 0).is_ok();
+            if fine {
+                Ok(())
+            } else {
+                Err(LawError::Shape("a deal's version cites, after its parent and the tips it settles, the acts it was made after, each as chain and predecessor, none twice, then a collective's chain"))
+            }
+        }
     }
+}
+
+/// The acts a deal's version cites after its parent and the tips it
+/// settles (QF1, F190): what it shows it was made after.
+pub fn deal_citations(inside: &Inside, t: &Terms) -> Vec<Hash> {
+    if t.parent.is_none() || t.is_collective() {
+        return vec![];
+    }
+    let n = 1 + t.settles.as_ref().map_or(0, |x| x.len());
+    inside
+        .objects
+        .as_deref()
+        .unwrap_or(&[])
+        .iter()
+        .skip(n)
+        .take_while(|e| e.chain == e.predecessor)
+        .map(|e| e.predecessor)
+        .collect()
 }
 
 // ---------------------------------------------------------------- resignation
@@ -2188,23 +2257,24 @@ impl SettlementRequest {
     }
 }
 
-/// Fork settlement (type 23; DQ8): the arbitrator a deal's reference
-/// version names settles its fork, once a party's request activated it:
-/// the branch kept, by its tip, and the branch discarded, by its tip. It
-/// names the request as chain and predecessor, `[[request, request]]`.
+/// Fork settlement (type 23; DQ8): the judge of forks a deal's reference
+/// version names (field 27, QF2) settles its fork, once a party's request
+/// activated it: the branch kept, by its tip, and every tip discarded
+/// (QF3), ascending, none twice. It names the request as chain and
+/// predecessor, `[[request, request]]`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ForkSettlement {
     /// 0: the settlement request (type 22) that activated the arbitrator.
     pub request: Hash,
     /// 1: the tip of the branch kept, in force from then on.
     pub kept: Hash,
-    /// 2: the tip of the branch discarded.
-    pub discarded: Hash,
+    /// 2: every tip discarded (QF3).
+    pub discarded: Vec<Hash>,
 }
 
 impl ForkSettlement {
     pub fn to_map(&self) -> Vec<(Value, Value)> {
-        vec![(Value::Uint(0), b(&self.request)), (Value::Uint(1), b(&self.kept)), (Value::Uint(2), b(&self.discarded))]
+        vec![(Value::Uint(0), b(&self.request)), (Value::Uint(1), b(&self.kept)), (Value::Uint(2), hashes_value(&self.discarded))]
     }
 
     pub fn decode(inside: &Inside) -> R<ForkSettlement> {
@@ -2213,17 +2283,18 @@ impl ForkSettlement {
             match k {
                 Value::Uint(0) => request = Some(hash(v, "fork settlement: the request")?),
                 Value::Uint(1) => kept = Some(hash(v, "fork settlement: the tip kept")?),
-                Value::Uint(2) => discarded = Some(hash(v, "fork settlement: the tip discarded")?),
+                Value::Uint(2) => discarded = Some(hashes(v, "fork settlement: the tips discarded")?),
                 _ => return Err(LawError::Shape("fork settlement: unknown field")),
             }
         }
         let request = request.ok_or(LawError::Shape("fork settlement: the request"))?;
         check_objects_self(inside, &request, "fork settlement: objects must name the request")?;
-        Ok(ForkSettlement {
-            request,
-            kept: kept.ok_or(LawError::Shape("fork settlement: the tip kept"))?,
-            discarded: discarded.ok_or(LawError::Shape("fork settlement: the tip discarded"))?,
-        })
+        let kept = kept.ok_or(LawError::Shape("fork settlement: the tip kept"))?;
+        let discarded = discarded.ok_or(LawError::Shape("fork settlement: the tips discarded"))?;
+        if !discarded.windows(2).all(|w| w[0] < w[1]) || discarded.contains(&kept) {
+            return Err(LawError::Check("fork settlement: the tips discarded are ascending, none twice, none the tip kept (QF3)"));
+        }
+        Ok(ForkSettlement { request, kept, discarded })
     }
 }
 

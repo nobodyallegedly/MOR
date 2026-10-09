@@ -416,10 +416,11 @@ export async function propose(by: TestIdentity, t: CollectiveTerms, relays: stri
 export async function proposePayload(by: TestIdentity, payload: Uint8Array, parent: string | undefined, relays: string[]) {
   checkTerms(payload, LAW_SPECS);
   const objects: [string, string][] | undefined = parent ? [[parent, parent]] : undefined;
-  // F189 (6): a version settling a deal's fork also cites the version it
-  // settles, after its parent, so that verifiers fetching by citation find it.
+  // F189 (6): a version settling a deal's fork also cites each tip it
+  // settles (field 26, a list since QF3), after its parent, in that order,
+  // so that verifiers fetching by citation find them.
   const settles = (cborDecode(payload) as Map<number, unknown>).get(26);
-  if (objects && settles instanceof Uint8Array) objects.push([hex(settles), hex(settles)]);
+  if (objects && Array.isArray(settles)) for (const x of settles) if (x instanceof Uint8Array) objects.push([hex(x), hex(x)]);
   await carryChain(by, relays);
   return by.publish(REPO_SPECS.law, LAW_TYPES.terms, payload, { public: true, relays, objects });
 }

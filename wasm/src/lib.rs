@@ -1526,6 +1526,12 @@ struct SpecsIn {
     /// only where listed; with none, it is the authority's judgment.
     #[serde(default)]
     absence_accepted: Vec<(String, String)>,
+    /// The specifications the client read as the relay transport cMIP,
+    /// draft 3 or later, whose act type 0 is a relay's delivery record
+    /// (F184): it counts as evidence for a role share only where the
+    /// payer's claim acknowledges it (Law rules 19, 22).
+    #[serde(default)]
+    delivery_records: Vec<String>,
 }
 
 impl SpecsIn {
@@ -1562,6 +1568,9 @@ impl SpecsIn {
         }
         for (d, by) in &self.absence_accepted {
             view.absence_accepted.insert((unhex(d)?, unhex(by)?));
+        }
+        for r in &self.delivery_records {
+            view.delivery_records.insert(unhex(r)?);
         }
         Ok(view)
     }
@@ -1796,9 +1805,12 @@ struct TermsOut {
     forked_from: Option<String>,
     /// The release rule (field 24); null: every holder.
     release_rule: Option<RuleOut>,
-    /// In a deal's clone settling a fork, the other branch's tip it settles
-    /// (field 26, F186); null otherwise.
-    settles: Option<String>,
+    /// In a deal's clone settling a fork, every tip it discards (field 26,
+    /// F186; a list since QF3, F190); null otherwise.
+    settles: Option<Vec<String>>,
+    /// In a deal, the judge that settles its forks, one of field 13 (field
+    /// 27, QF2, F190); null: none does.
+    fork_judge: Option<String>,
     /// Why the terms fail the checks that need no other act, or null.
     problem: Option<ProblemOut>,
 }
@@ -1936,7 +1948,8 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             .collect(),
         forked_from: t.forked_from.as_ref().map(hx),
         release_rule: t.release_rule.as_ref().map(rule_out),
-        settles: t.settles.as_ref().map(hx),
+        settles: t.settles.as_ref().map(|x| x.iter().map(hx).collect()),
+        fork_judge: t.fork_judge.as_ref().map(hx),
         problem: t.check(&s.mips()?).err().map(|e| problem(&e)),
     })
 }
@@ -2066,15 +2079,17 @@ pub fn settlement_request_payload(reference: &str) -> R<Vec<u8>> {
     Ok(cbor::encode(&Value::Map(law::SettlementRequest { reference: unhex(reference)? }.to_map())))
 }
 
-/// A fork settlement payload (Law type 23; DQ8, F188): the arbitrator's
-/// settlement, naming the request that activated it, the tip of the branch
-/// kept and the tip of the branch discarded. The act carries, in
-/// `objects`, `[request, request]`.
+/// A fork settlement payload (Law type 23; DQ8, F188): the settlement of
+/// the judge of forks the reference names (terms field 27, QF2), naming the
+/// request that activated it, the tip of the branch kept and every tip
+/// discarded (QF3, F190), sorted here. The act carries, in `objects`,
+/// `[request, request]`.
 #[wasm_bindgen(js_name = forkSettlementPayload)]
-pub fn fork_settlement_payload(request: &str, kept: &str, discarded: &str) -> R<Vec<u8>> {
-    Ok(cbor::encode(&Value::Map(
-        law::ForkSettlement { request: unhex(request)?, kept: unhex(kept)?, discarded: unhex(discarded)? }.to_map(),
-    )))
+pub fn fork_settlement_payload(request: &str, kept: &str, discarded: Vec<String>) -> R<Vec<u8>> {
+    let mut d = discarded.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
+    d.sort();
+    d.dedup();
+    Ok(cbor::encode(&Value::Map(law::ForkSettlement { request: unhex(request)?, kept: unhex(kept)?, discarded: d }.to_map())))
 }
 
 /// A contest payload (Law type 14; BQ4, F188): the declaration of absence
@@ -3160,6 +3175,10 @@ impl Verifier {
                 })
                 .collect(),
             count_unknown: e.count_unknown.clone(),
+            numbering: e.numbering.as_ref().map(|n| match n {
+                law::NumberBreak::Unnumbered => NumberingOut { kind: "unnumbered".into(), number: None, with: vec![] },
+                law::NumberBreak::Repeated { number, with } => NumberingOut { kind: "repeated".into(), number: Some(*number), with: with.iter().map(hx).collect() },
+            }),
             cites: e.cites.iter().map(hx).collect(),
             tally: e.split.tally.iter().flatten().map(|(st, v)| (*st, v.iter().map(|(h, n)| (hx(h), *n)).collect())).collect(),
         })
@@ -3377,11 +3396,23 @@ struct SplitOut {
     breaks: Vec<BreakOut>,
     /// Stakes whose running count cannot be checked from the acts held.
     count_unknown: Vec<u64>,
+    /// A deal's split whose number breaks the plan (QF4, F190): null, or
+    /// `{ kind: "unnumbered" }`, or `{ kind: "repeated", number, with }`.
+    numbering: Option<NumberingOut>,
     /// The acts the split's envelope cites.
     cites: Vec<String>,
     /// The running count it carries, per stake: `[stake, [[hex, count]]]`
     /// (field 4, PROPOSED format).
     tally: Vec<(u64, Vec<(String, u64)>)>,
+}
+
+/// A deal's split whose number breaks the plan (QF4, F190).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NumberingOut {
+    kind: String,
+    number: Option<u64>,
+    with: Vec<String>,
 }
 
 /// A break of a split service's tally chain (F171): `kind` "reset" (it and

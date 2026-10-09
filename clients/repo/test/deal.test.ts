@@ -127,3 +127,27 @@ test('a buyer\'s client checks that the offer is the latest in its chain before 
   assert.match(old.words.join(' '), /^WARNING: the offer shown is outdated/);
   assert.equal((await offerCheck(a, relays)).current, true);
 });
+
+// QF3 (decided by Nobody, allegedly, 9 October 2026, F190): a settling
+// version names every tip it discards, so a tangled deal settles cleanly.
+test('a tangled deal settles by a version naming every tip it discards', async () => {
+  const [ana, ben, fan] = [await person(), await person(), await person()];
+  const parties = [ana.id, ben.id];
+  const relays = [relay.base];
+  const version = async (text: string, parent?: string, settles?: string[]) => {
+    const p = await proposePayload(ana, dealPayload({ parties, text, parent, settles }), parent, relays);
+    await sign(ana, p.id, relays);
+    await sign(ben, p.id, relays);
+    return p.id;
+  };
+  const d = await version('Ana and Ben sell a song.');
+  const x = await version('One: the price is 100.', d);
+  const y = await version('Two: the price is 110.', d);
+  const z = await version('Three: the price is 120.', d);
+  const tangled = await sellerAlarm(ana.id, await pay(fan, ana.id, d, y, 'qf3 one'), relays);
+  assert.equal(tangled?.kind, 'fork');
+  assert.match(tangled!.words.join(' '), /tangled/);
+  assert.match(tangled!.words.join(' '), /names every tip it discards/);
+  const s = await version('One, having seen Two and Three.', x, [y, z]);
+  assert.equal(await sellerAlarm(ana.id, await pay(fan, ana.id, d, s, 'qf3 two'), relays), null, 'settled: nothing to raise');
+});

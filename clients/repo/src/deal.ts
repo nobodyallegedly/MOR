@@ -15,12 +15,21 @@ import { LAW_TYPES, REPO_SPECS } from './specs.ts';
 /**
  * A deal's terms (Law type 0): founding terms every party signs (field 4,
  * every party), or a clone of `parent` marked with the clone rule and every
- * party whose voice remains (rule 45b). A clone settling a fork of two
- * complete versions names, beside its one parent, the other branch's
- * latest version it settles (field 26, F186), and is signed by the parties
- * of both branches (F188, DQ5).
+ * party whose voice remains (rule 45b). A clone settling a fork names,
+ * beside its one parent, every tip it discards (field 26, F186; a list,
+ * ascending, since QF3, F190), and is signed by the parties of all the
+ * branches (F188, DQ5). `judge`: in founding terms or a clone, the judge of
+ * the deal's forks (field 27, QF2), one of its arbitrators or verifiers
+ * (`arbitrators`, field 13).
  */
-export function dealPayload(t: { parties: string[]; text: string; parent?: string; settles?: string }): Uint8Array {
+export function dealPayload(t: {
+  parties: string[];
+  text: string;
+  parent?: string;
+  settles?: string | string[];
+  arbitrators?: string[];
+  judge?: string;
+}): Uint8Array {
   const m = new Map<number, unknown>([
     [0, t.parties.map(unhex)],
     [1, t.text],
@@ -31,7 +40,10 @@ export function dealPayload(t: { parties: string[]; text: string; parent?: strin
     [5, [0]],
   ]);
   if (t.parent) m.set(11, unhex(t.parent));
-  if (t.settles) m.set(26, unhex(t.settles));
+  if (t.arbitrators?.length) m.set(13, t.arbitrators.map(unhex));
+  const settles = typeof t.settles === 'string' ? [t.settles] : (t.settles ?? []);
+  if (settles.length) m.set(26, [...new Set(settles)].sort().map(unhex));
+  if (t.judge) m.set(27, unhex(t.judge));
   return cborEncode(m);
 }
 
@@ -196,7 +208,8 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
       held,
       words: [
         `ALARM (Law rule 45b, F188): this payment names version ${short(named)} of a deal whose fork is tangled (${fork.tangled}). The deal stays on ${short(fork.reference)}, the last version every party agreed on: the changes the tangled versions made are lost.`,
-        'A buyer who paid under a version every party signed stays protected: this payment counts under the version it names. Settle the deal cleanly with every party.',
+        'A buyer who paid under a version every party signed stays protected: this payment counts under the version it names.',
+        'Settle the deal cleanly with every party: sign a version that, beside its one parent, names every tip it discards (terms field 26), signed by the parties of every branch, so everyone sees every option and signs the choice (QF3). Where the reference names a judge of forks (terms field 27), a party who signed it may ask that judge instead (DQ8, QF2).',
       ],
     };
   }
@@ -209,7 +222,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
       words: [
         `ALARM (Law rule 45b, F186): this payment names version ${short(named)} of a deal that stands forked. Every party signed two versions of ${short(fork.reference)}, neither descending from the other: ${fork.branches.map((b) => b.map(short).join(' → ')).join(', and ')}.`,
         `While the fork stands, ${short(fork.reference)} is the reference, and a payment may follow either branch and counts: ${branch ? `this one follows ${branch.map(short).join(' → ')}` : 'this one names the reference'}. The buyer is protected.`,
-        'Settle the fork with every party of both branches: sign a version that names both branches, beside its one parent the other branch\'s latest version (terms field 26). Settlement is final: the other branch never comes back. Where the parties cannot agree, a party who signed the reference may ask the arbitrator it names to settle it (Law rule 45b, DQ8).',
+        'Settle the fork with every party of both branches: sign a version that names both branches, beside its one parent the other branch\'s latest version (terms field 26). Settlement is final: the other branch never comes back, and a version made on it later changes nothing where it cites the settlement; one citing nothing tangles the deal again (QF1). Where the parties cannot agree, a party who signed the reference may ask the judge of forks it names (terms field 27) to settle it (Law rule 45b, DQ8, QF2).',
       ],
     };
   }
@@ -391,11 +404,11 @@ export async function offerCheck(offered: string, hints: string[], via: Via = {}
 }
 
 /**
- * A party's request that the arbitrator a deal's reference version names
- * settle its fork (Law type 22, rule 45b; DQ8, decided by Nobody,
- * allegedly, 9 October 2026): the arbitrator acts only once activated by
- * one of the signing parties, by a signed request naming the fork, which
- * its settlement names. Public.
+ * A party's request that the judge of forks a deal's reference version
+ * names (terms field 27, QF2, F190) settle its fork (Law type 22, rule 45b;
+ * DQ8, decided by Nobody, allegedly, 9 October 2026): the judge acts only
+ * once activated by one of the signing parties, by a signed request naming
+ * the fork, which its settlement names. Public.
  */
 export async function requestSettlement(by: TestIdentity, reference: string, relays: string[]) {
   await carryChain(by, relays);

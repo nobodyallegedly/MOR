@@ -2157,6 +2157,8 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **Next, decided by Nobody, allegedly:** taken up on 8 October 2026, straight after the collective client human test (step 11b).
 
+**Written into Law and built, 9 October 2026** (`docs/f190-build-2026-10-09.md`): Law draft 10, the role share and rules 19 and 22: a relay's delivery record counts as evidence for a relay's role share only when the payer's claim for the payment acknowledges it, and the object it names is the one the payment was for; the split reading in the core checks it, given which specification is the relay transport cMIP (a fact the verifier states, as for push rails). Freeze suite step 2.4f. *Question QG3 raised:* a verifier not told which specification is the relay transport cMIP still reads a delivery record as any third party's act.
+
 ## F185. A broken collective, and its way back (8 October 2026, evening)
 
 **Found building the fix for the step 11b human test** (`docs/step-11b-false-mark-2026-10-08.md`, merged `b081a50`): rule 37 says that where a rotation declares an agreement that fails it, "the collective's acts that need member signatures count for nothing", and says nothing of what comes next. The core reads such a collective as broken for good.
@@ -2270,6 +2272,8 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 **QF2, QF4, QF5 and QF6, accepted by Nobody, allegedly, 9 October 2026 ("Yes"), as rules already set elsewhere:** QF2, the deal's reference version must name which of its judges settles forks; where that is unclear, none does, and the deal waits on its reference. QF4, a deal's split with a missing or repeated number is a deviation that breaks the plan, as a tally reset (F171). QF5, money owed back is repaid like any debt, by a payment naming what it repays, proven by either side's record (double entry); no new act. QF6, an old stepping down is spent once the member holds the area again, as for resignations (F189, item 1).
 
 **With F190, every question of the F188 and F189 build is decided** (the eleven readings to be confirmed with the revised texts). Next: one building session writes F190 in, with the relay's delivery record in Law rules 19 and 22 (F184), and the Production MIP's and core task table's wording on units and anchoring (noted by the technical-pass session).
+
+**Written in and built, 9 October 2026** (`docs/f190-build-2026-10-09.md`): Law draft 10 (terms fields 26, a list, and 27, the judge of forks; the fork settlement's field 2, a list; rules 5, 15a, 19, 22, 37d, 45b; the resignation; the role share), core v21, Production draft 6 (wording only) and the freeze suite (steps 1.7a, 2.4f, 3.7w), each revised in place for Nobody, allegedly, to approve again; the core, its bindings, the repo client, the collective client and the desk, each change with a test that fails first. F189 (4) is completed by QF1. Writing it in, the settlement's reach was made exact as **clean**: every complete version of the deal either in the settlement's history or made after it; the first clean settlement holds (a reading to confirm). Questions QG1 to QG5 for Nobody, allegedly (Law, "Open in this draft"): a refund to a bare key or to nobody (QG1), the payer's pointer for a repayment (QG2), how a verifier knows a delivery record (QG3), the chain of judgment for the judge of forks (QG4), Production's other kinds called Modules (QG5).
 
 ## Review of F163 to F168 (7 October 2026, morning)
 
