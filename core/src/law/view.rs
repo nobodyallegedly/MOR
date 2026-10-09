@@ -1523,6 +1523,28 @@ impl<'a> LawView<'a> {
         out
     }
 
+    /// The contests of a declaration of absence (type 14, rule 52; BQ4,
+    /// decided 9 October 2026): valid contests naming it, each signed by
+    /// the party it declares absent, which shows presence. A contest voids
+    /// nothing: it is shown beside the declaration.
+    pub fn contests(&self, declaration: &Hash) -> R<Vec<Hash>> {
+        let Some(dh) = self.v.get(declaration) else { return Ok(vec![]) };
+        if !self.is_law(dh, types::DECLARATION) {
+            return Ok(vec![]);
+        }
+        let Ok(d) = AbsenceDeclaration::decode(&dh.inside) else { return Ok(vec![]) };
+        Ok(self
+            .v
+            .signed_by(&d.party)
+            .filter(|h| {
+                self.is_law(h, types::CONTEST)
+                    && self.valid(&h.id)
+                    && Contest::decode(&h.inside).is_ok_and(|c| &c.declaration == declaration)
+            })
+            .map(|h| h.id)
+            .collect())
+    }
+
     /// The broken stretches of a collective's chain (rule 37d): each broken
     /// act's link, and the link of the rollback that ended it, if any.
     fn stretches(&self, col: &Col) -> R<Vec<(usize, Option<usize>)>> {
@@ -7252,22 +7274,26 @@ impl<'a> LawView<'a> {
         };
         let current = self.claim_line(&named, work.as_ref())?;
         let sellers = self.sellers(&p, work.as_ref())?;
-        // RB2 (decided 9 October 2026): a payment a collective seller
-        // received during a broken stretch is no purchase, owed back to the
-        // payer, unless the sale is signed anew after the rollback: a receipt
-        // of the collective for the same payment that counts. An
-        // acknowledgement adopting the stretch's receipt is not signing anew.
+        // RB2, BQ2 and BQ3 (decided 9 October 2026): a broken collective
+        // keeps exactly what its rules before the break allowed, judged by
+        // the offer the payment names, not by when it was paid. A payment
+        // under an offer made during the broken stretch is no purchase,
+        // owed back to the payer, unless the sale is signed anew after the
+        // rollback: a receipt of the collective for the same payment that
+        // counts. An acknowledgement adopting the stretch's receipt is not
+        // signing anew. A payment under an offer made before the break is
+        // kept.
         let payee = match crate::finance::Payload::decode(x.inside.type_, &x.inside.payload) {
             Ok(crate::finance::Payload::Receipt(r)) => Some(r.payee),
             Ok(crate::finance::Payload::Claim(c)) => Some(c.payee),
             _ => None,
         };
         for c in sellers.iter().chain(payee.iter().filter(|p| !sellers.contains(p))) {
-            if let Some(anew) = self.received_in_stretch(id, c)? {
+            if let Some(anew) = self.under_stretch_offer(id, &p.line, c)? {
                 if !anew {
                     return no(
                         e,
-                        "received while the collective that sells it was broken: no purchase, owed back to the payer unless the sale is signed anew after the rollback (rule 37d, RB2)",
+                        "it names an offer made while the collective that sells it was broken: no purchase, owed back to the payer unless the sale is signed anew after the rollback (rule 37d, RB2, BQ2)",
                     );
                 }
             }
@@ -7351,16 +7377,60 @@ impl<'a> LawView<'a> {
         Ok(Some(e))
     }
 
-    /// Where collective `c` received the payment `id` during a broken
-    /// stretch (rule 37d, RB2): its receipt for it, by its own key or a grant
-    /// key of its, the payment itself or one carrying the same rail proof,
-    /// lies in a stretch. `Some(true)` where a receipt of `c` for the same
-    /// payment counts, signed anew after the rollback; `Some(false)` where
-    /// none does; `None` where `c` received it in no stretch.
-    fn received_in_stretch(&self, id: &Hash, c: &Hash) -> R<Option<bool>> {
+    /// The versions of collective `c`'s agreement made during a broken
+    /// stretch (rule 37d): for each stretch, the agreement in force just
+    /// before the broken act and the rollback's clone, if any. A version of
+    /// the stretch descends from the first, strictly, and not from the
+    /// second.
+    fn stretch_bounds(&self, col: &Col) -> R<Vec<(Hash, Option<Hash>)>> {
+        let mut out: Vec<(Hash, Option<Hash>)> = vec![];
+        let mut open = false;
+        for k in 0..col.res.links.len() {
+            match self.chain_state(col, k)? {
+                ChainState::Broken { act: Some((_, before)), .. } => {
+                    if !open {
+                        out.push((before, None));
+                        open = true;
+                    }
+                }
+                ChainState::InForce(h) => {
+                    if open {
+                        if let Some(last) = out.last_mut() {
+                            last.1 = Some(h);
+                        }
+                        open = false;
+                    }
+                }
+                ChainState::Broken { act: None, .. } => {}
+            }
+        }
+        Ok(out)
+    }
+
+    /// Whether a payment naming the version `line` was made under an offer
+    /// of collective `c`'s broken stretch (rule 37d; BQ2, BQ3, decided 9
+    /// October 2026): judged by the offer it names, never by when it was
+    /// paid. `Some(true)` where a receipt of `c` for the same payment
+    /// counts, signing the sale anew after the rollback; `Some(false)`
+    /// where none does; `None` where the offer it names was not made during
+    /// a stretch: kept, as the rules before the break allowed.
+    fn under_stretch_offer(&self, id: &Hash, line: &Hash, c: &Hash) -> R<Option<bool>> {
         use crate::finance::Payload as Fin;
         let col = self.col(c);
         if !(0..col.res.links.len()).any(|k| self.declares(&col, k)) {
+            return Ok(None);
+        }
+        let Some(l) = self.v.get(line) else { return Ok(None) };
+        if !self.is_law(l, types::TERMS) {
+            return Ok(None);
+        }
+        let Ok(ls) = self.lineage(line) else { return Ok(None) };
+        let ls: Vec<Hash> = ls.into_iter().map(|(i, _)| i).collect();
+        let of_stretch = self
+            .stretch_bounds(&col)?
+            .iter()
+            .any(|(before, back)| line != before && ls.contains(before) && back.is_none_or(|r| !ls.contains(&r)));
+        if !of_stretch {
             return Ok(None);
         }
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
@@ -7368,37 +7438,31 @@ impl<'a> LawView<'a> {
             Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
             _ => None,
         };
-        let Some(x) = self.v.get(id) else { return Ok(None) };
-        let mine = proof(x);
-        let receipts: Vec<&Held> = self
-            .v
-            .signed_by(c)
-            .filter(|h| {
-                h.inside.spec == self.mips.finance
-                    && h.inside.type_ == crate::finance::types::RECEIPT
-                    && self.valid(&h.id)
-                    && !self.rail_invalid.contains(&h.id)
-                    && (h.id == *id || mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m)))
-            })
-            .collect();
-        let mut stretch = false;
+        let mine = self.v.get(id).and_then(proof);
         let mut anew = false;
-        for h in receipts {
+        for h in self.v.signed_by(c) {
+            if h.inside.spec != self.mips.finance
+                || h.inside.type_ != crate::finance::types::RECEIPT
+                || !self.valid(&h.id)
+                || self.rail_invalid.contains(&h.id)
+                || !(h.id == *id || mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m)))
+            {
+                continue;
+            }
             let in_stretch = match col.pos(h) {
                 Some(k) => self.base(&col, k)?.is_err() && (0..=k).any(|j| self.declares(&col, j)),
                 None => self.in_a_stretch(&col, h)?.is_some(),
             };
-            if in_stretch {
-                stretch = true;
-            } else if self.consent(&h.id)?.counts() {
+            if !in_stretch && self.consent(&h.id)?.counts() {
                 anew = true;
             }
         }
-        Ok(stretch.then_some(anew))
+        Ok(Some(anew))
     }
 
-    /// The payments a collective received during a broken stretch and owes
-    /// back, the sale not signed anew after the rollback (rule 37d, RB2): a
+    /// The payments a collective owes back, made under an offer of a broken
+    /// stretch, the sale not signed anew after the rollback (rule 37d, RB2,
+    /// BQ2, BQ3): a
     /// visible open obligation, one entry per payment (its first receipt or
     /// claim held). The network records and shows the debt; it cannot force
     /// a payment back.

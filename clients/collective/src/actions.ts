@@ -15,6 +15,7 @@ import {
   LAW_SPECS,
   RELEASE_AREA,
   closingPayload,
+  contest,
   debtReleasePayload,
   encodeTerms,
   forkPayload,
@@ -178,7 +179,7 @@ interface Shown {
   /** Payments received during a broken stretch, owed back until the sale is signed anew after the rollback (Law rule 37d, RB2). */
   owedBack?: { payment: string; to: string | null; unit: string; value: number; stillBroken: boolean }[];
   /** Declarations of absence naming a member, as Law's verifier holds them (RB3, client conformance). */
-  declared?: { member: string; act: string; signer: string; agreement: string; outcomes: number[] }[];
+  declared?: { member: string; act: string; signer: string; agreement: string; outcomes: number[]; contests?: string[] }[];
 }
 
 const ruleNumber = (r: { form: string; threshold?: number | null } | null | undefined, all: number): number | undefined =>
@@ -188,9 +189,10 @@ const ruleNumber = (r: { form: string; threshold?: number | null } | null | unde
  * A declaration of absence as the member it names is shown it, with the way
  * to contest it (RB3, client conformance; Law rules 51, 52, 53; F172).
  */
-function contestWords(who: string, by: string, d: { act: string; agreement: string; outcomes: number[] }): string {
+function contestWords(who: string, by: string, d: { act: string; agreement: string; outcomes: number[]; contests?: string[] }): string {
   const outs = d.outcomes.map((o) => (o === 0 ? 'voice removed' : o === 1 ? 'stake redistributed' : o === 2 ? 'stake transferred' : o === 3 ? 'obligations redirected' : `outcome ${o}`)).join(', ');
-  return `${who} is named as absent by a declaration ${short(d.act)}, signed by ${by}, under the agreement ${short(d.agreement)} (outcomes: ${outs}). It moves nothing by itself: it takes effect only where a line of the collective registers it (a record, or a rollback). To contest it: ${who} signs a contest act (Law rule 52), shown beside the declaration to everyone who reads it; a contest shows the declaration, it does not void it. A voice removed comes back only by a later version of the agreement naming ${who}, signed under the collective's rules. The contest act's format (Law type 14) is still open, so this client cannot sign one yet.`;
+  const contested = d.contests?.length ? ` ${who} contested it (${d.contests.map(short).join(', ')}): shown beside it, it voids nothing.` : '';
+  return `${who} is named as absent by a declaration ${short(d.act)}, signed by ${by}, under the agreement ${short(d.agreement)} (outcomes: ${outs}). It moves nothing by itself: it takes effect only where a line of the collective registers it (a record, or a rollback). To contest it: ${who} signs a contest act (Law rule 52), shown beside the declaration to everyone who reads it; a contest shows the declaration, it does not void it. A voice removed comes back only by a later version of the agreement naming ${who}, signed under the collective's rules.${contested}`;
 }
 
 /** What the page shows: from Law's reading of the agreement in force where it has one, else from this device's copy. */
@@ -1398,15 +1400,20 @@ export class Actions {
           `The collective then registers it at once by a record, its line, signed with its everyday key. From that line on, ${who}'s signature counts toward no rule and no area of the collective (F109).`,
           'Nothing else changes now: no rule is rewritten, no key rotates.',
         ];
+    // BQ5 (decided by Nobody, allegedly, 9 October 2026): "It breaks, but
+    // it only breaks one layer." Not a broken collective (Law rule 37d): no
+    // rollback; a collective may choose to freeze its rules for good.
     const constitutionWords = [
-      'You are about to break the collective.',
+      "You are about to break the collective's constitutional layer.",
+      'Once you leave, nobody will be able to change its rules again.',
+      'The other members keep acting in their areas.',
       `${who} holds the last constitutional voice that remains in “${cname}”: its constitutional change rule names no other member whose voice remains (Law rules 44c, 44d).`,
       `If ${who} leaves, its constitution freezes as it stands: nobody will be able to add or remove a member, redraw an area or change any rule of the constitution again${b ? ', and the collective can no longer be rolled back: it stays broken' : ''}. The other members keep their voices in their areas, under rules nobody can change.`,
       ...fromElsewhere,
       `${who} keeps their stake, as a departed holder (Law rule 46b). Leaving is still ${who}'s alone to decide.`,
     ];
     if (last) summary.unshift(...lastWords.slice(0, 2 + fromElsewhere.length));
-    else if (lastConstitutional) summary.unshift(...constitutionWords.slice(0, 3));
+    else if (lastConstitutional) summary.unshift(...constitutionWords.slice(0, 5));
     if (blind) {
       summary.unshift(
         law.broken
@@ -1506,7 +1513,7 @@ export class Actions {
     if (!b) {
       blocking.push(
         law.broken
-          ? `Law reads ${it} as broken in a way a rollback cannot repair: ${law.broken}. There is no agreement in force before it to roll back to (Law rule 37d).`
+          ? `Law reads ${it} as broken in a way a rollback cannot repair: ${law.broken}. There is no agreement in force before it to roll back to (Law rule 37d): nothing Law would accept ever existed, so the collective is simply founded again, as a new collective (F188).`
           : law.unread
             ? `Law's own reading of ${it} could not be had (${law.unread}), so whether it is broken cannot be told.`
             : `Law does not read ${it} as broken: there is nothing to roll back.`,
@@ -1666,7 +1673,7 @@ export class Actions {
           heading: 'What stays as it was',
           lines: [
             { text: `The broken act and every act signed in the collective's name since (records, releases, changes) stay shown, and count for nothing, for good (Law rule 37d). Sign again, after the rollback, what is still wanted.`, tone: 'warn' },
-            { text: 'What a counterparty relied on during the broken stretch is signed anew after the rollback, never adopted (RB2). A payment the collective received during the stretch is owed back to its payer unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (RB2). Grants made before the broken act work again after the rollback; what grantees signed during the stretch counts for nothing (RB1). The rollback restores every condition as at the act before the break.' },
+            { text: 'What a counterparty relied on during the broken stretch is signed anew after the rollback, never adopted (RB2). The collective keeps exactly what its rules before the break allowed, judged by the offer a payment names (BQ2, BQ3): a sale under an offer made before the break is kept, and what the collective owes for it is done once the rollback lets it act; a payment under an offer made during the stretch is owed back to its payer unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (RB2). Money owed back is a debt: the collective cannot close until those payers are settled (F189, 7). Grants made before the broken act work again after the rollback; what grantees signed during the stretch counts for nothing (RB1). The rollback restores every condition as at the act before the break.' },
           ],
         },
         {
@@ -2132,6 +2139,50 @@ export class Actions {
    * member keeps what they own. The members who remain then refit the
    * collective (Change members), as after a resignation.
    */
+  /**
+   * The member a declaration of absence names contests it (Law type 14,
+   * rule 52; BQ4, decided by Nobody, allegedly, 9 October 2026): a contest
+   * naming the declaration, signed by that member, which shows presence and
+   * the dispute and voids nothing.
+   */
+  async prepareContest(a: { collective: string; declaration: string }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const shown = await this.shown(c);
+    const d = (shown.declared ?? []).find((x) => x.act === a.declaration);
+    const blocking: string[] = [];
+    if (!d) blocking.push(`No declaration of absence ${short(a.declaration)} naming a member of “${cname}” is held here.`);
+    const who = d ? names(d.member) : 'The member';
+    if (d && !this.store.holds(d.member)) blocking.push(`${who} is not held by this program, so it cannot sign the contest here: only the member named signs it.`);
+    if (d?.contests?.length) blocking.push(`${who} already contested it (${d.contests.map(short).join(', ')}).`);
+    const reading: Reading = {
+      title: `${who} contests the declaration of their absence from “${cname}”`,
+      summary: [
+        `${who} signs a contest of the declaration ${short(a.declaration)}${d ? `, signed by ${names(d.signer)}` : ''}: a Law act (type 14) naming it, signed by ${who} alone, which shows ${who} is present (Law rule 52).`,
+        'It is published, and delivered to the one who signed the declaration. Everyone who reads the declaration sees the contest beside it.',
+        `It voids nothing: the declaration stays as it is, and where a line of the collective registered it, ${who}'s voice stays removed. A voice removed comes back only by a later version of the agreement naming ${who}, signed under the collective's rules (F172).`,
+      ],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' }] }],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'contest',
+      digest: digestOf('contest', a.collective, a.declaration),
+      reading,
+      depends: [a.collective, ...(d ? [d.member] : [])],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const me = this.store.identity(d!.member);
+        const x = await contest(me, { act: a.declaration, signer: d!.signer }, col.f.relays);
+        this.store.saveIdentity(me);
+        this.shownCache.delete(col.identity);
+        return { title: `${who} contested the declaration`, lines: [{ text: `Contest ${x.id}, naming declaration ${a.declaration}.`, tone: 'ok' as const }], acts: [x.id] };
+      },
+    });
+  }
+
   async prepareDeclare(a: { collective: string; member: string; signers?: string[] }) {
     const names = this.store.names();
     const c = this.store.collective(a.collective);
@@ -3498,7 +3549,7 @@ export class Actions {
       }
       const parties = new Set([...c.f.members, ...departedOf(c).map((d) => d.member)]);
       shown.declared = [...parties].flatMap((m) =>
-        ((law.v.lawDeclarationsNaming(LAW_SPECS, m) as { act: string; signer: string; agreement: string; outcomes: number[] }[]) ?? []).map((d) => ({ member: m, ...d })),
+        ((law.v.lawDeclarationsNaming(LAW_SPECS, m) as { act: string; signer: string; agreement: string; outcomes: number[]; contests: string[] }[]) ?? []).map((d) => ({ member: m, ...d })),
       );
     }
     this.shownCache.set(c.identity, { stamp, at: Date.now(), shown });
@@ -3568,7 +3619,7 @@ export class Actions {
             toName: o.to && /^[0-9a-f]{64}$/.test(o.to) ? names(o.to) : (o.to ?? 'nobody named'),
             value: o.value,
             unit: o.unit,
-            text: `${o.value} (unit ${short(o.unit)}) received ${o.stillBroken ? 'while the collective is broken' : 'during a broken stretch since rolled back'}: no purchase, owed back to ${o.to && /^[0-9a-f]{64}$/.test(o.to) ? names(o.to) : (o.to ?? 'nobody named')} unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (Law rule 37d, RB2). Shown here as an open obligation: the network records and shows it; it cannot force a payment back.`,
+            text: `${o.value} (unit ${short(o.unit)}) paid under an offer made ${o.stillBroken ? 'while the collective is broken' : 'during a broken stretch since rolled back'}: no purchase, owed back to ${o.to && /^[0-9a-f]{64}$/.test(o.to) ? names(o.to) : (o.to ?? 'nobody named')} unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (Law rule 37d, RB2). Shown here as an open obligation: the network records and shows it; it cannot force a payment back.`,
           })),
           declared: (w.declared ?? []).map((d) => ({
             member: d.member,
@@ -3577,6 +3628,7 @@ export class Actions {
             act: d.act,
             by: names(d.signer),
             text: contestWords(names(d.member), names(d.signer), d),
+            contested: !!d.contests?.length,
           })),
         };
       }),

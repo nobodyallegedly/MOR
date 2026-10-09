@@ -11,6 +11,7 @@ import {
   cborDecode,
   cborEncode,
   checkTerms,
+  contestPayload,
   declarationPayload,
   describeAct,
   hex,
@@ -547,6 +548,22 @@ export async function declare(
     relays,
     to: [d.party],
     objects: [[d.agreement, d.agreement]],
+  });
+}
+
+/**
+ * A contest of a declaration of absence (Law type 14, rule 52; BQ4,
+ * decided by Nobody, allegedly, 9 October 2026), signed by the party the
+ * declaration names: it shows presence and the dispute, and voids nothing.
+ * Public, and delivered to the declaration's signer.
+ */
+export async function contest(by: TestIdentity, declaration: { act: string; signer: string }, relays: string[]) {
+  await carryChain(by, relays);
+  return by.publish(REPO_SPECS.law, LAW_TYPES.contest, contestPayload(declaration.act), {
+    public: true,
+    relays,
+    to: [declaration.signer],
+    objects: [[declaration.act, declaration.act]],
   });
 }
 

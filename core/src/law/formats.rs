@@ -36,6 +36,8 @@ pub mod types {
     /// (format open). The handover is withdrawn (F129, H3).
     pub const IMPORT: u64 = 11;
     pub const DECLARATION: u64 = 13;
+    /// A contest of a declaration of absence (rule 52; BQ4, F188).
+    pub const CONTEST: u64 = 14;
     pub const RESIGNATION: u64 = 16;
     pub const RECORD: u64 = 17;
     /// A negotiation message (F118, rule 56).
@@ -2111,6 +2113,41 @@ impl Resignation {
         let agreement = agreement.ok_or(LawError::Shape("resignation: the agreement"))?;
         check_objects_self(inside, &agreement, "resignation: objects must name the agreement")?;
         Ok(Resignation { agreement, area })
+    }
+}
+
+// ---------------------------------------------------------------- contest
+
+/// Contest (type 14; BQ4, decided 9 October 2026): the party a declaration
+/// of absence names answers it, which shows presence. It names the
+/// declaration as chain and predecessor, `[[declaration, declaration]]`,
+/// and voids nothing (rule 52, F172): it is shown beside the declaration.
+/// A contest of any other act, or by another with standing (rule 57a),
+/// keeps its format open.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Contest {
+    /// 0: the declaration of absence (type 13) it answers.
+    pub declaration: Hash,
+}
+
+impl Contest {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        vec![(Value::Uint(0), b(&self.declaration))]
+    }
+
+    /// Decode, and check the inside names the declaration as chain and
+    /// predecessor.
+    pub fn decode(inside: &Inside) -> R<Contest> {
+        let mut declaration = None;
+        for (k, v) in &inside.payload {
+            match k {
+                Value::Uint(0) => declaration = Some(hash(v, "contest: the declaration")?),
+                _ => return Err(LawError::Shape("contest: unknown field (only a declaration of absence's format is written, BQ4)")),
+            }
+        }
+        let declaration = declaration.ok_or(LawError::Shape("contest: the declaration"))?;
+        check_objects_self(inside, &declaration, "contest: objects must name the declaration")?;
+        Ok(Contest { declaration })
     }
 }
 

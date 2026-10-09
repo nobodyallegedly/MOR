@@ -176,7 +176,7 @@ export interface State {
     /** Payments received during a broken stretch and owed back: open obligations (Law rule 37d, RB2). */
     owedBack: { payment: string; to: string | null; toName: string; value: number; unit: string; text: string }[];
     /** Declarations of absence naming a member, each with the way to contest it (RB3, client conformance). */
-    declared: { member: string; name: string; held: boolean; act: string; by: string; text: string }[];
+    declared: { member: string; name: string; held: boolean; act: string; by: string; text: string; contested: boolean }[];
     splits: string[];
     /** Debts it signed, and those of the collective it was forked from (owed by the successors its fork handed them to, F127): each with its creditor, and whether this program holds the creditor. */
     debts: { id: string; creditor: string; creditorName: string; creditorHeld: boolean; inherited: boolean }[];

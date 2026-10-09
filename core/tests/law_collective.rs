@@ -7677,15 +7677,17 @@ fn rb1_a_grant_is_quarantined_during_the_broken_stretch() {
     assert!(matches!(lab.view().backing(&during).unwrap(), Backing::NotBacked { .. }));
 }
 
-/// RB2's follow-up (decided 9 October 2026): every payment the collective
-/// received during the broken stretch is no purchase, and is owed back to
-/// the payer, unless the sale is signed anew after the rollback; until then
-/// it stands as a visible open obligation. Signing anew is a receipt of the
-/// collective for the same payment after the rollback, never an
-/// acknowledgement adopting the stretch's.
+/// RB2's follow-up, narrowed by BQ2 and BQ3 (decided 9 October 2026): a
+/// broken collective keeps exactly what its rules before the break
+/// allowed, judged by the offer a payment names, never by when it was paid.
+/// A sale under an offer made before the break is kept, even received in
+/// the stretch; one under an offer of the stretch is no purchase and is
+/// owed back, a payer's claim alone included (BQ3), unless the sale is
+/// signed anew after the rollback: a receipt of the collective for the same
+/// payment, never an acknowledgement adopting the stretch's.
 #[test]
-fn rb2_a_payment_received_during_the_broken_stretch_is_owed_back() {
-    use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt, RefundTo};
+fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
+    use mor_core::finance::{Amount, Claim, Payer, Payload as Fin, Purchase, Receipt, RefundTo};
     let work = spec("a song");
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
@@ -7723,29 +7725,53 @@ fn rb2_a_payment_received_during_the_broken_stretch_is_owed_back() {
     let k1 = lab.propose(ANA, &k1);
     let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
     let rot1 = lab.rotate(Some((k1, ks)), &[0]);
-    // A fan pays during the broken stretch; the label's receipt is of the stretch.
-    let paid = receipt(&mut lab, "Dee the fan", b"dee", f);
+    // Under the offer made before the break, received in the stretch: kept.
+    let kept = receipt(&mut lab, "Dee the fan", b"dee", f);
+    let got = lab.view().purchase(&kept).unwrap().unwrap();
+    assert!(!matches!(got.verdict, law::PurchaseVerdict::NoPurchase { .. }), "{got:?}");
+    // Under the clone of the stretch: owed back.
+    let paid = receipt(&mut lab, "Eve the fan", b"eve", k1);
     let got = lab.view().purchase(&paid).unwrap().unwrap();
     assert!(matches!(got.verdict, law::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")), "{got:?}");
-    assert_eq!(got.refund_to, RefundTo::Identity(spec("Dee the fan")));
-    assert_eq!(lab.view().owed_back(&label).unwrap().iter().map(|o| o.payment).collect::<Vec<_>>(), vec![paid]);
-    // The rollback; the payment is still owed back.
+    assert_eq!(got.refund_to, RefundTo::Identity(spec("Eve the fan")));
+    // BQ3: shown only by the payer's own claim, judged by the offer it names.
+    let mut fan = lab.w.genesis("Fay the fan", vec![own_home()], None, None);
+    let claim = |w: &mut World, fan: &mut Person, line: Hash, proof: &[u8]| {
+        let c = Fin::Claim(Claim {
+            rail,
+            proof: proof.to_vec(),
+            payee: label,
+            amount: Amount { unit: spec("a unit"), value: 4 },
+            fulfils: publication,
+            disagrees: None,
+            referral: None,
+            refund: None,
+            anonymous: None,
+            purchase: Some(Purchase { agreement: f, line }),
+        });
+        let x = w.everyday_act(fan, mips().finance, 3, c.to_map(), None, None);
+        w.add(&x)
+    };
+    let by_claim = claim(&mut lab.w, &mut fan, k1, b"fay");
+    let before_claim = claim(&mut lab.w, &mut fan, f, b"fay2");
+    let v = lab.view();
+    assert!(matches!(v.purchase(&by_claim).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")));
+    assert!(!matches!(v.purchase(&before_claim).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { .. }));
+    let owed: Vec<Hash> = v.owed_back(&label).unwrap().iter().map(|o| o.payment).collect();
+    assert_eq!(sorted(owed), sorted(vec![paid, by_claim]));
+    drop(v);
+    // The rollback; Eve's payment is still owed back.
     let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
     let r = lab.propose(ANA, &same);
     let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
     roll_back(&mut lab, r, &rs, rot1, &[]);
     assert_eq!(lab.view().broken(&label).unwrap(), None);
-    assert!(matches!(lab.view().purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { .. }));
     // Adopting the stretch's receipt by an acknowledgement does not sign the sale anew.
     lab.adopt(0, paid);
-    assert!(matches!(lab.view().purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { .. }));
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
+    assert!(lab.view().owed_back(&label).unwrap().iter().any(|o| o.payment == paid));
     // A receipt for the same payment, signed after the rollback: the sale, signed anew.
-    let anew = receipt(&mut lab, "Dee the fan", b"dee", f);
-    let v = lab.view();
-    assert_eq!(v.purchase(&anew).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
-    assert_eq!(v.purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
-    assert!(v.owed_back(&label).unwrap().is_empty());
+    receipt(&mut lab, "Eve the fan", b"eve", k1);
+    assert!(lab.view().owed_back(&label).unwrap().iter().all(|o| o.payment != paid));
 }
 
 /// RB6 (decided 8 and 9 October 2026): a broken collective cannot fork or
@@ -7876,16 +7902,16 @@ fn published_resignations_and_declarations_naming_a_party() {
     assert_eq!((named[0].0, named[0].1, named[0].2.party), (d, lab.authority.id, ids[ANA]));
 }
 
-/// RB2: "every payment the collective received during the broken stretch":
-/// a payment naming a claim, paid to the collective itself, with no stake
-/// making it a seller, is owed back too.
+/// RB2 with BQ2: a payment naming an offer of the broken stretch, paid to
+/// the collective itself, with no stake making it a seller, is owed back
+/// too.
 #[test]
 fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
     use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let label = lab.c[0].id;
-    let (_, _, _, _) = break_by_lost_record(&mut lab);
+    let (k1, _, _, _) = break_by_lost_record(&mut lab);
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"gift".to_vec(),
@@ -7896,7 +7922,7 @@ fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
         previous: None,
         forward: None,
         batch: None,
-        purchase: Some(Purchase { agreement: f, line: f }),
+        purchase: Some(Purchase { agreement: f, line: k1 }),
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mips().finance, 2, r.to_map(), None, None);
     let x = lab.w.add(&a);
@@ -8394,4 +8420,78 @@ fn f189_8_a_declaration_counts_only_if_public_or_addressed_to_the_member() {
     lab.record(0, None, &[], vec![shown], f);
     let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
     assert!(!n.voices.contains(&ids[CY]));
+}
+
+/// F188, BQ1 (decided 9 October 2026, "Yes, everyone have to acknowledge
+/// the rollback. Safer."): after a rollback, a grantee's act counts only
+/// once it cites the rollback or a later decision of the collective; one
+/// citing nothing newer than the time before the break, including one made
+/// just before the break that no act of the collective took in, counts for
+/// nothing and is signed again.
+#[test]
+fn bq1_after_a_rollback_a_grantees_act_counts_once_it_cites_the_rollback() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let env = mips().envelope;
+    let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
+    let grant = Grant { area: Some(1), kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]), ..plain_grant(agent.id, false) };
+    let g = lab.grant(&grant);
+    lab.sign(ANA, &g);
+    sign(&mut lab.w, &mut agent, &g);
+    let mut st = lab.strand(g, &key_of(agent.id));
+    let act = |lab: &mut Lab, st: &mut Person| -> Hash {
+        let a = lab.w.everyday_act(st, env, 0, vec![], None, None);
+        lab.w.add(&a)
+    };
+    // Made just before the break; no act of the collective takes it in.
+    let unseen = act(&mut lab, &mut st);
+    let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
+    let k1 = lab.propose(ANA, &k1);
+    let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
+    let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
+    let r = lab.propose(ANA, &same);
+    let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
+    let back = roll_back(&mut lab, r, &rs, rot1, &[]);
+    assert_eq!(lab.view().broken(&col).unwrap(), None);
+    assert!(matches!(lab.view().backing(&unseen).unwrap(), Backing::NotBacked { .. }), "made just before the break, taken in by nothing");
+    // After the rollback, citing nothing newer: nothing.
+    let stale = act(&mut lab, &mut st);
+    assert!(matches!(lab.view().backing(&stale).unwrap(), Backing::NotBacked { .. }));
+    // Citing the rollback: it counts.
+    st.cite.as_mut().unwrap().1.push(back);
+    let fresh = act(&mut lab, &mut st);
+    assert_eq!(lab.view().backing(&fresh).unwrap(), Backing::Backed { grant: g });
+}
+
+/// F188, BQ4 (decided 9 October 2026): the contest act's format (Law type
+/// 14). It names the declaration it answers and is signed by the party
+/// declared absent, which shows presence; it shows the dispute and voids
+/// nothing (rule 52).
+#[test]
+fn bq4_a_contest_names_the_declaration_and_is_signed_by_the_party_named() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let ids = lab.ids();
+    let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    lab.record(0, None, &[], vec![d], f);
+    let c = law::Contest { declaration: d };
+    let mut cy = lab.m[CY].clone();
+    let x = law_act(&mut lab.w, &mut cy, law::types::CONTEST, c.to_map(), obj(d));
+    // Someone else's "contest" of it shows nothing.
+    let mut ben = lab.m[BEN].clone();
+    let y = law_act(&mut lab.w, &mut ben, law::types::CONTEST, c.to_map(), obj(d));
+    let v = lab.view();
+    assert_eq!(v.contests(&d).unwrap(), vec![x]);
+    let _ = y;
+    // It voids nothing: Cy's voice stays removed.
+    let n = v.next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+    assert!(!n.voices.contains(&ids[CY]));
+    // Its objects name the declaration, as chain and predecessor.
+    let mut cy2 = lab.m[CY].clone();
+    drop(v);
+    let bad = law_act(&mut lab.w, &mut cy2, law::types::CONTEST, c.to_map(), obj(f));
+    assert!(!lab.view().contests(&d).unwrap().contains(&bad));
 }

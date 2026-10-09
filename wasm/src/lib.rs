@@ -2057,6 +2057,14 @@ pub fn resignation_payload(agreement: &str, area: Option<u32>) -> R<Vec<u8>> {
     )))
 }
 
+/// A contest payload (Law type 14; BQ4, F188): the declaration of absence
+/// it answers. Signed by the party the declaration names; the act carries,
+/// in `objects`, `[declaration, declaration]`. It voids nothing (rule 52).
+#[wasm_bindgen(js_name = contestPayload)]
+pub fn contest_payload(declaration: &str) -> R<Vec<u8>> {
+    Ok(cbor::encode(&Value::Map(law::Contest { declaration: unhex(declaration)? }.to_map())))
+}
+
 /// An abandonment declaration payload (Law type 13, B12): the agreement,
 /// the version whose clause it applies (the last the party signed), the
 /// party, and the outcomes, ascending. The act carries, in `objects`,
@@ -2628,7 +2636,8 @@ impl Verifier {
     }
 
     /// The declarations of absence naming `party` this verifier holds (RB3,
-    /// client conformance): `{ act, signer, agreement, clause, outcomes }`.
+    /// client conformance): `{ act, signer, agreement, clause, outcomes,
+    /// contests }`, `contests` the party's contests of it (BQ4).
     #[wasm_bindgen(js_name = lawDeclarationsNaming)]
     pub fn law_declarations_naming(&self, specs: JsValue, party: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2636,14 +2645,17 @@ impl Verifier {
         let out: Vec<DeclarationNamingOut> = view
             .declarations_naming(&unhex(party)?)
             .iter()
-            .map(|(act, signer, d)| DeclarationNamingOut {
-                act: hx(act),
-                signer: hx(signer),
-                agreement: hx(&d.agreement),
-                clause: hx(&d.clause),
-                outcomes: d.outcomes.clone(),
+            .map(|(act, signer, d)| {
+                Ok(DeclarationNamingOut {
+                    act: hx(act),
+                    signer: hx(signer),
+                    agreement: hx(&d.agreement),
+                    clause: hx(&d.clause),
+                    outcomes: d.outcomes.clone(),
+                    contests: view.contests(act).map_err(lerr)?.iter().map(hx).collect(),
+                })
             })
-            .collect();
+            .collect::<R<_>>()?;
         to_js(&out)
     }
 
@@ -3203,6 +3215,9 @@ struct DeclarationNamingOut {
     agreement: String,
     clause: String,
     outcomes: Vec<u64>,
+    /// The contests of it the party signed (type 14; BQ4, F188): shown
+    /// beside it; a contest voids nothing (rule 52).
+    contests: Vec<String>,
 }
 
 #[derive(Serialize)]
