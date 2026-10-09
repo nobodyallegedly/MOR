@@ -1760,9 +1760,11 @@ name = "mor-harness"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "bitcoin",
  "clap",
  "mor-core",
  "mor-lightning",
+ "mor-onchain",
  "mor-payment",
  "mor-relay",
  "reqwest",
@@ -1786,6 +1788,23 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "slh-dsa",
+]
+
+[[package]]
+name = "mor-onchain"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "hex",
+ "k256",
+ "mor-core",
+ "mor-lightning",
+ "mor-payment",
+ "reqwest",
+ "serde_json",
+ "sha2 0.10.9",
+ "slh-dsa",
+ "tokio",
 ]
 
 [[package]]

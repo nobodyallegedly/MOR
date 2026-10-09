@@ -23,3 +23,7 @@ slh-dsa = "=0.2.0-rc.5"
 [dev-dependencies]
 mor-payment = { path = "../cmips/payment" }
 mor-lightning = { path = "../modules/lightning", features = ["lnd"] }
+mor-onchain = { path = "../modules/onchain", features = ["btcd"] }
+# The payer's wallet in the on-chain test: rust-bitcoin signs its
+# transactions, and the payee's sweep of a payment with the tweaked key.
+bitcoin = "0.32"
