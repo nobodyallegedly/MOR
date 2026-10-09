@@ -18,6 +18,7 @@ They are not part of the core. The core document and the six MIPs in `spec/` def
 - [Adult Content, Consent on the Record](18-MOR-case-study-adult-content-v3.md): signed consent, age proofs without exposure, and payment rails that cannot switch a sector off alone.
 - [Paying the Ones Everything Stands On](19-MOR-case-study-software-v3.md): open-source maintainers paid through dependency lineage, targets and bounties.
 - [From Agents to Open Intelligence](20-MOR-case-study-ai-v2.md): AI agents under grants, then AI itself made by many, with data on stated terms, a market for compute and training collectives. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
+- [From One Sentence to a Research Programme](21-MOR-case-study-academic-publishing-v2.md): a researcher without a doctorate, from a proposal to a research programme with industry, with departments that carry and stamp, a sentence traced through every quote, and every flow of money read from its source. *Draft 2, drafted for the author's own redraft; draft 1 is kept in the project. Not yet checked in full against the spec.*
 
 Each latest draft is the previous one with the technical pass of 9 October 2026 applied and nothing else changed, except where the author has since redrafted it (09, 12 and 14, draft 4; 13, draft 3) (`../technical-pass-2026-10-09.md`; what was applied, per document, in `../technical-pass-applied-2026-10-09.md`). Older drafts stay beside them.
 
