@@ -8,6 +8,6 @@ esbuild: 0.25.12
 
 Work hash of each file:
 3ccb74363d16a759f2f9922cb0e5788d2b4921a8df0c85638da2ec925d5ea6b2  index.html
-fa420642e6332e0d5cb7b8ef4dd6e192dff7d42413d7c41b34a8aab126778b56  gateway.js
+c198d9b46f12f5210d21dda5386184442bf79dcb53b2f9db5ab6912e3d7f229d  gateway.js
 4cc7d842029c2f86ec75d9735ddf661539003d05ec6cc3a0e8e53a1f41ba6e35  gateway.css
-f4c8b36fa07e5dd762800eda12a203101f2efcaf59851c807e9f411cd69907ae  mor_wasm_bg.wasm
+b8bf47cab5fec0a028833ee8ba9c6d5e3d2b7172c8d34863286353caabe6c8fb  mor_wasm_bg.wasm

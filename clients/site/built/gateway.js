@@ -349,10 +349,6 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
-   * Where a deal stands forked (rule 45b, F186): `{ reference, branches }`,
-   * each branch its versions from the split to its latest; null where it
-   * is not forked. Throws where the shape is not decided (refused rather
-   * than guessed).
    * @param {any} specs
    * @param {string} agreement
    * @returns {any}
@@ -406,8 +402,6 @@ var Verifier = class {
     return v2;
   }
   /**
-   * The declarations of absence naming `party` this verifier holds (RB3,
-   * client conformance): `{ act, signer, agreement, clause, outcomes }`.
    * @param {any} specs
    * @param {string} party
    * @returns {any}
@@ -485,7 +479,9 @@ var Verifier = class {
    * Client conformance (rule 45b, F186): the alarm a seller's client and
    * a split service raise when a payment names a version of the deal that
    * does not descend from the version they hold. Null where it does;
-   * else `{ named, held, shared, fork, heldLine, namedLine }`.
+   * else `{ named, held, shared, kind, heldLine, namedLine }`, `kind`
+   * "fork" (the alarm), "unheld" (a version this verifier does not hold:
+   * the alarm, F189 3) or "older" (a plain notice, F188 DQ7).
    * @param {any} specs
    * @param {string} payment
    * @param {string} held
@@ -910,6 +906,30 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * The declarations of absence naming `party` this verifier holds (RB3,
+   * client conformance): `{ act, signer, agreement, clause, outcomes,
+   * contests }`, `contests` the party's contests of it (BQ4).
+   * The numbers on the splits a service made under a deal (DQ6, F188):
+   * `{ numbers: [number, split][], gaps, repeated, unnumbered }`. Client
+   * conformance: a holder's client MUST raise the alarm where the
+   * numbers it receives skip (`gaps`).
+   * @param {any} specs
+   * @param {string} service
+   * @param {string} agreement
+   * @returns {any}
+   */
+  lawSplitNumbers(specs, service, agreement) {
+    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_lawSplitNumbers(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Rule 15a's turns (F165, F171): for `stake` (its index) of
    * `agreement`'s version in force, the leftover units each holder has
    * received so far from `service`'s splits, as `previous` (the
@@ -963,6 +983,41 @@ var Verifier = class {
       throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Where a deal stands forked (rule 45b, F186): `{ reference, branches,
+   * tangled }`, each branch its versions from the split to its latest,
+   * `tangled` the reason where the fork is tangled (F188, DQ1 to DQ4: the
+   * deal stays on its reference); null where it is not forked. Throws
+   * where the shape is not decided (QF1, refused rather than guessed).
+   * The version of an agreement in force, as rule 45b reads a deal's
+   * forks (F186, F188): while forked or tangled, the reference. Throws
+   * where the shape is not decided (QF1). What a buyer's client checks
+   * an offer against before paying (F188, a strong SHOULD).
+   * @param {any} specs
+   * @param {string} agreement
+   * @returns {string}
+   */
+  lawVersionInForce(specs, agreement) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+      const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_lawVersionInForce(this.__wbg_ptr, specs, ptr0, len0);
+      var ptr2 = ret[0];
+      var len2 = ret[1];
+      if (ret[3]) {
+        ptr2 = 0;
+        len2 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred3_0 = ptr2;
+      deferred3_1 = len2;
+      return getStringFromWasm0(ptr2, len2);
+    } finally {
+      wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
   }
   /**
    * A link between two MOR identities as the act `seenBy` sees it
