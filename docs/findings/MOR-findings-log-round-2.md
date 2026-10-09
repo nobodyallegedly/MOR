@@ -2153,6 +2153,8 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **(2), decided by Nobody, allegedly, 9 October 2026 ("Yes"):** the **delivery record** is defined in the relay transport cMIP: a relay's signed act saying it served a file for a request; **it counts as evidence for a relay's role share only when the payer's claim acknowledges it** (a claim is a Finance act, which may carry acknowledgements, Envelope rule 4a). *The project lead's reasoning:* a relay's own signature alone would let it claim deliveries it never made ("paying for usage invites faking usage"); the confirming signature comes from the other side of the deal, as for the referral (F75); no new core grammar; a claim may acknowledge several records, so several relays can share one payment. *Noted for (1), not decided:* the same acknowledgements might carry several referrals.
 
+**Written in, 9 October 2026:** `cmips/cmip-relay-transport-draft-3.md` (not yet approved): the delivery record, type 0 of the cMIP, `[locked hash, size, client's nonce]`, signed by the relay's operator identity; asked for by `POST {base}/delivery-record`; counting only when the payer's claim acknowledges it; several records in one claim; the stated costs. *Still to align (the next building session, since Law is being edited now):* Law rules 19 and 22 and the role share definition say the relay's delivery record counts once acknowledged by the payer's claim.
+
 **Next, decided by Nobody, allegedly:** taken up on 8 October 2026, straight after the collective client human test (step 11b).
 
 ## F185. A broken collective, and its way back (8 October 2026, evening)
