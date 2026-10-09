@@ -107,6 +107,13 @@ pub struct LawView<'a> {
     /// Module's specification declares it in is open (F140 item 1), so,
     /// like `push_rails`, a fact the caller states.
     pub unbound_rails: BTreeSet<Hash>,
+    /// The specifications this verifier read as the relay transport cMIP,
+    /// draft 3 or later, whose act type 0 is a relay's delivery record
+    /// (F184): `[locked hash, size, client's nonce]`, signed by the relay's
+    /// operator. Like `push_rails`, a fact the caller states: the core reads
+    /// no cMIP. A delivery record counts as evidence for a role share only
+    /// where the payer's claim acknowledges it (Law rules 19, 22).
+    pub delivery_records: BTreeSet<Hash>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -425,6 +432,7 @@ impl<'a> LawView<'a> {
             absence_accepted: BTreeSet::new(),
             anchored: Default::default(),
             unbound_rails: BTreeSet::new(),
+            delivery_records: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -473,6 +481,7 @@ impl<'a> LawView<'a> {
             absence_accepted: self.absence_accepted.clone(),
             anchored: self.anchored.clone(),
             unbound_rails: self.unbound_rails.clone(),
+            delivery_records: self.delivery_records.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -1272,6 +1281,13 @@ impl<'a> LawView<'a> {
                 return Ok(Err(
                     "the rollback registers a resignation its signer made before coming back: spent, it registers nothing (F189, 1)".into(),
                 ));
+            }
+            if let (None, Some(area)) = (at, res.area) {
+                if self.stepping_down_spent(col, &p, before, &res.agreement, area)? {
+                    return Ok(Err(
+                        "the rollback registers a stepping down its signer made before holding the area again: spent, it registers nothing (QF6)".into(),
+                    ));
+                }
             }
             let kind = match res.area {
                 None => DepartureKind::Resigned { agreement: res.agreement },
@@ -2544,6 +2560,13 @@ impl<'a> LawView<'a> {
                         continue;
                     }
                 }
+                // QF6 (decided 9 October 2026, F190): so is a stepping down,
+                // once its signer holds the area again.
+                if let DepartureKind::SteppedDown { agreement, area: a } = &d.kind {
+                    if area == Some(*a) && self.spent(agreement, &self.area_returns(col, p, *a, &lineage, &lines)?)? {
+                        continue;
+                    }
+                }
                 let (from, hits) = match &d.kind {
                     DepartureKind::Resigned { agreement } | DepartureKind::Declared { agreement } => (*agreement, true),
                     DepartureKind::SteppedDown { agreement, area: a } => (*agreement, area == Some(*a)),
@@ -2614,6 +2637,36 @@ impl<'a> LawView<'a> {
             }
         }
         Ok(out)
+    }
+
+    /// The versions by which `p` came back to area `area` (QF6, F190): for
+    /// each line registering their stepping down from it, the latest
+    /// version naming them a holder of it again that they signed by a
+    /// signature not placed before that line.
+    fn area_returns(&self, col: &Col, p: &Hash, area: u64, lineage: &[Hash], lines: &[(Line<'a>, Departure)]) -> R<Vec<Hash>> {
+        let mut out = vec![];
+        for (l, d) in lines {
+            match &d.kind {
+                DepartureKind::SteppedDown { agreement, area: a } if &d.party == p && *a == area => {
+                    if let Some(v) = self.restoring(col, p, lineage, agreement, Some(area), *l)? {
+                        if !out.contains(&v) {
+                            out.push(v);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(out)
+    }
+
+    /// Whether `p`'s stepping down from `area` naming `agreement` is spent
+    /// at the collective's tip, counted in agreement `ag` (QF6, F190).
+    fn stepping_down_spent(&self, col: &Col, p: &Hash, ag: &Hash, agreement: &Hash, area: u64) -> R<bool> {
+        let lineage: Vec<Hash> = self.lineage(ag)?.into_iter().map(|(i, _)| i).collect();
+        let lines = self.departure_lines(col, Point::Tip, &[])?;
+        let returns = self.area_returns(col, p, area, &lineage, &lines)?;
+        self.spent(agreement, &returns)
     }
 
     /// Whether `p`'s resignation naming `agreement` is spent at the
@@ -4798,6 +4851,67 @@ impl<'a> LawView<'a> {
         Ok(false)
     }
 
+    /// Whether `id` is a relay's delivery record: type 0 of a specification
+    /// the caller read as the relay transport cMIP (F184).
+    fn is_delivery_record(&self, id: &Hash) -> bool {
+        self.v.get(id).is_some_and(|x| x.inside.type_ == 0 && self.delivery_records.contains(&x.inside.spec))
+    }
+
+    /// Whether a relay's delivery record counts for the payment `payment`
+    /// (a receipt or payer's claim) a split divides (F184, decided 9
+    /// October 2026; Law rules 19 and 22; relay transport cMIP, draft 3,
+    /// "Delivery records"): **the payer's claim for that payment
+    /// acknowledges it**, and the object it names (its locked hash, field
+    /// 0) is the media of the publication the payment was for (Envelope,
+    /// publication field 2). The payer's claim: `payment` itself where it
+    /// is a claim, or a claim of the same rail payment, by the payer the
+    /// receipt names (its identity, or its committed key). *A relay's own
+    /// signature alone would let it claim deliveries it never made; the
+    /// confirming signature comes from the other side of the deal, as for
+    /// a referral (F75).*
+    fn delivery_acknowledged(&self, record: &Hash, payment: &Hash) -> bool {
+        use crate::finance::{Payer, Payload as Fin};
+        let Some(r) = self.v.get(record) else { return false };
+        let object: Option<Hash> = r.inside.payload.iter().find_map(|(k, v)| match (k, v) {
+            (crate::cbor::Value::Uint(0), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
+            _ => None,
+        });
+        let Some(p) = self.v.get(payment) else { return false };
+        if p.inside.spec != self.mips.finance {
+            return false;
+        }
+        let (fulfils, payer) = match Fin::decode(p.inside.type_, &p.inside.payload) {
+            Ok(Fin::Receipt(x)) => (x.fulfils, x.payer),
+            Ok(Fin::Claim(x)) => (x.fulfils, None),
+            _ => return false,
+        };
+        // The object paid for: the media of the publication the payment fulfils.
+        let paid_for: Option<Hash> = self.v.get(&fulfils).filter(|f| f.inside.spec == self.mips.envelope && f.inside.type_ == 0).and_then(|f| {
+            f.inside.payload.iter().find_map(|(k, v)| match (k, v) {
+                (crate::cbor::Value::Uint(2), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
+                _ => None,
+            })
+        });
+        if object.is_none() || object != paid_for {
+            return false;
+        }
+        let mut claims: Vec<&Held> = vec![];
+        if matches!(Fin::decode(p.inside.type_, &p.inside.payload), Ok(Fin::Claim(_))) {
+            claims.push(p);
+        }
+        claims.extend(self.same_payment(payment).into_iter().filter_map(|(x, _)| self.v.get(&x)));
+        claims.into_iter().any(|c| {
+            let Ok(Fin::Claim(cl)) = Fin::decode(c.inside.type_, &c.inside.payload) else { return false };
+            let by_payer = match (&payer, cl.anonymous.as_ref()) {
+                (None, _) => c.id == *payment,
+                (Some(Payer::Identity(h)), None) => c.act.outside.signer.as_ref() == Some(h),
+                (Some(Payer::Key(k)), Some(a)) => &a.key == k,
+                _ => false,
+            };
+            c.inside.spec == self.mips.finance && self.payers_claim(c) && by_payer && c.inside.acks.iter().flatten().any(|a| a == record)
+        })
+    }
+
     /// Whether an act is evidence for a role share in a split by
     /// `service` for `payee`, the identity the payment was made to (rules
     /// 19 and 22). For any role but a rail Module's, the evidence is a
@@ -5033,6 +5147,10 @@ pub struct SplitEval {
     /// split cites as its previous one is not held, two are cited, or the
     /// previous carries no count; shown as unknown, never as a deviation.
     pub count_unknown: Vec<u64>,
+    /// For a deal's split, where its number breaks the plan (rule 15a; QF4,
+    /// F190): no number, or one another split of the same service under the
+    /// deal carries. A deviation, as a break of the tally chain is.
+    pub numbering: Option<NumberBreak>,
     /// The acts the split's envelope cites (`objects`, `acks`, `refs`):
     /// among them, the service's previous split act for each stake.
     pub cites: Vec<Hash>,
@@ -5065,6 +5183,17 @@ pub enum ChainBreak {
     Count { stake: u64, carried: Vec<(Hash, u64)>, expected: Vec<(Hash, u64)> },
     /// The split carries no running count for a stake it pays.
     NoCount { stake: u64 },
+}
+
+/// A deal's split whose number breaks the plan (rule 15a; QF4, decided 9
+/// October 2026, F190), as a reset of the tally chain does (F171).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NumberBreak {
+    /// It carries no number (split key 5).
+    Unnumbered,
+    /// Its number is carried by `with` too: other splits of the same
+    /// service under the same deal, any version or branch.
+    Repeated { number: u64, with: Vec<Hash> },
 }
 
 impl ChainBreak {
@@ -5235,6 +5364,17 @@ pub enum DealState {
     /// A tangled fork (F188, DQ1 to DQ4): the deal stays on its reference
     /// until one clean settlement; each branch's versions as held.
     Tangled { reference: Hash, why: &'static str, branches: Vec<Vec<Hash>> },
+}
+
+/// A settlement of a deal's fork, as `deal_state` weighs it (QF1, QF3).
+struct Settlement {
+    /// The settling version, or the judge's settlement (type 23).
+    act: Hash,
+    /// What it puts in force: the settling version, or the tip kept.
+    into: Hash,
+    /// What it saw: its history, and, for a judge's settlement, the
+    /// histories of the tips it names.
+    seen: BTreeSet<Hash>,
 }
 
 /// A deal standing forked (rule 45b, F186).
@@ -6993,20 +7133,25 @@ impl<'a> LawView<'a> {
         out
     }
 
-    /// A deal read from its founding terms `root` (rule 45b; F186 and F188,
-    /// decided 9 October 2026): followed one complete version at a time.
-    /// Where one version has two complete clones, neither descending from
-    /// the other, the deal is forked, the version before the split its
-    /// reference, until one clean settlement: a complete version on one
-    /// branch, its parent that branch's latest version, naming in field 26
-    /// the tip of the other branch and signed by the parties of both (DQ5),
-    /// or the settlement of the arbitrator the reference names, activated
-    /// by a party's request (DQ8). Settled, the chosen line is in force
-    /// from then on; a settling version naming a settlement is made after
-    /// it, and settles nothing (A3). Tangled shapes (DQ1 to DQ4) leave the
-    /// deal on its reference. What grows on the discarded branch past the
-    /// tip named, with nothing showing it came after, is not decided (QF1):
-    /// refused. Only complete versions of this deal are read (F189, 2).
+    /// A deal read from its founding terms `root` (rule 45b; F186, F188,
+    /// F190): followed one complete version at a time. Where one version
+    /// has two complete clones or more, the deal is forked, the version
+    /// before the split its reference, until one clean settlement: a
+    /// complete version naming in field 26 every tip it discards (QF3),
+    /// signed by the parties of all the branches involved (DQ5), or the
+    /// settlement of the judge of forks the reference names, activated by a
+    /// party's request (DQ8, QF2).
+    ///
+    /// **Clean**: every complete version of the fork is either in the
+    /// settlement's history (its parent's line, the tips it names and what
+    /// it cites) or made after it (citing it, or on the line it puts in
+    /// force). A version beyond the tips a settlement names, not citing it,
+    /// leaves it unclean: the deal is tangled, back on its reference (QF1);
+    /// a version citing it is plainly after it and changes nothing. The
+    /// first clean settlement holds; one made after it changes nothing
+    /// (A3). With no clean settlement, tangled shapes (DQ1 to DQ4, QF1)
+    /// leave the deal on its reference. Only complete versions of this deal
+    /// are read (F189, 2).
     pub fn deal_state(&self, root: &Hash) -> R<DealState> {
         let mut at = *root;
         loop {
@@ -7030,118 +7175,171 @@ impl<'a> LawView<'a> {
                 }
                 out
             };
-            let side = |x: &Hash| -> Option<usize> { up(x).last().and_then(|k| kids.iter().position(|j| j == k)) };
             let branches: Vec<Vec<Hash>> = kids
                 .iter()
                 .map(|k| below.keys().filter(|x| up(x).last() == Some(k)).copied().collect())
                 .collect();
-            // The settlements: (the act, the kept tip, the discarded tip,
-            // what comes into force).
-            let mut found: Vec<(Hash, Hash, Hash, Hash)> = vec![];
+            let tangled = |why: &'static str| Ok(DealState::Tangled { reference: at, why, branches: branches.clone() });
+            let hist = self.fork_histories(&below)?;
+            // Two versions on separate lines: neither descends from the other.
+            let apart = |a: &Hash, b: &Hash| a != b && !up(a).contains(b) && !up(b).contains(a);
+            let mut cands: Vec<Settlement> = vec![];
             for (x, par) in &below {
                 let t = self.terms(x)?;
-                let Some(o) = t.settles else { continue };
-                if self.v.get(&o).is_none() {
+                let Some(tips) = t.settles.as_ref() else { continue };
+                if let Some(o) = tips.iter().find(|o| self.v.get(o).is_none()) {
+                    let _ = o;
                     return Err(LawError::Unsettled(
-                        "a version settles a branch of a deal's fork this verifier does not hold: it holds that version before answering (F186)",
+                        "a version settles a tip of a deal's fork this verifier does not hold: it holds that version before answering (F186)",
                     ));
                 }
-                let (Some(i), Some(j)) = (side(par), side(&o)) else { continue };
-                if i == j || !below.contains_key(&o) {
+                if !tips.iter().all(|o| below.contains_key(o) && apart(o, par)) {
                     continue;
                 }
-                // DQ5: the parties of the discarded branch whose voice
+                // DQ5 (QF3): the parties of every tip discarded whose voice
                 // remains sign it too.
-                let lo = self.lineage(&o)?;
-                let mut lx = lo.clone();
-                lx.insert(0, (*x, t.clone()));
-                let need = self.deal_voices(x, &lx)?;
+                let mut need: Vec<Hash> = vec![];
+                for o in tips {
+                    let mut lx = self.lineage(o)?;
+                    lx.insert(0, (*x, t.clone()));
+                    for p in self.deal_voices(x, &lx)? {
+                        if !need.contains(&p) {
+                            need.push(p);
+                        }
+                    }
+                }
                 if self.signers(x, &need).len() < need.len() {
                     continue;
                 }
-                found.push((*x, *par, o, *x));
+                cands.push(Settlement { act: *x, into: *x, seen: hist.get(x).cloned().unwrap_or_default() });
             }
-            found.extend(self.arbitrated(&at, &kids, &below)?);
-            // A settlement naming a settlement, or a version after one, was
-            // made after it: growth on the discarded branch (A3).
-            let ids: Vec<Hash> = found.iter().map(|f| f.0).collect();
-            let after = |o: &Hash| up(o).iter().any(|y| ids.contains(y));
-            let real: Vec<&(Hash, Hash, Hash, Hash)> = found.iter().filter(|f| !after(&f.2)).collect();
-            let late: Vec<Hash> = found.iter().filter(|f| after(&f.2)).map(|f| f.0).collect();
-            let proven_after = |x: &Hash| up(x).iter().any(|y| late.contains(y));
-            let tangled = |why: &'static str| Ok(DealState::Tangled { reference: at, why, branches: branches.clone() });
+            for (act, kept, discarded) in self.arbitrated(&at, &below)? {
+                if !discarded.iter().all(|o| apart(o, &kept)) {
+                    continue;
+                }
+                let mut seen: BTreeSet<Hash> = BTreeSet::from([act]);
+                for y in std::iter::once(&kept).chain(&discarded) {
+                    seen.extend(hist.get(y).into_iter().flatten().copied());
+                }
+                cands.push(Settlement { act, into: kept, seen });
+            }
+            // After a settlement: it is in the version's history, or the
+            // version lies on the line it puts in force.
+            let after = |y: &Hash, c: &Settlement| hist.get(y).is_some_and(|h| h.contains(&c.act)) || up(y).contains(&c.into);
+            let clean = |c: &Settlement| below.keys().all(|y| c.seen.contains(y) || after(y, c));
+            let cleans: Vec<&Settlement> = cands.iter().filter(|c| clean(c)).collect();
+            let first: Vec<&&Settlement> = cleans
+                .iter()
+                .filter(|c| !cleans.iter().any(|o| o.act != c.act && (c.seen.contains(&o.act) || up(&c.into).contains(&o.into) && o.into != c.into)))
+                .collect();
+            match first.as_slice() {
+                [c, rest @ ..] if rest.iter().all(|o| o.into == c.into) => {
+                    at = c.into;
+                    continue;
+                }
+                [] => {}
+                _ => return tangled("two settlements of one fork, neither made after the other (DQ3)"),
+            }
             if kids.len() > 2 {
-                return tangled("three or more complete versions of one version (DQ2)");
+                return tangled("three or more complete versions of one version, not settled by one naming every tip (DQ2, QF3)");
             }
-            let forks_again = |x: &Hash, skip: &dyn Fn(&Hash) -> bool| {
-                below.iter().filter(|(y, p)| *p == x && !skip(y)).count() > 1
-            };
-            match real.as_slice() {
-                [] => {
-                    if below.keys().any(|x| forks_again(x, &|_| false)) {
-                        return tangled("a branch that splits again (DQ1)");
-                    }
-                    let lines = branches
-                        .iter()
-                        .map(|b| {
-                            let mut b = b.clone();
-                            b.sort_by_key(|x| std::cmp::Reverse(up(x).len()));
-                            b.reverse();
-                            b
-                        })
-                        .collect();
-                    return Ok(DealState::Forked { reference: at, branches: lines });
-                }
-                [(x, par, o, into)] => {
-                    let i = side(par).expect("a settlement's kept tip lies on a branch");
-                    let kept_path = up(par);
-                    let dead_path = up(o);
-                    // Past the settlement, on the kept side: its own line.
-                    let new_line = |y: &Hash| into != par && up(y).contains(into);
-                    for y in &branches[i] {
-                        if kept_path.contains(y) || new_line(y) || y == x || proven_after(y) {
-                            continue;
-                        }
-                        if into == par && up(y).contains(par) {
-                            continue;
-                        }
-                        return tangled("a settling version made from below its branch's latest version, or a branch that splits again (DQ1, DQ4)");
-                    }
-                    for y in &branches[1 - i] {
-                        if dead_path.contains(y) || proven_after(y) || late.contains(y) {
-                            continue;
-                        }
-                        return Err(LawError::Unsettled(
-                            "a complete version on the discarded branch past the tip the settlement names, with nothing showing it came after: F188 says the fork is then not settled, A3 that nothing on the discarded branch unsettles it (QF1, \"Open in this draft\")",
-                        ));
-                    }
-                    at = *into;
-                }
-                _ => return tangled("two settlements of one fork (DQ3)"),
+            match cands.len() {
+                0 => {}
+                1 => return tangled("a complete version beyond the tips a settlement names, not citing it (QF1), or a settlement made from below its branch's latest version (DQ4)"),
+                _ => return tangled("two settlements of one fork, neither clean (DQ3)"),
             }
+            let parents: Vec<&Hash> = below.values().filter(|p| **p != at).collect();
+            if parents.iter().enumerate().any(|(i, p)| parents[i + 1..].contains(p)) {
+                return tangled("a branch that splits again (DQ1)");
+            }
+            let lines = branches
+                .iter()
+                .map(|b| {
+                    let mut b = b.clone();
+                    b.sort_by_key(|x| up(x).len());
+                    b
+                })
+                .collect();
+            return Ok(DealState::Forked { reference: at, branches: lines });
         }
     }
 
-    /// The arbitrator's settlements of the fork at `at` (F188, DQ8).
-    /// The arbitrator's settlements of the fork at `at` (F188, DQ8): each
-    /// signed by the one arbitrator the reference names (field 13), naming
-    /// a request by a party who signed the reference, which names `at`; its
-    /// kept and discarded tips on the two branches. As (the act, the kept
-    /// tip, the discarded tip, the kept tip). Where the reference names
-    /// several arbitrators or verifiers, which one may settle is not
-    /// decided (QF2): none counts, and the deal stays on its reference.
-    fn arbitrated(&self, at: &Hash, kids: &[Hash], below: &BTreeMap<Hash, Hash>) -> R<Vec<(Hash, Hash, Hash, Hash)>> {
-        let t = self.terms(at)?;
-        let Some([arbitrator]) = t.arbitrators.as_deref() else { return Ok(vec![]) };
-        let side = |x: &Hash| -> Option<usize> {
+    /// What each complete version of a fork shows it was made after (QF1,
+    /// F190): itself, its parent's history, and each act it names in field
+    /// 26 or cites, with that act's history where it is a version of the
+    /// fork, or, for a judge's settlement (type 23), the histories of the
+    /// tips it names.
+    fn fork_histories(&self, below: &BTreeMap<Hash, Hash>) -> R<BTreeMap<Hash, BTreeSet<Hash>>> {
+        let mut out: BTreeMap<Hash, BTreeSet<Hash>> = BTreeMap::new();
+        let mut order: Vec<Hash> = below.keys().copied().collect();
+        // Parents and cited versions first: by depth below the fork, then
+        // again until nothing changes (citations may cross branches).
+        let depth = |x: &Hash| {
+            let mut n = 0usize;
             let mut y = *x;
             while let Some(p) = below.get(&y) {
-                if kids.contains(&y) {
-                    return kids.iter().position(|k| k == &y);
-                }
+                n += 1;
                 y = *p;
             }
-            None
+            n
+        };
+        order.sort_by_key(depth);
+        let mut direct: BTreeMap<Hash, Vec<Hash>> = BTreeMap::new();
+        for x in &order {
+            let h = self.held(x)?;
+            let t = self.terms(x)?;
+            let mut d: Vec<Hash> = below.get(x).copied().into_iter().collect();
+            d.extend(t.settles.iter().flatten().copied());
+            d.extend(deal_citations(&h.inside, &t));
+            // A judge's settlement cited: what it named, too.
+            for c in d.clone() {
+                if let Some(a) = self.v.get(&c) {
+                    if self.is_law(a, types::FORK_SETTLEMENT) {
+                        if let Ok(s) = ForkSettlement::decode(&a.inside) {
+                            d.push(s.kept);
+                            d.extend(s.discarded);
+                        }
+                    }
+                }
+            }
+            direct.insert(*x, d);
+        }
+        for x in &order {
+            out.insert(*x, BTreeSet::from([*x]));
+        }
+        loop {
+            let mut changed = false;
+            for x in &order {
+                let mut add: BTreeSet<Hash> = BTreeSet::new();
+                for c in &direct[x] {
+                    add.insert(*c);
+                    if let Some(hc) = out.get(c) {
+                        add.extend(hc.iter().copied());
+                    }
+                }
+                let e = out.get_mut(x).expect("each version has an entry");
+                let n = e.len();
+                e.extend(add);
+                changed |= e.len() != n;
+            }
+            if !changed {
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+    /// The judge's settlements of the fork at `at` (F188, DQ8), each signed
+    /// by the judge of forks the reference names (field 27, one of field
+    /// 13: QF2, decided 9 October 2026), naming a request by a party who
+    /// signed the reference, which names `at`; its kept tip and every tip it
+    /// discards (QF3), all versions of the fork. As (the act, the kept tip,
+    /// the tips discarded). Where the reference names no judge of forks,
+    /// none settles, and the deal waits on its reference (QF2).
+    fn arbitrated(&self, at: &Hash, below: &BTreeMap<Hash, Hash>) -> R<Vec<(Hash, Hash, Vec<Hash>)>> {
+        let t = self.terms(at)?;
+        let Some(arbitrator) = t.fork_judge.as_ref().filter(|j| t.arbitrators.iter().flatten().any(|a| a == *j)) else {
+            return Ok(vec![]);
         };
         let mut out = vec![];
         for h in self.v.signed_by(arbitrator) {
@@ -7158,9 +7356,8 @@ impl<'a> LawView<'a> {
             if r.reference != *at || !t.parties.contains(&asker) || self.signers(at, &[asker]).is_empty() {
                 continue;
             }
-            match (side(&s.kept), side(&s.discarded)) {
-                (Some(i), Some(j)) if i != j => out.push((h.id, s.kept, s.discarded, s.kept)),
-                _ => {}
+            if below.contains_key(&s.kept) && s.discarded.iter().all(|d| below.contains_key(d)) {
+                out.push((h.id, s.kept, s.discarded));
             }
         }
         Ok(out)
@@ -7568,11 +7765,84 @@ impl<'a> LawView<'a> {
             if let PurchaseVerdict::NoPurchase { why } = &e.verdict {
                 if why.contains("RB2") {
                     seen.push(key);
-                    out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken });
+                    // QF5 (decided 9 October 2026, F190): repaid like any
+                    // debt, by a payment naming what it repays.
+                    let mut names = vec![h.id];
+                    names.extend(self.same_payment(&h.id).into_iter().map(|(x, _)| x));
+                    let back = match &e.refund_to {
+                        crate::finance::RefundTo::Identity(to) => self.repaid(&names, to, &amount.unit),
+                        // A bare key's refund is paid where its claim says
+                        // (Finance rule 10a), by a payment no identity
+                        // receives: how that repayment is shown is not
+                        // written ("Open in this draft"). With no key, it is
+                        // unclaimable (rule 10a).
+                        _ => 0,
+                    };
+                    if back < amount.value {
+                        out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken });
+                    }
                 }
             }
         }
         Ok(out)
+    }
+
+    /// What has been paid back to `to` toward a payment owed back, by the
+    /// acts of that payment `owed` (QF5, decided 9 October 2026, F190):
+    /// repaid like any debt, by a payment naming what it repays, proven by
+    /// either side's record (double entry). A receipt `to` signs, or a
+    /// payer's claim, naming one of `owed` in field 5, paid to `to` in
+    /// `unit`, whose rail's proof the caller checked (`rail_valid`); a
+    /// claim counts only where its rail shows it paid to a payee pointer
+    /// or vault entry of `to`'s own. As for a debt, receipts are summed,
+    /// and a claim adds what no receipt for its proof covers.
+    fn repaid(&self, owed: &[Hash], to: &Hash, unit: &Hash) -> u64 {
+        use crate::finance::{PaidAt, Payload as Fin};
+        let to_own = |at: &PaidAt| match at {
+            PaidAt::Flow(p) => self.v.get(p).is_some_and(|x| {
+                x.act.outside.signer.as_ref() == Some(to)
+                    && x.inside.spec == self.mips.finance
+                    && matches!(Fin::decode(x.inside.type_, &x.inside.payload), Ok(Fin::PayeePointer(q)) if &q.payee == to)
+            }),
+            PaidAt::VaultEntry(act, _) => self.v.get(act).is_some_and(|x| x.act.outside.signer.as_ref() == Some(to)),
+        };
+        let mut receipts: Vec<(Vec<u8>, u64)> = vec![];
+        let mut claims: BTreeMap<Vec<u8>, u64> = BTreeMap::new();
+        for r in self.v.held_acts() {
+            if r.inside.spec != self.mips.finance || !self.rail_valid.contains_key(&r.id) {
+                continue;
+            }
+            match Fin::decode(r.inside.type_, &r.inside.payload) {
+                Ok(Fin::Receipt(rc))
+                    if owed.contains(&rc.fulfils)
+                        && &rc.payee == to
+                        && r.act.outside.signer.as_ref() == Some(to)
+                        && &rc.amount.unit == unit
+                        && self.valid(&r.id)
+                        && !self.receipt_overruled(&rc) =>
+                {
+                    receipts.push((rc.proof, rc.amount.value));
+                }
+                Ok(Fin::Claim(c))
+                    if owed.contains(&c.fulfils)
+                        && &c.payee == to
+                        && &c.amount.unit == unit
+                        && self.payers_claim(r)
+                        && self.rail_valid.get(&r.id).is_some_and(to_own)
+                        && !self.claim_overruled(&c) =>
+                {
+                    let m = claims.entry(c.proof).or_default();
+                    *m = (*m).max(c.amount.value);
+                }
+                _ => {}
+            }
+        }
+        let mut sum = receipts.iter().map(|(_, v)| *v).fold(0u64, u64::saturating_add);
+        for (proof, claimed) in claims {
+            let receipted = receipts.iter().filter(|(p, _)| p == &proof).map(|(_, v)| *v).fold(0u64, u64::saturating_add);
+            sum = sum.saturating_add(claimed.saturating_sub(receipted));
+        }
+        sum
     }
 
     /// The other receipts and claims of the same rail payment as `id` (one
@@ -8132,7 +8402,9 @@ impl<'a> LawView<'a> {
                             Some((true, Ok(Fin::Claim(x)))) => Role::RailModule(x.rail),
                             _ => Role::Other,
                         };
-                        self.v.get(&ev).is_some() && self.role_evidence(&ev, &role, &service, &payee)?
+                        self.v.get(&ev).is_some()
+                            && self.role_evidence(&ev, &role, &service, &payee)?
+                            && (!self.is_delivery_record(&ev) || self.delivery_acknowledged(&ev, &s.receipt))
                     }
                     _ => false,
                 };
@@ -8239,6 +8511,26 @@ impl<'a> LawView<'a> {
                 }
             }
         }
+        // QF4 (decided 9 October 2026, F190): a deal's split carries its
+        // number, one no other split of its service under the deal carries;
+        // otherwise it is a deviation that breaks the plan, as a reset of the
+        // tally chain is (rule 15a, F171). A gap is the holder's alarm only.
+        let numbering = match (t.is_collective(), h.act.outside.signer) {
+            (false, Some(service)) => match s.number {
+                None => Some(NumberBreak::Unnumbered),
+                Some(n) => {
+                    let with: Vec<Hash> = self
+                        .split_numbers(&service, &s.agreement)?
+                        .numbers
+                        .into_iter()
+                        .filter(|(m, x)| *m == n && x != id)
+                        .map(|(_, x)| x)
+                        .collect();
+                    (!with.is_empty()).then_some(NumberBreak::Repeated { number: n, with })
+                }
+            },
+            _ => None,
+        };
         Ok(SplitEval {
             id: *id,
             split: s,
@@ -8254,6 +8546,7 @@ impl<'a> LawView<'a> {
             turns_unknown,
             breaks,
             count_unknown,
+            numbering,
             cites: crate::finance::Citations::of(&h.inside).acts(),
         })
     }

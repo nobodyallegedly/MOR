@@ -109,6 +109,7 @@ fn label() -> Terms {
         forked_from: None,
         release_rule: None,
         settles: None,
+        fork_judge: None,
     }
 }
 
