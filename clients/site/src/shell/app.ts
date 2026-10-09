@@ -14,7 +14,7 @@ import { parseSiteSettings, type SiteSettings } from '../settings.ts';
 import { findLater } from '../latest.ts';
 import { matches, openVersion, type Version } from '../verify.ts';
 import { preparePage } from './page.ts';
-import { ACT_STYLE, bar, failingWords, verifiedWords, type BarState } from './view.ts';
+import { ACT_STYLE, bar, briefWords, failingWords, verifiedWords, type BarState } from './view.ts';
 
 const barEl = document.getElementById('mor-bar')!;
 const view = document.getElementById('mor-view')!;
@@ -23,6 +23,7 @@ const message = (err: unknown) => (err instanceof Error ? err.message : String(e
 const state: BarState = {
   phase: 'checking',
   words: 'Checking this page against what its owner signed…',
+  brief: null,
   settings: null,
   version: null,
   path: null,
@@ -40,6 +41,7 @@ function paint(): void {
 function fail(what: string, reasons: string[] = []): void {
   state.phase = 'bad';
   state.words = failingWords(what);
+  state.brief = null;
   state.reasons = reasons;
   view.innerHTML = '';
   paint();
@@ -195,6 +197,7 @@ async function main(): Promise<void> {
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
     state.phase = 'ok';
     state.words = verifiedWords(settings, 'page');
+    state.brief = briefWords(settings);
     paint();
     const frame = document.createElement('iframe');
     // No allow-scripts: nothing in the page can run (rule 11).
@@ -219,6 +222,7 @@ async function main(): Promise<void> {
   document.title = `${entry.path} · ${version.manifest!.name}`;
   state.phase = 'ok';
   state.words = verifiedWords(settings, kind === 'picture' ? 'picture' : 'file');
+  state.brief = briefWords(settings);
   paint();
   const box = document.createElement('div');
   box.className = 'file';

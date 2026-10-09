@@ -1,0 +1,172 @@
+{
+ "first-screen-chromium-upright-light": {
+  "screen": [
+   390,
+   844
+  ],
+  "photo": [
+   324,
+   324
+  ],
+  "bar": {
+   "top": 0,
+   "bottom": 63
+  },
+  "act": {
+   "top": 105,
+   "bottom": 603
+  },
+  "shortcuts": {
+   "top": 627,
+   "bottom": 704
+  },
+  "onePage": {
+   "top": 627,
+   "bottom": 692
+  },
+  "showerText": {
+   "top": 627,
+   "bottom": 692
+  },
+  "firstDoor": {
+   "top": 716,
+   "bottom": 837
+  }
+ },
+ "first-screen-chromium-upright-dark": {
+  "screen": [
+   390,
+   844
+  ],
+  "photo": [
+   324,
+   324
+  ],
+  "bar": {
+   "top": 0,
+   "bottom": 63
+  },
+  "act": {
+   "top": 105,
+   "bottom": 603
+  },
+  "shortcuts": {
+   "top": 627,
+   "bottom": 704
+  },
+  "onePage": {
+   "top": 627,
+   "bottom": 692
+  },
+  "showerText": {
+   "top": 627,
+   "bottom": 692
+  },
+  "firstDoor": {
+   "top": 716,
+   "bottom": 837
+  }
+ },
+ "first-screen-chromium-upright-safari-bars-light": {
+  "screen": [
+   390,
+   664
+  ],
+  "photo": [
+   324,
+   324
+  ],
+  "bar": {
+   "top": 0,
+   "bottom": 63
+  },
+  "act": {
+   "top": 105,
+   "bottom": 603
+  },
+  "shortcuts": {
+   "top": 627,
+   "bottom": 704
+  },
+  "onePage": {
+   "top": 627,
+   "bottom": 692
+  },
+  "showerText": {
+   "top": 627,
+   "bottom": 692
+  },
+  "firstDoor": {
+   "top": 716,
+   "bottom": 837
+  }
+ },
+ "first-screen-chromium-upright-safari-bars-dark": {
+  "screen": [
+   390,
+   664
+  ],
+  "photo": [
+   324,
+   324
+  ],
+  "bar": {
+   "top": 0,
+   "bottom": 63
+  },
+  "act": {
+   "top": 105,
+   "bottom": 603
+  },
+  "shortcuts": {
+   "top": 627,
+   "bottom": 704
+  },
+  "onePage": {
+   "top": 627,
+   "bottom": 692
+  },
+  "showerText": {
+   "top": 627,
+   "bottom": 692
+  },
+  "firstDoor": {
+   "top": 716,
+   "bottom": 837
+  }
+ },
+ "first-screen-chromium-sideways-light": {
+  "screen": [
+   844,
+   390
+  ],
+  "photo": [
+   654,
+   654
+  ],
+  "bar": {
+   "top": 0,
+   "bottom": 63
+  },
+  "act": {
+   "top": 105,
+   "bottom": 909
+  },
+  "shortcuts": {
+   "top": 933,
+   "bottom": 995
+  },
+  "onePage": {
+   "top": 933,
+   "bottom": 983
+  },
+  "showerText": {
+   "top": 933,
+   "bottom": 983
+  },
+  "firstDoor": {
+   "top": 1007,
+   "bottom": 1148
+  }
+ }
+}
