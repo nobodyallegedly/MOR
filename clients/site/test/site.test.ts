@@ -129,13 +129,13 @@ test('the dubsar.org site is published as a version of its owner, and every file
   assert.equal(v.manifest!.name, 'dubsar.org');
   assert.equal(v.manifest!.previous, null);
   const paths = v.manifest!.files.map((f) => f.path);
-  assert.deepEqual(paths, ['build.html', 'index.html', 'read.html', 'run.html', 'site.css', 'use.html']);
+  assert.deepEqual(paths, ['build.html', 'icon.jpg', 'index.html', 'read.html', 'run.html', 'site.css', 'tablet-dark.jpg', 'tablet-light.jpg', 'use.html']);
   for (const f of v.manifest!.files) {
     const b = await fetchFile(f, v.places);
     assert.ok(b, f.path);
     assert.deepEqual(b, new Uint8Array(readFileSync(join(w.dir, f.path))));
   }
-  assert.equal(w.site.uploaded, 6);
+  assert.equal(w.site.uploaded, 9);
 });
 
 test('a new version names the one before, uploads only what changed; the old one still verifies', async () => {
@@ -371,7 +371,7 @@ test('the display client a gateway serves by default is the copy published in th
 test('from the command line, with no gateway: verify a version and write its files out', async () => {
   const out = mkdtempSync(join(tmpdir(), 'mor-site-out-'));
   const r = await run('node', ['--import', 'tsx', 'src/cli.ts', 'verify', w.site.id, '--identity', w.owner.id, '--at', w.relay.base, '--out', out], { cwd: here });
-  assert.match(r.stdout, /VERIFIED: the site "dubsar.org", 6 files/);
+  assert.match(r.stdout, /VERIFIED: the site "dubsar.org", 9 files/);
   for (const p of ['index.html', 'run.html', 'site.css']) assert.deepEqual(readFileSync(join(out, p)), readFileSync(join(w.dir, p)));
   await assert.rejects(
     run('node', ['--import', 'tsx', 'src/cli.ts', 'verify', w.site.id, '--identity', 'ab'.repeat(32), '--at', w.relay.base], { cwd: here }),

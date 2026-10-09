@@ -15,6 +15,8 @@ export interface Prepared {
   title: string | null;
   /** The acts the page shows, in order. */
   acts: string[];
+  /** The checked bytes of the picture the page names as its icon, for the browser tab (rule 16a). */
+  icon: Uint8Array | null;
   /** Files the page uses whose bytes did not match: the page is then not shown. */
   problems: string[];
   /** How many things were dropped (code, references to elsewhere or to files the site does not hold). */
@@ -43,7 +45,7 @@ export async function preparePage(
 ): Promise<Prepared> {
   const doc = new DOMParser().parseFromString(new TextDecoder('utf-8', { fatal: true }).decode(bytes), 'text/html');
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out: Prepared = { html: '', title: null, acts: [], problems: [], dropped: 0 };
+  const out: Prepared = { html: '', title: null, acts: [], icon: null, problems: [], dropped: 0 };
   const drop = (el: Element) => {
     el.remove();
     out.dropped++;
@@ -88,9 +90,18 @@ export async function preparePage(
     else drop(img);
   }
 
-  // Stylesheets: only the site's own, checked, reaching nothing else.
+  // Stylesheets: only the site's own, checked, reaching nothing else. The icon:
+  // the first link naming one of the site's pictures, kept as checked bytes for
+  // the browser tab; the link itself leaves the page (rule 16a).
   for (const link of [...doc.querySelectorAll('link')]) {
     const rel = (link.getAttribute('rel') ?? '').toLowerCase().split(/\s+/);
+    if (rel.includes('icon') && !rel.includes('stylesheet')) {
+      const p = resolveRef(path, link.getAttribute('href') ?? '');
+      const entry = p ? byPath.get(p) : undefined;
+      drop(link);
+      if (entry && kindOf(entry.path) === 'picture' && !out.icon) out.icon = await checked(entry);
+      continue;
+    }
     const p = rel.includes('stylesheet') ? resolveRef(path, link.getAttribute('href') ?? '') : null;
     const entry = p ? byPath.get(p) : undefined;
     if (!entry || kindOf(entry.path) !== 'stylesheet') {

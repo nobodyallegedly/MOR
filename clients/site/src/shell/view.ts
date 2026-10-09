@@ -8,12 +8,17 @@ import { fingerprint, standingWords } from '../../../reader/src/read.ts';
 import type { SiteSettings } from '../settings.ts';
 import type { Version } from '../verify.ts';
 
-/** The display client's own page: the bar on top, the file below. */
+/**
+ * The display client's own page: the bar on top, the file below. The page's
+ * frame is as tall as the page (app.ts), so the browser's own scrolling is the
+ * only one: no box scrolls inside the page (layout decided by Nobody,
+ * allegedly, 7 October 2026). Frames are `width:1px;min-width:100%`, since
+ * Safari on phones otherwise widens a frame to its content.
+ */
 export const STYLE = `:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 22%,transparent);--soft:color-mix(in srgb,CanvasText 70%,Canvas);--ok:#1a7f37;--bad:#b3261e;--bar:color-mix(in srgb,CanvasText 6%,Canvas)}
 @media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
 *{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;display:flex;flex-direction:column;background:Canvas;color:CanvasText;font:15px/1.45 system-ui,sans-serif}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:Canvas;color:CanvasText;font:15px/1.45 system-ui,sans-serif}
 #mor-bar{flex:none;padding:8px 16px;border-bottom:2px solid var(--line);background:var(--bar);max-height:60vh;overflow:auto}
 #mor-bar.ok{border-bottom-color:var(--ok)}
 #mor-bar.bad{border-bottom-color:var(--bad)}
@@ -30,23 +35,24 @@ body{margin:0;display:flex;flex-direction:column;background:Canvas;color:CanvasT
 code,.fp{font-family:ui-monospace,Menlo,monospace;font-size:.92em;overflow-wrap:anywhere}
 .ok-word{color:var(--ok);font-weight:600}
 .bad-word{color:var(--bad);font-weight:600}
-#mor-view{flex:1;min-height:0;display:flex}
-#mor-view>iframe{flex:1;width:100%;border:0;background:Canvas}
-#mor-view>.file{flex:1;overflow:auto;padding:16px}
+#mor-view{flex:1}
+#mor-view>iframe{display:block;width:1px;min-width:100%;height:calc(100vh - 4em);border:0;background:Canvas}
+#mor-view>.file{padding:16px}
 #mor-view img{max-width:100%;height:auto;image-orientation:from-image}
 #mor-view pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,Menlo,monospace}
 .note{max-width:42em;margin:24px auto;padding:10px 12px;border-left:3px solid var(--bad)}`;
 
 /** Put first in every page's frame: the boxes where acts are shown, and links that leave the site. */
 export const FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
-.mor-act>iframe{display:block;width:100%;border:0;min-height:4em}
+.mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 
-/** Inside an act's own frame: the post as the reader shows it. */
+/** Inside an act's own frame: the post as the reader shows it, its picture scaled to the frame's width, whole. */
 export const ACT_STYLE = `${POST_STYLE}
 :root{color-scheme:light dark}
 body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 Georgia,'Times New Roman',serif}
-.mor-post{margin:0}`;
+.mor-post{margin:0}
+.mor-post img{width:100%}`;
 
 export interface ActLine {
   id: string;

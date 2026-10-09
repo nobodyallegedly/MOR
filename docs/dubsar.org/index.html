@@ -5,31 +5,40 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>dubsar.org</title>
 <link rel="stylesheet" href="site.css">
+<!-- The browser-tab icon: the KI sign cut in clay, as a JPEG (website cMIP draft 3, rule 16a; drawn from
+     docs/marks/ki-icon.svg by clients/site/scripts/marks.ts). -->
+<link rel="icon" href="icon.jpg">
 </head>
 <body>
 <main>
-<!-- The first act, up front (case study 21): "Thank you for the shower…" with the photograph of the Earth.
-     It is shown as the act itself, fetched and checked by the gateway's display client, not copied here.
-     Its id exists only at step 17. Until then, replace FIRST-ACT with a test post's id before publishing. -->
+<!-- The first act, up front (case study 21): "Thank you for the shower…" with the photograph of the Earth,
+     scaled to the page's width, whole. It is shown as the act itself, fetched and checked by the gateway's
+     display client, not copied here. Its id exists only at step 17. Until then, replace FIRST-ACT with a test
+     post's id before publishing. Nothing goes under it (Nobody, allegedly, 7 October 2026). -->
 <section class="first-act"><mor-act act="FIRST-ACT"></mor-act></section>
 
-<p class="placeholder">Placeholder, for Nobody, allegedly, to write: a line under the first act, or nothing.</p>
-
-<!-- MOR in one page, a clear button up front (asked for by Nobody, allegedly, 4 October 2026). It leads to the
-     document's act in the reader, published at step 17. Until then, ONE-PAGE is a placeholder: replace it with
-     the act's id (64 hex digits) before publishing; the reader says the link is not valid while it stays. -->
-<p class="one-page"><a class="button" href="https://reader.dubsar.org/#ONE-PAGE">MOR in one page</a></p>
+<!-- Two shortcuts before the sections (Nobody, allegedly, 7 October 2026). Each leads to its document's act in
+     the reader, published at step 17. Until then ONE-PAGE and SHOWER-TEXT are placeholders: replace each with the
+     act's id (64 hex digits) before publishing; the reader says the link is not valid while it stays. -->
+<p class="shortcuts">
+<a class="button" id="one-page" href="https://reader.dubsar.org/#ONE-PAGE">MOR in one page</a>
+<a class="button" id="shower-text" href="https://reader.dubsar.org/#SHOWER-TEXT">Thank you for the shower</a>
+</p>
 
 <nav class="doors">
-<a href="read.html"><span class="door">Read</span><span class="what">Placeholder: what is behind this door, in a few words.</span></a>
-<a href="build.html"><span class="door">Build</span><span class="what">Placeholder: what is behind this door, in a few words.</span></a>
-<a href="run.html"><span class="door">Run</span><span class="what">Placeholder: what is behind this door, in a few words.</span></a>
-<a href="use.html"><span class="door">Use</span><span class="what">Placeholder: what is behind this door, in a few words.</span></a>
+<a href="read.html"><span class="door">Read</span><span class="what">Every document that is not technical: what MOR is, and what it could be.</span></a>
+<a href="build.html"><span class="door">Build</span><span class="what">Every technical document: the protocol, why each rule exists, how it is tested, and the code.</span></a>
+<a href="run.html"><span class="door">Run</span><span class="what">Relays, and the tools to run them.</span></a>
+<a href="use.html"><span class="door">Use</span><span class="what">The clients: the programs for using MOR.</span></a>
 </nav>
 </main>
 <footer>
-<p class="placeholder">Placeholder, for Nobody, allegedly, to write: the footnote about the scribe.</p>
-<p>Reach him: by email, <span class="placeholder">Placeholder: the address (the dubsar.org one for the release)</span>; or over MOR, sealed in your browser, through the reader: <a href="https://reader.dubsar.org/">https://reader.dubsar.org/</a></p>
+<p><a href="mailto:nobodyallegedly@dubsar.org">nobodyallegedly@dubsar.org</a></p>
+<p><a href="https://reader.dubsar.org/">A sealed message, through the reader</a></p>
+<!-- The clay tablet, "scribe of Enki" (dub-sar {d}en-ki-ka), the very last thing on the page. A JPEG cannot be
+     see-through, so it is drawn twice, on the page's light and dark colours, and the stylesheet shows one. -->
+<img class="tablet light" src="tablet-light.jpg" alt="A clay tablet inscribed in cuneiform: dub-sar den-ki-ka, scribe of Enki">
+<img class="tablet dark" src="tablet-dark.jpg" alt="A clay tablet inscribed in cuneiform: dub-sar den-ki-ka, scribe of Enki">
 </footer>
 </body>
 </html>
