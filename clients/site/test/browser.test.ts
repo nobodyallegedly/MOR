@@ -152,7 +152,8 @@ test('a fresh browser shows each page of the site as verified, and signed by the
   ];
   for (const [address, title, name] of pages) {
     const { page, ctx, problems, elsewhere, sandbox } = await open(base + address);
-    assert.match((await standing(page))!, /^Verified: this page is exactly what was signed by the identity this gateway names as Nobody, allegedly\. Checked in this browser\./, address);
+    const why = (await page.locator('#mor-reasons').count()) ? await page.textContent('#mor-reasons') : '';
+    assert.match((await standing(page))!, /^Verified: this page is exactly what was signed by the identity this gateway names as Nobody, allegedly\. Checked in this browser\./, `${address}: ${why} ${problems.join(' ')}`);
     assert.equal(await fp(page), w.owner.id, `${address}: the whole fingerprint of the signer`);
     assert.equal(await page.textContent('#mor-version'), w.site.id);
     assert.equal(await page.title(), title);
