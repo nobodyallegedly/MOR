@@ -6,7 +6,7 @@ They are not part of the core. The core document and the six MIPs in `spec/` def
 
 - [Augmented Democracy](04-MOR-case-study-augmented-democracy-v4.md): points instead of candidates, from a neighbourhood association to a binding commune budget.
 - [From Bedroom to Label](08-MOR-case-study-musician-to-label-v3.md): a musician from stems and remixes to a band and a label deal.
-- [From Cat Video to Coproduction](09-MOR-case-study-cat-video-to-coproduction-v3.md): a video creator from tips to an ad-supported platform and a streaming coproduction.
+- [From Cat Video to Coproduction](09-MOR-case-study-cat-video-to-coproduction-v4.md): a video creator from tips to an ad-supported platform and a streaming coproduction.
 - [Migration to MOR 2](10-MOR-case-study-migration-to-MOR2-v3.md): the right of exit at its largest, crossing to a successor protocol, including after a cryptographic break.
 - [From Local Question to World Story](11-MOR-case-study-journalism-v2.md): a local journalist from a funded question to a world story, with every asset credited, every check signed and every correction shown. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
 - [One Reputation, Many Trades](12-MOR-case-study-gig-economy-v3.md): the gig economy as job, settlement and rating, with a reputation that belongs to the worker.
@@ -19,7 +19,7 @@ They are not part of the core. The core document and the six MIPs in `spec/` def
 - [Paying the Ones Everything Stands On](19-MOR-case-study-software-v3.md): open-source maintainers paid through dependency lineage, targets and bounties.
 - [From Agents to Open Intelligence](20-MOR-case-study-ai-v2.md): AI agents under grants, then AI itself made by many, with data on stated terms, a market for compute and training collectives. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
 
-Each latest draft is the previous one with the technical pass of 9 October 2026 applied and nothing else changed (`../technical-pass-2026-10-09.md`; what was applied, per document, in `../technical-pass-applied-2026-10-09.md`). Older drafts stay beside them.
+Each latest draft is the previous one with the technical pass of 9 October 2026 applied and nothing else changed, except where the author has since redrafted it (09, draft 4) (`../technical-pass-2026-10-09.md`; what was applied, per document, in `../technical-pass-applied-2026-10-09.md`). Older drafts stay beside them.
 
 Companion documents are in [`../companions/`](../companions/README.md).
 
