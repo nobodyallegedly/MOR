@@ -11,7 +11,7 @@ They are not part of the core. The core document and the six MIPs in `spec/` def
 - [From Local Question to World Story](11-MOR-case-study-journalism-v2.md): a local journalist from a funded question to a world story, with every asset credited, every check signed and every correction shown. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
 - [One Reputation, Many Trades](12-MOR-case-study-gig-economy-v4.md): the gig economy as job, settlement and rating, with a reputation that belongs to the worker.
 - [From Pocket Game to Open Market](13-MOR-case-study-gaming-v3.md): a game developer from a mobile game to a studio, a store dispute, an open market and a console release. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
-- [Shown, Not Listed](14-MOR-case-study-learning-and-work-v2.md): accreditation computed from signed evidence, and profiles that show what people can do. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
+- [Shown, Not Listed](14-MOR-case-study-learning-and-work-v3.md): accreditation computed from signed evidence, and profiles that show what people can do. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
 - [Paid for Results, Seen for What It Is](15-MOR-case-study-advertising-v3.md): advertising paid on real sales, and attention deals made legible.
 - [No Firm Required](16-MOR-case-study-commerce-v2.md): an open marketplace and logistics network with no owner, Coase revisited. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
 - [From the Stands to the Main League](17-MOR-case-study-live-sports-v3.md): live streaming, from a phone in the stands to co-streaming a main league.
@@ -19,7 +19,7 @@ They are not part of the core. The core document and the six MIPs in `spec/` def
 - [Paying the Ones Everything Stands On](19-MOR-case-study-software-v3.md): open-source maintainers paid through dependency lineage, targets and bounties.
 - [From Agents to Open Intelligence](20-MOR-case-study-ai-v2.md): AI agents under grants, then AI itself made by many, with data on stated terms, a market for compute and training collectives. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
 
-Each latest draft is the previous one with the technical pass of 9 October 2026 applied and nothing else changed, except where the author has since redrafted it (09 and 12, draft 4; 13, draft 3) (`../technical-pass-2026-10-09.md`; what was applied, per document, in `../technical-pass-applied-2026-10-09.md`). Older drafts stay beside them.
+Each latest draft is the previous one with the technical pass of 9 October 2026 applied and nothing else changed, except where the author has since redrafted it (09 and 12, draft 4; 13 and 14, draft 3) (`../technical-pass-2026-10-09.md`; what was applied, per document, in `../technical-pass-applied-2026-10-09.md`). Older drafts stay beside them.
 
 Companion documents are in [`../companions/`](../companions/README.md).
 
