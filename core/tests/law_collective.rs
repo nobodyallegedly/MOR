@@ -7883,3 +7883,29 @@ fn a_purchase_following_either_branch_counts() {
     assert_eq!(v.version_in_force(&deal).unwrap(), deal, "forked: the reference");
     assert_eq!(v.purchase(&ra).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
 }
+
+/// F187 (3) and RB3, readings for clients: the resignations the parties
+/// published, registered or not (during a broken stretch, from the
+/// agreement in force just before the broken act), and the declarations
+/// naming a party, which its client shows it.
+#[test]
+fn published_resignations_and_declarations_naming_a_party() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let ids = lab.ids();
+    let (_, _, res_b, _) = break_by_lost_record(&mut lab);
+    let mut cy = lab.m[CY].clone();
+    let res_c = lab.resign_from(&mut cy, f, None);
+    let v = lab.view();
+    let got: Vec<(Hash, Hash)> = v.published_resignations(&col).unwrap().iter().map(|d| (d.act, d.party)).collect();
+    assert_eq!(sorted(got.iter().map(|x| x.0).collect()), sorted(vec![res_b, res_c]));
+    assert!(got.contains(&(res_c, ids[CY])));
+    assert!(v.declarations_naming(&ids[ANA]).is_empty());
+    drop(v);
+    let d = lab.declare(None, f, f, ANA, vec![outcomes::VOICE_REMOVED]);
+    let v = lab.view();
+    let named = v.declarations_naming(&ids[ANA]);
+    assert_eq!(named.len(), 1);
+    assert_eq!((named[0].0, named[0].1, named[0].2.party), (d, lab.authority.id, ids[ANA]));
+}

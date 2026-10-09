@@ -1465,6 +1465,59 @@ impl<'a> LawView<'a> {
         self.rollback_departures(&col, None, &b.before, registers)
     }
 
+    /// The resignations the parties of a collective's agreement have
+    /// published, registered or not (rule 37a; F187, 3): each a valid
+    /// resignation of the whole voice (type 16, no area) by a party of the
+    /// agreement in force, or, during a broken stretch, of the agreement in
+    /// force just before the broken act, naming it or an agreement it
+    /// descends from. Law counts a resignation only once a line registers
+    /// it; a client reads these too, so that the last voice is warned when
+    /// the others resigned from other devices. Empty where the collective
+    /// has no agreement Law can name.
+    pub fn published_resignations(&self, collective: &Hash) -> R<Vec<Departure>> {
+        let ag = match self.broken_act(collective)? {
+            Some(b) => b.before,
+            None => match self.current(collective) {
+                Ok(Some(c)) => c.agreement,
+                _ => return Ok(vec![]),
+            },
+        };
+        let t = self.terms(&ag)?;
+        let lineage: Vec<Hash> = self.lineage(&ag)?.into_iter().map(|(i, _)| i).collect();
+        let mut out = vec![];
+        for p in &t.parties {
+            for h in self.v.signed_by(p) {
+                if !self.is_law(h, types::RESIGNATION) || !self.valid(&h.id) {
+                    continue;
+                }
+                let Ok(r) = Resignation::decode(&h.inside) else { continue };
+                if r.area.is_none() && lineage.contains(&r.agreement) {
+                    out.push(Departure { act: h.id, party: *p, kind: DepartureKind::Resigned { agreement: r.agreement } });
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// The declarations of absence naming `party` that this verifier holds
+    /// (type 13, rule 51), valid under Identity, each with its signer, as
+    /// held: client conformance (RB3, decided 9 October 2026): a
+    /// declaration naming a party MUST always be shown to that party, broken
+    /// collective or not, with the way to contest it (rule 52).
+    pub fn declarations_naming(&self, party: &Hash) -> Vec<(Hash, Hash, AbsenceDeclaration)> {
+        let mut out = vec![];
+        for h in self.v.held_acts() {
+            if !self.is_law(h, types::DECLARATION) || !self.valid(&h.id) {
+                continue;
+            }
+            let Ok(d) = AbsenceDeclaration::decode(&h.inside) else { continue };
+            if &d.party == party {
+                out.push((h.id, h.act.outside.signer.unwrap_or_default(), d));
+            }
+        }
+        out
+    }
+
     /// The broken stretches of a collective's chain (rule 37d): each broken
     /// act's link, and the link of the rollback that ended it, if any.
     fn stretches(&self, col: &Col) -> R<Vec<(usize, Option<usize>)>> {
