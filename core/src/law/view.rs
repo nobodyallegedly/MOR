@@ -5039,6 +5039,21 @@ pub struct PurchaseEval {
     pub refund_to: crate::finance::RefundTo,
 }
 
+/// A payment a collective received during a broken stretch, owed back to
+/// its payer until the sale is signed anew after the rollback (rule 37d,
+/// RB2): a visible open obligation.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OwedBack {
+    /// The receipt or claim of the payment, as held.
+    pub payment: Hash,
+    /// Who it is owed back to (Finance rule 10a).
+    pub to: crate::finance::RefundTo,
+    /// Its amount.
+    pub amount: crate::finance::Amount,
+    /// Whether the collective is still broken (no rollback yet).
+    pub still_broken: bool,
+}
+
 /// The constitutional change rule, counted among the voices that remain
 /// (rule 44d), met by these signers.
 fn constitution_met(t: &Terms, voices: &[Hash], signed: &[Hash]) -> bool {
@@ -6744,6 +6759,21 @@ impl<'a> LawView<'a> {
         }
         let current = self.claim_line(&p.agreement, work.as_ref())?;
         let sellers = self.sellers(&p, work.as_ref())?;
+        // RB2 (decided 9 October 2026): a payment a collective seller
+        // received during a broken stretch is no purchase, owed back to the
+        // payer, unless the sale is signed anew after the rollback: a receipt
+        // of the collective for the same payment that counts. An
+        // acknowledgement adopting the stretch's receipt is not signing anew.
+        for c in &sellers {
+            if let Some(anew) = self.received_in_stretch(id, c)? {
+                if !anew {
+                    return no(
+                        e,
+                        "received while the collective that sells it was broken: no purchase, owed back to the payer unless the sale is signed anew after the rollback (rule 37d, RB2)",
+                    );
+                }
+            }
+        }
         if !self.push_rails.contains(&rail) {
             // W4 (F128), request rails: the claim the payment names is the
             // one the seller's request committed to, so a buyer cannot pay a
@@ -6821,6 +6851,84 @@ impl<'a> LawView<'a> {
             e.verdict = PurchaseVerdict::Unrecorded;
         }
         Ok(Some(e))
+    }
+
+    /// Where collective `c` received the payment `id` during a broken
+    /// stretch (rule 37d, RB2): its receipt for it, by its own key or a grant
+    /// key of its, the payment itself or one carrying the same rail proof,
+    /// lies in a stretch. `Some(true)` where a receipt of `c` for the same
+    /// payment counts, signed anew after the rollback; `Some(false)` where
+    /// none does; `None` where `c` received it in no stretch.
+    fn received_in_stretch(&self, id: &Hash, c: &Hash) -> R<Option<bool>> {
+        use crate::finance::Payload as Fin;
+        let col = self.col(c);
+        if !(0..col.res.links.len()).any(|k| self.declares(&col, k)) {
+            return Ok(None);
+        }
+        let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
+            _ => None,
+        };
+        let Some(x) = self.v.get(id) else { return Ok(None) };
+        let mine = proof(x);
+        let receipts: Vec<&Held> = self
+            .v
+            .signed_by(c)
+            .filter(|h| {
+                h.inside.spec == self.mips.finance
+                    && h.inside.type_ == crate::finance::types::RECEIPT
+                    && self.valid(&h.id)
+                    && !self.rail_invalid.contains(&h.id)
+                    && (h.id == *id || mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m)))
+            })
+            .collect();
+        let mut stretch = false;
+        let mut anew = false;
+        for h in receipts {
+            let in_stretch = match col.pos(h) {
+                Some(k) => self.base(&col, k)?.is_err() && (0..=k).any(|j| self.declares(&col, j)),
+                None => self.in_a_stretch(&col, h)?.is_some(),
+            };
+            if in_stretch {
+                stretch = true;
+            } else if self.consent(&h.id)?.counts() {
+                anew = true;
+            }
+        }
+        Ok(stretch.then_some(anew))
+    }
+
+    /// The payments a collective received during a broken stretch and owes
+    /// back, the sale not signed anew after the rollback (rule 37d, RB2): a
+    /// visible open obligation, one entry per payment (its first receipt or
+    /// claim held). The network records and shows the debt; it cannot force
+    /// a payment back.
+    pub fn owed_back(&self, collective: &Hash) -> R<Vec<OwedBack>> {
+        use crate::finance::Payload as Fin;
+        let col = self.col(collective);
+        let still_broken = self.broken(collective)?.is_some();
+        let mut out = vec![];
+        let mut seen: Vec<(Hash, Vec<u8>)> = vec![];
+        let held: Vec<&Held> = self.v.held_acts().filter(|h| h.inside.spec == self.mips.finance).collect();
+        for h in held {
+            let (payee, amount, key) = match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::Receipt(r)) => (r.payee, r.amount, (r.rail, r.proof)),
+                Ok(Fin::Claim(r)) => (r.payee, r.amount, (r.rail, r.proof)),
+                _ => continue,
+            };
+            if payee != col.id || (!key.1.is_empty() && seen.contains(&key)) {
+                continue;
+            }
+            let Some(e) = self.purchase(&h.id)? else { continue };
+            if let PurchaseVerdict::NoPurchase { why } = &e.verdict {
+                if why.contains("RB2") {
+                    seen.push(key);
+                    out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken });
+                }
+            }
+        }
+        Ok(out)
     }
 
     /// The other receipts and claims of the same rail payment as `id` (one
