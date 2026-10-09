@@ -60,6 +60,9 @@ test('a payment naming a version on another branch, or an older one, raises the 
   const older = await sellerAlarm(ana.id, await pay(fan, ana.id, d, d, 'two'), relays);
   assert.equal(older?.kind, 'older');
   assert.match(older!.words.join(' '), /an older version than .*, the version this identity holds/);
+  // F188, DQ7: an older version raises a plain notice; the alarm is kept for forks.
+  assert.match(older!.words[0], /^NOTICE/);
+  assert.doesNotMatch(older!.words.join(' '), /ALARM/);
   // Ben's device, out of step, makes 3B; both sign it: a fork.
   const b = await version(ben, '3B: the price is 120.', d);
   const forked = await sellerAlarm(ana.id, await pay(fan, ana.id, d, b, 'three'), relays);
@@ -75,4 +78,29 @@ test('a payment naming a version on another branch, or an older one, raises the 
   // A payment still naming 3B now names a version that does not descend from the one held.
   const late = await sellerAlarm(ana.id, await pay(fan, ana.id, d, b, 'five'), relays);
   assert.equal(late?.kind, 'fork');
+});
+
+// F189 (3), decided 9 October 2026: a payment naming a version the seller
+// does not hold raises the alarm: an unknown version is the hidden fork the
+// alarm exists for.
+test('a payment naming a version the seller has never seen raises the alarm', async () => {
+  const [ana, ben, fan] = [await person(), await person(), await person()];
+  const parties = [ana.id, ben.id];
+  const relays = [relay.base];
+  const version = async (text: string, parent?: string) => {
+    const p = await proposePayload(ana, dealPayload({ parties, text, parent }), parent, relays);
+    await sign(ana, p.id, relays);
+    await sign(ben, p.id, relays);
+    return p.id;
+  };
+  const d = await version('Ana and Ben sell a song.');
+  const a = await version('3A: the price is 100.', d);
+  // 3B, signed on Ben's device, published nowhere Ana looks.
+  const hidden = 'b3'.repeat(32);
+  const got = await sellerAlarm(ana.id, await pay(fan, ana.id, d, hidden, 'unseen'), relays);
+  assert.equal(got?.kind, 'unheld');
+  const w = got!.words.join(' ');
+  assert.match(w, /^ALARM/);
+  assert.match(w, /never seen/);
+  assert.match(w, new RegExp(a.slice(0, 8)));
 });

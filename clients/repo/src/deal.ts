@@ -16,7 +16,8 @@ import { LAW_TYPES, REPO_SPECS } from './specs.ts';
  * every party), or a clone of `parent` marked with the clone rule and every
  * party whose voice remains (rule 45b). A clone settling a fork of two
  * complete versions names, beside its one parent, the other branch's
- * latest version it settles (field 26, F186).
+ * latest version it settles (field 26, F186), and is signed by the parties
+ * of both branches (F188, DQ5).
  */
 export function dealPayload(t: { parties: string[]; text: string; parent?: string; settles?: string }): Uint8Array {
   const m = new Map<number, unknown>([
@@ -33,10 +34,15 @@ export function dealPayload(t: { parties: string[]; text: string; parent?: strin
   return cborEncode(m);
 }
 
-/** What a seller's client says when it raises the alarm (F186). */
+/** What a seller's client says when it raises the alarm (F186) or a notice (F188, DQ7). */
 export interface SellerAlarm {
-  /** "fork": the deal stands forked, or the payment follows another branch; "older": it names an older version. */
-  kind: 'fork' | 'older';
+  /**
+   * "fork": the deal stands forked, or the payment follows another branch;
+   * "unheld": it names a version this identity has never seen, the hidden
+   * fork the alarm exists for (F189, 3); "older": it names an older
+   * version, a plain notice, not the alarm (F188, DQ7).
+   */
+  kind: 'fork' | 'unheld' | 'older';
   /** The version the payment names, and the version this identity holds. */
   named: string;
   held: string | null;
@@ -66,7 +72,8 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
   }
   if (d.spec !== MIPS.finance || (d.type !== 2 && d.type !== 3) || !d.payload) return null;
   const claim = (cborDecode(d.payload) as Map<number, unknown>).get(9);
-  if (!Array.isArray(claim) || !(claim[1] instanceof Uint8Array)) return null;
+  if (!Array.isArray(claim) || !(claim[0] instanceof Uint8Array) || !(claim[1] instanceof Uint8Array)) return null;
+  const agreement = hex(claim[0]);
   const named = hex(claim[1]);
   const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
   const add = (a: Uint8Array) => {
@@ -113,6 +120,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
   await look(me);
   add(payment);
   await fetchLine(named);
+  await fetchLine(agreement);
   // The versions `me` signed: its own signature acts, and what they name.
   for (const a of await allBy(me, hints, via)) {
     add(a);
@@ -145,11 +153,28 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
     for (let y: string | null = x; y; y = ag(y)?.parent ?? null) out.push(y);
     return out;
   };
-  const root = lineage(named).at(-1);
+  // F189 (3): a version this identity has never seen, of the deal the
+  // payment names, is the hidden fork the alarm exists for.
   const a0 = ag(named);
-  if (!a0 || a0.collective) return null;
+  const root = (a0 ? lineage(named) : lineage(agreement)).at(-1);
+  const top = root ? ag(root) : null;
+  if (!top || top.collective) return null;
+  // The latest version of this deal `me` signed that exists.
+  const mine = [...fetched].filter((x) => lineage(x).at(-1) === root && ag(x)?.exists === true && ag(x)!.signed.includes(me));
+  const held = mine.sort((a, b) => lineage(b).length - lineage(a).length)[0] ?? null;
+  if (!a0) {
+    return {
+      kind: 'unheld',
+      named,
+      held,
+      words: [
+        `ALARM (Law rule 45b, F189): this payment names version ${short(named)} of the deal, a version this identity has never seen${held ? `; the version it holds is ${short(held)}` : ''}.`,
+        'Every party may have signed a version this identity was never shown: the deal may have a branch hidden from it. Fetch that version from the payer\'s relays, and look at the whole deal with every party before relying on it.',
+      ],
+    };
+  }
   // The deal stands forked, as the relays show it: the fork itself.
-  type Fork = { reference: string; branches: string[][] };
+  type Fork = { reference: string; branches: string[][]; tangled: string | null };
   let fork: Fork | null = null;
   try {
     fork = v.lawDealFork(LAW_SPECS, named) as Fork | null;
@@ -157,15 +182,23 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
     return {
       kind: 'fork',
       named,
-      held: null,
+      held,
       words: [
         `ALARM: this payment names version ${short(named)} of a deal whose versions branch in a way Law does not settle (${e instanceof Error ? e.message : String(e)}). Look at the whole deal with every party before relying on it (Law rule 45b, F186).`,
       ],
     };
   }
-  // The latest version of this deal `me` signed that exists.
-  const mine = [...fetched].filter((x) => lineage(x).at(-1) === root && ag(x)?.exists === true && ag(x)!.signed.includes(me));
-  const held = mine.sort((a, b) => lineage(b).length - lineage(a).length)[0] ?? null;
+  if (fork?.tangled) {
+    return {
+      kind: 'fork',
+      named,
+      held,
+      words: [
+        `ALARM (Law rule 45b, F188): this payment names version ${short(named)} of a deal whose fork is tangled (${fork.tangled}). The deal stays on ${short(fork.reference)}, the last version every party agreed on: the changes the tangled versions made are lost.`,
+        'A buyer who paid under a version every party signed stays protected: this payment counts under the version it names. Settle the deal cleanly with every party.',
+      ],
+    };
+  }
   if (fork) {
     const branch = fork.branches.find((b) => b.includes(named));
     return {
@@ -175,29 +208,30 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
       words: [
         `ALARM (Law rule 45b, F186): this payment names version ${short(named)} of a deal that stands forked. Every party signed two versions of ${short(fork.reference)}, neither descending from the other: ${fork.branches.map((b) => b.map(short).join(' → ')).join(', and ')}.`,
         `While the fork stands, ${short(fork.reference)} is the reference, and a payment may follow either branch and counts: ${branch ? `this one follows ${branch.map(short).join(' → ')}` : 'this one names the reference'}. The buyer is protected.`,
-        'Settle the fork with every party: sign a version that names both branches, beside its one parent the other branch\'s latest version (terms field 26). Settlement is final: the other branch never comes back.',
+        'Settle the fork with every party of both branches: sign a version that names both branches, beside its one parent the other branch\'s latest version (terms field 26). Settlement is final: the other branch never comes back.',
       ],
     };
   }
   if (!held) return null;
-  const alarm = v.lawForkAlarm(LAW_SPECS, d.id, held) as { named: string; held: string; shared: string; fork: boolean; heldLine: string[]; namedLine: string[] } | null;
+  const alarm = v.lawForkAlarm(LAW_SPECS, d.id, held) as { named: string; held: string; shared: string; kind: 'fork' | 'unheld' | 'older'; heldLine: string[]; namedLine: string[] } | null;
   if (!alarm) return null;
-  return alarm.fork
-    ? {
-        kind: 'fork',
-        named,
-        held,
-        words: [
-          `ALARM (Law rule 45b, F186): this payment names version ${short(named)} of the deal, which does not descend from ${short(held)}, the version this identity holds. The two lines part after ${short(alarm.shared)}: this identity's ${alarm.heldLine.map(short).join(' → ')}, the payment's ${alarm.namedLine.map(short).join(' → ')}.`,
-          'The deal may have two branches this identity does not see. Look for the full picture with every party; if both versions are complete, the payment counts under the branch it followed (the buyer is protected), and the fork is settled by a version naming both branches.',
-        ],
-      }
-    : {
-        kind: 'older',
-        named,
-        held,
-        words: [
-          `ALARM (Law rule 45b, F186): this payment names version ${short(named)} of the deal, an older version than ${short(held)}, the version this identity holds: it does not descend from it. The payer's client followed a version since replaced.`,
-        ],
-      };
+  if (alarm.kind === 'older') {
+    return {
+      kind: 'older',
+      named,
+      held,
+      words: [
+        `NOTICE (Law rule 45b, F188): this payment names version ${short(named)} of the deal, an older version than ${short(held)}, the version this identity holds. There is no fork: the payer's client followed an outdated offer, still read as valid.`,
+      ],
+    };
+  }
+  return {
+    kind: 'fork',
+    named,
+    held,
+    words: [
+      `ALARM (Law rule 45b, F186): this payment names version ${short(named)} of the deal, which does not descend from ${short(held)}, the version this identity holds. The two lines part after ${short(alarm.shared)}: this identity's ${alarm.heldLine.map(short).join(' → ')}, the payment's ${alarm.namedLine.map(short).join(' → ')}.`,
+      'The deal may have, or have had, two branches this identity does not see. Look for the full picture with every party; if both versions are complete and the fork is not settled, the payment counts under the branch it followed (the buyer is protected), and the fork is settled by a version naming both branches.',
+    ],
+  };
 }

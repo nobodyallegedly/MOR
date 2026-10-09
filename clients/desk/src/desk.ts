@@ -561,7 +561,9 @@ export class Desk {
       // descend from the version it holds, showing both branches.
       try {
         const alarm = await sellerAlarm(me, act, hints, this.via);
-        if (alarm) item.alarm = alarm.words.join(' ');
+        // F188 (DQ7): an older version raises a plain notice; the alarm is kept for forks.
+        if (alarm?.kind === 'older') item.notice = alarm.words.join(' ');
+        else if (alarm) item.alarm = alarm.words.join(' ');
       } catch (e) {
         item.alarm = `The version of the deal this payment names could not be checked (${err(e)}): look at the deal before relying on it (Law rule 45b, F186).`;
       }

@@ -2063,8 +2063,15 @@ pub(crate) fn check_terms_inside(inside: &Inside, t: &Terms) -> R<()> {
             Ok(_) => Ok(()),
             Err(_) => Err(LawError::Shape("terms without a parent name no chain")),
         },
-        Some(p) => match chain_citations(o, 1) {
-            Ok((own, _)) if own.len() == 1 && &own[0].chain == p => Ok(()),
+        // F189 (6): a settling version also cites the version it settles,
+        // `[settled, settled]`, after its parent, so that a verifier
+        // fetching by citation finds it.
+        Some(p) => match (&t.settles, chain_citations(o, if t.settles.is_some() { 2 } else { 1 })) {
+            (None, Ok((own, _))) if own.len() == 1 && &own[0].chain == p => Ok(()),
+            (Some(x), Ok((own, _))) if own.len() == 2 && &own[0].chain == p && own[1].chain == *x && own[1].predecessor == *x => Ok(()),
+            (Some(_), _) => Err(LawError::Shape(
+                "a settling version names its parent's chain in objects, then the version it settles as chain and predecessor (F189, 6)",
+            )),
             _ => Err(LawError::Shape("a clone names its parent's chain in objects, once")),
         },
     }

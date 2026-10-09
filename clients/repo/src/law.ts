@@ -413,6 +413,10 @@ export async function propose(by: TestIdentity, t: CollectiveTerms, relays: stri
 export async function proposePayload(by: TestIdentity, payload: Uint8Array, parent: string | undefined, relays: string[]) {
   checkTerms(payload, LAW_SPECS);
   const objects: [string, string][] | undefined = parent ? [[parent, parent]] : undefined;
+  // F189 (6): a version settling a deal's fork also cites the version it
+  // settles, after its parent, so that verifiers fetching by citation find it.
+  const settles = (cborDecode(payload) as Map<number, unknown>).get(26);
+  if (objects && settles instanceof Uint8Array) objects.push([hex(settles), hex(settles)]);
   await carryChain(by, relays);
   return by.publish(REPO_SPECS.law, LAW_TYPES.terms, payload, { public: true, relays, objects });
 }
@@ -534,9 +538,14 @@ export async function declare(
   relays: string[],
 ) {
   await carryChain(by, relays);
+  // F189 (8): a declaration counts only if public or addressed to the
+  // member it names; it is published, and also delivered to that member's
+  // inbox, so they see it early (a SHOULD; the safeguard is that it counts
+  // only where they can obtain it).
   return by.publish(REPO_SPECS.law, LAW_TYPES.declaration, declarationPayload(d.agreement, d.clause, d.party, Uint32Array.from(d.outcomes)), {
     public: true,
     relays,
+    to: [d.party],
     objects: [[d.agreement, d.agreement]],
   });
 }

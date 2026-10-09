@@ -72,6 +72,8 @@ export interface Item {
   problem?: string;
   /** A payment naming a version of a deal that does not descend from the version this identity holds: the seller's alarm (Law rule 45b, F186, client conformance). */
   alarm?: string;
+  /** A payment naming an older version of a deal, with no fork: a plain notice, not the alarm (Law rule 45b, F188, DQ7). */
+  notice?: string;
   /** When this desk first found it (this machine's clock: a hint, never part of any act). */
   found: number;
   sorted: Sorted;

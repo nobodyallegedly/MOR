@@ -144,6 +144,8 @@ export interface CollectiveFile {
     signatures?: string[];
     rotation?: string;
     at?: number;
+    /** The clone by which the member came back, named again (B10): the entry is closed (F189, 1). */
+    returned?: string;
   }[];
   /** Kept by the collective client: holders who stepped down from an area (rule 37b), each registered at once by a record. */
   /**

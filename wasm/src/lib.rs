@@ -2673,10 +2673,11 @@ impl Verifier {
         to_js(&out)
     }
 
-    /// Where a deal stands forked (rule 45b, F186): `{ reference, branches }`,
-    /// each branch its versions from the split to its latest; null where it
-    /// is not forked. Throws where the shape is not decided (refused rather
-    /// than guessed).
+    /// Where a deal stands forked (rule 45b, F186): `{ reference, branches,
+    /// tangled }`, each branch its versions from the split to its latest,
+    /// `tangled` the reason where the fork is tangled (F188, DQ1 to DQ4: the
+    /// deal stays on its reference); null where it is not forked. Throws
+    /// where the shape is not decided (QF1, refused rather than guessed).
     #[wasm_bindgen(js_name = lawDealFork)]
     pub fn law_deal_fork(&self, specs: JsValue, agreement: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2686,6 +2687,7 @@ impl Verifier {
             Some(f) => to_js(&DealForkOut {
                 reference: hx(&f.reference),
                 branches: f.branches.iter().map(|b| b.iter().map(hx).collect()).collect(),
+                tangled: f.tangled,
             }),
         }
     }
@@ -2693,7 +2695,9 @@ impl Verifier {
     /// Client conformance (rule 45b, F186): the alarm a seller's client and
     /// a split service raise when a payment names a version of the deal that
     /// does not descend from the version they hold. Null where it does;
-    /// else `{ named, held, shared, fork, heldLine, namedLine }`.
+    /// else `{ named, held, shared, kind, heldLine, namedLine }`, `kind`
+    /// "fork" (the alarm), "unheld" (a version this verifier does not hold:
+    /// the alarm, F189 3) or "older" (a plain notice, F188 DQ7).
     #[wasm_bindgen(js_name = lawForkAlarm)]
     pub fn law_fork_alarm(&self, specs: JsValue, payment: &str, held: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2704,7 +2708,11 @@ impl Verifier {
                 named: hx(&a.named),
                 held: hx(&a.held),
                 shared: hx(&a.shared),
-                fork: a.fork,
+                kind: match a.kind {
+                    mor_core::law::AlarmKind::Fork => "fork",
+                    mor_core::law::AlarmKind::Unheld => "unheld",
+                    mor_core::law::AlarmKind::Older => "older",
+                },
                 held_line: a.held_line.iter().map(hx).collect(),
                 named_line: a.named_line.iter().map(hx).collect(),
             }),
@@ -3217,6 +3225,9 @@ struct OwedBackOut {
 struct DealForkOut {
     reference: String,
     branches: Vec<Vec<String>>,
+    /// Where the fork is tangled (F188, DQ1 to DQ4), why: the deal stays on
+    /// its reference until one clean settlement.
+    tangled: Option<&'static str>,
 }
 
 #[derive(Serialize)]
@@ -3225,7 +3236,7 @@ struct ForkAlarmOut {
     named: String,
     held: String,
     shared: String,
-    fork: bool,
+    kind: &'static str,
     held_line: Vec<String>,
     named_line: Vec<String>,
 }

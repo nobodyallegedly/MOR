@@ -294,7 +294,9 @@ export function brokenWords(it: string, reason: string): string {
 }
 
 /** The departures a collective file keeps (Law draft 7), with defaults for older files. */
-const departedOf = (c: TestCollective) => c.f.departed ?? [];
+// A member named again by a version they signed has come back (B10): their
+// old entry is closed, and their old resignation is spent (F189, 1).
+const departedOf = (c: TestCollective) => (c.f.departed ?? []).filter((d) => !d.returned);
 const steppedDownOf = (c: TestCollective) => c.f.steppedDown ?? [];
 
 /** Members whose voice remains: not departed (rule 37a). */
@@ -1180,6 +1182,10 @@ export class Actions {
           col.f.records = [...(col.f.records ?? []), got.record];
           col.f.departed = [...departedOf(col), ...got.resigned.map((r) => ({ member: r.member, resignation: r.act, record: got.record! }))];
         }
+        // F189 (1): a member who left and is named again here has come back:
+        // their departed entry is closed, so no later line registers their
+        // old resignation again.
+        if (join.length) col.f.departed = (col.f.departed ?? []).map((d) => (join.includes(d.member) && !d.returned ? { ...d, returned: got.clone ?? 'returned' } : d));
         this.store.saveCollective(col);
         for (const i of [...stay, ...joining, ...leaving]) this.store.saveIdentity(i);
         const counts = await col.settle();
@@ -1526,8 +1532,12 @@ export class Actions {
     const all = law.v.lawRollbackVoices(LAW_SPECS, c.identity, { form: 'judicial' }, []) as { error: string | null; voices: string[] };
     if (all.error) blocking.push(`Law cannot count the voices that remain for the rollback: ${all.error}.`);
     const registering: { member: string; resignation: string; area?: number }[] = [];
+    // F189 (1): a resignation its signer made before coming back (named
+    // again by a version they signed) is spent: Law no longer lists it, and
+    // the rollback never registers it.
+    const spent = (x: string) => /F189, 1/.test((law.v.lawRollbackRegisters(LAW_SPECS, c.identity, [x]) as { error: string | null }).error ?? '');
     for (const d of departedOf(c)) {
-      if (!d.resignation || !all.voices?.includes(d.member)) continue;
+      if (!d.resignation || !all.voices?.includes(d.member) || spent(d.resignation)) continue;
       const nm = d.named ?? (await this.resignationNames(d.resignation, hints));
       if (nm && lineage.includes(nm)) registering.push({ member: d.member, resignation: d.resignation });
     }

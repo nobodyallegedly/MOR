@@ -211,3 +211,35 @@ test('F187 (8): stepping down during a broken stretch is allowed, and the rollba
     await relay.close();
   }
 });
+
+// F189 (1), decided 9 October 2026 (Fable's review of the F186, RB and F187
+// build, finding 1): a resignation is spent once its signer comes back by
+// signing a version that names them (B10). The client's rollback never
+// registers a returned member's old resignation, and their departed entry
+// is closed when they come back.
+test('F189 (1): a rollback made in good faith never removes a member who came back', async () => {
+  const c = w.client;
+  let s = await state(c);
+  const [ada, one, two, four] = ['Ada', 'Sim One', 'Sim Two', 'Sim Four'].map((n) => idOf(s, n));
+  const { id, relay } = await found('Returning', [ada, one, two, four], { safety: 2, release: 2, clone: 2, others: 2 });
+  try {
+    // Sim Four leaves, the record reaching the relays; then comes back.
+    await sign(c, { kind: 'leave', collective: id, member: four });
+    const out = await sign(c, { kind: 'change', collective: id, leave: [four] });
+    assert.match(out.done.title, /done$/, out.done.title);
+    const back = await sign(c, { kind: 'change', collective: id, join: [four] });
+    assert.match(back.done.title, /done$/, back.done.title);
+    s = await state(c);
+    assert.equal(box(s, id).members.find((m) => m.id === four)?.left ?? false, false, 'Sim Four is a member again');
+    // Then Sim Two's removal, its record lost: broken.
+    await breakBy(id, relay, [ada, one, four], two, { safetyThreshold: 2, releaseThreshold: 1, cloneThreshold: 2, abandonmentOthers: 1 });
+    s = await state(c);
+    assert.equal(box(s, id).law.rollback, true, box(s, id).law.broken ?? '');
+    const rb = await prepare(c, { kind: 'rollback', collective: id, rules: { safety: 2, release: 1, clone: 2, others: 1 } });
+    const rw = words(rb.reading);
+    assert.doesNotMatch(rw, /Sim Four resigned/, rw);
+    assert.match(rw, /Members after the rollback: .*Sim Four/, rw);
+  } finally {
+    await relay.close();
+  }
+});
