@@ -19,3 +19,5 @@ This one makes the whole thing sort of absurd. They have to count, both versions
 **B3.** "It has to, the vanish could cause deadlocks, but at the same time how can this be gamed?" *(Exploration follows in the conversation.)*
 
 **B3, added after the exploration.** "The absentee still has a possibility to void their statement of absence. But, the absentee has to be informed somehow. This one will need a third round taking the previous 2 in consideration."
+
+**B4.** "To me, if Law looks at the content of an act and finds a malformed one, or a referenced but empty one, Law does not have what it needs to allow the act and consider the chain broken. It is a break, this one is technical, the previous one was human error."
