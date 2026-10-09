@@ -11,3 +11,5 @@
 **A4.** "We cannot state that they count for nothing in Law but it does in finance. In this case, finance is dictated by law, they cannot be separated.
 
 This one makes the whole thing sort of absurd. They have to count, both versions count, both signed, and clients should begin to catch the mistake and slowly ring the alarm."
+
+**B1.** "Ideally, the collective is quarantined, it has accidentally breached the rules « of engagement ». Grants should not be able to count during the stretch. Rollback does what it states, it rolls back all the conditions to the act just prior to the break."
