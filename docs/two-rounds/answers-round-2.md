@@ -5,3 +5,5 @@
 **A1.** "A"
 
 **A2.** "Today b makes sense, acknowledge the fork before moving on.  Part of me still wonders if a is enough though."
+
+**A3.** "A) all involved need to be racing all involved on both chains and I don't see how that could happen anyway"
