@@ -7113,12 +7113,8 @@ fn a_broken_collective_rolls_back() {
     assert_eq!(still_broken(&lab), Some(rot1));
     rb(&mut lab, r, vec![ra, rc], rot1, vec![pub1]); // registers what is no resignation
     assert_eq!(still_broken(&lab), Some(rot1));
-    // A declaration of Ben's absence, with outcome 0, by the authority the
-    // clause names: a rollback registers resignations only (RB3, open).
-    let d = lab.declare(None, f, f, BEN, vec![outcomes::VOICE_REMOVED]);
-    assert!(lab.view().declaration(&d).unwrap().is_ok(), "the declaration itself passes its checks");
-    rb(&mut lab, r, vec![ra, rc], rot1, vec![d]);
-    assert_eq!(still_broken(&lab), Some(rot1));
+    // (A declaration of absence made during the stretch may be registered
+    // by the rollback: RB3, `rb3_a_rollback_registers_a_declaration_of_absence`.)
     let of_broken = lab.clone_terms(&k1, vec![(Power::Constitutional, vec![ANA, CY])], &|_| {});
     let of_broken = lab.propose(ANA, &of_broken);
     let (oa, oc) = (lab.sign(ANA, &of_broken), lab.sign(CY, &of_broken));
@@ -7397,4 +7393,161 @@ fn f187_7_a_stretch_acknowledgement_places_no_signature_on_a_declaration() {
     let rec = lab.record(0, None, &[], vec![d], r);
     let e = lab.view().record(&col, &rec).unwrap();
     assert!(e.line, "{:?}", e.not_a_line);
+}
+
+/// RB4 (decided 9 October 2026, "broken is broken"): a rotation whose
+/// Law declaration is missing (the kind removed) or unreadable is a broken
+/// act, a technical one, with the same way back: a rollback to the
+/// agreement in force just before it.
+#[test]
+fn rb4_a_missing_or_unreadable_declaration_is_a_break_with_a_rollback() {
+    for case in ["removed", "unreadable"] {
+        let mut lab = Lab::new(&|_| {});
+        let f = lab.founding;
+        let col = lab.c[0].id;
+        let law = mips().law;
+        let value = match case {
+            "removed" => None,
+            _ => Some(Value::Uint(7)),
+        };
+        let rot1 = lab.rotate_with(Some(vec![mor_core::identity::Declaration { spec: law, kind: 0, value }]), &[0]);
+        let b = lab.view().broken_act(&col).unwrap().unwrap_or_else(|| panic!("{case}: a broken act, with a way back"));
+        assert_eq!((b.act, b.before), (rot1, f), "{case}");
+        let p = lab.publish(0);
+        lab.sign(ANA, &p);
+        assert!(matches!(lab.consent(&p), Consent::Broken { .. }), "{case}");
+        let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
+        let r = lab.propose(ANA, &same);
+        let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
+        roll_back(&mut lab, r, &rs, rot1, &[]);
+        assert_eq!(lab.view().broken(&col).unwrap(), None, "{case}");
+        assert_eq!(lab.view().current(&col).unwrap().unwrap().agreement, r, "{case}");
+    }
+}
+
+/// RB3 (decided 9 October 2026, third round): the rollback may register a
+/// declaration of absence made during the broken stretch under the clause
+/// of the agreement in force just before the broken act, exactly as a
+/// record does outside it: the vanished member then no longer blocks the
+/// way back. Where the clause asks for several of the other members, the
+/// rollback names their signature acts beside the declaration and places
+/// them; an acknowledgement made during the stretch places nothing.
+#[test]
+fn rb3_a_rollback_registers_a_declaration_of_absence() {
+    // A named authority.
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let ids = lab.ids();
+    let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
+    let k1 = lab.propose(ANA, &k1);
+    let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
+    let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    let n = lab.view().rollback_voices(&col, &Power::Constitutional, &[ids[CY]]).unwrap().unwrap();
+    assert_eq!((sorted(n.voices), n.needed), (sorted(vec![ids[ANA], ids[BEN]]), Some(2)));
+    let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN])], &|_| {});
+    let r = lab.propose(ANA, &same);
+    let rs = vec![lab.sign(ANA, &r), lab.sign(BEN, &r)];
+    roll_back(&mut lab, r, &rs, rot1, &[d]);
+    let v = lab.view();
+    assert_eq!(v.broken(&col).unwrap(), None);
+    let cur = v.current(&col).unwrap().unwrap();
+    assert_eq!((cur.agreement, cur.departed), (r, vec![ids[CY]]));
+    drop(v);
+
+    // Two of the other members judge absence.
+    let mut lab = Lab::new(&others_judge_absence);
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
+    let k1 = lab.propose(ANA, &k1);
+    let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
+    let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    let d = lab.declare(Some(ANA), f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    let sb = lab.sign(BEN, &d);
+    lab.acknowledge(0, sb);
+    let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN])], &|_| {});
+    let r = lab.propose(ANA, &same);
+    let rs = vec![lab.sign(ANA, &r), lab.sign(BEN, &r)];
+    roll_back(&mut lab, r, &rs, rot1, &[d]);
+    assert_eq!(lab.view().broken_act(&col).unwrap().map(|b| b.act), Some(rot1), "Ben's signature, acknowledged in the stretch, is not placed");
+    // A signature act on something else is no registration.
+    roll_back(&mut lab, r, &rs, rot1, &[d, rs[0]]);
+    assert_eq!(lab.view().broken_act(&col).unwrap().map(|b| b.act), Some(rot1));
+    roll_back(&mut lab, r, &rs, rot1, &[d, sb]);
+    assert_eq!(lab.view().broken(&col).unwrap(), None);
+    assert_eq!(lab.view().current(&col).unwrap().unwrap().departed, vec![lab.m[CY].id]);
+}
+
+/// RB1 (decided 8 and 9 October 2026): a broken collective is quarantined.
+/// A grantee's act during the broken stretch counts for nothing, like the
+/// collective's own; the grant works again after the rollback, which
+/// restores every condition as at the act before the break. An act the
+/// broken act's history holds was made before it, and stands; one racing
+/// it, or after it, is of the stretch, placed only by citing the rollback
+/// or a later decision. What was signed in the stretch is signed anew,
+/// never adopted (RB2). A grant made during the stretch backs nothing.
+#[test]
+fn rb1_a_grant_is_quarantined_during_the_broken_stretch() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let env = mips().envelope;
+    let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
+    let grant = Grant {
+        area: Some(1),
+        kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]),
+        ..plain_grant(agent.id, false)
+    };
+    let g = lab.grant(&grant);
+    lab.sign(ANA, &g);
+    sign(&mut lab.w, &mut agent, &g);
+    let mut st = lab.strand(g, &key_of(agent.id));
+    let act = |lab: &mut Lab, st: &mut Person| -> Hash {
+        let a = lab.w.everyday_act(st, env, 0, vec![], None, None);
+        lab.w.add(&a)
+    };
+    // Made before the break, and held by its history: the label's next act cites it.
+    let early = act(&mut lab, &mut st);
+    let seen = {
+        let o = lab.chain(&[early]);
+        let a = lab.w.everyday_act(&mut lab.c[0], env, 0, vec![], Some(o), None);
+        lab.w.add(&a)
+    };
+    lab.sign(ANA, &seen);
+    assert_eq!(lab.view().backing(&early).unwrap(), Backing::Backed { grant: g });
+    let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
+    let k1 = lab.propose(ANA, &k1);
+    let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
+    let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    assert!(lab.view().broken_act(&col).unwrap().is_some());
+    // During the stretch: the grantee, citing only its grant, counts for nothing.
+    let during = act(&mut lab, &mut st);
+    assert!(matches!(lab.view().backing(&during).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("RB1")), "{:?}", lab.view().backing(&during).unwrap());
+    assert!(!lab.counts(&during));
+    assert_eq!(lab.view().backing(&early).unwrap(), Backing::Backed { grant: g }, "made before the break, it stands");
+    // A grant made in the stretch counts for nothing, then and after.
+    let mut other = lab.w.genesis("another agent", vec![own_home()], None, None);
+    let (k2, p2) = grant_key("another agent");
+    let g2 = lab.grant(&Grant { key: p2, ..plain_grant(other.id, false) });
+    lab.sign(ANA, &g2);
+    sign(&mut lab.w, &mut other, &g2);
+    let mut st2 = lab.strand(g2, &k2);
+    // The rollback restores the founding agreement.
+    let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
+    let r = lab.propose(ANA, &same);
+    let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
+    let back = roll_back(&mut lab, r, &rs, rot1, &[]);
+    assert_eq!(lab.view().broken(&col).unwrap(), None);
+    // After it, the grant works again for an act citing the rollback.
+    st.cite.as_mut().unwrap().1.push(back);
+    let after = act(&mut lab, &mut st);
+    assert_eq!(lab.view().backing(&after).unwrap(), Backing::Backed { grant: g });
+    st2.cite.as_mut().unwrap().1.push(back);
+    let under_g2 = act(&mut lab, &mut st2);
+    assert!(matches!(lab.view().backing(&under_g2).unwrap(), Backing::NotBacked { .. }));
+    // The stretch's act stays void, even acknowledged after the rollback: signed anew, never adopted.
+    lab.adopt(0, during);
+    assert!(matches!(lab.view().backing(&during).unwrap(), Backing::NotBacked { .. }));
 }
