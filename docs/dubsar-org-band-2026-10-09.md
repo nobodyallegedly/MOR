@@ -66,7 +66,7 @@ Where each part sits, in pixels from the top, is in `first-screen-webkit.json` b
 - `npm run test:build`: 1 of 2, as in the two sessions before. The core library's WebAssembly, built twice, is the same byte for byte. The display client differs from the released copy in `built/` (`gateway.js differs`), as expected: its source changed. The CI step "Reproducible build of the display client" will show this one failure until the release commit lands on `main`.
 - On GitHub, the workflow "site in WebKit" runs the browser tests in WebKit and in Chromium, and now also takes the screenshots in WebKit and keeps them as an artifact (`first-screen-webkit`). The result for this branch is below.
 
-**On GitHub,** run 7 of "site in WebKit" on this branch (commit `f72f51a`): WebKit, Safari's engine: **15 of 15 pass**, the new test included. Chromium: **15 of 15 pass**. The screenshots were taken in WebKit in the same run. The same pictures were then committed by the workflow "site first screen in WebKit", because the stored artifact could not be read from this session.
+**On GitHub,** run 7 of "site in WebKit" on this branch (commit `f72f51a`): WebKit, Safari's engine: **15 of 15 pass**, the new test included. Chromium: **15 of 15 pass**. The committed screenshots come from a separate run in WebKit, by the workflow "site first screen in WebKit" (commit `cb63c55`). The test run's own screenshots were kept only as a GitHub artifact, which this session could not read. *Fonts differ:* GitHub's Linux WebKit has no Apple fonts, so the words on an iPhone will be set a little differently, and the heights a few pixels off.
 
 ## Questions for Nobody, allegedly
 
