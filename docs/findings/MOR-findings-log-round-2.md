@@ -2235,7 +2235,9 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **A collective whose very first agreement fails, decided by Nobody, allegedly, 9 October 2026:** **it is simply refounded**, with no rollback: "nothing that law would accept ever existed." *A stated cost, small: a new collective has no history, works, money or followers yet.*
 
-**Still standing out, to decide one at a time:** BQ4 (the contest act has no format, so no client can sign a contest), BQ5 (the warning's wording), a settling version naming an older version of the other branch, and a collective whose very first agreement fails.
+**BQ4, decided by Nobody, allegedly, 9 October 2026 ("Yes, as new needs are discovered the grammar needs definition. Normal"):** the next building session writes **the contest act's format** (Law type 14): it names the declaration it answers and is signed by the party declared absent, which shows presence; per rule 52 it shows the dispute and voids nothing; the client lets the declared member sign it.
+
+**With BQ4, every question of the F186, RB and F187 build is decided** (DQ1 to DQ8, BQ1 to BQ6, the eight readings). Next: one building session writes F188 in and builds it, after Fable's review of the build, so both can go into one session.
 
 ## Review of F163 to F168 (7 October 2026, morning)
 
