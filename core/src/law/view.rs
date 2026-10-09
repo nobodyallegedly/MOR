@@ -7187,8 +7187,7 @@ impl<'a> LawView<'a> {
             for (x, par) in &below {
                 let t = self.terms(x)?;
                 let Some(tips) = t.settles.as_ref() else { continue };
-                if let Some(o) = tips.iter().find(|o| self.v.get(o).is_none()) {
-                    let _ = o;
+                if tips.iter().any(|o| self.v.get(o).is_none()) {
                     return Err(LawError::Unsettled(
                         "a version settles a tip of a deal's fork this verifier does not hold: it holds that version before answering (F186)",
                     ));

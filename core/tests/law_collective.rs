@@ -9064,6 +9064,8 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
     };
     let served = record(&mut lab, &mut relay, locked, 1);
     let other = record(&mut lab, &mut relay, spec("another object"), 2);
+    let mut relay2 = lab.w.genesis("a second relay's operator", vec![own_home()], None, None);
+    let served2 = record(&mut lab, &mut relay2, locked, 3);
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let everyone = ids.clone();
     let relay_id = relay.id;
@@ -9100,8 +9102,9 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
     lab.w.add(&a);
     assert_eq!(read(&mut lab, &mut svc, served), vec![relay_id], "only the payer's claim acknowledges a delivery");
     // The fan's claim, acknowledging the record of the object it paid for.
-    let a = lab.w.everyday_act(&mut fan, mips().finance, 3, claim, None, Some(vec![served, other]));
+    let a = lab.w.everyday_act(&mut fan, mips().finance, 3, claim, None, Some(sorted(vec![served, other, served2])));
     lab.w.add(&a);
     assert!(read(&mut lab, &mut svc, served).is_empty(), "acknowledged by the payer's claim: it counts");
+    assert!(read(&mut lab, &mut svc, served2).is_empty(), "one claim acknowledges several relays' records");
     assert_eq!(read(&mut lab, &mut svc, other), vec![relay_id], "a record of another object than the one paid for counts for nothing");
 }

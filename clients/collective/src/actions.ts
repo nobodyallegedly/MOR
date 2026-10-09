@@ -1541,8 +1541,9 @@ export class Actions {
     const registering: { member: string; resignation: string; area?: number }[] = [];
     // F189 (1): a resignation its signer made before coming back (named
     // again by a version they signed) is spent: Law no longer lists it, and
-    // the rollback never registers it.
-    const spent = (x: string) => /F189, 1/.test((law.v.lawRollbackRegisters(LAW_SPECS, c.identity, [x]) as { error: string | null }).error ?? '');
+    // the rollback never registers it. QF6 (F190): so is a stepping down
+    // its signer made before holding the area again.
+    const spent = (x: string) => /F189, 1|QF6/.test((law.v.lawRollbackRegisters(LAW_SPECS, c.identity, [x]) as { error: string | null }).error ?? '');
     for (const d of departedOf(c)) {
       if (!d.resignation || !all.voices?.includes(d.member) || spent(d.resignation)) continue;
       const nm = d.named ?? (await this.resignationNames(d.resignation, hints));
@@ -1561,7 +1562,7 @@ export class Actions {
     // Steppings down signed during the broken stretch, with no record: the
     // rollback registers them too (Law rules 37a, 37b, 37d; F187, 8).
     for (const d of steppedDownOf(c)) {
-      if (d.record || d.rollback || !all.voices?.includes(d.member)) continue;
+      if (d.record || d.rollback || !all.voices?.includes(d.member) || spent(d.resignation)) continue;
       const nm = d.named ?? (await this.resignationNames(d.resignation, hints));
       if (nm && lineage.includes(nm)) registering.push({ member: d.member, resignation: d.resignation, area: d.area });
     }

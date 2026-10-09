@@ -474,15 +474,24 @@ export class Desk {
         const numbers = items.map((x) => x.split!.number).filter((n): n is number => n !== null);
         const gaps = splitGaps(numbers);
         const unnumbered = items.filter((x) => x.split!.number === null).length;
+        // QF4 (decided by Nobody, allegedly, 9 October 2026, F190): a split
+        // with no number, or a number two splits carry, is a deviation that
+        // breaks the plan, as a reset of the tally chain is (F171).
+        const repeated = [...new Set(numbers.filter((n, i) => numbers.indexOf(n) !== i))].sort((a, b) => a - b);
         const top = items.reduce((a, b) => ((b.split!.number ?? 0) > (a.split!.number ?? 0) ? b : a));
         for (const x of items) if (x.alarm?.startsWith('ALARM (Law rule 15a')) delete x.alarm;
-        if (gaps.length || unnumbered) {
+        if (gaps.length || unnumbered || repeated.length) {
           top.alarm = [
             gaps.length
               ? `ALARM (Law rule 15a, F188): this service's splits under this deal skip: ${gaps.length === 1 ? `the split numbered ${gaps[0]} was` : `the splits numbered ${gaps.join(', ')} were`} never delivered here. Splits are being made where this identity is not shown: the deal may have a branch hidden from it.`
+              : 'ALARM (Law rule 15a, QF4): the numbers on this service\'s splits under this deal break the plan.',
+            unnumbered
+              ? `${unnumbered} split${unnumbered === 1 ? '' : 's'} of this service under this deal carr${unnumbered === 1 ? 'ies' : 'y'} no number: a deviation that breaks the plan (Law rule 15a, QF4).`
               : '',
-            unnumbered ? `${unnumbered} split${unnumbered === 1 ? '' : 's'} of this service under this deal carr${unnumbered === 1 ? 'ies' : 'y'} no number, so a gap cannot be seen there.` : '',
-            'Look at the whole deal with every party, and ask the service for the splits missing.',
+            ...repeated.map(
+              (n) => `The number ${n} is carried by ${numbers.filter((m) => m === n).length} splits: a deviation that breaks the plan (Law rule 15a, QF4).`,
+            ),
+            'Look at the whole deal with every party, and ask the service for the splits missing or repeated.',
           ]
             .filter(Boolean)
             .join(' ');
