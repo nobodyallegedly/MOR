@@ -45,7 +45,7 @@ export interface Settings {
 }
 
 export type Sorted = 'new' | 'to answer' | 'answered' | 'ignored';
-export type Kind = 'message' | 'reply' | 'acknowledgement' | 'payment' | 'key delivery' | 'other';
+export type Kind = 'message' | 'reply' | 'acknowledgement' | 'payment' | 'split' | 'key delivery' | 'other';
 
 /** One interaction an identity received, as read and judged when it arrived. */
 export interface Item {
@@ -74,6 +74,8 @@ export interface Item {
   alarm?: string;
   /** A payment naming an older version of a deal, with no fork: a plain notice, not the alarm (Law rule 45b, F188, DQ7). */
   notice?: string;
+  /** A split received (Law type 8): its service, the deal version it pays under, and its number (F188, DQ6). */
+  split?: { service: string; agreement: string; number: number | null };
   /** When this desk first found it (this machine's clock: a hint, never part of any act). */
   found: number;
   sorted: Sorted;

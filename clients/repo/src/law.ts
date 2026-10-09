@@ -273,7 +273,7 @@ export interface PayoutIn {
  * with Nobody, allegedly (the spec gives the field, not its key). The split
  * act cites, in `refs`, the service's previous split for each stake.
  */
-export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: string; agreement: string; tally?: [number, [string, number][]][] }): Uint8Array {
+export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: string; agreement: string; tally?: [number, [string, number][]][]; number?: number }): Uint8Array {
   const m = new Map<number, unknown>([
     [0, unhex(s.receipt)],
     [
@@ -292,6 +292,8 @@ export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: st
     [3, unhex(s.agreement)],
   ]);
   if (s.tally?.length) m.set(4, s.tally.map(([stake, hs]) => [stake, hs.map(([h, n]) => [unhex(h), n])]));
+  // DQ6 (F188): one numbering across every split the service makes under a deal, from 1.
+  if (s.number !== undefined) m.set(5, s.number);
   return cborEncode(m);
 }
 

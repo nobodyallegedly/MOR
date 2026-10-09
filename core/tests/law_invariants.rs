@@ -2491,7 +2491,7 @@ impl DealWorld {
                     *carried.entry(stakes[0].0).or_insert(0) += 1;
                 }
                 let carried: Vec<(Hash, u64)> = carried.into_iter().collect();
-                let s = law::Split { receipt: rc, payouts, cmip: spec("a split cMIP"), agreement: latest, tally: Some(vec![(0, carried.clone())]) };
+                let s = law::Split { receipt: rc, payouts, cmip: spec("a split cMIP"), agreement: latest, tally: Some(vec![(0, carried.clone())]), number: None };
                 let to: Vec<Hash> = if *deliver_all { ids.clone() } else { ids[1..].to_vec() };
                 let mut svp = self.svc.take().unwrap();
                 let x = self.w.private_act_refs(&mut svp, mips().law, law::types::SPLIT, s.to_map(), None, to, previous.map(|p| vec![mor_core::act::Ref::Act(p)]));

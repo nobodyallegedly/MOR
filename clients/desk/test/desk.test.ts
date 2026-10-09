@@ -352,3 +352,34 @@ test('a payment naming the other branch of a forked deal raises the alarm at the
   assert.match(paid.alarm ?? '', /The buyer is protected/);
   assert.match(paid.alarm ?? '', /names both branches/);
 });
+
+// F188, DQ6 (decided by Nobody, allegedly, 9 October 2026), client
+// conformance: one numbering runs across every split a service makes under
+// a deal, on any branch; a holder's client raises the alarm where the
+// numbers on the splits it receives skip.
+test('splits whose numbers skip raise the holder\'s alarm at the desk', async () => {
+  const { dealPayload } = await import('../../repo/src/deal.ts');
+  const { proposePayload, sign, splitPayload } = await import('../../repo/src/law.ts');
+  const relays = [w.relay.base];
+  const other = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
+  await other.publishGenesis();
+  for (const a of other.chainActs()) await relayAt(w.relay.base).putAct(a);
+  const seller = w.app.store.identity(machine);
+  const p = await proposePayload(other, dealPayload({ parties: [machine, other.id], text: 'Machine and another split a song.' }), undefined, relays);
+  await sign(other, p.id, relays);
+  await sign(seller, p.id, relays);
+  w.app.store.saveIdentity(seller);
+  const service = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
+  await service.publishGenesis();
+  for (const a of service.chainActs()) await relayAt(w.relay.base).putAct(a);
+  for (const n of [1, 3]) {
+    const s = splitPayload({ receipt: `${n}`.padStart(64, '0'), payouts: [{ receiver: machine, amount: 1, stake: 0 }], cmip: 'c'.repeat(64), agreement: p.id, number: n });
+    await service.publish(REPO_SPECS.law, LAW_TYPES.split, s, { public: true, relays, to: [machine] });
+  }
+  await w.client.ask('refresh', { identity: machine });
+  const got = (await state(w.client)).identities.find((i) => i.id === machine)!.received;
+  const splits = got.filter((x) => x.from === service.id);
+  assert.equal(splits.length, 2);
+  const alarm = splits.map((x) => x.alarm ?? '').join(' ');
+  assert.match(alarm, /ALARM .*split numbered 2 .*not shown/);
+});

@@ -120,7 +120,7 @@ export type Sorted = 'new' | 'to answer' | 'answered' | 'ignored';
 
 export interface Item {
   key: string;
-  kind: 'message' | 'reply' | 'acknowledgement' | 'payment' | 'key delivery' | 'other';
+  kind: 'message' | 'reply' | 'acknowledgement' | 'payment' | 'split' | 'key delivery' | 'other';
   from: string | null;
   fromName: string | null;
   act: string | null;

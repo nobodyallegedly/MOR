@@ -138,6 +138,7 @@ const KIND: Record<Item['kind'], string> = {
   reply: 'A reply',
   acknowledgement: 'An acknowledgement',
   payment: 'A payment',
+  split: 'A split of money received',
   'key delivery': 'A key delivery',
   other: 'Something else',
 };

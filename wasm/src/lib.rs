@@ -2057,6 +2057,26 @@ pub fn resignation_payload(agreement: &str, area: Option<u32>) -> R<Vec<u8>> {
     )))
 }
 
+/// A settlement request payload (Law type 22; DQ8, F188): the deal's
+/// reference version, the version with two complete clones, whose
+/// arbitrator a party who signed it asks to settle the fork. The act
+/// carries, in `objects`, `[reference, reference]`.
+#[wasm_bindgen(js_name = settlementRequestPayload)]
+pub fn settlement_request_payload(reference: &str) -> R<Vec<u8>> {
+    Ok(cbor::encode(&Value::Map(law::SettlementRequest { reference: unhex(reference)? }.to_map())))
+}
+
+/// A fork settlement payload (Law type 23; DQ8, F188): the arbitrator's
+/// settlement, naming the request that activated it, the tip of the branch
+/// kept and the tip of the branch discarded. The act carries, in
+/// `objects`, `[request, request]`.
+#[wasm_bindgen(js_name = forkSettlementPayload)]
+pub fn fork_settlement_payload(request: &str, kept: &str, discarded: &str) -> R<Vec<u8>> {
+    Ok(cbor::encode(&Value::Map(
+        law::ForkSettlement { request: unhex(request)?, kept: unhex(kept)?, discarded: unhex(discarded)? }.to_map(),
+    )))
+}
+
 /// A contest payload (Law type 14; BQ4, F188): the declaration of absence
 /// it answers. Signed by the party the declaration names; the act carries,
 /// in `objects`, `[declaration, declaration]`. It voids nothing (rule 52).
@@ -2638,6 +2658,23 @@ impl Verifier {
     /// The declarations of absence naming `party` this verifier holds (RB3,
     /// client conformance): `{ act, signer, agreement, clause, outcomes,
     /// contests }`, `contests` the party's contests of it (BQ4).
+    /// The numbers on the splits a service made under a deal (DQ6, F188):
+    /// `{ numbers: [number, split][], gaps, repeated, unnumbered }`. Client
+    /// conformance: a holder's client MUST raise the alarm where the
+    /// numbers it receives skip (`gaps`).
+    #[wasm_bindgen(js_name = lawSplitNumbers)]
+    pub fn law_split_numbers(&self, specs: JsValue, service: &str, agreement: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let n = view.split_numbers(&unhex(service)?, &unhex(agreement)?).map_err(lerr)?;
+        to_js(&SplitNumbersOut {
+            numbers: n.numbers.iter().map(|(k, h)| (*k, hx(h))).collect(),
+            gaps: n.gaps,
+            repeated: n.repeated,
+            unnumbered: n.unnumbered.iter().map(hx).collect(),
+        })
+    }
+
     #[wasm_bindgen(js_name = lawDeclarationsNaming)]
     pub fn law_declarations_naming(&self, specs: JsValue, party: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2690,6 +2727,17 @@ impl Verifier {
     /// `tangled` the reason where the fork is tangled (F188, DQ1 to DQ4: the
     /// deal stays on its reference); null where it is not forked. Throws
     /// where the shape is not decided (QF1, refused rather than guessed).
+    /// The version of an agreement in force, as rule 45b reads a deal's
+    /// forks (F186, F188): while forked or tangled, the reference. Throws
+    /// where the shape is not decided (QF1). What a buyer's client checks
+    /// an offer against before paying (F188, a strong SHOULD).
+    #[wasm_bindgen(js_name = lawVersionInForce)]
+    pub fn law_version_in_force(&self, specs: JsValue, agreement: &str) -> R<String> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        Ok(hx(&view.version_in_force(&unhex(agreement)?).map_err(lerr)?))
+    }
+
     #[wasm_bindgen(js_name = lawDealFork)]
     pub fn law_deal_fork(&self, specs: JsValue, agreement: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -3234,6 +3282,14 @@ struct OwedBackOut {
     unit: String,
     value: u64,
     still_broken: bool,
+}
+
+#[derive(Serialize)]
+struct SplitNumbersOut {
+    numbers: Vec<(u64, String)>,
+    gaps: Vec<u64>,
+    repeated: Vec<u64>,
+    unnumbered: Vec<String>,
 }
 
 #[derive(Serialize)]

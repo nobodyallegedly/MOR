@@ -46,6 +46,12 @@ pub mod types {
     pub const FORK: u64 = 19;
     /// The closing of a collective that holds nothing (rule 47a, F124 N9).
     pub const CLOSING: u64 = 20;
+    /// A party's request that the arbitrator settle a deal's fork (rule
+    /// 45b; DQ8, F188).
+    pub const SETTLEMENT_REQUEST: u64 = 22;
+    /// The arbitrator's settlement of a deal's fork, naming the request
+    /// that activated it (rule 45b; DQ8, F188).
+    pub const FORK_SETTLEMENT: u64 = 23;
     // 21, the creditor's release (F125), is retired and never reused: it is
     // a Finance act (Finance type 4, F126).
 }
@@ -2151,6 +2157,76 @@ impl Contest {
     }
 }
 
+// ---------------------------------------------------------------- a deal's fork, settled by its arbitrator
+
+/// Settlement request (type 22; DQ8, decided 9 October 2026): a party who
+/// signed a deal's reference version asks the arbitrator that version
+/// names to settle the fork of that version. It names the reference as
+/// chain and predecessor, `[[reference, reference]]`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SettlementRequest {
+    /// 0: the reference: the version with two complete clones.
+    pub reference: Hash,
+}
+
+impl SettlementRequest {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        vec![(Value::Uint(0), b(&self.reference))]
+    }
+
+    pub fn decode(inside: &Inside) -> R<SettlementRequest> {
+        let mut reference = None;
+        for (k, v) in &inside.payload {
+            match k {
+                Value::Uint(0) => reference = Some(hash(v, "settlement request: the reference")?),
+                _ => return Err(LawError::Shape("settlement request: unknown field")),
+            }
+        }
+        let reference = reference.ok_or(LawError::Shape("settlement request: the reference"))?;
+        check_objects_self(inside, &reference, "settlement request: objects must name the reference")?;
+        Ok(SettlementRequest { reference })
+    }
+}
+
+/// Fork settlement (type 23; DQ8): the arbitrator a deal's reference
+/// version names settles its fork, once a party's request activated it:
+/// the branch kept, by its tip, and the branch discarded, by its tip. It
+/// names the request as chain and predecessor, `[[request, request]]`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ForkSettlement {
+    /// 0: the settlement request (type 22) that activated the arbitrator.
+    pub request: Hash,
+    /// 1: the tip of the branch kept, in force from then on.
+    pub kept: Hash,
+    /// 2: the tip of the branch discarded.
+    pub discarded: Hash,
+}
+
+impl ForkSettlement {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        vec![(Value::Uint(0), b(&self.request)), (Value::Uint(1), b(&self.kept)), (Value::Uint(2), b(&self.discarded))]
+    }
+
+    pub fn decode(inside: &Inside) -> R<ForkSettlement> {
+        let (mut request, mut kept, mut discarded) = (None, None, None);
+        for (k, v) in &inside.payload {
+            match k {
+                Value::Uint(0) => request = Some(hash(v, "fork settlement: the request")?),
+                Value::Uint(1) => kept = Some(hash(v, "fork settlement: the tip kept")?),
+                Value::Uint(2) => discarded = Some(hash(v, "fork settlement: the tip discarded")?),
+                _ => return Err(LawError::Shape("fork settlement: unknown field")),
+            }
+        }
+        let request = request.ok_or(LawError::Shape("fork settlement: the request"))?;
+        check_objects_self(inside, &request, "fork settlement: objects must name the request")?;
+        Ok(ForkSettlement {
+            request,
+            kept: kept.ok_or(LawError::Shape("fork settlement: the tip kept"))?,
+            discarded: discarded.ok_or(LawError::Shape("fork settlement: the tip discarded"))?,
+        })
+    }
+}
+
 // ---------------------------------------------------------------- abandonment declaration
 
 /// Abandonment declaration (type 13, B12): the authority the clause names
@@ -3138,6 +3214,11 @@ pub struct Split {
     /// hash, count: uint]]]]`, stakes distinct, each stake's holders
     /// distinct. A holder not listed counts zero.
     pub tally: Option<Vec<(u64, Vec<(Hash, u64)>)>>,
+    /// 5: the split's number (DQ6, decided 9 October 2026): one numbering
+    /// runs across every split the service makes under a deal, on any
+    /// branch of a fork, from 1, each split showing its number, so that a
+    /// holder's client raises the alarm where the numbers it receives skip.
+    pub number: Option<u64>,
 }
 
 /// Each holder's leftover units in what a split pays a stake (rule 15a,
@@ -3200,6 +3281,9 @@ impl Split {
                 .collect();
             m.push((Value::Uint(4), Value::Array(v)));
         }
+        if let Some(n) = self.number {
+            m.push((Value::Uint(5), Value::Uint(n)));
+        }
         m
     }
 
@@ -3207,7 +3291,7 @@ impl Split {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in p {
             match k {
-                Value::Uint(n) if *n <= 4 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 5 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("split: unknown field")),
             }
         }
@@ -3248,6 +3332,10 @@ impl Split {
             cmip: hash(req(2, "split: the split cMIP")?, "split: the split cMIP")?,
             agreement: hash(req(3, "split: the agreement")?, "split: the agreement")?,
             tally: get(4).map(decode_tally).transpose()?,
+            number: match get(5).map(|v| uint(v, "split: its number")).transpose()? {
+                Some(0) => return Err(LawError::Shape("split: its number counts from 1 (DQ6)")),
+                n => n,
+            },
         })
     }
 }

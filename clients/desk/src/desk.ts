@@ -13,8 +13,8 @@ import { TestIdentity, sealFor, type Home } from '../../genesis/src/identity.ts'
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
 import { record as recordKex } from '../../genesis/src/kex.ts';
-import { REPO_SPECS } from '../../repo/src/specs.ts';
-import { sellerAlarm } from '../../repo/src/deal.ts';
+import { LAW_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
+import { dealRoot, sellerAlarm, splitGaps } from '../../repo/src/deal.ts';
 import type { Line, Section } from '../../collective/src/explain.ts';
 import {
   ANSWER_LABEL,
@@ -460,6 +460,34 @@ export class Desk {
           problems.push(`${hint}: ${err(e)}`);
         }
       }
+      // F188 (DQ6), client conformance: a holder's client raises the alarm
+      // where the numbers on the splits it receives from one service under
+      // one deal skip: splits are being made where it is not shown.
+      const groups = new Map<string, Item[]>();
+      for (const it of rec.items) {
+        if (!it.split) continue;
+        const root = (await dealRoot(it.split.agreement, hints, via)) ?? it.split.agreement;
+        const k = `${it.split.service}/${root}`;
+        groups.set(k, [...(groups.get(k) ?? []), it]);
+      }
+      for (const items of groups.values()) {
+        const numbers = items.map((x) => x.split!.number).filter((n): n is number => n !== null);
+        const gaps = splitGaps(numbers);
+        const unnumbered = items.filter((x) => x.split!.number === null).length;
+        const top = items.reduce((a, b) => ((b.split!.number ?? 0) > (a.split!.number ?? 0) ? b : a));
+        for (const x of items) if (x.alarm?.startsWith('ALARM (Law rule 15a')) delete x.alarm;
+        if (gaps.length || unnumbered) {
+          top.alarm = [
+            gaps.length
+              ? `ALARM (Law rule 15a, F188): this service's splits under this deal skip: ${gaps.length === 1 ? `the split numbered ${gaps[0]} was` : `the splits numbered ${gaps.join(', ')} were`} never delivered here. Splits are being made where this identity is not shown: the deal may have a branch hidden from it.`
+              : '',
+            unnumbered ? `${unnumbered} split${unnumbered === 1 ? '' : 's'} of this service under this deal carr${unnumbered === 1 ? 'ies' : 'y'} no number, so a gap cannot be seen there.` : '',
+            'Look at the whole deal with every party, and ask the service for the splits missing.',
+          ]
+            .filter(Boolean)
+            .join(' ');
+        }
+      }
       // F152: a private link counts only once published at its signer's
       // homes, so a thief using a stolen signing key leaves something here:
       // any act its homes hold, signed with its key, that this desk did not
@@ -569,6 +597,18 @@ export class Desk {
       }
     }
     if (d.spec === REPO_SPECS.law) item.problem = 'A Law act: read it in the collective client.';
+    if (d.spec === REPO_SPECS.law && d.type === LAW_TYPES.split && d.signer) {
+      // F188 (DQ6): a split's number, read for the holder's alarm.
+      try {
+        const m = cborDecode(d.payload) as Map<number, unknown>;
+        const ag = m.get(3);
+        const n = m.get(5);
+        if (ag instanceof Uint8Array) item.split = { service: d.signer, agreement: hex(ag), number: typeof n === 'number' ? n : typeof n === 'bigint' ? Number(n) : null };
+        item.kind = 'split';
+      } catch {
+        // not a split this desk reads
+      }
+    }
     return item;
   }
 

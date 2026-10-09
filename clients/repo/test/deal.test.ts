@@ -9,7 +9,7 @@ import { MIPS, cborEncode, unhex } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
-import { dealPayload, sellerAlarm } from '../src/deal.ts';
+import { dealPayload, offerCheck, sellerAlarm } from '../src/deal.ts';
 import { proposePayload, sign } from '../src/law.ts';
 
 let homes: Running[] = [];
@@ -103,4 +103,27 @@ test('a payment naming a version the seller has never seen raises the alarm', as
   assert.match(w, /^ALARM/);
   assert.match(w, /never seen/);
   assert.match(w, new RegExp(a.slice(0, 8)));
+});
+
+// F188 (decided 9 October 2026), client conformance, a strong SHOULD: before
+// paying, a buyer's client finds the offer and verifies that it is truly the
+// latest in its chain, and warns where what it shows is outdated.
+test('a buyer\'s client checks that the offer is the latest in its chain before paying', async () => {
+  const [ana, ben] = [await person(), await person()];
+  const parties = [ana.id, ben.id];
+  const relays = [relay.base];
+  const version = async (text: string, parent?: string) => {
+    const p = await proposePayload(ana, dealPayload({ parties, text, parent }), parent, relays);
+    await sign(ana, p.id, relays);
+    await sign(ben, p.id, relays);
+    return p.id;
+  };
+  const d = await version('Ana and Ben sell a song at 100.');
+  assert.equal((await offerCheck(d, relays)).current, true);
+  const a = await version('Now at 120.', d);
+  const old = await offerCheck(d, relays);
+  assert.equal(old.current, false);
+  assert.equal(old.inForce, a);
+  assert.match(old.words.join(' '), /^WARNING: the offer shown is outdated/);
+  assert.equal((await offerCheck(a, relays)).current, true);
 });

@@ -3880,6 +3880,7 @@ fn every_payout_matches_its_stake() {
         cmip: spec("a split cMIP"),
         agreement: f,
         tally: None,
+        number: None,
     };
     let everyone = ids.clone();
     let r1 = receipt(&mut lab, &mut svc, 1000);
@@ -3990,6 +3991,7 @@ fn unit_split(lab: &mut Lab, svc: &mut Person, f: Hash, stake: u64, receipt: Has
         cmip: spec("a split cMIP"),
         agreement: f,
         tally: count.map(|c| vec![(stake, c)]),
+        number: None,
     };
     let everyone = lab.ids()[..2].to_vec();
     lab.w.private_act_refs(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone, previous.map(|p| vec![Ref::Act(p)]))
@@ -4219,7 +4221,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     assert!(matches!(lab.view().backing(&incoming).unwrap(), Backing::Backed { .. }));
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None };
+    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None, number: None };
     let by_stakes = vec![pay(ids[ANA], 400), pay(ids[BEN], 300), pay(ids[CY], 300)];
     let everyone = ids.clone();
     // The service's own split, naming the version in force: no problem.
@@ -4336,7 +4338,7 @@ fn a_split_service_is_held_to_account() {
     assert!(account.unpaid.is_empty());
     let stake = lab.view().terms(&k).unwrap().own_stake().unwrap().0 as u64;
     let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None };
+    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None, number: None };
     // A stranger's split names it: the service still owes a split.
     let _ = lab.w.private_act(&mut stranger, mips().law, law::types::SPLIT, split(r1).to_map(), None, ids.clone());
     assert_eq!(lab.view().service_account(&svc.id).unwrap().unsplit.len(), 1);
@@ -6482,6 +6484,7 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
         cmip: spec("a split cMIP"),
         agreement: deal,
         tally: None,
+        number: None,
     };
     let sp = law_act(&mut w, &mut svc, law::types::SPLIT, split.to_map(), None);
     let named = add(&mut w, &mut sb, rc(bid, fid, sp, None, None));
@@ -8494,4 +8497,107 @@ fn bq4_a_contest_names_the_declaration_and_is_signed_by_the_party_named() {
     drop(v);
     let bad = law_act(&mut lab.w, &mut cy2, law::types::CONTEST, c.to_map(), obj(f));
     assert!(!lab.view().contests(&d).unwrap().contains(&bad));
+}
+
+/// F188, DQ8 (decided 9 October 2026): where the parties cannot agree, the
+/// arbitrator the deal's reference version names may settle the fork,
+/// only once activated by one of the signing parties, by a signed request
+/// naming the fork, which its settlement names: never on its own
+/// initiative. With no arbitrator named, the deal stays on its reference.
+#[test]
+fn f188_dq8_the_arbitrator_settles_a_fork_only_on_a_partys_request() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut arb = w.genesis("an arbitrator", vec![own_home()], None, None);
+    let mut eve = w.genesis("eve", vec![own_home()], None, None);
+    let mut t = deal_terms(ana.id, ben.id);
+    t.arbitrators = Some(vec![arb.id]);
+    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let mut l = DealLab { w, ana, ben, t, d };
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let settle = |w: &mut World, arb: &mut Person, request: Hash| {
+        let s = law::ForkSettlement { request, kept: a1, discarded: b1 };
+        law_act(w, arb, law::types::FORK_SETTLEMENT, s.to_map(), obj(request))
+    };
+    let ask = |w: &mut World, who: &mut Person| {
+        let r = law::SettlementRequest { reference: d };
+        law_act(w, who, law::types::SETTLEMENT_REQUEST, r.to_map(), obj(d))
+    };
+    // Never on its own initiative: a settlement naming a request nobody made.
+    settle(&mut l.w, &mut arb, spec("no request"));
+    assert_eq!(l.in_force().unwrap(), d);
+    // A request by someone who signed nothing activates nothing.
+    let by_eve = ask(&mut l.w, &mut eve);
+    settle(&mut l.w, &mut arb, by_eve);
+    assert_eq!(l.in_force().unwrap(), d);
+    // Ben asks; the arbitrator keeps A.
+    let by_ben = ask(&mut l.w, &mut l.ben);
+    let s = settle(&mut l.w, &mut arb, by_ben);
+    assert_eq!(l.in_force().unwrap(), a1, "settled by the arbitrator, on Ben's request");
+    // Only the arbitrator the reference names settles.
+    let mut l2 = DealLab::new();
+    let d2 = l2.d;
+    l2.version(d2, "A.", None);
+    l2.version(d2, "B.", None);
+    let _ = s;
+    let req = {
+        let r = law::SettlementRequest { reference: d2 };
+        law_act(&mut l2.w, &mut l2.ana, law::types::SETTLEMENT_REQUEST, r.to_map(), obj(d2))
+    };
+    let mut other = l2.w.genesis("not the arbitrator", vec![own_home()], None, None);
+    let kids = view(&l2.w).deal_fork(&d2).unwrap().unwrap().branches;
+    let s2 = law::ForkSettlement { request: req, kept: kids[0][0], discarded: kids[1][0] };
+    law_act(&mut l2.w, &mut other, law::types::FORK_SETTLEMENT, s2.to_map(), obj(req));
+    assert_eq!(l2.in_force().unwrap(), d2);
+}
+
+/// F188, DQ6 (decided 9 October 2026, "Yes"): while a deal is forked, the
+/// turns for leftover units stay per branch, and a single numbering runs
+/// across every split the service makes, on any branch, each split showing
+/// its number; a holder's client raises the alarm where the numbers on the
+/// splits it receives skip: splits are then being made where it is not
+/// shown.
+#[test]
+fn f188_dq6_one_numbering_across_a_deals_splits_shows_a_hidden_branch() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let mut svc = l.w.genesis("a split service", vec![own_home()], None, None);
+    let svc_id = svc.id;
+    let ana = l.ana.id;
+    let mut split = |l: &mut DealLab, agreement: Hash, number: Option<u64>| {
+        let s = law::Split {
+            receipt: spec(&format!("a receipt {number:?} {agreement:?}")),
+            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None }],
+            cmip: spec("a split cMIP"),
+            agreement,
+            tally: None,
+            number,
+        };
+        law_act(&mut l.w, &mut svc, law::types::SPLIT, s.to_map(), None)
+    };
+    split(&mut l, a1, Some(1));
+    split(&mut l, a1, Some(2));
+    // Number 3, under branch B, never reaches the holder who sees A only.
+    split(&mut l, a1, Some(4));
+    let n = view(&l.w).split_numbers(&svc_id, &a1).unwrap();
+    assert_eq!(n.gaps, vec![3], "the alarm: a split numbered 3 was made where this holder is not shown");
+    // Delivered after all, under B: one numbering across both branches.
+    split(&mut l, b1, Some(3));
+    let n = view(&l.w).split_numbers(&svc_id, &d).unwrap();
+    assert!(n.gaps.is_empty());
+    assert_eq!(n.numbers.iter().map(|x| x.0).collect::<Vec<_>>(), vec![1, 2, 3, 4]);
+    split(&mut l, a1, Some(4));
+    split(&mut l, b1, None);
+    let n = view(&l.w).split_numbers(&svc_id, &d).unwrap();
+    assert_eq!((n.repeated, n.unnumbered.len()), (vec![4], 1));
+    // A number counts from 1.
+    let mut s = law::Split { receipt: spec("r"), payouts: vec![], cmip: spec("c"), agreement: d, tally: None, number: Some(0) };
+    s.payouts.push(law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None });
+    assert!(law::Split::decode(&s.to_map()).is_err());
 }

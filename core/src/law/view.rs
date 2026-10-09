@@ -1523,6 +1523,36 @@ impl<'a> LawView<'a> {
         out
     }
 
+    /// The numbers on the splits a service made under a deal (DQ6, decided
+    /// 9 October 2026): one numbering across every split the service
+    /// makes under the deal, on any branch of a fork. Client conformance:
+    /// a holder's client MUST raise the alarm where the numbers it receives
+    /// skip, since splits are then being made where it is not shown. Given
+    /// the splits this verifier holds (those it received): the numbers
+    /// missing below the highest, the numbers carried twice, and the
+    /// splits carrying none.
+    pub fn split_numbers(&self, service: &Hash, agreement: &Hash) -> R<SplitNumbers> {
+        let root = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
+        let mut seen: BTreeMap<u64, Vec<Hash>> = BTreeMap::new();
+        let mut unnumbered = vec![];
+        for (h, sp) in self.splits_of(service) {
+            if self.lineage(&sp.agreement).ok().and_then(|l| l.last().map(|r| r.0)) != Some(root) {
+                continue;
+            }
+            match sp.number {
+                Some(n) => seen.entry(n).or_default().push(h.id),
+                None => unnumbered.push(h.id),
+            }
+        }
+        let top = seen.keys().next_back().copied().unwrap_or(0);
+        Ok(SplitNumbers {
+            gaps: (1..=top).filter(|n| !seen.contains_key(n)).collect(),
+            repeated: seen.iter().filter(|(_, v)| v.len() > 1).map(|(n, _)| *n).collect(),
+            numbers: seen.into_iter().flat_map(|(n, v)| v.into_iter().map(move |h| (n, h))).collect(),
+            unnumbered,
+        })
+    }
+
     /// The contests of a declaration of absence (type 14, rule 52; BQ4,
     /// decided 9 October 2026): valid contests naming it, each signed by
     /// the party it declares absent, which shows presence. A contest voids
@@ -5242,6 +5272,19 @@ pub struct ForkAlarm {
     pub named_line: Vec<Hash>,
 }
 
+/// The numbers on a service's splits under a deal (DQ6, F188).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SplitNumbers {
+    /// Each split held, by its number, ascending.
+    pub numbers: Vec<(u64, Hash)>,
+    /// The numbers missing below the highest held: the holder's alarm.
+    pub gaps: Vec<u64>,
+    /// Numbers carried by two splits or more.
+    pub repeated: Vec<u64>,
+    /// Splits under the deal carrying no number.
+    pub unnumbered: Vec<Hash>,
+}
+
 /// What a payment naming a version a seller does not descend from shows
 /// (rule 45b, client conformance).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -7080,8 +7123,47 @@ impl<'a> LawView<'a> {
     }
 
     /// The arbitrator's settlements of the fork at `at` (F188, DQ8).
-    fn arbitrated(&self, _at: &Hash, _kids: &[Hash], _below: &BTreeMap<Hash, Hash>) -> R<Vec<(Hash, Hash, Hash, Hash)>> {
-        Ok(vec![])
+    /// The arbitrator's settlements of the fork at `at` (F188, DQ8): each
+    /// signed by the one arbitrator the reference names (field 13), naming
+    /// a request by a party who signed the reference, which names `at`; its
+    /// kept and discarded tips on the two branches. As (the act, the kept
+    /// tip, the discarded tip, the kept tip). Where the reference names
+    /// several arbitrators or verifiers, which one may settle is not
+    /// decided (QF2): none counts, and the deal stays on its reference.
+    fn arbitrated(&self, at: &Hash, kids: &[Hash], below: &BTreeMap<Hash, Hash>) -> R<Vec<(Hash, Hash, Hash, Hash)>> {
+        let t = self.terms(at)?;
+        let Some([arbitrator]) = t.arbitrators.as_deref() else { return Ok(vec![]) };
+        let side = |x: &Hash| -> Option<usize> {
+            let mut y = *x;
+            while let Some(p) = below.get(&y) {
+                if kids.contains(&y) {
+                    return kids.iter().position(|k| k == &y);
+                }
+                y = *p;
+            }
+            None
+        };
+        let mut out = vec![];
+        for h in self.v.signed_by(arbitrator) {
+            if !self.is_law(h, types::FORK_SETTLEMENT) || !self.valid(&h.id) {
+                continue;
+            }
+            let Ok(s) = ForkSettlement::decode(&h.inside) else { continue };
+            let Some(rq) = self.v.get(&s.request) else { continue };
+            if !self.is_law(rq, types::SETTLEMENT_REQUEST) || !self.valid(&rq.id) {
+                continue;
+            }
+            let Ok(r) = SettlementRequest::decode(&rq.inside) else { continue };
+            let Some(asker) = rq.act.outside.signer else { continue };
+            if r.reference != *at || !t.parties.contains(&asker) || self.signers(at, &[asker]).is_empty() {
+                continue;
+            }
+            match (side(&s.kept), side(&s.discarded)) {
+                (Some(i), Some(j)) if i != j => out.push((h.id, s.kept, s.discarded, s.kept)),
+                _ => {}
+            }
+        }
+        Ok(out)
     }
 
     /// Where a deal stands forked (rule 45b, F186): the reference, the
