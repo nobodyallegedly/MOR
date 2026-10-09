@@ -15,3 +15,5 @@ This one makes the whole thing sort of absurd. They have to count, both versions
 **B1.** "Ideally, the collective is quarantined, it has accidentally breached the rules « of engagement ». Grants should not be able to count during the stretch. Rollback does what it states, it rolls back all the conditions to the act just prior to the break."
 
 **B2.** "Here we are facing activities over two chains. The inner chain is broken, but the public chain was not affected. Signed anew makes sense. But I'm doubting… what I'd need to reconsider is how the two chains cross. Because if they were able to sign new stuff that new stuff is then possibly used by other participants and that creates a whole new set of problems, no? So the question I am asking myself: does the public chain need to be addressed? Only if activities do not respect the rules at the act before the break."
+
+**B3.** "It has to, the vanish could cause deadlocks, but at the same time how can this be gamed?" *(Exploration follows in the conversation.)*
