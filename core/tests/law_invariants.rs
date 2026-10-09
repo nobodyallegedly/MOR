@@ -2023,7 +2023,8 @@ enum SplitCite {
 enum DealRead {
     InForce(Hash),
     Forked { reference: Hash, branches: Vec<Vec<Hash>> },
-    Undecided,
+    /// A tangled fork (F188, DQ1 to DQ4): the deal stays on its reference.
+    Tangled { reference: Hash },
 }
 
 #[derive(Clone, Debug)]
@@ -2254,9 +2255,9 @@ impl DealWorld {
     /// written from the text, apart from the library: followed one complete
     /// version at a time; two complete versions of one version, each branch
     /// followed alone, a fork, its reference the version before the split
-    /// (this harness makes no settling version); any other shape (three
-    /// clones of one version, a branch forking again) is not decided, and a
-    /// verifier refuses it.
+    /// (this harness makes no settling version); a tangled shape (three
+    /// clones of one version, a branch splitting again) leaves the deal on
+    /// its reference (F188, DQ1 to DQ4, decided 9 October 2026).
     fn oracle(&self) -> DealRead {
         let lv = self.view();
         let kids = |at: Hash| -> Vec<Hash> {
@@ -2279,14 +2280,14 @@ impl DealWorld {
                             match kids(*line.last().unwrap()).as_slice() {
                                 [] => break,
                                 [n] => line.push(*n),
-                                _ => return DealRead::Undecided,
+                                _ => return DealRead::Tangled { reference: at },
                             }
                         }
                         branches.push(line);
                     }
                     return DealRead::Forked { reference: at, branches };
                 }
-                _ => return DealRead::Undecided,
+                _ => return DealRead::Tangled { reference: at },
             }
         }
     }
@@ -2298,7 +2299,7 @@ impl DealWorld {
         match self.oracle() {
             DealRead::InForce(h) => Some(h),
             DealRead::Forked { reference, branches } => Some(branches.iter().find(|b| b.contains(named)).map(|b| *b.last().unwrap()).unwrap_or(reference)),
-            DealRead::Undecided => None,
+            DealRead::Tangled { reference } => Some(reference),
         }
     }
 
@@ -2308,7 +2309,7 @@ impl DealWorld {
         match self.oracle() {
             DealRead::InForce(h) => h,
             DealRead::Forked { branches, .. } => *branches[0].last().unwrap(),
-            DealRead::Undecided => self.deal,
+            DealRead::Tangled { reference } => reference,
         }
     }
 
@@ -2490,7 +2491,7 @@ impl DealWorld {
                     *carried.entry(stakes[0].0).or_insert(0) += 1;
                 }
                 let carried: Vec<(Hash, u64)> = carried.into_iter().collect();
-                let s = law::Split { receipt: rc, payouts, cmip: spec("a split cMIP"), agreement: latest, tally: Some(vec![(0, carried.clone())]) };
+                let s = law::Split { receipt: rc, payouts, cmip: spec("a split cMIP"), agreement: latest, tally: Some(vec![(0, carried.clone())]), number: None };
                 let to: Vec<Hash> = if *deliver_all { ids.clone() } else { ids[1..].to_vec() };
                 let mut svp = self.svc.take().unwrap();
                 let x = self.w.private_act_refs(&mut svp, mips().law, law::types::SPLIT, s.to_map(), None, to, previous.map(|p| vec![mor_core::act::Ref::Act(p)]));
@@ -2568,16 +2569,14 @@ impl DealWorld {
                 bad.push(format!("SERVICE-NO-DEAL: a grant key binds though the deal does not exist (H4): {x:?}"));
             }
         }
-        // F186: a shape the text does not decide (three complete versions
-        // of one version, a branch forking again) is refused, never guessed;
-        // nothing judged against the version in force can be checked there.
+        // F188 (DQ1 to DQ4): a tangled fork leaves the deal on its
+        // reference until one clean settlement.
         let read = self.oracle();
-        if read == DealRead::Undecided {
-            if !matches!(lv.version_in_force(&self.deal), Err(law::LawError::Unsettled(_))) {
-                bad.push(format!("DEAL-UNDECIDED: a deal's fork the text does not decide is given a version in force: {:?}", lv.version_in_force(&self.deal)));
+        if let DealRead::Tangled { reference } = read {
+            if lv.version_in_force(&self.deal).ok() != Some(reference) {
+                bad.push(format!("DEAL-TANGLED: a tangled fork does not stay on its reference: {:?}", lv.version_in_force(&self.deal)));
             }
-            deal_stats().hit("undecided_fork");
-            return Violations(bad).into_result();
+            deal_stats().hit("tangled_fork");
         }
         if matches!(read, DealRead::Forked { .. }) {
             deal_stats().hit("forked");

@@ -21,6 +21,12 @@ export const LAW_TYPES = {
   split: 8,
   grant: 9,
   declaration: 13,
+  /** A contest of a declaration of absence (rule 52; BQ4, F188). */
+  contest: 14,
+  /** A party's request that a deal's arbitrator settle its fork (DQ8, F188). */
+  settlementRequest: 22,
+  /** The arbitrator's settlement of a deal's fork (DQ8, F188). */
+  forkSettlement: 23,
   resignation: 16,
   record: 17,
   fork: 19,

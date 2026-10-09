@@ -2057,6 +2057,34 @@ pub fn resignation_payload(agreement: &str, area: Option<u32>) -> R<Vec<u8>> {
     )))
 }
 
+/// A settlement request payload (Law type 22; DQ8, F188): the deal's
+/// reference version, the version with two complete clones, whose
+/// arbitrator a party who signed it asks to settle the fork. The act
+/// carries, in `objects`, `[reference, reference]`.
+#[wasm_bindgen(js_name = settlementRequestPayload)]
+pub fn settlement_request_payload(reference: &str) -> R<Vec<u8>> {
+    Ok(cbor::encode(&Value::Map(law::SettlementRequest { reference: unhex(reference)? }.to_map())))
+}
+
+/// A fork settlement payload (Law type 23; DQ8, F188): the arbitrator's
+/// settlement, naming the request that activated it, the tip of the branch
+/// kept and the tip of the branch discarded. The act carries, in
+/// `objects`, `[request, request]`.
+#[wasm_bindgen(js_name = forkSettlementPayload)]
+pub fn fork_settlement_payload(request: &str, kept: &str, discarded: &str) -> R<Vec<u8>> {
+    Ok(cbor::encode(&Value::Map(
+        law::ForkSettlement { request: unhex(request)?, kept: unhex(kept)?, discarded: unhex(discarded)? }.to_map(),
+    )))
+}
+
+/// A contest payload (Law type 14; BQ4, F188): the declaration of absence
+/// it answers. Signed by the party the declaration names; the act carries,
+/// in `objects`, `[declaration, declaration]`. It voids nothing (rule 52).
+#[wasm_bindgen(js_name = contestPayload)]
+pub fn contest_payload(declaration: &str) -> R<Vec<u8>> {
+    Ok(cbor::encode(&Value::Map(law::Contest { declaration: unhex(declaration)? }.to_map())))
+}
+
 /// An abandonment declaration payload (Law type 13, B12): the agreement,
 /// the version whose clause it applies (the last the party signed), the
 /// party, and the outcomes, ascending. The act carries, in `objects`,
@@ -2628,7 +2656,25 @@ impl Verifier {
     }
 
     /// The declarations of absence naming `party` this verifier holds (RB3,
-    /// client conformance): `{ act, signer, agreement, clause, outcomes }`.
+    /// client conformance): `{ act, signer, agreement, clause, outcomes,
+    /// contests }`, `contests` the party's contests of it (BQ4).
+    /// The numbers on the splits a service made under a deal (DQ6, F188):
+    /// `{ numbers: [number, split][], gaps, repeated, unnumbered }`. Client
+    /// conformance: a holder's client MUST raise the alarm where the
+    /// numbers it receives skip (`gaps`).
+    #[wasm_bindgen(js_name = lawSplitNumbers)]
+    pub fn law_split_numbers(&self, specs: JsValue, service: &str, agreement: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let n = view.split_numbers(&unhex(service)?, &unhex(agreement)?).map_err(lerr)?;
+        to_js(&SplitNumbersOut {
+            numbers: n.numbers.iter().map(|(k, h)| (*k, hx(h))).collect(),
+            gaps: n.gaps,
+            repeated: n.repeated,
+            unnumbered: n.unnumbered.iter().map(hx).collect(),
+        })
+    }
+
     #[wasm_bindgen(js_name = lawDeclarationsNaming)]
     pub fn law_declarations_naming(&self, specs: JsValue, party: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2636,14 +2682,17 @@ impl Verifier {
         let out: Vec<DeclarationNamingOut> = view
             .declarations_naming(&unhex(party)?)
             .iter()
-            .map(|(act, signer, d)| DeclarationNamingOut {
-                act: hx(act),
-                signer: hx(signer),
-                agreement: hx(&d.agreement),
-                clause: hx(&d.clause),
-                outcomes: d.outcomes.clone(),
+            .map(|(act, signer, d)| {
+                Ok(DeclarationNamingOut {
+                    act: hx(act),
+                    signer: hx(signer),
+                    agreement: hx(&d.agreement),
+                    clause: hx(&d.clause),
+                    outcomes: d.outcomes.clone(),
+                    contests: view.contests(act).map_err(lerr)?.iter().map(hx).collect(),
+                })
             })
-            .collect();
+            .collect::<R<_>>()?;
         to_js(&out)
     }
 
@@ -2673,10 +2722,22 @@ impl Verifier {
         to_js(&out)
     }
 
-    /// Where a deal stands forked (rule 45b, F186): `{ reference, branches }`,
-    /// each branch its versions from the split to its latest; null where it
-    /// is not forked. Throws where the shape is not decided (refused rather
-    /// than guessed).
+    /// Where a deal stands forked (rule 45b, F186): `{ reference, branches,
+    /// tangled }`, each branch its versions from the split to its latest,
+    /// `tangled` the reason where the fork is tangled (F188, DQ1 to DQ4: the
+    /// deal stays on its reference); null where it is not forked. Throws
+    /// where the shape is not decided (QF1, refused rather than guessed).
+    /// The version of an agreement in force, as rule 45b reads a deal's
+    /// forks (F186, F188): while forked or tangled, the reference. Throws
+    /// where the shape is not decided (QF1). What a buyer's client checks
+    /// an offer against before paying (F188, a strong SHOULD).
+    #[wasm_bindgen(js_name = lawVersionInForce)]
+    pub fn law_version_in_force(&self, specs: JsValue, agreement: &str) -> R<String> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        Ok(hx(&view.version_in_force(&unhex(agreement)?).map_err(lerr)?))
+    }
+
     #[wasm_bindgen(js_name = lawDealFork)]
     pub fn law_deal_fork(&self, specs: JsValue, agreement: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2686,6 +2747,7 @@ impl Verifier {
             Some(f) => to_js(&DealForkOut {
                 reference: hx(&f.reference),
                 branches: f.branches.iter().map(|b| b.iter().map(hx).collect()).collect(),
+                tangled: f.tangled,
             }),
         }
     }
@@ -2693,7 +2755,9 @@ impl Verifier {
     /// Client conformance (rule 45b, F186): the alarm a seller's client and
     /// a split service raise when a payment names a version of the deal that
     /// does not descend from the version they hold. Null where it does;
-    /// else `{ named, held, shared, fork, heldLine, namedLine }`.
+    /// else `{ named, held, shared, kind, heldLine, namedLine }`, `kind`
+    /// "fork" (the alarm), "unheld" (a version this verifier does not hold:
+    /// the alarm, F189 3) or "older" (a plain notice, F188 DQ7).
     #[wasm_bindgen(js_name = lawForkAlarm)]
     pub fn law_fork_alarm(&self, specs: JsValue, payment: &str, held: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
@@ -2704,7 +2768,11 @@ impl Verifier {
                 named: hx(&a.named),
                 held: hx(&a.held),
                 shared: hx(&a.shared),
-                fork: a.fork,
+                kind: match a.kind {
+                    mor_core::law::AlarmKind::Fork => "fork",
+                    mor_core::law::AlarmKind::Unheld => "unheld",
+                    mor_core::law::AlarmKind::Older => "older",
+                },
                 held_line: a.held_line.iter().map(hx).collect(),
                 named_line: a.named_line.iter().map(hx).collect(),
             }),
@@ -3195,6 +3263,9 @@ struct DeclarationNamingOut {
     agreement: String,
     clause: String,
     outcomes: Vec<u64>,
+    /// The contests of it the party signed (type 14; BQ4, F188): shown
+    /// beside it; a contest voids nothing (rule 52).
+    contests: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -3214,9 +3285,20 @@ struct OwedBackOut {
 }
 
 #[derive(Serialize)]
+struct SplitNumbersOut {
+    numbers: Vec<(u64, String)>,
+    gaps: Vec<u64>,
+    repeated: Vec<u64>,
+    unnumbered: Vec<String>,
+}
+
+#[derive(Serialize)]
 struct DealForkOut {
     reference: String,
     branches: Vec<Vec<String>>,
+    /// Where the fork is tangled (F188, DQ1 to DQ4), why: the deal stays on
+    /// its reference until one clean settlement.
+    tangled: Option<&'static str>,
 }
 
 #[derive(Serialize)]
@@ -3225,7 +3307,7 @@ struct ForkAlarmOut {
     named: String,
     held: String,
     shared: String,
-    fork: bool,
+    kind: &'static str,
     held_line: Vec<String>,
     named_line: Vec<String>,
 }

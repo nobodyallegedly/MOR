@@ -3880,6 +3880,7 @@ fn every_payout_matches_its_stake() {
         cmip: spec("a split cMIP"),
         agreement: f,
         tally: None,
+        number: None,
     };
     let everyone = ids.clone();
     let r1 = receipt(&mut lab, &mut svc, 1000);
@@ -3990,6 +3991,7 @@ fn unit_split(lab: &mut Lab, svc: &mut Person, f: Hash, stake: u64, receipt: Has
         cmip: spec("a split cMIP"),
         agreement: f,
         tally: count.map(|c| vec![(stake, c)]),
+        number: None,
     };
     let everyone = lab.ids()[..2].to_vec();
     lab.w.private_act_refs(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone, previous.map(|p| vec![Ref::Act(p)]))
@@ -4219,7 +4221,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     assert!(matches!(lab.view().backing(&incoming).unwrap(), Backing::Backed { .. }));
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None };
+    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None, number: None };
     let by_stakes = vec![pay(ids[ANA], 400), pay(ids[BEN], 300), pay(ids[CY], 300)];
     let everyone = ids.clone();
     // The service's own split, naming the version in force: no problem.
@@ -4336,7 +4338,7 @@ fn a_split_service_is_held_to_account() {
     assert!(account.unpaid.is_empty());
     let stake = lab.view().terms(&k).unwrap().own_stake().unwrap().0 as u64;
     let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None };
+    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None, number: None };
     // A stranger's split names it: the service still owes a split.
     let _ = lab.w.private_act(&mut stranger, mips().law, law::types::SPLIT, split(r1).to_map(), None, ids.clone());
     assert_eq!(lab.view().service_account(&svc.id).unwrap().unsplit.len(), 1);
@@ -5377,7 +5379,19 @@ fn two_complete_versions_of_a_deal() {
     let fk = view(&w).deal_fork(&d).unwrap().expect("still forked");
     assert!(fk.branches.contains(&vec![k1, k3]));
     // A version naming as settled something not on the other branch settles nothing.
-    let stray = clone(&mut w, &mut ana, &mut ben, k3, "Settling nothing.", Some(d));
+    let stray = {
+        let mut c = t.clone();
+        c.parent = Some(k3);
+        c.text = "Settling nothing.".into();
+        c.release_rule = Some(Rule::All);
+        c.settles = Some(d);
+        c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
+        let o = vec![Object { chain: k3, predecessor: k3 }, Object { chain: d, predecessor: d }];
+        let k = law_act(&mut w, &mut ana, law::types::TERMS, c.to_map(), Some(o));
+        sign(&mut w, &mut ana, &k);
+        sign(&mut w, &mut ben, &k);
+        k
+    };
     assert_eq!(view(&w).version_in_force(&d).unwrap(), d);
     assert!(view(&w).deal_fork(&d).unwrap().expect("still forked").branches.contains(&vec![k1, k3, stray]));
     // Field 26 is a deal's: founding terms, or a version naming its own parent, are invalid.
@@ -5387,74 +5401,28 @@ fn two_complete_versions_of_a_deal() {
 }
 
 /// F186 (decided 9 October 2026): settled only by a version naming both
-/// branches; final. And the shapes F186 does not decide are refused.
+/// branches, complete; from then on the settling version's line is in
+/// force. (What grows on the discarded branch, and the tangled shapes:
+/// `f189_4_…`, `f189_5_…`, `f188_dq1_to_dq4_…`.)
 #[test]
 fn a_deals_fork_is_settled_by_a_version_naming_both_branches() {
-    let mut w = World::new();
-    let mut ana = w.genesis("ana", vec![own_home()], None, None);
-    let mut ben = w.genesis("ben", vec![own_home()], None, None);
-    let t = deal_terms(ana.id, ben.id);
-    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
-    sign(&mut w, &mut ana, &d);
-    sign(&mut w, &mut ben, &d);
-    let clone = |w: &mut World, ana: &mut Person, ben: &mut Person, parent: Hash, text: &str, settles: Option<Hash>| {
-        let mut c = t.clone();
-        c.parent = Some(parent);
-        c.text = text.into();
-        c.settles = settles;
-        c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
-        let k = law_act(w, ana, law::types::TERMS, c.to_map(), obj(parent));
-        sign(w, ana, &k);
-        sign(w, ben, &k);
-        k
-    };
-    let a1 = clone(&mut w, &mut ana, &mut ben, d, "Branch A.", None);
-    let b1 = clone(&mut w, &mut ana, &mut ben, d, "Branch B.", None);
-    let a2 = clone(&mut w, &mut ana, &mut ben, a1, "Branch A grows.", None);
-    assert_eq!(view(&w).version_in_force(&d).unwrap(), d);
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "Branch A.", None);
+    let b1 = l.version(d, "Branch B.", None);
+    let a2 = l.version(a1, "Branch A grows.", None);
+    assert_eq!(l.in_force().unwrap(), d);
     // A settling version that is a draft settles nothing.
-    let mut c = t.clone();
-    c.parent = Some(a2);
-    c.text = "Settled, half signed.".into();
-    c.settles = Some(b1);
-    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
-    let half = law_act(&mut w, &mut ana, law::types::TERMS, c.to_map(), obj(a2));
-    sign(&mut w, &mut ana, &half);
-    assert_eq!(view(&w).version_in_force(&d).unwrap(), d);
+    let half = l.propose(a2, "Settled, half signed.", Some(b1));
+    sign(&mut l.w, &mut l.ana, &half);
+    assert_eq!(l.in_force().unwrap(), d);
     // Settled: a complete version on branch A naming branch B's tip.
-    let s = clone(&mut w, &mut ana, &mut ben, a2, "Settled: A, having seen B.", Some(b1));
-    assert_eq!(view(&w).version_in_force(&d).unwrap(), s);
-    assert_eq!(view(&w).deal_fork(&d).unwrap(), None);
-    assert_eq!(view(&w).version_in_force(&b1).unwrap(), s, "an act naming B is judged by the version in force");
-    // Final: branch B grows, and never comes back.
-    let b2 = clone(&mut w, &mut ana, &mut ben, b1, "Branch B grows after the settlement.", None);
-    let b3 = clone(&mut w, &mut ana, &mut ben, b2, "And again.", None);
-    assert_eq!(view(&w).version_in_force(&b3).unwrap(), s);
-    let s2 = clone(&mut w, &mut ana, &mut ben, s, "Life goes on.", None);
-    assert_eq!(view(&w).version_in_force(&d).unwrap(), s2);
-    // Not decided, refused: two versions settling one fork.
-    let other = clone(&mut w, &mut ana, &mut ben, b3, "Settled the other way.", Some(a2));
-    assert!(matches!(view(&w).version_in_force(&d), Err(law::LawError::Unsettled(_))));
-    let _ = other;
-
-    // Not decided, refused: three complete versions of one version.
-    let mut w2 = World::new();
-    let mut ana = w2.genesis("ana", vec![own_home()], None, None);
-    let mut ben = w2.genesis("ben", vec![own_home()], None, None);
-    let t = deal_terms(ana.id, ben.id);
-    let d = law_act(&mut w2, &mut ana, law::types::TERMS, t.to_map(), None);
-    sign(&mut w2, &mut ana, &d);
-    sign(&mut w2, &mut ben, &d);
-    for x in ["One.", "Two.", "Three."] {
-        let mut c = t.clone();
-        c.parent = Some(d);
-        c.text = x.into();
-        c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
-        let k = law_act(&mut w2, &mut ana, law::types::TERMS, c.to_map(), obj(d));
-        sign(&mut w2, &mut ana, &k);
-        sign(&mut w2, &mut ben, &k);
-    }
-    assert!(matches!(view(&w2).version_in_force(&d), Err(law::LawError::Unsettled(_))));
+    let s = l.version(a2, "Settled: A, having seen B.", Some(b1));
+    assert_eq!(l.in_force().unwrap(), s);
+    assert_eq!(view(&l.w).deal_fork(&d).unwrap(), None);
+    assert_eq!(view(&l.w).version_in_force(&b1).unwrap(), s, "an act naming B is judged by the version in force");
+    let s2 = l.version(s, "Life goes on.", None);
+    assert_eq!(l.in_force().unwrap(), s2);
 }
 
 /// F186, client conformance (decided 9 October 2026): a seller's client
@@ -5503,14 +5471,14 @@ fn a_payment_naming_another_branch_raises_the_alarm() {
     let under_b = pay(&mut w, &mut fan, b, b"b");
     let v = view(&w);
     let alarm = v.fork_alarm(&under_b, &a).unwrap().expect("Ana's client holds 3A: the alarm");
-    assert_eq!((alarm.named, alarm.held, alarm.shared, alarm.fork), (b, a, d, true));
+    assert_eq!((alarm.named, alarm.held, alarm.shared, alarm.kind), (b, a, d, law::AlarmKind::Fork));
     assert_eq!((alarm.held_line.clone(), alarm.named_line.clone()), (vec![a], vec![b]));
     assert_eq!(v.fork_alarm(&under_b, &b).unwrap(), None, "Ben's client holds 3B: it descends");
     assert_eq!(v.fork_alarm(&under_b, &d).unwrap(), None, "a client holding the version before the split: 3B descends from it");
     drop(v);
     let under_d = pay(&mut w, &mut fan, d, b"d");
     let alarm = view(&w).fork_alarm(&under_d, &a).unwrap().expect("an older version does not descend from 3A");
-    assert!(!alarm.fork);
+    assert_eq!(alarm.kind, law::AlarmKind::Older, "a plain notice (DQ7)");
 }
 
 /// Freeze suite v21, 3.9e (F124 N11): a timed release names a future point
@@ -6516,6 +6484,7 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
         cmip: spec("a split cMIP"),
         agreement: deal,
         tally: None,
+        number: None,
     };
     let sp = law_act(&mut w, &mut svc, law::types::SPLIT, split.to_map(), None);
     let named = add(&mut w, &mut sb, rc(bid, fid, sp, None, None));
@@ -7711,15 +7680,17 @@ fn rb1_a_grant_is_quarantined_during_the_broken_stretch() {
     assert!(matches!(lab.view().backing(&during).unwrap(), Backing::NotBacked { .. }));
 }
 
-/// RB2's follow-up (decided 9 October 2026): every payment the collective
-/// received during the broken stretch is no purchase, and is owed back to
-/// the payer, unless the sale is signed anew after the rollback; until then
-/// it stands as a visible open obligation. Signing anew is a receipt of the
-/// collective for the same payment after the rollback, never an
-/// acknowledgement adopting the stretch's.
+/// RB2's follow-up, narrowed by BQ2 and BQ3 (decided 9 October 2026): a
+/// broken collective keeps exactly what its rules before the break
+/// allowed, judged by the offer a payment names, never by when it was paid.
+/// A sale under an offer made before the break is kept, even received in
+/// the stretch; one under an offer of the stretch is no purchase and is
+/// owed back, a payer's claim alone included (BQ3), unless the sale is
+/// signed anew after the rollback: a receipt of the collective for the same
+/// payment, never an acknowledgement adopting the stretch's.
 #[test]
-fn rb2_a_payment_received_during_the_broken_stretch_is_owed_back() {
-    use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt, RefundTo};
+fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
+    use mor_core::finance::{Amount, Claim, Payer, Payload as Fin, Purchase, Receipt, RefundTo};
     let work = spec("a song");
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
@@ -7757,29 +7728,53 @@ fn rb2_a_payment_received_during_the_broken_stretch_is_owed_back() {
     let k1 = lab.propose(ANA, &k1);
     let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
     let rot1 = lab.rotate(Some((k1, ks)), &[0]);
-    // A fan pays during the broken stretch; the label's receipt is of the stretch.
-    let paid = receipt(&mut lab, "Dee the fan", b"dee", f);
+    // Under the offer made before the break, received in the stretch: kept.
+    let kept = receipt(&mut lab, "Dee the fan", b"dee", f);
+    let got = lab.view().purchase(&kept).unwrap().unwrap();
+    assert!(!matches!(got.verdict, law::PurchaseVerdict::NoPurchase { .. }), "{got:?}");
+    // Under the clone of the stretch: owed back.
+    let paid = receipt(&mut lab, "Eve the fan", b"eve", k1);
     let got = lab.view().purchase(&paid).unwrap().unwrap();
     assert!(matches!(got.verdict, law::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")), "{got:?}");
-    assert_eq!(got.refund_to, RefundTo::Identity(spec("Dee the fan")));
-    assert_eq!(lab.view().owed_back(&label).unwrap().iter().map(|o| o.payment).collect::<Vec<_>>(), vec![paid]);
-    // The rollback; the payment is still owed back.
+    assert_eq!(got.refund_to, RefundTo::Identity(spec("Eve the fan")));
+    // BQ3: shown only by the payer's own claim, judged by the offer it names.
+    let mut fan = lab.w.genesis("Fay the fan", vec![own_home()], None, None);
+    let claim = |w: &mut World, fan: &mut Person, line: Hash, proof: &[u8]| {
+        let c = Fin::Claim(Claim {
+            rail,
+            proof: proof.to_vec(),
+            payee: label,
+            amount: Amount { unit: spec("a unit"), value: 4 },
+            fulfils: publication,
+            disagrees: None,
+            referral: None,
+            refund: None,
+            anonymous: None,
+            purchase: Some(Purchase { agreement: f, line }),
+        });
+        let x = w.everyday_act(fan, mips().finance, 3, c.to_map(), None, None);
+        w.add(&x)
+    };
+    let by_claim = claim(&mut lab.w, &mut fan, k1, b"fay");
+    let before_claim = claim(&mut lab.w, &mut fan, f, b"fay2");
+    let v = lab.view();
+    assert!(matches!(v.purchase(&by_claim).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")));
+    assert!(!matches!(v.purchase(&before_claim).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { .. }));
+    let owed: Vec<Hash> = v.owed_back(&label).unwrap().iter().map(|o| o.payment).collect();
+    assert_eq!(sorted(owed), sorted(vec![paid, by_claim]));
+    drop(v);
+    // The rollback; Eve's payment is still owed back.
     let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
     let r = lab.propose(ANA, &same);
     let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
     roll_back(&mut lab, r, &rs, rot1, &[]);
     assert_eq!(lab.view().broken(&label).unwrap(), None);
-    assert!(matches!(lab.view().purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { .. }));
     // Adopting the stretch's receipt by an acknowledgement does not sign the sale anew.
     lab.adopt(0, paid);
-    assert!(matches!(lab.view().purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { .. }));
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
+    assert!(lab.view().owed_back(&label).unwrap().iter().any(|o| o.payment == paid));
     // A receipt for the same payment, signed after the rollback: the sale, signed anew.
-    let anew = receipt(&mut lab, "Dee the fan", b"dee", f);
-    let v = lab.view();
-    assert_eq!(v.purchase(&anew).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
-    assert_eq!(v.purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
-    assert!(v.owed_back(&label).unwrap().is_empty());
+    receipt(&mut lab, "Eve the fan", b"eve", k1);
+    assert!(lab.view().owed_back(&label).unwrap().iter().all(|o| o.payment != paid));
 }
 
 /// RB6 (decided 8 and 9 October 2026): a broken collective cannot fork or
@@ -7910,16 +7905,16 @@ fn published_resignations_and_declarations_naming_a_party() {
     assert_eq!((named[0].0, named[0].1, named[0].2.party), (d, lab.authority.id, ids[ANA]));
 }
 
-/// RB2: "every payment the collective received during the broken stretch":
-/// a payment naming a claim, paid to the collective itself, with no stake
-/// making it a seller, is owed back too.
+/// RB2 with BQ2: a payment naming an offer of the broken stretch, paid to
+/// the collective itself, with no stake making it a seller, is owed back
+/// too.
 #[test]
 fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
     use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let label = lab.c[0].id;
-    let (_, _, _, _) = break_by_lost_record(&mut lab);
+    let (k1, _, _, _) = break_by_lost_record(&mut lab);
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"gift".to_vec(),
@@ -7930,7 +7925,7 @@ fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
         previous: None,
         forward: None,
         batch: None,
-        purchase: Some(Purchase { agreement: f, line: f }),
+        purchase: Some(Purchase { agreement: f, line: k1 }),
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mips().finance, 2, r.to_map(), None, None);
     let x = lab.w.add(&a);
@@ -7938,4 +7933,671 @@ fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
     assert!(matches!(got.verdict, law::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")), "{got:?}");
     let owed = lab.view().owed_back(&label).unwrap();
     assert_eq!((owed.len(), owed[0].still_broken, owed[0].amount.value), (1, true, 7));
+}
+
+// ---------------------------------------------------------------- F189 and F188 (9 October 2026)
+
+/// Ben resigns, a record registers it, and a year later Ben comes back: a
+/// constitutional clone naming Ben again, signed by all three, declared by
+/// a rotation (B10). Returns (Ben's old resignation, the clone of the return).
+fn ben_leaves_and_returns(lab: &mut Lab) -> (Hash, Hash) {
+    let f = lab.founding;
+    let mut ben = lab.m[BEN].clone();
+    let res_b = lab.resign_from(&mut ben, f, None);
+    lab.record(0, None, &[], vec![res_b], f);
+    let back = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, CY])], &|t| t.text = "Ben is back.".into());
+    let back = lab.propose(ANA, &back);
+    let sigs = vec![lab.sign(ANA, &back), lab.sign(BEN, &back), lab.sign(CY, &back)];
+    lab.rotate(Some((back, sigs)), &[0]);
+    (res_b, back)
+}
+
+/// F189 (1), decided 9 October 2026 (Fable's review, finding 1): a
+/// resignation is spent once its signer comes back by signing a version
+/// that names them (B10). A line registers only a resignation naming the
+/// version of the member's latest return, or one descending from it: an
+/// old resignation registered again, by a record or by a rollback, takes
+/// nothing from a returned member.
+#[test]
+fn f189_1_an_old_resignation_cannot_take_a_returned_members_voice() {
+    // By a record, drawn by the everyday key's holder alone.
+    let mut lab = Lab::new(&|_| {});
+    let col = lab.c[0].id;
+    let ids = lab.ids();
+    let all = sorted(ids.clone());
+    let (res_b, back) = ben_leaves_and_returns(&mut lab);
+    let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+    assert_eq!((n.agreement, sorted(n.voices)), (back, all.clone()), "Ben counts again (B10)");
+    lab.record(0, None, &[], vec![res_b], back);
+    let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+    assert_eq!(sorted(n.voices), all, "the old resignation, registered again, takes nothing");
+    assert!(
+        lab.view().published_resignations(&col).unwrap().iter().all(|d| d.act != res_b),
+        "a spent resignation is not shown as a resignation to come"
+    );
+    // A resignation Ben signs after the return counts.
+    let mut ben = lab.m[BEN].clone();
+    let again = lab.resign_from(&mut ben, back, None);
+    lab.record(0, None, &[], vec![again], back);
+    let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+    assert_eq!(sorted(n.voices), sorted(vec![ids[ANA], ids[CY]]));
+
+    // By a rollback: Ana and Cy break the collective on purpose, then roll
+    // back registering Ben's old resignation, signed by the two of them.
+    let mut lab = Lab::new(&|_| {});
+    let col = lab.c[0].id;
+    let (res_b, back) = ben_leaves_and_returns(&mut lab);
+    let k1 = lab.clone_terms(&back, vec![(Power::Clone, vec![ANA, CY])], &|t| t.text = "Broken on purpose.".into());
+    let k1 = lab.propose(ANA, &k1);
+    let ks = vec![lab.sign(ANA, &k1), lab.sign(CY, &k1)];
+    let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    assert!(lab.view().broken_act(&col).unwrap().is_some());
+    assert!(
+        lab.view().rollback_registers(&col, &[res_b]).unwrap().is_err(),
+        "the client is told before anything is signed"
+    );
+    let same = lab.clone_terms(&back, vec![(Power::Constitutional, vec![ANA, CY])], &|_| {});
+    let r = lab.propose(ANA, &same);
+    let rs = vec![lab.sign(ANA, &r), lab.sign(CY, &r)];
+    roll_back(&mut lab, r, &rs, rot1, &[res_b]);
+    assert_eq!(
+        lab.view().broken_act(&col).unwrap().map(|b| b.act),
+        Some(rot1),
+        "Ben's voice remains: the rollback needs Ben too"
+    );
+}
+
+/// A deal between Ana and Ben, signed by both, for the F186 and F188 tests.
+struct DealLab {
+    w: World,
+    ana: Person,
+    ben: Person,
+    t: Terms,
+    d: Hash,
+}
+
+impl DealLab {
+    fn new() -> DealLab {
+        let mut w = World::new();
+        let mut ana = w.genesis("ana", vec![own_home()], None, None);
+        let mut ben = w.genesis("ben", vec![own_home()], None, None);
+        let t = deal_terms(ana.id, ben.id);
+        let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+        sign(&mut w, &mut ana, &d);
+        sign(&mut w, &mut ben, &d);
+        DealLab { w, ana, ben, t, d }
+    }
+
+    /// A version cloning `parent`, proposed by Ana; settling, it cites the
+    /// version it settles beside its parent (F189, 6).
+    fn propose(&mut self, parent: Hash, text: &str, settles: Option<Hash>) -> Hash {
+        let mut c = self.t.clone();
+        c.parent = Some(parent);
+        c.text = text.into();
+        c.settles = settles;
+        c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![self.ana.id, self.ben.id]) }]);
+        let mut o = vec![Object { chain: parent, predecessor: parent }];
+        if let Some(s) = settles {
+            o.push(Object { chain: s, predecessor: s });
+        }
+        law_act(&mut self.w, &mut self.ana, law::types::TERMS, c.to_map(), Some(o))
+    }
+
+    /// A complete version: proposed, signed by both.
+    fn version(&mut self, parent: Hash, text: &str, settles: Option<Hash>) -> Hash {
+        let k = self.propose(parent, text, settles);
+        sign(&mut self.w, &mut self.ana, &k);
+        sign(&mut self.w, &mut self.ben, &k);
+        k
+    }
+
+    fn in_force(&self) -> Result<Hash, LawError> {
+        view(&self.w).version_in_force(&self.d)
+    }
+}
+
+/// F189 (2), decided 9 October 2026 (Fable's review, finding 2): a version
+/// is checked to be complete and to belong to the deal before it is read
+/// as settling a fork, so no draft or stranger's act makes a forked deal
+/// unreadable.
+#[test]
+fn f189_2_no_draft_or_strangers_act_makes_a_forked_deal_unreadable() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "Branch A.", None);
+    let _b1 = l.version(d, "Branch B.", None);
+    assert_eq!(l.in_force().unwrap(), d);
+    // Ana alone signs a version of A naming in field 26 a hash nobody holds.
+    let half = l.propose(a1, "Settles nothing anybody holds.", Some(spec("nothing held")));
+    sign(&mut l.w, &mut l.ana, &half);
+    assert_eq!(l.in_force().unwrap(), d, "a draft is nobody's version");
+    assert!(view(&l.w).deal_fork(&d).unwrap().is_some());
+    // A stranger's terms, whose parent nobody holds, carrying field 26.
+    let mut eve = l.w.genesis("eve", vec![own_home()], None, None);
+    let mut e = deal_terms(eve.id, spec("someone"));
+    e.parent = Some(spec("an unheld parent"));
+    e.settles = Some(spec("another unheld version"));
+    e.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: vec![eve.id] }]);
+    let o = vec![
+        Object { chain: spec("an unheld parent"), predecessor: spec("an unheld parent") },
+        Object { chain: spec("another unheld version"), predecessor: spec("another unheld version") },
+    ];
+    law_act(&mut l.w, &mut eve, law::types::TERMS, e.to_map(), Some(o));
+    assert_eq!(l.in_force().unwrap(), d, "a stranger's act belongs to no version of this deal");
+    assert!(view(&l.w).deal_fork(&d).unwrap().is_some());
+}
+
+/// F189 (4), with F188's settling version naming the tip: settlement is
+/// final. A settling version made after the settlement, which names the
+/// settling version itself, is growth on the discarded branch and changes
+/// nothing. A plain version on the discarded branch past the tip the
+/// settling version named cannot be told from a version that was there
+/// before it, unnamed: F188 then says the fork is not settled, A3 that
+/// nothing changes. Not decided ("Open in this draft", QF1): refused.
+#[test]
+fn f189_4_what_grows_on_the_discarded_branch() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "Branch A.", None);
+    let b1 = l.version(d, "Branch B.", None);
+    let s = l.version(a1, "Settled: A, having seen B.", Some(b1));
+    assert_eq!(l.in_force().unwrap(), s);
+    // Settled again from the discarded branch, naming the settlement: after it.
+    let late = l.version(b1, "Settled the other way, too late.", Some(s));
+    assert_eq!(l.in_force().unwrap(), s, "made after the settlement, it settles nothing");
+    let s2 = l.version(s, "Life goes on.", None);
+    assert_eq!(l.in_force().unwrap(), s2);
+    let _ = late;
+    // A plain version on the discarded branch past the tip named.
+    l.version(b1, "B grows, when?", None);
+    match l.in_force() {
+        Err(LawError::Unsettled(w)) => assert!(w.contains("QF1"), "{w}"),
+        x => panic!("not decided, refused: {x:?}"),
+    }
+}
+
+/// F189 (5), F188 (decided 9 October 2026, "Tips are what matter on the
+/// forks"): a settling version names the tip of the branch it discards;
+/// one naming an older version settles nothing. The newer version it did
+/// not name is past the tip it named, so the same question as QF1 stands
+/// for it: refused, never reported settled.
+#[test]
+fn f189_5_a_settling_version_names_the_discarded_tip() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "Branch A.", None);
+    let b1 = l.version(d, "Branch B.", None);
+    let _b2 = l.version(b1, "B, a new price and a new payee.", None);
+    let s = l.version(a1, "Settles B1, says Ana.", Some(b1));
+    let got = l.in_force();
+    assert!(got != Ok(s), "naming an older version of the discarded branch, it is never reported settled: {got:?}");
+}
+
+/// F189 (6), decided 9 October 2026 (Fable's review, finding 7): a settling
+/// version also cites the version it settles in `objects`, beside its
+/// parent, so that verifiers fetching by citation find it. One that does
+/// not is invalid.
+#[test]
+fn f189_6_a_settling_version_cites_the_version_it_settles() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "Branch A.", None);
+    let b1 = l.version(d, "Branch B.", None);
+    let mut c = l.t.clone();
+    c.parent = Some(a1);
+    c.text = "Settled, citing only its parent.".into();
+    c.settles = Some(b1);
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![l.ana.id, l.ben.id]) }]);
+    let k = law_act(&mut l.w, &mut l.ana, law::types::TERMS, c.to_map(), obj(a1));
+    sign(&mut l.w, &mut l.ana, &k);
+    sign(&mut l.w, &mut l.ben, &k);
+    assert!(view(&l.w).terms(&k).is_err(), "it does not cite the version it settles");
+    assert_eq!(l.in_force().unwrap(), d);
+    let s = l.version(a1, "Settled, citing both.", Some(b1));
+    assert_eq!(l.in_force().unwrap(), s);
+}
+
+/// F188, DQ1 to DQ4 (decided 9 October 2026, "Yes"): when a deal's fork
+/// turns tangled (three complete versions of one version, a branch that
+/// splits again, two competing settling versions, a settling version that
+/// splits its own branch again), the deal stays on its last agreed
+/// version, the reference, until one clean settlement; the parties lose
+/// the changes the tangled versions made.
+#[test]
+fn f188_dq1_to_dq4_a_tangled_fork_stays_on_the_reference() {
+    let tangled = |l: &DealLab| {
+        assert_eq!(l.in_force().unwrap(), l.d, "the reference");
+        let f = view(&l.w).deal_fork(&l.d).unwrap().expect("shown forked");
+        assert!(f.tangled.is_some(), "and tangled");
+    };
+    // DQ2: three complete versions of one version.
+    let mut l = DealLab::new();
+    let d = l.d;
+    for x in ["One.", "Two.", "Three."] {
+        l.version(d, x, None);
+    }
+    tangled(&l);
+    // DQ1: a branch that splits again before the settlement.
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    l.version(d, "B.", None);
+    l.version(a1, "A, one way.", None);
+    l.version(a1, "A, the other way.", None);
+    tangled(&l);
+    // DQ3: two settling versions, one on each branch, each naming the other's tip.
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    l.version(a1, "Settled for A.", Some(b1));
+    l.version(b1, "Settled for B.", Some(a1));
+    tangled(&l);
+    // DQ4: a settling version made from below its branch's latest version.
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    l.version(a1, "A grows.", None);
+    l.version(a1, "Settled from below.", Some(b1));
+    tangled(&l);
+}
+
+/// F188, DQ1 to DQ4: any buyer who paid under a version every party signed
+/// stays protected, as for a simple fork (A4).
+#[test]
+fn f188_a_buyer_under_a_tangled_version_stays_protected() {
+    use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let mut l = DealLab::new();
+    let work = spec("their song");
+    let (a, b) = (l.ana.id, l.ben.id);
+    let both = sorted(vec![a, b]);
+    l.t.stakes = Some(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::Id(both[0]), 500_000), (Who::Id(both[1]), 500_000)] }]);
+    let mut t = l.t.clone();
+    let d = law_act(&mut l.w, &mut l.ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut l.w, &mut l.ana, &d);
+    sign(&mut l.w, &mut l.ben, &d);
+    l.d = d;
+    let publication = {
+        let x = l.w.everyday_act(&mut l.ana, mips().envelope, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        l.w.add(&x)
+    };
+    let mut tangled = vec![];
+    for (x, share) in [("One.", 600_000), ("Two.", 700_000), ("Three.", 800_000)] {
+        t.stakes = Some(vec![law::Stake { object: Who::Id(work), holders: vec![(Who::Id(both[0]), share), (Who::Id(both[1]), 1_000_000 - share)] }]);
+        l.t = t.clone();
+        tangled.push(l.version(d, x, None));
+    }
+    let push = spec("a push rail");
+    let mut receipt = |l: &mut DealLab, who: usize| {
+        let p = if who == 0 { &mut l.ana } else { &mut l.ben };
+        let r = Fin::Receipt(Receipt {
+            rail: push,
+            proof: b"tx".to_vec(),
+            payer: Some(Payer::Identity(spec("a fan"))),
+            payee: p.id,
+            amount: Amount { unit: spec("a unit"), value: 5 },
+            fulfils: publication,
+            previous: None,
+            forward: None,
+            batch: None,
+            purchase: Some(Purchase { agreement: d, line: tangled[1] }),
+        });
+        let x = l.w.everyday_act(p, mips().finance, 2, r.to_map(), None, None);
+        l.w.add(&x)
+    };
+    let ra = receipt(&mut l, 0);
+    receipt(&mut l, 1);
+    let mut v = LawView::new(&l.w.v, mips());
+    v.push_rails.insert(push);
+    assert_eq!(v.version_in_force(&d).unwrap(), d, "tangled: the reference");
+    assert_eq!(v.purchase(&ra).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
+}
+
+/// F188, DQ5 (decided 9 October 2026, "Yes, Carla needs to sign either
+/// way"): a version that settles a deal's fork must be signed by the
+/// parties of both branches, so no one on the discarded side is dropped
+/// without consent.
+#[test]
+fn f188_dq5_the_parties_of_both_branches_sign_the_settlement() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let mut carla = l.w.genesis("carla", vec![own_home()], None, None);
+    let a1 = l.version(d, "A.", None);
+    // Branch B adds Carla, who signs it.
+    let mut c = l.t.clone();
+    c.parent = Some(d);
+    c.text = "B, with Carla.".into();
+    c.parties = vec![l.ana.id, l.ben.id, carla.id];
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![l.ana.id, l.ben.id]) }]);
+    let b1 = law_act(&mut l.w, &mut l.ana, law::types::TERMS, c.to_map(), obj(d));
+    sign(&mut l.w, &mut l.ana, &b1);
+    sign(&mut l.w, &mut l.ben, &b1);
+    sign(&mut l.w, &mut carla, &b1);
+    assert_eq!(l.in_force().unwrap(), d, "forked");
+    let s = l.version(a1, "Settled for A, without Carla.", Some(b1));
+    assert_eq!(l.in_force().unwrap(), d, "Carla has not signed the version that drops her branch");
+    sign(&mut l.w, &mut carla, &s);
+    assert_eq!(l.in_force().unwrap(), s);
+}
+
+/// F189 (3), decided 9 October 2026 (Fable's review, finding 3): a payment
+/// naming a version the seller does not hold raises the alarm: an unknown
+/// version is the hidden fork the alarm exists for. And F188, DQ7: a
+/// payment naming an older version of the same line, with no fork, raises
+/// a plain notice; the alarm is kept for forks.
+#[test]
+fn f189_3_a_payment_naming_a_version_the_seller_does_not_hold_raises_the_alarm() {
+    use mor_core::finance::{Amount, Claim, Payload as Fin, Purchase};
+    let mut l = DealLab::new();
+    let d = l.d;
+    let mut fan = l.w.genesis("a fan", vec![own_home()], None, None);
+    let a = l.version(d, "3A: the price is 100.", None);
+    let ana = l.ana.id;
+    let pay = |w: &mut World, fan: &mut Person, line: Hash, proof: &[u8]| {
+        let c = Fin::Claim(Claim {
+            rail: spec("a rail Module"),
+            proof: proof.to_vec(),
+            payee: ana,
+            amount: Amount { unit: spec("a unit"), value: 120 },
+            fulfils: spec("a publication"),
+            disagrees: None,
+            referral: None,
+            refund: None,
+            anonymous: None,
+            purchase: Some(Purchase { agreement: d, line }),
+        });
+        let x = w.everyday_act(fan, mips().finance, 3, c.to_map(), None, None);
+        w.add(&x)
+    };
+    // 3B, signed by both from Ben's device, never reached Ana's relays.
+    let hidden = spec("3B, held nowhere Ana looks");
+    let under_hidden = pay(&mut l.w, &mut fan, hidden, b"b");
+    let alarm = view(&l.w).fork_alarm(&under_hidden, &a).unwrap().expect("an unknown version: the alarm");
+    assert_eq!((alarm.named, alarm.held, alarm.kind), (hidden, a, law::AlarmKind::Unheld));
+    let under_d = pay(&mut l.w, &mut fan, d, b"d");
+    let notice = view(&l.w).fork_alarm(&under_d, &a).unwrap().expect("an older version: a notice");
+    assert_eq!(notice.kind, law::AlarmKind::Older);
+    assert!(!notice.kind.is_alarm(), "the alarm is kept for forks");
+    let b = l.version(d, "3B: the price is 120.", None);
+    let under_b = pay(&mut l.w, &mut fan, b, b"bb");
+    let alarm = view(&l.w).fork_alarm(&under_b, &a).unwrap().unwrap();
+    assert_eq!(alarm.kind, law::AlarmKind::Fork);
+    assert!(alarm.kind.is_alarm());
+}
+
+/// F189 (7), decided 9 October 2026 ("It's an emergency situation with
+/// emergency rules"): while a collective is broken, no fork or closing
+/// counts, whatever line it names, the last good link before the broken
+/// act included (Fable's review, finding 5).
+#[test]
+fn f189_7_no_closing_counts_while_broken_whatever_its_line() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    // The last good link, and the collective's tips there.
+    let p = lab.publish(0);
+    lab.sign(ANA, &p);
+    let (good, tips) = (lab.c[0].binding, vec![tip(&lab.c[0])]);
+    break_by_lost_record(&mut lab);
+    assert!(lab.view().broken(&label).unwrap().is_some());
+    let c = law::Closing { agreement: f, collective: label, chain_act: good, tips };
+    let eo = ending_obj(&lab, f, label);
+    let x = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, c.to_map(), eo);
+    lab.end(ANA, &x);
+    lab.end(BEN, &x);
+    lab.end(CY, &x);
+    let v = lab.view();
+    let e = v.closing(&x).unwrap();
+    assert!(!e.complete, "a closing on the line before the broken act counts for nothing while broken: {:?}", e.why);
+    assert_eq!(v.closed_by(&label).unwrap(), None);
+}
+
+/// F189 (7): money owed back from the broken stretch counts as a debt for
+/// a closing's "owes nothing", so a collective cannot close until those
+/// payers are settled.
+#[test]
+fn f189_7_money_owed_back_from_the_stretch_is_a_debt_before_closing() {
+    use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let mut lab = Lab::new(&|_| {});
+    let label = lab.c[0].id;
+    let (k1, _, _, rot1) = break_by_lost_record(&mut lab);
+    let f = lab.founding;
+    // A patron pays under the clone of the broken stretch: owed back (BQ2).
+    let r = Fin::Receipt(Receipt {
+        rail: spec("a rail Module"),
+        proof: b"gift".to_vec(),
+        payer: Some(Payer::Identity(spec("a patron"))),
+        payee: label,
+        amount: Amount { unit: spec("a unit"), value: 7 },
+        fulfils: k1,
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: Some(Purchase { agreement: f, line: k1 }),
+    });
+    let a = lab.w.everyday_act(&mut lab.c[0], mips().finance, 2, r.to_map(), None, None);
+    lab.w.add(&a);
+    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
+    // The rollback; then every member closes.
+    let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
+    let r = lab.propose(ANA, &same);
+    let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
+    roll_back(&mut lab, r, &rs, rot1, &[]);
+    assert_eq!(lab.view().broken(&label).unwrap(), None);
+    let c = law::Closing { agreement: r, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])] };
+    let eo = ending_obj(&lab, r, label);
+    let x = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, c.to_map(), eo);
+    lab.end(ANA, &x);
+    lab.end(BEN, &x);
+    lab.end(CY, &x);
+    let e = lab.view().closing(&x).unwrap();
+    assert!(!e.complete, "the patron is still owed: {:?}", e.why);
+    assert!(e.why.iter().any(|w| w.contains("owed back")), "{:?}", e.why);
+}
+
+/// F189 (8), decided 9 October 2026, in essence: a declaration of absence
+/// counts only if it is public, or addressed (sealed) to the member it
+/// names, among others if wished; one that is neither counts for nothing,
+/// so no line or rollback can register it.
+#[test]
+fn f189_8_a_declaration_counts_only_if_public_or_addressed_to_the_member() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let ids = lab.ids();
+    let d = AbsenceDeclaration { agreement: f, clause: f, party: ids[CY], outcomes: vec![outcomes::VOICE_REMOVED] };
+    // Sealed to Ana and Ben only.
+    let mut a = lab.authority.clone();
+    let hidden = lab.w.private_act(&mut a, mips().law, law::types::DECLARATION, d.to_map(), obj(f), vec![ids[ANA], ids[BEN]]);
+    lab.authority = a;
+    assert!(lab.view().declaration(&hidden).unwrap().is_err(), "kept from the member it names, it counts for nothing");
+    lab.record(0, None, &[], vec![hidden], f);
+    let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+    assert!(n.voices.contains(&ids[CY]), "no line registers it");
+    // Sealed to Cy too: it counts.
+    let mut a = lab.authority.clone();
+    let shown = lab.w.private_act(&mut a, mips().law, law::types::DECLARATION, d.to_map(), obj(f), vec![ids[ANA], ids[CY]]);
+    lab.authority = a;
+    assert!(lab.view().declaration(&shown).unwrap().is_ok());
+    lab.record(0, None, &[], vec![shown], f);
+    let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+    assert!(!n.voices.contains(&ids[CY]));
+}
+
+/// F188, BQ1 (decided 9 October 2026, "Yes, everyone have to acknowledge
+/// the rollback. Safer."): after a rollback, a grantee's act counts only
+/// once it cites the rollback or a later decision of the collective; one
+/// citing nothing newer than the time before the break, including one made
+/// just before the break that no act of the collective took in, counts for
+/// nothing and is signed again.
+#[test]
+fn bq1_after_a_rollback_a_grantees_act_counts_once_it_cites_the_rollback() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let env = mips().envelope;
+    let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
+    let grant = Grant { area: Some(1), kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]), ..plain_grant(agent.id, false) };
+    let g = lab.grant(&grant);
+    lab.sign(ANA, &g);
+    sign(&mut lab.w, &mut agent, &g);
+    let mut st = lab.strand(g, &key_of(agent.id));
+    let act = |lab: &mut Lab, st: &mut Person| -> Hash {
+        let a = lab.w.everyday_act(st, env, 0, vec![], None, None);
+        lab.w.add(&a)
+    };
+    // Made just before the break; no act of the collective takes it in.
+    let unseen = act(&mut lab, &mut st);
+    let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
+    let k1 = lab.propose(ANA, &k1);
+    let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
+    let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
+    let r = lab.propose(ANA, &same);
+    let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
+    let back = roll_back(&mut lab, r, &rs, rot1, &[]);
+    assert_eq!(lab.view().broken(&col).unwrap(), None);
+    assert!(matches!(lab.view().backing(&unseen).unwrap(), Backing::NotBacked { .. }), "made just before the break, taken in by nothing");
+    // After the rollback, citing nothing newer: nothing.
+    let stale = act(&mut lab, &mut st);
+    assert!(matches!(lab.view().backing(&stale).unwrap(), Backing::NotBacked { .. }));
+    // Citing the rollback: it counts.
+    st.cite.as_mut().unwrap().1.push(back);
+    let fresh = act(&mut lab, &mut st);
+    assert_eq!(lab.view().backing(&fresh).unwrap(), Backing::Backed { grant: g });
+}
+
+/// F188, BQ4 (decided 9 October 2026): the contest act's format (Law type
+/// 14). It names the declaration it answers and is signed by the party
+/// declared absent, which shows presence; it shows the dispute and voids
+/// nothing (rule 52).
+#[test]
+fn bq4_a_contest_names_the_declaration_and_is_signed_by_the_party_named() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let col = lab.c[0].id;
+    let ids = lab.ids();
+    let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    lab.record(0, None, &[], vec![d], f);
+    let c = law::Contest { declaration: d };
+    let mut cy = lab.m[CY].clone();
+    let x = law_act(&mut lab.w, &mut cy, law::types::CONTEST, c.to_map(), obj(d));
+    // Someone else's "contest" of it shows nothing.
+    let mut ben = lab.m[BEN].clone();
+    let y = law_act(&mut lab.w, &mut ben, law::types::CONTEST, c.to_map(), obj(d));
+    let v = lab.view();
+    assert_eq!(v.contests(&d).unwrap(), vec![x]);
+    let _ = y;
+    // It voids nothing: Cy's voice stays removed.
+    let n = v.next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+    assert!(!n.voices.contains(&ids[CY]));
+    // Its objects name the declaration, as chain and predecessor.
+    let mut cy2 = lab.m[CY].clone();
+    drop(v);
+    let bad = law_act(&mut lab.w, &mut cy2, law::types::CONTEST, c.to_map(), obj(f));
+    assert!(!lab.view().contests(&d).unwrap().contains(&bad));
+}
+
+/// F188, DQ8 (decided 9 October 2026): where the parties cannot agree, the
+/// arbitrator the deal's reference version names may settle the fork,
+/// only once activated by one of the signing parties, by a signed request
+/// naming the fork, which its settlement names: never on its own
+/// initiative. With no arbitrator named, the deal stays on its reference.
+#[test]
+fn f188_dq8_the_arbitrator_settles_a_fork_only_on_a_partys_request() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut arb = w.genesis("an arbitrator", vec![own_home()], None, None);
+    let mut eve = w.genesis("eve", vec![own_home()], None, None);
+    let mut t = deal_terms(ana.id, ben.id);
+    t.arbitrators = Some(vec![arb.id]);
+    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let mut l = DealLab { w, ana, ben, t, d };
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let settle = |w: &mut World, arb: &mut Person, request: Hash| {
+        let s = law::ForkSettlement { request, kept: a1, discarded: b1 };
+        law_act(w, arb, law::types::FORK_SETTLEMENT, s.to_map(), obj(request))
+    };
+    let ask = |w: &mut World, who: &mut Person| {
+        let r = law::SettlementRequest { reference: d };
+        law_act(w, who, law::types::SETTLEMENT_REQUEST, r.to_map(), obj(d))
+    };
+    // Never on its own initiative: a settlement naming a request nobody made.
+    settle(&mut l.w, &mut arb, spec("no request"));
+    assert_eq!(l.in_force().unwrap(), d);
+    // A request by someone who signed nothing activates nothing.
+    let by_eve = ask(&mut l.w, &mut eve);
+    settle(&mut l.w, &mut arb, by_eve);
+    assert_eq!(l.in_force().unwrap(), d);
+    // Ben asks; the arbitrator keeps A.
+    let by_ben = ask(&mut l.w, &mut l.ben);
+    let s = settle(&mut l.w, &mut arb, by_ben);
+    assert_eq!(l.in_force().unwrap(), a1, "settled by the arbitrator, on Ben's request");
+    // Only the arbitrator the reference names settles.
+    let mut l2 = DealLab::new();
+    let d2 = l2.d;
+    l2.version(d2, "A.", None);
+    l2.version(d2, "B.", None);
+    let _ = s;
+    let req = {
+        let r = law::SettlementRequest { reference: d2 };
+        law_act(&mut l2.w, &mut l2.ana, law::types::SETTLEMENT_REQUEST, r.to_map(), obj(d2))
+    };
+    let mut other = l2.w.genesis("not the arbitrator", vec![own_home()], None, None);
+    let kids = view(&l2.w).deal_fork(&d2).unwrap().unwrap().branches;
+    let s2 = law::ForkSettlement { request: req, kept: kids[0][0], discarded: kids[1][0] };
+    law_act(&mut l2.w, &mut other, law::types::FORK_SETTLEMENT, s2.to_map(), obj(req));
+    assert_eq!(l2.in_force().unwrap(), d2);
+}
+
+/// F188, DQ6 (decided 9 October 2026, "Yes"): while a deal is forked, the
+/// turns for leftover units stay per branch, and a single numbering runs
+/// across every split the service makes, on any branch, each split showing
+/// its number; a holder's client raises the alarm where the numbers on the
+/// splits it receives skip: splits are then being made where it is not
+/// shown.
+#[test]
+fn f188_dq6_one_numbering_across_a_deals_splits_shows_a_hidden_branch() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let mut svc = l.w.genesis("a split service", vec![own_home()], None, None);
+    let svc_id = svc.id;
+    let ana = l.ana.id;
+    let mut split = |l: &mut DealLab, agreement: Hash, number: Option<u64>| {
+        let s = law::Split {
+            receipt: spec(&format!("a receipt {number:?} {agreement:?}")),
+            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None }],
+            cmip: spec("a split cMIP"),
+            agreement,
+            tally: None,
+            number,
+        };
+        law_act(&mut l.w, &mut svc, law::types::SPLIT, s.to_map(), None)
+    };
+    split(&mut l, a1, Some(1));
+    split(&mut l, a1, Some(2));
+    // Number 3, under branch B, never reaches the holder who sees A only.
+    split(&mut l, a1, Some(4));
+    let n = view(&l.w).split_numbers(&svc_id, &a1).unwrap();
+    assert_eq!(n.gaps, vec![3], "the alarm: a split numbered 3 was made where this holder is not shown");
+    // Delivered after all, under B: one numbering across both branches.
+    split(&mut l, b1, Some(3));
+    let n = view(&l.w).split_numbers(&svc_id, &d).unwrap();
+    assert!(n.gaps.is_empty());
+    assert_eq!(n.numbers.iter().map(|x| x.0).collect::<Vec<_>>(), vec![1, 2, 3, 4]);
+    split(&mut l, a1, Some(4));
+    split(&mut l, b1, None);
+    let n = view(&l.w).split_numbers(&svc_id, &d).unwrap();
+    assert_eq!((n.repeated, n.unnumbered.len()), (vec![4], 1));
+    // A number counts from 1.
+    let mut s = law::Split { receipt: spec("r"), payouts: vec![], cmip: spec("c"), agreement: d, tally: None, number: Some(0) };
+    s.payouts.push(law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None });
+    assert!(law::Split::decode(&s.to_map()).is_err());
 }

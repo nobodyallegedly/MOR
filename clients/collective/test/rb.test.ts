@@ -59,7 +59,7 @@ async function breakBy(id: string, relay: { drop: boolean }, stay: string[], rem
   for (const i of [...s, leaving]) store.saveIdentity(i);
 }
 
-test('RB2: a payment the collective received during the broken stretch is shown as owed back', async () => {
+test('RB2 with BQ2: a payment under an offer of the broken stretch is shown as owed back; one under an offer before the break is kept', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, one, two, patron] = ['Ada', 'Sim One', 'Sim Two', 'A Patron'].map((n) => idOf(s, n));
@@ -68,14 +68,20 @@ test('RB2: a payment the collective received during the broken stretch is shown 
     await breakBy(id, relay, [ada, one], two, { safetyThreshold: 1, releaseThreshold: 1, cloneThreshold: 1, abandonmentOthers: 1 });
     const store = w.app.store;
     const col = store.collective(id);
-    const named = col.f.agreements[0];
-    // The collective's own receipt for a payment naming its claim, signed in the stretch.
-    await col.id.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value: 12, fulfils: named, payer: patron, purchase: [named, named] }), { public: true, relays: col.f.relays });
+    const founding = col.f.agreements[0];
+    // The clone the broken act declared: an offer of the broken stretch.
+    const ofStretch = col.f.agreement;
+    assert.notEqual(ofStretch, founding);
+    // The collective's own receipts, signed in the stretch, for payments naming each.
+    const pay = (line: string, value: number) =>
+      col.id.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer: patron, purchase: [founding, line] }), { public: true, relays: col.f.relays });
+    await pay(founding, 5);
+    await pay(ofStretch, 12);
     store.saveCollective(col);
     s = await state(c);
     const b = box(s, id);
     assert.equal(b.owedBack.length, 1, JSON.stringify(b.owedBack));
-    assert.match(b.owedBack[0].text, /12 .*received while the collective is broken: no purchase, owed back to A Patron .*unless the sale is signed anew after the rollback/);
+    assert.match(b.owedBack[0].text, /12 .*paid under an offer made while the collective is broken: no purchase, owed back to A Patron .*unless the sale is signed anew after the rollback/);
   } finally {
     await relay.close();
   }
@@ -99,6 +105,15 @@ test('RB3: a declaration of absence made during the broken stretch is registered
     const shownTo = box(s, id).declared.find((d) => d.member === two)!;
     assert.match(shownTo.text, /Sim Two .*is named as absent by a declaration .*signed by Ada/);
     assert.match(shownTo.text, /To contest it: Sim Two .*signs a contest act \(Law rule 52\)/);
+    // BQ4 (decided 9 October 2026): Sim Two, held here, signs a contest naming the declaration.
+    assert.equal(shownTo.contested, false);
+    const ct = await prepare(c, { kind: 'contest', collective: id, declaration: shownTo.act });
+    assert.deepEqual(ct.reading.blocking, [], words(ct.reading));
+    assert.match(words(ct.reading), /Sim Two .*signs a contest of the declaration/);
+    assert.match(words(ct.reading), /voids nothing/);
+    await c.ask('confirm', { plan: ct.plan, digest: ct.digest });
+    s = await state(c);
+    assert.equal(box(s, id).declared.find((d) => d.member === two)!.contested, true, 'the contest is shown beside the declaration');
     // The rollback registers it: Sim Two no longer blocks the way back.
     const rb = await prepare(c, { kind: 'rollback', collective: id, rules: { safety: 1, release: 1, clone: 1, others: 1 } });
     assert.deepEqual(rb.reading.blocking, [], words(rb.reading));
@@ -115,7 +130,7 @@ test('RB3: a declaration of absence made during the broken stretch is registered
   }
 });
 
-test('RB5: the last holder of constitutional power is warned before leaving, "You are about to break the collective"', async () => {
+test('RB5 with BQ5: the last holder of constitutional power is warned before leaving, in the words decided', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, one, two] = ['Ada', 'Sim One', 'Sim Two'].map((n) => idOf(s, n));
@@ -127,7 +142,12 @@ test('RB5: the last holder of constitutional power is warned before leaving, "Yo
     const last = await prepare(c, { kind: 'leave', collective: id, member: ada });
     assert.deepEqual(last.reading.blocking, [], 'leaving is never blocked');
     const lw = words(last.reading);
-    assert.equal(last.reading.summary[0], 'You are about to break the collective.');
+    // BQ5 (decided by Nobody, allegedly, 9 October 2026): "It breaks, but it only breaks one layer."
+    assert.deepEqual(last.reading.summary.slice(0, 3), [
+      "You are about to break the collective's constitutional layer.",
+      'Once you leave, nobody will be able to change its rules again.',
+      'The other members keep acting in their areas.',
+    ]);
     assert.match(lw, /Ada .*holds the last constitutional voice that remains in “Crown”/);
     assert.match(lw, /its constitution freezes as it stands/);
     assert.doesNotMatch(lw, /is the last voice that remains/, 'Sim Two keeps a voice');

@@ -11,6 +11,7 @@ import {
   cborDecode,
   cborEncode,
   checkTerms,
+  contestPayload,
   declarationPayload,
   describeAct,
   hex,
@@ -272,7 +273,7 @@ export interface PayoutIn {
  * with Nobody, allegedly (the spec gives the field, not its key). The split
  * act cites, in `refs`, the service's previous split for each stake.
  */
-export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: string; agreement: string; tally?: [number, [string, number][]][] }): Uint8Array {
+export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: string; agreement: string; tally?: [number, [string, number][]][]; number?: number }): Uint8Array {
   const m = new Map<number, unknown>([
     [0, unhex(s.receipt)],
     [
@@ -291,6 +292,8 @@ export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: st
     [3, unhex(s.agreement)],
   ]);
   if (s.tally?.length) m.set(4, s.tally.map(([stake, hs]) => [stake, hs.map(([h, n]) => [unhex(h), n])]));
+  // DQ6 (F188): one numbering across every split the service makes under a deal, from 1.
+  if (s.number !== undefined) m.set(5, s.number);
   return cborEncode(m);
 }
 
@@ -413,6 +416,10 @@ export async function propose(by: TestIdentity, t: CollectiveTerms, relays: stri
 export async function proposePayload(by: TestIdentity, payload: Uint8Array, parent: string | undefined, relays: string[]) {
   checkTerms(payload, LAW_SPECS);
   const objects: [string, string][] | undefined = parent ? [[parent, parent]] : undefined;
+  // F189 (6): a version settling a deal's fork also cites the version it
+  // settles, after its parent, so that verifiers fetching by citation find it.
+  const settles = (cborDecode(payload) as Map<number, unknown>).get(26);
+  if (objects && settles instanceof Uint8Array) objects.push([hex(settles), hex(settles)]);
   await carryChain(by, relays);
   return by.publish(REPO_SPECS.law, LAW_TYPES.terms, payload, { public: true, relays, objects });
 }
@@ -534,10 +541,31 @@ export async function declare(
   relays: string[],
 ) {
   await carryChain(by, relays);
+  // F189 (8): a declaration counts only if public or addressed to the
+  // member it names; it is published, and also delivered to that member's
+  // inbox, so they see it early (a SHOULD; the safeguard is that it counts
+  // only where they can obtain it).
   return by.publish(REPO_SPECS.law, LAW_TYPES.declaration, declarationPayload(d.agreement, d.clause, d.party, Uint32Array.from(d.outcomes)), {
     public: true,
     relays,
+    to: [d.party],
     objects: [[d.agreement, d.agreement]],
+  });
+}
+
+/**
+ * A contest of a declaration of absence (Law type 14, rule 52; BQ4,
+ * decided by Nobody, allegedly, 9 October 2026), signed by the party the
+ * declaration names: it shows presence and the dispute, and voids nothing.
+ * Public, and delivered to the declaration's signer.
+ */
+export async function contest(by: TestIdentity, declaration: { act: string; signer: string }, relays: string[]) {
+  await carryChain(by, relays);
+  return by.publish(REPO_SPECS.law, LAW_TYPES.contest, contestPayload(declaration.act), {
+    public: true,
+    relays,
+    to: [declaration.signer],
+    objects: [[declaration.act, declaration.act]],
   });
 }
 

@@ -170,7 +170,12 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
           : '';
       // RB3: a declaration naming a member is always shown, with the way to contest it.
       const declaredNote = (c.declared ?? []).length
-        ? note('warn', `<strong>Declared absent.</strong><br>${c.declared.map((d) => e(d.text)).join('<br>')}`)
+        ? note(
+            'warn',
+            `<strong>Declared absent.</strong><br>${c.declared
+              .map((d) => `${e(d.text)}${d.held && !d.contested ? ` <button class="quiet" data-action="contest" data-collective="${e(c.id)}" data-declaration="${e(d.act)}">Contest as ${e(d.name)}</button>` : ''}`)
+              .join('<br>')}`,
+          )
         : '';
       // RB2: payments received during a broken stretch, owed back.
       const owedNote = (c.owedBack ?? []).length
