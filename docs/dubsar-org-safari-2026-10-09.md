@@ -58,14 +58,19 @@ The runs on branch `claude/tender-lamport-g6aklb`:
 | --- | --- | --- | --- |
 | `ef4939e` | the new tests, without the fixes | 9 of 14 | 12 of 14 |
 | `6c4bc8c` | the fixes | 13 of 14 | 14 of 14 |
-| `6a0c23c` | the WebKit-specific test changes | 13 of 14 (a page error not yet sorted) | 14 of 14 |
-| PENDING | WebKit's sandbox reports sorted, page errors too | PENDING | PENDING |
+| `6a0c23c` | the door clicked by mouse; WebKit's sandbox notices kept apart | 13 of 14 (a sandbox notice reported as a page error, not yet sorted) | 14 of 14 |
+| `629c5c0` | page errors sorted too | 13 of 14 (see below) | 14 of 14 |
+| `547cc58` | the test says why, if a page does not verify | **14 of 14** | **14 of 14** |
 
 The first run reproduced both faults in WebKit:
 - the act's frame stayed 150 px tall while the act inside it was 474 px tall, so it scrolled;
 - the tab's icon was still the empty placeholder when the window finished loading.
 
 In Chromium, only the new tests of the icon at load and of the opacity failed, as expected without the fixes.
+
+*Not explained:* in the run of `629c5c0`, the very first page opened in a fresh WebKit said "the site this gateway serves does not verify". Every other page and test passed. The same test passed in WebKit in the runs before and after it, and the display client did not change in between. The bar's reasons were not recorded then. The test now writes them out, so if this happens again the run will say why. Until then it is an open question, not a known flake: a check that fails once in a fresh browser could be a real fault in how the display client fetches from relays at first start.
+
+The runs are listed in the repository's Actions tab, under "site in WebKit".
 
 ### All the site's tests here (Chromium)
 
