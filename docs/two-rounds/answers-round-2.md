@@ -17,3 +17,5 @@ This one makes the whole thing sort of absurd. They have to count, both versions
 **B2.** "Here we are facing activities over two chains. The inner chain is broken, but the public chain was not affected. Signed anew makes sense. But I'm doubting… what I'd need to reconsider is how the two chains cross. Because if they were able to sign new stuff that new stuff is then possibly used by other participants and that creates a whole new set of problems, no? So the question I am asking myself: does the public chain need to be addressed? Only if activities do not respect the rules at the act before the break."
 
 **B3.** "It has to, the vanish could cause deadlocks, but at the same time how can this be gamed?" *(Exploration follows in the conversation.)*
+
+**B3, added after the exploration.** "The absentee still has a possibility to void their statement of absence. But, the absentee has to be informed somehow. This one will need a third round taking the previous 2 in consideration."
