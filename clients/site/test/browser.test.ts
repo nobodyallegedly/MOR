@@ -101,18 +101,30 @@ async function open(url: string, refusals = csp) {
   const page = await ctx.newPage();
   const problems: string[] = [];
   const elsewhere: string[] = [];
+  /** WebKit's reports of the page's sandbox refusing a script, or a navigation without a click: the sandbox at work. */
+  const sandbox: string[] = [];
   page.on('console', (m) => {
     if (/Content.Security.Policy/i.test(m.text())) refusals.push(m.text());
-    else if (m.type() === 'error') problems.push(m.text());
+    else if (/sandboxed/.test(m.text())) sandbox.push(m.text());
+    else if (m.type() === 'error' && !benign(m.text())) problems.push(m.text());
   });
-  page.on('pageerror', (e) => problems.push(String(e)));
+  page.on('pageerror', (e) => {
+    if (!benign(String(e))) problems.push(String(e));
+  });
   page.on('request', (r) => {
     if (!/^(http:\/\/127\.0\.0\.1:|blob:|data:|about:)/.test(r.url())) elsewhere.push(r.url());
   });
   await page.goto(url);
   await page.waitForSelector('#mor-bar.ok, #mor-bar.bad', { timeout: 60_000 });
-  return { page, ctx, problems, elsewhere };
+  return { page, ctx, problems, elsewhere, sandbox };
 }
+
+/**
+ * WebKit's notice that a frame's size changed again while being fitted: the
+ * remaining notices come at the next frame, as the observer's rules say, so
+ * nothing is lost.
+ */
+const benign = (m: string) => /ResizeObserver loop completed with undelivered notifications/.test(m);
 
 const standing = (page: Page) => page.textContent('#mor-standing');
 const fp = async (page: Page) => (await page.textContent('#mor-signer'))!.replace(/ /g, '');
@@ -138,7 +150,7 @@ test('a fresh browser shows each page of the site as verified, and signed by the
     ['/use.html', 'Use · dubsar.org · dubsar.org', 'use'],
   ];
   for (const [address, title, name] of pages) {
-    const { page, ctx, problems, elsewhere } = await open(base + address);
+    const { page, ctx, problems, elsewhere, sandbox } = await open(base + address);
     assert.match((await standing(page))!, /^Verified: this page is exactly what was signed by the identity this gateway names as Nobody, allegedly\. Checked in this browser\./, address);
     assert.equal(await fp(page), w.owner.id, `${address}: the whole fingerprint of the signer`);
     assert.equal(await page.textContent('#mor-version'), w.site.id);
@@ -150,6 +162,7 @@ test('a fresh browser shows each page of the site as verified, and signed by the
     await shot(page, `page-${name}`);
     assert.deepEqual(problems, [], address);
     assert.deepEqual(elsewhere, [], `${address}: nothing fetched from elsewhere`);
+    assert.deepEqual(sandbox, [], `${address}: the display client tries nothing the page's sandbox refuses`);
     await ctx.close();
   }
 });
@@ -314,7 +327,11 @@ test("a door opens its page through the display client, checked again", async ()
   const { page, ctx, problems } = await open(base + '/');
   const f = await pageFrame(page);
   assert.equal(await f.getAttribute('.doors a:nth-child(3)', 'href'), '/run.html');
-  await Promise.all([page.waitForURL(base + '/run.html'), f.click('.doors a:nth-child(3)')]);
+  // A plain click of the mouse, as a visitor's: Playwright's own click adds listeners inside the page's
+  // frame, which WebKit's sandbox refuses, and reports.
+  await f.locator('.doors a:nth-child(3)').scrollIntoViewIfNeeded();
+  const door = (await f.locator('.doors a:nth-child(3)').boundingBox())!;
+  await Promise.all([page.waitForURL(base + '/run.html'), page.mouse.click(door.x + door.width / 2, door.y + door.height / 2)]);
   await page.waitForSelector('#mor-bar.ok, #mor-bar.bad', { timeout: 60_000 });
   assert.match((await standing(page))!, /^Verified/);
   assert.equal(await (await pageFrame(page)).textContent('h1'), 'Run');
