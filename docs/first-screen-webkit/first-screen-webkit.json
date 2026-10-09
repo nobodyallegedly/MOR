@@ -1,0 +1,202 @@
+{
+ "first-screen-webkit-upright-light-20": {
+  "screen": 844,
+  "photo": 169,
+  "act": {
+   "top": 166,
+   "bottom": 509
+  },
+  "shortcuts": {
+   "top": 533,
+   "bottom": 657
+  },
+  "doors": {
+   "top": 657,
+   "bottom": 1188
+  },
+  "firstDoor": {
+   "top": 669,
+   "bottom": 789
+  }
+ },
+ "first-screen-webkit-upright-light-25": {
+  "screen": 844,
+  "photo": 211,
+  "act": {
+   "top": 166,
+   "bottom": 551
+  },
+  "shortcuts": {
+   "top": 575,
+   "bottom": 699
+  },
+  "doors": {
+   "top": 699,
+   "bottom": 1230
+  },
+  "firstDoor": {
+   "top": 711,
+   "bottom": 831
+  }
+ },
+ "first-screen-webkit-upright-light-30": {
+  "screen": 844,
+  "photo": 253,
+  "act": {
+   "top": 166,
+   "bottom": 594
+  },
+  "shortcuts": {
+   "top": 618,
+   "bottom": 742
+  },
+  "doors": {
+   "top": 742,
+   "bottom": 1273
+  },
+  "firstDoor": {
+   "top": 754,
+   "bottom": 874
+  }
+ },
+ "first-screen-webkit-upright-dark-20": {
+  "screen": 844,
+  "photo": 169,
+  "act": {
+   "top": 166,
+   "bottom": 509
+  },
+  "shortcuts": {
+   "top": 533,
+   "bottom": 657
+  },
+  "doors": {
+   "top": 657,
+   "bottom": 1188
+  },
+  "firstDoor": {
+   "top": 669,
+   "bottom": 789
+  }
+ },
+ "first-screen-webkit-upright-dark-25": {
+  "screen": 844,
+  "photo": 211,
+  "act": {
+   "top": 166,
+   "bottom": 551
+  },
+  "shortcuts": {
+   "top": 575,
+   "bottom": 699
+  },
+  "doors": {
+   "top": 699,
+   "bottom": 1230
+  },
+  "firstDoor": {
+   "top": 711,
+   "bottom": 831
+  }
+ },
+ "first-screen-webkit-upright-dark-30": {
+  "screen": 844,
+  "photo": 253,
+  "act": {
+   "top": 166,
+   "bottom": 594
+  },
+  "shortcuts": {
+   "top": 618,
+   "bottom": 742
+  },
+  "doors": {
+   "top": 742,
+   "bottom": 1273
+  },
+  "firstDoor": {
+   "top": 754,
+   "bottom": 874
+  }
+ },
+ "first-screen-webkit-upright-safari-bars-light-20": {
+  "screen": 664,
+  "photo": 133,
+  "act": {
+   "top": 166,
+   "bottom": 473
+  },
+  "shortcuts": {
+   "top": 497,
+   "bottom": 621
+  },
+  "doors": {
+   "top": 621,
+   "bottom": 1152
+  },
+  "firstDoor": {
+   "top": 633,
+   "bottom": 753
+  }
+ },
+ "first-screen-webkit-upright-safari-bars-light-25": {
+  "screen": 664,
+  "photo": 166,
+  "act": {
+   "top": 166,
+   "bottom": 506
+  },
+  "shortcuts": {
+   "top": 530,
+   "bottom": 654
+  },
+  "doors": {
+   "top": 654,
+   "bottom": 1185
+  },
+  "firstDoor": {
+   "top": 666,
+   "bottom": 786
+  }
+ },
+ "first-screen-webkit-upright-safari-bars-light-30": {
+  "screen": 664,
+  "photo": 199,
+  "act": {
+   "top": 166,
+   "bottom": 540
+  },
+  "shortcuts": {
+   "top": 564,
+   "bottom": 688
+  },
+  "doors": {
+   "top": 688,
+   "bottom": 1219
+  },
+  "firstDoor": {
+   "top": 700,
+   "bottom": 820
+  }
+ },
+ "first-screen-webkit-sideways-light-25": {
+  "screen": 390,
+  "photo": 98,
+  "act": {
+   "top": 124,
+   "bottom": 372
+  },
+  "shortcuts": {
+   "top": 396,
+   "bottom": 458
+  },
+  "doors": {
+   "top": 458,
+   "bottom": 767
+  },
+  "firstDoor": {
+   "top": 470,
+   "bottom": 611
+  }
+ }
+}
