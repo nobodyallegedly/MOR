@@ -226,3 +226,20 @@ Where the texts are silent or unclear, as found above; none is answered here.
 6. **F184, open.** Several referrers on one payment (15), one slot shared between a storefront and a reposter (16), stakes or rewards by contribution over time (14), and a client's default split plan (05): each is flagged under F184 and left as it is.
 7. **The rename** (F132): the safety key becoming the chain key and the everyday key the signing key, "to apply after the session writing F132". The spec texts still say safety key; when does the rename pass run, and do the companions and case studies follow it then?
 8. **Not a document issue, for the record.** The documents marked "older than the current core" (11, 13, 14, 16, 20) also predate F126, F128 and F132; the items above are what their redraft needs beyond the general note each carries.
+
+## Addendum: "Thank you for MOR", skeleton 4 (checked by the project lead, 9 October 2026)
+
+*The essay draft and its notes live in the claude.ai project, not in this repository; checked there against the spec and two outside sources. Only facts are checked; the voice and the author's choices are not judged.*
+
+**Medium (1)**
+- *"the cypherpunks, the culture that had created it, the same one that had given us PGP".* PGP was released by Phil Zimmermann in 1991; the cypherpunks' mailing list began in 1992 (from memory, to confirm). The cypherpunks took PGP up and championed it, but did not give it. Fix in plain words: "the culture PGP belonged to", or "that had taken up PGP".
+
+**Confirmed (the two [CHECK] marks on PGP)**
+- Zimmermann was investigated by the U.S. Customs Service over the arms export rules for about three years, ending in early 1996 without charges ([Wikipedia](https://en.wikipedia.org/wiki/Phil_Zimmermann); [Zimmermann's own notice](https://www.mit.edu/~prz/EN/news/PRZ_case_dropped.html)).
+- The source code went out printed as a book: *PGP Source Code and Internals*, MIT Press, 1995 (same sources).
+
+**Light (2)**
+- *"The shared safety key is held in commitments, and the commitments are Pedersen's".* True of the founding air-gapped signer Module (`modules/module-airgap-safety-signer-draft-4.md`), not of the core, which does not fix how a safety key is shared. Fine as heritage; avoid implying it is a core rule.
+- *The clay sentence:* Gauss laid out arithmetic on numbers that wrap (and their "indices", today's discrete logarithms) in 1801; that undoing a power is *hard* is a modern assumption, not his. The sentence's "a problem … which Gauss had laid out" holds as written; keep it from saying he laid out the hardness.
+
+**Holds** (checked against the spec): the signature by BIP-340 and SHA-256 (core v21, Identity); the running summary as a Merkle structure, a Merkle mountain range (Envelope, "Running summary"), with the forearm image matching the proof of kept ancestry "without opening any private act" (Identity); the lock as Bernstein's cipher, XChaCha20-Poly1305, and half of key delivery as X25519 within X-Wing, the other half ML-KEM (Envelope); the safety key as SLH-DSA (Identity); Lamport's happened-before (1978); homes and receipts as KERI's witnesses.
