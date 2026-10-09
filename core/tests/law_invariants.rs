@@ -545,6 +545,9 @@ struct ColWorld {
     /// The agreement in force (the founding terms, or the clone naming the
     /// split service).
     current: Hash,
+    /// The record that put `current` in force, where it is not the
+    /// founding terms.
+    current_record: Option<Hash>,
     agents: Vec<Person>,
     creditors: Vec<Person>,
     stranger: Person,
@@ -666,6 +669,7 @@ impl ColWorld {
             col,
             founding,
             current: founding,
+            current_record: None,
             agents,
             creditors,
             stranger,
@@ -821,6 +825,7 @@ impl ColWorld {
         let r = Record { clone: Some(k), signatures: Some(sigs), kept: vec![], registers: None };
         let rec = self.record(0, r, k, &[], true);
         self.current = k;
+        self.current_record = Some(rec);
         for s in self.grants[gi].strands.iter_mut() {
             s.cite.as_mut().unwrap().1.push(rec);
         }
@@ -873,7 +878,8 @@ impl ColWorld {
         let id = self.act_on(Who2::Dev(d), mips().law, law::types::GRANT, g.to_map(), vec![], &[], true, Seal::Public, None, &[]);
         self.note(id, Seal::Public, true, None, K::GrantAct);
         if in_area && holders_sign {
-            self.lane_sign(&id);
+            let s = self.lane_sign(&id);
+            self.info.get_mut(&id).unwrap().lane_signed = s;
         }
         if accept {
             sign(&mut self.w, &mut self.agents[agent], &id);
@@ -1084,8 +1090,16 @@ impl ColWorld {
                 let r = Record { clone: None, signatures: None, kept, registers: Some(vec![res]) };
                 let rec = self.record(d, r, cur, &[], inform);
                 self.note(rec, Seal::Public, true, None, K::Record);
-                self.departures.push((rec, who, area_only));
-                let _ = i;
+                // A record naming no clone names the agreement in force for
+                // it, or it is no line and registers nothing (record, type
+                // 17): drawn on a device whose history does not hold the
+                // record that put `current` in force, it names an agreement
+                // not yet in force for it. Found by the Law invariants
+                // (`docs/fork-hands-out-2026-10-09.md`, OF1).
+                let line = self.current_record.is_none_or(|r| history_of(&self.w.v, &self.col, &rec).contains(&r));
+                if line {
+                    self.departures.push((rec, who, area_only));
+                }
             }
             Op::Fork { stale, sides, debts, seal, all_sign, succ_sign, names } => {
                 if self.endings.iter().filter(|e| e.fork).count() >= 2 {
@@ -1453,6 +1467,92 @@ impl ColWorld {
             .collect()
     }
 
+    /// The revocations of `y`'s grant that count, not by a grant key, whose
+    /// history does not hold `y`, an act of that grant's key never adopted:
+    /// each voids it (the tie rule, G1).
+    fn voiding_revocations(&self, lv: &LawView, y: &Hash) -> Vec<Hash> {
+        let gi = self.info[y].grant.unwrap();
+        if !self.adopters(lv, y).is_empty() {
+            return vec![];
+        }
+        self.info
+            .iter()
+            .filter(|(r, rf)| rf.kind == (K::Revocation { grant: gi }) && rf.grant.is_none() && lv.consent(r).map(|c| c.counts()).unwrap_or(false))
+            .filter(|(r, _)| !history_of(&self.w.v, &self.col, r).contains(y))
+            .map(|(r, _)| *r)
+            .collect()
+    }
+
+    /// The lines emptying the area of `y`'s grant, a grant within an area,
+    /// whose history does not hold `y`, an act of that grant's key never
+    /// adopted: each voids it (the tie rule, G2).
+    fn voiding_lines(&self, lv: &LawView, y: &Hash) -> Vec<Hash> {
+        let g = &self.grants[self.info[y].grant.unwrap()];
+        if !g.in_area || !self.adopters(lv, y).is_empty() {
+            return vec![];
+        }
+        let mut out = vec![];
+        for l in &self.records {
+            let hl = history_of(&self.w.v, &self.col, l);
+            if !hl.contains(&g.id) {
+                continue;
+            }
+            let gone: Vec<Hash> = self.departures.iter().filter(|(rec, _, _)| rec == l || hl.contains(rec)).map(|(_, p, _)| *p).collect();
+            if self.lane_holders.iter().all(|h| gone.contains(h)) && !hl.contains(y) {
+                out.push(*l);
+            }
+        }
+        out
+    }
+
+    /// Whether the Finance lane's consent counts for `d`, a debt or a grant
+    /// within the lane signed by the collective's own key, among the lines
+    /// of the history `he`: as
+    /// judged, or, adopted by an act of the collective's own key citing it,
+    /// once the departures racing that citation (lines the citing act does
+    /// not hold) are set aside (F131 IT2a; reading, confirmed, F132:
+    /// "whichever of the two judgments counts"). A departure before the
+    /// citation is never set aside. As the core reads it, a departure is
+    /// set aside where any act adopting `d` races it. Found by the Law
+    /// invariants (`docs/fork-hands-out-2026-10-09.md`, OF3 to OF5).
+    fn lane_counts(&self, lv: &LawView, d: &Hash, he: &BTreeSet<Hash>) -> bool {
+        if self.lane_meets(d, he, &BTreeSet::new()) {
+            return true;
+        }
+        let adopters = self.adopters(lv, d);
+        let aside: BTreeSet<Hash> = self
+            .departures
+            .iter()
+            .map(|(rec, _, _)| *rec)
+            .filter(|rec| adopters.iter().any(|a| !history_of(&self.w.v, &self.col, a).contains(rec)))
+            .collect();
+        !adopters.is_empty() && self.lane_meets(d, he, &aside)
+    }
+
+    /// Whether the Finance lane's holders meet its threshold on `d`, a debt
+    /// signed by the collective's own key, judged at `d`'s place among the
+    /// lines of the history `he`, the departures registered by the records
+    /// in `aside` set aside (rules 36a, 37a, 37b, 44d; "Made before, made
+    /// after", 3 and 7): a departure registered by a line whose history
+    /// does not hold `d` takes the holder's voice off it; an area left with
+    /// no holder is frozen, and `d` counts for nothing; with fewer holders
+    /// remaining than the threshold, all of them meet it.
+    fn lane_meets(&self, d: &Hash, he: &BTreeSet<Hash>, aside: &BTreeSet<Hash>) -> bool {
+        let Some((_, k)) = self.shape.lane else { return true };
+        let gone: Vec<Hash> = self
+            .departures
+            .iter()
+            .filter(|(rec, _, _)| he.contains(rec) && !aside.contains(rec) && !history_of(&self.w.v, &self.col, rec).contains(d))
+            .map(|(_, p, _)| *p)
+            .collect();
+        let remain: Vec<Hash> = self.lane_holders.iter().filter(|h| !gone.contains(h)).copied().collect();
+        if remain.is_empty() {
+            return false;
+        }
+        let signed = self.info[d].lane_signed.iter().filter(|h| remain.contains(h)).count();
+        signed >= (k as usize).min(remain.len())
+    }
+
     /// Whether `y`, an act of a grant key, lies within its grant's reach,
     /// as the generator built that grant.
     fn in_reach(&self, y: &Hash) -> bool {
@@ -1542,26 +1642,12 @@ impl ColWorld {
                 }
             }
             // The tie rule at every revocation of its grant that counts (G1).
-            for (r, rf) in &self.info {
-                if rf.kind != (K::Revocation { grant: gi }) || rf.grant.is_some() || !lv.consent(r).map(|c| c.counts()).unwrap_or(false) {
-                    continue;
-                }
-                if !history_of(v, &col, r).contains(y) && self.adopters(&lv, y).is_empty() {
-                    bad.push(format!("TIE-REVOCATION: an act of a revoked grant key that the revocation's history does not hold, never adopted, binds: {y:?} revocation {r:?} {b:?}"));
-                }
+            for r in self.voiding_revocations(&lv, y) {
+                bad.push(format!("TIE-REVOCATION: an act of a revoked grant key that the revocation's history does not hold, never adopted, binds: {y:?} revocation {r:?} {b:?}"));
             }
             // The tie rule at a line emptying its area (G2).
-            if g.in_area {
-                for l in &self.records {
-                    let hl = history_of(v, &col, l);
-                    if !hl.contains(&g.id) {
-                        continue;
-                    }
-                    let gone: Vec<Hash> = self.departures.iter().filter(|(rec, _, _)| rec == l || hl.contains(rec)).map(|(_, p, _)| *p).collect();
-                    if self.lane_holders.iter().all(|h| gone.contains(h)) && !hl.contains(y) && self.adopters(&lv, y).is_empty() {
-                        bad.push(format!("TIE-EMPTIED: an act of a grant key whose area a line emptied, not in that line's history, never adopted, binds: {y:?} line {l:?} {b:?}"));
-                    }
-                }
+            for l in self.voiding_lines(&lv, y) {
+                bad.push(format!("TIE-EMPTIED: an act of a grant key whose area a line emptied, not in that line's history, never adopted, binds: {y:?} line {l:?} {b:?}"));
             }
         }
         // Endings: the tie rule, handing out, owing (rules 47a, 47b; F127).
@@ -1595,8 +1681,17 @@ impl ColWorld {
                         && f.seal != Seal::TooFew
                         && f.cited
                         && match f.grant {
-                            None => self.shape.lane.is_none() || !f.lane_signed.is_empty(),
-                            Some(_) => self.in_reach(d) && { let g = &self.grants[f.grant.unwrap()]; g.accepted && (!g.in_area || g.holders_signed) },
+                            None => self.shape.lane.is_none() || (!f.lane_signed.is_empty() && self.lane_counts(&lv, d, &he)),
+                            // A grant key's debt that a revocation of its
+                            // grant, or a line emptying its area, voids by the
+                            // tie rule, never adopted, binds no one, and is not
+                            // handed out (rules 37b, 40; G1, G2; IC3). Found
+                            // by the Law invariants
+                            // (`docs/fork-hands-out-2026-10-09.md`, OF2).
+                            // A grant within the area counts only as the
+                            // area's own act: the lane judged at the grant's
+                            // place (OF5).
+                            Some(_) => self.in_reach(d) && { let g = &self.grants[f.grant.unwrap()]; g.accepted && (!g.in_area || (g.holders_signed && self.lane_counts(&lv, &g.id, &he))) } && self.voiding_revocations(&lv, d).is_empty() && self.voiding_lines(&lv, d).is_empty(),
                         };
                     if should && !listed.contains(d) {
                         bad.push(format!("FORK-HANDS-OUT: a complete fork {:?} leaves out a debt in its history: {d:?}", en.id));
@@ -3539,4 +3634,259 @@ fn it3_the_payments_claim_decides() {
 // verifier in verifier2/ to judge. Ignored unless asked for; changes nothing.
 mod verifier2_export {
     include!("../../verifier2/export/export.rs");
+}
+
+/// OF1 (the oracle, not the core; `docs/fork-hands-out-2026-10-09.md`): a
+/// record naming no clone names the agreement in force for it, or it is no
+/// line and registers nothing (record, type 17). Seed
+/// 12903442695522571031 at 1,500 cases: a Finance holder stepped down by a
+/// record drawn on a device that had never seen the record putting the
+/// current agreement in force; the oracle took the stepping down as
+/// registered, so it had the lane's one other holder sign a debt alone and
+/// expected the fork to hand it out. The core, rightly, still counted both
+/// holders: the debt binds no one, and the fork leaves it out.
+#[test]
+fn of1_a_record_naming_an_agreement_not_in_force_registers_nothing() {
+    let shape = Shape { members: 5, devices: 3, member_devices: 1, constitutional: None, lane: Some((18, 2)), owns_work: true };
+    let story = |tips: u8, succ_sign: bool| {
+        [
+            Op::Resign { member: 21, area_only: true, dev: 7, tips, inform: false },
+            Op::Debt { dev: 0, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: true },
+            Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign, names: false },
+        ]
+    };
+    let rec = |cw: &ColWorld| *cw.info.iter().find(|(x, f)| f.kind == K::Record && !cw.records[..1].contains(x)).unwrap().0;
+    // The shrunk story: the record names device 2's tip alone, and device 2
+    // has signed nothing; it does not hold the record on device 0 that put
+    // the current agreement in force.
+    let cw = run_col(&shape, &story(12, false), 0);
+    assert_eq!(cw.check(), Ok(()), "the shrunk story, as found");
+    // The same, the successors signing for the debts handed to them.
+    let cw = run_col(&shape, &story(12, true), 0);
+    let lv = cw.view();
+    let e = lv.record(&cw.col, &rec(&cw)).unwrap();
+    assert!(!e.line && e.registers.is_empty(), "{e:?}");
+    assert!(cw.departures.is_empty(), "the oracle registers nothing either");
+    let d = cw.debts[0];
+    assert_eq!(cw.info[&d].lane_signed.len(), 2, "both holders sign: neither left the lane");
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(true));
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.iter().any(|(x, _)| *x == d), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+    drop(lv);
+    // The same, the record naming device 0's tip too: it holds that record,
+    // so it is a line and registers the stepping down; the lane's one
+    // remaining holder meets its threshold alone (rule 37b), the debt
+    // binds, and the fork hands it out.
+    let cw = run_col(&shape, &story(13, true), 0);
+    let lv = cw.view();
+    let e = lv.record(&cw.col, &rec(&cw)).unwrap();
+    assert!(e.line && e.registers.len() == 1, "{e:?}");
+    let d = cw.debts[0];
+    assert_eq!(cw.info[&d].lane_signed.len(), 1);
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(true));
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.iter().any(|(x, _)| *x == d), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+}
+
+/// OF2 (the oracle, not the core; `docs/fork-hands-out-2026-10-09.md`):
+/// FORK-HANDS-OUT expected a fork to hand out a grant key's debt that a
+/// revocation of its grant voids by the tie rule (rule 40, G1; IC3). Found
+/// at 5,000 cases, seed 7145587436215071231. The Finance lane's one holder
+/// grants an agent a key; the agent signs a debt; device 0, not having seen
+/// it, revokes the grant with the holder's signature; device 2 revokes it
+/// too, citing the debt, without the holder's signature, so its revocation
+/// does not count and adopts nothing (rule 40: judged by the area alone).
+/// The debt binds no one, and the fork rightly leaves it out.
+#[test]
+fn of2_a_fork_leaves_out_a_debt_a_revocation_voided() {
+    let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let ops = [
+        Op::Grant { dev: 0, agent: 0, in_area: true, accept: true, holders_sign: true },
+        Op::AgentAct { grant: 0, strand: 0, what: AgentWhat::InScope, seal: Seal::Public },
+        Op::Revoke { grant: 0, dev: 0, join_strand: false, holders_sign: true },
+        Op::Revoke { grant: 0, dev: 50, join_strand: true, holders_sign: false },
+        Op::Grant { dev: 45, agent: 0, in_area: false, accept: false, holders_sign: false },
+        Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
+    ];
+    let cw = run_col(&shape, &ops, 0);
+    let lv = cw.view();
+    let d = cw.debts[0];
+    assert!(history(&cw.w.v, &cw.col, &cw.endings[0].tips).contains(&d), "the fork's history holds it");
+    assert!(matches!(lv.backing(&d).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")), "{:?}", lv.backing(&d));
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
+    assert_eq!(cw.voiding_revocations(&lv, &d).len(), 1, "device 0's revocation; device 2's does not count");
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.is_empty(), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+    drop(lv);
+    // The same, device 2's revocation signed by the holder: it counts, and
+    // citing the debt adopts it (rule 40, IT2a); the fork must hand it out.
+    let mut ops = ops;
+    ops[3] = Op::Revoke { grant: 0, dev: 50, join_strand: true, holders_sign: true };
+    ops[5] = Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: true, names: false };
+    let cw = run_col(&shape, &ops, 0);
+    let lv = cw.view();
+    let d = cw.debts[0];
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(true));
+    assert!(cw.voiding_revocations(&lv, &d).is_empty());
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.iter().any(|(x, _)| *x == d), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+}
+
+/// OF3 (the oracle, not the core; `docs/fork-hands-out-2026-10-09.md`):
+/// FORK-HANDS-OUT took a debt the lane's holders had signed as within its
+/// signer's powers wherever it stood. Found at 5,000 cases, seed
+/// 7145587436215071231, after OF2. The Finance lane's only holder signs a
+/// debt on device 1, then resigns by a record on device 0 that does not
+/// hold it: the voice that line removes is gone for every act its history
+/// does not hold ("Made before, made after", 3 and 7), the area is left
+/// with no holder and frozen for the debt (rule 37b), and the debt binds no
+/// one; the fork, whose history holds both, rightly leaves it out.
+#[test]
+fn of3_a_departure_racing_a_debt_freezes_the_lane_for_it() {
+    let shape = Shape { members: 3, devices: 2, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let story = |tips: u8, succ_sign: bool| {
+        [
+            Op::Debt { dev: 61, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: true },
+            Op::Resign { member: 63, area_only: false, dev: 110, tips, inform: false },
+            Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign, names: false },
+        ]
+    };
+    let cw = run_col(&shape, &story(120, false), 0);
+    let lv = cw.view();
+    let d = cw.debts[0];
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    assert!(he.contains(&d) && he.contains(&cw.departures[0].0), "the fork's history holds the debt and the line");
+    assert!(!history_of(&cw.w.v, &cw.col, &cw.departures[0].0).contains(&d), "the line does not hold the debt");
+    assert!(matches!(lv.consent(&d).unwrap(), law::Consent::Areas { ref areas, .. } if areas[0].frozen), "{:?}", lv.consent(&d));
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
+    assert!(!cw.lane_meets(&d, &he, &BTreeSet::new()));
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.is_empty(), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+    drop(lv);
+    // The same, the record naming device 1's tip: the line holds the debt,
+    // made before it, so the holder's voice remains for it; the debt binds,
+    // and the complete fork hands it out.
+    let cw = run_col(&shape, &story(122, true), 0);
+    let lv = cw.view();
+    let d = cw.debts[0];
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    assert!(history_of(&cw.w.v, &cw.col, &cw.departures[0].0).contains(&d));
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(true));
+    assert!(cw.lane_meets(&d, &he, &BTreeSet::new()));
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.iter().any(|(x, _)| *x == d), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+}
+
+/// OF4 (the oracle, not the core; `docs/fork-hands-out-2026-10-09.md`):
+/// found at 5,000 cases, seed 7145587436215071231, after OF3, whose first
+/// form took any adopted debt as counting. The Finance lane's only holder
+/// signs a debt on device 1, steps down from the lane by a record on device
+/// 0 that does not hold it, then resigns by a later record there that names
+/// device 1's tip; device 0 then signs a grant, whose history holds the
+/// debt: it adopts it (rule 40, IT2a). But the stepping down lies in that
+/// grant's history: it does not race the citation, so it is not set aside
+/// (F131, confirmed F132), the lane stays frozen for the debt, and the
+/// debt binds no one; the fork rightly leaves it out.
+#[test]
+fn of4_a_departure_before_the_citation_is_not_set_aside() {
+    let shape = Shape { members: 3, devices: 2, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let ops = [
+        Op::Debt { dev: 61, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: true },
+        Op::Resign { member: 63, area_only: true, dev: 110, tips: 120, inform: false },
+        Op::Resign { member: 0, area_only: false, dev: 0, tips: 2, inform: false },
+        Op::Grant { dev: 14, agent: 0, in_area: false, accept: false, holders_sign: false },
+        Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
+    ];
+    let cw = run_col(&shape, &ops, 0);
+    let lv = cw.view();
+    let d = cw.debts[0];
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    let step_down = cw.departures[0].0;
+    let adopters = cw.adopters(&lv, &d);
+    assert_eq!(adopters.len(), 1, "the grant adopts the debt");
+    assert!(history_of(&cw.w.v, &cw.col, &adopters[0]).contains(&step_down), "the stepping down is before the citation");
+    assert!(!history_of(&cw.w.v, &cw.col, &step_down).contains(&d), "and does not hold the debt");
+    assert!(matches!(lv.consent(&d).unwrap(), law::Consent::Areas { ref areas, .. } if areas[0].frozen), "{:?}", lv.consent(&d));
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
+    assert!(!cw.lane_counts(&lv, &d, &he));
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.is_empty(), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+    drop(lv);
+    // The same stepping down, the debt cited instead by device 1's next
+    // act, which does not hold the stepping down: it races the citation,
+    // is set aside, and the debt counts; the complete fork hands it out.
+    let ops = [
+        Op::Debt { dev: 61, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: true },
+        Op::Resign { member: 63, area_only: true, dev: 110, tips: 120, inform: false },
+        Op::Publish { dev: 1, seal: Seal::Public },
+        Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: true, names: false },
+    ];
+    let cw = run_col(&shape, &ops, 0);
+    let lv = cw.view();
+    let d = cw.debts[0];
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    assert!(!cw.lane_meets(&d, &he, &BTreeSet::new()), "as judged, the lane is frozen for it");
+    assert!(cw.lane_counts(&lv, &d, &he));
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(true));
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.iter().any(|(x, _)| *x == d), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+}
+
+/// OF5 (the oracle, not the core; `docs/fork-hands-out-2026-10-09.md`):
+/// found at 5,000 cases, seed 11735650117398688613. The Finance lane's
+/// only holder grants an agent a key within the lane on device 0, then
+/// steps down from the lane by a record on device 1 that does not hold the
+/// grant: the holder's voice is gone for the grant ("Made before, made
+/// after", 3 and 7), the lane is frozen for it (rule 37b), and the grant
+/// never counts. The agent's debt is backed by nothing; the fork rightly
+/// leaves it out. The oracle had taken the grant as counting because the
+/// holder signed it.
+#[test]
+fn of5_a_grant_racing_the_line_that_empties_its_area_never_counts() {
+    let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let story = |tips: u8, succ_sign: bool| {
+        [
+            Op::Grant { dev: 57, agent: 0, in_area: true, accept: true, holders_sign: true },
+            Op::Resign { member: 32, area_only: true, dev: 13, tips, inform: false },
+            Op::AgentAct { grant: 0, strand: 0, what: AgentWhat::InScope, seal: Seal::Public },
+            Op::Revoke { grant: 0, dev: 0, join_strand: true, holders_sign: false },
+            Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign, names: false },
+        ]
+    };
+    let cw = run_col(&shape, &story(44, false), 0);
+    let lv = cw.view();
+    let (g, d, l) = (cw.grants[0].id, cw.debts[0], cw.departures[0].0);
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    assert!(he.contains(&d) && !history_of(&cw.w.v, &cw.col, &l).contains(&g), "the line does not hold the grant");
+    assert!(!lv.consent(&g).unwrap().counts(), "{:?}", lv.consent(&g));
+    assert!(!cw.lane_counts(&lv, &g, &he));
+    assert!(matches!(lv.backing(&d).unwrap(), Backing::NotBacked { .. }), "{:?}", lv.backing(&d));
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.is_empty(), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+    drop(lv);
+    // The same, the record naming device 0's tip: the line holds the grant,
+    // made before it, and the grant counts; the agent's debt, after the line
+    // that emptied the area, is void all the same (rule 37b, G2), and is
+    // not handed out either.
+    let cw = run_col(&shape, &story(45, true), 0);
+    let lv = cw.view();
+    let (g, d) = (cw.grants[0].id, cw.debts[0]);
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    assert!(lv.consent(&g).unwrap().counts(), "{:?}", lv.consent(&g));
+    assert!(cw.lane_counts(&lv, &g, &he));
+    assert_eq!(cw.voiding_lines(&lv, &d).len(), 1);
+    assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(f.complete && f.fork.debts.is_empty(), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
 }
