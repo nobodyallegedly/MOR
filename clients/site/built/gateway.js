@@ -4367,7 +4367,8 @@ function bar(s) {
   );
   const open = s.phase === "bad" ? " open" : "";
   const newer = s.newer && newerWords(s.newer);
-  return `<div class="standing" id="mor-standing">${escapeHtml(s.words)}</div>${newer ? `
+  const brief = s.brief ? `<div class="standing brief" id="mor-brief">${escapeHtml(s.brief)}</div>` : "";
+  return `${brief}<div class="standing" id="mor-standing">${escapeHtml(s.words)}</div>${newer ? `
 <div class="newer" id="mor-newer">${newer}</div>` : ""}
 <details${open}><summary>Who signed it, and how to check</summary><dl>${rows.join("")}</dl></details>`;
 }
@@ -4378,6 +4379,9 @@ function newerWords(n) {
 }
 function verifiedWords(settings, kind) {
   return `Verified: this ${kind} is exactly what was signed by the identity this gateway names as ${settings.name}. Checked in this browser.`;
+}
+function briefWords(settings) {
+  return `Verified: signed by ${settings.name}`;
 }
 var failingWords = (what) => `Failing: ${what} Not shown.`;
 
@@ -4538,6 +4542,7 @@ var message = (err) => err instanceof Error ? err.message : String(err);
 var state = {
   phase: "checking",
   words: "Checking this page against what its owner signed\u2026",
+  brief: null,
   settings: null,
   version: null,
   path: null,
@@ -4553,6 +4558,7 @@ function paint() {
 function fail(what, reasons = []) {
   state.phase = "bad";
   state.words = failingWords(what);
+  state.brief = null;
   state.reasons = reasons;
   view.innerHTML = "";
   paint();
@@ -4680,6 +4686,7 @@ async function main() {
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
     state.phase = "ok";
     state.words = verifiedWords(settings, "page");
+    state.brief = briefWords(settings);
     paint();
     const frame2 = document.createElement("iframe");
     frame2.setAttribute("sandbox", "allow-same-origin allow-top-navigation-by-user-activation allow-popups allow-popups-to-escape-sandbox");
@@ -4702,6 +4709,7 @@ async function main() {
   document.title = `${entry.path} \xB7 ${version.manifest.name}`;
   state.phase = "ok";
   state.words = verifiedWords(settings, kind === "picture" ? "picture" : "file");
+  state.brief = briefWords(settings);
   paint();
   const box = document.createElement("div");
   box.className = "file";

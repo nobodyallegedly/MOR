@@ -6,6 +6,8 @@ body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:Can
 #mor-bar.ok{border-bottom-color:var(--ok)}
 #mor-bar.bad{border-bottom-color:var(--bad)}
 #mor-bar .standing{font-weight:600}
+#mor-bar .brief{display:none}
+@media (max-width:40em),(max-height:30em){#mor-bar .brief{display:block}#mor-bar .brief+.standing{display:none}}
 #mor-bar.ok .standing{color:var(--ok)}
 #mor-bar.bad .standing{color:var(--bad)}
 #mor-bar .newer{margin-top:4px;font-weight:600}
