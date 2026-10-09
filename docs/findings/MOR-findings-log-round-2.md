@@ -2245,7 +2245,9 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **Answered by the day's decisions, accepted by Nobody, allegedly, 9 October 2026 ("Yes"), for the next building session to fix:** (1) a resignation is spent once its signer comes back by signing a version that names them (B10): a line registers only a resignation signed after the member's latest return, so an old resignation cannot take a returned member's voice again, by a record or a rollback; (2) a version is checked to be complete and to belong to the deal before it is read as settling a fork, so no draft or stranger's act makes a forked deal unreadable; (3) a payment naming a version the seller does not hold raises the alarm: an unknown version is the hidden fork the alarm exists for; (4) settlement is final in the code as in the text (A3): nothing that grows on a discarded branch unsettles the deal; (5) field 26 names the tip of the discarded branch (F188); (6) a settling version also cites the settled version in `objects`, so verifiers that fetch by citation find it.
 
-**For Nobody, allegedly:** (7) a broken collective can close on the line before the broken act (finding 5); (8) a declaration of absence can be kept from the party it names (finding 8).
+**(7), decided by Nobody, allegedly, 9 October 2026 ("Agreed"):** while a collective is broken, **no fork or closing counts, whatever line it names**, the last good link before the broken act included; and **money owed back from the broken stretch counts as a debt** for a closing's "owes nothing", so a collective cannot close until those payers are settled. *His frame:* "It's an emergency situation with emergency rules. All that happened under emergency has to be settled to the respect of the rules before the emergency is lifted." *The project lead's reasoning:* a closing on an old line was a quiet way out of the refunds owed for the stretch.
+
+**Still for Nobody, allegedly:** (8) a declaration of absence can be kept from the party it names (finding 8).
 
 ## Review of F163 to F168 (7 October 2026, morning)
 
