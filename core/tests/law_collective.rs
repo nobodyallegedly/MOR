@@ -7909,3 +7909,33 @@ fn published_resignations_and_declarations_naming_a_party() {
     assert_eq!(named.len(), 1);
     assert_eq!((named[0].0, named[0].1, named[0].2.party), (d, lab.authority.id, ids[ANA]));
 }
+
+/// RB2: "every payment the collective received during the broken stretch":
+/// a payment naming a claim, paid to the collective itself, with no stake
+/// making it a seller, is owed back too.
+#[test]
+fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
+    use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let (_, _, _, _) = break_by_lost_record(&mut lab);
+    let r = Fin::Receipt(Receipt {
+        rail: spec("a rail Module"),
+        proof: b"gift".to_vec(),
+        payer: Some(Payer::Identity(spec("a patron"))),
+        payee: label,
+        amount: Amount { unit: spec("a unit"), value: 7 },
+        fulfils: f,
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: Some(Purchase { agreement: f, line: f }),
+    });
+    let a = lab.w.everyday_act(&mut lab.c[0], mips().finance, 2, r.to_map(), None, None);
+    let x = lab.w.add(&a);
+    let got = lab.view().purchase(&x).unwrap().unwrap();
+    assert!(matches!(got.verdict, law::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")), "{got:?}");
+    let owed = lab.view().owed_back(&label).unwrap();
+    assert_eq!((owed.len(), owed[0].still_broken, owed[0].amount.value), (1, true, 7));
+}

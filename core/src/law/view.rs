@@ -7047,7 +7047,12 @@ impl<'a> LawView<'a> {
         // payer, unless the sale is signed anew after the rollback: a receipt
         // of the collective for the same payment that counts. An
         // acknowledgement adopting the stretch's receipt is not signing anew.
-        for c in &sellers {
+        let payee = match crate::finance::Payload::decode(x.inside.type_, &x.inside.payload) {
+            Ok(crate::finance::Payload::Receipt(r)) => Some(r.payee),
+            Ok(crate::finance::Payload::Claim(c)) => Some(c.payee),
+            _ => None,
+        };
+        for c in sellers.iter().chain(payee.iter().filter(|p| !sellers.contains(p))) {
             if let Some(anew) = self.received_in_stretch(id, c)? {
                 if !anew {
                     return no(

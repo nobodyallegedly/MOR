@@ -732,16 +732,20 @@ export class TestCollective {
    * version of the agreement chain, up to the agreement in force, that the
    * member signed (Law rule 51, B12).
    */
-  async clauseOf(member: string, via: Via = {}): Promise<string | null> {
-    const chain = this.f.agreements.slice(0, this.f.agreements.indexOf(this.f.agreement) + 1);
+  async clauseOf(member: string, via: Via = {}, upTo: string = this.f.agreement): Promise<string | null> {
+    const chain = this.f.agreements.slice(0, this.f.agreements.indexOf(upTo) + 1);
     return (await signedVersions(member, chain, this.f.relays, via)).at(-1) ?? null;
   }
 
-  /** A declaration's payload against `member`, outcome 0, under the clause they signed last. */
-  async declarationFor(member: string, via: Via = {}): Promise<Uint8Array> {
-    const clause = await this.clauseOf(member, via);
+  /**
+   * A declaration's payload against `member`, outcome 0, under the clause
+   * they signed last; naming `agreement`, the agreement in force (during a
+   * broken stretch, the one in force just before the broken act: RB3).
+   */
+  async declarationFor(member: string, via: Via = {}, agreement: string = this.f.agreement): Promise<Uint8Array> {
+    const clause = await this.clauseOf(member, via, agreement);
     if (!clause) throw new Error('that member signed no version of the agreement');
-    return declarationPayload(this.f.agreement, clause, member, Uint32Array.from([0]));
+    return declarationPayload(agreement, clause, member, Uint32Array.from([0]));
   }
 
   /**
@@ -762,15 +766,27 @@ export class TestCollective {
     cosigners: TestIdentity[];
     expect?: Uint8Array;
     via?: Via;
+    /**
+     * During a broken stretch (Law rule 37d, RB3): the agreement in force
+     * just before the broken act, which the declaration names. No record is
+     * drawn: the rollback registers the declaration, naming the signature
+     * acts beside it.
+     */
+    broken?: { before: string };
   }): Promise<{ declaration: string; signed: Signed[]; record?: string }> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
-    if (this.recovering().length) throw new Error('the everyday key\'s holder was declared absent: refit the collective first');
-    const payload = await this.declarationFor(opts.member, opts.via);
+    if (!opts.broken && this.recovering().length) throw new Error('the everyday key\'s holder was declared absent: refit the collective first');
+    const named = opts.broken?.before ?? this.f.agreement;
+    const payload = await this.declarationFor(opts.member, opts.via, named);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the declaration is not the one shown: nothing signed');
-    const clause = await this.clauseOf(opts.member, opts.via);
-    const d = await declare(opts.by, { agreement: this.f.agreement, clause: clause!, party: opts.member, outcomes: [0] }, this.f.relays);
+    const clause = await this.clauseOf(opts.member, opts.via, named);
+    const d = await declare(opts.by, { agreement: named, clause: clause!, party: opts.member, outcomes: [0] }, this.f.relays);
     const signed: Signed[] = [];
     for (const m of opts.cosigners) signed.push({ member: m.id, act: (await sign(m, d.id, this.f.relays)).id });
+    if (opts.broken) {
+      this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, signatures: signed.map((s) => s.act), named }];
+      return { declaration: d.id, signed };
+    }
     if (opts.member === this.f.signingHolder) {
       this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, signatures: signed.map((s) => s.act) }];
       return { declaration: d.id, signed };
