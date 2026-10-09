@@ -70,7 +70,7 @@ The height cap in the display client (`PICTURE_SHARE`, the screen probe and `--m
 - The earlier tests are unchanged and pass, among them the photograph scaling to the width, whole, at 390 and 1280.
 - Here (Chromium): `npm test` in `clients/site`, **31 of 31 pass** (site 15, browser 16). The typecheck is clean.
 - `npm run test:build`: **1 of 2, as on `main` before this session.** The WebAssembly built twice is the same, byte for byte. The second test compares the build with the released copy in `built/`: on `main` it already failed (`mor_wasm_bg.wasm differs`, from F190); now `gateway.js` differs too. Both go when the display client is released, which this session does not do.
-- On GitHub: the results of "test" and "site in WebKit" on this branch are given in the session's last message; this report is written before they run.
+- **On GitHub, commit `f4ac606`:** "site in WebKit" (run 8): **WebKit, Safari's engine, 16 of 16; Chromium 16 of 16**, the new tests included. "tests" (run 255, started by hand, since it runs by itself only on `main` and pull requests): every step passes (the Rust workspace, every client, `clients/site`, `modules/jpeg`) except "Reproducible build of the display client" and the fingerprint step after it, **exactly as on `main`** (run 254, `95d0ce4`): they wait for the display client's release.
 
 ## Questions for Nobody, allegedly
 
