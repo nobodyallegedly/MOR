@@ -19,7 +19,7 @@ import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { Gateway } from '../src/gateway.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
 import { post } from '../../barebone/src/post.ts';
-import { gatewayFor, phone, siteCopy, world, type World } from './world.ts';
+import { DOORS, gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -444,6 +444,85 @@ test("a door opens its page through the display client, checked again", async ()
   // Only the sandbox at work: the test's own helpers refused inside the page's frame, and WebKit reporting
   // its rule for leaving the page (only on a click) before it follows the click.
   assert.ok(sandbox.every((m) => /^Blocked script execution in 'about:srcdoc'|initiate navigation .* sandboxed/s.test(m)), sandbox.join('\n'));
+  await ctx.close();
+});
+
+test("every department's door verifies, signed by the owner, with the main door's stylesheet, icon and footer, and a link back to the main door", async () => {
+  // Decided by Nobody, allegedly, 9 October 2026: a door of its own for each department, a folder within the
+  // one site; every pitch sends both doors, so each door links back to the main door.
+  for (const [folder, name] of DOORS) {
+    const address = `/${folder}/`;
+    const ctx = await browser.newContext({ colorScheme: 'dark' });
+    const page = await ctx.newPage();
+    const problems: string[] = [];
+    const elsewhere: string[] = [];
+    page.on('console', (m) => {
+      if (/Content.Security.Policy/i.test(m.text())) csp.push(m.text());
+      else if (m.type() === 'error' && !benign(m.text()) && !/sandboxed/.test(m.text())) problems.push(m.text());
+    });
+    page.on('request', (r) => {
+      if (!/^(http:\/\/127\.0\.0\.1:|blob:|data:|about:)/.test(r.url())) elsewhere.push(r.url());
+    });
+    await page.goto(base + address);
+    await page.waitForSelector('#mor-bar.ok, #mor-bar.bad', { timeout: 60_000 });
+    const why = (await page.locator('#mor-reasons').count()) ? await page.textContent('#mor-reasons') : '';
+    assert.match((await standing(page))!, /^Verified: this page is exactly what was signed by the identity this gateway names as Nobody, allegedly\./, `${address}: ${why} ${problems.join(' ')}`);
+    assert.equal(await fp(page), w.owner.id, `${address}: the whole fingerprint of the signer`);
+    assert.equal(await page.textContent('#mor-version'), w.site.id);
+    assert.equal(await page.title(), `${name} · dubsar.org · dubsar.org`);
+    const f = await pageFrame(page);
+    assert.equal(await f.textContent('h1'), name);
+    assert.equal(await f.locator('script').count(), 0);
+    // Back to the main door, through the display client.
+    assert.equal(await f.getAttribute('.back a', 'href'), '/', `${address}: links back to the main door`);
+    assert.equal(await f.getAttribute('.back a', 'target'), '_top');
+    // Until Nobody, allegedly, writes them, the opening lines are a placeholder, as on the main door's pages; the
+    // documents are placeholders until step 17.
+    assert.match((await f.textContent('main .placeholder'))!, /^Placeholder:/);
+    assert.ok((await f.locator('.items li').count()) >= 1, `${address}: its documents`);
+    // The main door's stylesheet applies (its dark page colour), and its footer, with the tablet last.
+    assert.equal(await f.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(18, 18, 18)');
+    const links = await f.$$eval('footer a', (as) => as.map((a) => [a.textContent, a.getAttribute('href')]));
+    assert.deepEqual(links, [
+      ['nobodyallegedly@dubsar.org', 'mailto:nobodyallegedly@dubsar.org'],
+      ['A sealed message, through the reader', 'https://reader.dubsar.org/'],
+    ]);
+    const tablet = await f.$$eval('footer img.tablet', (is) =>
+      is.filter((i) => getComputedStyle(i).display !== 'none').map((i) => [i.className, (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0]),
+    );
+    assert.deepEqual(tablet, [['tablet dark', true]], `${address}: the tablet drawn on the dark page, its checked bytes shown`);
+    assert.equal(await page.getAttribute('link[rel="icon"]', 'href'), `data:image/jpeg;base64,${readFileSync(join(w.dir, 'icon.jpg')).toString('base64')}`);
+    await shot(page, `door-${folder}`);
+    assert.deepEqual(problems, [], address);
+    assert.deepEqual(elsewhere, [], `${address}: nothing fetched from elsewhere`);
+    await ctx.close();
+  }
+});
+
+test("the main door lists no department's door: unlisted, never hidden", async () => {
+  const { page, ctx } = await open(base + '/');
+  const f = await pageFrame(page);
+  const hrefs = await f.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')!));
+  assert.ok(hrefs.length > 0);
+  for (const [folder] of DOORS) {
+    assert.ok(!hrefs.some((h) => h === `/${folder}/` || h.startsWith(`/${folder}/`)), `the main door does not link to /${folder}/ (${hrefs})`);
+  }
+  await ctx.close();
+  // Never hidden: each door is in the signed version's list of files, for anyone to see.
+  const paths = at(honest).manifest!.files.map((x) => x.path);
+  for (const [folder] of DOORS) assert.ok(paths.includes(`${folder}/index.html`), folder);
+});
+
+test("a department's door leads back to the main door, checked again", async () => {
+  const { page, ctx, problems } = await open(base + '/law/');
+  const f = await pageFrame(page);
+  await f.locator('.back a').scrollIntoViewIfNeeded();
+  const back = (await f.locator('.back a').boundingBox())!;
+  await Promise.all([page.waitForURL(base + '/'), page.mouse.click(back.x + back.width / 2, back.y + back.height / 2)]);
+  await page.waitForSelector('#mor-bar.ok, #mor-bar.bad', { timeout: 60_000 });
+  assert.match((await standing(page))!, /^Verified/);
+  assert.equal(await (await pageFrame(page)).locator('.doors a').count(), 4, 'the main door');
+  assert.deepEqual(problems, []);
   await ctx.close();
 });
 
