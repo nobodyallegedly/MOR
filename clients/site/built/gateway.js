@@ -1,3 +1,21 @@
+// src/shell/hold.ts
+var LONGEST = 3e4;
+var frame = document.createElement("iframe");
+frame.hidden = true;
+frame.setAttribute("aria-hidden", "true");
+frame.title = "Holding the page until its icon is checked";
+document.body.append(frame);
+frame.contentDocument?.open();
+var held = true;
+var cap = setTimeout(() => releaseLoad(), LONGEST);
+function releaseLoad() {
+  if (!held) return;
+  held = false;
+  clearTimeout(cap);
+  frame.contentDocument?.close();
+  frame.remove();
+}
+
 // ../genesis/wasm/mor_wasm.js
 var Verifier = class {
   __destroy_into_raw() {
@@ -487,10 +505,10 @@ var Verifier = class {
    * @param {string} held
    * @returns {any}
    */
-  lawForkAlarm(specs, payment, held) {
+  lawForkAlarm(specs, payment, held2) {
     const ptr0 = passStringToWasm0(payment, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(held, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(held2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_lawForkAlarm(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
@@ -1844,6 +1862,7 @@ function refused(err) {
 }
 var ANOTHER_WAY = "or check the site without a browser, from a relay, with MOR's own tools (<code>mor-site verify</code>).";
 function cannotCheck(err) {
+  releaseLoad();
   const bar2 = document.getElementById("mor-bar");
   if (!bar2) return;
   const why = err instanceof Error ? err.message : String(err);
@@ -2713,13 +2732,13 @@ function readExif(body) {
 }
 function read(b) {
   const { segments: segs, end } = segments(b);
-  const frame = segs.find((s) => isFrame(s.marker));
-  if (frame.body.length < 6) throw new NotJpeg("a frame header too short");
-  const precision = frame.body[0];
-  let height = u16(frame.body, 1);
-  const width = u16(frame.body, 3);
-  const components = frame.body[5];
-  if (frame.body.length !== 6 + 3 * components) throw new NotJpeg("a frame header of the wrong length");
+  const frame2 = segs.find((s) => isFrame(s.marker));
+  if (frame2.body.length < 6) throw new NotJpeg("a frame header too short");
+  const precision = frame2.body[0];
+  let height = u16(frame2.body, 1);
+  const width = u16(frame2.body, 3);
+  const components = frame2.body[5];
+  if (frame2.body.length !== 6 + 3 * components) throw new NotJpeg("a frame header of the wrong length");
   if (width === 0) throw new NotJpeg("a picture zero pixels wide");
   if (components === 0) throw new NotJpeg("a picture with no colour component");
   if (height === 0) {
@@ -2772,8 +2791,8 @@ function read(b) {
   const o = orientation !== null && orientation >= 1 && orientation <= 8 ? orientation : 1;
   const turned = o >= 5;
   return {
-    frame: frame.marker,
-    process: PROCESS[frame.marker] ?? "unknown",
+    frame: frame2.marker,
+    process: PROCESS[frame2.marker] ?? "unknown",
     precision,
     width,
     height,
@@ -4544,8 +4563,8 @@ async function gatewayFile(entry) {
   const b = new Uint8Array(await r.arrayBuffer());
   return matches(entry, b) ? b : null;
 }
-async function showActs(frame, settings) {
-  const doc = frame.contentDocument;
+async function showActs(frame2, settings) {
+  const doc = frame2.contentDocument;
   if (!doc) return;
   const actStyle = URL.createObjectURL(new Blob([ACT_STYLE], { type: "text/css" }));
   for (const box of [...doc.querySelectorAll(".mor-act[data-act]")]) {
@@ -4559,15 +4578,12 @@ async function showActs(frame, settings) {
       inner.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
       inner.setAttribute("title", `Act ${id}`);
       const html = renderPost(post).replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
-      inner.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${actStyle}"></head><body>${html}</body></html>`;
-      inner.addEventListener("load", () => {
-        const d = inner.contentDocument;
-        if (!d) return;
-        const fit = () => inner.style.height = `${d.documentElement.scrollHeight}px`;
-        fit();
-        new ResizeObserver(fit).observe(d.body);
-      });
       box.replaceChildren(inner);
+      const d = inner.contentDocument;
+      d.open();
+      d.write(`<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${actStyle}"></head><body>${html}</body></html>`);
+      d.close();
+      fitFrame(inner);
     } catch (err) {
       line.problem = message(err);
       const note = doc.createElement("div");
@@ -4578,12 +4594,12 @@ async function showActs(frame, settings) {
     paint();
   }
 }
-function fitFrame(frame) {
-  const doc = frame.contentDocument;
+function fitFrame(frame2) {
+  const doc = frame2.contentDocument;
   if (!doc) return;
   const fit = () => {
     const h = Math.min(Math.ceil(doc.documentElement.getBoundingClientRect().height), 1e5);
-    if (Math.abs(frame.clientHeight - h) > 1) frame.style.height = `${h}px`;
+    if (Math.abs(frame2.clientHeight - h) > 1) frame2.style.height = `${h}px`;
   };
   fit();
   new ResizeObserver(fit).observe(doc.documentElement);
@@ -4665,21 +4681,21 @@ async function main() {
     state.phase = "ok";
     state.words = verifiedWords(settings, "page");
     paint();
-    const frame = document.createElement("iframe");
-    frame.setAttribute("sandbox", "allow-same-origin allow-top-navigation-by-user-activation allow-popups allow-popups-to-escape-sandbox");
-    frame.setAttribute("title", prepared.title ?? entry.path);
-    frame.id = "mor-page";
-    frame.addEventListener(
+    const frame2 = document.createElement("iframe");
+    frame2.setAttribute("sandbox", "allow-same-origin allow-top-navigation-by-user-activation allow-popups allow-popups-to-escape-sandbox");
+    frame2.setAttribute("title", prepared.title ?? entry.path);
+    frame2.id = "mor-page";
+    frame2.addEventListener(
       "load",
       () => {
-        fitFrame(frame);
-        void showActs(frame, settings);
+        fitFrame(frame2);
+        void showActs(frame2, settings);
       },
       { once: true }
     );
-    frame.srcdoc = prepared.html;
+    frame2.srcdoc = prepared.html;
     if (prepared.icon) showIcon(prepared.icon);
-    view.replaceChildren(frame);
+    view.replaceChildren(frame2);
     void lookForLater(version);
     return;
   }
@@ -4702,4 +4718,4 @@ async function main() {
   view.replaceChildren(box);
   void lookForLater(version);
 }
-void main();
+void main().finally(releaseLoad);
