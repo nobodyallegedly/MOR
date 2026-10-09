@@ -61,6 +61,16 @@ jobs:
         run: cd clients/site && npx playwright-core install --with-deps webkit
       - name: Browser tests in WebKit (Safari's engine)
         run: cd clients/site && MOR_BROWSER=webkit node --import tsx --test test/browser.test.ts
+      - name: Screenshots of the front page's first screen in WebKit, at three shares of the screen's height
+        if: success() || failure()
+        run: cd clients/site && MOR_BROWSER=webkit node --import tsx scripts/first-screen.ts ../../first-screen 0.2 0.25 0.3
+      - name: Keep the screenshots
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: first-screen-webkit
+          path: first-screen/
+          if-no-files-found: warn
       - name: Browser tests in Chromium
         if: success() || failure()
         run: cd clients/site && node --import tsx --test test/browser.test.ts

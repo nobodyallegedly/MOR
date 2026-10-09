@@ -40,19 +40,34 @@ code,.fp{font-family:ui-monospace,Menlo,monospace;font-size:.92em;overflow-wrap:
 #mor-view>.file{padding:16px}
 #mor-view img{max-width:100%;height:auto;image-orientation:from-image}
 #mor-view pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,Menlo,monospace}
-.note{max-width:42em;margin:24px auto;padding:10px 12px;border-left:3px solid var(--bad)}`;
+.note{max-width:42em;margin:24px auto;padding:10px 12px;border-left:3px solid var(--bad)}
+#mor-screen{position:fixed;top:0;left:0;width:0;height:100vh;height:100svh;visibility:hidden;pointer-events:none}`;
 
 /** Put first in every page's frame: the boxes where acts are shown, and links that leave the site. */
 export const FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 
-/** Inside an act's own frame: the post as the reader shows it, its picture scaled to the frame's width, whole. */
+/**
+ * How tall an act's picture may be, as a share of the screen's height: one
+ * value, the same on every phone (step 10a, decided by Nobody, allegedly,
+ * 9 October 2026: the first act's photograph a little less tall, still whole,
+ * so that a band shows at the bottom of the first screen). The display client
+ * gives each act's frame the screen's height as `--mor-screen` (app.ts): inside
+ * a frame as tall as what it shows, the frame's own `vh` would be its height.
+ */
+export const PICTURE_SHARE = 0.25;
+
+/**
+ * Inside an act's own frame: the post as the reader shows it, its picture
+ * scaled to the frame's width and whole; never taller than its share of the
+ * screen, narrower then and centred, never cropped.
+ */
 export const ACT_STYLE = `${POST_STYLE}
-:root{color-scheme:light dark}
+:root{color-scheme:light dark;--mor-picture-share:${PICTURE_SHARE}}
 body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 Georgia,'Times New Roman',serif}
 .mor-post{margin:0}
-.mor-post img{width:100%}`;
+.mor-post img{width:100%;max-height:calc(var(--mor-screen) * var(--mor-picture-share));object-fit:contain}`;
 
 export interface ActLine {
   id: string;

@@ -20,6 +20,7 @@ import { Gateway } from '../src/gateway.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
 import { post } from '../../barebone/src/post.ts';
 import { gatewayFor, phone, siteCopy, world, type World } from './world.ts';
+import { PICTURE_SHARE } from '../src/shell/view.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -269,6 +270,79 @@ test("the first act's photograph scales to the page's width, whole, and nothing 
       assert.ok(m.pageScroll[0] <= m.pageScroll[1] && m.pageScroll[2] <= m.pageScroll[3] + 1, `the page's frame does not scroll: it is as tall as the page (${m.pageScroll})`);
       assert.ok(m.top[0] <= m.top[1], 'nothing wider than the window');
       await shot(page, `front-large-picture-${width}`);
+      await ctx.close();
+    }
+  } finally {
+    g.close();
+  }
+});
+
+test("on a phone's first screen (390 x 844), the photograph is whole and the band shows: the shortcuts, then the sections through a gradient", async () => {
+  // Decided by Nobody, allegedly, 9 October 2026: the photograph a little less tall, still whole, so that a broadish
+  // band ends the first screen; the two shortcuts at its top; below them a gradient, behind the sections and never
+  // over their words, through which their first line shows. In light and dark.
+  const act = (await post(w.owner, { text: 'Thank you for the shower… (a large picture)', jpeg: await largeJpeg(), relays: [w.relay.base] })).id;
+  const v = await publishSite(w.owner, { name: 'dubsar.org', files: readFolder(siteCopy(act)), relays: [w.relay.base] });
+  const g = new Gateway(gatewayFor(w, v.id, { serve: 'pinned' }), join(here, 'dist'), { extraConnect: LOCAL });
+  try {
+    assert.ok(await ok(g));
+    const at = await g.listen('127.0.0.1', 0);
+    for (const colorScheme of ['light', 'dark'] as const) {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme });
+      const page = await ctx.newPage();
+      await page.goto(at + '/');
+      await page.waitForSelector('#mor-bar.ok', { timeout: 60_000 });
+      const f = await pageFrame(page);
+      const inner = (await (await f.waitForSelector('.mor-act iframe', { timeout: 60_000 })).contentFrame())!;
+      await inner.waitForSelector('.mor-post img');
+      await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
+      await page.waitForTimeout(300);
+      const m = await page.evaluate(() => {
+        const frame = document.getElementById('mor-page') as HTMLIFrameElement;
+        const top = frame.getBoundingClientRect().top;
+        const d = frame.contentDocument!;
+        const actFrame = d.querySelector('.mor-act iframe') as HTMLIFrameElement;
+        const a = actFrame.contentDocument!;
+        const img = a.querySelector('.mor-post img') as HTMLImageElement;
+        const r = img.getBoundingClientRect();
+        const look = getComputedStyle(img);
+        const shortcuts = d.querySelector('.shortcuts')!.getBoundingClientRect();
+        const door = d.querySelector('.doors a')!.getBoundingClientRect();
+        const doors = d.querySelector('.doors')!;
+        return {
+          screen: window.innerHeight,
+          img: [r.width, r.height, img.naturalWidth, img.naturalHeight],
+          fit: look.objectFit,
+          actScroll: [a.documentElement.scrollWidth, a.documentElement.clientWidth, a.documentElement.scrollHeight, actFrame.clientHeight],
+          shortcuts: [top + shortcuts.top, top + shortcuts.bottom],
+          door: top + door.top,
+          gradient: getComputedStyle(doors).backgroundImage,
+          doorBackground: getComputedStyle(d.querySelector('.doors a')!).backgroundColor,
+          band: [getComputedStyle(d.documentElement).getPropertyValue('--band'), getComputedStyle(d.body).backgroundColor],
+        };
+      });
+      const [shownW, shownH, naturalW, naturalH] = m.img;
+      // Whole: the picture keeps its proportions inside its box, and nothing of it is cut off or scrolled.
+      assert.equal(m.fit, 'contain', 'the picture is fitted whole into its box, never cropped');
+      const scale = Math.min(shownW / naturalW, shownH / naturalH);
+      assert.ok(naturalW * scale <= shownW + 0.5 && naturalH * scale <= shownH + 0.5, `the whole picture fits its box (${m.img})`);
+      assert.ok(m.actScroll[0] <= m.actScroll[1] && m.actScroll[2] <= m.actScroll[3] + 1, `the act's frame does not scroll (${m.actScroll})`);
+      // Less tall: no taller than its share of the screen's height.
+      assert.ok(shownH <= PICTURE_SHARE * m.screen + 1, `the picture is no taller than ${PICTURE_SHARE} of the screen (${shownH} of ${m.screen})`);
+      // The band: both shortcuts on the first screen, whole, and the sections' first line showing below them.
+      assert.ok(m.shortcuts[1] <= m.screen, `both shortcuts on the first screen (${m.shortcuts} of ${m.screen})`);
+      for (const id of ['#one-page', '#shower-text']) {
+        const b = (await (await f.$(id))!.boundingBox())!;
+        assert.ok(b.y >= 0 && b.y + b.height <= m.screen, `${id} shown whole on the first screen (${b.y}, ${b.height})`);
+      }
+      assert.ok(m.door + 40 <= m.screen, `the sections' first line shows on the first screen (${m.door} of ${m.screen})`);
+      // Broadish: this test reads it as at least a quarter of the screen, from the shortcuts' top down.
+      assert.ok(m.screen - m.shortcuts[0] >= m.screen / 4, `the band is at least a quarter of the screen (${m.screen - m.shortcuts[0]} of ${m.screen})`);
+      // The gradient, behind the sections: their own boxes stay see-through, so nothing is drawn over their words.
+      assert.match(m.gradient, /linear-gradient/, 'a gradient behind the sections');
+      assert.equal(m.doorBackground, 'rgba(0, 0, 0, 0)', 'the sections draw nothing of their own over the gradient');
+      assert.notEqual(m.band[0].trim(), '', 'the band colour is drawn from the page colours');
+      await shot(page, `front-first-screen-${colorScheme}`);
       await ctx.close();
     }
   } finally {

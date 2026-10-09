@@ -78,6 +78,7 @@ async function showActs(frame: HTMLIFrameElement, settings: SiteSettings): Promi
       d.open();
       d.write(`<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${actStyle}"></head><body>${html}</body></html>`);
       d.close();
+      tellScreen(inner);
       fitFrame(inner);
     } catch (err) {
       line.problem = message(err);
@@ -108,6 +109,22 @@ function fitFrame(frame: HTMLIFrameElement): void {
   fit();
   new ResizeObserver(fit).observe(doc.documentElement);
 }
+
+/**
+ * The screen's height, measured in this window, the only one that knows it:
+ * the small viewport (`svh`), the screen as first seen, with the browser's
+ * bars showing, so a picture does not change size as they hide on scrolling.
+ * Given to each act's frame as `--mor-screen`, for its picture's height
+ * (view.ts, PICTURE_SHARE), and again whenever it changes (a turned phone).
+ */
+const screenProbe = document.body.appendChild(Object.assign(document.createElement('div'), { id: 'mor-screen' }));
+const actFrames: HTMLIFrameElement[] = [];
+function tellScreen(frame: HTMLIFrameElement): void {
+  if (!actFrames.includes(frame)) actFrames.push(frame);
+  const h = Math.round(screenProbe.getBoundingClientRect().height);
+  frame.contentDocument?.documentElement.style.setProperty('--mor-screen', `${h}px`);
+}
+new ResizeObserver(() => actFrames.forEach(tellScreen)).observe(screenProbe);
 
 /** The page's icon on the browser tab: the picture's checked bytes, never an address (rule 16a). */
 function showIcon(bytes: Uint8Array): void {
