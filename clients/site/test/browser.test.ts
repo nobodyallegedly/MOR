@@ -1,4 +1,5 @@
-// The gateway's display client in a real browser (headless Chromium), on a
+// The gateway's display client in a real browser (headless Chromium, or
+// WebKit, Safari's engine, with MOR_BROWSER=webkit), on a
 // fresh profile each time, as a fresh device would open the site: the built
 // display client, served by the gateway with its headers, checks the version
 // against local relays with the core library's WebAssembly, then each page
@@ -12,7 +13,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium, type Browser, type Frame, type Page } from 'playwright-core';
+import { chromium, webkit, type Browser, type Frame, type Page } from 'playwright-core';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { Gateway } from '../src/gateway.ts';
@@ -22,6 +23,8 @@ import { gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+/** WebKit is Safari's engine, which every browser on an iPhone uses: Playwright's own build of it, installed with `npx playwright-core install webkit`. */
+const WEBKIT = process.env.MOR_BROWSER === 'webkit';
 const shots = process.env.MOR_SCREENSHOTS;
 const LOCAL = ['http://127.0.0.1:*'];
 
@@ -82,7 +85,7 @@ before(async () => {
   assert.ok(await ok(hostile));
   hostileBase = await hostile.listen('127.0.0.1', 0);
 
-  browser = await chromium.launch({ executablePath: CHROMIUM });
+  browser = WEBKIT ? await webkit.launch() : await chromium.launch({ executablePath: CHROMIUM });
 });
 
 after(async () => {
@@ -176,6 +179,14 @@ test('the front page opens on the first act, shown as the act, verified, with it
   assert.deepEqual(await f.$$eval('.doors .door', (els) => els.map((e) => e.textContent)), ['Read', 'Build', 'Run', 'Use']);
   const size = await inner.$eval('.mor-post img', (i) => (i as HTMLImageElement).naturalWidth);
   assert.ok(size > 0, 'the picture is shown');
+  // A little less than fully opaque (asked for by Nobody, allegedly, 9 October 2026): the value is the site
+  // stylesheet's, so the test follows it rather than fixing a number.
+  const opacity = await f.$eval('.first-act .mor-act', (b) => [
+    getComputedStyle(b).opacity,
+    getComputedStyle(document.documentElement).getPropertyValue('--first-act-opacity').trim(),
+  ]);
+  assert.equal(Number(opacity[0]), Number(opacity[1]), `the first act shown at the stylesheet's opacity (${opacity})`);
+  assert.ok(Number(opacity[0]) > 0.5 && Number(opacity[0]) < 1, `a little less than fully opaque (${opacity[0]})`);
   await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
   const acts = (await page.textContent('#mor-acts'))!;
   assert.ok(acts.includes(w.firstAct) && acts.replace(/ /g, '').includes(w.owner.id), 'the bar names the act, its standing and signer');
@@ -254,6 +265,8 @@ test('the footer: only the contact and the sealed message, then the clay tablet,
   for (const colorScheme of ['light', 'dark'] as const) {
     for (const path of ['/', '/read.html', '/build.html', '/run.html', '/use.html']) {
       const ctx = await browser.newContext({ colorScheme });
+      // The icon as it is when the window finishes loading, which is when Safari's engine reads it, once.
+      await ctx.addInitScript("addEventListener('load', () => { window.morIconAtLoad = document.querySelector('link[rel=\"icon\"]')?.getAttribute('href') ?? null; });");
       const page = await ctx.newPage();
       await page.goto(base + path);
       await page.waitForSelector('#mor-bar.ok', { timeout: 60_000 });
@@ -287,6 +300,10 @@ test('the footer: only the contact and the sealed message, then the clay tablet,
       // The tab's icon: the site's icon.jpg, as the bytes the display client checked.
       const icon = await page.getAttribute('link[rel="icon"]', 'href');
       assert.equal(icon, `data:image/jpeg;base64,${readFileSync(join(w.dir, 'icon.jpg')).toString('base64')}`);
+      // Already there when the window finished loading: the display client holds the load until the icon is
+      // checked and set, since WebKit reads it then and never again.
+      assert.equal(await page.evaluate(() => (window as { morIconAtLoad?: string | null }).morIconAtLoad), icon, 'the icon set before the window finished loading');
+      assert.equal(await page.locator('iframe[aria-hidden]').count(), 0, 'the hold is gone once released');
       if (path === '/') await shot(page, `footer-${colorScheme}`);
       await ctx.close();
     }
