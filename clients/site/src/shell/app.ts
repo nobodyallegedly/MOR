@@ -6,6 +6,7 @@
 // only then shows it, under a bar that says who signed it and whether it
 // verified. A file that does not match is not shown.
 
+import { releaseLoad } from './hold.ts';
 import { readPost } from '../../../barebone/src/post.ts';
 import { renderPost } from '../../../barebone/src/html.ts';
 import { kindOf, pathFor, type FileEntry } from '../manifest.ts';
@@ -68,15 +69,16 @@ async function showActs(frame: HTMLIFrameElement, settings: SiteSettings): Promi
       inner.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
       inner.setAttribute('title', `Act ${id}`);
       const html = renderPost(post).replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
-      inner.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${actStyle}"></head><body>${html}</body></html>`;
-      inner.addEventListener('load', () => {
-        const d = inner.contentDocument;
-        if (!d) return;
-        const fit = () => (inner.style.height = `${d.documentElement.scrollHeight}px`);
-        fit();
-        new ResizeObserver(fit).observe(d.body);
-      });
+      // Written into the frame at once, rather than waiting for the frame's
+      // load event: Safari's engine, WebKit, runs no listener for an event in
+      // a document that may not run scripts, as the page's frame may not, so
+      // the act's frame was never sized there and scrolled in a short box.
       box.replaceChildren(inner);
+      const d = inner.contentDocument!;
+      d.open();
+      d.write(`<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${actStyle}"></head><body>${html}</body></html>`);
+      d.close();
+      fitFrame(inner);
     } catch (err) {
       line.problem = message(err);
       const note = doc.createElement('div');
@@ -89,10 +91,12 @@ async function showActs(frame: HTMLIFrameElement, settings: SiteSettings): Promi
 }
 
 /**
- * Make the page's frame as tall as the page, now and whenever the page grows
- * or shrinks (an act shown, a turned phone), so that nothing scrolls inside
- * it: the browser's own scrolling is the only one. Capped, so that a page
- * whose height follows its frame's cannot grow it without end.
+ * Make a frame as tall as what it shows (the page, or an act in it), now and
+ * whenever that grows or shrinks (an act shown, a picture loaded, a turned
+ * phone), so that nothing scrolls inside it: the browser's own scrolling is
+ * the only one. Capped, so that a page whose height follows its frame's
+ * cannot grow it without end. Uses no event of the framed document, which
+ * WebKit would not deliver there: the observer belongs to this window.
  */
 function fitFrame(frame: HTMLIFrameElement): void {
   const doc = frame.contentDocument;
@@ -232,4 +236,5 @@ async function main(): Promise<void> {
   void lookForLater(version);
 }
 
-void main();
+// The window finishes loading once the icon is on the tab, or there is none (hold.ts).
+void main().finally(releaseLoad);
