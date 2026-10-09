@@ -2231,6 +2231,8 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **BQ5, decided by Nobody, allegedly, 9 October 2026:** "It breaks, but it only breaks one layer." The warning to the last holder of constitutional power: **"You are about to break the collective's constitutional layer. Once you leave, nobody will be able to change its rules again. The other members keep acting in their areas."** (First sentence his; the rest the project lead's, accepted: "It works.") It is not a broken collective (rule 37d) and has no rollback. **"This could become a deliberate act under rare scenarios"** (Nobody, allegedly): a collective may choose to freeze its own rules for good, and the warning makes sure it is chosen.
 
+**The settling version's reach, decided by Nobody, allegedly, 9 October 2026 ("Yes, absolutely. Tips are what matter on the forks"):** **a settling version must name the latest version, the tip, of the branch it discards**; one naming an older version settles nothing, and where a newer version of that branch turns up that it did not name, the fork is not settled and the deal stays on its reference (DQ1 to DQ4). *Replaces the build's reading "may name any version of the other branch".*
+
 **Still standing out, to decide one at a time:** BQ4 (the contest act has no format, so no client can sign a contest), BQ5 (the warning's wording), a settling version naming an older version of the other branch, and a collective whose very first agreement fails.
 
 ## Review of F163 to F168 (7 October 2026, morning)
