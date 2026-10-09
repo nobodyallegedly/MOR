@@ -7,3 +7,7 @@
 **A2.** "Today b makes sense, acknowledge the fork before moving on.  Part of me still wonders if a is enough though."
 
 **A3.** "A) all involved need to be racing all involved on both chains and I don't see how that could happen anyway"
+
+**A4.** "We cannot state that they count for nothing in Law but it does in finance. In this case, finance is dictated by law, they cannot be separated.
+
+This one makes the whole thing sort of absurd. They have to count, both versions count, both signed, and clients should begin to catch the mistake and slowly ring the alarm."
