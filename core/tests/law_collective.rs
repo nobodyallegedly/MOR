@@ -7937,9 +7937,9 @@ fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
 
 // ---------------------------------------------------------------- F189 and F188 (9 October 2026)
 
-/// Ben resigns, a record registers it, and a year later he comes back: a
-/// constitutional clone naming him again, signed by all three, declared by
-/// a rotation (B10). Returns (his old resignation, the clone of his return).
+/// Ben resigns, a record registers it, and a year later Ben comes back: a
+/// constitutional clone naming Ben again, signed by all three, declared by
+/// a rotation (B10). Returns (Ben's old resignation, the clone of the return).
 fn ben_leaves_and_returns(lab: &mut Lab) -> (Hash, Hash) {
     let f = lab.founding;
     let mut ben = lab.m[BEN].clone();
@@ -7975,7 +7975,7 @@ fn f189_1_an_old_resignation_cannot_take_a_returned_members_voice() {
         lab.view().published_resignations(&col).unwrap().iter().all(|d| d.act != res_b),
         "a spent resignation is not shown as a resignation to come"
     );
-    // A resignation he signs after his return counts.
+    // A resignation Ben signs after the return counts.
     let mut ben = lab.m[BEN].clone();
     let again = lab.resign_from(&mut ben, back, None);
     lab.record(0, None, &[], vec![again], back);
@@ -8003,7 +8003,7 @@ fn f189_1_an_old_resignation_cannot_take_a_returned_members_voice() {
     assert_eq!(
         lab.view().broken_act(&col).unwrap().map(|b| b.act),
         Some(rot1),
-        "Ben's voice remains: the rollback needs him too"
+        "Ben's voice remains: the rollback needs Ben too"
     );
 }
 
