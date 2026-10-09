@@ -1,0 +1,61 @@
+# Screenshots of dubsar.org's first screen in WebKit, Safari's engine, committed
+# to the branch that asked for them, so they can be opened from a session's
+# report (roadmap step 10a, 9 October 2026: the photograph's height chosen by
+# looking). Playwright's WebKit cannot be downloaded in a session's container,
+# nor GitHub's stored artifacts read from there, so the pictures come back as a
+# commit. Runs on a working branch when the screenshot script or this file
+# changes, with the shares listed below; a commit made here starts no workflow.
+name: site first screen in WebKit
+
+on:
+  push:
+    branches:
+      - 'claude/**'
+    paths:
+      - clients/site/scripts/first-screen.ts
+      - .github/workflows/site-first-screen.yml
+
+permissions:
+  contents: write
+
+env:
+  SHARES: "0.2 0.25 0.3"
+  OUT: docs/first-screen-webkit
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Core library for the clients (WebAssembly), and the packages the site's code shares
+        run: |
+          cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
+          for p in barebone reader longform site; do (cd ../$p && npm ci --no-audit --no-fund); done
+          cd ../../modules/jpeg && npm ci --no-audit --no-fund
+          cd ../.. && cargo build -q -p mor-relay
+      - name: WebKit, Playwright's build
+        run: cd clients/site && npx playwright-core install --with-deps webkit
+      - name: Screenshots in WebKit
+        run: |
+          rm -rf "$OUT"
+          cd clients/site && MOR_BROWSER=webkit node --import tsx scripts/first-screen.ts "../../$OUT" $SHARES
+      - name: Commit them to this branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUT"
+          git diff --cached --quiet && exit 0
+          git commit -m "Screenshots of dubsar.org's first screen in WebKit (shares $SHARES), from ${GITHUB_SHA::7}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

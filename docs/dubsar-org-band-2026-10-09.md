@@ -10,9 +10,9 @@ The gradient is a background, behind the sections. Nothing is drawn over their w
 
 **To choose by looking.** The photograph's height is one number: the most of the screen's height the photograph may take. The screenshots show three values: **20%, 25% and 30%**. The page is set to the middle one, 25%, until Nobody, allegedly, chooses.
 
-The task's own examples were 65%, 72% and 80%. Those would change nothing. A square photograph like the Earth's is only about 38% of a 390 × 844 phone screen tall already. Most of the first screen goes to other things: the checking bar (about 150 pixels), the act's own lines above and below the picture (about 175), and the two shortcuts, which sit one above the other on a phone (about 125). So the values that make a difference are lower. *The real photograph's shape is not in the repository; the screenshots use a square stand-in of the same size. If the real one is taller than it is wide, the same value gives a narrower picture, not a taller one.*
+The task's own examples were 65%, 72% and 80%. Those would change nothing. A square photograph like the Earth's is only about 38% of a 390 × 844 phone screen tall already. Most of the first screen goes to other things: the checking bar and the space under it (about 165 pixels in WebKit), the act's own lines above and below the picture (about 175), and the two shortcuts, which sit one above the other on a phone (about 125). So the values that make a difference are lower. *The real photograph's shape is not in the repository; the screenshots use a square stand-in of the same size. If the real one is taller than it is wide, the same value gives a narrower picture, not a taller one.*
 
-**One thing to know before choosing.** A 390 × 844 screenshot shows the whole screen of the phone. Safari on an iPhone keeps part of it for its own bars, which leaves about 390 × 664 for the page. That figure is an estimate, not measured here. So each value is also shown at that size: at that size, 20% shows both shortcuts and the top of the first section, its name right at the bottom edge; 25% shows both shortcuts whole and the very start of the gradient; at 30% the second shortcut is cut by a few pixels at the bottom.
+**One thing to know before choosing.** A 390 × 844 screenshot shows the whole screen of the phone. Safari on an iPhone keeps part of it for its own bars, which leaves about 390 × 664 for the page. That figure is an estimate, not measured here. So each value is also shown at that size: at that size, in WebKit, 20% shows both shortcuts whole and the top of the first section, its name cut by the bottom edge; 25% shows both shortcuts whole, with the sections starting just below the screen; at 30% the second shortcut is cut at the bottom (it ends at 688 pixels on a 664-pixel screen).
 
 **The display client changed.** The page's own stylesheet could not do this alone, for two reasons:
 
@@ -23,15 +23,15 @@ So the display client now measures the screen's height in its own window. It giv
 
 ## Screenshots (WebKit, Safari's engine)
 
-Taken in WebKit on GitHub, through the real gateway, display client, homes and relay, by `clients/site/scripts/first-screen.ts`. They are in `docs/dubsar-org-band-2026-10-09/`.
+Taken in WebKit on GitHub, through the real gateway, display client, homes and relay, by `clients/site/scripts/first-screen.ts`. They are in `docs/first-screen-webkit/`, committed by the workflow "site first screen in WebKit" (`.github/workflows/site-first-screen.yml`), since WebKit cannot be downloaded in this session's container, nor GitHub's stored artifacts read from it.
 
 | Share of the screen's height | Phone, 390 × 844, light | Phone, 390 × 844, dark | As Safari leaves it, about 390 × 664, light |
 | --- | --- | --- | --- |
-| 20% | [light](dubsar-org-band-2026-10-09/first-screen-webkit-upright-light-20.png) | [dark](dubsar-org-band-2026-10-09/first-screen-webkit-upright-dark-20.png) | [Safari's bars](dubsar-org-band-2026-10-09/first-screen-webkit-upright-safari-bars-light-20.png) |
-| **25% (set now)** | [light](dubsar-org-band-2026-10-09/first-screen-webkit-upright-light-25.png) | [dark](dubsar-org-band-2026-10-09/first-screen-webkit-upright-dark-25.png) | [Safari's bars](dubsar-org-band-2026-10-09/first-screen-webkit-upright-safari-bars-light-25.png) |
-| 30% | [light](dubsar-org-band-2026-10-09/first-screen-webkit-upright-light-30.png) | [dark](dubsar-org-band-2026-10-09/first-screen-webkit-upright-dark-30.png) | [Safari's bars](dubsar-org-band-2026-10-09/first-screen-webkit-upright-safari-bars-light-30.png) |
+| 20% | [light](first-screen-webkit/first-screen-webkit-upright-light-20.png) | [dark](first-screen-webkit/first-screen-webkit-upright-dark-20.png) | [Safari's bars](first-screen-webkit/first-screen-webkit-upright-safari-bars-light-20.png) |
+| **25% (set now)** | [light](first-screen-webkit/first-screen-webkit-upright-light-25.png) | [dark](first-screen-webkit/first-screen-webkit-upright-dark-25.png) | [Safari's bars](first-screen-webkit/first-screen-webkit-upright-safari-bars-light-25.png) |
+| 30% | [light](first-screen-webkit/first-screen-webkit-upright-light-30.png) | [dark](first-screen-webkit/first-screen-webkit-upright-dark-30.png) | [Safari's bars](first-screen-webkit/first-screen-webkit-upright-safari-bars-light-30.png) |
 
-The phone held sideways (844 × 390, at 25%): [sideways](dubsar-org-band-2026-10-09/first-screen-webkit-sideways-light-25.png). **Less than what was accepted:** the decision accepted a band showing only the shortcuts. Held sideways, even the shortcuts fall just below the first screen: they start at 398 pixels on a screen 390 pixels tall. The checking bar and the act's own lines take most of the height, and the picture is already only 98 pixels tall. See question 5.
+The phone held sideways (844 × 390, at 25%): [sideways](first-screen-webkit/first-screen-webkit-sideways-light-25.png). **Less than what was accepted:** the decision accepted a band showing only the shortcuts. Held sideways, even the shortcuts fall just below the first screen: they start at 396 pixels on a screen 390 pixels tall. The checking bar and the act's own lines take most of the height, and the picture is already only 98 pixels tall. See question 5.
 
 Where each part sits, in pixels from the top, is in `first-screen-webkit.json` beside the pictures.
 
@@ -66,14 +66,14 @@ Where each part sits, in pixels from the top, is in `first-screen-webkit.json` b
 - `npm run test:build`: 1 of 2, as in the two sessions before. The core library's WebAssembly, built twice, is the same byte for byte. The display client differs from the released copy in `built/` (`gateway.js differs`), as expected: its source changed. The CI step "Reproducible build of the display client" will show this one failure until the release commit lands on `main`.
 - On GitHub, the workflow "site in WebKit" runs the browser tests in WebKit and in Chromium, and now also takes the screenshots in WebKit and keeps them as an artifact (`first-screen-webkit`). The result for this branch is below.
 
-WEBKIT-RESULT
+**On GitHub,** run 7 of "site in WebKit" on this branch (commit `f72f51a`): WebKit, Safari's engine: **15 of 15 pass**, the new test included. Chromium: **15 of 15 pass**. The screenshots were taken in WebKit in the same run. The same pictures were then committed by the workflow "site first screen in WebKit", because the stored artifact could not be read from this session.
 
 ## Questions for Nobody, allegedly
 
 1. **Which value:** 20%, 25% or 30%? The 25% set now is only the middle one shown.
 2. **Should the value be the site's rather than the display client's?** As built, it is the display client's, the same for every site, because a page may not style what is inside an act (rule 13). If each site should set it for its own acts, the website cMIP needs a rule letting a page set how tall an act's picture may be. That is the same kind of question the Safari session left open about fading the photograph alone. Not chosen here.
 3. **"The first line of the four sections":** on a phone the four sections sit one above the other, so the band shows the first one, *Read*, and the top of the gradient. If the four names were all meant to show in the band, the sections would need a different arrangement on phones, for example two by two. That was not decided, so it was not built.
-4. **On a real iPhone the band is narrow.** With Safari's bars, the checking bar and the act's own lines take most of the screen, so even at 20% the band shows the shortcuts and only the start of the sections. Two things would give it more room, and neither is decided: a shorter checking bar on phones (it is three lines of text now), or the two shortcuts side by side.
+4. **On a real iPhone the band is narrow.** With Safari's bars, the checking bar and the act's own lines take most of the screen, so even at 20% the band shows the shortcuts and only the top of the first section. Two things would give it more room, and neither is decided: a shorter checking bar on phones (it is three lines of text now), or the two shortcuts side by side.
 
 5. **Sideways, the band does not show.** Making the shortcuts reach the first screen held sideways would take less height for the checking bar or the act's own lines, or a smaller share for the photograph on short screens only. None of that was decided, so none of it was built.
 
