@@ -3902,7 +3902,9 @@ var SITE_SPECS = {
   envelope: SPECS.envelope,
   /** The Law MIP (`LAW`): only to tell that a signer is a collective. */
   law: test3("LAW, test value until the freeze"),
-  /** The website cMIP (cmips/cmip-website-draft-2.md). */
+  /** The website cMIP (cmips/cmip-website-draft-3.md). Draft 3 adds the icon
+   * (rule 16a) and leaves the manifest as it was, so the test value stays
+   * draft 2's: versions already published still verify. */
   site: test3("website cMIP, draft 2, test value until publication")
 };
 var SITE_LAW_SPECS = { ...MIPS, law: SITE_SPECS.law };
@@ -4138,12 +4140,13 @@ function standingWords2(s) {
 
 // src/shell/view.ts
 var FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
-.mor-act>iframe{display:block;width:100%;border:0;min-height:4em}
+.mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 var ACT_STYLE = `${STYLE2}
 :root{color-scheme:light dark}
 body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 Georgia,'Times New Roman',serif}
-.mor-post{margin:0}`;
+.mor-post{margin:0}
+.mor-post img{width:100%}`;
 function actItem(a) {
   if (a.problem) return `<li><code>${escapeHtml(a.id)}</code>: <span class="bad-word">not shown</span>, ${escapeHtml(a.problem)}</li>`;
   if (!a.standing) return `<li><code>${escapeHtml(a.id)}</code>: checking\u2026</li>`;
@@ -4223,7 +4226,7 @@ function inertCss(css) {
 async function preparePage(bytes, path, manifest, getFile) {
   const doc = new DOMParser().parseFromString(new TextDecoder("utf-8", { fatal: true }).decode(bytes), "text/html");
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out = { html: "", title: null, acts: [], problems: [], dropped: 0 };
+  const out = { html: "", title: null, acts: [], icon: null, problems: [], dropped: 0 };
   const drop = (el) => {
     el.remove();
     out.dropped++;
@@ -4265,6 +4268,13 @@ async function preparePage(bytes, path, manifest, getFile) {
   }
   for (const link of [...doc.querySelectorAll("link")]) {
     const rel = (link.getAttribute("rel") ?? "").toLowerCase().split(/\s+/);
+    if (rel.includes("icon") && !rel.includes("stylesheet")) {
+      const p2 = resolveRef(path, link.getAttribute("href") ?? "");
+      const entry2 = p2 ? byPath.get(p2) : void 0;
+      drop(link);
+      if (entry2 && kindOf(entry2.path) === "picture" && !out.icon) out.icon = await checked(entry2);
+      continue;
+    }
     const p = rel.includes("stylesheet") ? resolveRef(path, link.getAttribute("href") ?? "") : null;
     const entry = p ? byPath.get(p) : void 0;
     if (!entry || kindOf(entry.path) !== "stylesheet") {
@@ -4401,6 +4411,24 @@ async function showActs(frame, settings) {
     paint();
   }
 }
+function fitFrame(frame) {
+  const doc = frame.contentDocument;
+  if (!doc) return;
+  const fit = () => {
+    const h = Math.min(Math.ceil(doc.documentElement.getBoundingClientRect().height), 1e5);
+    if (Math.abs(frame.clientHeight - h) > 1) frame.style.height = `${h}px`;
+  };
+  fit();
+  new ResizeObserver(fit).observe(doc.documentElement);
+}
+function showIcon(bytes) {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  const link = document.querySelector('link[rel="icon"]') ?? document.head.appendChild(document.createElement("link"));
+  link.rel = "icon";
+  link.type = "image/jpeg";
+  link.href = `data:image/jpeg;base64,${btoa(s)}`;
+}
 async function lookForLater(version) {
   const later = await findLater(version);
   state.newer = { latest: later.latest.version === version.version ? null : later.latest.version, fork: later.fork };
@@ -4474,8 +4502,16 @@ async function main() {
     frame.setAttribute("sandbox", "allow-same-origin allow-top-navigation-by-user-activation allow-popups allow-popups-to-escape-sandbox");
     frame.setAttribute("title", prepared.title ?? entry.path);
     frame.id = "mor-page";
-    frame.addEventListener("load", () => void showActs(frame, settings), { once: true });
+    frame.addEventListener(
+      "load",
+      () => {
+        fitFrame(frame);
+        void showActs(frame, settings);
+      },
+      { once: true }
+    );
     frame.srcdoc = prepared.html;
+    if (prepared.icon) showIcon(prepared.icon);
     view.replaceChildren(frame);
     void lookForLater(version);
     return;
