@@ -37,6 +37,7 @@ Each records what a session built, what it found, and what it left open. They ar
 | [law-invariants.md](law-invariants.md) | Law stress testing: invariant hunting over random histories, F131 and F132. |
 | [small-fixes-2026-10-04.md](small-fixes-2026-10-04.md) | Small client fixes. |
 | [dubsar-org-layout-2026-10-08.md](dubsar-org-layout-2026-10-08.md) | The dubsar.org layout of 7 October 2026 built: the first act's fit, the shortcuts, the four sections, the footer with the clay tablet, the tab icon; website cMIP draft 3. |
+| [dubsar-org-first-screen-b-2026-10-09.md](dubsar-org-first-screen-b-2026-10-09.md) | dubsar.org's first screen, option B: the photograph whole at the act's width; the checking bar briefer on phones, the shortcuts side by side, the sections through a gradient; screenshots in `first-screen-b/`. |
 | [step-11b-false-mark-2026-10-08.md](step-11b-false-mark-2026-10-08.md) | The collective client's false clone mark from the human test of 8 October 2026: marks and the collective's box from Law's own reading. |
 | [adversarial-test-plan-v2.md](adversarial-test-plan-v2.md), [v3](adversarial-test-plan-v3.md) | Earlier versions of the test plan. |
 | [project-lead-prompt.md](project-lead-prompt.md) | The brief the AI project lead worked from. |

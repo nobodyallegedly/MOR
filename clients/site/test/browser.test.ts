@@ -276,6 +276,109 @@ test("the first act's photograph scales to the page's width, whole, and nothing 
   }
 });
 
+test("on a phone's first screen (390 x 844): the photograph whole at the act's width, both shortcuts side by side, and Read's first line through the gradient", async () => {
+  // Option B, decided by Nobody, allegedly, 9 October 2026: the first act's photograph stays whole at the act's
+  // full width (7 October), and the room is made by the furniture instead: the checking bar briefer on a narrow
+  // screen, the two shortcuts side by side at the top of the band, and below them a gradient behind the four
+  // sections, never over their words, drawn from the page's own colours. In light and dark.
+  const act = (await post(w.owner, { text: 'Thank you for the shower… (a large picture)', jpeg: await largeJpeg(), relays: [w.relay.base] })).id;
+  const v = await publishSite(w.owner, { name: 'dubsar.org', files: readFolder(siteCopy(act)), relays: [w.relay.base] });
+  const g = new Gateway(gatewayFor(w, v.id, { serve: 'pinned' }), join(here, 'dist'), { extraConnect: LOCAL });
+  try {
+    assert.ok(await ok(g));
+    const at = await g.listen('127.0.0.1', 0);
+    for (const colorScheme of ['light', 'dark'] as const) {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme });
+      const page = await ctx.newPage();
+      await page.goto(at + '/');
+      await page.waitForSelector('#mor-bar.ok', { timeout: 60_000 });
+      const f = await pageFrame(page);
+      const inner = (await (await f.waitForSelector('.mor-act iframe', { timeout: 60_000 })).contentFrame())!;
+      await inner.waitForSelector('.mor-post img');
+      await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
+      await page.waitForTimeout(300);
+      const m = await page.evaluate(() => {
+        const frame = document.getElementById('mor-page') as HTMLIFrameElement;
+        const top = frame.getBoundingClientRect().top;
+        const d = frame.contentDocument!;
+        const actFrame = d.querySelector('.mor-act iframe') as HTMLIFrameElement;
+        const a = actFrame.contentDocument!;
+        const img = a.querySelector('.mor-post img') as HTMLImageElement;
+        const box = a.querySelector('.mor-post') as HTMLElement;
+        const r = img.getBoundingClientRect();
+        // No named functions inside: the page runs this as it is, without tsx's helpers.
+        const boxes: Record<string, { top: number; bottom: number; left: number; right: number }> = {};
+        for (const sel of ['#one-page', '#shower-text', '.doors a .door']) {
+          const b = d.querySelector(sel)!.getBoundingClientRect();
+          boxes[sel] = { top: top + b.top, bottom: top + b.bottom, left: b.left, right: b.right };
+        }
+        const door = d.querySelector('.doors a')!;
+        return {
+          screen: window.innerHeight,
+          img: { width: r.width, height: r.height, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight, fit: getComputedStyle(img).objectFit },
+          room: box.clientWidth - parseFloat(getComputedStyle(box).paddingLeft) - parseFloat(getComputedStyle(box).paddingRight),
+          actScroll: [a.documentElement.scrollWidth, a.documentElement.clientWidth, a.documentElement.scrollHeight, actFrame.clientHeight],
+          onePage: boxes['#one-page'],
+          shower: boxes['#shower-text'],
+          read: boxes['.doors a .door'],
+          readName: door.querySelector('.door')!.textContent,
+          gradient: getComputedStyle(d.querySelector('.doors')!).backgroundImage,
+          doorBackground: getComputedStyle(door).backgroundColor,
+          band: getComputedStyle(d.documentElement).getPropertyValue('--band').trim(),
+        };
+      });
+      // The photograph spans the act's width and is whole: its own proportions, nothing cropped, nothing scrolled.
+      assert.ok(Math.abs(m.img.width - m.room) < 1, `the photograph spans the act's width (${m.img.width} of ${m.room})`);
+      assert.ok(
+        Math.abs(m.img.height / m.img.width - m.img.naturalHeight / m.img.naturalWidth) < 0.01,
+        `the photograph keeps its proportions, so none of it is cut off (${JSON.stringify(m.img)})`,
+      );
+      assert.notEqual(m.img.fit, 'cover', 'never cropped to a box');
+      assert.ok(m.actScroll[0] <= m.actScroll[1] && m.actScroll[2] <= m.actScroll[3] + 1, `the act's frame does not scroll (${m.actScroll})`);
+      // Both shortcuts on the first screen, whole, side by side.
+      for (const [name, b] of [['MOR in one page', m.onePage], ['the shower text', m.shower]] as const) {
+        assert.ok(b.top >= 0 && b.bottom <= m.screen, `${name} is whole on the first screen (${b.top} to ${b.bottom} of ${m.screen})`);
+      }
+      assert.ok(Math.abs(m.onePage.top - m.shower.top) < 1 && m.onePage.right <= m.shower.left, `the shortcuts side by side (${JSON.stringify([m.onePage, m.shower])})`);
+      // Read's first line on the first screen, below the shortcuts.
+      assert.equal(m.readName, 'Read');
+      assert.ok(m.read.top >= m.shower.bottom && m.read.bottom <= m.screen, `Read's first line on the first screen (${m.read.top} to ${m.read.bottom} of ${m.screen})`);
+      // The gradient behind the sections: their own boxes stay see-through, so nothing is drawn over their words.
+      assert.match(m.gradient, /linear-gradient/, 'a gradient behind the sections');
+      assert.equal(m.doorBackground, 'rgba(0, 0, 0, 0)', 'the sections draw nothing of their own over the gradient');
+      assert.notEqual(m.band, '', "the band's colour is drawn from the page's colours");
+      // The checking bar, briefer on a phone: verified and by whom in plain words, and everything else rule 9 asks
+      // for one tap away, as on every screen.
+      assert.equal(await page.locator('#mor-brief').innerText(), 'Verified: signed by Nobody, allegedly');
+      assert.ok(await page.locator('#mor-brief').isVisible());
+      assert.ok(!(await page.locator('#mor-standing').isVisible()), 'the long sentence gives way to the brief one');
+      assert.equal(await page.locator('#mor-bar summary').innerText(), 'Who signed it, and how to check');
+      await page.click('#mor-bar summary');
+      assert.equal(await fp(page), w.owner.id, 'the whole fingerprint of the signer');
+      assert.ok(await page.locator('#mor-signer').isVisible());
+      assert.match((await page.textContent('#mor-bar dl'))!, /The identity this gateway names as Nobody, allegedly\. The name is the gateway's setting/);
+      assert.equal(await page.textContent('#mor-version'), v.id);
+      assert.ok((await page.textContent('#mor-acts'))!.includes(act), 'the act shown is listed, with its standing and signer');
+      await page.click('#mor-bar summary');
+      await shot(page, `front-first-screen-${colorScheme}`);
+      await ctx.close();
+    }
+  } finally {
+    g.close();
+  }
+});
+
+test('on a wide screen, the checking bar keeps its whole sentence', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  await page.goto(base + '/');
+  await page.waitForSelector('#mor-bar.ok', { timeout: 60_000 });
+  assert.ok(await page.locator('#mor-standing').isVisible());
+  assert.match(await page.locator('#mor-standing').innerText(), /^Verified: this page is exactly what was signed by the identity this gateway names as Nobody, allegedly\./);
+  assert.ok(!(await page.locator('#mor-brief').isVisible()), 'the brief line is for narrow or short screens only');
+  await ctx.close();
+});
+
 test('the footer: only the contact and the sealed message, then the clay tablet, the very last thing, on light and dark; the KI icon on the tab', async () => {
   for (const colorScheme of ['light', 'dark'] as const) {
     for (const path of ['/', '/read.html', '/build.html', '/run.html', '/use.html']) {

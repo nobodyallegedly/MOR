@@ -10,6 +10,15 @@
    so the value applies to the whole act: its photograph, and its words. */
 :root{--first-act-opacity:.85}
 :root{color-scheme:light dark;--page:#ffffff;--text:#1b1b1b;--soft:#5c5c5c;--line:#d9d9d9}
+/* The band at the bottom of the front page's first screen (decided by
+   Nobody, allegedly, 9 October 2026): the two shortcuts at its top, side by
+   side; below them a gradient, behind the four sections and never over their
+   words, through which the sections' first line shows. Drawn from the page's
+   own two colours: --band is the page with a little of the text's colour.
+   The photograph above stays whole at the act's full width (option B): the
+   room comes from the shortcuts side by side and the display client's
+   briefer checking line on phones, not from the picture. */
+:root{--band:color-mix(in srgb,var(--text) 12%,var(--page))}
 @media (prefers-color-scheme:dark){:root{--page:#121212;--text:#ebe9e6;--soft:#a7a5a2;--line:#3a3a3a}}
 *{box-sizing:border-box}
 html,body{background:var(--page);color:var(--text)}
@@ -21,11 +30,12 @@ h1{font-weight:normal;font-size:1.6em;margin:.5em 0 .2em}
 .line{margin:0 0 1em;color:var(--soft)}
 .first-act{margin:0 0 24px}
 .first-act .mor-act{opacity:var(--first-act-opacity)}
-.shortcuts{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:24px 0}
-.button{display:inline-block;padding:12px 24px;border:2px solid var(--text);border-radius:999px;text-decoration:none;text-align:center;font:600 17px/1.3 system-ui,sans-serif}
+.shortcuts{display:flex;justify-content:center;gap:12px;margin:24px 0 0;padding-bottom:12px}
+.button{display:flex;align-items:center;justify-content:center;padding:12px 24px;border:2px solid var(--text);border-radius:999px;text-decoration:none;text-align:center;font:600 17px/1.3 system-ui,sans-serif}
+@media (max-width:32em){.shortcuts{gap:8px}.button{flex:1 1 0;min-width:0;padding:10px 12px;font-size:16px}}
 .button:hover,.button:focus{background:var(--text);color:var(--page)}
-.doors{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:12px;margin:24px 0}
-.doors a{display:block;padding:16px;border:1px solid var(--line);border-radius:10px;text-decoration:none}
+.doors{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:12px;margin:0 -16px;padding:12px 16px 24px;background:linear-gradient(to bottom,var(--page),var(--band) 8em)}
+.doors a{display:block;padding:16px;border:1px solid var(--line);border-radius:10px;text-decoration:none;background:transparent}
 .doors a:hover,.doors a:focus{border-color:var(--text)}
 .door{display:block;font-size:1.4em}
 .what{display:block;font:15px/1.4 system-ui,sans-serif;color:var(--soft);margin-top:4px}

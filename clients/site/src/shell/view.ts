@@ -23,6 +23,8 @@ body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:Can
 #mor-bar.ok{border-bottom-color:var(--ok)}
 #mor-bar.bad{border-bottom-color:var(--bad)}
 #mor-bar .standing{font-weight:600}
+#mor-bar .brief{display:none}
+@media (max-width:40em),(max-height:30em){#mor-bar .brief{display:block}#mor-bar .brief+.standing{display:none}}
 #mor-bar.ok .standing{color:var(--ok)}
 #mor-bar.bad .standing{color:var(--bad)}
 #mor-bar .newer{margin-top:4px;font-weight:600}
@@ -73,6 +75,8 @@ export interface BarState {
   phase: 'checking' | 'ok' | 'bad';
   /** The sentence on top, in plain words. */
   words: string;
+  /** The same, briefly, shown instead on a narrow or short screen (a phone); null to show `words` on every screen. */
+  brief: string | null;
   settings: SiteSettings | null;
   version: Version | null;
   path: string | null;
@@ -125,7 +129,8 @@ export function bar(s: BarState): string {
   );
   const open = s.phase === 'bad' ? ' open' : '';
   const newer = s.newer && newerWords(s.newer);
-  return `<div class="standing" id="mor-standing">${e(s.words)}</div>${newer ? `\n<div class="newer" id="mor-newer">${newer}</div>` : ''}
+  const brief = s.brief ? `<div class="standing brief" id="mor-brief">${e(s.brief)}</div>` : '';
+  return `${brief}<div class="standing" id="mor-standing">${e(s.words)}</div>${newer ? `\n<div class="newer" id="mor-newer">${newer}</div>` : ''}
 <details${open}><summary>Who signed it, and how to check</summary><dl>${rows.join('')}</dl></details>`;
 }
 
@@ -143,6 +148,18 @@ export function newerWords(n: Newer): string {
 /** What the bar says on top, in plain words. */
 export function verifiedWords(settings: SiteSettings, kind: string): string {
   return `Verified: this ${kind} is exactly what was signed by the identity this gateway names as ${settings.name}. Checked in this browser.`;
+}
+
+/**
+ * The top sentence, briefly, for a narrow or short screen, where the bar
+ * would otherwise take much of the first screen (roadmap step 10a, option B,
+ * decided by Nobody, allegedly, 9 October 2026). Shown only once the file
+ * verified; everything else rule 9 asks for stays under "Who signed it, and
+ * how to check", as on every screen: the whole fingerprint, whether it is the
+ * identity expected (and that the name is the gateway's setting), the version.
+ */
+export function briefWords(settings: SiteSettings): string {
+  return `Verified: signed by ${settings.name}`;
 }
 
 export const failingWords = (what: string) => `Failing: ${what} Not shown.`;
