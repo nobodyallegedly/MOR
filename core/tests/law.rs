@@ -108,6 +108,7 @@ fn label() -> Terms {
         stakes: None,
         forked_from: None,
         release_rule: None,
+        settles: None,
     }
 }
 

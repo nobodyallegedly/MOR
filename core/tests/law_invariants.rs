@@ -620,6 +620,7 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         stakes: shape.owns_work.then(|| vec![law::Stake { object: Who::Id(work), holders: vec![(Who::This, 1_000_000)] }]),
         forked_from: None,
         release_rule: None,
+        settles: None,
     }
 }
 
@@ -2018,6 +2019,13 @@ enum SplitCite {
     Fork,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum DealRead {
+    InForce(Hash),
+    Forked { reference: Hash, branches: Vec<Vec<Hash>> },
+    Undecided,
+}
+
 #[derive(Clone, Debug)]
 enum DOp {
     /// A new version: new shares, signed by some parties, some signatures a
@@ -2175,6 +2183,7 @@ impl DealWorld {
             stakes: Some(vec![law::Stake { object: Who::Id(work), holders: stakes.iter().map(|(h, n)| (Who::Id(*h), *n)).collect() }]),
             forked_from: None,
             release_rule: None,
+            settles: None,
         };
         assert_eq!(t.check(&mips()), Ok(()), "the generator's own deal terms");
         let deal = law_act(&mut w, &mut p[0], law::types::TERMS, t.to_map(), None);
@@ -2241,20 +2250,65 @@ impl DealWorld {
     /// The latest version every party signed: from the deal, the one
     /// existing clone of each version in turn; where two exist, the status
     /// quo stands (rule 5b: no concurrency rule, its format open).
-    fn latest(&self) -> Hash {
+    /// The deal as rule 45b reads it (F186, decided 9 October 2026),
+    /// written from the text, apart from the library: followed one complete
+    /// version at a time; two complete versions of one version, each branch
+    /// followed alone, a fork, its reference the version before the split
+    /// (this harness makes no settling version); any other shape (three
+    /// clones of one version, a branch forking again) is not decided, and a
+    /// verifier refuses it.
+    fn oracle(&self) -> DealRead {
         let lv = self.view();
-        let mut at = self.deal;
-        loop {
-            let kids: Vec<Hash> = self
-                .versions
+        let kids = |at: Hash| -> Vec<Hash> {
+            self.versions
                 .iter()
                 .filter(|(v, parent, _)| *parent == Some(at) && lv.agreement(v).is_ok_and(|a| a.exists == Some(true)))
                 .map(|(v, _, _)| *v)
-                .collect();
-            match kids.as_slice() {
+                .collect()
+        };
+        let mut at = self.deal;
+        loop {
+            match kids(at).as_slice() {
+                [] => return DealRead::InForce(at),
                 [k] => at = *k,
-                _ => return at,
+                [a, b] => {
+                    let mut branches = vec![];
+                    for k in [*a, *b] {
+                        let mut line = vec![k];
+                        loop {
+                            match kids(*line.last().unwrap()).as_slice() {
+                                [] => break,
+                                [n] => line.push(*n),
+                                _ => return DealRead::Undecided,
+                            }
+                        }
+                        branches.push(line);
+                    }
+                    return DealRead::Forked { reference: at, branches };
+                }
+                _ => return DealRead::Undecided,
             }
+        }
+    }
+
+    /// The version an act naming `named` is judged against (rules 26, 45b;
+    /// F186): the version in force; while forked, its branch's latest, or
+    /// the reference. `None` where the shape is not decided.
+    fn judged_by(&self, named: &Hash) -> Option<Hash> {
+        match self.oracle() {
+            DealRead::InForce(h) => Some(h),
+            DealRead::Forked { reference, branches } => Some(branches.iter().find(|b| b.contains(named)).map(|b| *b.last().unwrap()).unwrap_or(reference)),
+            DealRead::Undecided => None,
+        }
+    }
+
+    /// What a new clone "from the latest" clones: the version in force, or
+    /// the first branch's latest while forked.
+    fn latest(&self) -> Hash {
+        match self.oracle() {
+            DealRead::InForce(h) => h,
+            DealRead::Forked { branches, .. } => *branches[0].last().unwrap(),
+            DealRead::Undecided => self.deal,
         }
     }
 
@@ -2514,6 +2568,20 @@ impl DealWorld {
                 bad.push(format!("SERVICE-NO-DEAL: a grant key binds though the deal does not exist (H4): {x:?}"));
             }
         }
+        // F186: a shape the text does not decide (three complete versions
+        // of one version, a branch forking again) is refused, never guessed;
+        // nothing judged against the version in force can be checked there.
+        let read = self.oracle();
+        if read == DealRead::Undecided {
+            if !matches!(lv.version_in_force(&self.deal), Err(law::LawError::Unsettled(_))) {
+                bad.push(format!("DEAL-UNDECIDED: a deal's fork the text does not decide is given a version in force: {:?}", lv.version_in_force(&self.deal)));
+            }
+            deal_stats().hit("undecided_fork");
+            return Violations(bad).into_result();
+        }
+        if matches!(read, DealRead::Forked { .. }) {
+            deal_stats().hit("forked");
+        }
         // One payment, one verdict: never a purchase and owed back at once.
         // F131 (IT3): the payment decides; a receipt naming another claim
         // than its commitment is a wrong receipt, counting for nothing.
@@ -2599,7 +2667,9 @@ impl DealWorld {
                     // carries them (F171), then the smallest identity hash;
                     // any other amount breaks the plan; so does a payout to
                     // someone who holds no part of it.
-                    let latest = self.latest();
+                    // F186: while forked, judged against the latest version
+                    // of the branch the split names, or the reference.
+                    let latest = self.judged_by(&e.split.agreement).expect("decided");
                     let stakes = &self.versions.iter().find(|v| v.0 == latest).unwrap().2;
                     let pot: u128 = e.split.payouts.iter().filter(|p| p.stake == Some(0)).map(|p| p.amount as u128).sum();
                     let sum: u128 = stakes.iter().map(|(_, n)| *n as u128).sum::<u128>().max(1);
@@ -2659,7 +2729,7 @@ impl DealWorld {
                 // A split under a version since left is judged against the
                 // stakes in force (rule 26), its count with them: already
                 // shown broken, its count is not foreseen here.
-                let unforeseen = matches!(mode, SplitMode::Overflow) || e.split.agreement != self.latest();
+                let unforeseen = matches!(mode, SplitMode::Overflow) || Some(e.split.agreement) != self.judged_by(&e.split.agreement);
                 let mut got: Vec<String> = vec![];
                 let mut counted = false;
                 for b in &e.breaks {
@@ -2668,10 +2738,17 @@ impl DealWorld {
                         other => got.push(format!("{other:?}")),
                     }
                 }
-                if got != expect {
+                // While a deal stands forked, the text does not say whether a
+                // service's tally chain for a stake runs across both branches
+                // or along each (F186, an open question): not checked.
+                let forked = matches!(read, DealRead::Forked { .. });
+                if forked {
+                    deal_stats().hit("fork_tally_unchecked");
+                }
+                if !forked && got != expect {
                     bad.push(format!("SPLIT-CHAIN: a split's place in the tally chain judged differently from the text: library {got:?}, text {expect:?}"));
                 }
-                if !unforeseen && counted != *lie {
+                if !forked && !unforeseen && counted != *lie {
                     bad.push(format!("SPLIT-COUNT: a running count {} is {} as one: {x:?} {:?}", if *lie { "that lies" } else { "that is right" }, if *lie { "not shown" } else { "shown" }, e.breaks));
                 }
                 if !e.count_unknown.is_empty() || !e.turns_unknown.is_empty() {
@@ -2701,7 +2778,7 @@ fn run_deal(s: &DealShape, ops: &[DOp], seed: u64) -> DealWorld {
 
 fn deal_stats() -> &'static Stats {
     static S: std::sync::OnceLock<Stats> = std::sync::OnceLock::new();
-    S.get_or_init(|| Stats::new(&["cases", "acts", "versions_exist", "versions_draft", "thief_voided", "service_binds", "service_refused", "purchase", "refund", "unrecorded", "wrong_receipt", "splits", "split_mismatch", "split_reset", "split_fork", "split_count"]))
+    S.get_or_init(|| Stats::new(&["cases", "acts", "versions_exist", "versions_draft", "thief_voided", "service_binds", "service_refused", "purchase", "refund", "unrecorded", "wrong_receipt", "splits", "split_mismatch", "split_reset", "split_fork", "split_count", "forked", "undecided_fork", "fork_tally_unchecked"]))
 }
 
 fn deal_tally(d: &DealWorld) {

@@ -5039,6 +5039,48 @@ pub struct PurchaseEval {
     pub refund_to: crate::finance::RefundTo,
 }
 
+/// A deal read as rule 45b reads its forks (F186).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DealState {
+    /// One version in force.
+    InForce(Hash),
+    /// Two complete versions of one version, not settled: the version
+    /// before the split is the reference; each branch from the split to its
+    /// latest version.
+    Forked { reference: Hash, branches: Vec<Vec<Hash>> },
+}
+
+/// A deal standing forked (rule 45b, F186).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DealFork {
+    /// The version before the split: the last version every party agrees
+    /// on, what a verifier reports as the unforked state, and the point
+    /// the settling version names.
+    pub reference: Hash,
+    /// Each branch, from the split to its latest version.
+    pub branches: Vec<Vec<Hash>>,
+}
+
+/// The alarm a seller's client and a split service raise (rule 45b, F186,
+/// client conformance): a payment names a version of the deal that does
+/// not descend from the version they hold.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ForkAlarm {
+    /// The version the payment names.
+    pub named: Hash,
+    /// The version the seller or service holds.
+    pub held: Hash,
+    /// The last version both lines share.
+    pub shared: Hash,
+    /// Whether the two lines part after `shared` (a fork); false where the
+    /// payment names an older version of the line held.
+    pub fork: bool,
+    /// The versions after `shared` up to `held`, in order.
+    pub held_line: Vec<Hash>,
+    /// The versions after `shared` up to `named`, in order.
+    pub named_line: Vec<Hash>,
+}
+
 /// A payment a collective received during a broken stretch, owed back to
 /// its payer until the sale is signed anew after the rollback (rule 37d,
 /// RB2): a visible open obligation.
@@ -6617,7 +6659,9 @@ impl<'a> LawView<'a> {
 
     /// The latest version of an agreement that exists: for a collective's
     /// own agreement, the one in force at its current state; for a deal,
-    /// the furthest version every party signed.
+    /// the version in force as rule 45b reads its forks (F186): while two
+    /// complete versions of one version stand unsettled, the version before
+    /// the split, the reference.
     fn latest_version(&self, agreement: &Hash) -> R<Hash> {
         let t = self.terms(agreement)?;
         if t.is_collective() {
@@ -6628,28 +6672,208 @@ impl<'a> LawView<'a> {
             }
             return Ok(*agreement);
         }
-        // Rule 5b: two clones of one version that exist are a fork of the
-        // deal; with no concurrency rule (terms field 10, format open), the
-        // status quo stands: the parent stays the latest version (audit,
-        // October 2026, R5b). Walked from the deal's founding terms, so
-        // that a version off the line in force is never "latest".
-        let mut at = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
+        let root = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
+        Ok(match self.deal_state(&root)? {
+            DealState::InForce(h) => h,
+            DealState::Forked { reference, .. } => reference,
+        })
+    }
+
+    /// The version an act naming the version `named` of an agreement is
+    /// judged against (rules 26, 17; F186): the version in force; or, while
+    /// a deal stands forked, the latest version of the branch `named` lies
+    /// on, since a new act may follow either branch and counts (the buyer
+    /// is protected), and the reference for a version before the split.
+    fn version_for(&self, named: &Hash) -> R<Hash> {
+        let t = self.terms(named)?;
+        if t.is_collective() {
+            return self.latest_version(named);
+        }
+        let root = self.lineage(named)?.pop().expect("a lineage has a root").0;
+        Ok(match self.deal_state(&root)? {
+            DealState::InForce(h) => h,
+            DealState::Forked { reference, branches } => branches
+                .iter()
+                .find(|b| b.contains(named))
+                .and_then(|b| b.last().copied())
+                .unwrap_or(reference),
+        })
+    }
+
+    /// The complete versions of a deal cloning `at` (rule 45b): clones of
+    /// it every party whose voice remains signed, valid.
+    fn complete_clones(&self, at: &Hash) -> Vec<Hash> {
+        self.v
+            .held_acts()
+            .filter(|x| {
+                self.is_law(x, types::TERMS)
+                    && self.terms(&x.id).is_ok_and(|c| c.parent == Some(*at))
+                    && self.agreement(&x.id).is_ok_and(|a| a.exists == Some(true))
+            })
+            .map(|x| x.id)
+            .collect()
+    }
+
+    /// A deal read from its founding terms `root` (rule 45b, F186, decided
+    /// 9 October 2026): followed one complete version at a time; where one
+    /// version has two complete clones, neither descending from the other,
+    /// the deal is forked, the version before the split its reference, until
+    /// a complete version names both branches: beside its one parent, the
+    /// latest version of one branch, the other branch's tip it settles
+    /// (field 26). That version is in force from then on, for good; the
+    /// other branch never comes back (settlement is final). Shapes F186
+    /// does not decide are refused rather than guessed ("Open in this
+    /// draft"): a version with three complete clones, a branch that forks
+    /// again, two versions settling one fork, a version settling from
+    /// below its branch's latest version, and a settled version this
+    /// verifier does not hold.
+    pub fn deal_state(&self, root: &Hash) -> R<DealState> {
+        let mut at = *root;
         loop {
-            let next: Vec<Hash> = self
-                .v
-                .held_acts()
-                .filter(|x| {
-                    self.is_law(x, types::TERMS)
-                        && self.terms(&x.id).is_ok_and(|c| c.parent == Some(at))
-                        && self.agreement(&x.id).is_ok_and(|a| a.exists == Some(true))
-                })
-                .map(|x| x.id)
-                .collect();
-            match next.as_slice() {
-                [x] => at = *x,
-                _ => return Ok(at),
+            let kids = self.complete_clones(&at);
+            match kids.len() {
+                0 => return Ok(DealState::InForce(at)),
+                1 => {
+                    at = kids[0];
+                    continue;
+                }
+                2 => {}
+                _ => {
+                    return Err(LawError::Unsettled(
+                        "three or more complete versions of one version of a deal: F186 decides two branches (\"Open in this draft\")",
+                    ))
+                }
+            }
+            let side = |x: &Hash| -> R<Option<usize>> {
+                let ls = self.lineage(x)?;
+                Ok(kids.iter().position(|k| ls.iter().any(|(i, _)| i == k)))
+            };
+            // The versions settling this fork: complete, naming as parent a
+            // version of one branch and as settled one of the other.
+            let mut settling = vec![];
+            for x in self.v.held_acts() {
+                if !self.is_law(x, types::TERMS) {
+                    continue;
+                }
+                let Ok(t) = self.terms(&x.id) else { continue };
+                let (Some(par), Some(other)) = (t.parent, t.settles) else { continue };
+                let Some(i) = side(&par)? else { continue };
+                if self.v.get(&other).is_none() {
+                    return Err(LawError::Unsettled(
+                        "a version settles a branch of a deal's fork this verifier does not hold: it holds that version before answering (F186)",
+                    ));
+                }
+                if side(&other)? != Some(1 - i) {
+                    continue;
+                }
+                if self.agreement(&x.id).is_ok_and(|a| a.exists == Some(true)) {
+                    settling.push((x.id, par, i));
+                }
+            }
+            // Each branch, followed one complete version at a time.
+            let mut branches: Vec<Vec<Hash>> = vec![];
+            for k in &kids {
+                let mut b = vec![*k];
+                let mut x = *k;
+                loop {
+                    let next: Vec<Hash> = self
+                        .complete_clones(&x)
+                        .into_iter()
+                        .filter(|n| !settling.iter().any(|(s, _, _)| s == n))
+                        .collect();
+                    match next.as_slice() {
+                        [] => break,
+                        [n] => {
+                            b.push(*n);
+                            x = *n;
+                        }
+                        _ => {
+                            return Err(LawError::Unsettled(
+                                "a branch of a deal's fork that forks again: how it is counted is not decided (F186, \"Open in this draft\")",
+                            ))
+                        }
+                    }
+                }
+                branches.push(b);
+            }
+            match settling.as_slice() {
+                [] => return Ok(DealState::Forked { reference: at, branches }),
+                [(s, par, i)] => {
+                    if branches[*i].last() != Some(par) {
+                        return Err(LawError::Unsettled(
+                            "a version settles a deal's fork from below its own branch's latest version: not decided (F186, \"Open in this draft\")",
+                        ));
+                    }
+                    at = *s;
+                }
+                _ => {
+                    return Err(LawError::Unsettled(
+                        "two versions settle one fork of a deal: not decided (F186, \"Open in this draft\")",
+                    ))
+                }
             }
         }
+    }
+
+    /// Where a deal stands forked (rule 45b, F186): the reference, the
+    /// version before the split, and each branch's versions from the split
+    /// to its latest. `None` where it is not forked, or is a collective's.
+    pub fn deal_fork(&self, agreement: &Hash) -> R<Option<DealFork>> {
+        let t = self.terms(agreement)?;
+        if t.is_collective() {
+            return Ok(None);
+        }
+        let root = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
+        Ok(match self.deal_state(&root)? {
+            DealState::InForce(_) => None,
+            DealState::Forked { reference, branches } => Some(DealFork { reference, branches }),
+        })
+    }
+
+    /// Client conformance (rule 45b, F186, decided 9 October 2026): a
+    /// seller's client, and a split service, MUST raise the alarm when a
+    /// payment names a version of the deal that does not descend from the
+    /// version they hold. Given the payment (a receipt or claim naming the
+    /// claim it pays under, field 9) and the version `held`: `None` where
+    /// the version it names descends from `held` (or is `held`), or names
+    /// no version of the same agreement; otherwise both lines from the last
+    /// version they share, to show both branches and point to settling the
+    /// fork.
+    pub fn fork_alarm(&self, payment: &Hash, held: &Hash) -> R<Option<ForkAlarm>> {
+        use crate::finance::Payload as Fin;
+        let x = self.held(payment)?;
+        if x.inside.spec != self.mips.finance {
+            return Ok(None);
+        }
+        let named = match Fin::decode(x.inside.type_, &x.inside.payload) {
+            Ok(Fin::Receipt(r)) => r.purchase.map(|p| p.line),
+            Ok(Fin::Claim(c)) => c.purchase.map(|p| p.line),
+            _ => None,
+        };
+        let Some(named) = named else { return Ok(None) };
+        if self.v.get(&named).is_none_or(|l| !self.is_law(l, types::TERMS)) {
+            return Ok(None);
+        }
+        let ln: Vec<Hash> = self.lineage(&named)?.into_iter().map(|(i, _)| i).collect();
+        let lh: Vec<Hash> = self.lineage(held)?.into_iter().map(|(i, _)| i).collect();
+        if ln.contains(held) {
+            return Ok(None);
+        }
+        let Some(shared) = lh.iter().find(|h| ln.contains(h)).copied() else {
+            return Ok(None);
+        };
+        let line = |l: &[Hash]| -> Vec<Hash> {
+            let k = l.iter().position(|h| *h == shared).unwrap_or(0);
+            l[..k].iter().rev().copied().collect()
+        };
+        Ok(Some(ForkAlarm {
+            named,
+            held: *held,
+            shared,
+            fork: shared != named,
+            held_line: line(&lh),
+            named_line: line(&ln),
+        }))
     }
 
     /// The act at which a work's claim under `agreement` is current, as this
@@ -6657,7 +6881,7 @@ impl<'a> LawView<'a> {
     /// where a collective holding the work's stake in it was ended by a fork
     /// or closing, that act; or the work's release.
     fn claim_line(&self, agreement: &Hash, work: Option<&Hash>) -> R<Hash> {
-        let v = self.latest_version(agreement)?;
+        let v = self.version_for(agreement)?;
         if let Some(w) = work {
             if let Some(r) = self.released(w)? {
                 return Ok(r.id);
@@ -6757,7 +6981,13 @@ impl<'a> LawView<'a> {
         if !in_history {
             return no(e, "the line it names carries none of that agreement's claims");
         }
-        let current = self.claim_line(&p.agreement, work.as_ref())?;
+        // F186: while a deal stands forked, a purchase may follow either
+        // branch, judged against that branch's latest version.
+        let named = match self.v.get(&p.line) {
+            Some(l) if self.is_law(l, types::TERMS) => p.line,
+            _ => p.agreement,
+        };
+        let current = self.claim_line(&named, work.as_ref())?;
         let sellers = self.sellers(&p, work.as_ref())?;
         // RB2 (decided 9 October 2026): a payment a collective seller
         // received during a broken stretch is no purchase, owed back to the
@@ -7443,7 +7673,7 @@ impl<'a> LawView<'a> {
         // Rule 26: the stakes as currently held, those of the agreement in
         // force (audit, October 2026, gap 8). A split naming an older
         // version is judged against the version in force all the same.
-        let in_force = self.latest_version(&s.agreement)?;
+        let in_force = self.version_for(&s.agreement)?;
         let t = self.terms(&in_force)?;
         let collective = if t.is_collective() { self.collective_of(&in_force)? } else { None };
         let mut problems = vec![];
@@ -7646,7 +7876,7 @@ impl<'a> LawView<'a> {
         if !x.payouts.iter().any(|p| p.stake == Some(idx)) {
             return Ok(None);
         }
-        if self.latest_version(&x.agreement).ok().as_ref() != Some(in_force) {
+        if self.version_for(&x.agreement).ok().as_ref() != Some(in_force) {
             return Ok(None);
         }
         Ok(Some(x))
@@ -7979,7 +8209,7 @@ impl<'a> LawView<'a> {
             // version the release names must be, or one it descends from
             // (audit, October 2026, gap 7: naming an older, looser version
             // ends nothing).
-            let current = self.latest_version(ag)?;
+            let current = self.version_for(ag)?;
             let in_force = self.lineage(&current)?;
             if !in_force.iter().any(|(x, _)| x == ag) {
                 return fail(e, "a release names a version of the claiming agreement that is neither in force nor one the version in force descends from (rule 17)");
