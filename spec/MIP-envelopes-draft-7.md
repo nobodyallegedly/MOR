@@ -2,6 +2,8 @@
 
 *Draft 7, 3 October 2026 (the core pass, core v21). *Revised in place, 10 October 2026, for F201, F202 and F204 (`docs/onchain-rail-f200-f205-build-2026-10-10.md`), for Nobody, allegedly, to approve again: the anchoring task has **one cMIP, the clocks Modules under it**; the point on a clock that counts blocks is **the block**; an anchor may place **a commitment naming its act**, so an on-chain payment's proof anchors the receipt or claim it pays; a clock's headers are data the client supplies.* **Approved by Nobody, allegedly, 5 October 2026** (the core pass, then F131 and F132). *Revised in place, 4 October 2026, for F127: one note under "Chains, acknowledgements and references": a collective's actions cite its chain in `objects` (Agreements rule 35b); no rule of this MIP changes.* *Revised in place again, 4 October 2026, for F128: the `binding` field may name the act that installs a scoped key (Identity, a collective's grant key, Agreements grant field 9); a collective's act is done once sealed to every member (or public) and on its chain, wherever it is held, relays being transport (Agreements rule 35a); a publication a collective's grantee makes with its grant key is the collective's own, its signer, so it needs no `for`; no rule of this MIP changes.* Written against core v21, the Identity MIP draft 11, the Text MIP draft 6, the Money MIP draft 6, the Agreements MIP draft 10 and findings F1 to F119. Draft 7 is draft 6 with two findings written in: a publication's size field is the size of the media once unlocked, as every client already writes and reads it (F108); and only act types defined by the Identity, Money and Agreements MIPs may carry acknowledgements, any other act carrying them being invalid, so that a like can never become an acknowledgement (F110). *Revised in place, 4 October 2026, for F126:* one sentence under "For whom": buying a work under an Agreements claim needs a payment naming that claim; and, for a collective, its recipients (`to`) carry the rule that an act in its name binds it only once sealed to every member (Agreements rule 35a); Envelopes' own rules are unchanged. Draft 6, 29 September 2026, was written against core v16, the Identity MIP draft 9, the Text MIP draft 5 and findings F1 to F99. Draft 6 was draft 5 with two findings of the genesis client (roadmap step 5): encryption keys and key delivery use X-Wing, and their formats are fixed (F98); a private act, a key delivery included, reaches its recipients inside a sealed container that carries its key, since a key delivery that was itself private could never be opened (F99). Draft 5 was draft 4 with three findings from building the core library (roadmap step 2): the running summary's peaks are bagged with left kept on the left (F89); the lock binds no associated data (F90); no data item is nested more than 128 levels deep (F91). Draft 4 applied review round 2: the `for` field on publications and withdrawal by signer or `for`; `objects` entries name their chain; the running summary's empty value and bagging order; signature schemes by specification hash; key delivery to a bare key; inbox delivery and the holding principle; reposts as references.*
 
+*Revised in place, 10 October 2026 (night), for F237 (`docs/vow-grammar-build.md`), for Nobody, allegedly, to approve again: **the announcement** (type 5; to be renamed **vow** in the redraft before review, F239, F241): an act naming something to come, its own chain, its genesis id its name for good, later versions signed again on that chain, each naming the first. Nothing about what it promises, how it is delivered or what it became: that is the cMIPs' (F237); the stream rules F230 to F232 had placed in the core are the live media cMIP's (`cmips/cmip-live-media-draft-1.md`).*
+
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
 ## Purpose
@@ -207,9 +209,28 @@ Media bytes are always stored locked, with their own content key, the same way a
 
 **For whom.** Payment for a publication goes to the payee pointer of the identity named in `for` if present, otherwise of the signer (Money). *A false `for` can only send money to the identity it names, never to whoever wrote it, so nobody gains by lying in it. Whether a grant backs a publication made for another identity is Agreements' business (a collective's grantee signs with a grant key, so its publication is the collective's own and names no `for`, F128); an Agreements client may refuse a publication whose `for` is not backed by a grant it can check, and shows it so. A Money-only wallet needs nothing beyond this field (F68).* **Buying a work under an Agreements claim** is a purchase only when the payment names that claim (Agreements rule 32a, Money rule 10c, F126): a Money-only wallet can pay a claimed work's publication, but its payment is no purchase and is owed back to it. *A plain publication of an unclaimed work is paid as before.*
 
-Segmentation, chunk fingerprints, streaming and live media are defined by the cMIP the publication names; the fields above then describe the whole, or a manifest of the parts. A live stream has no work hash until it ends; paid live access is sold through a standing offer (Agreements), not a publication.
+Segmentation, chunk fingerprints, streaming and live media are defined by the cMIP the publication names; the fields above then describe the whole, or a manifest of the parts. A live stream has no work hash until it ends; paid live access is sold through a standing offer (Agreements), not a publication. A stream that needs a name before it ends takes an announcement's (below); everything else about it is the live media cMIP's (F237).
 
 A publication is a neutral carrier: it never claims the work. A work is bound to its creators only by an explicit work claim (Agreements).
+
+### Announcements
+
+*To be renamed **vows** in the redraft before review (F239, F241); the code already says "vow". Decided by Nobody, allegedly, 10 October 2026 (F237): "we must separate the claim and confirmation grammar from what will be claimed and confirmed … the core only wants to know whether it is confirmed, pending, or already contested."*
+
+An announcement is an act of type 5 of this MIP, naming in words something to come: something MOR cannot hash, or cannot hash yet. **It is its own chain** (Nobody, allegedly: "it's a fingerprint for the announcement, since it will have its own chain it has a genesis"): its first act is its **genesis**, **whose id is its name for good**; a later version (a new date, a changed description) is signed again on that chain by the genesis's signer, naming the genesis and the version it follows, as an offer's and an agreement's versions do. The name is the announcement's fingerprint, never a work hash.
+
+```cddl
+announcement = {
+  0 => tstr,          ; its words: what is to come, canonical text
+  ? 1 => [hash, any]  ; a cMIP and its parameters: what it is in that cMIP's terms (its kind, its terms)
+}
+```
+
+Its `objects`: none on the genesis; a later version names `[genesis, previous]`, one entry beside any a collective's actions chain needs (Agreements rule 35b). *Mechanic, the vow grammar build:* the type number, the field numbers and the chain entry.
+
+- **A version counts** only signed by the genesis's signer, naming the genesis and a version of the same chain. A stranger's act naming the chain is no version of it. **Two versions naming one previous are the signer's fork, shown**, both standing (rule 2; as an offer's, Agreements OF4 a).
+- **A rotation voids the signer's own acts after the kept tip, the genesis among them where it lies there; never a name others wrote down** (F237, correcting F230's stated cost): what others signed naming the id (an offer, a stake, a claim) stands, pointing at a void act, shown so.
+- **Offers naming it** sell it, with their words, and **each sale's state** (pending, confirmed or contested) are Agreements' (rule 32b). **Nothing else is the core's** (F237): what is claimed or delivered and how it is confirmed; what an announcement became and how claims reach it (an ordinary work claim, dated by itself, Agreements rule 15); quantities and seats; delivery points; kinds; and streams, whose segments, signers, closing, branches and recording are the live media cMIP's.
 
 ## Relays
 
@@ -237,6 +258,7 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 | 2 | Commitment | public |
 | 3 | Withdrawal | public |
 | 4 | Encryption key | public (an Identity act in spirit, defined here) |
+| 5 | Announcement (to be renamed vow, F239) | as any act ("Public and private"); its offers are always public (Agreements) |
 
 ## Validity rules
 
@@ -322,6 +344,7 @@ A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. 
 - **F99.** A private act reaches its recipients in a sealed container that carries its key; a key delivery's payload is the key itself, private inside a container or public to make something public.
 - **F108 (draft 7).** A publication's size field is the size of the unlocked media.
 - **F110 (draft 7).** Only act types defined by the Identity, Money and Agreements MIPs may carry acknowledgements; any other act carrying them is invalid.
+- **F237 (draft 7, revised in place).** The announcement (type 5; to be renamed vow, F239): an act naming something to come, its own chain, its genesis id its name for good; the core keeps only that grammar, the rest is the cMIPs' (streams: the live media cMIP).
 
 ## Freeze scenarios
 

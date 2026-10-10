@@ -53,6 +53,10 @@ pub use deals::SuccessorCheck;
 /// The owning side of step 12b: work claims and stake transfers.
 mod owning;
 pub use owning::{TransferEval, WorkOwners};
+/// The vow grammar (F237, F240): a vow's chain, the offers naming it, and
+/// each sale's state.
+mod vows;
+pub use vows::{SaleState, VowEval, VowSale};
 use std::rc::Rc;
 
 /// Read Agreements from what a verifier holds.
@@ -1708,7 +1712,7 @@ impl<'a> AgreementsView<'a> {
             .filter(|h| {
                 self.is_agreements(h, types::CONTEST)
                     && self.valid(&h.id)
-                    && Contest::decode(&h.inside).is_ok_and(|c| &c.declaration == declaration)
+                    && Contest::decode(&h.inside).is_ok_and(|c| &c.act == declaration)
             })
             .map(|h| h.id)
             .collect())
@@ -9171,13 +9175,19 @@ impl<'a> AgreementsView<'a> {
         idxs.dedup();
         for idx in idxs {
             // F235 (decided by Nobody, allegedly, 10 October 2026, QK3,
-            // replacing QJ2 a): money passes layer by layer; a holder that
-            // is another agreement (a work's, F216; or a publication's in a
-            // pool's) is paid by a payout naming that agreement's split
-            // service, as its version in force names it, as the receiver of
-            // its share; such a payout is read as paid to that holder. A
-            // receiver that is itself a holder of the stake is read as paid
-            // in its own name (mechanic, the build's).
+            // replacing QJ2 a), as F244 restates it (QL1, "The publisher
+            // pays the pointer specified by the work's agreement"): money
+            // passes layer by layer; a holder that is another agreement (a
+            // work's, F216; or a publication's in a pool's) is paid by a
+            // payout naming the one pointer that agreement's version in
+            // force names for money arriving from above (its split service,
+            // an owner acting as treasury among them, or a lone owner), as
+            // the receiver of its share; such a payout is read as paid to
+            // that holder. The layer above never divides the next layer's
+            // share: an agreement naming no such pointer cannot be paid
+            // through a layer, and any payout on its holding is a mismatch.
+            // A receiver that is itself a holder of the stake is read as
+            // paid in its own name (mechanic, the build's).
             let direct: Vec<Hash> = t.stakes.iter().flatten().nth(idx as usize).map(|st| st.holders.iter().filter_map(|(w, _)| w.resolve(collective.as_ref())).collect()).unwrap_or_default();
             let mapped: Vec<Payout> = s
                 .payouts
@@ -9186,7 +9196,7 @@ impl<'a> AgreementsView<'a> {
                 .map(|p| {
                     let mut q = p.clone();
                     if !direct.contains(&p.receiver) {
-                        if let Some(a) = direct.iter().find(|a| self.layer_services(a).contains(&p.receiver)) {
+                        if let Some(a) = direct.iter().find(|a| self.layer_receivers(a).contains(&p.receiver)) {
                             q.receiver = *a;
                         }
                     }
@@ -9559,6 +9569,35 @@ impl<'a> AgreementsView<'a> {
         let Ok(v) = self.version_in_force(holder) else { return vec![] };
         let Ok(t) = self.terms(&v) else { return vec![] };
         self.named_services(&t).unwrap_or_default()
+    }
+
+    /// The one pointer an agreement named as a holder names for money
+    /// arriving from above (F244, decided by Nobody, allegedly, 10 October
+    /// 2026, QL1: "The publisher pays the pointer specified by the work's
+    /// agreement"): the receiver of that agreement's share in a layer above
+    /// (Agreements rule 16, the split plan). Behind it is the agreement's
+    /// own business: its split service (field 14, or its chain of
+    /// judgment's link for the split service), which may be one of its
+    /// owners acting as treasury for the joint venture; or, where it names
+    /// none, a lone owner, whose own payee pointer receives it with nothing
+    /// to split: a deal of one party holding every stake it writes
+    /// (mechanic, the build's). Empty otherwise: several owners and no
+    /// split service (payer-side splitting) cannot be paid through a layer
+    /// until their agreement names one.
+    fn layer_receivers(&self, holder: &Hash) -> Vec<Hash> {
+        let services = self.layer_services(holder);
+        if !services.is_empty() {
+            return services;
+        }
+        let Ok(v) = self.version_in_force(holder) else { return vec![] };
+        let Ok(t) = self.terms(&v) else { return vec![] };
+        if t.is_collective() {
+            return vec![];
+        }
+        match t.parties.as_slice() {
+            [lone] if t.stakes.iter().flatten().all(|st| st.holders.iter().all(|(w, _)| w == &Who::Id(*lone))) => vec![*lone],
+            _ => vec![],
+        }
     }
 
     /// Where the receipt `y` is a split service receipting the share of a

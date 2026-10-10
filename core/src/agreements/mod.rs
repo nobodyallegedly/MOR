@@ -29,5 +29,5 @@ pub use view::{
     Agreement, AreaCount, Backing, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement,
     BrokenAct, ChainBreak, DepartureKind, ForkEval, AgreementsView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,
     ReleaseEval, Role, ServiceAccount, SplitEval, PurchaseEval, PurchaseVerdict, Unpaid, Unsplit, DealFork, DealState, ForkAlarm,
-    AlarmKind, NumberBreak, OwedBack, SplitNumbers, OfferEval, TransferEval, WorkOwners, SuccessorCheck,
+    AlarmKind, NumberBreak, OwedBack, SplitNumbers, OfferEval, TransferEval, WorkOwners, SuccessorCheck, SaleState, VowEval, VowSale,
 };

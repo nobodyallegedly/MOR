@@ -113,7 +113,7 @@ impl RefundTerms {
 // ---------------------------------------------------------------- the standing offer
 
 /// What a standing offer sells (OF1, Fable's reading: `[0]` and `[2]`, given
-/// by rule 32 and the freeze suite). `[1, work]`, any publication carrying a
+/// by rule 32 and the freeze suite; `[3]`, a vow, F237). `[1, work]`, any publication carrying a
 /// work, is not built: it is put to Nobody, allegedly, with F216 (a work-wide
 /// offer under the work's agreement would sell around a publication's
 /// agreement), and refused meanwhile, fail closed.
@@ -124,6 +124,11 @@ pub enum Sold {
     /// `[ 2, [ cmip, params ] ]`: something with no work hash yet (a live
     /// stream): a cMIP and its parameters.
     Access(Hash, Vec<u8>),
+    /// `[ 3, vow ]`: a vow (Envelopes type 5; F237, "announcement" in the
+    /// texts until the redraft, F241), by its name, its genesis id. The
+    /// offer carries its words (field 4). The next free form (mechanic,
+    /// the build's).
+    Vow(Hash),
 }
 
 impl Sold {
@@ -134,6 +139,7 @@ impl Sold {
                 Value::Uint(2),
                 Value::Array(vec![b(c), cbor::decode(params).unwrap_or(Value::Null)]),
             ]),
+            Sold::Vow(v) => Value::Array(vec![Value::Uint(3), b(v)]),
         }
     }
 
@@ -148,6 +154,7 @@ impl Sold {
                 let x = tuple(&a[1], 2, "offer: access, a cMIP and its parameters")?;
                 Ok(Sold::Access(hash(&x[0], "offer: access, its cMIP")?, cbor::encode(&x[1])))
             }
+            (3, 2) => Ok(Sold::Vow(hash(&a[1], "offer: a vow, by its name")?)),
             _ => Err(AgreementsError::Shape("offer: what it sells")),
         }
     }
@@ -182,7 +189,7 @@ pub enum Paid {
 ///   2 => amount,          ; the price (OF5 a: one amount)
 ///   ? 3 => hash / 0,      ; paid: the payee, or 0 for payer-side splitting by the stakes; required
 ///                         ;   with field 0; absent with no field 0: the signer
-///   ? 4 => tstr,          ; the offer's words, canonical text
+///   ? 4 => tstr,          ; the offer's words, canonical text; required where it names a vow (F237)
 ///   ? 5 => any,           ; until: a point on the time reference after which it takes no payment
 ///   ? 6 => [hash, any],   ; a lone seller's own time reference (F215, F219; mechanic, the build's)
 ///   ? 7 => refund-terms   ; a lone seller's own refund terms (F215; mechanic, the build's)
@@ -284,6 +291,10 @@ impl Offer {
             })
             .transpose()?;
         let refund = get(&f, 7).map(RefundTerms::decode).transpose()?;
+        // F237: an offer naming a vow sells it with its words.
+        if words.is_none() && sold.iter().any(|s| matches!(s, Sold::Vow(_))) {
+            return Err(AgreementsError::Check("offer: an offer naming a vow carries its words, field 4 (F237)"));
+        }
         // F215: co-owners' offers carry field 0, and their agreement's time
         // reference and refund terms; a lone seller's offer carries its own.
         if under.is_some() && (time.is_some() || refund.is_some()) {
