@@ -2447,6 +2447,18 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Core changes:** the on-chain rail Module draft 1 ("Costs, stated"; the request's confirmations field); the Bitcoin clock Module (F202), its depth; Finance draft 6, nothing (a counted answer already stands). *To build:* with F200 to F204.
 
+## F206. Two settlements neither of which saw the other: the parties win, a judge who contradicts itself has spoken for nothing (QH1, 10 October 2026, afternoon)
+
+**From** the F191 to F199 build, QH1: a verifier tells a later settlement only by what it holds; where a judge's settlement is one of two settlements neither holding the other (the judge signing twice; the judge and the parties settling at once), the build refused to name the version in force. *Laid beside it:* F192 (final for what its signers could see; any judge speaks once per fork); QG4 (F191: "judging relies on a chain of judges every time it is needed"); DQ1 to DQ4 (a tangled deal stays on its last agreed version until one clean settlement, buyers protected); and, checked before recording, rule 45b (a deal changes only with everyone's signature; the judge acts only once a settlement request activates it), rule 34a (the chain moves on when a judge answers "unknown"), IT1 (two endings neither naming the other: neither counts until one names the other).
+
+**Decided by Nobody, allegedly, 10 October 2026 ("If nothing new is created, agreed."):** *Suggested by the project lead.*
+- **(a) A judge's two settlements of one fork, neither holding the other, both count for nothing**, read as the judge answering "unknown": the deal stays on its last agreed version (DQ1 to DQ4) and the next link of the chain of judgment settles (rule 34a, QG4). The double signature stays visible.
+- **(b) A settlement signed by every party and a judge's, neither holding the other: the parties' holds**, the judge's counts for nothing. The judge is a fallback a request activates; a version every party signed is the deal changing by its own rule (45b).
+
+**Checked against the condition, by the project lead:** no new mechanism. (a) is IT1's pattern (neither counts) with rule 34a's existing step (unknown passes the chain on); (b) is rule 45b's own rule ranked above the fallback it already is. Two sentences of rule 45b, citing these.
+
+**Core changes:** Law draft 10, rule 45b (the two sentences). *To build:* `deal_state`, where QH1 now refuses; `review_f190_2` to pin it.
+
 ## F191 to F199 built (10 October 2026, early afternoon)
 
 `docs/f191-f199-build-2026-10-10.md` (merged): F191 to F199 written into Law draft 10, Finance draft 6, Production draft 6, core v21 and the freeze suite (each revised in place for Nobody, allegedly, to approve again) and built, each with a test that fails first; Rust 502 passed; both FORK-HANDS-OUT seeds and every invariant pass at 5,000 cases; Fable's `review_f190_*` tests rewritten to pin the fixes (5b, the offer's object, unchanged: QH3). The display client released again. **Six questions for Nobody, allegedly, open:** QH1 (two settlements of one fork, neither holding the other, one the judge's); QH2 (a branch nobody named, carrying a newcomer, dropped by F192 without her signature); QH3 (the object a relay's record names, and a purchase naming an offer; joins step 12b's OF1); QH4 (a resignation and the very version that registers it); QH5 (a one-time key that gave no refund address); QH6 (a pointer inside a fork's history whose taking-on the fork left out). Nine readings to confirm.
