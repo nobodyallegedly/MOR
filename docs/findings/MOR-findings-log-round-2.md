@@ -2690,6 +2690,12 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Open for Nobody, allegedly:** QK1 (two links of the chain of judgment each settling the fork, neither holding the other); QK3 (QJ2's receipt by the work's service against H5 and H7: a grant key never signs a split's payout); the live work review's six questions (`docs/reviews/live-work-review.md`); a step-down naming drafts.
 
+## F243. The explainer film plays on dubsar.org's front page, carried by MOR (10 October 2026, night)
+
+**Asked by Nobody, allegedly:** "What will be needed to run the video via MOR?" *The project lead's answer:* nothing in the core (a film is bytes; Envelopes carry any bytes); above it, a video Module (the format, MP4 with H.264, and the checks a client runs before playing), room on the homes (64 MB per media object today; the 3-minute draft is 23 MB), a website cMIP draft letting a page use a video file of its own signed version, a player in the display client, and publication by the test identity. **Decided by Nobody, allegedly ("Project managers hate me. Yes it should"):** the film lives on dubsar.org's front page. *Noted:* a longer or sharper film needs the media cMIP that serves one object in parts from many homes, not yet written.
+
+**Changes, none to a MIP:** a video Module draft 1; the website cMIP draft 4 (rule 12: a `video` element naming a file of the same version, with a poster picture); the display client's player. *To build;* the film's final version is published later with the site's next version.
+
 ## F242. What Money states and what Agreements decide: the rename pass's M1 to M8, item by item (10 October 2026, night)
 
 **Asked by Nobody, allegedly:** "Let's verify what belongs where." Each sentence the rename pass found (`docs/rename-pass.md`, part 3) is read against F225: Money says which rails, units, where to, that money moved, or asks that it move; Agreements say what must happen in return or in consequence.
