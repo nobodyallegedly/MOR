@@ -10271,3 +10271,128 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     let e = close_with(&mut lab, label, rot1, vec![law::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
     assert!(owed_why(&e), "not sealed to the payer: {:?}", e.why);
 }
+
+// ---------------------------------------------------------------------------
+// Fable's review of "EXPLORED, NOT DECIDED: a forked deal is broken, like a
+// collective" (`docs/reviews/forked-deal-broken-review.md`, 10 October
+// 2026). The shape is not built; these tests pin what the core answers
+// today under F192, at the four places where the explored shape would
+// answer differently. Each passes as the code stands. If the shape is ever
+// built, the ones its text says must flip are named in the review.
+// ---------------------------------------------------------------------------
+
+/// Review question 2 (the stated cost). Today: a whole branch made at the
+/// split by every party, hidden, and revealed after the settlement reopens
+/// nothing (F192: "a whole branch the settlement never saw"). The explored
+/// shape says the same branch "breaks the deal again": the deal would fall
+/// back to its reference, and everything written into the repair would
+/// need signing again. The verifier has no clock: nothing in `w` says when
+/// C was made, which is the point.
+#[test]
+fn review_fdb_1_today_a_hidden_sibling_revealed_after_a_settlement_reopens_nothing() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A: Ben's share raised.", None);
+    let b1 = l.version(d, "B: a retry Ben's client signed again.", None);
+    // C: a third complete version of the reference, in Ana's drawer.
+    let c1 = l.version(d, "C: another retry, kept back.", None);
+    let s = l.version(a1, "Repaired for A, naming B, the only other branch anyone could see.", Some(b1));
+    let s2 = l.version(s, "Life goes on under the repair: Ben delivers.", None);
+    let before = held_without(&l.w, &[c1]);
+    assert_eq!(LawView::new(&before, mips()).version_in_force(&d).unwrap(), s2, "before C surfaces: the repaired line is in force");
+    // Ana publishes C.
+    assert_eq!(l.in_force().unwrap(), s2, "today, under F192: C reopens nothing, Ben's raise stands");
+    assert!(view(&l.w).deal_fork(&d).unwrap().is_none(), "today: not forked, not broken");
+    // Under the explored shape the two lines above would read: in force =
+    // d (the reference), deal broken, and Ana may refuse every repair.
+}
+
+/// Review question 1 (the new hole: the asymmetry). Today a version the
+/// settlement's signers could not see loses whatever its parent is: a
+/// child grown on the dropped branch (B2) and a sibling at the reference
+/// (C1) are treated alike. The explored shape treats them differently:
+/// B2 "grown on a closed tip counts for nothing", C1 "breaks the deal
+/// again". Whoever hides a version therefore makes it a sibling, never a
+/// child, and the shape's own protection against growth is sidestepped.
+#[test]
+fn review_fdb_2_today_a_hidden_child_and_a_hidden_sibling_lose_alike() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let b2 = l.version(b1, "B grows: hidden child of the dropped tip.", None);
+    let c1 = l.version(d, "C: hidden sibling at the reference.", None);
+    let s = l.version(a1, "Repaired for A, naming B1.", Some(b1));
+    let before = held_without(&l.w, &[b2, c1]);
+    assert_eq!(LawView::new(&before, mips()).version_in_force(&d).unwrap(), s);
+    // Both surface.
+    assert_eq!(l.in_force().unwrap(), s, "today: the hidden child and the hidden sibling lose alike (F192)");
+    assert!(view(&l.w).deal_fork(&d).unwrap().is_none());
+    // Under the explored shape: B2 counts for nothing (closed tip), and C1
+    // re-breaks the deal to d. Same signatures, same ignorance of the
+    // settlers, opposite outcomes, chosen by whoever hid the version.
+}
+
+/// Review question 8 (what the common case carries) and the pre-repair
+/// escape hatch, which exists today and is DQ5's stated cost: a deal that
+/// never visibly forked runs A1, A2, A3; a sibling of A1 surfaces; the
+/// reference is in force and a party who refuses to settle keeps it there.
+/// Today this ends with one settlement naming the sibling, and acts under
+/// A3 kept counting meanwhile (A4). The explored shape keeps the first
+/// half, voids A2 and A3 as versions, and never gives the second half the
+/// finality F192 gives it (test 1).
+#[test]
+fn review_fdb_3_before_any_settlement_a_hidden_sibling_already_sends_the_deal_to_its_reference() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A1.", None);
+    let a2 = l.version(a1, "A2.", None);
+    let a3 = l.version(a2, "A3: Ben's share raised for more work.", None);
+    let c1 = l.version(d, "C1: a sibling of A1, from a device out of step at the time.", None);
+    let before = held_without(&l.w, &[c1]);
+    assert_eq!(LawView::new(&before, mips()).version_in_force(&d).unwrap(), a3, "a deal that never visibly forked: A3 in force");
+    // C1 surfaces, however late.
+    assert_eq!(l.in_force().unwrap(), d, "today: forked at d, the reference in force (A1 beside A4)");
+    let f = view(&l.w).deal_fork(&d).unwrap().expect("forked");
+    assert!(f.tangled.is_none(), "a simple fork, not tangled");
+    assert_eq!(f.branches.len(), 2);
+    // A new version on A3 changes nothing while the fork stands; Ana can
+    // hold the deal here by refusing to settle (DQ5's stated cost).
+    let a4 = l.version(a3, "A4, signed by both without naming C1.", None);
+    assert_eq!(l.in_force().unwrap(), d, "a version that does not name the other tip settles nothing");
+    // One settlement naming C1 ends it, for good (F192), under today's rule.
+    let s = l.version(a4, "Settled for A, naming C1.", Some(c1));
+    assert_eq!(l.in_force().unwrap(), s);
+    assert!(view(&l.w).deal_fork(&d).unwrap().is_none());
+}
+
+/// Review question 1 (a repair of a repair) and question 3. Today a second
+/// settling version made from the reference, naming the settled line's tip
+/// as dropped, holds the first settlement in its history, is after it, and
+/// changes nothing: a settlement is final (A3, F192). In the explored
+/// shape a repair is a complete version whose parent is the reference and
+/// which closes tips; a second such version closing the first repair's
+/// tip is, by the shape's own test ("two complete versions naming the same
+/// parent"), either a new break or an undo of a valid repair. The texts
+/// have the first answer for a collective (F185: a rollback naming an act
+/// Law does not read as broken is itself a broken act) and nothing yet for
+/// a deal, where no single act is the broken one.
+#[test]
+fn review_fdb_4_today_a_second_settlement_from_the_reference_naming_the_first_changes_nothing() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let s = l.version(a1, "Repaired for A, naming B.", Some(b1));
+    let s2 = l.version(s, "Carla's work written in under the repair.", None);
+    assert_eq!(l.in_force().unwrap(), s2);
+    // A "repair of the repair": from the reference, closing the repaired
+    // line's tip and B's, signed by both parties of the reference.
+    let r2 = l.version_full(d, "From the reference again, closing S2 and B1 as mistakes.", vec![s2, b1], vec![]);
+    assert_eq!(view(&l.w).agreement(&r2).unwrap().exists, Some(true), "complete: every party of the reference signed it");
+    assert_eq!(l.in_force().unwrap(), s2, "today: it holds the first settlement in its history, is after it, and changes nothing");
+    assert!(view(&l.w).deal_fork(&d).unwrap().is_none(), "today: the deal is neither forked nor broken by it");
+    // Under the explored shape, r2 is a third complete child of d beside a1
+    // and b1 (closed) and s's line: the deal reads as broken again or r2
+    // undoes s. Neither is what A3 decided.
+}
