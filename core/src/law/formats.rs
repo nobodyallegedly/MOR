@@ -3379,7 +3379,7 @@ impl Release {
 // ---------------------------------------------------------------- the split
 
 /// One payout of a split (F121, Q9).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Payout {
     /// 0: who receives it.
     pub receiver: Hash,
@@ -3395,6 +3395,9 @@ pub struct Payout {
     pub fee_module: Option<Hash>,
     /// 6: the rail fee deducted, within the plan's maximum.
     pub rail_fee: Option<u64>,
+    /// 7: the metric share it pays, by its index in the plan's field 0
+    /// (rule 28; step 12b).
+    pub metric: Option<u64>,
 }
 
 impl Payout {
@@ -3418,6 +3421,9 @@ impl Payout {
         if let Some(x) = self.rail_fee {
             m.push((Value::Uint(6), Value::Uint(x)));
         }
+        if let Some(x) = self.metric {
+            m.push((Value::Uint(7), Value::Uint(x)));
+        }
         Value::Map(m)
     }
 }
@@ -3425,7 +3431,7 @@ impl Payout {
 /// A split (type 8, rules 20 to 24): signed by the split service with its
 /// own key, delivered to every holder it pays, naming each fee and who
 /// received it (F121, Q9).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Split {
     /// 0: the receipt or payer's claim that brought the money.
     pub receipt: Hash,
@@ -3451,6 +3457,17 @@ pub struct Split {
     /// branch of a fork, from 1, each split showing its number, so that a
     /// holder's client raises the alarm where the numbers it receives skip.
     pub number: Option<u64>,
+    /// 6: the Modules and cMIPs it ran under (rule 27), ascending, none
+    /// twice: the service's statement, never what decides which fees are
+    /// owed (F214).
+    pub modules: Vec<Hash>,
+    /// 7: the metric records it divides by (rule 28), each signed by the
+    /// measurer the plan names.
+    pub metric_records: Vec<Hash>,
+    /// 8: per stake, the latest transfer it follows (OF19 a, Fable's
+    /// reading): the service's statement, never the moment a sale takes
+    /// effect (F217), as `[stake, transfer]`, stakes ascending.
+    pub transfers: Vec<(u64, Hash)>,
 }
 
 /// Each holder's leftover units in what a split pays a stake (rule 15a,
@@ -3516,6 +3533,15 @@ impl Split {
         if let Some(n) = self.number {
             m.push((Value::Uint(5), Value::Uint(n)));
         }
+        if !self.modules.is_empty() {
+            m.push((Value::Uint(6), hashes_value(&self.modules)));
+        }
+        if !self.metric_records.is_empty() {
+            m.push((Value::Uint(7), hashes_value(&self.metric_records)));
+        }
+        if !self.transfers.is_empty() {
+            m.push((Value::Uint(8), Value::Array(self.transfers.iter().map(|(i, t)| Value::Array(vec![Value::Uint(*i), b(t)])).collect())));
+        }
         m
     }
 
@@ -3523,7 +3549,7 @@ impl Split {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in p {
             match k {
-                Value::Uint(n) if *n <= 5 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 8 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("split: unknown field")),
             }
         }
@@ -3532,7 +3558,7 @@ impl Split {
         let payouts = nonempty(req(1, "split: payouts")?, "split: payouts")?
             .iter()
             .map(|v| {
-                let fl = map_fields(v, 7, "split: a payout")?;
+                let fl = map_fields(v, 8, "split: a payout")?;
                 let pf = |k| field(&fl, k);
                 Ok(Payout {
                     receiver: hash(pf(0).ok_or(LawError::Shape("payout: receiver"))?, "payout: receiver")?,
@@ -3547,6 +3573,7 @@ impl Split {
                     evidence: pf(4).map(|v| hash(v, "payout: evidence")).transpose()?,
                     fee_module: pf(5).map(|v| hash(v, "payout: fee module")).transpose()?,
                     rail_fee: pf(6).map(|v| uint(v, "payout: rail fee")).transpose()?,
+                    metric: pf(7).map(|v| uint(v, "payout: metric share")).transpose()?,
                 })
             })
             .collect::<R<Vec<_>>>()?;
@@ -3556,6 +3583,9 @@ impl Split {
             }
             if x.evidence.is_some() && x.role.is_none() {
                 return Err(LawError::Shape("payout: evidence goes with a role"));
+            }
+            if x.metric.is_some() && (x.stake.is_some() || x.role.is_some() || x.fee_module.is_some()) {
+                return Err(LawError::Check("a payout pays a fee, a stake, a role or a metric share, one at a time"));
             }
         }
         Ok(Split {
@@ -3567,6 +3597,42 @@ impl Split {
             number: match get(5).map(|v| uint(v, "split: its number")).transpose()? {
                 Some(0) => return Err(LawError::Shape("split: its number counts from 1 (DQ6)")),
                 n => n,
+            },
+            modules: match get(6) {
+                None => vec![],
+                Some(v) => {
+                    let x = hashes(v, "split: the Modules it ran under")?;
+                    if x.is_empty() || !x.windows(2).all(|w| w[0] < w[1]) {
+                        return Err(LawError::Check("split: the Modules it ran under, ascending, none twice (rule 27)"));
+                    }
+                    x
+                }
+            },
+            metric_records: match get(7) {
+                None => vec![],
+                Some(v) => {
+                    let x = hashes(v, "split: the metric records")?;
+                    if x.is_empty() || !distinct(&x) {
+                        return Err(LawError::Check("split: the metric records, none twice (rule 28)"));
+                    }
+                    x
+                }
+            },
+            transfers: match get(8) {
+                None => vec![],
+                Some(v) => {
+                    let x = nonempty(v, "split: the transfers it follows")?
+                        .iter()
+                        .map(|e| {
+                            let a = tuple(e, 2, "split: a stake and the transfer it follows")?;
+                            Ok((uint(&a[0], "split: a stake")?, hash(&a[1], "split: a transfer")?))
+                        })
+                        .collect::<R<Vec<_>>>()?;
+                    if !x.windows(2).all(|w| w[0].0 < w[1].0) {
+                        return Err(LawError::Check("split: the transfers it follows, by stake ascending, one each (OF19)"));
+                    }
+                    x
+                }
             },
         })
     }

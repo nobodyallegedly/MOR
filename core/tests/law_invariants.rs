@@ -2563,9 +2563,9 @@ impl DealWorld {
                     }
                 }
                 let svc_id = sv.id;
-                let mut payouts = vec![law::Payout { receiver: svc_id, amount: fee_paid, stake: None, role: None, evidence: None, fee_module: Some(spec("a fee Module")), rail_fee: None }];
+                let mut payouts = vec![law::Payout { receiver: svc_id, amount: fee_paid, stake: None, role: None, evidence: None, fee_module: Some(spec("a fee Module")), rail_fee: None, ..Default::default() }];
                 for ((h, _), a) in stakes.iter().zip(&each) {
-                    payouts.push(law::Payout { receiver: *h, amount: *a, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None });
+                    payouts.push(law::Payout { receiver: *h, amount: *a, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() });
                 }
                 if matches!(mode, SplitMode::Overflow) {
                     payouts[0].amount = u64::MAX - 1;
@@ -2594,7 +2594,7 @@ impl DealWorld {
                     *carried.entry(stakes[0].0).or_insert(0) += 1;
                 }
                 let carried: Vec<(Hash, u64)> = carried.into_iter().collect();
-                let s = law::Split { receipt: rc, payouts, cmip: spec("a split cMIP"), agreement: latest, tally: Some(vec![(0, carried.clone())]), number: None };
+                let s = law::Split { receipt: rc, payouts, cmip: spec("a split cMIP"), agreement: latest, tally: Some(vec![(0, carried.clone())]), number: None, ..Default::default() };
                 let to: Vec<Hash> = if *deliver_all { ids.clone() } else { ids[1..].to_vec() };
                 let mut svp = self.svc.take().unwrap();
                 let x = self.w.private_act_refs(&mut svp, mips().law, law::types::SPLIT, s.to_map(), None, to, previous.map(|p| vec![mor_core::act::Ref::Act(p)]));

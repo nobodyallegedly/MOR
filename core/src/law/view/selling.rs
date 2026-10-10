@@ -35,7 +35,7 @@ pub struct OfferEval {
 
 impl<'a> LawView<'a> {
     /// A held standing offer with its decoded payload.
-    fn offer_act(&self, id: &Hash) -> Option<(&'a Held, OfferAct)> {
+    pub(super) fn offer_act(&self, id: &Hash) -> Option<(&'a Held, OfferAct)> {
         let h = self.v.get(id)?;
         if !self.is_law(h, types::STANDING_OFFER) {
             return None;

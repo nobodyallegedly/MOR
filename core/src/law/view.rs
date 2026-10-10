@@ -5281,6 +5281,18 @@ pub struct SplitEval {
     /// The acts the split's envelope cites (`objects`, `acks`, `refs`):
     /// among them, the service's previous split act for each stake.
     pub cites: Vec<Hash>,
+    /// Step 12b, the plan's roles (OF11 a, Fable's reading): roles whose
+    /// fillers are not paid equally, within one unit.
+    pub unequal_roles: Vec<String>,
+    /// F214: fees the agreement's fee entries make owed on this payment,
+    /// by their module, that the split leaves out: a wrong split, each
+    /// fee the service's open obligation (rule 29).
+    pub fees_skipped: Vec<Hash>,
+    /// Rule 28 with Fable's review 2.7 and OF13 (a), (d): what is wrong
+    /// with its metric payouts (a measurer paid by its own metric, or the
+    /// split service; a receiver the plan does not already pay; a record
+    /// not signed by the measurer, or not of the metric's Module).
+    pub metric_problems: Vec<String>,
 }
 
 /// A break in a split service's tally chain for a stake (rule 15a, rule
@@ -5357,6 +5369,10 @@ pub struct ServiceAccount {
     /// Payouts of its splits that no receipt of the receiver discharges
     /// (rules 23, 24, 24a, 29).
     pub unpaid: Vec<Unpaid>,
+    /// Fees its splits left out though the agreement's fee entry made
+    /// them owed (F214): each `(split, module)`, an open obligation of the
+    /// service (rule 29).
+    pub fees_skipped: Vec<(Hash, Hash)>,
 }
 
 /// An incoming payment with no split by the service (rules 20, 29).
@@ -8801,7 +8817,28 @@ impl<'a> LawView<'a> {
         });
         let mut unevidenced = vec![];
         let mut unplanned = vec![];
+        // Step 12b: the plan (terms field 8) and the fees (field 28) of
+        // the version in force say which roles, receivers, fees and metric
+        // shares a payout may pay; without a plan, none can be checked.
+        let plan = t.plan.clone();
+        let fee_entries = t.fees.clone().unwrap_or_default();
+        let planned = |p: &Payout| -> bool {
+            let Some(plan) = &plan else { return false };
+            if let Some(r) = &p.role {
+                return plan.roles().contains(&r.as_str());
+            }
+            if let Some(m) = &p.fee_module {
+                return fee_entries.iter().any(|f| &f.module == m);
+            }
+            if let Some(i) = p.metric {
+                return matches!(plan.shares.get(i as usize), Some(super::open_formats::ShareRule::Metric { .. }));
+            }
+            plan.receivers().contains(&p.receiver)
+        };
         for p in &s.payouts {
+            if p.role.is_some() && plan.is_some() && !planned(p) && !unplanned.contains(&p.receiver) {
+                unplanned.push(p.receiver);
+            }
             if p.role.is_some() {
                 let holds = match (p.evidence, payee, h.act.outside.signer) {
                     (Some(ev), Some(payee), Some(service)) => {
@@ -8819,8 +8856,87 @@ impl<'a> LawView<'a> {
                 if !holds && !unevidenced.contains(&p.receiver) {
                     unevidenced.push(p.receiver);
                 }
-            } else if p.stake.is_none() && !unplanned.contains(&p.receiver) {
+            } else if p.stake.is_none() && !planned(p) && !unplanned.contains(&p.receiver) {
                 unplanned.push(p.receiver);
+            }
+        }
+        // OF11 (a), Fable's reading: several fillers of one role, equally.
+        let mut unequal_roles: Vec<String> = vec![];
+        let mut roles: Vec<&String> = s.payouts.iter().filter_map(|p| p.role.as_ref()).collect();
+        roles.sort();
+        roles.dedup();
+        for r in roles {
+            let mut by: BTreeMap<Hash, u128> = BTreeMap::new();
+            for p in s.payouts.iter().filter(|p| p.role.as_ref() == Some(r)) {
+                *by.entry(p.receiver).or_default() += p.amount as u128;
+            }
+            let (lo, hi) = (by.values().min().copied().unwrap_or(0), by.values().max().copied().unwrap_or(0));
+            if hi > lo + 1 {
+                unequal_roles.push(r.clone());
+            }
+        }
+        // F214: a fee is owed as its entry states; the service applies it.
+        let (paid_for, rail_of) = match self.v.get(&s.receipt).map(|r| Fin::decode(r.inside.type_, &r.inside.payload)) {
+            Some(Ok(Fin::Receipt(x))) => (Some(x.fulfils), Some(x.rail)),
+            Some(Ok(Fin::Claim(x))) => (Some(x.fulfils), Some(x.rail)),
+            _ => (None, None),
+        };
+        let mut fees_skipped: Vec<Hash> = vec![];
+        for f in &fee_entries {
+            let owed = match &f.scope {
+                super::open_formats::FeeScope::Every => true,
+                super::open_formats::FeeScope::Rail(r) => rail_of.as_ref() == Some(r),
+                super::open_formats::FeeScope::Publication(pb) => {
+                    paid_for.as_ref() == Some(pb)
+                        || paid_for.is_some_and(|x| {
+                            self.offer_act(&x).is_some_and(|(_, o)| o.offer.sold.contains(&super::open_formats::Sold::Publication(*pb)))
+                        })
+                }
+            };
+            if owed && !s.payouts.iter().any(|p| p.fee_module == Some(f.module)) && !fees_skipped.contains(&f.module) {
+                fees_skipped.push(f.module);
+            }
+        }
+        if !fees_skipped.is_empty() {
+            problems.push("it leaves out a fee the agreement's fee entry makes owed on this payment: a wrong split, the fee the service's open obligation (F214; rule 29)".into());
+        }
+        // Rule 28 (metrics), with Fable's review 2.7 and OF13 (a), (d).
+        let mut metric_problems: Vec<String> = vec![];
+        let metric_payouts: Vec<&Payout> = s.payouts.iter().filter(|p| p.metric.is_some()).collect();
+        if !metric_payouts.is_empty() {
+            match &plan {
+                None => metric_problems.push("a metric payout, and no plan naming a metric (rule 28)".into()),
+                Some(plan) => {
+                    let mut already: Vec<Hash> = plan.receivers();
+                    for st in t.stakes.iter().flatten() {
+                        already.extend(st.holders.iter().filter_map(|(w, _)| w.resolve(collective.as_ref())));
+                    }
+                    for p in &metric_payouts {
+                        let i = p.metric.unwrap_or_default() as usize;
+                        let Some(super::open_formats::ShareRule::Metric { metric, .. }) = plan.shares.get(i) else {
+                            metric_problems.push("a metric payout names no metric share of the plan".into());
+                            continue;
+                        };
+                        let Some(m) = plan.metrics.get(*metric as usize) else { continue };
+                        if Some(m.measurer) == h.act.outside.signer {
+                            metric_problems.push("the metric's measurer is the split service (rule 28)".into());
+                        }
+                        if metric_payouts.iter().any(|q| q.metric == p.metric && q.receiver == m.measurer) {
+                            metric_problems.push("the metric's measurer is paid by its own metric (review 2.7; F194)".into());
+                        }
+                        if !already.contains(&p.receiver) {
+                            metric_problems.push("a metric pays only identities the plan already pays (OF13 a)".into());
+                        }
+                        let recorded = s.metric_records.iter().any(|r| {
+                            self.v.get(r).is_some_and(|x| x.inside.spec == m.module && x.act.outside.signer == Some(m.measurer) && self.valid(r))
+                        });
+                        if !recorded {
+                            metric_problems.push("no record of the metric's Module signed by its measurer is named (rule 28; OF13 d)".into());
+                        }
+                    }
+                    metric_problems.sort();
+                    metric_problems.dedup();
+                }
             }
         }
         let mut mismatched = vec![];
@@ -8956,6 +9072,9 @@ impl<'a> LawView<'a> {
             count_unknown,
             numbering,
             cites: crate::finance::Citations::of(&h.inside).acts(),
+            unequal_roles,
+            fees_skipped,
+            metric_problems,
         })
     }
 
@@ -9274,7 +9393,14 @@ impl<'a> LawView<'a> {
                 }
             }
         }
-        Ok(ServiceAccount { service: *service, unsplit, unpaid })
+        // F214: each fee its splits left out, its open obligation.
+        let mut fees_skipped = vec![];
+        for (sh, _) in &splits {
+            for m in self.split(&sh.id)?.fees_skipped {
+                fees_skipped.push((sh.id, m));
+            }
+        }
+        Ok(ServiceAccount { service: *service, unsplit, unpaid, fees_skipped })
     }
 
     // ------------------------------------------------------------ the release

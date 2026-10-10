@@ -3905,15 +3905,16 @@ fn every_payout_matches_its_stake() {
     let split = |receipt: Hash, ana: u64, ben: u64, cy: u64| law::Split {
         receipt,
         payouts: vec![
-            law::Payout { receiver: svc_id, amount: 100, stake: None, role: None, evidence: None, fee_module: Some(fee_module), rail_fee: None },
-            law::Payout { receiver: ids[ANA], amount: ana, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[BEN], amount: ben, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[CY], amount: cy, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
+            law::Payout { receiver: svc_id, amount: 100, stake: None, role: None, evidence: None, fee_module: Some(fee_module), rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[ANA], amount: ana, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[BEN], amount: ben, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[CY], amount: cy, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
         ],
         cmip: spec("a split cMIP"),
         agreement: f,
         tally: None,
         number: None,
+        ..Default::default()
     };
     let everyone = ids.clone();
     let r1 = receipt(&mut lab, &mut svc, 1000);
@@ -4020,11 +4021,12 @@ fn unit_split(lab: &mut Lab, svc: &mut Person, f: Hash, stake: u64, receipt: Has
     use mor_core::act::Ref;
     let s = law::Split {
         receipt,
-        payouts: vec![law::Payout { receiver: to, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None }],
+        payouts: vec![law::Payout { receiver: to, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() }],
         cmip: spec("a split cMIP"),
         agreement: f,
         tally: count.map(|c| vec![(stake, c)]),
         number: None,
+        ..Default::default()
     };
     let everyone = lab.ids()[..2].to_vec();
     lab.w.private_act_refs(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone, previous.map(|p| vec![Ref::Act(p)]))
@@ -4253,8 +4255,8 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     };
     assert!(matches!(lab.view().backing(&incoming).unwrap(), Backing::Backed { .. }));
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
-    let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None, number: None };
+    let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() };
+    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None, number: None, ..Default::default() };
     let by_stakes = vec![pay(ids[ANA], 400), pay(ids[BEN], 300), pay(ids[CY], 300)];
     let everyone = ids.clone();
     // The service's own split, naming the version in force: no problem.
@@ -4302,7 +4304,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     let mut fan = lab.w.genesis("a fan", vec![own_home()], None, None);
     let post = lab.w.post(&mut fan, "I sent them here");
     let own_word = lab.w.post(&mut svc, "I say the fan sent them");
-    let role = |who: Hash, amount: u64, evidence: Option<Hash>| law::Payout { receiver: who, amount, stake: None, role: Some("referral".into()), evidence, fee_module: None, rail_fee: None };
+    let role = |who: Hash, amount: u64, evidence: Option<Hash>| law::Payout { receiver: who, amount, stake: None, role: Some("referral".into()), evidence, fee_module: None, rail_fee: None, ..Default::default() };
     let rest = vec![pay(ids[ANA], 630), pay(ids[BEN], 270)];
     let with = |lab: &mut Lab, svc: &mut Person, extra: law::Payout| {
         let mut ps = rest.clone();
@@ -4333,9 +4335,9 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     let module_share = law::Payout { role: Some("rail".into()), ..role(spec("the Module's maintainer"), 100, Some(incoming)) };
     assert!(with(&mut lab, &mut svc, module_share).unevidenced.is_empty(), "the receipt names the rail the label's pointer names");
     // A fee, or a named receiver: only the plan could justify them.
-    let fee = law::Payout { receiver: svc.id, amount: 100, stake: None, role: None, evidence: None, fee_module: Some(spec("a fee Module")), rail_fee: None };
+    let fee = law::Payout { receiver: svc.id, amount: 100, stake: None, role: None, evidence: None, fee_module: Some(spec("a fee Module")), rail_fee: None, ..Default::default() };
     assert_eq!(with(&mut lab, &mut svc, fee).unplanned, vec![svc.id]);
-    let named = law::Payout { receiver: spec("a position"), amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None };
+    let named = law::Payout { receiver: spec("a position"), amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() };
     assert_eq!(with(&mut lab, &mut svc, named).unplanned, vec![spec("a position")]);
 }
 
@@ -4390,8 +4392,8 @@ fn a_split_service_is_held_to_account() {
     assert_eq!(account.unsplit, vec![Unsplit { payment: r1, claim: false, receiver: label, agreement: k, amount: Amount { unit, value: 1000 } }]);
     assert!(account.unpaid.is_empty());
     let stake = lab.view().terms(&k).unwrap().own_stake().unwrap().0 as u64;
-    let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None, number: None };
+    let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() };
+    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None, number: None, ..Default::default() };
     // A stranger's split names it: the service still owes a split.
     let _ = lab.w.private_act(&mut stranger, mips().law, law::types::SPLIT, split(r1).to_map(), None, ids.clone());
     assert_eq!(lab.view().service_account(&svc.id).unwrap().unsplit.len(), 1);
@@ -6562,12 +6564,11 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
     // Nor a split's payout, whoever is named as payer.
     let split = law::Split {
         receipt: sale,
-        payouts: vec![law::Payout { receiver: bid, amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None }],
+        payouts: vec![law::Payout { receiver: bid, amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() }],
         cmip: spec("a split cMIP"),
         agreement: deal,
         tally: None,
-        number: None,
-    };
+        number: None, ..Default::default() };
     let sp = law_act(&mut w, &mut svc, law::types::SPLIT, split.to_map(), None);
     let named = add(&mut w, &mut sb, rc(bid, fid, sp, None, None));
     assert!(reason(&w, &named).contains("payout"));
@@ -8701,12 +8702,11 @@ fn f188_dq6_one_numbering_across_a_deals_splits_shows_a_hidden_branch() {
     let mut split = |l: &mut DealLab, agreement: Hash, number: Option<u64>| {
         let s = law::Split {
             receipt: spec(&format!("a receipt {number:?} {agreement:?}")),
-            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None }],
+            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() }],
             cmip: spec("a split cMIP"),
             agreement,
             tally: None,
-            number,
-        };
+            number, ..Default::default() };
         law_act(&mut l.w, &mut svc, law::types::SPLIT, s.to_map(), None)
     };
     split(&mut l, a1, Some(1));
@@ -8725,8 +8725,8 @@ fn f188_dq6_one_numbering_across_a_deals_splits_shows_a_hidden_branch() {
     let n = view(&l.w).split_numbers(&svc_id, &d).unwrap();
     assert_eq!((n.repeated, n.unnumbered.len()), (vec![4], 1));
     // A number counts from 1.
-    let mut s = law::Split { receipt: spec("r"), payouts: vec![], cmip: spec("c"), agreement: d, tally: None, number: Some(0) };
-    s.payouts.push(law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None });
+    let mut s = law::Split { receipt: spec("r"), payouts: vec![], cmip: spec("c"), agreement: d, tally: None, number: Some(0), ..Default::default() };
+    s.payouts.push(law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() });
     assert!(law::Split::decode(&s.to_map()).is_err());
 }
 
@@ -8986,12 +8986,11 @@ fn f190_qf4_a_missing_or_repeated_number_breaks_the_plan() {
     let mut split = |l: &mut DealLab, number: Option<u64>, tag: &str| {
         let s = law::Split {
             receipt: spec(&format!("a receipt {tag}")),
-            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None }],
+            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() }],
             cmip: spec("a split cMIP"),
             agreement: d,
             tally: None,
-            number,
-        };
+            number, ..Default::default() };
         law_act(&mut l.w, &mut svc, law::types::SPLIT, s.to_map(), None)
     };
     let one = split(&mut l, Some(1), "one");
@@ -9182,12 +9181,12 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
     let relay_id = relay.id;
     let read = |lab: &mut Lab, svc: &mut Person, evidence: Hash| {
         let payouts = vec![
-            law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: relay_id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(evidence), fee_module: None, rail_fee: None },
+            law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: relay_id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(evidence), fee_module: None, rail_fee: None, ..Default::default() },
         ];
-        let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None };
+        let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None, ..Default::default() };
         let x = lab.w.private_act(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone.clone());
         let mut v = lab.view();
         v.delivery_records.insert(transport);
@@ -9393,12 +9392,12 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
     lab.w.add(&a);
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let payouts = vec![
-        law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None },
+        law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None, ..Default::default() },
     ];
-    let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None };
+    let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None, ..Default::default() };
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, s.to_map(), None, ids.clone());
     let mut v = lab.view();
     v.delivery_records.insert(transport);
@@ -9562,12 +9561,12 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_offer_that_s
     lab.rail_valid.push((a, mor_core::finance::PaidAt::Flow(ptr)));
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let payouts = vec![
-        law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None },
+        law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None, ..Default::default() },
     ];
-    let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None };
+    let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None, ..Default::default() };
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, s.to_map(), None, ids.clone());
     let mut v = lab.view();
     v.delivery_records.insert(transport);
@@ -9985,12 +9984,12 @@ impl RoleLab {
     fn unevidenced(&mut self, to: Hash, evidence: Hash, told: Option<Hash>) -> Vec<Hash> {
         let ids = self.lab.ids();
         let payouts = vec![
-            law::Payout { receiver: ids[ANA], amount: 360, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[BEN], amount: 270, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[CY], amount: 270, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: to, amount: 100, stake: None, role: Some("a helper".into()), evidence: Some(evidence), fee_module: None, rail_fee: None },
+            law::Payout { receiver: ids[ANA], amount: 360, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[BEN], amount: 270, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[CY], amount: 270, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: to, amount: 100, stake: None, role: Some("a helper".into()), evidence: Some(evidence), fee_module: None, rail_fee: None, ..Default::default() },
         ];
-        let s = law::Split { receipt: self.incoming, payouts, cmip: spec("a split cMIP"), agreement: self.k1, tally: None, number: None };
+        let s = law::Split { receipt: self.incoming, payouts, cmip: spec("a split cMIP"), agreement: self.k1, tally: None, number: None, ..Default::default() };
         let x = self.lab.w.private_act(&mut self.svc, mips().law, law::types::SPLIT, s.to_map(), None, ids);
         let mut v = self.lab.view();
         v.delivery_records.extend(told);
@@ -10457,6 +10456,10 @@ struct ServiceDeal {
 
 impl ServiceDeal {
     fn new() -> ServiceDeal {
+        Self::with(&|_| {})
+    }
+
+    fn with(f: &dyn Fn(&mut Terms)) -> ServiceDeal {
         let mut w = World::new();
         let mut ana = w.genesis("ana", vec![own_home()], None, None);
         let mut ben = w.genesis("ben", vec![own_home()], None, None);
@@ -10478,6 +10481,7 @@ impl ServiceDeal {
         let mut t = deal_terms(ana.id, ben.id);
         t.payee_grants = Some(vec![ga, gb]);
         t.stakes = Some(vec![law::Stake { object: law::Who::Id(work), holders: vec![(law::Who::Id(ana.id), 600_000), (law::Who::Id(ben.id), 400_000)] }]);
+        f(&mut t);
         let deal = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
         sign(&mut w, &mut ana, &deal);
         sign(&mut w, &mut ben, &deal);
@@ -10696,4 +10700,167 @@ fn t1_a_purchase_under_either_agreement_holding_a_stake_in_the_work() {
     assert_eq!(view(&w).purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase, "a purchase under the agreement it names");
     let paid = ServiceDeal::receipt(&mut w, &mut ana, aid, fan.id, publication, Some(shared), b"under the shared deal");
     assert_eq!(view(&w).purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
+}
+
+fn plan_of(shares: Vec<law::ShareRule>, metrics: Vec<law::Metric>) -> law::SplitPlan {
+    law::SplitPlan { shares, cmip: spec("a split cMIP"), unfilled: law::Unfilled::Stakes, top: vec![], service_bears_rail_fees: false, max_rail_fee: None, params: None, metrics }
+}
+
+fn payout(receiver: Hash, amount: u64) -> law::Payout {
+    law::Payout { receiver, amount, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None, metric: None }
+}
+
+impl ServiceDeal {
+    /// A sale under the deal, receipted in Ana's name by the service's
+    /// strand, with the fan's claim acknowledging `acks`, its rail proof
+    /// valid: the payer the payment commits to is the fan (F193).
+    fn sale(&mut self, proof: &[u8], acks: Vec<Hash>) -> (Hash, Hash) {
+        use mor_core::finance::{Amount, Claim, Payload as Fin, Purchase};
+        let (aid, fid, deal, song) = (self.ana.id, self.fan.id, self.deal, self.song);
+        let mut sa = self.sa.clone();
+        let r = ServiceDeal::receipt(&mut self.w, &mut sa, aid, fid, song, Some(deal), proof);
+        self.sa = sa;
+        let c = Fin::Claim(Claim {
+            rail: spec("a rail Module"),
+            proof: proof.to_vec(),
+            payee: aid,
+            amount: Amount { unit: spec("a unit"), value: 1000 },
+            fulfils: song,
+            disagrees: None,
+            referral: None,
+            refund: None,
+            anonymous: None,
+            purchase: Some(Purchase { agreement: deal, line: deal }),
+        });
+        let a = self.w.everyday_act(&mut self.fan, mips().finance, 3, c.to_map(), None, (!acks.is_empty()).then_some(acks));
+        (r, self.w.add(&a))
+    }
+
+    fn split(&mut self, receipt: Hash, payouts: Vec<law::Payout>, metrics: Vec<Hash>) -> Hash {
+        let s = law::Split { receipt, payouts, cmip: spec("a split cMIP"), agreement: self.deal, tally: None, number: Some(1), modules: vec![], metric_records: metrics, transfers: vec![] };
+        let all = vec![self.ana.id, self.ben.id];
+        self.w.private_act(&mut self.svc, mips().law, law::types::SPLIT, s.to_map(), None, all)
+    }
+
+    fn stake_payouts(&self) -> Vec<law::Payout> {
+        vec![
+            law::Payout { stake: Some(0), ..payout(self.ana.id, 480) },
+            law::Payout { stake: Some(0), ..payout(self.ben.id, 320) },
+        ]
+    }
+}
+
+/// Fable's review 7.2, taken under the delegation: a role share is named
+/// by its role; a payout filling a role the plan names counts on any act
+/// the committed payer acknowledges, whatever cMIP defines it; a payout
+/// filling a role the plan does not name is unplanned. Several fillers of
+/// one role divide it equally (OF11 a, Fable's reading).
+#[test]
+fn review_7_2_a_role_share_is_named_by_its_role() {
+    let mut l = ServiceDeal::with(&|t| {
+        t.plan = Some(plan_of(vec![law::ShareRule::Stake { stake: 0, part: 800_000 }, law::ShareRule::Role { role: "relay".into(), part: 200_000 }], vec![]));
+    });
+    let mut r1 = l.w.genesis("relay one", vec![own_home()], None, None);
+    let mut r2 = l.w.genesis("relay two", vec![own_home()], None, None);
+    let rec = |w: &mut World, p: &mut Person, cmip: &str| {
+        let a = w.everyday_act(p, spec(cmip), 0, vec![(Value::Uint(0), Value::Bytes(spec("the song's locked bytes, 12b").to_vec()))], None, None);
+        w.add(&a)
+    };
+    // Two transport cMIPs, neither named in the plan.
+    let e1 = rec(&mut l.w, &mut r1, "a relay transport cMIP, draft 3");
+    let e2 = rec(&mut l.w, &mut r2, "its successor, draft 4");
+    let (receipt, claim) = l.sale(b"a sale", vec![e1, e2]);
+    let mut ps = l.stake_payouts();
+    ps.push(law::Payout { role: Some("relay".into()), evidence: Some(e1), ..payout(r1.id, 100) });
+    ps.push(law::Payout { role: Some("relay".into()), evidence: Some(e2), ..payout(r2.id, 100) });
+    let x = l.split(receipt, ps.clone(), vec![]);
+    let mut v = view(&l.w);
+    v.rail_valid.insert(claim, mor_core::finance::PaidAt::Flow(spec("a pointer")));
+    let e = v.split(&x).unwrap();
+    assert!(e.unevidenced.is_empty() && e.unplanned.is_empty() && e.unequal_roles.is_empty(), "{e:?}");
+    // Unequal: 150 and 50.
+    ps[2].amount = 150;
+    ps[3].amount = 50;
+    let x = l.split(receipt, ps.clone(), vec![]);
+    let mut v = view(&l.w);
+    v.rail_valid.insert(claim, mor_core::finance::PaidAt::Flow(spec("a pointer")));
+    assert_eq!(v.split(&x).unwrap().unequal_roles, vec!["relay".to_string()]);
+    // A role the plan does not name.
+    ps[3].role = Some("mastering".into());
+    let x = l.split(receipt, ps, vec![]);
+    let mut v = view(&l.w);
+    v.rail_valid.insert(claim, mor_core::finance::PaidAt::Flow(spec("a pointer")));
+    assert_eq!(v.split(&x).unwrap().unplanned, vec![r2.id]);
+}
+
+/// F214, decided by Nobody, allegedly, 10 October 2026 ("A service not
+/// respecting this is liable"): a fee entry says when it applies; a split
+/// leaving out a fee its entry makes owed is a wrong split, and the fee is
+/// the service's open obligation (rule 29). The split's list of Modules
+/// (key 6) is the service's statement, never what decides. A fee scoped to
+/// another rail is not owed.
+#[test]
+fn f214_a_skipped_fee_is_the_services_open_obligation() {
+    let (m, n) = (spec("a publishing Module, 12b"), spec("an on-chain rail Module, 12b"));
+    let mut l = ServiceDeal::with(&|t| {
+        t.plan = Some(plan_of(vec![law::ShareRule::Stake { stake: 0, part: 1 }], vec![]));
+        t.fees = Some(vec![
+            law::Fee { module: spec("a publishing Module, 12b"), part: 20_000, scope: law::FeeScope::Every },
+            law::Fee { module: spec("an on-chain rail Module, 12b"), part: 10_000, scope: law::FeeScope::Rail(spec("an on-chain rail Module, 12b")) },
+        ]);
+    });
+    let creator = spec("the publishing Module's creator");
+    let (receipt, _) = l.sale(b"a sale", vec![]);
+    let x = l.split(receipt, l.stake_payouts(), vec![]);
+    let e = view(&l.w).split(&x).unwrap();
+    assert_eq!(e.fees_skipped, vec![m], "owed on every payment; the rail fee is not owed on another rail");
+    assert!(!e.fees_skipped.contains(&n));
+    assert!(e.problems.iter().any(|w| w.contains("F214")));
+    let svc = l.svc.id;
+    assert_eq!(view(&l.w).service_account(&svc).unwrap().fees_skipped, vec![(x, m)]);
+    let mut ps = l.stake_payouts();
+    ps.push(law::Payout { fee_module: Some(m), ..payout(creator, 20) });
+    let y = l.split(receipt, ps, vec![]);
+    let e = view(&l.w).split(&y).unwrap();
+    assert!(e.fees_skipped.is_empty() && e.unplanned.is_empty(), "{e:?}");
+}
+
+/// Fable's review 2.7, taken under the delegation (F194), with OF13 (a)
+/// and (d), Fable's readings: a metric's measurer is none of the
+/// identities its metric divides among, nor the split service; the metric
+/// pays only identities the plan already pays; its record is signed by the
+/// measurer, of the metric's Module.
+#[test]
+fn review_2_7_a_measurer_never_weighs_its_own_share() {
+    let module = spec("a play-count Module");
+    let run = |measurer_is_ana: bool| {
+        let carla = spec("Carla, who runs the play-count service");
+        let mut l = ServiceDeal::with(&|_| {});
+        let (aid, bid) = (l.ana.id, l.ben.id);
+        let measurer = if measurer_is_ana { aid } else { l.fan.id };
+        let mut t = view(&l.w).terms(&l.deal).unwrap();
+        t.plan = Some(plan_of(
+            vec![law::ShareRule::Stake { stake: 0, part: 500_000 }, law::ShareRule::Receiver { receiver: aid, part: 0 }, law::ShareRule::Receiver { receiver: bid, part: 0 }, law::ShareRule::Metric { metric: 0, part: 500_000 }],
+            vec![law::Metric { module, measurer, params: None }],
+        ));
+        let _ = carla;
+        // A fresh deal carrying the plan, the same grants.
+        let deal = law_act(&mut l.w, &mut l.ana, law::types::TERMS, t.to_map(), None);
+        sign(&mut l.w, &mut l.ana, &deal);
+        sign(&mut l.w, &mut l.ben, &deal);
+        l.deal = deal;
+        let counts = {
+            let mut who = if measurer_is_ana { l.ana.clone() } else { l.fan.clone() };
+            let a = l.w.everyday_act(&mut who, module, 0, vec![(Value::Uint(0), Value::Uint(600))], None, None);
+            l.w.add(&a)
+        };
+        let (receipt, _) = l.sale(b"a month", vec![]);
+        let mut ps = vec![law::Payout { stake: Some(0), ..payout(aid, 300) }, law::Payout { stake: Some(0), ..payout(bid, 200) }];
+        ps.push(law::Payout { metric: Some(3), ..payout(aid, 300) });
+        ps.push(law::Payout { metric: Some(3), ..payout(bid, 200) });
+        let x = l.split(receipt, ps, vec![counts]);
+        view(&l.w).split(&x).unwrap().metric_problems
+    };
+    assert!(run(true).iter().any(|w| w.contains("measurer")), "Ana measures and is paid by the metric: refused");
+    assert!(run(false).is_empty(), "{:?}", run(false));
 }
