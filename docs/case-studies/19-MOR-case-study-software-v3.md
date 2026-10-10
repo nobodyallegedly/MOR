@@ -84,7 +84,7 @@ What changes is that everything a company takes from the open-source commons, an
 
 ## 7. MOR itself
 
-**MOR's cMIPs and modules are software.** Each module is a work, frozen under its hash. Each Module names the cMIP it implements. The Production MIP pays the makers of cMIPs and modules when their work takes part in a settlement, through the module fees in each split. A module's use is evidenced by a party, never by the module, which signs nothing: for a payment rail module, by the receipt or claim naming it; for a service someone runs on a module, by a use record signed by whoever runs it.
+**MOR's cMIPs and modules are software.** Each module is a work, frozen under its hash. Each Module names the cMIP it implements. The Development MIP pays the makers of cMIPs and modules when their work takes part in a settlement, through the module fees in each split. A module's use is evidenced by a party, never by the module, which signs nothing: for a payment rail module, by the receipt or claim naming it; for a service someone runs on a module, by a use record signed by whoever runs it.
 
 **This case study is MOR's own economy.** A developer who writes a split module, a rating cMIP or a consent module for the other case studies is paid the way Priya is paid: through lineage, when real settlements use their work and the paying agreement honours the terms. Everything these case studies list under "open for others to build" is an invitation on these terms.
 

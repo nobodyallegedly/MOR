@@ -1,4 +1,4 @@
-//! The Law MIP's exact formats (Law draft 9, "Act formats"), and the checks
+//! The Agreements MIP's exact formats (Agreements draft 9, "Act formats"), and the checks
 //! that need no other act.
 //!
 //! In plain words: terms (an agreement's proposal), with the fields draft 7
@@ -11,7 +11,7 @@
 //!
 //! Terms fields whose formats are still open (stakes, the split plan, the
 //! fork rule, refund terms) are refused as unsupported: a client never signs
-//! or accepts what it does not implement (Envelope rule 11, fail closed).
+//! or accepts what it does not implement (Envelopes rule 11, fail closed).
 
 use crate::act::{Inside, Object};
 use crate::cbor::{self, Value};
@@ -19,7 +19,7 @@ use crate::hash::Hash;
 use crate::identity::{Declaration, KeptTip, SigningKey};
 use std::fmt;
 
-/// The Law act types (Law, "Act formats").
+/// The Agreements act types (Agreements, "Act formats").
 pub mod types {
     pub const TERMS: u64 = 0;
     pub const SIGNATURE: u64 = 1;
@@ -56,10 +56,10 @@ pub mod types {
     /// F197): sealed to the payer, with a deadline on a time reference.
     pub const NOTICE: u64 = 24;
     // 21, the creditor's release (F125), is retired and never reused: it is
-    // a Finance act (Finance type 4, F126).
+    // a Money act (Money type 4, F126).
 }
 
-/// The declaration kinds Law defines (Identity, declarations slot).
+/// The declaration kinds Agreements define (Identity, declarations slot).
 pub mod kinds {
     /// The agreement a collective lives under: its founding agreement at
     /// genesis (the terms' id), then each constitutional clone a rotation
@@ -67,16 +67,16 @@ pub mod kinds {
     pub const FOUNDING_AGREEMENT: u64 = 0;
 }
 
-/// The core's layers, as Law's kinds number them (Law, `kind`).
+/// The core's layers, as Agreements' kinds number them (Agreements, `kind`).
 pub mod layers {
     pub const IDENTITY: u64 = 0;
-    pub const ENVELOPE_AND_TEXT: u64 = 1;
-    pub const FINANCE: u64 = 2;
-    pub const LAW: u64 = 3;
-    pub const PRODUCTION: u64 = 4;
+    pub const ENVELOPES_AND_TEXT: u64 = 1;
+    pub const MONEY: u64 = 2;
+    pub const AGREEMENTS: u64 = 3;
+    pub const DEVELOPMENT: u64 = 4;
 }
 
-/// The highest task number (Production, task table).
+/// The highest task number (Development, task table).
 pub const LAST_TASK: u64 = 14;
 
 /// The judicial tasks: condition evaluation, time reference, anchoring,
@@ -97,7 +97,7 @@ pub const MILLION: u64 = 1_000_000;
 pub const LEFTOVER_TAG: &str = "MOR/law/leftover";
 
 /// Rule 15a's tie key for a holder (F150): `tagged_hash("MOR/law/leftover",
-/// [ act hash, holder ])`, the array encoded as CBOR, as Law writes its
+/// [ act hash, holder ])`, the array encoded as CBOR, as Agreements writes its
 /// arrays (F162, 7). Since F165 it orders only a fork's sides, by the fork
 /// act every member signs (F162, 10): a split service's receipt no longer
 /// orders ties, since its signer picks its salt (F165).
@@ -198,43 +198,43 @@ pub fn divide_stake(total: u64, holders: &[(Hash, u64)], ties: Ties) -> Result<V
     Ok(parts)
 }
 
-/// The layer of a task's MIP (Production, task table).
+/// The layer of a task's MIP (Development, task table).
 pub fn task_layer(task: u64) -> Option<u64> {
     match task {
         1..=3 => Some(layers::IDENTITY),
-        4 | 5 => Some(layers::ENVELOPE_AND_TEXT),
-        6 | 7 => Some(layers::FINANCE),
-        8..=14 => Some(layers::LAW),
+        4 | 5 => Some(layers::ENVELOPES_AND_TEXT),
+        6 | 7 => Some(layers::MONEY),
+        8..=14 => Some(layers::AGREEMENTS),
         _ => None,
     }
 }
 
-/// The six MIPs' spec hashes, fixed at the freeze. Law computes an act's
+/// The six MIPs' spec hashes, fixed at the freeze. Agreements computes an act's
 /// layer from its `spec` field, these hashes and the collective's own terms
 /// ("Layer", F106).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Mips {
     pub identity: Hash,
-    pub envelope: Hash,
+    pub envelopes: Hash,
     pub text: Hash,
-    pub finance: Hash,
-    pub law: Hash,
-    pub production: Hash,
+    pub money: Hash,
+    pub agreements: Hash,
+    pub development: Hash,
 }
 
 impl Mips {
-    /// The layer of a MIP's own acts. Production defines none.
+    /// The layer of a MIP's own acts. Development defines none.
     pub fn layer(&self, spec: &Hash) -> Option<u64> {
         if spec == &self.identity {
             Some(layers::IDENTITY)
-        } else if spec == &self.envelope || spec == &self.text {
-            Some(layers::ENVELOPE_AND_TEXT)
-        } else if spec == &self.finance {
-            Some(layers::FINANCE)
-        } else if spec == &self.law {
-            Some(layers::LAW)
-        } else if spec == &self.production {
-            Some(layers::PRODUCTION)
+        } else if spec == &self.envelopes || spec == &self.text {
+            Some(layers::ENVELOPES_AND_TEXT)
+        } else if spec == &self.money {
+            Some(layers::MONEY)
+        } else if spec == &self.agreements {
+            Some(layers::AGREEMENTS)
+        } else if spec == &self.development {
+            Some(layers::DEVELOPMENT)
         } else {
             None
         }
@@ -245,15 +245,15 @@ impl Mips {
     }
 }
 
-/// Why a Law act, or an agreement, fails.
+/// Why an Agreements act, or an agreement, fails.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum LawError {
+pub enum AgreementsError {
     /// The payload or inside is not in the type's shape. Names the field.
     Shape(&'static str),
-    /// A field or act whose exact format Law has not fixed yet: refused,
+    /// A field or act whose exact format Agreements have not fixed yet: refused,
     /// never accepted unchecked.
     Unsupported(&'static str),
-    /// A rule of the Law MIP fails. Names it.
+    /// A rule of the Agreements MIP fails. Names it.
     Check(&'static str),
     /// An act the check needs is not held (or not opened).
     Missing(Hash),
@@ -267,45 +267,45 @@ pub enum LawError {
     OwnAttempt,
 }
 
-impl fmt::Display for LawError {
+impl fmt::Display for AgreementsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LawError::Shape(w) => write!(f, "not in the Law format: {w}"),
-            LawError::Unsupported(w) => write!(f, "not supported yet (format still open): {w}"),
-            LawError::Check(w) => write!(f, "{w}"),
-            LawError::Missing(h) => {
+            AgreementsError::Shape(w) => write!(f, "not in the Agreements format: {w}"),
+            AgreementsError::Unsupported(w) => write!(f, "not supported yet (format still open): {w}"),
+            AgreementsError::Check(w) => write!(f, "{w}"),
+            AgreementsError::Missing(h) => {
                 write!(f, "act ")?;
                 for x in h {
                     write!(f, "{x:02x}")?;
                 }
                 write!(f, " is not held")
             }
-            LawError::Unsettled(w) => write!(f, "unsettled by the texts: {w}"),
-            LawError::OwnAttempt => f.write_str(
+            AgreementsError::Unsettled(w) => write!(f, "unsettled by the texts: {w}"),
+            AgreementsError::OwnAttempt => f.write_str(
                 "unknown: it rests on this reader's own failed attempts to reach a home (re-homed without audit), and nothing binding rests on them (F153)",
             ),
         }
     }
 }
 
-impl std::error::Error for LawError {}
+impl std::error::Error for AgreementsError {}
 
 /// A short machine-readable code for each error kind, so clients need not
 /// match the wording.
-impl LawError {
+impl AgreementsError {
     pub fn code(&self) -> &'static str {
         match self {
-            LawError::Shape(_) => "shape",
-            LawError::Unsupported(_) => "unsupported",
-            LawError::Check(_) => "check",
-            LawError::Missing(_) => "missing",
-            LawError::Unsettled(_) => "unsettled",
-            LawError::OwnAttempt => "own-attempt",
+            AgreementsError::Shape(_) => "shape",
+            AgreementsError::Unsupported(_) => "unsupported",
+            AgreementsError::Check(_) => "check",
+            AgreementsError::Missing(_) => "missing",
+            AgreementsError::Unsettled(_) => "unsettled",
+            AgreementsError::OwnAttempt => "own-attempt",
         }
     }
 }
 
-pub(crate) type R<T> = Result<T, LawError>;
+pub(crate) type R<T> = Result<T, AgreementsError>;
 
 // ---------------------------------------------------------------- rules
 
@@ -382,7 +382,7 @@ pub struct Keepers {
     pub rule: Rule,
 }
 
-/// `holding`: how a key is held (Law rule 36).
+/// `holding`: how a key is held (Agreements rule 36).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Holding {
     /// `[ 0, holder ]`: one holder.
@@ -454,7 +454,7 @@ impl KeyGrammar {
     }
 }
 
-/// `succession-plan` (Law rule 48a).
+/// `succession-plan` (Agreements rule 48a).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SuccessionPlan {
     pub party: Hash,
@@ -490,7 +490,7 @@ impl SuccessionPlan {
     }
 }
 
-/// Who decides absence (Law rule 49): always an identity, or, in a
+/// Who decides absence (Agreements rule 49): always an identity, or, in a
 /// collective only (B19), a threshold of the other parties, each of whom is
 /// one.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -503,7 +503,7 @@ pub enum Authority {
     Others(u64),
 }
 
-/// The outcomes an abandonment clause may allow (Law rule 53).
+/// The outcomes an abandonment clause may allow (Agreements rule 53).
 pub mod outcomes {
     pub const VOICE_REMOVED: u64 = 0;
     pub const STAKE_REDISTRIBUTED: u64 = 1;
@@ -834,7 +834,7 @@ pub enum Step<T> {
     /// It has been asked and has not acted. Whether its period has passed,
     /// as the agreement's time reference says: `Some(true)` after,
     /// `Some(false)` before, `None` undetermined. An answer made after its
-    /// period passed is no answer here (reading, Law draft 10, section 6).
+    /// period passed is no answer here (reading, Agreements draft 10, section 6).
     Silent { period_passed: Option<bool> },
 }
 
@@ -962,7 +962,7 @@ impl Stake {
 
 // ---------------------------------------------------------------- terms
 
-/// Terms (type 0), in the fields Law draft 7 fixes.
+/// Terms (type 0), in the fields Agreements draft 7 fixes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Terms {
     /// 0: parties, identity or collective hashes, in order.
@@ -1072,7 +1072,7 @@ impl Terms {
 
     /// The layers a specification's acts belong to under these terms
     /// ("Layer", F106): a MIP's layer; for a cMIP, the layer of each task
-    /// the terms name it for; Production for an extension. Empty: the
+    /// the terms name it for; Development for an extension. Empty: the
     /// specification is named nowhere.
     pub fn spec_layers(&self, mips: &Mips, spec: &Hash) -> Vec<u64> {
         if let Some(l) = mips.layer(spec) {
@@ -1085,7 +1085,7 @@ impl Terms {
             .filter_map(|(t, _)| task_layer(*t))
             .collect();
         if self.extensions().contains(spec) {
-            out.push(layers::PRODUCTION);
+            out.push(layers::DEVELOPMENT);
         }
         out.sort();
         out.dedup();
@@ -1236,7 +1236,7 @@ impl Terms {
                 // OF20, option c, taken with step 12b): rule 47's default
                 // stands for every collective (Q38, B11). Never reused.
                 Value::Uint(10) => {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "terms field 10 (the concurrency rule) is withdrawn: a fork of records waits for a resolving clone (rule 47; step 12b)",
                     ))
                 }
@@ -1244,21 +1244,21 @@ impl Terms {
                 // transport, never a condition of validity. It is never
                 // reused, and terms carrying it are refused.
                 Value::Uint(25) => {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "terms field 25 (the relays) is withdrawn: an act is done by its signatures, seals and citations, wherever held (F128)",
                     ))
                 }
                 Value::Uint(n) if *n <= 24 || *n == 26 || *n == 27 || *n == super::open_formats::FEES_FIELD => f.push((*n, v)),
-                _ => return Err(LawError::Shape("terms: unknown field")),
+                _ => return Err(AgreementsError::Shape("terms: unknown field")),
             }
         }
         let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
-        let req = |k: u64, w| get(k).ok_or(LawError::Shape(w));
+        let req = |k: u64, w| get(k).ok_or(AgreementsError::Shape(w));
         let Value::Text(text) = req(1, "terms text")? else {
-            return Err(LawError::Shape("terms text"));
+            return Err(AgreementsError::Shape("terms text"));
         };
         let Value::Map(cm) = req(2, "terms cMIPs")? else {
-            return Err(LawError::Shape("terms cMIPs"));
+            return Err(AgreementsError::Shape("terms cMIPs"));
         };
         let cmips = cm
             .iter()
@@ -1294,7 +1294,7 @@ impl Terms {
             split_grant: match get(14) {
                 Some(v @ Value::Bytes(_)) => Some(hash(v, "terms split grant")?),
                 Some(Value::Array(_)) | None => None,
-                Some(_) => return Err(LawError::Shape("terms field 14: a grant, or a deal's list of grants (F129)")),
+                Some(_) => return Err(AgreementsError::Shape("terms field 14: a grant, or a deal's list of grants (F129)")),
             },
             payee_grants: match get(14) {
                 Some(v @ Value::Array(_)) => Some(hashes(v, "terms payee grants")?),
@@ -1316,15 +1316,15 @@ impl Terms {
             area_words: get(20)
                 .map(|v| {
                     let Value::Map(m) = v else {
-                        return Err(LawError::Shape("terms area words"));
+                        return Err(AgreementsError::Shape("terms area words"));
                     };
                     if m.is_empty() {
-                        return Err(LawError::Shape("terms area words"));
+                        return Err(AgreementsError::Shape("terms area words"));
                     }
                     m.iter()
                         .map(|(k, v)| match v {
                             Value::Text(t) => Ok((uint(k, "area words id")?, t.clone())),
-                            _ => Err(LawError::Shape("area words")),
+                            _ => Err(AgreementsError::Shape("area words")),
                         })
                         .collect()
                 })
@@ -1369,14 +1369,14 @@ impl Terms {
     /// stake share of the plan names a stake of field 7.
     fn check_open_formats(&self) -> R<()> {
         if self.refund.is_some() && self.time.is_none() && self.cmip(TIME_REFERENCE_TASK).is_none() {
-            return Err(LawError::Check("refund terms are a point on the agreement's time reference: terms carrying field 17 name one (rule 33; F219)"));
+            return Err(AgreementsError::Check("refund terms are a point on the agreement's time reference: terms carrying field 17 name one (rule 33; F219)"));
         }
         if let Some(p) = &self.plan {
             let n = self.stakes.as_ref().map_or(0, |s| s.len()) as u64;
             for s in &p.shares {
                 if let super::open_formats::ShareRule::Stake { stake, .. } = s {
                     if *stake >= n {
-                        return Err(LawError::Check("split plan: a stake share names a stake of field 7 (rule 26)"));
+                        return Err(AgreementsError::Check("split plan: a stake share names a stake of field 7 (rule 26)"));
                     }
                 }
             }
@@ -1395,32 +1395,32 @@ impl Terms {
         self.stake_on(&Who::This)
     }
 
-    /// The checks that need no other act (Law rules 1, 2, 36, 36b for
+    /// The checks that need no other act (Agreements rules 1, 2, 36, 36b for
     /// founding terms, 48a, 49; "Areas"; F96, F105, F107, Q20, Q21, Q24,
     /// Q25, Q31, Q32). A clone's checks against its parent and lineage are
-    /// the view's ([`super::LawView::agreement`]).
+    /// the view's ([`super::AgreementsView::agreement`]).
     pub fn check(&self, mips: &Mips) -> R<()> {
         self.check_open_formats()?;
         let parties = &self.parties;
         if !distinct(parties) {
-            return Err(LawError::Check("a party is listed twice"));
+            return Err(AgreementsError::Check("a party is listed twice"));
         }
         let mut last = 0;
         for (t, _) in &self.cmips {
             if *t == 0 || *t > LAST_TASK {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a cMIP names a task number that does not exist",
                 ));
             }
             // The abandonment clause names the absence-proof cMIP (key 3,
             // rule 51), and only there (a reading, F182).
             if *t == ABSENCE_PROOF_TASK {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "the absence-proof cMIP is named by the abandonment clause (key 3), not in field 2 (F172, F182)",
                 ));
             }
             if *t <= last {
-                return Err(LawError::Check("at most one cMIP per task"));
+                return Err(AgreementsError::Check("at most one cMIP per task"));
             }
             last = *t;
         }
@@ -1429,26 +1429,26 @@ impl Terms {
         match (&self.parent, &self.field4) {
             (None, Field4::Rule(Rule::All)) => {}
             (None, Field4::Rule(_)) => {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "founding terms exist only when every party has signed them: field 4 must be every party",
                 ))
             }
             (None, Field4::Mark(_)) => {
-                return Err(LawError::Check("founding terms carry a signing rule, not a mark"))
+                return Err(AgreementsError::Check("founding terms carry a signing rule, not a mark"))
             }
             (Some(_), Field4::Rule(_)) => {
-                return Err(LawError::Check("a clone carries a mark in field 4, not a rule"))
+                return Err(AgreementsError::Check("a clone carries a mark in field 4, not a rule"))
             }
             (Some(_), Field4::Mark(m)) => check_mark_shape(m)?,
         }
         if !self.clone.fits(parties) {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "the clone rule names a threshold or party that does not fit the parties",
             ));
         }
         if let Some(r) = &self.constitutional {
             if !r.fits(parties) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "the constitutional change rule names a threshold or party that does not fit the parties",
                 ));
             }
@@ -1456,48 +1456,48 @@ impl Terms {
         if !self.is_collective() {
             // A deal (F107): every party signs it and every clone of it.
             if self.clone != Rule::All {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a deal changes only with every party's signature: its clone rule must be every party",
                 ));
             }
             if self.constitutional.is_some() || self.areas.is_some() || self.area_words.is_some() {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "tiers and areas belong to collectives: a deal carries no field 18, 19 or 20",
                 ));
             }
             // F129, H4: a deal lists its payees' grants, one per payee.
             if self.split_grant.is_some() {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a deal lists its payees' grants to the split service in field 14, one per payee (F129, H4)",
                 ));
             }
             if let Some(g) = &self.payee_grants {
                 if g.is_empty() || !distinct(g) {
-                    return Err(LawError::Check("field 14 lists each payee's grant once (F129, H4)"));
+                    return Err(AgreementsError::Check("field 14 lists each payee's grant once (F129, H4)"));
                 }
             }
             // B19: in a deal, the absence authority is one identity.
             if matches!(&self.abandonment, Some(Abandonment { authority: Authority::Others(_), .. })) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "in a deal, the absence authority is one identity, never a threshold of the other parties (B19)",
                 ));
             }
         }
         if self.is_collective() && self.payee_grants.is_some() {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "a collective names its split service by one grant in field 14; a list of payees' grants is a deal's (F129, H4)",
             ));
         }
         if let Some(k) = &self.keepers {
             if !distinct(&k.operators) || !k.rule.fits(&k.operators) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "the keepers' rule does not fit the keepers",
                 ));
             }
         }
         for list in [&self.arbitrators, &self.extensions].into_iter().flatten() {
             if !distinct(list) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a list names the same identity or cMIP twice",
                 ));
             }
@@ -1513,43 +1513,43 @@ impl Terms {
                 Rule::Named(n) => !n.is_empty() && distinct(n),
             };
             if !ok {
-                return Err(LawError::Check("the release rule is a rule among a stake's holders"));
+                return Err(AgreementsError::Check("the release rule is a rule among a stake's holders"));
             }
         }
         if let Some(x) = &self.settles {
             if self.parent.is_none() || self.is_collective() {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "only a deal's clone names the tips it settles (field 26, rule 45b, F186); a collective's forks are settled by its records (rule 47)",
                 ));
             }
             if self.parent.as_ref().is_some_and(|p| x.contains(p)) {
-                return Err(LawError::Check("a version settles the other branches, never its own parent (field 26, F186)"));
+                return Err(AgreementsError::Check("a version settles the other branches, never its own parent (field 26, F186)"));
             }
             if !x.windows(2).all(|w| w[0] < w[1]) {
-                return Err(LawError::Check("the tips a version settles are ascending, none twice (field 26, QF3)"));
+                return Err(AgreementsError::Check("the tips a version settles are ascending, none twice (field 26, QF3)"));
             }
         }
         if let Some(j) = &self.fork_judge {
             if self.is_collective() {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "only a deal names the judge of its forks (field 27, QF2); a collective's forks are settled by its records (rule 47)",
                 ));
             }
             if !self.arbitrators.iter().flatten().any(|a| a == j) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "the judge of a deal's forks is one of its arbitrators or verifiers (field 27 among field 13, QF2)",
                 ));
             }
         }
         if self.forked_from.is_some() && (self.parent.is_some() || !self.is_collective()) {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "only a collective's founding terms name the original it forked from (F121)",
             ));
         }
         if let Some(a) = &self.abandonment {
             if let Authority::Others(k) = a.authority {
                 if k == 0 || k >= parties.len() as u64 {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "the abandonment authority's threshold does not fit the other parties",
                     ));
                 }
@@ -1558,7 +1558,7 @@ impl Terms {
                 || a.outcomes.iter().any(|o| *o > outcomes::AGREEMENT_CLOSED)
                 || a.outcomes.windows(2).any(|w| w[0] >= w[1])
             {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "the abandonment clause lists unknown or repeated outcomes",
                 ));
             }
@@ -1569,25 +1569,25 @@ impl Terms {
             let departed = self.departed.iter().flatten().any(|d| d == &s.party);
             let stake_only = s.seats.is_none() && s.entry.is_none() && s.stakes.is_some();
             if !parties.contains(&s.party) && !(departed && stake_only) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a succession plan is for someone who is not a party (a departed holder's carries only its stake part, M1)",
                 ));
             }
             if let Some(st) = &s.stakes {
                 if st.iter().map(|(_, n)| *n as u128).sum::<u128>() != MILLION as u128 {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "stake successors' shares do not sum to 1,000,000",
                     ));
                 }
             }
             if matches!(s.entry, Some(e) if e > 1) {
-                return Err(LawError::Check("seat entry is 0 or 1"));
+                return Err(AgreementsError::Check("seat entry is 0 or 1"));
             }
         }
         if let Some(plans) = &self.succession {
             let who: Vec<Hash> = plans.iter().map(|p| p.party).collect();
             if !distinct(&who) {
-                return Err(LawError::Check("two succession plans for one party"));
+                return Err(AgreementsError::Check("two succession plans for one party"));
             }
         }
         if let Some(g) = &self.grammar {
@@ -1599,7 +1599,7 @@ impl Terms {
                 // judged per party, under the version each signed (the view).
                 for p in self.constitutional_rule().counted_among(parties) {
                     if !self.abandonment.as_ref().is_some_and(|a| a.covers(&p)) {
-                        return Err(LawError::Check(
+                        return Err(AgreementsError::Check(
                             "a member with constitutional power is not covered by an abandonment clause able to remove their voice (F105)",
                         ));
                     }
@@ -1614,7 +1614,7 @@ impl Terms {
     fn check_judges(&self) -> R<()> {
         if let (Some((t, _)), Some(c)) = (&self.time, self.cmip(TIME_REFERENCE_TASK)) {
             if t != c {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "the time reference (field 6) and the cMIP for task 10 name different specifications (Q31)",
                 ));
             }
@@ -1639,12 +1639,12 @@ impl Terms {
             let as_time = self.time.as_ref().is_some_and(|(t, _)| t == j)
                 && !tasks.contains(&TIME_REFERENCE_TASK);
             if tasks.len() + as_time as usize > 1 {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a judge never handles what it judges: a specification named for a judicial task is named for no other task (Q20, Q25)",
                 ));
             }
             if self.extensions().contains(j) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a judge never handles what it judges: a specification named for a judicial task is no extension (Q25)",
                 ));
             }
@@ -1658,7 +1658,7 @@ impl Terms {
                 || self.time.as_ref().is_some_and(|(t, _)| t == p)
                 || self.extensions().contains(p);
             if elsewhere {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a judge never handles what it judges: the absence-proof cMIP the abandonment clause names serves no other task and is no extension (F172, F178)",
                 ));
             }
@@ -1686,7 +1686,7 @@ impl Terms {
         let Some(chain) = &self.chain else { return Ok(()) };
         for w in chain.windows(2) {
             if w[0].judge.encoding() >= w[1].judge.encoding() {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "the chain of judgment's links are ascending by their judge, no judge twice (F121)",
                 ));
             }
@@ -1702,7 +1702,7 @@ impl Terms {
                     match self.task_judge(*t) {
                         Some(h) if JUDICIAL_TASKS.contains(t) => h,
                         _ => {
-                            return Err(LawError::Check(
+                            return Err(AgreementsError::Check(
                                 "the chain of judgment follows a judicial task the terms name no judge for (F121)",
                             ))
                         }
@@ -1713,7 +1713,7 @@ impl Terms {
                         || self.arbitrators.iter().flatten().any(|a| a == x)
                         || authority.as_ref() == Some(x);
                     if !named {
-                        return Err(LawError::Check(
+                        return Err(AgreementsError::Check(
                             "the chain of judgment follows an identity the terms name as no keeper, arbitrator or authority (F121)",
                         ));
                     }
@@ -1726,21 +1726,21 @@ impl Terms {
                     // field 14 lists; every grant is listed once.
                     (None, Some(list)) => {
                         if !l.next.iter().all(|(t, _)| matches!(t, Taker::Grants(g) if g.len() == list.len())) {
-                            return Err(LawError::Check(
+                            return Err(AgreementsError::Check(
                                 "in a deal, each service taking over from the split service is a group of grants, one per payee, as many as field 14 lists (F130, H6)",
                             ));
                         }
                         let mut all = list.clone();
                         all.extend(l.successors());
                         if !distinct(&all) {
-                            return Err(LawError::Check(
+                            return Err(AgreementsError::Check(
                                 "a deal lists each grant to its split service, and to each service taking over, once (F130, H6)",
                             ));
                         }
                         list[0]
                     }
                     (None, None) => {
-                        return Err(LawError::Check(
+                        return Err(AgreementsError::Check(
                             "the chain of judgment follows a split service the terms do not name (F121)",
                         ))
                     }
@@ -1749,18 +1749,18 @@ impl Terms {
             // A group of grants takes over only from a deal's split service.
             let grouped = l.next.iter().any(|(t, _)| matches!(t, Taker::Grants(_)));
             if grouped && (l.judge != Judge::SplitService || self.payee_grants.is_none()) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a group of grants takes over only from a deal's split service; every other one that takes over is one hash (F130, H6)",
                 ));
             }
             let next = l.successors();
             if l.next.iter().any(|(_, p)| *p == 0) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "every link of the chain of judgment names a period above zero (Q7)",
                 ));
             }
             if !distinct(&next) || next.contains(&judge) {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "those that take over from a judge are distinct, and none is the judge itself (F121)",
                 ));
             }
@@ -1772,7 +1772,7 @@ impl Terms {
                         || self.abandonment.as_ref().and_then(|a| a.proof.as_ref()).is_some_and(|(p, _)| p == h)
                         || fallbacks.contains(h);
                     if elsewhere {
-                        return Err(LawError::Check(
+                        return Err(AgreementsError::Check(
                             "a judge never handles what it judges: a specification that takes over from a judge is named nowhere else in the terms (F121, Q20)",
                         ));
                     }
@@ -1786,7 +1786,7 @@ impl Terms {
             && self.time.is_none()
             && self.cmip(TIME_REFERENCE_TASK).is_none()
         {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "a chain of judgment following a judge that can stay silent needs a time reference (Q7)",
             ));
         }
@@ -1800,18 +1800,18 @@ impl Terms {
     fn check_departed(&self) -> R<()> {
         let Some(d) = &self.departed else { return Ok(()) };
         if !self.is_collective() {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "a departed members entry belongs to a collective (F121)",
             ));
         }
         if !distinct(d) || d.iter().any(|h| self.parties.contains(h)) {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "a departed members entry names each holder once, and no party (F121)",
             ));
         }
         let own = self.own_stake().map(|(_, s)| s);
         if d.iter().any(|h| own.is_none_or(|s| s.share_of(&Who::Id(*h)) == 0)) {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "a departed holder holds a share of the stake in the collective itself (field 7): the entry records only that they are departed (N5)",
             ));
         }
@@ -1825,10 +1825,10 @@ impl Terms {
         let Some(st) = &self.stakes else { return Ok(()) };
         let objects: Vec<Who> = st.iter().map(|s| s.object).collect();
         if objects.iter().enumerate().any(|(i, o)| objects[..i].contains(o)) {
-            return Err(LawError::Check("two stakes on one object"));
+            return Err(AgreementsError::Check("two stakes on one object"));
         }
         // Shares are summed wide: summed in 64 bits, shares near the top
-        // could wrap round to exactly 1,000,000 and pass (found by the Law
+        // could wrap round to exactly 1,000,000 and pass (found by the Agreements
         // invariants, `docs/law-invariants.md`, IC7).
         for s in st {
             let who: Vec<Who> = s.holders.iter().map(|(h, _)| *h).collect();
@@ -1836,18 +1836,18 @@ impl Terms {
                 || s.holders.iter().any(|(_, n)| *n == 0)
                 || s.holders.iter().map(|(_, n)| *n as u128).sum::<u128>() != MILLION as u128
             {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a stake's holders are distinct, each share above zero, summing to 1,000,000 (rule 15a)",
                 ));
             }
             let this = s.object == Who::This || who.contains(&Who::This);
             if this && !self.is_collective() {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "null names this collective: only a collective's terms use it (S1)",
                 ));
             }
             if s.object == Who::This && who.contains(&Who::This) {
-                return Err(LawError::Check("a collective holds no stake in itself"));
+                return Err(AgreementsError::Check("a collective holds no stake in itself"));
             }
         }
         Ok(())
@@ -1876,35 +1876,35 @@ impl Terms {
         let areas = self.areas();
         let ids: Vec<u64> = areas.iter().map(|a| a.id).collect();
         if ids.iter().enumerate().any(|(i, x)| ids[..i].contains(x)) {
-            return Err(LawError::Check("two areas carry the same id (Q32)"));
+            return Err(AgreementsError::Check("two areas carry the same id (Q32)"));
         }
         for a in areas {
             if !distinct(&a.holders) || !a.holders.iter().all(|h| self.parties.contains(h)) {
-                return Err(LawError::Check("an area's holders are distinct parties"));
+                return Err(AgreementsError::Check("an area's holders are distinct parties"));
             }
             if a.holders.is_empty() && self.parent.is_none() {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "founding terms never list an area without holders (Q21)",
                 ));
             }
             if a.threshold == 0 {
-                return Err(LawError::Check("an area's number is at least 1"));
+                return Err(AgreementsError::Check("an area's number is at least 1"));
             }
             if a.kinds.is_none() && a.fields.is_none() {
-                return Err(LawError::Check("an area reaches at least one act kind or one field"));
+                return Err(AgreementsError::Check("an area reaches at least one act kind or one field"));
             }
             for k in a.kinds.iter().flatten() {
                 match k {
-                    Kind::Layer(l) if *l > layers::PRODUCTION => {
-                        return Err(LawError::Check("an area names a layer that does not exist"))
+                    Kind::Layer(l) if *l > layers::DEVELOPMENT => {
+                        return Err(AgreementsError::Check("an area names a layer that does not exist"))
                     }
                     Kind::Type { spec, type_ }
                         if (spec == &mips.identity && (*type_ == 0 || *type_ == 1))
-                            || (spec == &mips.law && *type_ == crate::law::types::RECORD) =>
+                            || (spec == &mips.agreements && *type_ == crate::agreements::types::RECORD) =>
                     {
                         // Genesis, rotations and records are never in an
                         // area's reach ("Areas").
-                        return Err(LawError::Check(
+                        return Err(AgreementsError::Check(
                             "genesis, rotations and records are never in an area's reach",
                         ));
                     }
@@ -1918,7 +1918,7 @@ impl Terms {
                     FieldRef::Task(t) => (1..=LAST_TASK).contains(t) && !JUDICIAL_TASKS.contains(t),
                 };
                 if !ok {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "an area's field references name only operational fields and tasks",
                     ));
                 }
@@ -1930,13 +1930,13 @@ impl Terms {
                 for x in a.kinds.iter().flatten() {
                     for y in b2.kinds.iter().flatten() {
                         if self.kinds_overlap(mips, x, y) {
-                            return Err(LawError::Check("two areas reach the same acts (Q5)"));
+                            return Err(AgreementsError::Check("two areas reach the same acts (Q5)"));
                         }
                     }
                 }
                 for x in a.fields.iter().flatten() {
                     if b2.fields.iter().flatten().any(|y| y == x) {
-                        return Err(LawError::Check("two areas reach the same field (Q5)"));
+                        return Err(AgreementsError::Check("two areas reach the same field (Q5)"));
                     }
                 }
                 // A lane overlaps a field reference to a task of its layer.
@@ -1944,7 +1944,7 @@ impl Terms {
                     for f in q.fields.iter().flatten() {
                         if let FieldRef::Task(t) = f {
                             if task_layer(*t).is_some_and(|l| p.is_lane(l)) {
-                                return Err(LawError::Check(
+                                return Err(AgreementsError::Check(
                                     "a lane and another area both reach a task of its layer (Q5)",
                                 ));
                             }
@@ -1957,10 +1957,10 @@ impl Terms {
             let mut last = None;
             for (id, _) in w {
                 if !ids.contains(id) {
-                    return Err(LawError::Check("area words for an area that does not exist"));
+                    return Err(AgreementsError::Check("area words for an area that does not exist"));
                 }
                 if last.is_some_and(|l| l >= *id) {
-                    return Err(LawError::Shape("area words, ascending by id"));
+                    return Err(AgreementsError::Shape("area words, ascending by id"));
                 }
                 last = Some(*id);
             }
@@ -1968,7 +1968,7 @@ impl Terms {
         Ok(())
     }
 
-    /// Law rule 36 with F96: the grammar fits the parties, and leaves a way
+    /// Agreements rule 36 with F96: the grammar fits the parties, and leaves a way
     /// to rotate that survives the loss of any one key holder.
     fn check_grammar(&self, g: &KeyGrammar) -> R<()> {
         let parties = &self.parties;
@@ -1980,7 +1980,7 @@ impl Terms {
                     || *threshold == 0
                     || *threshold > members.len() as u64
                 {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "a holding's members or threshold do not fit the parties",
                     ));
                 }
@@ -1993,7 +1993,7 @@ impl Terms {
                     ..
                 }) if a == authority => {}
                 _ => {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "an escrowed share is released by the abandonment authority, which the clause must name",
                     ))
                 }
@@ -2002,14 +2002,14 @@ impl Terms {
         match &g.safety {
             Holding::Shares { threshold, members } => {
                 if *threshold == members.len() as u64 && g.recovery.is_none() {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "the grammar needs every member to rotate and names no recovery path",
                     ));
                 }
             }
             Holding::One(holder) => {
                 if !matches!(g.recovery, Some(Recovery::Escrow { .. })) {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "one holder keeps the safety key and no escrowed share is named for a successor (F96)",
                     ));
                 }
@@ -2018,7 +2018,7 @@ impl Terms {
                         &p.party == holder && p.seats.as_ref().is_some_and(|s| !s.is_empty())
                     });
                 if !has_successor {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "one holder keeps the safety key and no successor to the seat is named (F96)",
                     ));
                 }
@@ -2030,7 +2030,7 @@ impl Terms {
                     None => false,
                 };
                 if !other {
-                    return Err(LawError::Check(
+                    return Err(AgreementsError::Check(
                         "one custodian keeps the safety key and no recovery path held by another is named (F96)",
                     ));
                 }
@@ -2044,11 +2044,11 @@ impl Terms {
 /// no power twice, each with distinct signers.
 fn check_mark_shape(m: &[MarkEntry]) -> R<()> {
     if m.is_empty() {
-        return Err(LawError::Shape("a mark names at least one power"));
+        return Err(AgreementsError::Shape("a mark names at least one power"));
     }
     for w in m.windows(2) {
         if w[0].power.encoding() >= w[1].power.encoding() {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "a mark's powers are ascending by their encoding, no power twice",
             ));
         }
@@ -2057,7 +2057,7 @@ fn check_mark_shape(m: &[MarkEntry]) -> R<()> {
         // Ascending by hash, so one meaning has one encoding (B8); that
         // also names no signer twice.
         if e.signers.is_empty() || e.signers.windows(2).any(|w| w[0] >= w[1]) {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "a mark's signers for a power are ascending by hash, none twice (B8)",
             ));
         }
@@ -2074,10 +2074,10 @@ pub fn decode_signature(inside: &Inside) -> R<Hash> {
     for (k, v) in &inside.payload {
         match k {
             Value::Uint(0) => signed = Some(hash(v, "signature: the act signed")?),
-            _ => return Err(LawError::Shape("signature: unknown field")),
+            _ => return Err(AgreementsError::Shape("signature: unknown field")),
         }
     }
-    let signed = signed.ok_or(LawError::Shape("signature: the act signed"))?;
+    let signed = signed.ok_or(AgreementsError::Shape("signature: the act signed"))?;
     check_objects_self(inside, &signed, "signature: objects must name the act signed")?;
     Ok(signed)
 }
@@ -2096,7 +2096,7 @@ pub fn chain_citations(objects: &[Object], own: usize) -> R<(&[Object], &[Object
     let (a, c) = objects.split_at(own.min(objects.len()));
     if let Some(first) = c.first() {
         if c.iter().any(|o| o.chain != first.chain) || a.iter().any(|o| o.chain == first.chain) {
-            return Err(LawError::Shape(
+            return Err(AgreementsError::Shape(
                 "objects: after the entries the type defines, only citations of one collective's chain (F127)",
             ));
         }
@@ -2112,7 +2112,7 @@ pub(crate) fn check_objects_self(inside: &Inside, x: &Hash, w: &'static str) -> 
     let o = inside.objects.as_deref().unwrap_or(&[]);
     match chain_citations(o, 1) {
         Ok((own, _)) if own == &expected[..] => Ok(()),
-        _ => Err(LawError::Shape(w)),
+        _ => Err(AgreementsError::Shape(w)),
     }
 }
 
@@ -2126,7 +2126,7 @@ fn check_objects_ending(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
     let first = o.first().is_some_and(|e| &e.chain == x && &e.predecessor == x);
     let ends: Vec<Hash> = o.iter().skip(1).take(named).map(|e| e.predecessor).collect();
     if !first || ends.contains(x) || !distinct(&ends) || chain_citations(&o[1 + named..], 0).is_err() {
-        return Err(LawError::Shape(w));
+        return Err(AgreementsError::Shape(w));
     }
     Ok(())
 }
@@ -2139,7 +2139,7 @@ pub(crate) fn check_terms_inside(inside: &Inside, t: &Terms) -> R<()> {
     match &t.parent {
         None => match chain_citations(o, 0) {
             Ok(_) => Ok(()),
-            Err(_) => Err(LawError::Shape("terms without a parent name no chain")),
+            Err(_) => Err(AgreementsError::Shape("terms without a parent name no chain")),
         },
         // F189 (6): a settling version also cites each tip it settles,
         // `[tip, tip]`, after its parent, in field 26's order, so that a
@@ -2151,7 +2151,7 @@ pub(crate) fn check_terms_inside(inside: &Inside, t: &Terms) -> R<()> {
                 && &o[0].chain == p
                 && o[1..n].iter().zip(tips).all(|(e, x)| e.chain == *x && e.predecessor == *x);
             if !own_ok {
-                return Err(LawError::Shape(if tips.is_empty() {
+                return Err(AgreementsError::Shape(if tips.is_empty() {
                     "a clone names its parent's chain in objects, once"
                 } else {
                     "a settling version names its parent's chain in objects, then each tip it settles as chain and predecessor (F189, 6)"
@@ -2161,7 +2161,7 @@ pub(crate) fn check_terms_inside(inside: &Inside, t: &Terms) -> R<()> {
             if t.is_collective() {
                 return match chain_citations(rest, 0) {
                     Ok(_) if !rest.iter().any(|e| &e.chain == p) => Ok(()),
-                    _ => Err(LawError::Shape("a clone names its parent's chain in objects, once")),
+                    _ => Err(AgreementsError::Shape("a clone names its parent's chain in objects, once")),
                 };
             }
             // A deal's version may cite acts it was made after, each
@@ -2177,7 +2177,7 @@ pub(crate) fn check_terms_inside(inside: &Inside, t: &Terms) -> R<()> {
             if fine {
                 Ok(())
             } else {
-                Err(LawError::Shape("a deal's version cites, after its parent and the tips it settles, the acts it was made after, each as chain and predecessor, none twice, then a collective's chain"))
+                Err(AgreementsError::Shape("a deal's version cites, after its parent and the tips it settles, the acts it was made after, each as chain and predecessor, none twice, then a collective's chain"))
             }
         }
     }
@@ -2246,13 +2246,13 @@ impl Resignation {
                         .map(|x| hash(x, "resignation: a draft left behind"))
                         .collect::<R<Vec<_>>>()?;
                     if !drafts.windows(2).all(|w| w[0] < w[1]) {
-                        return Err(LawError::Check("resignation: the drafts left behind are ascending, none twice (F207)"));
+                        return Err(AgreementsError::Check("resignation: the drafts left behind are ascending, none twice (F207)"));
                     }
                 }
-                _ => return Err(LawError::Shape("resignation: unknown field")),
+                _ => return Err(AgreementsError::Shape("resignation: unknown field")),
             }
         }
-        let agreement = agreement.ok_or(LawError::Shape("resignation: the agreement"))?;
+        let agreement = agreement.ok_or(AgreementsError::Shape("resignation: the agreement"))?;
         check_objects_self(inside, &agreement, "resignation: objects must name the agreement")?;
         Ok(Resignation { agreement, area, drafts })
     }
@@ -2284,10 +2284,10 @@ impl Contest {
         for (k, v) in &inside.payload {
             match k {
                 Value::Uint(0) => declaration = Some(hash(v, "contest: the declaration")?),
-                _ => return Err(LawError::Shape("contest: unknown field (only a declaration of absence's format is written, BQ4)")),
+                _ => return Err(AgreementsError::Shape("contest: unknown field (only a declaration of absence's format is written, BQ4)")),
             }
         }
-        let declaration = declaration.ok_or(LawError::Shape("contest: the declaration"))?;
+        let declaration = declaration.ok_or(AgreementsError::Shape("contest: the declaration"))?;
         check_objects_self(inside, &declaration, "contest: objects must name the declaration")?;
         Ok(Contest { declaration })
     }
@@ -2315,10 +2315,10 @@ impl SettlementRequest {
         for (k, v) in &inside.payload {
             match k {
                 Value::Uint(0) => reference = Some(hash(v, "settlement request: the reference")?),
-                _ => return Err(LawError::Shape("settlement request: unknown field")),
+                _ => return Err(AgreementsError::Shape("settlement request: unknown field")),
             }
         }
-        let reference = reference.ok_or(LawError::Shape("settlement request: the reference"))?;
+        let reference = reference.ok_or(AgreementsError::Shape("settlement request: the reference"))?;
         check_objects_self(inside, &reference, "settlement request: objects must name the reference")?;
         Ok(SettlementRequest { reference })
     }
@@ -2353,11 +2353,11 @@ impl Notice {
                     let a = tuple(v, 2, "notice: the deadline")?;
                     deadline = Some((hash(&a[0], "notice: the deadline's time reference")?, a[1].clone()));
                 }
-                _ => return Err(LawError::Shape("notice: unknown field")),
+                _ => return Err(AgreementsError::Shape("notice: unknown field")),
             }
         }
-        let payment = payment.ok_or(LawError::Shape("notice: the payment owed back"))?;
-        let deadline = deadline.ok_or(LawError::Shape("notice: the deadline"))?;
+        let payment = payment.ok_or(AgreementsError::Shape("notice: the payment owed back"))?;
+        let deadline = deadline.ok_or(AgreementsError::Shape("notice: the deadline"))?;
         check_objects_self(inside, &payment, "notice: objects must name the payment owed back")?;
         Ok(Notice { payment, deadline })
     }
@@ -2390,15 +2390,15 @@ impl ForkSettlement {
                 Value::Uint(0) => request = Some(hash(v, "fork settlement: the request")?),
                 Value::Uint(1) => kept = Some(hash(v, "fork settlement: the tip kept")?),
                 Value::Uint(2) => discarded = Some(hashes(v, "fork settlement: the tips discarded")?),
-                _ => return Err(LawError::Shape("fork settlement: unknown field")),
+                _ => return Err(AgreementsError::Shape("fork settlement: unknown field")),
             }
         }
-        let request = request.ok_or(LawError::Shape("fork settlement: the request"))?;
+        let request = request.ok_or(AgreementsError::Shape("fork settlement: the request"))?;
         check_objects_self(inside, &request, "fork settlement: objects must name the request")?;
-        let kept = kept.ok_or(LawError::Shape("fork settlement: the tip kept"))?;
-        let discarded = discarded.ok_or(LawError::Shape("fork settlement: the tips discarded"))?;
+        let kept = kept.ok_or(AgreementsError::Shape("fork settlement: the tip kept"))?;
+        let discarded = discarded.ok_or(AgreementsError::Shape("fork settlement: the tips discarded"))?;
         if !discarded.windows(2).all(|w| w[0] < w[1]) || discarded.contains(&kept) {
-            return Err(LawError::Check("fork settlement: the tips discarded are ascending, none twice, none the tip kept (QF3)"));
+            return Err(AgreementsError::Check("fork settlement: the tips discarded are ascending, none twice, none the tip kept (QF3)"));
         }
         Ok(ForkSettlement { request, kept, discarded })
     }
@@ -2452,19 +2452,19 @@ impl AbsenceDeclaration {
                             .collect::<R<Vec<u64>>>()?,
                     )
                 }
-                _ => return Err(LawError::Shape("declaration: unknown field")),
+                _ => return Err(AgreementsError::Shape("declaration: unknown field")),
             }
         }
         let d = AbsenceDeclaration {
-            agreement: agreement.ok_or(LawError::Shape("declaration: the agreement"))?,
-            clause: clause.ok_or(LawError::Shape("declaration: the clause's version"))?,
-            party: party.ok_or(LawError::Shape("declaration: the party"))?,
-            outcomes: outs.ok_or(LawError::Shape("declaration: outcomes"))?,
+            agreement: agreement.ok_or(AgreementsError::Shape("declaration: the agreement"))?,
+            clause: clause.ok_or(AgreementsError::Shape("declaration: the clause's version"))?,
+            party: party.ok_or(AgreementsError::Shape("declaration: the party"))?,
+            outcomes: outs.ok_or(AgreementsError::Shape("declaration: outcomes"))?,
         };
         if d.outcomes.iter().any(|o| *o > outcomes::AGREEMENT_CLOSED)
             || d.outcomes.windows(2).any(|w| w[0] >= w[1])
         {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "a declaration's outcomes are known ones, ascending, none twice",
             ));
         }
@@ -2522,11 +2522,11 @@ impl Record {
         for (k, v) in &inside.payload {
             match k {
                 Value::Uint(n) if *n <= 3 => f.push((*n, v)),
-                _ => return Err(LawError::Shape("record: unknown field")),
+                _ => return Err(AgreementsError::Shape("record: unknown field")),
             }
         }
         let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
-        let kept = match get(1).ok_or(LawError::Shape("record: kept tips"))? {
+        let kept = match get(1).ok_or(AgreementsError::Shape("record: kept tips"))? {
             Value::Array(a) => a
                 .iter()
                 .map(|t| {
@@ -2538,7 +2538,7 @@ impl Record {
                     })
                 })
                 .collect::<R<Vec<_>>>()?,
-            _ => return Err(LawError::Shape("record: kept tips")),
+            _ => return Err(AgreementsError::Shape("record: kept tips")),
         };
         let r = Record {
             clone: get(0).map(|v| hash(v, "record: the clone")).transpose()?,
@@ -2547,27 +2547,27 @@ impl Record {
             registers: get(3).map(|v| hashes(v, "record: registrations")).transpose()?,
         };
         if r.clone.is_some() != r.signatures.is_some() {
-            return Err(LawError::Shape(
+            return Err(AgreementsError::Shape(
                 "record: field 2 is present exactly when field 0 is",
             ));
         }
         if r.clone.is_none() && r.registers.is_none() {
-            return Err(LawError::Shape("record: at least one of fields 0 and 3"));
+            return Err(AgreementsError::Shape("record: at least one of fields 0 and 3"));
         }
         let o = inside.objects.as_deref().unwrap_or(&[]);
         if o.len() != 1 || o[0].chain != o[0].predecessor {
-            return Err(LawError::Shape(
+            return Err(AgreementsError::Shape(
                 "record: objects name the clone, or the agreement in force, as chain and predecessor",
             ));
         }
         if let Some(c) = &r.clone {
             if &o[0].chain != c {
-                return Err(LawError::Shape("record: objects must name its clone"));
+                return Err(AgreementsError::Shape("record: objects must name its clone"));
             }
         }
         for s in [&r.signatures, &r.registers].into_iter().flatten() {
             if !distinct(s) {
-                return Err(LawError::Check("a record names one act twice"));
+                return Err(AgreementsError::Check("a record names one act twice"));
             }
         }
         Ok(r)
@@ -2664,13 +2664,13 @@ impl Grant {
         for (k, v) in p {
             match k {
                 Value::Uint(n) if *n <= 9 => f.push((*n, v)),
-                _ => return Err(LawError::Shape("grant: unknown field")),
+                _ => return Err(AgreementsError::Shape("grant: unknown field")),
             }
         }
         let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
         let g = Grant {
-            grantee: hash(get(0).ok_or(LawError::Shape("grant: grantee"))?, "grant: grantee")?,
-            scope: uint(get(1).ok_or(LawError::Shape("grant: scope"))?, "grant: scope")?,
+            grantee: hash(get(0).ok_or(AgreementsError::Shape("grant: grantee"))?, "grant: grantee")?,
+            scope: uint(get(1).ok_or(AgreementsError::Shape("grant: scope"))?, "grant: scope")?,
             agreements: match get(2) {
                 Some(Value::Null) | None => None,
                 Some(v) => Some(hashes(v, "grant: agreements")?),
@@ -2686,29 +2686,29 @@ impl Grant {
             by_this: match get(8) {
                 None => false,
                 Some(Value::Null) => true,
-                Some(_) => return Err(LawError::Shape("grant: field 8 is null, this collective (S1)")),
+                Some(_) => return Err(AgreementsError::Shape("grant: field 8 is null, this collective (S1)")),
             },
-            key: crate::identity::signing_key(get(9).ok_or(LawError::Shape("grant: field 9, the grant key (F128)"))?)
-                .map_err(|_| LawError::Shape("grant: field 9, the grant key, is a signing key (F128)"))?,
+            key: crate::identity::signing_key(get(9).ok_or(AgreementsError::Shape("grant: field 9, the grant key (F128)"))?)
+                .map_err(|_| AgreementsError::Shape("grant: field 9, the grant key, is a signing key (F128)"))?,
         };
         if g.by_this && (g.area.is_some() || g.reinstates.is_some()) {
-            return Err(LawError::Shape(
+            return Err(AgreementsError::Shape(
                 "grant: a grant of this collective by its founding terms (field 8) names no area and reinstates nothing",
             ));
         }
         if g.this_agreement && (g.scope != 1 || g.by_this || g.area.is_some() || g.reinstates.is_some()) {
-            return Err(LawError::Shape(
+            return Err(AgreementsError::Shape(
                 "grant: a grant naming this agreement by null (F129, H4) manages that deal (scope 1), and names no area, reinstates nothing and is not a collective's founding grant",
             ));
         }
         if g.scope > 2 {
-            return Err(LawError::Check("a grant's scope is 0, 1 or 2"));
+            return Err(AgreementsError::Check("a grant's scope is 0, 1 or 2"));
         }
         if g.area.is_some() && g.kinds.is_none() {
-            return Err(LawError::Shape("grant: field 6 is required with field 5"));
+            return Err(AgreementsError::Shape("grant: field 6 is required with field 5"));
         }
         if g.reinstates.is_some() && g.area.is_none() {
-            return Err(LawError::Shape("grant: field 7 only with field 5"));
+            return Err(AgreementsError::Shape("grant: field 7 only with field 5"));
         }
         Ok(g)
     }
@@ -2735,18 +2735,18 @@ impl Revocation {
         for (k, v) in p {
             match k {
                 Value::Uint(0) => grant = Some(hash(v, "revocation: the grant")?),
-                _ => return Err(LawError::Shape("revocation: unknown field")),
+                _ => return Err(AgreementsError::Shape("revocation: unknown field")),
             }
         }
         Ok(Revocation {
-            grant: grant.ok_or(LawError::Shape("revocation: the grant"))?,
+            grant: grant.ok_or(AgreementsError::Shape("revocation: the grant"))?,
         })
     }
 }
 
 // ---------------------------------------------------------------- declarations
 
-/// A collective's Law declaration of kind 0: at genesis, the founding terms;
+/// A collective's Agreements declaration of kind 0: at genesis, the founding terms;
 /// at a rotation, a constitutional clone and the signature acts completing
 /// it (Flaw M), and, at a recovery rotation, the signature acts on the
 /// declaration taking effect there (Flaw B18); at a rollback (rule 37d,
@@ -2768,17 +2768,17 @@ pub struct Rollback {
     pub registers: Vec<Hash>,
 }
 
-/// The Law declaration of kind 0 among these declarations, decoded. `None`
+/// The Agreements declaration of kind 0 among these declarations, decoded. `None`
 /// when there is none; `Err` when its value is in neither form.
-pub fn declared_in(ds: &[Declaration], law: &Hash) -> Option<R<Declared>> {
+pub fn declared_in(ds: &[Declaration], agreements: &Hash) -> Option<R<Declared>> {
     ds.iter()
-        .find(|d| &d.spec == law && d.kind == kinds::FOUNDING_AGREEMENT)
+        .find(|d| &d.spec == agreements && d.kind == kinds::FOUNDING_AGREEMENT)
         .map(|d| match &d.value {
             Some(Value::Bytes(x)) => Ok(Declared {
                 agreement: x
                     .as_slice()
                     .try_into()
-                    .map_err(|_| LawError::Shape("Law declaration"))?,
+                    .map_err(|_| AgreementsError::Shape("Agreements declaration"))?,
                 signatures: None,
                 absence: None,
                 rollback: None,
@@ -2786,37 +2786,37 @@ pub fn declared_in(ds: &[Declaration], law: &Hash) -> Option<R<Declared>> {
             // A rollback: `[clone, [+ hash], broken, [* hash]]`, its third
             // element a hash, where the recovery form has a list (F185).
             Some(Value::Array(a)) if a.len() == 4 => Ok(Declared {
-                agreement: hash(&a[0], "Law declaration: the clone")?,
-                signatures: Some(hashes(&a[1], "Law declaration: signatures")?),
+                agreement: hash(&a[0], "Agreements declaration: the clone")?,
+                signatures: Some(hashes(&a[1], "Agreements declaration: signatures")?),
                 absence: None,
                 rollback: Some(Rollback {
-                    broken: hash(&a[2], "Law declaration: the broken act")?,
+                    broken: hash(&a[2], "Agreements declaration: the broken act")?,
                     registers: match &a[3] {
                         Value::Array(x) => x
                             .iter()
-                            .map(|h| hash(h, "Law declaration: what a rollback registers"))
+                            .map(|h| hash(h, "Agreements declaration: what a rollback registers"))
                             .collect::<R<_>>()?,
-                        _ => return Err(LawError::Shape("Law declaration: what a rollback registers")),
+                        _ => return Err(AgreementsError::Shape("Agreements declaration: what a rollback registers")),
                     },
                 }),
             }),
             Some(Value::Array(a)) if a.len() == 2 || a.len() == 3 => Ok(Declared {
-                agreement: hash(&a[0], "Law declaration: the clone")?,
-                signatures: Some(hashes(&a[1], "Law declaration: signatures")?),
+                agreement: hash(&a[0], "Agreements declaration: the clone")?,
+                signatures: Some(hashes(&a[1], "Agreements declaration: signatures")?),
                 absence: a
                     .get(2)
-                    .map(|x| hashes(x, "Law declaration: signatures on a declaration"))
+                    .map(|x| hashes(x, "Agreements declaration: signatures on a declaration"))
                     .transpose()?,
                 rollback: None,
             }),
-            _ => Err(LawError::Shape("Law declaration")),
+            _ => Err(AgreementsError::Shape("Agreements declaration")),
         })
 }
 
 /// The declaration a collective's genesis carries: its founding terms.
-pub fn founding_declaration(law: &Hash, agreement: &Hash) -> Declaration {
+pub fn founding_declaration(agreements: &Hash, agreement: &Hash) -> Declaration {
     Declaration {
-        spec: *law,
+        spec: *agreements,
         kind: kinds::FOUNDING_AGREEMENT,
         value: Some(b(agreement)),
     }
@@ -2824,9 +2824,9 @@ pub fn founding_declaration(law: &Hash, agreement: &Hash) -> Declaration {
 
 /// The declaration a rotation carries for a constitutional clone: the clone
 /// and the signature acts that complete it (Flaw M).
-pub fn clone_declaration(law: &Hash, clone: &Hash, signatures: &[Hash]) -> Declaration {
+pub fn clone_declaration(agreements: &Hash, clone: &Hash, signatures: &[Hash]) -> Declaration {
     Declaration {
-        spec: *law,
+        spec: *agreements,
         kind: kinds::FOUNDING_AGREEMENT,
         value: Some(Value::Array(vec![b(clone), hashes_value(signatures)])),
     }
@@ -2836,9 +2836,9 @@ pub fn clone_declaration(law: &Hash, clone: &Hash, signatures: &[Hash]) -> Decla
 /// takes the declared party out, the signature acts that complete it, and
 /// the signature acts on the declaration that takes effect there, which
 /// the rotation places (Flaw B18).
-pub fn recovery_declaration(law: &Hash, clone: &Hash, signatures: &[Hash], absence: &[Hash]) -> Declaration {
+pub fn recovery_declaration(agreements: &Hash, clone: &Hash, signatures: &[Hash], absence: &[Hash]) -> Declaration {
     Declaration {
-        spec: *law,
+        spec: *agreements,
         kind: kinds::FOUNDING_AGREEMENT,
         value: Some(Value::Array(vec![b(clone), hashes_value(signatures), hashes_value(absence)])),
     }
@@ -2848,9 +2848,9 @@ pub fn recovery_declaration(law: &Hash, clone: &Hash, signatures: &[Hash], absen
 /// agreement in force just before the broken act, the signature acts that
 /// complete it, the broken act it names, and the resignations and
 /// steppings down it registers, possibly none.
-pub fn rollback_declaration(law: &Hash, clone: &Hash, signatures: &[Hash], broken: &Hash, registers: &[Hash]) -> Declaration {
+pub fn rollback_declaration(agreements: &Hash, clone: &Hash, signatures: &[Hash], broken: &Hash, registers: &[Hash]) -> Declaration {
     Declaration {
-        spec: *law,
+        spec: *agreements,
         kind: kinds::FOUNDING_AGREEMENT,
         value: Some(Value::Array(vec![
             b(clone),
@@ -2863,7 +2863,7 @@ pub fn rollback_declaration(law: &Hash, clone: &Hash, signatures: &[Hash], broke
 
 // ---------------------------------------------------------------- negotiation message
 
-/// Negotiation message (type 18, F118): a Law act carrying text, by which
+/// Negotiation message (type 18, F118): an Agreements act carrying text, by which
 /// two sides negotiate (rule 56). Its inside names, in `objects`, nothing
 /// for a thread's first message, and `[[thread, previous]]` for every later
 /// one; its `acks` name at most the latest message of the other side its
@@ -2899,18 +2899,18 @@ impl NegotiationMessage {
             match (k, v) {
                 (Value::Uint(0), Value::Text(t)) => text = Some(t.clone()),
                 (Value::Uint(1), _) => format = Some(hash(v, "negotiation message: the format")?),
-                _ => return Err(LawError::Shape("negotiation message: unknown field")),
+                _ => return Err(AgreementsError::Shape("negotiation message: unknown field")),
             }
         }
-        let text = text.ok_or(LawError::Shape("negotiation message: the text"))?;
+        let text = text.ok_or(AgreementsError::Shape("negotiation message: the text"))?;
         if !crate::text::is_canonical(&text) {
-            return Err(LawError::Check("negotiation message: the text is not canonical (Text MIP)"));
+            return Err(AgreementsError::Check("negotiation message: the text is not canonical (Text MIP)"));
         }
         let follows = match inside.objects.as_deref() {
             None => None,
             Some([o]) => Some((o.chain, o.predecessor)),
             Some(_) => {
-                return Err(LawError::Shape(
+                return Err(AgreementsError::Shape(
                     "negotiation message: objects name the thread and the previous message, once",
                 ))
             }
@@ -2919,7 +2919,7 @@ impl NegotiationMessage {
             None | Some([]) => None,
             Some([a]) => Some(*a),
             Some(_) => {
-                return Err(LawError::Shape(
+                return Err(AgreementsError::Shape(
                     "negotiation message: acks name only the latest message received from the other side",
                 ))
             }
@@ -2947,7 +2947,7 @@ fn tips(v: &Value, w: &'static str) -> R<Vec<KeptTip>> {
                 })
             })
             .collect(),
-        _ => Err(LawError::Shape(w)),
+        _ => Err(AgreementsError::Shape(w)),
     }
 }
 
@@ -3055,11 +3055,11 @@ impl Fork {
         for (k, v) in &inside.payload {
             match k {
                 Value::Uint(n) if *n <= 6 => f.push((*n, v)),
-                _ => return Err(LawError::Shape("fork: unknown field")),
+                _ => return Err(AgreementsError::Shape("fork: unknown field")),
             }
         }
         let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
-        let req = |k: u64, w| get(k).ok_or(LawError::Shape(w));
+        let req = |k: u64, w| get(k).ok_or(AgreementsError::Shape(w));
         let sides = nonempty(req(4, "fork: sides")?, "fork: sides")?
             .iter()
             .map(|x| {
@@ -3081,7 +3081,7 @@ impl Fork {
                         index: uint(&a[1], "fork: a share's stake")?,
                         shares: match &a[2] {
                             Value::Array(n) => n.iter().map(|y| uint(y, "fork: share")).collect::<R<Vec<_>>>()?,
-                            _ => return Err(LawError::Shape("fork: shares")),
+                            _ => return Err(AgreementsError::Shape("fork: shares")),
                         },
                     })
                 })
@@ -3113,26 +3113,26 @@ impl Fork {
             debts,
         };
         if x.sides.len() < 2 {
-            return Err(LawError::Check("a fork has at least two sides (F121)"));
+            return Err(AgreementsError::Check("a fork has at least two sides (F121)"));
         }
         let all: Vec<Hash> = x.sides.iter().flat_map(|s| s.members.iter()).copied().collect();
         if !distinct(&all) {
-            return Err(LawError::Check("a member is on one side of a fork at most (F121)"));
+            return Err(AgreementsError::Check("a member is on one side of a fork at most (F121)"));
         }
         let successors: Vec<Hash> = x.sides.iter().map(|s| s.successor).collect();
         if !distinct(&successors) || successors.iter().any(|s| s == &x.collective) {
-            return Err(LawError::Check("each side names its own successor, never the original (N4)"));
+            return Err(AgreementsError::Check("each side names its own successor, never the original (N4)"));
         }
         for sh in &x.shares {
             if sh.shares.len() != x.sides.len() || sh.shares.iter().map(|n| *n as u128).sum::<u128>() != MILLION as u128 {
-                return Err(LawError::Check(
+                return Err(AgreementsError::Check(
                     "a fork's shares name one share per side, in millionths, summing to 1,000,000 (F121)",
                 ));
             }
         }
         for (i, a) in x.shares.iter().enumerate() {
             if x.shares[..i].iter().any(|b2| b2.agreement == a.agreement && b2.index == a.index) {
-                return Err(LawError::Check("a fork names one stake's shares once"));
+                return Err(AgreementsError::Check("a fork names one stake's shares once"));
             }
         }
         let obligations: Vec<Hash> = x.debts.iter().map(|(o, _)| *o).collect();
@@ -3141,7 +3141,7 @@ impl Fork {
                 s.windows(2).any(|w| w[0] >= w[1]) || s.iter().any(|i| *i as usize >= x.sides.len())
             })
         {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "a fork assigns each debt once, to sides it lists, ascending (F121, N13)",
             ));
         }
@@ -3197,9 +3197,9 @@ impl OpenOwed {
 
     fn decode(v: &Value) -> R<OpenOwed> {
         let w = "closing: an obligation left open";
-        let Value::Array(a) = v else { return Err(LawError::Shape(w)) };
+        let Value::Array(a) = v else { return Err(AgreementsError::Shape(w)) };
         if a.len() != 2 && a.len() != 3 {
-            return Err(LawError::Shape(w));
+            return Err(AgreementsError::Shape(w));
         }
         Ok(OpenOwed {
             payment: hash(&a[0], w)?,
@@ -3226,17 +3226,17 @@ impl Closing {
         for (k, v) in &inside.payload {
             match k {
                 Value::Uint(n) if *n <= 4 => f.push((*n, v)),
-                _ => return Err(LawError::Shape("closing: unknown field")),
+                _ => return Err(AgreementsError::Shape("closing: unknown field")),
             }
         }
         let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
-        let req = |k: u64, w| get(k).ok_or(LawError::Shape(w));
+        let req = |k: u64, w| get(k).ok_or(AgreementsError::Shape(w));
         let open = match get(4) {
             None => vec![],
             Some(v) => nonempty(v, "closing: the obligations left open")?.iter().map(OpenOwed::decode).collect::<R<Vec<_>>>()?,
         };
         if !open.windows(2).all(|w| w[0].payment < w[1].payment) {
-            return Err(LawError::Check("closing: the obligations left open are ascending by payment, none twice (field 4)"));
+            return Err(AgreementsError::Check("closing: the obligations left open are ascending by payment, none twice (field 4)"));
         }
         let x = Closing {
             agreement: hash(req(0, "closing: the agreement")?, "closing: the agreement")?,
@@ -3316,11 +3316,11 @@ impl Release {
         for (k, v) in &inside.payload {
             match k {
                 Value::Uint(n) if *n <= 4 => f.push((*n, v)),
-                _ => return Err(LawError::Shape("release: unknown field")),
+                _ => return Err(AgreementsError::Shape("release: unknown field")),
             }
         }
         let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
-        let req = |k: u64, w| get(k).ok_or(LawError::Shape(w));
+        let req = |k: u64, w| get(k).ok_or(AgreementsError::Shape(w));
         let r = Release {
             work: hash(req(0, "release: the work")?, "release: the work")?,
             stakes: pairs(req(1, "release: stakes")?, "release: a stake")?,
@@ -3333,7 +3333,7 @@ impl Release {
                         let a = tuple(x, 2, "release: a content key")?;
                         match &a[1] {
                             Value::Bytes(k) if k.len() == 32 => Ok((hash(&a[0], "release: a publication")?, k.clone())),
-                            _ => Err(LawError::Shape("release: a content key is 32 bytes")),
+                            _ => Err(AgreementsError::Shape("release: a content key is 32 bytes")),
                         }
                     })
                     .collect::<R<Vec<_>>>()?,
@@ -3346,31 +3346,31 @@ impl Release {
                 .transpose()?,
         };
         if get(2).is_some() && r.claims.is_empty() {
-            return Err(LawError::Shape("release: claims"));
+            return Err(AgreementsError::Shape("release: claims"));
         }
         for (i, a) in r.stakes.iter().enumerate() {
             if r.stakes[..i].contains(a) {
-                return Err(LawError::Check("a release names one stake twice"));
+                return Err(AgreementsError::Check("a release names one stake twice"));
             }
         }
         if !distinct(&r.claims) {
-            return Err(LawError::Check("a release names one claim twice"));
+            return Err(AgreementsError::Check("a release names one claim twice"));
         }
         let mut ags: Vec<Hash> = r.stakes.iter().map(|(a, _)| *a).collect();
         ags.sort();
         ags.dedup();
         let mut named: Vec<Hash> = vec![];
         let (own, _) = chain_citations(inside.objects.as_deref().unwrap_or(&[]), ags.len())
-            .map_err(|_| LawError::Shape("release: objects name each agreement whose stake it ends"))?;
+            .map_err(|_| AgreementsError::Shape("release: objects name each agreement whose stake it ends"))?;
         for o in own {
             if o.chain != o.predecessor {
-                return Err(LawError::Shape("release: objects name each agreement as chain and predecessor"));
+                return Err(AgreementsError::Shape("release: objects name each agreement as chain and predecessor"));
             }
             named.push(o.chain);
         }
         named.sort();
         if named != ags {
-            return Err(LawError::Shape("release: objects name each agreement whose stake it ends"));
+            return Err(AgreementsError::Shape("release: objects name each agreement whose stake it ends"));
         }
         Ok(r)
     }
@@ -3550,24 +3550,24 @@ impl Split {
         for (k, v) in p {
             match k {
                 Value::Uint(n) if *n <= 8 => f.push((*n, v)),
-                _ => return Err(LawError::Shape("split: unknown field")),
+                _ => return Err(AgreementsError::Shape("split: unknown field")),
             }
         }
         let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
-        let req = |k: u64, w| get(k).ok_or(LawError::Shape(w));
+        let req = |k: u64, w| get(k).ok_or(AgreementsError::Shape(w));
         let payouts = nonempty(req(1, "split: payouts")?, "split: payouts")?
             .iter()
             .map(|v| {
                 let fl = map_fields(v, 8, "split: a payout")?;
                 let pf = |k| field(&fl, k);
                 Ok(Payout {
-                    receiver: hash(pf(0).ok_or(LawError::Shape("payout: receiver"))?, "payout: receiver")?,
-                    amount: uint(pf(1).ok_or(LawError::Shape("payout: amount"))?, "payout: amount")?,
+                    receiver: hash(pf(0).ok_or(AgreementsError::Shape("payout: receiver"))?, "payout: receiver")?,
+                    amount: uint(pf(1).ok_or(AgreementsError::Shape("payout: amount"))?, "payout: amount")?,
                     stake: pf(2).map(|v| uint(v, "payout: stake")).transpose()?,
                     role: pf(3)
                         .map(|v| match v {
                             Value::Text(t) => Ok(t.clone()),
-                            _ => Err(LawError::Shape("payout: role")),
+                            _ => Err(AgreementsError::Shape("payout: role")),
                         })
                         .transpose()?,
                     evidence: pf(4).map(|v| hash(v, "payout: evidence")).transpose()?,
@@ -3579,13 +3579,13 @@ impl Split {
             .collect::<R<Vec<_>>>()?;
         for x in &payouts {
             if x.fee_module.is_some() && (x.stake.is_some() || x.role.is_some()) {
-                return Err(LawError::Check("a payout pays a fee, a stake or a role, one at a time"));
+                return Err(AgreementsError::Check("a payout pays a fee, a stake or a role, one at a time"));
             }
             if x.evidence.is_some() && x.role.is_none() {
-                return Err(LawError::Shape("payout: evidence goes with a role"));
+                return Err(AgreementsError::Shape("payout: evidence goes with a role"));
             }
             if x.metric.is_some() && (x.stake.is_some() || x.role.is_some() || x.fee_module.is_some()) {
-                return Err(LawError::Check("a payout pays a fee, a stake, a role or a metric share, one at a time"));
+                return Err(AgreementsError::Check("a payout pays a fee, a stake, a role or a metric share, one at a time"));
             }
         }
         Ok(Split {
@@ -3595,7 +3595,7 @@ impl Split {
             agreement: hash(req(3, "split: the agreement")?, "split: the agreement")?,
             tally: get(4).map(decode_tally).transpose()?,
             number: match get(5).map(|v| uint(v, "split: its number")).transpose()? {
-                Some(0) => return Err(LawError::Shape("split: its number counts from 1 (DQ6)")),
+                Some(0) => return Err(AgreementsError::Shape("split: its number counts from 1 (DQ6)")),
                 n => n,
             },
             modules: match get(6) {
@@ -3603,7 +3603,7 @@ impl Split {
                 Some(v) => {
                     let x = hashes(v, "split: the Modules it ran under")?;
                     if x.is_empty() || !x.windows(2).all(|w| w[0] < w[1]) {
-                        return Err(LawError::Check("split: the Modules it ran under, ascending, none twice (rule 27)"));
+                        return Err(AgreementsError::Check("split: the Modules it ran under, ascending, none twice (rule 27)"));
                     }
                     x
                 }
@@ -3613,7 +3613,7 @@ impl Split {
                 Some(v) => {
                     let x = hashes(v, "split: the metric records")?;
                     if x.is_empty() || !distinct(&x) {
-                        return Err(LawError::Check("split: the metric records, none twice (rule 28)"));
+                        return Err(AgreementsError::Check("split: the metric records, none twice (rule 28)"));
                     }
                     x
                 }
@@ -3629,7 +3629,7 @@ impl Split {
                         })
                         .collect::<R<Vec<_>>>()?;
                     if !x.windows(2).all(|w| w[0].0 < w[1].0) {
-                        return Err(LawError::Check("split: the transfers it follows, by stake ascending, one each (OF19)"));
+                        return Err(AgreementsError::Check("split: the transfers it follows, by stake ascending, one each (OF19)"));
                     }
                     x
                 }
@@ -3643,19 +3643,19 @@ impl Split {
 fn decode_tally(v: &Value) -> R<Vec<(u64, Vec<(Hash, u64)>)>> {
     let mut out: Vec<(u64, Vec<(Hash, u64)>)> = vec![];
     for e in nonempty(v, "split: the tally")? {
-        let Value::Array(pair) = e else { return Err(LawError::Shape("split: a stake's tally")) };
-        let [s, hs] = pair.as_slice() else { return Err(LawError::Shape("split: a stake's tally")) };
+        let Value::Array(pair) = e else { return Err(AgreementsError::Shape("split: a stake's tally")) };
+        let [s, hs] = pair.as_slice() else { return Err(AgreementsError::Shape("split: a stake's tally")) };
         let stake = uint(s, "split: the tally's stake")?;
         if out.iter().any(|(x, _)| *x == stake) {
-            return Err(LawError::Shape("split: a stake tallied twice"));
+            return Err(AgreementsError::Shape("split: a stake tallied twice"));
         }
         let mut holders: Vec<(Hash, u64)> = vec![];
         for x in nonempty(hs, "split: a stake's tally")? {
-            let Value::Array(hn) = x else { return Err(LawError::Shape("split: a holder's count")) };
-            let [h, n] = hn.as_slice() else { return Err(LawError::Shape("split: a holder's count")) };
+            let Value::Array(hn) = x else { return Err(AgreementsError::Shape("split: a holder's count")) };
+            let [h, n] = hn.as_slice() else { return Err(AgreementsError::Shape("split: a holder's count")) };
             let h = hash(h, "split: the tally's holder")?;
             if holders.iter().any(|(y, _)| *y == h) {
-                return Err(LawError::Shape("split: a holder counted twice"));
+                return Err(AgreementsError::Shape("split: a holder counted twice"));
             }
             holders.push((h, uint(n, "split: the tally's count")?));
         }
@@ -3680,29 +3680,29 @@ pub(crate) fn distinct(v: &[Hash]) -> bool {
 
 pub(crate) fn hash(v: &Value, w: &'static str) -> R<Hash> {
     match v {
-        Value::Bytes(x) => x.as_slice().try_into().map_err(|_| LawError::Shape(w)),
-        _ => Err(LawError::Shape(w)),
+        Value::Bytes(x) => x.as_slice().try_into().map_err(|_| AgreementsError::Shape(w)),
+        _ => Err(AgreementsError::Shape(w)),
     }
 }
 
 pub(crate) fn uint(v: &Value, w: &'static str) -> R<u64> {
     match v {
         Value::Uint(n) => Ok(*n),
-        _ => Err(LawError::Shape(w)),
+        _ => Err(AgreementsError::Shape(w)),
     }
 }
 
 pub(crate) fn nonempty<'a>(v: &'a Value, w: &'static str) -> R<&'a [Value]> {
     match v {
         Value::Array(a) if !a.is_empty() => Ok(a),
-        _ => Err(LawError::Shape(w)),
+        _ => Err(AgreementsError::Shape(w)),
     }
 }
 
 pub(crate) fn tuple<'a>(v: &'a Value, n: usize, w: &'static str) -> R<&'a [Value]> {
     match v {
         Value::Array(a) if a.len() == n => Ok(a),
-        _ => Err(LawError::Shape(w)),
+        _ => Err(AgreementsError::Shape(w)),
     }
 }
 
@@ -3716,7 +3716,7 @@ pub(crate) fn rule(v: &Value) -> R<Rule> {
         (0, 1) => Ok(Rule::All),
         (1, 2) => Ok(Rule::Threshold(uint(&a[1], "rule threshold")?)),
         (2, 2) => Ok(Rule::Named(hashes(&a[1], "rule names")?)),
-        _ => Err(LawError::Shape("rule")),
+        _ => Err(AgreementsError::Shape("rule")),
     }
 }
 
@@ -3727,7 +3727,7 @@ pub(crate) fn judge(v: &Value) -> R<Judge> {
         (0, 2) => Judge::Task(uint(&j[1], "judge task")?),
         (1, 2) => Judge::Identity(hash(&j[1], "judge identity")?),
         (2, 1) => Judge::SplitService,
-        _ => return Err(LawError::Shape("judge")),
+        _ => return Err(AgreementsError::Shape("judge")),
     })
 }
 
@@ -3756,7 +3756,7 @@ fn power(v: &Value) -> R<Power> {
         (2, 2) => Ok(Power::Area(uint(&a[1], "power area")?)),
         (3, 2) => Ok(Power::Plan(hash(&a[1], "power party")?)),
         (4, 1) => Ok(Power::Judicial),
-        _ => Err(LawError::Shape("power")),
+        _ => Err(AgreementsError::Shape("power")),
     }
 }
 
@@ -3777,7 +3777,7 @@ fn field4(v: &Value) -> R<Field4> {
                 })
                 .collect::<R<_>>()?,
         )),
-        _ => Err(LawError::Shape("terms field 4")),
+        _ => Err(AgreementsError::Shape("terms field 4")),
     }
 }
 
@@ -3789,7 +3789,7 @@ fn kind(v: &Value) -> R<Kind> {
             spec: hash(&a[1], "kind spec")?,
             type_: uint(&a[2], "kind type")?,
         }),
-        _ => Err(LawError::Shape("kind")),
+        _ => Err(AgreementsError::Shape("kind")),
     }
 }
 
@@ -3798,30 +3798,30 @@ fn field_ref(v: &Value) -> R<FieldRef> {
     match uint(&a[0], "field reference form")? {
         0 => Ok(FieldRef::Field(uint(&a[1], "field reference")?)),
         1 => Ok(FieldRef::Task(uint(&a[1], "field reference task")?)),
-        _ => Err(LawError::Shape("field reference")),
+        _ => Err(AgreementsError::Shape("field reference")),
     }
 }
 
 fn area(v: &Value) -> R<Area> {
     let f = map_fields(v, 6, "area")?;
     let Some(Value::Text(name)) = field(&f, 0) else {
-        return Err(LawError::Shape("area name"));
+        return Err(AgreementsError::Shape("area name"));
     };
-    let holders = match field(&f, 1).ok_or(LawError::Shape("area holders"))? {
+    let holders = match field(&f, 1).ok_or(AgreementsError::Shape("area holders"))? {
         Value::Array(a) => a.iter().map(|x| hash(x, "area holders")).collect::<R<_>>()?,
-        _ => return Err(LawError::Shape("area holders")),
+        _ => return Err(AgreementsError::Shape("area holders")),
     };
     Ok(Area {
         name: name.clone(),
         holders,
-        threshold: uint(field(&f, 2).ok_or(LawError::Shape("area number"))?, "area number")?,
+        threshold: uint(field(&f, 2).ok_or(AgreementsError::Shape("area number"))?, "area number")?,
         kinds: field(&f, 3)
             .map(|v| nonempty(v, "area kinds")?.iter().map(kind).collect())
             .transpose()?,
         fields: field(&f, 4)
             .map(|v| nonempty(v, "area fields")?.iter().map(field_ref).collect())
             .transpose()?,
-        id: uint(field(&f, 5).ok_or(LawError::Shape("area id"))?, "area id")?,
+        id: uint(field(&f, 5).ok_or(AgreementsError::Shape("area id"))?, "area id")?,
     })
 }
 
@@ -3837,7 +3837,7 @@ fn holding(v: &Value) -> R<Holding> {
             custodian: hash(&a[1], "holding custodian")?,
             grant: hash(&a[2], "holding grant")?,
         }),
-        _ => Err(LawError::Shape("holding")),
+        _ => Err(AgreementsError::Shape("holding")),
     }
 }
 
@@ -3851,18 +3851,18 @@ fn recovery(v: &Value) -> R<Recovery> {
         (1, 2) => Ok(Recovery::Escrow {
             authority: hash(&a[1], "recovery authority")?,
         }),
-        _ => Err(LawError::Shape("recovery")),
+        _ => Err(AgreementsError::Shape("recovery")),
     }
 }
 
 pub(crate) fn map_fields<'a>(v: &'a Value, n: u64, w: &'static str) -> R<Vec<(u64, &'a Value)>> {
     let Value::Map(m) = v else {
-        return Err(LawError::Shape(w));
+        return Err(AgreementsError::Shape(w));
     };
     m.iter()
         .map(|(k, v)| match k {
             Value::Uint(k) if *k < n => Ok((*k, v)),
-            _ => Err(LawError::Shape(w)),
+            _ => Err(AgreementsError::Shape(w)),
         })
         .collect()
 }
@@ -3874,13 +3874,13 @@ pub(crate) fn field<'a>(f: &[(u64, &'a Value)], k: u64) -> Option<&'a Value> {
 fn key_grammar(v: &Value) -> R<KeyGrammar> {
     let f = map_fields(v, 4, "key grammar")?;
     if field(&f, 2).is_some() {
-        return Err(LawError::Shape(
+        return Err(AgreementsError::Shape(
             "key grammar key 2 (draft 6's listed act types) is retired: areas reach acts",
         ));
     }
     Ok(KeyGrammar {
-        signing: holding(field(&f, 0).ok_or(LawError::Shape("key grammar signing key"))?)?,
-        safety: holding(field(&f, 1).ok_or(LawError::Shape("key grammar safety key"))?)?,
+        signing: holding(field(&f, 0).ok_or(AgreementsError::Shape("key grammar signing key"))?)?,
+        safety: holding(field(&f, 1).ok_or(AgreementsError::Shape("key grammar safety key"))?)?,
         recovery: field(&f, 3).map(recovery).transpose()?,
     })
 }
@@ -3906,7 +3906,7 @@ fn succession_plan(v: &Value) -> R<SuccessionPlan> {
     let f = map_fields(v, 4, "succession plan")?;
     Ok(SuccessionPlan {
         party: hash(
-            field(&f, 0).ok_or(LawError::Shape("succession plan party"))?,
+            field(&f, 0).ok_or(AgreementsError::Shape("succession plan party"))?,
             "succession plan party",
         )?,
         stakes: field(&f, 1)
@@ -3922,23 +3922,23 @@ fn succession_plan(v: &Value) -> R<SuccessionPlan> {
 fn abandonment(v: &Value) -> R<Abandonment> {
     let f = map_fields(v, 4, "abandonment")?;
     if field(&f, 2).is_some() {
-        return Err(LawError::Shape(
+        return Err(AgreementsError::Shape(
             "abandonment key 2 (the period of absence, F140) is retired and never reused: terms carrying it are invalid (F172)",
         ));
     }
     let a = nonempty(
-        field(&f, 0).ok_or(LawError::Shape("abandonment authority"))?,
+        field(&f, 0).ok_or(AgreementsError::Shape("abandonment authority"))?,
         "abandonment authority",
     )?;
     let authority = match (uint(&a[0], "abandonment authority form")?, a.len()) {
         (0, 2) => Authority::Named(hash(&a[1], "abandonment authority")?),
         (1, 2) => Authority::Others(uint(&a[1], "abandonment authority threshold")?),
-        _ => return Err(LawError::Shape("abandonment authority")),
+        _ => return Err(AgreementsError::Shape("abandonment authority")),
     };
     Ok(Abandonment {
         authority,
         outcomes: nonempty(
-            field(&f, 1).ok_or(LawError::Shape("abandonment outcomes"))?,
+            field(&f, 1).ok_or(AgreementsError::Shape("abandonment outcomes"))?,
             "abandonment outcomes",
         )?
         .iter()

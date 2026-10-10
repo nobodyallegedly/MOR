@@ -71,7 +71,7 @@ test('a test identity is born: three homes each sign a receipt, and a reader see
   assert.match(l.resolution.effective ?? '', /Threshold\(2\)/, 'majority of three operators by default');
   // Routes and encryption key, as the core library chooses them.
   assert.equal(l.routes.act, alice.f.routes?.act);
-  assert.deepEqual(l.inbox(SPECS.envelope), [inbox.base]);
+  assert.deepEqual(l.inbox(SPECS.envelopes), [inbox.base]);
   assert.equal(l.encryptionKeyAct, alice.f.encryption[0].act);
   assert.equal(l.verifier.status(alice.f.routes!.act), 'valid');
 });
@@ -177,7 +177,7 @@ test('a key delivered to an identity opens only with its key', async () => {
   bob = await person('bob');
   // Alice publishes a private post on her outbox relay, then delivers its key to Bob.
   const payload = cborEncode(new Map([[0, 'for Bob only']]));
-  const post = await alice.publish(SPECS.envelope, 99, payload, { public: false, relays: [homes[0].base] });
+  const post = await alice.publish(SPECS.envelopes, 99, payload, { public: false, relays: [homes[0].base] });
   const d = await alice.deliverKey({ to: bob.id, hints: [homes[0].base], target: post.id, key: post.key });
   assert.deepEqual(d.inbox, [inbox.base]);
 
@@ -211,7 +211,7 @@ test('after Bob changes his encryption key, new deliveries use it and old ones s
   await bob.publishEncryptionKey();
   const l = await lookUp(bob.id, [homes[0].base]);
   assert.equal(l.encryptionKeyAct, bob.f.encryption[1].act);
-  const post = await alice.publish(SPECS.envelope, 99, cborEncode(new Map([[0, 'second']])), {
+  const post = await alice.publish(SPECS.envelopes, 99, cborEncode(new Map([[0, 'second']])), {
     public: false,
     relays: [homes[0].base],
   });
@@ -227,7 +227,7 @@ test('after Bob changes his encryption key, new deliveries use it and old ones s
 
 test('a key delivered to a bare key is found by its pickup tag and opens only with it', async () => {
   const buyer = TestIdentity.newBareKey();
-  const post = await alice.publish(SPECS.envelope, 99, cborEncode(new Map([[0, 'bought']])), {
+  const post = await alice.publish(SPECS.envelopes, 99, cborEncode(new Map([[0, 'bought']])), {
     public: false,
     relays: [homes[0].base],
   });
@@ -245,7 +245,7 @@ test('a key delivered to a bare key is found by its pickup tag and opens only wi
   assert.equal((await receive(page.items[0].item, null, [other.secret], [])).opened, false);
 });
 
-test('only Identity, Finance and Law acts acknowledge; reliance is a witness act, explained first (F110)', async () => {
+test('only Identity, Money and Agreements acts acknowledge; reliance is a witness act, explained first (F110)', async () => {
   const text = (t: string) => cborEncode(new Map([[0, t]]));
   const post = await bob.publish(SPECS.text, 0, text('I will repay you on Friday.'), { public: true, relays: [inbox.base] });
   // A reply that acknowledges: refused, never signed.
@@ -262,7 +262,7 @@ test('only Identity, Finance and Law acts acknowledge; reliance is a witness act
   l.verifier.add(w.act);
   assert.equal(l.verifier.status(w.id), 'valid');
   // Signing for someone else to submit is held to the same rule.
-  assert.throws(() => alice.sign(SPECS.envelope, 0, text('a publication'), { public: true, acks: [post.id] }), /witness act/);
+  assert.throws(() => alice.sign(SPECS.envelopes, 0, text('a publication'), { public: true, acks: [post.id] }), /witness act/);
 });
 
 test('a private link counts only once published at its signer\'s homes, where its owner sees it (F152, F159)', async () => {
@@ -306,7 +306,7 @@ test('every key exchange in these tests agrees with a second implementation (nob
   }
 });
 
-// ------------------------------------------------------------ the clock (Finance rule 15, F176 to F181)
+// ------------------------------------------------------------ the clock (Money rule 15, F176 to F181)
 
 /** A test anchoring cMIP on one reference: it records what it anchors. */
 function testAnchoring(name: string, fails = false) {
@@ -368,7 +368,7 @@ test('after a rotation the owner\'s client anchors its home quorum on the declar
   assert.match(three.unanchored ?? '', /could not be anchored/);
 });
 
-test('before a genesis or rotation leaving no clock, the client says plainly that a theft\'s loss will be the owner\'s (Finance rule 14b, F181)', async () => {
+test('before a genesis or rotation leaving no clock, the client says plainly that a theft\'s loss will be the owner\'s (Money rule 14b, F181)', async () => {
   const main = testAnchoring('the main clock');
   const t = TestIdentity.create({ homes: homes.map((h) => h.home) });
   assert.match(t.clockWarning() ?? '', /no clock.*your loss/s);

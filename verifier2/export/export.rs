@@ -1,12 +1,12 @@
 // verifier2's exporter (docs/verifier2-report.md). Included, as a child
-// module, at the end of core/tests/law_invariants.rs, so that it can use the
+// module, at the end of core/tests/agreements_invariants.rs, so that it can use the
 // generator of random collective histories as it is, without copying it. It
 // writes, for each story, the abstract story verifier2 reads (its acts: ids,
 // signers, kinds, what each cites) and the library's verdicts on it. It is
 // ignored unless asked for:
 //
 //   VERIFIER2_OUT=dir VERIFIER2_SEED=1 VERIFIER2_CASES=1000 \
-//     cargo test -p mor-core --release --test law_invariants -- --ignored --exact verifier2_export::verifier2_export
+//     cargo test -p mor-core --release --test agreements_invariants -- --ignored --exact verifier2_export::verifier2_export
 //
 // With VERIFIER2_REQUEST=file, each line "<case> <name> <op indices, comma
 // separated>" exports instead the story of that case (drawn with the same
@@ -17,7 +17,7 @@
 use super::*;
 use serde_json::{json, Map, Value as J};
 use mor_core::chain::Held;
-use mor_core::law::Consent;
+use mor_core::agreements::Consent;
 use proptest::strategy::ValueTree;
 
 fn hx(h: &Hash) -> String {
@@ -28,12 +28,12 @@ fn hxs(hs: &[Hash]) -> Vec<String> {
     hs.iter().map(hx).collect()
 }
 
-/// The founding agreement a collective's genesis declares (Law kind 0).
+/// The founding agreement a collective's genesis declares (Agreements kind 0).
 fn founding_of(v: &Verifier, collective: &Hash) -> Option<Hash> {
     let h = v.get(collective)?;
     let Some(Ok(mor_core::identity::Payload::Genesis(g))) = &h.identity else { return None };
     for d in g.declarations.iter().flatten() {
-        if d.spec == mips().law && d.kind == law::kinds::FOUNDING_AGREEMENT {
+        if d.spec == mips().agreements && d.kind == agreements::kinds::FOUNDING_AGREEMENT {
             if let Some(Value::Bytes(b)) = &d.value {
                 if b.len() == 32 {
                     let mut out = [0u8; 32];
@@ -80,11 +80,11 @@ fn story_json(cw: &ColWorld) -> J {
         }
         h.act.outside.binding.filter(|b| grant_ids.contains(b))
     };
-    // Signature acts (Law type 1): the act named -> its signers.
+    // Signature acts (Agreements type 1): the act named -> its signers.
     let mut sigs_on: BTreeMap<Hash, Vec<Hash>> = BTreeMap::new();
     for h in v.held_acts() {
-        if h.inside.spec == mips().law && h.inside.type_ == law::types::SIGNATURE && v.status(&h.id) == Status::Valid {
-            if let (Ok(x), Some(s)) = (law::decode_signature(&h.inside), h.act.outside.signer) {
+        if h.inside.spec == mips().agreements && h.inside.type_ == agreements::types::SIGNATURE && v.status(&h.id) == Status::Valid {
+            if let (Ok(x), Some(s)) = (agreements::decode_signature(&h.inside), h.act.outside.signer) {
                 sigs_on.entry(x).or_default().push(s);
             }
         }
@@ -153,10 +153,10 @@ fn story_json(cw: &ColWorld) -> J {
             continue;
         }
         // Endings, signed by a member.
-        if signer != col && members.contains(&signer) && h.inside.spec == mips().law && (h.inside.type_ == law::types::FORK || h.inside.type_ == law::types::CLOSING) {
+        if signer != col && members.contains(&signer) && h.inside.spec == mips().agreements && (h.inside.type_ == agreements::types::FORK || h.inside.type_ == agreements::types::CLOSING) {
             let objects: Vec<String> = h.inside.objects.iter().flatten().map(|o| o.predecessor).filter(|p| endings.contains(p) && *p != id).map(|p| hx(&p)).collect();
-            if h.inside.type_ == law::types::FORK {
-                let Ok(f) = law::Fork::decode(&h.inside) else { continue };
+            if h.inside.type_ == agreements::types::FORK {
+                let Ok(f) = agreements::Fork::decode(&h.inside) else { continue };
                 let mut m = base("fork", hx(&signer));
                 m.remove("prev");
                 m.insert("cites".into(), json!([]));
@@ -180,7 +180,7 @@ fn story_json(cw: &ColWorld) -> J {
                 m.insert("agreement".into(), json!(hx(&f.agreement)));
                 acts.push(J::Object(m));
             } else {
-                let Ok(c) = law::Closing::decode(&h.inside) else { continue };
+                let Ok(c) = agreements::Closing::decode(&h.inside) else { continue };
                 let mut m = base("closing", hx(&signer));
                 m.remove("prev");
                 m.insert("cites".into(), json!([]));
@@ -196,7 +196,7 @@ fn story_json(cw: &ColWorld) -> J {
             continue;
         }
         // Creditors' receipts and releases.
-        if signer != col && h.inside.spec == mips().finance {
+        if signer != col && h.inside.spec == mips().money {
             match Fin::decode(h.inside.type_, &h.inside.payload) {
                 Ok(Fin::Receipt(r)) if cw.debts.contains(&r.fulfils) => {
                     acts.push(json!({"id": hx(&id), "order": order.get(&id).copied().unwrap_or(0), "type": "payment", "signer": hx(&signer), "payee": hx(&r.payee), "obligation": hx(&r.fulfils), "amount": r.amount.value, "valid": valid}));
@@ -225,13 +225,13 @@ fn story_json(cw: &ColWorld) -> J {
                 continue;
             }
             ("publication", Map::new())
-        } else if h.inside.spec == mips().law {
+        } else if h.inside.spec == mips().agreements {
             match h.inside.type_ {
-                law::types::RECORD => {
+                agreements::types::RECORD => {
                     // A record that does not decode (the generator's record signed with
                     // a grant key names a departure that is no act): still an act on
                     // its strand, with no tips and no clone.
-                    let r = law::Record::decode(&h.inside).unwrap_or(law::Record { clone: None, signatures: None, kept: vec![], registers: None });
+                    let r = agreements::Record::decode(&h.inside).unwrap_or(agreements::Record { clone: None, signatures: None, kept: vec![], registers: None });
                     let mut e = Map::new();
                     e.insert("tips".into(), json!(r.kept.iter().map(|t| hx(&t.act)).collect::<Vec<_>>()));
                     if let Some(c) = r.clone {
@@ -247,8 +247,8 @@ fn story_json(cw: &ColWorld) -> J {
                     e.insert("registers".into(), json!(regs));
                     ("record", e)
                 }
-                law::types::GRANT => {
-                    let Ok(g) = law::Grant::decode(&h.inside.payload) else { continue };
+                agreements::types::GRANT => {
+                    let Ok(g) = agreements::Grant::decode(&h.inside.payload) else { continue };
                     let mut e = Map::new();
                     e.insert("grantee".into(), json!(hx(&g.grantee)));
                     if let Some(gi) = cw.grants.iter().find(|x| x.id == id) {
@@ -261,8 +261,8 @@ fn story_json(cw: &ColWorld) -> J {
                     }
                     ("grant", e)
                 }
-                law::types::REVOCATION => {
-                    let Ok(r) = law::Revocation::decode(&h.inside.payload) else { continue };
+                agreements::types::REVOCATION => {
+                    let Ok(r) = agreements::Revocation::decode(&h.inside.payload) else { continue };
                     let mut e = Map::new();
                     e.insert("revokes".into(), json!(hx(&r.grant)));
                     if cw.grants.iter().any(|x| x.id == r.grant && x.in_area) {
@@ -275,7 +275,7 @@ fn story_json(cw: &ColWorld) -> J {
                     continue;
                 }
             }
-        } else if h.inside.spec == mips().finance {
+        } else if h.inside.spec == mips().money {
             match Fin::decode(h.inside.type_, &h.inside.payload) {
                 Ok(Fin::Obligation(o)) => {
                     let mut e = Map::new();
@@ -299,7 +299,7 @@ fn story_json(cw: &ColWorld) -> J {
                     continue;
                 }
             }
-        } else if h.inside.spec == mips().envelope {
+        } else if h.inside.spec == mips().envelopes {
             ("publication", Map::new())
         } else {
             skipped.push(json!({"id": hx(&id), "why": format!("spec {} type {}", hx(&h.inside.spec)[..8].to_string(), h.inside.type_), "grant": grant.map(|g| hx(&g))}));
@@ -400,7 +400,7 @@ fn ref_json(cw: &ColWorld, story: &J) -> J {
         m.insert("done".into(), json!(done));
         m.insert("counts".into(), json!(counts));
         m.insert("consent".into(), json!(format!("{consent:?}")));
-        // Verdicts resting on rules outside verifier2's scope (Finance's rails, the
+        // Verdicts resting on rules outside verifier2's scope (Money's rails, the
         // split service's limits, adoption of specifications): marked, so the
         // comparison can leave them out.
         let out_of_scope = match &consent {

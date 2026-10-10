@@ -42,16 +42,16 @@ draft = {
 
 Deterministic CBOR as the core defines it; a draft that does not re-encode to its own bytes, has another field, or another label, is not a draft. A draft is never an act: the desk makes the act from it as the next in the identity's own sequence (position, previous act, running summary, binding, salt and lock are the desk's), so no program elsewhere can fork that sequence by guessing a position.
 
-**What a draft may be** (decided by Nobody, allegedly, 1 October 2026: acts of the Text and Envelope layers only):
+**What a draft may be** (decided by Nobody, allegedly, 1 October 2026: acts of the Text and Envelopes layers only):
 
 | Kind | Spec, type | Shape |
 | --- | --- | --- |
 | A post | Text, 0 | public; payload `{0: text, ? 1: long-form format}`; refs allowed; no objects, recipient or media |
 | A message | Text, 0 | private; one recipient (field 9), who has an encryption key and an inbox; refs allowed; sealed to the recipient at the desk and left in its inbox |
-| A picture | Envelope, 0 | public; a JPEG publication with its key (fields 0 to 6 of the media map, no price, no `for`); its locked bytes in field 10; the JPEG stripped to the picture alone |
-| A withdrawal | Envelope, 3 | public; empty payload; objects `[[publication, publication]]`, a publication its signer made or that was made for it |
+| A picture | Envelopes, 0 | public; a JPEG publication with its key (fields 0 to 6 of the media map, no price, no `for`); its locked bytes in field 10; the JPEG stripped to the picture alone |
+| A withdrawal | Envelopes, 3 | public; empty payload; objects `[[publication, publication]]`, a publication its signer made or that was made for it |
 
-Anything else, a Law act above all, is refused: by the connector before any draft is written, and by the desk again if a draft arrives by another way.
+Anything else, an Agreements act above all, is refused: by the connector before any draft is written, and by the desk again if a draft arrives by another way.
 
 ### The answer
 

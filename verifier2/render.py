@@ -6,7 +6,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from law_endings import verify  # noqa: E402
+from agreements_endings import verify  # noqa: E402
 
 
 def render(story: dict, ref: dict, diffs: list[dict], handout="done", cites="strict") -> str:

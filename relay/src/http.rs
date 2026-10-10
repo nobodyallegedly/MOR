@@ -456,7 +456,7 @@ async fn feed(State(s): State<Arc<Shared>>, RawQuery(raw): RawQuery) -> Response
 async fn commitment() -> Response {
     error(WireError::new(
         code::NOT_HELD,
-        "this relay publishes no commitment: the Merkle construction for commitments is still open in the Envelope MIP",
+        "this relay publishes no commitment: the Merkle construction for commitments is still open in the Envelopes MIP",
     ))
 }
 

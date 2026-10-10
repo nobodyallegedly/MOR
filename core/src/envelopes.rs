@@ -1,5 +1,5 @@
-//! The Envelope MIP's encryption keys, key deliveries and sealed containers
-//! (Envelope draft 6, "Encryption keys and key delivery", "Sealed
+//! The Envelopes MIP's encryption keys, key deliveries and sealed containers
+//! (Envelopes draft 6, "Encryption keys and key delivery", "Sealed
 //! containers"; F98, F99).
 //!
 //! In plain words:
@@ -29,7 +29,7 @@ use std::fmt;
 
 pub mod anchoring;
 
-/// The types this MIP defines (Envelope, "Types defined by this MIP").
+/// The types this MIP defines (Envelopes, "Types defined by this MIP").
 pub mod types {
     pub const PUBLICATION: u64 = 0;
     pub const KEY_DELIVERY: u64 = 1;
@@ -49,7 +49,7 @@ pub mod tag {
     pub const WRAP: &str = "MOR/sealed/wrap";
 }
 
-/// Why an Envelope object is refused.
+/// Why an Envelopes object is refused.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EnvError {
     /// Not in the format's shape. Names the field.
@@ -71,7 +71,7 @@ pub enum EnvError {
 impl fmt::Display for EnvError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EnvError::Shape(w) => write!(f, "not in the Envelope's shape: {w}"),
+            EnvError::Shape(w) => write!(f, "not in the Envelopes' shape: {w}"),
             EnvError::Cbor(e) => write!(f, "not deterministic CBOR: {e}"),
             EnvError::UnknownScheme => f.write_str("an encryption key under an unknown scheme"),
             EnvError::XWing(e) => write!(f, "{e}"),
@@ -265,7 +265,7 @@ fn version_fields(v: &Version, m: &mut Vec<(Value, Value)>) {
     }
 }
 
-/// Which act of a versioned chain counts (Identity, "Routes"; Envelope,
+/// Which act of a versioned chain counts (Identity, "Routes"; Envelopes,
 /// "Encryption key"): follow the chain from version 1, each act naming the
 /// one before and carrying its version plus one. The latest act of an
 /// unbroken, unforked chain counts. Where two acts name the same
@@ -398,7 +398,7 @@ impl Routes {
 
 // ---------------------------------------------------------------- encryption key (type 4)
 
-/// The encryption-key payload (Envelope type 4):
+/// The encryption-key payload (Envelopes type 4):
 /// `{ 0 => uint, ? 1 => hash, 2 => enc-key }`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EncryptionKey {
@@ -425,7 +425,7 @@ impl EncryptionKey {
 
 // ---------------------------------------------------------------- key delivery (type 1)
 
-/// The key-delivery payload (Envelope type 1):
+/// The key-delivery payload (Envelopes type 1):
 /// `{ 0 => hash, 1 => bstr .size 32, ? 2 => true }`: the act whose content
 /// key this is, the key, and, when present, that it is the key of the media
 /// that act (a publication) describes rather than of the act itself.
@@ -644,7 +644,7 @@ impl Contents {
     }
 }
 
-/// Seal an act for its recipients (Envelope, "Sealed containers"; rule 10).
+/// Seal an act for its recipients (Envelopes, "Sealed containers"; rule 10).
 ///
 /// `key` is the inner act's content key when it is private. For recipients
 /// that are identities, the container's `to` lists them in order, each

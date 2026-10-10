@@ -130,18 +130,18 @@ app.addEventListener('click', async (ev) => {
       await prepare({ kind: 'sign', member: d.member, release: d.release });
       break;
     case 'leave':
-      // Leaving is not a member change: a resignation, registered by the collective's record (Law rule 37a).
+      // Leaving is not a member change: a resignation, registered by the collective's record (Agreements rule 37a).
       await prepare({ kind: 'leave', collective: d.collective, member: d.member });
       break;
     case 'stepdown':
       await prepare({ kind: 'stepdown', collective: d.collective, member: d.member });
       break;
     case 'rollback':
-      // A broken collective's way back (Law rule 37d, F185): reviewed in plain words before anything is signed.
+      // A broken collective's way back (Agreements rule 37d, F185): reviewed in plain words before anything is signed.
       await prepare({ kind: 'rollback', collective: d.collective });
       break;
     case 'contest':
-      // The member a declaration names contests it: shown beside it, voiding nothing (Law rule 52, BQ4).
+      // The member a declaration names contests it: shown beside it, voiding nothing (Agreements rule 52, BQ4).
       await prepare({ kind: 'contest', collective: d.collective, declaration: d.declaration });
       break;
     case 'notice': {
@@ -151,7 +151,7 @@ app.addEventListener('click', async (ev) => {
       break;
     }
     case 'declare':
-      // Absence, judged by the other members under the clause the member signed (Law rules 49, 53; B15).
+      // Absence, judged by the other members under the clause the member signed (Agreements rules 49, 53; B15).
       await prepare({ kind: 'declare', collective: d.collective, member: d.member });
       break;
     case 'check-pointer':

@@ -1,4 +1,4 @@
-// F207 (Law draft 10, step 12b): a resignation names the drafts its signer
+// F207 (Agreements draft 10, step 12b): a resignation names the drafts its signer
 // leaves behind, and her client names them when she resigns (client
 // conformance). A draft here is a change of the release words that Ada and
 // Sim One signed and that was stopped before its record: never in force.
@@ -50,7 +50,7 @@ test('F207: leaving names the drafts the member signed and leaves behind, in the
   assert.match(lw, /Drafts left behind/);
   assert.match(lw, new RegExp(`signed a version of the agreement that is not in force: ${draft.slice(0, 8)}…${draft.slice(-4)}\\. The resignation names it as left behind, so that none ever brings Ada .* back.*\\(F207\\)`), lw);
 
-  // The resignation itself names it (Law type 16, field 2).
+  // The resignation itself names it (Agreements type 16, field 2).
   const resignation = leave.done.acts[0];
   const a = await relayAt(w.relay.base, {}).getAct(resignation);
   assert.ok(a, 'the resignation is at the relay');

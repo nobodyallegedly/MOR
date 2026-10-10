@@ -1,4 +1,4 @@
-//! Encryption keys, key deliveries and sealed containers (Envelope draft 6;
+//! Encryption keys, key deliveries and sealed containers (Envelopes draft 6;
 //! F98, F99). Every X-Wing exchange a container makes or opens here is
 //! checked against the second implementation (libcrux).
 
@@ -6,14 +6,14 @@ mod xwing2;
 
 use mor_core::act::{self, Act, Addressing, Inside};
 use mor_core::cbor::Value;
-use mor_core::envelope::{
+use mor_core::envelopes::{
     self, latest, open, seal, types, Contents, DecKey, EncKey, EncryptionKey, EnvError,
     KeyDelivery, Latest, Recipient, Route, Routes, SealRandom, Sealed, Version, XWING,
 };
 use mor_core::hash::{sha256, Hash};
 use mor_core::sig::SchnorrKey;
 
-fn envelope_spec() -> Hash {
+fn envelopes_spec() -> Hash {
     sha256(b"ENVELOPE, test value until the freeze")
 }
 
@@ -52,7 +52,7 @@ fn signer(name: &str) -> Signer {
 
 fn inside(type_: u64, payload: Vec<(Value, Value)>, salt: &str) -> Inside {
     Inside {
-        spec: envelope_spec(),
+        spec: envelopes_spec(),
         type_,
         prev: Some(vec![]),
         objects: None,
@@ -104,7 +104,7 @@ fn second_check_capsules(s: &Sealed, keys: &[&EncKey], r: &SealRandom) {
 }
 
 /// Open as `me`, with the second implementation checking the decapsulation.
-fn checked_open(s: &Sealed, me: Option<&Hash>, dk: &DecKey) -> Result<envelope::Opened, EnvError> {
+fn checked_open(s: &Sealed, me: Option<&Hash>, dk: &DecKey) -> Result<envelopes::Opened, EnvError> {
     let (capsules, _, _) = s.parts().unwrap();
     let i = match me {
         Some(id) => s.to.iter().position(|t| t == id),

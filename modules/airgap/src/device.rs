@@ -36,9 +36,9 @@ your current signing key, and a lost phone with no backup can mean a lost identi
 pub struct Config {
     /// The Identity MIP's spec hash, fixed at the freeze.
     pub identity_spec: Hash,
-    /// The Finance MIP's spec hash, to read the vault; `None` shows the
+    /// The Money MIP's spec hash, to read the vault; `None` shows the
     /// vault as a declaration this device cannot read.
-    pub finance_spec: Option<Hash>,
+    pub money_spec: Option<Hash>,
 }
 
 /// A seed the device holds, for keys from `from_index` on.
@@ -285,7 +285,7 @@ fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
     let payload = Payload::decode(inside.type_, &inside.payload).map_err(|e| p(e.to_string()))?;
     let id = a.id();
     let vault_of = |ds: &Option<Vec<identity::Declaration>>| -> Option<Option<Value>> {
-        let f = cfg.finance_spec?;
+        let f = cfg.money_spec?;
         ds.iter()
             .flatten()
             .find(|d| d.spec == f && d.kind == 0)
@@ -351,7 +351,7 @@ fn parse_inside(bytes: &[u8], cfg: &Config) -> Result<Parsed, Refusal> {
                 "a field besides spec, type and payload, which this device will not sign unseen"
                     .into(),
             )),
-            _ => return Err(bad("the inside is not in the Envelope's shape".into())),
+            _ => return Err(bad("the inside is not in the Envelopes' shape".into())),
         }
     }
     if spec.as_deref() != Some(&cfg.identity_spec[..]) {
@@ -679,7 +679,7 @@ impl Signer {
                 &Before {
                     vault: prev.vault.as_ref().map(|v| v.as_ref()),
                 },
-                self.config.finance_spec.as_ref(),
+                self.config.money_spec.as_ref(),
                 escape,
             );
             self.finish_summary(&mut summary, &pending, &prev);
@@ -774,7 +774,7 @@ impl Signer {
             &Before {
                 vault: prev.vault.as_ref().map(|v| v.as_ref()),
             },
-            self.config.finance_spec.as_ref(),
+            self.config.money_spec.as_ref(),
             escape,
         );
         if clean_device {

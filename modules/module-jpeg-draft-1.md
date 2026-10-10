@@ -1,6 +1,6 @@
 # Module: JPEG
 
-*Draft 1, 30 September 2026 (roadmap step 9). Approved by Nobody, allegedly, 30 September 2026. Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v17, the Envelope MIP draft 6, the Text MIP draft 6, the Production MIP draft 4, the relay transport cMIP draft 2 and findings F1 to F102. Not core: a founding media type for task 5 (media interpretation), frozen at publication, competing with any other.*
+*Draft 1, 30 September 2026 (roadmap step 9). Approved by Nobody, allegedly, 30 September 2026. Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v17, the Envelopes MIP draft 6, the Text MIP draft 6, the Development MIP draft 4, the relay transport cMIP draft 2 and findings F1 to F102. Not core: a founding media type for task 5 (media interpretation), frozen at publication, competing with any other.*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 
@@ -12,17 +12,17 @@
 
 ## Purpose
 
-This Module fills task 5 of the Envelope MIP (Production, task table: media interpretation) for one media type. It defines:
+This Module fills task 5 of the Envelopes MIP (Development, task table: media interpretation) for one media type. It defines:
 
 - what the media object's bytes are;
 - the picture a reader shows from them;
 - what a posting client removes before publishing.
 
-It defines no act type. A picture is a publication (Envelope, type 0) whose media type (payload field 0) is this Module's spec hash. *A post with a picture is a text act whose `refs` name that publication (F27); see "A picture in a post".*
+It defines no act type. A picture is a publication (Envelopes, type 0) whose media type (payload field 0) is this Module's spec hash. *A post with a picture is a text act whose `refs` name that publication (F27); see "A picture in a post".*
 
 ## Dependencies
 
-Envelope (publication, media lock, work hash, withdrawal) and Production. Text only for the post that shows a picture, and the relay transport cMIP only to publish and fetch, as for any act and any media.
+Envelopes (publication, media lock, work hash, withdrawal) and Development. Text only for the post that shows a picture, and the relay transport cMIP only to publish and fetch, as for any act and any media.
 
 ## Definitions
 
@@ -34,7 +34,7 @@ Envelope (publication, media lock, work hash, withdrawal) and Production. Text o
 
 ## The media object
 
-1. **One file.** The media object's plaintext is one JPEG file, whole. The work hash is taken over exactly those bytes (Envelope, "Work hash"). There is no segmentation: the publication's fields describe the whole file.
+1. **One file.** The media object's plaintext is one JPEG file, whole. The work hash is taken over exactly those bytes (Envelopes, "Work hash"). There is no segmentation: the publication's fields describe the whole file.
    - A reader reads the file from SOI to the first EOI, segment by segment. A file that does not begin with SOI, has no frame header (SOF) before its first scan, ends before its EOI, or has a segment running past the end is not a JPEG this Module reads: the reader shows it as not a picture, and says so. *Bytes after the EOI are part of the work, and never part of the picture.*
 
 ## The picture
@@ -63,12 +63,12 @@ Envelope (publication, media lock, work hash, withdrawal) and Production. Text o
 
 ## A picture in a post
 
-7. **By reference.** A post shows a picture by naming its publication in the text act's `refs` (Envelope, "References"; F27). A client that shows a referenced picture:
+7. **By reference.** A post shows a picture by naming its publication in the text act's `refs` (Envelopes, "References"; F27). A client that shows a referenced picture:
    - judges the publication as any act, through its own signer's identity chain, and shows the picture only if the publication counts;
-   - shows it under the publication's own signer: a picture by another identity is shown as theirs, not the poster's (a repost is a reference, Envelope);
-   - fetches its locked bytes, checks them against the locked hash, opens them with the publication's key and nonce, and checks the plaintext against the work hash and the size before showing anything (Envelope rule 14 asks this of purchases; a reader asks it of every picture);
-   - shows it as not available once the publication is withdrawn (Envelope, "Withdrawal"), wherever it finds the withdrawal; the post itself stands.
-   *A client without this Module still shows the post's text, and the reference as a reference (Text MIP, rule 3; Envelope rule 11).*
+   - shows it under the publication's own signer: a picture by another identity is shown as theirs, not the poster's (a repost is a reference, Envelopes);
+   - fetches its locked bytes, checks them against the locked hash, opens them with the publication's key and nonce, and checks the plaintext against the work hash and the size before showing anything (Envelopes rule 14 asks this of purchases; a reader asks it of every picture);
+   - shows it as not available once the publication is withdrawn (Envelopes, "Withdrawal"), wherever it finds the withdrawal; the post itself stands.
+   *A client without this Module still shows the post's text, and the reference as a reference (Text MIP, rule 3; Envelopes rule 11).*
 
 ## Stated costs
 

@@ -4,7 +4,7 @@
 //!
 //! Each payload decodes strictly: its CDDL map is closed, so an unknown key,
 //! a missing required key or a value of the wrong kind makes the act invalid,
-//! as for the outside and inside (Envelope rule 1). Every payload also
+//! as for the outside and inside (Envelopes rule 1). Every payload also
 //! encodes, so clients and tests can build acts.
 //!
 //! What depends on other acts (which predecessor counts, receipts, homes,
@@ -35,7 +35,7 @@ pub mod types {
     /// "I received this act and rely on it" (F110, Identity draft 11).
     pub const WITNESS: u64 = 15;
     /// A signature made with the safety key, on the identity chain (F132,
-    /// U1 refined): Law's ending signature.
+    /// U1 refined): Agreements' ending signature.
     pub const CHAIN_SIGNATURE: u64 = 16;
 }
 
@@ -292,7 +292,7 @@ fn scheme(v: &Value, w: &'static str) -> R<Scheme> {
     }
 }
 
-/// Decode `signing-key = [ scheme, key: bstr ]`; Finance reads an anonymous
+/// Decode `signing-key = [ scheme, key: bstr ]`; Money reads an anonymous
 /// payer's bare key in this form (F113).
 pub fn signing_key(v: &Value) -> R<SigningKey> {
     let a = tuple(v, 2, "signing-key")?;
@@ -913,7 +913,7 @@ pub fn check_witness_shape(inside: &Inside) -> R<()> {
 }
 
 /// Whether an act names `target` in `objects`, in the chain `chain`: an
-/// entry `[chain, target]` (Envelope, "Chains"; F81).
+/// entry `[chain, target]` (Envelopes, "Chains"; F81).
 pub fn names(inside: &Inside, chain: &Hash, target: &Hash) -> bool {
     inside.objects.as_ref().is_some_and(|os| {
         os.iter()

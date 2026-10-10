@@ -53,7 +53,7 @@ async function candidates(signer: string, places: string[], via: Via): Promise<C
           continue;
         }
         if (found.has(d.id) || d.signer !== signer || !d.public || !d.payload) continue;
-        if (d.spec !== SITE_SPECS.envelope || d.type !== PUBLICATION) continue;
+        if (d.spec !== SITE_SPECS.envelopes || d.type !== PUBLICATION) continue;
         const previous = await previousOf(d.payload, places, via);
         if (previous !== undefined) found.set(d.id, { id: d.id, previous });
       }

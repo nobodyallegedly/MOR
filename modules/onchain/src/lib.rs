@@ -3,7 +3,7 @@
 //! The on-chain Bitcoin rail Module, draft 2
 //! (`modules/module-onchain-rail-draft-2.md`), a rail Module under the
 //! payment cMIP (`mor-payment`). **Experimental**: an instrument for testing
-//! the Finance MIP, never for real money.
+//! the Money MIP, never for real money.
 //!
 //! - [`p2c`]: pay-to-contract on Taproot: the payee's key tweaked by the
 //!   payment commitment gives the payment's address (BIP 341).
@@ -345,7 +345,7 @@ impl<'a> Onchain<'a> {
     }
 
     /// The rule itself, on its inputs and the chain's headers handed to it
-    /// as data (the Module's "Verification rule"; Production rule 12).
+    /// as data (the Module's "Verification rule"; Development rule 12).
     pub fn rule(input: &RailInput, chain: Option<&chain::HeaderChain>) -> Answer {
         // 1. The shapes.
         let Some(addr) = OnchainAddress::decode(input.address) else {

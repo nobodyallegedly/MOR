@@ -8,7 +8,7 @@
 
 use mor_core::act::{self, Act, Addressing, Inside, Object};
 use mor_core::cbor::Value;
-use mor_core::envelope::{DecKey, EncKey, EncryptionKey, Route, Routes, Version};
+use mor_core::envelopes::{DecKey, EncKey, EncryptionKey, Route, Routes, Version};
 use mor_core::hash::{sha256, Hash, ZERO_HASH};
 use mor_core::identity::{
     Absence, Audit, Declaration, Endorsement, Genesis, Home, HomeRule, KeptTip, Objection, Payload, Receipt,
@@ -160,7 +160,7 @@ impl Person {
         Self::genesis_declaring(seed, name, homes, rule, audit, None)
     }
 
-    /// A new identity whose genesis makes declarations (a Finance vault).
+    /// A new identity whose genesis makes declarations (a Money vault).
     pub fn genesis_declaring(
         seed: &[u8; 32],
         name: &str,
@@ -369,13 +369,13 @@ impl Person {
         self.act(spec, 3, r.to_map(), None, None)
     }
 
-    /// An encryption-key act (Envelope type 4) for an X-Wing key.
+    /// An encryption-key act (Envelopes type 4) for an X-Wing key.
     pub fn encryption_key(&mut self, version: u64, previous: Option<Hash>, key: &DecKey) -> Act {
         let e = EncryptionKey {
             version: Version { version, previous },
             key: EncKey::xwing(key.public.key.clone()),
         };
-        let spec = self.specs.envelope;
+        let spec = self.specs.envelopes;
         self.act(spec, 4, e.to_map(), None, None)
     }
 

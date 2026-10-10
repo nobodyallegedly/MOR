@@ -1,4 +1,4 @@
-//! Tiers (Law draft 7, rules 44a to 44c): what a clone changes, the tier of
+//! Tiers (Agreements draft 7, rules 44a to 44c): what a clone changes, the tier of
 //! each change, the area it lies in, and so which powers its mark must name.
 //!
 //! In plain words: compare the clone with its parent field by field (and
@@ -11,7 +11,7 @@
 //! needed is read from the bytes, never from what the clone says of itself.
 
 use super::formats::{
-    layers, task_layer, FieldRef, LawError, Mips, Power, Terms, JUDICIAL_TASKS, R,
+    layers, task_layer, FieldRef, AgreementsError, Mips, Power, Terms, JUDICIAL_TASKS, R,
 };
 use crate::cbor;
 use crate::hash::Hash;
@@ -190,7 +190,7 @@ fn lies_in(
             }
         }
         Change::Extension(e) => {
-            lane(layers::PRODUCTION, &mut areas, &mut nowhere);
+            lane(layers::DEVELOPMENT, &mut areas, &mut nowhere);
             for l in ext_layers(e)? {
                 lane(l, &mut areas, &mut nowhere);
             }
@@ -230,7 +230,7 @@ pub fn rollback_powers(parent: &Terms, clone: &Terms) -> Vec<Power> {
 /// The powers a clone of a collective's agreement needs, from its changes
 /// alone (rule 44c, 1 and 2), ascending as a mark lists them. A deal's
 /// clone needs the clone rule, every party (rule 45b). `ext_layers` gives
-/// the layers an extension declares in its specification (Production,
+/// the layers an extension declares in its specification (Development,
 /// field 10); an extension whose specification the caller does not hold is
 /// an error, never a guess.
 pub fn powers_needed(
@@ -294,6 +294,6 @@ pub fn judicial_changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
 }
 
 /// An error for an extension whose declared layers the caller cannot give.
-pub fn unknown_extension(e: &Hash) -> LawError {
-    LawError::Missing(*e)
+pub fn unknown_extension(e: &Hash) -> AgreementsError {
+    AgreementsError::Missing(*e)
 }

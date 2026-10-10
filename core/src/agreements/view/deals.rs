@@ -29,7 +29,7 @@ impl SuccessorCheck {
     }
 }
 
-impl<'a> LawView<'a> {
+impl<'a> AgreementsView<'a> {
     /// Whether `owner` signed the version `x`: proposed it, or signed a
     /// signature act naming it (any device: the verifier reads its owner's
     /// acts, not one device's sequence).
@@ -42,7 +42,7 @@ impl<'a> LawView<'a> {
         let mut out: Vec<Hash> = self
             .v
             .held_acts()
-            .filter(|h| self.is_law(h, types::TERMS) && self.terms(&h.id).is_ok_and(|t| t.parent == Some(*parent)))
+            .filter(|h| self.is_agreements(h, types::TERMS) && self.terms(&h.id).is_ok_and(|t| t.parent == Some(*parent)))
             .map(|h| h.id)
             .collect();
         out.sort();

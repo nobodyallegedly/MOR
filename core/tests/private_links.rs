@@ -13,7 +13,7 @@
 
 mod common;
 
-use common::{finance_spec, home, identity_spec, law_spec, own_home, Rot, World};
+use common::{money_spec, home, identity_spec, agreements_spec, own_home, Rot, World};
 use mor_core::act::{Object, Ref};
 use mor_core::cbor::Value;
 use mor_core::chain::{LinkSeen, Status, Verifier};
@@ -145,7 +145,7 @@ fn a_found_private_link_binds_nothing_on_the_fetch_alone() {
     let claim = w.private_act(&mut ana, identity_spec(), types::LINK_CLAIM, claim_payload(&ben.id), None, vec![ben.id]);
     let post = w.post(&mut ana, "a public post");
     // Another verifier holding the same acts and content keys, no fetch.
-    let mut other = Verifier::with_mips(identity_spec(), finance_spec(), law_spec());
+    let mut other = Verifier::with_mips(identity_spec(), money_spec(), agreements_spec());
     for (a, k) in &w.log {
         other.add_with_key(a.clone(), k.as_ref()).unwrap();
     }
@@ -191,7 +191,7 @@ fn a_private_identity_act_other_than_a_link_is_refused() {
     assert_eq!(w.v.status(&witness), Status::Invalid);
     // A private act of another specification is no Identity act: untouched.
     let mut carol = w.genesis("carol", vec![own_home()], None, None);
-    let msg = w.private_act(&mut carol, common::finance_spec(), 99, vec![], None, vec![bob.id]);
+    let msg = w.private_act(&mut carol, common::money_spec(), 99, vec![], None, vec![bob.id]);
     assert_ne!(w.v.status(&msg), Status::Invalid);
     assert_eq!(w.v.status(&post), Status::Valid);
 }
@@ -219,7 +219,7 @@ fn a_links_ending_applies_to_every_act_holding_the_termination() {
     // An act that refers to the termination holds it: for it, ended.
     let a = w.everyday_act_refs(
         &mut reader,
-        common::finance_spec(),
+        common::money_spec(),
         99,
         vec![],
         None,
@@ -239,7 +239,7 @@ fn a_links_ending_applies_to_every_act_holding_the_termination() {
     assert_eq!(w.v.link(&claim, &before), LinkSeen::Linked { confirmation });
     // An act citing one this verifier does not hold: cannot be told.
     let mut eve = w.genesis("eve", vec![own_home()], None, None);
-    let a = w.everyday_act_refs(&mut eve, common::finance_spec(), 99, vec![], None, None, Some(vec![Ref::Act([9; 32])]));
+    let a = w.everyday_act_refs(&mut eve, common::money_spec(), 99, vec![], None, None, Some(vec![Ref::Act([9; 32])]));
     let blind = w.add(&a);
     assert_eq!(w.v.link(&claim, &blind), LinkSeen::Unknown);
     // A termination by a third party ends nothing.
@@ -260,12 +260,12 @@ fn a_private_link_signed_by_a_scoped_key_is_invalid() {
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let ben = w.genesis("ben", vec![own_home()], None, None);
     // An act of a higher MIP, standing for the grant that installs a key.
-    let g = w.everyday_act(&mut ana, law_spec(), 9, vec![], None, None);
+    let g = w.everyday_act(&mut ana, agreements_spec(), 9, vec![], None, None);
     let grant = w.add(&g);
     let mut scoped = ana.clone();
     scoped.binding = grant;
     scoped.seq.clear();
-    let public = w.everyday_act(&mut scoped, finance_spec(), 2, vec![], None, None);
+    let public = w.everyday_act(&mut scoped, money_spec(), 2, vec![], None, None);
     let public = w.add(&public);
     assert_eq!(w.v.status(&public), Status::Scoped, "a scoped key signs a higher MIP's act");
     let claim = w.private_act(&mut scoped, identity_spec(), types::LINK_CLAIM, claim_payload(&ben.id), None, vec![ben.id]);

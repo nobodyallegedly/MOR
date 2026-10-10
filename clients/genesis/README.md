@@ -11,7 +11,7 @@ An identity in MOR starts with a genesis: a signed statement of its first everyd
 - **Say where to find you (routes).** Where your posts are, and your inbox, where others deliver things for you.
 - **Publish an encryption key.** A public key others use to send you things only you can open. It is X-Wing: two locks in one, one that a future quantum computer cannot pick (ML-KEM-768) and one that has been trusted for years (X25519). What is locked stays locked if either holds.
 - **Rotate.** Replace your everyday key using the safety key. The rotation counts once the homes your rule names have signed receipts for it: by default a majority of homes, counted per operator. Until then it is pending, and the program keeps the exact same bytes to send again, never a second rotation.
-- **Rely on an act (a witness act).** `witness --file F ACT` signs "I received this act and rely on it" (Identity draft 11, type 15): the act stays visible as disputed even if its author later disowns it. The program says what it does first and signs only if you type RELY. Since F110 it refuses to put acknowledgements on any other kind of act than Identity, Finance and Law acts.
+- **Rely on an act (a witness act).** `witness --file F ACT` signs "I received this act and rely on it" (Identity draft 11, type 15): the act stays visible as disputed even if its author later disowns it. The program says what it does first and signs only if you type RELY. Since F110 it refuses to put acknowledgements on any other kind of act than Identity, Money and Agreements acts.
 - **Deliver a key.** To give someone the key to something private, the program puts a small signed note, "the key of act X is K", inside a sealed container locked to their encryption key, and drops it in their inbox. The relay sees whom it is for, never who sent it or what it is. A key can also go to a one-off "bare" key someone handed out, found again by a tag (for an anonymous buyer).
 - **Look anyone up** as any reader would: fetch the chain and receipts from every home, and let the core library decide which rotation counts. Nothing a relay says unsigned is trusted.
 
@@ -21,7 +21,7 @@ An identity in MOR starts with a genesis: a signed statement of its first everyd
 | --- | --- |
 | `src/core.ts` | Loads the core library's WebAssembly (`wasm/`, crate `mor-wasm`); the test spec hashes. |
 | `src/transport.ts` | The relay transport cMIP: `info`, publishing acts and sealed containers, fetching, the feed, identity records. Recomputes the id of everything fetched. |
-| `src/identity.ts` | The test identity file; genesis, routes (Identity type 3), encryption key (Envelope type 4), rotation (prepare, save, submit, settle), bringing homes up to date, key delivery to an identity or a bare key, reading an inbox, and looking an identity up (`lookUp`). |
+| `src/identity.ts` | The test identity file; genesis, routes (Identity type 3), encryption key (Envelopes type 4), rotation (prepare, save, submit, settle), bringing homes up to date, key delivery to an identity or a bare key, reading an inbox, and looking an identity up (`lookUp`). |
 | `src/kex.ts` | Records every X-Wing exchange (public key, eseed, ciphertext; for opening, the private key used), so the tests can re-make each one with a second implementation. |
 | `src/cli.ts` | The command line (`npm run cli -- help`). |
 
@@ -68,22 +68,22 @@ alias mg='npm run -s cli --'
 
 Keep `~/mor-test/*.json` secret: each holds every key of its test identity.
 
-Added for the repo client (step 5a): `publish` takes `objects` (the chains an act belongs to); `lookUp` can add what it fetches to a verifier it is given, so several identities are judged together; the transport publishes and fetches media (`putMedia`, `getMedia`, checked by their SHA-256); the bindings make genesis and rotations with declarations, check Law terms and member signatures, lock media, and deal, check and rebuild split safety keys.
+Added for the repo client (step 5a): `publish` takes `objects` (the chains an act belongs to); `lookUp` can add what it fetches to a verifier it is given, so several identities are judged together; the transport publishes and fetches media (`putMedia`, `getMedia`, checked by their SHA-256); the bindings make genesis and rotations with declarations, check Agreements terms and member signatures, lock media, and deal, check and rebuild split safety keys.
 
 ## Readings, confirmed by Nobody, allegedly (29 September 2026)
 
 Where the texts are silent, the program takes the reading below.
 
-1. **X-Wing's number.** Encryption keys share Identity's scheme number space, and X-Wing is founding number 4, defined by Envelope; 1 to 3 stay signature schemes and are refused as encryption keys. Identity's `scheme` for signing keys is unchanged. The pickup tag of a bare X-Wing key is therefore `tagged_hash("MOR/transport/pickup", 0x04 ‖ key)`.
+1. **X-Wing's number.** Encryption keys share Identity's scheme number space, and X-Wing is founding number 4, defined by Envelopes; 1 to 3 stay signature schemes and are refused as encryption keys. Identity's `scheme` for signing keys is unchanged. The pickup tag of a bare X-Wing key is therefore `tagged_hash("MOR/transport/pickup", 0x04 ‖ key)`.
 2. **Media in a key delivery** is named by its publication's act id, with field 2 set (`true`); an act's own key is named by the act's id.
-3. **The sealed container's details** (Envelope draft 6): one capsule per recipient in `to`, a bare key always alone; the container key wrapped under `tagged_hash("MOR/sealed/wrap", shared secret)` with a zero nonce; the one-time key is a Schnorr key signing `tagged_hash("MOR/sealed", [to, one-time-key, locked-act])`.
+3. **The sealed container's details** (Envelopes draft 6): one capsule per recipient in `to`, a bare key always alone; the container key wrapped under `tagged_hash("MOR/sealed/wrap", shared secret)` with a zero nonce; the one-time key is a Schnorr key signing `tagged_hash("MOR/sealed", [to, one-time-key, locked-act])`.
 4. **The encryption-key act** is an everyday act of the owner, public, in the owner's sequence, and is sent to every home, like the routes.
 5. **Which routes or encryption key counts:** only acts the core library judges valid take part (a disputed act never counts, Identity), followed from version 1; a fork leaves the last act before it, shown as contested.
 6. **Old encryption keys are kept** in the identity file, so deliveries made to an earlier key still open.
 7. **The owner's client brings the homes up to date** after a rotation counts: every chain act a home missed (the same bytes), every receipt the other homes signed (cMIP, identity record part 8), and the chain acts of the homes' operators, which any relay may carry as ordinary acts. A reader who cannot reach an operator's own home looks for the operator's chain at the other homes. *Cost, stated:* a copy found elsewhere may be out of date; if the operator rotated after a theft of its everyday key and the reader cannot reach the operator's homes, the reader may count a receipt the operator's rotation voided. A reader that can reach the operator's own homes always prefers them.
 8. **The test identity file** is JSON, every key in the clear, readable by its owner only, labelled in its first line. A rotation is saved as pending before it is sent, so a retry sends the same bytes (Identity rule 8a); the program refuses to sign a second one while one is pending.
 9. **Randomness** is drawn from the platform (`crypto.getRandomValues`); SLH-DSA signatures are hedged, as the air-gapped Module signs.
-10. **One sequence per identity file.** Key deliveries are everyday acts in it, private, so a rotation's kept tip may be a private act; the running summary proves its line without opening it (Envelope).
+10. **One sequence per identity file.** Key deliveries are everyday acts in it, private, so a rotation's kept tip may be a private act; the running summary proves its line without opening it (Envelopes).
 
 ## Not yet
 

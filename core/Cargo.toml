@@ -42,7 +42,7 @@ slh-dsa = "=0.2.0-rc.5"
 libcrux-ml-kem = "0.0.10"
 libcrux-curve25519 = "0.0.8"
 libcrux-sha3 = "0.0.10"
-# Property-based testing with shrinking, for the Law invariants
-# (`tests/law_invariants.rs`): random histories, every failure reduced to
+# Property-based testing with shrinking, for the Agreements invariants
+# (`tests/agreements_invariants.rs`): random histories, every failure reduced to
 # its smallest example.
 proptest = { version = "1", default-features = false, features = ["std"] }

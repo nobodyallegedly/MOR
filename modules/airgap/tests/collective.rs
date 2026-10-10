@@ -1,4 +1,4 @@
-//! Collectives' split safety keys (Module, section 5; Law rule 36, F97).
+//! Collectives' split safety keys (Module, section 5; Agreements rule 36, F97).
 
 mod common;
 

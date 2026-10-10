@@ -88,7 +88,7 @@ const IDENTITY_TYPES: Record<number, string> = {
   14: 'escape endorsement',
 };
 
-const ENVELOPE_TYPES: Record<number, string> = { 0: 'publication', 4: 'encryption key' };
+const ENVELOPES_TYPES: Record<number, string> = { 0: 'publication', 4: 'encryption key' };
 
 /** What an arrival is, in words the relay can tell. */
 export function what(it: Item): string {
@@ -96,7 +96,7 @@ export function what(it: Item): string {
   if (it.kind === 'media') return 'media';
   if (it.spec === null) return 'private act';
   if (it.spec === 'identity') return `Identity: ${IDENTITY_TYPES[it.type ?? -1] ?? `type ${it.type}`}`;
-  if (it.spec === 'envelope') return `Envelope: ${ENVELOPE_TYPES[it.type ?? -1] ?? `type ${it.type}`}`;
+  if (it.spec === 'envelope') return `Envelopes: ${ENVELOPES_TYPES[it.type ?? -1] ?? `type ${it.type}`}`;
   return `spec ${it.spec.slice(0, 8)}…, type ${it.type}`;
 }
 

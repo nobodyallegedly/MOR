@@ -13,7 +13,7 @@
 //!   from a browser (outside the protocol).
 //!
 //! Written against the relay transport cMIP draft 2, core v16, Identity
-//! draft 10, Envelope draft 6 and Text draft 5.
+//! draft 10, Envelopes draft 6 and Text draft 5.
 
 pub mod client;
 pub mod http;

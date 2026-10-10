@@ -7,7 +7,7 @@ import { Verifier, cborDecode, describeAct, hex, openMedia, workHash } from '../
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { decodeSite, type FileEntry, type SiteManifest } from './manifest.ts';
-import { PUBLICATION, SITE_LAW_SPECS, SITE_SPECS, WITHDRAWAL } from './specs.ts';
+import { PUBLICATION, SITE_AGREEMENTS_SPECS, SITE_SPECS, WITHDRAWAL } from './specs.ts';
 
 interface Described {
   id: string;
@@ -71,7 +71,7 @@ export async function openVersion(version: string, expected: string, hints: stri
     return fail(`the version is not a valid act: ${e instanceof Error ? e.message : e}`);
   }
   if (!d.public || !d.payload) return fail('the version is not a public act');
-  if (d.spec !== SITE_SPECS.envelope || d.type !== PUBLICATION) return fail('the version is not a publication (Envelope type 0)');
+  if (d.spec !== SITE_SPECS.envelopes || d.type !== PUBLICATION) return fail('the version is not a publication (Envelopes type 0)');
   if (!d.signer) return fail('the version has no signer');
   r.signer = d.signer;
   let media: Map<number, unknown>;
@@ -98,8 +98,8 @@ export async function openVersion(version: string, expected: string, hints: stri
   if (r.standing !== 'valid') fail(`the version is ${r.standing}, not valid, for its signer's identity chain`);
   const res = v.resolve(d.signer) as { links: { act: string }[] };
   for (const link of res.links) {
-    if (v.lawDeclared(SITE_LAW_SPECS, d.signer, link.act)) {
-      fail("the signer is a collective (its chain declares an agreement): a collective's site counts only once Law draft 7 is approved, under its Envelope lane (website cMIP, rule 3)");
+    if (v.agreementsDeclared(SITE_AGREEMENTS_SPECS, d.signer, link.act)) {
+      fail("the signer is a collective (its chain declares an agreement): a collective's site counts only once Agreements draft 7 is approved, under its Envelopes lane (website cMIP, rule 3)");
       break;
     }
   }
@@ -133,7 +133,7 @@ export async function openVersion(version: string, expected: string, hints: stri
 }
 
 /**
- * A withdrawal of the version (Envelope, "Withdrawal"): an Envelope act of
+ * A withdrawal of the version (Envelopes, "Withdrawal"): an Envelopes act of
  * type 3 naming it in `objects`, valid, by its signer. Silence proves
  * nothing: a version is a version when none is found where we looked.
  */
@@ -155,7 +155,7 @@ async function findWithdrawal(version: string, signer: string, hints: string[], 
         } catch {
           continue;
         }
-        if (d.spec !== SITE_SPECS.envelope || d.type !== WITHDRAWAL || d.signer !== signer) continue;
+        if (d.spec !== SITE_SPECS.envelopes || d.type !== WITHDRAWAL || d.signer !== signer) continue;
         if (!(d.objects ?? []).some(([chain]) => chain === version)) continue;
         try {
           v.add(it.item);

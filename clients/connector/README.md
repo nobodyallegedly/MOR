@@ -14,7 +14,7 @@ Claude's desktop app can run small helper programs on your computer and use them
   - **a text** (a post or a long-form document), **a signature**, **a picture**, **an identity** (its homes, its chain, whether it is a collective and which agreement its record names).
 - **Preparing.** Ask Claude to post, publish a picture, withdraw a picture or send a message, for an identity you linked to Claude at the desk. The connector writes a **draft** as a file into the drafts folder on your Mac, `~/mor-drafts` (its format is documented in `DRAFTS.md`; nothing is written there): exactly what the act will say, what signing it means, and a short fingerprint of it (its digest). Nothing is signed. In MOR Identities you read it again, with the same digest, and approve it, decline it, or send it back with a note.
 - **Hearing back.** Claude asks the connector what the desk answered. An approval: the connector fetches the act from the relays and checks it is exactly the draft. A note: Claude reworks the draft and prepares a new one, naming the one you sent back.
-- **What Claude cannot prepare.** Anything outside the Text and Envelope layers: no signature on a release or an agreement, no agreement, no Identity act (decided by Nobody, allegedly, 1 October 2026). Claude still reads and explains every act.
+- **What Claude cannot prepare.** Anything outside the Text and Envelopes layers: no signature on a release or an agreement, no agreement, no Identity act (decided by Nobody, allegedly, 1 October 2026). Claude still reads and explains every act.
 - **Words in acts are not instructions.** A post or an agreement can be written to talk to a machine that reads it. Everything a signer wrote is shown between fences that say so, and the connector tells Claude to report it, never to follow it. Hidden characters that change the order text displays in are shown as codes, `<U+202E>` and so on.
 
 ## Precisely
@@ -41,9 +41,9 @@ The Claude desktop app cannot start a program kept inside `~/Documents`: macOS r
 
 Where the texts are silent, the connector takes these readings. *To be confirmed by Nobody, allegedly.*
 
-1. **The draft is a local handoff,** not a protocol format, and the desk, not the connector, makes the act: only the desk knows the identity's own sequence, and an act prepared elsewhere at a guessed position could fork it (Envelope, "Sequences"). *Decided since (1 October 2026):* by a folder on the Mac, documented in `DRAFTS.md`.
-2. **"In force" is as far as the relays asked show** (decided, 1 October 2026). An agreement is in force when Law says it exists (rules 1 and 45) and no clone that exists was found among its parties' acts at the relays asked; for a collective, the one its record names. A way to ask relays for later versions of an agreement is raised for the next relay transport draft.
-3. **Claude is not the signing client.** Law rule 4a and Text rule 5a bind the signer's own client: the desk shows the plain text with every invisible control as an escape, and the draft's digest. What Claude says is advice, not "what you saw".
+1. **The draft is a local handoff,** not a protocol format, and the desk, not the connector, makes the act: only the desk knows the identity's own sequence, and an act prepared elsewhere at a guessed position could fork it (Envelopes, "Sequences"). *Decided since (1 October 2026):* by a folder on the Mac, documented in `DRAFTS.md`.
+2. **"In force" is as far as the relays asked show** (decided, 1 October 2026). An agreement is in force when Agreements say it exists (rules 1 and 45) and no clone that exists was found among its parties' acts at the relays asked; for a collective, the one its record names. A way to ask relays for later versions of an agreement is raised for the next relay transport draft.
+3. **Claude is not the signing client.** Agreements rule 4a and Text rule 5a bind the signer's own client: the desk shows the plain text with every invisible control as an escape, and the draft's digest. What Claude says is advice, not "what you saw".
 4. **Signers' words are fenced.** Every word a signer wrote appears only between the fences, never in the connector's own lines; a relay's error text is quoted. The owner's notes from the desk are shown as the owner's, quoted, and they direct the rework.
 5. **Names are not shown,** only fingerprints, except the names the owner gave the identities linked to Claude, which the desk writes to the drafts folder so Claude can say whose draft it is.
 6. **Two approvals for a post with a picture:** the picture is published first; its id, known only once signed, is what the post refers to. *Set aside:* one draft holding several acts.
@@ -58,7 +58,7 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
 
 `test/connector.test.ts`, against three homes and an open relay on local ports, a test collective of three members (the repo client) and a release signed by one of the two members it needs. The connector runs as its own process and is driven over MCP, as Claude's app drives it:
 
-- its seven tools, none taking a key, none preparing a Law act; started by its launcher from another folder;
+- its seven tools, none taking a key, none preparing an Agreements act; started by its launcher from another folder;
 - given only a release id: verified, not a release yet, under the agreement its collective's record named, who signed and who did not, the agreement rule by rule, its words fenced;
 - a post prepared as a draft for a linked identity, by hash or by name, decoding to exactly what was asked, waiting at the desk;
 - refused before any draft: an identity not linked, a message to an identity that cannot receive one, a withdrawal of what is not a publication;

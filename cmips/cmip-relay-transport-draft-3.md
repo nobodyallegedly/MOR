@@ -1,8 +1,8 @@
 # cMIP: Relay Transport
 
-*Draft 3, 9 October 2026. **Not yet approved.** Draft 3 is draft 2 (approved by Nobody, allegedly, 30 September 2026) with one addition, decided by Nobody, allegedly, 9 October 2026 (F184): **the delivery record**, a relay's signed act saying it served a media object for a client's request, which counts as evidence for a relay's role share (Law rules 19 and 22) only when the payer's claim acknowledges it. Nothing else changes. Draft 2's own history follows.*
+*Draft 3, 9 October 2026. **Not yet approved.** Draft 3 is draft 2 (approved by Nobody, allegedly, 30 September 2026) with one addition, decided by Nobody, allegedly, 9 October 2026 (F184): **the delivery record**, a relay's signed act saying it served a media object for a client's request, which counts as evidence for a relay's role share (Agreements rules 19 and 22) only when the payer's claim acknowledges it. Nothing else changes. Draft 2's own history follows.*
 
-*Draft 2, 29 September 2026, approved by Nobody, allegedly, 30 September 2026. Draft 1 with F101 written in (roadmap step 7, the identity gauntlet): inclusion proofs travel. A home keeps and serves carried inclusion proofs for the identities it serves, with the acts they rest on (identity record parts 9 and 10, `POST {base}/proofs`); a bundle can carry them (key 2); and an owner's client keeps the proofs of its own audited receipts and hands them to its new homes. Draft 1 was approved by Nobody, allegedly, 28 September 2026 (roadmap step 1); its hash stays a draft hash until its creator is named at step 17. Written against core v12, the Identity MIP draft 7, the Envelope MIP draft 4, the Text MIP draft 5, the Production MIP draft 4, freeze test suite v11 and findings F1 to F83; merged against freeze test suite v12 and findings to F85, whose scenarios are unchanged. Not core: a founding cMIP, frozen at publication and competing with any other transport. It answers two open parameters of the drafts: how a home is queried (Identity), and how a client finds the key deliveries and sealed containers addressed to it (Envelope).*
+*Draft 2, 29 September 2026, approved by Nobody, allegedly, 30 September 2026. Draft 1 with F101 written in (roadmap step 7, the identity gauntlet): inclusion proofs travel. A home keeps and serves carried inclusion proofs for the identities it serves, with the acts they rest on (identity record parts 9 and 10, `POST {base}/proofs`); a bundle can carry them (key 2); and an owner's client keeps the proofs of its own audited receipts and hands them to its new homes. Draft 1 was approved by Nobody, allegedly, 28 September 2026 (roadmap step 1); its hash stays a draft hash until its creator is named at step 17. Written against core v12, the Identity MIP draft 7, the Envelopes MIP draft 4, the Text MIP draft 5, the Development MIP draft 4, freeze test suite v11 and findings F1 to F83; merged against freeze test suite v12 and findings to F85, whose scenarios are unchanged. Not core: a founding cMIP, frozen at publication and competing with any other transport. It answers two open parameters of the drafts: how a home is queried (Identity), and how a client finds the key deliveries and sealed containers addressed to it (Envelopes).*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples. Decisions taken with Nobody, allegedly are marked "(Nobody, allegedly, Q1)" and so on; the questions and their answers are listed at the end.*
 
@@ -31,11 +31,11 @@ It defines one act type, the delivery record ("Delivery records"), fills no task
 
 ## Dependencies
 
-Identity, Envelope and Text. It relies on the act format, act ids, sealed containers, routes (including the inbox kind), receipts, log summaries and their RFC 9162 Merkle tree exactly as those MIPs define them.
+Identity, Envelopes and Text. It relies on the act format, act ids, sealed containers, routes (including the inbox kind), receipts, log summaries and their RFC 9162 Merkle tree exactly as those MIPs define them.
 
 ## Definitions
 
-- **Relay.** As in Envelope: a server that stores and serves acts, sealed containers and media, operated by an identity.
+- **Relay.** As in Envelopes: a server that stores and serves acts, sealed containers and media, operated by an identity.
 - **Home.** As in Identity: a relay that also stores and serves identity chains and signs receipts.
 - **Base address.** An `https` URL that is the root of every request below, for example `https://home.example.org/mor`. It is the form an address hint takes under this cMIP.
 - **Item.** Anything a relay stores: an act, a sealed container, or a media object.
@@ -89,9 +89,9 @@ Every relay implements these requests. Every error is answered as in "Errors" be
 
 `POST {base}/acts`, body: the act (`bstr` content, sent as the whole body).
 
-1. The relay MUST check that the body decodes as an act in the Envelope shape, that the locked bytes hash to the outside's locked hash, and that the signature is valid for the act id under the key and scheme it carries, where the relay implements the scheme. It SHOULD check the binding (that the key is the one the named identity-chain act bound) where it can resolve the signer; a home MUST, for the identities it serves.
-2. A relay MUST NOT refuse an act because it does not implement the specification named inside. *It cannot read a private act's inside at all, and an unknown act must stay carriable so clients can later adopt its specification (Envelope rules 11 and 12, scenario 2).*
-3. Whether it keeps the act beyond these checks, for how long and at what price, is the relay's policy (Envelope, relays rule 5).
+1. The relay MUST check that the body decodes as an act in the Envelopes shape, that the locked bytes hash to the outside's locked hash, and that the signature is valid for the act id under the key and scheme it carries, where the relay implements the scheme. It SHOULD check the binding (that the key is the one the named identity-chain act bound) where it can resolve the signer; a home MUST, for the identities it serves.
+2. A relay MUST NOT refuse an act because it does not implement the specification named inside. *It cannot read a private act's inside at all, and an unknown act must stay carriable so clients can later adopt its specification (Envelopes rules 11 and 12, scenario 2).*
+3. Whether it keeps the act beyond these checks, for how long and at what price, is the relay's policy (Envelopes, relays rule 5).
 4. On success it answers:
 
 ```cddl
@@ -111,12 +111,12 @@ Publishing an act that the relay already holds answers the same result again. *P
 
 ```cddl
 put-sealed = {
-  0 => bstr,             ; the sealed container, as Envelope defines it
+  0 => bstr,             ; the sealed container, as Envelopes define it
   ? 1 => [+ hash]        ; pickup tags, for a container addressed to a bare key
 }
 ```
 
-The relay checks only that the container decodes in the Envelope shape. It indexes it by every recipient in its `to` field and every pickup tag given. *A sealed container is opaque: the relay learns its recipients and size, never its sender, as Envelope promises (scenario 5).*
+The relay checks only that the container decodes in the Envelopes shape. It indexes it by every recipient in its `to` field and every pickup tag given. *A sealed container is opaque: the relay learns its recipients and size, never its sender, as Envelopes promise (scenario 5).*
 
 ### Publishing media
 
@@ -161,13 +161,13 @@ feed-item = [ arrival: uint, kind: 0 / 1, item: bstr ]   ; kind 0 an act, 1 a se
 
 *To follow an identity, a client asks for its acts after the last arrival number it saw, with a wait; when an answer comes, it asks again. The wait is the relay's patience, not a time in the protocol: nothing about any act depends on it.*
 
-A relay can filter only by what it can read: the outside of every act, and the inside of a public act, whose key travels with it. **The `spec` and `type` filters apply to public acts only;** a relay that does not open public acts answers them with error 9. *A private act's type, position and thread are invisible to relays, as Envelope intends. A relay cannot even order a private sequence; the client does that from the acts.*
+A relay can filter only by what it can read: the outside of every act, and the inside of a public act, whose key travels with it. **The `spec` and `type` filters apply to public acts only;** a relay that does not open public acts answers them with error 9. *A private act's type, position and thread are invisible to relays, as Envelopes intend. A relay cannot even order a private sequence; the client does that from the acts.*
 
 A feed with no filter returns everything the relay holds that its policy lets it serve. *This is how a relay is mirrored, and how anyone recomputes a result from a mirror (scenario 4).*
 
 ### Commitments
 
-`GET {base}/commitment` returns the relay's latest commitment act (Envelope type 2), if it publishes one. Its Merkle construction is the Envelope MIP's, still open there.
+`GET {base}/commitment` returns the relay's latest commitment act (Envelopes type 2), if it publishes one. Its Merkle construction is the Envelopes MIP's, still open there.
 
 ## Delivering to an inbox
 
@@ -192,13 +192,13 @@ Reading an inbox needs no login: acts addressed to an identity show their recipi
 
 **Stated cost.** Anyone can watch an inbox's traffic: when deliveries arrive, how large they are and how many. Never their content, and never the sender of a sealed container. *An owner who wants less exposure can have acts sent in sealed containers, receive bought keys at bare keys found by scanning (Q2), or declare several inboxes, or none. Private inbox reading belongs to a later metadata-privacy cMIP (F70); this cMIP leaves room for it and does not complete it.*
 
-After a rotation that voids a thief's routes act, a client that delivered into the window re-delivers to the inbox the current routes name (Identity rule 39, Envelope). *The transport needs nothing new for this; the client needs to remember what it delivered.*
+After a rotation that voids a thief's routes act, a client that delivered into the window re-delivers to the inbox the current routes name (Identity rule 39, Envelopes). *The transport needs nothing new for this; the client needs to remember what it delivered.*
 
 ## Delivery records
 
-*In plain words: Law lets the owners of a work give a share of each sale to "the relay that served the file". Something must show which relay did. A relay could say so itself, but then any relay could claim deliveries it never made, and paying for usage invites faking usage. So the relay signs a small record of what it served, and the record counts only when the buyer, in the claim for the payment, confirms it: the confirming signature comes from the other side of the deal, as for a referral (Finance rule 10b, F75).*
+*In plain words: Agreements let the owners of a work give a share of each sale to "the relay that served the file". Something must show which relay did. A relay could say so itself, but then any relay could claim deliveries it never made, and paying for usage invites faking usage. So the relay signs a small record of what it served, and the record counts only when the buyer, in the claim for the payment, confirms it: the confirming signature comes from the other side of the deal, as for a referral (Money rule 10b, F75).*
 
-A delivery record is an act of this cMIP, type 0, signed by the relay's operator identity (Envelope, "Relay", F18). Its payload:
+A delivery record is an act of this cMIP, type 0, signed by the relay's operator identity (Envelopes, "Relay", F18). Its payload:
 
 ```cddl
 delivery-record = {
@@ -211,13 +211,13 @@ delivery-record = {
 **Asking for one.** `POST {base}/delivery-record`, body `[ locked-hash: hash, nonce: bstr ]`, sent by a client that fetched the object from this relay. A relay MAY answer with a signed delivery record, and MUST NOT sign one for an object it does not hold. *The nonce binds the record to one request and carries nothing about who asked: the relay learns no identity.*
 
 **When it counts.**
-1. A delivery record counts as evidence for a relay's role share (Law, "Role share"; rules 19 and 22) **only when the payer's claim for the payment acknowledges it** (Finance, the claim; Envelope rule 4a: a Finance act may carry acknowledgements), and the object it names is one the purchase paid for.
+1. A delivery record counts as evidence for a relay's role share (Agreements, "Role share"; rules 19 and 22) **only when the payer's claim for the payment acknowledges it** (Money, the claim; Envelopes rule 4a: a Money act may carry acknowledgements), and the object it names is one the purchase paid for.
 2. A delivery record no claim acknowledges is evidence of nothing.
 3. A claim MAY acknowledge several delivery records, so several relays can fill a role share in one payment, as the split plan divides it.
 
 **Clients.** A buyer's client SHOULD ask the relays it fetched a purchased object from for delivery records, and acknowledge in its claim those that served it. It MUST NOT acknowledge a record of a relay it did not fetch the object from.
 
-*Stated cost.* A payer and a relay together can acknowledge a delivery that never happened, sending part of the owners' money to that relay. The owners bound it by the size of the role share they offer, as for a self-referral (F184). *Also stated:* the acknowledgement links the payer's claim to the relays it used; a payer who wants no part in it acknowledges none, and then no relay earns that share on that payment (an unfilled role share, Law).
+*Stated cost.* A payer and a relay together can acknowledge a delivery that never happened, sending part of the owners' money to that relay. The owners bound it by the size of the role share they offer, as for a self-referral (F184). *Also stated:* the acknowledgement links the payer's claim to the relays it used; a payer who wants no part in it acknowledges none, and then no relay earns that share on that payment (an unfilled role share, Agreements).
 
 ## Homes
 
@@ -251,7 +251,7 @@ identity-record = {
   ? 1 => [+ bstr],        ; chain: genesis and every rotation the home holds as this identity's, in position order
   ? 2 => [* bstr],        ; receipts: this home's receipts for those acts
   ? 3 => [* bstr],        ; routes: the whole routes chain the home holds, from version 1, every branch
-  ? 4 => [* bstr],        ; encryption key: the whole encryption-key chain (Envelope type 4), every branch
+  ? 4 => [* bstr],        ; encryption key: the whole encryption-key chain (Envelopes type 4), every branch
   ? 5 => [* bstr],        ; names and name withdrawals
   ? 6 => [* bstr],        ; links: public claims, confirmations and terminations naming or signed by this identity
   ? 7 => [* bstr],        ; evidence: see below
@@ -403,17 +403,17 @@ error = {
 *What drafting this cMIP showed, for Nobody, allegedly.*
 
 1. **Found in Identity (a flaw; resolved as F86).** Receipt check 3 says a receipt counts only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts receipts "from the new homes", which are declared by the homeless rotation itself, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count. The intent is clear; the text contradicts it. *Decided (Nobody, allegedly, F86):* check 3 gains "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)", at the next Identity draft.
-2. **A gap in Identity, filled here.** Identity rule 13 asks a home to store the latest routes act; Identity's "Routes" rule needs the chain from version 1 to detect forks. This cMIP requires homes to serve the whole chain, and does the same for the encryption key, which Envelope defines "in spirit" as an Identity act but which rule 13 does not list. A stronger rule, not a relaxation.
-3. **Open parameters answered.** Identity: "how a home is queried" (the identity record, log requests). Envelope: "how a client finds the key deliveries and sealed containers addressed to it" (the feed by `to`, by pickup tag, or by scanning unaddressed containers). F83 listed the first as a condition of the freeze; under F84 it is a prerequisite of the freeze of all six MIPs.
+2. **A gap in Identity, filled here.** Identity rule 13 asks a home to store the latest routes act; Identity's "Routes" rule needs the chain from version 1 to detect forks. This cMIP requires homes to serve the whole chain, and does the same for the encryption key, which Envelopes define "in spirit" as an Identity act but which rule 13 does not list. A stronger rule, not a relaxation.
+3. **Open parameters answered.** Identity: "how a home is queried" (the identity record, log requests). Envelopes: "how a client finds the key deliveries and sealed containers addressed to it" (the feed by `to`, by pickup tag, or by scanning unaddressed containers). F83 listed the first as a condition of the freeze; under F84 it is a prerequisite of the freeze of all six MIPs.
 4. **No clock.** Arrival numbers and feed waits are local and never enter an act or a validity decision.
-5. **Untrusted relays** (Envelope). Every answer is a signed act, a hint, or a proof checked against a signed summary.
-6. **An act counts only where it is held; delivery is the signer's interest** (core, Envelope). Relays are never required to propagate; clients deliver.
+5. **Untrusted relays** (Envelopes). Every answer is a signed act, a hint, or a proof checked against a signed summary.
+6. **An act counts only where it is held; delivery is the signer's interest** (core, Envelopes). Relays are never required to propagate; clients deliver.
 7. **Same bytes to every home** (Identity 8a). Relays store and serve items byte for byte.
-8. **Privacy as Envelope promises.** Relays index only outsides and public insides; sealed containers show recipients and pickup tags, never senders.
+8. **Privacy as Envelopes promise.** Relays index only outsides and public insides; sealed containers show recipients and pickup tags, never senders.
 9. **Signatures sign act ids only.** The transport asks for no other signature.
 10. **Found in Identity through this cMIP (a flaw; resolved as F87).** A homeless rotation accepted on the verifier's own failed attempt became final once the next rotation counted, and a thief holding the safety key controls that next rotation. Behind a censor's firewall a thief could make its own theft final, beyond any later objection. *Decided (Nobody, allegedly, F87):* such a rotation never becomes final by the next rotation; the old home's objection voids it whenever it surfaces. This cMIP adds the transport side: objections from anywhere, probes, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
 11. **Where the core marks a weak or conformance rule, this cMIP does not smooth it over.** The "tried and failed to reach" case is defined as honestly as a transport can and still labelled the weakest; refusals stay unsigned, as the core says; "not held" proves nothing.
-12. **Its place in Production.** This cMIP fills no task and defines no act type (Production rule 8a allows this). No act names it: relays and clients adopt it by implementing it. Its spec hash covers its creator, who must publish it. The creator is named at roadmap step 17; any hash computed before then is a draft hash (Nobody, allegedly, Q6).
+12. **Its place in Development.** This cMIP fills no task and defines no act type (Development rule 8a allows this). No act names it: relays and clients adopt it by implementing it. Its spec hash covers its creator, who must publish it. The creator is named at roadmap step 17; any hash computed before then is a draft hash (Nobody, allegedly, Q6).
 
 13. **Found in Identity through the identity gauntlet (a flaw; resolved as F101).** Identity said a home serves inclusion proofs on request, and nothing else did. An identity that requires audit counts a rotation only with an inclusion proof of its receipt under a cosigned summary. Once its home vanished, a reader who had never reached that home could prove no receipt it signed, so the chain stopped at genesis for that reader, and the homeless rotation that auditors' absence statements should let count could not count either. *Decided (Nobody, allegedly, F101):* proofs travel, as objections do: homes keep and serve carried proofs, bundles carry them, and the owner's client keeps its own.
 14. **Friction, not a flaw: proving a home's receipts after its operator rotates.** A receipt signed before an operator's rotation counts only if it lies in the rotation's kept ancestry, and a verifier proves that from every act id of the operator's line up to the kept tip. The identity record carries none of the operator's receipts and summaries for other identities, so a reader fetches the operator's whole sequence with the feed (`signer=`). It works, and grows with the home's size; the open parameter below (an inclusion proof for a kept ancestry) would make it small.

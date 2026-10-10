@@ -499,13 +499,13 @@ fn an_acknowledgement_by_the_owner_itself_does_not_count() {
     let _ = &mut j;
 }
 
-/// F110 (freeze suite v21, scenario 5 step 5b, scenario 2 step 5c): only Identity, Finance and
-/// Law act types carry acknowledgements. A text act or a cMIP's reaction
+/// F110 (freeze suite v21, scenario 5 step 5b, scenario 2 step 5c): only Identity, Money and
+/// Agreements act types carry acknowledgements. A text act or a cMIP's reaction
 /// carrying `acks` is invalid and rescues nothing; a witness act keeps a
-/// disowned post visible as disputed; a buyer's claim (Finance) does the
+/// disowned post visible as disputed; a buyer's claim (Money) does the
 /// same for a publication.
 #[test]
-fn only_identity_finance_and_law_acts_acknowledge_f110() {
+fn only_identity_money_and_agreements_acts_acknowledge_f110() {
     let mut w = World::new();
     let mut h = w.operator("home");
     let mut j = w.genesis("journalist", vec![home(&h)], None, None);
@@ -527,7 +527,7 @@ fn only_identity_finance_and_law_acts_acknowledge_f110() {
     // A buyer's claim acknowledging the publication it paid for.
     let claim = w.everyday_act(
         &mut buyer,
-        finance_spec(),
+        money_spec(),
         3,
         vec![(Value::Uint(0), Value::Text("a claim".into()))],
         None,
@@ -576,12 +576,12 @@ fn a_witness_act_names_what_it_witnesses() {
     assert_eq!(w.v.status(&said), Status::Invalid, "its payload is empty");
     // A verifier told only the Identity MIP's hash.
     let mut blind = mor_core::chain::Verifier::new(identity_spec());
-    let law_act = w.everyday_act(&mut r, law_spec(), 17, vec![], None, Some(vec![x]));
+    let agreements_act = w.everyday_act(&mut r, agreements_spec(), 17, vec![], None, Some(vec![x]));
     let genesis = w.v.resolve(&r.id).links[0].act;
     blind.add(w.v.get(&genesis).unwrap().act.clone()).unwrap();
-    let id = blind.add(law_act.clone()).unwrap();
+    let id = blind.add(agreements_act.clone()).unwrap();
     assert_eq!(blind.status(&id), Status::Unknown);
-    let id = w.add(&law_act);
+    let id = w.add(&agreements_act);
     assert_eq!(w.v.status(&id), Status::Valid);
 }
 

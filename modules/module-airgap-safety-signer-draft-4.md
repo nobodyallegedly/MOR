@@ -139,7 +139,7 @@ No container fixes a compromised machine on its own; this should be stated plain
 
 ## 5. Collectives: split safety keys
 
-For a collective whose safety key is held as shares (Law, key grammar), the rotation device is the one that rebuilds the key from k shares, signs once and forgets it. *For that moment one device holds the whole key; that is the price (Law rule 36).* The same holds for the next key: the device that generates it sees it before dealing its shares. **Nothing can prove that a device forgot a key (F97).** What can be checked is that the shares were dealt honestly, so that no device ends up the only one able to rotate.
+For a collective whose safety key is held as shares (Agreements, key grammar), the rotation device is the one that rebuilds the key from k shares, signs once and forgets it. *For that moment one device holds the whole key; that is the price (Agreements rule 36).* The same holds for the next key: the device that generates it sees it before dealing its shares. **Nothing can prove that a device forgot a key (F97).** What can be checked is that the shares were dealt honestly, so that no device ends up the only one able to rotate.
 
 **5.1 Deal the next shares verifiably.** The device that generates the next safety key MUST deal its shares so that each member can check, alone, that their share is consistent with every other member's, and MUST have the shares checked against the committed key before the rotation that commits to it is relied on. *Otherwise a dealing device could commit to a key it keeps and hand the members shares of another seed, and only it could ever rotate the collective (F82, M23, F97).*
 

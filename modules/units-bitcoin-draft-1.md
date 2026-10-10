@@ -1,10 +1,10 @@
 # Units: the satoshi, and the satoshis of Bitcoin's test networks
 
-*Draft 1, 2 October 2026 (roadmap step 12). **Not yet approved.** Four unit specifications (Production kind 2), one per network, written together. Each is published as its own specification, with its own hash; until their creator is named at step 17 each is named by a test value. The unit specification format is an open parameter of the Finance MIP: each text below is the whole of its specification for now.*
+*Draft 1, 2 October 2026 (roadmap step 12). **Not yet approved.** Four unit specifications (Development kind 2), one per network, written together. Each is published as its own specification, with its own hash; until their creator is named at step 17 each is named by a test value. The unit specification format is an open parameter of the Money MIP: each text below is the whole of its specification for now.*
 
 *Reading this document: normal text is the specification. Italic text is commentary.*
 
-*Why four: a unit names what an amount is counted in, so that one unit has one name on every rail (Finance, "One name per unit"). A coin of a test network is worth nothing and can be made at will; counting it as a satoshi would let a test payment discharge a real debt. The Lightning rail Module (and the on-chain Module of step 12a) carry each network's own unit.*
+*Why four: a unit names what an amount is counted in, so that one unit has one name on every rail (Money, "One name per unit"). A coin of a test network is worth nothing and can be made at will; counting it as a satoshi would let a test payment discharge a real debt. The Lightning rail Module (and the on-chain Module of step 12a) carry each network's own unit.*
 
 ## Satoshi (Bitcoin)
 

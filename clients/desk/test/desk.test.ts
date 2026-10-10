@@ -1,6 +1,6 @@
 // Roadmap step 11c, "done when": a draft prepared by Claude reaches the
 // desk, is read in plain words, sent back with a note, reworked, approved,
-// and accepted by a relay; a Law act cannot be prepared; and an identity's
+// and accepted by a relay; an Agreements act cannot be prepared; and an identity's
 // received interactions are sorted into to answer, answered and ignored.
 // Claude's side is the connector, driven over MCP as Claude's app drives
 // it; the owner's side is the desk's program, through the page's requests.
@@ -15,7 +15,7 @@ import { relayAt } from '../../genesis/src/transport.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { POST_SPECS } from '../../barebone/src/specs.ts';
 import { readPost } from '../../barebone/src/post.ts';
-import { LAW_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { decodeDraft, encodeDraft, loadAnswer, loadLinked, saveDraft, type Draft } from '../../connector/src/draft.ts';
 import { DESK_SPECS } from '../src/specs.ts';
 import type { Done } from '../src/page/api.ts';
@@ -131,17 +131,17 @@ test('a draft from Claude reaches the desk, is sent back with a note, reworked, 
   assert.deepEqual(h.slice(0, 2), ['approved', 'sent back']);
 });
 
-test('a Law act cannot be prepared: the connector has no tool for one, and the desk refuses one written by hand', async () => {
+test('an Agreements act cannot be prepared: the connector has no tool for one, and the desk refuses one written by hand', async () => {
   const { tools } = await w.claude.client.listTools();
   assert.deepEqual(tools.map((t) => t.name).sort(), ['mor_drafts', 'mor_identity', 'mor_prepare_message', 'mor_prepare_picture', 'mor_prepare_post', 'mor_prepare_withdrawal', 'mor_read']);
   for (const t of tools) {
     for (const k of Object.keys((t.inputSchema as { properties?: object }).properties ?? {})) assert.doesNotMatch(k, /key|secret|seed|identity_file|password/i, `${t.name} takes ${k}`);
   }
-  // Something else on the machine writes a Law signature, as a draft, into the folder.
-  const law: Draft = {
+  // Something else on the machine writes an Agreements signature, as a draft, into the folder.
+  const agreements: Draft = {
     signer: machine,
-    spec: REPO_SPECS.law,
-    type: LAW_TYPES.signature,
+    spec: REPO_SPECS.agreements,
+    type: AGREEMENTS_TYPES.signature,
     payload: signaturePayload(post),
     public: true,
     refs: [],
@@ -152,21 +152,21 @@ test('a Law act cannot be prepared: the connector has no tool for one, and the d
     note: 'Please sign this agreement.',
     reworks: null,
   };
-  const s = saveDraft(w.drafts, law);
+  const s = saveDraft(w.drafts, agreements);
   const ds = await waiting(w.client);
   const d = ds.find((x) => x.digest === s.digest)!;
   assert.equal(d.kind, 'refused');
-  assert.match(d.blocking.join(' '), /It is a Law act .* Claude prepares acts of the Text and Envelope layers only: posts, publications, withdrawals and messages/);
+  assert.match(d.blocking.join(' '), /It is an Agreements act .* Claude prepares acts of the Text and Envelopes layers only: posts, publications, withdrawals and messages/);
   const before = w.app.store.identity(machine).f.sequence.length;
-  await assert.rejects(w.client.ask('approve', { digest: s.digest }), /This cannot be signed: It is a Law act/);
+  await assert.rejects(w.client.ask('approve', { digest: s.digest }), /This cannot be signed: It is an Agreements act/);
   assert.equal(w.app.store.identity(machine).f.sequence.length, before, 'nothing signed');
   await w.client.ask('decline', { digest: s.digest, note: '' });
   // An Identity act, and a key delivery, likewise.
   for (const [spec, type] of [
     [SPECS.identity, 3],
-    [POST_SPECS.envelope, 1],
+    [POST_SPECS.envelopes, 1],
   ] as [string, number][]) {
-    const x = saveDraft(w.drafts, { ...law, spec, type, payload: cborEncode(new Map()), objects: [], note: null });
+    const x = saveDraft(w.drafts, { ...agreements, spec, type, payload: cborEncode(new Map()), objects: [], note: null });
     const v = (await waiting(w.client)).find((y) => y.digest === x.digest)!;
     assert.equal(v.kind, 'refused', words(v));
     await assert.rejects(w.client.ask('approve', { digest: x.digest }), /This cannot be signed/);
@@ -225,7 +225,7 @@ test('a picture and a withdrawal, prepared by Claude and approved at the desk', 
   // A publication it did not sign is not withdrawn: refused before any draft.
   const other = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
   await other.publishGenesis();
-  const theirs = await other.publish(POST_SPECS.envelope, 0, cborEncode(new Map<number, unknown>([[0, unhex(POST_SPECS.jpeg)], [1, new Uint8Array(32)], [2, new Uint8Array(32)], [3, 1], [4, new Uint8Array(24)]])), { public: true, relays: [w.relay.base] });
+  const theirs = await other.publish(POST_SPECS.envelopes, 0, cborEncode(new Map<number, unknown>([[0, unhex(POST_SPECS.jpeg)], [1, new Uint8Array(32)], [2, new Uint8Array(32)], [3, 1], [4, new Uint8Array(24)]])), { public: true, relays: [w.relay.base] });
   const no = await ask('mor_prepare_withdrawal', { signer: machine, publication: theirs.id });
   assert.match(no.text, /did not sign that publication and is not the one it was made for/);
   assert.match(no.text, /No draft was written/);
@@ -252,7 +252,7 @@ test("an identity's received interactions: messages, replies, acknowledgements a
   // F110: a text act may not acknowledge; the genesis client refuses to sign one. Reliance is a witness act.
   await assert.rejects(other.publish(POST_SPECS.text, 0, textPayload('Received.'), { public: true, relays: inbox, to: [machine], acks: [post] }), /witness act/);
   await other.publish(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(new Map()), { public: true, relays: inbox, to: [machine], acks: [post] });
-  await other.publish(DESK_SPECS.finance, 3, cborEncode(new Map<number, unknown>([[2, unhex(machine)]])), { public: true, relays: inbox, to: [machine] });
+  await other.publish(DESK_SPECS.money, 3, cborEncode(new Map<number, unknown>([[2, unhex(machine)]])), { public: true, relays: inbox, to: [machine] });
 
   const r = await w.client.ask<{ added: number; problems: string[] }>('refresh', { identity: machine });
   assert.deepEqual(r.problems, []);
@@ -269,7 +269,7 @@ test("an identity's received interactions: messages, replies, acknowledgements a
   assert.equal(kind('acknowledgement').witness, true);
   assert.equal(kind('acknowledgement').standing, 'valid');
   assert.equal(kind('payment').from, other.id);
-  assert.match(kind('payment').problem!, /does not read Finance yet/);
+  assert.match(kind('payment').problem!, /does not read Money yet/);
   assert.ok(got.every((x) => x.sorted === 'new'));
 
   // The owner sorts them.
@@ -316,7 +316,7 @@ test('unlinking an identity at the desk stops Claude preparing for it, and the d
 // settling the fork.
 test('a payment naming the other branch of a forked deal raises the alarm at the desk', async () => {
   const { dealPayload } = await import('../../repo/src/deal.ts');
-  const { proposePayload, sign } = await import('../../repo/src/law.ts');
+  const { proposePayload, sign } = await import('../../repo/src/agreements.ts');
   const relays = [w.relay.base];
   const other = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
   await other.publishGenesis();
@@ -334,21 +334,21 @@ test('a payment naming the other branch of a forked deal raises the alarm at the
   const b = await version('3B: the price is 120.', d);
   w.app.store.saveIdentity(seller);
   const claim = new Map<number, unknown>([
-    [0, unhex(MIPS.finance)],
+    [0, unhex(MIPS.money)],
     [1, new TextEncoder().encode('a fan pays under 3B')],
     [2, unhex(machine)],
-    [3, [unhex(MIPS.finance), 120]],
+    [3, [unhex(MIPS.money), 120]],
     [4, unhex(d)],
     [9, [unhex(d), unhex(b)]],
   ]);
   const fan = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
   await fan.publishGenesis();
   for (const a of fan.chainActs()) await relayAt(w.relay.base).putAct(a);
-  await fan.publish(MIPS.finance, 3, cborEncode(claim), { public: true, relays, to: [machine] });
+  await fan.publish(MIPS.money, 3, cborEncode(claim), { public: true, relays, to: [machine] });
   await w.client.ask('refresh', { identity: machine });
   const got = (await state(w.client)).identities.find((i) => i.id === machine)!.received;
   const paid = got.find((x) => x.kind === 'payment' && x.from === fan.id)!;
-  assert.match(paid.alarm ?? '', /ALARM \(Law rule 45b, F186\): this payment names version .* of a deal that stands forked/);
+  assert.match(paid.alarm ?? '', /ALARM \(Agreements rule 45b, F186\): this payment names version .* of a deal that stands forked/);
   assert.match(paid.alarm ?? '', /The buyer is protected/);
   assert.match(paid.alarm ?? '', /names both branches/);
 });
@@ -359,7 +359,7 @@ test('a payment naming the other branch of a forked deal raises the alarm at the
 // numbers on the splits it receives skip.
 test('splits whose numbers skip raise the holder\'s alarm at the desk', async () => {
   const { dealPayload } = await import('../../repo/src/deal.ts');
-  const { proposePayload, sign, splitPayload } = await import('../../repo/src/law.ts');
+  const { proposePayload, sign, splitPayload } = await import('../../repo/src/agreements.ts');
   const relays = [w.relay.base];
   const other = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
   await other.publishGenesis();
@@ -374,7 +374,7 @@ test('splits whose numbers skip raise the holder\'s alarm at the desk', async ()
   for (const a of service.chainActs()) await relayAt(w.relay.base).putAct(a);
   for (const n of [1, 3]) {
     const s = splitPayload({ receipt: `${n}`.padStart(64, '0'), payouts: [{ receiver: machine, amount: 1, stake: 0 }], cmip: 'c'.repeat(64), agreement: p.id, number: n });
-    await service.publish(REPO_SPECS.law, LAW_TYPES.split, s, { public: true, relays, to: [machine] });
+    await service.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.split, s, { public: true, relays, to: [machine] });
   }
   await w.client.ask('refresh', { identity: machine });
   const got = (await state(w.client)).identities.find((i) => i.id === machine)!.received;
@@ -385,7 +385,7 @@ test('splits whose numbers skip raise the holder\'s alarm at the desk', async ()
   // QF4 (decided by Nobody, allegedly, 9 October 2026, F190): a repeated
   // number is a deviation that breaks the plan.
   const s = splitPayload({ receipt: '9'.padStart(64, '0'), payouts: [{ receiver: machine, amount: 1, stake: 0 }], cmip: 'c'.repeat(64), agreement: p.id, number: 3 });
-  await service.publish(REPO_SPECS.law, LAW_TYPES.split, s, { public: true, relays, to: [machine] });
+  await service.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.split, s, { public: true, relays, to: [machine] });
   await w.client.ask('refresh', { identity: machine });
   const again = (await state(w.client)).identities.find((i) => i.id === machine)!.received.filter((x) => x.from === service.id);
   assert.match(again.map((x) => x.alarm ?? '').join(' '), /number 3 is carried by 2 splits: a deviation that breaks the plan/);

@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { cborEncode, describeAct } from '../../genesis/src/core.ts';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
-import { LAW_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Client, newKey, type Done, type Reading, type Review, type State } from '../src/page/api.ts';
 
@@ -88,20 +88,20 @@ const unhex = (h: string) => Uint8Array.from(h.match(/../g)!.map((x) => parseInt
 
 /**
  * A relay in front of another: everything passes, except that while `drop`
- * is set a Law act of one of the types in `types` (by default a record of
- * a collective, Law type 17) is answered as taken and never passed on.
+ * is set an Agreements act of one of the types in `types` (by default a record of
+ * a collective, Agreements type 17) is answered as taken and never passed on.
  * What a person sees when a relay loses an act: the client was told it
  * arrived.
  */
 export async function lossy(target: string): Promise<{ base: string; drop: boolean; types: number[]; close(): Promise<void> }> {
-  const state = { drop: false, types: [LAW_TYPES.record] as number[] };
+  const state = { drop: false, types: [AGREEMENTS_TYPES.record] as number[] };
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];
     for await (const ch of req) chunks.push(ch as Buffer);
     const body = Buffer.concat(chunks);
     if (state.drop && req.method === 'POST' && req.url === '/acts') {
       const d = describeAct(new Uint8Array(body)) as { id: string; spec?: string; type?: number };
-      if (d.spec === REPO_SPECS.law && d.type !== undefined && state.types.includes(d.type)) {
+      if (d.spec === REPO_SPECS.agreements && d.type !== undefined && state.types.includes(d.type)) {
         res.writeHead(200, { 'content-type': 'application/cbor' });
         res.end(Buffer.from(cborEncode(new Map<number, unknown>([[0, unhex(d.id)], [1, 0]]))));
         return;

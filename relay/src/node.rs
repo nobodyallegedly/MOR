@@ -34,21 +34,21 @@ use std::path::{Path, PathBuf};
 pub struct Specs {
     /// `IDENTITY`: receipts, routes, log summaries, objections...
     pub identity: Hash,
-    /// `ENVELOPE`: publications, encryption keys.
-    pub envelope: Hash,
+    /// `ENVELOPES`: publications, encryption keys.
+    pub envelopes: Hash,
 }
 
 impl Specs {
     pub fn test() -> Self {
         Specs {
             identity: sha256(b"IDENTITY, test value until the freeze"),
-            envelope: sha256(b"ENVELOPE, test value until the freeze"),
+            envelopes: sha256(b"ENVELOPE, test value until the freeze"),
         }
     }
 }
 
-/// Envelope types a relay reads.
-pub mod envelope_types {
+/// Envelopes types a relay reads.
+pub mod envelopes_types {
     pub const PUBLICATION: u64 = 0;
     pub const ENCRYPTION_KEY: u64 = 4;
 }
@@ -61,7 +61,7 @@ pub enum Role {
     Home,
 }
 
-/// Whose acts this relay keeps (Envelope, relays rule 5: the relay's policy).
+/// Whose acts this relay keeps (Envelopes, relays rule 5: the relay's policy).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Policy {
     /// Anyone's.
@@ -677,7 +677,7 @@ impl Node {
     /// naming every base address in its outbox route for `IDENTITY`, and
     /// keeping every other route as it was.
     fn next_routes(&mut self, bases: &[String], drop: Option<&str>) -> R<Hash> {
-        use mor_core::envelope::{latest, Route, Routes, Version};
+        use mor_core::envelopes::{latest, Route, Routes, Version};
         let op = self
             .operator()
             .ok_or_else(|| Fail::Internal("a relay has no operator".into()))?;
@@ -1368,7 +1368,7 @@ impl Node {
         Ok(())
     }
 
-    /// The relay's own policy (Envelope, relays rule 5; Identity rule 12).
+    /// The relay's own policy (Envelopes, relays rule 5; Identity rule 12).
     fn check_policy(
         &self,
         act: &Act,
@@ -1433,7 +1433,7 @@ impl Node {
     }
 
     /// What a public act concerns, for the identity record: its `objects`,
-    /// and the fields of Identity and Envelope payloads that name an
+    /// and the fields of Identity and Envelopes payloads that name an
     /// identity, an act or media.
     fn about(&self, inside: &Inside) -> Vec<Hash> {
         let mut out = vec![];
@@ -1468,7 +1468,7 @@ impl Node {
                 _ => {}
             }
         }
-        if inside.spec == self.specs.envelope && inside.type_ == envelope_types::PUBLICATION {
+        if inside.spec == self.specs.envelopes && inside.type_ == envelopes_types::PUBLICATION {
             out.extend(as_hash(field(2)));
         }
         out.sort();
@@ -1622,7 +1622,7 @@ impl Node {
         if self.cfg.policy == Policy::Allowlist
             && !self
                 .store
-                .any_about(&h, &self.specs.envelope, envelope_types::PUBLICATION)?
+                .any_about(&h, &self.specs.envelopes, envelopes_types::PUBLICATION)?
         {
             return wire(
                 code::NOT_ACCEPTED,
@@ -1751,8 +1751,8 @@ impl Node {
         if want(part::ENCRYPTION_KEY) {
             rec.encryption_keys = bytes_of(self.store.acts_by(
                 identity,
-                &self.specs.envelope,
-                &[envelope_types::ENCRYPTION_KEY],
+                &self.specs.envelopes,
+                &[envelopes_types::ENCRYPTION_KEY],
             )?);
         }
         if want(part::NAMES) {

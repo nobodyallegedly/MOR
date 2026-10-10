@@ -7,13 +7,13 @@ import { createHash } from 'node:crypto';
 const test = (s: string) => createHash('sha256').update(s).digest('hex');
 
 export const REPO_SPECS = {
-  /** The Law MIP (`LAW`). */
-  law: test('LAW, test value until the freeze'),
+  /** The Agreements MIP (`AGREEMENTS`). */
+  agreements: test('LAW, test value until the freeze'),
   /** The release manifest cMIP (cmips/cmip-release-manifest-draft-1.md). */
   manifest: test('release manifest cMIP, draft 1, test value until publication'),
 };
 
-export const LAW_TYPES = {
+export const AGREEMENTS_TYPES = {
   terms: 0,
   signature: 1,
   release: 5,
@@ -33,11 +33,11 @@ export const LAW_TYPES = {
   record: 17,
   fork: 19,
   closing: 20,
-  // 21, the creditor's release under F125, is retired: a Finance act now (F126).
+  // 21, the creditor's release under F125, is retired: a Money act now (F126).
 } as const;
 
-/** Finance act types the collective client makes (Finance draft 6). */
-export const FINANCE_TYPES = { pointer: 0, obligation: 1, receipt: 2, release: 4 } as const;
+/** Money act types the collective client makes (Money draft 6). */
+export const MONEY_TYPES = { pointer: 0, obligation: 1, receipt: 2, release: 4 } as const;
 
 /** The rail Module the test pointers name: a test value, no real rail. */
 export const TEST_RAIL = test('a test rail Module, no real rail');
@@ -45,5 +45,5 @@ export const TEST_RAIL = test('a test rail Module, no real rail');
 /** The time reference a notice's deadline names (F197): a test value, no real clock; this program reads no time reference. */
 export const TEST_TIME = test('a test time reference, no real clock');
 
-/** Law's declaration kind 0: the agreement a collective lives under. */
+/** Agreements' declaration kind 0: the agreement a collective lives under. */
 export const FOUNDING_AGREEMENT = 0;

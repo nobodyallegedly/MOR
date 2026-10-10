@@ -9,23 +9,23 @@ use sha2::{Digest, Sha256};
 /// A 32-byte SHA-256 hash.
 pub type Hash = [u8; 32];
 
-/// The empty running summary, and nothing else: 32 zero bytes (Envelope, "Sequences").
+/// The empty running summary, and nothing else: 32 zero bytes (Envelopes, "Sequences").
 pub const ZERO_HASH: Hash = [0u8; 32];
 
 /// The tags the core uses. Each one names one kind of object, so a hash of
 /// one kind can never be passed off as another.
 pub mod tag {
-    /// Act id: over the encoded outside (Identity, Envelope).
+    /// Act id: over the encoded outside (Identity, Envelopes).
     pub const ACT: &str = "MOR/act";
-    /// Inside commitment: over the encoded, unlocked inside (Envelope).
+    /// Inside commitment: over the encoded, unlocked inside (Envelopes).
     pub const INSIDE: &str = "MOR/inside";
-    /// Running summary leaf: over an act id (Envelope, "Sequences").
+    /// Running summary leaf: over an act id (Envelopes, "Sequences").
     pub const MMR_LEAF: &str = "MOR/mmr-leaf";
-    /// Running summary internal node: over `left || right` (Envelope, "Sequences").
+    /// Running summary internal node: over `left || right` (Envelopes, "Sequences").
     pub const MMR_NODE: &str = "MOR/mmr-node";
-    /// Work hash: over a work's complete plaintext (Envelope, "Media").
+    /// Work hash: over a work's complete plaintext (Envelopes, "Media").
     pub const WORK: &str = "MOR/work";
-    /// Spec hash: over a specification's encoded content (Production).
+    /// Spec hash: over a specification's encoded content (Development).
     pub const SPEC: &str = "MOR/spec";
     /// Safety key commitment: over `scheme || key` (Identity).
     pub const SAFETY: &str = "MOR/safety";

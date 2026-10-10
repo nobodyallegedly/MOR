@@ -23,8 +23,8 @@ use bitcoin::taproot::TapNodeHash;
 use bitcoin::{absolute, consensus, transaction, Address, CompressedPublicKey, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness};
 use mor_core::act::{Act, Inside};
 use mor_core::chain::Status;
-use mor_core::envelope::{self, DecKey, EncryptionKey, Recipient, Routes, SealRandom, Sealed};
-use mor_core::finance::{self, choose, Amount, Choice, Citations, Claim, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
+use mor_core::envelopes::{self, DecKey, EncryptionKey, Recipient, Routes, SealRandom, Sealed};
+use mor_core::money::{self, choose, Amount, Choice, Citations, Claim, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
 use mor_core::hash::{sha256, Hash};
 use mor_core::identity::Payload as Id;
 use mor_harness::net::{Http, Site};
@@ -40,7 +40,7 @@ use mor_relay::store::Filter;
 use mor_relay::{Policy, Role, Specs};
 use std::path::PathBuf;
 
-fn finance() -> Hash {
+fn money() -> Hash {
     sha256(b"FINANCE, test value until the freeze")
 }
 
@@ -83,7 +83,7 @@ async fn put(site: &Site, a: &Act) {
 
 impl Party {
     async fn born(site: &Site, seed: &[u8; 32], name: &str, vault: Option<Vec<VaultEntry>>) -> Party {
-        let decl = vault.map(|v| vec![finance::vault_declaration(&finance(), &v)]);
+        let decl = vault.map(|v| vec![money::vault_declaration(&money(), &v)]);
         let (g, mut p) = Person::genesis_declaring(seed, name, vec![site.home()], None, None, decl);
         put(site, &g).await;
         let dk = DecKey::from_secret(random::<32>());
@@ -94,8 +94,8 @@ impl Party {
         Party { p, dk, rd: Reader::new(Http::new(None)) }
     }
 
-    fn finance_act(&mut self, payload: &Payload, to: Option<Hash>) -> Act {
-        self.p.act(finance(), payload.type_(), payload.to_map(), None, to.map(|t| vec![t]))
+    fn money_act(&mut self, payload: &Payload, to: Option<Hash>) -> Act {
+        self.p.act(money(), payload.type_(), payload.to_map(), None, to.map(|t| vec![t]))
     }
 
     /// Pick up and open what reached this identity's inbox.
@@ -108,7 +108,7 @@ impl Party {
         let mut out = vec![];
         for item in page.items {
             let Ok(s) = Sealed::decode(&item.item) else { continue };
-            let Ok(o) = envelope::open(&s, Some(&self.p.id), &self.dk) else { continue };
+            let Ok(o) = envelopes::open(&s, Some(&self.p.id), &self.dk) else { continue };
             let id = o.act.id();
             if self.rd.v.get(&id).is_none() {
                 let _ = self.rd.v.add_with_key(o.act.clone(), o.key.as_ref());
@@ -134,7 +134,7 @@ async fn deliver(to: &PayeeView, a: &Act, key: &[u8; 32]) {
         }
     };
     let rnd = SealRandom { container_key: random::<32>(), nonce: random::<24>(), eseeds: vec![random::<64>()], one_time_secret, aux: random::<32>() };
-    let s = envelope::seal(a, Some(key), &[Recipient::Identity { id: to.id, key: to.ek.clone() }], &rnd).expect("a sealed container");
+    let s = envelopes::seal(a, Some(key), &[Recipient::Identity { id: to.id, key: to.ek.clone() }], &rnd).expect("a sealed container");
     mor_relay::client::Client::new(&to.inbox).put_sealed(&s.encode(), &[]).await.expect("the inbox takes it");
 }
 
@@ -145,21 +145,21 @@ struct PayeeView {
     pointer: Option<(Hash, PayeePointer)>,
     vault: Option<(Hash, Vec<VaultEntry>)>,
     inbox: String,
-    ek: envelope::EncKey,
+    ek: envelopes::EncKey,
 }
 
 /// What a reader holds, as the payment cMIP asks for it (as in the
-/// Lightning rail's test): a Finance-only wallet.
+/// Lightning rail's test): a Money-only wallet.
 struct View<'a>(&'a Reader);
 
 impl Held for View<'_> {
     fn pointer(&self, id: &Hash) -> Option<PayeePointer> {
         let h = self.0.v.get(id)?;
-        if self.0.v.binding_status(id) != Status::Valid || h.inside.spec != finance() {
+        if self.0.v.binding_status(id) != Status::Valid || h.inside.spec != money() {
             return None;
         }
         let p = Payload::decode(h.inside.type_, &h.inside.payload).ok()?;
-        finance::check_signer(&p, h.act.outside.signer.as_ref()?, &Citations::of(&h.inside)).ok()?;
+        money::check_signer(&p, h.act.outside.signer.as_ref()?, &Citations::of(&h.inside)).ok()?;
         match p {
             Payload::PayeePointer(p) => Some(p),
             _ => None,
@@ -175,13 +175,13 @@ impl Held for View<'_> {
             Id::Rotation(r) => (*h.act.outside.signer.as_ref()?, r.declarations.clone()?),
             _ => return None,
         };
-        let v = finance::vault_in(&finance(), &decls).ok()??;
+        let v = money::vault_in(&money(), &decls).ok()??;
         Some((who, v?))
     }
-    fn obligation(&self, _: &Hash) -> Option<finance::Obligation> {
+    fn obligation(&self, _: &Hash) -> Option<money::Obligation> {
         None
     }
-    fn holding(&self, _: &Hash, _: &Hash) -> Option<finance::Holding> {
+    fn holding(&self, _: &Hash, _: &Hash) -> Option<money::Holding> {
         None
     }
     fn voided_pointer(&self, _: &Hash) -> Option<(PayeePointer, Hash)> {
@@ -191,7 +191,7 @@ impl Held for View<'_> {
         self.0
             .v
             .signed_by(payee)
-            .filter(|h| h.inside.spec == finance() && h.inside.type_ == finance::types::PAYEE_POINTER)
+            .filter(|h| h.inside.spec == money() && h.inside.type_ == money::types::PAYEE_POINTER)
             .filter_map(|h| Some((h.id, self.pointer(&h.id)?)))
             .filter(|(_, p)| &p.payee == payee)
             .collect()
@@ -200,13 +200,13 @@ impl Held for View<'_> {
         let res = self.0.v.resolve(payee);
         let mut out = None;
         for st in &res.states {
-            if let Ok(Some(v)) = finance::vault_in(&finance(), &st.declarations) {
+            if let Ok(Some(v)) = money::vault_in(&money(), &st.declarations) {
                 out = v;
             }
         }
         out
     }
-    fn payment_counts(&self, _: &Hash, _: &finance::PaidAt, _: &Amount, _: &[u8], _: &Hash) -> Option<bool> {
+    fn payment_counts(&self, _: &Hash, _: &money::PaidAt, _: &Amount, _: &[u8], _: &Hash) -> Option<bool> {
         None
     }
 }
@@ -224,7 +224,7 @@ async fn read_payee(rd: &mut Reader, site: &Site, id: &Hash) -> PayeeView {
             continue;
         }
         let i = &h.inside;
-        if i.spec == finance() && i.type_ == finance::types::PAYEE_POINTER {
+        if i.spec == money() && i.type_ == money::types::PAYEE_POINTER {
             if let Ok(Payload::PayeePointer(p)) = Payload::decode(i.type_, &i.payload) {
                 pointers.push((h.id, p));
             }
@@ -232,7 +232,7 @@ async fn read_payee(rd: &mut Reader, site: &Site, id: &Hash) -> PayeeView {
             if let Ok(r) = Routes::decode(&i.payload) {
                 routes.push((h.id, r));
             }
-        } else if i.spec == Specs::test().envelope && i.type_ == 4 {
+        } else if i.spec == Specs::test().envelopes && i.type_ == 4 {
             if let Ok(k) = EncryptionKey::decode(&i.payload) {
                 keys.push((h.id, k));
             }
@@ -241,24 +241,24 @@ async fn read_payee(rd: &mut Reader, site: &Site, id: &Hash) -> PayeeView {
             vault = Some((h.id, v.1));
         }
     }
-    let latest = finance::latest_pointer(&pointers);
+    let latest = money::latest_pointer(&pointers);
     let pointer = pointers.into_iter().find(|(i, _)| Some(*i) == latest.act);
-    let r = envelope::latest(&routes.iter().map(|(i, r)| (*i, r.version)).collect::<Vec<_>>());
-    let k = envelope::latest(&keys.iter().map(|(i, k)| (*i, k.version)).collect::<Vec<_>>());
+    let r = envelopes::latest(&routes.iter().map(|(i, r)| (*i, r.version)).collect::<Vec<_>>());
+    let k = envelopes::latest(&keys.iter().map(|(i, k)| (*i, k.version)).collect::<Vec<_>>());
     let route = routes.iter().find(|(i, _)| Some(*i) == r.act).expect("an inbox route");
     let key = keys.iter().find(|(i, _)| Some(*i) == k.act).expect("an encryption key");
     PayeeView { id: *id, pointer, vault, inbox: route.1.inbox(&text_spec()).expect("an inbox").hints[0].clone(), ek: key.1.key.clone() }
 }
 
 /// Verify a receipt or claim the party holds, with the core and the cMIP;
-/// and, beside it, whether it counts for this Finance-only wallet (rules 12
+/// and, beside it, whether it counts for this Money-only wallet (rules 12
 /// to 14a; for a tip, the pointer it follows).
 fn check(party: &Party, act: &Hash, chain: &HeaderChain) -> (Answer, Answer) {
     let h = party.rd.v.get(act).expect("held");
     let signer = h.act.outside.signer.expect("signed by an identity");
-    let p = Payload::decode(h.inside.type_, &h.inside.payload).expect("a Finance act");
+    let p = Payload::decode(h.inside.type_, &h.inside.payload).expect("a Money act");
     let cited = Citations::of(&h.inside);
-    finance::check_signer(&p, &signer, &cited).expect("signed by the right party");
+    money::check_signer(&p, &signer, &cited).expect("signed by the right party");
     let onchain = Onchain::on(chain);
     let m = Modules::new().adopt(&onchain);
     let rec = match &p {
@@ -405,13 +405,13 @@ struct Made {
     address: OnchainAddress,
     request: [u8; 64],
     tx: Transaction,
-    /// The claim written at the moment of payment (Finance rule 15), pending.
+    /// The claim written at the moment of payment (Money rule 15), pending.
     claim_at_payment: Act,
 }
 
 #[derive(Debug)]
 enum Refused {
-    Undeliverable(finance::Undeliverable),
+    Undeliverable(money::Undeliverable),
     WrongAddress(Answer),
 }
 
@@ -490,7 +490,7 @@ impl Wallet<'_> {
             anonymous: None,
             purchase: None,
         });
-        let a = self.alice.finance_act(&claim, Some(view.id));
+        let a = self.alice.money_act(&claim, Some(view.id));
         put(self.site, &a).await;
         deliver(view, &a, &self.alice.p.key_of(&a.id()).unwrap()).await;
         self.alice.keep(&a);
@@ -519,7 +519,7 @@ async fn receipt(bob: &mut Party, node: &Btcd, made: &Made, payer: &PayeeView) -
         batch: None,
         purchase: None,
     });
-    let a = bob.finance_act(&r, Some(payer.id));
+    let a = bob.money_act(&r, Some(payer.id));
     deliver(payer, &a, &bob.p.key_of(&a.id()).unwrap()).await;
     bob.keep(&a);
     a
@@ -574,7 +574,7 @@ async fn a_test_identity_pays_another_on_chain() {
     let bob_vault = vec![VaultEntry { unit: unit(Network::Regtest), rail_module: mor_onchain::spec(), source: safe.encode(), limit: 10_000 }];
     let mut bob = Party::born(&site, &seed, "bob", Some(bob_vault)).await;
     let pointer = Payload::PayeePointer(PayeePointer { payee: bob.p.id, version: 1, previous: None, rails: vec![Rail { module: mor_onchain::spec(), address: flow.encode() }] });
-    let pointer_act = bob.finance_act(&pointer, None);
+    let pointer_act = bob.money_act(&pointer, None);
     put(&site, &pointer_act).await;
     let side = PayeeSide {
         payee: bob.p.id,
@@ -656,14 +656,14 @@ async fn a_test_identity_pays_another_on_chain() {
     assert_ne!(t.output[0].script_pubkey.as_bytes(), mor_onchain::tx::taproot_script(&safe.key).as_slice(), "never the vault key's own address: nothing on the chain links it to the vault");
     // The same payment presented as paid to the flow would not have
     // followed the vault (rule 14a).
-    assert!(!finance::flow_followed_vault(bob_view.vault.as_ref().map(|v| v.1.as_slice()), &sat(50_000)));
+    assert!(!money::flow_followed_vault(bob_view.vault.as_ref().map(|v| v.1.as_slice()), &sat(50_000)));
     eprintln!("50,000 above the limit of 10,000 went to Bob's vault address, its request signed by the vault's request key, verified");
     // Signet satoshis: a unit Bob's vault does not cover. Fail closed
     // (rule 14a): refused before anything is asked or paid.
     let out = Wallet { alice: &mut alice, coins: &mut coins, site: &site }
         .pay(&a.rpc, &bob_view, &side, Amount { unit: unit(Network::Signet), value: 500 }, tip_pointer, None)
         .await;
-    assert!(matches!(&out, Err(Refused::Undeliverable(finance::Undeliverable::UnitNotCovered))), "{:?}", out.err());
+    assert!(matches!(&out, Err(Refused::Undeliverable(money::Undeliverable::UnitNotCovered))), "{:?}", out.err());
     eprintln!("500 signet satoshis: a unit Bob's vault does not cover, refused (rule 14a)");
 
     // ------------------------------------------------ 3. An address not tweaked by the commitment.

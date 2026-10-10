@@ -96,7 +96,7 @@ test('a link carries the act id in the fragment, and relays beside the reader\'s
 test('the browser\'s helpers give the same answers as the genesis client\'s core', () => {
   assert.deepEqual(web.SPECS, node.SPECS);
   assert.deepEqual(web.IDENTITY_TYPES, node.IDENTITY_TYPES);
-  assert.deepEqual(web.ENVELOPE_TYPES, node.ENVELOPE_TYPES);
+  assert.deepEqual(web.ENVELOPES_TYPES, node.ENVELOPES_TYPES);
   for (const n of [0, 1, 31, 32, 1000, 70_000]) {
     const b = node.randomBytes(n);
     assert.equal(web.hex(b), node.hex(b));

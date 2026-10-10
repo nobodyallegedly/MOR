@@ -17,7 +17,7 @@ fn homeless(basis: Basis, final_: bool) -> How {
 /// The inbox and the encryption key that count for an identity, from the
 /// routes and encryption-key chains the reader holds: void or invalid acts
 /// never count (Identity, "Declarations, succession, routes...").
-fn inbox_and_key(rd: &Reader, id: &Hash) -> Option<(String, envelope::EncKey)> {
+fn inbox_and_key(rd: &Reader, id: &Hash) -> Option<(String, envelopes::EncKey)> {
     let specs = Specs::test();
     let counts = |h: &Hash| matches!(rd.status(h), Status::Valid | Status::Disputed);
     let mut routes = vec![];
@@ -30,19 +30,19 @@ fn inbox_and_key(rd: &Reader, id: &Hash) -> Option<(String, envelope::EncKey)> {
             if let Ok(r) = Routes::decode(&h.inside.payload) {
                 routes.push((h.id, r));
             }
-        } else if h.inside.spec == specs.envelope && h.inside.type_ == 4 {
+        } else if h.inside.spec == specs.envelopes && h.inside.type_ == 4 {
             if let Ok(k) = EncryptionKey::decode(&h.inside.payload) {
                 keys.push((h.id, k));
             }
         }
     }
-    let r = envelope::latest(
+    let r = envelopes::latest(
         &routes
             .iter()
             .map(|(i, r)| (*i, r.version))
             .collect::<Vec<_>>(),
     );
-    let k = envelope::latest(
+    let k = envelopes::latest(
         &keys
             .iter()
             .map(|(i, k)| (*i, k.version))
@@ -54,7 +54,7 @@ fn inbox_and_key(rd: &Reader, id: &Hash) -> Option<(String, envelope::EncKey)> {
     Some((inbox.hints[0].clone(), key.1.key.clone()))
 }
 
-fn seal_to(msg: &Act, key: &[u8; 32], id: &Hash, ek: envelope::EncKey) -> envelope::Sealed {
+fn seal_to(msg: &Act, key: &[u8; 32], id: &Hash, ek: envelopes::EncKey) -> envelopes::Sealed {
     let one_time_secret = loop {
         let s = random::<32>();
         if mor_core::sig::SchnorrKey::from_secret(&s).is_some() {
@@ -68,7 +68,7 @@ fn seal_to(msg: &Act, key: &[u8; 32], id: &Hash, ek: envelope::EncKey) -> envelo
         one_time_secret,
         aux: random::<32>(),
     };
-    envelope::seal(
+    envelopes::seal(
         msg,
         Some(key),
         &[Recipient::Identity { id: *id, key: ek }],
@@ -1031,8 +1031,8 @@ impl Gauntlet {
                 .client(&inbox)
                 .put_sealed(&sealed.encode(), &[])
                 .await;
-            thief_opened = envelope::open(&sealed, Some(&j.id), &kt).is_ok();
-            owner_opened_first = envelope::open(&sealed, Some(&j.id), &k1).is_ok();
+            thief_opened = envelopes::open(&sealed, Some(&j.id), &kt).is_ok();
+            owner_opened_first = envelopes::open(&sealed, Some(&j.id), &k1).is_ok();
         }
         self.check(
             "5.7c",
@@ -1058,7 +1058,7 @@ impl Gauntlet {
                 .client(&inbox)
                 .put_sealed(&sealed.encode(), &[])
                 .await;
-            owner_opened = put.is_ok() && envelope::open(&sealed, Some(&j.id), &k1).is_ok();
+            owner_opened = put.is_ok() && envelopes::open(&sealed, Some(&j.id), &k1).is_ok();
         }
         self.check(
             "5.7c",

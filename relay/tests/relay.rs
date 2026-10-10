@@ -59,7 +59,7 @@ async fn acts_go_in_and_come_back_byte_for_byte() {
     assert_eq!(info.bases, vec![r.base.clone()]);
     assert_eq!(info.operator, None);
     assert_eq!(info.roles, vec![wire::role::RELAY, wire::role::INBOX]);
-    // No commitment: its construction is still open in Envelope.
+    // No commitment: its construction is still open in Envelopes.
     assert_eq!(code_of(r.client.commitment().await), code::NOT_HELD);
     // A basic relay is not a home.
     assert_eq!(

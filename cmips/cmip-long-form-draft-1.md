@@ -1,6 +1,6 @@
 # cMIP: Long-form Text Format
 
-*Draft 1, 30 September 2026 (roadmap step 8). Approved by Nobody, allegedly. **Revised in place for F149, F167, F174, F178 and F182 (rules 5, 10, 11a and the markup declaration), approved by Nobody, allegedly, 7 October 2026 (F183).** Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v17, the Text MIP draft 6, the Envelope MIP draft 6, the Production MIP draft 4, the relay transport cMIP draft 2 and findings F1 to F102. Not core: a founding cMIP for task 4 (text format), frozen at publication, competing with any other format.* *Revised in place, 6 October 2026, for F149 (Text draft 6, the Text format task: a format may hide only its own declared markup, in the positions it declares it): the markup declaration below, describing exactly the markup the founding implementation already hides; no reading changes.* *Revised in place, 7 October 2026, for the floor under every declaration (Text draft 6, the Text format task; F167, F174, F175, F178): the declaration says which of its hidden characters end a block (the LF only), and a link's closing `>` next to a digit is shown (F178 item 17). Awaiting approval by Nobody, allegedly.* *Revised in place again, 7 October 2026, afternoon, for F182 (Text draft 6, the Text format task: where the floor forbids hiding a markup character, the format shows it as text rather than refusing the document): a `>` directly before a digit opens no quote (rule 5); a link's `<` directly after a digit is shown, the address still the link (rule 10); markup of code spans, links and emphasis that would be hidden between two digits is read as text (rule 11a). No text is refused for the format's own markup any more. Awaiting approval by Nobody, allegedly.*
+*Draft 1, 30 September 2026 (roadmap step 8). Approved by Nobody, allegedly. **Revised in place for F149, F167, F174, F178 and F182 (rules 5, 10, 11a and the markup declaration), approved by Nobody, allegedly, 7 October 2026 (F183).** Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v17, the Text MIP draft 6, the Envelopes MIP draft 6, the Development MIP draft 4, the relay transport cMIP draft 2 and findings F1 to F102. Not core: a founding cMIP for task 4 (text format), frozen at publication, competing with any other format.* *Revised in place, 6 October 2026, for F149 (Text draft 6, the Text format task: a format may hide only its own declared markup, in the positions it declares it): the markup declaration below, describing exactly the markup the founding implementation already hides; no reading changes.* *Revised in place, 7 October 2026, for the floor under every declaration (Text draft 6, the Text format task; F167, F174, F175, F178): the declaration says which of its hidden characters end a block (the LF only), and a link's closing `>` next to a digit is shown (F178 item 17). Awaiting approval by Nobody, allegedly.* *Revised in place again, 7 October 2026, afternoon, for F182 (Text draft 6, the Text format task: where the floor forbids hiding a markup character, the format shows it as text rather than refusing the document): a `>` directly before a digit opens no quote (rule 5); a link's `<` directly after a digit is shown, the address still the link (rule 10); markup of code spans, links and emphasis that would be hidden between two digits is read as text (rule 11a). No text is refused for the format's own markup any more. Awaiting approval by Nobody, allegedly.*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 
@@ -12,7 +12,7 @@
 
 ## Purpose
 
-This cMIP fills task 4 of the Text MIP (Production, task table): it accepts any canonical text and produces a rendering for display. It defines:
+This cMIP fills task 4 of the Text MIP (Development, task table): it accepts any canonical text and produces a rendering for display. It defines:
 
 - the markup: which lines and signs mean what;
 - the rendering: what is shown, what is hidden, and what a rendering may add around it;
@@ -22,7 +22,7 @@ It defines no act type. A long-form document is a text act (Text MIP, type 0) wh
 
 ## Dependencies
 
-Text (canonical text, the text act, task 4) and Production. Envelope and the relay transport cMIP only to publish and fetch the acts, as for any act.
+Text (canonical text, the text act, task 4) and Development. Envelopes and the relay transport cMIP only to publish and fetch the acts, as for any act.
 
 ## Definitions
 

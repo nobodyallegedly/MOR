@@ -163,10 +163,10 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
         .join('');
       const others = s.identities.filter((i) => !c.members.some((m) => m.id === i.id));
       const mine = c.members.filter((m) => !m.left && s.identities.find((i) => i.id === m.id)?.mine);
-      const lawNote = c.law.broken
-        ? note('error', `<strong>Law reads this collective as broken.</strong> No agreement can be found in force for it, so nothing signed in its name counts, and no change of it can come into force. Law's reason: ${e(c.law.broken)}. <span class="small">The rules below are this device's copy, not rules in force.</span>${c.law.rollback ? `<br>The way back is a rollback: a new rotation brings back the agreement in force just before the broken act, signed under its rule for changing the constitution; what was signed since stays shown and counts for nothing. <button data-action="rollback" data-collective="${e(c.id)}">Review a rollback</button><details class="rollback"><summary>Roll back with new numbers</summary><p class="small">Where the rules before the broken act do not fit the members left after it.</p><form class="rollback" data-collective="${e(c.id)}">${rulesFields(c.rules)}<div class="row"><button type="submit">Review the rollback</button></div></form></details>` : ''}`)
+      const agreementsNote = c.law.broken
+        ? note('error', `<strong>Agreements read this collective as broken.</strong> No agreement can be found in force for it, so nothing signed in its name counts, and no change of it can come into force. Agreements' reason: ${e(c.law.broken)}. <span class="small">The rules below are this device's copy, not rules in force.</span>${c.law.rollback ? `<br>The way back is a rollback: a new rotation brings back the agreement in force just before the broken act, signed under its rule for changing the constitution; what was signed since stays shown and counts for nothing. <button data-action="rollback" data-collective="${e(c.id)}">Review a rollback</button><details class="rollback"><summary>Roll back with new numbers</summary><p class="small">Where the rules before the broken act do not fit the members left after it.</p><form class="rollback" data-collective="${e(c.id)}">${rulesFields(c.rules)}<div class="row"><button type="submit">Review the rollback</button></div></form></details>` : ''}`)
         : c.law.unread
-          ? note('warn', `Law's own reading of this collective could not be had (${e(c.law.unread)}). <span class="small">The rules below are this device's copy; nothing is signed until Law can count.</span>`)
+          ? note('warn', `Agreements' own reading of this collective could not be had (${e(c.law.unread)}). <span class="small">The rules below are this device's copy; nothing is signed until Agreements can count.</span>`)
           : '';
       // RB3: a declaration naming a member is always shown, with the way to contest it.
       const declaredNote = (c.declared ?? []).length
@@ -187,7 +187,7 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
           )
         : '';
       return `<div class="card" data-collective="${e(c.id)}"><h3>${e(c.name)}</h3>
-${lawNote}
+${agreementsNote}
 ${declaredNote}
 ${owedNote}
 <dl class="facts"><dt>Collective</dt><dd>${fp(c.id)}</dd>
@@ -196,7 +196,7 @@ ${owedNote}
 <dt>Safety key</dt><dd>${c.shares.of} shares, any ${c.shares.threshold} rebuild it</dd>
 <dt>A change of members or rules needs</dt><dd>${c.rules.constitution ? `any ${c.rules.constitution} members` : 'every member whose voice remains'}</dd>
 <dt>Any other change needs</dt><dd>${c.rules.clone} members' signatures</dd>
-<dt>${c.law.broken || c.law.unread ? 'Agreement this device holds' : 'Agreement in force (as Law reads it)'}</dt><dd>${fp(c.agreement)} (${c.agreements === 1 ? 'the founding agreement' : `clone ${c.agreements - 1}`})</dd>
+<dt>${c.law.broken || c.law.unread ? 'Agreement this device holds' : 'Agreement in force (as Agreements read it)'}</dt><dd>${fp(c.agreement)} (${c.agreements === 1 ? 'the founding agreement' : `clone ${c.agreements - 1}`})</dd>
 <dt>Records drawn</dt><dd>${c.records}${c.departed.length ? `; left: ${c.departed.map((d) => e(d.name)).join(', ')}` : ''}${c.steppedDown.length ? `; stepped down: ${c.steppedDown.map((d) => e(d.name)).join(', ')}` : ''}</dd>
 <dt>Relays</dt><dd>${c.relays.map(e).join('<br>')}</dd></dl>
 ${releaseArea(s, c)}
@@ -217,9 +217,9 @@ ${money(s, c)}</div>`;
     .join('');
 }
 
-/** Money and endings (Law draft 10, F121 to F124): stakes, the split service, the pointer, splits, debts, the fork, a release to the public domain, closing. */
+/** Money and endings (Agreements draft 10, F121 to F124): stakes, the split service, the pointer, splits, debts, the fork, a release to the public domain, closing. */
 function money(s: State, c: State['collectives'][number]): string {
-  if (c.closed) return note('warn', `Ended by its fork or closing ${fp(c.closed)}: what its keys sign afterwards counts for nothing in Law.`);
+  if (c.closed) return note('warn', `Ended by its fork or closing ${fp(c.closed)}: what its keys sign afterwards counts for nothing in Agreements.`);
   const id = e(c.id);
   const back = c.forkedFrom ? `<p class="small">Forked from ${fp(c.forkedFrom)}.</p>` : '';
   const stakes = back + (c.stakes.length
@@ -234,7 +234,7 @@ ${c.holdersToBe.map((h) => `<label>${e(h.name)} <input type="number" step="any" 
 <form class="split-service row" data-collective="${id}"><select name="service">${s.identities.map((i) => `<option value="${e(i.id)}">${e(nameOf(s, i.id))}</option>`).join('')}</select><button type="submit">Review a split service</button></form>
 <form class="pointer row" data-collective="${id}"><input name="addresses" type="text" placeholder="the collective's addresses, separated by spaces" required><button type="submit">Review a payee pointer</button></form>
 <form class="service-pointer row"><select name="owner">${s.identities.map((i) => `<option value="${e(i.id)}">${e(nameOf(s, i.id))}</option>`).join('')}</select><input name="addresses" type="text" placeholder="its addresses, separated by spaces" required><button type="submit">Review a pointer for this identity</button></form>
-<div class="row"><button class="quiet" data-action="check-pointer" data-collective="${id}">Check the collective's pointer, as a Law client before paying</button></div>
+<div class="row"><button class="quiet" data-action="check-pointer" data-collective="${id}">Check the collective's pointer, as an Agreements client before paying</button></div>
 ${c.splitService ? `<form class="split row" data-collective="${id}"><input name="amount" type="number" min="1" placeholder="amount received" required><input name="fee" type="number" min="0" placeholder="the service's fee" value="0"><button type="submit">Review a simulated payment and its split</button></form>` : ''}
 ${c.splits.length ? `<ul class="plain">${c.splits.map((x) => `<li>Split ${fp(x)} <button class="quiet" data-action="check-split" data-collective="${id}" data-split="${e(x)}">Check it</button></li>`).join('')}</ul>` : ''}
 ${c.releases.length ? `<form class="release-work row" data-collective="${id}"><select name="release">${c.releases.map((r) => `<option value="${e(r.id)}">${e(r.version)}</option>`).join('')}</select><button type="submit">Review a release to the public domain</button></form>` : ''}

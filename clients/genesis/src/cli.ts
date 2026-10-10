@@ -121,7 +121,7 @@ async function main() {
         scheme: one('scheme') === '3' ? 3 : 2,
         via,
       });
-      // Finance rule 14b (F181): said plainly before a genesis with no clock.
+      // Money rule 14b (F181): said plainly before a genesis with no clock.
       const warning = t.clockWarning();
       if (warning) console.log(`WARNING: ${warning}`);
       t.save(file);
@@ -202,7 +202,7 @@ async function main() {
     case 'inbox': {
       const t = load();
       const l = await lookUp(t.id, t.f.homes.map((h) => h.hint), via);
-      const inbox = l.inbox(SPECS.envelope);
+      const inbox = l.inbox(SPECS.envelopes);
       if (!inbox) throw new Error('this identity declares no inbox');
       const got = await t.readInbox({ inbox, senderHints: [...(opts.at ?? []), ...t.f.homes.map((h) => h.hint)] });
       for (const g of got) {

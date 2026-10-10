@@ -1,6 +1,6 @@
 # MOR V1: Build Brief
 
-*28 September 2026. The starting point for building MOR V1, the first release, frozen at inception (F85). Written against core v12, the MIP drafts (Identity 7, Text 5, Envelope 4, Finance 5, Law 4, Production 4), freeze test suite v12 and the findings log to F85. It records what Nobody, allegedly decided on 27 and 28 September, what is suggested, and what is still open.*
+*28 September 2026. The starting point for building MOR V1, the first release, frozen at inception (F85). Written against core v12, the MIP drafts (Identity 7, Text 5, Envelopes 4, Money 5, Agreements 4, Development 4), freeze test suite v12 and the findings log to F85. It records what Nobody, allegedly decided on 27 and 28 September, what is suggested, and what is still open.*
 
 ## Purpose of V1
 
@@ -9,7 +9,7 @@ Two things. Nothing is shown before both are built and tested (Nobody, allegedly
 1. **The door.** A link Nobody, allegedly can send to one person at a time. It lands on a web reader, where everything is found: the statement, the documents, the links to the code. The documents are themselves MOR acts, signed by the author's identity and fetched from a relay. The protocol is shown by being used. *(Decided, Nobody, allegedly: "The pitch is… here is a link. That's it." "A small door to a big universe.")*
 2. **The proof.** The identity gauntlet (freeze test suite, scenario 5, steps 7 to 7d) passing against the home relay and the genesis client. That proves most of review round 2 in code, and it is what the first builders will want to see, or break.
 
-V1 exercises all six layers, so every one meets friction (F84): Identity, Text and Envelope through the door and the gauntlet; Finance through a Lightning integration module; Law through a Split Module and a deal-assessment tool; Production throughout, since every specification published runs through it. All six MIPs are frozen together at the first release. It is tested in more detail (F85): every scenario the components can run is run, the rest are reasoned on paper, and the freeze report says which.
+V1 exercises all six layers, so every one meets friction (F84): Identity, Text and Envelopes through the door and the gauntlet; Money through a Lightning integration module; Agreements through a Split Module and a deal-assessment tool; Development throughout, since every specification published runs through it. All six MIPs are frozen together at the first release. It is tested in more detail (F85): every scenario the components can run is run, the rest are reasoned on paper, and the freeze report says which.
 
 ## Decisions (Nobody, allegedly)
 
@@ -38,7 +38,7 @@ V1 exercises all six layers, so every one meets friction (F84): Identity, Text a
 
 ## Components
 
-The components. *Their build order is in `docs/roadmap-v1.md`: foundations, identity proven by the gauntlet, content, friction in Finance and Law, review and freeze, publication.*
+The components. *Their build order is in `docs/roadmap-v1.md`: foundations, identity proven by the gauntlet, content, friction in Money and Agreements, review and freeze, publication.*
 
 | # | Component | Language | Done when |
 | --- | --- | --- | --- |
@@ -54,9 +54,9 @@ The components. *Their build order is in `docs/roadmap-v1.md`: foundations, iden
 | 9 | **Freeze-suite harness** | Rust | It runs scenarios from the freeze test suite against the real components, starting with scenario 5, steps 7 to 7d. |
 | 10 | **The repository on MOR** | — | See below. |
 | 10a | **Release manifest and repo client**, with a test collective | — / to settle | Roadmap step 5a: a manifest format (a founding cMIP or Module), a client that publishes and verifies releases, and a test collective under a real founding agreement whose release rule requires visible member signatures. Every release of the code is published through it from then on. |
-| 11 | **Lightning integration module** (specification + code) | — / to settle | Its specification is written and hashed: how a Lightning payment becomes a Finance receipt and a payout. A test identity pays another over Lightning and both hold a verified receipt. *(Nobody, allegedly: "probably the easiest module".)* |
+| 11 | **Lightning integration module** (specification + code) | — / to settle | Its specification is written and hashed: how a Lightning payment becomes a Money receipt and a payout. A test identity pays another over Lightning and both hold a verified receipt. *(Nobody, allegedly: "probably the easiest module".)* |
 | 11a | **On-chain module** (specification + code) | — / to settle | Roadmap step 12a: on-chain payments and the vault, with receipts pending until confirmed. |
-| 12 | **Split Module** (specification + code) | — / to settle | Its specification is written and hashed: a Law split over stakes. A payment is split among test identities, the split balances exactly, and each share is paid and receipted. |
+| 12 | **Split Module** (specification + code) | — / to settle | Its specification is written and hashed: an Agreements split over stakes. A payment is split among test identities, the split balances exactly, and each share is paid and receipted. |
 | 13 | **Deal-assessment tool** | to settle | *What it assesses is to be defined with Nobody, allegedly at its step* ("something to assess deals"). Suggested (Claude): it reads an agreement and shows, in plain words, who signed, what each party is bound to, the shares and how the deal ends. |
 | 13a | **Pooled anchoring cMIP** (specification + code) | — / to settle | Roadmap step 14a: a service anchoring paid hashes in batches on-chain; an omitted hash is a provable default and a refund. |
 
@@ -67,7 +67,7 @@ The harness (9) grows alongside everything else: every component is done only wh
 "The repo" means two things, and V1 needs both.
 
 - **The code repository** (GitHub). Where the code is written, reviewed and attacked. It is a workshop, not the record.
-- **The repository on MOR** (read-only). Where it is recorded. Each release of the code, and each specification (the six MIPs, the founding cMIPs and Modules), is published as an act, named by its hash. Nothing is updated: a new release is a new act naming the one before. This is where the six MIP hashes are published together, the one trust root below the MIPs (Production rule 20).
+- **The repository on MOR** (read-only). Where it is recorded. Each release of the code, and each specification (the six MIPs, the founding cMIPs and Modules), is published as an act, named by its hash. Nothing is updated: a new release is a new act naming the one before. This is where the six MIP hashes are published together, the one trust root below the MIPs (Development rule 20).
 
 **MOR governs its own code (roadmap step 5a, decided by Nobody, allegedly).** From step 5a, every release is published on the test relays as a manifest signed under a test collective's release rule; until the first builders join after V1, releases are signed by the author's own identity, and the real collective is founded with them (a collective of one would need a successor and an escrowed share, F96; decided by Nobody, allegedly, 30 September 2026). A release the collective did not sign is not a release. *Consequence (step 5a):* build windows keep no keys and cannot reach the public homes, so each window prepares the code, and the release is published and signed from the author's machine, where the test collective's files live.
 
@@ -75,7 +75,7 @@ The harness (9) grows alongside everything else: every component is done only wh
 
 ## Open, to settle before or during the build
 
-1. **Draft hashes versus frozen hashes.** Settled by F84: all six MIPs freeze before the first acts, so the first acts are permanent. The specification format stays in Production, which freezes with the rest.
+1. **Draft hashes versus frozen hashes.** Settled by F84: all six MIPs freeze before the first acts, so the first acts are permanent. The specification format stays in Development, which freezes with the rest.
 2. **Naming.** Settled by F85: the first release, frozen at inception, is V1.
 3. **Who publishes the repository on MOR.** Code releases: the author's own identity at step 17, then the collective once the first builders found it (decided). Specifications: the author's own identity or the collective (the brainstorm proposal suggests Nobody, allegedly signs the MIPs he wrote). The same identity is named as creator of the founding cMIPs and Modules, whose hashes are draft hashes until then. *Nobody, allegedly to decide, at step 17.*
 4. **The long-form format.** Which markup the long-form module uses, within the Text MIP's rules for formats. **Settled (Nobody, allegedly, 30 September 2026):** a strict subset of Markdown, `cmips/cmip-long-form-draft-1.md`.

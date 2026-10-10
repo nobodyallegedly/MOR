@@ -2,7 +2,7 @@
 // 30 September 2026): a private text act addressed to the owner, sealed with
 // X-Wing to the owner's current encryption key, and put in the owner's inbox.
 // Relays see a container for the owner and its size; never the text, nor
-// who sent it (Envelope, "Sealed containers").
+// who sent it (Envelopes, "Sealed containers").
 //
 // Every act has a signer, so the visitor needs an identity. The page makes a
 // one-time identity for each message: a genesis at the homes the settings

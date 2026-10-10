@@ -8,8 +8,8 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MIPS } from '../../genesis/src/core.ts';
-import { receiptPayload } from '../../repo/src/law.ts';
-import { FINANCE_TYPES, TEST_RAIL } from '../../repo/src/specs.ts';
+import { receiptPayload } from '../../repo/src/agreements.ts';
+import { MONEY_TYPES, TEST_RAIL } from '../../repo/src/specs.ts';
 import type { Governance } from '../../repo/src/collective.ts';
 import type { State } from '../src/page/api.ts';
 import { lossy, prepare, sign, state, words, world, type World } from './setup.ts';
@@ -36,7 +36,7 @@ async function found(name: string, members: string[], rules: object) {
   return { id: (await state(c)).collectives.find((x) => x.name === name)!.id, relay };
 }
 
-/** The removal of `remove`, its record lost, as before step 11b's fix: Law reads the collective as broken. */
+/** The removal of `remove`, its record lost, as before step 11b's fix: Agreements read the collective as broken. */
 async function breakBy(id: string, relay: { drop: boolean }, stay: string[], remove: string, change: Partial<Governance> = {}) {
   const store = w.app.store;
   const col = store.collective(id);
@@ -74,7 +74,7 @@ test('RB2 with BQ2: a payment under an offer of the broken stretch is shown as o
     assert.notEqual(ofStretch, founding);
     // The collective's own receipts, signed in the stretch, for payments naming each.
     const pay = (line: string, value: number) =>
-      col.id.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer: patron, purchase: [founding, line] }), { public: true, relays: col.f.relays });
+      col.id.publish(MIPS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer: patron, purchase: [founding, line] }), { public: true, relays: col.f.relays });
     await pay(founding, 5);
     await pay(ofStretch, 12);
     store.saveCollective(col);
@@ -99,7 +99,7 @@ test('QG1 and F197: a closing names money owed back to nobody; a payer with no a
     const founding = col.f.agreements[0];
     const ofStretch = col.f.agreement;
     const pay = (value: number, payer?: string) =>
-      col.id.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer, purchase: [founding, ofStretch] }), { public: true, relays: col.f.relays });
+      col.id.publish(MIPS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer, purchase: [founding, ofStretch] }), { public: true, relays: col.f.relays });
     await pay(3);
     await pay(9, patron);
     store.saveCollective(col);
@@ -154,7 +154,7 @@ test('RB3: a declaration of absence made during the broken stretch is registered
     s = await state(c);
     const shownTo = box(s, id).declared.find((d) => d.member === two)!;
     assert.match(shownTo.text, /Sim Two .*is named as absent by a declaration .*signed by Ada/);
-    assert.match(shownTo.text, /To contest it: Sim Two .*signs a contest act \(Law rule 52\)/);
+    assert.match(shownTo.text, /To contest it: Sim Two .*signs a contest act \(Agreements rule 52\)/);
     // BQ4 (decided 9 October 2026): Sim Two, held here, signs a contest naming the declaration.
     assert.equal(shownTo.contested, false);
     const ct = await prepare(c, { kind: 'contest', collective: id, declaration: shownTo.act });
@@ -214,7 +214,7 @@ test('RB6: a broken collective cannot fork or close before it is fixed', async (
   try {
     await breakBy(id, relay, [ada, one], two, { safetyThreshold: 1, releaseThreshold: 1, cloneThreshold: 1, abandonmentOthers: 1 });
     const close = await prepare(c, { kind: 'closing', collective: id });
-    assert.match(close.reading.blocking.join(' '), /A broken collective cannot fork or close before it is fixed: the members roll it back first \(Law rule 37d, RB6\)/);
+    assert.match(close.reading.blocking.join(' '), /A broken collective cannot fork or close before it is fixed: the members roll it back first \(Agreements rule 37d, RB6\)/);
   } finally {
     await relay.close();
   }

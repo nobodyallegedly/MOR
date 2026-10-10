@@ -1,6 +1,6 @@
 # MIP: Text
 
-*Draft 6, 30 September 2026. Draft 5 with F102 applied (roadmap step 8, the long-form text format): a format shows what it does not hide in the order of the bytes, and never makes it invisible by styling. Written against core v17, the Identity MIP draft 10, the Envelope MIP draft 6 and findings F1 to F102. Draft 5 applied review round 2: bidirectional controls shown visibly before signing (a MUST for the Law act types), and a bound on what a format may hide.*
+*Draft 6, 30 September 2026. Draft 5 with F102 applied (roadmap step 8, the long-form text format): a format shows what it does not hide in the order of the bytes, and never makes it invisible by styling. Written against core v17, the Identity MIP draft 10, the Envelopes MIP draft 6 and findings F1 to F102. Draft 5 applied review round 2: bidirectional controls shown visibly before signing (a MUST for the Agreements act types), and a bound on what a format may hide.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
@@ -13,7 +13,7 @@ Text is the only native media of MOR, because the protocol itself speaks in text
 
 ## Dependencies
 
-Identity, for signers. The act format is the envelope defined in the Identity MIP and completed by the Envelope MIP. Every client implements this MIP.
+Identity, for signers. The act format is the envelope defined in the Identity MIP and completed by the Envelopes MIP. Every client implements this MIP.
 
 ## Definitions
 
@@ -45,7 +45,7 @@ text-payload = {
 }
 ```
 
-A text act is an Envelope MIP act. Outside: `signer` and `binding`. Inside: `spec` (the hash of this MIP, written `TEXT`), `type` 0, `prev`, the payload, and optionally `refs`: the acts or web resources it responds to or mentions. Like every act, its inside is locked: a public text carries its key, a private one is delivered to its recipients, possibly in a sealed container. A private text looks like any other act to a relay.
+A text act is an Envelopes MIP act. Outside: `signer` and `binding`. Inside: `spec` (the hash of this MIP, written `TEXT`), `type` 0, `prev`, the payload, and optionally `refs`: the acts or web resources it responds to or mentions. Like every act, its inside is locked: a public text carries its key, a private one is delivered to its recipients, possibly in a sealed container. A private text looks like any other act to a relay.
 
 ## Validity rules
 
@@ -54,7 +54,7 @@ A text act is an Envelope MIP act. Outside: `signer` and `binding`. Inside: `spe
 3. A client MUST be able to display any valid text act as plain text, whatever its format.
 4. A client that does not implement the format a text act names MUST still display its text as plain text. Format is the only case where an unknown cMIP does not make an act unknown: the text itself is always understood.
 5. A client SHOULD warn about lookalike characters (letters from different scripts that look the same) and about invisible characters that can make text display differently from its bytes: the zero-width space (U+200B), the bidirectional marks (U+061C, U+200E, U+200F) and controls: every character of the pinned Unicode version whose general category is Cf (format) or whose property is Bidi_Control or Default_Ignorable_Code_Point (F140). These are client warnings, not validity rules: text in every script, mixed as people need, stays valid. The zero-width joiner (U+200D) and non-joiner (U+200C) are needed by emoji sequences and several scripts, and are never warned about for their presence alone.
-5a. *Client conformance.* Before any act is signed, a client MUST be able to show all of its text as plain text, character for character, and SHOULD show it that way by default for agreements, terms and grants. Before signing terms, a grant or a clone (Law), a client MUST show every bidirectional control visibly, as an escape, in that plain-text view, so that no clause can display in an order different from its bytes. What you sign is what you saw. *This is a rule for the signer's own client; no verifier can check it, which is why it is conformance and why Law's act types are named explicitly (F78).*
+5a. *Client conformance.* Before any act is signed, a client MUST be able to show all of its text as plain text, character for character, and SHOULD show it that way by default for agreements, terms and grants. Before signing terms, a grant or a clone (Agreements), a client MUST show every bidirectional control visibly, as an escape, in that plain-text view, so that no clause can display in an order different from its bytes. What you sign is what you saw. *This is a rule for the signer's own client; no verifier can check it, which is why it is conformance and why Agreements' act types are named explicitly (F78).*
 6. A client composing text SHOULD normalize it for the user: convert line breaks to LF, apply NFC, remove trailing spaces and a final line break, remove U+FEFF, replace each TAB with spaces, and remove other control characters and noncharacters, telling the user when it removed something visible, so users never see a rejection for invisible reasons.
 
 ## Tasks
@@ -70,7 +70,7 @@ A text act is an Envelope MIP act. Outside: `signer` and `binding`. Inside: `spe
 - **The rules are fixed, not borrowed.** *Unicode grows every year. Rules that follow whatever version a machine has would let two verifiers disagree on whether an act is valid. So the space list is written out, control characters are defined by range, and normalization uses one pinned version. New characters, such as new emoji, remain usable. One rare edge remains: a combining mark added to Unicode after the pinned version is treated as unassigned, so two orders of such marks could both pass. Every verifier still agrees, which matters more. Unicode's stability policy guarantees that text in NFC under one version stays in NFC under every later one, so pinning never shuts out future text.*
 - **No TAB.** *A tab displays at different widths in different places, and can hide alignment tricks in terms. Text that needs layout uses a format.*
 - **Warnings, not rules, for lookalikes.** *Banning mixed scripts would exclude real people writing real languages. Deciding what looks alike is judgement, so it belongs to clients.*
-- **Every client can open text.** *Every client implements the Envelope MIP, so every client can unlock a public text and any private text addressed to it. Locking everything does not weaken text's universality.*
+- **Every client can open text.** *Every client implements the Envelopes MIP, so every client can unlock a public text and any private text addressed to it. Locking everything does not weaken text's universality.*
 - **Formats never lock text away.** *Text is the one media every client understands, so no cMIP may make a message unreadable. A format adds meaning; it never replaces the words, and it never hides them.*
 
 ## Open technical parameters
@@ -81,7 +81,7 @@ A text act is an Envelope MIP act. Outside: `signer` and `binding`. Inside: `spe
 
 ## Freeze scenarios
 
-- Text universal across sub-networks: scenario 5 (a messaging client with no Finance or Law still exchanges text with both parties).
+- Text universal across sub-networks: scenario 5 (a messaging client with no Money or Agreements still exchanges text with both parties).
 - Canonical text in every act: all scenarios, since terms, names and messages are text.
 - A text act with a format the receiving client lacks, displayed as plain text: scenario 5.
 - Terms containing a bidirectional override, shown with the control visible before signing: scenario 1.

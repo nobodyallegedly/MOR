@@ -1,13 +1,13 @@
-# verifier2: a second verifier for collectives' endings (Law draft 10)
+# verifier2: a second verifier for collectives' endings (Agreements draft 10)
 
-*6 October 2026. An independent implementation of one part of Law, written from the
+*6 October 2026. An independent implementation of one part of Agreements, written from the
 specification text alone, to be compared with the reference library. Nothing here is
 the protocol: `spec/` is. Disagreements between the two are findings for Nobody,
 allegedly, recorded in `docs/verifier2-report.md`.*
 
 ## What it covers
 
-Law draft 10 on how a collective ends (`spec/MIP-law-draft-10.md`: "Made before, made
+Agreements draft 10 on how a collective ends (`spec/MIP-agreements-draft-10.md`: "Made before, made
 after", "Fork (type 19)", "Closing (type 20)", rules 35a, 35b, 36a, 37b, 40, 43, 44d,
 47a, 47b; Identity draft 11, "Chain signature (type 16)"; findings F131 and F132):
 
@@ -33,15 +33,15 @@ and its clones (an input flag), successors' founding terms (an input flag), stak
 
 ## Files
 
-- `law_endings.py`: the verifier. `python3 law_endings.py story.json` prints its verdict;
-  `python3 law_endings.py stories/ --out verdicts/ --quiet` judges a directory.
+- `agreements_endings.py`: the verifier. `python3 agreements_endings.py story.json` prints its verdict;
+  `python3 agreements_endings.py stories/ --out verdicts/ --quiet` judges a directory.
   `--handout binding` and `--cites loose` switch one reading each (below).
-- `test_law_endings.py`: one test per freeze scenario or smallest story, written from the
+- `test_agreements_endings.py`: one test per freeze scenario or smallest story, written from the
   text; running it also writes each story to `stories/`.
 - `stories/`: those stories, as JSON; `stories/compared/`: the smallest stories of each
   disagreement with the reference, as exported, with the reference's verdicts.
 - `export/export.rs`: the exporter, included as a child module at the end of
-  `core/tests/law_invariants.rs` (the one change made there, test-only and ignored unless
+  `core/tests/agreements_invariants.rs` (the one change made there, test-only and ignored unless
   asked for). It draws the reference's random collective histories from a seed, writes
   each as a story in the format below, and writes the library's verdicts on it in the same
   terms. `compare.py` judges each story with this verifier and prints every disagreement;
@@ -53,9 +53,9 @@ and its clones (an input flag), successors' founding terms (an input flag), stak
   To reproduce the comparison (`docs/verifier2-report.md`):
 
   ```
-  cargo test -p mor-core --release --test law_invariants --no-run
+  cargo test -p mor-core --release --test agreements_invariants --no-run
   VERIFIER2_OUT=out VERIFIER2_SEED=1 VERIFIER2_CASES=3000 \
-    target/release/deps/law_invariants-<hash> --ignored --exact verifier2_export::verifier2_export
+    target/release/deps/agreements_invariants-<hash> --ignored --exact verifier2_export::verifier2_export
   python3 verifier2/compare.py out --quiet --json cmp.json     # --handout done: the reading before F144
   python3 verifier2/group.py cmp.json
   python3 verifier2/shrink.py out case00446 --seed 1
@@ -92,7 +92,7 @@ absent for the collective's own key).
 | `fork` | a fork act, signed by its drafter | `tips`, `sides`: `[{"successor", "members"}]`, `assigned`: `[{"obligation", "sides": [i]}]`, `objects` (earlier endings named), `successor_signed`: `{successor: bool}`, `successors_ok`, `agreement_ok`, `chain_act_ok`, `format_ok` |
 | `closing` | a closing act | `tips`, `objects`, `holds_nothing`, `agreement_ok`, `chain_act_ok`, `format_ok` |
 | `chain_sig` | a member's chain signature (Identity type 16) | `signer` (the member), `ending`, `position` (on the member's identity chain), `counts` (its homes hold it; default true) |
-| `sig_act` | a signature act (Law type 1) on an ending: no member's signature | ignored |
+| `sig_act` | a signature act (Agreements type 1) on an ending: no member's signature | ignored |
 | `payment` | a creditor's receipt toward an obligation | `signer`, `obligation`, `amount` |
 | `release` | a creditor's release | `signer`, `obligation` |
 
@@ -179,7 +179,7 @@ where the reference read it otherwise.
     decision in its `objects`, so it is on no chain, never counts, and adopts nothing
     (the report's finding A; decided so by F142).
 12. **Owes nothing:** receipts signed by the creditor, summed, reach the amount, or the
-    creditor's release exists; a receipt by anyone else pays nothing (Finance rule 7).
+    creditor's release exists; a receipt by anyone else pays nothing (Money rule 7).
 13. **An act the verifier does not hold:** an ending whose history names one is not
     complete; an action citing one is on no chain.
 14. **A fork listing an obligation outside its history** is not thereby incomplete; that

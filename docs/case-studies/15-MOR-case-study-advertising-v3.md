@@ -64,7 +64,7 @@ Whichever rule applies, the buyer's wallet is the one that records and signs the
 
 **Attention deals are allowed, and legible.** The car maker's agency buys views through intermediaries, on MOR, and everything the chain does is visible to those it concerns:
 
-- **Every hop is a receipt, and every payer keeps a record.** Like the payment routes in the Finance MIP, each intermediary's cut is a line the advertiser can see, and the advertiser's own record of what it paid stands against any intermediary that reports less. Intermediaries stay; they show what they take. Nothing goes untraced.
+- **Every hop is a receipt, and every payer keeps a record.** Like the payment routes in the Money MIP, each intermediary's cut is a line the advertiser can see, and the advertiser's own record of what it paid stands against any intermediary that reports less. Intermediaries stay; they show what they take. Nothing goes untraced.
 - **Placements are signed by publishers.** The advertiser sees exactly where each ad ran, signed by the publisher's identity, with its ratings. Fake sites cannot hide behind an exchange.
 - **Metrics come from named modules.** Views and clicks are claims signed by the metric service that measured them, never by the party being paid for them, as in the video case study. Competing verification services audit them, and the advertiser chooses which to trust.
 - **Data brokers are visible.** If targeting data is bought, the purchase is a line in the settlement. What the data contained stays between the parties; that it was bought does not.

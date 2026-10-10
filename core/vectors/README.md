@@ -7,13 +7,13 @@ Made by `cargo run -p mor-core --example gen_vectors`, checked by the Rust libra
 | File | What it pins | Defined in |
 | --- | --- | --- |
 | `tagged-hash.json` | `tagged_hash(tag, x)` for each tag the core uses. | Identity, "Hashes" |
-| `cbor.json` | Encodings that must be accepted (and re-encode to the same bytes), and encodings that must be rejected, one reason each. | Identity, "Encoding" (RFC 8949 §4.2.1); Envelope rule 1a |
+| `cbor.json` | Encodings that must be accepted (and re-encode to the same bytes), and encodings that must be rejected, one reason each. | Identity, "Encoding" (RFC 8949 §4.2.1); Envelopes rule 1a |
 | `canonical-text.json` | Strings as code points, whether each is canonical text, and the first rule it breaks. Includes a string using two marks new in Unicode 17.0 that only a verifier with the pinned tables rejects. | Text, "Canonical text" |
-| `lock.json` | XChaCha20-Poly1305 with no associated data, and the locked hash. | Envelope, "How it fits together" |
-| `running-summary.json` | The running summary over 0 to 11 stand-in act ids. | Envelope, "Sequences" |
-| `sequence-three-acts.json` | **The three-act vector (F78).** Three public text acts in one sequence: each inside, its commitment, the locked bytes, the outside, the act id, and the running summary each act carries; then the summary including the third act. | Envelope, "Sequences"; Text, "Act format" |
-| `open-act.json` | Sealed acts, and the first check that fails when each is opened, or `ok`. | Envelope, validity rules 1–5 |
+| `lock.json` | XChaCha20-Poly1305 with no associated data, and the locked hash. | Envelopes, "How it fits together" |
+| `running-summary.json` | The running summary over 0 to 11 stand-in act ids. | Envelopes, "Sequences" |
+| `sequence-three-acts.json` | **The three-act vector (F78).** Three public text acts in one sequence: each inside, its commitment, the locked bytes, the outside, the act id, and the running summary each act carries; then the summary including the third act. | Envelopes, "Sequences"; Text, "Act format" |
+| `open-act.json` | Sealed acts, and the first check that fails when each is opened, or `ok`. | Envelopes, validity rules 1–5 |
 
 No signatures appear: they are part 2 (roadmap step 3). The act id does not depend on the signature, so every id here is final for its outside.
 
-The readings these vectors depend on are decided and written into Envelope draft 5: how the running summary's peaks are bagged (F89), that the lock uses no associated data (F90), and the 128-level nesting limit (F91, in `cbor.json`).
+The readings these vectors depend on are decided and written into Envelopes draft 5: how the running summary's peaks are bagged (F89), that the lock uses no associated data (F90), and the 128-level nesting limit (F91, in `cbor.json`).

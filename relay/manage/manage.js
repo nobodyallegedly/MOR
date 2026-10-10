@@ -134,13 +134,13 @@ var IDENTITY_TYPES = {
   13: "absence statement",
   14: "escape endorsement"
 };
-var ENVELOPE_TYPES = { 0: "publication", 4: "encryption key" };
+var ENVELOPES_TYPES = { 0: "publication", 4: "encryption key" };
 function what(it) {
   if (it.kind === "sealed") return "sealed container";
   if (it.kind === "media") return "media";
   if (it.spec === null) return "private act";
   if (it.spec === "identity") return `Identity: ${IDENTITY_TYPES[it.type ?? -1] ?? `type ${it.type}`}`;
-  if (it.spec === "envelope") return `Envelope: ${ENVELOPE_TYPES[it.type ?? -1] ?? `type ${it.type}`}`;
+  if (it.spec === "envelope") return `Envelopes: ${ENVELOPES_TYPES[it.type ?? -1] ?? `type ${it.type}`}`;
   return `spec ${it.spec.slice(0, 8)}\u2026, type ${it.type}`;
 }
 var note = (kind, html) => `<div class="note ${kind}">${html}</div>`;

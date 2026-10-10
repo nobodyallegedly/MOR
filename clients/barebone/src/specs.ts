@@ -10,8 +10,8 @@ const test = (s: string) => sha256(s);
 export const POST_SPECS = {
   /** The Text MIP (`TEXT`). */
   text: LONGFORM_SPECS.text,
-  /** The Envelope MIP (`ENVELOPE`). */
-  envelope: SPECS.envelope,
+  /** The Envelopes MIP (`ENVELOPES`). */
+  envelopes: SPECS.envelopes,
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
@@ -20,6 +20,6 @@ export const POST_SPECS = {
 
 /** The text act (Text MIP, "Act format"). */
 export const TEXT_ACT = 0;
-/** Envelope types: a publication and a withdrawal. */
+/** Envelopes types: a publication and a withdrawal. */
 export const PUBLICATION = 0;
 export const WITHDRAWAL = 3;

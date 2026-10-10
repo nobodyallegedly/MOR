@@ -71,7 +71,7 @@ export function standingWords(s: string): { ok: boolean; words: string } {
     case 'invalid':
       return { ok: false, words: 'Invalid: the signature or the act does not check.' };
     case 'scoped':
-      return { ok: false, words: "Signed with a grant key: a key of a collective scoped to one of its grants (Law, F128). Whether the grant backs it is Law's to say, and this reader does not judge Law." };
+      return { ok: false, words: "Signed with a grant key: a key of a collective scoped to one of its grants (Agreements, F128). Whether the grant backs it is Agreements' to say, and this reader does not judge Agreements." };
     default:
       return { ok: false, words: `Not verified (${s}): this browser could not establish who signed it.` };
   }

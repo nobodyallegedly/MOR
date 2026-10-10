@@ -3,7 +3,7 @@
 // files, so that a reader that holds no keys, such as the web reader in a
 // browser, uses the same code as the genesis client.
 
-import { MIPS, SPECS, ENVELOPE_TYPES, IDENTITY_TYPES, Verifier, actId, cborDecode, describeAct, hex } from './core.ts';
+import { MIPS, SPECS, ENVELOPES_TYPES, IDENTITY_TYPES, Verifier, actId, cborDecode, describeAct, hex } from './core.ts';
 import { relayAt, type Via } from './transport.ts';
 
 interface Described {
@@ -70,7 +70,7 @@ export interface Lookup {
  * verifier, so several identities can be judged together.
  */
 export async function lookUp(identity: string, hints: string[], via: Via = {}, into?: Verifier): Promise<Lookup> {
-  const v = into ?? new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+  const v = into ?? new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
   const tried = new Set<string>();
   const unreachable: string[] = [];
   const operatorActs = new Map<string, Uint8Array[]>();
@@ -201,7 +201,7 @@ export async function lookUp(identity: string, hints: string[], via: Via = {}, i
       });
     }
   }
-  const e = v.latest(identity, SPECS.envelope, ENVELOPE_TYPES.encryptionKey) as { act?: string; payload?: Uint8Array };
+  const e = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey) as { act?: string; payload?: Uint8Array };
   let encryptionKey: Uint8Array | null = null;
   if (e.payload) {
     const p = cborDecode(e.payload) as Map<number, unknown>;

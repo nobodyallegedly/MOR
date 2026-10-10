@@ -105,7 +105,7 @@ This is the world as it is, and it works on MOR unchanged.
 
 **Open for others to build (cMIPs and Modules):**
 
-- **Live media modules for the Envelope:** how a live stream is cut into segments, ordered, timed and signed, so any relay and any client can carry and play it.
+- **Live media modules for the Envelopes:** how a live stream is cut into segments, ordered, timed and signed, so any relay and any client can carry and play it.
 - **Live-rights cMIPs:** permissions to stream, clip rights, exclusivity.
 - **Co-streaming cMIPs:** revenue share, flat fee, promotion.
 - **Multi-feed modules:** camera angles, commentaries, statistics.

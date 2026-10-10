@@ -473,7 +473,7 @@ fn run(node: &mut Node, key: &[u8; 32], op: &str, args: &Value) -> Answer {
                     let spec = it.spec.map(|s| {
                         if s == specs.identity {
                             "identity".to_string()
-                        } else if s == specs.envelope {
+                        } else if s == specs.envelopes {
                             "envelope".to_string()
                         } else {
                             wire::hex(&s)

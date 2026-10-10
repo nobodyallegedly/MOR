@@ -1,4 +1,4 @@
-// Deals (Law rule 45b): plain terms between named people, with no keys of
+// Deals (Agreements rule 45b): plain terms between named people, with no keys of
 // their own, and the alarm a seller's client raises when a payment names a
 // version of the deal that does not descend from the version it holds
 // (F186, client conformance, decided by Nobody, allegedly, 9 October 2026).
@@ -8,12 +8,12 @@ import { MIPS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, settle
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { LAW_SPECS, carryChain } from './law.ts';
+import { AGREEMENTS_SPECS, carryChain } from './agreements.ts';
 import { allBy } from './release.ts';
-import { LAW_TYPES, REPO_SPECS } from './specs.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from './specs.ts';
 
 /**
- * A deal's terms (Law type 0): founding terms every party signs (field 4,
+ * A deal's terms (Agreements type 0): founding terms every party signs (field 4,
  * every party), or a clone of `parent` marked with the clone rule and every
  * party whose voice remains (rule 45b). A clone settling a fork names,
  * beside its one parent, every tip it discards (field 26, F186; a list,
@@ -66,8 +66,8 @@ export interface SellerAlarm {
 const short = (h: string) => `${h.slice(0, 8)}…${h.slice(-4)}`;
 
 /**
- * Client conformance (Law rule 45b, F186): given a payment `me` received (a
- * Finance receipt or claim naming the claim it pays under, field 9), read
+ * Client conformance (Agreements rule 45b, F186): given a payment `me` received (a
+ * Money receipt or claim naming the claim it pays under, field 9), read
  * the deal it names from the relays (its versions, and every party's
  * signatures on them) and raise the alarm when the version the payment
  * names does not descend from the version `me` holds: the latest version
@@ -83,12 +83,12 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
   } catch {
     return null;
   }
-  if (d.spec !== MIPS.finance || (d.type !== 2 && d.type !== 3) || !d.payload) return null;
+  if (d.spec !== MIPS.money || (d.type !== 2 && d.type !== 3) || !d.payload) return null;
   const claim = (cborDecode(d.payload) as Map<number, unknown>).get(9);
   if (!Array.isArray(claim) || !(claim[0] instanceof Uint8Array) || !(claim[1] instanceof Uint8Array)) return null;
   const agreement = hex(claim[0]);
   const named = hex(claim[1]);
-  const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
   const add = (a: Uint8Array) => {
     try {
       v.add(a);
@@ -115,7 +115,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
           const a = await relayAt(h, via).getAct(x);
           if (!a) continue;
           const t = describeAct(a) as { spec?: string; type?: number; payload?: Uint8Array };
-          if (t.spec !== REPO_SPECS.law || t.type !== LAW_TYPES.terms || !t.payload) break;
+          if (t.spec !== REPO_SPECS.agreements || t.type !== AGREEMENTS_TYPES.terms || !t.payload) break;
           add(a);
           const m = cborDecode(t.payload) as Map<number, unknown>;
           for (const p of (m.get(0) as Uint8Array[]) ?? []) parties.add(hex(p));
@@ -139,7 +139,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
     add(a);
     try {
       const s = describeAct(a) as { spec?: string; type?: number; payload?: Uint8Array };
-      if (s.spec === REPO_SPECS.law && s.type === LAW_TYPES.signature && s.payload) {
+      if (s.spec === REPO_SPECS.agreements && s.type === AGREEMENTS_TYPES.signature && s.payload) {
         const x = (cborDecode(s.payload) as Map<number, unknown>).get(0);
         if (x instanceof Uint8Array) await fetchLine(hex(x));
       }
@@ -156,7 +156,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
   type Ag = { parent: string | null; signed: string[]; exists: boolean | null; collective: boolean };
   const ag = (x: string): Ag | null => {
     try {
-      return v.lawAgreement(LAW_SPECS, x) as Ag;
+      return v.agreementsAgreement(AGREEMENTS_SPECS, x) as Ag;
     } catch {
       return null;
     }
@@ -181,7 +181,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
       named,
       held,
       words: [
-        `ALARM (Law rule 45b, F189): this payment names version ${short(named)} of the deal, a version this identity has never seen${held ? `; the version it holds is ${short(held)}` : ''}.`,
+        `ALARM (Agreements rule 45b, F189): this payment names version ${short(named)} of the deal, a version this identity has never seen${held ? `; the version it holds is ${short(held)}` : ''}.`,
         'Every party may have signed a version this identity was never shown: the deal may have a branch hidden from it. Fetch that version from the payer\'s relays, and look at the whole deal with every party before relying on it.',
       ],
     };
@@ -190,14 +190,14 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
   type Fork = { reference: string; branches: string[][]; tangled: string | null };
   let fork: Fork | null = null;
   try {
-    fork = v.lawDealFork(LAW_SPECS, named) as Fork | null;
+    fork = v.agreementsDealFork(AGREEMENTS_SPECS, named) as Fork | null;
   } catch (e) {
     return {
       kind: 'fork',
       named,
       held,
       words: [
-        `ALARM: this payment names version ${short(named)} of a deal whose versions branch in a way Law does not settle (${e instanceof Error ? e.message : String(e)}). Look at the whole deal with every party before relying on it (Law rule 45b, F186).`,
+        `ALARM: this payment names version ${short(named)} of a deal whose versions branch in a way Agreements do not settle (${e instanceof Error ? e.message : String(e)}). Look at the whole deal with every party before relying on it (Agreements rule 45b, F186).`,
       ],
     };
   }
@@ -207,7 +207,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
       named,
       held,
       words: [
-        `ALARM (Law rule 45b, F188): this payment names version ${short(named)} of a deal whose fork is tangled (${fork.tangled}). The deal stays on ${short(fork.reference)}, the last version every party agreed on: the changes the tangled versions made are lost.`,
+        `ALARM (Agreements rule 45b, F188): this payment names version ${short(named)} of a deal whose fork is tangled (${fork.tangled}). The deal stays on ${short(fork.reference)}, the last version every party agreed on: the changes the tangled versions made are lost.`,
         'A buyer who paid under a version every party signed stays protected: this payment counts under the version it names.',
         'Settle the deal cleanly with every party: sign a version that, beside its one parent, names every tip it discards (terms field 26), signed by the parties of every branch, so everyone sees every option and signs the choice (QF3). Where the reference names a judge of forks (terms field 27), a party who signed it may ask that judge instead (DQ8, QF2).',
       ],
@@ -220,14 +220,14 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
       named,
       held,
       words: [
-        `ALARM (Law rule 45b, F186): this payment names version ${short(named)} of a deal that stands forked. Every party signed two versions of ${short(fork.reference)}, neither descending from the other: ${fork.branches.map((b) => b.map(short).join(' → ')).join(', and ')}.`,
+        `ALARM (Agreements rule 45b, F186): this payment names version ${short(named)} of a deal that stands forked. Every party signed two versions of ${short(fork.reference)}, neither descending from the other: ${fork.branches.map((b) => b.map(short).join(' → ')).join(', and ')}.`,
         `While the fork stands, ${short(fork.reference)} is the reference, and a payment may follow either branch and counts: ${branch ? `this one follows ${branch.map(short).join(' → ')}` : 'this one names the reference'}. The buyer is protected.`,
-        'Settle the fork with every party of both branches: sign a version that names both branches, beside its one parent the other branch\'s latest version (terms field 26). Settlement is final: the other branch never comes back, and a version made on it later changes nothing where it cites the settlement; one citing nothing tangles the deal again (QF1). Where the parties cannot agree, a party who signed the reference may ask the judge of forks it names (terms field 27) to settle it (Law rule 45b, DQ8, QF2).',
+        'Settle the fork with every party of both branches: sign a version that names both branches, beside its one parent the other branch\'s latest version (terms field 26). Settlement is final: the other branch never comes back, and a version made on it later changes nothing where it cites the settlement; one citing nothing tangles the deal again (QF1). Where the parties cannot agree, a party who signed the reference may ask the judge of forks it names (terms field 27) to settle it (Agreements rule 45b, DQ8, QF2).',
       ],
     };
   }
   if (!held) return null;
-  const alarm = v.lawForkAlarm(LAW_SPECS, d.id, held) as { named: string; held: string; shared: string; kind: 'fork' | 'unheld' | 'older'; heldLine: string[]; namedLine: string[] } | null;
+  const alarm = v.agreementsForkAlarm(AGREEMENTS_SPECS, d.id, held) as { named: string; held: string; shared: string; kind: 'fork' | 'unheld' | 'older'; heldLine: string[]; namedLine: string[] } | null;
   if (!alarm) return null;
   if (alarm.kind === 'older') {
     return {
@@ -235,7 +235,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
       named,
       held,
       words: [
-        `NOTICE (Law rule 45b, F188): this payment names version ${short(named)} of the deal, an older version than ${short(held)}, the version this identity holds. There is no fork: the payer's client followed an outdated offer, still read as valid.`,
+        `NOTICE (Agreements rule 45b, F188): this payment names version ${short(named)} of the deal, an older version than ${short(held)}, the version this identity holds. There is no fork: the payer's client followed an outdated offer, still read as valid.`,
       ],
     };
   }
@@ -244,7 +244,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
     named,
     held,
     words: [
-      `ALARM (Law rule 45b, F186): this payment names version ${short(named)} of the deal, which does not descend from ${short(held)}, the version this identity holds. The two lines part after ${short(alarm.shared)}: this identity's ${alarm.heldLine.map(short).join(' → ')}, the payment's ${alarm.namedLine.map(short).join(' → ')}.`,
+      `ALARM (Agreements rule 45b, F186): this payment names version ${short(named)} of the deal, which does not descend from ${short(held)}, the version this identity holds. The two lines part after ${short(alarm.shared)}: this identity's ${alarm.heldLine.map(short).join(' → ')}, the payment's ${alarm.namedLine.map(short).join(' → ')}.`,
       'The deal may have, or have had, two branches this identity does not see. Look for the full picture with every party; if both versions are complete and the fork is not settled, the payment counts under the branch it followed (the buyer is protected), and the fork is settled by a version naming both branches.',
     ],
   };
@@ -265,7 +265,7 @@ export async function dealRoot(version: string, hints: string[], via: Via = {}):
         const a = await relayAt(h, via).getAct(x);
         if (!a) continue;
         const t = describeAct(a) as { spec?: string; type?: number; payload?: Uint8Array };
-        if (t.spec !== REPO_SPECS.law || t.type !== LAW_TYPES.terms || !t.payload) return null;
+        if (t.spec !== REPO_SPECS.agreements || t.type !== AGREEMENTS_TYPES.terms || !t.payload) return null;
         const par = (cborDecode(t.payload) as Map<number, unknown>).get(11);
         next = par instanceof Uint8Array ? hex(par) : null;
         break;
@@ -281,7 +281,7 @@ export async function dealRoot(version: string, hints: string[], via: Via = {}):
 }
 
 /**
- * Client conformance (Law rule 15a with F188, DQ6, decided by Nobody,
+ * Client conformance (Agreements rule 15a with F188, DQ6, decided by Nobody,
  * allegedly, 9 October 2026): one numbering runs across every split a
  * service makes under a deal, on any branch of a fork, from 1. Given the
  * numbers on the splits a holder received from one service under one
@@ -301,7 +301,7 @@ export function splitGaps(numbers: number[]): number[] {
 export interface OfferCheck {
   /** Whether the version offered is truly the latest in its chain, as the relays show it. */
   current: boolean;
-  /** The version in force (while forked or tangled, the reference), if Law can name one. */
+  /** The version in force (while forked or tangled, the reference), if Agreements can name one. */
   inForce: string | null;
   /** In plain words, for the buyer, before paying. */
   words: string[];
@@ -318,7 +318,7 @@ export interface OfferCheck {
  * protected, A4).
  */
 export async function offerCheck(offered: string, hints: string[], via: Via = {}): Promise<OfferCheck> {
-  const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
   const add = (a: Uint8Array) => {
     try {
       v.add(a);
@@ -337,7 +337,7 @@ export async function offerCheck(offered: string, hints: string[], via: Via = {}
           const a = await relayAt(h, via).getAct(x);
           if (!a) continue;
           const t = describeAct(a) as { spec?: string; type?: number; payload?: Uint8Array };
-          if (t.spec !== REPO_SPECS.law || t.type !== LAW_TYPES.terms || !t.payload) break;
+          if (t.spec !== REPO_SPECS.agreements || t.type !== AGREEMENTS_TYPES.terms || !t.payload) break;
           add(a);
           const m = cborDecode(t.payload) as Map<number, unknown>;
           for (const p of (m.get(0) as Uint8Array[]) ?? []) parties.add(hex(p));
@@ -364,7 +364,7 @@ export async function offerCheck(offered: string, hints: string[], via: Via = {}
       add(a);
       try {
         const s = describeAct(a) as { spec?: string; type?: number; payload?: Uint8Array };
-        if (s.spec === REPO_SPECS.law && s.type === LAW_TYPES.signature && s.payload) {
+        if (s.spec === REPO_SPECS.agreements && s.type === AGREEMENTS_TYPES.signature && s.payload) {
           const x = (cborDecode(s.payload) as Map<number, unknown>).get(0);
           if (x instanceof Uint8Array) await fetchLine(hex(x));
         }
@@ -377,19 +377,19 @@ export async function offerCheck(offered: string, hints: string[], via: Via = {}
   let inForce: string;
   let fork: { reference: string; branches: string[][]; tangled: string | null } | null;
   try {
-    inForce = v.lawVersionInForce(LAW_SPECS, offered) as string;
-    fork = v.lawDealFork(LAW_SPECS, offered) as typeof fork;
+    inForce = v.agreementsVersionInForce(AGREEMENTS_SPECS, offered) as string;
+    fork = v.agreementsDealFork(AGREEMENTS_SPECS, offered) as typeof fork;
   } catch (e) {
-    return { current: false, inForce: null, words: [`WARNING: the deal's versions branch in a way Law does not settle (${e instanceof Error ? e.message : String(e)}): look at the whole deal before paying.`] };
+    return { current: false, inForce: null, words: [`WARNING: the deal's versions branch in a way Agreements do not settle (${e instanceof Error ? e.message : String(e)}): look at the whole deal before paying.`] };
   }
   const tips = fork && !fork.tangled ? fork.branches.map((b) => b.at(-1)!) : [];
-  const exists = (v.lawAgreement(LAW_SPECS, offered) as { exists: boolean | null }).exists === true;
+  const exists = (v.agreementsAgreement(AGREEMENTS_SPECS, offered) as { exists: boolean | null }).exists === true;
   const current = exists && (offered === inForce || tips.includes(offered) || (!!fork?.tangled && fork.branches.flat().includes(offered)));
   if (current) {
     return {
       current: true,
       inForce,
-      words: [fork ? `The offer's version ${short(offered)} is the latest of its branch: the deal stands forked, and a payment under it counts (the buyer is protected, Law rule 45b).` : `The offer's version ${short(offered)} is the latest in its chain.`],
+      words: [fork ? `The offer's version ${short(offered)} is the latest of its branch: the deal stands forked, and a payment under it counts (the buyer is protected, Agreements rule 45b).` : `The offer's version ${short(offered)} is the latest in its chain.`],
     };
   }
   return {
@@ -397,7 +397,7 @@ export async function offerCheck(offered: string, hints: string[], via: Via = {}
     inForce,
     words: [
       exists
-        ? `WARNING: the offer shown is outdated: version ${short(offered)} has been replaced; the version in force is ${short(inForce)}. Pay under the latest version, or ask the seller (Law rules 32a, 45b; F188).`
+        ? `WARNING: the offer shown is outdated: version ${short(offered)} has been replaced; the version in force is ${short(inForce)}. Pay under the latest version, or ask the seller (Agreements rules 32a, 45b; F188).`
         : `WARNING: the offer's version ${short(offered)} is not signed by every party: it is no version of the deal yet. The version in force is ${short(inForce)}.`,
     ],
   };
@@ -405,12 +405,12 @@ export async function offerCheck(offered: string, hints: string[], via: Via = {}
 
 /**
  * A party's request that the judge of forks a deal's reference version
- * names (terms field 27, QF2, F190) settle its fork (Law type 22, rule 45b;
+ * names (terms field 27, QF2, F190) settle its fork (Agreements type 22, rule 45b;
  * DQ8, decided by Nobody, allegedly, 9 October 2026): the judge acts only
  * once activated by one of the signing parties, by a signed request naming
  * the fork, which its settlement names. Public.
  */
 export async function requestSettlement(by: TestIdentity, reference: string, relays: string[]) {
   await carryChain(by, relays);
-  return by.publish(REPO_SPECS.law, LAW_TYPES.settlementRequest, settlementRequestPayload(reference), { public: true, relays, objects: [[reference, reference]] });
+  return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.settlementRequest, settlementRequestPayload(reference), { public: true, relays, objects: [[reference, reference]] });
 }

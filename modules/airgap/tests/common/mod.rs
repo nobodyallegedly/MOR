@@ -68,14 +68,14 @@ pub fn identity_spec() -> Hash {
     sha256(b"IDENTITY, test value until the freeze")
 }
 
-pub fn finance_spec() -> Hash {
+pub fn money_spec() -> Hash {
     sha256(b"FINANCE, test value until the freeze")
 }
 
 pub fn config() -> Config {
     Config {
         identity_spec: identity_spec(),
-        finance_spec: Some(finance_spec()),
+        money_spec: Some(money_spec()),
     }
 }
 

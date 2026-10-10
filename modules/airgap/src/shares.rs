@@ -1,4 +1,4 @@
-//! Split safety keys for collectives (Module, section 5; Law rule 36).
+//! Split safety keys for collectives (Module, section 5; Agreements rule 36).
 //!
 //! The seed of the collective's next safety key is split with Shamir's
 //! scheme, any k of n shares rebuilding it, and the shares are dealt with

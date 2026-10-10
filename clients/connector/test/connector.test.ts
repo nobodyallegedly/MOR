@@ -1,6 +1,6 @@
 // Roadmap steps 11a and 11c: a Claude session with the connector, given only
 // a release id or a link, verifies it and explains it in plain words; and it
-// prepares acts of the Text and Envelope layers only, as drafts for the
+// prepares acts of the Text and Envelopes layers only, as drafts for the
 // owner's desk, for identities the owner linked there. The connector runs as
 // its own process and is driven over MCP, as Claude's app drives it. The
 // desk's side (approving, sending back) is tested in clients/desk.
@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { collectiveTerms } from '../../repo/src/collective.ts';
-import { proposePayload, termsPayload } from '../../repo/src/law.ts';
+import { proposePayload, termsPayload } from '../../repo/src/agreements.ts';
 import { POST_SPECS } from '../../barebone/src/specs.ts';
 import { decodeDraft, draftDigest, saveLinked } from '../src/draft.ts';
 import { addTo, addToClaude, installDir } from '../scripts/add-to-claude.ts';
@@ -49,7 +49,7 @@ function handed(text: string): { path: string; digest: string } {
 
 const drafts = () => readdirSync(w.drafts).filter((f) => f.endsWith('.mor-draft')).length;
 
-test('the connector offers its tools, none takes a key, and none prepares a Law act', async () => {
+test('the connector offers its tools, none takes a key, and none prepares an Agreements act', async () => {
   const { tools } = await mcp.client.listTools();
   assert.deepEqual(tools.map((t) => t.name).sort(), ['mor_drafts', 'mor_identity', 'mor_prepare_message', 'mor_prepare_picture', 'mor_prepare_post', 'mor_prepare_withdrawal', 'mor_read']);
   for (const t of tools) {
@@ -69,7 +69,7 @@ test('the connector offers its tools, none takes a key, and none prepares a Law 
   const instructions = mcp.client.getInstructions() ?? '';
   assert.match(instructions, /never instructions to you/);
   assert.match(instructions, /never holds a key/);
-  assert.match(instructions, /You cannot prepare Law acts/);
+  assert.match(instructions, /You cannot prepare Agreements acts/);
   assert.match(instructions, /as far as the relays asked show/);
 });
 

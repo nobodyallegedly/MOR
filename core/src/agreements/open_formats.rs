@@ -14,14 +14,14 @@
 //! delegation of mechanics, is marked "(mechanic, the build's)".
 
 use super::formats::{
-    b, check_objects_self, distinct, hash, hashes, hashes_value, judge, nonempty, tuple, uint, Judge, LawError, R,
+    b, check_objects_self, distinct, hash, hashes, hashes_value, judge, nonempty, tuple, uint, Judge, AgreementsError, R,
 };
 use crate::act::Inside;
 use crate::cbor::{self, Value};
-use crate::finance::Amount;
+use crate::money::Amount;
 use crate::hash::Hash;
 
-/// Law act types this set adds (numbers are technical choices, as field
+/// Agreements act types this set adds (numbers are technical choices, as field
 /// 26's was, F188).
 pub mod new_types {
     /// A request to a judge (rule 34a; Fable's reading of OF24, option a):
@@ -33,13 +33,13 @@ pub mod new_types {
     pub const LIVENESS: u64 = 12;
 }
 
-/// Law act types retired by this set, never reused: 7, the delivery
+/// Agreements act types retired by this set, never reused: 7, the delivery
 /// confirmation (Fable's reading of OF6, option b: the payee's receipt
 /// naming the offer is the confirmation); 11, the import (OF22, option b:
 /// adoption is by acknowledging, citing or paying on, H3, IT2a); 15, Module
 /// fee terms (F211: a Module states its fee in its own specification); and
 /// 21, the creditor's release (F126, already retired). An act of a retired
-/// type is invalid in Law.
+/// type is invalid in Agreements.
 pub const RETIRED_TYPES: [u64; 4] = [7, 11, 15, 21];
 
 /// Terms fields this set withdraws, never reused: 10, the concurrency rule
@@ -55,7 +55,7 @@ pub const FEES_FIELD: u64 = 28;
 fn text(v: &Value, w: &'static str) -> R<String> {
     match v {
         Value::Text(t) => Ok(t.clone()),
-        _ => Err(LawError::Shape(w)),
+        _ => Err(AgreementsError::Shape(w)),
     }
 }
 
@@ -64,7 +64,7 @@ fn fields(p: &[(Value, Value)], max: u64, w: &'static str) -> R<Vec<(u64, Value)
     for (k, v) in p {
         match k {
             Value::Uint(n) if *n <= max && !out.iter().any(|(m, _)| m == n) => out.push((*n, v.clone())),
-            _ => return Err(LawError::Shape(w)),
+            _ => return Err(AgreementsError::Shape(w)),
         }
     }
     Ok(out)
@@ -75,7 +75,7 @@ fn get(f: &[(u64, Value)], k: u64) -> Option<&Value> {
 }
 
 fn amount(v: &Value, w: &'static str) -> R<Amount> {
-    Amount::decode(v).map_err(|_| LawError::Shape(w))
+    Amount::decode(v).map_err(|_| AgreementsError::Shape(w))
 }
 
 // ---------------------------------------------------------------- refund terms
@@ -99,12 +99,12 @@ impl RefundTerms {
     }
 
     pub fn decode(v: &Value) -> R<RefundTerms> {
-        let Value::Map(m) = v else { return Err(LawError::Shape("refund terms")) };
+        let Value::Map(m) = v else { return Err(AgreementsError::Shape("refund terms")) };
         let f = fields(m, 0, "refund terms: unknown field")?;
-        let lapse = get(&f, 0).ok_or(LawError::Shape("refund terms: the lapse"))?;
+        let lapse = get(&f, 0).ok_or(AgreementsError::Shape("refund terms: the lapse"))?;
         let a = tuple(lapse, 2, "refund terms: the lapse is [0, point] (F219)")?;
         if uint(&a[0], "refund terms: the lapse's form")? != 0 {
-            return Err(LawError::Shape("refund terms: the lapse is a fixed point, [0, point] (F219)"));
+            return Err(AgreementsError::Shape("refund terms: the lapse is a fixed point, [0, point] (F219)"));
         }
         Ok(RefundTerms { until: a[1].clone() })
     }
@@ -119,7 +119,7 @@ impl RefundTerms {
 /// agreement), and refused meanwhile, fail closed.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Sold {
-    /// `[ 0, publication ]`: a publication (Envelope type 0), by its act id.
+    /// `[ 0, publication ]`: a publication (Envelopes type 0), by its act id.
     Publication(Hash),
     /// `[ 2, [ cmip, params ] ]`: something with no work hash yet (a live
     /// stream): a cMIP and its parameters.
@@ -141,14 +141,14 @@ impl Sold {
         let a = nonempty(v, "offer: what it sells")?;
         match (uint(&a[0], "offer: what it sells, its form")?, a.len()) {
             (0, 2) => Ok(Sold::Publication(hash(&a[1], "offer: a publication")?)),
-            (1, 2) => Err(LawError::Unsupported(
+            (1, 2) => Err(AgreementsError::Unsupported(
                 "offer: a work, any publication carrying it (OF1 [1]): put to Nobody, allegedly, with F216",
             )),
             (2, 2) => {
                 let x = tuple(&a[1], 2, "offer: access, a cMIP and its parameters")?;
                 Ok(Sold::Access(hash(&x[0], "offer: access, its cMIP")?, cbor::encode(&x[1])))
             }
-            _ => Err(LawError::Shape("offer: what it sells")),
+            _ => Err(AgreementsError::Shape("offer: what it sells")),
         }
     }
 }
@@ -170,7 +170,7 @@ pub enum Paid {
     ByStakes,
 }
 
-/// A standing offer (Law type 6, rule 32).
+/// A standing offer (Agreements type 6, rule 32).
 ///
 /// ```cddl
 /// offer-payload = {
@@ -261,15 +261,15 @@ impl Offer {
     pub fn decode(inside: &Inside) -> R<OfferAct> {
         let f = fields(&inside.payload, 7, "offer: unknown field")?;
         let under = get(&f, 0).map(|v| hash(v, "offer: the agreement it is made under")).transpose()?;
-        let Value::Array(sv) = get(&f, 1).ok_or(LawError::Shape("offer: what it sells"))? else {
-            return Err(LawError::Shape("offer: what it sells"));
+        let Value::Array(sv) = get(&f, 1).ok_or(AgreementsError::Shape("offer: what it sells"))? else {
+            return Err(AgreementsError::Shape("offer: what it sells"));
         };
         let sold = sv.iter().map(Sold::decode).collect::<R<Vec<_>>>()?;
         let enc: Vec<Vec<u8>> = sold.iter().map(|s| cbor::encode(&s.to_value())).collect();
         if !enc.windows(2).all(|w| w[0] < w[1]) {
-            return Err(LawError::Check("offer: what it sells is ascending by deterministic encoding, none twice"));
+            return Err(AgreementsError::Check("offer: what it sells is ascending by deterministic encoding, none twice"));
         }
-        let price = amount(get(&f, 2).ok_or(LawError::Shape("offer: the price"))?, "offer: the price")?;
+        let price = amount(get(&f, 2).ok_or(AgreementsError::Shape("offer: the price"))?, "offer: the price")?;
         let paid = match get(&f, 3) {
             None => None,
             Some(Value::Uint(0)) => Some(Paid::ByStakes),
@@ -287,20 +287,20 @@ impl Offer {
         // F215: co-owners' offers carry field 0, and their agreement's time
         // reference and refund terms; a lone seller's offer carries its own.
         if under.is_some() && (time.is_some() || refund.is_some()) {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "offer: an offer under co-owners' agreement takes its time reference and refund terms from that agreement (F215, FR1)",
             ));
         }
         if under.is_some() && paid.is_none() {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "offer: under an agreement, field 3 says who is paid: a payee, or the stakes (review 2.1; mechanic, the build's)",
             ));
         }
         if under.is_none() && paid == Some(Paid::ByStakes) {
-            return Err(LawError::Check("offer: a lone seller's offer has no stakes to be paid by (F215)"));
+            return Err(AgreementsError::Check("offer: a lone seller's offer has no stakes to be paid by (F215)"));
         }
         if under.is_none() && (until.is_some() || refund.is_some()) && time.is_none() {
-            return Err(LawError::Check(
+            return Err(AgreementsError::Check(
                 "offer: a lone seller's deadline or refund terms are points on its own time reference, field 6 (rule 33; F219)",
             ));
         }
@@ -317,13 +317,13 @@ impl Offer {
         if let Some(u) = &under {
             match rest.first() {
                 Some(o) if o.chain == *u && o.predecessor == *u => rest = &rest[1..],
-                _ => return Err(LawError::Shape("offer: objects name the agreement it is made under, [agreement, agreement]")),
+                _ => return Err(AgreementsError::Shape("offer: objects name the agreement it is made under, [agreement, agreement]")),
             }
         }
         // A collective's offer cites its chain after these (F127).
         let _ = rest;
         if sold.is_empty() && follows.is_none() {
-            return Err(LawError::Check("offer: only a later version withdraws an offer, by selling nothing (OF4 a)"));
+            return Err(AgreementsError::Check("offer: only a later version withdraws an offer, by selling nothing (OF4 a)"));
         }
         Ok(OfferAct {
             offer: Offer { under, sold, price, paid, words, until, time, refund },
@@ -377,7 +377,7 @@ impl Fee {
     fn decode(v: &Value) -> R<Fee> {
         let a = nonempty(v, "fee")?;
         if a.len() != 2 && a.len() != 3 {
-            return Err(LawError::Shape("fee: [module, part, ? scope]"));
+            return Err(AgreementsError::Shape("fee: [module, part, ? scope]"));
         }
         let scope = match a.get(2) {
             None => FeeScope::Every,
@@ -386,7 +386,7 @@ impl Fee {
                 match uint(&x[0], "fee: its scope's form")? {
                     0 => FeeScope::Publication(hash(&x[1], "fee: a publication")?),
                     1 => FeeScope::Rail(hash(&x[1], "fee: a rail Module")?),
-                    _ => return Err(LawError::Shape("fee: its scope")),
+                    _ => return Err(AgreementsError::Shape("fee: its scope")),
                 }
             }
         };
@@ -399,7 +399,7 @@ impl Fee {
         let out = nonempty(v, "fees")?.iter().map(Fee::decode).collect::<R<Vec<_>>>()?;
         for (i, x) in out.iter().enumerate() {
             if out[..i].iter().any(|y| y.module == x.module && y.scope == x.scope) {
-                return Err(LawError::Check("fees: one module twice for the same payments"));
+                return Err(AgreementsError::Check("fees: one module twice for the same payments"));
             }
         }
         Ok(out)
@@ -412,7 +412,7 @@ impl Fee {
 
 // ---------------------------------------------------------------- the split plan (terms field 8)
 
-/// A share of the plan (Law, "Split plan and split").
+/// A share of the plan (Agreements, "Split plan and split").
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ShareRule {
     /// `[ 0, stake, part ]`: a stake, by its index in field 7 of the same
@@ -461,7 +461,7 @@ impl ShareRule {
             1 => Ok(ShareRule::Role { role: text(&a[1], "split plan: a role, by its name (review 7.2)")?, part }),
             2 => Ok(ShareRule::Receiver { receiver: hash(&a[1], "split plan: a named receiver")?, part }),
             3 => Ok(ShareRule::Metric { metric: uint(&a[1], "split plan: a metric")?, part }),
-            _ => Err(LawError::Shape("split plan: a share's kind")),
+            _ => Err(AgreementsError::Shape("split plan: a share's kind")),
         }
     }
 }
@@ -565,17 +565,17 @@ impl SplitPlan {
     }
 
     pub fn decode(v: &Value) -> R<SplitPlan> {
-        let Value::Map(m) = v else { return Err(LawError::Shape("split plan")) };
+        let Value::Map(m) = v else { return Err(AgreementsError::Shape("split plan")) };
         if m.iter().any(|(k, _)| k == &Value::Uint(2)) {
-            return Err(LawError::Check("split plan: fees are terms field 28, their own field, since F213"));
+            return Err(AgreementsError::Check("split plan: fees are terms field 28, their own field, since F213"));
         }
         let f = fields(m, 8, "split plan: unknown field")?;
-        let shares = nonempty(get(&f, 0).ok_or(LawError::Shape("split plan: its shares"))?, "split plan: its shares")?
+        let shares = nonempty(get(&f, 0).ok_or(AgreementsError::Shape("split plan: its shares"))?, "split plan: its shares")?
             .iter()
             .map(ShareRule::decode)
             .collect::<R<Vec<_>>>()?;
         if !shares.windows(2).all(|w| w[0].kind() <= w[1].kind()) {
-            return Err(LawError::Check("split plan: stakes, then roles, then named receivers, then metric shares"));
+            return Err(AgreementsError::Check("split plan: stakes, then roles, then named receivers, then metric shares"));
         }
         let unfilled = match get(&f, 3) {
             None => Unfilled::Stakes,
@@ -585,7 +585,7 @@ impl SplitPlan {
                     (0, 1) => Unfilled::Stakes,
                     (1, 1) => Unfilled::HeldOpen,
                     (2, 2) => Unfilled::To(hash(&a[1], "split plan: an unfilled role's receiver")?),
-                    _ => return Err(LawError::Shape("split plan: an unfilled role")),
+                    _ => return Err(AgreementsError::Shape("split plan: an unfilled role")),
                 }
             }
         };
@@ -594,19 +594,19 @@ impl SplitPlan {
             Some(v) => nonempty(v, "split plan: shares off the top")?.iter().map(|x| uint(x, "split plan: a share off the top")).collect::<R<_>>()?,
         };
         if !top.windows(2).all(|w| w[0] < w[1]) || top.iter().any(|i| *i as usize >= shares.len()) {
-            return Err(LawError::Check("split plan: shares off the top name shares of field 0, ascending, none twice"));
+            return Err(AgreementsError::Check("split plan: shares off the top name shares of field 0, ascending, none twice"));
         }
         let service_bears_rail_fees = match get(&f, 5) {
             None => false,
             Some(Value::Uint(0)) => false,
             Some(Value::Uint(1)) => true,
-            Some(_) => return Err(LawError::Check("split plan: field 5 is 0 or 1")),
+            Some(_) => return Err(AgreementsError::Check("split plan: field 5 is 0 or 1")),
         };
         let max_rail_fee = get(&f, 6).cloned();
         match &max_rail_fee {
             None => {}
             Some(Value::Uint(n)) if *n <= super::formats::MILLION => {}
-            Some(Value::Uint(_)) => return Err(LawError::Check("split plan: a maximum in millionths is at most 1,000,000")),
+            Some(Value::Uint(_)) => return Err(AgreementsError::Check("split plan: a maximum in millionths is at most 1,000,000")),
             Some(v) => {
                 amount(v, "split plan: the largest rail fee")?;
             }
@@ -618,7 +618,7 @@ impl SplitPlan {
                 .map(|x| {
                     let a = nonempty(x, "split plan: a metric")?;
                     if a.len() != 2 && a.len() != 3 {
-                        return Err(LawError::Shape("split plan: a metric is [module, measurer, ? params]"));
+                        return Err(AgreementsError::Shape("split plan: a metric is [module, measurer, ? params]"));
                     }
                     Ok(Metric { module: hash(&a[0], "a metric's module")?, measurer: hash(&a[1], "a metric's measurer")?, params: a.get(2).cloned() })
                 })
@@ -627,13 +627,13 @@ impl SplitPlan {
         for s in &shares {
             if let ShareRule::Metric { metric, .. } = s {
                 if *metric as usize >= metrics.len() {
-                    return Err(LawError::Check("split plan: a metric share names a metric of field 8"));
+                    return Err(AgreementsError::Check("split plan: a metric share names a metric of field 8"));
                 }
             }
         }
         Ok(SplitPlan {
             shares,
-            cmip: hash(get(&f, 1).ok_or(LawError::Shape("split plan: the split cMIP"))?, "split plan: the split cMIP")?,
+            cmip: hash(get(&f, 1).ok_or(AgreementsError::Shape("split plan: the split cMIP"))?, "split plan: the split cMIP")?,
             unfilled,
             top,
             service_bears_rail_fees,
@@ -668,7 +668,7 @@ impl SplitPlan {
 
 // ---------------------------------------------------------------- the work claim
 
-/// A work claim (Law type 3, rule 15): who made a work, authorship, not
+/// A work claim (Agreements type 3, rule 15): who made a work, authorship, not
 /// ownership. Signed by one creator, the one who opens it; bound when
 /// every other creator listed has a signature act naming it.
 ///
@@ -701,13 +701,13 @@ impl WorkClaim {
 
     pub fn decode(inside: &Inside, signer: Option<&Hash>) -> R<WorkClaim> {
         let f = fields(&inside.payload, 2, "work claim: unknown field")?;
-        let work = hash(get(&f, 0).ok_or(LawError::Shape("work claim: the work"))?, "work claim: the work")?;
-        let creators = hashes(get(&f, 1).ok_or(LawError::Shape("work claim: the creators"))?, "work claim: the creators")?;
+        let work = hash(get(&f, 0).ok_or(AgreementsError::Shape("work claim: the work"))?, "work claim: the work")?;
+        let creators = hashes(get(&f, 1).ok_or(AgreementsError::Shape("work claim: the creators"))?, "work claim: the creators")?;
         if creators.is_empty() || !creators.windows(2).all(|w| w[0] < w[1]) {
-            return Err(LawError::Check("work claim: the creators, ascending, none twice"));
+            return Err(AgreementsError::Check("work claim: the creators, ascending, none twice"));
         }
         if signer.is_some_and(|s| !creators.contains(s)) {
-            return Err(LawError::Check("work claim: signed by one of its creators (rule 15)"));
+            return Err(AgreementsError::Check("work claim: signed by one of its creators (rule 15)"));
         }
         let commitment = get(&f, 2)
             .map(|v| {
@@ -721,7 +721,7 @@ impl WorkClaim {
 
 // ---------------------------------------------------------------- the stake transfer
 
-/// A stake transfer (Law type 4, rule 14): signed by the seller, completed
+/// A stake transfer (Agreements type 4, rule 14): signed by the seller, completed
 /// by the buyer's signature act; it takes effect on the seller's own line
 /// (F217, decided 10 October 2026): the seller signs it by a chain
 /// signature (F132), so no device blurs its place.
@@ -764,7 +764,7 @@ impl StakeTransfer {
 
     pub fn decode(inside: &Inside) -> R<StakeTransfer> {
         let f = fields(&inside.payload, 4, "transfer: unknown field")?;
-        let req = |k, w| get(&f, k).ok_or(LawError::Shape(w));
+        let req = |k, w| get(&f, k).ok_or(AgreementsError::Shape(w));
         let t = StakeTransfer {
             agreement: hash(req(0, "transfer: the agreement")?, "transfer: the agreement")?,
             stake: uint(req(1, "transfer: the stake")?, "transfer: the stake")?,
@@ -773,15 +773,15 @@ impl StakeTransfer {
             record: get(&f, 4).map(|v| hashes(v, "transfer: what the seller took")).transpose()?.unwrap_or_default(),
         };
         if t.share == 0 || t.share > super::formats::MILLION {
-            return Err(LawError::Check("transfer: above zero, at most the whole stake"));
+            return Err(AgreementsError::Check("transfer: above zero, at most the whole stake"));
         }
         if !distinct(&t.record) {
-            return Err(LawError::Check("transfer: what the seller took, none twice"));
+            return Err(AgreementsError::Check("transfer: what the seller took, none twice"));
         }
         let objects = inside.objects.as_deref().unwrap_or(&[]);
         match objects.first() {
             Some(o) if o.chain == t.agreement && o.predecessor == t.agreement => {}
-            _ => return Err(LawError::Shape("transfer: objects name the agreement, [agreement, agreement]")),
+            _ => return Err(AgreementsError::Shape("transfer: objects name the agreement, [agreement, agreement]")),
         }
         Ok(t)
     }
@@ -789,7 +789,7 @@ impl StakeTransfer {
 
 // ---------------------------------------------------------------- the request to a judge
 
-/// A request to a judge (Law type 25, rule 34a; Fable's reading of OF24,
+/// A request to a judge (Agreements type 25, rule 34a; Fable's reading of OF24,
 /// option a, with review 2.6): someone with standing asks a judge the terms
 /// name to decide a question; the judge's period runs from it. It counts,
 /// and the period runs, only where it is public or sealed to the judge it
@@ -820,7 +820,7 @@ impl JudgeRequest {
 
     pub fn decode(inside: &Inside) -> R<JudgeRequest> {
         let f = fields(&inside.payload, 2, "request to a judge: unknown field")?;
-        let req = |k, w| get(&f, k).ok_or(LawError::Shape(w));
+        let req = |k, w| get(&f, k).ok_or(AgreementsError::Shape(w));
         let r = JudgeRequest {
             agreement: hash(req(0, "request to a judge: the agreement")?, "request to a judge: the agreement")?,
             judge: judge(req(1, "request to a judge: the judge")?)?,
@@ -833,7 +833,7 @@ impl JudgeRequest {
 
 // ---------------------------------------------------------------- liveness
 
-/// Liveness (Law type 12, rule 50): a party shows presence on an agreement,
+/// Liveness (Agreements type 12, rule 50): a party shows presence on an agreement,
 /// `{ 0 => hash }`, naming any version of it as chain and predecessor. It
 /// counts only where public or addressed to the agreement's other parties
 /// (OF23 a, Fable's reading, F189 (8)'s form); in a collective, only where
@@ -850,7 +850,7 @@ impl Liveness {
 
     pub fn decode(inside: &Inside) -> R<Liveness> {
         let f = fields(&inside.payload, 0, "liveness: unknown field")?;
-        let agreement = hash(get(&f, 0).ok_or(LawError::Shape("liveness: the agreement"))?, "liveness: the agreement")?;
+        let agreement = hash(get(&f, 0).ok_or(AgreementsError::Shape("liveness: the agreement"))?, "liveness: the agreement")?;
         check_objects_self(inside, &agreement, "liveness: objects name the agreement")?;
         Ok(Liveness { agreement })
     }

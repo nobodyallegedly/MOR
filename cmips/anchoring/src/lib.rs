@@ -1,7 +1,7 @@
 //! # mor-anchoring
 //!
 //! The anchoring cMIP, draft 3 (`cmips/cmip-anchoring-draft-3.md`): the
-//! Envelope's anchoring task (F173), one cMIP with each clock a Module under
+//! Envelopes' anchoring task (F173), one cMIP with each clock a Module under
 //! it (F202). **Experimental**: an instrument for testing the core.
 //!
 //! - [`tree`]: the batch tree a pooled anchoring service commits to on a

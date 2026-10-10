@@ -1,7 +1,7 @@
 // The plain-words reading, from the exact bytes the core library decodes:
 // who is bound, how a clone comes into force (its mark), who decides what
-// (tiers and areas, Law draft 7); hidden direction controls shown; what this
-// client does not implement refused; Law's objections by their codes; what a
+// (tiers and areas, Agreements draft 7); hidden direction controls shown; what this
+// client does not implement refused; Agreements' objections by their codes; what a
 // clone changes, by tier.
 
 import { test } from 'node:test';
@@ -9,8 +9,8 @@ import assert from 'node:assert/strict';
 import { cborDecode, cborEncode, checkTerms, sha256 } from '../../genesis/src/core.ts';
 import { plainHtml } from '../../longform/src/html.ts';
 import { collectiveTerms, type Governance } from '../../repo/src/collective.ts';
-import { LAW_SPECS, encodeTerms, type MarkEntry } from '../../repo/src/law.ts';
-import { absenceWarning, lawThrown, problemWords, readAgreement, readChanges, rulesHints, termsOf, uncovered, withLaw, type Reading } from '../src/explain.ts';
+import { AGREEMENTS_SPECS, encodeTerms, type MarkEntry } from '../../repo/src/agreements.ts';
+import { absenceWarning, agreementsThrown, problemWords, readAgreement, readChanges, rulesHints, termsOf, uncovered, withAgreements, type Reading } from '../src/explain.ts';
 
 const [a, b, c, d] = ['a', 'b', 'c', 'd'].map((x) => sha256(`member ${x}`));
 const NAMES: Record<string, string> = { [a]: 'Ann', [b]: 'Ben', [c]: 'Cy', [d]: 'Di' };
@@ -31,7 +31,7 @@ const section = (r: { sections: Reading['sections'] }, heading: string) =>
 
 test('a founding agreement, read from its bytes: who is bound, the keys, the areas, the tiers, leaving, absence', () => {
   const t = termsOf(encodeTerms(collectiveTerms(g(), [a, b, c], a)));
-  assert.ok(!t.problem, 'Law accepts it');
+  assert.ok(!t.problem, 'Agreements accepts it');
   const r = readAgreement(t, names);
   assert.deepEqual(r.blocking, []);
   const w = all(r);
@@ -49,11 +49,11 @@ test('a founding agreement, read from its bytes: who is bound, the keys, the are
   assert.match(areas, /its holders alone decide, and may grant within it \(Q5\)/);
   assert.match(areas, /change only by the constitutional change rule/);
   assert.match(areas, /A holder may step down at once, alone\. The other holders carry on/);
-  assert.match(areas, /With no holder left, the area is frozen: its acts count for nothing until the members refit it \(Law rule 37b\)/);
+  assert.match(areas, /With no holder left, the area is frozen: its acts count for nothing until the members refit it \(Agreements rule 37b\)/);
 
   const tiers = section(r, 'Who decides what');
   assert.match(tiers, /Constitutional: the members, the change rules, the key grammar, the areas and the constitution's words\. They change only by the constitutional change rule: every member whose voice remains: nobody loses their say without signing \(F103\)/);
-  assert.match(tiers, /Judicial: the protected clauses \(the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs\)\. They change only with the signature of every member whose voice remains: one version for everyone \(Law rule 46a, F121\)/);
+  assert.match(tiers, /Judicial: the protected clauses \(the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs\)\. They change only with the signature of every member whose voice remains: one version for everyone \(Agreements rule 46a, F121\)/);
   assert.match(tiers, /Operational: matters outside every area change by the clone rule, any 2 of the 3 parties/);
 
   const leaving = section(r, 'Leaving');
@@ -63,7 +63,7 @@ test('a founding agreement, read from its bytes: who is bound, the keys, the are
   assert.match(w, /any 2 of the other parties together may declare them absent/);
   assert.match(w, /their voice is removed \(they no longer count in any rule or area\)/);
   assert.match(w, /Every member with a say in the constitution is covered.*\(F105\)/);
-  assert.match(w, /agrees to this in advance \(Law rule 13\)/);
+  assert.match(w, /agrees to this in advance \(Agreements rule 13\)/);
   assert.match(w, /the release manifest cMIP/);
 
   // A constitutional change rule of any k members.
@@ -82,7 +82,7 @@ test("the release area's own words are shown as plain text, and an area left wit
   assert.deepEqual(uncovered({ ...t, abandonment: { ...t.abandonment!, outcomes: [1] } }), [a, b, c]);
 });
 
-test("a clone's mark, read in words: the powers it claims and who signs; Law checks it (F104)", () => {
+test("a clone's mark, read in words: the powers it claims and who signs; Agreements check it (F104)", () => {
   const parent = sha256('the founding agreement');
   const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: [a, b] }];
   const t = termsOf(encodeTerms(collectiveTerms(g(), [a, b, d], a, parent, mark)));
@@ -90,7 +90,7 @@ test("a clone's mark, read in words: the powers it claims and who signs; Law che
   const r = readAgreement(t, names);
   const w = section(r, 'How it comes into force: its mark');
   assert.match(w, /It says it comes in by the constitutional change rule of that agreement, signed by Ann and Ben\./);
-  assert.match(w, /Law checks that these are exactly the powers its changes need.*A false mark sinks the clone, whatever signatures it gathers \(F104\)/);
+  assert.match(w, /Agreements check that these are exactly the powers its changes need.*A false mark sinks the clone, whatever signatures it gathers \(F104\)/);
   assert.match(w, /put in force by a rotation of the collective; any other change by the collective's record, at once/);
   assert.match(all(r), /It is a clone of agreement [0-9a-f]{8}…[0-9a-f]{4}: once in force, it replaces it/);
 
@@ -118,45 +118,45 @@ test('what this client does not implement cannot be signed; terms out of their f
   const t = collectiveTerms(g(), [a, b, c], a);
   t.extensions = [...t.extensions, unknown];
   const r = readAgreement(termsOf(encodeTerms(t)), names);
-  assert.match(r.blocking.join(' '), /extension this client does not implement.*Law rule 2/);
+  assert.match(r.blocking.join(' '), /extension this client does not implement.*Agreements rule 2/);
 
   // Step 12b wrote the split plan's format in (field 8), so an empty plan is now refused as not in
   // its format, no longer as "format open"; field 10, the concurrency rule, is withdrawn: the core
   // will not read terms carrying either.
   const m = cborDecode(encodeTerms(collectiveTerms(g(), [a, b, c], a))) as Map<number, unknown>;
   m.set(8, []);
-  assert.throws(() => termsOf(cborEncode(m)), /not in the Law format: split plan/);
+  assert.throws(() => termsOf(cborEncode(m)), /not in the Agreements format: split plan/);
   const w = cborDecode(encodeTerms(collectiveTerms(g(), [a, b, c], a))) as Map<number, unknown>;
   w.set(10, 0);
   assert.throws(() => termsOf(cborEncode(w)), /terms field 10 \(the concurrency rule\) is withdrawn/);
 });
 
-test("Law's objections by their codes, in Law's own words, after the client's own hints, never folded by wording", () => {
+test("Agreements' objections by their codes, in Agreements' own words, after the client's own hints, never folded by wording", () => {
   // Two members who must both rebuild the safety key: refused by F96.
   const t = termsOf(encodeTerms(collectiveTerms(g({ abandonmentOthers: 1 }), [a, b], a)));
   assert.equal(t.problem!.code, 'check');
   const r = readAgreement(t, names);
   assert.equal(r.blocking.length, 1);
   assert.equal(r.blocking[0], problemWords(t.problem!));
-  assert.match(r.blocking[0], /^Law refuses these terms\. Law's own words: “.+”\.$/);
+  assert.match(r.blocking[0], /^Agreements refuse these terms\. Agreements' own words: “.+”\.$/);
 
   const hints = rulesHints({ safety: 2, release: 3, clone: 2, others: 2 }, 2);
   assert.equal(hints.length, 3);
   assert.match(hints[0], /^With 2 members, a safety key that needs all 2 of them would be lost with any one of them \(F96\)/);
-  const out = withLaw(hints, [...r.blocking, ...r.blocking]);
-  assert.deepEqual(out, [...hints, r.blocking[0]], "the client's hints first, then Law's objection, once");
+  const out = withAgreements(hints, [...r.blocking, ...r.blocking]);
+  assert.deepEqual(out, [...hints, r.blocking[0]], "the client's hints first, then Agreements' objection, once");
   assert.match(rulesHints({ safety: 1, release: 1, clone: 1, others: 1, constitution: 3 }, 2)[0], /change of the constitution is not between 1 and the 2 members/);
 
   // An error the core throws is recognised by its code alone.
   let thrown: unknown;
   try {
-    checkTerms(encodeTerms(collectiveTerms(g({ abandonmentOthers: 1 }), [a, b], a)), LAW_SPECS);
+    checkTerms(encodeTerms(collectiveTerms(g({ abandonmentOthers: 1 }), [a, b], a)), AGREEMENTS_SPECS);
   } catch (e) {
     thrown = e;
   }
-  assert.equal(lawThrown(thrown)?.code, 'check');
-  assert.equal(lawThrown(new Error('something else')), null);
-  assert.match(problemWords({ code: 'unsupported', text: 'x' }), /^Law does not support these terms yet\. Law's own words: “x”\.$/);
+  assert.equal(agreementsThrown(thrown)?.code, 'check');
+  assert.equal(agreementsThrown(new Error('something else')), null);
+  assert.match(problemWords({ code: 'unsupported', text: 'x' }), /^Agreements do not support these terms yet\. Agreements' own words: “x”\.$/);
 
   // Any one member alone: allowed, and said plainly.
   const one = readAgreement(termsOf(encodeTerms(collectiveTerms(g({ safetyThreshold: 1, abandonmentOthers: 1 }), [a, b], a))), names);
@@ -185,7 +185,7 @@ test('what a clone changes, by tier, and the powers its mark must name', () => {
   assert.match(w, /The constitution's words change/);
   assert.match(w, /A change to who the members are: constitutional\./);
   assert.match(w, /A change to the abandonment clause: judicial, a protected clause/);
-  assert.match(w, /So its mark must name the constitutional change rule and the judicial tier's rule, every member whose voice remains \(Law rule 44c\)\.\nIts mark names exactly that\./);
+  assert.match(w, /So its mark must name the constitutional change rule and the judicial tier's rule, every member whose voice remains \(Agreements rule 44c\)\.\nIts mark names exactly that\./);
 
   // An ordinary change: the release area's words, operational in that area.
   const words = encodeTerms(collectiveTerms(g({ releaseWords: 'Ours.' }), [a, b, c], a, parent, [{ power: { area: 1 }, signers: [a, b] }]));
@@ -219,7 +219,7 @@ test("a deal's chain of judgment follows its split service: one grant per payee 
       ]),
     );
   const t = termsOf(deal([[2], [[[h(9), h(10)], 30]]]));
-  assert.ok(!t.problem, `Law accepts it: ${JSON.stringify(t.problem)}`);
+  assert.ok(!t.problem, `Agreements accepts it: ${JSON.stringify(t.problem)}`);
   assert.deepEqual(t.chain, [['split service', [[[hx(9), hx(10)], 30]]]]);
   const w = all(readAgreement(t, names));
   assert.match(w, /the service granted by .* \(one grant per payee, signed with this deal, F130 H6\) \(after 30 on the time reference\) takes over/);
@@ -227,7 +227,7 @@ test("a deal's chain of judgment follows its split service: one grant per payee 
   assert.match(JSON.stringify(termsOf(deal([[2], [[h(9), 30]]])).problem ?? ''), /H6/);
 });
 
-test('Law rule 49 (F172, F178 item 11): before signing terms with an abandonment clause, who may declare a party absent, with which outcomes, and whether an absence-proof cMIP stands between', () => {
+test('Agreements rule 49 (F172, F178 item 11): before signing terms with an abandonment clause, who may declare a party absent, with which outcomes, and whether an absence-proof cMIP stands between', () => {
   // A collective's terms, read from their bytes: no absence-proof cMIP.
   const t = termsOf(encodeTerms(collectiveTerms(g(), [a, b, c], a)));
   assert.equal(t.abandonment?.proof ?? null, null);
@@ -235,7 +235,7 @@ test('Law rule 49 (F172, F178 item 11): before signing terms with an abandonment
   const absence = section(r, 'If someone disappears');
   assert.match(
     absence,
-    /If a party stops acting on the agreement, any 2 of the other parties together may declare them absent\. What may then follow: their voice is removed .*\. No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or your activity\. Signing accepts that \(Law rules 49 and 51, a stated cost\); if they declare you absent wrongly, you can only contest it, in public \(Law rule 52\)\./,
+    /If a party stops acting on the agreement, any 2 of the other parties together may declare them absent\. What may then follow: their voice is removed .*\. No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or your activity\. Signing accepts that \(Agreements rules 49 and 51, a stated cost\); if they declare you absent wrongly, you can only contest it, in public \(Agreements rule 52\)\./,
   );
   assert.equal(r.sections.find((s) => s.heading === 'If someone disappears')?.lines[0].tone, 'warn');
   assert.doesNotMatch(all(r), /period|acknowledgement|F158/, 'no period, no acknowledgement window (F172)');
@@ -245,10 +245,10 @@ test('Law rule 49 (F172, F178 item 11): before signing terms with an abandonment
   const named = { ...t, abandonment: { authority: 'named' as const, identity: d, outcomes: [0, 1], proof: p } };
   const w = absenceWarning(named, names);
   assert.match(w!.text, /Di may declare them absent\. What may then follow: their voice is removed .* and their stake is shared among the remaining holders\./);
-  assert.match(w!.text, /An absence-proof cMIP stands between their word and your stake: an unknown specification \(.*\)\. A declaration counts only if it accepts it \(Law rule 51\)\./);
+  assert.match(w!.text, /An absence-proof cMIP stands between their word and your stake: an unknown specification \(.*\)\. A declaration counts only if it accepts it \(Agreements rule 51\)\./);
   assert.equal(absenceWarning({ abandonment: null }, names), null, 'no clause, nothing to warn of');
 
-  // Key 3 read from the bytes; key 2 (a period) refused by Law (F172).
+  // Key 3 read from the bytes; key 2 (a period) refused by Agreements (F172).
   const bytes = encodeTerms(collectiveTerms(g(), [a, b, c], a));
   const withKey = (k: number, v: unknown) => {
     const m = cborDecode(bytes) as Map<number, unknown>;

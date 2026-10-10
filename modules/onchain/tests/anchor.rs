@@ -8,7 +8,7 @@
 mod support;
 
 use mor_anchoring::tree::{self, Batch};
-use mor_core::envelope::anchoring::{Anchors, AnchoringCmip};
+use mor_core::envelopes::anchoring::{Anchors, AnchoringCmip};
 use mor_core::hash::Hash;
 use mor_onchain::chain::HeaderChain;
 use mor_onchain::clock::{self, BatchAnchor, BitcoinClock};

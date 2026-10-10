@@ -100,7 +100,7 @@ test('what strangers sent is escaped on the page', () => {
 test('the page says what each arrival is, in words', () => {
   const it = { arrival: 1, id: 'aa'.repeat(32), size: 10, signer: null };
   assert.equal(v.what({ ...it, kind: 'act', spec: 'identity', type: 2 }), 'Identity: receipt');
-  assert.equal(v.what({ ...it, kind: 'act', spec: 'envelope', type: 4 }), 'Envelope: encryption key');
+  assert.equal(v.what({ ...it, kind: 'act', spec: 'envelope', type: 4 }), 'Envelopes: encryption key');
   assert.equal(v.what({ ...it, kind: 'act', spec: null, type: null }), 'private act');
   assert.equal(v.what({ ...it, kind: 'sealed', spec: null, type: null }), 'sealed container');
   assert.equal(v.bytes(1536), '1.5 KiB');

@@ -14,32 +14,32 @@
 //!    hash, never a bare work claim: a lone creator's claim on the live
 //!    name leaves a stranger's publication of that name a plain payment;
 //! 4. a publication whose field 1 is any hash puts that hash under the
-//!    purchase rules once an agreement writes a stake in it: the Law
+//!    purchase rules once an agreement writes a stake in it: the Agreements
 //!    machinery is indifferent to what the hash fingerprints;
 //! 5. the recording's hash and the live name are two works with no tie
 //!    the core reads: a claim on one shows nothing on the other.
 //!
 //! Test identities only; the specification hashes are test values until
-//! the freeze, as in the other Law tests.
+//! the freeze, as in the other Agreements tests.
 
 mod common;
 
 use common::{own_home, Person, World};
 use mor_core::act::Object;
 use mor_core::cbor::Value;
-use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
 use mor_core::hash::{sha256, Hash};
-use mor_core::law::{self, Field4, LawView, Mips, PurchaseVerdict, Rule, Stake, Terms, Who};
+use mor_core::agreements::{self, Field4, AgreementsView, Mips, PurchaseVerdict, Rule, Stake, Terms, Who};
 
 fn mips() -> Mips {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mips {
         identity: common::identity_spec(),
-        envelope: t("ENVELOPE"),
+        envelopes: t("ENVELOPE"),
         text: t("TEXT"),
-        finance: t("FINANCE"),
-        law: t("LAW"),
-        production: t("PRODUCTION"),
+        money: t("FINANCE"),
+        agreements: t("LAW"),
+        development: t("PRODUCTION"),
     }
 }
 
@@ -47,32 +47,32 @@ fn spec(s: &str) -> Hash {
     sha256(s.as_bytes())
 }
 
-fn view(w: &World) -> LawView<'_> {
-    LawView::new(&w.v, mips())
+fn view(w: &World) -> AgreementsView<'_> {
+    AgreementsView::new(&w.v, mips())
 }
 
-fn law_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
-    let a = w.everyday_act(p, mips().law, type_, payload, objects, None);
+fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
+    let a = w.everyday_act(p, mips().agreements, type_, payload, objects, None);
     w.add(&a)
 }
 
 fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
-    law_act(w, p, law::types::SIGNATURE, law::signature_payload(x), Some(vec![Object { chain: *x, predecessor: *x }]))
+    agreements_act(w, p, agreements::types::SIGNATURE, agreements::signature_payload(x), Some(vec![Object { chain: *x, predecessor: *x }]))
 }
 
 /// A work claim by `p` alone on `work`, public; it binds at once (rule 15:
 /// a sole creator alone).
 fn claim_alone(w: &mut World, p: &mut Person, work: Hash) -> Hash {
-    let c = law::WorkClaim { work, creators: vec![p.id], commitment: None };
-    law_act(w, p, law::types::WORK_CLAIM, c.to_map(), None)
+    let c = agreements::WorkClaim { work, creators: vec![p.id], commitment: None };
+    agreements_act(w, p, agreements::types::WORK_CLAIM, c.to_map(), None)
 }
 
-/// A publication (Envelope type 0) by `p` whose field 1 is `work` and field
+/// A publication (Envelopes type 0) by `p` whose field 1 is `work` and field
 /// 2 some locked bytes' hash; the core decodes nothing else of it.
 fn publication(w: &mut World, p: &mut Person, work: Hash, locked: Hash) -> Hash {
     let x = w.everyday_act(
         p,
-        mips().envelope,
+        mips().envelopes,
         0,
         vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))],
         None,
@@ -83,8 +83,8 @@ fn publication(w: &mut World, p: &mut Person, work: Hash, locked: Hash) -> Hash 
 
 /// A lone seller's standing offer (F215): no agreement behind it, paid to
 /// the signer.
-fn lone_offer(w: &mut World, p: &mut Person, sold: law::Sold) -> Hash {
-    let o = law::Offer {
+fn lone_offer(w: &mut World, p: &mut Person, sold: agreements::Sold) -> Hash {
+    let o = agreements::Offer {
         under: None,
         sold: vec![sold],
         price: Amount { unit: spec("a unit"), value: 300 },
@@ -94,7 +94,7 @@ fn lone_offer(w: &mut World, p: &mut Person, sold: law::Sold) -> Hash {
         time: None,
         refund: None,
     };
-    law_act(w, p, law::types::STANDING_OFFER, o.to_map(), None)
+    agreements_act(w, p, agreements::types::STANDING_OFFER, o.to_map(), None)
 }
 
 /// A receipt in `payee`'s name for `payer`'s payment following `fulfils`,
@@ -113,7 +113,7 @@ fn receipt(w: &mut World, payee: &mut Person, payer: Hash, fulfils: Hash, purcha
         batch: None,
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
     });
-    let a = w.everyday_act(payee, mips().finance, 2, r.to_map(), None, None);
+    let a = w.everyday_act(payee, mips().money, 2, r.to_map(), None, None);
     w.add(&a)
 }
 
@@ -211,7 +211,7 @@ fn today_an_access_offer_names_no_work_so_a_claim_on_the_stream_reaches_none_of_
     // The stranger sells access to "Dario's stream": the parameters say so,
     // in the live media cMIP's own form; the core reads none of it.
     let params = mor_core::cbor::encode(&Value::Array(vec![Value::Text("Dario's match, live".into()), Value::Bytes(opening.to_vec())]));
-    let offer = lone_offer(&mut w, &mut stranger, law::Sold::Access(spec("a live media cMIP"), params));
+    let offer = lone_offer(&mut w, &mut stranger, agreements::Sold::Access(spec("a live media cMIP"), params));
     let e = view(&w).offer(&offer).unwrap();
     assert!(e.counts, "a lone seller's access offer counts: {:?}", e.problems);
     let r = receipt(&mut w, &mut stranger, fan.id, offer, None, b"the fan paid the stranger");
@@ -246,7 +246,7 @@ fn today_a_bare_claim_does_not_make_a_name_claimed_for_purchases_an_agreement_do
     // Dario and the club write a stake in the name: now the name is claimed
     // for purchases, and the stranger's next payment names no claim.
     let t = deal_on([dario.id, club.id], opening);
-    let d = law_act(&mut w, &mut dario, law::types::TERMS, t.to_map(), None);
+    let d = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut dario, &d);
     sign(&mut w, &mut club, &d);
     assert_eq!(view(&w).work_owners(&opening).unwrap().agreements, vec![d]);
@@ -274,23 +274,23 @@ fn today_a_publication_under_any_name_is_sold_under_the_agreement_claiming_that_
     let fan = w.genesis("a fan", vec![own_home()], None, None);
     let opening = spec("the opening segment of Dario's stream");
     let t = deal_on([dario.id, club.id], opening);
-    let d = law_act(&mut w, &mut dario, law::types::TERMS, t.to_map(), None);
+    let d = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut dario, &d);
     sign(&mut w, &mut club, &d);
     let pub_ = publication(&mut w, &mut dario, opening, spec("the stream so far, locked"));
     // The owners' offer for their publication, under their deal, paid by the
     // stakes (no split service), signed by both.
-    let o = law::Offer {
+    let o = agreements::Offer {
         under: Some(d),
-        sold: vec![law::Sold::Publication(pub_)],
+        sold: vec![agreements::Sold::Publication(pub_)],
         price: Amount { unit: spec("a unit"), value: 300 },
-        paid: Some(law::Paid::ByStakes),
+        paid: Some(agreements::Paid::ByStakes),
         words: None,
         until: None,
         time: None,
         refund: None,
     };
-    let offer = law_act(&mut w, &mut dario, law::types::STANDING_OFFER, o.to_map(), Some(vec![Object { chain: d, predecessor: d }]));
+    let offer = agreements_act(&mut w, &mut dario, agreements::types::STANDING_OFFER, o.to_map(), Some(vec![Object { chain: d, predecessor: d }]));
     sign(&mut w, &mut club, &offer);
     assert!(view(&w).offer(&offer).unwrap().counts);
     let r = receipt(&mut w, &mut dario, fan.id, offer, Some(d), b"the fan paid the owners");
@@ -318,7 +318,7 @@ fn today_the_recording_and_the_live_name_are_two_works_with_no_tie_the_core_read
     // Dario's publication of the recording, naming the live work in refs.
     let a = w.everyday_act_refs(
         &mut dario,
-        mips().envelope,
+        mips().envelopes,
         0,
         vec![(Value::Uint(1), Value::Bytes(recording.to_vec())), (Value::Uint(2), Value::Bytes(spec("the recording, locked").to_vec()))],
         None,

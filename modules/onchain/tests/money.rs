@@ -1,5 +1,5 @@
-//! The on-chain rail against Finance's rules, offline, over the core
-//! library's verifier and Law view:
+//! The on-chain rail against Money's rules, offline, over the core
+//! library's verifier and Agreements view:
 //!
 //! - **vault limits per unit** (rule 14a, F114): a vault holding the same
 //!   unit on Lightning and on-chain takes the smaller limit, whichever rail
@@ -25,11 +25,11 @@ use common::{home, Person, Rot, World};
 use mor_core::act::{Object, Ref};
 use mor_core::cbor::Value;
 use mor_core::chain::Status;
-use mor_core::envelope::anchoring::{Anchor, AnchoringCmip, Anchors, Reference};
-use mor_core::finance::{self as fin, Amount, Choice, Citations, Claim, Clock, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, Undeliverable, VaultEntry};
+use mor_core::envelopes::anchoring::{Anchor, AnchoringCmip, Anchors, Reference};
+use mor_core::money::{self as fin, Amount, Choice, Citations, Claim, Clock, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, Undeliverable, VaultEntry};
 use mor_core::hash::{tagged_hash, Hash};
 use mor_core::identity::Payload as Id;
-use mor_core::law::{self, LawView, Mips};
+use mor_core::agreements::{self, AgreementsView, Mips};
 use mor_core::sig::{self, SchnorrKey, Verdict};
 use mor_onchain::chain::HeaderChain;
 use mor_onchain::{block, unit, Block, Network, Onchain, OnchainProof, Paid};
@@ -41,10 +41,10 @@ fn mips() -> Mips {
     Mips {
         identity: common::identity_spec(),
         text: h("a text specification"),
-        envelope: h("the envelope specification"),
-        finance: common::finance_spec(),
-        law: common::law_spec(),
-        production: h("the production specification"),
+        envelopes: h("the envelope specification"),
+        money: common::money_spec(),
+        agreements: common::agreements_spec(),
+        development: h("the production specification"),
     }
 }
 
@@ -124,23 +124,23 @@ impl AnchoringCmip for TestAnchoring {
     }
 }
 
-// ---------------------------------------------------------------- a Law client's Held
+// ---------------------------------------------------------------- an Agreements client's Held
 
-struct LawHeld<'a> {
-    view: LawView<'a>,
+struct AgreementsHeld<'a> {
+    view: AgreementsView<'a>,
 }
 
-impl LawHeld<'_> {
+impl AgreementsHeld<'_> {
     fn fin(&self, id: &Hash) -> Option<(Payload, Hash)> {
         let x = self.view.v.get(id)?;
-        if x.inside.spec != mips().finance {
+        if x.inside.spec != mips().money {
             return None;
         }
         Some((Payload::decode(x.inside.type_, &x.inside.payload).ok()?, x.act.outside.signer?))
     }
 }
 
-impl Held for LawHeld<'_> {
+impl Held for AgreementsHeld<'_> {
     fn pointer(&self, id: &Hash) -> Option<PayeePointer> {
         match self.fin(id)? {
             (Payload::PayeePointer(p), s) if s == p.payee && self.view.v.binding_status(id) == Status::Valid => Some(p),
@@ -154,7 +154,7 @@ impl Held for LawHeld<'_> {
             Id::Rotation(r) => (x.act.outside.signer?, r.declarations.clone()?),
             _ => return None,
         };
-        Some((who, fin::vault_in(&mips().finance, &decls).ok()??.unwrap_or_default()))
+        Some((who, fin::vault_in(&mips().money, &decls).ok()??.unwrap_or_default()))
     }
     fn obligation(&self, id: &Hash) -> Option<Obligation> {
         match self.fin(id)? {
@@ -181,7 +181,7 @@ impl Held for LawHeld<'_> {
         let res = self.view.v.resolve(payee);
         let mut out = None;
         for st in &res.states {
-            if let Ok(Some(v)) = fin::vault_in(&mips().finance, &st.declarations) {
+            if let Ok(Some(v)) = fin::vault_in(&mips().money, &st.declarations) {
                 out = v;
             }
         }
@@ -217,8 +217,8 @@ fn story(w: World, main: Clockwork, payee: Hash) -> Story {
 }
 
 impl Story {
-    fn view(&self) -> LawView<'_> {
-        let mut v = LawView::new(&self.w.v, mips());
+    fn view(&self) -> AgreementsView<'_> {
+        let mut v = AgreementsView::new(&self.w.v, mips());
         v.rail_valid = self.rail_valid.clone();
         v.rail_pending = self.rail_pending.clone();
         v.payments = self.payments.clone();
@@ -227,7 +227,7 @@ impl Story {
         v
     }
 
-    /// What a Law client states of a record it checked: its rail answer,
+    /// What an Agreements client states of a record it checked: its rail answer,
     /// and, where the rail shows a payment, which payment it is (F200).
     fn state(&mut self, id: Hash, rec: &Record, answer: &Answer) {
         let onchain = Onchain::on(&self.chain);
@@ -262,16 +262,16 @@ impl Story {
 
     fn debt(&mut self, label: &mut Person, deal: Hash, value: u64, named: Hash) -> Hash {
         let o = Payload::Obligation(Obligation { debtor: label.id, creditor: self.payee, amount: sat(value), pointer: named, agreement: Some(deal) });
-        self.act(label, mips().finance, fin::types::OBLIGATION, o.to_map(), None, None)
+        self.act(label, mips().money, fin::types::OBLIGATION, o.to_map(), None, None)
     }
 
     /// Sign and hold a claim of `payer`'s carrying `rail_proof`; where the
-    /// rail's answer is valid, hand it to the Law view as the caller states
+    /// rail's answer is valid, hand it to the Agreements view as the caller states
     /// it. Returns the claim's act id and the rail's answer.
     fn claim(&mut self, payer: &mut Person, debt: Hash, paid_to: PaidTo, salt: [u8; 16], amount: Amount, rail_proof: &OnchainProof) -> (Hash, Answer) {
         let proof = Proof { paid_to, salt, rail: rail_proof.encode() }.encode();
         let claim = Claim { rail: mor_onchain::spec(), proof, payee: self.payee, amount, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
-        let id = self.act(payer, mips().finance, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
+        let id = self.act(payer, mips().money, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
         let rec = Record::Claim(&claim, payer.id, &Citations::default());
         let answer = self.verify(&rec);
         self.state(id, &rec, &answer);
@@ -282,7 +282,7 @@ impl Story {
     fn receipt(&mut self, payee: &mut Person, payer: Hash, debt: Hash, paid_to: PaidTo, salt: [u8; 16], amount: Amount, rail_proof: &OnchainProof) -> (Hash, Answer) {
         let proof = Proof { paid_to, salt, rail: rail_proof.encode() }.encode();
         let r = Receipt { rail: mor_onchain::spec(), proof, payer: Some(Payer::Identity(payer)), payee: self.payee, amount, fulfils: debt, previous: None, forward: None, batch: None, purchase: None };
-        let id = self.act(payee, mips().finance, fin::types::RECEIPT, Payload::Receipt(r.clone()).to_map(), None, None);
+        let id = self.act(payee, mips().money, fin::types::RECEIPT, Payload::Receipt(r.clone()).to_map(), None, None);
         let rec = Record::Receipt(&r);
         let answer = self.verify(&rec);
         self.state(id, &rec, &answer);
@@ -292,7 +292,7 @@ impl Story {
     /// The rail's answer for a record, on the chain the verifier follows.
     fn verify(&self, rec: &Record) -> Answer {
         let onchain = Onchain::on(&self.chain);
-        let held = LawHeld { view: self.view() };
+        let held = AgreementsHeld { view: self.view() };
         verify(rec.clone(), &held, &Modules::new().adopt(&onchain)).answer
     }
 }
@@ -357,8 +357,8 @@ fn theft(main: Clockwork, clock: Reference) -> Theft {
     let clock = Clock { main: clock, backup: None };
     let ana_vault = Keys::new("Ana's vault");
     let decls = vec![
-        fin::clock_declaration(&mips().finance, &clock),
-        fin::vault_declaration(&mips().finance, &[VaultEntry { unit: unit(Network::Regtest), rail_module: mor_onchain::spec(), source: ana_vault.address(Network::Regtest).encode(), limit: 50_000 }]),
+        fin::clock_declaration(&mips().money, &clock),
+        fin::vault_declaration(&mips().money, &[VaultEntry { unit: unit(Network::Regtest), rail_module: mor_onchain::spec(), source: ana_vault.address(Network::Regtest).encode(), limit: 50_000 }]),
     ];
     let mut ana = w.genesis_with("Ana", vec![home(&op)], None, None, Some(decls), 3);
     let aid = ana.id;
@@ -366,15 +366,15 @@ fn theft(main: Clockwork, clock: Reference) -> Theft {
     let mut label = s.w.genesis("the label", vec![common::own_home()], None, None);
     let ana_flow = Keys::new("Ana's flow");
     let rail = |k: &Keys| vec![Rail { module: mor_onchain::spec(), address: k.address(Network::Regtest).encode() }];
-    let v1 = s.act(&mut ana, mips().finance, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: aid, version: 1, previous: None, rails: rail(&ana_flow) }).to_map(), None, None);
-    let deal = s.act(&mut label, mips().law, law::types::TERMS, vec![], None, None);
+    let v1 = s.act(&mut ana, mips().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: aid, version: 1, previous: None, rails: rail(&ana_flow) }).to_map(), None, None);
+    let deal = s.act(&mut label, mips().agreements, agreements::types::TERMS, vec![], None, None);
     let on = |t: Hash| Some(vec![Object { chain: t, predecessor: t }]);
-    s.act(&mut label, mips().law, law::types::SIGNATURE, law::signature_payload(&deal), on(deal), None);
-    s.act(&mut ana, mips().law, law::types::SIGNATURE, law::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v1)]));
+    s.act(&mut label, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), None);
+    s.act(&mut ana, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v1)]));
     let thief_keys = Keys::new("the thief's wallet");
     let mut thief = ana.clone();
-    let v2 = s.act(&mut thief, mips().finance, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: aid, version: 2, previous: Some(v1), rails: rail(&thief_keys) }).to_map(), None, None);
-    let resigned = s.act(&mut thief, mips().law, law::types::SIGNATURE, law::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v2)]));
+    let v2 = s.act(&mut thief, mips().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: aid, version: 2, previous: Some(v1), rails: rail(&thief_keys) }).to_map(), None, None);
+    let resigned = s.act(&mut thief, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v2)]));
     Theft { s, ana, label, op, deal, v2, resigned, thief_keys }
 }
 
@@ -415,7 +415,7 @@ fn on_a_clock_that_is_not_bitcoin_the_earliest_claim_of_the_same_payment_counts_
     t.s.anchor(pending1, 100);
     let (pending2, _) = t.s.claim(&mut t.label, d2, to_thief, p2.salt, sat(20_000), &p2.unconfirmed());
     t.s.anchor(pending2, 100);
-    assert_eq!(t.s.view().paid_toward(&d1), 0, "pending: nothing counts yet (Finance rule 4)");
+    assert_eq!(t.s.view().paid_toward(&d1), 0, "pending: nothing counts yet (Money rule 4)");
 
     let proof2 = p2.confirmed(&mut t.s.chain);
     let (confirmed2, a) = t.s.claim(&mut t.label, d2, to_thief, p2.salt, sat(20_000), &proof2);
@@ -448,7 +448,7 @@ fn on_a_clock_that_is_not_bitcoin_the_earliest_claim_of_the_same_payment_counts_
 /// carries the first proof, checked while that block was on the chain his
 /// verifier followed; the label's claim the second, checked on the chain
 /// after the reorganisation. The rail Module says both are the same
-/// payment (the same output), and Finance counts it once. *Under draft 1
+/// payment (the same output), and Money counts it once. *Under draft 1
 /// it counted twice (question 3 of the step 12a report).*
 #[test]
 fn one_payment_mined_again_after_a_reorganisation_counts_once() {
@@ -459,11 +459,11 @@ fn one_payment_mined_again_after_a_reorganisation_counts_once() {
     let mut s = story(w, Clockwork::new("a clock"), bid);
     let mut label = s.w.genesis("the label", vec![common::own_home()], None, None);
     let flow = Keys::new("Bob's flow");
-    let v1 = s.act(&mut bob, mips().finance, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: bid, version: 1, previous: None, rails: vec![Rail { module: mor_onchain::spec(), address: flow.address(Network::Regtest).encode() }] }).to_map(), None, None);
-    let deal = s.act(&mut label, mips().law, law::types::TERMS, vec![], None, None);
+    let v1 = s.act(&mut bob, mips().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: bid, version: 1, previous: None, rails: vec![Rail { module: mor_onchain::spec(), address: flow.address(Network::Regtest).encode() }] }).to_map(), None, None);
+    let deal = s.act(&mut label, mips().agreements, agreements::types::TERMS, vec![], None, None);
     let on = |t: Hash| Some(vec![Object { chain: t, predecessor: t }]);
-    s.act(&mut label, mips().law, law::types::SIGNATURE, law::signature_payload(&deal), on(deal), None);
-    s.act(&mut bob, mips().law, law::types::SIGNATURE, law::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v1)]));
+    s.act(&mut label, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), None);
+    s.act(&mut bob, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v1)]));
 
     // A debt of 2,000, and one payment of 1,000 toward it.
     let debt = s.debt(&mut label, deal, 2_000, v1);
@@ -497,7 +497,7 @@ fn one_payment_mined_again_after_a_reorganisation_counts_once() {
     let r = Receipt { rail: mor_onchain::spec(), proof: Proof { paid_to: to_bob, salt: p.salt, rail: first.encode() }.encode(), payer: Some(Payer::Identity(label.id)), payee: bid, amount: sat(1_000), fulfils: debt, previous: None, forward: None, batch: None, purchase: None };
     assert!(matches!(s.verify(&Record::Receipt(&r)), Answer::Unknown(_)));
     let s_old = Onchain::on(&old_chain);
-    let held = LawHeld { view: s.view() };
+    let held = AgreementsHeld { view: s.view() };
     assert_eq!(verify(Record::Receipt(&r), &held, &Modules::new().adopt(&s_old)).answer, Answer::Valid, "on the chain it was counted on");
 }
 
@@ -571,7 +571,7 @@ fn on_the_bitcoin_clock_the_payments_block_is_its_anchor() {
     let bitcoin = BitcoinClock { chain: &t.s.chain };
     for (id, proof, debt, salt, block) in [(valid1, &proof1, d1, p1.salt, block1), (valid2, &mined2, d2, p2.salt, block2)] {
         let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: proof.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
-        let held = LawHeld { view: t.s.view() };
+        let held = AgreementsHeld { view: t.s.view() };
         let anchor = bitcoin.payment_anchor(&id, &Record::Claim(&c, t.label.id, &Citations::default()), &held).expect("the clock Module's check passes");
         assert_eq!((anchor.reference.clone(), anchor.point), (reference.clone(), block), "the point is the block");
         t.s.anchors.add(&anchor);
@@ -587,7 +587,7 @@ fn on_the_bitcoin_clock_the_payments_block_is_its_anchor() {
     // The clock Module refuses a proof its chain does not hold, and one
     // short of the depth (F205).
     let offchain = support::chain(&[mine(h("another chain"), &[h("x")], REGTEST_BITS, 9)]);
-    let held = LawHeld { view: t.s.view() };
+    let held = AgreementsHeld { view: t.s.view() };
     let c1 = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt: p1.salt, rail: mined1.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: d1, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
     assert!(bitcoin.payment_anchor(&pending1, &Record::Claim(&c1, t.label.id, &Citations::default()), &held).is_none(), "two headers: not yet an anchor");
     let c1 = Claim { proof: Proof { paid_to: to_thief, salt: p1.salt, rail: proof1.encode() }.encode(), ..c1 };
@@ -675,7 +675,7 @@ fn on_the_bitcoin_clock_a_lock_changes_point_is_its_home_receipts_batch_anchor()
             let (id, a) = t.s.claim(&mut t.label, debt, to_thief, salt, sat(20_000), &full);
             assert_eq!(a, Answer::Valid);
             let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: full.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
-            let held = LawHeld { view: t.s.view() };
+            let held = AgreementsHeld { view: t.s.view() };
             let pa = BitcoinClock { chain: &bitcoin_chain }.payment_anchor(&id, &Record::Claim(&c, t.label.id, &Citations::default()), &held).unwrap();
             t.s.anchors.add(&pa);
         }
@@ -747,7 +747,7 @@ fn f226_the_earliest_of_two_services_anchors_closes_one_services_delay() {
         let (id, a) = t.s.claim(&mut t.label, debt, to_thief, salt, sat(20_000), &full);
         assert_eq!(a, Answer::Valid);
         let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: full.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
-        let held = LawHeld { view: t.s.view() };
+        let held = AgreementsHeld { view: t.s.view() };
         let pa = BitcoinClock { chain: &bitcoin_chain }.payment_anchor(&id, &Record::Claim(&c, t.label.id, &Citations::default()), &held).unwrap();
         t.s.anchors.add(&pa);
     }

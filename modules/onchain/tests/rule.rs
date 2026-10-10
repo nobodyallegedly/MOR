@@ -8,7 +8,7 @@ mod support;
 
 use bitcoin::hashes::Hash as _;
 use bitcoin::{consensus, CompactTarget, Target, Transaction};
-use mor_core::finance::{Amount, Anonymous, Citations, Claim, PayeePointer, Payer, Rail, Receipt, VaultEntry};
+use mor_core::money::{Amount, Anonymous, Citations, Claim, PayeePointer, Payer, Rail, Receipt, VaultEntry};
 use mor_core::hash::Hash;
 use mor_core::identity::SigningKey;
 use mor_core::sig::SchnorrKey;
@@ -399,10 +399,10 @@ impl Held for World {
     fn vault(&self, id: &Hash) -> Option<(Hash, Vec<VaultEntry>)> {
         (id == &self.vault_id).then(|| (self.payee, self.vault.clone()))
     }
-    fn obligation(&self, _: &Hash) -> Option<mor_core::finance::Obligation> {
+    fn obligation(&self, _: &Hash) -> Option<mor_core::money::Obligation> {
         None
     }
-    fn holding(&self, _: &Hash, _: &Hash) -> Option<mor_core::finance::Holding> {
+    fn holding(&self, _: &Hash, _: &Hash) -> Option<mor_core::money::Holding> {
         None
     }
     fn voided_pointer(&self, _: &Hash) -> Option<(PayeePointer, Hash)> {
@@ -418,7 +418,7 @@ impl Held for World {
     fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
         (payee == &self.payee).then(|| self.vault.clone())
     }
-    fn payment_counts(&self, _: &Hash, _: &mor_core::finance::PaidAt, _: &Amount, _: &[u8], _: &Hash) -> Option<bool> {
+    fn payment_counts(&self, _: &Hash, _: &mor_core::money::PaidAt, _: &Amount, _: &[u8], _: &Hash) -> Option<bool> {
         None
     }
 }

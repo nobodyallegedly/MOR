@@ -45,15 +45,15 @@ Checked once in headless Chromium, not in the tests: the page shows the stripped
 Where the texts are silent, this client and the JPEG Module take these readings. *Confirmed by Nobody, allegedly, 30 September 2026.*
 
 1. **A post is a text act that refers to its picture** (F27): no new act type and no post cMIP. A client without the JPEG Module still shows the text, and the reference as a reference.
-2. **A referenced picture is shown under its own signer.** A picture published by another identity is labelled "not by the poster": a repost is a reference (Envelope), never a claim.
-3. **The JPEG Module is a media type** (Production, kind 3) filling task 5 (media interpretation); its hash is a test value until its creator is named at step 17.
+2. **A referenced picture is shown under its own signer.** A picture published by another identity is labelled "not by the poster": a repost is a reference (Envelopes), never a claim.
+3. **The JPEG Module is a media type** (Development, kind 3) filling task 5 (media interpretation); its hash is a test value until its creator is named at step 17.
 4. **Stripping is a MUST for a posting client, with no option to keep metadata** in this client (Module, rule 6, client conformance). The Module itself accepts any JPEG (decided by Nobody, allegedly).
 5. **The orientation is kept, as a one-entry Exif segment,** so the picture is never re-encoded to turn it. Readers apply it (Module, rule 3), as browsers do by default.
 6. **The colour profile and Adobe's segment are kept.** They change how the colours are read; removing them would change the picture. The JFIF segment is kept without its thumbnail.
 7. **Pixels are square.** A JFIF pixel density never changes a picture's shape (Module, rule 2), as in browsers.
 8. **A reader never shows metadata, and says what a picture still carries** when another client did not strip it.
-9. **Every picture is checked against its work hash and size,** not only purchases (Envelope rule 14 asks it of purchases).
+9. **Every picture is checked against its work hash and size,** not only purchases (Envelopes rule 14 asks it of purchases).
 10. **The reader's own relays first.** A picture's bytes are fetched from the relays the reader was given, and only then from the places the publication names, which the poster chose.
-11. **A withdrawal is an Envelope act of type 3 with an empty payload,** naming the publication in `objects` as `[publication, publication]` (the publication is the root of its own chain). A reader looks for one in the feeds of the publication's signer and of its `for` identity at the relays it asks; a withdrawn picture is not shown, and the post stands. Silence proves nothing (relay transport cMIP): a withdrawal the reader never reached leaves the picture shown.
+11. **A withdrawal is an Envelopes act of type 3 with an empty payload,** naming the publication in `objects` as `[publication, publication]` (the publication is the root of its own chain). A reader looks for one in the feeds of the publication's signer and of its `for` identity at the relays it asks; a withdrawn picture is not shown, and the post stands. Silence proves nothing (relay transport cMIP): a withdrawal the reader never reached leaves the picture shown.
 
 For it, the WebAssembly bindings (`wasm/`) gained references: `makeEveryday` takes `refs` (act ids), and `describeAct` returns an opened act's `objects`, `refs` and `webRefs`. The genesis client's `publish` passes `refs` through.

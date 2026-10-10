@@ -146,8 +146,8 @@ export interface State {
       words: string;
     }[];
     /**
-     * Law's own reading of the collective, from what its relays and homes
-     * hold: `broken`, why Law reads it as broken; `unread`, why no reading
+     * Agreements' own reading of the collective, from what its relays and homes
+     * hold: `broken`, why Agreements read it as broken; `unread`, why no reading
      * could be had. While either is set, the rules shown are this device's
      * copy, not the rules in force.
      */
@@ -164,7 +164,7 @@ export interface State {
     relays: string[];
     releases: { id: string; version: string }[];
     pending: boolean;
-    /** The fork or closing that ended it (Law rule 47a, F121, F124 N9), if any. */
+    /** The fork or closing that ended it (Agreements rule 47a, F121, F124 N9), if any. */
     closed: string | null;
     /** For a successor of a fork: the original collective, a back-link (F124 N4). */
     forkedFrom: string | null;
@@ -173,7 +173,7 @@ export interface State {
     /** Who may hold a stake in it: members whose voice remains and departed holders. */
     holdersToBe: { id: string; name: string }[];
     splitService: boolean;
-    /** Payments received during a broken stretch and owed back: open obligations (Law rule 37d, RB2). */
+    /** Payments received during a broken stretch and owed back: open obligations (Agreements rule 37d, RB2). */
     owedBack: { payment: string; to: string | null; toKind: 'identity' | 'key' | 'nobody'; toName: string; value: number; unit: string; notice: string | null; text: string }[];
     /** Declarations of absence naming a member, each with the way to contest it (RB3, client conformance). */
     declared: { member: string; name: string; held: boolean; act: string; by: string; text: string; contested: boolean }[];

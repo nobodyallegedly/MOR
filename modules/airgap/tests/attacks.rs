@@ -91,7 +91,7 @@ fn every_consequential_field_changed_online_is_shown_prominently() {
             "flow off",
             Box::new(move |r| {
                 r.declarations = Some(vec![Declaration {
-                    spec: finance_spec(),
+                    spec: money_spec(),
                     kind: 0,
                     value: Some(Value::Array(vec![Value::Array(vec![
                         Value::Bytes(unit.to_vec()),
@@ -106,7 +106,7 @@ fn every_consequential_field_changed_online_is_shown_prominently() {
             "VAULT REMOVED",
             Box::new(|r| {
                 r.declarations = Some(vec![Declaration {
-                    spec: finance_spec(),
+                    spec: money_spec(),
                     kind: 0,
                     value: None,
                 }])
@@ -150,7 +150,7 @@ fn every_consequential_field_changed_online_is_shown_prominently() {
 #[test]
 fn a_unit_removed_from_the_vault_is_named() {
     let vault = |units: &[&str]| Declaration {
-        spec: finance_spec(),
+        spec: money_spec(),
         kind: 0,
         value: Some(Value::Array(
             units

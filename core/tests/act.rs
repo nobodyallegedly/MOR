@@ -1,5 +1,5 @@
 //! Acts: decoding the whole act, and an everyday act's place in its sequence
-//! (Envelope rules 1 and 4).
+//! (Envelopes rules 1 and 4).
 
 use mor_core::act::{
     self, Act, ActError, Addressing, Inside, Scheme, Sequence, SequenceError, Signature,

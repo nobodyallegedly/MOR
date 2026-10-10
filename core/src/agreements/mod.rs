@@ -1,4 +1,4 @@
-//! The Law MIP (Law draft 10): exact formats, tiers, and the checks a
+//! The Agreements MIP (Agreements draft 10): exact formats, tiers, and the checks a
 //! collective needs, judged on the collective's own sequence (F109); the
 //! negotiation record (F118) and role-share evidence (F119); the judicial
 //! tier changed only by every member, the chain of judgment and the
@@ -27,7 +27,7 @@ pub use open_formats::{
 pub use tiers::{changes, judicial_changes, powers_needed, rollback_powers, Change, Tier};
 pub use view::{
     Agreement, AreaCount, Backing, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement,
-    BrokenAct, ChainBreak, DepartureKind, ForkEval, LawView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,
+    BrokenAct, ChainBreak, DepartureKind, ForkEval, AgreementsView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,
     ReleaseEval, Role, ServiceAccount, SplitEval, PurchaseEval, PurchaseVerdict, Unpaid, Unsplit, DealFork, DealState, ForkAlarm,
     AlarmKind, NumberBreak, OwedBack, SplitNumbers, OfferEval, TransferEval, WorkOwners, SuccessorCheck,
 };

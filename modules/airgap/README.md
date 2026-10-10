@@ -23,13 +23,13 @@ Every MOR identity has two keys. The everyday key lives on your phone and signs 
 | `msg` | The four messages (commitment export, pending rotation, signed rotation, share), strict: deterministic CBOR, closed maps, canonical text, 256 KiB at most, one kind at a time. | Module 2, 3.6 |
 | `device` | The signer. `review` checks the previous act (3.2), refuses anything but a rotation of the Identity MIP with spec, type and payload only (3.5), finds its key by commitment, applies the memory (3.4), inserts its own next commitment (3.3), optionally generates the signing key (section 4), builds the whole act, and summarises the exact bytes (3.1). `sign` signs (hedged SLH-DSA) and records. `review_collective` does the same from shares and deals the next key. State as CBOR. | Module 2 to 5 |
 | `summary` | The summary, prominent lines first; the key fingerprint (first 16 bytes of a tagged hash, 8 groups of 4). | Module 3.1 |
-| `shares` | Shamir over the secp256k1 order with Pedersen commitments; share check; rebuild; the rebuild check against the dealing's SLH-DSA commitment. | Module 5; Law 36 (F97) |
+| `shares` | Shamir over the secp256k1 order with Pedersen commitments; share check; rebuild; the rebuild check against the dealing's SLH-DSA commitment. | Module 5; Agreements 36 (F97) |
 | `online` | The phone's side: a genesis from a commitment export; a pending rotation; the check of a signed rotation before publishing (3.9). | Module 2, 3.9 |
 | `transport` | Animated QR codes as multi-part Uniform Resources (`ur` crate, pinned), upper case, level M, 120-byte fragments (QR version ≤ 11); files, bytes only. | Module 6 |
 
 `mor-signer` is the command-line signer for a laptop that never connects (`cargo run -p mor-airgap --bin mor-signer -- help`). The library builds to WebAssembly without it (`cargo build -p mor-airgap --lib --no-default-features --target wasm32-unknown-unknown`), for the genesis client.
 
-The Identity and Finance MIPs' spec hashes are fixed at the freeze; until then the device takes them as a `Config` and the tests and `mor-signer` use test values. The seed Modules' spec hashes are test values until they are published.
+The Identity and Money MIPs' spec hashes are fixed at the freeze; until then the device takes them as a `Config` and the tests and `mor-signer` use test values. The seed Modules' spec hashes are test values until they are published.
 
 ## Tests
 
@@ -60,13 +60,13 @@ QR frames are drawn as images and read back by an independent decoder (`rqrr`), 
 | Collective rotation from k shares, next shares verifiably dealt | Run |
 | All eight attack tests | Run; "a device keeps a copy" is not testable (F97) |
 
-Not in this step: a phone app with a camera (with the genesis client, step 5, per Nobody, allegedly, 28 September 2026); how the key grammar names holders (Law formats, step 5a): the share message's holder is a role and an identity hash for now.
+Not in this step: a phone app with a camera (with the genesis client, step 5, per Nobody, allegedly, 28 September 2026); how the key grammar names holders (Agreements formats, step 5a): the share message's holder is a role and an identity hash for now.
 
 ## Decided while building
 
 1. **The offline device's platform (Nobody, allegedly):** the rules in one Rust library, a command-line signer for an offline laptop now; the phone app with the genesis client.
 2. **Seeds (Nobody, allegedly):** two seed Modules, words and hex, both defined and both supported, to test several Modules side by side.
-3. **F97 (Nobody, allegedly):** verifiable dealing stops sole control of a collective's key, not a copy; Pedersen dealing plus one rebuild check on a second device. Law draft 5, Module draft 4.
+3. **F97 (Nobody, allegedly):** verifiable dealing stops sole control of a collective's key, not a copy; Pedersen dealing plus one rebuild check on a second device. Agreements draft 5, Module draft 4.
 
 ## Readings, confirmed
 
@@ -78,11 +78,11 @@ Where the Module was silent, the library takes the reading below; each is writte
 4. **The exceptions** are recognised from the last rotation the key signed: homeless then normal (after a voided homeless rotation), or normal then homeless with an escape announced. Each once, confirmed on the device, naming the earlier rotation.
 5. **Clean-device mode** is chosen on the offline device, not requested by the phone, and the device does not keep the key: a re-export does not carry it.
 6. **Fingerprint:** first 16 bytes of `tagged_hash("MOR/module/airgap/fingerprint", scheme ‖ key)`, 8 groups of 4 hex characters.
-7. **The vault** is read with the Finance MIP's spec hash; a unit removed is named when the previous act declared the vault, otherwise the device says every unlisted unit is undeliverable (fail closed).
+7. **The vault** is read with the Money MIP's spec hash; a unit removed is named when the previous act declared the vault, otherwise the device says every unlisted unit is undeliverable (fail closed).
 8. **The online device checks what comes back** (3.9) before publishing: that is what catches a swapped file.
 9. **Transport:** the UR types `mor-commitment-export`, `mor-pending-rotation`, `mor-signed-rotation`, `mor-share`; 120-byte fragments; files at most 256 KiB.
 10. **Memory after a restore** starts empty: rule 3.4 holds per device (cost stated in 3.4).
-11. **Holders of shares** are named by role (member, custodian, escrow) and identity hash until Law's key-grammar formats exist (step 5a).
+11. **Holders of shares** are named by role (member, custodian, escrow) and identity hash until Agreements' key-grammar formats exist (step 5a).
 
 ## New dependencies
 

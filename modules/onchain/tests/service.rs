@@ -20,9 +20,9 @@ use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
 use mor_anchoring::service::{self, Judgment, Offer, Payment, Price, Publication, Refund, Scheme, Standing, Terms, Ticket, Tier};
 use mor_anchoring::tree::{self, Batch};
-use mor_core::envelope::anchoring::Anchors;
-use mor_core::finance::{Amount, Citations, Claim, PayeePointer, Payer, Rail, RefundTo, VaultEntry};
-use mor_core::law;
+use mor_core::envelopes::anchoring::Anchors;
+use mor_core::money::{Amount, Citations, Claim, PayeePointer, Payer, Rail, RefundTo, VaultEntry};
+use mor_core::agreements;
 use mor_core::hash::{sha256, Hash};
 use mor_lightning::bolt11::Network as LnNetwork;
 use mor_lightning::{Lightning, LnAddress, LnProof};
@@ -53,10 +53,10 @@ impl Held for World {
     fn vault(&self, _: &Hash) -> Option<(Hash, Vec<VaultEntry>)> {
         None
     }
-    fn obligation(&self, _: &Hash) -> Option<mor_core::finance::Obligation> {
+    fn obligation(&self, _: &Hash) -> Option<mor_core::money::Obligation> {
         None
     }
-    fn holding(&self, _: &Hash, _: &Hash) -> Option<mor_core::finance::Holding> {
+    fn holding(&self, _: &Hash, _: &Hash) -> Option<mor_core::money::Holding> {
         None
     }
     fn voided_pointer(&self, _: &Hash) -> Option<(PayeePointer, Hash)> {
@@ -72,7 +72,7 @@ impl Held for World {
     fn vault_in_force(&self, _: &Hash) -> Option<Vec<VaultEntry>> {
         None
     }
-    fn payment_counts(&self, _: &Hash, _: &mor_core::finance::PaidAt, _: &Amount, _: &[u8], _: &Hash) -> Option<bool> {
+    fn payment_counts(&self, _: &Hash, _: &mor_core::money::PaidAt, _: &Amount, _: &[u8], _: &Hash) -> Option<bool> {
         None
     }
 }
@@ -94,7 +94,7 @@ fn terms() -> Terms {
 
 /// The standing offer the service signs (Agreements type 6), as the
 /// cMIP reads it: a lone seller's, its payee the service.
-fn offer_of(l: &law::Offer) -> Offer {
+fn offer_of(l: &agreements::Offer) -> Offer {
     Offer::read(h("the service's offer act"), h("the anchoring service"), l).expect("an anchoring offer")
 }
 
@@ -386,19 +386,19 @@ fn f225_the_services_offer_is_a_lone_sellers_standing_offer_carrying_its_terms()
     assert_eq!((o.payee, o.refund_until, o.terms.clone()), (h("the anchoring service"), Some(900), terms()));
     assert_eq!(o.price(1, None), Some(sat(20)));
     // Refused, not guessed.
-    let refuse = |m: law::Offer, why: &str| assert!(Offer::read(h("x"), h("the anchoring service"), &m).is_err(), "{why}");
-    refuse(law::Offer { under: Some(h("co-owners' agreement")), time: None, refund: None, paid: Some(law::Paid::Payee(h("a payee"))), ..l.clone() }, "under co-owners' agreement");
-    refuse(law::Offer { sold: vec![law::Sold::Publication(h("a song"))], ..l.clone() }, "selling a publication");
-    refuse(law::Offer { sold: vec![law::Sold::Access(h("another cMIP"), mor_core::cbor::encode(&terms().to_value()))], ..l.clone() }, "another cMIP's access");
-    refuse(law::Offer { sold: vec![], ..l.clone() }, "a version selling nothing withdraws the offer");
-    refuse(law::Offer { price: Amount { unit, value: 49 }, ..l.clone() }, "field 2 below what the urgent tier costs");
-    refuse(law::Offer { time: Some((h("another clock"), mor_core::cbor::Value::Uint(3))), ..l.clone() }, "deadlines on another reference than the terms'");
-    refuse(law::Offer { time: None, refund: None, ..l.clone() }, "no time reference for its deadlines");
+    let refuse = |m: agreements::Offer, why: &str| assert!(Offer::read(h("x"), h("the anchoring service"), &m).is_err(), "{why}");
+    refuse(agreements::Offer { under: Some(h("co-owners' agreement")), time: None, refund: None, paid: Some(agreements::Paid::Payee(h("a payee"))), ..l.clone() }, "under co-owners' agreement");
+    refuse(agreements::Offer { sold: vec![agreements::Sold::Publication(h("a song"))], ..l.clone() }, "selling a publication");
+    refuse(agreements::Offer { sold: vec![agreements::Sold::Access(h("another cMIP"), mor_core::cbor::encode(&terms().to_value()))], ..l.clone() }, "another cMIP's access");
+    refuse(agreements::Offer { sold: vec![], ..l.clone() }, "a version selling nothing withdraws the offer");
+    refuse(agreements::Offer { price: Amount { unit, value: 49 }, ..l.clone() }, "field 2 below what the urgent tier costs");
+    refuse(agreements::Offer { time: Some((h("another clock"), mor_core::cbor::Value::Uint(3))), ..l.clone() }, "deadlines on another reference than the terms'");
+    refuse(agreements::Offer { time: None, refund: None, ..l.clone() }, "no time reference for its deadlines");
     // Field 2's unit is the unit every tier's price is in.
-    let other = Offer::read(h("x"), h("the anchoring service"), &law::Offer { price: Amount { unit: h("another unit"), value: 50 }, ..l.clone() }).unwrap();
+    let other = Offer::read(h("x"), h("the anchoring service"), &agreements::Offer { price: Amount { unit: h("another unit"), value: 50 }, ..l.clone() }).unwrap();
     assert_eq!(other.price(0, None), Some(Amount { unit: h("another unit"), value: 50 }));
     // Paid to someone else by field 3: that payee is who a payment goes to.
-    let o2 = Offer::read(h("x"), h("the anchoring service"), &law::Offer { paid: Some(law::Paid::Payee(h("the service's collector"))), ..l.clone() }).unwrap();
+    let o2 = Offer::read(h("x"), h("the anchoring service"), &agreements::Offer { paid: Some(agreements::Paid::Payee(h("the service's collector"))), ..l.clone() }).unwrap();
     assert_eq!(o2.payee, h("the service's collector"));
     // Reading 3 reversed: a payment following the pointer buys nothing.
     let w = world();
@@ -411,9 +411,9 @@ fn f225_the_services_offer_is_a_lone_sellers_standing_offer_carrying_its_terms()
 
 /// F225: each default owes the price back **under the offer's terms**: to
 /// the payer the payment committed to (an identity, a bare key, or nobody:
-/// Finance rule 10a), claimable until the offer's refund point where it
+/// Money rule 10a), claimable until the offer's refund point where it
 /// sets one (F219). Money carries the repayment: what it shows repaid
-/// (the core's `LawView::refund_repaid`, tested in `tests/agreement.rs`)
+/// (the core's `AgreementsView::refund_repaid`, tested in `tests/agreement.rs`)
 /// settles it; past the terms unpaid, the refund is ended, the money kept.
 #[test]
 fn f225_a_default_owes_the_price_back_under_the_offers_terms() {

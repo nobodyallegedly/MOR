@@ -43,7 +43,7 @@ fn config() -> Config {
     // Test values until the freeze fixes the MIPs' hashes.
     Config {
         identity_spec: sha256(b"IDENTITY, test value until the freeze"),
-        finance_spec: Some(sha256(b"FINANCE, test value until the freeze")),
+        money_spec: Some(sha256(b"FINANCE, test value until the freeze")),
     }
 }
 

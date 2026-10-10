@@ -22,12 +22,12 @@ pub fn identity_spec() -> Hash {
     sha256(b"IDENTITY, test value until the freeze")
 }
 
-/// The Finance and Law MIPs' spec hashes in these tests: the act types
+/// The Money and Agreements MIPs' spec hashes in these tests: the act types
 /// that may carry acknowledgements beside Identity's (F110).
-pub fn finance_spec() -> Hash {
+pub fn money_spec() -> Hash {
     sha256(b"FINANCE, test value until the freeze")
 }
-pub fn law_spec() -> Hash {
+pub fn agreements_spec() -> Hash {
     sha256(b"LAW, test value until the freeze")
 }
 
@@ -84,9 +84,9 @@ pub struct Person {
 fn cited(p: &Person, spec: &Hash, type_: u64, objects: Option<Vec<Object>>) -> Option<Vec<Object>> {
     let Some((chain, ds)) = &p.cite else { return objects };
     // Identity's own everyday acts (a witness act...) carry no objects:
-    // they are not on the actions chain (reading, F127). A record (Law
+    // they are not on the actions chain (reading, F127). A record (Agreements
     // type 17) is a decision, citing by its kept tips.
-    if spec == &identity_spec() || (spec == &law_spec() && type_ == 17) {
+    if spec == &identity_spec() || (spec == &agreements_spec() && type_ == 17) {
         return objects;
     }
     if objects.iter().flatten().any(|o| &o.chain == chain) {
@@ -164,7 +164,7 @@ pub struct World {
     counter: u64,
     /// Every act held, in the order it was added, with the content key a
     /// recipient opens it with: so a history can be replayed into a fresh
-    /// verifier in another order (the Law invariants).
+    /// verifier in another order (the Agreements invariants).
     pub log: Vec<(Act, Option<mor_core::lock::ContentKey>)>,
 }
 
@@ -177,7 +177,7 @@ impl Default for World {
 impl World {
     pub fn new() -> Self {
         World {
-            v: Verifier::with_mips(identity_spec(), finance_spec(), law_spec()),
+            v: Verifier::with_mips(identity_spec(), money_spec(), agreements_spec()),
             counter: 0,
             log: vec![],
         }
@@ -434,7 +434,7 @@ impl World {
         a
     }
 
-    /// An everyday act of `p`, private, addressed to `to` (Envelope): held
+    /// An everyday act of `p`, private, addressed to `to` (Envelopes): held
     /// with its content key, as a recipient holds it.
     #[allow(clippy::too_many_arguments)]
     pub fn private_act(

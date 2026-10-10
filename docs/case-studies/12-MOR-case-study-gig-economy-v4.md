@@ -1,6 +1,6 @@
 # MOR Case Study: One Reputation, Many Trades
 
-*Case study, draft 4, 9 October 2026. The author's own redraft of draft 3, with three fixes from the project lead's technical check, accepted by Nobody, allegedly: the rating caveat keeps the author's question and names the two answers the core already offers (a witness act, Identity; a keeper named by the job's agreement, Law); the cleaner and the key-handover service, known at booking, receive named shares, not role shares (role shares are for helpers known only at payment time, Law rule 22); francs become US dollars (decided 30 September 2026). Draft 3's note follows.*
+*Case study, draft 4, 9 October 2026. The author's own redraft of draft 3, with three fixes from the project lead's technical check, accepted by Nobody, allegedly: the rating caveat keeps the author's question and names the two answers the core already offers (a witness act, Identity; a keeper named by the job's agreement, Agreements); the cleaner and the key-handover service, known at booking, receive named shares, not role shares (role shares are for helpers known only at payment time, Agreements rule 22); francs become US dollars (decided 30 September 2026). Draft 3's note follows.*
 
 *Case study, draft 3, 9 October 2026. Draft 2 with the technical pass of 9 October 2026 applied (`docs/technical-pass-2026-10-09.md`), items 1 to 7, nothing else changed. The rest is unchanged, for the author's own passes. Draft 2's note follows.*
 

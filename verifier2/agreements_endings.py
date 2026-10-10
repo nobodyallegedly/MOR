@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""verifier2: an independent verifier for one part of Law draft 10, collectives' endings.
+"""verifier2: an independent verifier for one part of Agreements draft 10, collectives' endings.
 
-Written from the specification text alone (spec/MIP-law-draft-10.md, "Made before,
+Written from the specification text alone (spec/MIP-agreements-draft-10.md, "Made before,
 made after", "Fork (type 19)", "Closing (type 20)", rules 35a, 35b, 40, 43, 44d, 47a;
 Identity draft 11, "Chain signature (type 16)"; findings F131 and F132), without
 reading the reference implementation.  Acts are modelled abstractly: ids, signer,
@@ -296,7 +296,7 @@ class Verifier:
     def chain_sigs(self) -> dict[str, dict[str, int]]:
         """ending id -> member -> position of the member's earliest counting chain
         signature naming it.  Only chain signatures (Identity type 16) are members'
-        signatures on an ending; a signature act (Law type 1) is none (F132 U1)."""
+        signatures on an ending; a signature act (Agreements type 1) is none (F132 U1)."""
         out: dict[str, dict[str, int]] = defaultdict(dict)
         for i, a in sorted(self.s.acts.items()):
             if a["type"] != "chain_sig" or not a["held"] or not a["valid"] or not a.get("counts", True):
@@ -820,7 +820,7 @@ def verify(data: dict, handout: str = "binding", cites: str = "strict") -> dict:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="verifier2: Law draft 10, collectives' endings")
+    ap = argparse.ArgumentParser(description="verifier2: Agreements draft 10, collectives' endings")
     ap.add_argument("paths", nargs="+", help="story files (.json), or directories of them")
     ap.add_argument("--handout", choices=["done", "binding"], default="binding",
                     help="which obligations a fork must hand out: every done one in its history (the text's words), or only binding ones")

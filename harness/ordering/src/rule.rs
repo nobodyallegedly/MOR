@@ -38,7 +38,7 @@ pub enum Rule {
     /// `c5`: a member's own rotation is registered on the collective's line, and that
     /// member's old-key signatures placed before it stay valid for the collective (F109,
     /// choice C5); otherwise Identity alone judges them. `b11`: a clone of one branch of a
-    /// fork of records, recorded after both lines, resolves it (Law draft 8, B11);
+    /// fork of records, recorded after both lines, resolves it (Agreements draft 8, B11);
     /// otherwise the parent stays in force.
     Root {
         placement: Placement,
@@ -47,7 +47,7 @@ pub enum Rule {
         c5: bool,
         b11: bool,
     },
-    /// Law draft 7 as written, simplified: a departure draws its line in the departing
+    /// Agreements draft 7 as written, simplified: a departure draws its line in the departing
     /// member's personal sequences (Flaw E), a keeper places only signatures on clones
     /// (rule 11a, Flaw J), any record naming a clone places its signatures (Flaw F), a
     /// declaration places nothing (Q28, Flaw L).
@@ -308,7 +308,7 @@ impl<'w> Eval<'w> {
 
     /// The signature act is valid under Identity: a member's own rotation voids a signature
     /// made with the old key outside its kept ancestry (Identity rules 15 to 17; an
-    /// acknowledged one is disputed and confers nothing, Law rule 5). Under C5 (Law draft 7,
+    /// acknowledged one is disputed and confers nothing, Agreements rule 5). Under C5 (Agreements draft 7,
     /// seventh pass, "Made before, made after" point 4), a signature placed before every line
     /// of the collective registering that rotation stays valid for the collective, whatever
     /// the rotation kept; one placed after is judged by Identity alone.

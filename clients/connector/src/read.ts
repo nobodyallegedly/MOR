@@ -1,7 +1,7 @@
 // Fetch an act by its id, verify it with the core library on this machine,
 // and say in plain words what it is, who signed it and whether it counts.
 // Every judgement is the core library's (through WebAssembly): the act's
-// standing through its signer's identity chain, Law's answer for releases
+// standing through its signer's identity chain, Agreements' answer for releases
 // and agreements. This file only gathers the acts the core needs and puts
 // its answers into words, reusing the readings of the clients that make
 // these acts (the reader, the repo client, the collective client).
@@ -17,8 +17,8 @@ import { readPost } from '../../barebone/src/post.ts';
 import { POST_SPECS } from '../../barebone/src/specs.ts';
 import { titleOf, standingWords } from '../../reader/src/read.ts';
 import { verifyRelease, type Manifest } from '../../repo/src/release.ts';
-import { LAW_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
-import { LAW_SPECS } from '../../repo/src/law.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
+import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { count, readAgreement, ruleWords, short, termsOf, type Line, type Section, type TermsRead } from '../../collective/src/explain.ts';
 import { escapeControls } from './words.ts';
 
@@ -37,7 +37,7 @@ export interface Told {
   /** One or two sentences: the answer. */
   verdict: string;
   signer: string | null;
-  /** The core library's standing of the act: valid, pending, disputed, void, invalid, unknown, or scoped (signed with a grant key, which Law judges, F128). */
+  /** The core library's standing of the act: valid, pending, disputed, void, invalid, unknown, or scoped (signed with a grant key, which Agreements judge, F128). */
   standing: string | null;
   sections: Section[];
   /** Words its signers wrote, quoted as data, invisible controls shown as escapes. */
@@ -108,7 +108,7 @@ export function describeChecked(act: Uint8Array, id: string): Described {
 
 /** One verifier, with each identity looked up once. */
 class Judge {
-  readonly v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+  readonly v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
   private looked = new Map<string, Resolution | null>();
   constructor(
     readonly hints: string[],
@@ -194,14 +194,14 @@ export async function readAct(id: string, hints: string[], via: Via = {}, depth 
     });
   }
   if (d.spec === POST_SPECS.text && d.type === 0) return text(id, hints, via);
-  if (d.spec === SPECS.envelope && d.type === 0) {
+  if (d.spec === SPECS.envelopes && d.type === 0) {
     const media = cborDecode(d.payload!) as Map<number, unknown>;
     const spec = media.get(0);
     if (spec instanceof Uint8Array && hex(spec) === REPO_SPECS.manifest) return release(id, hints, via);
     return publication(act, d, judge, spec instanceof Uint8Array ? hex(spec) : null);
   }
-  if (d.spec === REPO_SPECS.law && d.type === LAW_TYPES.terms) return agreement(act, d, judge);
-  if (d.spec === REPO_SPECS.law && d.type === LAW_TYPES.signature) return signature(act, d, judge, depth);
+  if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.terms) return agreement(act, d, judge);
+  if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.signature) return signature(act, d, judge, depth);
   if (d.spec === SPECS.identity) return identityAct(act, d, judge);
 
   const standing = await judge.standing(act, d);
@@ -346,7 +346,7 @@ async function termsAt(id: string, hints: string[], via: Via): Promise<TermsRead
   if (!a) return null;
   try {
     const d = describeChecked(a, id);
-    if (d.spec !== REPO_SPECS.law || d.type !== LAW_TYPES.terms) return null;
+    if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms) return null;
     return termsOf(d.payload!);
   } catch {
     return null;
@@ -363,14 +363,14 @@ interface AgreementOut {
   exists: boolean | null;
   /** A collective's clone: everyone its mark names, and everyone it adds, has signed it. */
   ready: boolean;
-  /** Why Law finds it invalid against its parent and lineage, if it does. */
+  /** Why Agreements find it invalid against its parent and lineage, if it does. */
   invalid: string | null;
   parent: string | null;
   collective: boolean;
 }
 
 /**
- * An agreement (Law terms, draft 8): who is bound, what each rule does (the
+ * An agreement (Agreements terms, draft 8): who is bound, what each rule does (the
  * collective client's reading, from the core's own decoding of the bytes),
  * who signed, whether it exists (rules 1 and 45) or, for a collective's
  * clone, whether it is ready for the collective's record to put it in force
@@ -387,7 +387,7 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
       title: 'An agreement',
       signer: d.signer ?? null,
       counts: false,
-      verdict: `An agreement that cannot be read here: ${err(e)}. Law leaves some fields' formats open; terms that use them are not read.`,
+      verdict: `An agreement that cannot be read here: ${err(e)}. Agreements leaves some fields' formats open; terms that use them are not read.`,
       problems: [err(e)],
     });
   }
@@ -418,7 +418,7 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
     for (const a of acts) {
       try {
         const x = describeAct(a) as Described;
-        if (x.spec !== REPO_SPECS.law || x.type !== LAW_TYPES.terms || !x.payload) continue;
+        if (x.spec !== REPO_SPECS.agreements || x.type !== AGREEMENTS_TYPES.terms || !x.payload) continue;
         if (termsOf(x.payload).parent === d.id && !clones.includes(x.id)) clones.push(x.id);
       } catch {
         // not terms this connector reads
@@ -427,13 +427,13 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
   }
   const parent = t.parent ? terms.get(t.parent) ?? null : null;
   const reading = readAgreement(t, names, parent);
-  let law: AgreementOut | null = null;
+  let agreements: AgreementOut | null = null;
   const problems: string[] = [];
   try {
-    law = judge.v.lawAgreement(LAW_SPECS, d.id) as AgreementOut;
-    if (law.invalid) problems.push(`Law finds it invalid: ${law.invalid}`);
+    agreements = judge.v.agreementsAgreement(AGREEMENTS_SPECS, d.id) as AgreementOut;
+    if (agreements.invalid) problems.push(`Agreements find it invalid: ${agreements.invalid}`);
   } catch (e) {
-    problems.push(`Law: ${err(e)}`);
+    problems.push(`Agreements: ${err(e)}`);
   }
   // A clone replaces it once the clone exists. A collective's clone never
   // exists by signatures alone: the collective's record puts it in force
@@ -442,20 +442,20 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
   const ready: string[] = [];
   for (const c of clones) {
     try {
-      const x = judge.v.lawAgreement(LAW_SPECS, c) as AgreementOut;
+      const x = judge.v.agreementsAgreement(AGREEMENTS_SPECS, c) as AgreementOut;
       if (x.exists === true) replaced = c;
       else if (x.exists === null && x.ready && !x.invalid) ready.push(c);
     } catch {
       // a broken clone replaces nothing
     }
   }
-  if (t.problem) problems.push(`Law refuses these terms: ${t.problem}`);
+  if (t.problem) problems.push(`Agreements refuse these terms: ${t.problem}`);
 
   const signedLines: Line[] = [];
-  if (law) {
-    const missing = t.parties.filter((x) => !law!.signed.includes(x));
-    signedLines.push({ text: law.signed.length ? `Signed by ${law.signed.length} of its ${t.parties.length} parties: ${law.signed.map(names).join(', ')}.` : 'No party has signed it.' });
-    if (missing.length) signedLines.push({ text: `Not signed by ${missing.map(names).join(', ')}: none of it binds them (Law rule 1).`, tone: 'warn' });
+  if (agreements) {
+    const missing = t.parties.filter((x) => !agreements!.signed.includes(x));
+    signedLines.push({ text: agreements.signed.length ? `Signed by ${agreements.signed.length} of its ${t.parties.length} parties: ${agreements.signed.map(names).join(', ')}.` : 'No party has signed it.' });
+    if (missing.length) signedLines.push({ text: `Not signed by ${missing.map(names).join(', ')}: none of it binds them (Agreements rule 1).`, tone: 'warn' });
   }
   signedLines.push({ text: `Proposed by the identity ${d.signer}.` }, standingLine(standing));
   if (t.grammar || t.parent) {
@@ -463,7 +463,7 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
   }
   if (ready.length) {
     signedLines.push({
-      text: `A clone signed by everyone it needs, ready for the collective's record to put it in force: ${ready.map(short).join(', ')}. Until a record names it, this one stays in force (Law rule 37c, F109).`,
+      text: `A clone signed by everyone it needs, ready for the collective's record to put it in force: ${ready.map(short).join(', ')}. Until a record names it, this one stays in force (Agreements rule 37c, F109).`,
     });
   }
   const pending = clones.filter((c) => c !== replaced && !ready.includes(c));
@@ -471,9 +471,9 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
 
   const all = t.parties.length === 1 ? 'its one party' : `all ${t.parties.length} parties`;
   const how = t.parent
-    ? `once the parties its mark names, and every party it adds, have signed it (Law rule 45)`
+    ? `once the parties its mark names, and every party it adds, have signed it (Agreements rule 45)`
     : `once ${t.signing ? ruleWords(t.signing, t.parties, names) : all} have signed it`;
-  const collectiveClone = law?.exists === null;
+  const collectiveClone = agreements?.exists === null;
   let verdict: string;
   let counts: boolean;
   if (problems.length) {
@@ -481,13 +481,13 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
     verdict = `NOT IN FORCE. ${problems.join('; ')}.`;
   } else if (replaced) {
     counts = false;
-    verdict = `REPLACED. It came into force, and has since been replaced by the clone ${replaced}, which its parties signed (Law rule 45).`;
+    verdict = `REPLACED. It came into force, and has since been replaced by the clone ${replaced}, which its parties signed (Agreements rule 45).`;
   } else if (collectiveClone) {
     counts = false;
-    verdict = law!.ready
-      ? `NOT IN FORCE YET: READY TO BE RECORDED, as far as the relays asked show. Everyone it needs has signed it; a collective's clone comes into force only when the collective's own record names it (Law rule 37c, F109). Read the collective's identity to know which agreement its record names.`
-      : `NOT IN FORCE YET, as far as the relays asked show. It is a collective's clone: it comes into force ${how}, and then only when the collective's own record names it (Law rule 37c, F109).`;
-  } else if (law?.exists) {
+    verdict = agreements!.ready
+      ? `NOT IN FORCE YET: READY TO BE RECORDED, as far as the relays asked show. Everyone it needs has signed it; a collective's clone comes into force only when the collective's own record names it (Agreements rule 37c, F109). Read the collective's identity to know which agreement its record names.`
+      : `NOT IN FORCE YET, as far as the relays asked show. It is a collective's clone: it comes into force ${how}, and then only when the collective's own record names it (Agreements rule 37c, F109).`;
+  } else if (agreements?.exists) {
     counts = true;
     verdict = `IN FORCE, as far as the relays asked show. It exists ${how.replace(/^once/, 'since')}, and no clone replacing it was found among its parties' acts there (a relay's silence proves nothing).`;
   } else {
@@ -505,13 +505,13 @@ async function agreement(act: Uint8Array, d: Described, judge: Judge): Promise<T
     quoted: [{ heading: 'Its words, as written', text: escapeControls(t.text) }],
     problems: [...problems, ...reading.blocking.filter((b) => !problems.some((p) => b.includes(p)))],
     parties: t.parties,
-    signedBy: law?.signed ?? [],
+    signedBy: agreements?.signed ?? [],
   });
 }
 
 // ---------------------------------------------------------------- a signature
 
-/** A Law signature: who signs which act; that act read in turn. */
+/** An Agreements signature: who signs which act; that act read in turn. */
 async function signature(act: Uint8Array, d: Described, judge: Judge, depth: number): Promise<Told> {
   const standing = await judge.standing(act, d);
   const signed = d.objects?.[0]?.[0] ?? null;
@@ -525,7 +525,7 @@ async function signature(act: Uint8Array, d: Described, judge: Judge, depth: num
     if (inner.kind === 'agreement' || inner.kind === 'release') {
       sections.push({
         heading: 'Whether this signature plays a part',
-        lines: [{ text: 'A signature counts only while its signer’s chain counts it, and only from a party the agreement names (Law rules 1, 36). Read the act it signs for the full answer.' }],
+        lines: [{ text: 'A signature counts only while its signer’s chain counts it, and only from a party the agreement names (Agreements rules 1, 36). Read the act it signs for the full answer.' }],
       });
     }
   }
@@ -535,7 +535,7 @@ async function signature(act: Uint8Array, d: Described, judge: Judge, depth: num
     signer: d.signer ?? null,
     standing,
     counts: standing === 'valid',
-    verdict: `A signature (Law): the identity ${short(d.signer ?? '')} signs ${of}. ${standingWords(standing).words}`,
+    verdict: `A signature (Agreements): the identity ${short(d.signer ?? '')} signs ${of}. ${standingWords(standing).words}`,
     sections,
   });
 }
@@ -587,13 +587,13 @@ export async function identity(id: string, hints: string[], via: Via = {}, judge
   let declared: string | null = null;
   if (latest) {
     try {
-      declared = judge.v.lawDeclared(LAW_SPECS, id, latest.act) ?? null;
+      declared = judge.v.agreementsDeclared(AGREEMENTS_SPECS, id, latest.act) ?? null;
     } catch {
       declared = null;
     }
   }
   if (declared) {
-    lines.push({ text: `It is a collective: it declares that it lives under the agreement ${declared} (Law).` });
+    lines.push({ text: `It is a collective: it declares that it lives under the agreement ${declared} (Agreements).` });
     lines.push({ text: 'That is the agreement in force for it: for a collective, the one its record names, as far as the relays asked show.' });
   }
   return told(id, {

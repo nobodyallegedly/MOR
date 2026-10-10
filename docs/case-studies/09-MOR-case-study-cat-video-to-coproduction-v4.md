@@ -1,6 +1,6 @@
 # MOR Case Study: From Cat Video to Coproduction
 
-*Case study, draft 4, 9 October 2026. The author's own redraft of draft 3, with four fixes from the project lead's technical check, accepted by Nobody, allegedly: the stake sale needs no one else's approval (Law rule 14: other holders are notified, not asked), so "nobody else's stake changes" is kept; "clones with protected clauses" becomes deals that change only with every party's signature (protected clauses belong to collectives; a deal changes only with every party, Law rule 45b); a platform's metric service, not its module, reports views (a Module signs nothing, F116); "players gain". Draft 3's note follows.*
+*Case study, draft 4, 9 October 2026. The author's own redraft of draft 3, with four fixes from the project lead's technical check, accepted by Nobody, allegedly: the stake sale needs no one else's approval (Agreements rule 14: other holders are notified, not asked), so "nobody else's stake changes" is kept; "clones with protected clauses" becomes deals that change only with every party's signature (protected clauses belong to collectives; a deal changes only with every party, Agreements rule 45b); a platform's metric service, not its module, reports views (a Module signs nothing, F116); "players gain". Draft 3's note follows.*
 
 *Case study, draft 3, 9 October 2026. Draft 2 with the technical pass of 9 October 2026 applied (`docs/technical-pass-2026-10-09.md`), items 1, 2, 3 and 6, nothing else changed; item 4 was optional and item 5 needed no change. Draft 2's own note below still says the metric is evidenced by the metric module: it records what draft 2 did and is kept as written. The rest is unchanged, for the author's own passes.*
 
@@ -102,7 +102,7 @@ Every term, however demanding, is legible to both sides before they sign. Nothin
 
 **Open for others to build (cMIPs and Modules):**
 
-- **Video media modules for the Envelope:** how segmented video is described, so any relay and any client can carry and play it.
+- **Video media modules for the Envelopes:** how segmented video is described, so any relay and any client can carry and play it.
 - **Ad-revenue cMIPs:** how views and clicks are reported, and how ad revenue is shared.
 - **Metric modules,** run by metric services that report attention under their own signature, and ways to compare their reliability.
 - **Subscription cMIPs** and **split modules** for pooled subscription revenue (by total viewing, by each subscriber's viewing, or fixed).
