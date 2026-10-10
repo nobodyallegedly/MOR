@@ -13,7 +13,8 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit, type Browser, type Frame, type Page } from 'playwright-core';
@@ -52,7 +53,9 @@ let base: string;
 let version: string;
 
 before(async () => {
-  execFileSync('node', ['--import', 'tsx', 'scripts/build.ts'], { cwd: here, stdio: 'ignore' });
+  // Its own folder, not dist/: the other test files build into dist/ at the same time, and each build empties its folder first.
+  const shell = mkdtempSync(join(tmpdir(), 'mor-film-shell-'));
+  execFileSync('node', ['--import', 'tsx', 'scripts/build.ts', '--out', shell], { cwd: here, stdio: 'ignore' });
   w = await world();
   const dir = siteCopy(w.firstAct);
   const index = join(dir, 'index.html');
@@ -62,7 +65,7 @@ before(async () => {
   writeFileSync(join(dir, 'films.html'), TRIES);
   const v = await publishSite(w.owner, { name: 'dubsar.org', files: readFolder(dir), relays: [w.relay.base] });
   version = v.id;
-  g = new Gateway(gatewayFor(w, version), join(here, 'dist'), { extraConnect: LOCAL });
+  g = new Gateway(gatewayFor(w, version), shell, { extraConnect: LOCAL });
   assert.ok((await g.load()).every((s) => s.loaded.ok));
   base = await g.listen('127.0.0.1', 0);
   browser = WEBKIT ? await webkit.launch() : await chromium.launch({ executablePath: CHROMIUM });
