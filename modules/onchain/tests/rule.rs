@@ -112,9 +112,15 @@ fn sat(n: u64) -> Amount {
     Amount { unit: unit(Network::Regtest), value: n }
 }
 
-/// The rule on a payment of `amount` to `a`, committing to `c`.
+/// The rule on a payment of `amount` to `a`, committing to `c`, for a
+/// verifier whose chain holds the proof's block and headers (F204).
 fn rule(a: &OnchainAddress, c: &Hash, amount: &Amount, p: &OnchainProof) -> Answer {
-    Onchain::rule(&RailInput { commitment: *c, amount, address: &a.encode(), rail_proof: &p.encode() })
+    rule_on(a, c, amount, p, held(p).as_ref())
+}
+
+/// The same, on the chain `chain` (`None`: offline).
+fn rule_on(a: &OnchainAddress, c: &Hash, amount: &Amount, p: &OnchainProof, chain: Option<&mor_onchain::chain::HeaderChain>) -> Answer {
+    Onchain::rule(&RailInput { commitment: *c, amount, address: &a.encode(), rail_proof: &p.encode() }, chain)
 }
 
 /// What the payee's address says to pay for `c`, worth `v`.
@@ -221,7 +227,9 @@ fn a_broken_block_proof_is_invalid() {
     let a = k.address(Network::Regtest);
     let c = h("a tip");
     let good = proof(&k.request, &c, to(&a, &c, 1234), Some(N));
-    let invalid = |p: &OnchainProof| assert!(matches!(rule(&a, &c, &sat(1234), p), Answer::Invalid(_)), "{p:?}");
+    // Checked on the honest verifier's chain, which holds the real block.
+    let real = held(&good);
+    let invalid = |p: &OnchainProof| assert!(matches!(rule_on(&a, &c, &sat(1234), p, real.as_ref()), Answer::Invalid(_)), "{p:?}");
     // The branch does not reach the block's root.
     let mut p = good.clone();
     p.paid.as_mut().unwrap().block.as_mut().unwrap().branch[0] = h("not a sibling");
@@ -257,23 +265,106 @@ fn a_script(a: &OnchainAddress, c: &Hash) -> (Vec<u8>, u64) {
     (a.script(c).unwrap(), 1234)
 }
 
+/// F204: a mined payment is checked against the chain the verifier
+/// follows, handed to the rule as data. A block not on that chain answers
+/// unknown, never valid, however much work its own headers carry; a
+/// verifier holding no chain (offline) answers unknown; one whose chain
+/// holds the block with fewer headers on it than the proof shows answers
+/// pending. There is no floor: headers on the chain count at whatever
+/// difficulty the network had.
 #[test]
-fn a_header_easier_than_the_networks_floor_is_unknown() {
+fn a_mined_payment_is_checked_against_the_chain_the_verifier_follows() {
     let k = Keys::new("payee");
-    let a = k.address(Network::Mainnet);
+    let a = k.address(Network::Regtest);
     let c = h("a tip");
-    let sats = Amount { unit: unit(Network::Mainnet), value: 1234 };
-    // Headers at regtest's difficulty, on Bitcoin: anyone could make them.
     let p = proof(&k.request, &c, to(&a, &c, 1234), Some(N));
-    assert!(matches!(rule(&a, &c, &sats, &p), Answer::Unknown(w) if w.contains("floor")));
-    // Unconfirmed, the floor is not reached: pending as anywhere.
-    let p = proof(&k.request, &c, to(&a, &c, 1234), None);
-    assert!(matches!(rule(&a, &c, &sats, &p), Answer::Pending(_)));
+    let unknown = |x: Answer, why: &str| assert!(matches!(&x, Answer::Unknown(w) if w.contains(why)), "{x:?}");
+    // On the chain held: valid, at regtest's difficulty (no floor).
+    assert_eq!(rule(&a, &c, &sat(1234), &p), Answer::Valid);
+    // Offline: unknown.
+    unknown(rule_on(&a, &c, &sat(1234), &p, None), "holds no headers");
+    // A chain that does not hold the block (a forged block, or one a
+    // reorganisation left): unknown.
+    let mut other = chain(&[mine(h("another chain"), &[h("x")], REGTEST_BITS, 1)]);
+    grow(&mut other, 10);
+    unknown(rule_on(&a, &c, &sat(1234), &p, Some(&other)), "not on the chain");
+    // The block is on the chain, but its confirmations are not.
+    let b = &p.paid.as_ref().unwrap().block.as_ref().unwrap().headers;
+    let mut forked = chain(&b[..2]);
+    grow(&mut forked, 5);
+    unknown(rule_on(&a, &c, &sat(1234), &p, Some(&forked)), "another branch");
+    // A verifier behind: its chain has the block and two headers on it.
+    let behind = chain(&b[..3]);
+    assert!(matches!(rule_on(&a, &c, &sat(1234), &p, Some(&behind)), Answer::Pending(w) if w.contains("3 of 6")));
+    // A verifier ahead: its chain goes on past the proof's headers: valid,
+    // so two verifiers holding different tips agree.
+    let mut ahead = chain(b);
+    grow(&mut ahead, 20);
+    assert_eq!(rule_on(&a, &c, &sat(1234), &p, Some(&ahead)), Answer::Valid);
+    // A chain of another network is no chain for this address.
+    let m = k.address(Network::Mainnet);
+    let sats = Amount { unit: unit(Network::Mainnet), value: 1234 };
+    let pm = proof(&k.request, &c, to(&m, &c, 1234), Some(N));
+    unknown(rule_on(&m, &c, &sats, &pm, held(&pm).as_ref()), "holds no headers");
+    // Unconfirmed, no chain is read: pending as anywhere, offline too.
+    let pu = proof(&k.request, &c, to(&a, &c, 1234), None);
+    assert!(matches!(rule_on(&a, &c, &sat(1234), &pu, None), Answer::Pending(_)));
+}
+
+/// F204's starting points: on Bitcoin, testnet and signet a held chain
+/// must start at a block this Module names (the network's genesis), so
+/// headers a client made up, or another network's, are no chain. Regtest
+/// accepts any start: a test network proves nothing.
+#[test]
+fn a_held_chain_starts_where_the_module_says_on_every_network_but_regtest() {
+    use mor_onchain::chain::{starts, HeaderChain};
+    let made_up = vec![mine(h("made up"), &[h("x")], REGTEST_BITS, 1)];
+    for n in [Network::Mainnet, Network::Testnet, Network::Signet] {
+        assert!(HeaderChain::new(n, 0, made_up.clone()).is_err(), "{n:?}");
+        assert_eq!(starts(n).len(), 1);
+    }
+    assert!(HeaderChain::new(Network::Regtest, 7, made_up.clone()).is_ok());
+    // Bitcoin's genesis header, as every node holds it, is a start.
+    let genesis: [u8; 80] = hex::decode("0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c").unwrap().try_into().unwrap();
+    let c = HeaderChain::new(Network::Mainnet, 0, vec![genesis]).unwrap();
+    assert_eq!(c.tip(), 0);
+    // A header not building on the tip, or missing its target, is refused.
+    let mut r = HeaderChain::new(Network::Regtest, 0, made_up.clone()).unwrap();
+    assert!(r.extend(mine(h("elsewhere"), &[h("y")], REGTEST_BITS, 2)).is_err());
+}
+
+/// F205: a payee's request may name more confirmations than the Module's
+/// minimum, for a large sum; the payment counts only at that depth. The
+/// number is signed with the request, so a payer cannot drop it, and a
+/// request naming fewer than the minimum is invalid.
+#[test]
+fn a_request_may_name_more_confirmations_and_the_payment_counts_only_there() {
+    let k = Keys::new("payee");
+    let a = k.address(Network::Regtest);
+    let c = h("a large sum");
+    let with = |n: usize, asked: u64| {
+        let mut p = proof(&k.request, &c, to(&a, &c, 9_000_000), Some(n));
+        p.confirmations = Some(asked);
+        p.request = request_for(&k.request, &c, Some(asked));
+        p
+    };
+    assert!(matches!(rule(&a, &c, &sat(9_000_000), &with(N, 20)), Answer::Pending(w) if w.contains("6 of 20")));
+    assert_eq!(rule(&a, &c, &sat(9_000_000), &with(20, 20)), Answer::Valid);
+    assert!(matches!(rule(&a, &c, &sat(9_000_000), &with(21, 20)), Answer::Invalid(w) if w.contains("exactly 20")));
+    // The payer strips the number: the signature no longer verifies.
+    let mut stripped = with(N, 20);
+    stripped.confirmations = None;
+    assert!(matches!(rule(&a, &c, &sat(9_000_000), &stripped), Answer::Invalid(w) if w.contains("request")));
+    // Fewer than the minimum: invalid, signed or not.
+    assert!(matches!(rule(&a, &c, &sat(9_000_000), &with(3, 3)), Answer::Invalid(w) if w.contains("fewer confirmations")));
+    // Round trip.
+    let p = with(20, 20);
+    assert_eq!(OnchainProof::decode(&p.encode()), Some(p));
 }
 
 #[test]
 fn it_declares_itself_a_request_rail_and_carries_lightnings_units() {
-    let onchain = Onchain;
+    let onchain = Onchain::offline();
     let ln = mor_lightning::Lightning;
     assert_eq!(onchain.kind(), RailKind::Request);
     assert_eq!(ln.kind(), RailKind::Request);
@@ -376,7 +467,8 @@ fn paid(w: &World, paid_to: PaidTo, keys: &Keys, amount: Amount, payer: Option<P
 }
 
 fn answers(w: &World, r: &Receipt, c: &Claim, claimant: Hash) -> (Answer, Answer) {
-    let onchain = Onchain;
+    let held_chain = OnchainProof::decode(&Proof::decode(&r.proof).unwrap().rail).as_ref().and_then(held);
+    let onchain = Onchain { chain: held_chain.as_ref() };
     let m = Modules::new().adopt(&onchain);
     (verify(Record::Receipt(r), w, &m).answer, verify(Record::Claim(c, claimant, &Citations::default()), w, &m).answer)
 }
@@ -467,7 +559,7 @@ fn payer_and_payee_build_the_same_proof_independently() {
     let t = bytes(&tx("the payer's coins", &[a_script(&a, &c)]));
     let rq = request(&k.request, &c);
     let block = confirm(&t, N);
-    let by = |b: &mor_onchain::Block| OnchainProof { request: rq, paid: Some(mor_onchain::Paid { tx: t.clone(), output: 0, block: Some(b.clone()) }) }.encode();
+    let by = |b: &mor_onchain::Block| OnchainProof { request: rq, confirmations: None, paid: Some(mor_onchain::Paid { tx: t.clone(), output: 0, block: Some(b.clone()) }) }.encode();
     let payer = by(&block);
     let txid = consensus::deserialize::<Transaction>(&t).unwrap().compute_txid().to_byte_array();
     let payee = by(&mor_onchain::Block {

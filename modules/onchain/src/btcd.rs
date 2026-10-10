@@ -225,6 +225,18 @@ impl Btcd {
                 Some(Block { index: index as u64, branch, headers })
             }
         };
-        Ok(OnchainProof { request, paid: Some(Paid { tx: tx.to_vec(), output, block }) })
+        Ok(OnchainProof { request, confirmations: None, paid: Some(Paid { tx: tx.to_vec(), output, block }) })
+    }
+
+    /// The headers of this node's best chain, from its genesis to its tip:
+    /// what a client hands the rule as data (F204). The node checked them
+    /// (work, difficulty schedule, times) as every node does.
+    pub async fn chain(&self, network: crate::Network) -> R<crate::chain::HeaderChain> {
+        let tip = self.block_count().await?;
+        let mut headers = Vec::with_capacity(tip as usize + 1);
+        for hgt in 0..=tip {
+            headers.push(self.header(&self.block_hash(hgt).await?).await?);
+        }
+        Ok(crate::chain::HeaderChain::new(network, 0, headers)?)
     }
 }

@@ -80,6 +80,31 @@ pub struct LawView<'a> {
     /// receipt or claim not listed has no rail answer, and pays nothing
     /// toward a debt ([`Self::paid_toward`]).
     pub rail_valid: BTreeMap<Hash, crate::finance::PaidAt>,
+    /// Claims whose rail proof the caller checked under the payment cMIP
+    /// and found pending with a payment shown (on-chain: a transaction
+    /// paying the commitment's address, not yet confirmed): the rail's
+    /// answer, a fact the caller states. Read by rule 15 alone, on a clock
+    /// that cannot see the rail's own proof (F203): such a claim's anchor
+    /// counts once a claim of the same payment is valid. It pays nothing.
+    pub rail_pending: BTreeSet<Hash>,
+    /// What "the same payment" is (F200): for each receipt's or claim's
+    /// proof (field 1, the payment cMIP's bytes) whose rail answer the
+    /// caller stated (valid, or pending), the payment its rail Module says
+    /// it is (`mor_payment::payment`: on-chain the output the transaction
+    /// created, on Lightning the payment hash). Finance's rules that tell
+    /// payments apart (8a, 10, 15) compare these, so two proofs of one
+    /// payment (a payment mined again after a reorganisation) are one
+    /// payment. A proof not listed is its own payment, as before: its
+    /// bytes. A fact the caller states, like `rail_valid`.
+    pub payments: BTreeMap<Vec<u8>, Vec<u8>>,
+    /// Pairs `(clock Module, rail Module)` where the clock Module reads the
+    /// rail's own proof as the payment's anchor (F201, F202: the Bitcoin
+    /// clock and the on-chain rail): on such a clock, rule 15 compares the
+    /// anchors of the payer's valid claims only, the payment's block among
+    /// them, and a pending claim's anchor counts for nothing (F203 applies
+    /// on every other clock). Like `push_rails`, a fact the caller states
+    /// from the specifications it holds.
+    pub rail_clocks: BTreeSet<(Hash, Hash)>,
     /// Absence proof (rule 51, task "Absence proof"; F172, F178 item 12):
     /// for an abandonment declaration under a clause naming an
     /// absence-proof cMIP (key 3), and the act that uses it (the record
@@ -454,6 +479,9 @@ impl<'a> LawView<'a> {
             push_rails: BTreeSet::new(),
             rail_invalid: BTreeSet::new(),
             rail_valid: BTreeMap::new(),
+            rail_pending: BTreeSet::new(),
+            payments: BTreeMap::new(),
+            rail_clocks: BTreeSet::new(),
             absence_accepted: BTreeSet::new(),
             anchored: Default::default(),
             unbound_rails: BTreeSet::new(),
@@ -506,6 +534,9 @@ impl<'a> LawView<'a> {
             push_rails: self.push_rails.clone(),
             rail_invalid: self.rail_invalid.clone(),
             rail_valid: self.rail_valid.clone(),
+            rail_pending: self.rail_pending.clone(),
+            payments: self.payments.clone(),
+            rail_clocks: self.rail_clocks.clone(),
             absence_accepted: self.absence_accepted.clone(),
             anchored: self.anchored.clone(),
             unbound_rails: self.unbound_rails.clone(),
@@ -6561,7 +6592,7 @@ impl<'a> LawView<'a> {
                         && counts(&r.id, &rc.amount, &rc.proof)
                         && !self.receipt_overruled(&rc) =>
                 {
-                    receipts.push((rc.proof, rc.amount.value));
+                    receipts.push((self.payment_of(&rc.proof), rc.amount.value));
                 }
                 Ok(Fin::Claim(c))
                     if &c.fulfils == obligation
@@ -6570,7 +6601,7 @@ impl<'a> LawView<'a> {
                         && counts(&r.id, &c.amount, &c.proof)
                         && !self.claim_overruled(&c) =>
                 {
-                    let m = claims.entry(c.proof).or_default();
+                    let m = claims.entry(self.payment_of(&c.proof)).or_default();
                     *m = (*m).max(c.amount.value);
                 }
                 _ => {}
@@ -6653,7 +6684,10 @@ impl<'a> LawView<'a> {
             })
             .collect();
         let receipt = self.receipts_for_proof(proof).iter().any(|(_, r)| &r.payee == payee);
-        fin::rule_15(&changes, receipt, &self.payers_claims(proof), &self.anchored)
+        let claims = fin::PaymentClaims { valid: self.payers_claims(proof), pending: self.payers_pending_claims(proof) };
+        let rail = self.rail_of_proof(proof);
+        let sees = |r: &crate::envelope::anchoring::Reference| rail.is_some_and(|x| self.rail_clocks.contains(&(r.cmip, x)));
+        fin::rule_15_by(&changes, receipt, &claims, &self.anchored, &sees)
     }
 
     /// The lock changes affecting a payment, by rotation (Finance rule 15,
@@ -6929,19 +6963,62 @@ impl<'a> LawView<'a> {
         out
     }
 
-    /// The payer's claims for one payment, its rail proof `proof`, that
-    /// stand ([`Self::payers_claim`]) with the rail's answer, valid
+    /// The payment a receipt's or claim's proof is (F200), as one key:
+    /// the payment its rail Module says ([`Self::payments`]) where the
+    /// caller stated it, otherwise the proof's own bytes, each tagged so
+    /// the two never meet. Empty for an empty proof, which is no payment.
+    pub fn payment_of(&self, proof: &[u8]) -> Vec<u8> {
+        if proof.is_empty() {
+            return vec![];
+        }
+        match self.payments.get(proof) {
+            Some(p) => [&[1u8][..], p].concat(),
+            None => [&[0u8][..], proof].concat(),
+        }
+    }
+
+    /// Whether two proofs are of the same payment (F200; rules 8a, 10, 15).
+    fn same_payment_of(&self, a: &[u8], b: &[u8]) -> bool {
+        !a.is_empty() && (a == b || self.payment_of(a) == self.payment_of(b))
+    }
+
+    /// The payer's claims of one payment, the payment proof `proof` is
+    /// (F200: the same payment as its rail Module says), that stand
+    /// ([`Self::payers_claim`]) with the rail's answer, valid
     /// ([`Self::rail_valid`]: on a rail whose commitment carries the payer,
     /// a claim anyone else signs fails it): their act ids, which rule 15
     /// compares by their anchors (F169, F178).
     pub fn payers_claims(&self, proof: &[u8]) -> Vec<Hash> {
+        self.claims_of_payment(proof, |id| self.rail_valid.contains_key(id))
+    }
+
+    /// The payer's claims of the same payment as `proof` whose rail answer
+    /// the caller stated pending, with the payment shown
+    /// ([`Self::rail_pending`]): rule 15 reads their anchors on a clock
+    /// that cannot see the rail's own proof, once a claim of the payment
+    /// is valid (F203).
+    pub fn payers_pending_claims(&self, proof: &[u8]) -> Vec<Hash> {
+        self.claims_of_payment(proof, |id| self.rail_pending.contains(id) && !self.rail_valid.contains_key(id) && !self.rail_invalid.contains(id))
+    }
+
+    fn claims_of_payment(&self, proof: &[u8], answered: impl Fn(&Hash) -> bool) -> Vec<Hash> {
         use crate::finance::Payload as Fin;
         self.v
             .held_acts()
-            .filter(|h| h.inside.spec == self.mips.finance && self.rail_valid.contains_key(&h.id) && self.payers_claim(h))
-            .filter(|h| matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::Claim(c)) if c.proof == proof))
+            .filter(|h| h.inside.spec == self.mips.finance && answered(&h.id) && self.payers_claim(h))
+            .filter(|h| matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::Claim(c)) if self.same_payment_of(&c.proof, proof)))
             .map(|h| h.id)
             .collect()
+    }
+
+    /// The rail Module a held receipt or claim carrying `proof` names.
+    fn rail_of_proof(&self, proof: &[u8]) -> Option<Hash> {
+        use crate::finance::Payload as Fin;
+        self.v.held_acts().filter(|h| h.inside.spec == self.mips.finance).find_map(|h| match Fin::decode(h.inside.type_, &h.inside.payload) {
+            Ok(Fin::Receipt(r)) if r.proof == proof => Some(r.rail),
+            Ok(Fin::Claim(c)) if c.proof == proof => Some(c.rail),
+            _ => None,
+        })
     }
 
     /// Whether `h` is a payer's claim that stands: valid under Identity,
@@ -6968,7 +7045,7 @@ impl<'a> LawView<'a> {
                         && r.act.outside.signer.is_some_and(|s| fin::check_signer(&p, &s, &fin::Citations::of(&r.inside)).is_ok()) =>
                 {
                     match p {
-                        Fin::Receipt(rc) if rc.proof == proof => Some((r.id, rc)),
+                        Fin::Receipt(rc) if self.same_payment_of(&rc.proof, proof) => Some((r.id, rc)),
                         _ => None,
                     }
                 }
@@ -7007,7 +7084,7 @@ impl<'a> LawView<'a> {
             h.inside.spec == self.mips.finance
                 && self.rail_valid.contains_key(&h.id)
                 && matches!(Fin::decode(h.inside.type_, &h.inside.payload),
-                    Ok(Fin::Claim(c)) if c.proof == rc.proof && (c.payee != rc.payee || c.fulfils != rc.fulfils))
+                    Ok(Fin::Claim(c)) if self.same_payment_of(&c.proof, &rc.proof) && (c.payee != rc.payee || c.fulfils != rc.fulfils))
                 && self.payers_claim(h)
         })
     }
@@ -7921,8 +7998,8 @@ impl<'a> LawView<'a> {
             return Ok(None);
         }
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, self.payment_of(&r.proof))),
             _ => None,
         };
         let mine = self.v.get(id).and_then(proof);
@@ -7980,8 +8057,8 @@ impl<'a> LawView<'a> {
         let held: Vec<&Held> = self.v.held_acts().filter(|h| h.inside.spec == self.mips.finance).collect();
         for h in held {
             let (payee, amount, key) = match Fin::decode(h.inside.type_, &h.inside.payload) {
-                Ok(Fin::Receipt(r)) => (r.payee, r.amount, (r.rail, r.proof)),
-                Ok(Fin::Claim(r)) => (r.payee, r.amount, (r.rail, r.proof)),
+                Ok(Fin::Receipt(r)) => (r.payee, r.amount, (r.rail, self.payment_of(&r.proof))),
+                Ok(Fin::Claim(r)) => (r.payee, r.amount, (r.rail, self.payment_of(&r.proof))),
                 _ => continue,
             };
             if payee != col.id || (!key.1.is_empty() && seen.contains(&key)) {
@@ -8069,7 +8146,7 @@ impl<'a> LawView<'a> {
                         && self.valid(&r.id)
                         && !self.receipt_overruled(&rc) =>
                 {
-                    receipts.push((rc.proof, rc.amount.value));
+                    receipts.push((self.payment_of(&rc.proof), rc.amount.value));
                 }
                 Ok(Fin::Claim(c))
                     if owed.contains(&c.fulfils)
@@ -8079,7 +8156,7 @@ impl<'a> LawView<'a> {
                         && self.rail_valid.get(&r.id).is_some_and(|at| counts(at, &c.amount, &c.proof))
                         && !self.claim_overruled(&c) =>
                 {
-                    let m = claims.entry(c.proof).or_default();
+                    let m = claims.entry(self.payment_of(&c.proof)).or_default();
                     *m = (*m).max(c.amount.value);
                 }
                 _ => {}
@@ -8099,8 +8176,8 @@ impl<'a> LawView<'a> {
     fn same_payment(&self, id: &Hash) -> Vec<(Hash, Option<crate::finance::Purchase>)> {
         use crate::finance::Payload as Fin;
         let of = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some(((r.rail, r.proof), r.purchase)),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some(((r.rail, r.proof), r.purchase)),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some(((r.rail, self.payment_of(&r.proof)), r.purchase)),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some(((r.rail, self.payment_of(&r.proof)), r.purchase)),
             _ => None,
         };
         let Some(Some((mine, _))) = self.v.get(id).map(of) else { return vec![] };
@@ -8162,8 +8239,8 @@ impl<'a> LawView<'a> {
     fn holder_receipts(&self, id: &Hash, holder: &Hash) -> Vec<&'a Held> {
         use crate::finance::Payload as Fin;
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, self.payment_of(&r.proof))),
             _ => None,
         };
         let Some(x) = self.v.get(id) else { return vec![] };
@@ -8302,8 +8379,8 @@ impl<'a> LawView<'a> {
         use crate::finance::Payload as Fin;
         let x = self.held(id)?;
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, r.proof)),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.finance => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.finance => Some((r.rail, self.payment_of(&r.proof))),
             _ => None,
         };
         let mine = proof(x);

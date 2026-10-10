@@ -1302,6 +1302,47 @@ pub fn claim_in_time(at: LockPoint, clock: &Clock, claim: &Hash, anchors: &Ancho
     }
 }
 
+/// The payer's claims of one payment (F200: the same payment as its rail
+/// Module says), as rule 15 reads them: those with the rail's answer,
+/// valid, and those pending with the payment shown (F203).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PaymentClaims {
+    pub valid: Vec<Hash>,
+    pub pending: Vec<Hash>,
+}
+
+impl PaymentClaims {
+    /// The claims whose anchors count on `reference`. On a reference whose
+    /// clock reads the rail's own proof as the payment's anchor (`sees`:
+    /// the Bitcoin clock and the on-chain rail, F201), the valid claims
+    /// alone, the payment's block among their anchors. On any other, the
+    /// earliest anchor among all the payer's claims of the payment counts,
+    /// once one of them is valid (F203); with none valid, none.
+    pub fn on(&self, sees: bool) -> Vec<Hash> {
+        if sees || self.valid.is_empty() {
+            return self.valid.clone();
+        }
+        self.valid.iter().chain(&self.pending).copied().collect()
+    }
+}
+
+/// Rule 15 (b), with the claims read per reference ([`PaymentClaims::on`]):
+/// whether a payer's claim of the payment is anchored in time against a
+/// lock change at `at`, on `clock`, as [`claim_in_time`] reads one claim.
+/// `sees` says, for a reference, whether its clock reads the payment's
+/// rail proof as the payment's anchor.
+pub fn claims_in_time(at: LockPoint, clock: &Clock, claims: &PaymentClaims, anchors: &Anchors, sees: &dyn Fn(&Reference) -> bool) -> bool {
+    let main = claims.on(sees(&clock.main));
+    match at {
+        LockPoint::NotAnchored => true,
+        LockPoint::Main(_) => main.iter().any(|x| claim_in_time(at, clock, x, anchors)),
+        LockPoint::Backup(p) => {
+            main.iter().any(|x| anchors.earliest(x, &clock.main).is_some())
+                || clock.backup.as_ref().is_some_and(|b| claims.on(sees(b)).iter().any(|x| anchors.earliest(x, b).is_some_and(|y| y <= p)))
+        }
+    }
+}
+
 /// One lock change affecting a payment, as rule 15 reads it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LockChange {
@@ -1325,10 +1366,18 @@ pub struct LockChange {
 /// changes affect a payment, it counts only if the claim is anchored before
 /// the first of them (F175): requiring every one is the same.*
 pub fn rule_15(changes: &[LockChange], receipt: bool, claims: &[Hash], anchors: &Anchors) -> bool {
+    let claims = PaymentClaims { valid: claims.to_vec(), pending: vec![] };
+    rule_15_by(changes, receipt, &claims, anchors, &|_| true)
+}
+
+/// Rule 15 as [`rule_15`], with the payer's claims of the payment read per
+/// reference (F201, F203; [`PaymentClaims::on`]): on a clock that reads the
+/// rail's own proof, the valid claims, the payment's block among their
+/// anchors; on any other, the earliest anchor among all the payer's claims
+/// of the same payment, once one is valid.
+pub fn rule_15_by(changes: &[LockChange], receipt: bool, claims: &PaymentClaims, anchors: &Anchors, sees: &dyn Fn(&Reference) -> bool) -> bool {
     changes.iter().all(|c| {
         let at = lock_point(c.clock.as_ref(), &c.quorum, &c.rotation, anchors);
-        at == LockPoint::NotAnchored
-            || receipt
-            || c.clock.as_ref().is_some_and(|k| claims.iter().any(|x| claim_in_time(at, k, x, anchors)))
+        at == LockPoint::NotAnchored || receipt || c.clock.as_ref().is_some_and(|k| claims_in_time(at, k, claims, anchors, sees))
     })
 }

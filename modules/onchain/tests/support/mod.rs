@@ -12,6 +12,7 @@ use bitcoin::taproot::TapNodeHash;
 use bitcoin::transaction::Version;
 use bitcoin::{absolute, consensus, BlockHash, CompactTarget, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxMerkleNode, TxOut, Txid, Witness};
 use mor_core::hash::{sha256, Hash};
+use mor_onchain::chain::HeaderChain;
 use mor_onchain::{Block, Network, OnchainAddress, OnchainProof, Paid, CONFIRMATIONS};
 
 pub fn h(label: &str) -> Hash {
@@ -31,6 +32,15 @@ pub fn xonly(sk: &SecretKey) -> [u8; 32] {
 /// rust-bitcoin's secp256k1, over the Module's request message.
 pub fn request(sk: &SecretKey, commitment: &Hash) -> [u8; 64] {
     let m = mor_onchain::p2c::request_message(commitment);
+    let kp = Keypair::from_secret_key(&Secp256k1::new(), sk);
+    Secp256k1::new()
+        .sign_schnorr_with_aux_rand(&Message::from_digest(m), &kp, &[0; 32])
+        .serialize()
+}
+
+/// The payee's side's request naming confirmations (F205).
+pub fn request_for(sk: &SecretKey, commitment: &Hash, confirmations: Option<u64>) -> [u8; 64] {
+    let m = mor_onchain::p2c::request_message_for(commitment, confirmations);
     let kp = Keypair::from_secret_key(&Secp256k1::new(), sk);
     Secp256k1::new()
         .sign_schnorr_with_aux_rand(&Message::from_digest(m), &kp, &[0; 32])
@@ -65,6 +75,11 @@ pub fn tx(spends: &str, outputs: &[(Vec<u8>, u64)]) -> Transaction {
             .map(|(s, v)| TxOut { value: bitcoin::Amount::from_sat(*v), script_pubkey: ScriptBuf::from_bytes(s.clone()) })
             .collect(),
     }
+}
+
+/// The txid of a transaction's bytes, by rust-bitcoin.
+pub fn txid(tx: &[u8]) -> [u8; 32] {
+    consensus::deserialize::<Transaction>(tx).unwrap().compute_txid().to_byte_array()
 }
 
 /// Its bytes without witness.
@@ -139,7 +154,45 @@ pub fn proof(request_key: &SecretKey, c: &Hash, pays: Option<(Vec<u8>, u64)>, n:
         let block = n.map(|n| confirm(&t, n));
         Paid { tx: t, output: 0, block }
     });
-    OnchainProof { request: request(request_key, c), paid }
+    OnchainProof { request: request(request_key, c), confirmations: None, paid }
+}
+
+/// The height at which the tests' regtest chains start.
+pub const START: u64 = 100;
+
+/// A regtest chain held by a verifier, from `START`: these headers.
+pub fn chain(headers: &[[u8; 80]]) -> HeaderChain {
+    HeaderChain::new(Network::Regtest, START, headers.to_vec()).unwrap()
+}
+
+/// The chain an honest verifier holds for a mined proof: the proof's own
+/// block and the headers on it, as its node followed them (F204). `None`
+/// for a proof not mined.
+pub fn held(p: &OnchainProof) -> Option<HeaderChain> {
+    Some(chain(&p.paid.as_ref()?.block.as_ref()?.headers))
+}
+
+/// Mine `n` empty regtest blocks on the tip of `chain`.
+pub fn grow(chain: &mut HeaderChain, n: usize) {
+    for i in 0..n {
+        let tip = chain.hash_at(chain.tip()).unwrap();
+        chain.extend(mine(tip, &[h(&format!("an empty block on {tip:?} {i}"))], REGTEST_BITS, 1_790_100_000 + i as u32)).unwrap();
+    }
+}
+
+/// A block holding `txids` mined on the tip of `chain`, with `n` headers in
+/// all, added to the chain: the headers.
+pub fn mine_on(chain: &mut HeaderChain, txids: &[[u8; 32]], n: usize) -> Vec<[u8; 80]> {
+    let tip = chain.hash_at(chain.tip()).unwrap();
+    let mut headers = vec![mine(tip, txids, REGTEST_BITS, 1_790_200_000)];
+    while headers.len() < n {
+        let prev = header_hash(headers.last().unwrap());
+        headers.push(mine(prev, &[h(&format!("coinbase {} on {tip:?}", headers.len()))], REGTEST_BITS, 1_790_200_000 + headers.len() as u32));
+    }
+    for x in &headers {
+        chain.extend(*x).unwrap();
+    }
+    headers
 }
 
 pub const N: usize = CONFIRMATIONS;

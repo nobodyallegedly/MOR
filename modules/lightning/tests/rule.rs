@@ -551,3 +551,26 @@ fn only_rails_the_payee_named_count_f115() {
     w2.pointer.rails[0].module = h("an on-chain rail Module");
     assert!(matches!(answers(&w2, &r, &c, w.payer).0, Answer::Invalid(_)));
 }
+
+/// F200: the Lightning rail Module says what "the same payment" is: the
+/// invoice's payment hash, which one payment settles once. Two proofs of
+/// it that differ in their bytes (the invoice re-encoded, say) are one
+/// payment; an invoice not yet paid (no preimage) shows no payment.
+#[test]
+fn the_same_payment_is_the_payment_hash() {
+    use mor_payment::RailModule;
+    let node = secret("node");
+    let c = h("a commitment");
+    let inv = invoice(&node, Network::Regtest, 1_000_000, &c, &h("preimage"), false);
+    let paid = LnProof { invoice: inv.clone(), preimage: Some(h("preimage")) };
+    let payment = Lightning.payment(&paid.encode()).unwrap();
+    assert_eq!(payment, sha256(&h("preimage")).to_vec(), "the payment hash");
+    // The same payment hash in an invoice carrying the node field: other
+    // bytes, the same payment.
+    let with_node = invoice(&node, Network::Regtest, 1_000_000, &c, &h("preimage"), true);
+    assert_ne!(with_node, inv);
+    assert_eq!(Lightning.payment(&LnProof { invoice: with_node, preimage: Some(h("preimage")) }.encode()), Some(payment.clone()));
+    assert_eq!(Lightning.payment(&LnProof { invoice: inv, preimage: None }.encode()), None, "not paid: no payment shown");
+    let other = invoice(&node, Network::Regtest, 1_000_000, &c, &h("another preimage"), false);
+    assert_ne!(Lightning.payment(&LnProof { invoice: other, preimage: Some(h("another preimage")) }.encode()), Some(payment));
+}

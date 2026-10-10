@@ -124,3 +124,32 @@ pub fn merkle_branch(txids: &[[u8; 32]], index: usize) -> Option<Vec<[u8; 32]>> 
     }
     Some(branch)
 }
+
+/// Whether `index` is the one canonical position a branch gives for a
+/// txid (F200). Bitcoin's tree repeats the last node of a level with an odd
+/// number of nodes, so a node in that place has its own copy as sibling,
+/// and the index with that level's bit set gives the same root with the
+/// same branch: a twin. Canonical means: wherever the sibling equals the
+/// running hash, the index's bit at that level is 0, the node's own
+/// position. *An honest block has no two equal siblings anywhere else
+/// (Bitcoin Core refuses such a block as mutated), so no honest proof is
+/// refused.*
+pub fn canonical(txid: &[u8; 32], index: u64, branch: &[[u8; 32]]) -> bool {
+    let mut h = *txid;
+    for (level, sibling) in branch.iter().enumerate() {
+        let right = level < 64 && (index >> level) & 1 == 1;
+        if sibling == &h && right {
+            return false;
+        }
+        let mut both = [0u8; 64];
+        if right {
+            both[..32].copy_from_slice(sibling);
+            both[32..].copy_from_slice(&h);
+        } else {
+            both[..32].copy_from_slice(&h);
+            both[32..].copy_from_slice(sibling);
+        }
+        h = dsha256(&both);
+    }
+    true
+}

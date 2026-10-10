@@ -12,6 +12,8 @@
 
 *Revised in place again, 10 October 2026, for Nobody, allegedly, to approve again (Law draft 10, Finance draft 6, Production draft 6; `docs/f191-f199-build-2026-10-10.md`), for **F191 to F199**: a deal's settlement final for everything its signers could see, replacing QF1 (F192), the judge of forks following the chain of judgment and speaking once (QG4), a settlement naming a version not held read as a plain version (F196); a helper's evidence counting only acknowledged by the payer the payment commits to, no service paid on its own record (F193, F194, QG3); a resignation spent by coming back, registered or not (F195); money owed back following the debt rule, a refund to a bare key shown repaid, money owed to nobody or to a payer noticed with a deadline not blocking a closing that names it (QG1, QG2, F197); a pointer left outside a fork counting for payments already made to it, a fork judged by its own history (F198, F199). Wording (QG5): the table "Outside the core" gives media types and the Modules that play them, and time sources to time-reference cMIPs. The deal bullet is rewritten common case first.*
 
+*Revised in place again, 10 October 2026, for Nobody, allegedly, to approve again (Finance draft 6, Envelope draft 7, Production draft 6; `docs/onchain-rail-f200-f205-build-2026-10-10.md`), for **F200 to F205**: Finance tells payments apart by the same payment as its rail Module says, never by a proof's bytes (F200); anchoring has one cMIP and the clocks are Modules under it, the point on a block-based clock is the block, and on a Bitcoin clock an on-chain payment's proof is that payment's anchor (F201, F202); on any other clock rule 15 reads the earliest anchor among the payer's claims of the same payment once one is valid, a stated cost (F203); a rule's input may include a chain's headers the client supplies (F204); an on-chain payment is final once counted, a deeper rewrite a stated cost (F205, in the on-chain rail Module).*
+
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
 ## Purpose
@@ -336,7 +338,7 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
 | Complex conditions | Condition modules |
 | Proofs, credentials | Verifying modules |
 | Time sources | Time-reference cMIPs, filling Law's time reference task (F173, F176) |
-| Anchoring | Anchoring cMIPs, filling the Envelope's anchoring task (F173) |
+| Anchoring | One anchoring cMIP, filling the Envelope's anchoring task (F173); each clock a Module under it (F202) |
 | Key storage, backup, recovery, air-gapped signing, verifiable share dealing | Identity modules |
 | New signature schemes | Signature-scheme specifications |
 | Readable naming schemes | Naming modules and homes |

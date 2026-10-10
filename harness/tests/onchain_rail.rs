@@ -31,6 +31,7 @@ use mor_harness::net::{Http, Site};
 use mor_harness::person::Person;
 use mor_harness::reader::Reader;
 use mor_onchain::btcd::{Btcd, Node};
+use mor_onchain::chain::HeaderChain;
 use mor_onchain::{unit, Network, Onchain, OnchainAddress, OnchainProof, CONFIRMATIONS};
 use mor_payment::{beside, verify, Answer, Commitment, Held, Modules, PaidTo, Proof, RailInput, RailModule, Record};
 use mor_relay::client::FeedQuery;
@@ -252,13 +253,13 @@ async fn read_payee(rd: &mut Reader, site: &Site, id: &Hash) -> PayeeView {
 /// Verify a receipt or claim the party holds, with the core and the cMIP;
 /// and, beside it, whether it counts for this Finance-only wallet (rules 12
 /// to 14a; for a tip, the pointer it follows).
-fn check(party: &Party, act: &Hash) -> (Answer, Answer) {
+fn check(party: &Party, act: &Hash, chain: &HeaderChain) -> (Answer, Answer) {
     let h = party.rd.v.get(act).expect("held");
     let signer = h.act.outside.signer.expect("signed by an identity");
     let p = Payload::decode(h.inside.type_, &h.inside.payload).expect("a Finance act");
     let cited = Citations::of(&h.inside);
     finance::check_signer(&p, &signer, &cited).expect("signed by the right party");
-    let onchain = Onchain;
+    let onchain = Onchain::on(chain);
     let m = Modules::new().adopt(&onchain);
     let rec = match &p {
         Payload::Receipt(r) => Record::Receipt(r),
@@ -313,6 +314,9 @@ impl PayeeSide {
 
     /// Spend a payment it received, by the key path with its key tweaked by
     /// the payment's commitment (BIP 341): the money is the payee's.
+    /// It sweeps to a fresh key of its own, never to the declared key's own
+    /// address, which would link the payment to the public pointer (client
+    /// conformance; review finding 7b).
     fn sweep(&self, address: &OnchainAddress, commitment: &Hash, prev: OutPoint, value: u64) -> Transaction {
         let (_, sk) = self.keys.iter().find(|(k, _)| *k == address.key).expect("the payee's key");
         let secp = Secp256k1::new();
@@ -322,7 +326,7 @@ impl PayeeSide {
             version: transaction::Version::TWO,
             lock_time: absolute::LockTime::ZERO,
             input: vec![TxIn { previous_output: prev, script_sig: ScriptBuf::new(), sequence: Sequence::MAX, witness: Witness::new() }],
-            output: vec![TxOut { value: bitcoin::Amount::from_sat(value - 500), script_pubkey: ScriptBuf::from_bytes(mor_onchain::tx::taproot_script(&address.key)) }],
+            output: vec![TxOut { value: bitcoin::Amount::from_sat(value - 500), script_pubkey: ScriptBuf::from_bytes(mor_onchain::tx::taproot_script(&xonly(&secret(&format!("Bob's next fresh key {}", address.key[0]))))) }],
         };
         let sighash = SighashCache::new(&t).taproot_key_spend_signature_hash(0, &Prevouts::All(&[spent]), TapSighashType::Default).unwrap();
         let sig = secp.sign_schnorr_with_aux_rand(&Message::from_digest(sighash.to_byte_array()), &tweaked.to_keypair(), &random::<32>());
@@ -424,7 +428,7 @@ impl Wallet<'_> {
     /// the payee's side offers to pay to, where it is not the address the
     /// commitment gives.
     async fn pay(&mut self, node: &Btcd, view: &PayeeView, side: &PayeeSide, amount: Amount, fulfils: Hash, offered: Option<Vec<u8>>) -> Result<Made, Refused> {
-        let onchain = Onchain;
+        let onchain = Onchain::offline();
         let can_pay = |m: &Hash, a: &[u8], u: &Hash| m == &mor_onchain::spec() && onchain.unit(a) == Some(*u) && *u == unit(Network::Regtest);
         let (paid_to, address) = match choose(view.pointer.as_ref().map(|(_, p)| p), view.vault.as_ref().map(|(_, v)| v.as_slice()), &amount, can_pay) {
             Choice::Flow(i) => {
@@ -444,8 +448,8 @@ impl Wallet<'_> {
             commitment: c.hash(),
             amount: &amount,
             address: &address,
-            rail_proof: &OnchainProof { request, paid: None }.encode(),
-        });
+            rail_proof: &OnchainProof { request, confirmations: None, paid: None }.encode(),
+        }, None);
         assert!(matches!(before, Answer::Pending(_)), "the request checks out before paying: {before:?}");
         let a = OnchainAddress::decode(&address).unwrap();
         let expected = a.script(&c.hash()).unwrap();
@@ -459,8 +463,8 @@ impl Wallet<'_> {
             commitment: c.hash(),
             amount: &amount,
             address: &address,
-            rail_proof: &OnchainProof { request, paid: Some(mor_onchain::Paid { tx: stripped(&t), output: 0, block: None }) }.encode(),
-        });
+            rail_proof: &OnchainProof { request, confirmations: None, paid: Some(mor_onchain::Paid { tx: stripped(&t), output: 0, block: None }) }.encode(),
+        }, None);
         if !matches!(as_paid, Answer::Pending(_)) {
             self.coins.unspent.insert(0, coin);
             return Err(Refused::WrongAddress(as_paid));
@@ -500,7 +504,8 @@ impl Wallet<'_> {
 async fn receipt(bob: &mut Party, node: &Btcd, made: &Made, payer: &PayeeView) -> Act {
     let rail = node.proof(made.request, &stripped(&made.tx), 0).await.expect("a proof");
     let c = &made.commitment;
-    let answer = Onchain::rule(&RailInput { commitment: c.hash(), amount: &c.amount, address: &made.address.encode(), rail_proof: &rail.encode() });
+    let chain = node.chain(Network::Regtest).await.expect("the node's headers");
+    let answer = Onchain::rule(&RailInput { commitment: c.hash(), amount: &c.amount, address: &made.address.encode(), rail_proof: &rail.encode() }, Some(&chain));
     assert_eq!(answer, Answer::Valid, "the payee signs only once the rule says valid");
     let r = Payload::Receipt(Receipt {
         rail: mor_onchain::spec(),
@@ -596,7 +601,7 @@ async fn a_test_identity_pays_another_on_chain() {
     // both; Bob signs no receipt.
     bob.pick_up(&site).await;
     for party in [&alice, &bob] {
-        let (answer, _) = check(party, &made.claim_at_payment.id());
+        let (answer, _) = check(party, &made.claim_at_payment.id(), &a.rpc.chain(Network::Regtest).await.unwrap());
         assert!(matches!(&answer, Answer::Pending(w) if w.contains("unconfirmed")), "{}: {answer:?}", party.p.name);
     }
     eprintln!("tip of 1,234 broadcast: the claim written at payment is pending (unconfirmed); no receipt yet");
@@ -604,7 +609,8 @@ async fn a_test_identity_pays_another_on_chain() {
     a.rpc.generate(1).await.unwrap();
     let one = a.rpc.proof(made.request, &stripped(&made.tx), 0).await.unwrap();
     let c = &made.commitment;
-    let rule = |p: &OnchainProof| Onchain::rule(&RailInput { commitment: c.hash(), amount: &c.amount, address: &made.address.encode(), rail_proof: &p.encode() });
+    let chain = a.rpc.chain(Network::Regtest).await.unwrap();
+    let rule = |p: &OnchainProof| Onchain::rule(&RailInput { commitment: c.hash(), amount: &c.amount, address: &made.address.encode(), rail_proof: &p.encode() }, Some(&chain));
     assert!(matches!(rule(&one), Answer::Pending(w) if w.contains("1 of 6")));
     eprintln!("mined once: pending, 1 of {CONFIRMATIONS}");
     // Six: valid. Bob's watcher builds the proof from his own node and
@@ -614,11 +620,12 @@ async fn a_test_identity_pays_another_on_chain() {
     let tip_claim = Wallet { alice: &mut alice, coins: &mut coins, site: &site }.claim(&bob_view, &made.commitment, made.request, &made.tx, &a.rpc).await;
     alice.pick_up(&site).await;
     bob.pick_up(&site).await;
+    let chain = a.rpc.chain(Network::Regtest).await.unwrap();
     for party in [&alice, &bob] {
         for act in [tip_receipt.id(), tip_claim.id()] {
-            assert_eq!(check(party, &act), (Answer::Valid, Answer::Valid), "{} verifies {}", party.p.name, short(&act));
+            assert_eq!(check(party, &act, &chain), (Answer::Valid, Answer::Valid), "{} verifies {}", party.p.name, short(&act));
         }
-        assert!(matches!(check(party, &made.claim_at_payment.id()).0, Answer::Pending(_)), "the claim written at payment stays pending: an act never changes");
+        assert!(matches!(check(party, &made.claim_at_payment.id(), &chain).0, Answer::Pending(_)), "the claim written at payment stays pending: an act never changes");
         assert_eq!(rail_proof(party, &tip_receipt.id()), rail_proof(party, &tip_claim.id()), "one payment, one proof: the same bytes on both sides");
     }
     eprintln!("six confirmations: Alice and Bob each hold a valid receipt {} and claim {}, with the same proof", short(&tip_receipt.id()), short(&tip_claim.id()));
@@ -641,7 +648,7 @@ async fn a_test_identity_pays_another_on_chain() {
     a.rpc.generate(CONFIRMATIONS as u64).await.unwrap();
     let big_receipt = receipt(&mut bob, &a.rpc, &big, &alice_view).await;
     bob.pick_up(&site).await;
-    assert_eq!(check(&bob, &big_receipt.id()), (Answer::Valid, Answer::Valid));
+    assert_eq!(check(&bob, &big_receipt.id(), &a.rpc.chain(Network::Regtest).await.unwrap()), (Answer::Valid, Answer::Valid));
     let (txid, _) = rail_proof(&bob, &big_receipt.id()).outpoint().unwrap();
     let (raw, _) = a.rpc.transaction(&txid).await.unwrap();
     let t: Transaction = consensus::deserialize(&raw).unwrap();
@@ -678,8 +685,9 @@ async fn a_test_identity_pays_another_on_chain() {
     a.rpc.generate(CONFIRMATIONS as u64).await.unwrap();
     let careless = Wallet { alice: &mut alice, coins: &mut coins, site: &site }.claim(&bob_view, &c, rq, &t, &a.rpc).await;
     bob.pick_up(&site).await;
+    let chain = a.rpc.chain(Network::Regtest).await.unwrap();
     for party in [&alice, &bob] {
-        assert!(matches!(check(party, &careless.id()).0, Answer::Invalid(w) if w.contains("not tweaked")), "{}", party.p.name);
+        assert!(matches!(check(party, &careless.id(), &chain).0, Answer::Invalid(w) if w.contains("not tweaked")), "{}", party.p.name);
     }
     eprintln!("paid anyway to the untweaked key and confirmed six times: the claim is invalid for both");
 
@@ -698,9 +706,10 @@ async fn a_test_identity_pays_another_on_chain() {
     let c4 = Wallet { alice: &mut alice, coins: &mut coins, site: &site }.claim(&bob_view, &paid.commitment, paid.request, &paid.tx, &a.rpc).await;
     alice.pick_up(&site).await;
     bob.pick_up(&site).await;
+    let counted_on = a.rpc.chain(Network::Regtest).await.unwrap();
     for party in [&alice, &bob] {
         for act in [r4.id(), c4.id()] {
-            assert_eq!(check(party, &act), (Answer::Valid, Answer::Valid));
+            assert_eq!(check(party, &act, &counted_on), (Answer::Valid, Answer::Valid));
         }
     }
     let block = rail_proof(&bob, &r4.id()).block_hash().unwrap();
@@ -718,17 +727,22 @@ async fn a_test_identity_pays_another_on_chain() {
     assert!(!a.rpc.on_best_chain(&block).await.unwrap(), "the block the proof names is no longer on A's best chain");
     assert!(a.rpc.unspent(&paid_txid, 0).await.unwrap().is_none(), "Bob's output does not exist on the best chain");
     assert!(a.rpc.transaction(&back.compute_txid().to_byte_array()).await.unwrap().1.is_some(), "the double spend is confirmed");
-    // What every party's record now shows: unchanged. The rule sees the
-    // proof alone, and its headers still carry their work.
+    // F204: checked against the chain A now follows, the proofs' block is
+    // on no chain the verifier holds: unknown, never valid. Checked against
+    // the chain they were counted on, they stay valid. A rewrite deeper than
+    // the confirmations is F205's stated cost; what a verifier answers for
+    // a payment counted before it is the build report's open question.
+    let now = a.rpc.chain(Network::Regtest).await.unwrap();
     for party in [&alice, &bob] {
         for act in [r4.id(), c4.id()] {
-            assert_eq!(check(party, &act), (Answer::Valid, Answer::Valid), "QUESTION 1: {} still holds {} as valid", party.p.name, short(&act));
+            assert!(matches!(check(party, &act, &now).0, Answer::Unknown(_)), "{} on the chain now", party.p.name);
+            assert_eq!(check(party, &act, &counted_on).0, Answer::Valid, "{} on the chain it was counted on", party.p.name);
         }
-        assert!(matches!(check(party, &paid.claim_at_payment.id()).0, Answer::Pending(_)));
+        assert!(matches!(check(party, &paid.claim_at_payment.id(), &now).0, Answer::Pending(_)));
     }
     eprintln!(
         "reorganised: the block of the 3,000 payment is off the best chain, the coins went back to Alice, and Bob's output does not exist; \
-         Alice's record and Bob's still show the receipt {} and the claim {} as valid, the claim at payment as pending (question 1)",
+         against the chain now followed the receipt {} and the claim {} answer unknown (F204); against the chain they were counted on, valid",
         short(&r4.id()),
         short(&c4.id())
     );
