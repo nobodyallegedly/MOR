@@ -113,17 +113,22 @@ test('hidden direction controls in the words are named, and shown as escapes in 
   assert.ok(!html.includes('‮'), 'the control itself is never passed to the screen');
 });
 
-test('what this client does not implement cannot be signed; open formats are refused outright', () => {
+test('what this client does not implement cannot be signed; terms out of their format, or with a withdrawn field, are refused outright', () => {
   const unknown = sha256('an extension nobody here knows');
   const t = collectiveTerms(g(), [a, b, c], a);
   t.extensions = [...t.extensions, unknown];
   const r = readAgreement(termsOf(encodeTerms(t)), names);
   assert.match(r.blocking.join(' '), /extension this client does not implement.*Law rule 2/);
 
-  // Terms with a split plan (field 8), whose format is still open: the core will not read them at all.
+  // Step 12b wrote the split plan's format in (field 8), so an empty plan is now refused as not in
+  // its format, no longer as "format open"; field 10, the concurrency rule, is withdrawn: the core
+  // will not read terms carrying either.
   const m = cborDecode(encodeTerms(collectiveTerms(g(), [a, b, c], a))) as Map<number, unknown>;
   m.set(8, []);
-  assert.throws(() => termsOf(cborEncode(m)), /not supported yet.*split plan/);
+  assert.throws(() => termsOf(cborEncode(m)), /not in the Law format: split plan/);
+  const w = cborDecode(encodeTerms(collectiveTerms(g(), [a, b, c], a))) as Map<number, unknown>;
+  w.set(10, 0);
+  assert.throws(() => termsOf(cborEncode(w)), /terms field 10 \(the concurrency rule\) is withdrawn/);
 });
 
 test("Law's objections by their codes, in Law's own words, after the client's own hints, never folded by wording", () => {

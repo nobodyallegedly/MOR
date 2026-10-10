@@ -528,11 +528,13 @@ async function canPaySigner(act: string, relays: string[], via: Via): Promise<bo
 /**
  * Leave the collective alone (Law rule 37a): a resignation act naming the
  * agreement, signed by the member with their own key, no one else's. It
- * takes effect for the collective at the line its record draws.
+ * takes effect for the collective at the line its record draws. `drafts`:
+ * the versions the member signed and leaves behind (F207), none of which
+ * ever brings them back.
  */
-export async function resign(by: TestIdentity, agreement: string, relays: string[], area?: number) {
+export async function resign(by: TestIdentity, agreement: string, relays: string[], area?: number, drafts?: string[]) {
   await carryChain(by, relays);
-  return by.publish(REPO_SPECS.law, LAW_TYPES.resignation, resignationPayload(agreement, area), {
+  return by.publish(REPO_SPECS.law, LAW_TYPES.resignation, resignationPayload(agreement, area, drafts?.length ? drafts : undefined), {
     public: true,
     relays,
     objects: [[agreement, agreement]],
@@ -587,6 +589,16 @@ export async function contest(by: TestIdentity, declaration: { act: string; sign
  * library checks it again when it judges the declaration.
  */
 export async function signedVersions(member: string, chain: string[], relays: string[], via: Via = {}): Promise<string[]> {
+  const signed = await signedBy(member, relays, via);
+  return chain.filter((a) => signed.has(a));
+}
+
+/**
+ * Every act `member` signed by a Law signature act its relays hold (terms
+ * or offers), by hash: for the versions a resignation leaves behind (F207)
+ * and the clause version a declaration applies (rule 51).
+ */
+export async function signedBy(member: string, relays: string[], via: Via = {}): Promise<Set<string>> {
   const signed = new Set<string>();
   for (const h of relays) {
     let after: number | undefined;
@@ -612,7 +624,7 @@ export async function signedVersions(member: string, chain: string[], relays: st
       // that relay is away: the others may hold them
     }
   }
-  return chain.filter((a) => signed.has(a));
+  return signed;
 }
 
 /**
