@@ -219,3 +219,57 @@ impl<'a> LawView<'a> {
         None
     }
 }
+
+impl<'a> LawView<'a> {
+    /// A request to a judge (type 25; Fable's reading of OF24 a, with
+    /// review 2.6): the links of the judge's chain of judgment it reaches,
+    /// public or sealed to each (the judge first; a link it does not reach
+    /// stops it there), or why it counts for nothing. Standing (rule 57a)
+    /// is read here as a party who signed the version (mechanic, the
+    /// build's; a stake's holder, keeper or arbitrator not yet).
+    pub fn judge_request(&self, id: &Hash) -> R<Result<Vec<Hash>, String>> {
+        let h = self.held(id)?;
+        if !self.is_law(h, crate::law::open_formats::new_types::JUDGE_REQUEST) {
+            return Err(LawError::Check("not a request to a judge"));
+        }
+        let r = crate::law::open_formats::JudgeRequest::decode(&h.inside)?;
+        if !self.valid(id) {
+            return Ok(Err("it is not valid under Identity".into()));
+        }
+        let t = self.terms(&r.agreement)?;
+        let asker = h.act.outside.signer.unwrap_or_default();
+        if !t.parties.contains(&asker) || self.signers(&r.agreement, &[asker]).is_empty() {
+            return Ok(Err("asked by someone without standing: a party who signed the version (rule 57a)".into()));
+        }
+        let Some(chain) = t.chain_of(&r.judge) else {
+            return Ok(Err("the terms name no such judge (rule 34a)".into()));
+        };
+        let named = match &r.judge {
+            Judge::Identity(j) => t.arbitrators.iter().flatten().any(|a| a == j) || t.keepers.iter().any(|k| k.operators.contains(j)) || t.fork_judge.as_ref() == Some(j),
+            _ => true,
+        };
+        if !named {
+            return Ok(Err("the terms name no such judge (rule 34a)".into()));
+        }
+        let reaches = |j: &Hash| h.act.outside.content_key.is_some() || h.act.outside.to.iter().flatten().any(|q| q == j);
+        let reached: Vec<Hash> = chain.into_iter().take_while(|j| reaches(j)).collect();
+        if reached.is_empty() {
+            return Ok(Err("neither public nor sealed to the judge it names: no judge was asked, and no period runs (review 2.6)".into()));
+        }
+        Ok(Ok(reached))
+    }
+
+    /// Whether a liveness act (type 12, rule 50) shows presence: valid, and
+    /// public or addressed to every other party of the agreement it names
+    /// (Fable's reading of OF23 a). In a collective it counts only where
+    /// the collective placed it (FR10), which its chain shows.
+    pub fn liveness(&self, id: &Hash) -> R<bool> {
+        let h = self.held(id)?;
+        let l = crate::law::open_formats::Liveness::decode(&h.inside)?;
+        let t = self.terms(&l.agreement)?;
+        let signer = h.act.outside.signer.unwrap_or_default();
+        let reaches = h.act.outside.content_key.is_some()
+            || t.parties.iter().filter(|p| **p != signer).all(|p| h.act.outside.to.iter().flatten().any(|q| q == p));
+        Ok(self.valid(id) && t.parties.contains(&signer) && reaches)
+    }
+}

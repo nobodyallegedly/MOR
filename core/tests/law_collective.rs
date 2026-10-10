@@ -11102,3 +11102,36 @@ fn f216_a_publication_carries_two_agreements() {
     want.sort();
     assert_eq!(paid, want);
 }
+
+/// Fable's readings of OF24 (a) with review 2.6, and OF23 (a): a request
+/// to a judge is its own act (type 25), by a party who signed the version,
+/// naming a judge the terms name; it counts, and the judge's period runs,
+/// only where public or sealed to the judge. A liveness act counts only
+/// where public or addressed to the agreement's other parties.
+#[test]
+fn of24_of23_a_request_reaches_its_judge_and_presence_is_shown() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let arb = w.genesis("an arbitrator", vec![own_home()], None, None);
+    let mut t = deal_terms(ana.id, ben.id);
+    t.arbitrators = Some(vec![arb.id]);
+    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let (aid, bid) = (ana.id, ben.id);
+    let milestone = spec("a milestone in dispute");
+    let r = law::JudgeRequest { agreement: d, judge: law::Judge::Identity(arb.id), question: milestone };
+    let kept = w.private_act(&mut ana, mips().law, law::new_types::JUDGE_REQUEST, r.to_map(), obj(d), vec![aid]);
+    assert!(view(&w).judge_request(&kept).unwrap().is_err(), "kept to herself: no judge was asked");
+    let sent = w.private_act(&mut ana, mips().law, law::new_types::JUDGE_REQUEST, r.to_map(), obj(d), vec![aid, arb.id]);
+    assert_eq!(view(&w).judge_request(&sent).unwrap(), Ok(vec![arb.id]));
+    let other = law::JudgeRequest { judge: law::Judge::Identity(spec("someone the terms never name")), ..r.clone() };
+    let x = law_act(&mut w, &mut ana, law::new_types::JUDGE_REQUEST, other.to_map(), obj(d));
+    assert!(view(&w).judge_request(&x).unwrap().is_err(), "a judge the terms name");
+    let l = law::Liveness { agreement: d };
+    let quiet = w.private_act(&mut ben, mips().law, law::new_types::LIVENESS, l.to_map(), obj(d), vec![bid]);
+    assert!(!view(&w).liveness(&quiet).unwrap());
+    let shown = w.private_act(&mut ben, mips().law, law::new_types::LIVENESS, l.to_map(), obj(d), vec![aid, bid]);
+    assert!(view(&w).liveness(&shown).unwrap());
+}
