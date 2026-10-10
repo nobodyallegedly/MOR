@@ -2686,6 +2686,14 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Open for Nobody, allegedly:** QK1 (two links of the chain of judgment each settling the fork, neither holding the other); QK3 (QJ2's receipt by the work's service against H5 and H7: a grant key never signs a split's payout); the live work review's six questions (`docs/reviews/live-work-review.md`); a step-down naming drafts.
 
+## F238. Announcements are renamed tallies (10 October 2026, evening)
+
+**Nobody, allegedly:** "Maybe announcements is the wrong label… got a better one?" Weighed: promise ("a cleaner description"), pledge ("sounds better"; in law a pledge is collateral), then poetic options: vow, oath, tally. **Decided by Nobody, allegedly: "Tally. I like it."**
+
+*The project lead's note on why it fits:* a medieval tally was a stick notched with a debt and split in two, seller and buyer each keeping half; matching halves settled it. F237's grammar is the same: a tally (its own chain, its genesis id its name), offers naming it, each sale pending, confirmed by acts the buyer acknowledges, or contested.
+
+**The collision, stated:** the code and texts already use "tally" for counting a collective's votes (`core/src/law/view.rs`, `formats.rs`, `chain.rs`, the collective and desk clients, about 25 files). *Mechanic taken by the project lead under the delegation:* the vote count is reworded ("count" of votes) when the tally act is built, so the word keeps one meaning. F237 and F229 to F234 keep the word "announcement" as records.
+
 ## F237. The core keeps the grammar of announcements; what is claimed, delivered or became moves to cMIPs (10 October 2026, night)
 
 **From** Fable's review of announcements (`docs/reviews/announcements-review.md`, merged): an announcement's claim covering what it became is a backdated claim on anything (Mara closes an anchored "album, next year" on a stranger's record); the closing, the announcer's act, binds the creators' claim; "a ticket sold twice is caught as F224 catches a stake" is false (nothing counts payments under an offer); when a sale of an announcement is complete is unclear; "computed, never declared" overclaims; two closings and offers after a closing are unsaid; "something MOR cannot hash" reaches every good and service, two forms for one task; F230's cost misstates what a rotation voids. *The project lead's errors, stated:* the F224 sentence in F233, and the check that announcements "replace nothing".
