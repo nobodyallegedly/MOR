@@ -27,6 +27,8 @@ export const LAW_TYPES = {
   settlementRequest: 22,
   /** The arbitrator's settlement of a deal's fork (DQ8, F188). */
   forkSettlement: 23,
+  /** A notice to a payer owed money back who gave no address (rule 37d; F197). */
+  notice: 24,
   resignation: 16,
   record: 17,
   fork: 19,
@@ -39,6 +41,9 @@ export const FINANCE_TYPES = { pointer: 0, obligation: 1, receipt: 2, release: 4
 
 /** The rail Module the test pointers name: a test value, no real rail. */
 export const TEST_RAIL = test('a test rail Module, no real rail');
+
+/** The time reference a notice's deadline names (F197): a test value, no real clock; this program reads no time reference. */
+export const TEST_TIME = test('a test time reference, no real clock');
 
 /** Law's declaration kind 0: the agreement a collective lives under. */
 export const FOUNDING_AGREEMENT = 0;

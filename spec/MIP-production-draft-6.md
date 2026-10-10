@@ -4,6 +4,8 @@
 
 *Revised in place again, 9 October 2026, for Nobody, allegedly, to approve again (`docs/f190-build-2026-10-09.md`), wording only, changing no rule: the definition of a Module no longer lists a unit, which is a specification of its own (kind 2; Finance), as the technical pass of 9 October found (`docs/technical-pass-applied-2026-10-09.md`).*
 
+*Revised in place again, 10 October 2026, for Nobody, allegedly, to approve again (`docs/f191-f199-build-2026-10-10.md`): the definition of a Module no longer lists a media type or a signature scheme, specifications of their own (kinds 3 and 5), as units already were; the code that plays a media type is a Module (QG5, F191, wording only); and a service's use record alone pays nothing (F194, rule 17).*
+
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
 ## Purpose
@@ -29,7 +31,7 @@ Identity, Envelope, Text, Finance and Law. Fees and usage rewards are defined in
 - **Task.** A point where a MIP hands work to a cMIP. Tasks exist only where the MIPs define them.
 - **Extension.** A cMIP an agreement names outside the listed tasks, for work nobody foresaw. An extension may add rules, never relax the core's.
 - **cMIP.** A community specification for one task: what it accepts and produces in core terms, the act types it defines, and the rules a verifier runs. Many cMIPs may compete for the same task.
-- **Module.** An implementation or extension under a MIP or cMIP: code, a verification rule, a media type, a signature scheme, a split plan template, a rail. *A unit is a specification of its own (kind 2, Finance: "Units are small specifications of their own"), not a Module.* Identified by its spec hash. *A Module is a specification: it signs nothing, holds nothing and is paid nothing by itself; the identities acting under it do (F112, F116).*
+- **Module.** An implementation or extension under a MIP or cMIP: code, a verification rule, the code that plays a media type, a split plan template, a rail. *A unit, a media type and a signature scheme are specifications of their own (kinds 2, 3 and 5; Finance: "Units are small specifications of their own"), not Modules; the code that plays a media type is a Module (QG5, F191).* Identified by its spec hash. *A Module is a specification: it signs nothing, holds nothing and is paid nothing by itself; the identities acting under it do (F112, F116).*
 - **Verification rule.** An executable program, part of a cMIP or Module, that anyone can run to check its outputs, such as a rail Module's check of a rail proof. The rule decides validity; the text explains it.
 - **Creator.** The identity that publishes a cMIP or Module and signs it as its own. MIPs have no creator: they are the protocol itself.
 - **Adoption.** A client's or user's opt-in to a specification, after which acts under it are no longer unknown to them.
@@ -134,7 +136,7 @@ The tasks the core defines:
 ### Earning
 
 16. **Fees are standing offers.** A creator who charges publishes fee terms as a standing offer (Law). A fee can only be charged where whoever bears it signed for it, and a split that omits a declared fee is visible (Law).
-17. **Usage is evidenced, not tracked, and always by a party** (F116). Receipts and splits name the specifications they ran under (Finance, Law). The evidence that a Module was used is signed by a party, never by the Module, which is a specification and signs nothing: for a rail Module, the receipt or the payer's claim naming it in field 0 (Finance); for a service someone runs on a Module, a use record signed by the identity running the service. *That record is the only evidence of use the core provides, and it is enough for role shares that pay "the modules the payment ran through" (Law).* A plain tip carries no module fees (Finance). *The use record's format is open (F140): to be defined with the split plan's format before freeze; until then no act counts as one.*
+17. **Usage is evidenced, not tracked, and always by a party** (F116). Receipts and splits name the specifications they ran under (Finance, Law). The evidence that a Module was used is signed by a party, never by the Module, which is a specification and signs nothing: for a rail Module, the receipt or the payer's claim naming it in field 0 (Finance); for a service someone runs on a Module, a use record signed by the identity running the service. **That record alone pays nothing** (F194, decided by Nobody, allegedly, 10 October 2026): a service the owners chose in advance is paid by a named share, with no evidence; a service the payer chose at payment time is paid by a role share only when the payer the payment commits to acknowledges its use record in its claim (Law rule 22, the relay's rule; F193); a service evidenced only by its own record is not paid. *The record is the role-filler's own signature, the self-evidence F184 closed for relays ("paying for usage invites faking usage"). Whether a client carries a user's choice of service into the payment is good practice for client developers, legible to those who look.* A plain tip carries no module fees (Finance). *The use record's format is open (F140): to be defined with the split plan's format before freeze; until then no act counts as one.*
 18. **Bounties.** A client or collective may offer a share of future splits to whoever builds a specification it needs. A bounty is an agreement like any other.
 
 ### Discovery and the trust root
@@ -188,7 +190,7 @@ The tasks the core defines:
 - An extension declaring the layers it acts on (field 10); a collective adopting and dropping it with the approval of each layer declared: 3, 8.
 - A rail Module's verification rule run by two different clients on the RV32IM profile, giving the same answer; a rule exceeding its budget, or making an environment call, answering unknown on both: 2, 8.
 - A split plan shown with its computed payouts before signing: 2.
-- A role share paid to the modules a payment ran through, evidenced by a party: the receipt or claim naming a rail Module, or a use record signed by the identity running a service (F116): 2.
+- A role share paid to the modules a payment ran through, evidenced by a party: the receipt or claim naming a rail Module, or a use record signed by the identity running a service and acknowledged by the payer the payment commits to; the use record alone pays nothing (F116, F194): 2.
 - A signature-scheme specification published; an identity rotates to it; a client without it shows the identity's later acts as unknown and the rotation as valid: 8.
 - A successor specification by a different creator shown with the creator mismatch: 8.
 - The six MIP hashes stable wherever published; a read-only client checks them against its build: 8.

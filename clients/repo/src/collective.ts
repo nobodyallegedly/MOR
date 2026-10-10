@@ -165,6 +165,8 @@ export interface CollectiveFile {
    * the service, the stake (its index), and the previous split it cites for the stake (Law rule 15a, F171).
    */
   splits?: { id: string; key: string; receipt: string; service?: string; stake?: number; previous?: string | null }[];
+  /** Kept by the collective client: the notices it sent to payers owed money back who gave no address (Law type 24, F197): the payment, the notice and its content key (base64), its payer, and the deadline on the test time reference. */
+  notices?: { payment: string; notice: string; key: string; to: string; deadline: number }[];
   /** Kept by the collective client: debts the collective signed, private, with their content keys (base64) (F124 N13). */
   debts?: { id: string; key: string; creditor: string }[];
   /** Kept by the collective client: its payee pointers, newest last. */

@@ -144,6 +144,8 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
             return actions.prepareStepDown({ collective: text(a.collective), member: text(a.member) });
           case 'contest':
             return actions.prepareContest({ collective: text(a.collective), declaration: text(a.declaration) });
+          case 'notice':
+            return actions.prepareNotice({ collective: text(a.collective), payment: text(a.payment), deadline: Number(a.deadline) });
           case 'declare':
             return actions.prepareDeclare({ collective: text(a.collective), member: text(a.member), signers: list(a.signers) });
           case 'words':

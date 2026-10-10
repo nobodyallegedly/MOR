@@ -144,6 +144,12 @@ app.addEventListener('click', async (ev) => {
       // The member a declaration names contests it: shown beside it, voiding nothing (Law rule 52, BQ4).
       await prepare({ kind: 'contest', collective: d.collective, declaration: d.declaration });
       break;
+    case 'notice': {
+      // Money owed back to a payer who gave no address: a notice with a deadline, before closing (F197).
+      const deadline = Number(prompt('The deadline, as a point on the test time reference (a whole number):', '1000') ?? '');
+      if (Number.isInteger(deadline) && deadline > 0) await prepare({ kind: 'notice', collective: d.collective, payment: d.payment, deadline });
+      break;
+    }
     case 'declare':
       // Absence, judged by the other members under the clause the member signed (Law rules 49, 53; B15).
       await prepare({ kind: 'declare', collective: d.collective, member: d.member });

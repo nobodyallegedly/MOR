@@ -2295,6 +2295,8 @@ A hostile review by Fable, which built none of it (`docs/reviews/f145-f162-revie
 
 **Next:** the nine readings of the F190 build, after Fable's review of it (running), since the review attacks the clean-settlement reading first; then one building session writes F191 in.
 
+**Written in and built, 10 October 2026** (`docs/f191-f199-build-2026-10-10.md`), after Fable's review and F192 to F199, as the order mended above asked: QG1 (Law rule 37d, the closing's new field 4; Finance rule 10a), QG2 (rule 37d; Finance rule 14), QG3 with F193 and F194 (rules 19, 22), QG4 with F192 (rule 45b, types 23 and 27's chain), QG5 (Production's Module, the core's table "Outside the core"), and the wording settled under the delegation (rule 37d's "the receipt's field 5 or the claim's field 4"; "the version of the fork it keeps"; DQ8's request restated, with its cost; the bindings refusing a repeated tip). Each change with a test that fails first. Questions QH3 (the object a relay's record names, and a purchase naming an offer) and QH5 (a bare key that never named a refund rail) left for Nobody, allegedly, in Law's "Open in this draft".
+
 ## Review of the F190 build (9 October 2026, night)
 
 Fable's review (`docs/reviews/f190-review-2026-10-09.md`, merged, with seven `review_f190_*` tests that pass while each attack works): the build does what F190 decided; QF4 held, field 26 as a list held, the judge cannot overturn the parties' clean settlement. Found: (1) **the judge of forks can unsettle a settled deal alone** by a second settlement, and the next plain version then picks the winner with no tip named (high); (2) **a party left alone on a dropped branch can tangle a settled deal by itself** ("nobody can unsettle a deal alone" is false in that shape; medium to high); (3) a complete version held back and published after a settlement tangles it, at the cost of an honest signer (the no-clock cost; medium); (4) **the split service writes the receipt's payer, so it chooses who acknowledges its own relay's delivery record** (medium to high), and (4b) on a purchase naming the offer, no delivery record ever counts; (4c) a prompt split pays no relay; (5) a stepping down never registered takes the area whenever it is registered; (6) smaller: a repayment to a disowned pointer (6a), "field 5" for a claim's field 4 in rule 37d (6b), a complete version naming an unheld tip kills the deal (6c), and wording; (8) **a service's use record is the relay's self-evidence one clause along** (F116; dormant while the record has no format).
@@ -2320,11 +2322,15 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 *How it went wrong, recorded by the project lead:* QF1 arrived from a build as a technical puzzle (a verifier cannot tell before from after), the cautious-sounding answer protected a version nobody could see against those who settled in plain view, its wording ("wherever it can be shown") hid that it narrowed A3, its reassurance ("nobody can unsettle a deal alone") was untested, the four questions were not asked of it, and it passed in a batch of six late on the ninth day.
 
+**Written in and built, 10 October 2026** (`docs/f191-f199-build-2026-10-10.md`): rule 45b rewritten common case first; "what a settlement could see" written exactly as its history (its own line, the tips it names, what it cites, each with its own history; a judge's settlement, the histories of the versions it names); a settlement counts only where it names every tip it saw; a settlement whose history holds another is after it and reopens nothing; only a version on the line in force changes the deal. Fable's `review_f190_1` and `review_f190_2` rewritten to pin the fix. Writing it in exposed QH1 (two settlements, a judge's among them, neither holding the other: the verifier refuses meanwhile) and QH2 (a branch the settlement never named, carrying a newcomer: dropped, as F192 says, against DQ5's reason), in Law's "Open in this draft".
+
 ## F193. Only the payer the payment commits to acknowledges a delivery (10 October 2026, morning)
 
 **From** Fable's review of the F190 build, finding 4: "the payer" whose claim acknowledges a relay's delivery record was read from the receipt, which the split service writes, so a service could name a puppet as payer, have it acknowledge its own relay's record, and take the relay share from the owners: the attack F184 was decided against, one step sideways. *Laid beside it:* F184 (the delivery record counts only acknowledged by the payer's claim); F131, IT3 ("the payment decides"); QG3 (F191).
 
 **Decided by Nobody, allegedly, 10 October 2026 ("Yes, the loss is minimal"):** **the payer whose claim may acknowledge a delivery record is the payer the payment's own commitment names** (payment cMIP: an identity, an anonymous payer's bare key, or nobody): a claim signed by that identity, or by that key; never the payer a receipt names. Where the commitment names nobody, no delivery record can be acknowledged, and the relay share is unfilled. *Suggested by the project lead, built from IT3.* **Stated cost:** a payer who stays wholly anonymous, committing no key, cannot reward a relay. Replaces the build's reading "the payer its receipt names" (Law rules 19, 22). The `review_f190_5_*` test is to be rewritten to pin the fix.
+
+**Written in and built, 10 October 2026** (`docs/f191-f199-build-2026-10-10.md`): the acknowledging claim is one whose rail proof carries the payment's commitment, its signer or bare key as payer; `review_f190_5` rewritten to pin the fix.
 
 ## F194. No service is paid on its own record alone (10 October 2026, morning)
 
@@ -2332,17 +2338,23 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Decided by Nobody, allegedly, 10 October 2026 ("Yes, then it is a question of good practice from clients devs"):** **a service chosen by the owners in advance is paid by a named share**, with no evidence; **a service chosen by the payer at payment time is paid by a role share only when the payer the payment commits to acknowledges its use record** (the relay's rule, F193); **a service evidenced only by its own record is not paid.** A service that worked unnamed is paid by whoever chose it: the owners (by naming it in a new version), the payer (through a client that carries the choice into the payment), or the relay or service that used it (by its own agreement with it). *Suggested by Fable and the project lead.* Whether a client carries a user's choices into the payment is good practice for client developers, the builders' choice, legible to those who look (F184: "pay the pipe if you wish to"). Replaces "the identity running a service for its use" as sufficient evidence (Law rule 22; Production rule 17's "it is enough for role shares").
 
+**Written in and built, 10 October 2026** (`docs/f191-f199-build-2026-10-10.md`): Law rules 19 and 22, Production rule 17; a referral's evidence counts the same way, named in the committed payer's claim (rule 22's "the payer's client for a referral").
+
 ## F195. A resignation is spent by coming back, registered or not (10 October 2026, morning)
 
 **From** Fable's review of the F190 build, finding 5: F189 (1) and QF6 spend a resignation or a stepping down only where a line registered it and the member came back after; one handed in and never registered can be registered years later, whatever the member signed since, and takes the voice or the area with no new signature of theirs. *Laid beside it:* F189 (1), B10, QF6.
 
 **Decided by Nobody, allegedly, 10 October 2026 ("Good"), after asking what "spent" means** (*the project lead's answer:* used up, like a punched ticket: still on the record and visible, but registering it changes nothing): **a resignation or a stepping down is spent by any later version its signer signed that names them again** (as a member, or as holder of the area), **whether or not it was ever registered**; once spent, no line registers it. *Suggested by the project lead, built from F189 (1).* *Cost:* none found; a member who means to leave signs a new resignation after the last version they signed. The `review_f190_6_*` test is to be rewritten to pin the fix.
 
+**Written in and built, 10 October 2026** (`docs/f191-f199-build-2026-10-10.md`): `review_f190_6` rewritten to pin the fix. Writing it in exposed QH4: read literally, the version a line puts in force while registering a member's resignation, which the member signed before leaving (C2; F187, 6), would spend the very resignation it registers; built so that version never brings its signer back, for Nobody, allegedly, to confirm.
+
 ## F196. A settlement naming a version nobody holds is read as a plain version (10 October 2026, morning)
 
 **From** Fable's review of the F190 build, finding 6c: a complete settling version whose field 26 names a hash nobody holds made every reading of the deal fail for good, with no later version able to mend it. *Laid beside it:* F189 (2) (no draft or stranger's act makes a deal unreadable); F188's reading (a settling version naming a version the verifier does not hold waits until it holds it).
 
 **Decided by Nobody, allegedly, 10 October 2026 ("Approved"):** **a settling version naming a dropped version the verifier does not hold is read as a plain version, not a settlement, until that version is held**; the deal stays readable, forked or on its reference as before, and the parties may sign a correct settlement. Once the named version is held, the settlement counts from then, as F188 reads it. *Suggested by the project lead, built from F189 (2).* The `review_f190_7_*` test is to be rewritten to pin the fix.
+
+**Written in and built, 10 October 2026** (`docs/f191-f199-build-2026-10-10.md`): `review_f190_7` rewritten to pin the fix.
 
 ## F197. Money owed back to a payer who gave no address: a notice first, a holder if chosen (10 October 2026, morning)
 
@@ -2354,17 +2366,23 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 *Suggested by the project lead (the notice), with Nobody, allegedly (the holder as a legible option).* A payer who committed only a one-time key cannot be reached by a notice; QG1 applies to them as decided.
 
+**Written in and built, 10 October 2026** (`docs/f191-f199-build-2026-10-10.md`): the notice (Law type 24), sealed to the payer and to every member (rule 35a), with a deadline on a time reference whose passing the verifier states; the closing's field 4 naming each payment it leaves open, its notice, and a holder where one is chosen; the collective client sends a notice and names what it leaves open. QH5 (a payer who committed only a one-time key) left for Nobody, allegedly.
+
 ## F198. A payee pointer left outside a fork still counts for payments already made to it (10 October 2026, morning)
 
 **From** FH1 (`docs/fork-hands-out-2026-10-09.md`): a fork drawn on purpose on an old line holds a buyer's payment and the collective's act taking it on, but not the payee pointer the receipt relied on; the pointer counting for nothing (rule 47a), the receipt stopped counting (Finance rule 12a) and the purchase vanished, though the buyer was safe under IT2a. *Laid beside it:* IT2a and IT2b (F131); F181 ("as the chain stood"); repair, not undo (F185).
 
 **Decided by Nobody, allegedly, 10 October 2026 ("Feels like the only option, agreed"):** **a payee pointer left outside a fork's history still counts for payments already made to it**, as the chain stood for each payment (F181); for anything after the fork it counts for nothing (rule 47a). *Suggested by the project lead.* *Why:* a stated cost (option 1) would let members erase, by an old-line fork, sales they had visibly taken on, against IT2a; failing the fork (option 3) would let one payment block an ending, the trap F191 and F197 closed for closings. The FORK-HANDS-OUT test at seed `7145587436215071231` is to pass once built.
 
+**Written in and built, 10 October 2026** (`docs/f191-f199-build-2026-10-10.md`): the seed `7145587436215071231` passes at 5,000 cases. On the way it found the same promise broken one step over (the pointer inside the fork's history, the act that took it on outside): built as F198 read "as the chain stood without the ending", question QH6 to confirm.
+
 ## F199. A fork's effect is judged by its own history only (10 October 2026, morning)
 
 **From** FH2 (`docs/fork-hands-out-2026-10-09.md`): a fork that leaves out a binding debt does not take effect; a departure registered afterwards, by a record that never saw the debt, made the debt count as made after it, so the fork became complete; then IC8 voided that record, and the debt bound again: the fork complete, the debt binding, no successor owing it. *Laid beside it:* the fork's own reading, "whether a fork took effect never changes with what happens after it" (to confirm); IC8; F192.
 
 **Decided by Nobody, allegedly, 10 October 2026 ("1 is agreed"):** **whether a fork took effect is judged only by what its own history holds: the departures registered before its line count for its check of the debts it must hand out; a departure registered after it never changes it.** The fork's reading is confirmed. In the story, the fork stays incomplete, and the members sign a new one that hands the debt out. *Suggested by the project lead*, following F192: what was decided is judged by what its signers could see. The library is to be fixed; the FORK-HANDS-OUT test at seed `7020607380199548456` is to pass once built.
+
+**Written in and built, 10 October 2026** (`docs/f191-f199-build-2026-10-10.md`): the seed `7020607380199548456` passes at 5,000 cases; a closing's check of its debts reads its own departures the same way, as F143 already says (a reading to confirm).
 
 ## How the documents are to be written: the common case first (10 October 2026, morning)
 

@@ -1528,10 +1528,23 @@ struct SpecsIn {
     absence_accepted: Vec<(String, String)>,
     /// The specifications the client read as the relay transport cMIP,
     /// draft 3 or later, whose act type 0 is a relay's delivery record
-    /// (F184): it counts as evidence for a role share only where the
-    /// payer's claim acknowledges it (Law rules 19, 22).
+    /// (F184): where listed, the object the record names is checked against
+    /// the payment's. Any act offered as evidence for a role share counts
+    /// only where the payer the payment commits to acknowledges it,
+    /// whether listed or not (Law rules 19, 22; QG3, F193, F194).
     #[serde(default)]
     delivery_records: Vec<String>,
+    /// The chain of judgment for a deal's judge of forks (Law rule 34a;
+    /// QG4): pairs `[settlement request, judge]` whose period to act on
+    /// that request has passed on the deal's time reference with no
+    /// settlement of theirs, as the client read that time reference.
+    #[serde(default)]
+    judges_lapsed: Vec<(String, String)>,
+    /// Notices to a payer owed money back (Law type 24; F197) whose
+    /// deadline has passed on their time reference with no address given,
+    /// as the client read that time reference.
+    #[serde(default)]
+    notices_lapsed: Vec<String>,
 }
 
 impl SpecsIn {
@@ -1571,6 +1584,12 @@ impl SpecsIn {
         }
         for r in &self.delivery_records {
             view.delivery_records.insert(unhex(r)?);
+        }
+        for (r, j) in &self.judges_lapsed {
+            view.judges_lapsed.insert((unhex(r)?, unhex(j)?));
+        }
+        for n in &self.notices_lapsed {
+            view.notices_lapsed.insert(unhex(n)?);
         }
         Ok(view)
     }
@@ -2080,16 +2099,35 @@ pub fn settlement_request_payload(reference: &str) -> R<Vec<u8>> {
 }
 
 /// A fork settlement payload (Law type 23; DQ8, F188): the settlement of
-/// the judge of forks the reference names (terms field 27, QF2), naming the
-/// request that activated it, the tip of the branch kept and every tip
-/// discarded (QF3, F190), sorted here. The act carries, in `objects`,
-/// `[request, request]`.
+/// the judge of forks the reference names (terms field 27, QF2), or of the
+/// link of its chain of judgment that took over (QG4), naming the request
+/// that activated it, the version of the fork it keeps and every tip it
+/// drops (QF3, F190), sorted here. A tip given twice is refused, as the
+/// core refuses it. The act carries, in `objects`, `[request, request]`.
 #[wasm_bindgen(js_name = forkSettlementPayload)]
 pub fn fork_settlement_payload(request: &str, kept: &str, discarded: Vec<String>) -> R<Vec<u8>> {
     let mut d = discarded.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
     d.sort();
-    d.dedup();
-    Ok(cbor::encode(&Value::Map(law::ForkSettlement { request: unhex(request)?, kept: unhex(kept)?, discarded: d }.to_map())))
+    if d.windows(2).any(|w| w[0] == w[1]) {
+        return Err(err("a tip dropped is named once (Law type 23, field 2; QF3)"));
+    }
+    let x = law::ForkSettlement { request: unhex(request)?, kept: unhex(kept)?, discarded: d };
+    if x.discarded.contains(&x.kept) {
+        return Err(err("the version kept is not among the tips dropped (Law type 23)"));
+    }
+    Ok(cbor::encode(&Value::Map(x.to_map())))
+}
+
+/// A notice payload (Law type 24; F197): before closing, the collective's
+/// notice to a payer owed money back who gave no address, naming the
+/// payment (one receipt or claim of it) and a deadline on a time reference
+/// (its hash, and the point on it, as an unsigned integer). The act is
+/// sealed to the payer's identity, and carries, in `objects`, `[payment,
+/// payment]`.
+#[wasm_bindgen(js_name = noticePayload)]
+pub fn notice_payload(payment: &str, time_reference: &str, deadline: u64) -> R<Vec<u8>> {
+    let n = law::Notice { payment: unhex(payment)?, deadline: (unhex(time_reference)?, Value::Uint(deadline)) };
+    Ok(cbor::encode(&Value::Map(n.to_map())))
 }
 
 /// A contest payload (Law type 14; BQ4, F188): the declaration of absence
@@ -2729,6 +2767,12 @@ impl Verifier {
                     finance::RefundTo::Key(_) => Some("the key the payment committed to".into()),
                     finance::RefundTo::Nobody => None,
                 },
+                to_kind: match &o.to {
+                    finance::RefundTo::Identity(_) => "identity",
+                    finance::RefundTo::Key(_) => "key",
+                    finance::RefundTo::Nobody => "nobody",
+                }
+                .into(),
                 unit: hx(&o.amount.unit),
                 value: o.amount.value,
                 still_broken: o.still_broken,
@@ -2741,11 +2785,13 @@ impl Verifier {
     /// tangled }`, each branch its versions from the split to its latest,
     /// `tangled` the reason where the fork is tangled (F188, DQ1 to DQ4: the
     /// deal stays on its reference); null where it is not forked. Throws
-    /// where the shape is not decided (QF1, refused rather than guessed).
+    /// where the shape is not decided (QH1, refused rather than guessed).
     /// The version of an agreement in force, as rule 45b reads a deal's
-    /// forks (F186, F188): while forked or tangled, the reference. Throws
-    /// where the shape is not decided (QF1). What a buyer's client checks
-    /// an offer against before paying (F188, a strong SHOULD).
+    /// forks (F186, F188, F192): while forked or tangled, the reference.
+    /// Throws where the shape is not decided (QH1: two settlements, a
+    /// judge's among them, neither holding the other). What a buyer's
+    /// client checks an offer against before paying (F188, a strong
+    /// SHOULD).
     #[wasm_bindgen(js_name = lawVersionInForce)]
     pub fn law_version_in_force(&self, specs: JsValue, agreement: &str) -> R<String> {
         let s = specs_of(specs)?;
@@ -2920,6 +2966,7 @@ impl Verifier {
             signed: e.signed.iter().map(hx).collect(),
             holds: e.holds.iter().map(|(a, i)| (hx(a), *i)).collect(),
             open_debts: e.open_debts.iter().map(hx).collect(),
+            left_open: e.closing.open.iter().map(|o| (hx(&o.payment), o.notice.as_ref().map(hx), o.holder.as_ref().map(hx))).collect(),
         })
     }
 
@@ -3266,6 +3313,9 @@ struct ClosingOut {
     signed: Vec<String>,
     holds: Vec<(String, u64)>,
     open_debts: Vec<String>,
+    /// The money owed back it names as left open (field 4; QG1, F197):
+    /// `[payment, notice or null, holder or null]`.
+    left_open: Vec<(String, Option<String>, Option<String>)>,
 }
 
 #[derive(Serialize)]
@@ -3298,6 +3348,10 @@ struct RollbackRegistersOut {
 struct OwedBackOut {
     payment: String,
     to: Option<String>,
+    /// Who it is owed to: "identity", "key" (an anonymous payer's bare
+    /// key, Finance rule 10a) or "nobody" (no key committed: it does not
+    /// block a closing that names it, QG1).
+    to_kind: String,
     unit: String,
     value: u64,
     still_broken: bool,
