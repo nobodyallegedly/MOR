@@ -66,6 +66,8 @@ export async function preparePage(
   // fills with its own player, outside the page; nothing of it is fetched
   // until the visitor asks to play it. Its other attributes (autoplay, loop,
   // muted, sources, tracks) are not the page's to set. Any other `video` goes.
+  // Only the places made here carry `data-film`: one a page wrote itself goes.
+  for (const el of [...doc.querySelectorAll('[data-film]')]) el.removeAttribute('data-film');
   for (const video of [...doc.querySelectorAll('video')]) {
     const p = resolveRef(path, video.getAttribute('src') ?? '');
     const entry = p ? byPath.get(p) : undefined;

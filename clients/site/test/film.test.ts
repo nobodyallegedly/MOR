@@ -42,6 +42,7 @@ const TRIES = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title
 <video id="picture" src="film-poster.jpg"></video>
 <audio src="film.mp4" autoplay></audio>
 <video id="own" src="film.mp4" poster="https://example.org/poster.jpg"></video>
+<div class="mor-film" data-film="0" id="forged">A place the page made itself</div>
 </body></html>`;
 
 let w: World;
@@ -243,7 +244,7 @@ test('a page cannot load a film from elsewhere, through sources, as sound, or st
   const f = await pageFrame(page);
   assert.equal(await f.locator('video, audio, source').count(), 0);
   // Only the film named by its own `src` gets a place; its poster from elsewhere is dropped, not fetched.
-  assert.deepEqual(await f.$$eval('.mor-film', (els) => els.map((e) => e.id)), ['own']);
+  assert.deepEqual(await f.$$eval('.mor-film[data-film]', (els) => els.map((e) => e.id)), ['own'], 'a place the page made itself gets no player');
   assert.equal(await page.locator('.mor-player').count(), 1);
   assert.equal(await page.locator('.mor-player img').count(), 0, 'no poster from elsewhere');
   assert.deepEqual(elsewhere, [], 'nothing asked of anyone else');
