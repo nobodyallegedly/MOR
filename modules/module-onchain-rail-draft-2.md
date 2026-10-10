@@ -114,7 +114,7 @@ Given the commitment hash, the amount, the address or source the payee signed, t
 
 ## The Bitcoin clock (F201, F202)
 
-*Where an owner's declared clock is Bitcoin, an on-chain payment needs no claim act to be anchored: its proof is its anchor.* Under the anchoring cMIP, the **Bitcoin clock Module** (`modules/module-bitcoin-clock-draft-1.md`) reads a proof of this Module as the anchor of the receipt or claim whose commitment the transaction pays, its point the height of the payment's block on the chain followed, where this rule answers valid on that chain: at the same depth, one number for both (F205). Finance rule 15 then compares "the payment's block before or at the lock change's block" (F201). This Module declares that the Bitcoin clock reads its proofs (in code `clock::reads`; *format open, F140 item 1, as for the rail's kind*).
+*Where an owner's declared clock is Bitcoin, an on-chain payment needs no claim act to be anchored: its proof is its anchor.* Under the anchoring cMIP, the **Bitcoin clock Module** (`modules/module-bitcoin-clock-draft-2.md`) reads a proof of this Module as the anchor of the receipt or claim whose commitment the transaction pays, its point the height of the payment's block on the chain followed, where this rule answers valid on that chain: at the same depth, one number for both (F205). Finance rule 15 then compares "the payment's block before or at the lock change's block" (F201). This Module declares that the Bitcoin clock reads its proofs (in code `clock::reads`; *format open, F140 item 1, as for the rail's kind*).
 
 ## What a verifier ties together (pattern 1)
 

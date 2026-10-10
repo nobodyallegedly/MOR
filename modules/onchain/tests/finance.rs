@@ -593,3 +593,94 @@ fn on_the_bitcoin_clock_the_payments_block_is_its_anchor() {
     let c1 = Claim { proof: Proof { paid_to: to_thief, salt: p1.salt, rail: proof1.encode() }.encode(), ..c1 };
     assert!(BitcoinClock { chain: &offchain }.payment_anchor(&valid1, &Record::Claim(&c1, t.label.id, &Citations::default()), &held).is_none(), "not on the chain the verifier follows");
 }
+
+/// The anchoring service, step 14a, as a test makes it: `act`'s leaf (with
+/// its blind) among others in a batch, the root committed by pay-to-contract
+/// to the service's key in a transaction mined on the tip of `chain` with
+/// `n` headers: the act's batch anchor on the Bitcoin clock.
+fn batch_anchor_of(chain: &mut HeaderChain, act: &Hash, n: usize) -> Vec<u8> {
+    use mor_anchoring::tree::{self, Batch};
+    use mor_onchain::clock::BatchAnchor;
+    let blind = h("the owner's blind for its lock change's receipt");
+    let leaves = vec![h("another payer's leaf"), tree::leaf(act, &blind), h("a third leaf")];
+    let batch = Batch::new(leaves).unwrap();
+    let key = support::xonly(&support::secret("the anchoring service's key"));
+    let out = mor_onchain::tx::taproot_script(&mor_onchain::p2c::pay_to_contract(&key, None, &batch.root()).unwrap());
+    let t = bytes(&tx("the pool's coins", &[(out, 330)]));
+    let txids = [h("a coinbase"), support::txid(&t)];
+    let headers = mine_on(chain, &txids, n);
+    BatchAnchor { blind, index: 1, count: 3, branch: batch.branch(1).unwrap(), key, tree: None, tx: t, output: 0, block: Some(Block { index: 1, branch: block::merkle_branch(&txids, 1).unwrap(), headers }) }.encode()
+}
+
+/// Step 14a makes rule 15 work on the Bitcoin clock (F177, F180, F201;
+/// reading 4 of F220): the lock change's point is its home receipt's batch
+/// anchor, checked by the Bitcoin clock Module through the core's anchoring
+/// interface, with no anchor stated by hand. A royalty mined before the
+/// batch's block counts; one mined after it does not. And the cost of what
+/// selective delay leaves (review section 9, item 3): a service that holds
+/// the receipt back for its tier's two blocks moves the point two blocks
+/// later, and a payment to the thief mined in between counts against the
+/// owner.
+#[test]
+fn on_the_bitcoin_clock_a_lock_changes_point_is_its_home_receipts_batch_anchor() {
+    use mor_onchain::clock::{self, BitcoinClock};
+    let reference = clock::reference(Network::Regtest);
+    for delay in [0usize, 2] {
+        let mut t = theft(Clockwork::new("unused"), reference.clone());
+        t.s.rail_clocks.insert(clock::reads());
+        let aid = t.ana.id;
+        let to_thief = PaidTo::Flow { pointer: t.v2, rail: 0 };
+        let d1 = t.s.debt(&mut t.label, t.deal, 20_000, t.v2);
+        let d2 = t.s.debt(&mut t.label, t.deal, 20_000, t.v2);
+        let p1 = OnchainPayment::new(aid, t.label.id, d1, to_thief, &t.thief_keys, sat(20_000), "the label's coins, 1");
+        let p2 = OnchainPayment::new(aid, t.label.id, d2, to_thief, &t.thief_keys, sat(20_000), "the label's coins, 2");
+        // Ana changes her locks and pays for her home's receipt to be
+        // anchored at the urgent tier. The first royalty is mined in the
+        // next block; the service anchors the receipt after `delay` more.
+        let (rot, receipt) = t.lock_change();
+        let proof1 = p1.mined_in(&mut t.s.chain, 1);
+        let block1 = proof1.height_on(&t.s.chain).unwrap();
+        let proof2 = if delay > 0 { Some(p2.mined_in(&mut t.s.chain, 1)) } else { None };
+        support::grow(&mut t.s.chain, delay.saturating_sub(1));
+        let anchor = batch_anchor_of(&mut t.s.chain, &receipt, N);
+        let point = t.s.chain.tip() - N as u64 + 1;
+        assert!(t.s.anchors.add_proof(&BitcoinClock { chain: &t.s.chain }, &reference, &receipt, &anchor), "the batch anchor passes the Bitcoin clock Module's check");
+        assert_eq!(t.s.anchors.earliest(&receipt, &reference), Some(point));
+        let q = t.s.w.v.quorum(&aid, &rot).unwrap();
+        assert_eq!(fin::quorum_point(&q, &rot, &t.s.anchors, &reference), Some(point), "the point is the batch's block");
+        // Without a delay, the second royalty is mined after the point.
+        let proof2 = proof2.unwrap_or_else(|| {
+            support::grow(&mut t.s.chain, 1);
+            p2.mined_in(&mut t.s.chain, 1)
+        });
+        let block2 = proof2.height_on(&t.s.chain).unwrap();
+        support::grow(&mut t.s.chain, N);
+        let bitcoin_chain = t.s.chain.clone();
+        let deep = |p: &OnchainProof, at: u64| {
+            let mut p = p.clone();
+            let hs = &mut p.paid.as_mut().unwrap().block.as_mut().unwrap().headers;
+            for k in 1..N as u64 {
+                hs.push(bitcoin_chain.header_at(at + k).unwrap());
+            }
+            p
+        };
+        for (debt, p, salt, at) in [(d1, &proof1, p1.salt, block1), (d2, &proof2, p2.salt, block2)] {
+            let full = deep(p, at);
+            let (id, a) = t.s.claim(&mut t.label, debt, to_thief, salt, sat(20_000), &full);
+            assert_eq!(a, Answer::Valid);
+            let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: full.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+            let held = LawHeld { view: t.s.view() };
+            let pa = BitcoinClock { chain: &bitcoin_chain }.payment_anchor(&id, &Record::Claim(&c, t.label.id, &Citations::default()), &held).unwrap();
+            t.s.anchors.add(&pa);
+        }
+        assert!(block1 <= point);
+        assert_eq!(t.s.view().paid_toward(&d1), 20_000, "mined before the batch's block: it counts");
+        if delay == 0 {
+            assert!(block2 > point);
+            assert_eq!(t.s.view().paid_toward(&d2), 0, "mined after the batch's block: it does not");
+        } else {
+            assert!(block2 <= point);
+            assert_eq!(t.s.view().paid_toward(&d2), 20_000, "held back {delay} blocks, the receipt's point lets a payment to the thief count: the stated cost of selective delay within a tier");
+        }
+    }
+}
