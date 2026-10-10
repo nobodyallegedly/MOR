@@ -8230,6 +8230,21 @@ impl<'a> LawView<'a> {
         Ok(out)
     }
 
+    /// What has been paid back toward a refund owed on a payment
+    /// (`payment`, any receipt or claim of it) to `to`, in `unit`: repaid
+    /// like any debt, by a payment naming what it repays, proven by either
+    /// side's record with the rail's proof (QF5, QG1, QG2; Money rules 10a
+    /// and 14). For a refund owed outside this view's own judgments, such
+    /// as a pooled anchoring service's under its standing offer's terms
+    /// (F225, decided 10 October 2026: Agreements say what is owed, Money
+    /// carries its payment): the caller judges what is owed; this says what
+    /// Money shows repaid.
+    pub fn refund_repaid(&self, payment: &Hash, to: &crate::finance::RefundTo, unit: &Hash) -> u64 {
+        let mut names = vec![*payment];
+        names.extend(self.same_payment(payment).into_iter().map(|(x, _)| x));
+        self.repaid(&names, to, unit)
+    }
+
     /// Whether a refund owed on a payment (`names`, its receipts and
     /// claims) is ended (F219, decided 10 October 2026): the terms the
     /// buyer accepted by paying carry refund terms (the version of the

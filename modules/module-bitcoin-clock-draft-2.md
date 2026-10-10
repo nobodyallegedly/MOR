@@ -1,6 +1,6 @@
 # Module: Bitcoin clock
 
-*Draft 2, 10 October 2026 (roadmap step 14a; `docs/anchoring-step-14a.md`). Draft 1 (findings F201, F202, F204 and F205) is kept unchanged except where draft 2 adds the batch anchor, its rule, and the costs it brings. **EXPERIMENTAL. Not approved, not a product, not for real money.** A clock Module under the anchoring cMIP draft 2 (`cmips/cmip-anchoring-draft-2.md`), which its field 5 names. Its hash stays a draft hash until its creator is named at step 17. Not core: frozen at publication, competing with any other Bitcoin clock Module.*
+*Draft 2, 10 October 2026 (roadmap step 14a; `docs/anchoring-step-14a.md`). Draft 1 (findings F201, F202, F204 and F205) is kept unchanged except where draft 2 adds the batch anchor, its rule, and the costs it brings. **EXPERIMENTAL. Not approved, not a product, not for real money.** A clock Module under the anchoring cMIP draft 2 (`cmips/cmip-anchoring-draft-2.md`), which its field 5 names. *Revised in place, 10 October 2026 (night, step 14a's second pass, `docs/anchoring-second-pass.md`): one stated cost now points to F228 and the anchoring cMIP draft 3; no rule changed.* Its hash stays a draft hash until its creator is named at step 17. Not core: frozen at publication, competing with any other Bitcoin clock Module.*
 
 *Reading this document: normal text is the specification. Italic text is commentary. Choices the build made under the delegation of 10 October 2026 are marked **(mechanic, the build's)**.*
 
@@ -47,8 +47,8 @@
 - **Headers kept, or a header service trusted** (F204): about 75 MB of Bitcoin headers in 2026, about 4 MB more a year; a client relying on a header service trusts it, and MUST say so (client conformance).
 - **A rewrite deeper than six blocks** (F205) leaves an anchor pointing at a block no longer on the chain; nothing reopens. *It has happened twice on Bitcoin, from software faults (August 2010, about 53 blocks; March 2013, about 24 blocks); an attack needs a majority of the hash rate.*
 - **Points are coarse**: a block every ten minutes on average, and two anchors in one block are at the same point; "before or at" counts the lock change's own block for the payer.
-- **A lock change's point on this clock** is its home receipts' anchors here: through the pooled service, at the service's pace within its tier (the anchoring cMIP, item 15), or by the owner's own transaction.
-- **A batch anchor costs a transaction** and at least a dust output (330 satoshis for a Taproot output under Bitcoin's relay rules), whatever the batch's size; the anchoring cMIP's pooled service shares it. Who pays when a batch costs more than its pool collected is open (`docs/anchoring-step-14a.md`, Q1).
+- **A lock change's point on this clock** is its home receipts' anchors here: through the pooled service, at the service's pace within its tier (the anchoring cMIP, item 15), or by the owner's own transaction. Its owner's client SHOULD anchor them through two independent services, or by its own transaction (Money rule 15's client conformance, F226): the earliest counts.
+- **A batch anchor costs a transaction** and at least a dust output (330 satoshis for a Taproot output under Bitcoin's relay rules), whatever the batch's size; the anchoring cMIP's pooled service shares it. Who bears a batch costing more than its tickets brought is the service, under its own terms (F228; anchoring cMIP draft 3, item 13a).
 - **A key-path spend of a batch output reveals nothing**; a script-path spend, where a `tree` is given, publishes the key and the batch root, as on the rail (review section 8, behaviour 2).
 
 ## Reference implementation

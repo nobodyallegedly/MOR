@@ -599,14 +599,20 @@ fn on_the_bitcoin_clock_the_payments_block_is_its_anchor() {
 /// to the service's key in a transaction mined on the tip of `chain` with
 /// `n` headers: the act's batch anchor on the Bitcoin clock.
 fn batch_anchor_of(chain: &mut HeaderChain, act: &Hash, n: usize) -> Vec<u8> {
+    batch_anchor_by(chain, act, n, "the anchoring service")
+}
+
+/// As [`batch_anchor_of`], by the service named `service`: its own key,
+/// its own batch, its own pool's coins.
+fn batch_anchor_by(chain: &mut HeaderChain, act: &Hash, n: usize, service: &str) -> Vec<u8> {
     use mor_anchoring::tree::{self, Batch};
     use mor_onchain::clock::BatchAnchor;
-    let blind = h("the owner's blind for its lock change's receipt");
-    let leaves = vec![h("another payer's leaf"), tree::leaf(act, &blind), h("a third leaf")];
+    let blind = h(&if service == "the anchoring service" { "the owner's blind for its lock change's receipt".to_string() } else { format!("the owner's blind for its lock change's receipt, at {service}") });
+    let leaves = vec![h(&if service == "the anchoring service" { "another payer's leaf".to_string() } else { format!("another payer's leaf at {service}") }), tree::leaf(act, &blind), h("a third leaf")];
     let batch = Batch::new(leaves).unwrap();
-    let key = support::xonly(&support::secret("the anchoring service's key"));
+    let key = support::xonly(&support::secret(&if service == "the anchoring service" { "the anchoring service's key".to_string() } else { format!("{service}'s key") }));
     let out = mor_onchain::tx::taproot_script(&mor_onchain::p2c::pay_to_contract(&key, None, &batch.root()).unwrap());
-    let t = bytes(&tx("the pool's coins", &[(out, 330)]));
+    let t = bytes(&tx(&if service == "the anchoring service" { "the pool's coins".to_string() } else { format!("{service}'s pool's coins") }, &[(out, 330)]));
     let txids = [h("a coinbase"), support::txid(&t)];
     let headers = mine_on(chain, &txids, n);
     BatchAnchor { blind, index: 1, count: 3, branch: batch.branch(1).unwrap(), key, tree: None, tx: t, output: 0, block: Some(Block { index: 1, branch: block::merkle_branch(&txids, 1).unwrap(), headers }) }.encode()
@@ -683,4 +689,68 @@ fn on_the_bitcoin_clock_a_lock_changes_point_is_its_home_receipts_batch_anchor()
             assert_eq!(t.s.view().paid_toward(&d2), 20_000, "held back {delay} blocks, the receipt's point lets a payment to the thief count: the stated cost of selective delay within a tier");
         }
     }
+}
+
+/// F226 (decided by Nobody, allegedly, 10 October 2026, "Agreed"; Money
+/// rule 15's client conformance, a SHOULD beside F181's MUST): after a lock
+/// change, the owner's client anchors the quorum's home receipts through
+/// two independent anchoring services, or by its own transaction, at an
+/// urgent tier; the earliest anchor counts (F178). One service holds Ana's
+/// receipt back two blocks, as in the test above, while a second anchors it
+/// at once: the point is the second's block, and the royalty to the thief
+/// mined in between no longer counts against Ana. The delay one service
+/// could impose is closed by the other.
+#[test]
+fn f226_the_earliest_of_two_services_anchors_closes_one_services_delay() {
+    use mor_onchain::clock::{self, BitcoinClock};
+    let reference = clock::reference(Network::Regtest);
+    let mut t = theft(Clockwork::new("unused"), reference.clone());
+    t.s.rail_clocks.insert(clock::reads());
+    let aid = t.ana.id;
+    let to_thief = PaidTo::Flow { pointer: t.v2, rail: 0 };
+    let d1 = t.s.debt(&mut t.label, t.deal, 20_000, t.v2);
+    let d2 = t.s.debt(&mut t.label, t.deal, 20_000, t.v2);
+    let p1 = OnchainPayment::new(aid, t.label.id, d1, to_thief, &t.thief_keys, sat(20_000), "the label's coins, 1");
+    let p2 = OnchainPayment::new(aid, t.label.id, d2, to_thief, &t.thief_keys, sat(20_000), "the label's coins, 2");
+    let (rot, receipt) = t.lock_change();
+    let proof1 = p1.mined_in(&mut t.s.chain, 1);
+    let block1 = proof1.height_on(&t.s.chain).unwrap();
+    // The second service anchors the receipt in the next block.
+    let prompt = batch_anchor_by(&mut t.s.chain, &receipt, N, "a second, independent anchoring service");
+    let prompt_point = t.s.chain.tip() - N as u64 + 1;
+    // The thief's royalty is mined; then the first service, two blocks
+    // late on its tier, anchors the same receipt.
+    let proof2 = p2.mined_in(&mut t.s.chain, 1);
+    let block2 = proof2.height_on(&t.s.chain).unwrap();
+    let late = batch_anchor_of(&mut t.s.chain, &receipt, N);
+    let late_point = t.s.chain.tip() - N as u64 + 1;
+    assert!(block1 <= prompt_point && prompt_point < block2 && block2 < late_point);
+    let bitcoin = BitcoinClock { chain: &t.s.chain };
+    assert!(t.s.anchors.add_proof(&bitcoin, &reference, &receipt, &late), "the late service's anchor passes the clock's check");
+    let q = t.s.w.v.quorum(&aid, &rot).unwrap();
+    assert_eq!(fin::quorum_point(&q, &rot, &t.s.anchors, &reference), Some(late_point), "through one service alone, the point is its late block");
+    assert!(t.s.anchors.add_proof(&bitcoin, &reference, &receipt, &prompt), "the second service's anchor too");
+    assert_eq!(t.s.anchors.earliest(&receipt, &reference), Some(prompt_point));
+    assert_eq!(fin::quorum_point(&q, &rot, &t.s.anchors, &reference), Some(prompt_point), "the earliest anchor counts (F178)");
+    support::grow(&mut t.s.chain, N);
+    let bitcoin_chain = t.s.chain.clone();
+    let deep = |p: &OnchainProof, at: u64| {
+        let mut p = p.clone();
+        let hs = &mut p.paid.as_mut().unwrap().block.as_mut().unwrap().headers;
+        for k in 1..N as u64 {
+            hs.push(bitcoin_chain.header_at(at + k).unwrap());
+        }
+        p
+    };
+    for (debt, p, salt, at) in [(d1, &proof1, p1.salt, block1), (d2, &proof2, p2.salt, block2)] {
+        let full = deep(p, at);
+        let (id, a) = t.s.claim(&mut t.label, debt, to_thief, salt, sat(20_000), &full);
+        assert_eq!(a, Answer::Valid);
+        let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: full.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+        let held = LawHeld { view: t.s.view() };
+        let pa = BitcoinClock { chain: &bitcoin_chain }.payment_anchor(&id, &Record::Claim(&c, t.label.id, &Citations::default()), &held).unwrap();
+        t.s.anchors.add(&pa);
+    }
+    assert_eq!(t.s.view().paid_toward(&d1), 20_000, "mined before both anchors: it counts");
+    assert_eq!(t.s.view().paid_toward(&d2), 0, "mined after the earliest anchor: the first service's delay no longer lets it count");
 }
