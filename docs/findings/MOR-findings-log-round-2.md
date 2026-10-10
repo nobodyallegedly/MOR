@@ -2698,6 +2698,8 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Added by Nobody, allegedly, the same night:** "it's a fingerprint for the announcement, since it will have its own chain it has a genesis." An announcement has its own chain: its first act is its genesis, whose id is its name for good; later versions (a new date, a changed description) are signed again on that chain, each naming the first, as offers' and agreements' versions do. *The project lead's note:* the id is the announcement's fingerprint, never a work hash.
 
+**Its reason, in his words:** "By keeping the grammar lean, the same tools can be used for concerts, sports events, live streams, gigs,… the cMIPs used by the sub fork will decide."
+
 ## F236. When two judges in the chain each settle a fork, the earlier in the chain prevails (QK1, 10 October 2026, night)
 
 **From** `docs/deals-owning-build.md`, QK1: the chain of judgment turns per request, so where the first judge let its period pass on one party's request but answered another's, the first and the next judge can each settle the same fork, neither holding the other; as built, the verifier refuses to name a version in force. *Laid beside it:* QG4 ("If a fork ends up being disputed it needs to follow the chain described in the agreement"); F206 (a judge that contradicts itself has spoken for nothing; the chain moves on). *Options put:* both void (deadlock a party could engineer); the earlier prevails; the later prevails (rewarding a request left to lapse).
