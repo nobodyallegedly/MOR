@@ -27,6 +27,7 @@ import {
   record,
   releasePayload,
   resign,
+  signedBy,
   sign as lawSign,
   splitPayload,
   type MarkEntry,
@@ -1282,6 +1283,35 @@ export class Actions {
   }
 
   /**
+   * The drafts `member` signed and leaves behind (F207): every version of
+   * this collective's agreement they signed by a signature act its relays
+   * hold, other than `named` and the versions this device has seen in
+   * force, sorted. The core finds each one's collective by its lineage.
+   */
+  private async draftsLeft(c: TestCollective, law: LawOf, member: string, named: string): Promise<string[]> {
+    const hints = this.hintsOf(c);
+    const out: string[] = [];
+    for (const x of await signedBy(member, hints, this.via)) {
+      if (x === named || x === law.agreement || c.f.agreements.includes(x)) continue;
+      const a = await this.fetchAct(x, hints);
+      if (!a) continue;
+      const d = describeAct(a) as { spec?: string; type?: number };
+      if (d.spec !== REPO_SPECS.law || d.type !== LAW_TYPES.terms) continue;
+      try {
+        law.v.add(a);
+      } catch {
+        // already held
+      }
+      try {
+        if (law.v.lawCollectiveOf(LAW_SPECS, x) === c.identity) out.push(x);
+      } catch {
+        // its lineage not held: not shown as this collective's
+      }
+    }
+    return out.sort();
+  }
+
+  /**
    * Leave a collective alone (Law rule 37a): the member signs a resignation
    * nobody else signs, and the collective registers it at once by a record,
    * its line. Nothing else changes: the members who stay refit the
@@ -1320,6 +1350,10 @@ export class Actions {
     // device's copy only where Law cannot be read, and the review says so.
     const named = b ? b.before : (law.agreement ?? c.f.agreement);
     const blind = !b && !law.agreement;
+    // F207 (client conformance): the drafts the member signed and leaves
+    // behind are named in the resignation, so none of them ever brings
+    // them back, whichever line puts it in force.
+    const drafts = await this.draftsLeft(c, law, a.member, named);
     // In a broken stretch: who remains for the rollback, those whose
     // resignations it will register taken out (rules 37a, 37d, 44d).
     let rollbackLine: Line = { text: '' };
@@ -1388,7 +1422,19 @@ export class Actions {
       `If ${who} leaves, the collective's works will be frozen as they stand: nobody will be able to change, release or move them, ever. Nothing can be decided in its name again${b ? ', and the collective can no longer be rolled back: it stays broken' : ''}.`,
       `${who} keeps their stake, as a departed holder (Law rule 46b). Someone with stakes in works worth keeping does not resign. Leaving is still ${who}'s alone to decide.`,
     ];
-    const payload = resignationPayload(named);
+    const payload = resignationPayload(named, undefined, drafts.length ? drafts : undefined);
+    const draftLines: Line[] = drafts.length
+      ? [
+          {
+            text: `${who} signed ${drafts.length === 1 ? 'a version' : `${drafts.length} versions`} of the agreement that ${drafts.length === 1 ? 'is' : 'are'} not in force: ${list(drafts.map(short))}. The resignation names ${drafts.length === 1 ? 'it' : 'them'} as left behind, so that none ever brings ${who} back, whichever line puts ${drafts.length === 1 ? 'it' : 'one'} in force (F207).`,
+          },
+          { text: `A version ${who} signed that is not held at the collective's relays cannot be named here: if a line ever put it in force, it would bring ${who} back (F207, a stated cost).`, tone: 'warn' },
+        ]
+      : [
+          {
+            text: `No version of the agreement that ${who} signed and that is not in force was found at the collective's relays: the resignation names no draft. One signed elsewhere and not found here would bring ${who} back if a line ever put it in force (F207, a stated cost).`,
+          },
+        ];
     const summary = b
       ? [
           `Law reads “${cname}” as broken since the rotation ${short(b.act)}: ${b.reason}.`,
@@ -1431,6 +1477,7 @@ export class Actions {
         ...(lastConstitutional ? [{ heading: 'The last constitutional voice', lines: constitutionWords.map((text) => ({ text, tone: 'bad' as const })) }] : []),
         ...(b ? [{ heading: 'A broken collective', lines: [{ text: brokenWords(`“${cname}”`, b.reason), tone: 'warn' as const }] }] : []),
         { heading: 'What leaving means', lines: what },
+        { heading: 'Drafts left behind', lines: draftLines },
         b ? { heading: 'Who decides the rollback', lines: [rollbackLine] } : { heading: 'Who decides from the line on', lines: this.decidersAfter(n, voices, releaseVoices, names) },
         { heading: 'Then', lines: then },
         {
@@ -1454,7 +1501,7 @@ export class Actions {
       run: async () => {
         const col = this.store.collective(a.collective);
         const m = this.store.identity(a.member);
-        const r = await resign(m, named, col.f.relays);
+        const r = await resign(m, named, col.f.relays, undefined, drafts);
         this.store.saveIdentity(m);
         if (b) {
           col.f.departed = [...departedOf(col), { member: a.member, resignation: r.id, named }];
@@ -3075,7 +3122,7 @@ export class Actions {
     const lines: Line[] = [
       ...e.problems.map((p) => ({ text: `NOT THE NAMED SERVICE'S SPLIT UNDER THE AGREEMENT IN FORCE: ${p}.`, tone: 'bad' as const })),
       ...e.unevidenced.map((r) => ({ text: `ROLE SHARE WITHOUT EVIDENCE THAT HOLDS: ${names(r)} (Law rule 22).`, tone: 'bad' as const })),
-      ...e.unplanned.map((r) => ({ text: `Paid to ${names(r)} as a fee or a named receiver: only the split plan, whose format is open, could justify it (rules 26, 27).` })),
+      ...e.unplanned.map((r) => ({ text: `Paid to ${names(r)} as a fee, a role or a named receiver that the split plan and fees of the version in force do not name: nothing in the agreement justifies it (Law rules 26, 27).` })),
       ...e.fees.map(([, r, n]) => ({ text: `Fee: ${n}, received by ${names(r)}.` })),
       ...e.payouts.filter(([, , st]) => st !== null).map(([r, n]) => ({ text: `Paid: ${n} to ${names(r)}${departed.includes(r) ? ' (a departed holder)' : ''}.` })),
       e.sums === false ? { text: 'The payouts do not add up to what arrived (Law rule 21): an invalid split.', tone: 'bad' as const } : { text: 'The payouts add up exactly to what arrived.', tone: 'ok' as const },

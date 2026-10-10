@@ -131,7 +131,7 @@ export interface TermsRead {
   problem?: Problem | null;
 }
 
-/** Read terms from their exact bytes. Throws if they are not terms, or use a field whose format is still open. */
+/** Read terms from their exact bytes. Throws if they are not terms, are not in Law's format, or use a withdrawn field. */
 export function termsOf(payload: Uint8Array): TermsRead {
   return readTerms(payload, LAW_SPECS) as TermsRead;
 }
@@ -216,7 +216,7 @@ export function kindWords(k: AreaRead['kinds'][number]): string {
   return TYPE_NAMES[k.spec ?? '']?.[k.type ?? -1] ?? `every act of type ${k.type} of ${specName(k.spec ?? '')} made by the collective`;
 }
 
-const OPERATIONAL_FIELDS: Record<number, string> = { 7: 'the stakes', 8: 'the split plan', 17: 'the refund terms' };
+const OPERATIONAL_FIELDS: Record<number, string> = { 7: 'the stakes', 8: 'the split plan', 17: 'the refund terms', 28: 'the fees' };
 
 function fieldRefWords(f: AreaRead['fields'][number]): string {
   return f.form === 'field' ? (OPERATIONAL_FIELDS[f.number] ?? `field ${f.number}`) : `the cMIP for task ${f.number}`;
@@ -628,7 +628,6 @@ const FIELD_NAMES: Record<number, string> = {
   7: 'the stakes',
   8: 'the split plan',
   9: 'the abandonment clause',
-  10: 'the fork rule',
   12: 'the key grammar',
   13: 'the arbitrators',
   14: "the split service's grant",
@@ -636,6 +635,7 @@ const FIELD_NAMES: Record<number, string> = {
   17: 'the refund terms',
   18: 'the constitutional change rule',
   19: 'the areas',
+  28: 'the fees',
 };
 
 type Change = { form: 'field' | 'task' | 'extension' | 'words'; field?: number | null; task?: number | null; extension?: string | null; area?: number | null; tier: 'constitutional' | 'judicial' | 'operational' };
