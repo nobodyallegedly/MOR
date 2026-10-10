@@ -24,7 +24,7 @@
 //!    (versions, a fork of its signer's);
 //! 4. a second agreement's offer on the same vow: still not shown outside
 //!    the first; whether rule 15b's visibility reaches an offer naming a vow
-//!    is put to Nobody, allegedly (question V1 in the build's report).
+//!    is put to Nobody, allegedly (question QV1 in the build's report).
 //!
 //! Test identities only; the specification hashes are test values until
 //! the freeze, as in the other Agreements tests.
@@ -348,7 +348,7 @@ fn what_a_vow_became_is_the_cmips_and_the_core_reads_only_its_chain() {
 /// purchase named the sponsor's deal. **Now:** the offer names the vow;
 /// otherwise unchanged: whether rule 15b's visibility reaches an offer
 /// naming a vow that an agreement claims is put to Nobody, allegedly
-/// (question V1), and is not built.
+/// (question QV1), and is not built.
 #[test]
 fn an_offer_naming_a_vow_under_a_second_agreement_is_not_shown_outside_the_first() {
     let mut w = World::new();

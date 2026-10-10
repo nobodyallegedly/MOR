@@ -3,7 +3,7 @@
 //! someone who signed onto the vow, at any price including none, may
 //! confirm or contest it; a vow nobody signed onto carries no state.
 //! Built in `docs/vow-grammar-build.md`; the readings each test relies on
-//! are listed there (V-R1 to V-R12).
+//! are listed there (V-R1 to V-R14).
 //!
 //! Test identities only; the specification hashes are test values until
 //! the freeze, as in the other Agreements tests.
@@ -214,7 +214,7 @@ fn a_sale_is_pending_then_confirmed_by_what_the_buyer_acknowledges() {
 /// F240: only someone who signed onto the vow may confirm or contest it.
 /// The seller acknowledging its own delivery confirms nothing; a stranger's
 /// contest shows nothing; the buyer's contest marks the sale contested,
-/// and prevails over a confirmation (V-R8).
+/// and prevails over a confirmation (V-R9).
 #[test]
 fn only_the_buyer_confirms_or_contests_and_a_contest_prevails() {
     let mut c = Concert::new();
