@@ -2493,6 +2493,14 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Core changes:** Law draft 10, rule 37d and the notice (type 24) addressed to a one-time key; the closing's field 4. *To build:* the notice to a key; `f191` closing tests where a bare key now no longer blocks after its deadline.
 
+## F209. F198 covers a pointer inside a fork whose taking-on was left out (QH6, 10 October 2026, afternoon)
+
+**From** the F191 to F199 build, QH6: found by the invariants at 5,000 cases (seed `7145587436215071231`) once F198 was built: the pointer inside the history of a fork drawn on an old line, the act taking it on (rule 40, IT2a) outside; read literally, the pointer is void and the buyer's receipt with it. *Laid beside it:* F198 ("Feels like the only option, agreed"); IT2a; F181 ("as the chain stood").
+
+**Confirmed by Nobody, allegedly, 10 October 2026 ("Yes"):** as built: for payments already made to it, a payee pointer is judged as the collective's own line stood without the ending, in both shapes (left outside the fork, or inside it with its taking-on outside); for anything after the fork, rule 47a. *Suggested by the project lead.* The sequence is the collective's own line (F109; F207's working practice).
+
+**Core changes:** none beyond the build (Law draft 10, "Open in this draft": QH6 answered).
+
 ## F191 to F199 built (10 October 2026, early afternoon)
 
 `docs/f191-f199-build-2026-10-10.md` (merged): F191 to F199 written into Law draft 10, Finance draft 6, Production draft 6, core v21 and the freeze suite (each revised in place for Nobody, allegedly, to approve again) and built, each with a test that fails first; Rust 502 passed; both FORK-HANDS-OUT seeds and every invariant pass at 5,000 cases; Fable's `review_f190_*` tests rewritten to pin the fixes (5b, the offer's object, unchanged: QH3). The display client released again. **Six questions for Nobody, allegedly, open:** QH1 (two settlements of one fork, neither holding the other, one the judge's); QH2 (a branch nobody named, carrying a newcomer, dropped by F192 without her signature); QH3 (the object a relay's record names, and a purchase naming an offer; joins step 12b's OF1); QH4 (a resignation and the very version that registers it); QH5 (a one-time key that gave no refund address); QH6 (a pointer inside a fork's history whose taking-on the fork left out). Nine readings to confirm.
