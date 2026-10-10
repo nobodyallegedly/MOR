@@ -10107,8 +10107,13 @@ fn owed_back_lab(payer: Option<mor_core::finance::Payer>, proof: &[u8]) -> (Lab,
 /// [`owed_back_lab`], the payer made in the lab first: `make` gives the
 /// payer the receipt names, and the person, where there is one.
 fn owed_back_lab_with(make: impl FnOnce(&mut Lab) -> (Option<mor_core::finance::Payer>, Option<Person>), proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash, Option<Person>) {
+    owed_back_lab_terms(&|_| {}, make, proof)
+}
+
+/// [`owed_back_lab_with`], the founding terms shaped by `f`.
+fn owed_back_lab_terms(f: &dyn Fn(&mut Terms), make: impl FnOnce(&mut Lab) -> (Option<mor_core::finance::Payer>, Option<Person>), proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash, Option<Person>) {
     use mor_core::finance::{Amount, Payload as Fin, Purchase, Receipt};
-    let mut lab = Lab::new(&|_| {});
+    let mut lab = Lab::new(f);
     let (payer, person) = make(&mut lab);
     let label = lab.c[0].id;
     let (k1, _, _, rot1) = break_by_lost_record(&mut lab);
@@ -10863,4 +10868,136 @@ fn review_2_7_a_measurer_never_weighs_its_own_share() {
     };
     assert!(run(true).iter().any(|w| w.contains("measurer")), "Ana measures and is paid by the metric: refused");
     assert!(run(false).is_empty(), "{:?}", run(false));
+}
+
+/// F210, decided by Nobody, allegedly, 10 October 2026 ("Yes. The grammar
+/// is there to make it work, responsibility then goes onto the clients."):
+/// no held shares, no completing split. A record acknowledged by the claim
+/// written at payment fills the role; one record acknowledged again by the
+/// same payer's claim for another payment is spent there (review 2.10):
+/// it counts for the first claim on the payer's sequence (mechanic, the
+/// build's).
+#[test]
+fn f210_one_record_is_spent_for_its_payers_other_claims() {
+    let mut l = ServiceDeal::with(&|t| {
+        t.plan = Some(plan_of(vec![law::ShareRule::Stake { stake: 0, part: 800_000 }, law::ShareRule::Role { role: "relay".into(), part: 200_000 }], vec![]));
+    });
+    let mut relay = l.w.genesis("a relay", vec![own_home()], None, None);
+    let rec = {
+        let a = l.w.everyday_act(&mut relay, spec("a relay transport cMIP, draft 3"), 0, vec![(Value::Uint(0), Value::Bytes(l.locked.to_vec()))], None, None);
+        l.w.add(&a)
+    };
+    let (r1, c1) = l.sale(b"first", vec![rec]);
+    let (r2, c2) = l.sale(b"second", vec![rec]);
+    let split_for = |l: &mut ServiceDeal, r: Hash| {
+        let mut ps = l.stake_payouts();
+        ps.push(law::Payout { role: Some("relay".into()), evidence: Some(rec), ..payout(relay.id, 200) });
+        l.split(r, ps, vec![])
+    };
+    let x1 = split_for(&mut l, r1);
+    let x2 = split_for(&mut l, r2);
+    let mut v = view(&l.w);
+    for c in [c1, c2] {
+        v.rail_valid.insert(c, mor_core::finance::PaidAt::Flow(spec("a pointer")));
+    }
+    assert!(v.split(&x1).unwrap().unevidenced.is_empty(), "the first claim acknowledging it");
+    assert_eq!(v.split(&x2).unwrap().unevidenced, vec![relay.id], "spent for the payer's other claim");
+}
+
+/// F219, decided by Nobody, allegedly, 10 October 2026 ("Yes, and bad faith
+/// terms remain public."): a refund past the terms the buyer accepted by
+/// paying is ended: the obligation closes there, the owners keep the
+/// money, and it does not block a closing. Past its terms is the time
+/// reference's answer, which the caller states; before it, the refund is
+/// owed and blocks as before. Terms with no refund terms never lapse
+/// (rule 32: the core sets no lapse).
+#[test]
+fn f219_a_refund_past_its_terms_is_ended() {
+    use mor_core::finance::Payer;
+    let carla = spec("Carla, a payer, F219");
+    let refundable = |t: &mut Terms| {
+        t.time = Some((spec("a block height reference"), Value::Uint(0)));
+        t.refund = Some(law::RefundTerms { until: Value::Uint(900_000) });
+    };
+    let owed_why = |e: &law::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
+    let (mut lab, label, owed, _, rot1, _) = owed_back_lab_terms(&refundable, |_| (Some(Payer::Identity(carla)), None), b"a refund with terms");
+    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "before its point: owed");
+    let mut v = lab.view();
+    v.refunds_past_terms.insert(owed);
+    assert!(v.owed_back(&label).unwrap().is_empty(), "past its terms: ended");
+    drop(v);
+    let e = close_with_past(&mut lab, label, rot1, &[owed]);
+    assert!(!owed_why(&e), "it does not block a closing: {:?}", e.why);
+    // Terms with no refund terms: the caller's word changes nothing.
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a refund with no terms");
+    let e = close_with_past(&mut lab, label, rot1, &[owed]);
+    assert!(owed_why(&e), "no lapse without terms: {:?}", e.why);
+}
+
+/// [`close_with`], refunds stated past their terms.
+fn close_with_past(lab: &mut Lab, label: Hash, rot1: Hash, past: &[Hash]) -> law::ClosingEval {
+    let f = lab.founding;
+    if lab.view().broken(&label).unwrap().is_some() {
+        let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
+        let r = lab.propose(ANA, &same);
+        let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
+        roll_back(lab, r, &rs, rot1, &[]);
+    }
+    let r = lab.view().current(&label).unwrap().unwrap().agreement;
+    let c = law::Closing { agreement: r, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
+    let eo = ending_obj(lab, r, label);
+    let x = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, c.to_map(), eo);
+    lab.end(ANA, &x);
+    lab.end(BEN, &x);
+    lab.end(CY, &x);
+    let mut v = lab.view();
+    v.refunds_past_terms.extend(past.iter().copied());
+    v.closing(&x).unwrap()
+}
+
+/// The work claim (type 3, rule 15), with Fable's readings of OF16 (a,
+/// public or addressed to every creator) and OF17 (a, no roles), and F218,
+/// decided by Nobody, allegedly, 10 October 2026 ("Yes"): in MOR's eyes the
+/// owners are who the recorded work claim names, with the shares its
+/// agreement gives; where no agreement writes shares, the default holder is
+/// the creator who opened the work claim. A claim binds once every other
+/// creator signs it; a second claim on the same work shows it contested.
+#[test]
+fn f218_the_default_holder_is_the_creator_who_opened_the_claim() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut stranger = w.genesis("a stranger", vec![own_home()], None, None);
+    let work = spec("a song, F218");
+    let claim = law::WorkClaim { work, creators: sorted(vec![ana.id, ben.id]), commitment: None };
+    let c = law_act(&mut w, &mut ana, law::types::WORK_CLAIM, claim.to_map(), None);
+    let o = view(&w).work_owners(&work).unwrap();
+    assert_eq!(o.default_holder, None, "not bound until Ben signs");
+    sign(&mut w, &mut ben, &c);
+    let o = view(&w).work_owners(&work).unwrap();
+    assert_eq!(o.claims, vec![c]);
+    assert_eq!(o.default_holder, Some(ana.id), "no shares written: the creator who opened it");
+    assert!(!o.contested);
+    // A sealed claim, addressed to Ana only, counts for nothing (OF16 a).
+    let sealed = law::WorkClaim { work, creators: sorted(vec![ben.id, stranger.id]), commitment: None };
+    w.private_act(&mut stranger, mips().law, law::types::WORK_CLAIM, sealed.to_map(), None, vec![ana.id]);
+    assert!(!view(&w).work_owners(&work).unwrap().contested);
+    // A stranger's public claim: contested, shown as recorded.
+    let theirs = law::WorkClaim { work, creators: vec![stranger.id], commitment: None };
+    let s = law_act(&mut w, &mut stranger, law::types::WORK_CLAIM, theirs.to_map(), None);
+    let o = view(&w).work_owners(&work).unwrap();
+    assert!(o.contested && o.claims == sorted(vec![c, s]));
+    // Once an agreement writes shares in the work, those are the owners.
+    let mut t = deal_terms(ana.id, ben.id);
+    t.stakes = Some(vec![law::Stake { object: law::Who::Id(work), holders: vec![(law::Who::Id(ana.id), 300_000), (law::Who::Id(ben.id), 700_000)] }]);
+    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let o = view(&w).work_owners(&work).unwrap();
+    assert_eq!(o.default_holder, None);
+    assert_eq!(o.agreements, vec![d]);
+    // A claim the opener is not among the creators of is refused.
+    let bad = law::WorkClaim { work, creators: vec![ben.id], commitment: None };
+    let b = law_act(&mut w, &mut ana, law::types::WORK_CLAIM, bad.to_map(), None);
+    assert!(!view(&w).work_owners(&work).unwrap().claims.contains(&b));
 }

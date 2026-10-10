@@ -47,6 +47,9 @@ pub mod reference_absence_proof;
 /// one paid for.
 mod selling;
 pub use selling::OfferEval;
+/// The owning side of step 12b: work claims and stake transfers.
+mod owning;
+pub use owning::{TransferEval, WorkOwners};
 use super::open_formats::{Offer, OfferAct};
 use std::rc::Rc;
 
@@ -5028,14 +5031,29 @@ impl<'a> LawView<'a> {
         }
         let mut claims: Vec<&Held> = vec![p];
         claims.extend(self.same_payment(payment).into_iter().filter_map(|(x, _)| self.v.get(&x)));
-        claims.into_iter().any(|c| {
-            let Ok(Fin::Claim(cl)) = Fin::decode(c.inside.type_, &c.inside.payload) else { return false };
-            c.inside.spec == self.mips.finance
+        let acknowledging = |c: &Held| -> Option<Vec<u8>> {
+            let Ok(Fin::Claim(cl)) = Fin::decode(c.inside.type_, &c.inside.payload) else { return None };
+            (c.inside.spec == self.mips.finance
                 && self.payers_claim(c)
                 && self.rail_valid.contains_key(&c.id)
                 && !self.rail_invalid.contains(&c.id)
                 && !self.unbound_rails.contains(&cl.rail)
-                && (c.inside.acks.iter().flatten().any(|a| a == evidence) || cl.referral.as_ref().is_some_and(|r| &r.evidence == evidence))
+                && (c.inside.acks.iter().flatten().any(|a| a == evidence) || cl.referral.as_ref().is_some_and(|r| &r.evidence == evidence)))
+            .then(|| self.payment_of(&cl.proof))
+        };
+        claims.into_iter().any(|c| {
+            let Some(this) = acknowledging(c) else { return false };
+            // F210 (review 2.10): one record acknowledged by the same
+            // payer's claims for several payments is spent after the first,
+            // by position on the payer's sequence; two at one position (two
+            // devices) leave it spent for both (mechanic, the build's).
+            let pos = c.inside.position.unwrap_or(0);
+            let spent = c.act.outside.signer.is_some_and(|payer| {
+                self.v.signed_by(&payer).any(|o| {
+                    o.id != c.id && acknowledging(o).is_some_and(|other| other != this) && o.inside.position.unwrap_or(0) <= pos
+                })
+            });
+            !spent
         })
     }
 
@@ -8170,6 +8188,11 @@ impl<'a> LawView<'a> {
                     // debt, by a payment naming what it repays.
                     let mut names = vec![h.id];
                     names.extend(self.same_payment(&h.id).into_iter().map(|(x, _)| x));
+                    // F219: past the terms the buyer accepted by paying, the
+                    // refund is ended, and owed no more.
+                    if self.refund_ended(&names, e.purchase.as_ref()) {
+                        continue;
+                    }
                     let back = self.repaid(&names, &e.refund_to, &amount.unit);
                     if back < amount.value {
                         out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken });
@@ -8178,6 +8201,33 @@ impl<'a> LawView<'a> {
             }
         }
         Ok(out)
+    }
+
+    /// Whether a refund owed on a payment (`names`, its receipts and
+    /// claims) is ended (F219, decided 10 October 2026): the terms the
+    /// buyer accepted by paying carry refund terms (the version of the
+    /// claim the payment names, field 17; or a lone seller's offer it
+    /// follows, field 7, F215), and the caller states the payment past
+    /// their point on the time reference ([`Self::refunds_past_terms`]).
+    /// Without refund terms nothing lapses (rule 32: the core sets none).
+    fn refund_ended(&self, names: &[Hash], purchase: Option<&crate::finance::Purchase>) -> bool {
+        use crate::finance::Payload as Fin;
+        if !names.iter().any(|n| self.refunds_past_terms.contains(n)) {
+            return false;
+        }
+        let from_claim = purchase.is_some_and(|p| {
+            let v = if self.v.get(&p.line).is_some_and(|l| self.is_law(l, types::TERMS)) { p.line } else { p.agreement };
+            self.terms(&v).is_ok_and(|t| t.refund.is_some())
+        });
+        let from_offer = names.iter().filter_map(|n| self.v.get(n)).any(|h| {
+            let fulfils = match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::Receipt(r)) => r.fulfils,
+                Ok(Fin::Claim(c)) => c.fulfils,
+                _ => return false,
+            };
+            self.offer_act(&fulfils).is_some_and(|(_, o)| o.offer.under.is_none() && o.offer.refund.is_some())
+        });
+        from_claim || from_offer
     }
 
     /// What has been paid back toward a payment owed back, `owed` being the
