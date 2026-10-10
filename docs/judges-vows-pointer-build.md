@@ -42,8 +42,8 @@ One thing to tell you plainly. QV2, as the last build put it, said "each payee m
 
 ## Tests
 
-- **Before** (main at `50e613b`, the vow grammar build's count): Rust workspace **593 passed, 0 failed, 1 ignored**; TypeScript **205 passed**.
-- **After** (this branch, rebased onto main, `cargo test --workspace --locked` and `scripts/test-all.sh`): Rust workspace **597 passed, 0 failed, 1 ignored** (+5 new, −1 replaced); TypeScript: see "Test run" below.
+- **Before** (main at `50e613b`, a clean copy, `cargo test --workspace --locked`): Rust workspace **593 passed, 0 failed, 1 ignored**.
+- **After** (this branch, rebased onto main at `50e613b`): Rust workspace **597 passed, 0 failed, 1 ignored** (+5 new, −1 replaced); TypeScript **219 passed, 0 failed**. No TypeScript file changed, so these are main's TypeScript tests, run against the rebuilt core library.
 - **New Rust tests** (`core/tests/agreements_collective.rs`), each seen failing against the old library first:
   - `f246_the_chain_runs_per_question_a_judge_whose_stage_passed_is_void_on_it`: F236's own case, now answered the other way: the next link's settlement stands, whichever was signed first.
   - `f246_only_the_active_link_settles_on_any_request_on_the_question`: while the judge's stage runs, the next link's settlement counts for nothing; once it passes, the next link settles on the later request too.
@@ -79,7 +79,11 @@ Each respects the decided rule; none changes what a rule decides.
 
 ## Test run
 
-*Filled in after the rebase onto the latest main.*
+Rebased onto the latest main (`50e613b`, unchanged since the branch began), then `cargo test --workspace --locked` and `scripts/test-all.sh`, both passing:
+
+- Rust workspace: 597 passed, 0 failed, 1 ignored (the vectors among them, unchanged).
+- The core library rebuilt for the clients (WebAssembly), then TypeScript: barebone 9, collective 40, connector 12, desk 12, genesis 17, longform 26, manage 7, reader 16, repo 18, site 42 (its browser test included), `modules/jpeg` 14, `modules/video` 6: **219 passed, 0 failed**.
+- One false start, stated: the first `scripts/test-all.sh` run failed the vectors test with "file not found". My baseline run of main, in a temporary copy sharing this build folder, had left a test program pointing at that copy's folder, removed afterwards. Rebuilding the core library's tests fixed it; nothing in the branch changed.
 
 ## Not done here
 
