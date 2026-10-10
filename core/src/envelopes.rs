@@ -28,6 +28,7 @@ use crate::xwing::{self, XWingError};
 use std::fmt;
 
 pub mod anchoring;
+pub mod vow;
 
 /// The types this MIP defines (Envelopes, "Types defined by this MIP").
 pub mod types {
@@ -36,6 +37,10 @@ pub mod types {
     pub const COMMITMENT: u64 = 2;
     pub const WITHDRAWAL: u64 = 3;
     pub const ENCRYPTION_KEY: u64 = 4;
+    /// A vow (F237; "announcement" in the texts until the redraft, F241):
+    /// an act naming something to come, its genesis id its name for good.
+    /// The next free number (mechanic, the build's).
+    pub const VOW: u64 = 5;
 }
 
 /// Key-exchange schemes, in the scheme number space Identity defines

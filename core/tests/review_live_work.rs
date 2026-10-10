@@ -1,23 +1,28 @@
 //! Fable's hostile review of F229 (`docs/reviews/live-work-review.md`): a
 //! live work named by its opening segment, a class of its own; its
-//! recording a separate work naming it. Nothing of F229 is built. These
-//! tests pin what the core does today where the review's questions touch
-//! it, so that the build, when it comes, changes it on purpose:
+//! recording a separate work naming it. These tests pinned what the core
+//! did before anything of F229 was built, so that the build would change it
+//! on purpose. The vow grammar build (F237) is that build for the core: a
+//! stream's name is a vow (Envelopes type 5, "announcement" in the texts
+//! until the redraft, F241), and everything else about streams (segments,
+//! who signs them, closing, branches, the recording's computation) is the
+//! live media cMIP's (`cmips/cmip-live-media-draft-1.md`). What changed and
+//! why, test by test (`docs/vow-grammar-build.md`):
 //!
-//! 1. the work claim checks no form of its hash: any 32 bytes bind, so a
-//!    "live work" can be claimed today under the name of any act, before
-//!    any content exists, and the claim is contested by a second one;
-//! 2. an offer selling access names no work: a work claim on the stream's
-//!    name reaches none of its sales, and a purchase following a lone
-//!    seller's access offer is judged with no work in sight;
+//! 1. the work claim checks no form of its hash: unchanged (rule 15, works
+//!    only, is unchanged); the opening is now a vow, not a cMIP act;
+//! 2. an offer selling a stream now names its vow (`[3, vow]`, with its
+//!    words) instead of the access form; a work claim on the name still
+//!    reaches none of its sales; what changed is that the fan, signed on by
+//!    their own claim, holds a sale with a state, and the claimant, who
+//!    never signed on, cannot contest it (F240);
 //! 3. "claimed", for a purchase, means an agreement with a stake in the
-//!    hash, never a bare work claim: a lone creator's claim on the live
-//!    name leaves a stranger's publication of that name a plain payment;
-//! 4. a publication whose field 1 is any hash puts that hash under the
-//!    purchase rules once an agreement writes a stake in it: the Agreements
-//!    machinery is indifferent to what the hash fingerprints;
-//! 5. the recording's hash and the live name are two works with no tie
-//!    the core reads: a claim on one shows nothing on the other.
+//!    hash: unchanged;
+//! 4. a publication under any name is sold under the agreement claiming
+//!    that name: unchanged;
+//! 5. the recording's hash and the stream's name are two works with no tie
+//!    the core reads: unchanged on purpose (F237: what a vow became is the
+//!    cMIPs'; the live media cMIP computes the recording).
 //!
 //! Test identities only; the specification hashes are test values until
 //! the freeze, as in the other Agreements tests.
@@ -27,9 +32,10 @@ mod common;
 use common::{own_home, Person, World};
 use mor_core::act::Object;
 use mor_core::cbor::Value;
-use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+use mor_core::money::{Amount, Claim, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
 use mor_core::hash::{sha256, Hash};
-use mor_core::agreements::{self, Field4, AgreementsView, Mips, PurchaseVerdict, Rule, Stake, Terms, Who};
+use mor_core::agreements::{self, Field4, AgreementsView, Mips, PurchaseVerdict, Rule, SaleState, Stake, Terms, Who};
+use mor_core::envelopes::vow::Vow;
 
 fn mips() -> Mips {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
@@ -60,6 +66,14 @@ fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
     agreements_act(w, p, agreements::types::SIGNATURE, agreements::signature_payload(x), Some(vec![Object { chain: *x, predecessor: *x }]))
 }
 
+/// A vow (Envelopes type 5, F237): the stream's name, its genesis id, as
+/// the live media cMIP draft 1 opens a stream.
+fn vow(w: &mut World, p: &mut Person, words: &str) -> Hash {
+    let v = Vow { words: words.into(), cmip: Some((spec("the live media cMIP"), Value::Null)) };
+    let a = w.everyday_act(p, mips().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None);
+    w.add(&a)
+}
+
 /// A work claim by `p` alone on `work`, public; it binds at once (rule 15:
 /// a sole creator alone).
 fn claim_alone(w: &mut World, p: &mut Person, work: Hash) -> Hash {
@@ -83,13 +97,13 @@ fn publication(w: &mut World, p: &mut Person, work: Hash, locked: Hash) -> Hash 
 
 /// A lone seller's standing offer (F215): no agreement behind it, paid to
 /// the signer.
-fn lone_offer(w: &mut World, p: &mut Person, sold: agreements::Sold) -> Hash {
+fn lone_offer(w: &mut World, p: &mut Person, sold: agreements::Sold, words: Option<&str>) -> Hash {
     let o = agreements::Offer {
         under: None,
         sold: vec![sold],
         price: Amount { unit: spec("a unit"), value: 300 },
         paid: None,
-        words: None,
+        words: words.map(String::from),
         until: None,
         time: None,
         refund: None,
@@ -166,11 +180,10 @@ fn today_a_work_claim_binds_any_hash_before_any_content_exists() {
     let mut w = World::new();
     let mut dario = w.genesis("dario", vec![own_home()], None, None);
     let mut stranger = w.genesis("a stranger", vec![own_home()], None, None);
-    // Dario's opening segment: an act of a live media cMIP, its id the name.
-    let opening = {
-        let a = w.everyday_act(&mut dario, spec("a live media cMIP"), 0, vec![(Value::Uint(0), Value::Bytes(vec![1, 2, 3]))], None, None);
-        w.add(&a)
-    };
+    // Dario's stream, opened by a vow, its genesis id the name (F237; the
+    // live media cMIP draft 1). Before this build: an act of a live media
+    // cMIP. The assertions are unchanged: rule 15 is.
+    let opening = vow(&mut w, &mut dario, "Saturday's match, live from the stands");
     let c = claim_alone(&mut w, &mut dario, opening);
     let o = view(&w).work_owners(&opening).unwrap();
     assert_eq!(o.claims, vec![c], "a sole creator's claim binds alone (rule 15)");
@@ -194,33 +207,53 @@ fn today_a_work_claim_binds_any_hash_before_any_content_exists() {
 }
 
 /// Review questions 1 and 4 (what a claim on a live work binds; selling
-/// while it runs): a standing offer selling access (`[2, [cmip, params]]`)
-/// names no work, and its parameters are bytes the core never reads. A
-/// stranger's access offer counts, and a fan's payment following it is a
-/// purchase under the stranger's own terms (F215), whatever Dario has
-/// claimed under the stream's name: today a work claim on a live work
-/// reaches no sale of access to it.
+/// while it runs). **Before:** the stranger's offer used the access form
+/// (`[2, [cmip, params]]`), naming no work, and a fan's payment was a
+/// purchase under the stranger's terms with Dario's claim nowhere in it.
+/// **Now (F237):** the offer names the stream's vow (`[3, vow]`) with its
+/// words; the purchase and the claim are as before (rule 15, works only);
+/// what is added: the fan, signed on by their own claim, holds a sale,
+/// pending, and Dario, who never signed on, has no standing to contest it
+/// (F240).
 #[test]
-fn today_an_access_offer_names_no_work_so_a_claim_on_the_stream_reaches_none_of_its_sales() {
+fn an_offer_naming_a_streams_vow_is_judged_apart_from_any_claim_on_its_name() {
     let mut w = World::new();
     let mut dario = w.genesis("dario", vec![own_home()], None, None);
     let mut stranger = w.genesis("a stranger", vec![own_home()], None, None);
-    let fan = w.genesis("a fan", vec![own_home()], None, None);
-    let opening = spec("the opening segment of Dario's stream");
+    let mut fan = w.genesis("a fan", vec![own_home()], None, None);
+    let opening = vow(&mut w, &mut dario, "Dario's match, live");
     claim_alone(&mut w, &mut dario, opening);
-    // The stranger sells access to "Dario's stream": the parameters say so,
-    // in the live media cMIP's own form; the core reads none of it.
-    let params = mor_core::cbor::encode(&Value::Array(vec![Value::Text("Dario's match, live".into()), Value::Bytes(opening.to_vec())]));
-    let offer = lone_offer(&mut w, &mut stranger, agreements::Sold::Access(spec("a live media cMIP"), params));
+    let offer = lone_offer(&mut w, &mut stranger, agreements::Sold::Vow(opening), Some("Dario's match, live"));
     let e = view(&w).offer(&offer).unwrap();
-    assert!(e.counts, "a lone seller's access offer counts: {:?}", e.problems);
+    assert!(e.counts, "a lone seller's offer naming a vow counts: {:?}", e.problems);
     let r = receipt(&mut w, &mut stranger, fan.id, offer, None, b"the fan paid the stranger");
     let p = view(&w).purchase(&r).unwrap().expect("a payment following an offer is judged");
     assert_eq!(p.verdict, PurchaseVerdict::Purchase, "a purchase under the stranger's own terms (F215); Dario's claim is nowhere in it");
-    // Dario's claim on the name is a record; it is not contested by the sale
-    // and the sale is not outside it: the two never meet.
     let o = view(&w).work_owners(&opening).unwrap();
     assert!(!o.contested && o.default_holder == Some(dario.id));
+    // The fan signs on by their own claim; Dario's contest shows nothing.
+    let c = {
+        let x = Fin::Claim(Claim {
+            rail: spec("a rail Module"),
+            proof: b"the fan paid the stranger".to_vec(),
+            payee: stranger.id,
+            amount: Amount { unit: spec("a unit"), value: 300 },
+            fulfils: offer,
+            disagrees: None,
+            referral: None,
+            refund: None,
+            anonymous: None,
+            purchase: None,
+        });
+        let a = w.everyday_act(&mut fan, mips().money, 3, x.to_map(), None, None);
+        w.add(&a)
+    };
+    let k = agreements::Contest { act: opening };
+    agreements_act(&mut w, &mut dario, agreements::types::CONTEST, k.to_map(), Some(vec![Object { chain: opening, predecessor: opening }]));
+    let mut v = view(&w);
+    v.rail_valid.insert(c, PaidAt::Flow(spec("the stranger's pointer")));
+    let sales: Vec<(Hash, SaleState)> = v.vow(&opening).unwrap().sales.into_iter().map(|s| (s.buyer, s.state)).collect();
+    assert_eq!(sales, vec![(fan.id, SaleState::Pending)], "only someone who signed onto the vow may contest it (F240)");
 }
 
 /// Review question 3 (what is owned when nothing but a claim stands), and

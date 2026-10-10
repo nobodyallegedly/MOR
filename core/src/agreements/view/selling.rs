@@ -143,6 +143,14 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
+        // F237: `[3, vow]` names a vow by its name, its genesis id.
+        for s in &offer.sold {
+            if let Sold::Vow(v) = s {
+                if let Some(p) = self.vow_name_problem(v) {
+                    problems.push(p);
+                }
+            }
+        }
         let first = follows.map(|(f, _)| f).unwrap_or(*id);
         let latest = self.offer_tips(&first, &signer);
         let counts = problems.is_empty();
@@ -175,7 +183,7 @@ impl<'a> AgreementsView<'a> {
     /// publication field 2), for a relay's delivery record (rule 22, F184;
     /// Fable's 4b): the object a purchase under the offer paid for is any
     /// of them (mechanic, the build's). Access sells no object the core can
-    /// read.
+    /// read; nor does a vow.
     pub(super) fn offer_media(&self, offer: &Hash) -> Vec<Hash> {
         let Some((_, o)) = self.offer_act(offer) else { return vec![] };
         o.offer
@@ -183,7 +191,7 @@ impl<'a> AgreementsView<'a> {
             .iter()
             .filter_map(|s| match s {
                 Sold::Publication(p) => self.publication_field(p, 2),
-                Sold::Access(..) => None,
+                Sold::Access(..) | Sold::Vow(..) => None,
             })
             .collect()
     }
@@ -207,7 +215,7 @@ impl<'a> AgreementsView<'a> {
         let (_, o) = self.offer_act(offer)?;
         o.offer.sold.iter().find_map(|s| match s {
             Sold::Publication(p) => self.publication_field(p, 1),
-            Sold::Access(..) => None,
+            Sold::Access(..) | Sold::Vow(..) => None,
         })
     }
 

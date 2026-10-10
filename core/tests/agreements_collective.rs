@@ -8608,7 +8608,7 @@ fn bq4_a_contest_names_the_declaration_and_is_signed_by_the_party_named() {
     let ids = lab.ids();
     let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
     lab.record(0, None, &[], vec![d], f);
-    let c = agreements::Contest { declaration: d };
+    let c = agreements::Contest { act: d };
     let mut cy = lab.m[CY].clone();
     let x = agreements_act(&mut lab.w, &mut cy, agreements::types::CONTEST, c.to_map(), obj(d));
     // Someone else's "contest" of it shows nothing.
@@ -11876,6 +11876,142 @@ fn f235_three_layers_a_pool_a_publication_and_a_work() {
     assert!(view(&l.w).service_account(&svc_p).unwrap().unsplit.iter().all(|u| u.payment != in_p), "split: nothing unsplit");
     let in_w = l.receipt(Who3::SvcW, svc_w, svc_p, 1190, ps, None, b"the work's share");
     assert!(view(&l.w).service_account(&svc_w).unwrap().unsplit.iter().any(|u| u.payment == in_w && u.agreement == l.we));
+}
+
+/// F244's lab: a work's agreement `we` (its parties in `owners`), a
+/// publication's agreement between it and a label (the label's split
+/// service by its grant), and the publication's split of a fan's payment
+/// paying the label's share and the work's agreement's share to `to`.
+struct F244Lab {
+    w: World,
+    label: Person,
+    svc_p: Person,
+    sl: Person,
+    pe: Hash,
+    publication: Hash,
+    owners: Vec<Hash>,
+}
+
+impl F244Lab {
+    fn new(mut w: World, we: Hash, owners: &mut [&mut Person]) -> F244Lab {
+        let mut label = w.genesis("a publisher, F244", vec![own_home()], None, None);
+        let mut svc_p = w.genesis("the publication's split service, F244", vec![own_home()], None, None);
+        let (gl, sl) = layer_grant(&mut w, &mut label, &mut svc_p, "the label, F244");
+        let work = spec("a song, F244");
+        let publication = {
+            let x = w.everyday_act(&mut label, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F244").to_vec()))], None, None);
+            w.add(&x)
+        };
+        let mut pe = deal_terms(we, label.id);
+        pe.payee_grants = Some(vec![gl]);
+        pe.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(publication), holders: vec![(agreements::Who::Id(we), 850_000), (agreements::Who::Id(label.id), 150_000)] }]);
+        let pe = agreements_act(&mut w, &mut label, agreements::types::TERMS, pe.to_map(), None);
+        sign(&mut w, &mut label, &pe);
+        for p in owners.iter_mut() {
+            sign(&mut w, p, &pe);
+        }
+        assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true));
+        let owners = owners.iter().map(|p| p.id).collect();
+        F244Lab { w, label, svc_p, sl, pe, publication, owners }
+    }
+
+    /// Whether the publication's split paying the work's share to `to`
+    /// shows a mismatch.
+    fn mismatched(&mut self, to: Hash, number: u64) -> bool {
+        let (label, pe, publication) = (self.label.id, self.pe, self.publication);
+        let proof = format!("a fan pays, {number}");
+        let incoming = layer_receipt(&mut self.w, &mut self.sl, label, spec("a fan"), 1000, publication, Some(pe), proof.as_bytes());
+        let s = agreements::Split {
+            receipt: incoming,
+            payouts: vec![agreements::Payout { stake: Some(0), ..payout(label, 150) }, agreements::Payout { stake: Some(0), ..payout(to, 850) }],
+            cmip: spec("a split cMIP"),
+            agreement: pe,
+            tally: None,
+            number: Some(number),
+            modules: vec![],
+            metric_records: vec![],
+            transfers: vec![],
+        };
+        let mut to_all = vec![label, to];
+        to_all.extend(self.owners.iter().copied());
+        to_all.sort();
+        to_all.dedup();
+        let ps = self.w.private_act(&mut self.svc_p, mips().agreements, agreements::types::SPLIT, s.to_map(), None, to_all);
+        let e = view(&self.w).split(&ps).unwrap();
+        assert!(e.problems.is_empty(), "{:?}", e.problems);
+        !e.mismatched.is_empty()
+    }
+}
+
+/// F244, decided by Nobody, allegedly, 10 October 2026 (QL1: "The
+/// publisher pays the pointer specified by the work's agreement"): a lone
+/// owner's agreement, naming no split service, is paid at its owner's own
+/// pointer, with nothing to split. Anyone else on that holding is a
+/// mismatch.
+#[test]
+fn f244_a_lone_owners_agreement_is_paid_at_its_owner() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let stranger = spec("someone the work's agreement never names");
+    let mut we = deal_terms(ana.id, spec("nobody"));
+    we.parties = vec![ana.id];
+    we.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(spec("a song, F244")), holders: vec![(agreements::Who::Id(ana.id), 1_000_000)] }]);
+    let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, we.to_map(), None);
+    sign(&mut w, &mut ana, &we);
+    assert_eq!(view(&w).agreement(&we).unwrap().exists, Some(true));
+    let aid = ana.id;
+    let mut l = F244Lab::new(w, we, &mut [&mut ana]);
+    assert!(!l.mismatched(aid, 1), "the lone owner receives the share at her own pointer: nothing to split");
+    assert!(l.mismatched(stranger, 2), "anyone else on the work's holding is a mismatch");
+}
+
+/// F244: "Either use a split service or have someone act as a treasury
+/// for the joint venture." A work of two owners whose split service is one
+/// of them (both payees granting Ana): the publication's split pays Ana as
+/// the work's agreement's pointer; Ben, not named as its pointer, is a
+/// mismatch: the layer above never divides the next layer's share.
+#[test]
+fn f244_an_owner_acting_as_treasury_receives_the_share() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut treasury = ana.clone();
+    let (ga, _) = layer_grant(&mut w, &mut ana, &mut treasury, "ana, as treasury");
+    ana.seq = treasury.seq.clone();
+    let mut treasury_b = ana.clone();
+    let (gb, _) = layer_grant(&mut w, &mut ben, &mut treasury_b, "ben, to ana as treasury");
+    ana.seq = treasury_b.seq.clone();
+    let mut we = deal_terms(ana.id, ben.id);
+    we.payee_grants = Some(vec![ga, gb]);
+    we.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(spec("a song, F244")), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
+    let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, we.to_map(), None);
+    sign(&mut w, &mut ana, &we);
+    sign(&mut w, &mut ben, &we);
+    assert_eq!(view(&w).agreement(&we).unwrap().exists, Some(true));
+    let (aid, bid) = (ana.id, ben.id);
+    let mut l = F244Lab::new(w, we, &mut [&mut ana, &mut ben]);
+    assert!(!l.mismatched(aid, 1), "the owner the agreement names as its split service receives the whole share");
+    assert!(l.mismatched(bid, 2), "the other owner is not the pointer: the layer above never divides the next layer's share");
+}
+
+/// F244: an agreement naming no pointer for money from above (two owners,
+/// no split service: payer-side splitting) cannot be paid through a layer
+/// until it names one: a payout to either owner, or to anyone, on its
+/// holding is a mismatch.
+#[test]
+fn f244_an_agreement_naming_no_pointer_cannot_be_paid_through_a_layer() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut we = deal_terms(ana.id, ben.id);
+    we.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(spec("a song, F244")), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
+    let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, we.to_map(), None);
+    sign(&mut w, &mut ana, &we);
+    sign(&mut w, &mut ben, &we);
+    let (aid, bid) = (ana.id, ben.id);
+    let mut l = F244Lab::new(w, we, &mut [&mut ana, &mut ben]);
+    assert!(l.mismatched(aid, 1), "Ana is not a pointer the agreement names");
+    assert!(l.mismatched(bid, 2), "nor is Ben");
 }
 
 fn agreements_purchase(a: Hash) -> mor_core::money::Purchase {
