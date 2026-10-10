@@ -157,6 +157,9 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     f(&mut t);
     t
@@ -3004,6 +3007,9 @@ fn a_deal_changes_only_with_everyone() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -3082,6 +3088,9 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             release_rule: None,
             settles: None,
             fork_judge: None,
+            plan: None,
+            refund: None,
+            fees: None,
         };
         let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -3177,6 +3186,9 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mips());
@@ -3345,6 +3357,9 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     assert_eq!(terms.check(&mips()), Ok(()));
     let d = law_act(&mut w, &mut m[0], law::types::TERMS, terms.to_map(), None);
@@ -4564,6 +4579,9 @@ fn payer_side_splitting_follows_the_claim() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal.to_map(), None);
     let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
@@ -4605,6 +4623,9 @@ fn leftovers_go_by_largest_remainder_whatever_the_order() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     let listed = [vec![(ids[ANA], 333_333), (ids[BEN], 333_333), (ids[CY], 333_334)], vec![(ids[CY], 333_334), (ids[ANA], 333_333), (ids[BEN], 333_333)]];
     for holders in listed.iter() {
@@ -5254,6 +5275,9 @@ fn a_work_is_released_to_the_public_domain() {
         release_rule: rule,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
@@ -5551,6 +5575,9 @@ fn a_timed_release() {
             release_rule: None,
             settles: None,
             fork_judge: None,
+            plan: None,
+            refund: None,
+            fees: None,
         };
         let x = law_act(w, ana, law::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
@@ -10354,4 +10381,30 @@ fn f207_a_resignation_names_the_drafts_it_leaves_behind() {
     };
     assert!(!run(true), "named in her resignation: the draft never brings her back");
     assert!(run(false), "not named: her stated cost, the draft brings her back (F195)");
+}
+
+/// Fable's formats review, 2.6, taken under the delegation (F189 (8) by
+/// analogy): a request to a judge counts, and the judge's period runs, only
+/// where the request is public or sealed to the judge it reaches. A
+/// settlement request Ben keeps sealed to himself activates no judge: the
+/// judge's settlement made on it settles nothing. Sealed to the judge, it
+/// does.
+#[test]
+fn review_2_6_a_settlement_request_counts_only_where_it_reaches_the_judge() {
+    for reaches in [false, true] {
+        let (mut l, mut judges) = judged_deal(0);
+        let d = l.d;
+        let a1 = l.version(d, "Branch A.", None);
+        let b1 = l.version(d, "Branch B.", None);
+        assert_eq!(l.in_force().unwrap(), d);
+        let r = law::SettlementRequest { reference: d };
+        let to = if reaches { vec![l.ben.id, judges[0].id] } else { vec![l.ben.id] };
+        let rq = l.w.private_act(&mut l.ben, mips().law, law::types::SETTLEMENT_REQUEST, r.to_map(), obj(d), to);
+        judge_settles(&mut l, &mut judges[0], rq, a1, vec![b1], vec![]);
+        if reaches {
+            assert_eq!(l.in_force().unwrap(), a1, "sealed to the judge: the settlement counts");
+        } else {
+            assert_eq!(l.in_force().unwrap(), d, "sealed to nobody but the asker: no judge was asked");
+        }
+    }
 }

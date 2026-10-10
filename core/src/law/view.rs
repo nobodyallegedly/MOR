@@ -2695,14 +2695,6 @@ impl<'a> LawView<'a> {
         Ok((voices, remaining))
     }
 
-    /// Whether `p`, departed from agreement `from` at line `l`, is named
-    /// again by a version between `from` (excluded) and the agreement
-    /// counted (lineage[0]) that `p` signed by a signature not placed before
-    /// that line (third pass reading).
-    fn restored(&self, col: &Col, p: &Hash, lineage: &[Hash], from: &Hash, area: Option<u64>, l: Line<'a>) -> R<bool> {
-        Ok(self.restoring(col, p, lineage, from, area, l)?.is_some())
-    }
-
     /// The versions by which `p` came back (B10; F189, 1; QF6; F195,
     /// decided 10 October 2026, "Good"): the versions of the agreement
     /// counted (`lineage`) that name `p` again, as a party (`area` none) or
@@ -2727,15 +2719,6 @@ impl<'a> LawView<'a> {
             }
         }
         Ok(out)
-    }
-
-    /// The version a line puts in force, where it puts one: a record's
-    /// clone (field 0), or the clone a rollback declares (rule 37d).
-    fn line_puts(&self, col: &Col, l: Line<'a>) -> Option<Hash> {
-        match l {
-            Line::Record(r) => Record::decode(&r.inside).ok().and_then(|x| x.clone),
-            Line::Rotation(m) => col.res.states.get(m).and_then(|st| declared_in(&st.declarations, &self.law())).and_then(|d| d.ok()).map(|d| d.agreement),
-        }
     }
 
     /// Whether `p`'s stepping down from `area` naming `agreement` is spent,
@@ -7655,6 +7638,15 @@ impl<'a> LawView<'a> {
                 let Ok(r) = SettlementRequest::decode(&rq.inside) else { continue };
                 let Some(asker) = rq.act.outside.signer else { continue };
                 if r.reference != *at || !t.parties.contains(&asker) || self.signers(at, &[asker]).is_empty() {
+                    continue;
+                }
+                // Fable's formats review 2.6, taken under the delegation
+                // (F189 (8) by analogy): a request counts, and a judge's
+                // period runs, only where the request is public or sealed to
+                // that judge; every link it passes through must have been
+                // reached (mechanic, the build's).
+                let reaches = |j: &Hash| rq.act.outside.content_key.is_some() || rq.act.outside.to.iter().flatten().any(|q| q == j);
+                if !links[..=i].iter().all(reaches) {
                     continue;
                 }
                 // QG4: its turn has come, and has not passed.

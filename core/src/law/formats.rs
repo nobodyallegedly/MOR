@@ -1025,6 +1025,14 @@ pub struct Terms {
     /// field 13 (rule 45b, DQ8; QF2, F190, decided 9 October 2026); absent,
     /// no judge settles them, and the deal waits on its reference.
     pub fork_judge: Option<Hash>,
+    /// 8: the split plan (step 12b; `open_formats::SplitPlan`).
+    pub plan: Option<super::open_formats::SplitPlan>,
+    /// 17: refund terms (step 12b; F219): a fixed point on the time
+    /// reference past which a refund owed on a payment under these terms
+    /// is ended.
+    pub refund: Option<super::open_formats::RefundTerms>,
+    /// 28: fees, their own field (F213), each with its scope (F214).
+    pub fees: Option<Vec<super::open_formats::Fee>>,
 }
 
 impl Terms {
@@ -1195,6 +1203,15 @@ impl Terms {
         if let Some(x) = &self.fork_judge {
             m.push((Value::Uint(27), b(x)));
         }
+        if let Some(x) = &self.plan {
+            m.push((Value::Uint(8), x.to_value()));
+        }
+        if let Some(x) = &self.refund {
+            m.push((Value::Uint(17), x.to_value()));
+        }
+        if let Some(x) = &self.fees {
+            m.push((Value::Uint(super::open_formats::FEES_FIELD), super::open_formats::Fee::field_value(x)));
+        }
         m
     }
 
@@ -1215,12 +1232,13 @@ impl Terms {
         let mut f: Vec<(u64, &Value)> = Vec::new();
         for (k, v) in p {
             match k {
-                Value::Uint(8) => return Err(LawError::Unsupported("terms field 8 (split plan)")),
+                // 10, the concurrency rule, is withdrawn (Fable's reading of
+                // OF20, option c, taken with step 12b): rule 47's default
+                // stands for every collective (Q38, B11). Never reused.
                 Value::Uint(10) => {
-                    return Err(LawError::Unsupported("terms field 10 (concurrency rule)"))
-                }
-                Value::Uint(17) => {
-                    return Err(LawError::Unsupported("terms field 17 (refund terms)"))
+                    return Err(LawError::Check(
+                        "terms field 10 (the concurrency rule) is withdrawn: a fork of records waits for a resolving clone (rule 47; step 12b)",
+                    ))
                 }
                 // 25, the relays (F126), is withdrawn (F128): relays are
                 // transport, never a condition of validity. It is never
@@ -1230,7 +1248,7 @@ impl Terms {
                         "terms field 25 (the relays) is withdrawn: an act is done by its signatures, seals and citations, wherever held (F128)",
                     ))
                 }
-                Value::Uint(n) if *n <= 24 || *n == 26 || *n == 27 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 24 || *n == 26 || *n == 27 || *n == super::open_formats::FEES_FIELD => f.push((*n, v)),
                 _ => return Err(LawError::Shape("terms: unknown field")),
             }
         }
@@ -1339,7 +1357,31 @@ impl Terms {
             release_rule: get(24).map(rule).transpose()?,
             settles: get(26).map(|v| hashes(v, "settles")).transpose()?,
             fork_judge: get(27).map(|v| hash(v, "the judge of forks")).transpose()?,
+            plan: get(8).map(super::open_formats::SplitPlan::decode).transpose()?,
+            refund: get(17).map(super::open_formats::RefundTerms::decode).transpose()?,
+            fees: get(super::open_formats::FEES_FIELD).map(super::open_formats::Fee::decode_field).transpose()?,
         })
+    }
+
+    /// Step 12b's checks that need no other act: refund terms are a point
+    /// on the agreement's time reference (rule 33; F219), so terms carrying
+    /// field 17 name one (field 6, or the time reference task's cMIP); every
+    /// stake share of the plan names a stake of field 7.
+    fn check_open_formats(&self) -> R<()> {
+        if self.refund.is_some() && self.time.is_none() && self.cmip(TIME_REFERENCE_TASK).is_none() {
+            return Err(LawError::Check("refund terms are a point on the agreement's time reference: terms carrying field 17 name one (rule 33; F219)"));
+        }
+        if let Some(p) = &self.plan {
+            let n = self.stakes.as_ref().map_or(0, |s| s.len()) as u64;
+            for s in &p.shares {
+                if let super::open_formats::ShareRule::Stake { stake, .. } = s {
+                    if *stake >= n {
+                        return Err(LawError::Check("split plan: a stake share names a stake of field 7 (rule 26)"));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     /// The stake whose object is `object` (field 7), and its index.
@@ -1358,6 +1400,7 @@ impl Terms {
     /// Q25, Q31, Q32). A clone's checks against its parent and lineage are
     /// the view's ([`super::LawView::agreement`]).
     pub fn check(&self, mips: &Mips) -> R<()> {
+        self.check_open_formats()?;
         let parties = &self.parties;
         if !distinct(parties) {
             return Err(LawError::Check("a party is listed twice"));
@@ -1870,7 +1913,8 @@ impl Terms {
             }
             for f in a.fields.iter().flatten() {
                 let ok = match f {
-                    FieldRef::Field(n) => [7, 8, 17].contains(n),
+                    // 28, fees, placed on their own (F213).
+                    FieldRef::Field(n) => [7, 8, 17, super::open_formats::FEES_FIELD].contains(n),
                     FieldRef::Task(t) => (1..=LAST_TASK).contains(t) && !JUDICIAL_TASKS.contains(t),
                 };
                 if !ok {
@@ -2060,7 +2104,7 @@ pub fn chain_citations(objects: &[Object], own: usize) -> R<(&[Object], &[Object
     Ok((a, c))
 }
 
-fn check_objects_self(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
+pub(crate) fn check_objects_self(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
     let expected = [Object {
         chain: *x,
         predecessor: *x,
@@ -3568,39 +3612,39 @@ pub(crate) fn distinct(v: &[Hash]) -> bool {
     v.iter().enumerate().all(|(i, x)| !v[..i].contains(x))
 }
 
-fn hash(v: &Value, w: &'static str) -> R<Hash> {
+pub(crate) fn hash(v: &Value, w: &'static str) -> R<Hash> {
     match v {
         Value::Bytes(x) => x.as_slice().try_into().map_err(|_| LawError::Shape(w)),
         _ => Err(LawError::Shape(w)),
     }
 }
 
-fn uint(v: &Value, w: &'static str) -> R<u64> {
+pub(crate) fn uint(v: &Value, w: &'static str) -> R<u64> {
     match v {
         Value::Uint(n) => Ok(*n),
         _ => Err(LawError::Shape(w)),
     }
 }
 
-fn nonempty<'a>(v: &'a Value, w: &'static str) -> R<&'a [Value]> {
+pub(crate) fn nonempty<'a>(v: &'a Value, w: &'static str) -> R<&'a [Value]> {
     match v {
         Value::Array(a) if !a.is_empty() => Ok(a),
         _ => Err(LawError::Shape(w)),
     }
 }
 
-fn tuple<'a>(v: &'a Value, n: usize, w: &'static str) -> R<&'a [Value]> {
+pub(crate) fn tuple<'a>(v: &'a Value, n: usize, w: &'static str) -> R<&'a [Value]> {
     match v {
         Value::Array(a) if a.len() == n => Ok(a),
         _ => Err(LawError::Shape(w)),
     }
 }
 
-fn hashes(v: &Value, w: &'static str) -> R<Vec<Hash>> {
+pub(crate) fn hashes(v: &Value, w: &'static str) -> R<Vec<Hash>> {
     nonempty(v, w)?.iter().map(|x| hash(x, w)).collect()
 }
 
-fn rule(v: &Value) -> R<Rule> {
+pub(crate) fn rule(v: &Value) -> R<Rule> {
     let a = nonempty(v, "rule")?;
     match (uint(&a[0], "rule form")?, a.len()) {
         (0, 1) => Ok(Rule::All),
@@ -3610,15 +3654,20 @@ fn rule(v: &Value) -> R<Rule> {
     }
 }
 
-fn chain_link(v: &Value) -> R<ChainLink> {
-    let a = tuple(v, 2, "chain link")?;
-    let j = nonempty(&a[0], "judge")?;
-    let judge = match (uint(&j[0], "judge form")?, j.len()) {
+/// The terms' `judge` form.
+pub(crate) fn judge(v: &Value) -> R<Judge> {
+    let j = nonempty(v, "judge")?;
+    Ok(match (uint(&j[0], "judge form")?, j.len()) {
         (0, 2) => Judge::Task(uint(&j[1], "judge task")?),
         (1, 2) => Judge::Identity(hash(&j[1], "judge identity")?),
         (2, 1) => Judge::SplitService,
         _ => return Err(LawError::Shape("judge")),
-    };
+    })
+}
+
+fn chain_link(v: &Value) -> R<ChainLink> {
+    let a = tuple(v, 2, "chain link")?;
+    let judge = judge(&a[0])?;
     let next = nonempty(&a[1], "chain of judgment")?
         .iter()
         .map(|n| {
@@ -3740,7 +3789,7 @@ fn recovery(v: &Value) -> R<Recovery> {
     }
 }
 
-fn map_fields<'a>(v: &'a Value, n: u64, w: &'static str) -> R<Vec<(u64, &'a Value)>> {
+pub(crate) fn map_fields<'a>(v: &'a Value, n: u64, w: &'static str) -> R<Vec<(u64, &'a Value)>> {
     let Value::Map(m) = v else {
         return Err(LawError::Shape(w));
     };
@@ -3752,7 +3801,7 @@ fn map_fields<'a>(v: &'a Value, n: u64, w: &'static str) -> R<Vec<(u64, &'a Valu
         .collect()
 }
 
-fn field<'a>(f: &[(u64, &'a Value)], k: u64) -> Option<&'a Value> {
+pub(crate) fn field<'a>(f: &[(u64, &'a Value)], k: u64) -> Option<&'a Value> {
     f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v)
 }
 
@@ -3770,7 +3819,7 @@ fn key_grammar(v: &Value) -> R<KeyGrammar> {
     })
 }
 
-fn who(v: &Value, w: &'static str) -> R<Who> {
+pub(crate) fn who(v: &Value, w: &'static str) -> R<Who> {
     match v {
         Value::Null => Ok(Who::This),
         _ => Ok(Who::Id(hash(v, w)?)),

@@ -625,6 +625,9 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     }
 }
 
@@ -2282,6 +2285,9 @@ impl DealWorld {
             release_rule: None,
             settles: None,
             fork_judge: None,
+            plan: None,
+            refund: None,
+            fees: None,
         };
         assert_eq!(t.check(&mips()), Ok(()), "the generator's own deal terms");
         let deal = law_act(&mut w, &mut p[0], law::types::TERMS, t.to_map(), None);
