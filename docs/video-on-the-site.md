@@ -82,3 +82,29 @@ Run on this branch after rebasing on main (`52f74ee`), with Rust 1.97.0, wasm-bi
 - `python3 modules/video/vectors/check.py`: 19 vectors, 0 failing.
 - Existing vectors unchanged: no file under any existing vectors folder differs from main, and the JPEG Module's vectors, written again (`npm run vectors`), are the same bytes; so are the video Module's. The core's freeze vectors are checked by the Rust tests above.
 - Not run here: the WebKit browser tests (Playwright's WebKit is not installed in this container) and H.264 playback (Playwright's Chromium has no H.264). Both run on GitHub, in the WebKit workflow and with Google Chrome.
+
+## WebKit
+
+On the pull request, the workflow "site in WebKit" failed at "Browser tests in WebKit (Safari's engine)" (runs 38087659086 and 38087639412). The Chromium step passed. The run logs could be read from the session. Playwright's WebKit could not be installed here (its download server is blocked), so the results below come from GitHub.
+
+**What failed.** Three of the eight film tests, the same three in both runs, out of 27 browser tests (24 passed):
+
+- the front page shows the film's place with its poster…;
+- pressed, the film is fetched, checked, and played…;
+- a film the gateway altered is not played….
+
+In each one, every check about the film passed. The only thing that failed was the last check, "no errors on the page". It found one message: `ResizeObserver loop completed with undelivered notifications.`
+
+**Why.** The display client makes the page's frame as tall as the page, and lays the film's player over its place. Both follow size changes with a ResizeObserver (a browser feature that reports when something changes size). When the poster loads, the film's place takes the poster's shape, so the page grows and the frame is resized. The frame changes size again within the same screen update. WebKit reports this as an error on the page, though the observer's rules deliver the remaining size changes at the next update, so nothing is lost. The first test confirms it in WebKit: the player lies exactly on the film's place, within 1.5 pixels, and that check passed before the error check failed. This is not something Safari cannot do. It is the notice the Safari report of 9 October (`docs/dubsar-org-safari-2026-10-09.md`) already decided not to count. `test/browser.test.ts` has filtered it out since then, but the new `test/film.test.ts` did not.
+
+**What changed.** Only the tests changed, not the display client, and no WebKit test was skipped:
+
+- That rule (`benign`) now lives in `clients/site/test/world.ts`, and `browser.test.ts` and `film.test.ts` both use it. Any other page error still fails a test, in either browser.
+- After that push, the "tests" workflow's `clients/site` step failed (run 38088841964): all eight film tests failed before running, because `scripts/build.ts` failed. The site's test files run at the same time. `browser.test.ts`, `site.test.ts` and `film.test.ts` each built the display client into the same `dist/` folder, and a build empties its folder first, so one build could empty `dist/` while another was writing to it. This came from the film tests added in this pull request, and the earlier runs passed by luck. `film.test.ts` now builds the display client into its own temporary folder.
+
+**Results** (commit `dd10b66`):
+
+- WebKit (Safari's engine), on GitHub (run 38089450335, and 38089447460 for the push): 27 tests, 27 passed, 0 failed (19 site tests, 8 film tests).
+- Chromium (Google Chrome, which plays H.264), in the same runs: 27 tests, 27 passed, 0 failed.
+- "tests" workflow (run 38089450336): every step passed, including `clients/site`, except "Reproducible build of the display client" and the fingerprints step after it. Those are expected to fail until the display client is released (see "Not done in this step").
+- In this session: `cargo test --workspace --locked` 585 passed, 0 failed. `scripts/test-all.sh` all passed (site 42, video 6, the other counts as above). `python3 modules/video/vectors/check.py` 19 vectors, 0 failing. No test vector changed.
