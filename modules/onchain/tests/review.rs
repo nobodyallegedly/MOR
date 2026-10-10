@@ -54,6 +54,11 @@ fn headers_over(previous: [u8; 32], txids: &[[u8; 32]], n: usize) -> Vec<[u8; 80
 
 // ---------------------------------------------------------------- 1a. One payment, two proofs, no reorganisation
 
+/// *Decided after this test was written, F200: the proof is made canonical
+/// (one index where a node is duplicated) and a rail Module says what "the
+/// same payment" is; this test and the next are to be rewritten to pin
+/// that fix once it is built. Until then they record what the rule does.*
+///
 /// Bitcoin's Merkle tree duplicates the last node of every level with an
 /// odd number of nodes (CVE-2012-2459). A transaction in such a position
 /// therefore has a second index whose branch is the same bytes: the
@@ -652,4 +657,91 @@ fn question_2_option_2_gives_the_owner_an_hour_wide_lever_no_prompt_anchoring_be
     // have counted.
     let clock = Clock { main: s.main.reference(), backup: None };
     assert!(fin::claim_in_time(LockPoint::Main(160), &clock, &pending, &s.anchors));
+}
+
+// ================================================================ 3. Privacy: what the chain and others learn
+
+// ---------------------------------------------------------------- 3a. A script-path spend publishes the key and the commitment
+
+/// The Module: "Nobody watching the chain can link two payments to the
+/// same payee, or an output to the payee's declared key, without the
+/// commitment." True while the output is unspent, and for a key-path
+/// spend. For an address with a `tree` (the k-of-n script multisig the
+/// Module offers for a vault), the owner spends by a script path, and BIP
+/// 341's control block then carries the internal key and the Merkle path
+/// to the root: the payee's declared key `key`, and the commitment hash as
+/// the sibling beside the owner's scripts. Both are on the chain forever,
+/// and `key` is in the payee's public pointer or vault.
+#[test]
+fn a_script_path_spend_publishes_the_payees_declared_key_and_the_commitment_on_the_chain() {
+    use bitcoin::key::XOnlyPublicKey;
+    use bitcoin::secp256k1::Secp256k1;
+    use bitcoin::taproot::{LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder};
+    use bitcoin::ScriptBuf;
+    let k = Keys::new("a vault, 2-of-3 by script");
+    let c = h("a vault payment's commitment");
+    // The owner's one script leaf: its TapLeaf hash is the `tree` the
+    // address declares.
+    let script = ScriptBuf::from_bytes(vec![0x51]); // stands in for the multisig script
+    let leaf: [u8; 32] = TapLeafHash::from_script(&script, LeafVersion::TapScript).to_byte_array();
+    let a = OnchainAddress { tree: Some(leaf), ..k.address(Network::Regtest) };
+    let secp = Secp256k1::new();
+    let info = TaprootBuilder::new()
+        .add_leaf(1, script.clone())
+        .unwrap()
+        .add_hidden_node(1, TapNodeHash::from_byte_array(c))
+        .unwrap()
+        .finalize(&secp, XOnlyPublicKey::from_slice(&a.key).unwrap())
+        .unwrap();
+    // The chain's output is the Module's address for this payment.
+    assert_eq!(info.output_key().to_x_only_public_key().serialize(), a.output_key(&c).unwrap());
+    // What the owner must put on the chain to spend by its script.
+    let control = info.control_block(&(script, LeafVersion::TapScript)).unwrap().serialize();
+    assert_eq!(&control[1..33], &a.key, "the control block carries the declared key");
+    assert!(control.windows(32).any(|w| w == c), "and the commitment hash, as the sibling");
+    eprintln!("a script-path spend reveals on the chain: the declared key {} and the commitment {}", hex(&a.key), hex(&c));
+}
+
+fn hex(b: &[u8]) -> String {
+    b.iter().map(|x| format!("{x:02x}")).collect()
+}
+
+// ---------------------------------------------------------------- 3b. The salt is the only secret
+
+/// Everything else in the commitment is public or guessable: the payee
+/// and its pointer act are public, the amount is a published price, what
+/// it fulfils is a public act, the payer is one of a short list, and the
+/// address's key is in the pointer. The output script is a deterministic
+/// function of these and the salt, so a client that makes salts from a
+/// counter, a clock or anything short lets an observer of the chain
+/// recompute the address and read, from a bare Taproot output, who paid
+/// whom for what. The Module says "chosen by the payer, fresh for each
+/// payment" and no more; the privacy claim rests on 128 random bits the
+/// payer's client must supply.
+#[test]
+fn a_weak_salt_lets_an_observer_of_the_chain_name_the_payer_the_payee_and_the_work() {
+    let flow = Keys::new("Bob's flow");
+    let a = flow.address(Network::Regtest);
+    let (bob, pointer, offer) = (h("Bob"), h("Bob's pointer act"), h("Bob's standing offer"));
+    let price = sat(4_321);
+    let payers = [h("Alice"), h("Carol"), h("Dan")];
+    // A careless wallet: the salt is a one-byte counter.
+    let mut salt = [0u8; 16];
+    salt[0] = 37;
+    let secret = Commitment { rail: mor_onchain::spec(), payee: bob, amount: price, fulfils: offer, payer: Some(Payer::Identity(payers[1])), paid_to: PaidTo::Flow { pointer, rail: 0 }, salt, purchase: None };
+    let on_chain = a.script(&secret.hash()).unwrap();
+    // The observer holds Bob's public pointer and offer, the price, and a
+    // list of three people who might buy; it tries every salt.
+    let mut found = None;
+    for payer in payers {
+        for n in 0..=255u8 {
+            let mut s = [0u8; 16];
+            s[0] = n;
+            let guess = Commitment { rail: mor_onchain::spec(), payee: bob, amount: price, fulfils: offer, payer: Some(Payer::Identity(payer)), paid_to: PaidTo::Flow { pointer, rail: 0 }, salt: s, purchase: None };
+            if a.script(&guess.hash()).unwrap() == on_chain {
+                found = Some((payer, n));
+            }
+        }
+    }
+    assert_eq!(found, Some((payers[1], 37)), "from the output alone: Carol bought Bob's offer at 4,321, with salt 37");
 }
