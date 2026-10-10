@@ -2408,6 +2408,23 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Core changes:** Envelope draft 7, the anchoring task (the point on a block-based reference); Finance draft 6, rule 15 (a rail proof read as an anchor where it passes the clock's anchoring cMIP); the on-chain rail Module draft 1 and the payment cMIP (the commitment names its act). *To build:* with step 14a's anchoring cMIP, which must define its point as the block before its code.
 
+## F202. One anchoring cMIP; the clocks are Modules (10 October 2026, early afternoon)
+
+**Decided by Nobody, allegedly, 10 October 2026, while deciding OC2 ("We need tu ensure that anchoring to multiple clocks is possible, cMIP is the anchoring, modules are the clocks."):** the anchoring task has one cMIP, which says what an anchor is, how two anchors on one clock compare, and what a clock must accept and produce; each clock (Bitcoin, a timestamp service, any other) is a Module under it, as rails are Modules under the payment cMIP. An act may be anchored on any number of clocks (already true: anyone may anchor any act, F173); the owner's declared clock names, by Module, the main clock and the backup that decide rule 15 (F176, F179).
+
+**Read with F201 (the project lead's wording, no rule changed):** "passes the anchoring cMIP's own check" reads as "passes the Bitcoin clock Module's check, under the anchoring cMIP"; the point on a block-based clock (the block) is defined by the anchoring cMIP for any such clock, and by the Bitcoin clock Module for Bitcoin.
+
+**Core changes:** Envelope draft 7, the anchoring task (one cMIP, clocks as Modules); Finance draft 6, the clock format (each entry names a clock Module, where it now says "an anchoring cMIP and its parameters"). *To build:* with step 14a, the first clock Module being Bitcoin.
+
+
+## F203. On a clock that is not Bitcoin, the owner bears on-chain payments caught in the window (10 October 2026, early afternoon)
+
+**From** OC2 for clocks that cannot see the payment's block (F201 settled the Bitcoin clock). *Laid beside it:* F176 ("a payee with no declared clock has chosen no protection and bears"; a payer's client reads the clock before paying; what is compared is named by the party a thief cannot be); F170 (re-pointing in the window is the window's cost); Fable's review, findings 2 and 3.
+
+**Decided by Nobody, allegedly, 10 October 2026 ("Yes, option 1."):** where the owner's clock is not Bitcoin, the earliest anchor among the payer's claims of the same payment (F200: "the same payment" as the rail Module says) counts, once one of them is valid. *Suggested by the project lead.* **Stated cost, at the size Fable found:** a thief and a payer together can anchor a claim in the window, pay after the lock change, and be protected; the owner bears, having accepted on-chain payments under a clock that cannot see them, and can close it by declaring Bitcoin as the clock. Not chosen: option 2, which let the owner void any honest on-chain payment by a lock change within the hour.
+
+**Core changes:** Finance draft 6, rule 15 (the earliest anchor of the same payment's claims, once one is valid, where the clock cannot compare with the rail's own proof), with the cost stated; the on-chain rail Module draft 1, "Costs, stated". *To build:* with F200 and F201.
+
 ## F191 to F199 built (10 October 2026, early afternoon)
 
 `docs/f191-f199-build-2026-10-10.md` (merged): F191 to F199 written into Law draft 10, Finance draft 6, Production draft 6, core v21 and the freeze suite (each revised in place for Nobody, allegedly, to approve again) and built, each with a test that fails first; Rust 502 passed; both FORK-HANDS-OUT seeds and every invariant pass at 5,000 cases; Fable's `review_f190_*` tests rewritten to pin the fixes (5b, the offer's object, unchanged: QH3). The display client released again. **Six questions for Nobody, allegedly, open:** QH1 (two settlements of one fork, neither holding the other, one the judge's); QH2 (a branch nobody named, carrying a newcomer, dropped by F192 without her signature); QH3 (the object a relay's record names, and a purchase naming an offer; joins step 12b's OF1); QH4 (a resignation and the very version that registers it); QH5 (a one-time key that gave no refund address); QH6 (a pointer inside a fork's history whose taking-on the fork left out). Nine readings to confirm.
