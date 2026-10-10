@@ -17,6 +17,28 @@ import { parseGatewaySettings, type GatewaySettings, type Serve } from '../src/s
 export const SITE_DIR = fileURLToPath(new URL('../../../docs/dubsar.org', import.meta.url));
 export const phone = new Uint8Array(readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url)));
 
+/**
+ * The departments' doors (decided by Nobody, allegedly, 9 October 2026): a folder each within the one site, in
+ * the order of the working list (docs/roadmap-v1.md, "Doors on the site"), with the name each page carries.
+ * Every pitch sends the main door and the department's; the main door does not list them.
+ */
+export const DOORS: [folder: string, name: string][] = [
+  ['computer-science', 'Computer science'],
+  ['cryptography', 'Cryptography and security'],
+  ['ai', 'Artificial intelligence'],
+  ['law', 'Law'],
+  ['economics', 'Economics'],
+  ['business', 'Business and marketing'],
+  ['politics', 'Political science and public policy'],
+  ['journalism', 'Journalism and communication'],
+  ['music', 'Music'],
+  ['film', 'Film and media production'],
+  ['creative-industries', 'Creative industries and publishing'],
+  ['education', 'Education'],
+  ['sociology', 'Sociology and labour studies'],
+  ['philosophy', 'Philosophy and ethics'],
+];
+
 export interface World {
   homes: Running[];
   relay: Running;

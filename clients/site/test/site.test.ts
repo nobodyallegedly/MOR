@@ -25,7 +25,7 @@ import { checkFiles, publishSite, readFolder, type FileIn } from '../src/publish
 import { BUILT, DISPLAY_FILES } from '../src/released.ts';
 import { hostOf, parseGatewaySettings, parseSiteSettings } from '../src/settings.ts';
 import { fetchFile, openVersion } from '../src/verify.ts';
-import { gatewayFor, phone, siteCopy, world, type World } from './world.ts';
+import { DOORS, gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const run = promisify(execFile);
@@ -129,13 +129,16 @@ test('the dubsar.org site is published as a version of its owner, and every file
   assert.equal(v.manifest!.name, 'dubsar.org');
   assert.equal(v.manifest!.previous, null);
   const paths = v.manifest!.files.map((f) => f.path);
-  assert.deepEqual(paths, ['build.html', 'icon.jpg', 'index.html', 'read.html', 'run.html', 'site.css', 'tablet-dark.jpg', 'tablet-light.jpg', 'use.html']);
+  // The main door's pages and files, and each department's door, a folder of its own (9 October 2026).
+  const main = ['build.html', 'icon.jpg', 'index.html', 'read.html', 'run.html', 'site.css', 'tablet-dark.jpg', 'tablet-light.jpg', 'use.html'];
+  const doors = DOORS.map(([folder]) => `${folder}/index.html`);
+  assert.deepEqual(paths, [...main, ...doors].sort());
   for (const f of v.manifest!.files) {
     const b = await fetchFile(f, v.places);
     assert.ok(b, f.path);
     assert.deepEqual(b, new Uint8Array(readFileSync(join(w.dir, f.path))));
   }
-  assert.equal(w.site.uploaded, 9);
+  assert.equal(w.site.uploaded, main.length + doors.length);
 });
 
 test('a new version names the one before, uploads only what changed; the old one still verifies', async () => {
@@ -371,8 +374,8 @@ test('the display client a gateway serves by default is the copy published in th
 test('from the command line, with no gateway: verify a version and write its files out', async () => {
   const out = mkdtempSync(join(tmpdir(), 'mor-site-out-'));
   const r = await run('node', ['--import', 'tsx', 'src/cli.ts', 'verify', w.site.id, '--identity', w.owner.id, '--at', w.relay.base, '--out', out], { cwd: here });
-  assert.match(r.stdout, /VERIFIED: the site "dubsar.org", 9 files/);
-  for (const p of ['index.html', 'run.html', 'site.css']) assert.deepEqual(readFileSync(join(out, p)), readFileSync(join(w.dir, p)));
+  assert.match(r.stdout, new RegExp(`VERIFIED: the site "dubsar.org", ${9 + DOORS.length} files`));
+  for (const p of ['index.html', 'run.html', 'site.css', 'law/index.html']) assert.deepEqual(readFileSync(join(out, p)), readFileSync(join(w.dir, p)));
   await assert.rejects(
     run('node', ['--import', 'tsx', 'src/cli.ts', 'verify', w.site.id, '--identity', 'ab'.repeat(32), '--at', w.relay.base], { cwd: here }),
     (e: { code: number; stdout: string }) => e.code === 1 && /NOT VERIFIED/.test(e.stdout),
