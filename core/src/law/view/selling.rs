@@ -46,7 +46,7 @@ impl<'a> LawView<'a> {
     /// The payees of an agreement naming a split service (rule 18): in a
     /// deal, the grantors of field 14's grants (F129, H4); in a collective,
     /// the collective. `None` where it names none (payer-side splitting).
-    fn payees_of(&self, agreement: &Hash, t: &Terms) -> R<Option<Vec<Hash>>> {
+    pub(super) fn payees_of(&self, agreement: &Hash, t: &Terms) -> R<Option<Vec<Hash>>> {
         if t.split_grant.is_some() {
             return Ok(Some(self.collective_of(agreement)?.into_iter().collect()));
         }

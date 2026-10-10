@@ -47,6 +47,9 @@ pub mod reference_absence_proof;
 /// one paid for.
 mod selling;
 pub use selling::OfferEval;
+/// Client conformance on a deal's versions (F221, F222).
+mod deals;
+pub use deals::SuccessorCheck;
 /// The owning side of step 12b: work claims and stake transfers.
 mod owning;
 pub use owning::{TransferEval, WorkOwners};
@@ -7493,18 +7496,40 @@ impl<'a> LawView<'a> {
     /// the parties, neither holding the other, keep different lines: every
     /// party signed both, and the deal stays tangled on its reference
     /// (DQ3) until one holding both settles it. Where a judge's settlement
-    /// is one of two such, which came first cannot be told, and the
-    /// verifier refuses ("Open in this draft", QH1). With no settlement,
+    /// is one of two such (F206, decided 10 October 2026): a judge's two,
+    /// keeping different versions, both count for nothing, the judge read
+    /// as answering "unknown", and the next link of its chain settles; the
+    /// parties' against a judge's, the parties' holds. Two links' settlements
+    /// neither holding the other are not decided by the texts, and the
+    /// verifier refuses (question QK1). With no settlement,
     /// tangled shapes (DQ1, DQ2) leave the deal on its reference. Only
     /// complete versions of this deal are read (F189, 2); a settling
     /// version naming a version this verifier does not hold is read as a
     /// plain version until it holds it (F196).
     pub fn deal_state(&self, root: &Hash) -> R<DealState> {
+        Ok(self.deal_walk(root)?.0)
+    }
+
+    /// F206 (a), decided by Nobody, allegedly, 10 October 2026: the judges
+    /// of forks who settled one fork of the deal `agreement` belongs to
+    /// twice or more, their first settlements neither holding the other
+    /// and keeping different versions: each such link with its
+    /// settlements, which count for nothing. The double signature stays
+    /// visible; a client shows it beside the fork.
+    pub fn judges_contradicted(&self, agreement: &Hash) -> R<Vec<(Hash, Vec<Hash>)>> {
+        let root = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
+        Ok(self.deal_walk(&root)?.1)
+    }
+
+    /// [`Self::deal_state`], with the judges who contradicted themselves
+    /// on the forks met on the way (F206 a).
+    fn deal_walk(&self, root: &Hash) -> R<(DealState, Vec<(Hash, Vec<Hash>)>)> {
+        let mut contradicted: Vec<(Hash, Vec<Hash>)> = vec![];
         let mut at = *root;
         loop {
             let kids = self.complete_clones(&at);
             match kids.len() {
-                0 => return Ok(DealState::InForce(at)),
+                0 => return Ok((DealState::InForce(at), contradicted)),
                 1 => {
                     at = kids[0];
                     continue;
@@ -7526,7 +7551,7 @@ impl<'a> LawView<'a> {
                 .iter()
                 .map(|k| below.keys().filter(|x| up(x).last() == Some(k)).copied().collect())
                 .collect();
-            let tangled = |why: &'static str| Ok(DealState::Tangled { reference: at, why, branches: branches.clone() });
+            let tangled = |why: &'static str, c: Vec<(Hash, Vec<Hash>)>| Ok((DealState::Tangled { reference: at, why, branches: branches.clone() }, c));
             let hist = self.fork_histories(&below)?;
             // Two versions on separate lines: neither descends from the other.
             let apart = |a: &Hash, b: &Hash| a != b && !up(a).contains(b) && !up(b).contains(a);
@@ -7570,7 +7595,16 @@ impl<'a> LawView<'a> {
                 }
                 cands.push(Settlement { act: *x, into: *x, judge: false, seen });
             }
-            for (act, kept, discarded) in self.arbitrated(&at, &below)? {
+            // The judges' settlements, link by link of the chain of
+            // judgment (QG4). F206 (a): a link whose first settlements of
+            // this fork, neither holding the other, keep different versions
+            // has answered "unknown": all its settlements count for
+            // nothing, and the next link's turn has come, with no period to
+            // wait (rule 34a) (mechanic, the build's: "first" read on the
+            // link's own settlements by history, as F192 reads any two).
+            let (links, judged) = self.arbitrated(&at, &below)?;
+            let mut by_link: Vec<Vec<(Settlement, Hash)>> = links.iter().map(|_| vec![]).collect();
+            for (i, act, request, kept, discarded) in judged {
                 if !discarded.iter().all(|o| apart(o, &kept)) {
                     continue;
                 }
@@ -7581,13 +7615,34 @@ impl<'a> LawView<'a> {
                 if !names_all(&seen, &[kept], &discarded) {
                     continue;
                 }
-                cands.push(Settlement { act, into: kept, judge: true, seen });
+                by_link[i].push((Settlement { act, into: kept, judge: true, seen }, request));
+            }
+            let mut unknown: Vec<bool> = vec![false; links.len()];
+            for (i, own) in by_link.into_iter().enumerate() {
+                // QG4: its turn has come: every link before it let its
+                // period pass on this request, or answered "unknown"; a
+                // settlement out of turn counts for nothing, and is no
+                // contradiction either.
+                let own: Vec<Settlement> = own
+                    .into_iter()
+                    .filter(|(_, request)| (0..i).all(|k| unknown[k] || self.judges_lapsed.contains(&(*request, links[k]))))
+                    .map(|(c, _)| c)
+                    .collect();
+                let first: Vec<&Settlement> = own.iter().filter(|c| !own.iter().any(|o| o.act != c.act && c.seen.contains(&o.act))).collect();
+                if first.iter().any(|c| c.into != first[0].into) {
+                    unknown[i] = true;
+                    let mut acts: Vec<Hash> = own.iter().map(|c| c.act).collect();
+                    acts.sort();
+                    contradicted.push((links[i], acts));
+                    continue;
+                }
+                cands.extend(own);
             }
             // F192: one settlement is after another when its history holds
             // it. Of those that are after none, one counts; where they keep
             // different lines, neither holds the other: the parties' own
             // tangle (DQ3), set aside for a later settlement holding them
-            // all, or, a judge among them, not decided by the texts (QH1).
+            // all; the parties' against a judge's, the parties' (F206 b).
             let mut live: Vec<&Settlement> = cands.iter().collect();
             let mut set_aside: Vec<&Settlement> = vec![];
             let mut settled: Option<Hash> = None;
@@ -7604,9 +7659,18 @@ impl<'a> LawView<'a> {
                     settled = Some(first[0].into);
                     break;
                 }
+                // F206 (b): a settlement every party signed and a judge's,
+                // neither holding the other, keeping different versions:
+                // the parties' holds, the judge's counts for nothing (rule
+                // 45b: the judge is a fallback a request activates).
+                if first.iter().any(|c| !c.judge) && first.iter().any(|c| c.judge) {
+                    let judges: Vec<Hash> = first.iter().filter(|c| c.judge).map(|c| c.act).collect();
+                    live.retain(|c| !judges.contains(&c.act));
+                    continue;
+                }
                 if first.iter().any(|c| c.judge) {
                     return Err(LawError::Unsettled(
-                        "two settlements of one deal's fork, a judge's among them, neither holding the other: which came first cannot be told (rule 45b, F192; QH1, Open in this draft)",
+                        "two judges' settlements of one deal's fork, by two links of its chain of judgment, neither holding the other: not decided by the texts (rule 45b, F206; question QK1)",
                     ));
                 }
                 set_aside.extend(first.iter().copied());
@@ -7617,14 +7681,14 @@ impl<'a> LawView<'a> {
                 continue;
             }
             if !set_aside.is_empty() {
-                return tangled("two settlements of one fork, neither holding the other (DQ3)");
+                return tangled("two settlements of one fork, neither holding the other (DQ3)", contradicted);
             }
             if kids.len() > 2 {
-                return tangled("three or more complete versions of one version, not settled by one naming every tip (DQ2, QF3)");
+                return tangled("three or more complete versions of one version, not settled by one naming every tip (DQ2, QF3)", contradicted);
             }
             let parents: Vec<&Hash> = below.values().filter(|p| **p != at).collect();
             if parents.iter().enumerate().any(|(i, p)| parents[i + 1..].contains(p)) {
-                return tangled("a branch that splits again (DQ1)");
+                return tangled("a branch that splits again (DQ1)", contradicted);
             }
             let lines = branches
                 .iter()
@@ -7634,7 +7698,7 @@ impl<'a> LawView<'a> {
                     b
                 })
                 .collect();
-            return Ok(DealState::Forked { reference: at, branches: lines });
+            return Ok((DealState::Forked { reference: at, branches: lines }, contradicted));
         }
     }
 
@@ -7714,10 +7778,10 @@ impl<'a> LawView<'a> {
     /// drops (QF3), all versions of the fork. As (the act, the version
     /// kept, the tips dropped). Where the reference names no judge of
     /// forks, none settles, and the deal waits on its reference (QF2).
-    fn arbitrated(&self, at: &Hash, below: &BTreeMap<Hash, Hash>) -> R<Vec<(Hash, Hash, Vec<Hash>)>> {
+    fn arbitrated(&self, at: &Hash, below: &BTreeMap<Hash, Hash>) -> R<(Vec<Hash>, Vec<(usize, Hash, Hash, Hash, Vec<Hash>)>)> {
         let t = self.terms(at)?;
         let Some(judge) = t.fork_judge.filter(|j| t.arbitrators.iter().flatten().any(|a| a == j)) else {
-            return Ok(vec![]);
+            return Ok((vec![], vec![]));
         };
         let links = t.chain_of(&Judge::Identity(judge)).unwrap_or_else(|| vec![judge]);
         let mut out = vec![];
@@ -7745,17 +7809,18 @@ impl<'a> LawView<'a> {
                 if !links[..=i].iter().all(reaches) {
                     continue;
                 }
-                // QG4: its turn has come, and has not passed.
-                let lapsed = |j: &Hash| self.judges_lapsed.contains(&(s.request, *j));
-                if !links[..i].iter().all(lapsed) || lapsed(link) {
+                // QG4: its own turn has not passed (whether it has come is
+                // read in `deal_walk`, where a link before it may have
+                // answered "unknown", F206 a).
+                if self.judges_lapsed.contains(&(s.request, *link)) {
                     continue;
                 }
                 if below.contains_key(&s.kept) && s.discarded.iter().all(|d| below.contains_key(d)) {
-                    out.push((h.id, s.kept, s.discarded));
+                    out.push((i, h.id, s.request, s.kept, s.discarded));
                 }
             }
         }
-        Ok(out)
+        Ok((links, out))
     }
 
     /// Where a deal stands forked (rule 45b, F186): the reference, the
@@ -7889,6 +7954,19 @@ impl<'a> LawView<'a> {
             }
             _ => return Ok(None),
         };
+        // F224: a payment for a stake transfer is a purchase of the stake,
+        // unless the transfer is an over-sale on the seller's own line: then
+        // it confers nothing, and the payment is money received for
+        // nothing, owed back by the seller (Money rule 10c).
+        if let Some(t) = self.transfer_paid_by(id, &fulfils) {
+            let mut e = PurchaseEval { id: *id, purchase: purchase.clone(), verdict: PurchaseVerdict::Purchase, refund_to };
+            if self.transfer(&t)?.over_sale {
+                e.verdict = PurchaseVerdict::NoPurchase {
+                    why: "it pays for a stake transfer that is an over-sale on the seller's own line: the transfer confers nothing, and the payment is owed back by the seller (F224; Money rule 10c)".into(),
+                };
+            }
+            return Ok(Some(e));
+        }
         let work = self.work_of(&fulfils);
         let for_offer = self.v.get(&fulfils).is_some_and(|f| self.is_law(f, types::STANDING_OFFER));
         let for_work = for_offer || work.is_some_and(|w| self.claimed(&w));
@@ -9041,7 +9119,28 @@ impl<'a> LawView<'a> {
         idxs.sort();
         idxs.dedup();
         for idx in idxs {
-            let paid_on: Vec<&Payout> = s.payouts.iter().filter(|p| p.stake == Some(idx)).collect();
+            // QJ2 (a), settled by the project lead under F216's delegation:
+            // a holder that is a work's agreement (F216) is paid through a
+            // payee of that agreement (its field 14, as its version in force
+            // names them); such a payout is read as paid to that holder. A
+            // receiver that is itself a holder of the stake is read as paid
+            // in its own name (mechanic, the build's).
+            let direct: Vec<Hash> = t.stakes.iter().flatten().nth(idx as usize).map(|st| st.holders.iter().filter_map(|(w, _)| w.resolve(collective.as_ref())).collect()).unwrap_or_default();
+            let mapped: Vec<Payout> = s
+                .payouts
+                .iter()
+                .filter(|p| p.stake == Some(idx))
+                .map(|p| {
+                    let mut q = p.clone();
+                    if !direct.contains(&p.receiver) {
+                        if let Some(a) = direct.iter().find(|a| self.work_payees(a).is_some_and(|ps| ps.contains(&p.receiver))) {
+                            q.receiver = *a;
+                        }
+                    }
+                    q
+                })
+                .collect();
+            let paid_on: Vec<&Payout> = mapped.iter().collect();
             let pot: u128 = paid_on.iter().map(|p| p.amount as u128).sum();
             let Some(stake) = t.stakes.iter().flatten().nth(idx as usize) else {
                 for p in paid_on {
@@ -9394,6 +9493,20 @@ impl<'a> LawView<'a> {
             .collect()
     }
 
+    /// The payees of a work's agreement named as a holder (F216, QJ2 a):
+    /// where `holder` is an agreement this verifier holds, the payees its
+    /// version in force names (field 14's grantors, or its collective);
+    /// `None` otherwise.
+    fn work_payees(&self, holder: &Hash) -> Option<Vec<Hash>> {
+        let h = self.v.get(holder)?;
+        if !self.is_law(h, types::TERMS) {
+            return None;
+        }
+        let v = self.version_in_force(holder).ok()?;
+        let t = self.terms(&v).ok()?;
+        self.payees_of(&v, &t).ok().flatten()
+    }
+
     /// What a split service owes (rule 29; audit, October 2026, gap 3).
     /// Unsplit: every receipt the service signed with a grant key, backed,
     /// binding, or unknown under a limited grant (money coming in for its
@@ -9496,6 +9609,13 @@ impl<'a> LawView<'a> {
                         received,
                     });
                 }
+            }
+        }
+        // F223: from the service's first split citing a transfer, the
+        // seller's payouts on that stake are owed to the buyer.
+        for (split, idx, buyer, owed) in self.owed_from_citing_splits(&splits) {
+            if !owed_to_buyers.iter().any(|(s, i, b, _)| *s == split && *i == idx && *b == buyer) {
+                owed_to_buyers.push((split, idx, buyer, owed));
             }
         }
         // F214: each fee its splits left out, its open obligation.
