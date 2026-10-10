@@ -1007,11 +1007,13 @@ var Verifier = class {
    * tangled }`, each branch its versions from the split to its latest,
    * `tangled` the reason where the fork is tangled (F188, DQ1 to DQ4: the
    * deal stays on its reference); null where it is not forked. Throws
-   * where the shape is not decided (QF1, refused rather than guessed).
+   * where the shape is not decided (QH1, refused rather than guessed).
    * The version of an agreement in force, as rule 45b reads a deal's
-   * forks (F186, F188): while forked or tangled, the reference. Throws
-   * where the shape is not decided (QF1). What a buyer's client checks
-   * an offer against before paying (F188, a strong SHOULD).
+   * forks (F186, F188, F192): while forked or tangled, the reference.
+   * Throws where the shape is not decided (QH1: two settlements, a
+   * judge's among them, neither holding the other). What a buyer's
+   * client checks an offer against before paying (F188, a strong
+   * SHOULD).
    * @param {any} specs
    * @param {string} agreement
    * @returns {string}
