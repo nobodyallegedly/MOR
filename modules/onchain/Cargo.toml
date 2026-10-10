@@ -11,6 +11,8 @@ btcd = ["dep:reqwest", "dep:serde_json", "dep:tokio"]
 [dependencies]
 mor-core = { path = "../../core" }
 mor-payment = { path = "../../cmips/payment" }
+# The batch tree the Bitcoin clock reads batch anchors with (step 14a).
+mor-anchoring = { path = "../../cmips/anchoring" }
 sha2 = { version = "0.10", default-features = false }
 # secp256k1 point arithmetic for the Taproot tweak, and BIP-340 signatures
 # for the payee's side's requests.
@@ -26,6 +28,9 @@ hex = "0.4"
 bitcoin = "0.32"
 # The Lightning rail Module: the same units, and a vault holding both rails.
 mor-lightning = { path = "../lightning" }
+# Real BOLT 11 invoices, signed by a test node key, for the anchoring
+# service's payments per hash.
+lightning-invoice = "0.33"
 # The core's test world (`core/tests/common`), shared by the theft story: it
 # checks every SLH-DSA signature against this second implementation.
 slh-dsa = "=0.2.0-rc.5"

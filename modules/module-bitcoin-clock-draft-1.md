@@ -1,3 +1,5 @@
+*Superseded, 10 October 2026, by draft 2 (`modules/module-bitcoin-clock-draft-2.md`, roadmap step 14a, `docs/anchoring-step-14a.md`). Kept as written.*
+
 # Module: Bitcoin clock
 
 *Draft 1, 10 October 2026 (findings F201, F202, F204 and F205; `docs/onchain-rail-f200-f205-build-2026-10-10.md`). **EXPERIMENTAL. Not approved, not a product, not for real money.** A clock Module under the anchoring cMIP draft 1 (`cmips/cmip-anchoring-draft-1.md`), which its field 5 names. Written only as far as F201 to F205 need: **batch anchors, the pooled anchoring service's proofs, are roadmap step 14a's and are not defined here.** Its hash stays a draft hash until its creator is named at step 17. Not core: frozen at publication, competing with any other Bitcoin clock Module.*

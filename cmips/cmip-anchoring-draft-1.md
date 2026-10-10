@@ -1,3 +1,5 @@
+*Superseded, 10 October 2026, by draft 2 (`cmips/cmip-anchoring-draft-2.md`, roadmap step 14a, `docs/anchoring-step-14a.md`). Kept as written.*
+
 # cMIP: Anchoring
 
 *Draft 1, 10 October 2026 (findings F201, F202 and F204; `docs/onchain-rail-f200-f205-build-2026-10-10.md`). **Experimental, not approved:** an instrument for testing the core, not a product. It fills the Envelope's anchoring task (Envelope draft 7, "Anchoring", F173). Written only as far as F201, F202 and F204 need: **the pooled anchoring service of roadmap step 14a (batches, payment per hash, omission, deadlines, urgency tiers) is not written here; it is that step's.** Its hash stays a draft hash until its creator is named at step 17. Not core: a founding cMIP, frozen at publication, competing with any other anchoring cMIP.* *Decided by Nobody, allegedly, 10 October 2026 (F202): "We need tu ensure that anchoring to multiple clocks is possible, cMIP is the anchoring, modules are the clocks."*

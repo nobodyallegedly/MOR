@@ -396,53 +396,72 @@ impl<'a> Onchain<'a> {
         let Some(b) = paid.block else {
             return Answer::Pending("the transaction is unconfirmed".into());
         };
-        // 8. In the block, at its one canonical position, under headers
-        // that build on each other and meet their targets.
-        let mut headers = Vec::with_capacity(b.headers.len());
-        for (i, raw) in b.headers.iter().enumerate() {
-            let Some(hd) = block::Header::decode(raw) else {
-                return Answer::Invalid("a header is not 80 bytes".into());
-            };
-            if i > 0 && hd.previous != headers.last().map(|p: &block::Header| p.hash).unwrap_or_default() {
-                return Answer::Invalid("a header does not build on the one before it".into());
-            }
-            if !hd.meets_its_target() {
-                return Answer::Invalid("a header's hash is above the target it states".into());
-            }
-            headers.push(hd);
-        }
-        if block::merkle_root(&t.txid, b.index, &b.branch) != Some(headers[0].merkle_root) {
-            return Answer::Invalid("the Merkle branch does not place the transaction in the block".into());
-        }
-        if !block::canonical(&t.txid, b.index, &b.branch) {
-            return Answer::Invalid("the index is not canonical: where the tree repeats a node, only the node's own position is its proof (one payment, one proof, F200)".into());
-        }
-        // 9. On the chain this verifier follows (F204).
-        let Some(chain) = chain.filter(|c| c.network() == addr.network) else {
-            return Answer::Unknown("this verifier holds no headers of the address's network: a mined payment is checked against the chain it follows, never against its own headers alone (F204)".into());
-        };
-        let Some(height) = chain.height_of(&headers[0].hash) else {
-            return Answer::Unknown("the proof's block is not on the chain this verifier follows (F204)".into());
-        };
-        for (i, hd) in headers.iter().enumerate().skip(1) {
-            match chain.hash_at(height + i as u64) {
-                Some(x) if x == hd.hash => {}
-                Some(_) => return Answer::Unknown("the proof's confirmations are on another branch than the chain this verifier follows (F204)".into()),
-                None => break,
-            }
-        }
-        // 10, 11. The confirmations: on the proof, and on the chain held.
-        let shown = headers.len() as u64;
-        let held = chain.tip() - height + 1;
-        if shown < need || held < need {
-            return Answer::Pending(format!("{} of {need} confirmations", shown.min(held)));
-        }
-        if shown > need {
-            return Answer::Invalid(format!("{shown} headers: one payment has one proof, with exactly {need}"));
+        // 8 to 11. In the block, on the chain followed, at the depth.
+        if let Err(a) = confirmed(&t.txid, &b, chain, addr.network, need) {
+            return a;
         }
         // 12.
         Answer::Valid
     }
+}
+
+/// Steps 8 to 11 of the rule, shared by the rail and the Bitcoin clock's
+/// batch anchors (anchoring cMIP draft 2: "the same tweak and header checks
+/// against the chain the verifier follows"): the transaction `txid` at its
+/// one canonical position in the proof's block (F200), under headers that
+/// build on each other and meet their targets; that block on the chain the
+/// verifier follows, of `network` (F204); exactly `need` headers, on the
+/// proof and on the chain held (F205). The block's height where all hold;
+/// otherwise the answer to give.
+pub(crate) fn confirmed(txid: &[u8; 32], b: &Block, chain: Option<&chain::HeaderChain>, network: Network, need: u64) -> Result<u64, Answer> {
+    // 8. In the block, at its one canonical position, under headers that
+    // build on each other and meet their targets.
+    let mut headers = Vec::with_capacity(b.headers.len());
+    for (i, raw) in b.headers.iter().enumerate() {
+        let Some(hd) = block::Header::decode(raw) else {
+            return Err(Answer::Invalid("a header is not 80 bytes".into()));
+        };
+        if i > 0 && hd.previous != headers.last().map(|p: &block::Header| p.hash).unwrap_or_default() {
+            return Err(Answer::Invalid("a header does not build on the one before it".into()));
+        }
+        if !hd.meets_its_target() {
+            return Err(Answer::Invalid("a header's hash is above the target it states".into()));
+        }
+        headers.push(hd);
+    }
+    let Some(first) = headers.first() else {
+        return Err(Answer::Invalid("no header".into()));
+    };
+    if block::merkle_root(txid, b.index, &b.branch) != Some(first.merkle_root) {
+        return Err(Answer::Invalid("the Merkle branch does not place the transaction in the block".into()));
+    }
+    if !block::canonical(txid, b.index, &b.branch) {
+        return Err(Answer::Invalid("the index is not canonical: where the tree repeats a node, only the node's own position is its proof (one payment, one proof, F200)".into()));
+    }
+    // 9. On the chain this verifier follows (F204).
+    let Some(chain) = chain.filter(|c| c.network() == network) else {
+        return Err(Answer::Unknown("this verifier holds no headers of the address's network: a mined payment is checked against the chain it follows, never against its own headers alone (F204)".into()));
+    };
+    let Some(height) = chain.height_of(&first.hash) else {
+        return Err(Answer::Unknown("the proof's block is not on the chain this verifier follows (F204)".into()));
+    };
+    for (i, hd) in headers.iter().enumerate().skip(1) {
+        match chain.hash_at(height + i as u64) {
+            Some(x) if x == hd.hash => {}
+            Some(_) => return Err(Answer::Unknown("the proof's confirmations are on another branch than the chain this verifier follows (F204)".into())),
+            None => break,
+        }
+    }
+    // 10, 11. The confirmations: on the proof, and on the chain held.
+    let shown = headers.len() as u64;
+    let held = chain.tip() - height + 1;
+    if shown < need || held < need {
+        return Err(Answer::Pending(format!("{} of {need} confirmations", shown.min(held))));
+    }
+    if shown > need {
+        return Err(Answer::Invalid(format!("{shown} headers: one payment has one proof, with exactly {need}")));
+    }
+    Ok(height)
 }
 
 impl RailModule for Onchain<'_> {
