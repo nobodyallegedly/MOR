@@ -2686,6 +2686,14 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Open for Nobody, allegedly:** QK1 (two links of the chain of judgment each settling the fork, neither holding the other); QK3 (QJ2's receipt by the work's service against H5 and H7: a grant key never signs a split's payout); the live work review's six questions (`docs/reviews/live-work-review.md`); a step-down naming drafts.
 
+## F231. Only the opener, and its grant keys, add segments to a live work (live work review, question 2, 10 October 2026, night)
+
+**From** Fable's review of F229, finding 4: "each later segment names the one before, signed as it goes": signed by whom? If anyone, a stranger's segment becomes part of the opener's work and its claim covers content the opener never made. *Laid beside it:* F128 (a grant key's act is the grantor's own); case study 17 ("each feed is a work with its own maker"); F217 ("Make it legible, don't ban it"); rule 15 ("The core records claims and their order, never legitimacy").
+
+**Decided by Nobody, allegedly, 10 October 2026 ("Agreed"):** a live work's segments are acts of its opener, signed with its own keys or a grant key it issued; a segment by anyone else naming the chain is shown by the live media cMIP as a fork, never as the work. A second camera is its own live work; a broadcaster's commentators, signing with its grant keys, add to the broadcaster's own. *Suggested by Fable and the project lead.* **Stated, with it:** a claim on a live work before it runs reserves a name, not content: for a live work, order is not evidence even of content (rule 15's "order is not evidence of authorship", read for live works).
+
+**Core changes:** Envelopes draft 7 (one sentence: a live work's segments are its opener's acts); the live media cMIP (forks shown).
+
 ## F230. A live work has a name from its opening act; "work hash" stays for the finished recording, computed from its segments (live work review, question 1, 10 October 2026, night)
 
 **From** Fable's review of F229 (`docs/reviews/live-work-review.md`, finding 1, with 7 and 10): "the fingerprint of its first signed segment" read as the bytes' fingerprint is copyable (a shared slate, a rival copying the opening); read as the opening act's id it is unique and the opener's, but voidable like any everyday act. The want is right; the word "work hash" is not. *Laid beside it:* F229 ("I think a stream should have a work hash as soon as it starts, if that stream then becomes a VOD it can have another hash pointing to the live as evidence"); Envelopes, "Work hash", approved 5 October ("the fingerprint of a work's complete plaintext … what ownership points to").
