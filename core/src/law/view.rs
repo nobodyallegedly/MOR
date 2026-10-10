@@ -43,6 +43,11 @@ use std::collections::{BTreeMap, BTreeSet};
 /// (F172): the time checks the core used before, for a caller to compute
 /// [`LawView::absence_accepted`] with.
 pub mod reference_absence_proof;
+/// The selling side of step 12b: offers judged, and what a purchase under
+/// one paid for.
+mod selling;
+pub use selling::OfferEval;
+use super::open_formats::{Offer, OfferAct};
 use std::rc::Rc;
 
 /// Read Law from what a verifier holds.
@@ -159,6 +164,18 @@ pub struct LawView<'a> {
     /// `judges_lapsed`. A closing may then leave that payment open, naming
     /// it with its notice (rule 37d; the closing's field 4).
     pub notices_lapsed: BTreeSet<Hash>,
+    /// Payments following an offer that the time reference places past the
+    /// offer's deadline (its field 5): the time reference's answer, a fact
+    /// the caller states, like `notices_lapsed`. A payment whose place is
+    /// undetermined is not listed, and is a purchase: on a push rail the
+    /// seller who chose it bears the undetermined place (Fable's reading of
+    /// OF4, in W4's shape); on a request rail the seller's request decides.
+    pub paid_past_until: BTreeSet<Hash>,
+    /// Refunds owed on payments (by one receipt or claim of the payment)
+    /// whose refund terms' point the time reference places passed (terms
+    /// field 17, or a lone seller's offer's field 7): ended (F219). The
+    /// time reference's answer, a fact the caller states.
+    pub refunds_past_terms: BTreeSet<Hash>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -488,6 +505,8 @@ impl<'a> LawView<'a> {
             delivery_records: BTreeSet::new(),
             judges_lapsed: BTreeSet::new(),
             notices_lapsed: BTreeSet::new(),
+            paid_past_until: BTreeSet::new(),
+            refunds_past_terms: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -543,6 +562,8 @@ impl<'a> LawView<'a> {
             delivery_records: self.delivery_records.clone(),
             judges_lapsed: self.judges_lapsed.clone(),
             notices_lapsed: self.notices_lapsed.clone(),
+            paid_past_until: self.paid_past_until.clone(),
+            refunds_past_terms: self.refunds_past_terms.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -3650,8 +3671,15 @@ impl<'a> LawView<'a> {
         if let Some(reason) = self.not_done(x, &ag)? {
             return Ok(Consent::NotDone { agreement: ag, reason });
         }
-        if self.is_law(x, types::IMPORT) {
-            return Err(LawError::Unsupported("imports (type 11): the format is open"));
+        // Step 12b: retired types (7, 11, 15, 21) are never reused; an act
+        // of one is invalid. An offer not in its format is invalid.
+        if x.inside.spec == self.mips.law && super::open_formats::RETIRED_TYPES.contains(&x.inside.type_) {
+            return Ok(Consent::Invalid { agreement: ag, reason: format!("Law type {} is retired, never reused (step 12b)", x.inside.type_) });
+        }
+        if self.is_law(x, types::STANDING_OFFER) {
+            if let Err(e) = super::open_formats::Offer::decode(&x.inside) {
+                return Ok(Consent::Invalid { agreement: ag, reason: e.to_string() });
+            }
         }
         if let Some(rail) = self.rail_not_accepted(&col, &c, x, b)? {
             return Ok(Consent::RailNotAccepted { agreement: ag, rail });
@@ -4113,6 +4141,12 @@ impl<'a> LawView<'a> {
         let objects_split = y.inside.objects.iter().flatten().any(|o| names_split(&o.chain) || names_split(&o.predecessor));
         if r.batch.is_some() || names_split(&r.fulfils) || objects_split {
             return Some("a split service's grant key never signs a split's payout, one its grantor is owed (F129, H5; F130, H7; rule 29)".into());
+        }
+        // Step 12b (H5's reading 4, lifted): a receipt following an offer
+        // is the grantor's only where the offer pays the grantor under its
+        // own claim.
+        if let Some(Some(w)) = self.offer_receipt_problem(&r.fulfils, grantor, own) {
+            return Some(w);
         }
         let incoming = r.purchase.as_ref().is_some_and(|p| own.contains(&p.agreement)) || own.contains(&r.fulfils);
         if !incoming {
@@ -4983,14 +5017,12 @@ impl<'a> LawView<'a> {
                 (crate::cbor::Value::Uint(0), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
                 _ => None,
             });
-            // The object paid for: the media of the publication the payment fulfils.
-            let paid_for: Option<Hash> = self.v.get(&fulfils).filter(|f| f.inside.spec == self.mips.envelope && f.inside.type_ == 0).and_then(|f| {
-                f.inside.payload.iter().find_map(|(k, v)| match (k, v) {
-                    (crate::cbor::Value::Uint(2), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
-                    _ => None,
-                })
-            });
-            if object.is_none() || object != paid_for {
+            // The object paid for: the media of the publication the payment
+            // fulfils; for a payment following an offer, of a publication
+            // the offer sells (step 12b; Fable's 4b).
+            let mut paid_for: Vec<Hash> = self.publication_field(&fulfils, 2).into_iter().collect();
+            paid_for.extend(self.offer_media(&fulfils));
+            if !object.is_some_and(|o| paid_for.contains(&o)) {
                 return false;
             }
         }
@@ -7256,6 +7288,9 @@ impl<'a> LawView<'a> {
     /// some agreement held carries a stake in it (a claimed work); `None`
     /// for a standing offer (its format is open) or anything else.
     fn work_of(&self, fulfils: &Hash) -> Option<Hash> {
+        if let Some(w) = self.offer_work(fulfils) {
+            return Some(w);
+        }
         let x = self.v.get(fulfils)?;
         if x.inside.spec != self.mips.envelope || x.inside.type_ != 0 {
             return None;
@@ -7804,6 +7839,37 @@ impl<'a> LawView<'a> {
             e.verdict = PurchaseVerdict::NoPurchase { why: w.into() };
             Ok(Some(e))
         };
+        // Step 12b, a payment following a standing offer: the offer must
+        // count; a lone seller's offer is itself the agreement with the
+        // buyer, so a payment following it names no claim and is accepted
+        // under its terms (F215); one following co-owners' offer names
+        // their agreement, a version of its lineage (the offer's field 0;
+        // mechanic, the build's).
+        if for_offer {
+            let o = match self.offer(&fulfils) {
+                Ok(o) => o,
+                Err(w) => return no(e, &format!("the offer it follows is not in the offer's format: {w}")),
+            };
+            if !o.counts {
+                return no(e, &format!("the offer it follows does not count: {}", o.problems.join("; ")));
+            }
+            if o.withdraws {
+                return no(e, "it follows a version of the offer that withdraws it: no purchase, owed back (rule 32)");
+            }
+            if self.paid_past_until.contains(id) {
+                return no(e, "paid past the offer's deadline, as the time reference answers: owed back (rule 32; OF4)");
+            }
+            match (&o.offer.under, &purchase) {
+                (None, _) => return Ok(Some(e)),
+                (Some(u), Some(p)) => {
+                    let same = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
+                    if same(u).is_none() || same(u) != same(&p.agreement) {
+                        return no(e, "it names another agreement than the one the offer is made under (the offer's field 0)");
+                    }
+                }
+                (Some(_), None) => {}
+            }
+        }
         // F131 (IT3): the payment decides. The claim is the one the
         // payment's commitment names; a receipt naming another is a wrong
         // receipt, which the rail shows: its commitment, recomputed from it,
