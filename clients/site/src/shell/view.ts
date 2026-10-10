@@ -37,15 +37,22 @@ body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:Can
 code,.fp{font-family:ui-monospace,Menlo,monospace;font-size:.92em;overflow-wrap:anywhere}
 .ok-word{color:var(--ok);font-weight:600}
 .bad-word{color:var(--bad);font-weight:600}
-#mor-view{flex:1}
+#mor-view{flex:1;position:relative}
 #mor-view>iframe{display:block;width:1px;min-width:100%;height:calc(100vh - 4em);border:0;background:Canvas}
 #mor-view>.file{padding:16px}
 #mor-view img{max-width:100%;height:auto;image-orientation:from-image}
 #mor-view pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,Menlo,monospace}
-.note{max-width:42em;margin:24px auto;padding:10px 12px;border-left:3px solid var(--bad)}`;
+.note{max-width:42em;margin:24px auto;padding:10px 12px;border-left:3px solid var(--bad)}
+.mor-player{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#000;color:#fff;overflow:hidden;font:14px/1.4 system-ui,sans-serif}
+.file .mor-player{position:relative;width:100%;aspect-ratio:16/9}
+.mor-player>img,.mor-player>video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;max-width:none}
+.mor-player>button{position:relative;font:600 16px system-ui,sans-serif;padding:12px 20px;border:0;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;cursor:pointer}
+.mor-player>.mor-film-note{position:relative;max-width:90%;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.65);text-align:center}
+.mor-player.played>.mor-film-note{display:none}`;
 
-/** Put first in every page's frame: the boxes where acts are shown, and links that leave the site. */
+/** Put first in every page's frame: the boxes where acts are shown, the places films are played, and links that leave the site. */
 export const FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
+.mor-film{display:block;width:100%;aspect-ratio:16/9;background:#000}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 
@@ -71,6 +78,14 @@ export interface Newer {
   fork: string[];
 }
 
+/** A film a page shows, or the film at this address (rule 12a): fetched and checked only when the visitor asks to play it. */
+export interface FilmLine {
+  path: string;
+  state: 'waiting' | 'checking' | 'verified' | 'failing' | 'cannot';
+  /** Why it failed, or why this browser cannot play it. */
+  why: string | null;
+}
+
 export interface BarState {
   phase: 'checking' | 'ok' | 'bad';
   /** The sentence on top, in plain words. */
@@ -82,6 +97,7 @@ export interface BarState {
   path: string | null;
   work: string | null;
   acts: ActLine[];
+  films: FilmLine[];
   reasons: string[];
   /** Null while looking for later versions, or before. */
   newer: Newer | null;
@@ -92,6 +108,17 @@ function actItem(a: ActLine): string {
   if (!a.standing) return `<li><code>${e(a.id)}</code>: checking…</li>`;
   const w = standingWords(a.standing);
   return `<li><code>${e(a.id)}</code>: <span class="${w.ok ? 'ok-word' : 'bad-word'}">${w.ok ? 'verified' : e(a.standing)}</span>, signed by <span class="fp">${fingerprint(a.signer!)}</span></li>`;
+}
+
+function filmItem(f: FilmLine): string {
+  const words = {
+    waiting: 'not fetched; checked against what was signed before it plays',
+    checking: 'fetching and checking…',
+    verified: '<span class="ok-word">verified</span>: exactly what was signed',
+    failing: '<span class="bad-word">failing</span>: not played',
+    cannot: '<span class="bad-word">not played</span> in this browser',
+  }[f.state];
+  return `<li><code>${e(f.path)}</code>: ${words}${f.why ? `, ${e(f.why)}` : ''}</li>`;
 }
 
 /** The bar: whether this file is what the identity signed, who signed, and how to check without this gateway. */
@@ -122,6 +149,7 @@ export function bar(s: BarState): string {
     );
   }
   if (s.path) rows.push(`<dt>This file</dt><dd><code>${e(s.path)}</code>${s.work ? `, work hash <code>${e(s.work)}</code>` : ''}</dd>`);
+  if (s.films.length) rows.push(`<dt>Films</dt><dd><ul id="mor-films">${s.films.map(filmItem).join('')}</ul></dd>`);
   if (s.acts.length) rows.push(`<dt>Acts shown</dt><dd><ul id="mor-acts">${s.acts.map(actItem).join('')}</ul></dd>`);
   if (s.reasons.length) rows.push(`<dt>Why</dt><dd><ul id="mor-reasons">${s.reasons.map((r) => `<li>${e(r)}</li>`).join('')}</ul></dd>`);
   rows.push(

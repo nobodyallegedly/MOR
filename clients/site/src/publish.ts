@@ -11,6 +11,7 @@ import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { NotJpeg, strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
+import { CARRIED_WORDS as FILM_CARRIED, NotFilm, strip as stripFilm } from '../../../modules/video/src/video.ts';
 import { decodeSite, encodeSite, FRONT, kindOf, type FileEntry, type SiteManifest } from './manifest.ts';
 import { PUBLICATION, SITE_SPECS } from './specs.ts';
 import { openVersion } from './verify.ts';
@@ -37,8 +38,9 @@ export function readFolder(dir: string): FileIn[] {
 /**
  * What the cMIP asks of files before they are published: valid paths (rule
  * 2), known kinds (rule 4), a front page (rule 5), pictures stripped to the
- * picture alone (rule 6), pages, stylesheets and text in UTF-8. Throws every
- * reason at once.
+ * picture alone (rule 6), films the video Module plays, within its limits,
+ * stripped to the film alone (rule 6a), pages, stylesheets and text in UTF-8.
+ * Throws every reason at once.
  */
 export function checkFiles(files: FileIn[]): void {
   const problems: string[] = [];
@@ -46,7 +48,7 @@ export function checkFiles(files: FileIn[]): void {
   for (const f of files) {
     const kind = kindOf(f.path);
     if (!kind) {
-      problems.push(`${f.path}: not a path a site may hold (lower-case a-z, 0-9, "-", "_", "."; ending in .html, .css, .jpg or .txt)`);
+      problems.push(`${f.path}: not a path a site may hold (lower-case a-z, 0-9, "-", "_", "."; ending in .html, .css, .jpg, .txt or .mp4)`);
       continue;
     }
     if (kind === 'picture') {
@@ -57,6 +59,15 @@ export function checkFiles(files: FileIn[]): void {
         }
       } catch (e) {
         problems.push(`${f.path}: ${e instanceof NotJpeg ? `not a JPEG: ${e.message}` : String(e)}`);
+      }
+    } else if (kind === 'film') {
+      try {
+        const s = stripFilm(f.bytes);
+        if (s.removed.length) {
+          problems.push(`${f.path}: carries more than the film (${s.removed.map((c) => FILM_CARRIED[c]).join('; ')}); strip it first (mor-site strip)`);
+        }
+      } catch (e) {
+        problems.push(`${f.path}: ${e instanceof NotFilm ? `not a film the video Module plays: ${e.message}` : String(e)}`);
       }
     } else {
       try {

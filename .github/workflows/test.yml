@@ -76,6 +76,9 @@ jobs:
       - name: modules/jpeg
         if: success() || failure()
         run: cd modules/jpeg && npm ci --no-audit --no-fund && npm test
+      - name: modules/video
+        if: success() || failure()
+        run: cd modules/video && npm ci --no-audit --no-fund && npm test
       - name: Reproducible build of the display client
         if: success() || failure()
         shell: bash

@@ -12,9 +12,10 @@ export const SITE_SPECS = {
   envelopes: SPECS.envelopes,
   /** The Agreements MIP (`AGREEMENTS`): only to tell that a signer is a collective. */
   agreements: test('LAW, test value until the freeze'),
-  /** The website cMIP (cmips/cmip-website-draft-3.md). Draft 3 adds the icon
-   * (rule 16a) and leaves the manifest as it was, so the test value stays
-   * draft 2's: versions already published still verify. */
+  /** The website cMIP (cmips/cmip-website-draft-4.md). Draft 3 adds the icon
+   * (rule 16a), draft 4 films (rules 4, 6a, 12a); both leave the manifest's
+   * format as it was, so the test value stays draft 2's: versions already
+   * published still verify. */
   site: test('website cMIP, draft 2, test value until publication'),
 };
 
