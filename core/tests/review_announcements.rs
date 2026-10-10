@@ -22,7 +22,7 @@
 //!    to read, and the purchase names whichever agreement the offer did.
 //!
 //! Test identities only; the specification hashes are test values until
-//! the freeze, as in the other Law tests.
+//! the freeze, as in the other Agreements tests.
 
 mod common;
 
@@ -30,21 +30,21 @@ use common::{own_home, Person, Rot, World};
 use mor_core::act::Object;
 use mor_core::cbor::Value;
 use mor_core::chain::Status;
-use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
 use mor_core::hash::{sha256, Hash};
 use mor_core::identity::KeptTip;
-use mor_core::law::{self, Field4, LawView, Mips, PurchaseVerdict, Rule, Stake, Terms, Who};
+use mor_core::agreements::{self, Field4, AgreementsView, Mips, PurchaseVerdict, Rule, Stake, Terms, Who};
 use mor_core::mmr::Mmr;
 
 fn mips() -> Mips {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mips {
         identity: common::identity_spec(),
-        envelope: t("ENVELOPE"),
+        envelopes: t("ENVELOPE"),
         text: t("TEXT"),
-        finance: t("FINANCE"),
-        law: t("LAW"),
-        production: t("PRODUCTION"),
+        money: t("FINANCE"),
+        agreements: t("LAW"),
+        development: t("PRODUCTION"),
     }
 }
 
@@ -52,17 +52,17 @@ fn spec(s: &str) -> Hash {
     sha256(s.as_bytes())
 }
 
-fn view(w: &World) -> LawView<'_> {
-    LawView::new(&w.v, mips())
+fn view(w: &World) -> AgreementsView<'_> {
+    AgreementsView::new(&w.v, mips())
 }
 
-fn law_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
-    let a = w.everyday_act(p, mips().law, type_, payload, objects, None);
+fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
+    let a = w.everyday_act(p, mips().agreements, type_, payload, objects, None);
     w.add(&a)
 }
 
 fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
-    law_act(w, p, law::types::SIGNATURE, law::signature_payload(x), Some(vec![Object { chain: *x, predecessor: *x }]))
+    agreements_act(w, p, agreements::types::SIGNATURE, agreements::signature_payload(x), Some(vec![Object { chain: *x, predecessor: *x }]))
 }
 
 /// An announcement as F234 describes it: an act of its signer, of some
@@ -90,22 +90,22 @@ fn close(w: &mut World, p: &mut Person, announcement: Hash, became: Hash) -> Has
 
 /// A work claim by `p` alone on `work`, public; it binds at once (rule 15).
 fn claim_alone(w: &mut World, p: &mut Person, work: Hash) -> Hash {
-    let c = law::WorkClaim { work, creators: vec![p.id], commitment: None };
-    law_act(w, p, law::types::WORK_CLAIM, c.to_map(), None)
+    let c = agreements::WorkClaim { work, creators: vec![p.id], commitment: None };
+    agreements_act(w, p, agreements::types::WORK_CLAIM, c.to_map(), None)
 }
 
 /// The access form of what an offer sells (`[2, [cmip, params]]`), its
 /// parameters naming the announcement in the cMIP's own words, which the
 /// core never reads.
-fn access_to(announcement: Hash, words: &str) -> law::Sold {
+fn access_to(announcement: Hash, words: &str) -> agreements::Sold {
     let params = mor_core::cbor::encode(&Value::Array(vec![Value::Text(words.into()), Value::Bytes(announcement.to_vec())]));
-    law::Sold::Access(spec("an announcement cMIP"), params)
+    agreements::Sold::Access(spec("an announcement cMIP"), params)
 }
 
 /// A lone seller's standing offer (F215): no agreement behind it, paid to
 /// the signer, with its words.
-fn lone_offer(w: &mut World, p: &mut Person, sold: law::Sold, words: &str) -> Hash {
-    let o = law::Offer {
+fn lone_offer(w: &mut World, p: &mut Person, sold: agreements::Sold, words: &str) -> Hash {
+    let o = agreements::Offer {
         under: None,
         sold: vec![sold],
         price: Amount { unit: spec("a unit"), value: 300 },
@@ -115,7 +115,7 @@ fn lone_offer(w: &mut World, p: &mut Person, sold: law::Sold, words: &str) -> Ha
         time: None,
         refund: None,
     };
-    law_act(w, p, law::types::STANDING_OFFER, o.to_map(), None)
+    agreements_act(w, p, agreements::types::STANDING_OFFER, o.to_map(), None)
 }
 
 /// A receipt in `payee`'s name for `payer`'s payment following `fulfils`,
@@ -134,7 +134,7 @@ fn receipt(w: &mut World, payee: &mut Person, payer: Hash, fulfils: Hash, purcha
         batch: None,
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
     });
-    let a = w.everyday_act(payee, mips().finance, 2, r.to_map(), None, None);
+    let a = w.everyday_act(payee, mips().money, 2, r.to_map(), None, None);
     w.add(&a)
 }
 
@@ -218,7 +218,7 @@ fn today_an_access_offer_sells_without_count_so_a_limited_announcement_is_sold_p
 
 /// Review attack 1 (an announcement that is never closed, or whose opening
 /// act is gone) and F230's stated cost ("a rotation that voids the opening
-/// act voids the name"). A thief with Dario's everyday key opens a stream
+/// act voids the name"). A thief with Dario's signing key opens a stream
 /// in his name; the club, taking it for Dario's, publishes an offer for
 /// access naming it; a fan pays the club; Dario rotates to the tip before
 /// the thief's act. The opening act is void. The name is not: the club's
@@ -314,28 +314,28 @@ fn today_an_access_offer_under_a_second_agreement_on_the_same_announcement_is_ne
     let fan = w.genesis("a fan", vec![own_home()], None, None);
     let stream = announce(&mut w, &mut dario, "The cup final, from the stands");
     let t1 = deal_on([dario.id, club.id], stream).to_map();
-    let with_club = law_act(&mut w, &mut dario, law::types::TERMS, t1, None);
+    let with_club = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t1, None);
     sign(&mut w, &mut dario, &with_club);
     sign(&mut w, &mut club, &with_club);
     let t2 = deal_on([dario.id, sponsor.id], stream).to_map();
-    let with_sponsor = law_act(&mut w, &mut dario, law::types::TERMS, t2, None);
+    let with_sponsor = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t2, None);
     sign(&mut w, &mut dario, &with_sponsor);
     sign(&mut w, &mut sponsor, &with_sponsor);
     let mut both = vec![with_club, with_sponsor];
     both.sort();
     assert_eq!(view(&w).work_owners(&stream).unwrap().agreements, both, "two agreements claim the announcement");
     // The sponsor's deal sells access, paid by its stakes, signed by both.
-    let o = law::Offer {
+    let o = agreements::Offer {
         under: Some(with_sponsor),
         sold: vec![access_to(stream, "the cup final, live")],
         price: Amount { unit: spec("a unit"), value: 300 },
-        paid: Some(law::Paid::ByStakes),
+        paid: Some(agreements::Paid::ByStakes),
         words: Some("Live access to the cup final.".into()),
         until: None,
         time: None,
         refund: None,
     };
-    let offer = law_act(&mut w, &mut dario, law::types::STANDING_OFFER, o.to_map(), Some(vec![Object { chain: with_sponsor, predecessor: with_sponsor }]));
+    let offer = agreements_act(&mut w, &mut dario, agreements::types::STANDING_OFFER, o.to_map(), Some(vec![Object { chain: with_sponsor, predecessor: with_sponsor }]));
     sign(&mut w, &mut sponsor, &offer);
     let e = view(&w).offer(&offer).unwrap();
     assert!(e.counts && e.unsigned.is_empty(), "{:?}", e.problems);
