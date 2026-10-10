@@ -58,7 +58,7 @@ pub struct TransferEval {
     pub over_sale: bool,
     /// Where it is an over-sale, the payments for it (a receipt or claim
     /// fulfilling it, or one its field 4 names): money received for
-    /// nothing, owed back by the seller (F224; Money rule 10c).
+    /// nothing, owed back by the seller, paid as a refund (F224; Agreements rule 14; Money rule 10a).
     pub owed_back: Vec<Hash>,
 }
 
