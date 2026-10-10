@@ -31,6 +31,15 @@ pub struct OfferEval {
     pub latest: Vec<Hash>,
     /// Whether this version withdraws the offer (sells nothing).
     pub withdraws: bool,
+    /// Rule 15b, reading a vow's name as a work's (F247, decided by
+    /// Nobody, allegedly, 11 October 2026, QV1 a): the agreements, as in
+    /// force, whose stakes claim what the offer sells (a publication's
+    /// work, or a vow's name, [`AgreementsView::work_owners`]) and under
+    /// whose line it is not made (its field 0 names no version of theirs;
+    /// a lone seller's offer is under none). The offer stays valid and may
+    /// count: it visibly contradicts those signed agreements, and a client
+    /// shows it as outside them. Ascending.
+    pub outside_claims: Vec<Hash>,
 }
 
 impl<'a> AgreementsView<'a> {
@@ -96,7 +105,7 @@ impl<'a> AgreementsView<'a> {
                     Ok(t) => t,
                     Err(_) => {
                         problems.push("the agreement it is made under is not held".into());
-                        return Ok(OfferEval { id: *id, offer, follows, signer, counts: false, problems, unsigned, latest: vec![], withdraws: false });
+                        return Ok(OfferEval { id: *id, offer, follows, signer, counts: false, problems, unsigned, latest: vec![], withdraws: false, outside_claims: vec![] });
                     }
                 };
                 if t.is_collective() {
@@ -151,11 +160,41 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
+        let outside_claims = self.outside_claims(&offer)?;
         let first = follows.map(|(f, _)| f).unwrap_or(*id);
         let latest = self.offer_tips(&first, &signer);
         let counts = problems.is_empty();
         let withdraws = offer.withdraws();
-        Ok(OfferEval { id: *id, offer, follows, signer, counts, problems, unsigned, latest, withdraws })
+        Ok(OfferEval { id: *id, offer, follows, signer, counts, problems, unsigned, latest, withdraws, outside_claims })
+    }
+
+    /// Rule 15b (F247, QV1 a): one rule for anything sold under a claim,
+    /// bytes or not. What the offer sells that an agreement can claim: a
+    /// publication's work (its field 1) and a vow's name; access names no
+    /// object. Each agreement claiming one of them, as in force, whose line
+    /// (its founding terms) is not the line of the agreement the offer is
+    /// made under, is one the offer is outside of (mechanic, the build's:
+    /// "signed under that claim's agreement" read as made under any version
+    /// of its line; whether every party signed is `unsigned`'s, OF3 a).
+    fn outside_claims(&self, offer: &Offer) -> R<Vec<Hash>> {
+        let root = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|(r, _)| *r));
+        let under = offer.under.as_ref().and_then(root);
+        let mut out: Vec<Hash> = vec![];
+        for s in &offer.sold {
+            let named = match s {
+                Sold::Publication(p) => self.publication_field(p, 1),
+                Sold::Vow(v) => Some(*v),
+                Sold::Access(..) => None,
+            };
+            let Some(named) = named else { continue };
+            for a in self.work_owners(&named)?.agreements {
+                if (under.is_none() || root(&a) != under) && !out.contains(&a) {
+                    out.push(a);
+                }
+            }
+        }
+        out.sort();
+        Ok(out)
     }
 
     /// The tips of an offer chain (OF4 a): the versions by `signer` naming

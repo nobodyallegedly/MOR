@@ -153,18 +153,33 @@ pub struct AgreementsView<'a> {
     /// no cMIP. A delivery record counts as evidence for a role share only
     /// where the payer's claim acknowledges it (Agreements rules 19, 22).
     pub delivery_records: BTreeSet<Hash>,
-    /// The chain of judgment for a deal's judge of forks (rule 34a; QG4,
-    /// decided 9 October 2026): each `(settlement request, judge)` whose
-    /// period to act on that request, counted from the request on the
-    /// deal's time reference, has passed with no settlement of its within
-    /// it. The time reference's answer, a fact the caller states, like
-    /// `absence_accepted`: the core reads no time reference. The next link
-    /// may settle only once every link before it is listed; a settlement by
-    /// a link listed counts for nothing in that question ("if the next
-    /// judge is triggered, the previous judge is void", F124). A link that
-    /// is a specification signs no settlement (QG4): the caller, which
+    /// The chain of judgment (rule 34a; QG4, decided 9 October 2026; F246,
+    /// decided 10 October 2026, superseding F236): each `(question, judge)`
+    /// whose stage on that question has passed with no answer of its within
+    /// it. The chain runs per question, never per party (F246: "There is no
+    /// 'one party deadline'. There is an agreed deadline."): for a deal's
+    /// fork, the question is the fork's reference, the version the
+    /// settlement requests name (type 22); for a request to a judge (type
+    /// 25), its field 2. The first valid request with standing starts the
+    /// first link's period, on the agreement's time reference; later
+    /// requests on the same question join that stage; each next link's
+    /// period runs from the end of the one before. The time reference's
+    /// answer, a fact the caller states, like `absence_accepted`: the core
+    /// reads no time reference. The next link is active only once every
+    /// link before it is listed (or answered "unknown", F206); a settlement
+    /// by a link listed counts for nothing on that question ("if the next
+    /// judge is triggered, the previous judge is void", F124, N6). A link
+    /// that is a specification signs no settlement (QG4): the caller, which
     /// holds the specifications, lists it as passed over.
     pub judges_lapsed: BTreeSet<(Hash, Hash)>,
+    /// Judges' settlements (type 23) the agreement's time reference places
+    /// before their link's stage opened on the question (F246: only the
+    /// active link settles; a settlement signed outside its link's active
+    /// window counts for nothing; mechanic, the project lead's, under the
+    /// delegation). One signed after its link's stage passed needs no entry
+    /// here: that link is in `judges_lapsed`. A fact the caller states,
+    /// like `judges_lapsed`.
+    pub settled_out_of_turn: BTreeSet<Hash>,
     /// Notices to a payer owed money back who gave no address (Agreements type
     /// 24; F197, decided 10 October 2026) whose deadline has passed, on the
     /// time reference the notice names, with no address given by the payer
@@ -513,6 +528,7 @@ impl<'a> AgreementsView<'a> {
             unbound_rails: BTreeSet::new(),
             delivery_records: BTreeSet::new(),
             judges_lapsed: BTreeSet::new(),
+            settled_out_of_turn: BTreeSet::new(),
             notices_lapsed: BTreeSet::new(),
             paid_past_until: BTreeSet::new(),
             refunds_past_terms: BTreeSet::new(),
@@ -570,6 +586,7 @@ impl<'a> AgreementsView<'a> {
             unbound_rails: self.unbound_rails.clone(),
             delivery_records: self.delivery_records.clone(),
             judges_lapsed: self.judges_lapsed.clone(),
+            settled_out_of_turn: self.settled_out_of_turn.clone(),
             notices_lapsed: self.notices_lapsed.clone(),
             paid_past_until: self.paid_past_until.clone(),
             refunds_past_terms: self.refunds_past_terms.clone(),
@@ -7530,9 +7547,12 @@ impl<'a> AgreementsView<'a> {
     /// is one of two such (F206, decided 10 October 2026): a judge's two,
     /// keeping different versions, both count for nothing, the judge read
     /// as answering "unknown", and the next link of its chain settles; the
-    /// parties' against a judge's, the parties' holds; two links'
-    /// settlements neither holding the other, the earlier link's holds
-    /// (F236, answering QK1). With no settlement,
+    /// parties' against a judge's, the parties' holds. Only the link of the
+    /// chain of judgment active on the fork settles it (F246, decided 10
+    /// October 2026, superseding F236): the chain runs per question, the
+    /// fork, never per request, so two links' settlements never both count,
+    /// and a link that settles after letting its stage pass counts for
+    /// nothing, whatever it saw (F245, QL2). With no settlement,
     /// tangled shapes (DQ1, DQ2) leave the deal on its reference. Only
     /// complete versions of this deal are read (F189, 2); a settling
     /// version naming a version this verifier does not hold is read as a
@@ -7634,8 +7654,8 @@ impl<'a> AgreementsView<'a> {
             // wait (rule 34a) (mechanic, the build's: "first" read on the
             // link's own settlements by history, as F192 reads any two).
             let (links, judged) = self.arbitrated(&at, &below)?;
-            let mut by_link: Vec<Vec<(Settlement, Hash)>> = links.iter().map(|_| vec![]).collect();
-            for (i, act, request, kept, discarded) in judged {
+            let mut by_link: Vec<Vec<Settlement>> = links.iter().map(|_| vec![]).collect();
+            for (i, act, kept, discarded) in judged {
                 if !discarded.iter().all(|o| apart(o, &kept)) {
                     continue;
                 }
@@ -7646,19 +7666,18 @@ impl<'a> AgreementsView<'a> {
                 if !names_all(&seen, &[kept], &discarded) {
                     continue;
                 }
-                by_link[i].push((Settlement { act, into: kept, link: Some(i), seen }, request));
+                by_link[i].push(Settlement { act, into: kept, link: Some(i), seen });
             }
             let mut unknown: Vec<bool> = vec![false; links.len()];
             for (i, own) in by_link.into_iter().enumerate() {
-                // QG4: its turn has come: every link before it let its
-                // period pass on this request, or answered "unknown"; a
+                // QG4 under F246 (decided 10 October 2026, superseding
+                // F236): the chain runs on the fork, never per request; this
+                // link is active only once every link before it let its
+                // stage on the fork pass, or answered "unknown" (F206 a); a
                 // settlement out of turn counts for nothing, and is no
                 // contradiction either.
-                let own: Vec<Settlement> = own
-                    .into_iter()
-                    .filter(|(_, request)| (0..i).all(|k| unknown[k] || self.judges_lapsed.contains(&(*request, links[k]))))
-                    .map(|(c, _)| c)
-                    .collect();
+                let active = (0..i).all(|k| unknown[k] || self.judges_lapsed.contains(&(at, links[k])));
+                let own: Vec<Settlement> = if active { own } else { vec![] };
                 let first: Vec<&Settlement> = own.iter().filter(|c| !own.iter().any(|o| o.act != c.act && c.seen.contains(&o.act))).collect();
                 if first.iter().any(|c| c.into != first[0].into) {
                     unknown[i] = true;
@@ -7699,20 +7718,9 @@ impl<'a> AgreementsView<'a> {
                     live.retain(|c| !judges.contains(&c.act));
                     continue;
                 }
-                // F236 (decided by Nobody, allegedly, 10 October 2026,
-                // answering QK1): of two links' settlements, neither holding
-                // the other, the earlier link in the chain prevails, on
-                // whichever party's request it answered; the later link's
-                // counts for nothing (rule 34a: the chain's order decides
-                // between links). Within one link, F206 (a) was read above.
-                if first.iter().all(|c| c.link.is_some()) {
-                    let earliest = first.iter().filter_map(|c| c.link).min();
-                    let later: Vec<Hash> = first.iter().filter(|c| c.link != earliest).map(|c| c.act).collect();
-                    if !later.is_empty() {
-                        live.retain(|c| !later.contains(&c.act));
-                        continue;
-                    }
-                }
+                // F246 (superseding F236): only the active link's
+                // settlements reach here, so two links' never meet; within
+                // one link, F206 (a) was read above.
                 set_aside.extend(first.iter().copied());
                 live.retain(|c| set_aside.iter().all(|o| c.seen.contains(&o.act)) && !set_aside.iter().any(|o| o.act == c.act));
             }
@@ -7810,15 +7818,19 @@ impl<'a> AgreementsView<'a> {
     /// The judge's settlements of the fork at `at` (F188, DQ8), each signed
     /// by the judge of forks the reference names (field 27, one of field
     /// 13: QF2, decided 9 October 2026), or by the link of its chain of
-    /// judgment (field 21) that took over (QG4, decided 9 October 2026:
-    /// once every link before it let its period pass, as the caller states
-    /// in [`Self::judges_lapsed`]; a link listed there counts for nothing
-    /// in that question), naming a request by a party who signed the
+    /// judgment (field 21) that took over (QG4, decided 9 October 2026;
+    /// F246, decided 10 October 2026: once every link before it let its
+    /// stage on the fork pass, as the caller states in
+    /// [`Self::judges_lapsed`], the question being the fork's reference
+    /// `at`; a link listed there counts for nothing on that question, and
+    /// a settlement listed in [`Self::settled_out_of_turn`] counts for
+    /// nothing at all), naming a request by a party who signed the
     /// reference, which names `at`; the version it keeps and every tip it
-    /// drops (QF3), all versions of the fork. As (the act, the version
-    /// kept, the tips dropped). Where the reference names no judge of
-    /// forks, none settles, and the deal waits on its reference (QF2).
-    fn arbitrated(&self, at: &Hash, below: &BTreeMap<Hash, Hash>) -> R<(Vec<Hash>, Vec<(usize, Hash, Hash, Hash, Vec<Hash>)>)> {
+    /// drops (QF3), all versions of the fork. As (the link's place, the
+    /// act, the version kept, the tips dropped). Where the reference names
+    /// no judge of forks, none settles, and the deal waits on its
+    /// reference (QF2).
+    fn arbitrated(&self, at: &Hash, below: &BTreeMap<Hash, Hash>) -> R<(Vec<Hash>, Vec<(usize, Hash, Hash, Vec<Hash>)>)> {
         let t = self.terms(at)?;
         let Some(judge) = t.fork_judge.filter(|j| t.arbitrators.iter().flatten().any(|a| a == j)) else {
             return Ok((vec![], vec![]));
@@ -7849,14 +7861,15 @@ impl<'a> AgreementsView<'a> {
                 if !links[..=i].iter().all(reaches) {
                     continue;
                 }
-                // QG4: its own turn has not passed (whether it has come is
-                // read in `deal_walk`, where a link before it may have
-                // answered "unknown", F206 a).
-                if self.judges_lapsed.contains(&(s.request, *link)) {
+                // QG4 under F246: its own stage on the fork has not passed,
+                // and the settlement was not signed before that stage opened
+                // (whether its stage has come is read in `deal_walk`, where
+                // a link before it may have answered "unknown", F206 a).
+                if self.judges_lapsed.contains(&(*at, *link)) || self.settled_out_of_turn.contains(&h.id) {
                     continue;
                 }
                 if below.contains_key(&s.kept) && s.discarded.iter().all(|d| below.contains_key(d)) {
-                    out.push((i, h.id, s.request, s.kept, s.discarded));
+                    out.push((i, h.id, s.kept, s.discarded));
                 }
             }
         }
@@ -9176,16 +9189,19 @@ impl<'a> AgreementsView<'a> {
         for idx in idxs {
             // F235 (decided by Nobody, allegedly, 10 October 2026, QK3,
             // replacing QJ2 a), as F244 restates it (QL1, "The publisher
-            // pays the pointer specified by the work's agreement"): money
-            // passes layer by layer; a holder that is another agreement (a
-            // work's, F216; or a publication's in a pool's) is paid by a
-            // payout naming the one pointer that agreement's version in
-            // force names for money arriving from above (its split service,
-            // an owner acting as treasury among them, or a lone owner), as
-            // the receiver of its share; such a payout is read as paid to
-            // that holder. The layer above never divides the next layer's
-            // share: an agreement naming no such pointer cannot be paid
-            // through a layer, and any payout on its holding is a mismatch.
+            // pays the pointer specified by the work's agreement") and F248
+            // designates it (QV2, "The publisher pays the one designated by
+            // the work agreement"): money passes layer by layer; a holder
+            // that is another agreement (a work's, F216; or a publication's
+            // in a pool's) is paid by a payout naming the one pointer that
+            // agreement's version in force designates for payments (its
+            // split service, an owner acting as treasury among them, or a
+            // lone owner), as the receiver of its share; such a payout is
+            // read as paid to that holder. The layer above never divides the
+            // next layer's share: an agreement designating none cannot be
+            // paid through a layer, and any payout on its holding, to a
+            // service its chain of judgment names to take over included, is
+            // a mismatch.
             // A receiver that is itself a holder of the stake is read as
             // paid in its own name (mechanic, the build's).
             let direct: Vec<Hash> = t.stakes.iter().flatten().nth(idx as usize).map(|st| st.holders.iter().filter_map(|(w, _)| w.resolve(collective.as_ref())).collect()).unwrap_or_default();
@@ -9196,7 +9212,7 @@ impl<'a> AgreementsView<'a> {
                 .map(|p| {
                     let mut q = p.clone();
                     if !direct.contains(&p.receiver) {
-                        if let Some(a) = direct.iter().find(|a| self.layer_receivers(a).contains(&p.receiver)) {
+                        if let Some(a) = direct.iter().find(|a| self.layer_receiver(a) == Some(p.receiver)) {
                             q.receiver = *a;
                         }
                     }
@@ -9559,8 +9575,11 @@ impl<'a> AgreementsView<'a> {
     /// The split services of an agreement named as a holder (F216, F235):
     /// where `holder` is an agreement this verifier holds, the split
     /// services its version in force names (field 14, and its chain of
-    /// judgment's link for the split service); none otherwise. The next
-    /// layer's split service, which receives that agreement's share.
+    /// judgment's link for the split service); none otherwise. Read for a
+    /// service's own account only (`layer_share`): a service named there
+    /// that received a layer's share holds it as an open obligation until
+    /// split, the designated one or not (rules 20, 29); which pointer a
+    /// layer pays is [`Self::layer_receiver`]'s alone (F248).
     fn layer_services(&self, holder: &Hash) -> Vec<Hash> {
         let Some(h) = self.v.get(holder) else { return vec![] };
         if !self.is_agreements(h, types::TERMS) {
@@ -9571,32 +9590,44 @@ impl<'a> AgreementsView<'a> {
         self.named_services(&t).unwrap_or_default()
     }
 
-    /// The one pointer an agreement named as a holder names for money
-    /// arriving from above (F244, decided by Nobody, allegedly, 10 October
-    /// 2026, QL1: "The publisher pays the pointer specified by the work's
-    /// agreement"): the receiver of that agreement's share in a layer above
-    /// (Agreements rule 16, the split plan). Behind it is the agreement's
-    /// own business: its split service (field 14, or its chain of
-    /// judgment's link for the split service), which may be one of its
-    /// owners acting as treasury for the joint venture; or, where it names
-    /// none, a lone owner, whose own payee pointer receives it with nothing
-    /// to split: a deal of one party holding every stake it writes
-    /// (mechanic, the build's). Empty otherwise: several owners and no
-    /// split service (payer-side splitting) cannot be paid through a layer
-    /// until their agreement names one.
-    fn layer_receivers(&self, holder: &Hash) -> Vec<Hash> {
-        let services = self.layer_services(holder);
-        if !services.is_empty() {
-            return services;
+    /// The one pointer an agreement named as a holder designates for
+    /// payments (F248, decided by Nobody, allegedly, 11 October 2026, QV2:
+    /// "The publisher pays the one designated by the work agreement. A work
+    /// always accept payments at the same addresses. The publisher simply
+    /// points to it."; F244): the receiver of that agreement's share in a
+    /// layer above (Agreements rule 16, the split plan), the same whoever
+    /// pays. The layer above pays it and divides nothing. The designation
+    /// is read from the version in force, reusing what the terms already
+    /// write (mechanic, the build's): **its split service, field 14's one
+    /// grantee** (in a deal every grant field 14 lists names the same
+    /// service, or the deal carries none of them, F129 reading 3; in a
+    /// collective, its one grant), which may be one of its owners acting as
+    /// treasury for the joint venture; or, where it names no split service,
+    /// **a lone owner**, a deal of one party holding every stake it writes,
+    /// whose own payee pointer receives it with nothing to split (F244). A
+    /// service the chain of judgment names to take over (rule 34a, H6) is
+    /// not the designation (question in `docs/judges-vows-pointer-build.md`).
+    /// `None` otherwise: an agreement designating none cannot be paid
+    /// through a layer until it designates one.
+    fn layer_receiver(&self, holder: &Hash) -> Option<Hash> {
+        let h = self.v.get(holder)?;
+        if !self.is_agreements(h, types::TERMS) {
+            return None;
         }
-        let Ok(v) = self.version_in_force(holder) else { return vec![] };
-        let Ok(t) = self.terms(&v) else { return vec![] };
+        let v = self.version_in_force(holder).ok()?;
+        let t = self.terms(&v).ok()?;
         if t.is_collective() {
-            return vec![];
+            let g = t.split_grant?;
+            return self.v.get(&g).filter(|x| self.is_agreements(x, types::GRANT)).and_then(|x| Grant::decode(&x.inside.payload).ok()).map(|x| x.grantee);
+        }
+        if t.payee_grants.is_some() {
+            // Field 14's group comes first (`deal_services`); a deal whose
+            // grants break F129 reading 3 or H6 carries none of them.
+            return self.deal_services(&t).and_then(|s| s.first().copied());
         }
         match t.parties.as_slice() {
-            [lone] if t.stakes.iter().flatten().all(|st| st.holders.iter().all(|(w, _)| w == &Who::Id(*lone))) => vec![*lone],
-            _ => vec![],
+            [lone] if t.stakes.iter().flatten().all(|st| st.holders.iter().all(|(w, _)| w == &Who::Id(*lone))) => Some(*lone),
+            _ => None,
         }
     }
 

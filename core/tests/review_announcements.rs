@@ -22,9 +22,10 @@
 //!    the cMIPs'), and a claim reaches a work only by its own work claim
 //!    (rule 15, works only); what the core does read is the vow's own chain
 //!    (versions, a fork of its signer's);
-//! 4. a second agreement's offer on the same vow: still not shown outside
-//!    the first; whether rule 15b's visibility reaches an offer naming a vow
-//!    is put to Nobody, allegedly (question QV1 in the build's report).
+//! 4. a second agreement's offer on the same vow: now shown outside the
+//!    first (F247, decided by Nobody, allegedly, 11 October 2026, QV1 a:
+//!    rule 15b reads a vow's name as it reads a work's;
+//!    `docs/judges-vows-pointer-build.md`); still valid, still counting.
 //!
 //! Test identities only; the specification hashes are test values until
 //! the freeze, as in the other Agreements tests.
@@ -345,12 +346,15 @@ fn what_a_vow_became_is_the_cmips_and_the_core_reads_only_its_chain() {
 /// vow). Dario and the club write a stake in the vow in one deal; Dario and
 /// a sponsor in another; the sponsor's deal sells it. **Before:** the
 /// access form; nothing marked the offer outside the club's deal; the
-/// purchase named the sponsor's deal. **Now:** the offer names the vow;
-/// otherwise unchanged: whether rule 15b's visibility reaches an offer
-/// naming a vow that an agreement claims is put to Nobody, allegedly
-/// (question QV1), and is not built.
+/// purchase named the sponsor's deal. **Until F247:** the offer named the
+/// vow and nothing marked it outside the club's deal (QV1, put to Nobody,
+/// allegedly). **Now** (F247, decided 11 October 2026, QV1 a: "Agreed"):
+/// rule 15b reads a vow's name as it reads a work's: the sponsor's offer is
+/// shown outside the club's deal, which claims the vow; it stays valid and
+/// counts, and the purchase under the sponsor's deal stands. A work sold
+/// the same way is shown the same way.
 #[test]
-fn an_offer_naming_a_vow_under_a_second_agreement_is_not_shown_outside_the_first() {
+fn an_offer_naming_a_vow_under_a_second_agreement_is_shown_outside_the_first() {
     let mut w = World::new();
     let mut dario = w.genesis("dario", vec![own_home()], None, None);
     let mut club = w.genesis("the club", vec![own_home()], None, None);
@@ -381,8 +385,26 @@ fn an_offer_naming_a_vow_under_a_second_agreement_is_not_shown_outside_the_first
     let offer = agreements_act(&mut w, &mut dario, agreements::types::STANDING_OFFER, o.to_map(), Some(vec![Object { chain: with_sponsor, predecessor: with_sponsor }]));
     sign(&mut w, &mut sponsor, &offer);
     let e = view(&w).offer(&offer).unwrap();
-    assert!(e.counts && e.unsigned.is_empty(), "{:?}", e.problems);
-    assert!(!e.problems.iter().any(|p| p.contains("outside")), "nothing marks it as outside the club's deal: {:?}", e.problems);
+    assert!(e.counts && e.unsigned.is_empty(), "valid, and it counts under the sponsor's deal: {:?}", e.problems);
+    assert_eq!(e.outside_claims, vec![with_club], "shown outside the club's deal, which claims the vow (rule 15b, F247)");
+    // A lone seller's offer on the vow is outside both claiming deals.
+    let alone = lone_offer(&mut w, &mut dario, stream, "The cup final, sold alone.");
+    assert_eq!(view(&w).offer(&alone).unwrap().outside_claims, both, "under no claiming agreement: outside both");
+    // A work, claimed and sold the same way, is read the same way.
+    let song = spec("a song the club's deal claims");
+    let t3 = deal_on([dario.id, club.id], song).to_map();
+    let song_deal = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t3, None);
+    sign(&mut w, &mut dario, &song_deal);
+    sign(&mut w, &mut club, &song_deal);
+    let publication = {
+        let x = w.everyday_act(&mut dario, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(song.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked").to_vec()))], None, None);
+        w.add(&x)
+    };
+    let mut ow = o.clone();
+    ow.sold = vec![agreements::Sold::Publication(publication)];
+    let work_offer = agreements_act(&mut w, &mut dario, agreements::types::STANDING_OFFER, ow.to_map(), Some(vec![Object { chain: with_sponsor, predecessor: with_sponsor }]));
+    sign(&mut w, &mut sponsor, &work_offer);
+    assert_eq!(view(&w).offer(&work_offer).unwrap().outside_claims, vec![song_deal], "a work's offer outside its claiming deal: the same answer");
     let r = receipt(&mut w, &mut dario, fan.id, offer, Some(with_sponsor), b"the fan paid under the sponsor's deal");
     let c = payers_claim(&mut w, &mut fan, dario.id, offer, Some(with_sponsor), b"the fan paid under the sponsor's deal");
     let p = view(&w).purchase(&r).unwrap().expect("judged");

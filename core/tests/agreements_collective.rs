@@ -9857,7 +9857,10 @@ fn f196_once_held_the_settlement_counts() {
 /// QG4, decided by Nobody, allegedly, 9 October 2026: the judge of forks
 /// follows the chain of judgment (field 21) like any judge the terms name.
 /// Where it does not act within its period, the next link takes over, and
-/// an answer it gives after that counts for nothing (rule 34a, F124).
+/// an answer it gives after that counts for nothing (rule 34a, F124). Under
+/// F246 (10 October 2026) the stage is the fork's, `(reference, judge)`,
+/// and a settlement the next link signed before its stage opened counts for
+/// nothing even once it opens: it signs again within its stage.
 #[test]
 fn qg4_the_judge_of_forks_follows_the_chain_of_judgment() {
     let (mut l, mut judges) = judged_deal(1);
@@ -9867,16 +9870,25 @@ fn qg4_the_judge_of_forks_follows_the_chain_of_judgment() {
     let r = ask_judge(&mut l);
     let (first, next) = judges.split_at_mut(1);
     // The next link may not act while the judge's period runs.
-    judge_settles(&mut l, &mut next[0], r, a1, vec![b1], vec![]);
+    let early = judge_settles(&mut l, &mut next[0], r, a1, vec![b1], vec![]);
     assert_eq!(l.in_force().unwrap(), d, "the next link waits on the judge's period");
-    // Its period passed, as the deal's time reference says: the next takes over.
+    // Its period on the fork passed, as the deal's time reference says: the
+    // next link is active, but what it signed before then counts for nothing.
     let mut v = view(&l.w);
-    v.judges_lapsed.insert((r, first[0].id));
+    v.judges_lapsed.insert((d, first[0].id));
+    v.settled_out_of_turn.insert(early);
+    assert_eq!(v.version_in_force(&d).unwrap(), d, "signed before its stage opened: counts for nothing (F246)");
+    // Within its stage, the next link settles.
+    judge_settles(&mut l, &mut next[0], r, a1, vec![b1], vec![]);
+    let mut v = view(&l.w);
+    v.judges_lapsed.insert((d, first[0].id));
+    v.settled_out_of_turn.insert(early);
     assert_eq!(v.version_in_force(&d).unwrap(), a1, "the next link settles");
     // The judge, speaking after its period, counts for nothing.
     judge_settles(&mut l, &mut first[0], r, b1, vec![a1], vec![]);
     let mut v = view(&l.w);
-    v.judges_lapsed.insert((r, first[0].id));
+    v.judges_lapsed.insert((d, first[0].id));
+    v.settled_out_of_turn.insert(early);
     assert_eq!(v.version_in_force(&d).unwrap(), a1, "the judge's late answer counts for nothing");
 }
 
@@ -11380,25 +11392,36 @@ fn f206_b_the_parties_settlement_beats_a_judges_neither_holding_the_other() {
     assert_eq!(l.in_force().unwrap(), a1, "made after the judge's settlement: final, it stands (F192)");
 }
 
-/// F236, decided by Nobody, allegedly, 10 October 2026 ("Yes … The second
-/// judge only gets actioned under pre set rules. Once the rules apply, its
-/// voice stops mattering."), answering QK1: of two links of the chain of
-/// judgment that each settle the same fork, neither holding the other, the
-/// earlier in the chain prevails, whichever signed first and on whichever
-/// party's request; the later link's settlement counts for nothing (rules
-/// 34a, 45b). F206 still applies within one link.
+// ---------------------------------------------------------------------------
+// Judges, vows and the pointer (11 October 2026): F246, F247 and F248,
+// `docs/judges-vows-pointer-build.md`. Test identities only.
+// ---------------------------------------------------------------------------
+
+/// Ana's settlement request on the deal's fork, after Ben's: a second
+/// request on the same question.
+fn ana_asks_judge(l: &mut DealLab) -> Hash {
+    let r = agreements::SettlementRequest { reference: l.d };
+    agreements_act(&mut l.w, &mut l.ana, agreements::types::SETTLEMENT_REQUEST, r.to_map(), obj(l.d))
+}
+
+/// F246, decided by Nobody, allegedly, 10 October 2026 ("There is no 'one
+/// party deadline'. There is an agreed deadline."), superseding F236: the
+/// chain of judgment runs on the agreement's deadlines, stage by stage, per
+/// question, never per party. Ben asks first, starting the judge's stage on
+/// the fork; Ana asks later, joining that stage, with no clock of her own.
+/// The stage passes with no answer: the next link is active and the judge
+/// is void on the fork, so its answer to Ana counts for nothing, whichever
+/// was signed first. F236's case (two links each settling, neither holding
+/// the other) cannot arise: before F246 the judge's prevailed here.
 #[test]
-fn f236_of_two_judges_in_the_chain_settling_one_fork_the_earlier_prevails() {
+fn f246_the_chain_runs_per_question_a_judge_whose_stage_passed_is_void_on_it() {
     for earlier_signs_first in [true, false] {
         let (mut l, mut judges) = judged_deal(1);
         let d = l.d;
         let a1 = l.version(d, "A.", None);
         let b1 = l.version(d, "B.", None);
-        // Ben asks; the first judge lets its period pass on his request.
         let ben_asks = ask_judge(&mut l);
-        // Ana asks too, later; the first judge answers her.
-        let r = agreements::SettlementRequest { reference: d };
-        let ana_asks = agreements_act(&mut l.w, &mut l.ana, agreements::types::SETTLEMENT_REQUEST, r.to_map(), obj(d));
+        let ana_asks = ana_asks_judge(&mut l);
         let (first, next) = judges.split_at_mut(1);
         if earlier_signs_first {
             judge_settles(&mut l, &mut first[0], ana_asks, b1, vec![a1], vec![]);
@@ -11408,14 +11431,99 @@ fn f236_of_two_judges_in_the_chain_settling_one_fork_the_earlier_prevails() {
             judge_settles(&mut l, &mut first[0], ana_asks, b1, vec![a1], vec![]);
         }
         let mut v = view(&l.w);
-        v.judges_lapsed.insert((ben_asks, first[0].id));
+        v.judges_lapsed.insert((d, first[0].id));
         assert_eq!(
             v.version_in_force(&d).unwrap(),
-            b1,
-            "the earlier link in the chain prevails; the later one's settlement counts for nothing (earlier signs first: {earlier_signs_first})"
+            a1,
+            "the judge's stage on the fork passed: it is void on it, and the active link settles (earlier signs first: {earlier_signs_first})"
         );
         assert!(v.judges_contradicted(&d).unwrap().is_empty(), "two links, each speaking once: nobody contradicted itself");
     }
+}
+
+/// F246: the active link settles on any request on the question, Ana's as
+/// well as Ben's; and while the judge's stage runs, the next link is not
+/// active: its settlement counts for nothing and the judge's answer,
+/// given within its stage, settles the fork.
+#[test]
+fn f246_only_the_active_link_settles_on_any_request_on_the_question() {
+    let (mut l, mut judges) = judged_deal(1);
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let ben_asks = ask_judge(&mut l);
+    let ana_asks = ana_asks_judge(&mut l);
+    let (first, next) = judges.split_at_mut(1);
+    judge_settles(&mut l, &mut next[0], ana_asks, a1, vec![b1], vec![]);
+    assert_eq!(l.in_force().unwrap(), d, "the judge's stage runs: the next link is not active");
+    judge_settles(&mut l, &mut first[0], ben_asks, b1, vec![a1], vec![]);
+    assert_eq!(l.in_force().unwrap(), b1, "the judge, active, settles; the next link's counts for nothing");
+    // Another deal: the judge lets its stage pass; the next link answers
+    // Ana's request, the later one, which joined the stage.
+    let (mut l, mut judges) = judged_deal(1);
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let _ben_asks = ask_judge(&mut l);
+    let ana_asks = ana_asks_judge(&mut l);
+    judge_settles(&mut l, &mut judges[1], ana_asks, a1, vec![b1], vec![]);
+    let mut v = view(&l.w);
+    v.judges_lapsed.insert((d, judges[0].id));
+    assert_eq!(v.version_in_force(&d).unwrap(), a1, "the active link settles on the later request too: the stage is the question's");
+}
+
+/// F246, QL2 (F245, decided by Nobody, allegedly, 10 October 2026: "Yes,
+/// the currently active judge settles it"): the judge lets its stage pass,
+/// the next link settles, and the judge then settles the other way, having
+/// seen the next link's settlement (its history holds it). The later
+/// link's settlement stands: the judge was void on the fork.
+#[test]
+fn f246_ql2_the_later_links_settlement_stands() {
+    let (mut l, mut judges) = judged_deal(1);
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let ben_asks = ask_judge(&mut l);
+    let ana_asks = ana_asks_judge(&mut l);
+    let (first, next) = judges.split_at_mut(1);
+    let later = judge_settles(&mut l, &mut next[0], ben_asks, a1, vec![b1], vec![]);
+    judge_settles(&mut l, &mut first[0], ana_asks, b1, vec![a1], vec![later]);
+    let mut v = view(&l.w);
+    v.judges_lapsed.insert((d, first[0].id));
+    assert_eq!(v.version_in_force(&d).unwrap(), a1, "the active link's settlement stands");
+}
+
+/// F246, the active window (mechanic, the project lead's, under the
+/// delegation): a settlement signed outside its link's active window
+/// counts for nothing. Before the window opened: the next link settling
+/// while the judge's stage still ran, placed so by the time reference,
+/// counts for nothing even once the judge's stage passes. After it closed:
+/// a link whose stage passed is void, the last link included, and the deal
+/// waits on its reference.
+#[test]
+fn f246_a_settlement_outside_its_links_active_window_counts_for_nothing() {
+    let (mut l, mut judges) = judged_deal(2);
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let r = ask_judge(&mut l);
+    let ids: Vec<Hash> = judges.iter().map(|j| j.id).collect();
+    let early = judge_settles(&mut l, &mut judges[2], r, b1, vec![a1], vec![]);
+    let mut v = view(&l.w);
+    v.judges_lapsed.insert((d, ids[0]));
+    v.judges_lapsed.insert((d, ids[1]));
+    assert_eq!(v.version_in_force(&d).unwrap(), b1, "unplaced, the third link's settlement counts once both stages passed");
+    v.settled_out_of_turn.insert(early);
+    assert_eq!(v.version_in_force(&d).unwrap(), d, "placed before its stage opened: it counts for nothing");
+    let within = judge_settles(&mut l, &mut judges[2], r, a1, vec![b1], vec![]);
+    let mut v = view(&l.w);
+    v.judges_lapsed.insert((d, ids[0]));
+    v.judges_lapsed.insert((d, ids[1]));
+    v.settled_out_of_turn.insert(early);
+    assert_eq!(v.version_in_force(&d).unwrap(), a1, "within its stage, the third link settles");
+    v.judges_lapsed.insert((d, ids[2]));
+    assert_eq!(v.version_in_force(&d).unwrap(), d, "had its stage passed first, the third link would be void too: the deal waits on its reference");
+    let _ = within;
 }
 
 /// A split by the deal's service under `l.deal`, numbered (DQ6), following
@@ -12012,6 +12120,62 @@ fn f244_an_agreement_naming_no_pointer_cannot_be_paid_through_a_layer() {
     let mut l = F244Lab::new(w, we, &mut [&mut ana, &mut ben]);
     assert!(l.mismatched(aid, 1), "Ana is not a pointer the agreement names");
     assert!(l.mismatched(bid, 2), "nor is Ben");
+}
+
+/// F248, decided by Nobody, allegedly, 11 October 2026 (QV2: "The
+/// publisher pays the one designated by the work agreement. A work always
+/// accept payments at the same addresses. The publisher simply points to
+/// it."): the work's agreement designates one pointer, field 14's split
+/// service, and the publication's split pays it, dividing nothing. A
+/// service the work's chain of judgment names to take over (rule 34a, H6)
+/// is not the designation: a payout to it on the work's holding is a
+/// mismatch (before F248 it was read as paid). A deal whose payees grant
+/// two different services names several and designates none (F129 reading
+/// 3): it cannot be paid through a layer until it designates one.
+#[test]
+fn f248_the_work_agreement_designates_one_pointer_and_the_layer_pays_it() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut svc_s = w.genesis("service S, F248", vec![own_home()], None, None);
+    let mut svc_t = w.genesis("service T, F248", vec![own_home()], None, None);
+    let (gas, _) = layer_grant(&mut w, &mut ana, &mut svc_s, "ana to S");
+    let (gbs, _) = layer_grant(&mut w, &mut ben, &mut svc_s, "ben to S");
+    let (gat, _) = layer_grant(&mut w, &mut ana, &mut svc_t, "ana to T");
+    let (gbt, _) = layer_grant(&mut w, &mut ben, &mut svc_t, "ben to T");
+    let mut we = deal_terms(ana.id, ben.id);
+    we.payee_grants = Some(vec![gas, gbs]);
+    we.time = Some((spec("a clock"), Value::Uint(0)));
+    we.chain = Some(vec![agreements::ChainLink { judge: agreements::Judge::SplitService, next: vec![(agreements::Taker::Grants(vec![gat, gbt]), 30)] }]);
+    we.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(spec("a song, F244")), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
+    assert_eq!(we.check(&mips()), Ok(()));
+    let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, we.to_map(), None);
+    sign(&mut w, &mut ana, &we);
+    sign(&mut w, &mut ben, &we);
+    assert_eq!(view(&w).agreement(&we).unwrap().exists, Some(true));
+    let (aid, sid, tid) = (ana.id, svc_s.id, svc_t.id);
+    let mut l = F244Lab::new(w, we, &mut [&mut ana, &mut ben]);
+    assert!(!l.mismatched(sid, 1), "the designated pointer, field 14's service, receives the work's share");
+    assert!(l.mismatched(tid, 2), "a service the chain names to take over is not the designation");
+    assert!(l.mismatched(aid, 3), "nor is an owner: the layer above divides nothing");
+    // Payees granting two different services in field 14: none designated.
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut svc_s = w.genesis("service S, F248", vec![own_home()], None, None);
+    let mut svc_t = w.genesis("service T, F248", vec![own_home()], None, None);
+    let (gas, _) = layer_grant(&mut w, &mut ana, &mut svc_s, "ana to S");
+    let (gbt, _) = layer_grant(&mut w, &mut ben, &mut svc_t, "ben to T");
+    let mut we = deal_terms(ana.id, ben.id);
+    we.payee_grants = Some(vec![gas, gbt]);
+    we.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(spec("a song, F244")), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
+    let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, we.to_map(), None);
+    sign(&mut w, &mut ana, &we);
+    sign(&mut w, &mut ben, &we);
+    let (sid, tid) = (svc_s.id, svc_t.id);
+    let mut l = F244Lab::new(w, we, &mut [&mut ana, &mut ben]);
+    assert!(l.mismatched(sid, 1), "two services named, none designated: S is not the pointer");
+    assert!(l.mismatched(tid, 2), "nor is T");
 }
 
 fn agreements_purchase(a: Hash) -> mor_core::money::Purchase {
