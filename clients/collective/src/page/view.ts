@@ -179,7 +179,12 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
         : '';
       // RB2: payments received during a broken stretch, owed back.
       const owedNote = (c.owedBack ?? []).length
-        ? note('warn', `<strong>Owed back.</strong><br>${c.owedBack.map((o) => `${fp(o.payment)}: ${e(o.text)}`).join('<br>')}`)
+        ? note(
+            'warn',
+            `<strong>Owed back.</strong><br>${c.owedBack
+              .map((o) => `${fp(o.payment)}: ${e(o.text)}${o.toKind === 'identity' && !o.notice && !c.closed ? ` <button class="quiet" data-action="notice" data-collective="${e(c.id)}" data-payment="${e(o.payment)}">Send ${e(o.toName)} a notice</button>` : ''}`)
+              .join('<br>')}`,
+          )
         : '';
       return `<div class="card" data-collective="${e(c.id)}"><h3>${e(c.name)}</h3>
 ${lawNote}

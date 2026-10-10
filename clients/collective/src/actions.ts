@@ -7,7 +7,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, lawClonePlan, lawDivideStake, lawRollbackPlan, lawSplitTally, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
+import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, lawClonePlan, lawDivideStake, lawRollbackPlan, lawSplitTally, noticePayload, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestCollective, collectiveTerms, type Governance } from '../../repo/src/collective.ts';
@@ -15,6 +15,7 @@ import {
   LAW_SPECS,
   RELEASE_AREA,
   closingPayload,
+  type LeftOpen,
   contest,
   debtReleasePayload,
   encodeTerms,
@@ -46,7 +47,7 @@ import {
   type Publisher,
   type Verified,
 } from '../../repo/src/release.ts';
-import { FINANCE_TYPES, LAW_TYPES, REPO_SPECS, TEST_RAIL } from '../../repo/src/specs.ts';
+import { FINANCE_TYPES, LAW_TYPES, REPO_SPECS, TEST_RAIL, TEST_TIME } from '../../repo/src/specs.ts';
 import {
   absenceSection,
   collectiveClause,
@@ -177,7 +178,7 @@ interface Shown {
   shares: { threshold: number; of: number };
   area: { holders: { id: string; voice: boolean; steppedDown: boolean }[]; threshold: number; needed: number; frozen: boolean; words: string };
   /** Payments received during a broken stretch, owed back until the sale is signed anew after the rollback (Law rule 37d, RB2). */
-  owedBack?: { payment: string; to: string | null; unit: string; value: number; stillBroken: boolean }[];
+  owedBack?: { payment: string; to: string | null; toKind: 'identity' | 'key' | 'nobody'; unit: string; value: number; stillBroken: boolean }[];
   /** Declarations of absence naming a member, as Law's verifier holds them (RB3, client conformance). */
   declared?: { member: string; act: string; signer: string; agreement: string; outcomes: number[]; contests?: string[] }[];
 }
@@ -2523,7 +2524,7 @@ export class Actions {
     // this program holds: a successor owes those the fork of the collective
     // it was forked from handed to it (F124 N13, F127).
     const debts = this.store.book().collectives.flatMap((x) => (x.id === c.identity || !this.store.isCollective(x.id) ? [] : (this.store.collective(x.id).f.debts ?? [])));
-    for (const sp of [...(c.f.splits ?? []), ...(c.f.debts ?? []), ...debts]) {
+    for (const sp of [...(c.f.splits ?? []), ...(c.f.debts ?? []), ...(c.f.notices ?? []).map((n) => ({ id: n.notice, key: n.key })), ...debts]) {
       const a = await this.fetchAct(sp.id, hints);
       if (a) {
         try {
@@ -3419,6 +3420,26 @@ export class Actions {
     const line = seq0.length ? [{ act: seq0[seq0.length - 1], position: seq0.length, summary: runningSummary(seq0) }] : [];
     const gate = await this.endingGate(c, v0, s0, line);
     blocking.push(...gate.blocking);
+    // Money owed back from a broken stretch (Law rule 37d; QG1, F191; F197):
+    // what is owed to nobody, and what is owed to a payer who gave no
+    // address and was sent a notice, the closing names as left open; the
+    // rest is repaid first.
+    let owedBack: NonNullable<Shown['owedBack']> = [];
+    try {
+      owedBack = v0.lawOwedBack(s0, c.identity) as NonNullable<Shown['owedBack']>;
+    } catch {
+      owedBack = [];
+    }
+    const noticeOf = (p: string) => (c.f.notices ?? []).find((n) => n.payment === p);
+    const leftOpen: LeftOpen[] = [];
+    for (const o of owedBack) {
+      if (o.toKind === 'nobody') leftOpen.push({ payment: o.payment, notice: null });
+      else if (o.toKind === 'identity' && noticeOf(o.payment)) leftOpen.push({ payment: o.payment, notice: noticeOf(o.payment)!.notice });
+      else
+        blocking.push(
+          `${o.value} (unit ${short(o.unit)}) is owed back to ${o.toKind === 'identity' && o.to ? names(o.to) : 'the key the payment committed to'} from the broken stretch: repay it first (Law rule 37d; F189, 7)${o.toKind === 'identity' ? ', or, where they gave no address, send them a notice with a deadline (F197)' : ''}.`,
+        );
+    }
     const owes = v0.lawOwes(s0, c.identity);
     if (owes.length) {
       const creditor = new Map(this.debtsOf(c).map((d) => [d.id, d.creditor]));
@@ -3432,6 +3453,19 @@ export class Actions {
         'A closing ends a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor (F124 N9, F125 D5). After its line, anything the collective\'s keys sign counts for nothing in Law.',
         `Signed by ${list(signers.map(names))}, each with their own identity and their safety key, on their own identity chain (a chain signature, F132), under the constitutional change rule.`,
         owes.length ? `It owes ${owes.length === 1 ? 'one debt' : `${owes.length} debts`}, its own or as a fork's successor.` : 'It owes nothing: every debt it signed or owes as a successor is paid or released.',
+        ...(() => {
+          const nobody = leftOpen.filter((x) => !x.notice).length;
+          const noticed = owedBack.filter((o) => o.toKind === 'identity' && noticeOf(o.payment));
+          return [
+            ...(nobody
+              ? [`It leaves open, visibly, ${nobody} payment${nobody === 1 ? '' : 's'} owed back to nobody: the payer committed no key, so nobody can ever claim it (Finance rule 10a). The closing act names ${nobody === 1 ? 'it' : 'them'}, and ${nobody === 1 ? 'it stays' : 'they stay'} shown after it (QG1).`]
+              : []),
+            ...noticed.map(
+              (o) =>
+                `It leaves open, visibly, ${o.value} (unit ${short(o.unit)}) owed back to ${o.to ? names(o.to) : 'its payer'}, who gave no address: a notice was sent, sealed to them, with a deadline at ${noticeOf(o.payment)!.deadline} on the test time reference (F197). The closing counts only once that deadline has passed with no address given, as the time reference shows; this program reads no time reference, so here it does not take effect.`,
+            ),
+          ];
+        })(),
       ],
       sections: [{ heading: 'Signed on this device', lines: [{ text: 'Test identities: consent simulated.', tone: 'warn' }] }],
       plain: [],
@@ -3446,7 +3480,7 @@ export class Actions {
         const col = this.store.collective(a.collective);
         const seq = col.f.identity.sequence;
         const tips = seq.length ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }] : [];
-        const payload = closingPayload({ agreement: col.f.agreement, collective: col.identity, chainAct: col.f.identity.binding, tips });
+        const payload = closingPayload({ agreement: col.f.agreement, collective: col.identity, chainAct: col.f.identity.binding, tips, open: leftOpen });
         const first = this.store.identity(signers[0]);
         const objects: [string, string][] = [[col.f.agreement, col.f.agreement], ...gate.named.map((e): [string, string] => [col.f.agreement, e])];
         const x = await first.publish(REPO_SPECS.law, LAW_TYPES.closing, payload, { public: true, relays: col.f.relays, objects });
@@ -3469,6 +3503,55 @@ export class Actions {
           lines: [{ text: `Closing ${x.id}.`, tone: e.complete ? 'ok' : 'bad' }, ...(e.why ? [{ text: e.why, tone: 'bad' as const }] : [])],
           acts,
         };
+      },
+    });
+  }
+
+  /**
+   * A notice to a payer owed money back from a broken stretch who gave no
+   * address (Law type 24; F197, decided 10 October 2026): sealed to the
+   * payer's identity, asking where the money should go, with a deadline on
+   * a time reference. Its conditions are visible, so its good faith can be
+   * judged; once the deadline passes with no address given, the collective
+   * may close, the debt named in the closing act, unpaid and visible.
+   */
+  async prepareNotice(a: { collective: string; payment: string; deadline: number }) {
+    const names = this.store.names();
+    const c = this.store.collective(a.collective);
+    const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const shown = await this.shown(c);
+    const o = (shown.owedBack ?? []).find((x) => x.payment === a.payment);
+    const blocking: string[] = [...this.closedBlock(c)];
+    if (!o) blocking.push(`No payment ${short(a.payment)} owed back by “${cname}” is held here.`);
+    else if (o.toKind !== 'identity' || !o.to) blocking.push('A notice is sealed to the payer\'s identity: this payment names none (a bare key, or nobody), so no notice can reach its payer (F197; QG1).');
+    if ((c.f.notices ?? []).some((n) => n.payment === a.payment)) blocking.push('A notice was already sent for this payment.');
+    if (!Number.isInteger(a.deadline) || a.deadline <= 0) blocking.push('The deadline is a point on the time reference: a whole number above zero.');
+    const who = o?.to ? names(o.to) : 'the payer';
+    const reading: Reading = {
+      title: `A notice to ${who}: money owed back by “${cname}”`,
+      summary: [
+        `“${cname}” sends ${who} a notice, sealed to ${who} (and to its members, as every act in its name), naming the payment ${short(a.payment)} it owes back from its broken stretch, and asking where the money should go (Law type 24, F197).`,
+        `Its deadline: ${a.deadline}, on the test time reference (${short(TEST_TIME)}). If ${who} names an address in time, ${who} is paid. If not, the collective may close, the debt named in the closing act, visible and unpaid.`,
+        'The notice and its deadline are visible to whoever checks the closing: the notice shows good faith, and how much depends on its conditions.',
+      ],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: 'Signed by the collective\'s everyday key, held here. Test identities only.', tone: 'warn' }] }],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      kind: 'notice',
+      digest: digestOf('notice', a.collective, a.payment, String(a.deadline)),
+      reading,
+      depends: [a.collective],
+      run: async () => {
+        const col = this.store.collective(a.collective);
+        const payload = noticePayload(a.payment, TEST_TIME, BigInt(a.deadline));
+        // Sealed to the payer, and to every member: an act in the collective's name is done once sealed to every member (Law rule 35a).
+        const x = await col.id.publish(REPO_SPECS.law, LAW_TYPES.notice, payload, { public: false, to: [o!.to!, ...col.f.members], relays: col.f.relays, objects: [[a.payment, a.payment]] });
+        col.f.notices = [...(col.f.notices ?? []), { payment: a.payment, notice: x.id, key: Buffer.from(x.key).toString('base64'), to: o!.to!, deadline: a.deadline }];
+        this.store.saveCollective(col);
+        this.shownCache.delete(col.identity);
+        return { title: `Notice sent to ${who}`, lines: [{ text: `Notice ${x.id}, sealed to ${who}, deadline ${a.deadline} on the test time reference.`, tone: 'ok' as const }], acts: [x.id] };
       },
     });
   }
@@ -3614,14 +3697,28 @@ export class Actions {
           splitService: !!c.f.governance.splitGrant,
           splits: (c.f.splits ?? []).map((x) => x.id),
           debts: this.debtsOf(c).map((d) => ({ id: d.id, creditor: d.creditor, creditorName: names(d.creditor), creditorHeld: this.store.holds(d.creditor), inherited: d.inherited })),
-          owedBack: (w.owedBack ?? []).map((o) => ({
-            payment: o.payment,
-            to: o.to,
-            toName: o.to && /^[0-9a-f]{64}$/.test(o.to) ? names(o.to) : (o.to ?? 'nobody named'),
-            value: o.value,
-            unit: o.unit,
-            text: `${o.value} (unit ${short(o.unit)}) paid under an offer made ${o.stillBroken ? 'while the collective is broken' : 'during a broken stretch since rolled back'}: no purchase, owed back to ${o.to && /^[0-9a-f]{64}$/.test(o.to) ? names(o.to) : (o.to ?? 'nobody named')} unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (Law rule 37d, RB2). Shown here as an open obligation: the network records and shows it; it cannot force a payment back.`,
-          })),
+          owedBack: (w.owedBack ?? []).map((o) => {
+            const sent = (c.f.notices ?? []).find((n) => n.payment === o.payment);
+            const toName = o.to && /^[0-9a-f]{64}$/.test(o.to) ? names(o.to) : (o.to ?? 'nobody named');
+            return {
+              payment: o.payment,
+              to: o.to,
+              toKind: o.toKind,
+              toName,
+              value: o.value,
+              unit: o.unit,
+              notice: sent?.notice ?? null,
+              text:
+                `${o.value} (unit ${short(o.unit)}) paid under an offer made ${o.stillBroken ? 'while the collective is broken' : 'during a broken stretch since rolled back'}: no purchase, owed back to ${toName} unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (Law rule 37d, RB2). Shown here as an open obligation: the network records and shows it; it cannot force a payment back.` +
+                (o.toKind === 'nobody'
+                  ? ' The payment committed no key: nobody can claim it (Finance rule 10a). It stays shown, and does not block a closing that names it (QG1).'
+                  : o.toKind === 'key'
+                    ? ' It is repaid where a claim signed with the key the payment committed to says (Finance rule 10a, QG1).'
+                    : sent
+                      ? ` A notice was sent to ${toName}, sealed to them, with a deadline at ${sent.deadline} on the test time reference (F197): once it passes with no address given, the collective may close, the debt named in the closing act.`
+                      : ' It is repaid as a debt: where the payer\'s own claim on the payment says, or to the pointer their own acts on it hold, or their pointer in force (QG2). Where the payer gave no address, the collective sends a notice with a deadline before closing (F197).'),
+            };
+          }),
           declared: (w.declared ?? []).map((d) => ({
             member: d.member,
             name: names(d.member),

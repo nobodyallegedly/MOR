@@ -114,6 +114,26 @@ pub struct LawView<'a> {
     /// no cMIP. A delivery record counts as evidence for a role share only
     /// where the payer's claim acknowledges it (Law rules 19, 22).
     pub delivery_records: BTreeSet<Hash>,
+    /// The chain of judgment for a deal's judge of forks (rule 34a; QG4,
+    /// decided 9 October 2026): each `(settlement request, judge)` whose
+    /// period to act on that request, counted from the request on the
+    /// deal's time reference, has passed with no settlement of its within
+    /// it. The time reference's answer, a fact the caller states, like
+    /// `absence_accepted`: the core reads no time reference. The next link
+    /// may settle only once every link before it is listed; a settlement by
+    /// a link listed counts for nothing in that question ("if the next
+    /// judge is triggered, the previous judge is void", F124). A link that
+    /// is a specification signs no settlement (QG4): the caller, which
+    /// holds the specifications, lists it as passed over.
+    pub judges_lapsed: BTreeSet<(Hash, Hash)>,
+    /// Notices to a payer owed money back who gave no address (Law type
+    /// 24; F197, decided 10 October 2026) whose deadline has passed, on the
+    /// time reference the notice names, with no address given by the payer
+    /// within it (no payee pointer, vault, or refund rail on a claim of
+    /// theirs). The time reference's answer, a fact the caller states, like
+    /// `judges_lapsed`. A closing may then leave that payment open, naming
+    /// it with its notice (rule 37d; the closing's field 4).
+    pub notices_lapsed: BTreeSet<Hash>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -121,6 +141,11 @@ pub struct LawView<'a> {
     citing: RefCell<BTreeSet<Hash>>,
     adopting: RefCell<BTreeSet<Hash>>,
     histories: RefCell<BTreeMap<(Hash, usize, Vec<Hash>), Rc<History>>>,
+    /// While a fork's check of the debts it must hand out runs, or a
+    /// closing's of the debts it must have paid (F199; F143): the
+    /// collective and the ending's line; only the departures registered in
+    /// its history count there.
+    fork_line: RefCell<Option<(Hash, Hash, Vec<KeptTip>)>>,
     ending_sigs: RefCell<BTreeMap<Hash, Rc<EndingSigs>>>,
     /// The chain read up to each link ([`LawView::chain_state`]), by
     /// collective and link: it depends on what the verifier holds alone.
@@ -433,6 +458,8 @@ impl<'a> LawView<'a> {
             anchored: Default::default(),
             unbound_rails: BTreeSet::new(),
             delivery_records: BTreeSet::new(),
+            judges_lapsed: BTreeSet::new(),
+            notices_lapsed: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -440,6 +467,7 @@ impl<'a> LawView<'a> {
             citing: RefCell::new(BTreeSet::new()),
             adopting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
+            fork_line: RefCell::new(None),
             ending_sigs: RefCell::new(BTreeMap::new()),
             chains: RefCell::new(BTreeMap::new()),
             trust_own_attempts: false,
@@ -482,6 +510,8 @@ impl<'a> LawView<'a> {
             anchored: self.anchored.clone(),
             unbound_rails: self.unbound_rails.clone(),
             delivery_records: self.delivery_records.clone(),
+            judges_lapsed: self.judges_lapsed.clone(),
+            notices_lapsed: self.notices_lapsed.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -489,6 +519,7 @@ impl<'a> LawView<'a> {
             citing: RefCell::new(BTreeSet::new()),
             adopting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
+            fork_line: RefCell::new(None),
             ending_sigs: RefCell::new(BTreeMap::new()),
             chains: RefCell::new(BTreeMap::new()),
             trust_own_attempts,
@@ -1277,13 +1308,13 @@ impl<'a> LawView<'a> {
                     "the rollback registers a resignation from an agreement not in force just before the broken act (rule 37a)".into(),
                 ));
             }
-            if at.is_none() && res.area.is_none() && self.resignation_spent(col, &p, before, &res.agreement)? {
+            if at.is_none() && res.area.is_none() && self.resignation_spent(&p, before, &res.agreement)? {
                 return Ok(Err(
                     "the rollback registers a resignation its signer made before coming back: spent, it registers nothing (F189, 1)".into(),
                 ));
             }
             if let (None, Some(area)) = (at, res.area) {
-                if self.stepping_down_spent(col, &p, before, &res.agreement, area)? {
+                if self.stepping_down_spent(&p, before, &res.agreement, area)? {
                     return Ok(Err(
                         "the rollback registers a stepping down its signer made before holding the area again: spent, it registers nothing (QF6)".into(),
                     ));
@@ -1512,7 +1543,7 @@ impl<'a> LawView<'a> {
                     continue;
                 }
                 let Ok(r) = Resignation::decode(&h.inside) else { continue };
-                if r.area.is_none() && lineage.contains(&r.agreement) && !self.resignation_spent(&self.col(collective), p, &ag, &r.agreement)? {
+                if r.area.is_none() && lineage.contains(&r.agreement) && !self.resignation_spent(p, &ag, &r.agreement)? {
                     out.push(Departure { act: h.id, party: *p, kind: DepartureKind::Resigned { agreement: r.agreement } });
                 }
             }
@@ -2441,6 +2472,15 @@ impl<'a> LawView<'a> {
                 if ended.as_ref().is_some_and(|e| !self.before_line(col, r, &e.chain_act, &e.tips)) {
                     continue;
                 }
+                // F199: for a fork's check of the debts it hands out, only
+                // the departures registered in its own history count. Judged
+                // for an act only: a line's own reading, which is cached,
+                // never depends on it.
+                if let (Some((c, chain_act, tips)), Point::Act(_)) = (self.fork_line.borrow().as_ref(), point) {
+                    if c == &col.id && !self.before_line(col, r, chain_act, tips) {
+                        continue;
+                    }
+                }
                 let e = self.record_eval(col, r)?;
                 if e.line {
                     for d in &e.registers {
@@ -2452,7 +2492,14 @@ impl<'a> LawView<'a> {
         // A rollback is a line: the departures it registers take effect
         // there (rule 37d, F185). One at this point's own link is before
         // it: an act or record bound to its key comes after it.
+        let fork_link = match point {
+            Point::Act(_) => self.fork_line.borrow().as_ref().filter(|(c, _, _)| c == &col.id).map(|(_, a, _)| col.res.position_of(a)),
+            _ => None,
+        };
         for (m, _, ds) in self.rollback_lines(col, limit)? {
+            if fork_link.is_some_and(|k| k.is_none_or(|k| m > k)) {
+                continue;
+            }
             for d in ds {
                 out.push((Line::Rotation(m), d));
             }
@@ -2545,16 +2592,22 @@ impl<'a> LawView<'a> {
         let mut voices = vec![];
         let mut remaining = vec![];
         for p in base {
-            let returns = self.returns(col, p, &lineage, &lines)?;
+            let returns = self.came_back(p, &lineage, None)?;
             let mut regs: Vec<Line<'a>> = vec![];
             for (l, d) in &lines {
                 if &d.party != p {
                     continue;
                 }
-                // F189 (1): a resignation is spent once its signer came back
-                // by a version naming them (B10); a line registers only one
-                // naming the version of their latest return, or one
-                // descending from it.
+                // The version the line registering it puts in force, which
+                // counts a departing member's signature placed before it
+                // (C2; F187, 6), never brings them back (reading, to
+                // confirm; QH4).
+                let puts = self.line_puts(col, *l);
+                let returns: Vec<Hash> = returns.iter().filter(|v| Some(**v) != puts).copied().collect();
+                // F189 (1), F195: a resignation is spent once its signer
+                // came back by a version naming them (B10), registered or
+                // not; a line registers only one naming the version of their
+                // latest return, or one descending from it.
                 if let DepartureKind::Resigned { agreement } = &d.kind {
                     if self.spent(agreement, &returns)? {
                         continue;
@@ -2563,7 +2616,8 @@ impl<'a> LawView<'a> {
                 // QF6 (decided 9 October 2026, F190): so is a stepping down,
                 // once its signer holds the area again.
                 if let DepartureKind::SteppedDown { agreement, area: a } = &d.kind {
-                    if area == Some(*a) && self.spent(agreement, &self.area_returns(col, p, *a, &lineage, &lines)?)? {
+                    let back: Vec<Hash> = self.came_back(p, &lineage, Some(*a))?.into_iter().filter(|v| Some(*v) != puts).collect();
+                    if area == Some(*a) && self.spent(agreement, &back)? {
                         continue;
                     }
                 }
@@ -2616,71 +2670,59 @@ impl<'a> LawView<'a> {
         Ok(self.restoring(col, p, lineage, from, area, l)?.is_some())
     }
 
-    /// The versions by which `p` came back to the collective's agreement
-    /// (B10): for each line registering a departure of their whole voice,
-    /// the latest version naming them again that they signed by a
-    /// signature not placed before that line (F189, 1).
-    fn returns(&self, col: &Col, p: &Hash, lineage: &[Hash], lines: &[(Line<'a>, Departure)]) -> R<Vec<Hash>> {
+    /// The versions by which `p` came back (B10; F189, 1; QF6; F195,
+    /// decided 10 October 2026, "Good"): the versions of the agreement
+    /// counted (`lineage`) that name `p` again, as a party (`area` none) or
+    /// as a holder of `area`, by a constitutional clone (B10: never an
+    /// ordinary clone that only copies the list), and that `p` signed by a
+    /// valid signature act. Whether or not any line registered a departure
+    /// of theirs: a departure such a version comes after is spent.
+    fn came_back(&self, p: &Hash, lineage: &[Hash], area: Option<u64>) -> R<Vec<Hash>> {
         let mut out = vec![];
-        for (l, d) in lines {
-            if &d.party != p {
-                continue;
-            }
-            let from = match &d.kind {
-                DepartureKind::Resigned { agreement } | DepartureKind::Declared { agreement } => agreement,
-                _ => continue,
+        for v in lineage {
+            let t = self.terms(v)?;
+            let named = match area {
+                None => t.parties.contains(p),
+                Some(a) => t.area(a).is_some_and(|ar| ar.holders.contains(p)),
             };
-            if let Some(v) = self.restoring(col, p, lineage, from, None, *l)? {
-                if !out.contains(&v) {
-                    out.push(v);
-                }
+            let constitutional = match &t.parent {
+                Some(pp) => changes(&self.terms(pp)?, &t).iter().any(|c| c.tier() == Tier::Constitutional),
+                None => false,
+            };
+            if named && constitutional && !self.valid_sigs(v, &[*p]).is_empty() {
+                out.push(*v);
             }
         }
         Ok(out)
     }
 
-    /// The versions by which `p` came back to area `area` (QF6, F190): for
-    /// each line registering their stepping down from it, the latest
-    /// version naming them a holder of it again that they signed by a
-    /// signature not placed before that line.
-    fn area_returns(&self, col: &Col, p: &Hash, area: u64, lineage: &[Hash], lines: &[(Line<'a>, Departure)]) -> R<Vec<Hash>> {
-        let mut out = vec![];
-        for (l, d) in lines {
-            match &d.kind {
-                DepartureKind::SteppedDown { agreement, area: a } if &d.party == p && *a == area => {
-                    if let Some(v) = self.restoring(col, p, lineage, agreement, Some(area), *l)? {
-                        if !out.contains(&v) {
-                            out.push(v);
-                        }
-                    }
-                }
-                _ => {}
-            }
+    /// The version a line puts in force, where it puts one: a record's
+    /// clone (field 0), or the clone a rollback declares (rule 37d).
+    fn line_puts(&self, col: &Col, l: Line<'a>) -> Option<Hash> {
+        match l {
+            Line::Record(r) => Record::decode(&r.inside).ok().and_then(|x| x.clone),
+            Line::Rotation(m) => col.res.states.get(m).and_then(|st| declared_in(&st.declarations, &self.law())).and_then(|d| d.ok()).map(|d| d.agreement),
         }
-        Ok(out)
     }
 
-    /// Whether `p`'s stepping down from `area` naming `agreement` is spent
-    /// at the collective's tip, counted in agreement `ag` (QF6, F190).
-    fn stepping_down_spent(&self, col: &Col, p: &Hash, ag: &Hash, agreement: &Hash, area: u64) -> R<bool> {
+    /// Whether `p`'s stepping down from `area` naming `agreement` is spent,
+    /// counted in agreement `ag` (QF6, F190; F195).
+    fn stepping_down_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash, area: u64) -> R<bool> {
         let lineage: Vec<Hash> = self.lineage(ag)?.into_iter().map(|(i, _)| i).collect();
-        let lines = self.departure_lines(col, Point::Tip, &[])?;
-        let returns = self.area_returns(col, p, area, &lineage, &lines)?;
-        self.spent(agreement, &returns)
+        self.spent(agreement, &self.came_back(p, &lineage, Some(area))?)
     }
 
-    /// Whether `p`'s resignation naming `agreement` is spent at the
-    /// collective's tip, counted in agreement `ag` (F189, 1).
-    fn resignation_spent(&self, col: &Col, p: &Hash, ag: &Hash, agreement: &Hash) -> R<bool> {
+    /// Whether `p`'s resignation naming `agreement` is spent, counted in
+    /// agreement `ag` (F189, 1; F195).
+    fn resignation_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash) -> R<bool> {
         let lineage: Vec<Hash> = self.lineage(ag)?.into_iter().map(|(i, _)| i).collect();
-        let lines = self.departure_lines(col, Point::Tip, &[])?;
-        let returns = self.returns(col, p, &lineage, &lines)?;
-        self.spent(agreement, &returns)
+        self.spent(agreement, &self.came_back(p, &lineage, None)?)
     }
 
-    /// Whether a resignation naming `agreement` is spent (F189, 1): its
-    /// signer came back by a version it does not descend from, so it was
-    /// signed before that return.
+    /// Whether a resignation or stepping down naming `agreement` is spent
+    /// (F189, 1; F195): its signer came back by a version it does not
+    /// descend from, so it was signed before that return, the only order
+    /// MOR can see between the two acts.
     fn spent(&self, agreement: &Hash, returns: &[Hash]) -> R<bool> {
         if returns.is_empty() {
             return Ok(false);
@@ -3472,12 +3514,23 @@ impl<'a> LawView<'a> {
             let Ok(Fin::PayeePointer(p)) = Fin::decode(h.inside.type_, &h.inside.payload) else {
                 continue;
             };
-            if &p.payee == c
-                && p.rails.iter().any(|r| r.module == rail)
-                && self.valid(&h.id)
-                && self.consent(&h.id)?.counts()
-            {
-                return Ok(None);
+            if &p.payee == c && p.rails.iter().any(|r| r.module == rail) && self.valid(&h.id) {
+                if self.consent(&h.id)?.counts() {
+                    return Ok(None);
+                }
+                // F198 (decided 10 October 2026, "Feels like the only
+                // option, agreed"): a pointer an ending left outside its
+                // history still counts for payments already made to it, as
+                // the chain stood for each (F181): this act, before the
+                // ending's line, is one. For anything after the ending it
+                // counts for nothing (rule 47a). Read here as judging the
+                // pointer as the chain stood without the ending, which also
+                // keeps a pointer inside the history whose taking-on (rule
+                // 40, IT2a) the ending's old line left out (reading, to
+                // confirm).
+                if self.closed_by(c)?.is_some() && self.on_own_history(c, |v| v.consent(&h.id))?.0.counts() {
+                    return Ok(None);
+                }
             }
         }
         Ok(Some(rail))
@@ -4708,7 +4761,9 @@ pub struct NegotiationRecord {
 pub enum Role {
     /// A rail Module the payment ran through, by its hash (F119).
     RailModule(Hash),
-    /// Any other role: a referral, a delivery, a service's use (F116).
+    /// Any other role: a referral, a delivery, a service's use (F116):
+    /// its evidence counts only acknowledged by the payer the payment
+    /// commits to (F184, QG3, F193, F194).
     Other,
 }
 
@@ -4851,64 +4906,75 @@ impl<'a> LawView<'a> {
         Ok(false)
     }
 
-    /// Whether `id` is a relay's delivery record: type 0 of a specification
-    /// the caller read as the relay transport cMIP (F184).
+    /// Whether `id` is a relay's delivery record whose object this verifier
+    /// can read: type 0 of a specification the caller read as the relay
+    /// transport cMIP (F184).
     fn is_delivery_record(&self, id: &Hash) -> bool {
         self.v.get(id).is_some_and(|x| x.inside.type_ == 0 && self.delivery_records.contains(&x.inside.spec))
     }
 
-    /// Whether a relay's delivery record counts for the payment `payment`
-    /// (a receipt or payer's claim) a split divides (F184, decided 9
-    /// October 2026; Law rules 19 and 22; relay transport cMIP, draft 3,
-    /// "Delivery records"): **the payer's claim for that payment
-    /// acknowledges it**, and the object it names (its locked hash, field
-    /// 0) is the media of the publication the payment was for (Envelope,
-    /// publication field 2). The payer's claim: `payment` itself where it
-    /// is a claim, or a claim of the same rail payment, by the payer the
-    /// receipt names (its identity, or its committed key). *A relay's own
-    /// signature alone would let it claim deliveries it never made; the
-    /// confirming signature comes from the other side of the deal, as for
-    /// a referral (F75).*
-    fn delivery_acknowledged(&self, record: &Hash, payment: &Hash) -> bool {
-        use crate::finance::{Payer, Payload as Fin};
-        let Some(r) = self.v.get(record) else { return false };
-        let object: Option<Hash> = r.inside.payload.iter().find_map(|(k, v)| match (k, v) {
-            (crate::cbor::Value::Uint(0), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
-            _ => None,
-        });
+    /// Whether an act offered as evidence for a role share counts for the
+    /// payment `payment` (a receipt or payer's claim) a split divides: **the
+    /// payer the payment's own commitment names acknowledges it** (Law rules
+    /// 19 and 22; F184; QG3, decided 9 October 2026: whatever cMIP defines
+    /// it; F193, decided 10 October 2026; F194, decided 10 October 2026: a
+    /// service's use record too). That payer's claim is a payer's claim of
+    /// the same rail payment (`payment` itself where it is one) whose rail
+    /// proof the caller checked and found to carry the commitment
+    /// recomputed from it, its signer, or the anonymous key it carries, as
+    /// payer ([`Self::rail_valid`]), on a rail whose commitment binds the
+    /// payer (not [`Self::unbound_rails`]), acknowledging it (Envelope rule
+    /// 4a), or naming it as its referral's evidence (Finance, the claim's
+    /// field 6: "the payer's client for a referral", rule 22); never the
+    /// payer a receipt names,
+    /// which the split service writes. Where the commitment names nobody,
+    /// no claim carries it, and nothing can be acknowledged: the share is
+    /// one nobody fills (the stated cost of F193). For a relay's delivery
+    /// record of a specification the caller read as the relay transport
+    /// cMIP, the object it names (its locked hash, field 0) must also be
+    /// the media of the publication the payment fulfils (Envelope,
+    /// publication field 2; F184); a verifier that cannot read the record's
+    /// format does not check the object ("Open in this draft", QH3).
+    /// *Paying for usage invites faking usage: the confirming signature
+    /// comes from the other side of the deal, as for a referral (F75).*
+    fn payer_acknowledged(&self, evidence: &Hash, payment: &Hash) -> bool {
+        use crate::finance::Payload as Fin;
         let Some(p) = self.v.get(payment) else { return false };
         if p.inside.spec != self.mips.finance {
             return false;
         }
-        let (fulfils, payer) = match Fin::decode(p.inside.type_, &p.inside.payload) {
-            Ok(Fin::Receipt(x)) => (x.fulfils, x.payer),
-            Ok(Fin::Claim(x)) => (x.fulfils, None),
+        let fulfils = match Fin::decode(p.inside.type_, &p.inside.payload) {
+            Ok(Fin::Receipt(x)) => x.fulfils,
+            Ok(Fin::Claim(x)) => x.fulfils,
             _ => return false,
         };
-        // The object paid for: the media of the publication the payment fulfils.
-        let paid_for: Option<Hash> = self.v.get(&fulfils).filter(|f| f.inside.spec == self.mips.envelope && f.inside.type_ == 0).and_then(|f| {
-            f.inside.payload.iter().find_map(|(k, v)| match (k, v) {
-                (crate::cbor::Value::Uint(2), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
+        if self.is_delivery_record(evidence) {
+            let Some(r) = self.v.get(evidence) else { return false };
+            let object: Option<Hash> = r.inside.payload.iter().find_map(|(k, v)| match (k, v) {
+                (crate::cbor::Value::Uint(0), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
                 _ => None,
-            })
-        });
-        if object.is_none() || object != paid_for {
-            return false;
+            });
+            // The object paid for: the media of the publication the payment fulfils.
+            let paid_for: Option<Hash> = self.v.get(&fulfils).filter(|f| f.inside.spec == self.mips.envelope && f.inside.type_ == 0).and_then(|f| {
+                f.inside.payload.iter().find_map(|(k, v)| match (k, v) {
+                    (crate::cbor::Value::Uint(2), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
+                    _ => None,
+                })
+            });
+            if object.is_none() || object != paid_for {
+                return false;
+            }
         }
-        let mut claims: Vec<&Held> = vec![];
-        if matches!(Fin::decode(p.inside.type_, &p.inside.payload), Ok(Fin::Claim(_))) {
-            claims.push(p);
-        }
+        let mut claims: Vec<&Held> = vec![p];
         claims.extend(self.same_payment(payment).into_iter().filter_map(|(x, _)| self.v.get(&x)));
         claims.into_iter().any(|c| {
             let Ok(Fin::Claim(cl)) = Fin::decode(c.inside.type_, &c.inside.payload) else { return false };
-            let by_payer = match (&payer, cl.anonymous.as_ref()) {
-                (None, _) => c.id == *payment,
-                (Some(Payer::Identity(h)), None) => c.act.outside.signer.as_ref() == Some(h),
-                (Some(Payer::Key(k)), Some(a)) => &a.key == k,
-                _ => false,
-            };
-            c.inside.spec == self.mips.finance && self.payers_claim(c) && by_payer && c.inside.acks.iter().flatten().any(|a| a == record)
+            c.inside.spec == self.mips.finance
+                && self.payers_claim(c)
+                && self.rail_valid.contains_key(&c.id)
+                && !self.rail_invalid.contains(&c.id)
+                && !self.unbound_rails.contains(&cl.rail)
+                && (c.inside.acks.iter().flatten().any(|a| a == evidence) || cl.referral.as_ref().is_some_and(|r| &r.evidence == evidence))
         })
     }
 
@@ -5366,14 +5432,16 @@ pub enum DealState {
     Tangled { reference: Hash, why: &'static str, branches: Vec<Vec<Hash>> },
 }
 
-/// A settlement of a deal's fork, as `deal_state` weighs it (QF1, QF3).
+/// A settlement of a deal's fork, as `deal_state` weighs it (QF3, F192).
 struct Settlement {
     /// The settling version, or the judge's settlement (type 23).
     act: Hash,
-    /// What it puts in force: the settling version, or the tip kept.
+    /// What it puts in force: the settling version, or the version kept.
     into: Hash,
-    /// What it saw: its history, and, for a judge's settlement, the
-    /// histories of the tips it names.
+    /// A judge's settlement (type 23), not a version of the parties.
+    judge: bool,
+    /// What it could see (F192): its history, and, for a judge's
+    /// settlement, the histories of the versions it names.
     seen: BTreeSet<Hash>,
 }
 
@@ -5694,7 +5762,17 @@ impl<'a> LawView<'a> {
             // (rules 40 and 42). One that binds no one cannot block a fork,
             // and stays visible as what it is.
             let _ = t;
-            if o.debtor == col.id && self.obligation_binds(&x.id)? == Some(true) && self.before_line(col, x, chain_act, tips) {
+            // F199 (decided 10 October 2026, "1 is agreed"): whether a fork
+            // took effect is judged only by what its own history holds: the
+            // departures registered before its line count for this check; a
+            // departure registered after it never changes it.
+            if o.debtor != col.id || !self.before_line(col, x, chain_act, tips) {
+                continue;
+            }
+            let outer = self.fork_line.replace(Some((col.id, *chain_act, tips.to_vec())));
+            let binds = self.obligation_binds(&x.id);
+            self.fork_line.replace(outer);
+            if binds? == Some(true) {
                 out.push(x.id);
             }
         }
@@ -6083,12 +6161,29 @@ impl<'a> LawView<'a> {
             );
         }
         // F189 (7): money owed back from a broken stretch is a debt for
-        // "owes nothing", whatever the closing's line.
+        // "owes nothing", whatever the closing's line; save what the
+        // closing names in field 4 as left open: owed to nobody (QG1,
+        // F191), or to a payer who gave no address, after a notice sealed
+        // to them whose deadline lapsed (F197).
         let owed = self.owed_back(&c.collective)?;
-        if !owed.is_empty() {
+        let mut blocking = 0usize;
+        for o in &owed {
+            let mut of: Vec<Hash> = vec![o.payment];
+            of.extend(self.same_payment(&o.payment).into_iter().map(|(h, _)| h));
+            let named = c.open.iter().find(|x| of.contains(&x.payment));
+            let left_open = match (&o.to, named) {
+                (crate::finance::RefundTo::Nobody, Some(_)) => true,
+                (crate::finance::RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, payer, &of)),
+                _ => false,
+            };
+            if !left_open {
+                blocking += 1;
+            }
+        }
+        if blocking > 0 {
             return fail(
                 e,
-                &format!("a collective cannot close while money from its broken stretch is owed back: {} payment(s) not yet settled (rule 37d, RB2; F189, 7)", owed.len()),
+                &format!("a collective cannot close while money from its broken stretch is owed back: {blocking} payment(s) not yet settled, nor left open as the rules allow (rule 37d, RB2; F189, 7; QG1, F191; F197)"),
             );
         }
         e.complete = true;
@@ -6593,9 +6688,20 @@ impl<'a> LawView<'a> {
                     Ok(Fin::PayeePointer(t)) if &t.payee == payee && x.act.outside.signer.as_ref() == Some(payee) => Some(t),
                     _ => None,
                 });
+                // QG2: money owed back, where the payer's own acts on the
+                // payment hold no pointer, goes to the payer's pointer in
+                // force (not the vault alone, as for a debt).
+                let refund = self
+                    .v
+                    .get(fulfils)
+                    .is_some_and(|x| x.inside.spec == self.mips.finance && matches!(x.inside.type_, fin::types::RECEIPT | fin::types::CLAIM));
                 let r14 = match tip {
                     Some(t) => self.stood_at(fulfils, &res, j) && fin::counts_toward(t.version, fin::PaidInto::Flow(q.version)),
                     None => match self.pointer_holding_at(fulfils, payee, Some(j)) {
+                        Some(h) if refund && h.pointers.is_empty() && h.complete => {
+                            let all: Vec<Hash> = chain.iter().map(|(i, _)| *i).collect();
+                            fin::select_pointer(&all, &chain).is_some_and(|(_, v)| fin::counts_toward(v, fin::PaidInto::Flow(q.version)))
+                        }
                         Some(h) => fin::rule_14(&h, &chain, q.version) == fin::Rule14::Counts,
                         None => false,
                     },
@@ -6693,7 +6799,46 @@ impl<'a> LawView<'a> {
         let x = self.v.get(fulfils)?;
         let mut complete = true;
         let acts: Vec<Hash> = if x.inside.spec == self.mips.finance {
-            let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else { return None };
+            let o = match Fin::decode(x.inside.type_, &x.inside.payload) {
+                Ok(Fin::Obligation(o)) => o,
+                // QG2 (decided 9 October 2026): money owed back on a
+                // payment, `fulfils` one receipt or claim of it, is repaid
+                // as a debt to its payer, by the pointer the payer's own
+                // acts on that payment hold: its claims for it, and its acts
+                // acknowledging any receipt or claim of it.
+                Ok(Fin::Receipt(_)) | Ok(Fin::Claim(_)) => {
+                    let mut of: Vec<Hash> = vec![*fulfils];
+                    of.extend(self.same_payment(fulfils).into_iter().map(|(h, _)| h));
+                    let acts: Vec<Hash> = self
+                        .v
+                        .signed_by(payee)
+                        .filter(|h| {
+                            ok(&h.id)
+                                && ((of.contains(&h.id) && h.inside.spec == self.mips.finance && h.inside.type_ == fin::types::CLAIM)
+                                    || h.inside.acks.iter().flatten().any(|a| of.contains(a)))
+                        })
+                        .map(|h| h.id)
+                        .collect();
+                    let mut pointers = vec![];
+                    for a in acts {
+                        let Some(h) = self.v.get(&a) else { continue };
+                        let held = fin::holds_own(self.v, fin::cites(&h.inside), payee);
+                        complete &= held.complete;
+                        for p in held.acts {
+                            let Some(y) = self.v.get(&p) else { continue };
+                            if y.inside.spec == self.mips.finance
+                                && y.inside.type_ == fin::types::PAYEE_POINTER
+                                && y.act.outside.signer.as_ref() == Some(payee)
+                                && !pointers.contains(&p)
+                            {
+                                pointers.push(p);
+                            }
+                        }
+                    }
+                    return Some(fin::Holding { pointers, complete });
+                }
+                _ => return None,
+            };
             if &o.creditor != payee {
                 return None;
             }
@@ -6992,7 +7137,18 @@ impl<'a> LawView<'a> {
                 continue;
             }
             let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else { continue };
-            if self.obligation_binds(&x.id)? != Some(true) {
+            // F143, as F199 reads it for forks: a closing is judged on its
+            // own departures, those registered in its history.
+            let own = match line {
+                Some((c, t)) if o.debtor == col.id => Some((col.id, *c, t.to_vec())),
+                _ => None,
+            };
+            let outer = own.map(|l| self.fork_line.replace(Some(l)));
+            let binds = self.obligation_binds(&x.id);
+            if let Some(o) = outer {
+                self.fork_line.replace(o);
+            }
+            if binds? != Some(true) {
                 continue;
             }
             let owes = if o.debtor == col.id {
@@ -7134,24 +7290,37 @@ impl<'a> LawView<'a> {
     }
 
     /// A deal read from its founding terms `root` (rule 45b; F186, F188,
-    /// F190): followed one complete version at a time. Where one version
-    /// has two complete clones or more, the deal is forked, the version
-    /// before the split its reference, until one clean settlement: a
-    /// complete version naming in field 26 every tip it discards (QF3),
-    /// signed by the parties of all the branches involved (DQ5), or the
-    /// settlement of the judge of forks the reference names, activated by a
-    /// party's request (DQ8, QF2).
+    /// F190, F192, F196): followed one complete version at a time. Where
+    /// one version has two complete clones or more, the deal is forked, the
+    /// version before the split its reference, until a settlement: a
+    /// complete version naming in field 26 every tip it drops (QF3), signed
+    /// by the parties of all the branches involved (DQ5), or the settlement
+    /// of the judge of forks the reference names, or of the link of its
+    /// chain of judgment that took over, activated by a party's request
+    /// (DQ8, QF2, QG4).
     ///
-    /// **Clean**: every complete version of the fork is either in the
-    /// settlement's history (its parent's line, the tips it names and what
-    /// it cites) or made after it (citing it, or on the line it puts in
-    /// force). A version beyond the tips a settlement names, not citing it,
-    /// leaves it unclean: the deal is tangled, back on its reference (QF1);
-    /// a version citing it is plainly after it and changes nothing. The
-    /// first clean settlement holds; one made after it changes nothing
-    /// (A3). With no clean settlement, tangled shapes (DQ1 to DQ4, QF1)
-    /// leave the deal on its reference. Only complete versions of this deal
-    /// are read (F189, 2).
+    /// **What a settlement could see** (F192, decided 10 October 2026,
+    /// replacing QF1 and the build's "clean"): its history, and nothing
+    /// else: its own line, each tip it names with that tip's history, and
+    /// what it cites, each with its own history ([`Self::fork_histories`]);
+    /// for a judge's settlement, the histories of the version it keeps and
+    /// of the tips it drops. A settlement counts only where it names every
+    /// tip it saw (F188): a version of the fork in its history that is
+    /// neither on the line it keeps nor at or below a tip it names leaves
+    /// it settling nothing, a plain version. A settlement that counts is
+    /// final for everything it saw, and for everything it did not: a
+    /// version it did not hold reopens nothing, nor does a settlement whose
+    /// history holds it (made after it), whoever signs them; only a version
+    /// on the line it puts in force changes the deal. Two settlements of
+    /// the parties, neither holding the other, keep different lines: every
+    /// party signed both, and the deal stays tangled on its reference
+    /// (DQ3) until one holding both settles it. Where a judge's settlement
+    /// is one of two such, which came first cannot be told, and the
+    /// verifier refuses ("Open in this draft", QH1). With no settlement,
+    /// tangled shapes (DQ1, DQ2) leave the deal on its reference. Only
+    /// complete versions of this deal are read (F189, 2); a settling
+    /// version naming a version this verifier does not hold is read as a
+    /// plain version until it holds it (F196).
     pub fn deal_state(&self, root: &Hash) -> R<DealState> {
         let mut at = *root;
         loop {
@@ -7183,19 +7352,26 @@ impl<'a> LawView<'a> {
             let hist = self.fork_histories(&below)?;
             // Two versions on separate lines: neither descends from the other.
             let apart = |a: &Hash, b: &Hash| a != b && !up(a).contains(b) && !up(b).contains(a);
+            // F188 under F192: every version of the fork a settlement saw is
+            // on the line it keeps, or at or below a tip it names.
+            let names_all = |seen: &BTreeSet<Hash>, keeps: &[Hash], tips: &[Hash]| {
+                seen.iter().filter(|y| below.contains_key(*y)).all(|y| {
+                    keeps.iter().any(|k| k == y || up(k).contains(y)) || tips.iter().any(|o| up(o).contains(y))
+                })
+            };
             let mut cands: Vec<Settlement> = vec![];
             for (x, par) in &below {
                 let t = self.terms(x)?;
                 let Some(tips) = t.settles.as_ref() else { continue };
+                // F196: naming a version this verifier does not hold, it is
+                // read as a plain version until that version is held.
                 if tips.iter().any(|o| self.v.get(o).is_none()) {
-                    return Err(LawError::Unsettled(
-                        "a version settles a tip of a deal's fork this verifier does not hold: it holds that version before answering (F186)",
-                    ));
+                    continue;
                 }
                 if !tips.iter().all(|o| below.contains_key(o) && apart(o, par)) {
                     continue;
                 }
-                // DQ5 (QF3): the parties of every tip discarded whose voice
+                // DQ5 (QF3): the parties of every tip dropped whose voice
                 // remains sign it too.
                 let mut need: Vec<Hash> = vec![];
                 for o in tips {
@@ -7210,7 +7386,11 @@ impl<'a> LawView<'a> {
                 if self.signers(x, &need).len() < need.len() {
                     continue;
                 }
-                cands.push(Settlement { act: *x, into: *x, seen: hist.get(x).cloned().unwrap_or_default() });
+                let seen = hist.get(x).cloned().unwrap_or_default();
+                if !names_all(&seen, &[*x], tips) {
+                    continue;
+                }
+                cands.push(Settlement { act: *x, into: *x, judge: false, seen });
             }
             for (act, kept, discarded) in self.arbitrated(&at, &below)? {
                 if !discarded.iter().all(|o| apart(o, &kept)) {
@@ -7220,32 +7400,49 @@ impl<'a> LawView<'a> {
                 for y in std::iter::once(&kept).chain(&discarded) {
                     seen.extend(hist.get(y).into_iter().flatten().copied());
                 }
-                cands.push(Settlement { act, into: kept, seen });
-            }
-            // After a settlement: it is in the version's history, or the
-            // version lies on the line it puts in force.
-            let after = |y: &Hash, c: &Settlement| hist.get(y).is_some_and(|h| h.contains(&c.act)) || up(y).contains(&c.into);
-            let clean = |c: &Settlement| below.keys().all(|y| c.seen.contains(y) || after(y, c));
-            let cleans: Vec<&Settlement> = cands.iter().filter(|c| clean(c)).collect();
-            let first: Vec<&&Settlement> = cleans
-                .iter()
-                .filter(|c| !cleans.iter().any(|o| o.act != c.act && (c.seen.contains(&o.act) || up(&c.into).contains(&o.into) && o.into != c.into)))
-                .collect();
-            match first.as_slice() {
-                [c, rest @ ..] if rest.iter().all(|o| o.into == c.into) => {
-                    at = c.into;
+                if !names_all(&seen, &[kept], &discarded) {
                     continue;
                 }
-                [] => {}
-                _ => return tangled("two settlements of one fork, neither made after the other (DQ3)"),
+                cands.push(Settlement { act, into: kept, judge: true, seen });
+            }
+            // F192: one settlement is after another when its history holds
+            // it. Of those that are after none, one counts; where they keep
+            // different lines, neither holds the other: the parties' own
+            // tangle (DQ3), set aside for a later settlement holding them
+            // all, or, a judge among them, not decided by the texts (QH1).
+            let mut live: Vec<&Settlement> = cands.iter().collect();
+            let mut set_aside: Vec<&Settlement> = vec![];
+            let mut settled: Option<Hash> = None;
+            while !live.is_empty() {
+                let first: Vec<&Settlement> = live
+                    .iter()
+                    .filter(|c| !live.iter().any(|o| o.act != c.act && c.seen.contains(&o.act)))
+                    .copied()
+                    .collect();
+                if first.is_empty() {
+                    break;
+                }
+                if first.iter().all(|o| o.into == first[0].into) {
+                    settled = Some(first[0].into);
+                    break;
+                }
+                if first.iter().any(|c| c.judge) {
+                    return Err(LawError::Unsettled(
+                        "two settlements of one deal's fork, a judge's among them, neither holding the other: which came first cannot be told (rule 45b, F192; QH1, Open in this draft)",
+                    ));
+                }
+                set_aside.extend(first.iter().copied());
+                live.retain(|c| set_aside.iter().all(|o| c.seen.contains(&o.act)) && !set_aside.iter().any(|o| o.act == c.act));
+            }
+            if let Some(into) = settled {
+                at = into;
+                continue;
+            }
+            if !set_aside.is_empty() {
+                return tangled("two settlements of one fork, neither holding the other (DQ3)");
             }
             if kids.len() > 2 {
                 return tangled("three or more complete versions of one version, not settled by one naming every tip (DQ2, QF3)");
-            }
-            match cands.len() {
-                0 => {}
-                1 => return tangled("a complete version beyond the tips a settlement names, not citing it (QF1), or a settlement made from below its branch's latest version (DQ4)"),
-                _ => return tangled("two settlements of one fork, neither clean (DQ3)"),
             }
             let parents: Vec<&Hash> = below.values().filter(|p| **p != at).collect();
             if parents.iter().enumerate().any(|(i, p)| parents[i + 1..].contains(p)) {
@@ -7330,33 +7527,45 @@ impl<'a> LawView<'a> {
 
     /// The judge's settlements of the fork at `at` (F188, DQ8), each signed
     /// by the judge of forks the reference names (field 27, one of field
-    /// 13: QF2, decided 9 October 2026), naming a request by a party who
-    /// signed the reference, which names `at`; its kept tip and every tip it
-    /// discards (QF3), all versions of the fork. As (the act, the kept tip,
-    /// the tips discarded). Where the reference names no judge of forks,
-    /// none settles, and the deal waits on its reference (QF2).
+    /// 13: QF2, decided 9 October 2026), or by the link of its chain of
+    /// judgment (field 21) that took over (QG4, decided 9 October 2026:
+    /// once every link before it let its period pass, as the caller states
+    /// in [`Self::judges_lapsed`]; a link listed there counts for nothing
+    /// in that question), naming a request by a party who signed the
+    /// reference, which names `at`; the version it keeps and every tip it
+    /// drops (QF3), all versions of the fork. As (the act, the version
+    /// kept, the tips dropped). Where the reference names no judge of
+    /// forks, none settles, and the deal waits on its reference (QF2).
     fn arbitrated(&self, at: &Hash, below: &BTreeMap<Hash, Hash>) -> R<Vec<(Hash, Hash, Vec<Hash>)>> {
         let t = self.terms(at)?;
-        let Some(arbitrator) = t.fork_judge.as_ref().filter(|j| t.arbitrators.iter().flatten().any(|a| a == *j)) else {
+        let Some(judge) = t.fork_judge.filter(|j| t.arbitrators.iter().flatten().any(|a| a == j)) else {
             return Ok(vec![]);
         };
+        let links = t.chain_of(&Judge::Identity(judge)).unwrap_or_else(|| vec![judge]);
         let mut out = vec![];
-        for h in self.v.signed_by(arbitrator) {
-            if !self.is_law(h, types::FORK_SETTLEMENT) || !self.valid(&h.id) {
-                continue;
-            }
-            let Ok(s) = ForkSettlement::decode(&h.inside) else { continue };
-            let Some(rq) = self.v.get(&s.request) else { continue };
-            if !self.is_law(rq, types::SETTLEMENT_REQUEST) || !self.valid(&rq.id) {
-                continue;
-            }
-            let Ok(r) = SettlementRequest::decode(&rq.inside) else { continue };
-            let Some(asker) = rq.act.outside.signer else { continue };
-            if r.reference != *at || !t.parties.contains(&asker) || self.signers(at, &[asker]).is_empty() {
-                continue;
-            }
-            if below.contains_key(&s.kept) && s.discarded.iter().all(|d| below.contains_key(d)) {
-                out.push((h.id, s.kept, s.discarded));
+        for (i, link) in links.iter().enumerate() {
+            for h in self.v.signed_by(link) {
+                if !self.is_law(h, types::FORK_SETTLEMENT) || !self.valid(&h.id) {
+                    continue;
+                }
+                let Ok(s) = ForkSettlement::decode(&h.inside) else { continue };
+                let Some(rq) = self.v.get(&s.request) else { continue };
+                if !self.is_law(rq, types::SETTLEMENT_REQUEST) || !self.valid(&rq.id) {
+                    continue;
+                }
+                let Ok(r) = SettlementRequest::decode(&rq.inside) else { continue };
+                let Some(asker) = rq.act.outside.signer else { continue };
+                if r.reference != *at || !t.parties.contains(&asker) || self.signers(at, &[asker]).is_empty() {
+                    continue;
+                }
+                // QG4: its turn has come, and has not passed.
+                let lapsed = |j: &Hash| self.judges_lapsed.contains(&(s.request, *j));
+                if !links[..i].iter().all(lapsed) || lapsed(link) {
+                    continue;
+                }
+                if below.contains_key(&s.kept) && s.discarded.iter().all(|d| below.contains_key(d)) {
+                    out.push((h.id, s.kept, s.discarded));
+                }
             }
         }
         Ok(out)
@@ -7738,6 +7947,24 @@ impl<'a> LawView<'a> {
         Ok(Some(anew))
     }
 
+    /// Whether `n` is a notice of `collective` (Law type 24; F197, decided
+    /// 10 October 2026) naming one of the acts `of` a payment owed back to
+    /// `payer`, valid, public or sealed to that payer and to every member
+    /// (done, rule 35a), whose deadline the caller states lapsed with no
+    /// address given ([`Self::notices_lapsed`]).
+    fn notice_lapsed(&self, n: &Hash, collective: &Hash, payer: &Hash, of: &[Hash]) -> bool {
+        let Some(h) = self.v.get(n) else { return false };
+        self.is_law(h, types::NOTICE)
+            && h.act.outside.signer.as_ref() == Some(collective)
+            && self.valid(n)
+            && (h.act.outside.content_key.is_some() || h.act.outside.to.iter().flatten().any(|q| q == payer))
+            // Rule 35a: an act in the collective's name is done once sealed
+            // to every member, or public.
+            && self.current(collective).ok().flatten().and_then(|c| self.terms(&c.agreement).ok()).is_some_and(|t| self.sealed_to_all(h, &t))
+            && Notice::decode(&h.inside).is_ok_and(|x| of.contains(&x.payment))
+            && self.notices_lapsed.contains(n)
+    }
+
     /// The payments a collective owes back, made under an offer of a broken
     /// stretch, the sale not signed anew after the rollback (rule 37d, RB2,
     /// BQ2, BQ3): a
@@ -7768,15 +7995,7 @@ impl<'a> LawView<'a> {
                     // debt, by a payment naming what it repays.
                     let mut names = vec![h.id];
                     names.extend(self.same_payment(&h.id).into_iter().map(|(x, _)| x));
-                    let back = match &e.refund_to {
-                        crate::finance::RefundTo::Identity(to) => self.repaid(&names, to, &amount.unit),
-                        // A bare key's refund is paid where its claim says
-                        // (Finance rule 10a), by a payment no identity
-                        // receives: how that repayment is shown is not
-                        // written ("Open in this draft"). With no key, it is
-                        // unclaimable (rule 10a).
-                        _ => 0,
-                    };
+                    let back = self.repaid(&names, &e.refund_to, &amount.unit);
                     if back < amount.value {
                         out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken });
                     }
@@ -7786,24 +8005,55 @@ impl<'a> LawView<'a> {
         Ok(out)
     }
 
-    /// What has been paid back to `to` toward a payment owed back, by the
-    /// acts of that payment `owed` (QF5, decided 9 October 2026, F190):
-    /// repaid like any debt, by a payment naming what it repays, proven by
-    /// either side's record (double entry). A receipt `to` signs, or a
-    /// payer's claim, naming one of `owed` in field 5, paid to `to` in
-    /// `unit`, whose rail's proof the caller checked (`rail_valid`); a
-    /// claim counts only where its rail shows it paid to a payee pointer
-    /// or vault entry of `to`'s own. As for a debt, receipts are summed,
-    /// and a claim adds what no receipt for its proof covers.
-    fn repaid(&self, owed: &[Hash], to: &Hash, unit: &Hash) -> u64 {
-        use crate::finance::{PaidAt, Payload as Fin};
-        let to_own = |at: &PaidAt| match at {
-            PaidAt::Flow(p) => self.v.get(p).is_some_and(|x| {
-                x.act.outside.signer.as_ref() == Some(to)
-                    && x.inside.spec == self.mips.finance
-                    && matches!(Fin::decode(x.inside.type_, &x.inside.payload), Ok(Fin::PayeePointer(q)) if &q.payee == to)
-            }),
-            PaidAt::VaultEntry(act, _) => self.v.get(act).is_some_and(|x| x.act.outside.signer.as_ref() == Some(to)),
+    /// What has been paid back toward a payment owed back, `owed` being the
+    /// acts of that payment (QF5, decided 9 October 2026, F190): repaid
+    /// like any debt, by a payment naming what it repays (the receipt's
+    /// field 5, or the claim's field 4: one of `owed`), in `unit`, proven by
+    /// either side's record (double entry), whose rail's proof the caller
+    /// checked (`rail_valid`). As for a debt, receipts are summed, and a
+    /// claim adds what no receipt for its proof covers.
+    ///
+    /// - **To an identity** (QG2, decided 9 October 2026, "Agreed"): its
+    ///   own receipt counts wherever the money went; a claim counts where
+    ///   the rail shows the money reached the refund rail the payer's own
+    ///   claim on the payment names (key 7, its `paid-to` naming that
+    ///   claim; reading, to confirm), where one names it; otherwise the
+    ///   pointer Finance rule 14 selects from the payer's own acts on the
+    ///   payment, or its pointer in force where they hold none, judged as
+    ///   for any payment ([`Self::payment_counts`], rules 12 to 15); or
+    ///   the payer's vault, always.
+    /// - **To a bare key** (QG1, decided 9 October 2026): a claim counts
+    ///   where the rail shows the money reached the refund rail a claim
+    ///   carrying that key's signature names (Finance rule 10a, key 7).
+    /// - **To nobody**: nothing repays it (rule 10a).
+    fn repaid(&self, owed: &[Hash], to: &crate::finance::RefundTo, unit: &Hash) -> u64 {
+        use crate::finance::{PaidAt, Payer, Payload as Fin, RefundTo};
+        let who: Option<Hash> = match to {
+            RefundTo::Identity(h) => Some(*h),
+            RefundTo::Key(_) => None,
+            RefundTo::Nobody => return 0,
+        };
+        let payer_is = |p: &Payer| match (p, to) {
+            (Payer::Identity(a), RefundTo::Identity(b)) => a == b,
+            (Payer::Key(a), RefundTo::Key(b)) => a == b,
+            _ => false,
+        };
+        // The payer's own claims on the payment naming a refund rail.
+        let refund_rails: Vec<Hash> = owed
+            .iter()
+            .filter_map(|h| self.v.get(h))
+            .filter(|h| self.payers_claim(h))
+            .filter(|h| match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::Claim(c)) => c.refund.is_some() && h.act.outside.signer.is_some_and(|s| payer_is(&c.payer(&s))),
+                _ => false,
+            })
+            .map(|h| h.id)
+            .collect();
+        let counts = |at: &PaidAt, amount: &crate::finance::Amount, proof: &[u8]| match (at, who) {
+            (PaidAt::VaultEntry(..), Some(w)) => self.payment_counts(&w, at, amount, proof, &owed[0]),
+            (PaidAt::Flow(c), _) if !refund_rails.is_empty() => refund_rails.contains(c),
+            (PaidAt::Flow(_), Some(w)) => self.payment_counts(&w, at, amount, proof, &owed[0]),
+            _ => false,
         };
         let mut receipts: Vec<(Vec<u8>, u64)> = vec![];
         let mut claims: BTreeMap<Vec<u8>, u64> = BTreeMap::new();
@@ -7814,8 +8064,7 @@ impl<'a> LawView<'a> {
             match Fin::decode(r.inside.type_, &r.inside.payload) {
                 Ok(Fin::Receipt(rc))
                     if owed.contains(&rc.fulfils)
-                        && &rc.payee == to
-                        && r.act.outside.signer.as_ref() == Some(to)
+                        && who.is_some_and(|w| rc.payee == w && r.act.outside.signer == Some(w))
                         && &rc.amount.unit == unit
                         && self.valid(&r.id)
                         && !self.receipt_overruled(&rc) =>
@@ -7824,10 +8073,10 @@ impl<'a> LawView<'a> {
                 }
                 Ok(Fin::Claim(c))
                     if owed.contains(&c.fulfils)
-                        && &c.payee == to
+                        && who.is_none_or(|w| c.payee == w)
                         && &c.amount.unit == unit
                         && self.payers_claim(r)
-                        && self.rail_valid.get(&r.id).is_some_and(to_own)
+                        && self.rail_valid.get(&r.id).is_some_and(|at| counts(at, &c.amount, &c.proof))
                         && !self.claim_overruled(&c) =>
                 {
                     let m = claims.entry(c.proof).or_default();
@@ -8384,7 +8633,8 @@ impl<'a> LawView<'a> {
         // rail Module's share is evidenced by a receipt or claim naming the
         // Module, which the payee's own pointer or vault must name (F119);
         // any other role, by an act signed by neither the service nor the
-        // payee. The payee is the identity the payment was made to.
+        // payee, which the payer the payment commits to acknowledges (F184,
+        // QG3, F193, F194). The payee is the identity the payment was made to.
         let payee = self.v.get(&s.receipt).and_then(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
             Ok(Fin::Receipt(x)) => Some(x.payee),
             Ok(Fin::Claim(x)) => Some(x.payee),
@@ -8403,7 +8653,7 @@ impl<'a> LawView<'a> {
                         };
                         self.v.get(&ev).is_some()
                             && self.role_evidence(&ev, &role, &service, &payee)?
-                            && (!self.is_delivery_record(&ev) || self.delivery_acknowledged(&ev, &s.receipt))
+                            && (role != Role::Other || self.payer_acknowledged(&ev, &s.receipt))
                     }
                     _ => false,
                 };

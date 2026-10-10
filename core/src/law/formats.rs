@@ -52,6 +52,9 @@ pub mod types {
     /// The arbitrator's settlement of a deal's fork, naming the request
     /// that activated it (rule 45b; DQ8, F188).
     pub const FORK_SETTLEMENT: u64 = 23;
+    /// A notice to a payer owed money back who gave no address (rule 37d;
+    /// F197): sealed to the payer, with a deadline on a time reference.
+    pub const NOTICE: u64 = 24;
     // 21, the creditor's release (F125), is retired and never reused: it is
     // a Finance act (Finance type 4, F126).
 }
@@ -2257,6 +2260,45 @@ impl SettlementRequest {
     }
 }
 
+/// Notice (type 24; F197, decided 10 October 2026): before closing, a
+/// collective owing money back to a payer who gave no address sends that
+/// payer a notice, sealed to their identity (or public), asking where the
+/// money should go, with a deadline on a time reference. Its conditions are
+/// visible, so its good faith can be judged. It names the payment owed
+/// back (one receipt or claim of it) as chain and predecessor,
+/// `[[payment, payment]]`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Notice {
+    /// 0: the payment owed back, by one receipt or claim of it.
+    pub payment: Hash,
+    /// 1: the deadline: a time reference, and the point on it.
+    pub deadline: (Hash, Value),
+}
+
+impl Notice {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        vec![(Value::Uint(0), b(&self.payment)), (Value::Uint(1), Value::Array(vec![b(&self.deadline.0), self.deadline.1.clone()]))]
+    }
+
+    pub fn decode(inside: &Inside) -> R<Notice> {
+        let (mut payment, mut deadline) = (None, None);
+        for (k, v) in &inside.payload {
+            match k {
+                Value::Uint(0) => payment = Some(hash(v, "notice: the payment owed back")?),
+                Value::Uint(1) => {
+                    let a = tuple(v, 2, "notice: the deadline")?;
+                    deadline = Some((hash(&a[0], "notice: the deadline's time reference")?, a[1].clone()));
+                }
+                _ => return Err(LawError::Shape("notice: unknown field")),
+            }
+        }
+        let payment = payment.ok_or(LawError::Shape("notice: the payment owed back"))?;
+        let deadline = deadline.ok_or(LawError::Shape("notice: the deadline"))?;
+        check_objects_self(inside, &payment, "notice: objects must name the payment owed back")?;
+        Ok(Notice { payment, deadline })
+    }
+}
+
 /// Fork settlement (type 23; DQ8): the judge of forks a deal's reference
 /// version names (field 27, QF2) settles its fork, once a party's request
 /// activated it: the branch kept, by its tip, and every tip discarded
@@ -3061,28 +3103,83 @@ pub struct Closing {
     pub collective: Hash,
     pub chain_act: Hash,
     pub tips: Vec<KeptTip>,
+    /// 4: the money owed back it leaves open (rule 37d; QG1, F191; F197):
+    /// ascending by payment, none twice.
+    pub open: Vec<OpenOwed>,
+}
+
+/// `open-owed = [ payment: hash, notice: hash / null, ? holder: hash ]`: a
+/// payment owed back that a closing leaves open (rule 37d), by one receipt
+/// or claim of it; the notice sent to its payer (type 24, F197), or null
+/// where it is owed to nobody (QG1, F191: the payment committed no key);
+/// and, where the collective chose one, the holder that outlives the
+/// closing and pays the payer when they turn up (F197: a cMIP's role; the
+/// core shows it, and requires none).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OpenOwed {
+    pub payment: Hash,
+    pub notice: Option<Hash>,
+    pub holder: Option<Hash>,
+}
+
+impl OpenOwed {
+    pub fn to_value(&self) -> Value {
+        let mut v = vec![b(&self.payment), self.notice.as_ref().map_or(Value::Null, b)];
+        if let Some(h) = &self.holder {
+            v.push(b(h));
+        }
+        Value::Array(v)
+    }
+
+    fn decode(v: &Value) -> R<OpenOwed> {
+        let w = "closing: an obligation left open";
+        let Value::Array(a) = v else { return Err(LawError::Shape(w)) };
+        if a.len() != 2 && a.len() != 3 {
+            return Err(LawError::Shape(w));
+        }
+        Ok(OpenOwed {
+            payment: hash(&a[0], w)?,
+            notice: match &a[1] {
+                Value::Null => None,
+                x => Some(hash(x, w)?),
+            },
+            holder: a.get(2).map(|x| hash(x, w)).transpose()?,
+        })
+    }
 }
 
 impl Closing {
     pub fn to_map(&self) -> Vec<(Value, Value)> {
-        line_map(&self.agreement, &self.collective, &self.chain_act, &self.tips)
+        let mut m = line_map(&self.agreement, &self.collective, &self.chain_act, &self.tips);
+        if !self.open.is_empty() {
+            m.push((Value::Uint(4), Value::Array(self.open.iter().map(OpenOwed::to_value).collect())));
+        }
+        m
     }
 
     pub fn decode(inside: &Inside) -> R<Closing> {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in &inside.payload {
             match k {
-                Value::Uint(n) if *n <= 3 => f.push((*n, v)),
+                Value::Uint(n) if *n <= 4 => f.push((*n, v)),
                 _ => return Err(LawError::Shape("closing: unknown field")),
             }
         }
         let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
         let req = |k: u64, w| get(k).ok_or(LawError::Shape(w));
+        let open = match get(4) {
+            None => vec![],
+            Some(v) => nonempty(v, "closing: the obligations left open")?.iter().map(OpenOwed::decode).collect::<R<Vec<_>>>()?,
+        };
+        if !open.windows(2).all(|w| w[0].payment < w[1].payment) {
+            return Err(LawError::Check("closing: the obligations left open are ascending by payment, none twice (field 4)"));
+        }
         let x = Closing {
             agreement: hash(req(0, "closing: the agreement")?, "closing: the agreement")?,
             collective: hash(req(1, "closing: the collective")?, "closing: the collective")?,
             chain_act: hash(req(2, "closing: the chain act")?, "closing: the chain act")?,
             tips: tips(req(3, "closing: kept tips")?, "closing: kept tip")?,
+            open,
         };
         check_objects_ending(inside, &x.agreement, "closing")?;
         Ok(x)

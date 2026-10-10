@@ -174,7 +174,7 @@ export interface State {
     holdersToBe: { id: string; name: string }[];
     splitService: boolean;
     /** Payments received during a broken stretch and owed back: open obligations (Law rule 37d, RB2). */
-    owedBack: { payment: string; to: string | null; toName: string; value: number; unit: string; text: string }[];
+    owedBack: { payment: string; to: string | null; toKind: 'identity' | 'key' | 'nobody'; toName: string; value: number; unit: string; notice: string | null; text: string }[];
     /** Declarations of absence naming a member, each with the way to contest it (RB3, client conformance). */
     declared: { member: string; name: string; held: boolean; act: string; by: string; text: string; contested: boolean }[];
     splits: string[];

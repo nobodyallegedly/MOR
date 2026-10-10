@@ -212,16 +212,26 @@ export function forkPayload(f: ForkAct): Uint8Array {
   return cborEncode(m);
 }
 
-/** The closing of a collective that holds nothing (Law type 20, F124 N9): its line, as a fork's. */
-export function closingPayload(c: { agreement: string; collective: string; chainAct: string; tips: Tip[] }): Uint8Array {
-  return cborEncode(
-    new Map<number, unknown>([
-      [0, unhex(c.agreement)],
-      [1, unhex(c.collective)],
-      [2, unhex(c.chainAct)],
-      [3, c.tips.map((t) => [unhex(t.act), t.position, unhex(t.summary)])],
-    ]),
-  );
+/** Money owed back a closing leaves open (Law type 20, field 4; QG1, F197): the payment, by one receipt or claim of it; the notice sent to its payer (type 24), or null where it is owed to nobody; and a holder that outlives the closing, where the collective chose one. */
+export interface LeftOpen {
+  payment: string;
+  notice: string | null;
+  holder?: string;
+}
+
+/** The closing of a collective that holds nothing (Law type 20, F124 N9): its line, as a fork's; and the money owed back it leaves open, ascending by payment (field 4; QG1, F197). */
+export function closingPayload(c: { agreement: string; collective: string; chainAct: string; tips: Tip[]; open?: LeftOpen[] }): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, unhex(c.agreement)],
+    [1, unhex(c.collective)],
+    [2, unhex(c.chainAct)],
+    [3, c.tips.map((t) => [unhex(t.act), t.position, unhex(t.summary)])],
+  ]);
+  if (c.open?.length) {
+    const open = [...c.open].sort((a, b) => (a.payment < b.payment ? -1 : a.payment > b.payment ? 1 : 0));
+    m.set(4, open.map((o) => [unhex(o.payment), o.notice ? unhex(o.notice) : null, ...(o.holder ? [unhex(o.holder)] : [])]));
+  }
+  return cborEncode(m);
 }
 
 /** A creditor's release (Finance type 4, F126; Law type 21 under F125): the creditor ends an obligation owed to it without full payment; `against`, for the record only, what it took instead (receipts, a Law agreement it was traded for). A collective signs it by its Finance lane. */

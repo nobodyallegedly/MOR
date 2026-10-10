@@ -87,6 +87,56 @@ test('RB2 with BQ2: a payment under an offer of the broken stretch is shown as o
   }
 });
 
+test('QG1 and F197: a closing names money owed back to nobody; a payer with no address is sent a notice with a deadline', async () => {
+  const c = w.client;
+  let s = await state(c);
+  const [ada, one, two, patron] = ['Ada', 'Sim One', 'Sim Two', 'A Patron'].map((n) => idOf(s, n));
+  const { id, relay } = await found('Ledger', [ada, one, two], { safety: 2, release: 2, clone: 2, others: 1 });
+  try {
+    await breakBy(id, relay, [ada, one], two, { safetyThreshold: 1, releaseThreshold: 1, cloneThreshold: 1, abandonmentOthers: 1 });
+    const store = w.app.store;
+    const col = store.collective(id);
+    const founding = col.f.agreements[0];
+    const ofStretch = col.f.agreement;
+    const pay = (value: number, payer?: string) =>
+      col.id.publish(MIPS.finance, FINANCE_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer, purchase: [founding, ofStretch] }), { public: true, relays: col.f.relays });
+    await pay(3);
+    await pay(9, patron);
+    store.saveCollective(col);
+    const rb = await prepare(c, { kind: 'rollback', collective: id, rules: { safety: 1, release: 1, clone: 1, others: 1 } });
+    assert.deepEqual(rb.reading.blocking, [], words(rb.reading));
+    await c.ask('confirm', { plan: rb.plan, digest: rb.digest });
+    s = await state(c);
+    const owed = box(s, id).owedBack;
+    assert.equal(owed.length, 2, JSON.stringify(owed));
+    const toNobody = owed.find((o) => o.toKind === 'nobody')!;
+    const toPatron = owed.find((o) => o.toKind === 'identity')!;
+    assert.match(toNobody.text, /committed no key: nobody can claim it .*does not block a closing that names it/);
+    assert.equal(toPatron.notice, null);
+    // Before any notice, money owed back to a payer with an identity blocks the closing.
+    const early = await prepare(c, { kind: 'closing', collective: id });
+    assert.ok(early.reading.blocking.some((b) => /owed back to A Patron .*send them a notice with a deadline \(F197\)/.test(b)), words(early.reading));
+    // F197: a notice sealed to the patron, with a deadline on a time reference.
+    const n = await prepare(c, { kind: 'notice', collective: id, payment: toPatron.payment, deadline: 900 });
+    assert.deepEqual(n.reading.blocking, [], words(n.reading));
+    assert.match(words(n.reading), /sealed to A Patron/);
+    assert.match(words(n.reading), /deadline/);
+    await c.ask('confirm', { plan: n.plan, digest: n.digest });
+    s = await state(c);
+    assert.ok(box(s, id).owedBack.find((o) => o.payment === toPatron.payment)!.notice, 'the notice is shown beside the payment');
+    // The closing names both as left open; neither blocks it here (the
+    // patron's deadline is the time reference's answer, which the core
+    // judges). This fixture lost a record of the collective (breakBy), so
+    // the history an ending would cite is not all held: that alone blocks.
+    const cl = await prepare(c, { kind: 'closing', collective: id });
+    assert.match(words(cl.reading), /leaves open, visibly, 1 payment owed back to nobody/);
+    assert.match(words(cl.reading), /A Patron .*who gave no address: a notice was sent/);
+    assert.ok(cl.reading.blocking.every((b) => !/owed back/.test(b)), words(cl.reading));
+  } finally {
+    await relay.close();
+  }
+});
+
 test('RB3: a declaration of absence made during the broken stretch is registered by the rollback, and shown to the member it names', async () => {
   const c = w.client;
   let s = await state(c);

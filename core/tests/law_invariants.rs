@@ -1192,7 +1192,7 @@ impl ColWorld {
                 let gone = self.gone();
                 let voices: Vec<usize> = (0..ids.len()).filter(|i| !gone.contains(&ids[*i])).collect();
                 let tips = self.line(stale);
-                let c = law::Closing { agreement: self.current, collective: self.col, chain_act: self.c[0].binding, tips: tips.clone() };
+                let c = law::Closing { agreement: self.current, collective: self.col, chain_act: self.c[0].binding, tips: tips.clone(), open: vec![] };
                 if voices.is_empty() {
                     return;
                 }
@@ -3367,7 +3367,7 @@ fn it1_a_complete_ending_is_final() {
 /// of `signers` with a chain signature (F132), naming in `objects` the
 /// endings `names` (none: an ending drawn without knowing the others).
 fn close_with(cw: &mut ColWorld, signers: &[usize], names: &[Hash]) -> Hash {
-    let c = law::Closing { agreement: cw.current, collective: cw.col, chain_act: cw.c[0].binding, tips: cw.line(0) };
+    let c = law::Closing { agreement: cw.current, collective: cw.col, chain_act: cw.c[0].binding, tips: cw.line(0), open: vec![] };
     let mut o = obj(cw.current).unwrap();
     o.extend(names.iter().map(|e| Object { chain: cw.current, predecessor: *e }));
     let x = law_act(&mut cw.w, &mut cw.m[signers[0]][0], law::types::CLOSING, c.to_map(), Some(o));
@@ -3413,7 +3413,7 @@ fn u1_a_signers_chain_orders_two_endings() {
     drop(lv);
     // Signature acts (Law type 1) on a closing, the old way: no signature.
     let ids = cw.ids();
-    let c = law::Closing { agreement: cw.current, collective: cw.col, chain_act: cw.c[0].binding, tips: cw.line(0) };
+    let c = law::Closing { agreement: cw.current, collective: cw.col, chain_act: cw.c[0].binding, tips: cw.line(0), open: vec![] };
     let x = law_act(&mut cw.w, &mut cw.m[0][0], law::types::CLOSING, c.to_map(), obj(cw.current));
     sign(&mut cw.w, &mut cw.m[1][0], &x);
     let e = cw.view().closing(&x).unwrap();
@@ -3888,5 +3888,71 @@ fn of5_a_grant_racing_the_line_that_empties_its_area_never_counts() {
     assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
     let f = lv.fork(&cw.endings[0].id).unwrap();
     assert!(f.complete && f.fork.debts.is_empty(), "{:?}", f.why);
+    assert_eq!(cw.check(), Ok(()));
+}
+
+/// F198, decided by Nobody, allegedly, 10 October 2026 ("Feels like the
+/// only option, agreed"), from FH1 (`docs/fork-hands-out-2026-10-09.md`;
+/// seed 7145587436215071231 at 5,000 cases, its 4,847th story): a payee
+/// pointer left outside a fork's history still counts for payments already
+/// made to it, as the chain stood for each payment (F181); for anything
+/// after the fork it counts for nothing (rule 47a). A buyer's payment and
+/// the collective's act taking it on lie in the history of a fork drawn on
+/// an old line, the pointer the receipt relied on outside it: the receipt
+/// keeps counting, and the buyer stays safe (IT2a).
+#[test]
+fn of6_a_pointer_left_outside_a_fork_counts_for_payments_already_made() {
+    let shape = Shape { members: 5, devices: 3, member_devices: 1, constitutional: None, lane: Some((8, 1)), owns_work: true };
+    let ops = [
+        Op::Sale { strand: 182, proof: 0, disguise: Disguise::None, lane_sign: true, line_current: false },
+        Op::Join { dev: 139, other: 103 },
+        Op::Resign { member: 0, area_only: false, dev: 29, tips: 14, inform: false },
+        Op::Fork { stale: 2, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
+    ];
+    let cw = run_col(&shape, &ops, 0);
+    assert_eq!(cw.check(), Ok(()));
+}
+
+/// F199, decided by Nobody, allegedly, 10 October 2026 ("1 is agreed"),
+/// from FH2 (`docs/fork-hands-out-2026-10-09.md`; seed 7020607380199548456,
+/// its 2,836th story): whether a fork took effect is judged only by what
+/// its own history holds. A fork leaving out a binding debt does not take
+/// effect; a departure registered after it, by a record that never saw the
+/// debt, never changes that: the fork stays incomplete, and the members
+/// sign a new one.
+#[test]
+fn of7_a_departure_after_a_fork_never_changes_whether_it_took_effect() {
+    let shape = Shape { members: 2, devices: 2, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let ops = [
+        Op::Debt { dev: 7, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: true },
+        Op::Fork { stale: 0, sides: 0, debts: DebtsMode::DropOne, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
+        Op::Resign { member: 92, area_only: false, dev: 20, tips: 132, inform: false },
+    ];
+    let cw = run_col(&shape, &ops, 0);
+    let lv = cw.view();
+    let f = lv.fork(&cw.endings[0].id).unwrap();
+    assert!(!f.complete, "the fork left out a debt binding in its own history: it never takes effect ({:?})", f.unassigned);
+    assert_eq!(lv.obligation_binds(&cw.debts[0]).unwrap(), Some(false), "as an act, the debt races the departure registered after it: the lane is frozen for it");
+    drop(lv);
+    assert_eq!(cw.check(), Ok(()));
+}
+
+/// F198, as read here (to confirm): the same pointer, inside the history
+/// of a fork drawn on an old line, where the act that took it on (rule 40,
+/// IT2a) lies outside, and the Finance lane's holder leaves by a record
+/// racing it: judged as the chain stood without the ending, it still counts
+/// for the payment already made to it. Found at 5,000 cases, seed
+/// 7145587436215071231, once OF6 passed.
+#[test]
+fn of6b_a_pointer_whose_taking_on_a_fork_left_out_counts_for_payments_already_made() {
+    let shape = Shape { members: 5, devices: 3, member_devices: 1, constitutional: None, lane: Some((8, 1)), owns_work: true };
+    let ops = [
+        Op::Sale { strand: 182, proof: 0, disguise: Disguise::None, lane_sign: true, line_current: false },
+        Op::Join { dev: 139, other: 103 },
+        Op::Debt { dev: 159, seal: Seal::Public, cited: false, creditor: 0, amount: 1, lane_sign: false },
+        Op::Resign { member: 158, area_only: false, dev: 29, tips: 14, inform: false },
+        Op::Fork { stale: 2, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
+    ];
+    let cw = run_col(&shape, &ops, 0);
     assert_eq!(cw.check(), Ok(()));
 }
