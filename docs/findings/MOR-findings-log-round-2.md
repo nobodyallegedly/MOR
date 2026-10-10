@@ -2686,6 +2686,10 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Open for Nobody, allegedly:** QK1 (two links of the chain of judgment each settling the fork, neither holding the other); QK3 (QJ2's receipt by the work's service against H5 and H7: a grant key never signs a split's payout); the live work review's six questions (`docs/reviews/live-work-review.md`); a step-down naming drafts.
 
+## F241. The layer names stay as F212 set them; vow lands in the redraft before adversarial review (10 October 2026, evening)
+
+**Nobody, allegedly**, having opened "Agreements instead of Law is meh. Let's be poetic on all layers and see what comes out", weighed for the Agreements layer: Pact, Accord, Covenant, Concord, Clasp, Troth, Handfast, Weft, and Law again ("Law still sounds the best"; "Law felt arrogant"); then asked what the layer does now (binding, sharing, governing, settling, departing). **Decided: "Let's keep agreements for now, keep vow for a later redraft, before adversarial."** The six names stay Identity, Text, Envelopes, Money, Agreements, Development (F212). The word vow (F239, F240) goes into the texts in a redraft before the machine review and round 3. *Mechanic taken by the project lead under the delegation:* code written before then for this act uses "vow", so nothing new needs renaming later; F237's texts keep "announcement" until the redraft.
+
 ## F240. Only someone who signed onto a vow may confirm or contest it (10 October 2026, evening)
 
 **Raised by the project lead:** F237's states belong to each sale, so a vow nobody signed onto has no state, and someone it touches could not contest it without buying in. **Decided by Nobody, allegedly: "Only a person who signed to use the vow should be able to contest it."** A vow with no counterpart carries no state in the core. *The project lead's note:* signing onto a vow may cost nothing (an offer at no price); who may sign, and at what cost, is the cMIPs' and the fork's. **His use, the same evening:** "It can also be leveraged in the democracy case. Citizens express needs, vows are drafted to meet them."
