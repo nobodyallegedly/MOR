@@ -1,6 +1,6 @@
 # The vow grammar build (F237, F240) and F244
 
-*10 October 2026, night. One roadmap step: the vow grammar build. Written for Nobody, allegedly, against main at `683a8cd`, on branch `claude/vow-grammar`. Read against F229 to F234 (records), F237, F239, F240, F241 and F244 (`docs/findings/MOR-findings-log-round-2.md`) and Fable's review of announcements (`docs/reviews/announcements-review.md`). The texts say "announcement" until the redraft before review (F241), with a note that it is to be renamed "vow" (F239); the code says `vow`. Nothing here is merged.*
+*10 October 2026, night. One roadmap step: the vow grammar build. Written for Nobody, allegedly, against main at `b2fcc9e`, on branch `claude/vow-grammar`. Read against F229 to F234 (records), F237, F239, F240, F241 and F244 (`docs/findings/MOR-findings-log-round-2.md`) and Fable's review of announcements (`docs/reviews/announcements-review.md`). The texts say "announcement" until the redraft before review (F241), with a note that it is to be renamed "vow" (F239); the code says `vow`. Nothing here is merged.*
 
 ## In plain words
 
@@ -117,7 +117,7 @@ Nothing else was silent or contradictory. *Noted, not a question:* F238's mechan
 
 ## Checks run
 
-- `cargo test --workspace --locked`, after rebasing on main at `683a8cd`: **593 passed, 0 failed** (585 before, plus 5 in `vows.rs` and 3 for F244; the 9 review tests rewritten in place, their count unchanged). The three compiler warnings are in older tests of `agreements_collective.rs`, unchanged.
+- `cargo test --workspace --locked`, after rebasing on main at `683a8cd` (main then moved to `b2fcc9e`, a findings-log line only; the branch is rebased on it): **593 passed, 0 failed** (585 before, plus 5 in `vows.rs` and 3 for F244; the 9 review tests rewritten in place, their count unchanged). The three compiler warnings are in older tests of `agreements_collective.rs`, unchanged.
 - `scripts/test-all.sh`: **all passed**; TypeScript 205 (barebone 9, collective 40, connector 12, desk 12, genesis 17, longform 26, manage 7, reader 16, repo 18, site 34, jpeg 14), unchanged. `wasm-bindgen-cli` 0.2.129 was installed for it. The site's browser test needs `MOR_CHROMIUM`, not set here; the regtest Lightning test is skipped without `MOR_LN_REGTEST`, as always.
 - rustfmt and clippy are not installed for this toolchain (as in the review's session): the new code is checked by the compiler and the tests only.
 
