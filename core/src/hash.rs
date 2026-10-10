@@ -27,8 +27,8 @@ pub mod tag {
     pub const WORK: &str = "MOR/work";
     /// Spec hash: over a specification's encoded content (Development).
     pub const SPEC: &str = "MOR/spec";
-    /// Safety key commitment: over `scheme || key` (Identity).
-    pub const SAFETY: &str = "MOR/safety";
+    /// Chain key commitment: over `scheme || key` (Identity).
+    pub const CHAIN_KEY: &str = "MOR/safety";
 }
 
 /// Plain SHA-256. Used for the locked hash (SHA-256 of the locked bytes).
@@ -97,7 +97,7 @@ mod tests {
             tag::MMR_NODE,
             tag::WORK,
             tag::SPEC,
-            tag::SAFETY,
+            tag::CHAIN_KEY,
         ] {
             assert!(t.starts_with("MOR/"));
         }

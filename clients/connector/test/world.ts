@@ -22,7 +22,7 @@ export const governance: Governance = {
   releaseThreshold: 2,
   cloneThreshold: 2,
   abandonmentOthers: 2,
-  text: 'The connector test collective. It publishes releases of a test tree and nothing else. Its everyday key is held by one member; its safety key is split among the members, any two of whom rebuild it. A release counts only when two members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any two members and by each member who joins, and a rotation of the collective declaring it. The other two members together decide whether a member is absent; the outcome is that member losing their voice.',
+  text: 'The connector test collective. It publishes releases of a test tree and nothing else. Its signing key is held by one member; its chain key is split among the members, any two of whom rebuild it. A release counts only when two members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any two members and by each member who joins, and a rotation of the collective declaring it. The other two members together decide whether a member is absent; the outcome is that member losing their voice.',
 };
 
 export const files: FileIn[] = [

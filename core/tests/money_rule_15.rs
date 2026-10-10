@@ -4,7 +4,7 @@
 //! anchoring cMIP through the core library's Envelopes interface (F173).
 //!
 //! In plain words: the owner names a clock (a main time reference and,
-//! optionally, a backup) with the safety key. After a theft, the owner
+//! optionally, a backup) with the chain key. After a theft, the owner
 //! changes the locks by rotation. While that lock change is not anchored,
 //! every payment that followed the chain as published counts: the owner
 //! bears the theft window. Once its home quorum's receipts are anchored on

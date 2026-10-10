@@ -1187,7 +1187,7 @@ pub const CLOCK_KIND: u64 = 1;
 /// `clock = [ MONEY, 1, [ main: [ hash, any ], ? backup: [ hash, any ] ] ]`:
 /// the main anchoring reference and, optionally, a backup, each an
 /// anchoring cMIP and its parameters naming one time reference (F176,
-/// F179, F181). Declared with the safety key, as the vault is.
+/// F179, F181). Declared with the chain key, as the vault is.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Clock {
     pub main: Reference,

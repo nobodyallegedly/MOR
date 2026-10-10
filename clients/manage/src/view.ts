@@ -152,7 +152,7 @@ export function overview(s: Status): string {
     ['Whose acts', s.policy === 'open' ? 'anyone\'s' : 'listed identities only'],
     ['Its words', e(s.policyText ?? '')],
   ];
-  if (home) rows.push(['Operator', `${hash(s.operator)}${s.holdsSafetyKey ? ' <span class="tag warn">test operator: safety key on this server</span>' : ''}`]);
+  if (home) rows.push(['Operator', `${hash(s.operator)}${s.holdsChainKey ? ' <span class="tag warn">test operator: chain key on this server</span>' : ''}`]);
   rows.push(
     ['Holds', `${s.counts.acts} acts, ${s.counts.sealed} sealed containers, ${s.counts.media} media (${bytes(s.counts.bytes)})`],
     ['Arrivals', String(s.arrivals)],
@@ -178,7 +178,7 @@ export function overview(s: Status): string {
 }
 
 export function pending(list: Waiting[]): string {
-  const intro = `<p class="small">For identities whose owners chose it, this home takes a rotation only once you approve it: a stand-in for proof from a registered device. Approve only a rotation the owner tells you, by another channel, is theirs: a thief holding the safety key can send one too. Once approved, the owner's client sends it again and the home takes it.</p>`;
+  const intro = `<p class="small">For identities whose owners chose it, this home takes a rotation only once you approve it: a stand-in for proof from a registered device. Approve only a rotation the owner tells you, by another channel, is theirs: a thief holding the chain key can send one too. Once approved, the owner's client sends it again and the home takes it.</p>`;
   if (!list.length) return `<h2>Rotations waiting for approval</h2>${intro}<p class="small">None.</p>`;
   const rows = list
     .map((p) => {
@@ -262,21 +262,21 @@ export function operator(s: Status): string {
   if (s.closed) {
     return `<h2>Operator</h2><p>${hash(s.operator)}</p>${note('', 'This home has closed by its operator\'s rotation: it holds nothing new and signs nothing more, and still serves what it held, so readers find the closure.')}`;
   }
-  const own = s.holdsSafetyKey
+  const own = s.holdsChainKey
     ? `<details><summary>Rotate the operator</summary>
-<p>New keys for the operator, made on this server; the home's own acts are kept, and every receipt it signed still counts. Do it if the operator's everyday key may have leaked. Type <code>rotate</code> to confirm.</p>
+<p>New keys for the operator, made on this server; the home's own acts are kept, and every receipt it signed still counts. Do it if the operator's signing key may have leaked. Type <code>rotate</code> to confirm.</p>
 <form class="row" id="rotate" autocomplete="off"><input type="text" id="rotate-confirm" placeholder="rotate" spellcheck="false"><button type="submit">Rotate</button></form>
 </details>
 <details><summary>Close this home for good</summary>
 <p><strong>This cannot be undone.</strong> A closure is a rotation of the operator (Identity rule 8c): the home then holds no new identity-chain acts and signs no receipts, and the identities it served must leave it. Type <code>close</code> to confirm.</p>
 <form class="row" id="close" autocomplete="off"><input type="text" id="close-confirm" placeholder="close" spellcheck="false"><button type="submit" class="danger">Close for good</button></form>
 </details>`
-    : `<p class="small">The operator's safety key is not on this server, as it should be: rotate (or close) where it is kept, then hand the rotation and the new key file to this home below.</p>`;
+    : `<p class="small">The operator's chain key is not on this server, as it should be: rotate (or close) where it is kept, then hand the rotation and the new key file to this home below.</p>`;
   return `<h2>Operator</h2>
-<p>This home runs under the identity ${hash(s.operator)}. Its everyday key is on this server, to sign receipts around the clock.</p>
+<p>This home runs under the identity ${hash(s.operator)}. Its signing key is on this server, to sign receipts around the clock.</p>
 ${own}
 <details><summary>Hand over a rotation made elsewhere</summary>
-<p>The operator rotated where its safety key is kept: give this home the rotation (a bundle holding that one act, <code>.mor</code>) and the new key file. It checks that both are the operator's and that the key is the one the rotation set.</p>
+<p>The operator rotated where its chain key is kept: give this home the rotation (a bundle holding that one act, <code>.mor</code>) and the new key file. It checks that both are the operator's and that the key is the one the rotation set.</p>
 <form id="rotated"><div class="row"><label>Rotation <input type="file" id="rotated-rotation" required></label></div><div class="row"><label>Key file <input type="file" id="rotated-key" required></label></div><div class="row"><button type="submit">Hand over</button></div></form>
 </details>`;
 }

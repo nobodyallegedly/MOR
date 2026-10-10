@@ -653,7 +653,7 @@ async fn a_test_identity_pays_another_over_lightning() {
 
     // Alice pays. Bob receives: his flow on his own node; his vault, for
     // regtest satoshis above 10,000, on a second node (carol), declared in
-    // his genesis under the safety key.
+    // his genesis under the chain key.
     let mut alice = Party::born(&site, &seed, "alice", None).await;
     let bob_vault = vec![VaultEntry {
         unit: unit(Network::Regtest),

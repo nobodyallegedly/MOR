@@ -74,7 +74,7 @@ Wanted, by anyone: each is described in [docs/roadmap-v1.md](docs/roadmap-v1.md)
 - **A forked deal**: two complete versions of one agreement, and how it is repaired, under exploration and review.
 - **The remaining technical parameters for freeze**: the RV32IM profile and its programs, test vectors, the pinned Unicode version.
 - **A second verifier for more of Agreements**, beyond collectives' endings, written from the text alone, never reading the existing code.
-- **Two renames, decided and not yet applied**: the layers (above), and the keys (the safety key becomes the *chain key*, the everyday key the *signing key*).
+- **Two renames, decided and applied by the rename pass** (`docs/rename-pass.md`): the layers (above), and the keys (the safety key became the *chain key*, the everyday key the *signing key*).
 
 There is no committee and nobody appointed to decide what comes next. A successor is anyone's to build, and users move to it by choice, as the core already provides.
 

@@ -56,7 +56,7 @@ pub struct GenesisPlan {
     pub audit: Option<identity::Audit>,
 }
 
-/// A genesis committing to the exported safety key, signed by the first
+/// A genesis committing to the exported chain key, signed by the first
 /// signing key. Refuses an export for any key but the first.
 pub fn genesis(
     identity_spec: Hash,
@@ -65,7 +65,7 @@ pub fn genesis(
     plan: GenesisPlan,
     rng: &mut (impl RngCore + CryptoRng),
 ) -> Result<Act, Rejection> {
-    let Message::CommitmentExport(CommitmentExport { safety, index }) =
+    let Message::CommitmentExport(CommitmentExport { chain_key, index }) =
         Message::decode_kind(export, kind::COMMITMENT_EXPORT)?
     else {
         unreachable!()
@@ -78,7 +78,7 @@ pub fn genesis(
             scheme: sig::SCHNORR,
             key: signing.public().to_vec(),
         },
-        safety,
+        chain_key,
         homes: plan.homes,
         rule: plan.rule,
         declarations: plan.declarations,
@@ -111,7 +111,7 @@ pub fn genesis(
 }
 
 /// The rotation inside the online device sends: spec, type 1 and the
-/// payload without key 3 (the next safety commitment), and no salt.
+/// payload without key 3 (the next chain-key commitment), and no salt.
 fn stripped_inside(identity_spec: &Hash, r: &Rotation) -> Vec<u8> {
     let mut payload = Payload::Rotation(r.clone()).to_map();
     payload.retain(|(k, _)| k != &Value::Uint(3));
@@ -122,7 +122,7 @@ fn stripped_inside(identity_spec: &Hash, r: &Rotation) -> Vec<u8> {
     ]))
 }
 
-/// 2.2: a pending rotation after `prev`. The `safety` field of `r` is
+/// 2.2: a pending rotation after `prev`. The `chain_key` field of `r` is
 /// ignored: the offline device supplies it.
 pub fn pending(
     identity_spec: &Hash,
@@ -150,7 +150,7 @@ pub struct Accepted {
 }
 
 /// Check what came back before publishing it: it must be the rotation that
-/// was asked for, with only the next safety commitment filled in (and, in
+/// was asked for, with only the next chain-key commitment filled in (and, in
 /// clean-device mode, the new signing key, whose secret must come with it),
 /// signed by the key the previous act committed to.
 pub fn accept(
@@ -175,10 +175,10 @@ pub fn accept(
     let prev = Act::decode(&p.prev).map_err(|e| na(&format!("{e:?}")))?;
     let prev_inside = prev.open(None).map_err(|e| na(&format!("{e:?}")))?;
     let (identity, commit) = match Payload::decode(prev_inside.type_, &prev_inside.payload) {
-        Ok(Payload::Genesis(g)) => (prev.id(), g.safety),
+        Ok(Payload::Genesis(g)) => (prev.id(), g.chain_key),
         Ok(Payload::Rotation(r)) => (
             prev.outside.signer.ok_or_else(|| na("previous act"))?,
-            r.safety,
+            r.chain_key,
         ),
         _ => return Err(na("the previous act is not an identity-chain act")),
     };
@@ -241,11 +241,11 @@ pub fn accept(
             "the rotation's signature is not valid",
         ));
     }
-    if sig::safety_commitment(&a.signature.scheme, &a.signature.key) != commit.commit
+    if sig::chain_key_commitment(&a.signature.scheme, &a.signature.key) != commit.commit
         || a.signature.scheme != commit.scheme
     {
         return Err(Rejection::Signature(
-            "the revealed safety key is not the one the previous act committed to",
+            "the revealed chain key is not the one the previous act committed to",
         ));
     }
     Ok(Accepted {

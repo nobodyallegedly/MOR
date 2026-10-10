@@ -173,7 +173,7 @@ fn rotation_round_trip_by_file_built_entirely_offline() {
     // The device built the act: outside, locked inside, commitment, signature.
     let r = rotation_of(&a);
     assert_eq!(r.signing_key, plan.signing_key);
-    assert_ne!(r.safety.commit, [0; 32]);
+    assert_ne!(r.chain_key.commit, [0; 32]);
     assert_eq!(o.post("after the rotation"), Status::Valid);
 }
 
@@ -322,14 +322,14 @@ fn several_rotations_then_a_fresh_seed() {
         )
         .unwrap();
     assert!(review.summary.warns("FRESH SEED (hex Module)"));
-    assert!(review.summary.warns("Back up this safety seed now"));
+    assert!(review.summary.warns("Back up this chain-key seed now"));
     let new_seed = review.new_seed.clone().unwrap();
     let s = o.device.sign(review, false, &mut o.rng).unwrap();
     let signed = Message::SignedRotation(s.message);
     let a = o.publish(&pending, &signed);
     let r = rotation_of(&a);
-    assert_eq!(r.safety.scheme, sig::SLH_128F);
-    assert_eq!(r.safety.commit, new_seed.key(3, 3).commitment());
+    assert_eq!(r.chain_key.scheme, sig::SLH_128F);
+    assert_eq!(r.chain_key.commit, new_seed.key(3, 3).commitment());
     // The next rotation uses the fresh seed's key.
     let a = o.rotate();
     assert_eq!(a.signature.scheme, sig::SLH_128F);

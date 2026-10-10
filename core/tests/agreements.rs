@@ -38,7 +38,7 @@ const ARBITRATOR: u8 = 91;
 
 /// The label of scenario 3.1: three members; the release manager (1)
 /// holds publications and the Development lane (area 1); the treasurer (2)
-/// holds the Money lane (area 2). The safety key needs all three, with an
+/// holds the Money lane (area 2). The chain key needs all three, with an
 /// escrowed share released by a third-party authority.
 fn label() -> Terms {
     let m = mips();
@@ -61,7 +61,7 @@ fn label() -> Terms {
                 threshold: 2,
                 members: vec![h(1), h(2), h(3)],
             },
-            safety: Holding::Shares {
+            chain_key: Holding::Shares {
                 threshold: 3,
                 members: vec![h(1), h(2), h(3)],
             },
@@ -382,9 +382,9 @@ fn every_constitutional_voice_is_covered() {
 
 #[test]
 fn a_grammar_leaves_a_way_to_rotate() {
-    // 3.7a, F96: a single holder of the safety key, no successor, no escrow.
+    // 3.7a, F96: a single holder of the chain key, no successor, no escrow.
     let mut t = label();
-    t.grammar.as_mut().unwrap().safety = Holding::One(h(1));
+    t.grammar.as_mut().unwrap().chain_key = Holding::One(h(1));
     t.grammar.as_mut().unwrap().recovery = None;
     assert!(check(&t).is_err());
     t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow {

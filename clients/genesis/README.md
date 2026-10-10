@@ -2,15 +2,15 @@
 
 The genesis client, in TypeScript, with the core library through WebAssembly. Roadmap step 5.
 
-**Test identities only.** A test identity holds its safety key in software, in its file: a prototype, labelled as such in the file itself. The real identity is created only with the air-gapped safety key Module, at the first acts (roadmap step 17).
+**Test identities only.** A test identity holds its chain key in software, in its file: a prototype, labelled as such in the file itself. The real identity is created only with the air-gapped chain key Module, at the first acts (roadmap step 17).
 
 ## In plain words
 
-An identity in MOR starts with a genesis: a signed statement of its first everyday key, a fingerprint of its safety key (kept back, for emergencies), and the homes where anyone can check it. This program makes one, sends it to each home, and collects each home's signed receipt. After that it can:
+An identity in MOR starts with a genesis: a signed statement of its first signing key, a fingerprint of its chain key (kept back, for emergencies), and the homes where anyone can check it. This program makes one, sends it to each home, and collects each home's signed receipt. After that it can:
 
 - **Say where to find you (routes).** Where your posts are, and your inbox, where others deliver things for you.
 - **Publish an encryption key.** A public key others use to send you things only you can open. It is X-Wing: two locks in one, one that a future quantum computer cannot pick (ML-KEM-768) and one that has been trusted for years (X25519). What is locked stays locked if either holds.
-- **Rotate.** Replace your everyday key using the safety key. The rotation counts once the homes your rule names have signed receipts for it: by default a majority of homes, counted per operator. Until then it is pending, and the program keeps the exact same bytes to send again, never a second rotation.
+- **Rotate.** Replace your signing key using the chain key. The rotation counts once the homes your rule names have signed receipts for it: by default a majority of homes, counted per operator. Until then it is pending, and the program keeps the exact same bytes to send again, never a second rotation.
 - **Rely on an act (a witness act).** `witness --file F ACT` signs "I received this act and rely on it" (Identity draft 11, type 15): the act stays visible as disputed even if its author later disowns it. The program says what it does first and signs only if you type RELY. Since F110 it refuses to put acknowledgements on any other kind of act than Identity, Money and Agreements acts.
 - **Deliver a key.** To give someone the key to something private, the program puts a small signed note, "the key of act X is K", inside a sealed container locked to their encryption key, and drops it in their inbox. The relay sees whom it is for, never who sent it or what it is. A key can also go to a one-off "bare" key someone handed out, found again by a tag (for an anonymous buyer).
 - **Look anyone up** as any reader would: fetch the chain and receipts from every home, and let the core library decide which rotation counts. Nothing a relay says unsigned is trusted.
@@ -37,7 +37,7 @@ npm test            # starts real homes and a relay from target/debug/mor-relay 
 
 - `test/genesis.test.ts`, the step's "done when", against three homes under three test operators and an open relay, run from the relay program of step 4 on local ports: a test identity is born and each home signs a receipt; each home serves the chain, receipts, routes and encryption key; it rotates, pending until the homes hold it, then counting by majority; with one home off, two of three still make a rotation count, and the home is brought up to date when it comes back; with two homes off, the rotation stays pending, while a reader reaching the one home left still counts the earlier rotations from the other homes' receipts it serves, and the rotation counts once resent unchanged; a key delivered to an identity opens only with its key (not another identity's, not the sender's), and the relay never sees the sender; after a new encryption key, new deliveries use it and old ones still open; a key delivered to a bare key, found by pickup tag and by scanning, opens only with that key. Last, **every X-Wing exchange made or opened in these tests is re-made by noble** (`@noble/post-quantum`, X-Wing on noble's own ML-KEM and X25519), and the two agree.
 - `test/xwing.test.ts`: the core library's X-Wing against noble, on the draft's three test vectors and on fresh keys.
-- `test/cli.test.ts`: the command line as a user drives it; and an operator identity made by this client running a home (`export-operator`, then `mor-relay init --operator-key`), its safety key never on the server.
+- `test/cli.test.ts`: the command line as a user drives it; and an operator identity made by this client running a home (`export-operator`, then `mor-relay init --operator-key`), its chain key never on the server.
 
 ## Running it against the three deployed homes
 
@@ -68,7 +68,7 @@ alias mg='npm run -s cli --'
 
 Keep `~/mor-test/*.json` secret: each holds every key of its test identity.
 
-Added for the repo client (step 5a): `publish` takes `objects` (the chains an act belongs to); `lookUp` can add what it fetches to a verifier it is given, so several identities are judged together; the transport publishes and fetches media (`putMedia`, `getMedia`, checked by their SHA-256); the bindings make genesis and rotations with declarations, check Agreements terms and member signatures, lock media, and deal, check and rebuild split safety keys.
+Added for the repo client (step 5a): `publish` takes `objects` (the chains an act belongs to); `lookUp` can add what it fetches to a verifier it is given, so several identities are judged together; the transport publishes and fetches media (`putMedia`, `getMedia`, checked by their SHA-256); the bindings make genesis and rotations with declarations, check Agreements terms and member signatures, lock media, and deal, check and rebuild split chain keys.
 
 ## Readings, confirmed by Nobody, allegedly (29 September 2026)
 
@@ -80,7 +80,7 @@ Where the texts are silent, the program takes the reading below.
 4. **The encryption-key act** is an everyday act of the owner, public, in the owner's sequence, and is sent to every home, like the routes.
 5. **Which routes or encryption key counts:** only acts the core library judges valid take part (a disputed act never counts, Identity), followed from version 1; a fork leaves the last act before it, shown as contested.
 6. **Old encryption keys are kept** in the identity file, so deliveries made to an earlier key still open.
-7. **The owner's client brings the homes up to date** after a rotation counts: every chain act a home missed (the same bytes), every receipt the other homes signed (cMIP, identity record part 8), and the chain acts of the homes' operators, which any relay may carry as ordinary acts. A reader who cannot reach an operator's own home looks for the operator's chain at the other homes. *Cost, stated:* a copy found elsewhere may be out of date; if the operator rotated after a theft of its everyday key and the reader cannot reach the operator's homes, the reader may count a receipt the operator's rotation voided. A reader that can reach the operator's own homes always prefers them.
+7. **The owner's client brings the homes up to date** after a rotation counts: every chain act a home missed (the same bytes), every receipt the other homes signed (cMIP, identity record part 8), and the chain acts of the homes' operators, which any relay may carry as ordinary acts. A reader who cannot reach an operator's own home looks for the operator's chain at the other homes. *Cost, stated:* a copy found elsewhere may be out of date; if the operator rotated after a theft of its signing key and the reader cannot reach the operator's homes, the reader may count a receipt the operator's rotation voided. A reader that can reach the operator's own homes always prefers them.
 8. **The test identity file** is JSON, every key in the clear, readable by its owner only, labelled in its first line. A rotation is saved as pending before it is sent, so a retry sends the same bytes (Identity rule 8a); the program refuses to sign a second one while one is pending.
 9. **Randomness** is drawn from the platform (`crypto.getRandomValues`); SLH-DSA signatures are hedged, as the air-gapped Module signs.
 10. **One sequence per identity file.** Key deliveries are everyday acts in it, private, so a rotation's kept tip may be a private act; the running summary proves its line without opening it (Envelopes).
@@ -88,6 +88,6 @@ Where the texts are silent, the program takes the reading below.
 ## Not yet
 
 - **The three deployed homes:** the steps above, run by Nobody, allegedly (see the roadmap).
-- **A genesis from the air-gapped Module's commitment export**, and the phone app with a camera the Module's README placed with this step. Test identities keep their safety key in software; the real identity needs both at step 17.
+- **A genesis from the air-gapped Module's commitment export**, and the phone app with a camera the Module's README placed with this step. Test identities keep their chain key in software; the real identity needs both at step 17.
 - **A browser build.** The library code has no Node-only logic beyond loading the WebAssembly file and the file system; the web reader (step 10) loads it the browser's way.
 - **Homeless rotation, escape, closure** from the client: the identity gauntlet (step 7) drives them.

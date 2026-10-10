@@ -5,7 +5,7 @@
 //! In plain words:
 //!
 //! - An identity publishes an **encryption key** (type 4): an X-Wing public
-//!   key, in a numbered chain like its routes, signed with its everyday key.
+//!   key, in a numbered chain like its routes, signed with its signing key.
 //! - Anything private travels in a **sealed container**: the act, and the
 //!   key that opens it, locked with X-Wing to each recipient's encryption
 //!   key, or to a bare key the recipient handed out. The container is signed

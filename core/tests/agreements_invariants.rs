@@ -607,7 +607,7 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         parent: None,
         grammar: Some(KeyGrammar {
             signing: Holding::Shares { threshold: 1, members: ids.to_vec() },
-            safety: Holding::Shares { threshold: ids.len() as u64, members: ids.to_vec() },
+            chain_key: Holding::Shares { threshold: ids.len() as u64, members: ids.to_vec() },
             recovery: Some(Recovery::Escrow { authority }),
         }),
         arbitrators: None,
@@ -733,7 +733,7 @@ impl ColWorld {
         let (id, q) = self.w.chain_sign(&self.m[i][d], *x);
         for dv in self.m[i].iter_mut() {
             dv.tip = q.tip;
-            dv.safety = q.safety.clone();
+            dv.chain_key = q.chain_key.clone();
             dv.position = q.position;
         }
         self.end_sigs.push((q.id, *x, self.step, late));
@@ -2129,7 +2129,7 @@ enum DealRead {
 #[derive(Clone, Debug)]
 enum DOp {
     /// A new version: new shares, signed by some parties, some signatures a
-    /// thief's (a copy of the party's everyday key).
+    /// thief's (a copy of the party's signing key).
     Clone { shares: Vec<u16>, signers: u8, thieves: u8, from_latest: bool },
     /// A party rotates, keeping only its own sequence: a thief's acts on
     /// other sequences become void (Identity rules 15 to 17).
@@ -2187,7 +2187,7 @@ fn millionths(w: &[u16]) -> Vec<u64> {
 struct DealWorld {
     w: World,
     p: Vec<Person>,
-    /// A thief holding a copy of each party's everyday key, signing from a
+    /// A thief holding a copy of each party's signing key, signing from a
     /// sequence of its own.
     thief: Vec<Person>,
     /// Which parties rotated after a thief signed for them.

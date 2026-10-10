@@ -118,7 +118,7 @@ function rulesFields(r: { safety: number | ''; release: number | ''; clone: numb
   const f = (name: string, v: number | '', words: string, placeholder = '') =>
     `<label>${words}</label><input name="${name}" type="number" min="1" value="${e(v)}" placeholder="${e(placeholder)}">`;
   return `<fieldset><legend>Rules</legend><div class="grid">
-${f('safety', r.safety, 'Shares needed to rebuild the safety key')}
+${f('safety', r.safety, 'Shares needed to rebuild the chain key')}
 ${f('release', r.release, 'Members who must sign a release')}
 ${f('constitution', r.constitution ?? '', 'Members who must sign a change of members or rules', 'every member')}
 ${f('clone', r.clone, 'Members who must sign any other change (a change of who judges needs every member)')}
@@ -192,8 +192,8 @@ ${declaredNote}
 ${owedNote}
 <dl class="facts"><dt>Collective</dt><dd>${fp(c.id)}</dd>
 <dt>Members</dt><dd>${c.members.map((m) => `${e(m.name)}${m.left ? ' <span class="tag">left: a party until the members refit the collective</span>' : ''}`).join('<br>')}</dd>
-<dt>Everyday key</dt><dd>${e(c.holder)}</dd>
-<dt>Safety key</dt><dd>${c.shares.of} shares, any ${c.shares.threshold} rebuild it</dd>
+<dt>Signing key</dt><dd>${e(c.holder)}</dd>
+<dt>Chain key</dt><dd>${c.shares.of} shares, any ${c.shares.threshold} rebuild it</dd>
 <dt>A change of members or rules needs</dt><dd>${c.rules.constitution ? `any ${c.rules.constitution} members` : 'every member whose voice remains'}</dd>
 <dt>Any other change needs</dt><dd>${c.rules.clone} members' signatures</dd>
 <dt>${c.law.broken || c.law.unread ? 'Agreement this device holds' : 'Agreement in force (as Agreements read it)'}</dt><dd>${fp(c.agreement)} (${c.agreements === 1 ? 'the founding agreement' : `clone ${c.agreements - 1}`})</dd>
@@ -251,7 +251,7 @@ ${c.debts.some((x) => x.creditorHeld) ? `<form class="debt-release row"><select 
 export function found(s: State): string {
   return `<form id="found">
 <div class="row"><input name="name" type="text" placeholder="A name, kept on this device" required></div>
-<fieldset><legend>Members (you first: you propose it and hold the everyday key)</legend>${s.identities.map((i) => `<label class="check"><input type="checkbox" name="members" value="${e(i.id)}"> ${e(nameOf(s, i.id))}</label>`).join('') || '<span class="small">Make test identities first.</span>'}</fieldset>
+<fieldset><legend>Members (you first: you propose it and hold the signing key)</legend>${s.identities.map((i) => `<label class="check"><input type="checkbox" name="members" value="${e(i.id)}"> ${e(nameOf(s, i.id))}</label>`).join('') || '<span class="small">Make test identities first.</span>'}</fieldset>
 ${rulesFields({ safety: 2, release: 2, clone: 2, others: '' })}
 <label>The words everyone signs (empty: the standard words for these rules)</label><textarea name="words"></textarea>
 <div class="row"><button type="submit">Review the founding</button></div></form>`;

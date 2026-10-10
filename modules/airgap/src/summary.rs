@@ -252,7 +252,7 @@ pub fn describe(
 
 fn vault(s: &mut Summary, value: Option<&Value>, before: &Before) {
     let Some(v) = value else {
-        s.warn("VAULT REMOVED: every payment goes to the flow pointer, which the everyday key can change");
+        s.warn("VAULT REMOVED: every payment goes to the flow pointer, which the signing key can change");
         return;
     };
     let Some(entries) = vault_entries(v) else {

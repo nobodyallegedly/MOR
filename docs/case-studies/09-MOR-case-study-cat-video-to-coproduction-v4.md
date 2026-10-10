@@ -4,7 +4,7 @@
 
 *Case study, draft 3, 9 October 2026. Draft 2 with the technical pass of 9 October 2026 applied (`docs/technical-pass-2026-10-09.md`), items 1, 2, 3 and 6, nothing else changed; item 4 was optional and item 5 needed no change. Draft 2's own note below still says the metric is evidenced by the metric module: it records what draft 2 did and is kept as written. The rest is unchanged, for the author's own passes.*
 
-*Case study, draft 2, 27 September 2026. What MOR could be, with your help. Draft 2 corrects draft 1 after review round 2 (F29, F68, F75, F77, F82): free video is locked with its key attached, not unencrypted; a repost is a reference; a key delivered to an app goes to a bare key; the team withdraws its own publications and contests a platform's; the safety-key grammar names its way through; the platform's metric is evidenced by the metric module.*
+*Case study, draft 2, 27 September 2026. What MOR could be, with your help. Draft 2 corrects draft 1 after review round 2 (F29, F68, F75, F77, F82): free video is locked with its key attached, not unencrypted; a repost is a reference; a key delivered to an app goes to a bare key; the team withdraws its own publications and contests a platform's; the chain-key grammar names its way through; the platform's metric is evidenced by the metric module.*
 
 ## Why this case study
 
@@ -16,11 +16,11 @@ This case study separates the production from the publishing, and focuses on the
 
 ## 1. Alone: cat videos and tips
 
-**Nico gets an identity.** His client creates it on two devices: his phone holds the everyday signing key, and an old phone kept offline holds the safety key; both seeds are backed up. His identity lives at a home he chooses, where anyone can find where to reach him and verify his content. 
+**Nico gets an identity.** His client creates it on two devices: his phone holds the signing key, and an old phone kept offline holds the chain key; both seeds are backed up. His identity lives at a home he chooses, where anyone can find where to reach him and verify his content. 
 
 **He posts a cat video.** He picks a file from his phone and uploads it to a video relay, the way he would to any video site. How the video is cut up, stored and streamed is handled by his client, the relay and a video media module they both speak, not by him. His client binds the video to him as a work, and his identity's routes tell other clients where his videos live. The video is free: like everything on MOR it is stored locked, and its key travels with the publication, so anyone can watch it and no relay can tell a free video from a paid one by its shape.
 
-**Viewers tip him.** His identity declares a payee pointer, and a viewer tips from the simplest wallet with one tap. No agreement is needed for a tip. Nico keeps his flow pointer on his everyday key for convenience, and sets a vault behind his safety key for anything large, per currency he accepts.
+**Viewers tip him.** His identity declares a payee pointer, and a viewer tips from the simplest wallet with one tap. No agreement is needed for a tip. Nico keeps his flow pointer on his signing key for convenience, and sets a vault behind his chain key for anything large, per currency he accepts.
 
 **Followers share his videos.** A repost is a reference to the original publication, never a publication of its own, so a tip on a repost is a tip on Nico's video and goes to Nico wherever people find him. Followers are people following his identity, not an account on a platform: if he changes apps, they come with him.
 
@@ -28,11 +28,11 @@ This case study separates the production from the publishing, and focuses on the
 
 ## 2. A team: the production collective
 
-**Nico forms a production team.** The team becomes a collective: a full identity of its own, with its own home, signing key and safety key. Its founding agreement sets how the keys are held, for example:
+**Nico forms a production team.** The team becomes a collective: a full identity of its own, with its own home, signing key and chain key. Its founding agreement sets how the keys are held, for example:
 
 - any one member signs everyday acts, like receipts for tips;
 - two of three publish a video;
-- two of three rotate the safety key, so no single member is ever needed. Every grammar must leave a way to rotate that needs less than everyone; a two-of-three share is the simplest.
+- two of three rotate the chain key, so no single member is ever needed. Every grammar must leave a way to rotate that needs less than everyone; a two-of-three share is the simplest.
 
 **Each video has its own ownership.** Every video's agreement sets the stakes: Nico, an editor and a camera operator, written in millionths so shares always sum exactly. Crew members choose how to be paid: a flat fee through a standing offer, or a stake in the video, betting on its success.
 

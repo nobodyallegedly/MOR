@@ -18,7 +18,7 @@ MOR does not run games. Engines, servers, matchmaking and anti-cheat stay outsid
 
 ## 1. Solo: a mobile game
 
-**Mina makes a small puzzle game** on her own. She has an identity with a signing key on her laptop and a safety key on an offline device.
+**Mina makes a small puzzle game** on her own. She has an identity with a signing key on her laptop and a chain key on an offline device.
 
 **The game is a work,** bound to her by a claim. Each version she releases is a new work naming the previous one, since nothing on MOR is updated.
 

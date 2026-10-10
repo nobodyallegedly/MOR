@@ -38,7 +38,7 @@ test('a founding agreement, read from its bytes: who is bound, the keys, the are
   assert.match(w, /3 parties: Ann, Ben and Cy\./);
   assert.match(w, /bound only by their own signature act/);
   assert.match(w, /exists only once every one of them has signed it: nobody is founded into a collective without signing/);
-  assert.match(w, /Ann holds the collective's everyday key.*An act no area reaches needs nobody else's signature/);
+  assert.match(w, /Ann holds the collective's signing key.*An act no area reaches needs nobody else's signature/);
   assert.match(w, /cut into 3 shares, one each for Ann, Ben and Cy\. Any 2 of them together rebuild it/);
   assert.doesNotMatch(w, /listed|key grammar lists/i, 'no act types listed in the key grammar any more');
 
@@ -132,7 +132,7 @@ test('what this client does not implement cannot be signed; terms out of their f
 });
 
 test("Agreements' objections by their codes, in Agreements' own words, after the client's own hints, never folded by wording", () => {
-  // Two members who must both rebuild the safety key: refused by F96.
+  // Two members who must both rebuild the chain key: refused by F96.
   const t = termsOf(encodeTerms(collectiveTerms(g({ abandonmentOthers: 1 }), [a, b], a)));
   assert.equal(t.problem!.code, 'check');
   const r = readAgreement(t, names);
@@ -142,7 +142,7 @@ test("Agreements' objections by their codes, in Agreements' own words, after the
 
   const hints = rulesHints({ safety: 2, release: 3, clone: 2, others: 2 }, 2);
   assert.equal(hints.length, 3);
-  assert.match(hints[0], /^With 2 members, a safety key that needs all 2 of them would be lost with any one of them \(F96\)/);
+  assert.match(hints[0], /^With 2 members, a chain key that needs all 2 of them would be lost with any one of them \(F96\)/);
   const out = withAgreements(hints, [...r.blocking, ...r.blocking]);
   assert.deepEqual(out, [...hints, r.blocking[0]], "the client's hints first, then Agreements' objection, once");
   assert.match(rulesHints({ safety: 1, release: 1, clone: 1, others: 1, constitution: 3 }, 2)[0], /change of the constitution is not between 1 and the 2 members/);
@@ -161,7 +161,7 @@ test("Agreements' objections by their codes, in Agreements' own words, after the
   // Any one member alone: allowed, and said plainly.
   const one = readAgreement(termsOf(encodeTerms(collectiveTerms(g({ safetyThreshold: 1, abandonmentOthers: 1 }), [a, b], a))), names);
   assert.deepEqual(one.blocking, []);
-  assert.match(all(one), /Any one member alone can rebuild the safety key/);
+  assert.match(all(one), /Any one member alone can rebuild the chain key/);
 });
 
 test('what a clone changes, by tier, and the powers its mark must name', () => {
@@ -178,7 +178,7 @@ test('what a clone changes, by tier, and the powers its mark must name', () => {
   assert.match(w, /Di joins, bound once they sign the clone/);
   assert.match(w, /Ann leaves\. They hand over nothing/);
   assert.match(w, /Cy leaves/);
-  assert.match(w, /The everyday key passes to Ben \(was Ann\)/);
+  assert.match(w, /The signing key passes to Ben \(was Ann\)/);
   assert.match(w, /2 shares, any 1 rebuild it \(was 3 shares, any 2\)/);
   assert.match(w, /The “Releases” area \(area 1\) is now decided by any 2 of Ben and Di \(was any 2 of Ann, Ben and Cy\)/);
   assert.match(w, /Absence is now judged by any 1 of the other parties \(was any 2 of the other parties\)\. A protected clause/);

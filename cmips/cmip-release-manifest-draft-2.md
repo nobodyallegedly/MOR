@@ -62,7 +62,7 @@ dependency = [
 
 ## Publishing
 
-1. **Signed by the governing identity.** A release is published by the identity whose release it is: for a collective, the collective itself, signing with its everyday key (F100). The publication is public; it needs no `for`.
+1. **Signed by the governing identity.** A release is published by the identity whose release it is: for a collective, the collective itself, signing with its signing key (F100). The publication is public; it needs no `for`.
 2. **The publication first.** The publisher puts the publication on its relays, then the manifest's locked bytes, then every new file's. *A relay that keeps media only for publications it holds (relay transport cMIP, "Publishing media") keeps the manifest; whether it keeps the files is its policy. The publisher lists in field 6 relays that keep them.*
 3. **Chains carried along.** The publisher, and every member who signs, carries its identity-chain acts (the same bytes) to the relays it publishes on, so that a reader who knows only a relay finds each genesis, and from it the homes. *Any relay may carry them; delivery is the signer's interest (Envelopes).*
 4. **Members sign.** Each member who consents publishes an Agreements signature act (type 1) naming the publication (Agreements draft 7), public, on the same relays. *Client conformance:* a member's client SHOULD fetch the release and check every file, and SHOULD compare them with the member's own checkout, before signing. *What you sign is what you saw.*
@@ -92,7 +92,7 @@ The release verifies only if every step passes. A verifier writes the files out 
 
 ## Stated costs
 
-- **One key signs for the collective.** Whoever holds the collective's everyday key can sign acts no area reaches, alone (F100). *An area reaching every publication, as the test collective's release area does, covers releases.*
+- **One key signs for the collective.** Whoever holds the collective's signing key can sign acts no area reaches, alone (F100). *An area reaching every publication, as the test collective's release area does, covers releases.*
 - **A departure counts from the collective's line.** A member who resigns still counts toward a release the collective signed before the record that registers the resignation (Agreements, F109, stated cost). *The collective's client draws that line in its next act.*
 - **Files a relay refuses.** An allowlist relay may keep the manifest and not the files; the files are then found only where field 6 points. *A release is as available as the relays that keep it.*
 - **Dependencies are declared, not verified.** A manifest says which libraries the code was built with; nothing in it proves they are the ones any machine will download.

@@ -309,7 +309,7 @@ impl Gauntlet {
         self.check(
             "slh",
             Ran::Throwaway,
-            "every safety-key signature met is checked by both SLH-DSA implementations, and they agree",
+            "every chain-key signature met is checked by both SLH-DSA implementations, and they agree",
             n > 0 && d == 0,
             format!("{n} signatures checked, {d} disagreements"),
         );

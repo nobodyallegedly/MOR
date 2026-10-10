@@ -2,9 +2,9 @@
 // encryption key, rotation, looking an identity up, and delivering keys in
 // sealed containers (Identity; Envelopes draft 6; relay transport cMIP).
 //
-// A TEST IDENTITY HOLDS ITS SAFETY KEY IN SOFTWARE. It is a prototype, never
-// for a real identity: the real identity's safety key is made and used only
-// by the air-gapped safety key Module (build brief; roadmap step 17).
+// A TEST IDENTITY HOLDS ITS CHAIN KEY IN SOFTWARE. It is a prototype, never
+// for a real identity: the real identity's chain key is made and used only
+// by the air-gapped chain key Module (build brief; roadmap step 17).
 
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -28,13 +28,13 @@ import {
   makeRotation,
   newEncryptionSecret,
   newSigningSecret,
-  newTestSafetyKey,
+  newTestChainKey,
   openSealed,
   pickupTag,
   readKeyDelivery,
   routesPayload,
   runningSummary,
-  safetyFromSeeds,
+  chainKeyFromSeeds,
   seal,
   sealedParts,
   signingPublic,
@@ -51,7 +51,7 @@ export { lookUp, type Home, type Lookup, type Resolution, type RouteIn } from '.
 export const TEST_LABEL =
   'MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.';
 
-interface Safety {
+interface ChainKey {
   scheme: number;
   /** FIPS 205 seeds, hex (48 bytes). */
   seeds: string;
@@ -68,7 +68,7 @@ export interface ClockRef {
 }
 
 /**
- * The clock the owner declares with the safety key (Money, "The clock",
+ * The clock the owner declares with the chain key (Money, "The clock",
  * F176, F179): a main anchoring reference and, optionally, a backup. A lock
  * change is compared with payers' claims on it (Money rule 15). Public.
  */
@@ -118,7 +118,7 @@ interface Pending {
   rotation: string;
   id: string;
   signingSecret: string;
-  safety: Safety;
+  safety: ChainKey;
   homes: Home[];
   rule: number[] | null;
   /** The clock in force once it counts; absent where the rotation leaves it unchanged. */
@@ -133,8 +133,8 @@ export interface IdentityFile {
   position: number;
   binding: string;
   signingSecret: string;
-  /** The safety key the current chain act committed: the next to be revealed. */
-  safety: Safety;
+  /** The chain key the current chain act committed: the next to be revealed. */
+  safety: ChainKey;
   /** This identity's chain acts, exact bytes, base64, oldest first. */
   chain: string[];
   homes: Home[];
@@ -207,19 +207,19 @@ export class TestIdentity {
   // ------------------------------------------------------------ genesis
 
   /**
-   * A new test identity: an everyday signing key, a safety key held in
+   * A new test identity: an signing key, a chain key held in
    * software and committed by hash, and a genesis naming its homes. Nothing
    * is sent yet: save the file first, then `publishGenesis`.
    */
   static create(opts: { homes: Home[]; rule?: number[]; scheme?: 2 | 3; via?: Via; clock?: Clock }): TestIdentity {
     if (!opts.homes.length) throw new Error('a genesis declares at least one home');
     const signingSecret = newSigningSecret();
-    const safety = newTestSafetyKey(opts.scheme ?? 2);
+    const chainKey = newTestChainKey(opts.scheme ?? 2);
     const genesis = makeGenesis({
       identitySpec: SPECS.identity,
       signingSecret,
-      safetyScheme: safety.scheme,
-      safetyCommit: safety.commit,
+      chainKeyScheme: chainKey.scheme,
+      chainKeyCommit: chainKey.commit,
       homes: opts.homes,
       rule: opts.rule,
       declarations: opts.clock ? [clockDeclaration(opts.clock)] : undefined,
@@ -232,7 +232,7 @@ export class TestIdentity {
         position: 0,
         binding: id,
         signingSecret: hex(signingSecret),
-        safety: { scheme: safety.scheme, seeds: hex(safety.seeds) },
+        safety: { scheme: chainKey.scheme, seeds: hex(chainKey.seeds) },
         chain: [b64(genesis)],
         homes: opts.homes,
         rule: opts.rule ?? null,
@@ -392,16 +392,16 @@ export class TestIdentity {
   // ------------------------------------------------------------ rotation
 
   /**
-   * Prepare a rotation: a new signing key, a new committed safety key, the
+   * Prepare a rotation: a new signing key, a new committed chain key, the
    * latest act of the sequence kept, and optionally new homes or rule
-   * (`rule: []` returns to the default). Signed with the safety key the
+   * (`rule: []` returns to the default). Signed with the chain key the
    * current chain act committed. The rotation is stored as pending; save
    * the file before submitting, so that a retry sends the same bytes.
    */
   prepareRotation(opts: { homes?: Home[]; rule?: number[]; scheme?: 2 | 3; clock?: Clock | null } = {}): string {
     if (this.f.pending) throw new Error('a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)');
     const newSigning = newSigningSecret();
-    const next = newTestSafetyKey(opts.scheme ?? (this.f.safety.scheme as 2 | 3));
+    const next = newTestChainKey(opts.scheme ?? (this.f.safety.scheme as 2 | 3));
     const seq = this.f.sequence;
     const kept = seq.length
       ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }]
@@ -415,11 +415,11 @@ export class TestIdentity {
       identity: this.f.identity,
       previous,
       position: chain.length,
-      safetyScheme: this.f.safety.scheme,
-      safetySeeds: unhex(this.f.safety.seeds),
+      chainKeyScheme: this.f.safety.scheme,
+      chainKeySeeds: unhex(this.f.safety.seeds),
       newSigningPublic: signingPublic(newSigning),
-      nextSafetyScheme: next.scheme,
-      nextSafetyCommit: next.commit,
+      nextChainKeyScheme: next.scheme,
+      nextChainKeyCommit: next.commit,
       kept,
       homes: opts.homes,
       rule: opts.rule,
@@ -534,27 +534,27 @@ export class TestIdentity {
 
   /**
    * A chain signature (Identity type 16, F132): `signs` signed with the
-   * safety key the latest identity-chain act committed, on the identity
-   * chain, committing a new one; the everyday key, homes and rules stay.
+   * chain key the latest identity-chain act committed, on the identity
+   * chain, committing a new one; the signing key, homes and rules stay.
    * Agreements take a member's signature on a fork or closing only in this form.
-   * The safety key is spent once signed, so the act is kept in the chain
+   * The chain key is spent once signed, so the act is kept in the chain
    * file at once and sent to every home, as a rotation is (the same bytes
    * whenever resent, rule 8a); it counts once the homes hold it. Sent to
    * `relays` too, beside the act it signs.
    */
   async chainSign(signs: string, relays: string[] = []): Promise<{ id: string; counts: boolean; sent: Submitted[] }> {
-    if (this.f.pending) throw new Error('a rotation is pending: submit and settle it first; one safety key signs one identity-chain act (Identity rule 8a)');
-    const next = newTestSafetyKey(this.f.safety.scheme as 2 | 3);
+    if (this.f.pending) throw new Error('a rotation is pending: submit and settle it first; one chain key signs one identity-chain act (Identity rule 8a)');
+    const next = newTestChainKey(this.f.safety.scheme as 2 | 3);
     const chain = this.chainActs();
     const act = makeChainSignature({
       identitySpec: SPECS.identity,
       identity: this.f.identity,
       previous: actId(chain[chain.length - 1]),
       position: chain.length,
-      safetyScheme: this.f.safety.scheme,
-      safetySeeds: unhex(this.f.safety.seeds),
-      nextSafetyScheme: next.scheme,
-      nextSafetyCommit: next.commit,
+      chainKeyScheme: this.f.safety.scheme,
+      chainKeySeeds: unhex(this.f.safety.seeds),
+      nextChainKeyScheme: next.scheme,
+      nextChainKeyCommit: next.commit,
       signs,
     });
     const id = actId(act);
@@ -610,9 +610,9 @@ export class TestIdentity {
     this.f.grantKeys = [...(this.f.grantKeys ?? []).filter((k) => k.grant !== grant), { grant, collective, secret: hex(secret) }];
   }
 
-  /** The public half of the safety key held for the next rotation. */
-  nextSafety(): { scheme: number; commit: string } {
-    const s = safetyFromSeeds(this.f.safety.scheme, unhex(this.f.safety.seeds));
+  /** The public half of the chain key held for the next rotation. */
+  nextChainKey(): { scheme: number; commit: string } {
+    const s = chainKeyFromSeeds(this.f.safety.scheme, unhex(this.f.safety.seeds));
     return { scheme: s.scheme, commit: s.commit };
   }
 

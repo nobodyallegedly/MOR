@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MIPS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, rebuildSafety, signaturePayload, verifyShare } from '../../genesis/src/core.ts';
+import { MIPS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, rebuildChainKey, signaturePayload, verifyShare } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
@@ -45,7 +45,7 @@ const governance: Governance = {
   releaseThreshold: 2,
   cloneThreshold: 2,
   abandonmentOthers: 2,
-  text: 'The MOR test collective. It publishes releases of the MOR code and nothing else. Its everyday key is held by one member; its safety key is split among the members, any two of whom rebuild it. A release counts only when two members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any two members and by each member who joins, and a rotation of the collective declaring it. The other two members together decide whether a member is absent; the outcome is that member losing their voice.',
+  text: 'The MOR test collective. It publishes releases of the MOR code and nothing else. Its signing key is held by one member; its chain key is split among the members, any two of whom rebuild it. A release counts only when two members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any two members and by each member who joins, and a rotation of the collective declaring it. The other two members together decide whether a member is absent; the outcome is that member losing their voice.',
 };
 
 const small: FileIn[] = [
@@ -168,7 +168,7 @@ test('a member leaves alone and another joins, by record, clone and rotation', a
   assert.ok(v1.ok, v1.problems.join('; '));
   assert.equal(v1.agreement, c.f.agreements[0]);
 
-  // The old everyday key signs a "release" after the rotation: void (F100).
+  // The old signing key signs a "release" after the rotation: void (F100).
   const ghost = new TestCollective({ ...c.f, identity: old, releases: [] });
   const g = await publishRelease(ghost, { name: 'MOR test tree', version: 'ghost', files: small });
   await signRelease(m1, g.id, c.f.relays);
@@ -271,7 +271,7 @@ test('manifests are strict', () => {
 
 test('a key grammar that one lost holder would freeze is refused (F96)', () => {
   const h = (n: number) => new Uint8Array(32).fill(n);
-  const terms = (safety: unknown[], extra: [number, unknown][] = []) =>
+  const terms = (chainKey: unknown[], extra: [number, unknown][] = []) =>
     cborEncode(
       new Map<number, unknown>([
         [0, [h(1), h(2), h(3)]],
@@ -280,7 +280,7 @@ test('a key grammar that one lost holder would freeze is refused (F96)', () => {
         [4, [0]],
         [5, [1, 2]],
         [9, new Map<number, unknown>([[0, [1, 2]], [1, [0]]])],
-        [12, new Map<number, unknown>([[0, [0, h(1)]], [1, safety]])],
+        [12, new Map<number, unknown>([[0, [0, h(1)]], [1, chainKey]])],
         ...extra,
       ]),
     );
@@ -330,8 +330,8 @@ test('shares check alone, and fewer than the threshold rebuild nothing', () => {
   const tampered = new Uint8Array(s[0]);
   tampered[tampered.length - 1] ^= 1;
   assert.throws(() => verifyShare(tampered));
-  assert.throws(() => rebuildSafety([s[0]]), /shares; the dealing needs 2/);
-  assert.equal((rebuildSafety([s[1], s[2]]) as { commit: string }).commit, c.f.safety.commit);
+  assert.throws(() => rebuildChainKey([s[0]]), /shares; the dealing needs 2/);
+  assert.equal((rebuildChainKey([s[1], s[2]]) as { commit: string }).commit, c.f.safety.commit);
 });
 
 test("a deal signed on the phone cites the wallet published from the laptop (F163)", async () => {

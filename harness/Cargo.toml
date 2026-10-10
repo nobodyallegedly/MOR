@@ -17,7 +17,7 @@ tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "socks"] }
 clap = { version = "4", features = ["derive"] }
 # The second, independent SLH-DSA implementation: the harness checks every
-# safety-key signature it meets against it, as every test of the core does.
+# chain-key signature it meets against it, as every test of the core does.
 slh-dsa = "=0.2.0-rc.5"
 
 [dev-dependencies]

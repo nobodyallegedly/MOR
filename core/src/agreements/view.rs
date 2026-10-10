@@ -3347,7 +3347,7 @@ impl<'a> AgreementsView<'a> {
     /// every area, its seat successors in; the successors in the party's
     /// place in every holding of the key grammar, every threshold
     /// unchanged; the executed plan dropped from field 16, and, where the
-    /// party held the safety key alone, a plan for the successor in its
+    /// party held the chain key alone, a plan for the successor in its
     /// place (Flaw B17). What the texts
     /// leave open ([`plan_open`]) is refused at the line
     /// ([`Self::plan_at`]), never guessed.
@@ -3403,13 +3403,13 @@ impl<'a> AgreementsView<'a> {
             );
         }
         // Field 16: the executed plan dropped, every other plan as it was;
-        // where the party held the safety key alone, a plan for the
+        // where the party held the chain key alone, a plan for the
         // successor in its place, naming their own successor (Flaw B17,
         // rule 36), signed by the successor as the mark's signer.
         let plans: Vec<SuccessionPlan> = parent.succession.clone().unwrap_or_default();
         let rest: Vec<SuccessionPlan> = plans.iter().filter(|s| &s.party != p).cloned().collect();
         let got = clone.succession.clone().unwrap_or_default();
-        let sole = matches!(parent.grammar.as_ref().map(|g| &g.safety), Some(Holding::One(x)) if x == p);
+        let sole = matches!(parent.grammar.as_ref().map(|g| &g.chain_key), Some(Holding::One(x)) if x == p);
         if sole && plan_open(parent, plan).is_none() {
             let i = plans.iter().position(|s| &s.party == p).expect("found above");
             let theirs = (got.len() == plans.len()).then(|| &got[i]);
@@ -3417,7 +3417,7 @@ impl<'a> AgreementsView<'a> {
             let named = theirs.is_some_and(|x| x.party == seats[0] && x.seats.as_ref().is_some_and(|v| !v.is_empty()));
             if !named || others != rest {
                 return Err(
-                    "the party held the safety key alone: it drops the executed plan and carries, in its place, a plan for the successor naming their own successor (rule 36, B17)".into(),
+                    "the party held the chain key alone: it drops the executed plan and carries, in its place, a plan for the successor naming their own successor (rule 36, B17)".into(),
                 );
             }
         } else if got != rest {
@@ -4781,7 +4781,7 @@ fn plan_grammar(parent: &Terms, party: &Hash, seats: &[Hash]) -> Option<KeyGramm
     };
     parent.grammar.as_ref().map(|g| KeyGrammar {
         signing: swap(&g.signing),
-        safety: swap(&g.safety),
+        chain_key: swap(&g.chain_key),
         recovery: g.recovery.clone(),
     })
 }
@@ -4800,7 +4800,7 @@ fn plan_open(parent: &Terms, plan: &SuccessionPlan) -> Option<&'static str> {
     }
     let p = &plan.party;
     if let Some(g) = &parent.grammar {
-        for h in [&g.signing, &g.safety] {
+        for h in [&g.signing, &g.chain_key] {
             match h {
                 Holding::One(x) if x == p && seats.len() != 1 => {
                     return Some("several seat successors to a key held by one: who takes that place is not written (Flaw B14)");
@@ -5203,7 +5203,7 @@ pub struct Closed {
 
 /// The ending signatures of one collective's forks and closings (F132): a
 /// member signs an ending by a chain signature (Identity type 16), on its
-/// identity chain with its safety key, so any two of one signer's ending
+/// identity chain with its chain key, so any two of one signer's ending
 /// signatures are ordered by their positions there.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct EndingSigs {
@@ -6103,7 +6103,7 @@ impl<'a> AgreementsView<'a> {
         if e.signed.len() < members.len() {
             return fail(
                 e,
-                "every member on a side signs the fork, with their own identity (F121), by a chain signature with their safety key (F132); a signature placed after the signer's own signature on an ending naming this one counts for nothing (U4)",
+                "every member on a side signs the fork, with their own identity (F121), by a chain signature with their chain key (F132); a signature placed after the signer's own signature on an ending naming this one counts for nothing (U4)",
             );
         }
         if !constitution_met(&t, &voices, &e.signed) {
@@ -6271,10 +6271,10 @@ impl<'a> AgreementsView<'a> {
             return fail(e, "the closing act is signed by someone who is not a member whose voice remains");
         }
         if !e.signed.contains(&signer) {
-            return fail(e, "the closing's signer signs it too, by a chain signature with their safety key (F132)");
+            return fail(e, "the closing's signer signs it too, by a chain signature with their chain key (F132)");
         }
         if !constitution_met(&t, &voices, &e.signed) {
-            return fail(e, "a closing follows the constitutional change rule, every member by default (N9), each signing by a chain signature with their safety key (F132)");
+            return fail(e, "a closing follows the constitutional change rule, every member by default (N9), each signing by a chain signature with their chain key (F132)");
         }
         if !e.holds.is_empty() {
             return fail(e, "a closing ends only a collective that holds nothing: every work sold or released (N9)");

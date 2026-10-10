@@ -68,7 +68,7 @@ Given the commitment hash, the amount, the address or source the payee signed, a
 - **The payee alone** can sign a receipt (it is its own admission), but not the payer's claim. *Its receipt naming a payer proves only what the payee says; the claim is the payer's.*
 - **The payer alone** cannot produce a valid proof: the invoice must be signed by the node the payee's pointer or vault names, and the preimage is learned only by paying it.
 - **A node on the route** learns the preimage as the payment settles, and could present the proof; it cannot claim to be the payer, because the commitment names the payer, and a claim's signer must be that payer. *For an anonymous payment the commitment names the payer's bare key, and only a signature with that key claims it or its refund (Money rule 10a, F113); a payment that committed no key can be refunded to nobody.*
-- **A thief with the payee's everyday key** can point the flow at its own node (the theft window, Money rule 15), but not the vault, which the safety key alone changes.
+- **A thief with the payee's signing key** can point the flow at its own node (the theft window, Money rule 15), but not the vault, which the chain key alone changes.
 
 *The binding of node to identity is only as strong as the payee pointer that names it: an invoice proves payment to whoever controls the node, and the payee's signed pointer says that is the payee.*
 
@@ -77,7 +77,7 @@ Given the commitment hash, the amount, the address or source the payee signed, a
 *A client MUST show these before an owner declares a Lightning rail in a pointer or vault.*
 
 - **A public node exposes its owner.** Naming the node in a payee pointer links the MOR identity to it publicly: its channels and the on-chain coins behind them are visible, its network address may be, and identities that share a node are linked by it. It is also a visible target.
-- **A Lightning vault guards against one thief, not another.** It stops a thief holding the everyday MOR key, who cannot change the vault's node; it does not stop someone who takes the node, which must stay online to issue invoices. The vault's node should be a different node from the flow's.
+- **A Lightning vault guards against one thief, not another.** It stops a thief holding the MOR signing key, who cannot change the vault's node; it does not stop someone who takes the node, which must stay online to issue invoices. The vault's node should be a different node from the flow's.
 - **Mitigations are the payee's choice:** an unannounced node, one node per identity, a hosted node, Tor.
 - **Set aside:** a Lightning Address (name@domain), whose invoices a later verifier cannot tie to the payee. **Later:** a BOLT 12 offer (a reusable, checkable address that hides the node), as a second rail Module under the same payment cMIP, once lnd supports it; it would also exercise a payee choosing between rails (F115).
 - **Other stated costs:** a claim without its preimage stays pending forever (no clock, no expiry); an invoice for a fraction of a satoshi cannot be a MOR payment; keysend and AMP payments prove nothing.

@@ -1,6 +1,6 @@
 // A test collective (Agreements rules 35 to 37): an identity of its own, founded by
-// an agreement its members sign, its everyday key with one member, its
-// safety key dealt as shares among the members (air-gapped Module, section
+// an agreement its members sign, its signing key with one member, its
+// chain key dealt as shares among the members (air-gapped Module, section
 // 5), its members changed by a clone of the founding agreement plus a
 // rotation declaring the clone.
 //
@@ -8,19 +8,19 @@
 // key and every member's share. Its members are simulated, so the mechanics
 // run (release rule, visible signatures, clone, rotation) while independent
 // consent does not (roadmap step 5a, "Run and not run"). A real collective
-// deals and rebuilds its safety key on offline devices, one share per member.
+// deals and rebuilds its chain key on offline devices, one share per member.
 
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import {
   SPECS,
   actId,
-  dealSafety,
+  dealChainKey,
   declarationPayload,
   hex,
   makeGenesis,
   makeRotation,
   newSigningSecret,
-  rebuildSafety,
+  rebuildChainKey,
   runningSummary,
   signingPublic,
   verifyShare,
@@ -53,7 +53,7 @@ const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
 const same = (a: Uint8Array, b: Uint8Array) => Buffer.from(a).equals(Buffer.from(b));
 const unb64 = (s: string) => Uint8Array.from(Buffer.from(s, 'base64'));
 
-/** A dealing of the collective's safety key: one share per holder. */
+/** A dealing of the collective's chain key: one share per holder. */
 export interface Dealt {
   scheme: number;
   /** The key's number in the collective's life: 0 at genesis, +1 per rotation. */
@@ -67,7 +67,7 @@ export interface Dealt {
 
 /** How the collective is governed, the same in the founding agreement and every clone. */
 export interface Governance {
-  /** Any k members rebuild the safety key (a way to rotate below the member count). */
+  /** Any k members rebuild the chain key (a way to rotate below the member count). */
   safetyThreshold: number;
   /** The release rule, an area held by every member: any k members' own
    * signature acts make a publication of the collective count. */
@@ -102,14 +102,14 @@ export interface Governance {
 
 export interface CollectiveFile {
   label: string;
-  /** The collective's own identity. Its safety key is held as shares (`safety`), never whole. */
+  /** The collective's own identity. Its chain key is held as shares (`chainKey`), never whole. */
   identity: IdentityFile;
   /** Where its Agreements acts, releases and files are published. */
   relays: string[];
   governance: Governance;
   /** The parties of the agreement in force, in order. */
   members: string[];
-  /** Who holds the everyday signing key. */
+  /** Who holds the signing key. */
   signingHolder: string;
   /** The agreement in force: the founding agreement, then each clone. */
   agreement: string;
@@ -126,7 +126,7 @@ export interface CollectiveFile {
    * declared absent, by a declaration it registered the same way (rule 53). They stay parties
    * of the agreement in force until the members refit the collective
    * without them; the list stays as history after. A member declared
-   * absent while holding the everyday key has no record (Agreements draft 9, C7,
+   * absent while holding the signing key has no record (Agreements draft 9, C7,
    * B16, B18): the declaration takes effect at the recovery rotation, the
    * member change removing them, which names `signatures`, the other
    * members' signature acts on it; `rotation` is that rotation once made,
@@ -194,7 +194,7 @@ export function governanceText(g: Omit<Governance, 'text'>): string {
   const constitution = g.constitutionalThreshold
     ? `any ${g.constitutionalThreshold} members`
     : 'every member whose voice remains';
-  return `The MOR test collective. It publishes releases of the MOR code and nothing else. Test acts only, wiped before the first real acts. Its everyday key is held by its first member; its safety key is split among the members, any ${g.safetyThreshold} of whom rebuild it. Releases are an area held by every member: a release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members, these rules and the release area change by a clone signed by ${constitution} and by each member who joins, and a rotation of the collective declaring it. Other changes need any ${g.cloneThreshold} members, and are recorded by the collective at once. A member may leave alone at any time, keeping what they own. The other members together decide whether a member is absent; the outcome is that member losing their voice.`;
+  return `The MOR test collective. It publishes releases of the MOR code and nothing else. Test acts only, wiped before the first real acts. Its signing key is held by its first member; its chain key is split among the members, any ${g.safetyThreshold} of whom rebuild it. Releases are an area held by every member: a release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members, these rules and the release area change by a clone signed by ${constitution} and by each member who joins, and a rotation of the collective declaring it. Other changes need any ${g.cloneThreshold} members, and are recorded by the collective at once. A member may leave alone at any time, keeping what they own. The other members together decide whether a member is absent; the outcome is that member losing their voice.`;
 }
 
 /** The abandonment clause these rules write: any `abandonmentOthers` of the other members, outcome 0, no absence-proof cMIP. */
@@ -223,7 +223,7 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
     clone: rule(g.cloneThreshold),
     constitutional: g.constitutionalNamed?.length ? { named: g.constitutionalNamed } : g.constitutionalThreshold ? rule(g.constitutionalThreshold) : undefined,
     signingHolder: holder,
-    safety: { threshold: g.safetyThreshold, members },
+    chainKey: { threshold: g.safetyThreshold, members },
     // A release is a publication of the collective (Envelopes type 0): an
     // area held by every member, counting with this many members' own
     // signature acts (F100, F103).
@@ -242,13 +242,13 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
 }
 
 /**
- * Deal a fresh safety key to the members (Module 5.1): each member checks
+ * Deal a fresh chain key to the members (Module 5.1): each member checks
  * their own share and compares the dealing's fingerprint with every other;
  * then k members rebuild it on a "second device" and compare it with the
  * commitment. Here both devices are this program: a test collective.
  */
 function deal(members: string[], threshold: number, index: number, scheme: number): Dealt {
-  const d = dealSafety({
+  const d = dealChainKey({
     seedModule: 'words',
     scheme,
     index,
@@ -259,7 +259,7 @@ function deal(members: string[], threshold: number, index: number, scheme: numbe
     const v = verifyShare(s) as { fingerprint: string };
     if (v.fingerprint !== d.fingerprint) throw new Error('a member saw another dealing');
   }
-  const check = rebuildSafety(d.shares.slice(0, threshold)) as { commit: string };
+  const check = rebuildChainKey(d.shares.slice(0, threshold)) as { commit: string };
   if (check.commit !== d.commit) throw new Error('the rebuild check failed: the shares do not rebuild the committed key');
   return {
     scheme: d.scheme,
@@ -328,7 +328,7 @@ export class TestCollective {
     };
   }
 
-  /** Who holds the everyday key after a member change: the holder if they stay, else the first member. */
+  /** Who holds the signing key after a member change: the holder if they stay, else the first member. */
   nextHolder(members: string[]): string {
     return members.includes(this.f.signingHolder) ? this.f.signingHolder : members[0];
   }
@@ -347,7 +347,7 @@ export class TestCollective {
 
   /**
    * Found a collective. The first member proposes the founding agreement;
-   * every member signs it (its signing rule: all parties); the safety key
+   * every member signs it (its signing rule: all parties); the chain key
    * is dealt to the members; the collective's genesis declares the
    * agreement and names its homes. The members' files move on (their
    * sequences grew): save them after.
@@ -371,13 +371,13 @@ export class TestCollective {
     for (const m of opts.members) signed.push({ member: m.id, act: (await sign(m, proposed.id, opts.relays)).id });
 
     const scheme = opts.scheme ?? 2;
-    const safety = deal(ids, opts.governance.safetyThreshold, 0, scheme);
+    const chainKey = deal(ids, opts.governance.safetyThreshold, 0, scheme);
     const signingSecret = newSigningSecret();
     const genesis = makeGenesis({
       identitySpec: SPECS.identity,
       signingSecret,
-      safetyScheme: scheme,
-      safetyCommit: safety.commit,
+      chainKeyScheme: scheme,
+      chainKeyCommit: chainKey.commit,
       homes: opts.homes,
       declarations: [{ spec: REPO_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: proposed.id }],
     });
@@ -388,7 +388,7 @@ export class TestCollective {
       position: 0,
       binding: id,
       signingSecret: hex(signingSecret),
-      // Held as shares, never whole: see `safety` in the collective file.
+      // Held as shares, never whole: see `chainKey` in the collective file.
       safety: { scheme, seeds: '' },
       chain: [b64(genesis)],
       homes: opts.homes,
@@ -411,7 +411,7 @@ export class TestCollective {
         signingHolder: holder,
         agreement: proposed.id,
         agreements: [proposed.id],
-        safety,
+        safety: chainKey,
         pending: null,
         releases: [],
       },
@@ -431,7 +431,7 @@ export class TestCollective {
    * the members who sign it (F104), proposed by `proposer`, signed by
    * `signers` (members whose voice remains, and each joining member, to be
    * bound); then a rotation of the collective declaring the clone with
-   * those signature acts (Flaw M), signed by the safety key rebuilt from
+   * those signature acts (Flaw M), signed by the chain key rebuilt from
    * the shares of `rebuilders` (members who stay: a leaving member hands
    * over nothing), and committing to a next key dealt to the new members
    * only. A member removed without resigning (`members` leaving them out)
@@ -467,7 +467,7 @@ export class TestCollective {
       line = (await record(this.id, { registers: resigned.map((r) => r.act), inForce: this.f.agreement }, this.f.relays)).id;
     }
     const left = new Set(resigned.map((r) => r.member));
-    // C7, B16, Flaw B18: a declared holder of the everyday key, removed by
+    // C7, B16, Flaw B18: a declared holder of the signing key, removed by
     // this change, is removed at this rotation, which names the other
     // members' signature acts on the declaration.
     const recovered = this.recovering().filter((d) => !opts.members.includes(d.member));
@@ -515,7 +515,7 @@ export class TestCollective {
 
   /**
    * Rotate the collective to declare a clone (Agreements rule 37, Flaw M): the
-   * current safety key, rebuilt from the shares of `rebuilders` (a
+   * current chain key, rebuilt from the shares of `rebuilders` (a
    * leaving member hands over nothing), signs a rotation carrying
    * `declaration` and committing to a next key dealt to `members` only.
    * The change waits in `pending` until the homes count it ([`settle`]).
@@ -533,7 +533,7 @@ export class TestCollective {
       .filter((s) => o.rebuilders.includes(s.holder))
       .slice(0, this.f.safety.threshold)
       .map((s) => unb64(s.share));
-    const current = rebuildSafety(shares) as { scheme: number; seeds: Uint8Array; commit: string };
+    const current = rebuildChainKey(shares) as { scheme: number; seeds: Uint8Array; commit: string };
     const dealt = deal(o.members, o.governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
 
     const f = this.f.identity;
@@ -547,11 +547,11 @@ export class TestCollective {
       identity: f.identity,
       previous: actId(this.id.chainActs()[f.position]),
       position: f.position + 1,
-      safetySeeds: current.seeds,
-      safetyScheme: current.scheme,
+      chainKeySeeds: current.seeds,
+      chainKeyScheme: current.scheme,
       newSigningPublic: signingPublic(newSigning),
-      nextSafetyScheme: dealt.scheme,
-      nextSafetyCommit: dealt.commit,
+      nextChainKeyScheme: dealt.scheme,
+      nextChainKeyCommit: dealt.commit,
       kept,
       declarations: [o.declaration],
     });
@@ -580,7 +580,7 @@ export class TestCollective {
    * `signers`; then a rotation declaring it as a rollback, naming the
    * broken act. The rotation is signed with the keys the broken stretch
    * holds, rebuilt from the shares of `rebuilders`, and deals a fresh
-   * safety key to the members after. Nothing is erased: the broken act and
+   * chain key to the members after. Nothing is erased: the broken act and
    * everything after it stay shown, counting for nothing. Save every file
    * after.
    */
@@ -632,7 +632,7 @@ export class TestCollective {
    * An ordinary change (Agreements rule 37c): the release area's own words, which
    * its holders change alone. A clone marked with the release area's power
    * and the members who sign it; the collective records it at once with
-   * their signature acts (A2), with its everyday key: no rotation (Q8).
+   * their signature acts (A2), with its signing key: no rotation (Q8).
    */
   async changeReleaseWords(opts: {
     words: string;
@@ -697,7 +697,7 @@ export class TestCollective {
    * A change written on the collective's record at once (rule 37c): a  /**
    * A change written on the collective's record at once (rule 37c): a
    * clone marked with the one power its changes need, signed by `signers`,
-   * recorded with their signature acts (A2) and the everyday key.
+   * recorded with their signature acts (A2) and the signing key.
    */
   private async recordChange(opts: {
     governance: Governance;
@@ -759,7 +759,7 @@ export class TestCollective {
    * signature acts naming it, as for terms; the collective registers it at
    * once by a record that acknowledges those signatures, placing them at
    * its line. From that line the member's voice counts for nothing (F109).
-   * Where the member holds the everyday key, the collective cannot draw
+   * Where the member holds the signing key, the collective cannot draw
    * its line without them: no record is made, and the declaration takes
    * effect at the recovery rotation, the member change removing them,
    * which names those signature acts (Agreements draft 9, C7, B16, B18).
@@ -779,7 +779,7 @@ export class TestCollective {
     broken?: { before: string };
   }): Promise<{ declaration: string; signed: Signed[]; record?: string }> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
-    if (!opts.broken && this.recovering().length) throw new Error('the everyday key\'s holder was declared absent: refit the collective first');
+    if (!opts.broken && this.recovering().length) throw new Error('the signing key\'s holder was declared absent: refit the collective first');
     const named = opts.broken?.before ?? this.f.agreement;
     const payload = await this.declarationFor(opts.member, opts.via, named);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the declaration is not the one shown: nothing signed');
@@ -802,7 +802,7 @@ export class TestCollective {
   }
 
   /**
-   * Declarations against the everyday key's holder waiting for the
+   * Declarations against the signing key's holder waiting for the
    * recovery rotation (C7, B16): no record could register them, since the
    * collective cannot draw its line without the declared holder.
    */

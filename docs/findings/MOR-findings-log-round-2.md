@@ -4,6 +4,7 @@
 
 **Names, old to new (the rename pass, 10 October 2026, `docs/rename-pass.md`).** The entries below, and every other record, keep the names of their day; read them with this map. Wording only: no rule and nothing on the wire changed.
 - **Layers** (F212): Envelope → **Envelopes**; Finance → **Money**; Law → **Agreements**; Production → **Development**; Identity and Text unchanged. "Finance rule 15" in a record is Money rule 15; `MIP-law-draft-10.md` is `MIP-agreements-draft-10.md`. In code: `layers::FINANCE`, `LAW`, `PRODUCTION`, `ENVELOPE_AND_TEXT` are `layers::MONEY`, `AGREEMENTS`, `DEVELOPMENT`, `ENVELOPES_AND_TEXT`, numbers unchanged (2, 3, 4, 1); the modules `law`, `finance`, `envelope` are `agreements`, `money`, `envelopes`.
+- **Keys** ("The two keys renamed", 5 October 2026): the safety key → **the chain key**; the everyday key → **the signing key**; so a safety commitment, seed or scheme is a chain-key commitment, seed or scheme. "Everyday act", "everyday check" and "everyday line" are unchanged (acts signed with the signing key). The hash tag `"MOR/safety"` is unchanged; `module-airgap-safety-signer-draft-4.md` and the safety seed Modules are `module-airgap-chain-key-signer-draft-4.md`, `module-chain-key-seed-words-draft-1.md` and `module-chain-key-seed-hex-draft-1.md`.
 
 ## Round 2 review patterns (working rules)
 

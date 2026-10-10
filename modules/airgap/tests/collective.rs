@@ -1,4 +1,4 @@
-//! Collectives' split safety keys (Module, section 5; Agreements rule 36, F97).
+//! Collectives' split chain keys (Module, section 5; Agreements rule 36, F97).
 
 mod common;
 
@@ -51,7 +51,7 @@ fn collective(rng: &mut TestRng) -> (Act, Vec<Share>) {
     };
     assert_eq!(
         shares::rebuild_check(&dealt[1..4]).unwrap(),
-        e.safety.commit
+        e.chain_key.commit
     );
     let g = online::genesis(
         identity_spec(),
@@ -101,12 +101,12 @@ fn a_collective_rotation_from_k_shares_with_the_next_shares_verifiably_dealt() {
     for sh in &next {
         shares::verify_share(sh).unwrap();
         assert_eq!(sh.dealing.fingerprint(), next[0].dealing.fingerprint());
-        assert_eq!(sh.dealing.safety, acc.rotation.safety);
+        assert_eq!(sh.dealing.chain_key, acc.rotation.chain_key);
     }
     // The rebuild check, by other members on a second device.
     assert_eq!(
         shares::rebuild_check(&next[1..]).unwrap(),
-        acc.rotation.safety.commit
+        acc.rotation.chain_key.commit
     );
 
     // Chloe has died: the next rotation uses the escrowed share, and the
@@ -139,7 +139,7 @@ fn a_dealer_who_deals_shares_of_another_seed_is_caught_by_the_rebuild_check() {
     let mut dealt = shares::deal(&decoy, 2, 0, 3, plan().holders, &mut rng);
     let committed = kept.key(2, 0);
     for s in dealt.iter_mut() {
-        s.dealing.safety.commit = committed.commitment();
+        s.dealing.chain_key.commit = committed.commitment();
     }
     for s in &dealt {
         shares::verify_share(s).unwrap();
@@ -224,7 +224,7 @@ fn any_k_shares_rebuild_the_same_seed_and_fewer_reveal_nothing_checkable() {
         let (s, d) = shares::rebuild(&chosen).unwrap();
         assert_eq!(s, seed);
         assert_eq!(d.index, 7);
-        assert_eq!(s.key(3, 7).commitment(), d.safety.commit);
+        assert_eq!(s.key(3, 7).commitment(), d.chain_key.commit);
     }
     assert!(matches!(
         shares::rebuild(&dealt[..2]),

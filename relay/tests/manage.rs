@@ -510,7 +510,7 @@ async fn the_operator_rotates_and_closes_from_the_page() {
     let b = Browser::new(&r);
     b.pair(&r).await;
     assert_eq!(
-        b.ask("status", json!({})).await.ok()["holdsSafetyKey"],
+        b.ask("status", json!({})).await.ok()["holdsChainKey"],
         true
     );
     b.ask("rotate", json!({ "closure": false }))
@@ -542,7 +542,7 @@ async fn the_operator_rotates_and_closes_from_the_page() {
     }
 }
 
-/// An operator whose safety key is kept elsewhere rotates there, then gives
+/// An operator whose chain key is kept elsewhere rotates there, then gives
 /// the home the rotation and the new key file through the page.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_operator_hands_over_a_rotation_made_elsewhere() {
@@ -562,7 +562,7 @@ async fn the_operator_hands_over_a_rotation_made_elsewhere() {
         identity: op.id,
         binding: op.id,
         signing_secret: mor_core::hash::sha256(b"operator/sign/0"),
-        safety: None,
+        chain_key: None,
     };
     let r = Running::start_as(
         Role::Home,
@@ -577,19 +577,19 @@ async fn the_operator_hands_over_a_rotation_made_elsewhere() {
     let b = Browser::new(&r);
     b.pair(&r).await;
     assert_eq!(
-        b.ask("status", json!({})).await.ok()["holdsSafetyKey"],
+        b.ask("status", json!({})).await.ok()["holdsChainKey"],
         false
     );
     b.ask("rotate", json!({ "closure": false, "confirm": "rotate" }))
         .await
         .refused(409, "rotate where it is kept");
-    // Where its safety key is kept, the operator rotates.
+    // Where its chain key is kept, the operator rotates.
     let (rot, _) = rotation(&op, Rot::default());
     let new_keys = Keys {
         identity: op.id,
         binding: rot.id(),
         signing_secret: mor_core::hash::sha256(b"operator/sign/1"),
-        safety: None,
+        chain_key: None,
     };
     let bundle = Bundle {
         acts: vec![rot.encode()],

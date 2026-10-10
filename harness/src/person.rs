@@ -3,7 +3,7 @@
 //!
 //! Every key comes from the run's own random seed and a name, so a run can
 //! rebuild a key it needs (a backed-up signing seed, a thief's copy of a
-//! safety key) and no two runs share keys. Test identities only: the safety
+//! chain key) and no two runs share keys. Test identities only: the safety
 //! key is held in software.
 
 use mor_core::act::{self, Act, Addressing, Inside, Object};
@@ -12,16 +12,16 @@ use mor_core::envelopes::{DecKey, EncKey, EncryptionKey, Route, Routes, Version}
 use mor_core::hash::{sha256, Hash, ZERO_HASH};
 use mor_core::identity::{
     Absence, Audit, Declaration, Endorsement, Genesis, Home, HomeRule, KeptTip, Objection, Payload, Receipt,
-    Rotation, SafetyCommit, SigningKey,
+    Rotation, ChainKeyCommit, SigningKey,
 };
 use mor_core::mmr::Mmr;
 use mor_core::sig::{self, SchnorrKey, SlhKey};
 use mor_relay::operator::random;
 use mor_relay::Specs;
 
-/// The safety scheme of the gauntlet's identities: SLH-DSA-SHA2-128f
+/// The chain-key scheme of the gauntlet's identities: SLH-DSA-SHA2-128f
 /// (scheme 3), fast to sign. Both schemes are allowed (Identity).
-pub const SAFETY_SCHEME: u8 = 3;
+pub const CHAIN_KEY_SCHEME: u8 = 3;
 
 fn derive(seed: &[u8; 32], label: &str) -> Hash {
     let mut b = seed.to_vec();
@@ -46,7 +46,7 @@ pub fn slh(seed: &[u8; 32], label: &str) -> SlhKey {
     let h = derive(seed, &format!("{label}/safety"));
     let g = sha256(&h);
     SlhKey::from_seeds(
-        SAFETY_SCHEME,
+        CHAIN_KEY_SCHEME,
         h[..16].try_into().unwrap(),
         h[16..].try_into().unwrap(),
         g[..16].try_into().unwrap(),
@@ -60,8 +60,8 @@ fn signing_key(k: &SchnorrKey) -> SigningKey {
     }
 }
 
-fn commit(k: &SlhKey) -> SafetyCommit {
-    SafetyCommit {
+fn commit(k: &SlhKey) -> ChainKeyCommit {
+    ChainKeyCommit {
         scheme: k.scheme(),
         commit: k.commitment(),
     }
@@ -127,8 +127,8 @@ pub struct Person {
     /// Generation of the current keys: 0 at genesis, one more per rotation.
     pub gen: u32,
     pub sign: SchnorrKey,
-    /// The safety key the current chain act committed, to reveal next.
-    pub safety: SlhKey,
+    /// The chain key the current chain act committed, to reveal next.
+    pub chain_key: SlhKey,
     /// The identity-chain act that bound the current signing key.
     pub binding: Hash,
     pub position: u64,
@@ -171,10 +171,10 @@ impl Person {
     ) -> (Act, Person) {
         let specs = Specs::test();
         let sign = schnorr(seed, &format!("{name}/0"));
-        let safety = slh(seed, &format!("{name}/0"));
+        let chain_key = slh(seed, &format!("{name}/0"));
         let g = Payload::Genesis(Genesis {
             signing_key: signing_key(&sign),
-            safety: commit(&safety),
+            chain_key: commit(&chain_key),
             homes,
             rule,
             declarations,
@@ -192,7 +192,7 @@ impl Person {
                 id,
                 gen: 0,
                 sign,
-                safety,
+                chain_key,
                 binding: id,
                 position: 0,
                 seq: vec![],
@@ -215,7 +215,7 @@ impl Person {
         schnorr(&self.seed, &format!("{}/thief/{label}", self.name))
     }
 
-    /// A rotation, signed with the safety key the current chain act
+    /// A rotation, signed with the chain key the current chain act
     /// committed. Returns the act and the person as it is if it counts.
     pub fn rotation(&self, r: Rot) -> (Act, Person) {
         let gen = self.gen + 1;
@@ -224,8 +224,8 @@ impl Person {
             .signing_key
             .clone()
             .unwrap_or_else(|| schnorr(&self.seed, &label));
-        // A thief's rival commits a safety key of its own.
-        let next_safety = if r.signing_key.is_some() {
+        // A thief's rival commits a chain key of its own.
+        let next_chain_key = if r.signing_key.is_some() {
             slh(&self.seed, &format!("{label}/thief"))
         } else {
             slh(&self.seed, &label)
@@ -235,7 +235,7 @@ impl Person {
             prev: self.binding,
             position: self.position + 1,
             signing_key: signing_key(&next_sign),
-            safety: commit(&next_safety),
+            chain_key: commit(&next_chain_key),
             kept,
             disowned: None,
             homes: r.homes,
@@ -247,9 +247,9 @@ impl Person {
             closure: r.closure,
         });
         let i = inside(self.specs.identity, 1, payload.to_map());
-        let safety = self.safety.clone();
+        let chain_key = self.chain_key.clone();
         let a = seal(&i, Some(self.id), None, None, &random::<32>(), |id| {
-            safety.sign(id, Some(&random::<16>()))
+            chain_key.sign(id, Some(&random::<16>()))
         });
         let mut q = self.clone();
         if r.signing_key.is_some() {
@@ -258,7 +258,7 @@ impl Person {
         }
         q.gen = gen;
         q.sign = next_sign;
-        q.safety = next_safety;
+        q.chain_key = next_chain_key;
         q.binding = a.id();
         q.position += 1;
         (a, q)
@@ -379,7 +379,7 @@ impl Person {
         self.act(spec, 4, e.to_map(), None, None)
     }
 
-    /// A receipt, as the operator's everyday key signs one.
+    /// A receipt, as the operator's signing key signs one.
     pub fn receipt(
         &mut self,
         identity: &Hash,
@@ -431,9 +431,9 @@ impl Person {
         )
     }
 
-    /// The same identity as someone holding only its everyday key and its
+    /// The same identity as someone holding only its signing key and its
     /// public sequence sees it: a home operator's key, stolen.
-    pub fn from_everyday_key(
+    pub fn from_signing_key(
         name: &str,
         id: Hash,
         binding: Hash,
@@ -445,8 +445,8 @@ impl Person {
             id,
             gen: 0,
             sign: SchnorrKey::from_secret(secret).expect("a valid signing secret"),
-            // Not held: a thief with the everyday key has no safety key.
-            safety: slh(&random::<32>(), "not held"),
+            // Not held: a thief with the signing key has no chain key.
+            chain_key: slh(&random::<32>(), "not held"),
             binding,
             position: 0,
             seq,

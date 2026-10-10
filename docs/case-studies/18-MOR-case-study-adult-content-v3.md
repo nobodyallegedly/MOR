@@ -63,7 +63,7 @@ This case study stays businesslike. It follows a performer, Mara, from selling h
 
 On MOR:
 
-- **Payee pointers accept several units.** In Money each unit (a currency, a token) is a specification and each rail a Module, and a payee pointer can accept several. Mara's pointer already declares more than one, and her vault, behind her safety key, has an entry for each unit she accepts, on more than one rail: a unit the vault does not cover cannot be paid to her everyday pointer at all, which is what stops a thief from opening a road she never chose. Adding a unit later takes a rotation, which she planned for.
+- **Payee pointers accept several units.** In Money each unit (a currency, a token) is a specification and each rail a Module, and a payee pointer can accept several. Mara's pointer already declares more than one, and her vault, behind her chain key, has an entry for each unit she accepts, on more than one rail: a unit the vault does not cover cannot be paid to her everyday pointer at all, which is what stops a thief from opening a road she never chose. Adding a unit later takes a rotation, which she planned for.
 - **Buyers' clients show the alternatives.** When the card route fails, a subscriber's client offers the other units Mara accepts, and conversion routes turn what the buyer has into what Mara receives, each hop disclosed.
 - **The audience stays.** Subscribers follow Mara's identity. Losing a payment rail does not mean losing the audience.
 - **Agreements stand.** Subscriptions are agreements between subscribers and creators; a rail that refuses a payment does not void the agreement, it only closes one road for paying it.

@@ -39,8 +39,8 @@ export interface Resolution {
   waiting: string[];
   contested: number[];
   signingKey?: Uint8Array;
-  safetyScheme?: number;
-  safetyCommit?: string;
+  chainKeyScheme?: number;
+  chainKeyCommit?: string;
   homes: Home[];
   rule?: number[];
   effective?: string;

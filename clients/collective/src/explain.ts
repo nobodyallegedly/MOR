@@ -108,7 +108,7 @@ export interface TermsRead {
   parent: string | null;
   grammar: {
     signing: HoldingOut;
-    safety: HoldingOut;
+    chainKey: HoldingOut;
     recovery: { form: 'custodian' | 'escrow'; custodian?: string | null; grant?: string | null; authority?: string | null } | null;
   } | null;
   arbitrators: string[] | null;
@@ -232,11 +232,11 @@ const OUTCOMES = [
 
 const WORDS = {
   f96: (n: number) =>
-    `With ${n} members, a safety key that needs all ${n} of them would be lost with any one of them (F96). Lower the number of members needed to rebuild it.`,
+    `With ${n} members, a chain key that needs all ${n} of them would be lost with any one of them (F96). Lower the number of members needed to rebuild it.`,
   absence: (n: number) => `Absence is judged by some of the other members: between 1 and ${Math.max(n - 1, 0)} of them.`,
   rule: (n: number) => `The number of members who must sign a change outside the constitution is not between 1 and the ${n} members.`,
   constitution: (n: number) => `The number of members who must sign a change of the constitution is not between 1 and the ${n} members.`,
-  shares: (n: number) => `The number of members needed to rebuild the safety key is not between 1 and the ${n} members.`,
+  shares: (n: number) => `The number of members needed to rebuild the chain key is not between 1 and the ${n} members.`,
   release: (n: number) => `The number of members who must sign a release is not between 1 and the ${n} members.`,
 };
 
@@ -399,7 +399,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     lines.push({ text: 'It is complete once everyone its mark names, and everyone it adds, has signed it (Agreements rule 45).' });
     if (g) {
       lines.push({
-        text: "A change of the constitution is then put in force by a rotation of the collective; any other change by the collective's record, at once, with its everyday key (Agreements rules 37, 37c).",
+        text: "A change of the constitution is then put in force by a rotation of the collective; any other change by the collective's record, at once, with its signing key (Agreements rules 37, 37c).",
       });
     }
     sections.push({ heading: 'How it comes into force: its mark', lines });
@@ -410,28 +410,28 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     const s = g.signing;
     if (s.form === 'one') {
       lines.push({
-        text: `${names(s.holder!)} holds the collective's everyday key, and signs the collective's acts with it. An act no area reaches needs nobody else's signature.`,
+        text: `${names(s.holder!)} holds the collective's signing key, and signs the collective's acts with it. An act no area reaches needs nobody else's signature.`,
       });
     } else if (s.form === 'shares') {
-      lines.push({ text: `The everyday key is held jointly: any ${s.threshold} of ${list((s.members ?? []).map(names))} sign together.` });
+      lines.push({ text: `The signing key is held jointly: any ${s.threshold} of ${list((s.members ?? []).map(names))} sign together.` });
     } else {
-      lines.push({ text: `${names(s.custodian!)} holds the everyday key as custodian, under grant ${short(s.grant!)}.` });
+      lines.push({ text: `${names(s.custodian!)} holds the signing key as custodian, under grant ${short(s.grant!)}.` });
     }
-    const k = g.safety;
+    const k = g.chainKey;
     if (k.form === 'shares') {
       const m = k.members ?? [];
       lines.push({
-        text: `The safety key, the one that rotates the collective (new keys, new members, new homes), is cut into ${m.length} shares, one each for ${list(m.map(names))}. Any ${k.threshold} of them together rebuild it.`,
+        text: `The chain key, the one that rotates the collective (new keys, new members, new homes), is cut into ${m.length} shares, one each for ${list(m.map(names))}. Any ${k.threshold} of them together rebuild it.`,
       });
       if (k.threshold === 1) {
-        lines.push({ text: 'Any one member alone can rebuild the safety key and rotate the collective, without the others.', tone: 'warn' });
+        lines.push({ text: 'Any one member alone can rebuild the chain key and rotate the collective, without the others.', tone: 'warn' });
       } else if (k.threshold! < m.length) {
         lines.push({ text: `If one member is lost, the other ${m.length - 1} can still rotate the collective (F96).`, tone: 'ok' });
       }
     } else if (k.form === 'one') {
-      lines.push({ text: `${names(k.holder!)} alone holds the safety key.`, tone: 'warn' });
+      lines.push({ text: `${names(k.holder!)} alone holds the chain key.`, tone: 'warn' });
     } else {
-      lines.push({ text: `${names(k.custodian!)} holds the safety key as custodian, under grant ${short(k.grant!)}.`, tone: 'warn' });
+      lines.push({ text: `${names(k.custodian!)} holds the chain key as custodian, under grant ${short(k.grant!)}.`, tone: 'warn' });
     }
     if (g.recovery) {
       const r = g.recovery;
@@ -446,7 +446,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
 
     const words = new Map(t.areaWords);
     const al: Line[] = [];
-    if (!t.areas.length) al.push({ text: "No area: no act of the collective needs members' own signatures; its everyday key alone speaks for it.", tone: 'warn' });
+    if (!t.areas.length) al.push({ text: "No area: no act of the collective needs members' own signatures; its signing key alone speaks for it.", tone: 'warn' });
     for (const a of t.areas) {
       al.push(
         a.holders.length
@@ -509,7 +509,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
       lines: [
         { text: 'Any member can leave alone, at any time, by a resignation no one else signs, keeping what they own and staying bound by what they signed (Agreements rule 37a).' },
         {
-          text: "It takes effect for the collective at the collective's next record, its line, drawn with its everyday key. Until then their signature still counts (F109, a stated cost). The members who stay then rotate the collective to keys the one who left never held (Agreements rule 37).",
+          text: "It takes effect for the collective at the collective's next record, its line, drawn with its signing key. Until then their signature still counts (F109, a stated cost). The members who stay then rotate the collective to keys the one who left never held (Agreements rule 37).",
           tone: 'warn',
         },
       ],
@@ -666,13 +666,13 @@ export function readChanges(beforePayload: Uint8Array, afterPayload: Uint8Array,
     });
   const holder = (t: TermsRead) => (t.grammar?.signing.form === 'one' ? t.grammar.signing.holder! : null);
   if (holder(before) !== holder(after) && holder(after)) {
-    out.push({ text: `The everyday key passes to ${names(holder(after)!)}${holder(before) ? ` (was ${names(holder(before)!)})` : ''}.` });
+    out.push({ text: `The signing key passes to ${names(holder(after)!)}${holder(before) ? ` (was ${names(holder(before)!)})` : ''}.` });
   }
-  const sb = before.grammar?.safety;
-  const sa = after.grammar?.safety;
+  const sb = before.grammar?.chainKey;
+  const sa = after.grammar?.chainKey;
   if (sa?.form === 'shares' && sb?.form === 'shares' && JSON.stringify(sa) !== JSON.stringify(sb)) {
     out.push({
-      text: `The safety key is dealt afresh: ${sa.members!.length} shares, any ${sa.threshold} rebuild it (was ${sb.members!.length} shares, any ${sb.threshold}). Nobody leaving ever holds a share of the new key.`,
+      text: `The chain key is dealt afresh: ${sa.members!.length} shares, any ${sa.threshold} rebuild it (was ${sb.members!.length} shares, any ${sb.threshold}). Nobody leaving ever holds a share of the new key.`,
       tone: sa.threshold === 1 && sb.threshold !== 1 ? 'warn' : undefined,
     });
   }

@@ -53,7 +53,7 @@ MOR was designed with this failure in mind: **rewards attach to settlements, nev
 **The library grows,** and Priya cannot maintain it alone. She and three regular contributors form a collective: an identity with its own keys and founding agreement.
 
 - Any two maintainers can sign a release.
-- All four are needed to rotate the collective's safety key. Because that alone would freeze the project if one of them vanished for good, the grammar names its way through: a fifth share held in escrow by a custodian under the collective's grant, released by the abandonment authority the agreement names. Every key grammar must leave a way to rotate that needs less than everyone; this is theirs.
+- All four are needed to rotate the collective's chain key. Because that alone would freeze the project if one of them vanished for good, the grammar names its way through: a fifth share held in escrow by a custodian under the collective's grant, released by the abandonment authority the agreement names. Every key grammar must leave a way to rotate that needs less than everyone; this is theirs.
 - The project's income is split by an agreement all four signed, with shares for past contributors.
 
 **Nobody is irreplaceable, and nobody is trapped.** When a maintainer burns out and leaves, the others clone the agreement without her and rotate the keys. Her share in past work keeps paying her. The project does not depend on one exhausted person. And who judges a member's absence, or which keeper records the shares, cannot change without the signature of every member whose voice remains; once she has left, she is judged by the clause in force.

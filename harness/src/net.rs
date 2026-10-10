@@ -5,7 +5,7 @@
 //! in this process, on a local port, from a fresh data directory. The
 //! harness can switch it off and on, act as its operator (approve a
 //! rotation, rotate, close), or play a thief who stole its operator's
-//! everyday key, which it can never do to a deployed home.
+//! signing key, which it can never do to a deployed home.
 
 use mor_core::hash::Hash;
 use mor_core::identity::Home;

@@ -388,7 +388,7 @@ pub enum Holding {
     /// `[ 0, holder ]`: one holder.
     One(Hash),
     /// `[ 1, threshold, members ]`: any k of these members; jointly for the
-    /// signing key, by shares for the safety key.
+    /// signing key, by shares for the chain key.
     Shares { threshold: u64, members: Vec<Hash> },
     /// `[ 2, custodian, grant ]`: a custodian under the collective's grant.
     Custodian { custodian: Hash, grant: Hash },
@@ -437,7 +437,7 @@ impl Recovery {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyGrammar {
     pub signing: Holding,
-    pub safety: Holding,
+    pub chain_key: Holding,
     pub recovery: Option<Recovery>,
 }
 
@@ -445,7 +445,7 @@ impl KeyGrammar {
     pub fn to_value(&self) -> Value {
         let mut m = vec![
             (Value::Uint(0), self.signing.to_value()),
-            (Value::Uint(1), self.safety.to_value()),
+            (Value::Uint(1), self.chain_key.to_value()),
         ];
         if let Some(r) = &self.recovery {
             m.push((Value::Uint(3), r.to_value()));
@@ -1972,7 +1972,7 @@ impl Terms {
     /// to rotate that survives the loss of any one key holder.
     fn check_grammar(&self, g: &KeyGrammar) -> R<()> {
         let parties = &self.parties;
-        for h in [&g.signing, &g.safety] {
+        for h in [&g.signing, &g.chain_key] {
             if let Holding::Shares { threshold, members } = h {
                 if members.is_empty()
                     || !distinct(members)
@@ -1999,7 +1999,7 @@ impl Terms {
                 }
             }
         }
-        match &g.safety {
+        match &g.chain_key {
             Holding::Shares { threshold, members } => {
                 if *threshold == members.len() as u64 && g.recovery.is_none() {
                     return Err(AgreementsError::Check(
@@ -2010,7 +2010,7 @@ impl Terms {
             Holding::One(holder) => {
                 if !matches!(g.recovery, Some(Recovery::Escrow { .. })) {
                     return Err(AgreementsError::Check(
-                        "one holder keeps the safety key and no escrowed share is named for a successor (F96)",
+                        "one holder keeps the chain key and no escrowed share is named for a successor (F96)",
                     ));
                 }
                 let has_successor =
@@ -2019,7 +2019,7 @@ impl Terms {
                     });
                 if !has_successor {
                     return Err(AgreementsError::Check(
-                        "one holder keeps the safety key and no successor to the seat is named (F96)",
+                        "one holder keeps the chain key and no successor to the seat is named (F96)",
                     ));
                 }
             }
@@ -2031,7 +2031,7 @@ impl Terms {
                 };
                 if !other {
                     return Err(AgreementsError::Check(
-                        "one custodian keeps the safety key and no recovery path held by another is named (F96)",
+                        "one custodian keeps the chain key and no recovery path held by another is named (F96)",
                     ));
                 }
             }
@@ -3880,7 +3880,7 @@ fn key_grammar(v: &Value) -> R<KeyGrammar> {
     }
     Ok(KeyGrammar {
         signing: holding(field(&f, 0).ok_or(AgreementsError::Shape("key grammar signing key"))?)?,
-        safety: holding(field(&f, 1).ok_or(AgreementsError::Shape("key grammar safety key"))?)?,
+        chain_key: holding(field(&f, 1).ok_or(AgreementsError::Shape("key grammar chain key"))?)?,
         recovery: field(&f, 3).map(recovery).transpose()?,
     })
 }

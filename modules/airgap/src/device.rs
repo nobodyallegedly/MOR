@@ -1,6 +1,6 @@
 //! The offline signing device (Module, sections 2 to 5).
 //!
-//! A device holds safety seeds, and a memory of every rotation it signed. It
+//! A device holds chain-key seeds, and a memory of every rotation it signed. It
 //! reads a pending rotation, checks it, builds the complete rotation act
 //! itself and shows a summary of the exact bytes it will sign ([`Signer::review`]);
 //! only then does it sign ([`Signer::sign`]). A collective's rotation is the
@@ -20,14 +20,14 @@ use crate::summary::{self, Before, Summary};
 use mor_core::act::{self, Act, Addressing, Inside, Scheme};
 use mor_core::cbor::{self, Value};
 use mor_core::hash::{tagged_hash_parts, Hash};
-use mor_core::identity::{self, ChainState, Genesis, Payload, SafetyCommit, SigningKey};
+use mor_core::identity::{self, ChainState, Genesis, Payload, ChainKeyCommit, SigningKey};
 use mor_core::sig::{self, SchnorrKey, SlhKey, Verdict};
 use mor_core::text;
 use rand_core::{CryptoRng, RngCore};
 use std::fmt;
 
 /// What rule 3.7 says to the user, at genesis and at every fresh seed.
-pub const BACKUP_NOTICE: &str = "Back up this safety seed now, on paper, kept apart from every device. \
+pub const BACKUP_NOTICE: &str = "Back up this chain-key seed now, on paper, kept apart from every device. \
 Back up the signing seed on your everyday device too: escaping a hostile or device-bound home needs \
 your current signing key, and a lost phone with no backup can mean a lost identity at such a home.";
 
@@ -60,7 +60,7 @@ pub struct Record {
     pub homeless: bool,
 }
 
-/// Rule 3.4: what the device signed with one safety key.
+/// Rule 3.4: what the device signed with one chain key.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyMemory {
     /// The key, by its commitment.
@@ -101,13 +101,13 @@ impl fmt::Display for Refusal {
             Refusal::Message(e) => write!(f, "{e}"),
             Refusal::Previous(e) => write!(f, "the previous act does not check: {e}"),
             Refusal::NoMatchingKey => f.write_str(
-                "this device holds no safety key matching the commitment in the previous act",
+                "this device holds no chain key matching the commitment in the previous act",
             ),
-            Refusal::NotARotation(w) => write!(f, "the safety key signs only rotations: {w}"),
+            Refusal::NotARotation(w) => write!(f, "the chain key signs only rotations: {w}"),
             Refusal::Rotation(e) => write!(f, "the rotation does not check: {e}"),
             Refusal::AlreadySigned { act } => write!(
                 f,
-                "this safety key already signed a different rotation ({}); it signs no other",
+                "this chain key already signed a different rotation ({}); it signs no other",
                 hexs(act)
             ),
             Refusal::NeedsConfirmation(e) => write!(f, "needs your explicit confirmation: {e}"),
@@ -174,7 +174,7 @@ pub struct Choices {
     /// Derive the next key from a fresh seed of this Module and scheme,
     /// because the current seed may be exposed (rule 3.3).
     pub fresh_seed: Option<(SeedModule, u8)>,
-    /// The scheme of the next safety key, if not the seed's own. A scheme
+    /// The scheme of the next chain key, if not the seed's own. A scheme
     /// named by specification hash is not implemented by this device.
     pub next_scheme: Option<u8>,
     /// Clean-device mode (section 4): the device generates the new signing key.
@@ -258,7 +258,7 @@ struct Previous {
     id: Hash,
     identity: Hash,
     position: u64,
-    commit: SafetyCommit,
+    commit: ChainKeyCommit,
     genesis: Option<Genesis>,
     vault: Option<Option<Value>>,
 }
@@ -298,7 +298,7 @@ fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
                 id,
                 identity: id,
                 position: 0,
-                commit: g.safety,
+                commit: g.chain_key,
                 vault: vault_of(&g.declarations),
                 genesis: Some(g),
             })
@@ -306,13 +306,13 @@ fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
         Payload::Rotation(r) => {
             identity::check_rotation_shape(&a, &inside, &r).map_err(|e| p(e.to_string()))?;
             if !sig::is_slh(&a.signature.scheme) {
-                return Err(p("a rotation is signed with a safety key".into()));
+                return Err(p("a rotation is signed with a chain key".into()));
             }
             Ok(Previous {
                 id,
                 identity: a.outside.signer.expect("checked"),
                 position: r.position,
-                commit: r.safety,
+                commit: r.chain_key,
                 vault: vault_of(&r.declarations),
                 genesis: None,
             })
@@ -323,7 +323,7 @@ fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
 
 /// The pending inside, parsed: spec, type 1 and a payload; nothing else
 /// (reading: the device never signs a field it cannot show). A salt, or a
-/// next safety commitment, from the online device is dropped.
+/// next chain-key commitment, from the online device is dropped.
 struct Parsed {
     payload: Vec<(Value, Value)>,
     stripped: Vec<u8>,
@@ -400,7 +400,7 @@ impl Signer {
 
     /// Hold a seed restored from its backup.
     pub fn add_seed(&mut self, seed: Seed, scheme: u8, from_index: u64) {
-        assert!(scheme == 2 || scheme == 3, "safety schemes are 2 and 3");
+        assert!(scheme == 2 || scheme == 3, "chain-key schemes are 2 and 3");
         self.seeds.push(StoredSeed {
             seed,
             scheme,
@@ -413,7 +413,7 @@ impl Signer {
         let s = &self.seeds[seed];
         let k = s.seed.key(s.scheme, index);
         Message::CommitmentExport(CommitmentExport {
-            safety: SafetyCommit {
+            chain_key: ChainKeyCommit {
                 scheme: k.scheme(),
                 commit: k.commitment(),
             },
@@ -423,7 +423,7 @@ impl Signer {
 
     /// Rule 3.2: the key at `index` whose commitment is `commit`, if a seed
     /// of this device gives it.
-    fn find_key(&self, commit: &SafetyCommit, index: u64) -> Option<(usize, SlhKey)> {
+    fn find_key(&self, commit: &ChainKeyCommit, index: u64) -> Option<(usize, SlhKey)> {
         let scheme = match commit.scheme {
             Scheme::Founding(n @ (2 | 3)) => n,
             _ => return None,
@@ -497,7 +497,7 @@ impl Signer {
             .ok_or(Refusal::NoMatchingKey)?;
         let next = if let Some((module, scheme)) = choices.fresh_seed {
             if scheme != 2 && scheme != 3 {
-                return Err(Refusal::Unsupported("safety schemes other than 2 and 3"));
+                return Err(Refusal::Unsupported("chain-key schemes other than 2 and 3"));
             }
             let seed = Seed::new(module, random(rng));
             let s = StoredSeed {
@@ -511,7 +511,7 @@ impl Signer {
             let s = &self.seeds[seed_i];
             let scheme = choices.next_scheme.unwrap_or(s.scheme);
             if scheme != 2 && scheme != 3 {
-                return Err(Refusal::Unsupported("safety schemes other than 2 and 3"));
+                return Err(Refusal::Unsupported("chain-key schemes other than 2 and 3"));
             }
             (
                 Next::Held { seed: None },
@@ -544,7 +544,7 @@ impl Signer {
         };
         let prev = check_previous(&pending.prev, &self.config)?;
         let (key, dealing) = shares::rebuild_key(shares)?;
-        if dealing.safety != prev.commit || dealing.index != pending.index {
+        if dealing.chain_key != prev.commit || dealing.index != pending.index {
             return Err(Refusal::NoMatchingKey);
         }
         let seed = shares::fresh_dealable_seed(plan.seed_module, rng);
@@ -619,7 +619,7 @@ impl Signer {
         let mut probe = parsed.payload.clone();
         probe.push((
             Value::Uint(3),
-            SafetyCommit {
+            ChainKeyCommit {
                 scheme: sig::SLH_128S,
                 commit: [0; 32],
             }
@@ -659,7 +659,7 @@ impl Signer {
 
         let mut summary = Summary::default();
         if parsed.commitment_supplied {
-            summary.warn("The online device supplied a next safety commitment. It was IGNORED and replaced by this device's own: a well-behaved client never sends one. Check the online device.");
+            summary.warn("The online device supplied a next chain-key commitment. It was IGNORED and replaced by this device's own: a well-behaved client never sends one. Check the online device.");
         }
         if let Standing::Exception(e) = &standing {
             summary.warn(format!("EXCEPTION to single use: {e}"));
@@ -704,7 +704,7 @@ impl Signer {
         let mut payload = parsed.payload;
         payload.push((
             Value::Uint(3),
-            SafetyCommit {
+            ChainKeyCommit {
                 scheme: next_key.scheme(),
                 commit: next_key.commitment(),
             }
@@ -783,7 +783,7 @@ impl Signer {
         let new_seed = match &next {
             Next::Held { seed: Some(s) } => {
                 summary.warn(format!(
-                    "FRESH SEED ({} Module): the next safety key comes from a new seed. {BACKUP_NOTICE}",
+                    "FRESH SEED ({} Module): the next chain key comes from a new seed. {BACKUP_NOTICE}",
                     s.seed.module.name()
                 ));
                 Some(s.seed.clone())
@@ -791,7 +791,7 @@ impl Signer {
             _ => None,
         };
         summary.plain(format!(
-            "Next safety key: {}, committed by this device, never by the online device",
+            "Next chain key: {}, committed by this device, never by the online device",
             summary::scheme_name(&next_key.scheme())
         ));
         self.finish_summary(&mut summary, &pending, &prev);
@@ -1065,7 +1065,7 @@ pub fn deal_genesis(
         rng,
     );
     let export = Message::CommitmentExport(CommitmentExport {
-        safety: dealt[0].dealing.safety,
+        chain_key: dealt[0].dealing.chain_key,
         index: 0,
     });
     (export, dealt)

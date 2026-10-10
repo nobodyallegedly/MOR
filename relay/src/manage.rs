@@ -450,7 +450,7 @@ fn run(node: &mut Node, key: &[u8; 32], op: &str, args: &Value) -> Answer {
                 "policyText": node.info().policy,
                 "limits": { "act": c.limits.act, "media": c.limits.media, "feed": c.limits.feed, "wait": c.limits.wait },
                 "operator": oh(&node.operator()),
-                "holdsSafetyKey": node.holds_safety_key(),
+                "holdsChainKey": node.holds_chain_key(),
                 "closed": node.closed()?,
                 "counts": { "acts": counts.acts, "sealed": counts.sealed, "media": counts.media, "bytes": counts.bytes },
                 "arrivals": node.max_arrival()?,
@@ -601,10 +601,10 @@ fn run(node: &mut Node, key: &[u8; 32], op: &str, args: &Value) -> Answer {
             if args.get("confirm").and_then(Value::as_str) != Some(expected) {
                 return Err(bad(format!("to confirm, type \"{expected}\"")));
             }
-            if !node.holds_safety_key() {
+            if !node.holds_chain_key() {
                 return Err(refuse(
                     StatusCode::CONFLICT,
-                    "the operator's safety key is not on this server: rotate where it is kept, then hand the rotation and the new key file to this home",
+                    "the operator's chain key is not on this server: rotate where it is kept, then hand the rotation and the new key file to this home",
                 ));
             }
             let id = node.rotate_operator(closure).map_err(checked)?;

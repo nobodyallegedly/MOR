@@ -1,13 +1,13 @@
 [package]
 name = "mor-airgap"
 version = "0.1.0"
-description = "The air-gapped safety key Module: the offline signer's rules, the two seed Modules, split safety keys for collectives, and the file and animated-QR transports."
+description = "The air-gapped chain key Module: the offline signer's rules, the two seed Modules, split chain keys for collectives, and the file and animated-QR transports."
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
 mor-core = { path = "../../core" }
-# Pedersen commitments for split safety keys (secp256k1 group arithmetic).
+# Pedersen commitments for split chain keys (secp256k1 group arithmetic).
 k256 = { version = "0.13.4", default-features = false, features = ["arithmetic"] }
 rand_core = { version = "0.6.4", default-features = false }
 # The words seed Module: BIP-39's English word list and checksum, over 256 bits.

@@ -28,7 +28,7 @@ This case study follows one community through three stages: a neighbourhood asso
 
 ## 2. First steps: a neighbourhood association
 
-**The association sets itself up as a collective.** It is a full identity with its own home and keys, and a founding agreement that says how its keys are held: for example, two of five board members sign everyday acts, and four of five rotate its safety key.
+**The association sets itself up as a collective.** It is a full identity with its own home and keys, and a founding agreement that says how its keys are held: for example, two of five board members sign everyday acts, and four of five rotate its chain key.
 
 **Members join with their own identities.** Membership is a signed list in the founding agreement, changed by cloning it and rotating the association's keys. Nothing is anonymous yet: in a small association, everyone knows who voted, and that is acceptable.
 

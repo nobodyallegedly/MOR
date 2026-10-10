@@ -6,7 +6,7 @@
 //
 // Every act has a signer, so the visitor needs an identity. The page makes a
 // one-time identity for each message: a genesis at the homes the settings
-// name, a signing key held in this page's memory only, and a safety key
+// name, a signing key held in this page's memory only, and a chain key
 // committed and then forgotten, so the identity can never rotate. When the
 // message is sent, the page forgets every key; nothing is stored.
 
@@ -18,7 +18,7 @@ import {
   makeEveryday,
   makeGenesis,
   newSigningSecret,
-  newTestSafetyKey,
+  newTestChainKey,
   randomBytes,
   seal,
   sealedParts,
@@ -98,13 +98,13 @@ export async function sendMessage(o: { text: string; to: Recipient; homes: strin
   }
   if (!homes.length) throw new Error('no home could be reached to give the message a signer');
   const signingSecret = newSigningSecret();
-  const safety = newTestSafetyKey(2) as { scheme: number; commit: string; seeds: Uint8Array };
-  safety.seeds.fill(0); // forgotten: this identity never rotates
+  const chainKey = newTestChainKey(2) as { scheme: number; commit: string; seeds: Uint8Array };
+  chainKey.seeds.fill(0); // forgotten: this identity never rotates
   const genesis = makeGenesis({
     identitySpec: SPECS.identity,
     signingSecret,
-    safetyScheme: safety.scheme,
-    safetyCommit: safety.commit,
+    chainKeyScheme: chainKey.scheme,
+    chainKeyCommit: chainKey.commit,
     homes,
   });
   const sender = actId(genesis);

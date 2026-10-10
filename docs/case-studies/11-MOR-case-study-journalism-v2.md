@@ -26,7 +26,7 @@ Journalism on MOR is a set of roles. Each can be filled by a single person, a la
 
 ## 2. A funded question
 
-**Sara covers her commune.** She has an identity with a signing key on her phone and a safety key on an offline device, like every creator in these case studies. Her readers follow her identity, not a newspaper's website.
+**Sara covers her commune.** She has an identity with a signing key on her phone and a chain key on an offline device, like every creator in these case studies. Her readers follow her identity, not a newspaper's website.
 
 **Readers fund a question.** Residents want to know what is in the commune's contract with a developer for a piece of public land. They pool money on the question: a signed agreement stating the question, the amount, a deadline on a named time reference, and a keeper. The pledges can be held by a custodian named in the agreement, or remain signed commitments paid only when the condition is met. Either way, the money is released on delivery, not before.
 

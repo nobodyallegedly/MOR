@@ -64,10 +64,10 @@ export interface CollectiveTerms {
   clone: Rule;
   /** The constitutional change rule (field 18); absent: every party. */
   constitutional?: Rule;
-  /** Who holds the collective's everyday signing key. */
+  /** Who holds the collective's signing key. */
   signingHolder: string;
-  /** The safety key as shares: any `threshold` of these members rebuild it. */
-  safety: { threshold: number; members: string[] };
+  /** The chain key as shares: any `threshold` of these members rebuild it. */
+  chainKey: { threshold: number; members: string[] };
   /** The release rule, as an area: publications of the collective (Envelopes
    * type 0) count only with this many of its holders' signature acts. */
   releases: { holders: string[]; threshold: number; words?: string };
@@ -136,7 +136,7 @@ export function termsPayload(t: CollectiveTerms): Uint8Array {
 export function encodeTerms(t: CollectiveTerms): Uint8Array {
   const grammar = new Map<number, unknown>([
     [0, [0, unhex(t.signingHolder)]],
-    [1, [1, t.safety.threshold, t.safety.members.map(unhex)]],
+    [1, [1, t.chainKey.threshold, t.chainKey.members.map(unhex)]],
   ]);
   const area = new Map<number, unknown>([
     [0, 'Releases'],
@@ -630,7 +630,7 @@ export async function signedBy(member: string, relays: string[], via: Via = {}):
 /**
  * The collective's record (Agreements type 17), its everyday line: it writes a
  * complete clone with the signature acts that complete it (A2), and
- * registers departures (A1). Signed with the collective's everyday key.
+ * registers departures (A1). Signed with the collective's signing key.
  * A test collective keeps one sequence, so it names no other. `acks`:
  * acts it acknowledges (Envelopes), which places members' signature acts at
  * this line ("Made before, made after", 2): the signatures completing a

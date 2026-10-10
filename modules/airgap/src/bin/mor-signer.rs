@@ -16,11 +16,11 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const HELP: &str =
-    "mor-signer — the offline safety-key signer (air-gapped safety key Module, draft 4)
+    "mor-signer — the offline chain-key signer (air-gapped chain key Module, draft 4)
 
 PROTOTYPE, FOR TEST IDENTITIES. Keep this machine offline, always.
 
-  mor-signer [--dir DIR] new words|hex [128s|128f]    a new safety seed; shows its backup
+  mor-signer [--dir DIR] new words|hex [128s|128f]    a new chain-key seed; shows its backup
   mor-signer [--dir DIR] restore words|hex [128s|128f] a seed from its backup, read from input
   mor-signer [--dir DIR] seeds                        the seeds this device holds
   mor-signer [--dir DIR] export OUT [--seed N]        the commitment for a genesis (key 0)
@@ -89,7 +89,7 @@ fn scheme(s: Option<&String>) -> u8 {
     match s.map(String::as_str) {
         None | Some("128s") => 2,
         Some("128f") => 3,
-        Some(x) => fail(format!("no safety scheme {x:?}: 128s or 128f")),
+        Some(x) => fail(format!("no chain-key scheme {x:?}: 128s or 128f")),
     }
 }
 

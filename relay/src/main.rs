@@ -63,8 +63,8 @@ enum Cmd {
         /// then names: for a relay on this machine only, never published.
         #[arg(long)]
         local_test: bool,
-        /// Home: the operator's key file (its everyday signing key and the
-        /// act that bound it). The safety key never goes on the server.
+        /// Home: the operator's key file (its signing key and the
+        /// act that bound it). The chain key never goes on the server.
         #[arg(long, requires = "operator_chain")]
         operator_key: Option<PathBuf>,
         /// Home: the operator's identity-chain acts, oldest first, as a
@@ -72,7 +72,7 @@ enum Cmd {
         #[arg(long, requires = "operator_key")]
         operator_chain: Option<PathBuf>,
         /// Home, stopgap until the genesis client exists: create a new test
-        /// operator identity, self-hosted here, its safety key in software.
+        /// operator identity, self-hosted here, its chain key in software.
         #[arg(long, conflicts_with = "operator_key")]
         new_test_operator: bool,
         /// Largest act or sealed container accepted, in bytes.
@@ -132,7 +132,7 @@ enum Cmd {
         dir: PathBuf,
         rotation: String,
     },
-    /// Rotate this home's test operator, whose safety key is in the key
+    /// Rotate this home's test operator, whose chain key is in the key
     /// file: new keys, the home's own acts kept. Stop the home first.
     Rotate {
         #[arg(long)]
@@ -184,7 +184,7 @@ enum Cmd {
         #[arg(long)]
         local_test: bool,
     },
-    /// The operator rotated where its safety key is kept: hold the rotation
+    /// The operator rotated where its chain key is kept: hold the rotation
     /// (a bundle holding that one act) and take the new key file. Stop the
     /// home first.
     Rotated {
@@ -293,7 +293,7 @@ async fn main() {
                     println!("Home set up in {}.", dir.display());
                     if test {
                         println!(
-                            "Operator (a new TEST identity, safety key in software): {}",
+                            "Operator (a new TEST identity, chain key in software): {}",
                             wire::hex(&op)
                         );
                     } else {

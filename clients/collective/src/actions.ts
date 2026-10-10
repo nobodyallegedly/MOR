@@ -109,7 +109,7 @@ interface Plan {
 /** The standard words for a test collective's rules. Members may write their own. */
 export function standardWords(name: string, g: Omit<Governance, 'text'>): string {
   const constitution = g.constitutionalThreshold ? `any ${g.constitutionalThreshold} members` : 'every member whose voice remains';
-  return `“${name}”, a MOR test collective. Test acts only, wiped before the first real acts. Its everyday key is held by its first member; its safety key is split among the members, any ${g.safetyThreshold} of whom rebuild it. Releases are an area held by every member: a release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members, the change rules, the keys and the areas change by a clone signed by ${constitution} and by each member who joins, and a rotation of the collective declaring it. Other changes need any ${g.cloneThreshold} members, and are recorded by the collective at once. A member may leave alone at any time, keeping what they own. Any ${g.abandonmentOthers} of the other members together decide whether a member is absent; the outcome is that member losing their voice.`;
+  return `“${name}”, a MOR test collective. Test acts only, wiped before the first real acts. Its signing key is held by its first member; its chain key is split among the members, any ${g.safetyThreshold} of whom rebuild it. Releases are an area held by every member: a release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members, the change rules, the keys and the areas change by a clone signed by ${constitution} and by each member who joins, and a rotation of the collective declaring it. Other changes need any ${g.cloneThreshold} members, and are recorded by the collective at once. A member may leave alone at any time, keeping what they own. Any ${g.abandonmentOthers} of the other members together decide whether a member is absent; the outcome is that member losing their voice.`;
 }
 
 export interface Rules {
@@ -212,7 +212,7 @@ function shownOf(c: TestCollective, agreements: AgreementsOf): Shown {
         need = nv.needed ?? 0;
       }
     }
-    const safety = t.grammar?.safety;
+    const chainKey = t.grammar?.chainKey;
     const signing = t.grammar?.signing;
     const parties = t.parties.length;
     return {
@@ -221,19 +221,19 @@ function shownOf(c: TestCollective, agreements: AgreementsOf): Shown {
       unread: null,
       agreement: agreements.agreement,
       // Left: gone as Agreements count it, or declared absent while holding the
-      // everyday key, the declaration signed and taking effect at the
+      // signing key, the declaration signed and taking effect at the
       // recovery rotation (C7, B16), where Agreements still counts them until then.
       members: t.parties.map((m) => ({ id: m, left: agreements.departed.includes(m) || c.recovering().some((d) => d.member === m) })),
       holder: signing?.form === 'one' && signing.holder ? signing.holder : c.f.signingHolder,
       rules: {
-        safety: safety?.threshold ?? c.f.governance.safetyThreshold,
+        safety: chainKey?.threshold ?? c.f.governance.safetyThreshold,
         release: area?.threshold ?? c.f.governance.releaseThreshold,
         clone: ruleNumber(t.clone, parties) ?? c.f.governance.cloneThreshold,
         others: t.abandonment?.threshold ?? Math.max(parties - 1, 1),
         ...(ruleNumber(t.constitutional, parties) !== undefined && t.constitutional?.form === 'threshold' ? { constitution: ruleNumber(t.constitutional, parties)! } : {}),
       },
       words: t.text,
-      shares: { threshold: safety?.threshold ?? c.f.safety.threshold, of: safety?.members?.length ?? c.f.safety.shares.length },
+      shares: { threshold: chainKey?.threshold ?? c.f.safety.threshold, of: chainKey?.members?.length ?? c.f.safety.shares.length },
       area: {
         holders: (area?.holders ?? []).map((h) => ({ id: h, voice: voices.includes(h), steppedDown: downIn(h) })),
         threshold: area?.threshold ?? 0,
@@ -422,7 +422,7 @@ export class Actions {
       title: `A new test identity, “${name}”`,
       summary: [
         'A new identity is born. Its genesis, signed now, goes to each of its homes, and each home signs a receipt.',
-        'Its safety key is kept in software, in this program’s folder: a test identity, never for a real one.',
+        'Its chain key is kept in software, in this program’s folder: a test identity, never for a real one.',
         a.mine
           ? 'It is you: the identity you act as here.'
           : 'It is a simulated member: held here so that one person can play every part in a test. Its consent is not independent.',
@@ -526,7 +526,7 @@ export class Actions {
     const who: Line[] = collective
       ? [
           {
-            text: `It is published by ${names(a.publisher)}, signed with its everyday key. It is not a release yet: it counts once ${anyOf(need, voices, names)}, the holders of its Releases area whose voice remains, have signed it, each with an act of their own (agreement in force ${short(collective.f.agreement)}).`,
+            text: `It is published by ${names(a.publisher)}, signed with its signing key. It is not a release yet: it counts once ${anyOf(need, voices, names)}, the holders of its Releases area whose voice remains, have signed it, each with an act of their own (agreement in force ${short(collective.f.agreement)}).`,
           },
           ...(voices.length < threshold && voices.length
             ? [{ text: `The area asks for ${threshold}; fewer holders remain, so all of them together meet it (Agreements rule 44d).` }]
@@ -753,7 +753,7 @@ export class Actions {
     releaseThreshold: number;
     constitution?: number;
     clone: number;
-    safety: number;
+    chainKey: number;
     problem: string | null;
     /** Agreements read the collective as broken (Agreements rule 37d). */
     broken?: boolean;
@@ -761,7 +761,7 @@ export class Actions {
     const agreements = await this.agreementsOf(c);
     const cname = this.store.book().collectives.find((x) => x.id === c.identity)?.name;
     const it = cname ? `“${cname}”` : 'this collective';
-    const none = { voices: [], releaseVoices: [], releaseNeeded: 0, releaseThreshold: 0, clone: 0, safety: 0 };
+    const none = { voices: [], releaseVoices: [], releaseNeeded: 0, releaseThreshold: 0, clone: 0, chainKey: 0 };
     if (agreements.broken) return { ...none, problem: brokenWords(it, agreements.broken), broken: true };
     if (!agreements.terms) return { ...none, problem: `Agreements' own reading of ${it} could not be had (${agreements.unread ?? 'nothing found'}), so who counts cannot be told.` };
     type NV = { error: string | null; voices: string[]; needed: number | null };
@@ -775,7 +775,7 @@ export class Actions {
       releaseThreshold: agreements.terms.t.areas.find((x) => x.id === RELEASE_AREA)?.threshold ?? 0,
       ...(k?.form === 'threshold' && k.threshold ? { constitution: k.threshold } : {}),
       clone: agreements.terms.t.clone.form === 'threshold' && agreements.terms.t.clone.threshold ? agreements.terms.t.clone.threshold : agreements.terms.t.parties.length,
-      safety: agreements.terms.t.grammar?.safety.threshold ?? 0,
+      chainKey: agreements.terms.t.grammar?.chainKey.threshold ?? 0,
       problem: all.error ? `Agreements cannot count the members of ${it}: ${all.error}.` : null,
     };
   }
@@ -892,7 +892,7 @@ export class Actions {
     if (!s.homes.length) blocking.push('Name its homes first, under Settings.');
     const relays = s.relays.length ? s.relays : s.homes.map((h) => h.hint);
     const b = this.store.book();
-    // You first: the first member proposes the agreement and holds the everyday key.
+    // You first: the first member proposes the agreement and holds the signing key.
     const members = [...new Set(a.members)].sort(
       (x, y) => Number(!b.identities.find((i) => i.id === x)?.mine) - Number(!b.identities.find((i) => i.id === y)?.mine),
     );
@@ -918,8 +918,8 @@ export class Actions {
       title: `Found the collective “${name}”`,
       summary: [
         `Each of the ${members.length} members signs the founding agreement below, each with a visible act of their own. It exists only once every one has signed: nobody is founded into a collective without signing (Q11).`,
-        `Then the collective is born: an identity of its own, whose genesis declares this agreement. Its safety key is dealt as ${members.length} shares, and each member checks theirs; any ${rules.safetyThreshold} rebuild it.`,
-        `${names(members[0])} proposes it and holds the collective's everyday key.`,
+        `Then the collective is born: an identity of its own, whose genesis declares this agreement. Its chain key is dealt as ${members.length} shares, and each member checks theirs; any ${rules.safetyThreshold} rebuild it.`,
+        `${names(members[0])} proposes it and holds the collective's signing key.`,
         ...(g.stakes ? [`Each founder's share of all the collective's income, in its founding terms, which name the collective as null, "this collective" (F124 S1): ${g.stakes[0].holders.map(([h, n]) => `${names(h!)} ${n / 10_000}%`).join(', ')}.`] : []),
       ],
       sections: [
@@ -929,7 +929,7 @@ export class Actions {
           lines: [
             { text: `${members.map(names).join(', ')} sign here: test identities this program holds.` },
             { text: 'Their consent is simulated: one person decides for all of them. The mechanics are real; independent consent is not (test only).', tone: 'warn' },
-            { text: `Every share of the safety key and the everyday key are kept in this program's folder, in software.`, tone: 'warn' },
+            { text: `Every share of the chain key and the signing key are kept in this program's folder, in software.`, tone: 'warn' },
           ],
         },
         {
@@ -961,7 +961,7 @@ export class Actions {
           lines: [
             { text: `The collective ${got.collective.identity}.`, tone: 'ok' },
             { text: `Founding agreement ${got.agreement}, signed by ${got.signed.length} members.` },
-            { text: `Safety key dealt: any ${rules.safetyThreshold} of ${members.length}; dealing ${got.collective.f.safety.fingerprint.slice(0, 16)}…` },
+            { text: `Chain key dealt: any ${rules.safetyThreshold} of ${members.length}; dealing ${got.collective.f.safety.fingerprint.slice(0, 16)}…` },
             ...got.sent.map((x) => ({
               text: `${x.home}: ${x.result?.receipt ? 'receipt signed' : `refused (${x.code ?? '?'}) ${x.error ?? ''}`}`,
               tone: (x.result?.receipt ? 'ok' : 'bad') as Line['tone'],
@@ -1008,7 +1008,7 @@ export class Actions {
     const departed = new Set(departedOf(c).map((d) => d.member));
     for (const d of departed) {
       if (c.f.members.includes(d) && !leave.has(d)) {
-        blocking.push(`${names(d)} left the collective. A change that keeps them as a member would deal them a share of the new safety key: remove them in the same change.`);
+        blocking.push(`${names(d)} left the collective. A change that keeps them as a member would deal them a share of the new chain key: remove them in the same change.`);
       }
     }
     const members = [...c.f.members.filter((m) => !leave.has(m)), ...join.filter((j) => !c.f.members.includes(j))];
@@ -1043,7 +1043,7 @@ export class Actions {
     // (F122): Agreements' plan says so, not this client.
     const agreements = await this.agreementsOf(c);
     // Leaving the count too: a member declared absent while holding the
-    // everyday key, whose declaration takes effect at this rotation (C7, B16).
+    // signing key, whose declaration takes effect at this rotation (C7, B16).
     const recoveringOut = c.recovering().filter((d) => leave.has(d.member)).map((d) => d.member);
     const lm = this.agreementsMark(c, agreements, (m) => encodeTerms(collectiveTerms(g, members, holder, c.f.agreement, m)), [...resigning, ...recoveringOut], names);
     blocking.push(...lm.blocking);
@@ -1063,7 +1063,7 @@ export class Actions {
       .filter((x) => staying.includes(x.holder) && !departed.has(x.holder) && this.store.holds(x.holder))
       .map((x) => x.holder);
     if (rebuilders.length < c.f.safety.threshold) {
-      blocking.push(`Rotating the collective needs ${c.f.safety.threshold} shares of its safety key from members who stay; only ${rebuilders.length} are here.`);
+      blocking.push(`Rotating the collective needs ${c.f.safety.threshold} shares of its chain key from members who stay; only ${rebuilders.length} are here.`);
     }
     if (!members.length) blocking.push('Nobody would be left.');
     if (!join.length && !leave.size && !changedGovernance) blocking.push('Nothing changes.');
@@ -1091,12 +1091,12 @@ export class Actions {
     for (const d of recovering) {
       const n = d.signatures?.length ?? 0;
       summary.push(
-        `${names(d.member)} was declared absent while holding the everyday key: this rotation is where the declaration takes effect (Agreements, “Made before, made after”, C7, B16). ${n ? `It names the ${n === 1 ? 'other member’s signature act' : `${n} other members’ signature acts`} on the declaration beside the clone’s, so that they count there (Agreements draft 9, B18).` : 'Its signer alone met the number, so the rotation names no signature on it.'} The clone is counted without ${names(d.member)}.`,
+        `${names(d.member)} was declared absent while holding the signing key: this rotation is where the declaration takes effect (Agreements, “Made before, made after”, C7, B16). ${n ? `It names the ${n === 1 ? 'other member’s signature act' : `${n} other members’ signature acts`} on the declaration beside the clone’s, so that they count there (Agreements draft 9, B18).` : 'Its signer alone met the number, so the rotation names no signature on it.'} The clone is counted without ${names(d.member)}.`,
       );
     }
     summary.push(
       `The members whose voice remains sign a clone of the agreement in force: a new version naming it, with ${members.length} members, marked with the constitutional change rule (Agreements rules 44c, 45a).`,
-      `Then the collective rotates: its safety key, rebuilt from the shares of ${list(usedRebuilders.map(names)) || 'nobody'}, signs a rotation declaring the clone, and a new safety key is dealt to the new members only.`,
+      `Then the collective rotates: its chain key, rebuilt from the shares of ${list(usedRebuilders.map(names)) || 'nobody'}, signs a rotation declaring the clone, and a new chain key is dealt to the new members only.`,
       'Once the homes count the rotation, the new rules apply, and anything the old key signs is void (F100).',
     );
     // The release area: who stepped down, and whether this change refits it (rule 37b).
@@ -1125,9 +1125,9 @@ export class Actions {
         {
           heading: 'Signed on this device',
           lines: [
-            ...(resigning.length ? [{ text: `${list(resigning.map(names))} sign${resigning.length === 1 ? 's' : ''} a resignation; the collective's everyday key, held here, signs the record.` }] : []),
+            ...(resigning.length ? [{ text: `${list(resigning.map(names))} sign${resigning.length === 1 ? 's' : ''} a resignation; the collective's signing key, held here, signs the record.` }] : []),
             { text: `The clone is proposed by ${names(signersStaying[0] ?? staying[0] ?? '')} and signed by ${list([...signersStaying, ...join].map(names))}.` },
-            { text: `The shares of ${list(usedRebuilders.map(names))} rebuild the safety key for the rotation. Members who leave hand over nothing.` },
+            { text: `The shares of ${list(usedRebuilders.map(names))} rebuild the chain key for the rotation. Members who leave hand over nothing.` },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
           ],
         },
@@ -1229,7 +1229,7 @@ export class Actions {
   // ------------------------------------------------------------ leaving, stepping down, an ordinary change
 
   /**
-   * While the everyday key's holder is declared absent and not yet removed,
+   * While the signing key's holder is declared absent and not yet removed,
    * the collective draws no line with their key: the refit, the recovery
    * rotation, comes first (Agreements, “Made before, made after”, C7, B16, B18).
    */
@@ -1238,7 +1238,7 @@ export class Actions {
       .recovering()
       .map(
         (d) =>
-          `${names(d.member)}, who holds the collective's everyday key, was declared absent: the collective draws no line with their key. Refit it first (Change members: remove ${names(d.member)}); that rotation is where the declaration takes effect (Agreements, “Made before, made after”, C7, B16).`,
+          `${names(d.member)}, who holds the collective's signing key, was declared absent: the collective draws no line with their key. Refit it first (Change members: remove ${names(d.member)}); that rotation is where the declaration takes effect (Agreements, “Made before, made after”, C7, B16).`,
       );
   }
 
@@ -1247,7 +1247,7 @@ export class Actions {
     const names = this.store.names();
     const c = this.store.collective(collective);
     const cname = this.store.book().collectives.find((x) => x.id === collective)?.name ?? short(collective);
-    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first. A record signed with the old everyday key would be void once it counts.');
+    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first. A record signed with the old signing key would be void once it counts.');
     blocking.push(...this.awaitingRecovery(c, names));
     if (!c.f.members.includes(member)) blocking.push(`${names(member)} is not a member of “${cname}”.`);
     if (!this.store.holds(member)) blocking.push(`${names(member)} is not held by this program, so it cannot sign here.`);
@@ -1390,9 +1390,9 @@ export class Actions {
       { text: `A signature of theirs placed before the line still counts for what it signed: a release made before the line can still be completed with it (Agreements, “Made before, made after”, C1).` },
     ];
     if (c.f.signingHolder === a.member && !b) {
-      what.push({ text: `${who} holds the collective's everyday key under its key grammar until the refit; here this program draws the line with it.`, tone: 'warn' });
+      what.push({ text: `${who} holds the collective's signing key under its key grammar until the refit; here this program draws the line with it.`, tone: 'warn' });
     }
-    what.push({ text: `${who}'s share of the current safety key exists until the refit; the rotation that follows fences it off (F100).`, tone: 'warn' });
+    what.push({ text: `${who}'s share of the current chain key exists until the refit; the rotation that follows fences it off (F100).`, tone: 'warn' });
     const then: Line[] = b
       ? [
           {
@@ -1401,13 +1401,13 @@ export class Actions {
         ]
       : [
           {
-            text: `The members who stay then refit the collective: Change members, removing ${who}, rotates it to keys ${who} never held, and deals the safety key afresh among those who stay (Agreements rule 37).`,
+            text: `The members who stay then refit the collective: Change members, removing ${who}, rotates it to keys ${who} never held, and deals the chain key afresh among those who stay (Agreements rule 37).`,
           },
         ];
     if (n.problem && !b) what.push({ text: n.problem, tone: 'warn' });
-    if (voices.length && n.safety >= voices.length) {
+    if (voices.length && n.chainKey >= voices.length) {
       then.push({
-        text: `With ${voices.length} member${voices.length === 1 ? '' : 's'} left, a safety key needing ${n.safety} of them would be lost with any one of them: the refit must ask fewer to rebuild it (F96).`,
+        text: `With ${voices.length} member${voices.length === 1 ? '' : 's'} left, a chain key needing ${n.chainKey} of them would be lost with any one of them: the refit must ask fewer to rebuild it (F96).`,
         tone: 'warn',
       });
     }
@@ -1444,7 +1444,7 @@ export class Actions {
         ]
       : [
           `${who} signs a resignation from the agreement in force (${short(named)}), alone: nobody else's signature is asked for, and nobody can stop it (Agreements rule 37a).`,
-          `The collective then registers it at once by a record, its line, signed with its everyday key. From that line on, ${who}'s signature counts toward no rule and no area of the collective (F109).`,
+          `The collective then registers it at once by a record, its line, signed with its signing key. From that line on, ${who}'s signature counts toward no rule and no area of the collective (F109).`,
           'Nothing else changes now: no rule is rewritten, no key rotates.',
         ];
     // BQ5 (decided by Nobody, allegedly, 9 October 2026): "It breaks, but
@@ -1484,7 +1484,7 @@ export class Actions {
           heading: 'Signed on this device',
           lines: [
             { text: `${who} signs the resignation here: a test identity this program holds.` },
-            ...(b ? [] : [{ text: "The collective's everyday key, kept in this program's folder, signs the record." }]),
+            ...(b ? [] : [{ text: "The collective's signing key, kept in this program's folder, signs the record." }]),
             ...(mine ? [] : [{ text: `${who} is a simulated member: their consent is simulated (test only).`, tone: 'warn' as const }]),
             ...(await this.unheard(c)),
           ],
@@ -1700,7 +1700,7 @@ export class Actions {
     const rebuilders = c.f.safety.shares.filter((x) => this.store.holds(x.holder) && !leaving.includes(x.holder)).map((x) => x.holder);
     const usedRebuilders = rebuilders.slice(0, c.f.safety.threshold);
     if (rebuilders.length < c.f.safety.threshold) {
-      blocking.push(`The rotation needs ${c.f.safety.threshold} shares of the collective's current safety key, the one the broken act dealt; only ${rebuilders.length} are held here by members who stay.`);
+      blocking.push(`The rotation needs ${c.f.safety.threshold} shares of the collective's current chain key, the one the broken act dealt; only ${rebuilders.length} are held here by members who stay.`);
     }
     const reading: Reading = {
       title,
@@ -1729,7 +1729,7 @@ export class Actions {
           heading: 'Signed on this device',
           lines: [
             { text: `The new version is proposed by ${names(signers[0] ?? members[0] ?? '')} and signed by ${list(signers.map(names)) || 'nobody'}.` },
-            { text: `The shares of ${list(usedRebuilders.map(names)) || 'nobody'} rebuild the collective's current safety key for the rotation; a new one is dealt to ${list(members.map(names)) || 'nobody'}.` },
+            { text: `The shares of ${list(usedRebuilders.map(names)) || 'nobody'} rebuild the collective's current chain key for the rotation; a new one is dealt to ${list(members.map(names)) || 'nobody'}.` },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
           ],
         },
@@ -1914,7 +1914,7 @@ export class Actions {
         {
           heading: 'Signed on this device',
           lines: [
-            { text: b ? `${who} signs the stepping down here; no record is drawn.` : `${who} signs the stepping down here; the collective's everyday key, kept in this program's folder, signs the record.` },
+            { text: b ? `${who} signs the stepping down here; no record is drawn.` : `${who} signs the stepping down here; the collective's signing key, kept in this program's folder, signs the record.` },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
             ...(await this.unheard(c)),
           ],
@@ -1971,7 +1971,7 @@ export class Actions {
   /**
    * An ordinary change (Agreements rule 37c, Q8): the release area's own words,
    * changed by enough of its holders, marked with the area's power, and
-   * written on the collective's record at once with its everyday key. No
+   * written on the collective's record at once with its signing key. No
    * rotation.
    */
   async prepareWords(a: { collective: string; text: string; signers?: string[] }) {
@@ -2021,7 +2021,7 @@ export class Actions {
       summary: [
         "An ordinary change: it changes only the Releases area's own words, an operational matter in that area (Agreements rules 44a, 44b).",
         `The clone is marked with the Releases area's power and signed by ${list(signers.map(names))}: enough of the area's holders (${anyOf(k, voices, names)}) (Agreements rules 44c, 45a).`,
-        "The collective writes it on its record at once, signed with its everyday key: no rotation, no new keys (Agreements rule 37c, Q8).",
+        "The collective writes it on its record at once, signed with its signing key: no rotation, no new keys (Agreements rule 37c, Q8).",
       ],
       sections: [
         { heading: 'What changes', lines: [...changes, ...(await this.unheard(c))] },
@@ -2030,7 +2030,7 @@ export class Actions {
         {
           heading: 'Signed on this device',
           lines: [
-            { text: `${list(signers.map(names))} sign the clone; the collective's everyday key, kept in this program's folder, signs the record.` },
+            { text: `${list(signers.map(names))} sign the clone; the collective's signing key, kept in this program's folder, signs the record.` },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
           ],
         },
@@ -2075,7 +2075,7 @@ export class Actions {
    * rules 44a, 46a). The judicial tier changes only with every member's
    * signature, one version for everyone (Agreements draft 10, F121): marked with
    * that power, signed by every member whose voice remains, and written on
-   * the collective's record at once with its everyday key: no rotation
+   * the collective's record at once with its signing key: no rotation
    * (rule 37c, Q8).
    */
   async prepareAbsenceRule(a: { collective: string; others: number; signers?: string[] }) {
@@ -2133,7 +2133,7 @@ export class Actions {
         `Today any ${old} of the other members together decide whether a member is absent; after the change, any ${others}. The outcome stays the same: the member loses their voice, never what they own (F105).`,
         `The clone is marked with the judicial tier's power and signed by ${list(signers.map(names))}: every member whose voice remains (Agreements rules 44c, 45a, 46a).`,
         'The judicial tier changes only with every member\'s signature, so there is one version for everyone: the new clause judges each member (Agreements draft 10, F121).',
-        "The collective writes it on its record at once, signed with its everyday key: no rotation, no new keys (Agreements rule 37c, Q8).",
+        "The collective writes it on its record at once, signed with its signing key: no rotation, no new keys (Agreements rule 37c, Q8).",
       ],
       sections: [
         { heading: 'What changes', lines: [...changes, ...notes, ...(await this.unheard(c))] },
@@ -2142,7 +2142,7 @@ export class Actions {
         {
           heading: 'Signed on this device',
           lines: [
-            { text: `${list(signers.map(names))} sign the clone; the collective's everyday key, kept in this program's folder, signs the record.` },
+            { text: `${list(signers.map(names))} sign the clone; the collective's signing key, kept in this program's folder, signs the record.` },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
           ],
         },
@@ -2238,12 +2238,12 @@ export class Actions {
     const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
     const who = names(a.member);
     const blocking: string[] = [];
-    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first. A record signed with the old everyday key would be void once it counts.');
+    if (c.f.pending) blocking.push('A member change is waiting for the homes: send it again first. A record signed with the old signing key would be void once it counts.');
     if (!c.f.members.includes(a.member)) blocking.push(`${who} is not a member of “${cname}”.`);
     if (departedOf(c).some((d) => d.member === a.member)) blocking.push(`${who} has already left “${cname}”, or was already declared absent.`);
     blocking.push(...this.awaitingRecovery(c, names));
     // C7, B16, B18: the collective cannot draw its line without the holder
-    // of its everyday key; the declaration takes effect at the recovery
+    // of its signing key; the declaration takes effect at the recovery
     // rotation, which names the others' signature acts on it.
     // RB3 (decided 9 October 2026): during a broken stretch, the
     // declaration names the agreement in force just before the broken act,
@@ -2296,8 +2296,8 @@ export class Actions {
         b
           ? `No record is drawn: a record made while the collective is broken counts for nothing (Agreements rule 37d). The rollback registers the declaration${cosigners.length ? ', naming those signature acts beside it, so that they count there' : ''}, exactly as a record would outside the broken stretch (RB3): from the rollback on, ${who}'s signature counts toward no rule and no area, and ${who} no longer blocks the way back.`
           : holder
-          ? `${who} holds the collective's everyday key, so the collective cannot draw its line without them: no record is made now. The declaration takes effect at the recovery rotation, the member change that removes ${who} (Change members), which rotates the collective to keys ${who} never held${cosigners.length ? ' and names those signature acts beside the clone’s, so that they count there' : ''} (Agreements, “Made before, made after”, C7, B16; Agreements draft 9, B18). From that rotation on, ${who}'s signature counts toward no rule and no area.`
-          : `The collective registers it at once by a record, its line, signed with its everyday key${cosigners.length ? ', acknowledging those signatures so that they count at the line' : ''}. From that line on, ${who}'s signature counts toward no rule and no area (F109).`,
+          ? `${who} holds the collective's signing key, so the collective cannot draw its line without them: no record is made now. The declaration takes effect at the recovery rotation, the member change that removes ${who} (Change members), which rotates the collective to keys ${who} never held${cosigners.length ? ' and names those signature acts beside the clone’s, so that they count there' : ''} (Agreements, “Made before, made after”, C7, B16; Agreements draft 9, B18). From that rotation on, ${who}'s signature counts toward no rule and no area.`
+          : `The collective registers it at once by a record, its line, signed with its signing key${cosigners.length ? ', acknowledging those signatures so that they count at the line' : ''}. From that line on, ${who}'s signature counts toward no rule and no area (F109).`,
         `${who} keeps what they own: outcome 0 removes the voice, never the stake. ${who} may contest it (Agreements rule 52); a contest is shown alongside it and changes nothing by itself. ${who}'s client shows ${who} this declaration, with the way to contest it (client conformance, RB3).`,
       ],
       sections: [
@@ -2305,7 +2305,7 @@ export class Actions {
           heading: 'What stands',
           lines: [
             { text: `A signature of ${who}'s placed before the line still counts for what it signed: a release made before the line can still be completed with it (Agreements, “Made before, made after”, C1).` },
-            { text: `${who}'s share of the current safety key exists until the refit; the rotation that follows fences it off (F100).`, tone: 'warn' },
+            { text: `${who}'s share of the current chain key exists until the refit; the rotation that follows fences it off (F100).`, tone: 'warn' },
           ],
         },
         { heading: 'Who decides from the line on', lines: this.decidersAfter(n, voices, releaseVoices, names) },
@@ -2318,8 +2318,8 @@ export class Actions {
           lines: [
             {
               text: holder
-                ? `${list(signers.map(names)) || 'Nobody'} sign${signers.length === 1 ? 's' : ''} here; the collective's everyday key signs nothing now.`
-                : `${list(signers.map(names)) || 'Nobody'} sign${signers.length === 1 ? 's' : ''} here; the collective's everyday key, kept in this program's folder, signs the record.`,
+                ? `${list(signers.map(names)) || 'Nobody'} sign${signers.length === 1 ? 's' : ''} here; the collective's signing key signs nothing now.`
+                : `${list(signers.map(names)) || 'Nobody'} sign${signers.length === 1 ? 's' : ''} here; the collective's signing key, kept in this program's folder, signs the record.`,
             },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
             ...(await this.unheard(c)),
@@ -2349,7 +2349,7 @@ export class Actions {
               ? { text: `Record ${got.record}: the collective's line, from which ${who}'s signature counts for nothing.`, tone: 'ok' as const }
               : b
                 ? { text: 'No record: the collective is broken. The rollback registers the declaration (Agreements rule 37d, RB3).', tone: 'ok' as const }
-                : { text: `No record: ${who} holds the everyday key. The declaration takes effect at the recovery rotation.`, tone: 'warn' as const },
+                : { text: `No record: ${who} holds the signing key. The declaration takes effect at the recovery rotation.`, tone: 'warn' as const },
             {
               text: got.record
                 ? `Next: the members who remain refit the collective (Change members: remove ${who}).`
@@ -2697,7 +2697,7 @@ export class Actions {
         {
           heading: 'Signed on this device',
           lines: [
-            { text: `${list(signers.map(names))} sign the clone; the collective's everyday key signs the record.` },
+            { text: `${list(signers.map(names))} sign the clone; the collective's signing key signs the record.` },
             { text: 'Every member here is a test identity held by this program: their consent is simulated (test only).', tone: 'warn' },
           ],
         },
@@ -3273,7 +3273,7 @@ export class Actions {
     const reading: Reading = {
       title: `Fork “${cname}”`,
       summary: [
-        `${sides.length} sides: ${sides.map((s, i) => `side ${i + 1}, ${list(s.map(names))}`).join('; ')}. Each side first founds its own collective, its successor; the fork act names them (F124 N4). Every member on a side signs with their own identity, not the collective's key, with their safety key on their own identity chain (a chain signature, F132), under the constitutional change rule (Agreements rule 47a, F124 N1).`,
+        `${sides.length} sides: ${sides.map((s, i) => `side ${i + 1}, ${list(s.map(names))}`).join('; ')}. Each side first founds its own collective, its successor; the fork act names them (F124 N4). Every member on a side signs with their own identity, not the collective's key, with their chain key on their own identity chain (a chain signature, F132), under the constitutional change rule (Agreements rule 47a, F124 N1).`,
         leaving.length
           ? `${list(leaving.map(names))} sign${leaving.length === 1 ? 's' : ''} no side: no seat in any successor, and a departed holder of each at their percentage (F124 N1).`
           : 'Every member whose voice remains is on a side.',
@@ -3361,7 +3361,7 @@ export class Actions {
         const x = await first.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.fork, payload, { public: true, relays, objects });
         acts.push(x.id);
         // F132 (U1): every member on a side, the fork's signer included,
-        // signs it with their safety key, by a chain signature on their own
+        // signs it with their chain key, by a chain signature on their own
         // identity chain.
         const ids = [];
         for (const m of listed) {
@@ -3416,7 +3416,7 @@ export class Actions {
         "The collective owns the work wholly, so it alone signs, by its own rules, meeting the lanes of every layer a release touches: Envelopes, Money and Agreements (F124 N7). This collective gives none of them to an area, so its own signature counts. Its members and departed holders own shares of its income, not the work; a release affects every holder alike.",
         'A claim on this work that the release does not name is shown beside it, openly contested (F124 N12).',
       ],
-      sections: [{ heading: 'Signed on this device', lines: [{ text: "The collective's everyday key signs it (test only).", tone: 'warn' }] }],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: "The collective's signing key signs it (test only).", tone: 'warn' }] }],
       plain: [],
       blocking,
     };
@@ -3498,7 +3498,7 @@ export class Actions {
       title: `Close “${cname}”`,
       summary: [
         'A closing ends a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor (F124 N9, F125 D5). After its line, anything the collective\'s keys sign counts for nothing in Agreements.',
-        `Signed by ${list(signers.map(names))}, each with their own identity and their safety key, on their own identity chain (a chain signature, F132), under the constitutional change rule.`,
+        `Signed by ${list(signers.map(names))}, each with their own identity and their chain key, on their own identity chain (a chain signature, F132), under the constitutional change rule.`,
         owes.length ? `It owes ${owes.length === 1 ? 'one debt' : `${owes.length} debts`}, its own or as a fork's successor.` : 'It owes nothing: every debt it signed or owes as a successor is paid or released.',
         ...(() => {
           const nobody = leftOpen.filter((x) => !x.notice).length;
@@ -3533,7 +3533,7 @@ export class Actions {
         const x = await first.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.closing, payload, { public: true, relays: col.f.relays, objects });
         const acts = [x.id];
         // F132 (U1): each signer, the closing's own included, signs it with
-        // their safety key, by a chain signature on their identity chain.
+        // their chain key, by a chain signature on their identity chain.
         const ids = [];
         for (const m of signers) {
           const i = this.store.identity(m);
@@ -3581,7 +3581,7 @@ export class Actions {
         `Its deadline: ${a.deadline}, on the test time reference (${short(TEST_TIME)}). If ${who} names an address in time, ${who} is paid. If not, the collective may close, the debt named in the closing act, visible and unpaid.`,
         'The notice and its deadline are visible to whoever checks the closing: the notice shows good faith, and how much depends on its conditions.',
       ],
-      sections: [{ heading: 'Signed on this device', lines: [{ text: 'Signed by the collective\'s everyday key, held here. Test identities only.', tone: 'warn' }] }],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: 'Signed by the collective\'s signing key, held here. Test identities only.', tone: 'warn' }] }],
       plain: [],
       blocking,
     };

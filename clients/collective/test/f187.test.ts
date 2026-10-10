@@ -61,7 +61,7 @@ async function breakBy(id: string, relay: { drop: boolean }, stay: string[], rem
   for (const i of [...s, leaving]) store.saveIdentity(i);
 }
 
-test('F187 (1): the rollback deals no share of the new safety key to a member who already left', async () => {
+test('F187 (1): the rollback deals no share of the new chain key to a member who already left', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, one, two, four] = ['Ada', 'Sim One', 'Sim Two', 'Sim Four'].map((n) => idOf(s, n));
@@ -85,7 +85,7 @@ test('F187 (1): the rollback deals no share of the new safety key to a member wh
     const b = box(s, id);
     assert.equal(b.law.broken, null);
     assert.deepEqual(b.members.filter((m) => !m.left).map((m) => m.id).sort(), [ada, one].sort());
-    assert.equal(b.shares.of, 2, 'the new safety key is dealt to the two who stay, never to Sim Four');
+    assert.equal(b.shares.of, 2, 'the new chain key is dealt to the two who stay, never to Sim Four');
   } finally {
     await relay.close();
   }

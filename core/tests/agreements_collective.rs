@@ -113,7 +113,7 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
                 threshold: 2,
                 members: ids.to_vec(),
             },
-            safety: Holding::Shares {
+            chain_key: Holding::Shares {
                 threshold: ids.len() as u64,
                 members: ids.to_vec(),
             },
@@ -288,7 +288,7 @@ impl Lab {
     }
 
     /// A member's signature on a fork or closing: a chain signature, with
-    /// their safety key, on their identity chain (F132).
+    /// their chain key, on their identity chain (F132).
     fn end(&mut self, by: usize, x: &Hash) -> Hash {
         let (id, q) = self.w.chain_sign(&self.m[by], *x);
         self.m[by] = q;
@@ -997,7 +997,7 @@ fn a_rotation_declares_the_membership_clone_with_its_signatures() {
                 threshold: 2,
                 members: new.clone(),
             };
-            g.safety = Holding::Shares {
+            g.chain_key = Holding::Shares {
                 threshold: 3,
                 members: new.clone(),
             };
@@ -1089,7 +1089,7 @@ fn a_member_removed_where_the_constitution_allows_it() {
             threshold: 1,
             members: keep.clone(),
         };
-        g.safety = Holding::Shares {
+        g.chain_key = Holding::Shares {
             threshold: 2,
             members: keep.clone(),
         };
@@ -1128,7 +1128,7 @@ fn a_departed_holders_stake_never_shrinks_without_them() {
             t.constitutional = Some(Rule::Threshold(2));
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
-            g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
+            g.chain_key = Holding::Shares { threshold: 2, members: keep.clone() };
             t.stakes = Some(vec![own(share)]);
             t.departed = Some(vec![cy]);
         })
@@ -2094,7 +2094,7 @@ fn a_declaration_removes_a_voice_at_the_labels_line() {
         t.constitutional = None;
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
-        g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
+        g.chain_key = Holding::Shares { threshold: 2, members: keep.clone() };
         g.recovery = Some(Recovery::Escrow { authority: auth });
         let a = t.areas.as_mut().unwrap();
         a[0].holders = vec![keep[1]];
@@ -2396,7 +2396,7 @@ fn a_threshold_authority_is_counted_at_the_line() {
             });
             let ids = t.parties.clone();
             let g = t.grammar.as_mut().unwrap();
-            g.safety = Holding::Shares { threshold: 2, members: ids };
+            g.chain_key = Holding::Shares { threshold: 2, members: ids };
             g.recovery = None;
         });
         let f = lab.founding;
@@ -2489,7 +2489,7 @@ fn a_declaration_against_the_key_holder_takes_effect_at_the_recovery_rotation() 
             t.parties = keep.clone();
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::One(keep[0]);
-            g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
+            g.chain_key = Holding::Shares { threshold: 2, members: keep.clone() };
             g.recovery = Some(Recovery::Escrow { authority: auth });
             t.areas.as_mut().unwrap()[0].holders = vec![keep[1]];
         });
@@ -2529,7 +2529,7 @@ fn a_threshold_declaration_at_the_recovery_rotation() {
             });
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::One(ids[ANA]);
-            g.safety = Holding::Shares { threshold: 2, members: ids };
+            g.chain_key = Holding::Shares { threshold: 2, members: ids };
             g.recovery = None;
         });
         let f = lab.founding;
@@ -2546,7 +2546,7 @@ fn a_threshold_declaration_at_the_recovery_rotation() {
             t.abandonment.as_mut().unwrap().authority = Authority::Others(1);
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::One(keep[0]);
-            g.safety = Holding::Shares { threshold: 1, members: keep.clone() };
+            g.chain_key = Holding::Shares { threshold: 1, members: keep.clone() };
             t.areas.as_mut().unwrap()[0].holders = vec![keep[1]];
         });
         let k = lab.propose(BEN, &t);
@@ -2590,7 +2590,7 @@ fn only_the_recovery_rotation_names_a_declarations_signatures() {
             proof: None,
         });
         let g = t.grammar.as_mut().unwrap();
-        g.safety = Holding::Shares { threshold: 2, members: ids };
+        g.chain_key = Holding::Shares { threshold: 2, members: ids };
         g.recovery = None;
     });
     let f = lab.founding;
@@ -2604,7 +2604,7 @@ fn only_the_recovery_rotation_names_a_declarations_signatures() {
         t.abandonment.as_mut().unwrap().authority = Authority::Others(1);
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 2, members: keep.clone() };
-        g.safety = Holding::Shares { threshold: 1, members: keep.clone() };
+        g.chain_key = Holding::Shares { threshold: 1, members: keep.clone() };
     });
     let k = lab.propose(ANA, &t);
     let s1 = lab.sign(ANA, &k);
@@ -2647,7 +2647,7 @@ fn a_seat_passes_by_nomination_after_a_declaration() {
         t.succession = None;
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 2, members: new.clone() };
-        g.safety = Holding::Shares { threshold: 3, members: new.clone() };
+        g.chain_key = Holding::Shares { threshold: 3, members: new.clone() };
         g.recovery = Some(Recovery::Escrow { authority: auth });
         t.areas.as_mut().unwrap()[1].holders = vec![new[2]];
     };
@@ -2728,7 +2728,7 @@ fn a_seat_passes_by_automatic_succession() {
             t.succession = None;
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::Shares { threshold: 2, members: new.clone() };
-            g.safety = Holding::Shares { threshold: 3, members: new.clone() };
+            g.chain_key = Holding::Shares { threshold: 3, members: new.clone() };
             // Ben off the Money lane; its number kept (Q26).
             let fin = &mut t.areas.as_mut().unwrap()[1];
             fin.holders.retain(|h| *h != ids[BEN]);
@@ -2748,7 +2748,7 @@ fn a_seat_passes_by_automatic_succession() {
                 ("it changes the words", &|t: &mut Terms| t.text = "Other words.".into()),
                 ("it lowers a threshold of the keys", &|t: &mut Terms| {
                     let m = t.parties.clone();
-                    t.grammar.as_mut().unwrap().safety = Holding::Shares { threshold: 2, members: m };
+                    t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 2, members: m };
                 }),
                 ("it leaves Dee out of the signing key", &|t: &mut Terms| {
                     let m = vec![t.parties[0], t.parties[2]];
@@ -2849,7 +2849,7 @@ fn what_b14_leaves_open_is_refused() {
             t.succession = None;
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::Shares { threshold: 2, members: place.clone() };
-            g.safety = Holding::Shares { threshold: 3, members: place.clone() };
+            g.chain_key = Holding::Shares { threshold: 3, members: place.clone() };
             t.areas.as_mut().unwrap()[1].holders = vec![];
         });
         t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Plan(ids[BEN]), signers: vec![dee.id] }]);
@@ -2864,20 +2864,20 @@ fn what_b14_leaves_open_is_refused() {
 }
 
 /// Flaw B17 (freeze suite v20, step 8b, the sixth collective): where Ben
-/// holds the safety key alone, the succession clone that passes his seat to
+/// holds the chain key alone, the succession clone that passes his seat to
 /// Dee also carries Dee's own plan, naming her successor, in the executed
 /// plan's place, signed by Dee in that clone; it comes into force, and Dee
 /// holds the key with a successor named (rule 36, F96). Without that plan,
 /// or with it for someone else, out of place, or where the party did not
-/// hold the safety key alone, the clone is invalid.
+/// hold the chain key alone, the clone is invalid.
 #[test]
-fn a_sole_safety_holders_successor_names_their_own_successor() {
+fn a_sole_chain_key_holders_successor_names_their_own_successor() {
     // Founded with a first successor named for Ben (rule 36); the members
     // then name Dee instead, all three signing, so Ben's seat passes
     // automatically (Q14).
     let mut lab = Lab::new(&|t| {
         let ids = t.parties.clone();
-        t.grammar.as_mut().unwrap().safety = Holding::One(ids[BEN]);
+        t.grammar.as_mut().unwrap().chain_key = Holding::One(ids[BEN]);
         t.succession = Some(vec![SuccessionPlan {
             party: ids[BEN],
             stakes: None,
@@ -2912,7 +2912,7 @@ fn a_sole_safety_holders_successor_names_their_own_successor() {
             t.succession = Some(plans.clone());
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::Shares { threshold: 2, members: new.clone() };
-            g.safety = Holding::One(dee.id);
+            g.chain_key = Holding::One(dee.id);
             t.areas.as_mut().unwrap()[1].holders = vec![];
         });
         t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Plan(ids[BEN]), signers: vec![dee.id] }]);
@@ -2947,12 +2947,12 @@ fn a_sole_safety_holders_successor_names_their_own_successor() {
     assert!(matches!(&got, Ok(c) if c.counts()), "{got:?}");
     assert_eq!(lab.in_force(&y), k);
     let cur = lab.view().terms(&k).unwrap();
-    assert_eq!(cur.grammar.unwrap().safety, Holding::One(dee.id));
+    assert_eq!(cur.grammar.unwrap().chain_key, Holding::One(dee.id));
     assert!(cur.succession.unwrap().iter().any(|p| p.party == dee.id && p.seats.as_ref().is_some_and(|s| s[0].0 == deesucc)));
 }
 
-/// Flaw B17 adds a plan only where the party held the safety key alone: in
-/// the label, whose safety key all three hold, a succession clone adding
+/// Flaw B17 adds a plan only where the party held the chain key alone: in
+/// the label, whose chain key all three hold, a succession clone adding
 /// one for the successor changes more than the plan gives.
 #[test]
 fn a_succession_clone_adds_no_plan_where_the_key_is_shared() {
@@ -2968,7 +2968,7 @@ fn a_succession_clone_adds_no_plan_where_the_key_is_shared() {
         t.succession = Some(vec![SuccessionPlan { party: dee.id, stakes: None, seats: Some(vec![(spec("Dee's successor"), 1)]), entry: Some(1) }]);
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 2, members: new.clone() };
-        g.safety = Holding::Shares { threshold: 3, members: new.clone() };
+        g.chain_key = Holding::Shares { threshold: 3, members: new.clone() };
         t.areas.as_mut().unwrap()[1].holders = vec![];
     });
     t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Plan(ids[BEN]), signers: vec![dee.id] }]);
@@ -3483,7 +3483,7 @@ fn a_threshold_declarations_signers_do_not_acknowledge_it() {
         });
         let ids = t.parties.clone();
         let g = t.grammar.as_mut().unwrap();
-        g.safety = Holding::Shares { threshold: 2, members: ids };
+        g.chain_key = Holding::Shares { threshold: 2, members: ids };
         g.recovery = None;
     });
     let f = lab.founding;
@@ -3785,7 +3785,7 @@ fn a_group_splits_off_and_its_members_become_departed_holders() {
         t.parties = keep.clone();
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
-        g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
+        g.chain_key = Holding::Shares { threshold: 2, members: keep.clone() };
         t.departed = Some(vec![cy]);
     });
     let k2 = lab.propose(ANA, &t);
@@ -3842,7 +3842,7 @@ fn a_removal_under_a_lower_rule_completes() {
             t.departed = Some(vec![cy]);
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::Shares { threshold: 1, members: keep.clone() };
-            g.safety = Holding::Shares { threshold: 2, members: keep.clone() };
+            g.chain_key = Holding::Shares { threshold: 2, members: keep.clone() };
         }
     };
     let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN])], &removal(true));
@@ -4673,7 +4673,7 @@ fn found_successor(lab: &mut Lab, name: &str, members: &[usize], kept: &[(Hash, 
         t.areas.as_mut().unwrap()[1].holders = vec![*m.last().unwrap()];
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 1, members: m.clone() };
-        g.safety = Holding::Shares { threshold: m.len() as u64, members: m.clone() };
+        g.chain_key = Holding::Shares { threshold: m.len() as u64, members: m.clone() };
         let mut holders: Vec<(Hash, u64)> = kept.to_vec();
         let each = rest / m.len() as u64;
         for (i, x) in m.iter().enumerate() {
@@ -5786,7 +5786,7 @@ fn the_clause_in_force_judges_a_party_removed_before_a_judicial_change() {
     let mut lab = Lab::new(&|t| {
         t.abandonment.as_mut().unwrap().outcomes = vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED];
         t.grammar.as_mut().unwrap().recovery = None;
-        t.grammar.as_mut().unwrap().safety = Holding::Shares { threshold: 2, members: t.parties.clone() };
+        t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 2, members: t.parties.clone() };
     });
     let f = lab.founding;
     let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
@@ -6388,8 +6388,8 @@ fn a_closing_must_be_done() {
 /// F128, extended to every identity (Nobody, allegedly, 4 October 2026):
 /// a person grants a key too. The grant and its revocation are everyday
 /// acts signed with the person's own signing key, public: no rotation, no
-/// safety key. A rotation still fences off a grant it does not keep, so a
-/// thief who stole the everyday key and granted itself a key loses it at
+/// chain key. A rotation still fences off a grant it does not keep, so a
+/// thief who stole the signing key and granted itself a key loses it at
 /// the owner's next rotation.
 #[test]
 fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
@@ -6400,7 +6400,7 @@ fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
     let grant = Grant { kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]), ..plain_grant(agent.id, false) };
     let g = agreements_act(&mut w, &mut singer, agreements::types::GRANT, grant.to_map(), None);
     assert!(w.v.get(&g).unwrap().act.outside.is_public());
-    assert_eq!(w.v.status(&g), Status::Valid, "an everyday act: no safety key");
+    assert_eq!(w.v.status(&g), Status::Valid, "an everyday act: no chain key");
     sign(&mut w, &mut agent, &g);
     // The agent's strand: acts in the singer's name, citing the grant.
     let mut s1 = singer.clone();
@@ -6436,10 +6436,10 @@ fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
         agreements::Revocation { grant: g }.to_map(),
         Some(vec![Object { chain: sid, predecessor: cited }]),
     );
-    assert_eq!(w.v.status(&r), Status::Valid, "an everyday act: no safety key");
+    assert_eq!(w.v.status(&r), Status::Valid, "an everyday act: no chain key");
     assert_eq!(view(&w).backing(&cited).unwrap(), Backing::Binds { grant: g });
     assert!(matches!(view(&w).backing(&racing).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")));
-    // A thief holding the singer's everyday key grants itself a key.
+    // A thief holding the singer's signing key grants itself a key.
     let mut thief = w.genesis("a thief", vec![own_home()], None, None);
     let mut stolen = singer.clone();
     let tg = agreements_act(&mut w, &mut stolen, agreements::types::GRANT, plain_grant(thief.id, false).to_map(), None);
@@ -7232,7 +7232,7 @@ fn the_next_line_counts_the_voices_a_mark_names() {
             t.parties = stay.clone();
             let g = t.grammar.as_mut().unwrap();
             g.signing = Holding::Shares { threshold: 2, members: stay.clone() };
-            g.safety = Holding::Shares { threshold: 2, members: stay.clone() };
+            g.chain_key = Holding::Shares { threshold: 2, members: stay.clone() };
             g.recovery = Some(Recovery::Escrow { authority: auth });
             for a in t.areas.as_mut().unwrap() {
                 a.holders.retain(|h| stay.contains(h));
@@ -7276,7 +7276,7 @@ fn a_broken_collective_rolls_back() {
         t.parties = stay.clone();
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 2, members: stay.clone() };
-        g.safety = Holding::Shares { threshold: 2, members: stay.clone() };
+        g.chain_key = Holding::Shares { threshold: 2, members: stay.clone() };
         g.recovery = Some(Recovery::Escrow { authority: auth });
         for a in t.areas.as_mut().unwrap() {
             a.holders.retain(|h| stay.contains(h));
@@ -7480,7 +7480,7 @@ fn break_by_lost_record(lab: &mut Lab) -> (Hash, Vec<Hash>, Hash, Hash) {
         t.parties = stay.clone();
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 2, members: stay.clone() };
-        g.safety = Holding::Shares { threshold: 2, members: stay.clone() };
+        g.chain_key = Holding::Shares { threshold: 2, members: stay.clone() };
         g.recovery = Some(Recovery::Escrow { authority: auth });
         for a in t.areas.as_mut().unwrap() {
             a.holders.retain(|h| stay.contains(h));
@@ -7492,13 +7492,13 @@ fn break_by_lost_record(lab: &mut Lab) -> (Hash, Vec<Hash>, Hash, Hash) {
     (k1, sigs, res_b, rot1)
 }
 
-/// Absence judged by two of the other members; the safety key two of
+/// Absence judged by two of the other members; the chain key two of
 /// three, so that no escrowed share is needed.
 fn others_judge_absence(t: &mut Terms) {
     let ids = t.parties.clone();
     t.abandonment.as_mut().unwrap().authority = Authority::Others(2);
     let g = t.grammar.as_mut().unwrap();
-    g.safety = Holding::Shares { threshold: 2, members: ids };
+    g.chain_key = Holding::Shares { threshold: 2, members: ids };
     g.recovery = None;
 }
 
@@ -7890,7 +7890,7 @@ fn rb6_a_broken_collective_cannot_close_before_the_rollback() {
         t.parties = stay.clone();
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 2, members: stay.clone() };
-        g.safety = Holding::Shares { threshold: 2, members: stay.clone() };
+        g.chain_key = Holding::Shares { threshold: 2, members: stay.clone() };
         g.recovery = Some(Recovery::Escrow { authority: auth });
         for a in t.areas.as_mut().unwrap() {
             a.holders.retain(|h| stay.contains(h));
@@ -8044,7 +8044,7 @@ fn ben_leaves_and_returns(lab: &mut Lab) -> (Hash, Hash) {
 /// nothing from a returned member.
 #[test]
 fn f189_1_an_old_resignation_cannot_take_a_returned_members_voice() {
-    // By a record, drawn by the everyday key's holder alone.
+    // By a record, drawn by the signing key's holder alone.
     let mut lab = Lab::new(&|_| {});
     let col = lab.c[0].id;
     let ids = lab.ids();

@@ -16,7 +16,7 @@
 //! Part 2 (roadmap step 3):
 //!
 //! - [`sig`]: signature schemes 1 to 3 (Schnorr, SLH-DSA 128s and 128f),
-//!   safety key commitments (Identity, "Signature schemes").
+//!   chain key commitments (Identity, "Signature schemes").
 //! - [`merkle`]: a home's receipt log, RFC 9162 trees and proofs (Identity,
 //!   "Log summary").
 //! - [`identity`]: the Identity MIP's act formats, home rules and the

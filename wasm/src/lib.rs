@@ -25,7 +25,7 @@ use mor_core::envelopes::{
 };
 use mor_core::hash::Hash;
 use mor_core::identity::{
-    self, Genesis, Home, HomeRule, KeptTip, Payload, Rotation, SafetyCommit, SigningKey,
+    self, Genesis, Home, HomeRule, KeptTip, Payload, Rotation, ChainKeyCommit, SigningKey,
 };
 use mor_core::money;
 use mor_core::agreements;
@@ -90,9 +90,9 @@ fn schnorr(secret: &[u8]) -> R<SchnorrKey> {
 
 fn slh(scheme: u8, seeds: &[u8]) -> R<SlhKey> {
     if !(2..=3).contains(&scheme) {
-        return Err(err("safety schemes are 2 (SLH-DSA-SHA2-128s) and 3 (128f)"));
+        return Err(err("chain-key schemes are 2 (SLH-DSA-SHA2-128s) and 3 (128f)"));
     }
-    let s = arr::<48>(seeds, "safety seeds")?;
+    let s = arr::<48>(seeds, "chain-key seeds")?;
     Ok(SlhKey::from_seeds(
         scheme,
         s[..16].try_into().unwrap(),
@@ -231,7 +231,7 @@ pub fn signing_public(secret: &[u8]) -> R<Vec<u8>> {
 }
 
 #[derive(Serialize)]
-struct SafetyOut {
+struct ChainKeyOut {
     scheme: u8,
     #[serde(with = "serde_bytes")]
     seeds: Vec<u8>,
@@ -240,18 +240,18 @@ struct SafetyOut {
     commit: String,
 }
 
-/// A fresh safety key held in software: its FIPS 205 seeds (48 bytes), its
+/// A fresh chain key held in software: its FIPS 205 seeds (48 bytes), its
 /// public key and its commitment. **For test identities only** (build
-/// brief: the real identity's safety key is made by the air-gapped Module).
-#[wasm_bindgen(js_name = newTestSafetyKey)]
-pub fn new_test_safety_key(scheme: u8) -> R<JsValue> {
-    safety_from_seeds(scheme, &random::<48>())
+/// brief: the real identity's chain key is made by the air-gapped Module).
+#[wasm_bindgen(js_name = newTestChainKey)]
+pub fn new_test_chain_key(scheme: u8) -> R<JsValue> {
+    chain_key_from_seeds(scheme, &random::<48>())
 }
 
-#[wasm_bindgen(js_name = safetyFromSeeds)]
-pub fn safety_from_seeds(scheme: u8, seeds: &[u8]) -> R<JsValue> {
+#[wasm_bindgen(js_name = chainKeyFromSeeds)]
+pub fn chain_key_from_seeds(scheme: u8, seeds: &[u8]) -> R<JsValue> {
     let k = slh(scheme, seeds)?;
-    to_js(&SafetyOut {
+    to_js(&ChainKeyOut {
         scheme,
         seeds: seeds.to_vec(),
         public: k.public(),
@@ -522,8 +522,8 @@ struct GenesisIn {
     identity_spec: String,
     #[serde(with = "serde_bytes")]
     signing_secret: Vec<u8>,
-    safety_scheme: u8,
-    safety_commit: String,
+    chain_key_scheme: u8,
+    chain_key_commit: String,
     homes: Vec<HomeIn>,
     rule: Option<Vec<u64>>,
     /// High-risk settings of higher MIPs (Identity, declarations slot).
@@ -644,9 +644,9 @@ pub fn make_genesis(input: JsValue) -> R<Vec<u8>> {
             scheme: sig::SCHNORR,
             key: key.public().to_vec(),
         },
-        safety: SafetyCommit {
-            scheme: Scheme::Founding(g.safety_scheme),
-            commit: unhex(&g.safety_commit)?,
+        chain_key: ChainKeyCommit {
+            scheme: Scheme::Founding(g.chain_key_scheme),
+            commit: unhex(&g.chain_key_commit)?,
         },
         homes: homes_of(&g.homes)?,
         rule: g.rule.as_deref().map(rule_of).transpose()?,
@@ -684,14 +684,14 @@ struct RotationIn {
     identity: String,
     previous: String,
     position: u64,
-    /// The safety key the previous act committed, revealed now.
-    safety_scheme: u8,
+    /// The chain key the previous act committed, revealed now.
+    chain_key_scheme: u8,
     #[serde(with = "serde_bytes")]
-    safety_seeds: Vec<u8>,
+    chain_key_seeds: Vec<u8>,
     #[serde(with = "serde_bytes")]
     new_signing_public: Vec<u8>,
-    next_safety_scheme: u8,
-    next_safety_commit: String,
+    next_chain_key_scheme: u8,
+    next_chain_key_commit: String,
     kept: Vec<TipIn>,
     homes: Option<Vec<HomeIn>>,
     /// Absent: left in place. `[]`: back to the default (null). Otherwise a rule.
@@ -700,16 +700,16 @@ struct RotationIn {
     declarations: Option<Vec<DeclIn>>,
 }
 
-/// A rotation (Identity type 1), signed by the revealed safety key.
+/// A rotation (Identity type 1), signed by the revealed chain key.
 ///
-/// The safety key here is held in software: **test identities only**. The
+/// The chain key here is held in software: **test identities only**. The
 /// signature is hedged (fresh randomness), as the air-gapped Module signs;
 /// the caller keeps the returned bytes and sends exactly them to every home
 /// (Identity rule 8a).
 #[wasm_bindgen(js_name = makeRotation)]
 pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
     let r: RotationIn = from_js(input)?;
-    let safety = slh(r.safety_scheme, &r.safety_seeds)?;
+    let chain_key = slh(r.chain_key_scheme, &r.chain_key_seeds)?;
     let payload = Rotation {
         prev: unhex(&r.previous)?,
         position: r.position,
@@ -717,9 +717,9 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
             scheme: sig::SCHNORR,
             key: arr::<32>(&r.new_signing_public, "a signing public key")?.to_vec(),
         },
-        safety: SafetyCommit {
-            scheme: Scheme::Founding(r.next_safety_scheme),
-            commit: unhex(&r.next_safety_commit)?,
+        chain_key: ChainKeyCommit {
+            scheme: Scheme::Founding(r.next_chain_key_scheme),
+            commit: unhex(&r.next_chain_key_commit)?,
         },
         kept: r
             .kept
@@ -755,7 +755,7 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
         &random::<32>(),
         &random::<24>(),
         &public_addr(Some(unhex(&r.identity)?)),
-        |id| safety.sign(id, Some(&random::<16>())),
+        |id| chain_key.sign(id, Some(&random::<16>())),
     );
     identity::check_rotation_shape(&a, &inside, &payload).map_err(err)?;
     Ok(a.encode())
@@ -768,34 +768,34 @@ struct ChainSignatureIn {
     identity: String,
     previous: String,
     position: u64,
-    /// The safety key the previous act committed, revealed now.
-    safety_scheme: u8,
+    /// The chain key the previous act committed, revealed now.
+    chain_key_scheme: u8,
     #[serde(with = "serde_bytes")]
-    safety_seeds: Vec<u8>,
-    next_safety_scheme: u8,
-    next_safety_commit: String,
+    chain_key_seeds: Vec<u8>,
+    next_chain_key_scheme: u8,
+    next_chain_key_commit: String,
     /// The act it signs.
     signs: String,
 }
 
 /// A chain signature (Identity type 16, F132): an act on the identity
-/// chain, signed by the revealed safety key, naming the act it signs and
-/// committing the next safety key; nothing else changes. Agreements' members sign
+/// chain, signed by the revealed chain key, naming the act it signs and
+/// committing the next chain key; nothing else changes. Agreements' members sign
 /// forks and closings with it.
 ///
-/// The safety key here is held in software: **test identities only**. As
+/// The chain key here is held in software: **test identities only**. As
 /// for a rotation, the caller keeps the returned bytes and sends exactly
 /// them to every home (Identity rule 8a).
 #[wasm_bindgen(js_name = makeChainSignature)]
 pub fn make_chain_signature(input: JsValue) -> R<Vec<u8>> {
     let c: ChainSignatureIn = from_js(input)?;
-    let safety = slh(c.safety_scheme, &c.safety_seeds)?;
+    let chain_key = slh(c.chain_key_scheme, &c.chain_key_seeds)?;
     let payload = identity::ChainSignature {
         prev: unhex(&c.previous)?,
         position: c.position,
-        safety: SafetyCommit {
-            scheme: Scheme::Founding(c.next_safety_scheme),
-            commit: unhex(&c.next_safety_commit)?,
+        chain_key: ChainKeyCommit {
+            scheme: Scheme::Founding(c.next_chain_key_scheme),
+            commit: unhex(&c.next_chain_key_commit)?,
         },
         signs: unhex(&c.signs)?,
     };
@@ -809,7 +809,7 @@ pub fn make_chain_signature(input: JsValue) -> R<Vec<u8>> {
         &random::<32>(),
         &random::<24>(),
         &public_addr(Some(unhex(&c.identity)?)),
-        |id| safety.sign(id, Some(&random::<16>())),
+        |id| chain_key.sign(id, Some(&random::<16>())),
     );
     identity::check_chain_signature_shape(&a, &inside, &payload).map_err(err)?;
     Ok(a.encode())
@@ -1182,8 +1182,8 @@ struct ResolutionOut {
     contested: Vec<u64>,
     /// The state the latest counting act leaves.
     signing_key: Option<serde_bytes::ByteBuf>,
-    safety_scheme: Option<u8>,
-    safety_commit: Option<String>,
+    chain_key_scheme: Option<u8>,
+    chain_key_commit: Option<String>,
     homes: Vec<HomeOut>,
     rule: Option<Vec<u64>>,
     /// The effective rule, in words.
@@ -1316,11 +1316,11 @@ impl Verifier {
             signing_key: latest
                 .as_ref()
                 .map(|s| serde_bytes::ByteBuf::from(s.signing_key.key.clone())),
-            safety_scheme: latest.as_ref().map(|s| match s.safety.scheme {
+            chain_key_scheme: latest.as_ref().map(|s| match s.chain_key.scheme {
                 Scheme::Founding(n) => n,
                 Scheme::Spec(_) => 0,
             }),
-            safety_commit: latest.as_ref().map(|s| hx(&s.safety.commit)),
+            chain_key_commit: latest.as_ref().map(|s| hx(&s.chain_key.commit)),
             homes: latest
                 .as_ref()
                 .map(|s| {
@@ -1663,7 +1663,7 @@ struct RecoveryOut {
 #[serde(rename_all = "camelCase")]
 struct GrammarOut {
     signing: HoldingOut,
-    safety: HoldingOut,
+    chain_key: HoldingOut,
     recovery: Option<RecoveryOut>,
 }
 
@@ -1915,7 +1915,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         parent: t.parent.as_ref().map(hx),
         grammar: t.grammar.as_ref().map(|g| GrammarOut {
             signing: holding_out(&g.signing),
-            safety: holding_out(&g.safety),
+            chain_key: holding_out(&g.chain_key),
             recovery: g.recovery.as_ref().map(|r| match r {
                 agreements::Recovery::Custodian { custodian, grant } => RecoveryOut {
                     form: "custodian".into(),
@@ -3513,7 +3513,7 @@ struct ReleaseOut {
     timed: Option<String>,
 }
 
-// ---------------------------------------------------------------- split safety keys
+// ---------------------------------------------------------------- split chain keys
 
 /// Randomness from the platform, for the share dealing's polynomials.
 struct PlatformRng;
@@ -3564,20 +3564,20 @@ struct DealOut {
     fingerprint: String,
 }
 
-/// Deal a fresh safety key of a collective as shares, any `threshold` of
+/// Deal a fresh chain key of a collective as shares, any `threshold` of
 /// which rebuild it, with Pedersen commitments (air-gapped Module, section
 /// 5; Agreements rule 36; F97). The key itself is never returned: only the
 /// shares, its commitment and the dealing's fingerprint. **Test
 /// collectives only**: here the dealing device is this program, in
 /// software; a real collective deals on an offline device.
-#[wasm_bindgen(js_name = dealSafety)]
-pub fn deal_safety(input: JsValue) -> R<JsValue> {
+#[wasm_bindgen(js_name = dealChainKey)]
+pub fn deal_chain_key(input: JsValue) -> R<JsValue> {
     use mor_airgap::msg::{Holder, Message, Role};
     use mor_airgap::seed::SeedModule;
     use mor_airgap::shares;
     let d: DealIn = from_js(input)?;
     if !(2..=3).contains(&d.scheme) {
-        return Err(err("safety schemes are 2 and 3"));
+        return Err(err("chain-key schemes are 2 and 3"));
     }
     if d.threshold == 0 || d.threshold > d.holders.len() as u64 {
         return Err(err("1 ≤ threshold ≤ holders"));
@@ -3609,7 +3609,7 @@ pub fn deal_safety(input: JsValue) -> R<JsValue> {
             .map(|s| serde_bytes::ByteBuf::from(Message::Share(s).encode()))
             .collect(),
         scheme: d.scheme,
-        commit: hx(&dealing.safety.commit),
+        commit: hx(&dealing.chain_key.commit),
         fingerprint: hx(&dealing.fingerprint()),
     })
 }
@@ -3646,11 +3646,11 @@ pub fn verify_share(bytes: &[u8]) -> R<JsValue> {
         threshold: d.threshold,
         holders: d.holders.len(),
         index: d.index,
-        scheme: match d.safety.scheme {
+        scheme: match d.chain_key.scheme {
             Scheme::Founding(n) => n,
             _ => 0,
         },
-        commit: hx(&d.safety.commit),
+        commit: hx(&d.chain_key.commit),
         fingerprint: hx(&d.fingerprint()),
     })
 }
@@ -3663,29 +3663,29 @@ struct RebuiltOut {
     commit: String,
 }
 
-/// Rebuild a collective's safety key from `threshold` shares, each checked,
+/// Rebuild a collective's chain key from `threshold` shares, each checked,
 /// and check it against the dealing's commitment (Module 5.1: the rebuild
 /// check; at a rotation, the rotating device). Returns the FIPS 205 seeds to
 /// sign one rotation with. **Test collectives only.**
-#[wasm_bindgen(js_name = rebuildSafety)]
-pub fn rebuild_safety(shares: Vec<js_sys::Uint8Array>) -> R<JsValue> {
+#[wasm_bindgen(js_name = rebuildChainKey)]
+pub fn rebuild_chain_key(shares: Vec<js_sys::Uint8Array>) -> R<JsValue> {
     let shares = shares
         .iter()
         .map(|b| share_of(&b.to_vec()))
         .collect::<R<Vec<_>>>()?;
     let (seed, d) = mor_airgap::shares::rebuild(&shares).map_err(err)?;
-    let scheme = match d.safety.scheme {
+    let scheme = match d.chain_key.scheme {
         Scheme::Founding(n @ (2 | 3)) => n,
-        _ => return Err(err("the dealing's safety scheme")),
+        _ => return Err(err("the dealing's chain-key scheme")),
     };
     let key = seed.key(scheme, d.index);
-    if key.commitment() != d.safety.commit {
+    if key.commitment() != d.chain_key.commit {
         return Err(err(mor_airgap::shares::ShareError::WrongKey));
     }
     to_js(&RebuiltOut {
         scheme,
         seeds: seed.key_seeds(scheme, d.index).to_vec(),
-        commit: hx(&d.safety.commit),
+        commit: hx(&d.chain_key.commit),
     })
 }
 

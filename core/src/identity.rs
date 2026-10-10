@@ -34,7 +34,7 @@ pub mod types {
     pub const ESCAPE_ENDORSEMENT: u64 = 14;
     /// "I received this act and rely on it" (F110, Identity draft 11).
     pub const WITNESS: u64 = 15;
-    /// A signature made with the safety key, on the identity chain (F132,
+    /// A signature made with the chain key, on the identity chain (F132,
     /// U1 refined): Agreements' ending signature.
     pub const CHAIN_SIGNATURE: u64 = 16;
 }
@@ -80,9 +80,9 @@ impl SigningKey {
     }
 }
 
-/// `safety-commit = [ scheme, commit: hash ]`
+/// `chain-key-commit = [ scheme, commit: hash ]`
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SafetyCommit {
+pub struct ChainKeyCommit {
     pub scheme: Scheme,
     pub commit: Hash,
 }
@@ -141,7 +141,7 @@ pub struct KeptTip {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Genesis {
     pub signing_key: SigningKey,
-    pub safety: SafetyCommit,
+    pub chain_key: ChainKeyCommit,
     pub homes: Vec<Home>,
     pub rule: Option<HomeRule>,
     pub declarations: Option<Vec<Declaration>>,
@@ -155,7 +155,7 @@ pub struct Rotation {
     pub prev: Hash,
     pub position: u64,
     pub signing_key: SigningKey,
-    pub safety: SafetyCommit,
+    pub chain_key: ChainKeyCommit,
     pub kept: Vec<KeptTip>,
     pub disowned: Option<Vec<Hash>>,
     pub homes: Option<Vec<Home>>,
@@ -168,14 +168,14 @@ pub struct Rotation {
 }
 
 /// Chain signature (type 16, F132): an identity-chain act signed with the
-/// revealed safety key, naming the act it signs. It commits the next safety
+/// revealed chain key, naming the act it signs. It commits the next safety
 /// key and changes nothing else: the signing key, homes, rules and
 /// declarations carry on, and it judges no act.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ChainSignature {
     pub prev: Hash,
     pub position: u64,
-    pub safety: SafetyCommit,
+    pub chain_key: ChainKeyCommit,
     /// The act it signs; what the signature means is the signed act's MIP's.
     pub signs: Hash,
 }
@@ -305,11 +305,11 @@ pub fn signing_key(v: &Value) -> R<SigningKey> {
     })
 }
 
-fn safety_commit(v: &Value) -> R<SafetyCommit> {
-    let a = tuple(v, 2, "safety-commit")?;
-    Ok(SafetyCommit {
-        scheme: scheme(&a[0], "safety-commit scheme")?,
-        commit: hash(&a[1], "safety-commit commit")?,
+fn chain_key_commit(v: &Value) -> R<ChainKeyCommit> {
+    let a = tuple(v, 2, "chain-key-commit")?;
+    Ok(ChainKeyCommit {
+        scheme: scheme(&a[0], "chain-key-commit scheme")?,
+        commit: hash(&a[1], "chain-key-commit commit")?,
     })
 }
 
@@ -445,7 +445,7 @@ impl Payload {
                 let f = fields(p, 6, "genesis: unknown key")?;
                 Payload::Genesis(Genesis {
                     signing_key: signing_key(req(&f, 0, "genesis 0: signing key")?)?,
-                    safety: safety_commit(req(&f, 1, "genesis 1: safety commitment")?)?,
+                    chain_key: chain_key_commit(req(&f, 1, "genesis 1: chain-key commitment")?)?,
                     homes: homes(req(&f, 2, "genesis 2: homes")?)?,
                     rule: get(&f, 3).map(home_rule).transpose()?,
                     declarations: get(&f, 4).map(declarations).transpose()?,
@@ -458,7 +458,7 @@ impl Payload {
                     prev: hash(req(&f, 0, "rotation 0: previous act")?, "rotation 0")?,
                     position: uint(req(&f, 1, "rotation 1: position")?, "rotation 1")?,
                     signing_key: signing_key(req(&f, 2, "rotation 2: signing key")?)?,
-                    safety: safety_commit(req(&f, 3, "rotation 3: safety commitment")?)?,
+                    chain_key: chain_key_commit(req(&f, 3, "rotation 3: chain-key commitment")?)?,
                     kept: kept(req(&f, 4, "rotation 4: kept")?)?,
                     disowned: get(&f, 5)
                         .map(|v| hashes(v, "rotation 5: disowned"))
@@ -483,7 +483,7 @@ impl Payload {
                 Payload::ChainSignature(ChainSignature {
                     prev: hash(req(&f, 0, "chain signature 0: previous act")?, "chain signature 0")?,
                     position: uint(req(&f, 1, "chain signature 1: position")?, "chain signature 1")?,
-                    safety: safety_commit(req(&f, 2, "chain signature 2: safety commitment")?)?,
+                    chain_key: chain_key_commit(req(&f, 2, "chain signature 2: chain-key commitment")?)?,
                     signs: hash(req(&f, 3, "chain signature 3: the act signed")?, "chain signature 3")?,
                 })
             }
@@ -562,7 +562,7 @@ impl SigningKey {
     }
 }
 
-impl SafetyCommit {
+impl ChainKeyCommit {
     pub fn to_value(&self) -> Value {
         Value::Array(vec![scheme_v(&self.scheme), b(&self.commit)])
     }
@@ -635,7 +635,7 @@ impl Payload {
         match self {
             Payload::Genesis(g) => {
                 put(&mut m, 0, g.signing_key.to_value());
-                put(&mut m, 1, g.safety.to_value());
+                put(&mut m, 1, g.chain_key.to_value());
                 put(&mut m, 2, homes_v(&g.homes));
                 if let Some(r) = &g.rule {
                     put(&mut m, 3, r.to_value());
@@ -651,7 +651,7 @@ impl Payload {
                 put(&mut m, 0, b(&r.prev));
                 put(&mut m, 1, Value::Uint(r.position));
                 put(&mut m, 2, r.signing_key.to_value());
-                put(&mut m, 3, r.safety.to_value());
+                put(&mut m, 3, r.chain_key.to_value());
                 let kept = r
                     .kept
                     .iter()
@@ -692,7 +692,7 @@ impl Payload {
             Payload::ChainSignature(c) => {
                 put(&mut m, 0, b(&c.prev));
                 put(&mut m, 1, Value::Uint(c.position));
-                put(&mut m, 2, c.safety.to_value());
+                put(&mut m, 2, c.chain_key.to_value());
                 put(&mut m, 3, b(&c.signs));
             }
             Payload::Receipt(r) => {
@@ -929,7 +929,7 @@ pub fn names(inside: &Inside, chain: &Hash, target: &Hash) -> bool {
 pub struct ChainState {
     pub identity: Hash,
     pub signing_key: SigningKey,
-    pub safety: SafetyCommit,
+    pub chain_key: ChainKeyCommit,
     pub homes: Vec<Home>,
     pub rule: Option<HomeRule>,
     pub audit: Option<Audit>,
@@ -955,7 +955,7 @@ impl ChainState {
         ChainState {
             identity,
             signing_key: g.signing_key.clone(),
-            safety: g.safety,
+            chain_key: g.chain_key,
             homes: g.homes.clone(),
             rule: g.rule,
             audit: g.audit.clone(),
@@ -997,7 +997,7 @@ impl ChainState {
         Ok(ChainState {
             identity: self.identity,
             signing_key: r.signing_key.clone(),
-            safety: r.safety,
+            chain_key: r.chain_key,
             homes,
             rule,
             audit,
@@ -1009,10 +1009,10 @@ impl ChainState {
         })
     }
 
-    /// The state after a chain signature (F132): the next safety key
+    /// The state after a chain signature (F132): the next chain key
     /// committed, nothing else changed.
     pub fn sign(&self, c: &ChainSignature) -> ChainState {
-        ChainState { safety: c.safety, ..self.clone() }
+        ChainState { chain_key: c.chain_key, ..self.clone() }
     }
 
     /// The distinct operators of the homes in effect.

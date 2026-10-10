@@ -4,16 +4,16 @@ The repo client, in TypeScript, with the core library through WebAssembly. Roadm
 
 **The command line is a test tool, not a client** (F187, 9). `src/cli.ts` drives this package's mechanics for tests and scripts: it marks a member change from this device's copy of the collective, without asking Agreements first, so it can sign and publish a clone whose mark Agreements call false, which breaks the collective (Agreements rule 37d; the step 11b fault). The collective client (`clients/collective`) is the client: it takes every mark from Agreements' own count and asks Agreements again before anything is sent.
 
-**Test collectives only.** A test collective holds every key in software, in its file: its everyday key and every member's share of its safety key. Its members are simulated identities, all held by whoever runs it, so the mechanics run (the release rule, visible signatures, clone, rotation) while independent consent does not; the freeze report says so. The real collective is created at step 17 the same way, with each member's share on that member's own offline device.
+**Test collectives only.** A test collective holds every key in software, in its file: its signing key and every member's share of its chain key. Its members are simulated identities, all held by whoever runs it, so the mechanics run (the release rule, visible signatures, clone, rotation) while independent consent does not; the freeze report says so. The real collective is created at step 17 the same way, with each member's share on that member's own offline device.
 
 ## In plain words
 
 The code of MOR is published as releases. A release is a list of every file with its fingerprint, the release before it, and the libraries the code depends on. MOR publishes it on its own relays, not only on GitHub.
 
-- **A collective owns the releases.** A collective is an identity of its own, like a person's, whose keys its members hold under a founding agreement. The members sign that agreement, each with an act of their own. It says: one member keeps the everyday key; the safety key is cut into shares, any two of which rebuild it; a release counts only when two members have signed it.
+- **A collective owns the releases.** A collective is an identity of its own, like a person's, whose keys its members hold under a founding agreement. The members sign that agreement, each with an act of their own. It says: one member keeps the signing key; the chain key is cut into shares, any two of which rebuild it; a release counts only when two members have signed it.
 - **Publishing a release.** The collective signs the list with its own key and puts it, and every file, on its relays. Then members sign it, each with a visible act. Until enough have signed, it is not a release.
 - **Checking a release, on any machine.** Give the program the release's number and one relay. It finds the collective's identity, checks that the collective really signed, reads the founding agreement the collective declared, checks the members' signatures against it, and then fetches every file and checks each against its fingerprint. Only if everything matches does it say VERIFIED and write the files out. It can also compare a GitHub checkout with the release, file by file.
-- **Changing members.** A member who leaves signs a resignation alone, and the collective writes it at once on its own record, its line: from there on, that member's signature counts for nothing (F109). The others and any newcomer sign a copy of the agreement with the new list (a clone), marked with the rule that brought it in (the constitutional change rule: by default every member whose voice remains), and the collective rotates to new keys, its safety key dealt afresh to the new members only. The rotation names the clone and the signatures that complete it. From then on the new rules apply, and anything the old key signs is void (F100).
+- **Changing members.** A member who leaves signs a resignation alone, and the collective writes it at once on its own record, its line: from there on, that member's signature counts for nothing (F109). The others and any newcomer sign a copy of the agreement with the new list (a clone), marked with the rule that brought it in (the constitutional change rule: by default every member whose voice remains), and the collective rotates to new keys, its chain key dealt afresh to the new members only. The rotation names the clone and the signatures that complete it. From then on the new rules apply, and anything the old key signs is void (F100).
 - **Ordinary changes.** The release rule is an area every member holds (Agreements draft 7). Its own words are its holders' to change: they sign a clone marked with the area's power, and the collective writes it on its record at once, with no rotation.
 
 ## Precisely
@@ -80,7 +80,7 @@ H='--home https://home1.dubsar.org --home https://home2.dubsar.org --home http:/
    mr verify ID2 --at https://home2.dubsar.org
    ```
 
-Keep `~/mor-test/*.json` secret: `collective.json` holds the collective's everyday key and every share of its safety key.
+Keep `~/mor-test/*.json` secret: `collective.json` holds the collective's signing key and every share of its chain key.
 
 ## Readings, confirmed by Nobody, allegedly (29 September 2026)
 
@@ -95,7 +95,7 @@ Where the texts are silent, the program and Agreements draft 6 take the reading 
 7. **Whose signatures count:** only parties who signed the agreement in force. A party a clone adds is bound, and counts, once it signs the clone.
 8. **A clone is complete** when the parent's clone rule is met among the parent's parties. Its inside names `[[parent, parent]]` in `objects`.
 9. **Terms fields whose formats are still open** (stakes, split plan, fork rule, refund terms) are refused as unsupported, never accepted unchecked.
-10. **F96, checked from the agreement alone:** a safety key held by every member needs a recovery path; a sole holder needs an escrowed share, released by the authority the abandonment clause names, and a seat successor in the holder's succession plan; a sole custodian needs a recovery path held by someone else.
+10. **F96, checked from the agreement alone:** a chain key held by every member needs a recovery path; a sole holder needs an escrowed share, released by the authority the abandonment clause names, and a seat successor in the holder's succession plan; a sole custodian needs a recovery path held by someone else.
 11. **The test collective's way to rotate** is its threshold, any two of three, below the member count (rule 36's first way). It names no separate recovery path (escrow or custodian), though the roadmap lists one; adding an escrowed share would make the dealing three of four, so that a voluntary departure needs either the departing member's share or the abandonment authority. *Say if you want one.*
 12. **The grammar lists every publication** of the collective (Envelopes type 0) as needing two members' signatures, not only manifests: a grammar names act types, and a manifest is a publication. The collective publishes nothing else.
 13. **The signing key's holder** is the first member. At a member change it stays with that member if they stay, else passes to the first member of the new list.
@@ -112,4 +112,4 @@ The readings above were taken under Agreements draft 6. Under draft 7, the texts
 
 - **The live run** on the three deployed homes: the steps above, by Nobody, allegedly (see the roadmap).
 - **An escrowed recovery share** (reading 11), and the abandonment declaration, liveness and contest acts: formats still to come (step 16; Agreements draft 7 leaves the declaration's format open).
-- **The safety key's shares on offline devices,** one per member, with the air-gapped Module (`mor-signer`), for the real collective at step 17.
+- **The chain key's shares on offline devices,** one per member, with the air-gapped Module (`mor-signer`), for the real collective at step 17.

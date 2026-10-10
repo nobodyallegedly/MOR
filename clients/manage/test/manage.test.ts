@@ -70,7 +70,7 @@ test('a key made here cannot be read out, and pairs with a code from `mor-relay 
   const s = await m.ask<Status>('status');
   assert.equal(s.role, 'home');
   assert.equal(s.operator, home.operator);
-  assert.equal(s.holdsSafetyKey, true);
+  assert.equal(s.holdsChainKey, true);
   // The operator on the command line sees the same browser.
   const listed = execFileSync(bin, ['managers', '--dir', home.dir], { encoding: 'utf8' });
   assert.match(listed, new RegExp(`^${m.publicKey}  node$`, 'm'));

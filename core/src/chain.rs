@@ -18,7 +18,7 @@
 //! In plain words, for each position of an identity chain:
 //!
 //! 1. Take the rotations that name the act counting at the position before,
-//!    and reveal the safety key it committed.
+//!    and reveal the chain key it committed.
 //! 2. A rotation counts if the homes the rule names hold it, shown by their
 //!    receipts. A home whose receipts name two different genuine rotations
 //!    counts for nothing there. Such a rotation always beats a homeless one.
@@ -303,7 +303,7 @@ enum Judgement {
 }
 
 /// A rotation that can count at a position: valid, naming the act that
-/// counts at the position before, revealing the committed safety key.
+/// counts at the position before, revealing the committed chain key.
 struct Cand {
     id: Hash,
     /// A homeless rotation (never a chain signature).
@@ -892,8 +892,8 @@ impl Verifier {
                 continue;
             }
             let s = &h.act.signature;
-            if s.scheme != ps.safety.scheme
-                || sig::safety_commitment(&s.scheme, &s.key) != ps.safety.commit
+            if s.scheme != ps.chain_key.scheme
+                || sig::chain_key_commitment(&s.scheme, &s.key) != ps.chain_key.commit
             {
                 continue;
             }
@@ -905,7 +905,7 @@ impl Verifier {
                 });
             }
         }
-        // Chain signatures (F132): signed with the same safety key, they
+        // Chain signatures (F132): signed with the same chain key, they
         // compete for the position as rotations do, and count as they do.
         for cid in self.by_type.get(&types::CHAIN_SIGNATURE).into_iter().flatten() {
             let h = &self.acts[cid];
@@ -916,8 +916,8 @@ impl Verifier {
                 continue;
             }
             let s = &h.act.signature;
-            if s.scheme != ps.safety.scheme
-                || sig::safety_commitment(&s.scheme, &s.key) != ps.safety.commit
+            if s.scheme != ps.chain_key.scheme
+                || sig::chain_key_commitment(&s.scheme, &s.key) != ps.chain_key.commit
             {
                 continue;
             }

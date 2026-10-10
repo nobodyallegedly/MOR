@@ -24,7 +24,7 @@ MOR does not do research and does not judge whether a result is true. Laboratori
 
 ## 1. The small: a proposal
 
-**Noor has an identity,** with a signing key on her laptop and a safety key on an offline device, both seeds backed up, at a home she chose.
+**Noor has an identity,** with a signing key on her laptop and a chain key on an offline device, both seeds backed up, at a home she chose.
 
 **Her proposal carries a finding.** Her master's work suggested that the water reaching an aquifer can be estimated from how fast the soil dries after rain, with cheap moisture sensors, instead of from rainfall records. One sentence says it: *"Recharge is written in how fast a soil dries, not in how much rain fell."* The proposal asks for money to test it in the field.
 
@@ -111,7 +111,7 @@ Every later step is shaped by who pays and what they want.
 
 **The project becomes a collective:** a full identity with its own keys and a founding agreement every founder signs. Its members are Noor, a senior hydrologist and the university.
 
-**Standing is written down, not hidden.** The council requires a principal investigator with a doctorate, so the senior hydrologist holds that role. Noor negotiates one thing before she signs: the area for the project's publications is held by her and the senior hydrologist together, both needed. Nothing is published in the project's name, and nothing is held back, without her. The university holds the Money lane, since it answers for the money; its research officer signs under a grant from the university. Any two of the three members can rotate the collective's safety key.
+**Standing is written down, not hidden.** The council requires a principal investigator with a doctorate, so the senior hydrologist holds that role. Noor negotiates one thing before she signs: the area for the project's publications is held by her and the senior hydrologist together, both needed. Nothing is published in the project's name, and nothing is held back, without her. The university holds the Money lane, since it answers for the money; its research officer signs under a grant from the university. Any two of the three members can rotate the collective's chain key.
 
 **Each result is a work with its own claim:** papers, datasets and analysis code, each bound to the people who made it, with their roles. Stakes in a result are set when it exists.
 

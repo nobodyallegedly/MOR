@@ -12,7 +12,7 @@ use mor_core::act::{self, Act, Addressing, Inside, Scheme, Signature};
 use mor_core::cbor::Value;
 use mor_core::chain::{Status, Verifier};
 use mor_core::hash::{sha256, Hash, ZERO_HASH};
-use mor_core::identity::{Home, Payload, Rotation, SafetyCommit, SigningKey};
+use mor_core::identity::{Home, Payload, Rotation, ChainKeyCommit, SigningKey};
 use mor_core::sig::{self, SchnorrKey, SLH_CONTEXT};
 use rand_core::{CryptoRng, RngCore};
 use slh_dsa::{Sha2_128f, Sha2_128s};
@@ -196,7 +196,7 @@ impl Owner {
                 key: next.public().to_vec(),
             },
             // Ignored: the offline device supplies it.
-            safety: SafetyCommit {
+            chain_key: ChainKeyCommit {
                 scheme: sig::SLH_128S,
                 commit: ZERO_HASH,
             },
