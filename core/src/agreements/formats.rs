@@ -2260,36 +2260,39 @@ impl Resignation {
 
 // ---------------------------------------------------------------- contest
 
-/// Contest (type 14; BQ4, decided 9 October 2026): the party a declaration
-/// of absence names answers it, which shows presence. It names the
-/// declaration as chain and predecessor, `[[declaration, declaration]]`,
-/// and voids nothing (rule 52, F172): it is shown beside the declaration.
+/// Contest (type 14): names the act it answers, as chain and predecessor,
+/// `[[act, act]]`, and voids nothing: it is shown beside what it answers.
+/// Written for two cases: the party a declaration of absence names answers
+/// it, which shows presence (BQ4, decided 9 October 2026; rule 52, F172);
+/// and someone who signed onto a vow contests it, which marks each of their
+/// sales of it contested (F237, F240; the field names the vow by its name).
 /// A contest of any other act, or by another with standing (rule 57a),
-/// keeps its format open.
+/// keeps its meaning open (OF25 a, decided in text).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Contest {
-    /// 0: the declaration of absence (type 13) it answers.
-    pub declaration: Hash,
+    /// 0: the act it answers: a declaration of absence (type 13), or a
+    /// vow's name (Envelopes type 5, its genesis id).
+    pub act: Hash,
 }
 
 impl Contest {
     pub fn to_map(&self) -> Vec<(Value, Value)> {
-        vec![(Value::Uint(0), b(&self.declaration))]
+        vec![(Value::Uint(0), b(&self.act))]
     }
 
-    /// Decode, and check the inside names the declaration as chain and
+    /// Decode, and check the inside names the act it answers as chain and
     /// predecessor.
     pub fn decode(inside: &Inside) -> R<Contest> {
-        let mut declaration = None;
+        let mut act = None;
         for (k, v) in &inside.payload {
             match k {
-                Value::Uint(0) => declaration = Some(hash(v, "contest: the declaration")?),
-                _ => return Err(AgreementsError::Shape("contest: unknown field (only a declaration of absence's format is written, BQ4)")),
+                Value::Uint(0) => act = Some(hash(v, "contest: the act it answers")?),
+                _ => return Err(AgreementsError::Shape("contest: unknown field (the format is { 0 => the act it answers })")),
             }
         }
-        let declaration = declaration.ok_or(AgreementsError::Shape("contest: the declaration"))?;
-        check_objects_self(inside, &declaration, "contest: objects must name the declaration")?;
-        Ok(Contest { declaration })
+        let act = act.ok_or(AgreementsError::Shape("contest: the act it answers"))?;
+        check_objects_self(inside, &act, "contest: objects must name the act it answers")?;
+        Ok(Contest { act })
     }
 }
 
