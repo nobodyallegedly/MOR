@@ -10,7 +10,11 @@
 # folders are replaced by fixed names: this repository by /mor, Cargo's home
 # (the downloaded crates) by /cargo. The same Rust and wasm-bindgen versions
 # then give the same bytes on any machine, in any folder
-# (clients/site/test/reproducible.test.ts).
+# (clients/site/test/reproducible.test.ts). The tools' names and versions are
+# not written into the file (--remove-producers-section): a prebuilt
+# wasm-bindgen and one installed by cargo write different version labels, so
+# the bytes would otherwise depend on how the tool was installed
+# (docs/release-fix-2026-10-10.md, option a).
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
 root=$(cd "$here/../.." && pwd)
@@ -22,4 +26,4 @@ us=$(printf '\037')
 CARGO_ENCODED_RUSTFLAGS="--remap-path-prefix=$root=/mor$us--remap-path-prefix=$cargo_home=/cargo"
 export CARGO_ENCODED_RUSTFLAGS
 cargo build --manifest-path "$root/Cargo.toml" -p mor-wasm --release --target wasm32-unknown-unknown --locked
-wasm-bindgen --target web --out-dir "$here/wasm" "$target/wasm32-unknown-unknown/release/mor_wasm.wasm"
+wasm-bindgen --target web --remove-producers-section --out-dir "$here/wasm" "$target/wasm32-unknown-unknown/release/mor_wasm.wasm"
