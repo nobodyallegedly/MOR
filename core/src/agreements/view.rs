@@ -778,24 +778,37 @@ impl<'a> AgreementsView<'a> {
         // participant of another agreement (a publication's) acts as a
         // single-use collective: it signs where every party of its version
         // in force signed, each by its own signature act (a deal's rule,
-        // F107; mechanic, the build's: one level, no deal inside a deal).
+        // F107). F235 ("It could even be three layers, and it should"):
+        // such a party may itself be a deal with an agreement among its
+        // parties, a publication's agreement in a pool's, read the same way
+        // at each layer (mechanic, the layers-and-judges build, replacing
+        // the F216 build's "one level"; at most eight layers, as payer-side
+        // splitting reads them).
         among
             .iter()
-            .filter(|p| own.contains(p) || self.deal_signed(act, p))
+            .filter(|p| own.contains(p) || self.deal_signed(act, p, 0))
             .copied()
             .collect()
     }
 
     /// Whether `party`, a deal's version held as terms, signed `act` by
-    /// every party of its version in force signing it (F216).
-    fn deal_signed(&self, act: &Hash, party: &Hash) -> bool {
+    /// every party of its version in force signing it (F216), a party
+    /// that is itself a deal signing the same way (F235).
+    fn deal_signed(&self, act: &Hash, party: &Hash, depth: usize) -> bool {
+        if depth > 8 {
+            return false;
+        }
         let Some(h) = self.v.get(party) else { return false };
         if !self.is_agreements(h, types::TERMS) {
             return false;
         }
         let Ok(v) = self.version_in_force(party) else { return false };
         let Ok(t) = self.terms(&v) else { return false };
-        !t.is_collective() && !t.parties.is_empty() && self.valid_sigs(act, &t.parties).len() == t.parties.len()
+        if t.is_collective() || t.parties.is_empty() {
+            return false;
+        }
+        let own: Vec<Hash> = self.valid_sigs(act, &t.parties).into_iter().map(|(p, _)| p).collect();
+        t.parties.iter().all(|p| own.contains(p) || self.deal_signed(act, p, depth + 1))
     }
 
     /// The checks a clone needs against its parent and lineage (rules 44c,
@@ -4101,7 +4114,7 @@ impl<'a> AgreementsView<'a> {
         if !services.contains(&g.grantee) {
             services.push(g.grantee);
         }
-        Ok(self.split_key_problem(y, grantor, &deals, &services))
+        Ok(self.split_key_problem(y, grantor, &g.grantee, &deals, &services))
     }
 
     /// The services a collective's agreement names for its split service,
@@ -4148,7 +4161,7 @@ impl<'a> AgreementsView<'a> {
     /// name (`services`), nor a split's payout (a batch, or a split named
     /// in field 5 or `objects`). Narrower kinds the grantor named still
     /// apply, before this.
-    fn split_key_problem(&self, y: &Held, grantor: &Hash, own: &[Hash], services: &[Hash]) -> Option<String> {
+    fn split_key_problem(&self, y: &Held, grantor: &Hash, grantee: &Hash, own: &[Hash], services: &[Hash]) -> Option<String> {
         use crate::money::{self as fin, Payer, Payload as Fin};
         if y.inside.spec != self.mips.money || y.inside.type_ != fin::types::RECEIPT {
             return Some("a split service's grant key signs only receipts for money coming in under its grantor's own claims and offers (F129, H5; F130, H7)".into());
@@ -4167,7 +4180,19 @@ impl<'a> AgreementsView<'a> {
         let names_split = |x: &Hash| self.v.get(x).is_some_and(|h| self.is_agreements(h, types::SPLIT));
         let objects_split = y.inside.objects.iter().flatten().any(|o| names_split(&o.chain) || names_split(&o.predecessor));
         if r.batch.is_some() || names_split(&r.fulfils) || objects_split {
-            return Some("a split service's grant key never signs a split's payout, one its grantor is owed (F129, H5; F130, H7; rule 29)".into());
+            // F235, as amended by Nobody, allegedly, 10 October 2026: where
+            // the rail pays an account the owner holds, the owner's grant
+            // lets the next layer's split service sign for the incoming
+            // share on the owner's behalf, the rail's proof required on that
+            // receipt: a payout of another identity's split naming the
+            // service as the receiver of a share held by an agreement of the
+            // grantor's that names it. Never a payout of the service's own
+            // split, nor one without the rail's proof (H5, H7 stand).
+            let layer = r.batch.is_none() && self.layer_share(y, grantee).is_some_and(|a| own.contains(&a));
+            if layer && self.rail_valid.contains_key(&y.id) {
+                return None;
+            }
+            return Some("a split service's grant key never signs a split's payout, one its grantor is owed, save a layer's incoming share with the rail's proof behind it (F129, H5; F130, H7; F235; rule 29)".into());
         }
         // Step 12b (H5's reading 4, lifted): a receipt following an offer
         // is the grantor's only where the offer pays the grantor under its
@@ -4302,7 +4327,7 @@ impl<'a> AgreementsView<'a> {
                     return not(&w);
                 }
             } else if let Some((own, services)) = self.collective_split_grant(&c, &ag, &gh.id)? {
-                if let Some(w) = self.split_key_problem(y, &c, &own, &services) {
+                if let Some(w) = self.split_key_problem(y, &c, &g.grantee, &own, &services) {
                     return not(&w);
                 }
             }
@@ -5563,8 +5588,10 @@ struct Settlement {
     act: Hash,
     /// What it puts in force: the settling version, or the version kept.
     into: Hash,
-    /// A judge's settlement (type 23), not a version of the parties.
-    judge: bool,
+    /// A judge's settlement (type 23), by the link of the chain of
+    /// judgment that signed it (its place in the chain); `None` for a
+    /// version of the parties.
+    link: Option<usize>,
     /// What it could see (F192): its history, and, for a judge's
     /// settlement, the histories of the versions it names.
     seen: BTreeSet<Hash>,
@@ -7499,9 +7526,9 @@ impl<'a> AgreementsView<'a> {
     /// is one of two such (F206, decided 10 October 2026): a judge's two,
     /// keeping different versions, both count for nothing, the judge read
     /// as answering "unknown", and the next link of its chain settles; the
-    /// parties' against a judge's, the parties' holds. Two links' settlements
-    /// neither holding the other are not decided by the texts, and the
-    /// verifier refuses (question QK1). With no settlement,
+    /// parties' against a judge's, the parties' holds; two links'
+    /// settlements neither holding the other, the earlier link's holds
+    /// (F236, answering QK1). With no settlement,
     /// tangled shapes (DQ1, DQ2) leave the deal on its reference. Only
     /// complete versions of this deal are read (F189, 2); a settling
     /// version naming a version this verifier does not hold is read as a
@@ -7593,7 +7620,7 @@ impl<'a> AgreementsView<'a> {
                 if !names_all(&seen, &[*x], tips) {
                     continue;
                 }
-                cands.push(Settlement { act: *x, into: *x, judge: false, seen });
+                cands.push(Settlement { act: *x, into: *x, link: None, seen });
             }
             // The judges' settlements, link by link of the chain of
             // judgment (QG4). F206 (a): a link whose first settlements of
@@ -7615,7 +7642,7 @@ impl<'a> AgreementsView<'a> {
                 if !names_all(&seen, &[kept], &discarded) {
                     continue;
                 }
-                by_link[i].push((Settlement { act, into: kept, judge: true, seen }, request));
+                by_link[i].push((Settlement { act, into: kept, link: Some(i), seen }, request));
             }
             let mut unknown: Vec<bool> = vec![false; links.len()];
             for (i, own) in by_link.into_iter().enumerate() {
@@ -7663,15 +7690,24 @@ impl<'a> AgreementsView<'a> {
                 // neither holding the other, keeping different versions:
                 // the parties' holds, the judge's counts for nothing (rule
                 // 45b: the judge is a fallback a request activates).
-                if first.iter().any(|c| !c.judge) && first.iter().any(|c| c.judge) {
-                    let judges: Vec<Hash> = first.iter().filter(|c| c.judge).map(|c| c.act).collect();
+                if first.iter().any(|c| c.link.is_none()) && first.iter().any(|c| c.link.is_some()) {
+                    let judges: Vec<Hash> = first.iter().filter(|c| c.link.is_some()).map(|c| c.act).collect();
                     live.retain(|c| !judges.contains(&c.act));
                     continue;
                 }
-                if first.iter().any(|c| c.judge) {
-                    return Err(AgreementsError::Unsettled(
-                        "two judges' settlements of one deal's fork, by two links of its chain of judgment, neither holding the other: not decided by the texts (rule 45b, F206; question QK1)",
-                    ));
+                // F236 (decided by Nobody, allegedly, 10 October 2026,
+                // answering QK1): of two links' settlements, neither holding
+                // the other, the earlier link in the chain prevails, on
+                // whichever party's request it answered; the later link's
+                // counts for nothing (rule 34a: the chain's order decides
+                // between links). Within one link, F206 (a) was read above.
+                if first.iter().all(|c| c.link.is_some()) {
+                    let earliest = first.iter().filter_map(|c| c.link).min();
+                    let later: Vec<Hash> = first.iter().filter(|c| c.link != earliest).map(|c| c.act).collect();
+                    if !later.is_empty() {
+                        live.retain(|c| !later.contains(&c.act));
+                        continue;
+                    }
                 }
                 set_aside.extend(first.iter().copied());
                 live.retain(|c| set_aside.iter().all(|o| c.seen.contains(&o.act)) && !set_aside.iter().any(|o| o.act == c.act));
@@ -7957,12 +7993,12 @@ impl<'a> AgreementsView<'a> {
         // F224: a payment for a stake transfer is a purchase of the stake,
         // unless the transfer is an over-sale on the seller's own line: then
         // it confers nothing, and the payment is money received for
-        // nothing, owed back by the seller (Money rule 10c).
+        // nothing, owed back by the seller (Agreements rule 14; the refund paid by Money rule 10a; F242, M6).
         if let Some(t) = self.transfer_paid_by(id, &fulfils) {
             let mut e = PurchaseEval { id: *id, purchase: purchase.clone(), verdict: PurchaseVerdict::Purchase, refund_to };
             if self.transfer(&t)?.over_sale {
                 e.verdict = PurchaseVerdict::NoPurchase {
-                    why: "it pays for a stake transfer that is an over-sale on the seller's own line: the transfer confers nothing, and the payment is owed back by the seller (F224; Money rule 10c)".into(),
+                    why: "it pays for a stake transfer that is an over-sale on the seller's own line: the transfer confers nothing, and the payment is owed back by the seller, paid as a refund (F224; Agreements rule 14; Money rule 10a)".into(),
                 };
             }
             return Ok(Some(e));
@@ -9134,10 +9170,12 @@ impl<'a> AgreementsView<'a> {
         idxs.sort();
         idxs.dedup();
         for idx in idxs {
-            // QJ2 (a), settled by the project lead under F216's delegation:
-            // a holder that is a work's agreement (F216) is paid through a
-            // payee of that agreement (its field 14, as its version in force
-            // names them); such a payout is read as paid to that holder. A
+            // F235 (decided by Nobody, allegedly, 10 October 2026, QK3,
+            // replacing QJ2 a): money passes layer by layer; a holder that
+            // is another agreement (a work's, F216; or a publication's in a
+            // pool's) is paid by a payout naming that agreement's split
+            // service, as its version in force names it, as the receiver of
+            // its share; such a payout is read as paid to that holder. A
             // receiver that is itself a holder of the stake is read as paid
             // in its own name (mechanic, the build's).
             let direct: Vec<Hash> = t.stakes.iter().flatten().nth(idx as usize).map(|st| st.holders.iter().filter_map(|(w, _)| w.resolve(collective.as_ref())).collect()).unwrap_or_default();
@@ -9148,7 +9186,7 @@ impl<'a> AgreementsView<'a> {
                 .map(|p| {
                     let mut q = p.clone();
                     if !direct.contains(&p.receiver) {
-                        if let Some(a) = direct.iter().find(|a| self.work_payees(a).is_some_and(|ps| ps.contains(&p.receiver))) {
+                        if let Some(a) = direct.iter().find(|a| self.layer_services(a).contains(&p.receiver)) {
                             q.receiver = *a;
                         }
                     }
@@ -9508,18 +9546,54 @@ impl<'a> AgreementsView<'a> {
             .collect()
     }
 
-    /// The payees of a work's agreement named as a holder (F216, QJ2 a):
-    /// where `holder` is an agreement this verifier holds, the payees its
-    /// version in force names (field 14's grantors, or its collective);
-    /// `None` otherwise.
-    fn work_payees(&self, holder: &Hash) -> Option<Vec<Hash>> {
-        let h = self.v.get(holder)?;
+    /// The split services of an agreement named as a holder (F216, F235):
+    /// where `holder` is an agreement this verifier holds, the split
+    /// services its version in force names (field 14, and its chain of
+    /// judgment's link for the split service); none otherwise. The next
+    /// layer's split service, which receives that agreement's share.
+    fn layer_services(&self, holder: &Hash) -> Vec<Hash> {
+        let Some(h) = self.v.get(holder) else { return vec![] };
         if !self.is_agreements(h, types::TERMS) {
+            return vec![];
+        }
+        let Ok(v) = self.version_in_force(holder) else { return vec![] };
+        let Ok(t) = self.terms(&v) else { return vec![] };
+        self.named_services(&t).unwrap_or_default()
+    }
+
+    /// Where the receipt `y` is a split service receipting the share of a
+    /// layer (F235): a Money receipt fulfilling or naming a split signed by
+    /// another identity than `service`, which pays `service` on a stake
+    /// held by an agreement naming `service` as its split service; that
+    /// agreement. `None` otherwise.
+    fn layer_share(&self, y: &Held, service: &Hash) -> Option<Hash> {
+        use crate::money::Payload as Fin;
+        if y.inside.spec != self.mips.money {
             return None;
         }
-        let v = self.version_in_force(holder).ok()?;
-        let t = self.terms(&v).ok()?;
-        self.payees_of(&v, &t).ok().flatten()
+        let Ok(Fin::Receipt(r)) = Fin::decode(y.inside.type_, &y.inside.payload) else { return None };
+        let named = std::iter::once(r.fulfils).chain(y.inside.objects.iter().flatten().flat_map(|o| [o.chain, o.predecessor]));
+        for x in named {
+            let Some(sh) = self.v.get(&x).filter(|h| self.is_agreements(h, types::SPLIT)) else { continue };
+            if sh.act.outside.signer.as_ref() == Some(service) {
+                continue;
+            }
+            let Ok(s) = Split::decode(&sh.inside.payload) else { continue };
+            let Ok(v) = self.version_for(&s.agreement) else { continue };
+            let Ok(t) = self.terms(&v) else { continue };
+            let collective = if t.is_collective() { self.collective_of(&v).ok().flatten() } else { None };
+            for p in s.payouts.iter().filter(|p| &p.receiver == service) {
+                let Some(stake) = p.stake.and_then(|i| t.stakes.iter().flatten().nth(i as usize)) else { continue };
+                for (w, _) in &stake.holders {
+                    if let Some(a) = w.resolve(collective.as_ref()) {
+                        if self.layer_services(&a).contains(service) {
+                            return Some(a);
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 
     /// What a split service owes (rule 29; audit, October 2026, gap 3).
@@ -9559,9 +9633,27 @@ impl<'a> AgreementsView<'a> {
                     payment: h.id,
                     claim: false,
                     receiver: r.payee,
-                    agreement: r.purchase.as_ref().map(|p| p.agreement).unwrap_or(r.fulfils),
+                    // F235: a layer's share received on its owner's behalf
+                    // is split under the agreement that holds it.
+                    agreement: self.layer_share(h, service).unwrap_or(r.purchase.as_ref().map(|p| p.agreement).unwrap_or(r.fulfils)),
                     amount: r.amount,
                 });
+            }
+        }
+        // F235: a layer's share the service receipted in its own name, as
+        // the receiver an earlier layer's split names: its to split under
+        // the agreement that holds that share.
+        for h in self.v.signed_by(service) {
+            if self.key_grant(h).is_some() || !self.valid(&h.id) {
+                continue;
+            }
+            let Ok(Fin::Receipt(r)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
+            if h.inside.spec != self.mips.money || &r.payee != service {
+                continue;
+            }
+            let Some(agreement) = self.layer_share(h, service) else { continue };
+            if !split_names(&h.id) {
+                unsplit.push(Unsplit { payment: h.id, claim: false, receiver: r.payee, agreement, amount: r.amount });
             }
         }
         // Payers' claims showing money arrived for a grantor without a receipt.
@@ -9587,19 +9679,34 @@ impl<'a> AgreementsView<'a> {
                 });
             }
         }
+        // F235, as amended: an owner's grant to the receiving service signs
+        // for the share on the owner's behalf, the rail's proof behind it
+        // (consent checks it): such a receipt is the receiver's.
+        let on_behalf: Vec<(Hash, &Held)> = self
+            .v
+            .held_acts()
+            .filter(|r| r.inside.spec == self.mips.money && r.inside.type_ == crate::money::types::RECEIPT)
+            .filter_map(|r| self.key_grant(r).map(|(_, g)| (g.grantee, r)))
+            .collect();
         // Each payout, discharged by the receiver's own receipts naming the split.
         let mut unpaid = vec![];
         let mut owed_to_buyers: Vec<(Hash, usize, Hash, u64)> = vec![];
         for (sh, s) in &splits {
             for (i, p) in s.payouts.iter().enumerate() {
                 let mut received: u64 = 0;
-                for r in self.v.signed_by(&p.receiver) {
-                    if r.inside.spec != self.mips.money || self.key_grant(r).is_some() || !self.valid(&r.id) {
+                let behalf = on_behalf.iter().filter(|(g, _)| g == &p.receiver).map(|(_, r)| *r);
+                for r in self.v.signed_by(&p.receiver).chain(behalf) {
+                    let own = r.act.outside.signer == Some(p.receiver);
+                    if r.inside.spec != self.mips.money || (own && self.key_grant(r).is_some()) || !self.valid(&r.id) {
                         continue;
                     }
                     let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
                     let names = x.fulfils == sh.id || r.inside.objects.iter().flatten().any(|o| o.chain == sh.id || o.predecessor == sh.id);
-                    if x.payee != p.receiver || !names || !self.consent(&r.id)?.counts() {
+                    let payee = if own { p.receiver } else { r.act.outside.signer.unwrap_or_default() };
+                    if x.payee != payee || !names || !self.consent(&r.id)?.counts() {
+                        continue;
+                    }
+                    if !own && self.layer_share(r, &p.receiver).is_none() {
                         continue;
                     }
                     // F217: a seller's payout receipt for a stake it has

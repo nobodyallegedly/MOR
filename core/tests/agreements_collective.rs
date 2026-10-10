@@ -10545,6 +10545,46 @@ fn f207_a_resignation_names_the_drafts_it_leaves_behind() {
     assert!(run(false), "not named: her stated cost, the draft brings her back (F195)");
 }
 
+/// F207's stepping-down half ("a resignation (or a stepping down) names
+/// the drafts its signer had signed and leaves behind"): a stepping down
+/// from an area names the drafts its signer leaves behind; a version it
+/// names never gives her the area back, whichever line puts it in force.
+/// A draft it fails to name is her stated cost (F195): it gives the area
+/// back.
+#[test]
+fn f207_a_stepping_down_names_the_drafts_it_leaves_behind() {
+    let run = |named: bool| {
+        let mut lab = Lab::new(&|_| {});
+        let f = lab.founding;
+        let ids = lab.ids();
+        // A constitutional draft every member signs, Ana among them, that
+        // redraws Releases (area 1) with Ana as its one holder.
+        let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|t| {
+            t.areas.as_mut().unwrap()[0].holders = vec![ids[ANA]];
+            t.text = "A draft Ana signed: she runs the releases.".into();
+        });
+        let draft = lab.propose(BEN, &t);
+        let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &draft)).collect();
+        for x in &s {
+            lab.acknowledge(0, *x);
+        }
+        // Ana steps down from Releases; a first line registers it, putting
+        // nothing in force.
+        let mut ana = lab.m[ANA].clone();
+        let down = lab.resign_leaving(&mut ana, f, Some(1), if named { vec![draft] } else { vec![] });
+        lab.m[ANA] = ana;
+        lab.record(0, None, &[], vec![down], f);
+        // A later line, a rotation, declares the draft (rule 37).
+        lab.rotate(Some((draft, s)), &[0]);
+        assert_eq!(lab.view().current(&lab.c[0].id).unwrap().unwrap().agreement, draft);
+        let p = lab.publish(0);
+        lab.sign(ANA, &p);
+        lab.counts(&p)
+    };
+    assert!(!run(true), "named in her stepping down: the draft never gives her the area back");
+    assert!(run(false), "not named: her stated cost, the draft gives her the area back (F195)");
+}
+
 /// Fable's formats review, 2.6, taken under the delegation (F189 (8) by
 /// analogy): a request to a judge counts, and the judge's period runs, only
 /// where the request is public or sealed to the judge it reaches. A
@@ -11340,6 +11380,44 @@ fn f206_b_the_parties_settlement_beats_a_judges_neither_holding_the_other() {
     assert_eq!(l.in_force().unwrap(), a1, "made after the judge's settlement: final, it stands (F192)");
 }
 
+/// F236, decided by Nobody, allegedly, 10 October 2026 ("Yes … The second
+/// judge only gets actioned under pre set rules. Once the rules apply, its
+/// voice stops mattering."), answering QK1: of two links of the chain of
+/// judgment that each settle the same fork, neither holding the other, the
+/// earlier in the chain prevails, whichever signed first and on whichever
+/// party's request; the later link's settlement counts for nothing (rules
+/// 34a, 45b). F206 still applies within one link.
+#[test]
+fn f236_of_two_judges_in_the_chain_settling_one_fork_the_earlier_prevails() {
+    for earlier_signs_first in [true, false] {
+        let (mut l, mut judges) = judged_deal(1);
+        let d = l.d;
+        let a1 = l.version(d, "A.", None);
+        let b1 = l.version(d, "B.", None);
+        // Ben asks; the first judge lets its period pass on his request.
+        let ben_asks = ask_judge(&mut l);
+        // Ana asks too, later; the first judge answers her.
+        let r = agreements::SettlementRequest { reference: d };
+        let ana_asks = agreements_act(&mut l.w, &mut l.ana, agreements::types::SETTLEMENT_REQUEST, r.to_map(), obj(d));
+        let (first, next) = judges.split_at_mut(1);
+        if earlier_signs_first {
+            judge_settles(&mut l, &mut first[0], ana_asks, b1, vec![a1], vec![]);
+            judge_settles(&mut l, &mut next[0], ben_asks, a1, vec![b1], vec![]);
+        } else {
+            judge_settles(&mut l, &mut next[0], ben_asks, a1, vec![b1], vec![]);
+            judge_settles(&mut l, &mut first[0], ana_asks, b1, vec![a1], vec![]);
+        }
+        let mut v = view(&l.w);
+        v.judges_lapsed.insert((ben_asks, first[0].id));
+        assert_eq!(
+            v.version_in_force(&d).unwrap(),
+            b1,
+            "the earlier link in the chain prevails; the later one's settlement counts for nothing (earlier signs first: {earlier_signs_first})"
+        );
+        assert!(v.judges_contradicted(&d).unwrap().is_empty(), "two links, each speaking once: nobody contradicted itself");
+    }
+}
+
 /// A split by the deal's service under `l.deal`, numbered (DQ6), following
 /// `transfers` (split key 8).
 fn numbered_split(l: &mut ServiceDeal, receipt: Hash, payouts: Vec<agreements::Payout>, number: u64, transfers: Vec<(u64, Hash)>) -> Hash {
@@ -11497,114 +11575,307 @@ fn f224_a_buyers_client_pays_only_once_the_transfer_is_placed_and_fits() {
     assert!(view(&l.w).transfer_payable(&y).unwrap().is_err_and(|w| w.contains("over-sale")), "Dan's client sees the earlier sale: do not pay");
 }
 
-/// QJ2, settled by the project lead under F216's delegation, option (a):
-/// with split services, the publication's split pays the work's line to a
-/// payee of the work's agreement (its field 14), and the work's service's
-/// receipt names the publication's split, as Money's routes chain
-/// receipts; the work's service then splits it under the work's
-/// agreement. Built: the payout to a payee of the work's agreement matches
-/// that agreement's holding. Not built: the work's service's receipt
-/// discharging it, which F129 (H5) and F130 (H7) forbid a grant key to
-/// sign (question QK3).
-#[test]
-fn qj2_a_the_publications_split_pays_the_works_line_to_a_payee_of_the_works_agreement() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Receipt};
-    let mut w = World::new();
-    let mut ana = w.genesis("ana", vec![own_home()], None, None);
-    let mut ben = w.genesis("ben", vec![own_home()], None, None);
-    let mut label = w.genesis("a publisher", vec![own_home()], None, None);
-    let mut svc_w = w.genesis("the work's split service", vec![own_home()], None, None);
-    let mut svc_p = w.genesis("the publication's split service", vec![own_home()], None, None);
-    let grant = |w: &mut World, by: &mut Person, svc: &mut Person, tag: &str| {
-        let sid = svc.id;
-        let (k, p) = grant_key(&format!("{sid:?} for {tag}, QJ2"));
-        let g = Grant { grantee: sid, scope: 1, agreements: None, this_agreement: true, key: p, ..plain_grant(sid, false) };
-        let gh = agreements_act(w, by, agreements::types::GRANT, g.to_map(), None);
-        sign(w, svc, &gh);
-        let mut s = by.clone();
-        s.binding = gh;
-        s.sign = k;
-        s.seq = vec![];
-        s.cite = Some((by.id, vec![gh]));
-        (gh, s)
-    };
-    let (ga, mut sa) = grant(&mut w, &mut ana, &mut svc_w, "ana");
-    let (gb, _) = grant(&mut w, &mut ben, &mut svc_w, "ben");
-    let (gl, mut sl) = grant(&mut w, &mut label, &mut svc_p, "the label");
-    let work = spec("a song, QJ2");
-    let mut we = deal_terms(ana.id, ben.id);
-    we.payee_grants = Some(vec![ga, gb]);
-    we.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(work), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
-    let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, we.to_map(), None);
-    sign(&mut w, &mut ana, &we);
-    sign(&mut w, &mut ben, &we);
-    let publication = {
-        let x = w.everyday_act(&mut label, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, QJ2").to_vec()))], None, None);
-        w.add(&x)
-    };
-    let mut pe = deal_terms(we, label.id);
-    pe.payee_grants = Some(vec![gl]);
-    pe.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(publication), holders: vec![(agreements::Who::Id(we), 850_000), (agreements::Who::Id(label.id), 150_000)] }]);
-    let pe = agreements_act(&mut w, &mut label, agreements::types::TERMS, pe.to_map(), None);
-    for p in [&mut label, &mut ana, &mut ben] {
-        sign(&mut w, p, &pe);
+/// The layers of F235: a work's agreement (Ana and Ben, their split
+/// service by one grant each), a publication's agreement (the work's
+/// agreement and a label, the label's split service), and the money
+/// coming in to the publication's service for a fan's purchase.
+struct Layers {
+    w: World,
+    ana: Person,
+    ben: Person,
+    label: Person,
+    /// The work's split service, with its grant key from Ana (`sa`).
+    svc_w: Person,
+    sa: Person,
+    /// The publication's split service, with its grant key from the label.
+    svc_p: Person,
+    sl: Person,
+    we: Hash,
+    pe: Hash,
+    publication: Hash,
+}
+
+impl Layers {
+    fn new() -> Layers {
+        let mut w = World::new();
+        let mut ana = w.genesis("ana", vec![own_home()], None, None);
+        let mut ben = w.genesis("ben", vec![own_home()], None, None);
+        let mut label = w.genesis("a publisher", vec![own_home()], None, None);
+        let mut svc_w = w.genesis("the work's split service", vec![own_home()], None, None);
+        let mut svc_p = w.genesis("the publication's split service", vec![own_home()], None, None);
+        let (ga, sa) = layer_grant(&mut w, &mut ana, &mut svc_w, "ana");
+        let (gb, _) = layer_grant(&mut w, &mut ben, &mut svc_w, "ben");
+        let (gl, sl) = layer_grant(&mut w, &mut label, &mut svc_p, "the label");
+        let work = spec("a song, F235");
+        let mut we = deal_terms(ana.id, ben.id);
+        we.payee_grants = Some(vec![ga, gb]);
+        we.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(work), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
+        let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, we.to_map(), None);
+        sign(&mut w, &mut ana, &we);
+        sign(&mut w, &mut ben, &we);
+        let publication = {
+            let x = w.everyday_act(&mut label, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F235").to_vec()))], None, None);
+            w.add(&x)
+        };
+        let mut pe = deal_terms(we, label.id);
+        pe.payee_grants = Some(vec![gl]);
+        pe.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(publication), holders: vec![(agreements::Who::Id(we), 850_000), (agreements::Who::Id(label.id), 150_000)] }]);
+        let pe = agreements_act(&mut w, &mut label, agreements::types::TERMS, pe.to_map(), None);
+        for p in [&mut label, &mut ana, &mut ben] {
+            sign(&mut w, p, &pe);
+        }
+        assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true));
+        Layers { w, ana, ben, label, svc_w, sa, svc_p, sl, we, pe, publication }
     }
-    assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true));
-    let receipt = |w: &mut World, by: &mut Person, payee: Hash, payer: Hash, value: u64, fulfils: Hash, purchase: Option<Hash>, proof: &[u8]| {
-        let r = Fin::Receipt(Receipt {
-            rail: spec("a rail Module"),
-            proof: proof.to_vec(),
-            payer: Some(Payer::Identity(payer)),
-            payee,
-            amount: Amount { unit: spec("a unit"), value },
-            fulfils,
-            previous: None,
-            forward: None,
-            batch: None,
-            purchase: purchase.map(|a| agreements_purchase(a)),
-        });
-        let a = w.everyday_act(by, mips().money, 2, r.to_map(), None, None);
-        w.add(&a)
-    };
-    let fan = spec("a fan");
-    let incoming = receipt(&mut w, &mut sl, label.id, fan, 1000, publication, Some(pe), b"the fan pays");
-    // The publication's split: the label's share, and the work's line to
-    // Ana, a payee of the work's agreement (its field 14).
+
+    /// A receipt signed by `by` (its own key, or a grant key it carries).
+    fn receipt(&mut self, by: Who3, payee: Hash, payer: Hash, value: u64, fulfils: Hash, purchase: Option<Hash>, proof: &[u8]) -> Hash {
+        let mut p = match by {
+            Who3::SvcW => self.svc_w.clone(),
+            Who3::SvcP => self.svc_p.clone(),
+            Who3::Sa => self.sa.clone(),
+            Who3::Sl => self.sl.clone(),
+            Who3::Ana => self.ana.clone(),
+        };
+        let h = layer_receipt(&mut self.w, &mut p, payee, payer, value, fulfils, purchase, proof);
+        match by {
+            Who3::SvcW => self.svc_w = p,
+            Who3::SvcP => self.svc_p = p,
+            Who3::Sa => self.sa = p,
+            Who3::Sl => self.sl = p,
+            Who3::Ana => self.ana = p,
+        }
+        h
+    }
+
+    /// The publication's split of a fan's payment: the label's share, and
+    /// the work's agreement's share paid to `to`.
+    fn publication_split(&mut self, to: Hash, number: u64, proof: &[u8]) -> Hash {
+        let (label, svc_p, pe, publication) = (self.label.id, self.svc_p.id, self.pe, self.publication);
+        let incoming = self.receipt(Who3::Sl, label, spec("a fan"), 1000, publication, Some(pe), proof);
+        let s = agreements::Split {
+            receipt: incoming,
+            payouts: vec![agreements::Payout { stake: Some(0), ..payout(label, 150) }, agreements::Payout { stake: Some(0), ..payout(to, 850) }],
+            cmip: spec("a split cMIP"),
+            agreement: pe,
+            tally: None,
+            number: Some(number),
+            modules: vec![],
+            metric_records: vec![],
+            transfers: vec![],
+        };
+        let to_all = vec![label, self.ana.id, self.ben.id, self.svc_w.id];
+        let _ = svc_p;
+        self.w.private_act(&mut self.svc_p, mips().agreements, agreements::types::SPLIT, s.to_map(), None, to_all)
+    }
+
+    /// The work's service's split, under the work's agreement, of `incoming`.
+    fn work_split(&mut self, incoming: Hash, number: u64) -> Hash {
+        let s = agreements::Split {
+            receipt: incoming,
+            payouts: vec![agreements::Payout { stake: Some(0), ..payout(self.ana.id, 510) }, agreements::Payout { stake: Some(0), ..payout(self.ben.id, 340) }],
+            cmip: spec("a split cMIP"),
+            agreement: self.we,
+            tally: None,
+            number: Some(number),
+            modules: vec![],
+            metric_records: vec![],
+            transfers: vec![],
+        };
+        let to_all = vec![self.ana.id, self.ben.id];
+        self.w.private_act(&mut self.svc_w, mips().agreements, agreements::types::SPLIT, s.to_map(), None, to_all)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Who3 {
+    SvcW,
+    SvcP,
+    Sa,
+    Sl,
+    Ana,
+}
+
+/// `by`'s grant to `svc` for its deal (F129, H4), accepted by the service:
+/// the grant, and `by` carrying the service's grant key.
+fn layer_grant(w: &mut World, by: &mut Person, svc: &mut Person, tag: &str) -> (Hash, Person) {
+    let sid = svc.id;
+    let (k, p) = grant_key(&format!("{sid:?} for {tag}, F235"));
+    let g = Grant { grantee: sid, scope: 1, agreements: None, this_agreement: true, key: p, ..plain_grant(sid, false) };
+    let gh = agreements_act(w, by, agreements::types::GRANT, g.to_map(), None);
+    sign(w, svc, &gh);
+    let mut s = by.clone();
+    s.binding = gh;
+    s.sign = k;
+    s.seq = vec![];
+    s.cite = Some((by.id, vec![gh]));
+    (gh, s)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn layer_receipt(w: &mut World, by: &mut Person, payee: Hash, payer: Hash, value: u64, fulfils: Hash, purchase: Option<Hash>, proof: &[u8]) -> Hash {
+    use mor_core::money::{Amount, Payer, Payload as Fin, Receipt};
+    let r = Fin::Receipt(Receipt {
+        rail: spec("a rail Module"),
+        proof: proof.to_vec(),
+        payer: Some(Payer::Identity(payer)),
+        payee,
+        amount: Amount { unit: spec("a unit"), value },
+        fulfils,
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: purchase.map(agreements_purchase),
+    });
+    let a = w.everyday_act(by, mips().money, 2, r.to_map(), None, None);
+    w.add(&a)
+}
+
+/// F235, decided by Nobody, allegedly, 10 October 2026 (QK3, option c,
+/// generalised), replacing QJ2 (a): money passes layer by layer. The
+/// publication's split names the work's agreement's split service as the
+/// receiver of the work's agreement's share; that service receipts in its
+/// own name, never with a grant key, and splits under the work's
+/// agreement. H5 and H7 stand: a payout to a payee of the work's agreement
+/// is no longer the work's share, and the work's service's grant key
+/// signing a split's payout, with no rail proof behind it, counts for
+/// nothing.
+#[test]
+fn f235_money_passes_layer_by_layer_each_service_receipting_in_its_own_name() {
+    let mut l = Layers::new();
+    let (ana, svc_w, svc_p) = (l.ana.id, l.svc_w.id, l.svc_p.id);
+    // The work's share, paid to the work's split service: it matches.
+    let ps = l.publication_split(svc_w, 1, b"the fan pays");
+    let e = view(&l.w).split(&ps).unwrap();
+    assert!(e.mismatched.is_empty(), "the work's share, paid to the work's split service: {:?}", e.mismatched);
+    // Paid to Ana, a payee of the work's agreement: no longer the work's
+    // share (QJ2 a replaced); paid to a stranger, neither.
+    for to in [ana, spec("someone the work's agreement never names")] {
+        let bad = l.publication_split(to, 2, b"another fan");
+        assert!(!view(&l.w).split(&bad).unwrap().mismatched.is_empty(), "a payout the work's agreement does not receive through its service");
+    }
+    let unpaid = |w: &World| view(w).service_account(&svc_p).unwrap().unpaid.iter().any(|u| u.split == ps && u.receiver == svc_w);
+    assert!(unpaid(&l.w));
+    // H5 stands: the work's service's grant key from Ana, signing for the
+    // share in Ana's name with no rail proof behind it, counts for nothing.
+    let forged = l.receipt(Who3::Sa, ana, svc_p, 850, ps, None, b"no rail proof");
+    assert!(matches!(view(&l.w).consent(&forged).unwrap(), Consent::Ungranted { .. }), "H5: refused without the rail's proof");
+    assert!(unpaid(&l.w));
+    // The work's service receipts in its own name: the payout is discharged,
+    // and the money is the work's service's to split.
+    let incoming = l.receipt(Who3::SvcW, svc_w, svc_p, 850, ps, None, b"the work's share");
+    assert!(view(&l.w).consent(&incoming).unwrap().counts());
+    assert!(!unpaid(&l.w), "receipted by its receiver, in its own name");
+    let unsplit = |w: &World| view(w).service_account(&svc_w).unwrap().unsplit.iter().any(|u| u.payment == incoming);
+    assert!(unsplit(&l.w), "received in its own name for the work's agreement: unsplit until its split names it (rule 29)");
+    assert_eq!(view(&l.w).service_account(&svc_w).unwrap().unsplit.iter().find(|u| u.payment == incoming).map(|u| u.agreement), Some(l.we));
+    // It splits under its own agreement.
+    let ws = l.work_split(incoming, 1);
+    let e = view(&l.w).split(&ws).unwrap();
+    assert!(e.problems.is_empty() && e.mismatched.is_empty(), "{:?} {:?}", e.problems, e.mismatched);
+    assert!(!unsplit(&l.w));
+    assert!(view(&l.w).service_account(&svc_w).unwrap().unpaid.iter().any(|u| u.split == ws), "its own payouts, owed until Ana and Ben receipt them");
+}
+
+/// F235, as amended by Nobody, allegedly, the same night ("Yes, the owner
+/// can grant whatever the owner wishes to whoever the owner chose."): where
+/// the rail pays an account an owner holds, the owner's grant lets the
+/// work's service sign for that incoming share on the owner's behalf, the
+/// rail's proof required on the receipt. Without the proof, H5 stands; and
+/// the service's grant key never signs a payout of its own split, proof or
+/// not.
+#[test]
+fn f235_an_owners_grant_signs_for_the_incoming_share_with_the_rails_proof() {
+    let mut l = Layers::new();
+    let (ana, svc_w, svc_p) = (l.ana.id, l.svc_w.id, l.svc_p.id);
+    let ps = l.publication_split(svc_w, 1, b"the fan pays");
+    let on_behalf = l.receipt(Who3::Sa, ana, svc_p, 850, ps, None, b"a bank transfer to Ana");
+    let unpaid = |v: &AgreementsView| v.service_account(&svc_p).unwrap().unpaid.iter().any(|u| u.split == ps && u.receiver == svc_w);
+    let v = view(&l.w);
+    assert!(matches!(v.consent(&on_behalf).unwrap(), Consent::Ungranted { .. }), "no rail proof: H5 stands");
+    assert!(unpaid(&v));
+    let mut v = view(&l.w);
+    v.rail_valid.insert(on_behalf, mor_core::money::PaidAt::Flow(spec("Ana's account")));
+    assert!(v.consent(&on_behalf).unwrap().counts(), "the rail's proof behind it: the owner's grant carries it");
+    assert!(!unpaid(&v), "the share is receipted on the owner's behalf");
+    assert!(
+        v.service_account(&svc_w).unwrap().unsplit.iter().any(|u| u.payment == on_behalf && u.agreement == l.we),
+        "money coming in for its grantor, the work's service's to split under the work's agreement"
+    );
+    // Its own split's payout to Ana: never, proof or not (H5).
+    let ws = l.work_split(on_behalf, 1);
+    let own = l.receipt(Who3::Sa, ana, svc_w, 510, ws, None, b"the service paying itself");
+    let mut v = view(&l.w);
+    v.rail_valid.insert(on_behalf, mor_core::money::PaidAt::Flow(spec("Ana's account")));
+    v.rail_valid.insert(own, mor_core::money::PaidAt::Flow(spec("Ana's account")));
+    assert!(matches!(v.consent(&own).unwrap(), Consent::Ungranted { .. }), "a payout of its own split stays the payee's own receipt to sign (H5)");
+}
+
+/// F235: "It could even be three layers, and it should." A pool (freeze
+/// scenario 7, a subscription service, read as the pool layer) splits by
+/// its stated rules; its split names the publication's split service as
+/// the receiver of the publication's share, which receipts in its own name
+/// and splits under the publication's agreement, naming the work's split
+/// service in turn.
+#[test]
+fn f235_three_layers_a_pool_a_publication_and_a_work() {
+    let mut l = Layers::new();
+    let (svc_w, svc_p, label) = (l.svc_w.id, l.svc_p.id, l.label.id);
+    let mut music = l.w.genesis("a music service", vec![own_home()], None, None);
+    let mut svc_pool = l.w.genesis("the pool's split service", vec![own_home()], None, None);
+    let (gm, mut sm) = layer_grant(&mut l.w, &mut music, &mut svc_pool, "the music service");
+    let pool_object = spec("the subscription pool, one month");
+    let mut pool = deal_terms(l.pe, music.id);
+    pool.payee_grants = Some(vec![gm]);
+    pool.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(pool_object), holders: vec![(agreements::Who::Id(l.pe), 700_000), (agreements::Who::Id(music.id), 300_000)] }]);
+    let pool = agreements_act(&mut l.w, &mut music, agreements::types::TERMS, pool.to_map(), None);
+    sign(&mut l.w, &mut music, &pool);
+    for who in [Who3::Ana] {
+        let _ = who;
+    }
+    let (mut lb, mut a, mut b) = (l.label.clone(), l.ana.clone(), l.ben.clone());
+    for p in [&mut lb, &mut a, &mut b] {
+        sign(&mut l.w, p, &pool);
+    }
+    (l.label, l.ana, l.ben) = (lb, a, b);
+    assert_eq!(view(&l.w).agreement(&pool).unwrap().exists, Some(true));
+    // A listener's subscription, received by the pool's service for the music service.
+    let sub = layer_receipt(&mut l.w, &mut sm, music.id, spec("a listener"), 2000, pool_object, Some(pool), b"a month's subscription");
     let s = agreements::Split {
-        receipt: incoming,
-        payouts: vec![
-            agreements::Payout { stake: Some(0), ..payout(label.id, 150) },
-            agreements::Payout { stake: Some(0), ..payout(ana.id, 850) },
-        ],
+        receipt: sub,
+        payouts: vec![agreements::Payout { stake: Some(0), ..payout(svc_p, 1400) }, agreements::Payout { stake: Some(0), ..payout(music.id, 600) }],
         cmip: spec("a split cMIP"),
-        agreement: pe,
+        agreement: pool,
         tally: None,
         number: Some(1),
         modules: vec![],
         metric_records: vec![],
         transfers: vec![],
     };
-    let ps = w.private_act(&mut svc_p, mips().agreements, agreements::types::SPLIT, s.to_map(), None, vec![label.id, ana.id, ben.id]);
-    let e = view(&w).split(&ps).unwrap();
-    assert!(e.mismatched.is_empty(), "the work's line, paid to a payee of the work's agreement: {:?}", e.mismatched);
-    // Paid to someone who is no payee of the work's agreement: a mismatch.
-    let stranger = spec("someone the work's agreement never names");
-    let s2 = agreements::Split { payouts: vec![agreements::Payout { stake: Some(0), ..payout(label.id, 150) }, agreements::Payout { stake: Some(0), ..payout(stranger, 850) }], number: Some(2), ..s.clone() };
-    let bad = w.private_act(&mut svc_p, mips().agreements, agreements::types::SPLIT, s2.to_map(), None, vec![label.id, ana.id, ben.id]);
-    assert!(!view(&w).split(&bad).unwrap().mismatched.is_empty());
-    // The work's service's receipt in Ana's name naming the publication's
-    // split: F129 (H5) and F130 (H7) say a split service's grant key never
-    // signs a split's payout. As built it counts for nothing and the payout
-    // stays unpaid; question QK3 in `docs/deals-owning-build.md`.
-    let unpaid_ana = |w: &World| view(w).service_account(&svc_p.id).unwrap().unpaid.iter().any(|u| u.split == ps && u.receiver == ana.id);
-    let line = receipt(&mut w, &mut sa, ana.id, svc_p.id, 850, ps, None, b"the work's line");
-    assert!(matches!(view(&w).consent(&line).unwrap(), Consent::Ungranted { .. }), "H5: refused, as the rule stands");
-    assert!(unpaid_ana(&w), "as built: the work's service's receipt discharges nothing (QK3)");
-    // Ana's own receipt, with her own key, naming the split, discharges it.
-    let mut a2 = ana.clone();
-    receipt(&mut w, &mut a2, ana.id, svc_p.id, 850, ps, None, b"Ana's own receipt");
-    assert!(!unpaid_ana(&w));
-    let _ = (&mut svc_w, gb);
+    let pool_split = l.w.private_act(&mut svc_pool, mips().agreements, agreements::types::SPLIT, s.to_map(), None, vec![music.id, svc_p, label]);
+    let e = view(&l.w).split(&pool_split).unwrap();
+    assert!(e.mismatched.is_empty(), "the pool's split names the publication's split service: {:?}", e.mismatched);
+    // The publication's service receipts in its own name and splits under
+    // the publication's agreement, naming the work's service.
+    let in_p = l.receipt(Who3::SvcP, svc_p, svc_pool.id, 1400, pool_split, None, b"the publication's share");
+    assert!(view(&l.w).service_account(&svc_pool.id).unwrap().unpaid.iter().all(|u| u.receiver != svc_p), "the pool's payout to the publication's service, receipted");
+    let s = agreements::Split {
+        receipt: in_p,
+        payouts: vec![agreements::Payout { stake: Some(0), ..payout(label, 210) }, agreements::Payout { stake: Some(0), ..payout(svc_w, 1190) }],
+        cmip: spec("a split cMIP"),
+        agreement: l.pe,
+        tally: None,
+        number: Some(1),
+        modules: vec![],
+        metric_records: vec![],
+        transfers: vec![],
+    };
+    let ps = l.w.private_act(&mut l.svc_p, mips().agreements, agreements::types::SPLIT, s.to_map(), None, vec![label, l.ana.id, l.ben.id, svc_w]);
+    let e = view(&l.w).split(&ps).unwrap();
+    assert!(e.problems.is_empty() && e.mismatched.is_empty(), "{:?} {:?}", e.problems, e.mismatched);
+    assert!(view(&l.w).service_account(&svc_p).unwrap().unsplit.iter().all(|u| u.payment != in_p), "split: nothing unsplit");
+    let in_w = l.receipt(Who3::SvcW, svc_w, svc_p, 1190, ps, None, b"the work's share");
+    assert!(view(&l.w).service_account(&svc_w).unwrap().unsplit.iter().any(|u| u.payment == in_w && u.agreement == l.we));
 }
 
 fn agreements_purchase(a: Hash) -> mor_core::money::Purchase {

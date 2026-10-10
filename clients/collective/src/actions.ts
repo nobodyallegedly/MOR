@@ -1312,6 +1312,28 @@ export class Actions {
   }
 
   /**
+   * The review's lines on the drafts a departure names (F207): for a
+   * resignation, none ever brings the member back; for a stepping down,
+   * none ever gives them the area back, whichever line puts it in force.
+   */
+  private draftLines(who: string, drafts: string[], act: 'resignation' | 'stepping down'): Line[] {
+    const back = act === 'resignation' ? `brings ${who} back` : `gives ${who} the Releases area back`;
+    const one = drafts.length === 1;
+    return drafts.length
+      ? [
+          {
+            text: `${who} signed ${one ? 'a version' : `${drafts.length} versions`} of the agreement that ${one ? 'is' : 'are'} not in force: ${list(drafts.map(short))}. The ${act} names ${one ? 'it' : 'them'} as left behind, so that none ever ${back}, whichever line puts ${one ? 'it' : 'one'} in force (F207).`,
+          },
+          { text: `A version ${who} signed that is not held at the collective's relays cannot be named here: if a line ever put it in force, it would ${act === 'resignation' ? `bring ${who} back` : `give ${who} the Releases area back`} (F207, a stated cost).`, tone: 'warn' },
+        ]
+      : [
+          {
+            text: `No version of the agreement that ${who} signed and that is not in force was found at the collective's relays: the ${act} names no draft. One signed elsewhere and not found here would ${act === 'resignation' ? `bring ${who} back` : `give ${who} the Releases area back`} if a line ever put it in force (F207, a stated cost).`,
+          },
+        ];
+  }
+
+  /**
    * Leave a collective alone (Agreements rule 37a): the member signs a resignation
    * nobody else signs, and the collective registers it at once by a record,
    * its line. Nothing else changes: the members who stay refit the
@@ -1423,18 +1445,7 @@ export class Actions {
       `${who} keeps their stake, as a departed holder (Agreements rule 46b). Someone with stakes in works worth keeping does not resign. Leaving is still ${who}'s alone to decide.`,
     ];
     const payload = resignationPayload(named, undefined, drafts.length ? drafts : undefined);
-    const draftLines: Line[] = drafts.length
-      ? [
-          {
-            text: `${who} signed ${drafts.length === 1 ? 'a version' : `${drafts.length} versions`} of the agreement that ${drafts.length === 1 ? 'is' : 'are'} not in force: ${list(drafts.map(short))}. The resignation names ${drafts.length === 1 ? 'it' : 'them'} as left behind, so that none ever brings ${who} back, whichever line puts ${drafts.length === 1 ? 'it' : 'one'} in force (F207).`,
-          },
-          { text: `A version ${who} signed that is not held at the collective's relays cannot be named here: if a line ever put it in force, it would bring ${who} back (F207, a stated cost).`, tone: 'warn' },
-        ]
-      : [
-          {
-            text: `No version of the agreement that ${who} signed and that is not in force was found at the collective's relays: the resignation names no draft. One signed elsewhere and not found here would bring ${who} back if a line ever put it in force (F207, a stated cost).`,
-          },
-        ];
+    const draftLines = this.draftLines(who, drafts, 'resignation');
     const summary = b
       ? [
           `Agreements read “${cname}” as broken since the rotation ${short(b.act)}: ${b.reason}.`,
@@ -1881,7 +1892,12 @@ export class Actions {
       threshold = c.f.rules?.[b.before]?.governance.releaseThreshold ?? threshold;
     }
     const named = b ? b.before : (agreements.agreement ?? c.f.agreement);
-    const payload = resignationPayload(named, RELEASE_AREA);
+    // F207 (client conformance), its stepping-down half: "a resignation (or
+    // a stepping down) names the drafts its signer had signed and leaves
+    // behind", so that none ever gives the area back, whichever line puts
+    // it in force. The same drafts a resignation would name.
+    const drafts = await this.draftsLeft(c, agreements, a.member, named);
+    const payload = resignationPayload(named, RELEASE_AREA, drafts.length ? drafts : undefined);
     const area: Line[] = releaseVoices.length
       ? [
           {
@@ -1911,6 +1927,7 @@ export class Actions {
           ],
       sections: [
         { heading: 'The Releases area from the line on', lines: area },
+        { heading: 'Drafts left behind', lines: this.draftLines(who, drafts, 'stepping down') },
         {
           heading: 'Signed on this device',
           lines: [
@@ -1931,7 +1948,7 @@ export class Actions {
       run: async () => {
         const col = this.store.collective(a.collective);
         const m = this.store.identity(a.member);
-        const r = await resign(m, named, col.f.relays, RELEASE_AREA);
+        const r = await resign(m, named, col.f.relays, RELEASE_AREA, drafts);
         this.store.saveIdentity(m);
         if (b) {
           col.f.steppedDown = [...steppedDownOf(col), { member: a.member, area: RELEASE_AREA, resignation: r.id, named }];
