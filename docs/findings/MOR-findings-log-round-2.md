@@ -2354,6 +2354,12 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 *Suggested by the project lead (the notice), with Nobody, allegedly (the holder as a legible option).* A payer who committed only a one-time key cannot be reached by a notice; QG1 applies to them as decided.
 
+## F198. A payee pointer left outside a fork still counts for payments already made to it (10 October 2026, morning)
+
+**From** FH1 (`docs/fork-hands-out-2026-10-09.md`): a fork drawn on purpose on an old line holds a buyer's payment and the collective's act taking it on, but not the payee pointer the receipt relied on; the pointer counting for nothing (rule 47a), the receipt stopped counting (Finance rule 12a) and the purchase vanished, though the buyer was safe under IT2a. *Laid beside it:* IT2a and IT2b (F131); F181 ("as the chain stood"); repair, not undo (F185).
+
+**Decided by Nobody, allegedly, 10 October 2026 ("Feels like the only option, agreed"):** **a payee pointer left outside a fork's history still counts for payments already made to it**, as the chain stood for each payment (F181); for anything after the fork it counts for nothing (rule 47a). *Suggested by the project lead.* *Why:* a stated cost (option 1) would let members erase, by an old-line fork, sales they had visibly taken on, against IT2a; failing the fork (option 3) would let one payment block an ending, the trap F191 and F197 closed for closings. The FORK-HANDS-OUT test at seed `7145587436215071231` is to pass once built.
+
 ## Review of F163 to F168 (7 October 2026, morning)
 
 A hostile review by Fable (`docs/reviews/f163-f168-review.md`) found that four of the six decisions answer their findings (F163 for conforming clients, F165, F167 in the main, most of F168), and that the two which changed a principle each leave a hole on the side of the party who gains: (1) F164 gives the payee the cut-off (it withholds the receipt, rotates, anchors), so an owner with no theft can unmake an honest payment to its own wallet, against rule 10's "the claim alone shows the money arrived"; (2) "anchored" names no reference, and Finance now depends on Law; (8) F166 does not say what a defeated declaration undoes. Also: F168 item 11 lets a thief re-point existing deals in the window (5); F163 imports a thief's pointer in the window (6); F165's receipt chain has no fork or reset rule (7); F167's floor forbids the long-form format's own markup and misses common negative and decimal forms (10, 11); editorial conflicts (12 to 14).
