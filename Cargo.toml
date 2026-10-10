@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "cmips/payment", "harness", "harness/ordering", "modules/airgap", "modules/lightning", "relay", "wasm"]
+members = ["core", "cmips/payment", "harness", "harness/ordering", "modules/airgap", "modules/lightning", "modules/onchain", "relay", "wasm"]
 resolver = "2"
 
 [workspace.package]

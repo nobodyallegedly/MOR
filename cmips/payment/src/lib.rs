@@ -19,7 +19,7 @@
 use mor_core::cbor::{self, Value};
 use mor_core::finance::{self as fin, Amount, Claim, Obligation, PaidInto, PayeePointer, Payer, Receipt, VaultEntry};
 use mor_core::hash::{sha256, tagged_hash, Hash};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 /// The tag of the payment commitment.
@@ -207,6 +207,21 @@ pub struct RailInput<'a> {
     pub rail_proof: &'a [u8],
 }
 
+/// Whether a rail Module is a request rail or a push rail (F128, W4; F140
+/// item 1): a rail Module declares it, and a client reads it from the
+/// Module, never sets it by hand. *Format open: the Production
+/// specification format has no field for it yet; until it has, each
+/// Module's code states what its text declares.*
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RailKind {
+    /// The payee's side commits to each payment before it is made, and so
+    /// to the claim a purchase names.
+    Request,
+    /// The payer pays an address with no request; each holder settles the
+    /// claim on its own chain (Finance rule 10c).
+    Push,
+}
+
 /// A rail Module, as the payment cMIP needs it.
 pub trait RailModule {
     /// Its spec hash: what receipt and claim field 0, pointer rails and
@@ -215,6 +230,9 @@ pub trait RailModule {
     /// The cMIP its specification's field 5 names ("implements",
     /// Production). Checked where an agreement names a payment cMIP (F115).
     fn implements(&self) -> Hash;
+    /// Whether it is a request rail or a push rail, as its specification
+    /// declares.
+    fn kind(&self) -> RailKind;
     /// The unit a rail address or vault source carries, if the address is
     /// one this Module reads.
     fn unit(&self, address: &[u8]) -> Option<Hash>;
@@ -287,6 +305,12 @@ impl<'a> Modules<'a> {
     }
     pub fn get(&self, spec: &Hash) -> Option<&'a dyn RailModule> {
         self.by_spec.get(spec).copied()
+    }
+    /// The adopted rail Modules that declare themselves push rails: what a
+    /// Law client hands the core's Law view (`LawView::push_rails`), read
+    /// from the Modules rather than set by hand (F140 item 1).
+    pub fn push_rails(&self) -> BTreeSet<Hash> {
+        self.by_spec.iter().filter(|(_, m)| m.kind() == RailKind::Push).map(|(h, _)| *h).collect()
     }
 }
 

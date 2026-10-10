@@ -25,7 +25,7 @@ pub mod lnd;
 use bolt11::{Bolt11Error, Network};
 use mor_core::cbor::{self, Value};
 use mor_core::hash::{sha256, Hash};
-use mor_payment::{Answer, RailInput, RailModule, Verification};
+use mor_payment::{Answer, RailInput, RailKind, RailModule, Verification};
 
 /// This Module's spec hash. A test value until the Module is published by
 /// its creator (roadmap step 17).
@@ -197,6 +197,11 @@ impl RailModule for Lightning {
 
     fn implements(&self) -> Hash {
         mor_payment::spec()
+    }
+
+    /// A request rail (F128, W4): the payee's node issues each invoice.
+    fn kind(&self) -> RailKind {
+        RailKind::Request
     }
 
     fn unit(&self, address: &[u8]) -> Option<Hash> {

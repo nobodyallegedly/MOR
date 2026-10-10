@@ -1,0 +1,31 @@
+[package]
+name = "mor-onchain"
+version = "0.1.0"
+description = "The on-chain Bitcoin rail Module: pay-to-contract Taproot addresses committing to each payment, confirmed transactions as proofs of payment, and the verification rule, for tests on regtest."
+edition.workspace = true
+license.workspace = true
+
+[features]
+btcd = ["dep:reqwest", "dep:serde_json", "dep:tokio"]
+
+[dependencies]
+mor-core = { path = "../../core" }
+mor-payment = { path = "../../cmips/payment" }
+sha2 = { version = "0.10", default-features = false }
+# secp256k1 point arithmetic for the Taproot tweak, and BIP-340 signatures
+# for the payee's side's requests.
+k256 = { version = "0.13.4", default-features = false, features = ["arithmetic", "schnorr"] }
+reqwest = { version = "0.13", default-features = false, features = ["json"], optional = true }
+serde_json = { version = "1", optional = true }
+tokio = { version = "1", features = ["time"], optional = true }
+
+[dev-dependencies]
+hex = "0.4"
+# The second, independent implementation the tests check every transaction,
+# header, Merkle branch and Taproot output key against.
+bitcoin = "0.32"
+# The Lightning rail Module: the same units, and a vault holding both rails.
+mor-lightning = { path = "../lightning" }
+# The core's test world (`core/tests/common`), shared by the theft story: it
+# checks every SLH-DSA signature against this second implementation.
+slh-dsa = "=0.2.0-rc.5"
