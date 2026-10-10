@@ -2888,3 +2888,5 @@ Fable's review of Finance rule 15 alone (`docs/reviews/rule-15-review-2026-10-07
 
 **Added 10 October 2026, night, asked by Nobody, allegedly:** "Every time our discussions have covered your needs for a new session, you can share the prompt here before we continue." The project lead writes a session's prompt into the conversation as soon as the decisions it needs are in hand, before moving on.
 
+**Amended the same night by Nobody, allegedly:** "Never share what I should not launch yet." A prompt is shared only once it can be launched at once; one that must wait for another session is held back until then.
+
