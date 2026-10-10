@@ -1,8 +1,8 @@
-//! The two seed Modules: how a safety seed is written down, and how safety
-//! keys come from it (`modules/module-safety-seed-words-draft-1.md`,
-//! `modules/module-safety-seed-hex-draft-1.md`).
+//! The two seed Modules: how a chain-key seed is written down, and how safety
+//! keys come from it (`modules/module-chain-key-seed-words-draft-1.md`,
+//! `modules/module-chain-key-seed-hex-draft-1.md`).
 //!
-//! Both hold a 256-bit seed and derive every safety key from it by a tagged
+//! Both hold a 256-bit seed and derive every chain key from it by a tagged
 //! hash of the seed, the scheme and the key index. They differ in how the
 //! backup is written, and each uses its own tag, so the same 256 bits under
 //! the two Modules give unrelated keys: a backup restores only under the
@@ -94,7 +94,7 @@ impl fmt::Display for SeedError {
 
 impl std::error::Error for SeedError {}
 
-/// A safety seed under one seed Module.
+/// A chain-key seed under one seed Module.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Seed {
     pub module: SeedModule,
@@ -180,7 +180,7 @@ impl Seed {
         }
     }
 
-    /// The safety key at `index` for `scheme` (2 or 3): FIPS 205's three
+    /// The chain key at `index` for `scheme` (2 or 3): FIPS 205's three
     /// 16-byte key-generation seeds are the first 48 bytes of
     /// `tagged_hash(tag, seed ‖ scheme ‖ index ‖ 0) ‖ tagged_hash(tag, seed ‖ scheme ‖ index ‖ 1)`,
     /// with the index as 8 bytes, big-endian, in the order sk_seed, sk_prf, pk_seed.
@@ -197,7 +197,7 @@ impl Seed {
     /// The 48 bytes of FIPS 205 seeds [`Seed::key`] derives (sk_seed,
     /// sk_prf, pk_seed), for a signer that takes seeds rather than a key.
     pub fn key_seeds(&self, scheme: u8, index: u64) -> [u8; 48] {
-        assert!(scheme == 2 || scheme == 3, "safety schemes are 2 and 3");
+        assert!(scheme == 2 || scheme == 3, "chain-key schemes are 2 and 3");
         let t = self.module.key_tag();
         let i = index.to_be_bytes();
         let a = tagged_hash_parts(t, &[&self.entropy, &[scheme], &i, &[0]]);

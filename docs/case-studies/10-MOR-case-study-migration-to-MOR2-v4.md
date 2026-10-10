@@ -4,7 +4,7 @@
 
 *Case study, draft 3, 9 October 2026. Draft 2 with the technical pass of 9 October 2026 applied (`docs/technical-pass-2026-10-09.md`), items 1 to 3, nothing else changed; item 4 needed no change. The rest is unchanged, for the author's own passes. Draft 2's note follows.*
 
-*Case study, draft 2, 27 September 2026. What MOR could be, with your help. Draft 2 corrects section 7 after review round 2 (F54, F55, F63): the everyday key can migrate to a post-quantum scheme, and must, before a break.*
+*Case study, draft 2, 27 September 2026. What MOR could be, with your help. Draft 2 corrects section 7 after review round 2 (F54, F55, F63): the signing key can migrate to a post-quantum scheme, and must, before a break.*
 
 > *"If you wish, you can take all this when you leave."*
 
@@ -38,15 +38,15 @@ Three things make a successor certain:
 
 - **Flaws found in use.** However carefully MOR1 is reviewed, years of real use will reveal things no reviewer saw.
 - **Better ideas.** Some of what the community learns on MOR1 will not fit a frozen core.
-- **Broken cryptography.** MOR1's everyday signatures use elliptic curves. A large enough quantum computer would break them for everyone at once. Nobody knows when, but a core frozen forever will outlive them.
+- **Broken cryptography.** MOR1's signing-key signatures use elliptic curves. A large enough quantum computer would break them for everyone at once. Nobody knows when, but a core frozen forever will outlive them.
 
 ## 2. What MOR1 already provides for the crossing
 
 Everything below is already in the MIPs. Nothing needs to be added for migration to work.
 
 - **Identities are hashes, not keys.** An identity survives any number of key changes, and can declare a successor.
-- **Succession rides on rotation.** A rotation, signed by the offline safety key, can name the identity that succeeds this one, in MOR or in another protocol. A thief holding only the everyday key can never redirect an identity's followers, agreements or money.
-- **Safety keys are post-quantum, and everyday keys can become so.** Even if elliptic-curve signatures are broken, nobody can forge a rotation or a succession, and nobody can forge a genesis, since the identity hash fixes it. A signature scheme is a specification named by its hash, so when a post-quantum everyday scheme is standardised, anyone publishes it, clients adopt it, and owners rotate to it, with no change to the core.
+- **Succession rides on rotation.** A rotation, signed by the offline chain key, can name the identity that succeeds this one, in MOR or in another protocol. A thief holding only the signing key can never redirect an identity's followers, agreements or money.
+- **Chain keys are post-quantum, and signing keys can become so.** Even if elliptic-curve signatures are broken, nobody can forge a rotation or a succession, and nobody can forge a genesis, since the identity hash fixes it. A signature scheme is a specification named by its hash, so when a post-quantum signing-key scheme is standardised, anyone publishes it, clients adopt it, and owners rotate to it, with no change to the core.
 - **Works are facts about bytes.** A work's hash is the same on any protocol, so a song or a video is recognisably the same work in MOR1 and MOR2.
 - **Agreements change by cloning.** A clone names its parent and closes it. A clone into MOR2 can name its MOR1 parent, so every stake and obligation carries its history across.
 - **Links to other protocols.** An identity can link to an identifier on another protocol, two-way where both sides sign.
@@ -63,9 +63,9 @@ Everything below is already in the MIPs. Nothing needs to be added for migration
 
 ## 4. Lea's band crosses
 
-**The band decides to move.** It creates its MOR2 identity, then rotates its MOR1 identity with its safety key, declaring the MOR2 identity as its successor. Under the band's key grammar, this needs the signatures its founding agreement requires for a rotation.
+**The band decides to move.** It creates its MOR2 identity, then rotates its MOR1 identity with its chain key, declaring the MOR2 identity as its successor. Under the band's key grammar, this needs the signatures its founding agreement requires for a rotation.
 
-**Followers follow.** Every client that reads the band's MOR1 identity sees the succession, signed by the safety key, and can offer to follow the band on MOR2. Nothing is lost in the move: the followers are the same people, now pointed at the new home.
+**Followers follow.** Every client that reads the band's MOR1 identity sees the succession, signed by the chain key, and can offer to follow the band on MOR2. Nothing is lost in the move: the followers are the same people, now pointed at the new home.
 
 **Works keep their identity.** The band's songs have the same work hashes in MOR2. The band publishes MOR2 claims naming its MOR1 claims, so the chain of ownership is unbroken.
 
@@ -93,7 +93,7 @@ This is the hard case, and the reason MOR1 is built the way it is.
 
 **What survives:**
 
-- **Identities, for owners who prepared.** Rotations and successions are signed with post-quantum safety keys, which the break does not touch. But whether a rotation *counts* rests on receipts, objections and summaries signed by homes and auditors with everyday keys; after a break those can be forged too, and a forged objection can block a homeless rotation. So the exit after a break belongs to owners who hold both keys (the escape needs no home's consent) and, above all, to owners who migrated their everyday key to a post-quantum scheme before the break, along with their homes and auditors. Migration comes first; the safety key is the last resort, not the plan.
+- **Identities, for owners who prepared.** Rotations and successions are signed with post-quantum chain keys, which the break does not touch. But whether a rotation *counts* rests on receipts, objections and summaries signed by homes and auditors with signing keys; after a break those can be forged too, and a forged objection can block a homeless rotation. So the exit after a break belongs to owners who hold both keys (the escape needs no home's consent) and, above all, to owners who migrated their signing key to a post-quantum scheme before the break, along with their homes and auditors. Migration comes first; the chain key is the last resort, not the plan.
 - **Genesis.** Nobody can forge an existing identity's genesis, since the identity hash fixes it.
 - **Anchored history.** Every act anchored before the break stays trustworthy: its existence at that point in time is proven independently of its signature.
 
@@ -101,7 +101,7 @@ This is the hard case, and the reason MOR1 is built the way it is.
 
 **The cost of not anchoring.** This is where a principle from MOR's earliest design sessions pays off. Anchoring is optional: each party decides what is worth anchoring, their risk, their dial. Money has a rule of its own: name a clock and anchor, or bear the loss of a theft. Deals of lasting value, such as a label contract, a coproduction or a commune's ballot commitment, are anchored. A casual post may not be. When the break comes, what was anchored crosses intact, and the migration to MOR2 has solid ground to stand on.
 
-**Migration must be prepared before the break.** Successions, anchoring and dual-protocol clients all need to exist before they are urgently needed. So does the post-quantum everyday scheme: it is a specification anyone can publish, and the sooner it is adopted, the less the break can touch. That is why this case study is written now.
+**Migration must be prepared before the break.** Successions, anchoring and dual-protocol clients all need to exist before they are urgently needed. So does the post-quantum signing-key scheme: it is a specification anyone can publish, and the sooner it is adopted, the less the break can touch. That is why this case study is written now.
 
 ## 8. From MOR2 to MOR3
 
@@ -111,7 +111,7 @@ MOR3 is the intended destination because by then the protocol will have been tes
 
 ## 9. What MOR provides, and what it needs
 
-**From the core, nothing new.** Succession in rotations, post-quantum safety keys, identities as hashes, work hashes, cloning with named parents, links to other protocols, anchoring and core data formats are all already defined.
+**From the core, nothing new.** Succession in rotations, post-quantum chain keys, identities as hashes, work hashes, cloning with named parents, links to other protocols, anchoring and core data formats are all already defined.
 
 **Open for others to build (cMIPs and Modules):**
 
@@ -126,8 +126,8 @@ MOR3 is the intended destination because by then the protocol will have been tes
 
 - **MOR1 can make the crossing possible; it cannot make MOR2 accept it.** Whether MOR2 honours MOR1's successions, claims and agreements is MOR2's choice. This case study is also an invitation to MOR2's builders to do so.
 - **Unanchored history is at risk after a break.** Anchoring is cheap, but it is a choice, and many will not make it.
-- **A lost safety key means no succession.** An identity whose owner lost the offline key can never rotate or declare a successor.
-- **An unmigrated everyday key is exposed after a break.** The safety key secures the exit; it does not secure the homes, auditors and keepers whose signatures decide whether that exit counts. Owners, homes and auditors who did not migrate before the break leave only with both keys, and cannot rely on what they left behind.
+- **A lost chain key means no succession.** An identity whose owner lost the offline key can never rotate or declare a successor.
+- **An unmigrated signing key is exposed after a break.** The chain key secures the exit; it does not secure the homes, auditors and keepers whose signatures decide whether that exit counts. Owners, homes and auditors who did not migrate before the break leave only with both keys, and cannot rely on what they left behind.
 - **Parties who refuse to sign stay behind.** Agreements needing their signature remain in MOR1 until they agree, the agreement ends, or its abandonment clause applies.
 - **Coexistence splits attention.** For a while, audiences and markets are divided across two protocols; bridges soften this but do not remove it.
 

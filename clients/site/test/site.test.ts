@@ -174,7 +174,7 @@ test('what is not a version of the expected site is refused, with the reason', a
   assert.equal(after.withdrawn, wd.id);
 });
 
-test("a collective's site is refused until Law draft 7 is approved, rather than accepted unjudged", async () => {
+test("a collective's site is refused until Agreements draft 7 is approved, rather than accepted unjudged", async () => {
   const members: TestIdentity[] = [];
   for (let i = 0; i < 3; i++) {
     const t = TestIdentity.create({ homes: w.homes.map((h) => h.home) });
@@ -191,7 +191,7 @@ test("a collective's site is refused until Law draft 7 is approved, rather than 
   const v = await openVersion(s.id, collective.identity, [w.relay.base]);
   assert.equal(v.ok, false);
   assert.equal(v.standing, 'valid', 'validly signed, and still not a version');
-  assert.match(v.problems.join(), /collective.*Law draft 7/);
+  assert.match(v.problems.join(), /collective.*Agreements draft 7/);
 });
 
 test('the gateway checks before it serves, serves its display client at every address, and the files only as bytes', async () => {

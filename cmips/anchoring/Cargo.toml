@@ -1,7 +1,7 @@
 [package]
 name = "mor-anchoring"
 version = "0.1.0"
-description = "The anchoring cMIP (the Envelope's anchoring task): the batch tree a pooled anchoring service commits to, and the service's offer, tickets and published batches, with omission and default judged from them."
+description = "The anchoring cMIP (the Envelopes' anchoring task): the batch tree a pooled anchoring service commits to, and the service's offer, tickets and published batches, with omission and default judged from them."
 edition.workspace = true
 license.workspace = true
 

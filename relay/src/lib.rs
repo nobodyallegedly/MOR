@@ -5,7 +5,7 @@
 //! - [`wire`]: the cMIP's messages, strict both ways.
 //! - [`store`]: storage, one SQLite file per relay.
 //! - [`operator`]: the identity that runs a home and signs what it states
-//!   (test identities only, safety key in software).
+//!   (test identities only, chain key in software).
 //! - [`node`]: what a relay and a home do with each request.
 //! - [`http`]: the requests over HTTP.
 //! - [`client`]: a client for the cMIP, checking what it fetches.
@@ -13,7 +13,7 @@
 //!   from a browser (outside the protocol).
 //!
 //! Written against the relay transport cMIP draft 2, core v16, Identity
-//! draft 10, Envelope draft 6 and Text draft 5.
+//! draft 10, Envelopes draft 6 and Text draft 5.
 
 pub mod client;
 pub mod http;

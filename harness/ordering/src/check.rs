@@ -278,7 +278,7 @@ pub fn check(seed: u64, t: &mut Tally) {
 
     // 3. Safety, in every run: no signature counts that real time places after its signer's
     //    line (no backdating, whatever the tips). With keepers, a mismatch is a keeper that
-    //    recorded a line late: the trust in keepers Law already states.
+    //    recorded a line late: the trust in keepers Agreements already states.
     for &(x, c) in &s.sigs {
         if c && !o.sig_of(x) {
             t.fail_unsafe += 1;
@@ -501,7 +501,7 @@ pub fn explain_unstable(seed: u64, rule: Rule) {
 }
 
 // ---------------------------------------------------------------------------------------
-// The rules as Law draft 7's seventh pass writes them (F109 with C1 to C8): a signature is
+// The rules as Agreements draft 7's seventh pass writes them (F109 with C1 to C8): a signature is
 // placed at the act it signs or where the collective acknowledged it (C1, C2); a record
 // counts only with the signature acts it names (A2); the collective's keepers place only its
 // own acts a line left out (C4); a member's own rotation is registered on the collective's
@@ -509,7 +509,7 @@ pub fn explain_unstable(seed: u64, rule: Rule) {
 // are settled by the collective's acknowledgement, payment or import (A6, C6, C8);
 // declarations take effect at the collective's line (C7); concurrent records leave their
 // parent in force (A4), until a clone of either branch recorded after both lines resolves
-// the fork (Law draft 8, B11).
+// the fork (Agreements draft 8, B11).
 // ---------------------------------------------------------------------------------------
 
 /// The rules as written.
@@ -571,7 +571,7 @@ pub struct WrittenTally {
     pub keeper_rescues: u64,
     pub late_completions: u64,
     /// Records resolving a fork of records, a clone of one branch recorded after both
-    /// lines (Law draft 8, B11).
+    /// lines (Agreements draft 8, B11).
     pub fork_resolutions: u64,
 }
 

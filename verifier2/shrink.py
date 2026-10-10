@@ -24,10 +24,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def binary() -> str:
-    cands = glob.glob(os.path.join(ROOT, "target", "release", "deps", "law_invariants-*"))
+    cands = glob.glob(os.path.join(ROOT, "target", "release", "deps", "agreements_invariants-*"))
     cands = [c for c in cands if not c.endswith(".d")]
     if not cands:
-        sys.exit("build first: cargo test -p mor-core --release --test law_invariants --no-run")
+        sys.exit("build first: cargo test -p mor-core --release --test agreements_invariants --no-run")
     return max(cands, key=os.path.getmtime)
 
 

@@ -460,7 +460,7 @@ impl PutSealed {
     }
 }
 
-/// A sealed container, as far as a relay reads it (Envelope):
+/// A sealed container, as far as a relay reads it (Envelopes):
 /// `[ to: [* hash], one-time-key: bstr, locked-act: bstr, sig: bstr ]`.
 /// The relay checks the shape only; the container is opaque.
 #[derive(Clone, Debug, PartialEq, Eq)]

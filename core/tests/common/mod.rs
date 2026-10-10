@@ -10,7 +10,7 @@ use mor_core::chain::Verifier;
 use mor_core::hash::{sha256, Hash, ZERO_HASH};
 use mor_core::identity::{
     Absence, Audit, Declaration, Endorsement, Genesis, Home, HomeRule, KeptTip, LogSummary,
-    ChainSignature, Objection, Payload, Receipt, Rotation, SafetyCommit, SigningKey, Successor,
+    ChainSignature, Objection, Payload, Receipt, Rotation, ChainKeyCommit, SigningKey, Successor,
 };
 use mor_core::merkle;
 use mor_core::mmr::Mmr;
@@ -22,12 +22,12 @@ pub fn identity_spec() -> Hash {
     sha256(b"IDENTITY, test value until the freeze")
 }
 
-/// The Finance and Law MIPs' spec hashes in these tests: the act types
+/// The Money and Agreements MIPs' spec hashes in these tests: the act types
 /// that may carry acknowledgements beside Identity's (F110).
-pub fn finance_spec() -> Hash {
+pub fn money_spec() -> Hash {
     sha256(b"FINANCE, test value until the freeze")
 }
-pub fn law_spec() -> Hash {
+pub fn agreements_spec() -> Hash {
     sha256(b"LAW, test value until the freeze")
 }
 
@@ -57,8 +57,8 @@ pub struct Person {
     /// Generation of the current keys: 0 at genesis, +1 per rotation made.
     pub gen: u32,
     pub sign: SchnorrKey,
-    /// The safety key committed by the current chain act, to reveal next.
-    pub safety: SlhKey,
+    /// The chain key committed by the current chain act, to reveal next.
+    pub chain_key: SlhKey,
     /// The identity-chain act that bound the current signing key.
     pub binding: Hash,
     /// Its position in the identity chain.
@@ -66,7 +66,7 @@ pub struct Person {
     /// The latest act of its identity chain: the binding, or a chain
     /// signature made since (F132).
     pub tip: Hash,
-    /// The safety scheme used for new commitments (2 or 3).
+    /// The chain-key scheme used for new commitments (2 or 3).
     pub scheme: u8,
     /// The everyday sequence, as act ids.
     pub seq: Vec<Hash>,
@@ -84,9 +84,9 @@ pub struct Person {
 fn cited(p: &Person, spec: &Hash, type_: u64, objects: Option<Vec<Object>>) -> Option<Vec<Object>> {
     let Some((chain, ds)) = &p.cite else { return objects };
     // Identity's own everyday acts (a witness act...) carry no objects:
-    // they are not on the actions chain (reading, F127). A record (Law
+    // they are not on the actions chain (reading, F127). A record (Agreements
     // type 17) is a decision, citing by its kept tips.
-    if spec == &identity_spec() || (spec == &law_spec() && type_ == 17) {
+    if spec == &identity_spec() || (spec == &agreements_spec() && type_ == 17) {
         return objects;
     }
     if objects.iter().flatten().any(|o| &o.chain == chain) {
@@ -119,8 +119,8 @@ pub fn signing_key(k: &SchnorrKey) -> SigningKey {
     }
 }
 
-pub fn commit(k: &SlhKey) -> SafetyCommit {
-    SafetyCommit {
+pub fn commit(k: &SlhKey) -> ChainKeyCommit {
+    ChainKeyCommit {
         scheme: k.scheme(),
         commit: k.commitment(),
     }
@@ -155,7 +155,7 @@ pub struct Rot {
     pub closure: bool,
     /// A different signing key than the next generation's (a thief's rival).
     pub signing_key: Option<SchnorrKey>,
-    /// Install an everyday key of another scheme.
+    /// Install a signing key of another scheme.
     pub raw_signing_key: Option<SigningKey>,
 }
 
@@ -164,7 +164,7 @@ pub struct World {
     counter: u64,
     /// Every act held, in the order it was added, with the content key a
     /// recipient opens it with: so a history can be replayed into a fresh
-    /// verifier in another order (the Law invariants).
+    /// verifier in another order (the Agreements invariants).
     pub log: Vec<(Act, Option<mor_core::lock::ContentKey>)>,
 }
 
@@ -177,7 +177,7 @@ impl Default for World {
 impl World {
     pub fn new() -> Self {
         World {
-            v: Verifier::with_mips(identity_spec(), finance_spec(), law_spec()),
+            v: Verifier::with_mips(identity_spec(), money_spec(), agreements_spec()),
             counter: 0,
             log: vec![],
         }
@@ -264,10 +264,10 @@ impl World {
         scheme: u8,
     ) -> Person {
         let sign = schnorr(name, 0);
-        let safety = slh(name, 0, scheme);
+        let chain_key = slh(name, 0, scheme);
         let g = Payload::Genesis(Genesis {
             signing_key: signing_key(&sign),
-            safety: commit(&safety),
+            chain_key: commit(&chain_key),
             homes,
             rule,
             declarations,
@@ -281,7 +281,7 @@ impl World {
             id,
             gen: 0,
             sign,
-            safety,
+            chain_key,
             binding: id,
             position: 0,
             tip: id,
@@ -298,7 +298,7 @@ impl World {
         self.genesis(name, vec![own_home()], None, None)
     }
 
-    /// A rotation of `p`, signed with the safety key its current chain act
+    /// A rotation of `p`, signed with the chain key its current chain act
     /// committed. Not held yet. Returns the act and the person as it would
     /// be if this rotation counts.
     pub fn rotation(&mut self, p: &Person, r: Rot) -> (Act, Person) {
@@ -307,7 +307,7 @@ impl World {
             .signing_key
             .clone()
             .unwrap_or_else(|| schnorr(&p.name, gen));
-        let next_safety = slh(&p.name, gen, p.scheme);
+        let next_chain_key = slh(&p.name, gen, p.scheme);
         let kept = r.kept.clone().unwrap_or_else(|| {
             p.seq
                 .last()
@@ -327,7 +327,7 @@ impl World {
                 .raw_signing_key
                 .clone()
                 .unwrap_or_else(|| signing_key(&next_sign)),
-            safety: commit(&next_safety),
+            chain_key: commit(&next_chain_key),
             kept,
             disowned: r.disowned,
             homes: r.homes,
@@ -339,12 +339,12 @@ impl World {
             closure: r.closure,
         });
         let inside = self.inside(1, &payload);
-        let safety = p.safety.clone();
-        let a = self.seal(&inside, Some(p.id), None, |id| safety.sign(id, None));
+        let chain_key = p.chain_key.clone();
+        let a = self.seal(&inside, Some(p.id), None, |id| chain_key.sign(id, None));
         let mut q = p.clone();
         q.gen = gen;
         q.sign = next_sign;
-        q.safety = next_safety;
+        q.chain_key = next_chain_key;
         q.binding = a.id();
         q.tip = a.id();
         q.position += 1;
@@ -352,23 +352,23 @@ impl World {
     }
 
     /// A chain signature of `p` on `signs` (Identity type 16, F132), signed
-    /// with the safety key its latest chain act committed, committing the
+    /// with the chain key its latest chain act committed, committing the
     /// next one. Held. Returns the act and the person as it is once the
-    /// signature counts: same signing key and binding, a new safety key.
+    /// signature counts: same signing key and binding, a new chain key.
     pub fn chain_sign(&mut self, p: &Person, signs: Hash) -> (Hash, Person) {
-        let next_safety = slh(&format!("{}/chain/{}", p.name, p.position + 1), p.gen, p.scheme);
+        let next_chain_key = slh(&format!("{}/chain/{}", p.name, p.position + 1), p.gen, p.scheme);
         let payload = Payload::ChainSignature(ChainSignature {
             prev: p.tip,
             position: p.position + 1,
-            safety: commit(&next_safety),
+            chain_key: commit(&next_chain_key),
             signs,
         });
         let inside = self.inside(16, &payload);
-        let safety = p.safety.clone();
-        let a = self.seal(&inside, Some(p.id), None, |id| safety.sign(id, None));
+        let chain_key = p.chain_key.clone();
+        let a = self.seal(&inside, Some(p.id), None, |id| chain_key.sign(id, None));
         let id = self.add(&a);
         let mut q = p.clone();
-        q.safety = next_safety;
+        q.chain_key = next_chain_key;
         q.tip = id;
         q.position += 1;
         (id, q)
@@ -434,7 +434,7 @@ impl World {
         a
     }
 
-    /// An everyday act of `p`, private, addressed to `to` (Envelope): held
+    /// An everyday act of `p`, private, addressed to `to` (Envelopes): held
     /// with its content key, as a recipient holds it.
     #[allow(clippy::too_many_arguments)]
     pub fn private_act(

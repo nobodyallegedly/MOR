@@ -27,8 +27,8 @@
 //   }
 //
 // What can be drafted is decided (Nobody, allegedly, 1 October 2026): acts
-// of the Text and Envelope layers only, namely posts, publications,
-// withdrawals and messages. Anything else, a Law act above all, is refused
+// of the Text and Envelopes layers only, namely posts, publications,
+// withdrawals and messages. Anything else, an Agreements act above all, is refused
 // by the connector before any draft is written, and by the desk again.
 //
 // The reading of a draft (`readDraft`) is made from these bytes alone, by
@@ -179,12 +179,12 @@ export interface DraftReading {
 
 /** Words for an act outside what Claude may prepare. */
 export function notPreparable(spec: string, type: number): string {
-  if (spec === REPO_SPECS.law) {
-    return 'It is a Law act (a signature, an agreement, a clone or the like). Claude prepares acts of the Text and Envelope layers only: posts, publications, withdrawals and messages (decided by Nobody, allegedly, 1 October 2026). A Law act is signed in the collective client, never from a draft.';
+  if (spec === REPO_SPECS.agreements) {
+    return 'It is an Agreements act (a signature, an agreement, a clone or the like). Claude prepares acts of the Text and Envelopes layers only: posts, publications, withdrawals and messages (decided by Nobody, allegedly, 1 October 2026). An Agreements act is signed in the collective client, never from a draft.';
   }
-  if (spec === SPECS.identity) return 'It is an Identity act. Claude prepares acts of the Text and Envelope layers only: posts, publications, withdrawals and messages.';
-  if (spec === SPECS.envelope) return `It is an Envelope act of type ${type}. Of the Envelope layer, Claude prepares publications and withdrawals only.`;
-  return `It is an act of a specification Claude does not prepare (${short(spec)}). Claude prepares acts of the Text and Envelope layers only: posts, publications, withdrawals and messages.`;
+  if (spec === SPECS.identity) return 'It is an Identity act. Claude prepares acts of the Text and Envelopes layers only: posts, publications, withdrawals and messages.';
+  if (spec === SPECS.envelopes) return `It is an Envelopes act of type ${type}. Of the Envelopes layer, Claude prepares publications and withdrawals only.`;
+  return `It is an act of a specification Claude does not prepare (${short(spec)}). Claude prepares acts of the Text and Envelopes layers only: posts, publications, withdrawals and messages.`;
 }
 
 /**
@@ -197,8 +197,8 @@ export async function readDraft(d: Draft, hints: string[], via: Via = {}): Promi
   if (d.note !== null && d.note.length > MAX_NOTE) extra.push(`Claude's note is longer than ${MAX_NOTE} characters.`);
   let r: DraftReading;
   if (d.spec === POST_SPECS.text && d.type === 0) r = d.public ? await readPost(d, who, hints, via) : await readMessage(d, who, hints, via);
-  else if (d.spec === POST_SPECS.envelope && d.type === PUBLICATION) r = await readPicture(d, who);
-  else if (d.spec === POST_SPECS.envelope && d.type === WITHDRAWAL) r = await readWithdrawal(d, who, hints, via);
+  else if (d.spec === POST_SPECS.envelopes && d.type === PUBLICATION) r = await readPicture(d, who);
+  else if (d.spec === POST_SPECS.envelopes && d.type === WITHDRAWAL) r = await readWithdrawal(d, who, hints, via);
   else r = { kind: 'refused', title: 'An act Claude does not prepare', summary: [], sections: [{ heading: 'Who signs', lines: who }], quoted: [], blocking: [notPreparable(d.spec, d.type)] };
   r.blocking.push(...extra);
   if (r.kind !== 'message' && d.to.length) r.blocking.push('Only a message names a recipient.');
@@ -335,7 +335,7 @@ async function readPicture(d: Draft, who: Line[]): Promise<DraftReading> {
     if (sha256(locked) !== hex(lockedHash)) blocking.push('The picture carried is not the one the publication names: its fingerprint differs.');
     try {
       const jpeg = new Uint8Array(openMedia(locked, key, nonce));
-      // The size of the stripped picture, as the JPEG Module and the barebone client have it (Envelope says "of those bytes": see the README, flaw 1).
+      // The size of the stripped picture, as the JPEG Module and the barebone client have it (Envelopes say "of those bytes": see the README, flaw 1).
       if (size !== jpeg.length) blocking.push('The publication states another size than the picture carried.');
       const work = b(1);
       const p = readJpeg(jpeg);
@@ -377,7 +377,7 @@ async function readWithdrawal(d: Draft, who: Line[], hints: string[], via: Via):
   if (p && p.size) blocking.push('A withdrawal carries an empty payload.');
   const pub = d.objects[0]?.[0];
   if (d.objects.length !== 1 || !pub || d.objects[0][1] !== pub) {
-    blocking.push('A withdrawal names exactly one publication, as both chain and predecessor (Envelope, "Withdrawal").');
+    blocking.push('A withdrawal names exactly one publication, as both chain and predecessor (Envelopes, "Withdrawal").');
   } else {
     const t = await readAct(pub, [...new Set([...hints, ...d.relays])], via, 0);
     const act = await fetchFirst(pub, [...new Set([...hints, ...d.relays])], via);
@@ -386,7 +386,7 @@ async function readWithdrawal(d: Draft, who: Line[], hints: string[], via: Via):
     if (act) {
       try {
         const x = describeChecked(act, pub);
-        isPublication = x.spec === SPECS.envelope && x.type === PUBLICATION;
+        isPublication = x.spec === SPECS.envelopes && x.type === PUBLICATION;
         const media = x.payload ? (cborDecode(x.payload) as Map<number, unknown>) : null;
         const forWhom = media?.get(8);
         authority = x.signer === d.signer || (forWhom instanceof Uint8Array && hex(forWhom) === d.signer);
@@ -396,7 +396,7 @@ async function readWithdrawal(d: Draft, who: Line[], hints: string[], via: Via):
     }
     lines.push({ text: `It withdraws ${t.title.replace(/^A /, 'a ').replace(/^An /, 'an ')} (${short(pub)}): ${t.verdict}` });
     if (!act) blocking.push('The publication it withdraws was not found at the relays asked.');
-    else if (!isPublication) blocking.push('What it names is not a publication: only a publication can be withdrawn (Envelope, "Withdrawal"). To stop showing a post, withdraw the picture it shows; a text act itself is not withdrawn.');
+    else if (!isPublication) blocking.push('What it names is not a publication: only a publication can be withdrawn (Envelopes, "Withdrawal"). To stop showing a post, withdraw the picture it shows; a text act itself is not withdrawn.');
     else if (!authority) blocking.push(`The identity ${short(d.signer)} did not sign that publication and is not the one it was made for, so its withdrawal has no authority.`);
   }
   lines.push({ text: 'Readers stop presenting the publication as available, and relays are asked, not forced, to stop serving it. Copies already taken remain.' });
@@ -488,14 +488,14 @@ export async function pictureDraft(o: Common & { jpeg: Uint8Array }, hints: stri
       [6, o.relays],
     ]),
   );
-  return { draft: { ...base(o), spec: POST_SPECS.envelope, type: PUBLICATION, payload, public: true, media: [l.locked] }, removed: s.removed.map((c) => CARRIED_WORDS[c]) };
+  return { draft: { ...base(o), spec: POST_SPECS.envelopes, type: PUBLICATION, payload, public: true, media: [l.locked] }, removed: s.removed.map((c) => CARRIED_WORDS[c]) };
 }
 
-/** A withdrawal of one of the signer's publications (Envelope type 3). */
+/** A withdrawal of one of the signer's publications (Envelopes type 3). */
 export async function withdrawalDraft(o: Common & { publication: string }, hints: string[], via: Via = {}): Promise<Draft> {
   await checkSigner(o.signer, hints, via);
   if (!HEX64.test(o.publication)) throw new Error('the publication is an act id: 64 hex digits');
-  return { ...base(o), spec: POST_SPECS.envelope, type: WITHDRAWAL, payload: cborEncode(new Map()), public: true, objects: [[o.publication, o.publication]] };
+  return { ...base(o), spec: POST_SPECS.envelopes, type: WITHDRAWAL, payload: cborEncode(new Map()), public: true, objects: [[o.publication, o.publication]] };
 }
 
 // ---------------------------------------------------------------- the drafts folder (DRAFTS.md)

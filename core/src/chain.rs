@@ -6,7 +6,7 @@
 //! its content key), plus the things a verifier knows that are not acts:
 //! inclusion proofs a home served, the homes the verifier itself tried and
 //! failed to reach, the acts a keeper recorded before recording a rotation
-//! (Law), and the private link acts it found at their signer's homes
+//! (Agreements), and the private link acts it found at their signer's homes
 //! (F152). Every answer is a pure function of what it holds: two verifiers
 //! holding the same acts and facts give the same answers.
 //!
@@ -18,7 +18,7 @@
 //! In plain words, for each position of an identity chain:
 //!
 //! 1. Take the rotations that name the act counting at the position before,
-//!    and reveal the safety key it committed.
+//!    and reveal the chain key it committed.
 //! 2. A rotation counts if the homes the rule names hold it, shown by their
 //!    receipts. A home whose receipts name two different genuine rotations
 //!    counts for nothing there. Such a rotation always beats a homeless one.
@@ -165,7 +165,7 @@ impl Resolution {
     }
 }
 
-/// Which receipts make a counting rotation count (Finance rule 15, F180;
+/// Which receipts make a counting rotation count (Money rule 15, F180;
 /// [`Verifier::quorum`]).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Quorum {
@@ -225,7 +225,7 @@ pub enum Status {
     /// Signed under a scheme, or of a type, this client does not implement.
     Unknown,
     /// Signed with a scoped key (F128): its binding names an act of a higher
-    /// MIP that installs a key of this identity, such as a Law grant's grant
+    /// MIP that installs a key of this identity, such as an Agreements grant's grant
     /// key. Identity checks only that the signature is valid; that MIP
     /// judges whether the key is the identity's and the act within its
     /// scope. A client that does not implement it shows the act as unknown.
@@ -253,8 +253,8 @@ fn closure_at(v: &Verifier, res: &Resolution) -> Option<usize> {
 pub struct Verifier {
     /// The spec hash of the Identity MIP (`IDENTITY`), fixed at the freeze.
     identity_spec: Hash,
-    /// The spec hashes of the Finance and Law MIPs, whose act types may
-    /// carry acknowledgements beside Identity's (Envelope rule 4a, F110).
+    /// The spec hashes of the Money and Agreements MIPs, whose act types may
+    /// carry acknowledgements beside Identity's (Envelopes rule 4a, F110).
     /// Unset: this verifier cannot tell, and an act of another specification
     /// carrying `acks` is unknown to it, never valid.
     ack_specs: Option<(Hash, Hash)>,
@@ -303,7 +303,7 @@ enum Judgement {
 }
 
 /// A rotation that can count at a position: valid, naming the act that
-/// counts at the position before, revealing the committed safety key.
+/// counts at the position before, revealing the committed chain key.
 struct Cand {
     id: Hash,
     /// A homeless rotation (never a chain signature).
@@ -353,25 +353,25 @@ impl Verifier {
         }
     }
 
-    /// A verifier that also knows the Finance and Law MIPs' spec hashes, so
+    /// A verifier that also knows the Money and Agreements MIPs' spec hashes, so
     /// it can tell which acts may carry acknowledgements (F110).
-    pub fn with_mips(identity_spec: Hash, finance: Hash, law: Hash) -> Self {
+    pub fn with_mips(identity_spec: Hash, money: Hash, agreements: Hash) -> Self {
         let mut v = Verifier::new(identity_spec);
-        v.ack_specs = Some((finance, law));
+        v.ack_specs = Some((money, agreements));
         v
     }
 
-    /// Whether an act may carry the acknowledgements it carries (Envelope
+    /// Whether an act may carry the acknowledgements it carries (Envelopes
     /// rules 4a and 7b, F110): `Some(true)` if it carries none or is of an
-    /// Identity, Finance or Law type; `Some(false)` if it carries some and is
+    /// Identity, Money or Agreements type; `Some(false)` if it carries some and is
     /// of any other specification; `None` if this verifier does not know the
-    /// Finance and Law hashes and cannot tell.
+    /// Money and Agreements hashes and cannot tell.
     pub fn acks_allowed(&self, inside: &Inside) -> Option<bool> {
         if inside.acks.as_ref().is_none_or(|a| a.is_empty()) || inside.spec == self.identity_spec {
             return Some(true);
         }
-        let (finance, law) = self.ack_specs?;
-        Some(inside.spec == finance || inside.spec == law)
+        let (money, agreements) = self.ack_specs?;
+        Some(inside.spec == money || inside.spec == agreements)
     }
 
     fn changed(&mut self) {
@@ -433,7 +433,7 @@ impl Verifier {
         }
         // Each index is kept in act-id order, never in arrival order, so that
         // nothing read from it depends on the order acts were delivered in.
-        // Found by the Law invariants (`docs/law-invariants.md`, IC6).
+        // Found by the Agreements invariants (`docs/law-invariants.md`, IC6).
         fn put(v: &mut Vec<Hash>, id: Hash) {
             if let Err(i) = v.binary_search(&id) {
                 v.insert(i, id);
@@ -469,7 +469,7 @@ impl Verifier {
     }
 
     /// A named keeper recorded this act before recording the rotation that
-    /// voids it (Law). Law checks the record; Identity takes its answer.
+    /// voids it (Agreements). Agreements check the record; Identity takes its answer.
     pub fn keeper_recorded(&mut self, act: Hash) {
         self.recorded.insert(act);
         self.changed();
@@ -584,8 +584,8 @@ impl Verifier {
             .filter_map(|id| self.acts.get(id))
     }
 
-    /// The acts this verifier holds whose `acks` name `id` (Envelope), in
-    /// act-id order. Law places a member's signature at an act
+    /// The acts this verifier holds whose `acks` name `id` (Envelopes), in
+    /// act-id order. Agreements place a member's signature at an act
     /// of the collective acknowledging it ("Made before, made after").
     /// Only acts that may carry acknowledgements are returned (F110).
     pub fn acknowledgements(&self, id: &Hash) -> impl Iterator<Item = &Held> {
@@ -599,7 +599,7 @@ impl Verifier {
 
     /// The act ids of `signer`'s line ending in the tip `t`, in order, if the
     /// verifier can rebuild it and the tip's running summary matches: the
-    /// same proof a rotation's kept ancestry uses. Law uses it for the tips a
+    /// same proof a rotation's kept ancestry uses. Agreements use it for the tips a
     /// collective's record names (record field 1).
     pub fn tip_line(&self, signer: &Hash, t: &identity::KeptTip) -> Option<Vec<Hash>> {
         self.line(signer, t)
@@ -737,7 +737,7 @@ impl Verifier {
     /// The counting rotation of its signer that judges an everyday act
     /// (validity rules 15 to 17): the first rotation after the chain act
     /// that bound the act's key, if one counts. `None` for an act not
-    /// held, an identity-chain act, or one no rotation judges yet. *Finance
+    /// held, an identity-chain act, or one no rotation judges yet. *Money
     /// rule 15 names it: the rotation that invalidated a payee pointer.*
     pub fn judged_by(&self, act: &Hash) -> Option<Hash> {
         let x = self.acts.get(act)?;
@@ -749,13 +749,13 @@ impl Verifier {
         self.judging(&res, k).map(|j| res.links[j].act)
     }
 
-    /// The home quorum of a counting rotation (Finance rule 15, F180): the
+    /// The home quorum of a counting rotation (Money rule 15, F180): the
     /// receipts the home rule in effect before it requires for it to
     /// count, each passing the receipt checks. `None` where `rotation` is
     /// not a counting rotation or chain signature of `identity` (genesis
     /// included). *A lock change's point is when its quorum is met and
     /// anchored; this says which receipts make up the quorum, the anchors
-    /// are Finance's.*
+    /// are Money's.*
     pub fn quorum(&self, identity: &Hash, rotation: &Hash) -> Option<Quorum> {
         let res = self.resolve(identity);
         let k = res.position_of(rotation)?;
@@ -892,8 +892,8 @@ impl Verifier {
                 continue;
             }
             let s = &h.act.signature;
-            if s.scheme != ps.safety.scheme
-                || sig::safety_commitment(&s.scheme, &s.key) != ps.safety.commit
+            if s.scheme != ps.chain_key.scheme
+                || sig::chain_key_commitment(&s.scheme, &s.key) != ps.chain_key.commit
             {
                 continue;
             }
@@ -905,7 +905,7 @@ impl Verifier {
                 });
             }
         }
-        // Chain signatures (F132): signed with the same safety key, they
+        // Chain signatures (F132): signed with the same chain key, they
         // compete for the position as rotations do, and count as they do.
         for cid in self.by_type.get(&types::CHAIN_SIGNATURE).into_iter().flatten() {
             let h = &self.acts[cid];
@@ -916,8 +916,8 @@ impl Verifier {
                 continue;
             }
             let s = &h.act.signature;
-            if s.scheme != ps.safety.scheme
-                || sig::safety_commitment(&s.scheme, &s.key) != ps.safety.commit
+            if s.scheme != ps.chain_key.scheme
+                || sig::chain_key_commitment(&s.scheme, &s.key) != ps.chain_key.commit
             {
                 continue;
             }
@@ -1300,13 +1300,13 @@ impl Verifier {
     }
 
     /// Whether another identity acknowledged this act, by a valid act whose
-    /// key is bound by a counting act of its signer (Envelope, "Chains",
+    /// key is bound by a counting act of its signer (Envelopes, "Chains",
     /// rule 4: the acknowledgement counts only alongside the act it names,
     /// which the verifier holds, since it is judging it).
     fn acknowledged(&self, cx: &mut Cx, x: &Held) -> bool {
         for a in self.acked_by.get(&x.id).into_iter().flatten() {
             let y = &self.acts[a];
-            // Only an Identity, Finance or Law act acknowledges (F110); an
+            // Only an Identity, Money or Agreements act acknowledges (F110); an
             // Identity act only if its own shape holds (a witness act).
             if self.acks_allowed(&y.inside) != Some(true) || matches!(y.identity, Some(Err(_))) {
                 continue;

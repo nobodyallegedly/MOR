@@ -4,7 +4,7 @@
 
 *Case study, draft 1, 27 September 2026. What MOR could be, with your help.*
 
-*Note, 6 October 2026: this draft predates the current core (Identity draft 11, Finance draft 6, Law draft 10) and the review rounds that changed it. Some rules it describes have since changed. It is to be redrafted (roadmap, 9 October 2026).*
+*Note, 6 October 2026: this draft predates the current core (Identity draft 11, Money draft 6, Agreements draft 10) and the review rounds that changed it. Some rules it describes have since changed. It is to be redrafted (roadmap, 9 October 2026).*
 
 ## Why this case study
 
@@ -74,7 +74,7 @@ This case study asks what happens when the costs Coase described fall without a 
 - **the seller:** the seller answers to the buyer and settles with the chain afterwards;
 - **insurance:** each order carries insurance from a named insurer, paid through the split, and the insurer settles.
 
-**The route is disclosed.** Like payment routes in the Finance MIP, each hop's fee is a line in the settlement. The buyer sees what delivery cost and who was paid; Inès sees which carriers are worth using.
+**The route is disclosed.** Like payment routes in the Money MIP, each hop's fee is a line in the settlement. The buyer sees what delivery cost and who was paid; Inès sees which carriers are worth using.
 
 **Returns and disputes** use the same tools: a return is a new agreement reversing the order, with the courier's fee named; a disagreement goes to the dispute cMIP from the gig economy case study.
 

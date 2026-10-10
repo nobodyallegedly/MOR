@@ -1,13 +1,13 @@
-//! Law draft 7: formats, the checks that need no other act, and the powers
+//! Agreements draft 7: formats, the checks that need no other act, and the powers
 //! a clone needs (rules 44a to 44c). Each test names the freeze suite v18
 //! step it follows. The flows on a collective's own sequence are in
-//! `law_collective.rs`.
+//! `agreements_collective.rs`.
 
 use mor_core::cbor::{self, Value};
 use mor_core::hash::{sha256, Hash};
-use mor_core::law::{
+use mor_core::agreements::{
     self, judged, outcomes, powers_needed, Abandonment, Area, Authority, ChainLink, Who,
-    Field4, FieldRef, Holding, Judge, KeyGrammar, Kind, LawError, MarkEntry, Mips, Power, Recovery,
+    Field4, FieldRef, Holding, Judge, KeyGrammar, Kind, AgreementsError, MarkEntry, Mips, Power, Recovery,
     Rule, SuccessionPlan, Terms, chain_answer, ChainAnswer, Step, Stake,
 };
 
@@ -15,11 +15,11 @@ pub fn mips() -> Mips {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mips {
         identity: t("IDENTITY"),
-        envelope: t("ENVELOPE"),
+        envelopes: t("ENVELOPE"),
         text: t("TEXT"),
-        finance: t("FINANCE"),
-        law: t("LAW"),
-        production: t("PRODUCTION"),
+        money: t("FINANCE"),
+        agreements: t("LAW"),
+        development: t("PRODUCTION"),
     }
 }
 
@@ -37,8 +37,8 @@ const AUTHORITY: u8 = 90;
 const ARBITRATOR: u8 = 91;
 
 /// The label of scenario 3.1: three members; the release manager (1)
-/// holds publications and the Production lane (area 1); the treasurer (2)
-/// holds the Finance lane (area 2). The safety key needs all three, with an
+/// holds publications and the Development lane (area 1); the treasurer (2)
+/// holds the Money lane (area 2). The chain key needs all three, with an
 /// escrowed share released by a third-party authority.
 fn label() -> Terms {
     let m = mips();
@@ -61,7 +61,7 @@ fn label() -> Terms {
                 threshold: 2,
                 members: vec![h(1), h(2), h(3)],
             },
-            safety: Holding::Shares {
+            chain_key: Holding::Shares {
                 threshold: 3,
                 members: vec![h(1), h(2), h(3)],
             },
@@ -82,19 +82,19 @@ fn label() -> Terms {
                 threshold: 1,
                 kinds: Some(vec![
                     Kind::Type {
-                        spec: m.envelope,
+                        spec: m.envelopes,
                         type_: 0,
                     },
-                    Kind::Layer(law::layers::PRODUCTION),
+                    Kind::Layer(agreements::layers::DEVELOPMENT),
                 ]),
                 fields: None,
                 id: 1,
             },
             Area {
-                name: "Finance".into(),
+                name: "Money".into(),
                 holders: vec![h(2)],
                 threshold: 1,
-                kinds: Some(vec![Kind::Layer(law::layers::FINANCE)]),
+                kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]),
                 fields: None,
                 id: 2,
             },
@@ -131,11 +131,11 @@ fn clone_of(parent: &Terms, mark: Vec<(Power, Vec<Hash>)>) -> Terms {
     t
 }
 
-fn ext_layers(e: &Hash) -> Result<Vec<u64>, LawError> {
+fn ext_layers(e: &Hash) -> Result<Vec<u64>, AgreementsError> {
     match e[0] {
         EXT => Ok(vec![]),
-        EXT_FIN => Ok(vec![law::layers::FINANCE]),
-        _ => Err(LawError::Missing(*e)),
+        EXT_FIN => Ok(vec![agreements::layers::MONEY]),
+        _ => Err(AgreementsError::Missing(*e)),
     }
 }
 
@@ -151,7 +151,7 @@ fn roundtrip(t: &Terms) -> Terms {
     Terms::decode(&m).unwrap()
 }
 
-fn check(t: &Terms) -> Result<(), LawError> {
+fn check(t: &Terms) -> Result<(), AgreementsError> {
     t.check(&mips())
 }
 
@@ -170,15 +170,15 @@ fn terms_round_trip_and_decode_strictly() {
     for k in [8, 17] {
         let mut m = t.to_map();
         m.push((Value::Uint(k), Value::Array(vec![])));
-        assert!(matches!(Terms::decode(&m), Err(LawError::Shape(_))), "field {k}: not in its format");
+        assert!(matches!(Terms::decode(&m), Err(AgreementsError::Shape(_))), "field {k}: not in its format");
     }
     let mut m = t.to_map();
     m.push((Value::Uint(10), Value::Array(vec![])));
-    assert!(matches!(Terms::decode(&m), Err(LawError::Check(w)) if w.contains("withdrawn")));
+    assert!(matches!(Terms::decode(&m), Err(AgreementsError::Check(w)) if w.contains("withdrawn")));
 
     let mut m = t.to_map();
     m.push((Value::Uint(21), Value::Uint(0)));
-    assert!(matches!(Terms::decode(&m), Err(LawError::Shape(_))));
+    assert!(matches!(Terms::decode(&m), Err(AgreementsError::Shape(_))));
 
     // Draft 6's listed act types (key grammar key 2) are retired.
     let mut m = t.to_map();
@@ -189,7 +189,7 @@ fn terms_round_trip_and_decode_strictly() {
             }
         }
     }
-    assert!(matches!(Terms::decode(&m), Err(LawError::Shape(w)) if w.contains("retired")));
+    assert!(matches!(Terms::decode(&m), Err(AgreementsError::Shape(w)) if w.contains("retired")));
 }
 
 #[test]
@@ -311,7 +311,7 @@ fn areas_are_checked() {
     let mut t = label();
     t.areas.as_mut().unwrap()[1].holders = vec![h(9)];
     assert!(check(&t).is_err());
-    // Q5: no two areas reach the same acts: a Finance lane and the
+    // Q5: no two areas reach the same acts: a Money lane and the
     // payment cMIP's receipts.
     let mut t = label();
     t.areas.as_mut().unwrap()[0].kinds.as_mut().unwrap().push(Kind::Type {
@@ -342,14 +342,14 @@ fn areas_are_checked() {
         type_: 1,
     });
     assert!(check(&t).is_err());
-    // R4: one specification for a Finance and a Law task, two lanes: valid.
+    // R4: one specification for a Money and an Agreements task, two lanes: valid.
     let mut t = label();
     t.cmips = vec![(6, h(PAY)), (7, h(PAY2)), (8, h(PAY2)), (11, h(ANCHOR))];
     t.areas.as_mut().unwrap().push(Area {
-        name: "Law".into(),
+        name: "Agreements".into(),
         holders: vec![h(3)],
         threshold: 1,
-        kinds: Some(vec![Kind::Layer(law::layers::LAW)]),
+        kinds: Some(vec![Kind::Layer(agreements::layers::AGREEMENTS)]),
         fields: None,
         id: 3,
     });
@@ -382,9 +382,9 @@ fn every_constitutional_voice_is_covered() {
 
 #[test]
 fn a_grammar_leaves_a_way_to_rotate() {
-    // 3.7a, F96: a single holder of the safety key, no successor, no escrow.
+    // 3.7a, F96: a single holder of the chain key, no successor, no escrow.
     let mut t = label();
-    t.grammar.as_mut().unwrap().safety = Holding::One(h(1));
+    t.grammar.as_mut().unwrap().chain_key = Holding::One(h(1));
     t.grammar.as_mut().unwrap().recovery = None;
     assert!(check(&t).is_err());
     t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow {
@@ -428,7 +428,7 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
     );
     // 3.7d: keepers are judicial: every member (F121).
     assert_eq!(
-        needs(&p, &c(&|t| t.keepers = Some(law::Keepers {
+        needs(&p, &c(&|t| t.keepers = Some(agreements::Keepers {
             operators: vec![h(80)],
             rule: Rule::All
         }))),
@@ -454,7 +454,7 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
         })),
         vec![Power::Judicial, Power::Area(1)]
     );
-    // 3.7g: the payment cMIP is the Finance lane's.
+    // 3.7g: the payment cMIP is the Money lane's.
     assert_eq!(
         needs(&p, &c(&|t| t.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))])),
         vec![Power::Area(2)]
@@ -469,7 +469,7 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
         needs(&p, &c(&|t| t.cmips = vec![(5, h(50)), (6, h(PAY)), (11, h(ANCHOR))])),
         vec![Power::Clone]
     );
-    // 3.7j: dropping an extension declaring only Production: the release
+    // 3.7j: dropping an extension declaring only Development: the release
     // manager alone.
     assert_eq!(needs(&p, &c(&|t| t.extensions = None)), vec![Power::Area(1)]);
 }
@@ -482,9 +482,9 @@ fn extensions_need_every_lane_they_declare() {
     t.extensions = Some(vec![h(EXT), h(99)]);
     assert!(matches!(
         powers_needed(&p, &t, &mips(), &ext_layers),
-        Err(LawError::Missing(_))
+        Err(AgreementsError::Missing(_))
     ));
-    // 3.7j: one declaring Finance needs the treasurer too.
+    // 3.7j: one declaring Money needs the treasurer too.
     t.extensions = Some(vec![h(EXT), h(EXT_FIN)]);
     assert_eq!(needs(&p, &t), vec![Power::Area(1), Power::Area(2)]);
     // Q18: dropping it needs the same.
@@ -497,23 +497,23 @@ fn extensions_need_every_lane_they_declare() {
 
 #[test]
 fn r4_a_specification_serving_two_layers_answers_to_both_lanes() {
-    // 3.7n: the Finance lane to member 2, the Law lane to member 3.
+    // 3.7n: the Money lane to member 2, the Agreements lane to member 3.
     let mut p = label();
     p.cmips = vec![(6, h(PAY)), (7, h(PAY2)), (8, h(PAY2)), (11, h(ANCHOR))];
     p.areas.as_mut().unwrap().push(Area {
-        name: "Law".into(),
+        name: "Agreements".into(),
         holders: vec![h(3)],
         threshold: 1,
-        kinds: Some(vec![Kind::Layer(law::layers::LAW)]),
+        kinds: Some(vec![Kind::Layer(agreements::layers::AGREEMENTS)]),
         fields: None,
         id: 3,
     });
     check(&p).unwrap();
-    // Naming that specification for another Finance task needs both lanes.
+    // Naming that specification for another Money task needs both lanes.
     let mut t = clone_of(&p, vec![(Power::Area(2), vec![h(2)])]);
     t.cmips = vec![(6, h(PAY2)), (7, h(PAY2)), (8, h(PAY2)), (11, h(ANCHOR))];
     assert_eq!(needs(&p, &t), vec![Power::Area(2), Power::Area(3)]);
-    // The Law lane alone adopts a grant-limits cMIP (task 12).
+    // The Agreements lane alone adopts a grant-limits cMIP (task 12).
     let mut t = clone_of(&p, vec![(Power::Area(3), vec![h(3)])]);
     t.cmips.push((12, h(55)));
     t.cmips.sort();
@@ -801,11 +801,11 @@ fn a_constitutional_version_changing_a_judge_needs_both_rules() {
 
 // ---------------------------------------------------------------- step 12b, the open formats
 
-fn plan_with(shares: Vec<law::ShareRule>) -> law::SplitPlan {
-    law::SplitPlan {
+fn plan_with(shares: Vec<agreements::ShareRule>) -> agreements::SplitPlan {
+    agreements::SplitPlan {
         shares,
         cmip: h(80),
-        unfilled: law::Unfilled::Stakes,
+        unfilled: agreements::Unfilled::Stakes,
         top: vec![],
         service_bears_rail_fees: false,
         max_rail_fee: None,
@@ -827,16 +827,16 @@ fn label_with_stake() -> Terms {
 fn f12b_the_split_plan_round_trips_roles_by_name_unfilled_to_the_stakes() {
     let mut t = label_with_stake();
     t.plan = Some(plan_with(vec![
-        law::ShareRule::Stake { stake: 0, part: 880_000 },
-        law::ShareRule::Role { role: "relay".into(), part: 50_000 },
-        law::ShareRule::Receiver { receiver: h(81), part: 70_000 },
+        agreements::ShareRule::Stake { stake: 0, part: 880_000 },
+        agreements::ShareRule::Role { role: "relay".into(), part: 50_000 },
+        agreements::ShareRule::Receiver { receiver: h(81), part: 70_000 },
     ]));
     assert_eq!(roundtrip(&t), t);
     check(&t).unwrap();
     // Absent field 3 reads as [0], to the stakes (F218).
     let Value::Map(pm) = t.plan.as_ref().unwrap().to_value() else { panic!() };
     assert!(!pm.iter().any(|(k, _)| *k == Value::Uint(3)), "the default is not written");
-    assert_eq!(roundtrip(&t).plan.unwrap().unfilled, law::Unfilled::Stakes);
+    assert_eq!(roundtrip(&t).plan.unwrap().unfilled, agreements::Unfilled::Stakes);
     // A role carrying a cMIP's hash and type, as the proposal drafted it,
     // is not a role share (review 7.2).
     let mut m = t.to_map();
@@ -851,8 +851,8 @@ fn f12b_the_split_plan_round_trips_roles_by_name_unfilled_to_the_stakes() {
     assert!(Terms::decode(&m).is_err());
     // A stake index outside field 7 is refused.
     let mut bad = t.clone();
-    bad.plan = Some(plan_with(vec![law::ShareRule::Stake { stake: 3, part: 1 }]));
-    assert!(matches!(check(&bad), Err(LawError::Check(_))));
+    bad.plan = Some(plan_with(vec![agreements::ShareRule::Stake { stake: 3, part: 1 }]));
+    assert!(matches!(check(&bad), Err(AgreementsError::Check(_))));
     // Fees are not the plan's: key 2 is refused (F213).
     let mut m = t.to_map();
     for (k, v) in m.iter_mut() {
@@ -862,7 +862,7 @@ fn f12b_the_split_plan_round_trips_roles_by_name_unfilled_to_the_stakes() {
             }
         }
     }
-    assert!(matches!(Terms::decode(&m), Err(LawError::Check(w)) if w.contains("F213")));
+    assert!(matches!(Terms::decode(&m), Err(AgreementsError::Check(w)) if w.contains("F213")));
 }
 
 /// F213, decided by Nobody, allegedly, 10 October 2026: fees are their own
@@ -873,19 +873,19 @@ fn f12b_the_split_plan_round_trips_roles_by_name_unfilled_to_the_stakes() {
 #[test]
 fn f213_fees_are_their_own_field_placed_by_areas() {
     let mut t = label_with_stake();
-    t.plan = Some(plan_with(vec![law::ShareRule::Stake { stake: 0, part: 1 }]));
+    t.plan = Some(plan_with(vec![agreements::ShareRule::Stake { stake: 0, part: 1 }]));
     t.fees = Some(vec![
-        law::Fee { module: h(83), part: 20_000, scope: law::FeeScope::Every },
-        law::Fee { module: h(84), part: 10_000, scope: law::FeeScope::Rail(h(PAY)) },
+        agreements::Fee { module: h(83), part: 20_000, scope: agreements::FeeScope::Every },
+        agreements::Fee { module: h(84), part: 10_000, scope: agreements::FeeScope::Rail(h(PAY)) },
     ]);
     // The treasurer's area reaches the plan; the release manager's, fees.
     t.areas.as_mut().unwrap()[1].fields = Some(vec![FieldRef::Field(8)]);
-    t.areas.as_mut().unwrap()[0].fields = Some(vec![FieldRef::Field(law::FEES_FIELD)]);
+    t.areas.as_mut().unwrap()[0].fields = Some(vec![FieldRef::Field(agreements::FEES_FIELD)]);
     assert_eq!(roundtrip(&t), t);
     check(&t).unwrap();
     let mut c = t.clone();
-    c.fees.as_mut().unwrap().push(law::Fee { module: h(85), part: 50_000, scope: law::FeeScope::Publication(h(86)) });
-    assert_eq!(law::changes(&t, &c), vec![law::Change::Field(law::FEES_FIELD)], "a new fee changes field 28 only");
+    c.fees.as_mut().unwrap().push(agreements::Fee { module: h(85), part: 50_000, scope: agreements::FeeScope::Publication(h(86)) });
+    assert_eq!(agreements::changes(&t, &c), vec![agreements::Change::Field(agreements::FEES_FIELD)], "a new fee changes field 28 only");
     let need = needs(&t, &c);
     assert_eq!(need, vec![Power::Area(1)], "the area holding fees, not the plan's holder");
     // Unplaced, fees fall to the clone rule, never to the plan's holder.
@@ -902,8 +902,8 @@ fn f213_fees_are_their_own_field_placed_by_areas() {
 #[test]
 fn f219_refund_terms_are_a_point_on_the_time_reference() {
     let mut t = label();
-    t.refund = Some(law::RefundTerms { until: Value::Uint(900_000) });
-    assert!(matches!(check(&t), Err(LawError::Check(w)) if w.contains("time reference")));
+    t.refund = Some(agreements::RefundTerms { until: Value::Uint(900_000) });
+    assert!(matches!(check(&t), Err(AgreementsError::Check(w)) if w.contains("time reference")));
     t.time = Some((h(CLOCK), Value::Null));
     check(&t).unwrap();
     assert_eq!(roundtrip(&t), t);

@@ -5,8 +5,8 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { resign } from '../../repo/src/law.ts';
-import { LAW_TYPES } from '../../repo/src/specs.ts';
+import { resign } from '../../repo/src/agreements.ts';
+import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import type { Governance } from '../../repo/src/collective.ts';
 import type { State } from '../src/page/api.ts';
 import { lossy, prepare, sign, state, words, world, type World } from './setup.ts';
@@ -37,7 +37,7 @@ async function found(name: string, members: string[], rules: { safety: number; r
 
 /**
  * Remove `remove` as the client did before step 11b's fix, the removal's
- * record lost: Law reads the collective as broken from that rotation.
+ * record lost: Agreements read the collective as broken from that rotation.
  */
 async function breakBy(id: string, relay: { drop: boolean }, stay: string[], remove: string, change: Partial<Governance> = {}) {
   const store = w.app.store;
@@ -61,13 +61,13 @@ async function breakBy(id: string, relay: { drop: boolean }, stay: string[], rem
   for (const i of [...s, leaving]) store.saveIdentity(i);
 }
 
-test('F187 (1): the rollback deals no share of the new safety key to a member who already left', async () => {
+test('F187 (1): the rollback deals no share of the new chain key to a member who already left', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, one, two, four] = ['Ada', 'Sim One', 'Sim Two', 'Sim Four'].map((n) => idOf(s, n));
   const { id, relay } = await found('Quartet', [ada, one, two, four], { safety: 2, release: 2, clone: 2, others: 2 });
   try {
-    // Sim Four leaves, the record reaching the relays: Law counts three voices from that line.
+    // Sim Four leaves, the record reaching the relays: Agreements count three voices from that line.
     await sign(c, { kind: 'leave', collective: id, member: four });
     s = await state(c);
     assert.equal(box(s, id).members.find((m) => m.id === four)!.left, true);
@@ -85,7 +85,7 @@ test('F187 (1): the rollback deals no share of the new safety key to a member wh
     const b = box(s, id);
     assert.equal(b.law.broken, null);
     assert.deepEqual(b.members.filter((m) => !m.left).map((m) => m.id).sort(), [ada, one].sort());
-    assert.equal(b.shares.of, 2, 'the new safety key is dealt to the two who stay, never to Sim Four');
+    assert.equal(b.shares.of, 2, 'the new chain key is dealt to the two who stay, never to Sim Four');
   } finally {
     await relay.close();
   }
@@ -99,14 +99,14 @@ test('F187 (2): a rollback registering a resignation the relays never got is ref
   try {
     await breakBy(id, relay, [ada, one, two], three);
     // Sim Two leaves during the broken stretch; the relay loses the resignation.
-    relay.types = [LAW_TYPES.resignation];
+    relay.types = [AGREEMENTS_TYPES.resignation];
     relay.drop = true;
     await sign(c, { kind: 'leave', collective: id, member: two });
     relay.drop = false;
-    relay.types = [LAW_TYPES.record];
+    relay.types = [AGREEMENTS_TYPES.record];
     const rb = await prepare(c, { kind: 'rollback', collective: id, rules: { safety: 1, release: 1, clone: 1, others: 1 } });
     const blocking = rb.reading.blocking.join(' ');
-    assert.match(blocking, /Law refuses what the rollback would register: the rollback registers an act this verifier does not hold/, words(rb.reading));
+    assert.match(blocking, /Agreements refuse what the rollback would register: the rollback registers an act this verifier does not hold/, words(rb.reading));
     s = await state(c);
     assert.notEqual(box(s, id).law.broken, null);
   } finally {
@@ -139,7 +139,7 @@ test('F187 (3): the last voice is warned when the other voices resigned from oth
   }
 });
 
-test('F187 (4): leaving names the agreement Law finds in force; where Law cannot be read, the review says so', async () => {
+test('F187 (4): leaving names the agreement Agreements find in force; where Agreements cannot be read, the review says so', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, one, two] = ['Ada', 'Sim One', 'Sim Two'].map((n) => idOf(s, n));
@@ -153,12 +153,12 @@ test('F187 (4): leaving names the agreement Law finds in force; where Law cannot
     col.f.agreement = col.f.agreements[col.f.agreements.indexOf(now) - 1];
     store.saveCollective(col);
     const leave = await prepare(c, { kind: 'leave', collective: id, member: two });
-    assert.match(words(leave.reading), new RegExp(now.slice(0, 8)), 'the resignation names the agreement Law finds in force');
+    assert.match(words(leave.reading), new RegExp(now.slice(0, 8)), 'the resignation names the agreement Agreements find in force');
     await c.ask('confirm', { plan: leave.plan, digest: leave.digest });
     s = await state(c);
-    assert.equal(box(s, id).members.find((m) => m.id === two)!.left, true, 'the record is a line: Law registers the departure');
+    assert.equal(box(s, id).members.find((m) => m.id === two)!.left, true, 'the record is a line: Agreements registers the departure');
 
-    // Law cannot be read: every relay and home away.
+    // Agreements cannot be read: every relay and home away.
     const col2 = store.collective(id);
     const keep = { relays: col2.f.relays, homes: col2.f.identity.homes.map((h) => h.hint) };
     col2.f.relays = ['http://127.0.0.1:9'];
@@ -167,8 +167,8 @@ test('F187 (4): leaving names the agreement Law finds in force; where Law cannot
     try {
       const away = await prepare(c, { kind: 'leave', collective: id, member: one });
       const aw = words(away.reading);
-      assert.match(aw, /Law's own reading of “Stale” could not be had/, aw);
-      assert.match(aw, /the resignation names this device's copy of the agreement in force .*which may not be the one Law finds/, aw);
+      assert.match(aw, /Agreements' own reading of “Stale” could not be had/, aw);
+      assert.match(aw, /the resignation names this device's copy of the agreement in force .*which may not be the one Agreements find/, aw);
       assert.match(aw, /No last-voice warning can be given/, aw);
     } finally {
       const back = store.collective(id);

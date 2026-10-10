@@ -154,13 +154,13 @@ fn a_rotation_is_pending_until_its_home_receipts_it() {
 }
 
 #[test]
-fn a_rotation_must_reveal_the_committed_safety_key_and_name_its_predecessor() {
+fn a_rotation_must_reveal_the_committed_chain_key_and_name_its_predecessor() {
     let mut w = World::new();
     let mut h = w.operator("home");
     let a = w.genesis("alice", vec![home(&h)], None, None);
-    // Signed with a safety key that was never committed.
+    // Signed with a chain key that was never committed.
     let mut wrong = a.clone();
-    wrong.safety = slh("someone else", 0, 3);
+    wrong.chain_key = slh("someone else", 0, 3);
     let (bad, _) = w.rotate(&wrong, Rot::default());
     w.receipt(&mut h, &a.id, &bad, 1);
     assert_eq!(chain(&w, &a), vec![a.id]);
@@ -178,7 +178,7 @@ fn a_rotation_must_reveal_the_committed_safety_key_and_name_its_predecessor() {
 }
 
 #[test]
-fn both_safety_schemes_rotate() {
+fn both_chain_key_schemes_rotate() {
     let mut w = World::new();
     let mut h = w.operator("home");
     let a = w.genesis_with("alice", vec![home(&h)], None, None, None, 2);
@@ -190,12 +190,12 @@ fn both_safety_schemes_rotate() {
     assert_eq!(w.v.get(&r1).unwrap().act.signature.sig.len(), 7856);
 }
 
-/// A chain signature (type 16, F132): signed with the revealed safety key,
+/// A chain signature (type 16, F132): signed with the revealed chain key,
 /// it takes the next position as a rotation does, pending until the homes
-/// receipt it, and commits the next safety key. It sets no key and judges
+/// receipt it, and commits the next chain key. It sets no key and judges
 /// nothing: acts under the key in effect stay valid, before and after it,
 /// and a later rotation names it as its predecessor. A binding naming it
-/// is invalid; a second act revealing the same safety key competes for the
+/// is invalid; a second act revealing the same chain key competes for the
 /// position.
 #[test]
 fn a_chain_signature_takes_a_position_and_changes_no_key() {
@@ -209,7 +209,7 @@ fn a_chain_signature_takes_a_position_and_changes_no_key() {
     w.receipt(&mut h, &a.id, &cs, 1);
     assert_eq!(chain(&w, &a), vec![a.id, cs]);
     assert_eq!(w.v.status(&cs), Status::Valid);
-    // The same everyday key, the same binding: nothing judged.
+    // The same signing key, the same binding: nothing judged.
     let after = w.post(&mut a1, "after");
     assert_eq!(w.v.status(&before), Status::Valid);
     assert_eq!(w.v.status(&after), Status::Valid);
@@ -227,10 +227,10 @@ fn a_chain_signature_takes_a_position_and_changes_no_key() {
     // The rotation judges the key it replaces, set at genesis: "after" was
     // not kept (the default keeps the person's own sequence, which holds it).
     assert_eq!(w.v.status(&after), Status::Valid);
-    // Revealing a spent safety key again: never counts.
+    // Revealing a spent chain key again: never counts.
     let (late, _) = w.chain_sign(&a, sha256(b"another fork"));
     assert_eq!(w.v.status(&late), Status::Invalid);
-    // Two acts revealing the same safety key compete for one position.
+    // Two acts revealing the same chain key compete for one position.
     let mut w2 = World::new();
     let s = w2.genesis("self", vec![own_home()], None, None);
     let (c1, _) = w2.chain_sign(&s, sha256(b"one"));
@@ -351,7 +351,7 @@ fn self_hosted_rotates_on_its_own_signatures() {
     let s = w.genesis("self", vec![own_home(), home(&h1)], None, None);
     let (r, s1) = w.rotate(&s, Rot::default());
     assert_eq!(chain(&w, &s), vec![s.id, r], "no receipt needed (rule 22a)");
-    // The stated cost: a thief holding the next safety key wins at once...
+    // The stated cost: a thief holding the next chain key wins at once...
     let mut w2 = World::new();
     let s = w2.genesis("self", vec![own_home()], None, None);
     let (thief, _) = w2.rotate(
@@ -499,13 +499,13 @@ fn an_acknowledgement_by_the_owner_itself_does_not_count() {
     let _ = &mut j;
 }
 
-/// F110 (freeze suite v21, scenario 5 step 5b, scenario 2 step 5c): only Identity, Finance and
-/// Law act types carry acknowledgements. A text act or a cMIP's reaction
+/// F110 (freeze suite v21, scenario 5 step 5b, scenario 2 step 5c): only Identity, Money and
+/// Agreements act types carry acknowledgements. A text act or a cMIP's reaction
 /// carrying `acks` is invalid and rescues nothing; a witness act keeps a
-/// disowned post visible as disputed; a buyer's claim (Finance) does the
+/// disowned post visible as disputed; a buyer's claim (Money) does the
 /// same for a publication.
 #[test]
-fn only_identity_finance_and_law_acts_acknowledge_f110() {
+fn only_identity_money_and_agreements_acts_acknowledge_f110() {
     let mut w = World::new();
     let mut h = w.operator("home");
     let mut j = w.genesis("journalist", vec![home(&h)], None, None);
@@ -527,7 +527,7 @@ fn only_identity_finance_and_law_acts_acknowledge_f110() {
     // A buyer's claim acknowledging the publication it paid for.
     let claim = w.everyday_act(
         &mut buyer,
-        finance_spec(),
+        money_spec(),
         3,
         vec![(Value::Uint(0), Value::Text("a claim".into()))],
         None,
@@ -576,12 +576,12 @@ fn a_witness_act_names_what_it_witnesses() {
     assert_eq!(w.v.status(&said), Status::Invalid, "its payload is empty");
     // A verifier told only the Identity MIP's hash.
     let mut blind = mor_core::chain::Verifier::new(identity_spec());
-    let law_act = w.everyday_act(&mut r, law_spec(), 17, vec![], None, Some(vec![x]));
+    let agreements_act = w.everyday_act(&mut r, agreements_spec(), 17, vec![], None, Some(vec![x]));
     let genesis = w.v.resolve(&r.id).links[0].act;
     blind.add(w.v.get(&genesis).unwrap().act.clone()).unwrap();
-    let id = blind.add(law_act.clone()).unwrap();
+    let id = blind.add(agreements_act.clone()).unwrap();
     assert_eq!(blind.status(&id), Status::Unknown);
-    let id = w.add(&law_act);
+    let id = w.add(&agreements_act);
     assert_eq!(w.v.status(&id), Status::Valid);
 }
 
@@ -630,7 +630,7 @@ fn a_forged_receipt_naming_a_made_up_act_changes_nothing() {
     let j = w.genesis("journalist", vec![home(&h)], None, None);
     let (r, _) = w.rotate(&j, Rot::default());
     w.receipt(&mut h, &j.id, &r, 1);
-    // The thief holds the operator's everyday key only.
+    // The thief holds the operator's signing key only.
     let mut thief = h.clone();
     w.receipt(&mut thief, &j.id, &sha256(b"a made-up rotation"), 1);
     let res = w.v.resolve(&j.id);
@@ -656,7 +656,7 @@ fn a_genuine_rival_rotation_receipted_by_a_stolen_home_key_is_contested_until_th
     let j = w.genesis("journalist", vec![home(&h)], None, None);
     let (own, _) = w.rotate(&j, Rot::default());
     w.receipt(&mut h, &j.id, &own, 1);
-    // The thief holds the journalist's safety key and the home's everyday key.
+    // The thief holds the journalist's chain key and the home's signing key.
     let (rival, _) = w.rotate(
         &j,
         Rot {
@@ -894,15 +894,15 @@ fn homeless_after_closure_then_final_after_the_next_rotation() {
 }
 
 #[test]
-fn a_stolen_operator_everyday_key_cannot_close_a_home() {
+fn a_stolen_operator_signing_key_cannot_close_a_home() {
     let mut w = World::new();
     let mut h = w.operator("home");
     let mut new = w.operator("thief-home");
     let j = w.genesis("journalist", vec![home(&h)], None, None);
-    // Closure is a rotation field; the everyday key signs only everyday acts.
-    // A "rotation" signed with the operator's everyday key is no rotation.
+    // Closure is a rotation field; the signing key signs only everyday acts.
+    // A "rotation" signed with the operator's signing key is no rotation.
     let mut fake = h.clone();
-    fake.safety = slh("not the committed key", 0, 3);
+    fake.chain_key = slh("not the committed key", 0, 3);
     w.rotate(
         &fake,
         Rot {
@@ -1026,7 +1026,7 @@ fn escape_past_a_hostile_home_after_a_refused_rotation() {
     let (refused, _) = w.rotate(&j, Rot::default());
     assert_eq!(chain(&w, &j), vec![j.id]);
     // The journalist leaves with both keys: a homeless rotation with the
-    // same safety key (rule 8a's exception), endorsed with the signing key,
+    // same chain key (rule 8a's exception), endorsed with the signing key,
     // listing the refused rotation as abandoned.
     let (hr, j1) = w.rotate(
         &j,
@@ -1247,11 +1247,11 @@ fn operators_hosting_each_other_resolve_on_their_own_signatures() {
 // ---------------------------------------------------------------- schemes (8.4)
 
 #[test]
-fn a_rotation_to_an_everyday_key_of_an_unknown_scheme() {
+fn a_rotation_to_a_signing_key_of_an_unknown_scheme() {
     let mut w = World::new();
     let mut h = w.operator("home");
     let j = w.genesis("journalist", vec![home(&h)], None, None);
-    let spec = sha256(b"a post-quantum everyday scheme specification");
+    let spec = sha256(b"a post-quantum signing-key scheme specification");
     let pq = SigningKey {
         scheme: Scheme::Spec(spec),
         key: vec![9; 40],
@@ -1364,7 +1364,7 @@ fn a_new_home_set_must_still_fit_the_rule_in_effect() {
 // ---------------------------------------------------------------- F92: an old-rule rotation always wins
 
 #[test]
-fn a_stolen_used_safety_key_cannot_rewrite_history_after_a_closure() {
+fn a_stolen_used_chain_key_cannot_rewrite_history_after_a_closure() {
     let mut w = World::new();
     let mut h0 = w.operator("home-0");
     let mut t = w.operator("thief-home");
@@ -1384,7 +1384,7 @@ fn a_stolen_used_safety_key_cannot_rewrite_history_after_a_closure() {
             ..Default::default()
         },
     );
-    // A thief finds the first safety key, used in r1, on an old backup,
+    // A thief finds the first chain key, used in r1, on an old backup,
     // makes a homeless rotation at position 1, and rotates again at once.
     let (h1, t1) = w.rotate(
         &j,
@@ -1477,7 +1477,7 @@ fn absence_statements_are_judged_by_the_auditors_in_force_before_the_homeless_ro
             auditors: vec![aud.id],
         }),
     );
-    // A thief holding the safety key drops auditing in the homeless rotation...
+    // A thief holding the chain key drops auditing in the homeless rotation...
     let (hr, _) = w.rotate(
         &j,
         Rot {

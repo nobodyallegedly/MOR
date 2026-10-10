@@ -55,7 +55,7 @@ pub fn world(seed: u64) -> Run {
 }
 
 /// As `world`, and, with `register_rotations`, a member's own rotation is registered on the
-/// collective's next registration line like a departure (Law draft 7, seventh pass, C5).
+/// collective's next registration line like a departure (Agreements draft 7, seventh pass, C5).
 /// Without it the worlds are exactly those of the ordering test's write-up.
 pub fn world_opts(seed: u64, register_rotations: bool) -> Run {
     let mut r = Rng::new(seed);

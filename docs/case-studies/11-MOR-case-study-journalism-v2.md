@@ -4,7 +4,7 @@
 
 *Case study, draft 1, 27 September 2026. What MOR could be, with your help.*
 
-*Note, 6 October 2026: this draft predates the current core (Identity draft 11, Finance draft 6, Law draft 10) and the review rounds that changed it. Some rules it describes have since changed. It is to be redrafted (roadmap, 9 October 2026).*
+*Note, 6 October 2026: this draft predates the current core (Identity draft 11, Money draft 6, Agreements draft 10) and the review rounds that changed it. Some rules it describes have since changed. It is to be redrafted (roadmap, 9 October 2026).*
 
 ## Why this case study
 
@@ -18,7 +18,7 @@ This case study follows one local journalist, Sara, from answering a single ques
 
 Journalism on MOR is a set of roles. Each can be filled by a single person, a large organisation or an automated service, and they all use the same rules.
 
-- **Contributors** supply assets: a photo, a video clip, a recorded interview, a document, a dataset, a translation. Each asset is a work, bound to its maker, offered through a standing offer (free with credit, a flat price, or a share of what the story earns). Buying under a standing offer needs a client that reads Law; a tip does not.
+- **Contributors** supply assets: a photo, a video clip, a recorded interview, a document, a dataset, a translation. Each asset is a work, bound to its maker, offered through a standing offer (free with credit, a flat price, or a share of what the story earns). Buying under a standing offer needs a client that reads Agreements; a tip does not.
 - **Editors** compile assets into stories for an audience. An editor can be a newspaper desk, a solo newsletter writer, or an automated or assisted compiler. A story names the assets it is built from, the way a track names its stems, and when the story earns, its split pays each contributor.
 - **Verifiers** check assets and claims, and sign what they checked: "this photo was taken at this place, on this date", "this quote matches the recording". Verification is a job in its own right. Agencies do it, and so do the research teams behind satire shows, magazine fact-checkers and open-source investigators.
 - **Agencies** are hubs. At one end, an automated market where assets are listed and bought. At the other, a specialised business with its own network, its own verification and its own reputation, selling to outlets.
@@ -26,7 +26,7 @@ Journalism on MOR is a set of roles. Each can be filled by a single person, a la
 
 ## 2. A funded question
 
-**Sara covers her commune.** She has an identity with a signing key on her phone and a safety key on an offline device, like every creator in these case studies. Her readers follow her identity, not a newspaper's website.
+**Sara covers her commune.** She has an identity with a signing key on her phone and a chain key on an offline device, like every creator in these case studies. Her readers follow her identity, not a newspaper's website.
 
 **Readers fund a question.** Residents want to know what is in the commune's contract with a developer for a piece of public land. They pool money on the question: a signed agreement stating the question, the amount, a deadline on a named time reference, and a keeper. The pledges can be held by a custodian named in the agreement, or remain signed commitments paid only when the condition is met. Either way, the money is released on delivery, not before.
 

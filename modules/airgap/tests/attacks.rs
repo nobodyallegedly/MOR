@@ -12,7 +12,7 @@ use mor_airgap::transport::{self, QrReceiver, QrSender};
 use mor_core::cbor::{self, Value};
 use mor_core::hash::sha256;
 use mor_core::identity::{
-    Audit, Declaration, HomeRule, Rotation, SafetyCommit, SigningKey, Successor,
+    Audit, Declaration, HomeRule, Rotation, ChainKeyCommit, SigningKey, Successor,
 };
 use mor_core::sig;
 
@@ -91,7 +91,7 @@ fn every_consequential_field_changed_online_is_shown_prominently() {
             "flow off",
             Box::new(move |r| {
                 r.declarations = Some(vec![Declaration {
-                    spec: finance_spec(),
+                    spec: money_spec(),
                     kind: 0,
                     value: Some(Value::Array(vec![Value::Array(vec![
                         Value::Bytes(unit.to_vec()),
@@ -106,7 +106,7 @@ fn every_consequential_field_changed_online_is_shown_prominently() {
             "VAULT REMOVED",
             Box::new(|r| {
                 r.declarations = Some(vec![Declaration {
-                    spec: finance_spec(),
+                    spec: money_spec(),
                     kind: 0,
                     value: None,
                 }])
@@ -150,7 +150,7 @@ fn every_consequential_field_changed_online_is_shown_prominently() {
 #[test]
 fn a_unit_removed_from_the_vault_is_named() {
     let vault = |units: &[&str]| Declaration {
-        spec: finance_spec(),
+        spec: money_spec(),
         kind: 0,
         value: Some(Value::Array(
             units
@@ -216,7 +216,7 @@ fn context_from_the_online_device_is_shown_apart_and_never_trusted() {
 #[test]
 fn an_online_supplied_next_commitment_is_ignored_and_replaced() {
     let mut o = Owner::new("commitment", SeedModule::Words, 2);
-    let attacker = sha256(b"the attacker's safety key");
+    let attacker = sha256(b"the attacker's chain key");
     // A compromised online device slips its own next commitment in.
     let r = o.plan();
     let Message::PendingRotation(mut p) = o.pending(&r) else {
@@ -230,7 +230,7 @@ fn an_online_supplied_next_commitment_is_ignored_and_replaced() {
             let Value::Map(pl) = v else { unreachable!() };
             pl.push((
                 Value::Uint(3),
-                SafetyCommit {
+                ChainKeyCommit {
                     scheme: sig::SLH_128S,
                     commit: attacker,
                 }
@@ -244,7 +244,7 @@ fn an_online_supplied_next_commitment_is_ignored_and_replaced() {
     assert!(rv.summary.warns("IGNORED and replaced"));
     let s = Message::SignedRotation(o.device.sign(rv, false, &mut o.rng).unwrap().message);
     let a = rotation_act(&s);
-    let got = rotation_of(&a).safety.commit;
+    let got = rotation_of(&a).chain_key.commit;
     assert_ne!(got, attacker);
     assert_eq!(
         got,
@@ -413,7 +413,7 @@ fn a_rotation_that_does_not_follow_the_previous_act_is_refused() {
 // ---------------------------------------------------------------- rule 3.5
 
 #[test]
-fn the_safety_key_signs_only_rotations() {
+fn the_chain_key_signs_only_rotations() {
     let mut o = Owner::new("only rotations", SeedModule::Words, 2);
     let r = o.plan();
     let Message::PendingRotation(p) = o.pending(&r) else {

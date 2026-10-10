@@ -14,7 +14,7 @@
 //! - text strings that are not valid UTF-8;
 //! - anything that is not well-formed, and trailing bytes;
 //! - any data item nested more than 128 levels below the outermost one
-//!   (Envelope validity rule 1a, F91).
+//!   (Envelopes validity rule 1a, F91).
 //!
 //! Tags and simple values are carried as they are: RFC 8949 section 4.2.1
 //! puts no further constraint on them, and nor does the core.
@@ -84,7 +84,7 @@ pub enum CborError {
     /// (a safety net behind the specific checks; not expected to fire).
     NotDeterministic,
     /// A data item nested more than [`MAX_DEPTH`] levels below the
-    /// outermost one. Invalid for every verifier (Envelope rule 1a, F91).
+    /// outermost one. Invalid for every verifier (Envelopes rule 1a, F91).
     TooDeep,
 }
 
@@ -112,7 +112,7 @@ impl std::error::Error for CborError {}
 
 /// How many levels below the outermost item a data item may be nested: the
 /// outermost item is at level 0, and nothing may be deeper than level 128.
-/// A core rule, the same for every verifier (Envelope rule 1a, F91); it also
+/// A core rule, the same for every verifier (Envelopes rule 1a, F91); it also
 /// guards every decoder's stack against hostile input.
 pub const MAX_DEPTH: usize = 128;
 

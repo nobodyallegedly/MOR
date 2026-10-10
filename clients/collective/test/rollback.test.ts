@@ -1,4 +1,4 @@
-// Law draft 10, revised in place for F185 (rules 37a, 37d), freeze suite
+// Agreements draft 10, revised in place for F185 (rules 37a, 37d), freeze suite
 // v21, step 3.7w: a broken collective, and its way back. The collective
 // is broken as on the Mac on 8 October 2026: a removal whose record is lost
 // on its way to the relay, so the rotation's mark names too few signers
@@ -28,7 +28,7 @@ const idOf = (s: State, name: string) => s.identities.find((i) => i.name === nam
  * Found a collective through a relay that loses records, then remove
  * `remove` as the client did before step 11b's fix: the repo client's own
  * member change, its mark from this device's copy, the removal's record
- * lost. Law reads it as broken from that rotation, the broken act.
+ * lost. Agreements read it as broken from that rotation, the broken act.
  */
 async function broken(name: string, members: string[], remove: string, rules: { safety: number; release: number; clone: number }, change: Partial<Governance> = {}) {
   const c = w.client;
@@ -83,9 +83,9 @@ test('3.7w: a broken collective, a resignation during the broken stretch, and th
     const leave = await prepare(c, { kind: 'leave', collective: id, member: three });
     assert.deepEqual(leave.reading.blocking, []);
     const lw = words(leave.reading);
-    assert.match(lw, /Law reads “Five” as broken since the rotation/);
+    assert.match(lw, /Agreements read “Five” as broken since the rotation/);
     assert.match(lw, /resignation from the agreement in force just before that broken act/);
-    assert.match(lw, /No record is drawn: a record made while the collective is broken counts for nothing \(Law rule 37d\)\. The resignation takes effect at the collective's next valid line, normally the rollback, which registers it/);
+    assert.match(lw, /No record is drawn: a record made while the collective is broken counts for nothing \(Agreements rule 37d\)\. The resignation takes effect at the collective's next valid line, normally the rollback, which registers it/);
     assert.doesNotMatch(lw, /last voice/);
     const left = await c.ask<{ title: string; acts: string[] }>('confirm', { plan: leave.plan, digest: leave.digest });
     assert.equal(left.acts.length, 1, 'a resignation, and no record');
@@ -98,17 +98,17 @@ test('3.7w: a broken collective, a resignation during the broken stretch, and th
     const rb = await prepare(c, { kind: 'rollback', collective: id, rules: { safety: 2, release: 2, clone: 2, others: 2 } });
     assert.deepEqual(rb.reading.blocking, [], words(rb.reading));
     const rw = words(rb.reading);
-    assert.match(rw, /The way back is a rollback \(Law rule 37d\): a new rotation of the collective declares a new version of the agreement that was in force just before the broken act/);
+    assert.match(rw, /The way back is a rollback \(Agreements rule 37d\): a new rotation of the collective declares a new version of the agreement that was in force just before the broken act/);
     assert.match(rw, /Sim Three/);
     assert.match(rw, /Sim Four/);
     assert.match(rw, /stay shown, and count for nothing, for good/);
-    assert.match(rw, /Law counts, for the constitutional change rule of that agreement: .*Ada.*Sim One.*Sim Two/);
+    assert.match(rw, /Agreements count, for the constitutional change rule of that agreement: .*Ada.*Sim One.*Sim Two/);
     // Who judges absence changes too: a judicial change, every voice that remains (rules 37d, 46a).
-    assert.match(rw, /Law counts, for the judicial tier's rule of that agreement: .*Ada.*Sim One.*Sim Two/);
+    assert.match(rw, /Agreements count, for the judicial tier's rule of that agreement: .*Ada.*Sim One.*Sim Two/);
     const done = await c.ask<{ title: string; lines: { text: string }[] }>('confirm', { plan: rb.plan, digest: rb.digest });
     assert.match(done.title, /done$/, JSON.stringify(done));
 
-    // Law reads it as working again: three members, the founding rules.
+    // Agreements read it as working again: three members, the founding rules.
     s = await state(c);
     box = s.collectives.find((x) => x.id === id)!;
     assert.equal(box.law.broken, null, box.law.broken ?? '');
@@ -118,7 +118,7 @@ test('3.7w: a broken collective, a resignation during the broken stretch, and th
     // The release of the broken stretch still counts for nothing, said as such.
     const v1 = await verifyRelease(inStretch, [relay.base]);
     assert.equal(v1.ok, false);
-    assert.match(v1.problems.join('; '), /It was published while Law read the collective that published it as broken, before the rollback/);
+    assert.match(v1.problems.join('; '), /It was published while Agreements read the collective that published it as broken, before the rollback/);
     // A release after the rollback, signed by two members, counts.
     commit(w.checkout, 'src/lib.rs', 'pub fn back() -> u8 { 8 }\n');
     const rel = await sign(c, { kind: 'release', publisher: id, version: 'back' });
@@ -130,7 +130,7 @@ test('3.7w: a broken collective, a resignation during the broken stretch, and th
 
     // Nothing to roll back any more.
     const again = await prepare(c, { kind: 'rollback', collective: id });
-    assert.match(again.reading.blocking.join(' '), /Law does not read “Five” as broken: there is nothing to roll back/);
+    assert.match(again.reading.blocking.join(' '), /Agreements do not read “Five” as broken: there is nothing to roll back/);
   } finally {
     await relay.close();
   }

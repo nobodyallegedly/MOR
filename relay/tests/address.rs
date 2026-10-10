@@ -9,7 +9,7 @@ mod common;
 
 use common::*;
 use mor_core::chain::Verifier;
-use mor_core::envelope::{latest, Routes, Version};
+use mor_core::envelopes::{latest, Routes, Version};
 use mor_core::hash::Hash;
 use mor_relay::{AddedBase, Policy, Role};
 

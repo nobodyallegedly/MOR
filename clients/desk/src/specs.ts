@@ -5,9 +5,9 @@ import { sha256 } from '../../genesis/src/core.ts';
 
 export const DESK_SPECS = {
   /**
-   * The Finance MIP (`FINANCE`), by the same test value the other MIPs use
-   * until the freeze. No client makes Finance acts yet (roadmap step 12):
+   * The Money MIP (`MONEY`), by the same test value the other MIPs use
+   * until the freeze. No client makes Money acts yet (roadmap step 12):
    * the desk only recognises one as a payment received.
    */
-  finance: sha256('FINANCE, test value until the freeze'),
+  money: sha256('FINANCE, test value until the freeze'),
 };

@@ -2,7 +2,7 @@
 // mor-repo: the test collective and releases of the code, from the command
 // line (roadmap step 5a). Test collectives only: every key and share is in
 // the collective's file. A test tool, not a client (F187, 9): its member
-// changes are marked from this device's copy, never asked of Law first.
+// changes are marked from this device's copy, never asked of Agreements first.
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -10,20 +10,20 @@ import { TestIdentity, type Home } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { hex } from '../../genesis/src/core.ts';
 import { TestCollective, abandonmentOf, governanceText, type Governance } from './collective.ts';
-import { absenceNotice } from './law.ts';
+import { absenceNotice } from './agreements.ts';
 import { compareWithTree, gitFiles, gitSource, publishRelease, signRelease, verifyRelease, type Verified } from './release.ts';
 
 const HELP = `mor-repo: MOR governs its own code. A test collective publishes releases
 as signed manifests; anyone fetches one and verifies every file.
 
 A TEST TOOL, NOT A CLIENT (F187, 9). It drives the repo client's mechanics
-for tests. It marks a member change from this device's copy of the collective, without asking Law first,
-so it can sign and publish a clone whose mark Law calls false, breaking the
-collective (Law rule 37d). To manage a collective, use the collective
-client (clients/collective), which asks Law before anything is signed.
+for tests. It marks a member change from this device's copy of the collective, without asking Agreements first,
+so it can sign and publish a clone whose mark Agreements call false, breaking the
+collective (Agreements rule 37d). To manage a collective, use the collective
+client (clients/collective), which asks Agreements before anything is signed.
 
-A TEST COLLECTIVE HOLDS EVERY KEY IN SOFTWARE, in its file: its everyday key
-and every member's share of its safety key. A prototype, never for a real
+A TEST COLLECTIVE HOLDS EVERY KEY IN SOFTWARE, in its file: its signing key
+and every member's share of its chain key. A prototype, never for a real
 collective. Keep the file secret. Members are test identities made with the
 genesis client (clients/genesis: mor-genesis new).
 
@@ -32,7 +32,7 @@ genesis client (clients/genesis: mor-genesis new).
         [--constitution K] [--scheme 2|3]
         Found a collective: the first member proposes the founding agreement,
         every member signs it (a collective exists only once every founder
-        has), the safety key is dealt as shares (any K of the members;
+        has), the chain key is dealt as shares (any K of the members;
         default 2), and the collective's genesis declares the agreement.
         Releases are an area every member holds: a release needs --release K
         members' signatures (default 2). Changing members or these rules
@@ -44,7 +44,7 @@ genesis client (clients/genesis: mor-genesis new).
         agreement, proposed by the first --stay member and signed by every
         --stay and --join member, marked with the constitutional change rule,
         and a rotation of the collective declaring it with those signatures,
-        signed with the safety key rebuilt from the staying members' shares,
+        signed with the chain key rebuilt from the staying members' shares,
         the next key dealt to the new members only. A member removed without
         resigning (--remove) is counted unless the founders agreed otherwise
         (--constitution at founding): by default nobody loses their say
@@ -127,7 +127,7 @@ async function main() {
       const governance: Governance = { ...rules, text: governanceText(rules) };
       console.log('The founding agreement, as every member signs it:\n');
       console.log(governance.text + '\n');
-      // Law rule 49: before signing terms carrying an abandonment clause.
+      // Agreements rule 49: before signing terms carrying an abandonment clause.
       console.log(absenceNotice(abandonmentOf(rules)) + '\n');
       const got = await TestCollective.found({
         members,
@@ -141,7 +141,7 @@ async function main() {
       paths.forEach((p, i) => members[i].save(p));
       console.log(`collective ${got.collective.identity}`);
       console.log(`founding agreement ${got.agreement}, signed by ${got.signed.length} members`);
-      console.log(`safety key dealt: any ${k} of ${members.length}; dealing ${got.collective.f.safety.fingerprint}`);
+      console.log(`chain key dealt: any ${k} of ${members.length}; dealing ${got.collective.f.safety.fingerprint}`);
       for (const s of got.sent) console.log(`  ${s.home}: ${s.result?.receipt ? 'receipt' : `refused (${s.code ?? '?'}) ${s.error ?? ''}`}`);
       break;
     }
@@ -158,7 +158,7 @@ async function main() {
         const out = new Set([...(opts.remove ?? []), ...leaving.map((l) => l.id)]);
         const members = [...c.f.members.filter((x) => !out.has(x)), ...join.map((j) => j.id)];
         for (const s of stay) if (!c.f.members.includes(s.id)) throw new Error(`${s.id} is not a member`);
-        // Law rule 49: the clone carries the abandonment clause; shown before it is signed.
+        // Agreements rule 49: the clone carries the abandonment clause; shown before it is signed.
         console.log(absenceNotice(abandonmentOf(c.f.governance)) + '\n');
         const got = await c.changeMembers({
           members,
@@ -187,7 +187,7 @@ async function main() {
       const c = TestCollective.load(file, via);
       const paths = opts.member ?? [];
       const signers = paths.map(member);
-      // Law rule 49: the clone carries the abandonment clause; shown before it is signed.
+      // Agreements rule 49: the clone carries the abandonment clause; shown before it is signed.
       console.log(absenceNotice(abandonmentOf(c.f.governance)) + '\n');
       const got = await c.changeReleaseWords({ words: need('text'), proposer: signers[0], signers });
       c.save(file);
@@ -255,7 +255,7 @@ async function main() {
         signingHolder: c.f.signingHolder,
         agreement: c.f.agreement,
         agreements: c.f.agreements,
-        safety: { index: c.f.safety.index, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint },
+        chainKey: { index: c.f.safety.index, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint },
         relays: c.f.relays,
         releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })),
         pending: !!c.f.pending,

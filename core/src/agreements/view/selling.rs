@@ -5,9 +5,9 @@
 //! lifted).
 
 use super::*;
-use crate::law::open_formats::{Offer, OfferAct, Paid, Sold};
+use crate::agreements::open_formats::{Offer, OfferAct, Paid, Sold};
 
-/// A standing offer, judged (Law type 6, rule 32; step 12b).
+/// A standing offer, judged (Agreements type 6, rule 32; step 12b).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OfferEval {
     pub id: Hash,
@@ -33,11 +33,11 @@ pub struct OfferEval {
     pub withdraws: bool,
 }
 
-impl<'a> LawView<'a> {
+impl<'a> AgreementsView<'a> {
     /// A held standing offer with its decoded payload.
     pub(super) fn offer_act(&self, id: &Hash) -> Option<(&'a Held, OfferAct)> {
         let h = self.v.get(id)?;
-        if !self.is_law(h, types::STANDING_OFFER) {
+        if !self.is_agreements(h, types::STANDING_OFFER) {
             return None;
         }
         Offer::decode(&h.inside).ok().map(|o| (h, o))
@@ -51,7 +51,7 @@ impl<'a> LawView<'a> {
             return Ok(Some(self.collective_of(agreement)?.into_iter().collect()));
         }
         let Some(gs) = &t.payee_grants else { return Ok(None) };
-        Ok(Some(gs.iter().filter_map(|g| self.v.get(g)).filter(|g| self.is_law(g, types::GRANT)).filter_map(|g| g.act.outside.signer).collect()))
+        Ok(Some(gs.iter().filter_map(|g| self.v.get(g)).filter(|g| self.is_agreements(g, types::GRANT)).filter_map(|g| g.act.outside.signer).collect()))
     }
 
     /// A standing offer, judged (rule 32; step 12b). Checks, each from a
@@ -62,16 +62,16 @@ impl<'a> LawView<'a> {
     /// 35a); who is paid (field 3) fits the agreement: a payee its field 14
     /// lists where it names a split service, the stakes where it names none
     /// (review 2.1 to 2.3); for a lone seller, the payee is the signer, or
-    /// one who signed a signature act accepting the offer (Finance rule 14,
+    /// one who signed a signature act accepting the offer (Money rule 14,
     /// F168 item 13); a deadline needs the agreement's time reference (rule
     /// 33).
     pub fn offer(&self, id: &Hash) -> R<OfferEval> {
         let h = self.held(id)?;
-        if !self.is_law(h, types::STANDING_OFFER) {
-            return Err(LawError::Check("not a standing offer"));
+        if !self.is_agreements(h, types::STANDING_OFFER) {
+            return Err(AgreementsError::Check("not a standing offer"));
         }
         let OfferAct { offer, follows } = Offer::decode(&h.inside)?;
-        let signer = h.act.outside.signer.ok_or(LawError::Check("an offer has a signer"))?;
+        let signer = h.act.outside.signer.ok_or(AgreementsError::Check("an offer has a signer"))?;
         let mut problems: Vec<String> = vec![];
         let mut unsigned: Vec<Hash> = vec![];
         if !self.valid(id) {
@@ -135,10 +135,10 @@ impl<'a> LawView<'a> {
             None => {
                 // F215: a lone seller's offer is the agreement with the
                 // buyer. Its payee is the signer, or one who accepted it by a
-                // signature act (Finance rule 14, F168 item 13; review 2.3).
+                // signature act (Money rule 14, F168 item 13; review 2.3).
                 if let Some(Paid::Payee(p)) = &offer.paid {
                     if *p != signer && self.signers(id, &[*p]).is_empty() {
-                        problems.push("the identity it pays has not accepted it by a signature act: an offer another identity signed is not the payee's act (Finance rule 14; review 2.3)".into());
+                        problems.push("the identity it pays has not accepted it by a signature act: an offer another identity signed is not the payee's act (Money rule 14; review 2.3)".into());
                     }
                 }
             }
@@ -171,7 +171,7 @@ impl<'a> LawView<'a> {
         tips
     }
 
-    /// The locked media an offer sells: each publication's (Envelope,
+    /// The locked media an offer sells: each publication's (Envelopes,
     /// publication field 2), for a relay's delivery record (rule 22, F184;
     /// Fable's 4b): the object a purchase under the offer paid for is any
     /// of them (mechanic, the build's). Access sells no object the core can
@@ -189,10 +189,10 @@ impl<'a> LawView<'a> {
     }
 
     /// A publication's field `k` (1, its work hash; 2, its locked media),
-    /// where `p` is a held publication (Envelope type 0).
+    /// where `p` is a held publication (Envelopes type 0).
     pub(super) fn publication_field(&self, p: &Hash, k: u64) -> Option<Hash> {
         let x = self.v.get(p)?;
-        if x.inside.spec != self.mips.envelope || x.inside.type_ != 0 {
+        if x.inside.spec != self.mips.envelopes || x.inside.type_ != 0 {
             return None;
         }
         x.inside.payload.iter().find_map(|(kk, v)| match (kk, v) {

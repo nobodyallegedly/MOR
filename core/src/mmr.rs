@@ -1,4 +1,4 @@
-//! Running summaries (Envelope, "Sequences").
+//! Running summaries (Envelopes, "Sequences").
 //!
 //! The running summary of a sequence is the root of a Merkle mountain range
 //! over the act ids of the sequence, in order:

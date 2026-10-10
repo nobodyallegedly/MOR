@@ -161,8 +161,8 @@ test('the author, without a terminal, from the page alone', async () => {
   await card.locator('form.change button[type=submit]').click();
   await review(page, /Remove Ada \(you\) .* from “Makers”/, '10-refit', [
     'already left',
-    'The everyday key passes to Sim Two',
-    'Any one member alone can rebuild the safety key',
+    'The signing key passes to Sim Two',
+    'Any one member alone can rebuild the chain key',
   ]);
   await done(page, ': done');
   assert.equal(/Ada/.test((await card.locator('dt:text-is("Members") + dd').textContent())!), false);

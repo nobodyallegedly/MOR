@@ -1,7 +1,7 @@
 //! # mor-payment
 //!
 //! The payment cMIP, draft 2 (`cmips/cmip-payment-draft-2.md`), filling
-//! the Finance MIP's task 6. It defines:
+//! the Money MIP's task 6. It defines:
 //!
 //! - the **payment commitment**: one hash binding a payment on a rail to
 //!   what the receipt and the claim say (payee, amount, what it fulfils,
@@ -17,7 +17,7 @@
 //! payers (F112).
 
 use mor_core::cbor::{self, Value};
-use mor_core::finance::{self as fin, Amount, Claim, Obligation, PaidInto, PayeePointer, Payer, Receipt, VaultEntry};
+use mor_core::money::{self as fin, Amount, Claim, Obligation, PaidInto, PayeePointer, Payer, Receipt, VaultEntry};
 use mor_core::hash::{sha256, tagged_hash, Hash};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -87,7 +87,7 @@ pub struct Commitment {
     pub payee: Hash,
     pub amount: Amount,
     /// The obligation, agreement, offer or payee-pointer act it follows
-    /// (Finance's open parameter: this is how a payment carries it).
+    /// (Money's open parameter: this is how a payment carries it).
     pub fulfils: Hash,
     /// The payer: an identity, an anonymous payer's bare key (F113), or
     /// `None` for an anonymous payment that committed no key.
@@ -95,10 +95,10 @@ pub struct Commitment {
     pub paid_to: PaidTo,
     /// Chosen by the payer, so the commitment cannot be guessed.
     pub salt: [u8; 16],
-    /// For a purchase, the claim it pays under (Finance receipt and claim
+    /// For a purchase, the claim it pays under (Money receipt and claim
     /// field 9, F126); absent otherwise, and then not encoded, so a payment
     /// that is no purchase commits to exactly what it did before.
-    pub purchase: Option<mor_core::finance::Purchase>,
+    pub purchase: Option<mor_core::money::Purchase>,
 }
 
 impl Commitment {
@@ -161,7 +161,7 @@ impl Proof {
     }
 }
 
-/// A verification answer (Finance, "Verification answer").
+/// A verification answer (Money, "Verification answer").
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Answer {
     Valid,
@@ -188,7 +188,7 @@ impl fmt::Display for Answer {
 }
 
 /// The answer, with the hash of the rail Module that computed it and the
-/// trusted party it relied on, if any (Finance rules 2 and 3).
+/// trusted party it relied on, if any (Money rules 2 and 3).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Verification {
     pub answer: Answer,
@@ -209,7 +209,7 @@ pub struct RailInput<'a> {
 
 /// Whether a rail Module is a request rail or a push rail (F128, W4; F140
 /// item 1): a rail Module declares it, and a client reads it from the
-/// Module, never sets it by hand. *Format open: the Production
+/// Module, never sets it by hand. *Format open: the Development
 /// specification format has no field for it yet; until it has, each
 /// Module's code states what its text declares.*
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -218,7 +218,7 @@ pub enum RailKind {
     /// to the claim a purchase names.
     Request,
     /// The payer pays an address with no request; each holder settles the
-    /// claim on its own chain (Finance rule 10c).
+    /// claim on its own chain (Money rule 10c).
     Push,
 }
 
@@ -228,7 +228,7 @@ pub trait RailModule {
     /// vault entries name.
     fn spec(&self) -> Hash;
     /// The cMIP its specification's field 5 names ("implements",
-    /// Production). Checked where an agreement names a payment cMIP (F115).
+    /// Development). Checked where an agreement names a payment cMIP (F115).
     fn implements(&self) -> Hash;
     /// Whether it is a request rail or a push rail, as its specification
     /// declares.
@@ -240,7 +240,7 @@ pub trait RailModule {
     /// proof shows, the same bytes in every proof of that payment, whatever
     /// else differs between them (on Lightning the payment hash; on-chain
     /// the output the transaction created). `None` where the proof shows no
-    /// payment yet (a request only). Finance's rules that tell payments
+    /// payment yet (a request only). Money's rules that tell payments
     /// apart (8a, 10, 15) read it through [`payment`], never through the
     /// proof's bytes.
     fn payment(&self, rail_proof: &[u8]) -> Option<Vec<u8>>;
@@ -261,39 +261,39 @@ pub trait Held {
     /// A genesis or rotation by id, that counts on its identity's chain and
     /// declared a vault: its identity and the entries.
     fn vault(&self, declared_by: &Hash) -> Option<(Hash, Vec<VaultEntry>)>;
-    /// An obligation act by id, valid and signed by its debtor (Finance
+    /// An obligation act by id, valid and signed by its debtor (Money
     /// F66).
     fn obligation(&self, id: &Hash) -> Option<Obligation>;
-    /// Finance rules 14 and 15 with F145 and F155: the payee's pointer acts
+    /// Money rules 14 and 15 with F145 and F155: the payee's pointer acts
     /// that the payee's own act holds through its citations, for what a
     /// payment follows: an obligation owed to `payee` (the payee's
     /// signature act on its agreement, or its offer; with neither, the
     /// payee's acts acknowledging it), an agreement (the payee's signature
     /// act on it) or an offer (the payee's own). Which acts those are is
-    /// Law's: a Law client gives the core library's answer
-    /// (`mor_core::law::LawView::pointer_holding`). `None` where `fulfils`
-    /// is none of these, or this verifier cannot read it (a Finance-only
+    /// Agreements': an Agreements client gives the core library's answer
+    /// (`mor_core::agreements::AgreementsView::pointer_holding`). `None` where `fulfils`
+    /// is none of these, or this verifier cannot read it (a Money-only
     /// client): the payment to the flow is then unknown, never valid.
     fn holding(&self, fulfils: &Hash, payee: &Hash) -> Option<fin::Holding>;
     /// Every valid payee-pointer act held for this identity, as (act id,
-    /// pointer): its chain and any fork of it (Finance rule 12).
+    /// pointer): its chain and any fork of it (Money rule 12).
     fn pointers_of(&self, payee: &Hash) -> Vec<(Hash, PayeePointer)>;
-    /// Finance rule 15: a payee-pointer act that a rotation of its signer
+    /// Money rule 15: a payee-pointer act that a rotation of its signer
     /// invalidated (voided, or voided and shown as disputed), and that
     /// rotation (`mor_core::chain::Verifier::judged_by`).
     fn voided_pointer(&self, id: &Hash) -> Option<(PayeePointer, Hash)>;
     /// The vault the payee's chain declares in force: its entries, or
-    /// `None` where it declares none (Finance rule 14a: the vault applies
+    /// `None` where it declares none (Money rule 14a: the vault applies
     /// as the chain declares it, F169; F160 withdrawn).
     fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>>;
-    /// Finance rules 12 to 15 over the payee's whole chain, for a payment
+    /// Money rules 12 to 15 over the payee's whole chain, for a payment
     /// that does not follow the chain as it stands now: whether it counts as
     /// made, because it followed the chain as published before and every
     /// anchored lock change since is answered by the payee's own receipt or
     /// a payer's claim anchored by its point (theft: anchor or bear the
-    /// loss; F169, F176 to F181). A Law client gives the core library's
-    /// answer (`mor_core::law::LawView::payment_counts`). `None` where this
-    /// verifier cannot read it (a Finance-only client).
+    /// loss; F169, F176 to F181). An Agreements client gives the core library's
+    /// answer (`mor_core::agreements::AgreementsView::payment_counts`). `None` where this
+    /// verifier cannot read it (a Money-only client).
     fn payment_counts(&self, payee: &Hash, paid_at: &fin::PaidAt, amount: &Amount, proof: &[u8], fulfils: &Hash) -> Option<bool>;
 }
 
@@ -315,7 +315,7 @@ impl<'a> Modules<'a> {
         self.by_spec.get(spec).copied()
     }
     /// The adopted rail Modules that declare themselves push rails: what a
-    /// Law client hands the core's Law view (`LawView::push_rails`), read
+    /// Agreements client hands the core's Agreements view (`AgreementsView::push_rails`), read
     /// from the Modules rather than set by hand (F140 item 1).
     pub fn push_rails(&self) -> BTreeSet<Hash> {
         self.by_spec.iter().filter(|(_, m)| m.kind() == RailKind::Push).map(|(h, _)| *h).collect()
@@ -398,13 +398,13 @@ fn address(
     }
 }
 
-/// Verify a receipt or claim (Finance rules 2 to 4; the payment cMIP,
+/// Verify a receipt or claim (Money rules 2 to 4; the payment cMIP,
 /// "Verifying a receipt or claim").
 ///
-/// The receipt's own signer is checked by the Finance MIP
-/// ([`mor_core::finance::check_signer`]); a claim's payer is its signer.
+/// The receipt's own signer is checked by the Money MIP
+/// ([`mor_core::money::check_signer`]); a claim's payer is its signer.
 ///
-/// The receipt or claim must be one the payee accepts (Finance rule 12a,
+/// The receipt or claim must be one the payee accepts (Money rule 12a,
 /// F115): the pointer rail or vault entry it was paid to, the payee's own,
 /// names its rail Module. Where the payment falls under an agreement, pass
 /// the payment cMIP it names as `under`: a rail Module implementing another
@@ -423,7 +423,7 @@ pub fn verify_under(
         if &m.implements() != cmip {
             return Verification {
                 answer: Answer::Invalid(
-                    "the rail Module implements another payment cMIP than the agreement names (Finance rule 12a, F115)"
+                    "the rail Module implements another payment cMIP than the agreement names (Money rule 12a, F115)"
                         .into(),
                 ),
                 module: rail,
@@ -478,14 +478,14 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
         salt: p.salt,
         purchase,
     };
-    // A claim's anonymous key must have signed it (Finance rule 1, F113);
+    // A claim's anonymous key must have signed it (Money rule 1, F113);
     // a claim signed by anyone else as payer recomputes another commitment,
     // which the rail's rule refuses: a node that learnt the proof on the
     // route cannot claim the payment, nor its refund.
     if let Record::Claim(c, signer, cited) = &record {
         if fin::check_signer(&fin::Payload::Claim((*c).clone()), signer, cited).is_err() {
             return out(Answer::Invalid(
-                "the anonymous payer's key did not sign this claim (Finance rule 1, F113)".into(),
+                "the anonymous payer's key did not sign this claim (Money rule 1, F113)".into(),
             ));
         }
     }
@@ -499,8 +499,8 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
 
 /// The payment a receipt or claim is (F200), as its rail Module says:
 /// `[rail, payment]` in deterministic CBOR, the rail Module's spec hash and
-/// what the Module gives ([`RailModule::payment`]). What a Law client hands
-/// the core's Law view (`LawView::payments`), keyed by the act's proof, so
+/// what the Module gives ([`RailModule::payment`]). What an Agreements client hands
+/// the core's Agreements view (`AgreementsView::payments`), keyed by the act's proof, so
 /// that two proofs of one payment count once. `None` where the Module is
 /// not adopted, the proof is not in this cMIP's shape, or it shows no
 /// payment yet.
@@ -528,7 +528,7 @@ pub fn paid_at(record: &Record) -> Option<fin::PaidAt> {
 
 /// Everything judged beside the verification answer ("What verification
 /// does not decide"): whether the payment follows the payee's chain as it
-/// stands now (Finance rules 12 and 14, [`pointer_in_force`]; rule 14a,
+/// stands now (Money rules 12 and 14, [`pointer_in_force`]; rule 14a,
 /// [`followed_vault`]), and, where it does not, rule 15: whether it counts
 /// as made all the same, because it followed the chain as published before
 /// and no anchored lock change since is left unanswered
@@ -555,20 +555,20 @@ pub fn beside(record: Record, held: &dyn Held) -> Answer {
         Some(true) => Answer::Valid,
         Some(false) => match now {
             Answer::Invalid(w) => Answer::Invalid(format!(
-                "{w}; nor does it count under Finance rule 15: it followed no earlier state of the payee's chain, or an anchored lock change affects it with no receipt of the payee's and no payer's claim anchored by its point (F169, F176 to F181)"
+                "{w}; nor does it count under Money rule 15: it followed no earlier state of the payee's chain, or an anchored lock change affects it with no receipt of the payee's and no payer's claim anchored by its point (F169, F176 to F181)"
             )),
             a => a,
         },
         None => match now {
             Answer::Invalid(w) => Answer::Unknown(format!(
-                "{w}, as the payee's chain stands now; whether it counts under Finance rule 15 (theft: anchor or bear the loss) is unknown to this verifier"
+                "{w}, as the payee's chain stands now; whether it counts under Money rule 15 (theft: anchor or bear the loss) is unknown to this verifier"
             )),
             a => a,
         },
     }
 }
 
-/// Finance rule 14a, judged beside the verification answer for a payment
+/// Money rule 14a, judged beside the verification answer for a payment
 /// received, on the payee's chain as it stands now: a payment to the flow
 /// counts as paid to the flow only where the vault in force lets it go
 /// there (an entry for its unit, and no more than that unit's smallest
@@ -600,7 +600,7 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
             if now.iter().any(|x| x.unit == e.unit && x.rail_module == e.rail_module && x.source == e.source) {
                 Answer::Valid
             } else {
-                Answer::Invalid("paid to a vault entry the payee's chain no longer declares: a rotation replaced it (Finance rules 14a and 15)".into())
+                Answer::Invalid("paid to a vault entry the payee's chain no longer declares: a rotation replaced it (Money rules 14a and 15)".into())
             }
         }
         PaidTo::Flow { .. } => {
@@ -608,7 +608,7 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
                 Answer::Valid
             } else {
                 Answer::Invalid(
-                    "paid to the flow, but the payee's vault sends this payment to the vault: above the unit's limit, or in a unit the vault does not cover (Finance rule 14a)"
+                    "paid to the flow, but the payee's vault sends this payment to the vault: above the unit's limit, or in a unit the vault does not cover (Money rule 14a)"
                         .into(),
                 )
             }
@@ -616,7 +616,7 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
     }
 }
 
-/// Finance rules 12 and 14, judged beside the verification answer
+/// Money rules 12 and 14, judged beside the verification answer
 /// ("What verification does not decide"), on the payee's chain as it
 /// stands now: whether the flow pointer a payment was paid to is in force
 /// for what it fulfils. A payment to the vault always is.
@@ -640,7 +640,7 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
 ///
 /// Valid where these rules let the payment count; invalid where they do
 /// not; unknown where the acts they need are not held, or what the payment
-/// fulfils is nothing this verifier can read (a Finance-only client reads
+/// fulfils is nothing this verifier can read (a Money-only client reads
 /// no agreement). An obligation owed to someone other than this hop's
 /// payee is not this hop's to judge, and answers valid. The rail's own
 /// answer is [`verify`]'s; the vault's limits are [`followed_vault`]'s.
@@ -660,7 +660,7 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
         None => match held.voided_pointer(&pointer) {
             Some(_) => {
                 return Answer::Invalid(
-                    "paid to a payee pointer a rotation of the payee voided: in force for nothing now (Finance rules 12 and 15)".into(),
+                    "paid to a payee pointer a rotation of the payee voided: in force for nothing now (Money rules 12 and 15)".into(),
                 )
             }
             None => return Answer::Unknown("the payee pointer it was paid to is not held".into()),
@@ -672,7 +672,7 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
     let chain = held.pointers_of(payee);
     if !fin::pointer_counts(&chain, &pointer) {
         return Answer::Invalid(
-            "the flow pointer it was paid to is not on the payee's unbroken, unforked chain: a forked chain counts only up to the fork (Finance rule 12)"
+            "the flow pointer it was paid to is not on the payee's unbroken, unforked chain: a forked chain counts only up to the fork (Money rule 12)"
                 .into(),
         );
     }
@@ -690,7 +690,7 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
                 fin::Rule14::Counts
             } else {
                 fin::Rule14::Vault(
-                    "it follows an earlier flow pointer than the one it was paid to: it counts only if paid to the vault (Finance rule 14)",
+                    "it follows an earlier flow pointer than the one it was paid to: it counts only if paid to the vault (Money rule 14)",
                 )
             }
         }
@@ -699,7 +699,7 @@ pub fn pointer_in_force(record: Record, held: &dyn Held) -> Answer {
             Some(h) => fin::rule_14(&h, &chain, q.version),
             None => {
                 return Answer::Unknown(
-                    "what it fulfils is no obligation, agreement or offer this verifier can read the payee's own acts on (Finance rules 14 and 15, F145)"
+                    "what it fulfils is no obligation, agreement or offer this verifier can read the payee's own acts on (Money rules 14 and 15, F145)"
                         .into(),
                 )
             }

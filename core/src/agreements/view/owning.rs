@@ -3,7 +3,7 @@
 //! transfer judged on the seller's own line (F217).
 
 use super::*;
-use crate::law::open_formats::{StakeTransfer, WorkClaim};
+use crate::agreements::open_formats::{StakeTransfer, WorkClaim};
 
 /// What MOR can record about a work's claims, read (rule 15; F218).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -62,12 +62,12 @@ pub struct TransferEval {
     pub owed_back: Vec<Hash>,
 }
 
-impl<'a> LawView<'a> {
+impl<'a> AgreementsView<'a> {
     /// Who made a work and who owns it as recorded (rule 15; F218).
     pub fn work_owners(&self, work: &Hash) -> R<WorkOwners> {
         let mut claims: Vec<Hash> = vec![];
         for h in self.v.held_acts() {
-            if !self.is_law(h, types::WORK_CLAIM) || !self.valid(&h.id) {
+            if !self.is_agreements(h, types::WORK_CLAIM) || !self.valid(&h.id) {
                 continue;
             }
             let Ok(c) = WorkClaim::decode(&h.inside, h.act.outside.signer.as_ref()) else { continue };
@@ -84,7 +84,7 @@ impl<'a> LawView<'a> {
         claims.sort();
         let mut agreements: Vec<Hash> = vec![];
         for h in self.v.held_acts() {
-            if !self.is_law(h, types::TERMS) {
+            if !self.is_agreements(h, types::TERMS) {
                 continue;
             }
             let Ok(t) = self.terms(&h.id) else { continue };
@@ -105,15 +105,15 @@ impl<'a> LawView<'a> {
     }
 }
 
-impl<'a> LawView<'a> {
+impl<'a> AgreementsView<'a> {
     /// A stake transfer, judged (rule 14; F217).
     pub fn transfer(&self, id: &Hash) -> R<TransferEval> {
         let h = self.held(id)?;
-        if !self.is_law(h, crate::law::open_formats::new_types::STAKE_TRANSFER) {
-            return Err(LawError::Check("not a stake transfer"));
+        if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) {
+            return Err(AgreementsError::Check("not a stake transfer"));
         }
         let transfer = StakeTransfer::decode(&h.inside)?;
-        let seller = h.act.outside.signer.ok_or(LawError::Check("a transfer has a signer"))?;
+        let seller = h.act.outside.signer.ok_or(AgreementsError::Check("a transfer has a signer"))?;
         let mut problems: Vec<String> = vec![];
         if !self.valid(id) {
             problems.push("it is not valid under Identity".into());
@@ -193,7 +193,7 @@ impl<'a> LawView<'a> {
         let root = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
         let mut out = vec![];
         for h in self.v.signed_by(seller) {
-            if !self.is_law(h, crate::law::open_formats::new_types::STAKE_TRANSFER) || !self.valid(&h.id) {
+            if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) || !self.valid(&h.id) {
                 continue;
             }
             let Ok(o) = StakeTransfer::decode(&h.inside) else { continue };
@@ -239,10 +239,10 @@ impl<'a> LawView<'a> {
     /// The payments for a transfer (F224): Money receipts and claims
     /// fulfilling it, and those its field 4 names.
     fn transfer_payments(&self, id: &Hash, t: &StakeTransfer) -> Vec<Hash> {
-        use crate::finance::Payload as Fin;
+        use crate::money::Payload as Fin;
         let mut out: Vec<Hash> = vec![];
         for h in self.v.held_acts() {
-            if h.inside.spec != self.mips.finance {
+            if h.inside.spec != self.mips.money {
                 continue;
             }
             let fulfils = match Fin::decode(h.inside.type_, &h.inside.payload) {
@@ -261,7 +261,7 @@ impl<'a> LawView<'a> {
     /// The stake transfer a payment pays for (F224): the one it fulfils, or
     /// one whose field 4 names it.
     pub(super) fn transfer_paid_by(&self, payment: &Hash, fulfils: &Hash) -> Option<Hash> {
-        let is_transfer = |h: &Held| self.is_law(h, crate::law::open_formats::new_types::STAKE_TRANSFER);
+        let is_transfer = |h: &Held| self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER);
         if self.v.get(fulfils).is_some_and(is_transfer) {
             return Some(*fulfils);
         }
@@ -352,7 +352,7 @@ impl<'a> LawView<'a> {
         let root = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
         let mut out = vec![];
         for h in self.v.held_acts() {
-            if !self.is_law(h, types::SPLIT) {
+            if !self.is_agreements(h, types::SPLIT) {
                 continue;
             }
             let Ok(s) = Split::decode(&h.inside.payload) else { continue };
@@ -377,8 +377,8 @@ impl<'a> LawView<'a> {
     /// split, and the part of it owed to the buyer (the share sold, of the
     /// seller's holding in the version the transfer names).
     pub(super) fn wrong_payout_receipt(&self, r: &Held) -> Option<(Hash, Hash, Hash, usize, u64)> {
-        use crate::finance::Payload as Fin;
-        if r.inside.spec != self.mips.finance || self.key_grant(r).is_some() || !self.valid(&r.id) {
+        use crate::money::Payload as Fin;
+        if r.inside.spec != self.mips.money || self.key_grant(r).is_some() || !self.valid(&r.id) {
             return None;
         }
         let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { return None };
@@ -388,7 +388,7 @@ impl<'a> LawView<'a> {
         }
         let pos = self.v.resolve(&seller).position_of(&r.act.outside.binding?)? as u64;
         for h in self.v.signed_by(&seller) {
-            if !self.is_law(h, crate::law::open_formats::new_types::STAKE_TRANSFER) {
+            if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) {
                 continue;
             }
             let Ok(t) = StakeTransfer::decode(&h.inside) else { continue };
@@ -411,7 +411,7 @@ impl<'a> LawView<'a> {
     }
 }
 
-impl<'a> LawView<'a> {
+impl<'a> AgreementsView<'a> {
     /// A request to a judge (type 25; Fable's reading of OF24 a, with
     /// review 2.6): the links of the judge's chain of judgment it reaches,
     /// public or sealed to each (the judge first; a link it does not reach
@@ -420,10 +420,10 @@ impl<'a> LawView<'a> {
     /// build's; a stake's holder, keeper or arbitrator not yet).
     pub fn judge_request(&self, id: &Hash) -> R<Result<Vec<Hash>, String>> {
         let h = self.held(id)?;
-        if !self.is_law(h, crate::law::open_formats::new_types::JUDGE_REQUEST) {
-            return Err(LawError::Check("not a request to a judge"));
+        if !self.is_agreements(h, crate::agreements::open_formats::new_types::JUDGE_REQUEST) {
+            return Err(AgreementsError::Check("not a request to a judge"));
         }
-        let r = crate::law::open_formats::JudgeRequest::decode(&h.inside)?;
+        let r = crate::agreements::open_formats::JudgeRequest::decode(&h.inside)?;
         if !self.valid(id) {
             return Ok(Err("it is not valid under Identity".into()));
         }
@@ -456,7 +456,7 @@ impl<'a> LawView<'a> {
     /// the collective placed it (FR10), which its chain shows.
     pub fn liveness(&self, id: &Hash) -> R<bool> {
         let h = self.held(id)?;
-        let l = crate::law::open_formats::Liveness::decode(&h.inside)?;
+        let l = crate::agreements::open_formats::Liveness::decode(&h.inside)?;
         let t = self.terms(&l.agreement)?;
         let signer = h.act.outside.signer.unwrap_or_default();
         let reaches = h.act.outside.content_key.is_some()

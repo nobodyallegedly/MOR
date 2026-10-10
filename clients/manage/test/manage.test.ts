@@ -70,7 +70,7 @@ test('a key made here cannot be read out, and pairs with a code from `mor-relay 
   const s = await m.ask<Status>('status');
   assert.equal(s.role, 'home');
   assert.equal(s.operator, home.operator);
-  assert.equal(s.holdsSafetyKey, true);
+  assert.equal(s.holdsChainKey, true);
   // The operator on the command line sees the same browser.
   const listed = execFileSync(bin, ['managers', '--dir', home.dir], { encoding: 'utf8' });
   assert.match(listed, new RegExp(`^${m.publicKey}  node$`, 'm'));
@@ -100,7 +100,7 @@ test('what strangers sent is escaped on the page', () => {
 test('the page says what each arrival is, in words', () => {
   const it = { arrival: 1, id: 'aa'.repeat(32), size: 10, signer: null };
   assert.equal(v.what({ ...it, kind: 'act', spec: 'identity', type: 2 }), 'Identity: receipt');
-  assert.equal(v.what({ ...it, kind: 'act', spec: 'envelope', type: 4 }), 'Envelope: encryption key');
+  assert.equal(v.what({ ...it, kind: 'act', spec: 'envelope', type: 4 }), 'Envelopes: encryption key');
   assert.equal(v.what({ ...it, kind: 'act', spec: null, type: null }), 'private act');
   assert.equal(v.what({ ...it, kind: 'sealed', spec: null, type: null }), 'sealed container');
   assert.equal(v.bytes(1536), '1.5 KiB');

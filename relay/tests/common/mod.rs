@@ -8,7 +8,7 @@ use mor_core::cbor::Value;
 use mor_core::chain::Verifier;
 use mor_core::hash::{sha256, Hash, ZERO_HASH};
 pub use mor_core::identity::Home;
-use mor_core::identity::{Audit, Genesis, HomeRule, Payload, Rotation, SafetyCommit, SigningKey};
+use mor_core::identity::{Audit, Genesis, HomeRule, Payload, Rotation, ChainKeyCommit, SigningKey};
 use mor_core::mmr::Mmr;
 use mor_core::sig::{self, SchnorrKey, SlhKey};
 use mor_relay::client::Client;
@@ -154,7 +154,7 @@ pub struct Person {
     pub id: Hash,
     pub gen: u32,
     pub sign: SchnorrKey,
-    pub safety: SlhKey,
+    pub chain_key: SlhKey,
     pub binding: Hash,
     pub position: u64,
     pub seq: Vec<Hash>,
@@ -182,8 +182,8 @@ fn signing_key(k: &SchnorrKey) -> SigningKey {
     }
 }
 
-fn commit(k: &SlhKey) -> SafetyCommit {
-    SafetyCommit {
+fn commit(k: &SlhKey) -> ChainKeyCommit {
+    ChainKeyCommit {
         scheme: k.scheme(),
         commit: k.commitment(),
     }
@@ -235,10 +235,10 @@ pub fn genesis(
     audit: Option<Audit>,
 ) -> (Act, Person) {
     let sign = schnorr(name, 0);
-    let safety = slh(name, 0);
+    let chain_key = slh(name, 0);
     let g = Payload::Genesis(Genesis {
         signing_key: signing_key(&sign),
-        safety: commit(&safety),
+        chain_key: commit(&chain_key),
         homes,
         rule,
         declarations: None,
@@ -256,7 +256,7 @@ pub fn genesis(
             id,
             gen: 0,
             sign,
-            safety,
+            chain_key,
             binding: id,
             position: 0,
             seq: vec![],
@@ -274,14 +274,14 @@ pub struct Rot {
     pub signing_key: Option<SchnorrKey>,
 }
 
-/// A rotation of `p`, signed with the safety key its chain act committed.
+/// A rotation of `p`, signed with the chain key its chain act committed.
 pub fn rotation(p: &Person, r: Rot) -> (Act, Person) {
     let gen = p.gen + 1;
     let next_sign = r
         .signing_key
         .clone()
         .unwrap_or_else(|| schnorr(&p.name, gen));
-    let next_safety = slh(&p.name, gen);
+    let next_chain_key = slh(&p.name, gen);
     let kept = p
         .seq
         .last()
@@ -297,7 +297,7 @@ pub fn rotation(p: &Person, r: Rot) -> (Act, Person) {
         prev: p.binding,
         position: p.position + 1,
         signing_key: signing_key(&next_sign),
-        safety: commit(&next_safety),
+        chain_key: commit(&next_chain_key),
         kept,
         disowned: None,
         homes: r.homes,
@@ -309,14 +309,14 @@ pub fn rotation(p: &Person, r: Rot) -> (Act, Person) {
         closure: false,
     });
     let i = inside(specs().identity, 1, payload.to_map());
-    let safety = p.safety.clone();
+    let chain_key = p.chain_key.clone();
     let a = seal(&i, Some(p.id), None, true, None, &random::<32>(), |id| {
-        safety.sign(id, None)
+        chain_key.sign(id, None)
     });
     let mut q = p.clone();
     q.gen = gen;
     q.sign = next_sign;
-    q.safety = next_safety;
+    q.chain_key = next_chain_key;
     q.binding = a.id();
     q.position += 1;
     (a, q)

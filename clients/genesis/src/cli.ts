@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node --import tsx
 // mor-genesis: the genesis client from the command line. Test identities
-// only: the safety key is held in software, in the identity file.
+// only: the chain key is held in software, in the identity file.
 
 import { writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -11,7 +11,7 @@ import { relayAt, type Via } from './transport.ts';
 
 const HELP = `mor-genesis: create and run MOR test identities.
 
-A TEST IDENTITY HOLDS ITS SAFETY KEY IN SOFTWARE, in its file. A prototype,
+A TEST IDENTITY HOLDS ITS CHAIN KEY IN SOFTWARE, in its file. A prototype,
 never for a real identity. Keep the file secret: it holds every key.
 
   new --file F --home URL [--home URL ...] [--rule R] [--scheme 2|3]
@@ -24,7 +24,7 @@ never for a real identity. Keep the file secret: it holds every key.
   enckey --file F
         Publish a new encryption key (X-Wing); the private half stays in the file.
   rotate --file F [--home URL ...] [--rule R]
-        Sign a rotation with the safety key and send it to every home; take on the
+        Sign a rotation with the chain key and send it to every home; take on the
         new keys once it counts. If one is pending, send the same bytes again.
   spread --file F
         Send every home what it missed, and the other homes' receipts.
@@ -39,7 +39,7 @@ never for a real identity. Keep the file secret: it holds every key.
         Sign a witness act: "I received this act and rely on it" (Identity type 15).
         What it does is shown first, and nothing is signed until you type RELY.
   export-operator --file F --out DIR
-        Write operator.key (the everyday signing key and its binding, no safety
+        Write operator.key (the signing key and its binding, no safety
         key) and operator-chain.mor, for \`mor-relay init --operator-key ...\`.
   show --file F
 
@@ -121,7 +121,7 @@ async function main() {
         scheme: one('scheme') === '3' ? 3 : 2,
         via,
       });
-      // Finance rule 14b (F181): said plainly before a genesis with no clock.
+      // Money rule 14b (F181): said plainly before a genesis with no clock.
       const warning = t.clockWarning();
       if (warning) console.log(`WARNING: ${warning}`);
       t.save(file);
@@ -157,7 +157,7 @@ async function main() {
         if (warning) console.log(`WARNING: ${warning}`);
         const id = t.prepareRotation({ homes, rule: one('rule') === 'majority' ? [] : rule(one('rule')) });
         t.save(need('file')); // before sending: a retry sends the same bytes
-        console.log(`rotation ${id} signed with the safety key (held in software)`);
+        console.log(`rotation ${id} signed with the chain key (held in software)`);
       } else console.log(`rotation ${t.f.pending.id} pending: sending the same bytes again`);
       report('rotation', await t.submitRotation());
       const { counts, lookup, unanchored } = await t.settleRotation();
@@ -202,7 +202,7 @@ async function main() {
     case 'inbox': {
       const t = load();
       const l = await lookUp(t.id, t.f.homes.map((h) => h.hint), via);
-      const inbox = l.inbox(SPECS.envelope);
+      const inbox = l.inbox(SPECS.envelopes);
       if (!inbox) throw new Error('this identity declares no inbox');
       const got = await t.readInbox({ inbox, senderHints: [...(opts.at ?? []), ...t.f.homes.map((h) => h.hint)] });
       for (const g of got) {
@@ -239,10 +239,10 @@ async function main() {
       const t = load();
       const out = need('out');
       // The relay's key file (relay/src/operator.rs, `Keys`): the everyday
-      // signing key and the act that bound it. Never the safety key.
+      // signing key and the act that bound it. Never the chain key.
       const key = cborEncode(
         new Map<number, unknown>([
-          [0, "The everyday signing key of a MOR home's operator. Keep it secret."],
+          [0, "The signing key of a MOR home's operator. Keep it secret."],
           [1, unhex(t.id)],
           [2, unhex(t.f.binding)],
           [3, unhex(t.f.signingSecret)],
@@ -258,7 +258,7 @@ async function main() {
       console.log(`TEST identity ${t.id}`);
       console.log(`  position ${t.f.position}, binding ${t.f.binding}`);
       console.log(`  homes: ${t.f.homes.map((h) => `${h.hint} (${h.operator ?? 'self'})`).join(', ')}`);
-      console.log(`  next safety key: scheme ${t.f.safety.scheme}, commitment ${t.nextSafety().commit}`);
+      console.log(`  next chain key: scheme ${t.f.safety.scheme}, commitment ${t.nextChainKey().commit}`);
       console.log(`  sequence: ${t.f.sequence.length} acts; routes v${t.f.routes?.version ?? 0}; encryption keys: ${t.f.encryption.length}`);
       if (t.f.pending) console.log(`  rotation pending: ${t.f.pending.id}`);
       break;

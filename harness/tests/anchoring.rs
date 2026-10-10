@@ -41,10 +41,10 @@ use mor_anchoring::service::{self, Judgment, Offer, Payment, Price, Publication,
 use mor_anchoring::tree::{self, Batch};
 use mor_core::act::{Act, Object};
 use mor_core::chain::Status;
-use mor_core::envelope::anchoring::Anchors;
-use mor_core::finance::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payer, Payload, Rail, VaultEntry};
+use mor_core::envelopes::anchoring::Anchors;
+use mor_core::money::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payer, Payload, Rail, VaultEntry};
 use mor_core::hash::{sha256, Hash};
-use mor_core::law::{self, LawView, Mips};
+use mor_core::agreements::{self, AgreementsView, Mips};
 use mor_harness::net::{Http, Site};
 use mor_harness::person::Person;
 use mor_harness::reader::Reader;
@@ -61,18 +61,18 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-fn finance_spec() -> Hash {
+fn money_spec() -> Hash {
     sha256(b"FINANCE, test value until the freeze")
 }
 
 fn mips() -> Mips {
     Mips {
         identity: sha256(b"IDENTITY, test value until the freeze"),
-        envelope: sha256(b"ENVELOPE, test value until the freeze"),
+        envelopes: sha256(b"ENVELOPE, test value until the freeze"),
         text: sha256(b"a text specification"),
-        finance: finance_spec(),
-        law: sha256(b"LAW, test value until the freeze"),
-        production: sha256(b"PRODUCTION, test value until the freeze"),
+        money: money_spec(),
+        agreements: sha256(b"LAW, test value until the freeze"),
+        development: sha256(b"PRODUCTION, test value until the freeze"),
     }
 }
 
@@ -126,10 +126,10 @@ impl Held for Pointers {
     fn vault(&self, _: &Hash) -> Option<(Hash, Vec<VaultEntry>)> {
         None
     }
-    fn obligation(&self, _: &Hash) -> Option<finance::Obligation> {
+    fn obligation(&self, _: &Hash) -> Option<money::Obligation> {
         None
     }
-    fn holding(&self, _: &Hash, _: &Hash) -> Option<finance::Holding> {
+    fn holding(&self, _: &Hash, _: &Hash) -> Option<money::Holding> {
         None
     }
     fn voided_pointer(&self, _: &Hash) -> Option<(PayeePointer, Hash)> {
@@ -141,7 +141,7 @@ impl Held for Pointers {
     fn vault_in_force(&self, _: &Hash) -> Option<Vec<VaultEntry>> {
         None
     }
-    fn payment_counts(&self, _: &Hash, _: &finance::PaidAt, _: &Amount, _: &[u8], _: &Hash) -> Option<bool> {
+    fn payment_counts(&self, _: &Hash, _: &money::PaidAt, _: &Amount, _: &[u8], _: &Hash) -> Option<bool> {
         None
     }
 }
@@ -321,7 +321,7 @@ struct Buyer {
     ticket: Ticket,
 }
 
-/// What a Law client states of a claim it checked: the rail's answer,
+/// What an Agreements client states of a claim it checked: the rail's answer,
 /// valid, where it was paid, and which payment it is (F200).
 #[allow(clippy::too_many_arguments)]
 fn state(rail_valid: &mut BTreeMap<Hash, PaidAt>, payments: &mut BTreeMap<Vec<u8>, Vec<u8>>, held: &Pointers, modules: &Modules, id: Hash, c: &Claim, signer: Hash) {
@@ -365,11 +365,11 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     // ------------------------------------------------ the service: pointer and standing offer
     let mut svc = born(&site, &seed, "the anchoring service").await;
     let pointer = PayeePointer { payee: svc.id, version: 1, previous: None, rails: lightning(ln.node_key(Side::Service).await) };
-    let pointer_act = svc.act(finance_spec(), finance::types::PAYEE_POINTER, Payload::PayeePointer(pointer.clone()).to_map(), None, None);
+    let pointer_act = svc.act(money_spec(), money::types::PAYEE_POINTER, Payload::PayeePointer(pointer.clone()).to_map(), None, None);
     put(&site, &pointer_act).await;
     let terms = Terms { reference: clock::reference(Network::Regtest), tiers: vec![Tier { price: Price::Fixed(50), blocks: 2 }, Tier { price: Price::Fixed(20), blocks: 6 }, Tier { price: Price::Fixed(5), blocks: 144 }] };
     let standing = terms.standing_offer(mor_onchain::unit(Network::Regtest), Some("Anchoring on Bitcoin regtest: tiers of 2, 6 and 144 blocks at 50, 20 and 5 satoshis a hash. A hash left out of its batch, or not anchored by its deadline, is refunded.".into()), None);
-    let offer_act = svc.act(mips().law, law::types::STANDING_OFFER, standing.to_map(), None, None);
+    let offer_act = svc.act(mips().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None);
     put(&site, &offer_act).await;
     let under_offer = Some(vec![Object { chain: offer_act.id(), predecessor: offer_act.id() }]);
     let pool_key_sk = secret("the anchoring service's batch key");
@@ -387,14 +387,14 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         let mut p = born(&site, &seed, name).await;
         // The payer's own pointer, where a refund comes back to.
         let own = PayeePointer { payee: p.id, version: 1, previous: None, rails: lightning(payer_node) };
-        let own_act = p.act(finance_spec(), finance::types::PAYEE_POINTER, Payload::PayeePointer(own.clone()).to_map(), None, None);
+        let own_act = p.act(money_spec(), money::types::PAYEE_POINTER, Payload::PayeePointer(own.clone()).to_map(), None, None);
         put(&site, &own_act).await;
         pointers.push((own_act.id(), own));
         // The payer reads the service's standing offer from the home; the
         // core's Agreements view says it counts.
         let rd = read(&site, &[svc.id]).await;
-        assert!(LawView::new(&rd.v, mips()).offer(&offer_act.id()).unwrap().counts, "the standing offer counts");
-        let lo = law::Offer::decode(&rd.v.get(&offer_act.id()).unwrap().inside).expect("an offer in Agreements' format").offer;
+        assert!(AgreementsView::new(&rd.v, mips()).offer(&offer_act.id()).unwrap().counts, "the standing offer counts");
+        let lo = agreements::Offer::decode(&rd.v.get(&offer_act.id()).unwrap().inside).expect("an offer in Agreements' format").offer;
         let o = Offer::read(offer_act.id(), svc.id, &lo).expect("an anchoring offer");
         // The act it anchors, and a random blind: the service sees only the leaf.
         let act = p.post(&format!("{name}'s act, to be anchored"));
@@ -418,7 +418,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         let proof = ln.pay(Side::Service, price.value, &commitment.hash()).await;
         let claim = claim_of(&commitment, &proof);
         assert_eq!(verify(Record::Claim(&claim, p.id, &Citations::default()), &Pointers(pointers.clone()), &modules).answer, Answer::Valid);
-        let claim_act = p.act(finance_spec(), finance::types::CLAIM, Payload::Claim(claim).to_map(), None, None);
+        let claim_act = p.act(money_spec(), money::types::CLAIM, Payload::Claim(claim).to_map(), None, None);
         put(&site, &claim_act).await;
         eprintln!("{name} pays {} satoshis over Lightning, following the standing offer, for one hash (tier {tier}, batch {batch}, by block {})", price.value, ticket.deadline);
         buyers.push(Buyer { name, p, act: act.id(), blind, pointer: own_act.id(), commitment, claim: claim_act, ticket_act, ticket });
@@ -444,16 +444,16 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     for b in &buyers {
         eve.add_act(&b.ticket_act);
     }
-    let lo = law::Offer::decode(&eve.v.get(&offer_act.id()).unwrap().inside).unwrap().offer;
+    let lo = agreements::Offer::decode(&eve.v.get(&offer_act.id()).unwrap().inside).unwrap().offer;
     let offer = Offer::read(offer_act.id(), svc.id, &lo).unwrap();
     let ids: Vec<Hash> = eve.v.signed_by(&svc.id).filter(|a| a.inside.spec == mor_anchoring::spec() && a.inside.type_ == service::PUBLICATION).map(|a| a.id).collect();
     let published: Vec<Publication> = ids.iter().map(|id| Publication::from_map(&payload(&eve, id)).unwrap()).collect();
     assert_eq!(published, vec![publication.clone()]);
-    // What a Law client states of each claim it checked: the rail's answer.
+    // What an Agreements client states of each claim it checked: the rail's answer.
     let held = Pointers(pointers.clone());
     let mut rail_valid: BTreeMap<Hash, PaidAt> = BTreeMap::new();
     let mut payments: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
-    let claim_in = |rd: &Reader, id: &Hash| match Payload::decode(finance::types::CLAIM, &payload(rd, id)) {
+    let claim_in = |rd: &Reader, id: &Hash| match Payload::decode(money::types::CLAIM, &payload(rd, id)) {
         Ok(Payload::Claim(c)) => c,
         _ => panic!("a claim"),
     };
@@ -461,10 +461,10 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         state(&mut rail_valid, &mut payments, &held, &modules, b.claim.id(), &claim_in(&eve, &b.claim.id()), b.p.id);
     }
     {
-        let mut v = LawView::new(&eve.v, mips());
+        let mut v = AgreementsView::new(&eve.v, mips());
         v.rail_valid = rail_valid.clone();
         for b in &buyers {
-            assert_eq!(v.purchase(&b.claim.id()).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase, "{}: a purchase accepted under the offer's terms (F215, F225)", b.name);
+            assert_eq!(v.purchase(&b.claim.id()).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "{}: a purchase accepted under the offer's terms (F215, F225)", b.name);
         }
     }
     let chain = node.rpc.chain(Network::Regtest).await.expect("the node's headers");
@@ -504,7 +504,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     let mut refund_claims = vec![];
     for (b, r) in [(cal, &cal_refund), (dan, &dan_refund)] {
         let shown = |rv: &BTreeMap<Hash, PaidAt>, pm: &BTreeMap<Vec<u8>, Vec<u8>>, rd: &Reader| {
-            let mut v = LawView::new(&rd.v, mips());
+            let mut v = AgreementsView::new(&rd.v, mips());
             v.rail_valid = rv.clone();
             v.payments = pm.clone();
             v.refund_repaid(&b.claim.id(), &r.to, &r.amount.unit)
@@ -515,7 +515,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         let back = Commitment { rail: mor_lightning::spec(), payee: b.p.id, amount: r.amount, fulfils: b.claim.id(), payer: Some(Payer::Identity(svc.id)), paid_to: PaidTo::Flow { pointer: b.pointer, rail: 0 }, salt: random::<16>(), purchase: None };
         let proof = ln.pay(Side::Payer, r.amount.value, &back.hash()).await;
         let c = claim_of(&back, &proof);
-        let act = svc.act(finance_spec(), finance::types::CLAIM, Payload::Claim(c).to_map(), None, None);
+        let act = svc.act(money_spec(), money::types::CLAIM, Payload::Claim(c).to_map(), None, None);
         put(&site, &act).await;
         refund_claims.push((act.id(), b, r));
     }
@@ -523,7 +523,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     for (id, _, _) in &refund_claims {
         state(&mut rail_valid, &mut payments, &held, &modules, *id, &claim_in(&eve, id), svc.id);
     }
-    let mut v = LawView::new(&eve.v, mips());
+    let mut v = AgreementsView::new(&eve.v, mips());
     v.rail_valid = rail_valid.clone();
     v.payments = payments.clone();
     for (_, b, r) in &refund_claims {

@@ -32,7 +32,7 @@ pub enum Kind {
     // --- Acts of the collective, in its own sequences ---
     /// An everyday act the area reaches: it counts only with the area's holders' signatures.
     AreaAct,
-    /// A grant within the area (Law rule 38a): counts like an area act.
+    /// A grant within the area (Agreements rule 38a): counts like an area act.
     Grant,
     /// A record (type 17) putting a clone in force. A line. `sigs`: the signature acts it
     /// names as completing the clone (addition A2 of the write-up; draft 7 leaves them
@@ -54,11 +54,11 @@ pub enum Kind {
     PayOn {
         deal: Id,
     },
-    /// An import of deals from a grant's branch (Law rule 41).
+    /// An import of deals from a grant's branch (Agreements rule 41).
     Import {
         deals: Vec<Id>,
     },
-    /// A revocation sealing a grant (counts like an area act: the area that issued the grant alone judges it, Law draft 7, Q29).
+    /// A revocation sealing a grant (counts like an area act: the area that issued the grant alone judges it, Agreements draft 7, Q29).
     Revoke {
         grant: Id,
     },
@@ -92,7 +92,7 @@ pub enum Kind {
     Deal {
         grant: Id,
     },
-    /// A friend's acknowledgement (Envelope `acks`): it carries no place in time.
+    /// A friend's acknowledgement (Envelopes `acks`): it carries no place in time.
     FriendAck {
         of: Id,
     },

@@ -10,7 +10,7 @@
 use mor_core::act::Scheme;
 use mor_core::cbor::{self, Value};
 use mor_core::hash::{tagged_hash, Hash};
-use mor_core::identity::SafetyCommit;
+use mor_core::identity::ChainKeyCommit;
 use mor_core::text;
 use std::fmt;
 
@@ -68,7 +68,7 @@ type R<T> = Result<T, MsgError>;
 /// 2.1, offline to online at genesis (kind 0).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommitmentExport {
-    pub safety: SafetyCommit,
+    pub chain_key: ChainKeyCommit,
     /// The key's number in the identity's life: 0 for the key genesis commits.
     pub index: u64,
 }
@@ -77,11 +77,11 @@ pub struct CommitmentExport {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PendingRotation {
     /// The rotation's inside, encoded, without the salt (key 10) and without
-    /// the next safety commitment (payload key 3).
+    /// the next chain-key commitment (payload key 3).
     pub inside: Vec<u8>,
     /// The previous identity-chain act, complete with its signature.
     pub prev: Vec<u8>,
-    /// The number of the safety key to use: the rotation's position minus one.
+    /// The number of the chain key to use: the rotation's position minus one.
     pub index: u64,
     /// Context for display, never trusted.
     pub context: Option<Vec<Vec<u8>>>,
@@ -117,8 +117,8 @@ pub struct Holder {
 /// The public part of a dealing, the same for every member.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dealing {
-    /// The next safety key the shares rebuild.
-    pub safety: SafetyCommit,
+    /// The next chain key the shares rebuild.
+    pub chain_key: ChainKeyCommit,
     /// The seed Module that derives the key from the rebuilt seed.
     pub seed_module: Hash,
     /// The key's number in the collective's life.
@@ -171,7 +171,7 @@ impl Message {
         let mut m = vec![(u(0), u(self.kind()))];
         match self {
             Message::CommitmentExport(c) => {
-                m.push((u(1), c.safety.to_value()));
+                m.push((u(1), c.chain_key.to_value()));
                 m.push((u(2), u(c.index)));
             }
             Message::PendingRotation(p) => {
@@ -228,7 +228,7 @@ impl Message {
         }
         Ok(match k {
             kind::COMMITMENT_EXPORT => Message::CommitmentExport(CommitmentExport {
-                safety: safety_commit(req(&f, 1, "1: safety-commit")?)?,
+                chain_key: chain_key_commit(req(&f, 1, "1: chain-key-commit")?)?,
                 index: uint(req(&f, 2, "2: index")?, "2: index")?,
             }),
             kind::PENDING_ROTATION => Message::PendingRotation(PendingRotation {
@@ -281,7 +281,7 @@ impl Message {
 impl Dealing {
     pub fn to_value(&self) -> Value {
         Value::Array(vec![
-            self.safety.to_value(),
+            self.chain_key.to_value(),
             Value::Bytes(self.seed_module.to_vec()),
             u(self.index),
             u(self.threshold),
@@ -335,7 +335,7 @@ impl Dealing {
             .map(|c| fixed(c, "dealing commitment"))
             .collect::<R<Vec<_>>>()?;
         let d = Dealing {
-            safety: safety_commit(&a[0])?,
+            chain_key: chain_key_commit(&a[0])?,
             seed_module: fixed(&a[1], "dealing seed module")?,
             index: uint(&a[2], "dealing index")?,
             threshold: uint(&a[3], "dealing threshold")?,
@@ -419,16 +419,16 @@ fn nonempty<'a>(v: &'a Value, w: &'static str) -> R<&'a [Value]> {
     }
 }
 
-/// `safety-commit = [ scheme, commit: hash ]`, as in the Identity MIP.
-pub fn safety_commit(v: &Value) -> R<SafetyCommit> {
-    let a = tuple(v, 2, "safety-commit")?;
+/// `chain-key-commit = [ scheme, commit: hash ]`, as in the Identity MIP.
+pub fn chain_key_commit(v: &Value) -> R<ChainKeyCommit> {
+    let a = tuple(v, 2, "chain-key-commit")?;
     let scheme = match &a[0] {
         Value::Uint(n @ 1..=3) => Scheme::Founding(*n as u8),
-        x @ Value::Bytes(_) => Scheme::Spec(fixed(x, "safety-commit scheme")?),
-        _ => return Err(MsgError::Shape("safety-commit scheme")),
+        x @ Value::Bytes(_) => Scheme::Spec(fixed(x, "chain-key-commit scheme")?),
+        _ => return Err(MsgError::Shape("chain-key-commit scheme")),
     };
-    Ok(SafetyCommit {
+    Ok(ChainKeyCommit {
         scheme,
-        commit: fixed(&a[1], "safety-commit commit")?,
+        commit: fixed(&a[1], "chain-key-commit commit")?,
     })
 }

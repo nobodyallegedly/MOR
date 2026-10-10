@@ -12,7 +12,7 @@ This case study follows one musician, Lea, from making tracks alone in her bedro
 
 ## 1. Alone: an identity and a first track
 
-**Lea gets an identity.** Her client creates it on two devices: her everyday phone holds the signing key, and an old phone kept in flight mode holds the safety key. Both seeds are backed up. Her identity lives at a home she chooses, a small relay run by a service she trusts. Her songs and posts can live on any relays she likes, and her routes say where others can deliver to her.
+**Lea gets an identity.** Her client creates it on two devices: her everyday phone holds the signing key, and an old phone kept in flight mode holds the chain key. Both seeds are backed up. Her identity lives at a home she chooses, a small relay run by a service she trusts. Her songs and posts can live on any relays she likes, and her routes say where others can deliver to her.
 
 **She makes a track from stems.** Each stem she records (drums, bass, vocals) is a work, and she binds each one to herself with an explicit claim. The finished track is a work too, built from those stems.
 
@@ -34,11 +34,11 @@ Lineage works at every depth. A remix of the remix names its own source, the fir
 
 **Three musicians meet online** through Lea's remix and start working together. At first they simply share stems and sessions, each contributor's stake set by agreement as they join: a contribution becomes ownership only when the others sign.
 
-**They form a band.** The band becomes a collective: a full identity of its own, with its own home, signing key and safety key. Its founding agreement sets the grammar for how those keys are held:
+**They form a band.** The band becomes a collective: a full identity of its own, with its own home, signing key and chain key. Its founding agreement sets the grammar for how those keys are held:
 
 - any one member can sign everyday things, like receipts for incoming payments;
 - publishing a release is an area of the agreement that two of three hold (the key grammar says only how the keys are held);
-- all three are needed to rotate the band's safety key. Because that would trap the band if one of them vanished, the grammar also names its way through: a fourth share of the safety key held in escrow by a custodian under the band's grant, released only by the abandonment authority the agreement names. Every grammar must leave a way to rotate that needs less than everyone; this is theirs.
+- all three are needed to rotate the band's chain key. Because that would trap the band if one of them vanished, the grammar also names its way through: a fourth share of the chain key held in escrow by a custodian under the band's grant, released only by the abandonment authority the agreement names. Every grammar must leave a way to rotate that needs less than everyone; this is theirs.
 
 **Their songs have shared ownership.** Each song's agreement sets the stakes, for example 40% each for the two writers and 20% for the drummer, written in millionths so they always add up exactly. Any tiny leftover from dividing goes to the holders with the largest remainders, ties taking turns.
 

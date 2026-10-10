@@ -1,4 +1,4 @@
-//! Locking (Envelope, "How it fits together", step 1).
+//! Locking (Envelopes, "How it fits together", step 1).
 //!
 //! An inside, or a media object, is locked with its own 32-byte content key
 //! and a 24-byte nonce using XChaCha20-Poly1305. The locked bytes are the
@@ -10,7 +10,7 @@ use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 use std::fmt;
 
-/// A content key: 32 bytes, new for every object (Envelope rule 9).
+/// A content key: 32 bytes, new for every object (Envelopes rule 9).
 pub type ContentKey = [u8; 32];
 /// A lock nonce: 24 bytes.
 pub type Nonce = [u8; 24];

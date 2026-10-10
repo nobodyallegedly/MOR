@@ -1,6 +1,6 @@
 # mor-lightning
 
-**Experimental** (F117): an instrument for testing the Finance MIP, never for real money; its costs are stated in its text. The Lightning rail Module (`../module-lightning-rail-draft-2.md`), under the payment cMIP (`../../cmips/cmip-payment-draft-2.md`, crate `mor-payment`).
+**Experimental** (F117): an instrument for testing the Money MIP, never for real money; its costs are stated in its text. The Lightning rail Module (`../module-lightning-rail-draft-2.md`), under the payment cMIP (`../../cmips/cmip-payment-draft-2.md`, crate `mor-payment`).
 
 - `src/bolt11.rs`: decodes a BOLT 11 invoice and recovers the node key that signed it.
 - `src/lib.rs`: the rail address, the rail proof and the verification rule.

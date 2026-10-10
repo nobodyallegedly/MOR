@@ -1,6 +1,6 @@
 //! Regenerate `vectors/seeds.json`: for each seed Module, fixed seeds, their
 //! written backups, and the keys they derive (FIPS 205 key-generation seeds,
-//! public key, safety commitment), so that another device can check its
+//! public key, chain-key commitment), so that another device can check its
 //! implementation of the derivation.
 //!
 //! `cargo run -p mor-airgap --example seed_vectors > modules/airgap/vectors/seeds.json`

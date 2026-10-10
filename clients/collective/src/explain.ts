@@ -1,15 +1,15 @@
-// Plain words for what is about to be signed (Law rule 4a, Text rule 5a:
+// Plain words for what is about to be signed (Agreements rule 4a, Text rule 5a:
 // what you sign is what you saw). Every reading is made from the exact bytes
 // that will be signed, as the core library decodes them (`readTerms`,
-// `lawClonePlan`), never from what someone typed into a form; so what the
+// `agreementsClonePlan`), never from what someone typed into a form; so what the
 // page shows and what the key signs cannot drift apart.
 //
 // The reading of an agreement is the first piece of the deal-assessment
 // tool (roadmap step 14): who is bound, what each rule does, who decides
-// what (Law draft 7: tiers and areas), what changes.
+// what (Agreements draft 7: tiers and areas), what changes.
 
-import { MIPS, SPECS, lawClonePlan, readTerms } from '../../genesis/src/core.ts';
-import { LAW_SPECS } from '../../repo/src/law.ts';
+import { MIPS, SPECS, agreementsClonePlan, readTerms } from '../../genesis/src/core.ts';
+import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import type { Manifest } from '../../repo/src/release.ts';
 
@@ -61,10 +61,10 @@ type HoldingOut = {
   grant?: string | null;
 };
 
-/** A power a clone's mark claims, or a plan needs (Law rule 44c). */
+/** A power a clone's mark claims, or a plan needs (Agreements rule 44c). */
 export type PowerOut = { form: 'constitutional' | 'clone' | 'area' | 'plan' | 'judicial'; area?: number | null; party?: string | null };
 
-/** An area (terms field 19): who holds it, how many decide, what it reaches (Law rule 36a). */
+/** An area (terms field 19): who holds it, how many decide, what it reaches (Agreements rule 36a). */
 export interface AreaRead {
   id: number;
   name: string;
@@ -74,13 +74,13 @@ export interface AreaRead {
   fields: { form: 'field' | 'task'; number: number }[];
 }
 
-/** Why Law refuses terms: its code, and its own words. */
+/** Why Agreements refuse terms: its code, and its own words. */
 export interface Problem {
   code: 'shape' | 'unsupported' | 'check' | 'missing' | 'unsettled' | string;
   text: string;
 }
 
-/** Terms (Law type 0) as the core library decodes them (`readTerms`). A field absent from the terms is null or undefined. */
+/** Terms (Agreements type 0) as the core library decodes them (`readTerms`). A field absent from the terms is null or undefined. */
 export interface TermsRead {
   parties: string[];
   text: string;
@@ -108,7 +108,7 @@ export interface TermsRead {
   parent: string | null;
   grammar: {
     signing: HoldingOut;
-    safety: HoldingOut;
+    chainKey: HoldingOut;
     recovery: { form: 'custodian' | 'escrow'; custodian?: string | null; grant?: string | null; authority?: string | null } | null;
   } | null;
   arbitrators: string[] | null;
@@ -127,30 +127,30 @@ export interface TermsRead {
   forkedFrom: string | null;
   /** The release rule (field 24); null: every stake holder signs a release (F121, D). */
   releaseRule: RuleOut | null;
-  /** Why the terms fail Law's own checks, if they do: Law's code and its own words. */
+  /** Why the terms fail Agreements' own checks, if they do: Agreements' code and its own words. */
   problem?: Problem | null;
 }
 
-/** Read terms from their exact bytes. Throws if they are not terms, are not in Law's format, or use a withdrawn field. */
+/** Read terms from their exact bytes. Throws if they are not terms, are not in Agreements' format, or use a withdrawn field. */
 export function termsOf(payload: Uint8Array): TermsRead {
-  return readTerms(payload, LAW_SPECS) as TermsRead;
+  return readTerms(payload, AGREEMENTS_SPECS) as TermsRead;
 }
 
 /** The specs and cMIPs this client implements, by name. Anything else is unknown here. */
 const KNOWN: Record<string, string> = {
   [SPECS.identity]: 'the Identity MIP',
-  [SPECS.envelope]: 'the Envelope MIP',
+  [SPECS.envelopes]: 'the Envelopes MIP',
   [SPECS.text]: 'the Text MIP',
-  [MIPS.finance]: 'the Finance MIP',
-  [MIPS.production]: 'the Production MIP',
-  [REPO_SPECS.law]: 'the Law MIP',
+  [MIPS.money]: 'the Money MIP',
+  [MIPS.development]: 'the Development MIP',
+  [REPO_SPECS.agreements]: 'the Agreements MIP',
   [REPO_SPECS.manifest]: 'the release manifest cMIP (draft 1)',
 };
 
-/** Extensions this client implements: it can sign agreements that name them (Law rule 2). */
+/** Extensions this client implements: it can sign agreements that name them (Agreements rule 2). */
 const EXTENSIONS = new Set([REPO_SPECS.manifest]);
 
-/** Absence-proof cMIPs this client implements (Law, task 14): none, so it signs no terms naming one (F182). */
+/** Absence-proof cMIPs this client implements (Agreements, task 14): none, so it signs no terms naming one (F182). */
 const ABSENCE_PROOFS = new Set<string>();
 
 const specName = (h: string) => KNOWN[h] ?? `an unknown specification (${short(h)})`;
@@ -172,7 +172,7 @@ export function ruleWords(r: RuleOut, parties: string[], names: Names): string {
   }
 }
 
-/** The constitutional change rule, in words (Law rule 44d: counted among the voices that remain). */
+/** The constitutional change rule, in words (Agreements rule 44d: counted among the voices that remain). */
 export function constitutionWords(t: Pick<TermsRead, 'constitutional' | 'parties'>, names: Names): string {
   const r = t.constitutional;
   if (!r || r.form === 'all') return 'every member whose voice remains: nobody loses their say without signing (F103)';
@@ -198,12 +198,12 @@ export function powerWords(p: PowerOut, areas: AreaRead[], names: Names): string
   }
 }
 
-/** The layers, as Law numbers them in an area's kinds ("Layer", F106). */
-const LAYERS = ['Identity', 'Envelope and Text', 'Finance', 'Law', 'Production'];
+/** The layers, as Agreements numbers them in an area's kinds ("Layer", F106). */
+const LAYERS = ['Identity', 'Envelopes and Text', 'Money', 'Agreements', 'Development'];
 
 const TYPE_NAMES: Record<string, Record<number, string>> = {
-  [SPECS.envelope]: { 0: 'every publication of the collective (a release is one)', 1: 'every key delivery of the collective', 4: 'every encryption key of the collective' },
-  [REPO_SPECS.law]: { 0: 'every terms act of the collective', 1: 'every signature of the collective' },
+  [SPECS.envelopes]: { 0: 'every publication of the collective (a release is one)', 1: 'every key delivery of the collective', 4: 'every encryption key of the collective' },
+  [REPO_SPECS.agreements]: { 0: 'every terms act of the collective', 1: 'every signature of the collective' },
   [SPECS.text]: { 0: 'every text of the collective' },
 };
 
@@ -232,17 +232,17 @@ const OUTCOMES = [
 
 const WORDS = {
   f96: (n: number) =>
-    `With ${n} members, a safety key that needs all ${n} of them would be lost with any one of them (F96). Lower the number of members needed to rebuild it.`,
+    `With ${n} members, a chain key that needs all ${n} of them would be lost with any one of them (F96). Lower the number of members needed to rebuild it.`,
   absence: (n: number) => `Absence is judged by some of the other members: between 1 and ${Math.max(n - 1, 0)} of them.`,
   rule: (n: number) => `The number of members who must sign a change outside the constitution is not between 1 and the ${n} members.`,
   constitution: (n: number) => `The number of members who must sign a change of the constitution is not between 1 and the ${n} members.`,
-  shares: (n: number) => `The number of members needed to rebuild the safety key is not between 1 and the ${n} members.`,
+  shares: (n: number) => `The number of members needed to rebuild the chain key is not between 1 and the ${n} members.`,
   release: (n: number) => `The number of members who must sign a release is not between 1 and the ${n} members.`,
 };
 
 /**
  * What is wrong with a collective's numbers for `n` members, all at once,
- * in plain words: this client's own reading of the numbers. Law judges the
+ * in plain words: this client's own reading of the numbers. Agreements judge the
  * terms themselves and stops at its first objection (`problemWords`); this
  * lists every one, so the numbers can be fixed together.
  */
@@ -257,35 +257,35 @@ export function rulesHints(r: { safety: number; release: number; clone: number; 
   return out;
 }
 
-const LAW_SAYS: Record<string, string> = {
-  check: 'Law refuses these terms',
-  shape: "These are not terms in Law's format",
-  unsupported: 'Law does not support these terms yet',
-  missing: 'Law lacks something it needs to judge these terms',
-  unsettled: 'Law cannot settle these terms yet',
+const AGREEMENTS_SAYS: Record<string, string> = {
+  check: 'Agreements refuse these terms',
+  shape: "These are not terms in Agreements' format",
+  unsupported: 'Agreements do not support these terms yet',
+  missing: 'Agreements lacks something it needs to judge these terms',
+  unsettled: 'Agreements cannot settle these terms yet',
 };
 
 /**
- * Law's objection, by its code, with Law's own words quoted as they are.
- * The client never reads meaning into Law's wording: its own reading of
+ * Agreements' objection, by its code, with Agreements' own words quoted as they are.
+ * The client never reads meaning into Agreements' wording: its own reading of
  * the numbers is `rulesHints`.
  */
 export function problemWords(p: Problem): string {
-  return `${LAW_SAYS[p.code] ?? `Law refuses these terms (${p.code})`}. Law's own words: “${p.text}”.`;
+  return `${AGREEMENTS_SAYS[p.code] ?? `Agreements refuse these terms (${p.code})`}. Agreements' own words: “${p.text}”.`;
 }
 
-/** Law's objection from an error the core threw (`law/<code>: <why>`), or null if it is not one. */
-export function lawThrown(e: unknown): Problem | null {
+/** Agreements' objection from an error the core threw (`agreements/<code>: <why>`), or null if it is not one. */
+export function agreementsThrown(e: unknown): Problem | null {
   const m = /^law\/([a-z]+): ([\s\S]*)$/.exec(e instanceof Error ? e.message : String(e));
   return m ? { code: m[1], text: m[2] } : null;
 }
 
 /**
  * Blocking reasons: this client's own hints first, then every other
- * reason, Law's objection among them once, in Law's own words. Nothing is
+ * reason, Agreements' objection among them once, in Agreements' own words. Nothing is
  * folded by comparing wordings: the core's words may change, its codes not.
  */
-export function withLaw(hints: string[], others: string[]): string[] {
+export function withAgreements(hints: string[], others: string[]): string[] {
   const out = [...hints];
   for (const o of others) if (!out.includes(o)) out.push(o);
   return out;
@@ -296,7 +296,7 @@ const INVISIBLE = /[؜​‎‏‪-‮⁦-⁩]/g;
 
 /**
  * The parties with a say in the constitution whom the abandonment clause
- * does not cover (Law rule 36b, F105): empty when every one can be
+ * does not cover (Agreements rule 36b, F105): empty when every one can be
  * declared absent and lose their voice.
  */
 export function uncovered(t: TermsRead): string[] {
@@ -309,7 +309,7 @@ export function uncovered(t: TermsRead): string[] {
 
 /**
  * The abandonment clause in plain words, shown before a party signs terms
- * carrying one (Law rule 49, client conformance; F172, F178 item 11): who
+ * carrying one (Agreements rule 49, client conformance; F172, F178 item 11): who
  * may declare a party absent, with which outcomes, and whether an
  * absence-proof cMIP stands between that authority's word and the party's
  * stake. Without one, the declaration is the authority's judgment alone, a
@@ -322,8 +322,8 @@ export function absenceWarning(t: Pick<TermsRead, 'abandonment'>, names: Names):
   const by = a.authority === 'named' ? names(a.identity!) : `any ${a.threshold} of the other parties together`;
   const outcomes = list(a.outcomes.map((o) => OUTCOMES[o] ?? `outcome ${o}`));
   const between = a.proof
-    ? `An absence-proof cMIP stands between their word and your stake: ${specName(a.proof)}. A declaration counts only if it accepts it (Law rule 51).`
-    : `No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or your activity. Signing accepts that (Law rules 49 and 51, a stated cost); if they declare you absent wrongly, you can only contest it, in public (Law rule 52).`;
+    ? `An absence-proof cMIP stands between their word and your stake: ${specName(a.proof)}. A declaration counts only if it accepts it (Agreements rule 51).`
+    : `No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or your activity. Signing accepts that (Agreements rules 49 and 51, a stated cost); if they declare you absent wrongly, you can only contest it, in public (Agreements rule 52).`;
   return {
     text: `If a party stops acting on the agreement, ${by} may declare them absent. What may then follow: ${outcomes}. ${between}`,
     tone: 'warn',
@@ -343,7 +343,7 @@ export const collectiveClause = (others: number): NonNullable<TermsRead['abandon
   proof: null,
 });
 
-/** The section shown before signing terms that carry an abandonment clause (Law rule 49); none without one. */
+/** The section shown before signing terms that carry an abandonment clause (Agreements rule 49); none without one. */
 export function absenceSection(t: Pick<TermsRead, 'abandonment'>, names: Names, heading = 'If someone disappears'): Section[] {
   const w = absenceWarning(t, names);
   return w ? [{ heading, lines: [w] }] : [];
@@ -363,20 +363,20 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
 
   const bound: Line[] = [
     { text: `${t.parties.length} parties: ${list(who)}.` },
-    { text: 'Each is bound only by their own signature act. Until someone signs, nothing in it binds them (Law rule 1).' },
+    { text: 'Each is bound only by their own signature act. Until someone signs, nothing in it binds them (Agreements rule 1).' },
   ];
   if (!t.parent) {
     if (t.signing?.form === 'all') {
       bound.push({
         text: g
-          ? 'It exists only once every one of them has signed it: nobody is founded into a collective without signing (Law, “Founding terms”, Q11).'
-          : 'It exists only once every one of them has signed it (Law, “Founding terms”, F107).',
+          ? 'It exists only once every one of them has signed it: nobody is founded into a collective without signing (Agreements, “Founding terms”, Q11).'
+          : 'It exists only once every one of them has signed it (Agreements, “Founding terms”, F107).',
       });
     } else if (t.signing) {
-      bound.push({ text: `It says it exists once ${ruleWords(t.signing, t.parties, names)} have signed it; Law asks for every party.`, tone: 'bad' });
+      bound.push({ text: `It says it exists once ${ruleWords(t.signing, t.parties, names)} have signed it; Agreements asks for every party.`, tone: 'bad' });
     }
   } else {
-    bound.push({ text: `It is a clone of agreement ${short(t.parent)}: once in force, it replaces it, and that one closes (Law rule 45).` });
+    bound.push({ text: `It is a clone of agreement ${short(t.parent)}: once in force, it replaces it, and that one closes (Agreements rule 45).` });
   }
   sections.push({ heading: 'Who is bound', lines: bound });
 
@@ -384,7 +384,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     const areas = parent?.areas ?? t.areas;
     const lines: Line[] = [];
     if (!t.mark?.length) lines.push({ text: 'It carries no mark: it does not say by which power it comes in.', tone: 'bad' });
-    // The mark lists signers by hash (Law draft 8, B8); read them in the
+    // The mark lists signers by hash (Agreements draft 8, B8); read them in the
     // order the parties are listed, which means something to a reader.
     const order = (ids: string[]) => {
       const at = (x: string) => (t.parties.indexOf(x) + 1 || Infinity);
@@ -394,44 +394,44 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
       lines.push({ text: `It says it comes in by ${powerWords(e.power, areas, names)} of that agreement, signed by ${list(order(e.signers).map(names))}.` });
     }
     lines.push({
-      text: 'Law checks that these are exactly the powers its changes need, and that those named meet them, counted among the voices that remain. A false mark sinks the clone, whatever signatures it gathers (F104).',
+      text: 'Agreements check that these are exactly the powers its changes need, and that those named meet them, counted among the voices that remain. A false mark sinks the clone, whatever signatures it gathers (F104).',
     });
-    lines.push({ text: 'It is complete once everyone its mark names, and everyone it adds, has signed it (Law rule 45).' });
+    lines.push({ text: 'It is complete once everyone its mark names, and everyone it adds, has signed it (Agreements rule 45).' });
     if (g) {
       lines.push({
-        text: "A change of the constitution is then put in force by a rotation of the collective; any other change by the collective's record, at once, with its everyday key (Law rules 37, 37c).",
+        text: "A change of the constitution is then put in force by a rotation of the collective; any other change by the collective's record, at once, with its signing key (Agreements rules 37, 37c).",
       });
     }
     sections.push({ heading: 'How it comes into force: its mark', lines });
   }
 
   if (g) {
-    const lines: Line[] = [{ text: 'It founds a collective: an identity of its own, whose keys its members hold as follows (Law rule 36).' }];
+    const lines: Line[] = [{ text: 'It founds a collective: an identity of its own, whose keys its members hold as follows (Agreements rule 36).' }];
     const s = g.signing;
     if (s.form === 'one') {
       lines.push({
-        text: `${names(s.holder!)} holds the collective's everyday key, and signs the collective's acts with it. An act no area reaches needs nobody else's signature.`,
+        text: `${names(s.holder!)} holds the collective's signing key, and signs the collective's acts with it. An act no area reaches needs nobody else's signature.`,
       });
     } else if (s.form === 'shares') {
-      lines.push({ text: `The everyday key is held jointly: any ${s.threshold} of ${list((s.members ?? []).map(names))} sign together.` });
+      lines.push({ text: `The signing key is held jointly: any ${s.threshold} of ${list((s.members ?? []).map(names))} sign together.` });
     } else {
-      lines.push({ text: `${names(s.custodian!)} holds the everyday key as custodian, under grant ${short(s.grant!)}.` });
+      lines.push({ text: `${names(s.custodian!)} holds the signing key as custodian, under grant ${short(s.grant!)}.` });
     }
-    const k = g.safety;
+    const k = g.chainKey;
     if (k.form === 'shares') {
       const m = k.members ?? [];
       lines.push({
-        text: `The safety key, the one that rotates the collective (new keys, new members, new homes), is cut into ${m.length} shares, one each for ${list(m.map(names))}. Any ${k.threshold} of them together rebuild it.`,
+        text: `The chain key, the one that rotates the collective (new keys, new members, new homes), is cut into ${m.length} shares, one each for ${list(m.map(names))}. Any ${k.threshold} of them together rebuild it.`,
       });
       if (k.threshold === 1) {
-        lines.push({ text: 'Any one member alone can rebuild the safety key and rotate the collective, without the others.', tone: 'warn' });
+        lines.push({ text: 'Any one member alone can rebuild the chain key and rotate the collective, without the others.', tone: 'warn' });
       } else if (k.threshold! < m.length) {
         lines.push({ text: `If one member is lost, the other ${m.length - 1} can still rotate the collective (F96).`, tone: 'ok' });
       }
     } else if (k.form === 'one') {
-      lines.push({ text: `${names(k.holder!)} alone holds the safety key.`, tone: 'warn' });
+      lines.push({ text: `${names(k.holder!)} alone holds the chain key.`, tone: 'warn' });
     } else {
-      lines.push({ text: `${names(k.custodian!)} holds the safety key as custodian, under grant ${short(k.grant!)}.`, tone: 'warn' });
+      lines.push({ text: `${names(k.custodian!)} holds the chain key as custodian, under grant ${short(k.grant!)}.`, tone: 'warn' });
     }
     if (g.recovery) {
       const r = g.recovery;
@@ -446,18 +446,18 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
 
     const words = new Map(t.areaWords);
     const al: Line[] = [];
-    if (!t.areas.length) al.push({ text: "No area: no act of the collective needs members' own signatures; its everyday key alone speaks for it.", tone: 'warn' });
+    if (!t.areas.length) al.push({ text: "No area: no act of the collective needs members' own signatures; its signing key alone speaks for it.", tone: 'warn' });
     for (const a of t.areas) {
       al.push(
         a.holders.length
           ? { text: `“${a.name}” (area ${a.id}): held by ${list(a.holders.map(names))}; any ${a.threshold} of them decide together.` }
-          : { text: `“${a.name}” (area ${a.id}): held by nobody. It stands frozen until the members refit it (Law rule 37b).`, tone: 'warn' },
+          : { text: `“${a.name}” (area ${a.id}): held by nobody. It stands frozen until the members refit it (Agreements rule 37b).`, tone: 'warn' },
       );
       const reach = [...a.kinds.map(kindWords), ...a.fields.map(fieldRefWords)];
       al.push({ text: `It reaches ${list(reach) || 'nothing'}.` });
-      const releases = a.kinds.some((k) => k.form === 'type' && k.spec === MIPS.envelope && k.type === 0);
+      const releases = a.kinds.some((k) => k.form === 'type' && k.spec === MIPS.envelopes && k.type === 0);
       al.push({
-        text: `${releases ? 'A release' : 'An act it reaches'} counts only once that many of its holders have signed it, each with a visible act of their own, under the agreement in force when the collective signed it (Law rule 36a, F100).`,
+        text: `${releases ? 'A release' : 'An act it reaches'} counts only once that many of its holders have signed it, each with a visible act of their own, under the agreement in force when the collective signed it (Agreements rule 36a, F100).`,
       });
       const own = words.get(a.id);
       if (own !== undefined) {
@@ -468,7 +468,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     if (t.areas.length) {
       al.push({ text: 'In an area, its holders alone decide, and may grant within it (Q5). Its holders, and how many of them decide, change only by the constitutional change rule.' });
       al.push({
-        text: 'A holder may step down at once, alone. The other holders carry on: their number stands while enough of them remain, and all of them together meet it when fewer do (Law rule 44d). With no holder left, the area is frozen: its acts count for nothing until the members refit it (Law rule 37b).',
+        text: 'A holder may step down at once, alone. The other holders carry on: their number stands while enough of them remain, and all of them together meet it when fewer do (Agreements rule 44d). With no holder left, the area is frozen: its acts count for nothing until the members refit it (Agreements rule 37b).',
       });
       al.push({ text: "An act no area reaches counts on the collective's own signature; an act of a specification this agreement names nowhere counts for nothing (Q16)." });
     }
@@ -479,15 +479,15 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
       heading: 'Who decides what',
       lines: [
         {
-          text: `Constitutional: the members, the change rules, the key grammar, the areas and the constitution's words. They change only by the constitutional change rule: ${constitutionWords(t, names)}. Such a change is declared by a rotation of the collective to new keys; whatever its old key signs afterwards is void (Law rule 37, F100).`,
+          text: `Constitutional: the members, the change rules, the key grammar, the areas and the constitution's words. They change only by the constitutional change rule: ${constitutionWords(t, names)}. Such a change is declared by a rotation of the collective to new keys; whatever its old key signs afterwards is void (Agreements rule 37, F100).`,
         },
         {
-          text: `Judicial: the protected clauses (the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs). They change only with the signature of every member whose voice remains: one version for everyone (Law rule 46a, F121).`,
+          text: `Judicial: the protected clauses (the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs). They change only with the signature of every member whose voice remains: one version for everyone (Agreements rule 46a, F121).`,
         },
         {
-          text: `Operational: matters outside every area change by the clone rule, ${clone}, and are written on the collective's record at once (Law rule 37c); matters inside an area, by its holders.`,
+          text: `Operational: matters outside every area change by the clone rule, ${clone}, and are written on the collective's record at once (Agreements rule 37c); matters inside an area, by its holders.`,
         },
-        { text: 'A change touching the constitution needs the constitutional change rule alone, which may change every tier; any other needs the power of each area and tier it touches, all at once (Law rule 44c, Q7).' },
+        { text: 'A change touching the constitution needs the constitutional change rule alone, which may change every tier; any other needs the power of each area and tier it touches, all at once (Agreements rule 44c, Q7).' },
       ],
     });
   }
@@ -497,8 +497,8 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     lines: [
       {
         text: g
-          ? 'It is never edited. It changes only by a clone, a new version naming this one, whose mark names the powers its changes need (Law rule 45). A member who joins is bound once they sign it too: nobody is added without signing (Law rule 1, Q11).'
-          : 'It is never edited. It changes only by a clone, a new version naming this one, that every party signs (Law rule 45b, F107).',
+          ? 'It is never edited. It changes only by a clone, a new version naming this one, whose mark names the powers its changes need (Agreements rule 45). A member who joins is bound once they sign it too: nobody is added without signing (Agreements rule 1, Q11).'
+          : 'It is never edited. It changes only by a clone, a new version naming this one, that every party signs (Agreements rule 45b, F107).',
       },
     ],
   });
@@ -507,9 +507,9 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     sections.push({
       heading: 'Leaving',
       lines: [
-        { text: 'Any member can leave alone, at any time, by a resignation no one else signs, keeping what they own and staying bound by what they signed (Law rule 37a).' },
+        { text: 'Any member can leave alone, at any time, by a resignation no one else signs, keeping what they own and staying bound by what they signed (Agreements rule 37a).' },
         {
-          text: "It takes effect for the collective at the collective's next record, its line, drawn with its everyday key. Until then their signature still counts (F109, a stated cost). The members who stay then rotate the collective to keys the one who left never held (Law rule 37).",
+          text: "It takes effect for the collective at the collective's next record, its line, drawn with its signing key. Until then their signature still counts (F109, a stated cost). The members who stay then rotate the collective to keys the one who left never held (Agreements rule 37).",
           tone: 'warn',
         },
       ],
@@ -523,10 +523,10 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     absence.push(warning);
     if (a?.proof && !ABSENCE_PROOFS.has(a.proof)) {
       absence.push({ text: `This client does not implement the absence-proof cMIP the clause names (${short(a.proof)}): it cannot show how absence would be judged.`, tone: 'bad' });
-      blocking.push(`It names an absence-proof cMIP this client does not implement (${short(a.proof)}, task 14); a client MUST NOT sign terms naming one it does not implement, as for an unknown extension (Law, task "Absence proof", F182).`);
+      blocking.push(`It names an absence-proof cMIP this client does not implement (${short(a.proof)}, task 14); a client MUST NOT sign terms naming one it does not implement, as for an unknown extension (Agreements, task "Absence proof", F182).`);
     }
-    absence.push({ text: 'Signing agrees to this in advance (Law rule 13). It is a protected clause: a later clone you do not sign cannot change it for you (Law rule 46a).' });
-    absence.push({ text: 'A declaration moves nothing by itself: what follows takes effect only through a record, rotation or clone put in force under it, and no later act undoes that (Law rule 51).' });
+    absence.push({ text: 'Signing agrees to this in advance (Agreements rule 13). It is a protected clause: a later clone you do not sign cannot change it for you (Agreements rule 46a).' });
+    absence.push({ text: 'A declaration moves nothing by itself: what follows takes effect only through a record, rotation or clone put in force under it, and no later act undoes that (Agreements rule 51).' });
   } else {
     absence.push({ text: 'No abandonment clause: nobody can declare a party absent.' });
   }
@@ -538,7 +538,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
         tone: 'ok',
       });
     } else {
-      absence.push({ text: `Not covered by the abandonment clause, though they have a say in the constitution: ${list(out.map(names))} (Law rule 36b, F105).`, tone: 'bad' });
+      absence.push({ text: `Not covered by the abandonment clause, though they have a say in the constitution: ${list(out.map(names))} (Agreements rule 36b, F105).`, tone: 'bad' });
     }
   }
   sections.push({ heading: 'If someone disappears', lines: absence });
@@ -548,17 +548,17 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   for (const [task, h] of t.cmips) {
     const known = KNOWN[h];
     more.push({ text: `For task ${task}: ${specName(h)}.`, tone: known ? undefined : 'bad' });
-    if (!known) blocking.push(`It names a cMIP this client does not implement (${short(h)}, task ${task}); a client that does not implement it cannot sign it (Law rule 2).`);
+    if (!known) blocking.push(`It names a cMIP this client does not implement (${short(h)}, task ${task}); a client that does not implement it cannot sign it (Agreements rule 2).`);
   }
   for (const h of t.extensions ?? []) {
     if (EXTENSIONS.has(h)) more.push({ text: `It adds the rules of ${specName(h)}.` });
     else {
       more.push({ text: `It adds the rules of ${specName(h)}.`, tone: 'bad' });
-      blocking.push(`It names an extension this client does not implement (${short(h)}); a client that does not implement all of them cannot sign it (Law rule 2).`);
+      blocking.push(`It names an extension this client does not implement (${short(h)}); a client that does not implement all of them cannot sign it (Agreements rule 2).`);
     }
   }
   if (t.keepers) {
-    more.push({ text: `Keepers record the deal as it happens: ${list(t.keepers[0].map(names))}; ${ruleWords(t.keepers[1], t.keepers[0], names)} count as recorded. A protected clause (Law rule 46a).` });
+    more.push({ text: `Keepers record the deal as it happens: ${list(t.keepers[0].map(names))}; ${ruleWords(t.keepers[1], t.keepers[0], names)} count as recorded. A protected clause (Agreements rule 46a).` });
   }
   if (t.time) {
     more.push({ text: `Time reference: ${specName(t.time)}. This client does not read time references.`, tone: 'bad' });
@@ -567,7 +567,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   if (t.arbitrators) more.push({ text: `Arbitrators or verifiers, who receive keys to judge content: ${list(t.arbitrators.map(names))}.` });
   if (t.splitGrant) {
     more.push({
-      text: `Incoming payments go to a split service, under grant ${short(t.splitGrant)}. A protected clause. The collective's payee pointer counts for Law only if every address in it is also in the service's own signed pointer (Law rule 18, F123); every split is delivered to every holder it pays, naming each fee and who received it (F121, Q9). The service's grant key signs only receipts for money coming in under the collective's own claims and offers: never one whose payer is the service, nor a payout the collective is owed (F130, H7).`,
+      text: `Incoming payments go to a split service, under grant ${short(t.splitGrant)}. A protected clause. The collective's payee pointer counts for Agreements only if every address in it is also in the service's own signed pointer (Agreements rule 18, F123); every split is delivered to every holder it pays, naming each fee and who received it (F121, Q9). The service's grant key signs only receipts for money coming in under the collective's own claims and offers: never one whose payer is the service, nor a payout the collective is owed (F130, H7).`,
     });
   }
   if (t.payeeGrants?.length) {
@@ -578,21 +578,21 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   const holderName = (h: string | null) => (h == null ? 'this collective' : names(h));
   for (const [object, holders] of t.stakes ?? []) {
     more.push({
-      text: `Stake in ${object == null ? 'this collective itself, a share of all its income (F121 Q8, F124 S1)' : names(object)}: ${list(holders.map(([h, n]) => `${holderName(h)} ${n / 10_000}%`))}. Every payout matches its stake exactly, every fee alike for every stake (F124 N10); no share is lowered without its holder's signature (Law rule 46).`,
+      text: `Stake in ${object == null ? 'this collective itself, a share of all its income (F121 Q8, F124 S1)' : names(object)}: ${list(holders.map(([h, n]) => `${holderName(h)} ${n / 10_000}%`))}. Every payout matches its stake exactly, every fee alike for every stake (F124 N10); no share is lowered without its holder's signature (Agreements rule 46).`,
     });
   }
   if (t.departed?.length) {
-    more.push({ text: `Departed holders: ${list(t.departed.map(names))}. No voice and no veto; their share of the collective's income is in its stakes above (Law rule 46b, F124 N5).` });
+    more.push({ text: `Departed holders: ${list(t.departed.map(names))}. No voice and no veto; their share of the collective's income is in its stakes above (Agreements rule 46b, F124 N5).` });
   }
   for (const [judge, next] of t.chain ?? []) {
     const taker = (hs: string[]) => (judge !== 'split service' || !t.payeeGrants?.length ? names(hs[0]) : `the service granted by ${list(hs.map(short))} (one grant per payee, signed with this deal, F130 H6)`);
-    more.push({ text: `If ${judge === 'split service' ? 'the split service' : judge.startsWith('task ') ? `the judge for ${judge}` : names(judge)} answers “unknown”, or does not act within its period, ${list(next.map(([hs, p]) => `${taker(hs)} (after ${p} on the time reference)`))} take${next.length === 1 ? 's' : ''} over, in that order (Law rule 34a, F121).` });
+    more.push({ text: `If ${judge === 'split service' ? 'the split service' : judge.startsWith('task ') ? `the judge for ${judge}` : names(judge)} answers “unknown”, or does not act within its period, ${list(next.map(([hs, p]) => `${taker(hs)} (after ${p} on the time reference)`))} take${next.length === 1 ? 's' : ''} over, in that order (Agreements rule 34a, F121).` });
   }
   more.push({
-    text: "Whatever is done in the collective's name binds it once it is sealed to every member (or public) and on its chain, citing its latest decision; before that, even signed, it binds no one (Law rule 35a, F128). Where it is stored decides nothing: the relays are only where its clients publish and look first.",
+    text: "Whatever is done in the collective's name binds it once it is sealed to every member (or public) and on its chain, citing its latest decision; before that, even signed, it binds no one (Agreements rule 35a, F128). Where it is stored decides nothing: the relays are only where its clients publish and look first.",
   });
   if (t.forkedFrom) {
-    more.push({ text: `Forked from ${names(t.forkedFrom)}: a back-link only, deciding nothing; the fork act names this collective as a successor (Law rule 47a, F124 N4).` });
+    more.push({ text: `Forked from ${names(t.forkedFrom)}: a back-link only, deciding nothing; the fork act names this collective as a successor (Agreements rule 47a, F124 N4).` });
   }
   for (const p of t.succession ?? []) {
     const parts: string[] = [];
@@ -618,7 +618,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   return { sections, blocking, plain };
 }
 
-/** Every field of the terms, named, for saying what a clone changes (Law rule 44a). */
+/** Every field of the terms, named, for saying what a clone changes (Agreements rule 44a). */
 const FIELD_NAMES: Record<number, string> = {
   0: 'who the members are',
   1: "the constitution's words",
@@ -640,9 +640,9 @@ const FIELD_NAMES: Record<number, string> = {
 
 type Change = { form: 'field' | 'task' | 'extension' | 'words'; field?: number | null; task?: number | null; extension?: string | null; area?: number | null; tier: 'constitutional' | 'judicial' | 'operational' };
 
-/** What a clone changes, field by field, and the powers its mark must name: the core's own plan (Law rules 44a to 44c). */
+/** What a clone changes, field by field, and the powers its mark must name: the core's own plan (Agreements rules 44a to 44c). */
 export function planOf(before: Uint8Array, after: Uint8Array): { changes: Change[]; needs: PowerOut[] } {
-  return lawClonePlan(before, after, LAW_SPECS) as { changes: Change[]; needs: PowerOut[] };
+  return agreementsClonePlan(before, after, AGREEMENTS_SPECS) as { changes: Change[]; needs: PowerOut[] };
 }
 
 const powerKey = (p: PowerOut) => (p.form === 'area' ? `area ${p.area}` : p.form === 'plan' ? `plan ${p.party}` : p.form);
@@ -662,17 +662,17 @@ export function readChanges(beforePayload: Uint8Array, afterPayload: Uint8Array,
   for (const p of joined) out.push({ text: `${names(p)} joins, bound once they sign the clone.` });
   for (const p of left)
     out.push({
-      text: `${names(p)} leaves. They hand over nothing: the collective rotates to keys they never held, and from then on they have no say in it. They keep what they own (Law rules 37, 46, F100).`,
+      text: `${names(p)} leaves. They hand over nothing: the collective rotates to keys they never held, and from then on they have no say in it. They keep what they own (Agreements rules 37, 46, F100).`,
     });
   const holder = (t: TermsRead) => (t.grammar?.signing.form === 'one' ? t.grammar.signing.holder! : null);
   if (holder(before) !== holder(after) && holder(after)) {
-    out.push({ text: `The everyday key passes to ${names(holder(after)!)}${holder(before) ? ` (was ${names(holder(before)!)})` : ''}.` });
+    out.push({ text: `The signing key passes to ${names(holder(after)!)}${holder(before) ? ` (was ${names(holder(before)!)})` : ''}.` });
   }
-  const sb = before.grammar?.safety;
-  const sa = after.grammar?.safety;
+  const sb = before.grammar?.chainKey;
+  const sa = after.grammar?.chainKey;
   if (sa?.form === 'shares' && sb?.form === 'shares' && JSON.stringify(sa) !== JSON.stringify(sb)) {
     out.push({
-      text: `The safety key is dealt afresh: ${sa.members!.length} shares, any ${sa.threshold} rebuild it (was ${sb.members!.length} shares, any ${sb.threshold}). Nobody leaving ever holds a share of the new key.`,
+      text: `The chain key is dealt afresh: ${sa.members!.length} shares, any ${sa.threshold} rebuild it (was ${sb.members!.length} shares, any ${sb.threshold}). Nobody leaving ever holds a share of the new key.`,
       tone: sa.threshold === 1 && sb.threshold !== 1 ? 'warn' : undefined,
     });
   }
@@ -698,7 +698,7 @@ export function readChanges(beforePayload: Uint8Array, afterPayload: Uint8Array,
     const words = (a: TermsRead['abandonment']) =>
       !a ? 'no one' : a.authority === 'named' ? names(a.identity!) : `any ${a.threshold} of the other parties`;
     out.push({
-      text: `Absence is now judged by ${words(after.abandonment)} (was ${words(before.abandonment)}). A protected clause: it changes only with every member's signature, one version for everyone (Law rule 46a, F121).`,
+      text: `Absence is now judged by ${words(after.abandonment)} (was ${words(before.abandonment)}). A protected clause: it changes only with every member's signature, one version for everyone (Agreements rule 46a, F121).`,
       tone: 'warn',
     });
   }
@@ -714,7 +714,7 @@ export function readChanges(beforePayload: Uint8Array, afterPayload: Uint8Array,
   try {
     plan = planOf(beforePayload, afterPayload);
   } catch (e) {
-    out.push({ text: `Law cannot say what this clone changes: ${e instanceof Error ? e.message : e}`, tone: 'bad' });
+    out.push({ text: `Agreements cannot say what this clone changes: ${e instanceof Error ? e.message : e}`, tone: 'bad' });
     return out;
   }
   const areaName = (id: number | null | undefined) => before.areas.find((a) => a.id === id)?.name ?? after.areas.find((a) => a.id === id)?.name ?? `area ${id}`;
@@ -731,15 +731,15 @@ export function readChanges(beforePayload: Uint8Array, afterPayload: Uint8Array,
       ch.tier === 'constitutional'
         ? 'constitutional'
         : ch.tier === 'judicial'
-          ? 'judicial, a protected clause: it changes only with every member\'s signature, one version for everyone (Law rule 46a, F121)'
+          ? 'judicial, a protected clause: it changes only with every member\'s signature, one version for everyone (Agreements rule 46a, F121)'
           : ch.form === 'words'
             ? `operational, in the “${areaName(ch.area)}” area`
             : 'operational';
     out.push({ text: `A change to ${what}: ${tier}.` });
   }
-  if (!plan.changes.length) out.push({ text: 'Law finds nothing changed in the terms.' });
+  if (!plan.changes.length) out.push({ text: 'Agreements find nothing changed in the terms.' });
   const areas = before.areas;
-  out.push({ text: `So its mark must name ${list(plan.needs.map((p) => powerWords(p, areas, names)))} (Law rule 44c).` });
+  out.push({ text: `So its mark must name ${list(plan.needs.map((p) => powerWords(p, areas, names)))} (Agreements rule 44c).` });
   const claimed = (after.mark ?? []).map((e) => powerKey(e.power));
   if (JSON.stringify(claimed) === JSON.stringify(plan.needs.map(powerKey))) {
     out.push({ text: 'Its mark names exactly that.', tone: 'ok' });

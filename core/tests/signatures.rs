@@ -134,25 +134,25 @@ fn wrong_lengths_are_invalid_and_other_schemes_unknown() {
 }
 
 #[test]
-fn safety_commitment_is_tagged_over_scheme_and_key() {
+fn chain_key_commitment_is_tagged_over_scheme_and_key() {
     let key = [7u8; 32];
     let spec = sha256(b"spec");
     // tagged_hash("MOR/safety", 0x02 || key)
     let mut two = vec![2u8];
     two.extend_from_slice(&key);
     assert_eq!(
-        sig::safety_commitment(&Scheme::Founding(2), &key),
+        sig::chain_key_commitment(&Scheme::Founding(2), &key),
         mor_core::tagged_hash("MOR/safety", &two)
     );
     let mut by_spec = spec.to_vec();
     by_spec.extend_from_slice(&key);
     assert_eq!(
-        sig::safety_commitment(&Scheme::Spec(spec), &key),
+        sig::chain_key_commitment(&Scheme::Spec(spec), &key),
         mor_core::tagged_hash("MOR/safety", &by_spec)
     );
     assert_ne!(
-        sig::safety_commitment(&Scheme::Founding(2), &key),
-        sig::safety_commitment(&Scheme::Founding(3), &key)
+        sig::chain_key_commitment(&Scheme::Founding(2), &key),
+        sig::chain_key_commitment(&Scheme::Founding(3), &key)
     );
 }
 

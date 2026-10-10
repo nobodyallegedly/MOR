@@ -28,7 +28,7 @@ This case study follows one community through three stages: a neighbourhood asso
 
 ## 2. First steps: a neighbourhood association
 
-**The association sets itself up as a collective.** It is a full identity with its own home and keys, and a founding agreement that says how its keys are held: for example, two of five board members sign everyday acts, and four of five rotate its safety key.
+**The association sets itself up as a collective.** It is a full identity with its own home and keys, and a founding agreement that says how its keys are held: for example, two of five board members sign everyday acts, and four of five rotate its chain key.
 
 **Members join with their own identities.** Membership is a signed list in the founding agreement, changed by cloning it and rotating the association's keys. Nothing is anonymous yet: in a small association, everyone knows who voted, and that is acceptable.
 
@@ -50,7 +50,7 @@ This stage needs no privacy technology at all, and it already tests the heart of
 
 **The registry binds, but never sees votes.** The commune's residents' registry already knows who is eligible. In Switzerland it would use the AVS number. Each resident's app generates a secret and derives a commitment from it; the registry binds that commitment to a verified resident. At each round, the registry publishes the set of eligible commitments as a Merkle tree, never the names.
 
-**Voting proves membership without revealing it.** An anonymous ballot is not a signed act, because every act names its signer; it travels as a sealed container, the wrapper the Envelope MIP uses for private senders, whose inner form the voting cMIP defines. It carries a zero-knowledge proof that its author's commitment is in the tree, and a per-round nullifier that prevents voting twice without revealing who voted. The Semaphore protocol is the model to study. These proofs are checked by a credential module, through the Identity MIP's task for identity proofs.
+**Voting proves membership without revealing it.** An anonymous ballot is not a signed act, because every act names its signer; it travels as a sealed container, the wrapper the Envelopes MIP uses for private senders, whose inner form the voting cMIP defines. It carries a zero-knowledge proof that its author's commitment is in the tree, and a per-round nullifier that prevents voting twice without revealing who voted. The Semaphore protocol is the model to study. These proofs are checked by a credential module, through the Identity MIP's task for identity proofs.
 
 **Coercion and vote buying.** A voter must not be able to prove to anyone how they voted. Designs such as MACI (Minimal Anti-Collusion Infrastructure) let a voter secretly change their ballot before the round closes, so any proof shown to a buyer is worthless.
 
@@ -82,9 +82,9 @@ Because each pool is fixed, raising one priority lowers another, exactly as in a
 **From the core, nothing new.** Everything above uses what the MIPs already define:
 
 - **Identity:** separate civic identities, homes, and the task for identity proofs.
-- **Envelope and Text:** signed ballots where nobody needs anonymity, sealed containers where they do, published priorities, relays, commitments, mirrors and anchoring.
-- **Finance:** payments to projects and their receipts; points counted in their own unit, defined by a unit specification.
-- **Law:** collectives and their key grammars, grants for open delegation, split plans for budgets, time references for rounds and deadlines, relying on the Envelope's anchoring.
+- **Envelopes and Text:** signed ballots where nobody needs anonymity, sealed containers where they do, published priorities, relays, commitments, mirrors and anchoring.
+- **Money:** payments to projects and their receipts; points counted in their own unit, defined by a unit specification.
+- **Agreements:** collectives and their key grammars, grants for open delegation, split plans for budgets, time references for rounds and deadlines, relying on the Envelopes' anchoring.
 
 **Open for others to build (cMIPs and Modules):**
 

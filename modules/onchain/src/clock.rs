@@ -3,8 +3,8 @@
 //! F202: "cMIP is the anchoring, modules are the clocks"). **Experimental.**
 //!
 //! - **Its reference** is one Bitcoin network: `[ this Module's spec,
-//!   network ]` ([`reference`]), the shape of Finance's clock entry and
-//!   Law's time reference.
+//!   network ]` ([`reference`]), the shape of Money's clock entry and
+//!   Agreements' time reference.
 //! - **Its point is the block** (F201): an anchor's point is the height, on
 //!   the chain the verifier follows, of the block that carries it. Two
 //!   anchors in one block are at the same point.
@@ -31,7 +31,7 @@ use crate::{Block, Network, Onchain, OnchainProof};
 use mor_anchoring::service::BatchClock;
 use mor_core::cbor;
 use mor_core::cbor::Value;
-use mor_core::envelope::anchoring::{Anchor, AnchoringCmip, Reference};
+use mor_core::envelopes::anchoring::{Anchor, AnchoringCmip, Reference};
 use mor_core::hash::{sha256, Hash};
 use mor_payment::{Answer, Held, Modules, Proof, Record};
 
@@ -42,14 +42,14 @@ pub fn spec() -> Hash {
 }
 
 /// The time reference this Module names for a network: `[ spec, network ]`.
-/// What a clock entry names (Finance, "clock"; F202).
+/// What a clock entry names (Money, "clock"; F202).
 pub fn reference(network: Network) -> Reference {
     Reference { cmip: spec(), params: Value::Uint(network.number()) }
 }
 
 /// The pair `(clock Module, rail Module)` this Module declares: it reads
-/// the on-chain rail's proofs as payments' anchors (F201). What a Law
-/// client hands the core's Law view (`LawView::rail_clocks`).
+/// the on-chain rail's proofs as payments' anchors (F201). What an Agreements
+/// client hands the core's Agreements view (`AgreementsView::rail_clocks`).
 pub fn reads() -> (Hash, Hash) {
     (spec(), crate::spec())
 }

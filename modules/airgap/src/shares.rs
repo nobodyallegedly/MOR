@@ -1,6 +1,6 @@
-//! Split safety keys for collectives (Module, section 5; Law rule 36).
+//! Split chain keys for collectives (Module, section 5; Agreements rule 36).
 //!
-//! The seed of the collective's next safety key is split with Shamir's
+//! The seed of the collective's next chain key is split with Shamir's
 //! scheme, any k of n shares rebuilding it, and the shares are dealt with
 //! Pedersen commitments (Pedersen, 1991), so that each member can check,
 //! alone, that their share lies on the same polynomial as every other
@@ -27,7 +27,7 @@ use k256::elliptic_curve::group::GroupEncoding;
 use k256::elliptic_curve::PrimeField;
 use k256::{AffinePoint, FieldBytes, ProjectivePoint, Scalar};
 use mor_core::hash::{tagged_hash, Hash};
-use mor_core::identity::SafetyCommit;
+use mor_core::identity::ChainKeyCommit;
 use rand_core::{CryptoRng, RngCore};
 use std::fmt;
 use std::sync::OnceLock;
@@ -174,7 +174,7 @@ pub fn deal(
         .collect();
     let key = seed.key(scheme, index);
     let dealing = Dealing {
-        safety: SafetyCommit {
+        chain_key: ChainKeyCommit {
             scheme: key.scheme(),
             commit: key.commitment(),
         },
@@ -274,12 +274,12 @@ pub fn rebuild(shares: &[Share]) -> R<(Seed, Dealing)> {
 /// dealer who kept sole control.
 pub fn rebuild_key(shares: &[Share]) -> R<(mor_core::sig::SlhKey, Dealing)> {
     let (seed, d) = rebuild(shares)?;
-    let scheme = match d.safety.scheme {
+    let scheme = match d.chain_key.scheme {
         mor_core::act::Scheme::Founding(n @ (2 | 3)) => n,
-        _ => return Err(ShareError::Unsupported("the dealing's safety scheme")),
+        _ => return Err(ShareError::Unsupported("the dealing's chain-key scheme")),
     };
     let key = seed.key(scheme, d.index);
-    if key.commitment() != d.safety.commit {
+    if key.commitment() != d.chain_key.commit {
         return Err(ShareError::WrongKey);
     }
     Ok((key, d))
@@ -290,5 +290,5 @@ pub fn rebuild_key(shares: &[Share]) -> R<(mor_core::sig::SlhKey, Dealing)> {
 /// commitment, and forgets it. Returns the commitment that was confirmed.
 pub fn rebuild_check(shares: &[Share]) -> R<Hash> {
     let (_key, d) = rebuild_key(shares)?;
-    Ok(d.safety.commit)
+    Ok(d.chain_key.commit)
 }

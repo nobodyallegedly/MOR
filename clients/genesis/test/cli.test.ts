@@ -1,6 +1,6 @@
 // The command line as a user drives it, against real homes; and an operator
 // identity made by this client running a home (relay reading 4: a home runs
-// under an identity made elsewhere, with no safety key on the server).
+// under an identity made elsewhere, with no chain key on the server).
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -47,7 +47,7 @@ test('new, routes, enckey, rotate and check, from the command line', () => {
   assert.match(run('show', '--file', file), /position 1/);
 });
 
-test('an operator identity made here runs a home, its safety key never on the server', async () => {
+test('an operator identity made here runs a home, its chain key never on the server', async () => {
   const file = join(dir, 'op.json');
   const port = 20000 + Math.floor(Math.random() * 20000);
   const base = `http://127.0.0.1:${port}`;

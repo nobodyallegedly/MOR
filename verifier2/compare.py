@@ -15,7 +15,7 @@ import sys
 from collections import Counter, defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from law_endings import verify  # noqa: E402
+from agreements_endings import verify  # noqa: E402
 
 
 def short(names: dict, x):

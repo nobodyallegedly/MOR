@@ -70,11 +70,11 @@ export interface Item {
   refs: string[];
   /** What could not be read. */
   problem?: string;
-  /** A payment naming a version of a deal that does not descend from the version this identity holds: the seller's alarm (Law rule 45b, F186, client conformance). */
+  /** A payment naming a version of a deal that does not descend from the version this identity holds: the seller's alarm (Agreements rule 45b, F186, client conformance). */
   alarm?: string;
-  /** A payment naming an older version of a deal, with no fork: a plain notice, not the alarm (Law rule 45b, F188, DQ7). */
+  /** A payment naming an older version of a deal, with no fork: a plain notice, not the alarm (Agreements rule 45b, F188, DQ7). */
   notice?: string;
-  /** A split received (Law type 8): its service, the deal version it pays under, and its number (F188, DQ6). */
+  /** A split received (Agreements type 8): its service, the deal version it pays under, and its number (F188, DQ6). */
   split?: { service: string; agreement: string; number: number | null };
   /** When this desk first found it (this machine's clock: a hint, never part of any act). */
   found: number;

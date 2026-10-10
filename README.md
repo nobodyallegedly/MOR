@@ -4,7 +4,7 @@
 
 MOR has a small core, meant to be frozen: six MIPs in layers, **Identity, Text, Envelopes, Money, Agreements and Development**. Above it sits an open, competitive layer of cMIPs and Modules, where adoption decides. Every act is signed, named by its hash, and never updated: a new version is a new act naming the one before.
 
-*The layers were renamed on 10 October 2026 (F212): Envelope became Envelopes, Finance became Money, Law became Agreements, Production became Development. The files and the code still carry the old names until one rename pass applies them; older records keep their wording, so "Finance rule 15" there means Money rule 15.*
+*The layers were renamed on 10 October 2026 (F212): Envelope became Envelopes, Finance became Money, Law became Agreements, Production became Development. The rename pass (`docs/rename-pass.md`) applied it to the current drafts, the code and these pages; older records keep their wording, so "Finance rule 15" there means Money rule 15.*
 
 It began with a text written in 2014, before MOR had a name: [Thank You For the Shower](docs/thank-you-for-the-shower.md).
 
@@ -15,7 +15,7 @@ It is built to be a good ancestor. Identities, agreements and history can always
 **Experimental. Not frozen. Test identities and test money only (regtest or signet), never real funds.**
 
 - **The core texts** were complete and approved by their author on 5 October 2026. Since then each building step and each hostile review has found more, and the texts are revised in place, finding by finding, for the author to approve again. The findings log runs to F220 ([docs/findings/](docs/findings/)): each finding says why a rule exists, and the log records which decisions were the author's and which were suggested.
-- **The core library**, in Rust, implements all six MIPs: 516 tests, plus invariant hunting, where Law's promises are checked over thousands of random histories of collectives and deals, replayed in shuffled orders ([docs/law-invariants.md](docs/law-invariants.md)). The TypeScript clients run on it through WebAssembly: 203 tests across eleven packages.
+- **The core library**, in Rust, implements all six MIPs: 516 tests, plus invariant hunting, where Agreements' promises are checked over thousands of random histories of collectives and deals, replayed in shuffled orders ([docs/law-invariants.md](docs/law-invariants.md)). The TypeScript clients run on it through WebAssembly: 203 tests across eleven packages.
 - **Two payment rails run end to end on regtest.** Lightning; and on-chain bitcoin by pay-to-contract, with proofs checked against the chain the verifier follows ([modules/module-onchain-rail-draft-2.md](modules/module-onchain-rail-draft-2.md)). A first clock, Bitcoin, sits under one anchoring cMIP ([cmips/cmip-anchoring-draft-1.md](cmips/cmip-anchoring-draft-1.md)).
 - **The project's website is published on MOR itself**, as signed acts, served by a gateway that checks them; its display client is built reproducibly on Linux, byte for byte.
 - **Building steps are attacked by a separate AI reviewer**, and its reports are kept ([docs/reviews/](docs/reviews/)).
@@ -74,7 +74,7 @@ Wanted, by anyone: each is described in [docs/roadmap-v1.md](docs/roadmap-v1.md)
 - **A forked deal**: two complete versions of one agreement, and how it is repaired, under exploration and review.
 - **The remaining technical parameters for freeze**: the RV32IM profile and its programs, test vectors, the pinned Unicode version.
 - **A second verifier for more of Agreements**, beyond collectives' endings, written from the text alone, never reading the existing code.
-- **Two renames, decided and not yet applied**: the layers (above), and the keys (the safety key becomes the *chain key*, the everyday key the *signing key*).
+- **Two renames, decided and applied by the rename pass** (`docs/rename-pass.md`): the layers (above), and the keys (the safety key became the *chain key*, the everyday key the *signing key*).
 
 There is no committee and nobody appointed to decide what comes next. A successor is anyone's to build, and users move to it by choice, as the core already provides.
 

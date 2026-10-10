@@ -5,28 +5,28 @@
 //! An operator is an ordinary identity in a role, not a kind of identity:
 //! any identity becomes an operator when a genesis names it as a home's
 //! operator. A home runs under an identity made elsewhere, like anyone's,
-//! and holds only its everyday signing key and the act that bound it. The
-//! safety key never needs to be on the server.
+//! and holds only its signing key and the act that bound it. The
+//! chain key never needs to be on the server.
 //!
 //! **A stopgap, until the genesis client exists (roadmap step 5).** `init`
 //! can also create a new test identity for the operator, self-hosted at the
-//! home, with its safety key in the key file. That is a prototype, labelled
+//! home, with its chain key in the key file. That is a prototype, labelled
 //! as such in the file itself, and only for test homes.
 
 use mor_core::act::{self, Act, Addressing, Inside, Object};
 use mor_core::cbor::{self, Value};
 use mor_core::hash::{Hash, ZERO_HASH};
-use mor_core::identity::{Genesis, Home, Payload, SafetyCommit, SigningKey};
+use mor_core::identity::{Genesis, Home, Payload, ChainKeyCommit, SigningKey};
 use mor_core::mmr::Mmr;
 use mor_core::sig::{self, SchnorrKey, SlhKey};
 use std::path::Path;
 
-/// Written into a key file that holds a safety key: the stopgap operator.
+/// Written into a key file that holds a chain key: the stopgap operator.
 pub const TEST_LABEL: &str = "MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.";
 
-/// Written into a key file that holds an everyday signing key only.
+/// Written into a key file that holds an signing key only.
 pub const SIGNING_LABEL: &str =
-    "The everyday signing key of a MOR home's operator. Keep it secret.";
+    "The signing key of a MOR home's operator. Keep it secret.";
 
 /// Fresh random bytes from the operating system.
 pub fn random<const N: usize>() -> [u8; N] {
@@ -52,14 +52,14 @@ pub struct Keys {
     /// The identity-chain act that bound the current signing key.
     pub binding: Hash,
     pub signing_secret: [u8; 32],
-    /// Only for the stopgap test operator: the safety key the current chain
+    /// Only for the stopgap test operator: the chain key the current chain
     /// act committed, as its scheme and FIPS 205 seeds.
-    pub safety: Option<(u8, [u8; 48])>,
+    pub chain_key: Option<(u8, [u8; 48])>,
 }
 
 impl Keys {
     pub fn encode(&self) -> Vec<u8> {
-        let label = if self.safety.is_some() {
+        let label = if self.chain_key.is_some() {
             TEST_LABEL
         } else {
             SIGNING_LABEL
@@ -70,7 +70,7 @@ impl Keys {
             (Value::Uint(2), Value::Bytes(self.binding.to_vec())),
             (Value::Uint(3), Value::Bytes(self.signing_secret.to_vec())),
         ];
-        if let Some((scheme, seeds)) = &self.safety {
+        if let Some((scheme, seeds)) = &self.chain_key {
             m.push((Value::Uint(4), Value::Uint(*scheme as u64)));
             m.push((Value::Uint(5), Value::Bytes(seeds.to_vec())));
         }
@@ -83,7 +83,7 @@ impl Keys {
             Some(Value::Bytes(b)) => Some(b.clone()),
             _ => None,
         };
-        let safety = match (v.map_get(4), b(5)) {
+        let chain_key = match (v.map_get(4), b(5)) {
             (None, None) => None,
             (Some(Value::Uint(n @ 2..=3)), Some(seeds)) => Some((*n as u8, seeds.try_into().ok()?)),
             _ => return None,
@@ -92,7 +92,7 @@ impl Keys {
             identity: b(1)?.try_into().ok()?,
             binding: b(2)?.try_into().ok()?,
             signing_secret: b(3)?.try_into().ok()?,
-            safety,
+            chain_key,
         };
         SchnorrKey::from_secret(&keys.signing_secret)?;
         Some(keys)
@@ -117,9 +117,9 @@ impl Keys {
         o.open(path)?.write_all(&self.encode())
     }
 
-    /// The stopgap operator's safety key, if this file holds one.
-    pub fn safety(&self) -> Option<SlhKey> {
-        self.safety.map(|(scheme, s)| {
+    /// The stopgap operator's chain key, if this file holds one.
+    pub fn chain_key(&self) -> Option<SlhKey> {
+        self.chain_key.map(|(scheme, s)| {
             SlhKey::from_seeds(
                 scheme,
                 s[..16].try_into().unwrap(),
@@ -161,12 +161,12 @@ pub fn seal_public(
 }
 
 /// The stopgap: a new test operator identity, self-hosted at `base`, its
-/// safety key in software. Its key file and its genesis act.
+/// chain key in software. Its key file and its genesis act.
 pub fn create(identity_spec: &Hash, base: &str) -> (Keys, Act) {
     let (secret, key) = schnorr_secret();
     let scheme = sig::SLH_128S;
     let seeds = random::<48>();
-    let safety = SlhKey::from_seeds(
+    let chain_key = SlhKey::from_seeds(
         2,
         seeds[..16].try_into().unwrap(),
         seeds[16..32].try_into().unwrap(),
@@ -177,9 +177,9 @@ pub fn create(identity_spec: &Hash, base: &str) -> (Keys, Act) {
             scheme: sig::SCHNORR,
             key: key.public().to_vec(),
         },
-        safety: SafetyCommit {
+        chain_key: ChainKeyCommit {
             scheme,
-            commit: safety.commitment(),
+            commit: chain_key.commitment(),
         },
         homes: vec![Home {
             operator: None,
@@ -207,7 +207,7 @@ pub fn create(identity_spec: &Hash, base: &str) -> (Keys, Act) {
         identity: genesis.id(),
         binding: genesis.id(),
         signing_secret: secret,
-        safety: Some((2, seeds)),
+        chain_key: Some((2, seeds)),
     };
     (keys, genesis)
 }

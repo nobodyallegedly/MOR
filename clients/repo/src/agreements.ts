@@ -1,7 +1,7 @@
-// Law acts as the test collective makes them (Law draft 8): terms, whether a
+// Agreements acts as the test collective makes them (Agreements draft 8): terms, whether a
 // founding agreement or a clone of one (with its mark), signature acts,
 // resignations and records. The payloads are built here and checked by the
-// core library (`checkTerms`, `lawClonePlan`) before anything is signed;
+// core library (`checkTerms`, `agreementsClonePlan`) before anything is signed;
 // the core library alone judges them afterwards.
 
 import {
@@ -15,7 +15,7 @@ import {
   declarationPayload,
   describeAct,
   hex,
-  lawClonePlan,
+  agreementsClonePlan,
   recordPayload,
   resignationPayload,
   signaturePayload,
@@ -23,7 +23,7 @@ import {
 } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { LAW_TYPES, REPO_SPECS } from './specs.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from './specs.ts';
 
 /** `rule`: every party, any k of them, or named ones. */
 export type Rule = { all: true } | { threshold: number } | { named: string[] };
@@ -31,10 +31,10 @@ export type Rule = { all: true } | { threshold: number } | { named: string[] };
 const ruleValue = (r: Rule): unknown[] =>
   'all' in r ? [0] : 'threshold' in r ? [1, r.threshold] : [2, r.named.map(unhex)];
 
-/** A power a clone's mark claims (Law draft 7, F104); the judicial tier, every member (Law draft 10, F121). */
+/** A power a clone's mark claims (Agreements draft 7, F104); the judicial tier, every member (Agreements draft 10, F121). */
 export type Power = { constitutional: true } | { clone: true } | { area: number } | { judicial: true };
 
-/** The powers a mark lists, ascending by their encoding (Law, "mark"): [0] < [1] < [4] < [2, area]. */
+/** The powers a mark lists, ascending by their encoding (Agreements, "mark"): [0] < [1] < [4] < [2, area]. */
 export const markOrder = (p: Power): number => ('constitutional' in p ? 0 : 'clone' in p ? 1 : 'judicial' in p ? 2 : 3);
 
 const powerValue = (p: Power): unknown[] =>
@@ -46,15 +46,15 @@ export interface MarkEntry {
   signers: string[];
 }
 
-/** The release area's id: permanent, never reused (Law draft 7, Q32). */
+/** The release area's id: permanent, never reused (Agreements draft 7, Q32). */
 export const RELEASE_AREA = 1;
 
-/** The spec hashes the core library's Law calls take: the six MIPs, and the
+/** The spec hashes the core library's Agreements calls take: the six MIPs, and the
  * layers each extension the collective names declares (the release manifest
- * cMIP declares none beyond Production). */
-export const LAW_SPECS = { ...MIPS, law: REPO_SPECS.law, extLayers: { [REPO_SPECS.manifest]: [] as number[] } };
+ * cMIP declares none beyond Development). */
+export const AGREEMENTS_SPECS = { ...MIPS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] as number[] } };
 
-/** A founding agreement for a collective, or a clone of one (Law draft 7). */
+/** A founding agreement for a collective, or a clone of one (Agreements draft 7). */
 export interface CollectiveTerms {
   /** The members, in order: the parties. */
   parties: string[];
@@ -64,11 +64,11 @@ export interface CollectiveTerms {
   clone: Rule;
   /** The constitutional change rule (field 18); absent: every party. */
   constitutional?: Rule;
-  /** Who holds the collective's everyday signing key. */
+  /** Who holds the collective's signing key. */
   signingHolder: string;
-  /** The safety key as shares: any `threshold` of these members rebuild it. */
-  safety: { threshold: number; members: string[] };
-  /** The release rule, as an area: publications of the collective (Envelope
+  /** The chain key as shares: any `threshold` of these members rebuild it. */
+  chainKey: { threshold: number; members: string[] };
+  /** The release rule, as an area: publications of the collective (Envelopes
    * type 0) count only with this many of its holders' signature acts. */
   releases: { holders: string[]; threshold: number; words?: string };
   /** Who decides absence: a threshold of the other parties; the outcomes
@@ -99,7 +99,7 @@ export interface Stake {
 
 const who = (h: string | null) => (h === null ? null : unhex(h));
 
-/** The outcomes an abandonment clause may allow (Law rule 53), in plain words. */
+/** The outcomes an abandonment clause may allow (Agreements rule 53), in plain words. */
 const ABSENCE_OUTCOMES = [
   'the member loses their voice (they no longer count in any rule or area)',
   'their stake is shared among the remaining holders',
@@ -110,7 +110,7 @@ const ABSENCE_OUTCOMES = [
 
 /**
  * The abandonment clause in plain words, shown before a member signs terms
- * carrying it (Law rule 49, client conformance; F172, F178 item 11): who
+ * carrying it (Agreements rule 49, client conformance; F172, F178 item 11): who
  * may declare a member absent, with which outcomes, and whether an
  * absence-proof cMIP stands between. This client writes none (clause key
  * 3), so the declaration is the authority's judgment alone, a stated cost.
@@ -121,31 +121,31 @@ export function absenceNotice(a: CollectiveTerms['abandonment']): string {
   return (
     `Absence: any ${a.others} of the other members together may declare a member absent. What may then follow: ${listed}. ` +
     'No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or the member\'s activity. ' +
-    'Signing accepts that (Law rules 49 and 51, a stated cost); a member declared absent wrongly can only contest it, in public (Law rule 52).'
+    'Signing accepts that (Agreements rules 49 and 51, a stated cost); a member declared absent wrongly can only contest it, in public (Agreements rule 52).'
   );
 }
 
 /** The terms payload, as CBOR, checked by the core library. */
 export function termsPayload(t: CollectiveTerms): Uint8Array {
   const payload = encodeTerms(t);
-  checkTerms(payload, LAW_SPECS);
+  checkTerms(payload, AGREEMENTS_SPECS);
   return payload;
 }
 
-/** The terms payload, as CBOR, not yet checked: for showing why Law would refuse it. */
+/** The terms payload, as CBOR, not yet checked: for showing why Agreements would refuse it. */
 export function encodeTerms(t: CollectiveTerms): Uint8Array {
   const grammar = new Map<number, unknown>([
     [0, [0, unhex(t.signingHolder)]],
-    [1, [1, t.safety.threshold, t.safety.members.map(unhex)]],
+    [1, [1, t.chainKey.threshold, t.chainKey.members.map(unhex)]],
   ]);
   const area = new Map<number, unknown>([
     [0, 'Releases'],
     [1, t.releases.holders.map(unhex)],
     [2, t.releases.threshold],
-    [3, [[1, unhex(MIPS.envelope), 0]]],
+    [3, [[1, unhex(MIPS.envelopes), 0]]],
     [5, RELEASE_AREA],
   ]);
-  // A mark's signers are ascending by hash (Law draft 8, B8): lowercase
+  // A mark's signers are ascending by hash (Agreements draft 8, B8): lowercase
   // hex sorts as the bytes do.
   const field4 = t.parent
     ? [...(t.mark ?? [])].sort((a, b) => markOrder(a.power) - markOrder(b.power)).map((e) => [powerValue(e.power), [...e.signers].sort().map(unhex)])
@@ -185,7 +185,7 @@ export interface Tip {
   summary: string;
 }
 
-/** The fork of a collective (Law type 19, rule 47a, F121 shape B, F124). */
+/** The fork of a collective (Agreements type 19, rule 47a, F121 shape B, F124). */
 export interface ForkAct {
   agreement: string;
   collective: string;
@@ -212,14 +212,14 @@ export function forkPayload(f: ForkAct): Uint8Array {
   return cborEncode(m);
 }
 
-/** Money owed back a closing leaves open (Law type 20, field 4; QG1, F197): the payment, by one receipt or claim of it; the notice sent to its payer (type 24), or null where it is owed to nobody; and a holder that outlives the closing, where the collective chose one. */
+/** Money owed back a closing leaves open (Agreements type 20, field 4; QG1, F197): the payment, by one receipt or claim of it; the notice sent to its payer (type 24), or null where it is owed to nobody; and a holder that outlives the closing, where the collective chose one. */
 export interface LeftOpen {
   payment: string;
   notice: string | null;
   holder?: string;
 }
 
-/** The closing of a collective that holds nothing (Law type 20, F124 N9): its line, as a fork's; and the money owed back it leaves open, ascending by payment (field 4; QG1, F197). */
+/** The closing of a collective that holds nothing (Agreements type 20, F124 N9): its line, as a fork's; and the money owed back it leaves open, ascending by payment (field 4; QG1, F197). */
 export function closingPayload(c: { agreement: string; collective: string; chainAct: string; tips: Tip[]; open?: LeftOpen[] }): Uint8Array {
   const m = new Map<number, unknown>([
     [0, unhex(c.agreement)],
@@ -234,14 +234,14 @@ export function closingPayload(c: { agreement: string; collective: string; chain
   return cborEncode(m);
 }
 
-/** A creditor's release (Finance type 4, F126; Law type 21 under F125): the creditor ends an obligation owed to it without full payment; `against`, for the record only, what it took instead (receipts, a Law agreement it was traded for). A collective signs it by its Finance lane. */
+/** A creditor's release (Money type 4, F126; Agreements type 21 under F125): the creditor ends an obligation owed to it without full payment; `against`, for the record only, what it took instead (receipts, an Agreements agreement it was traded for). A collective signs it by its Money lane. */
 export function debtReleasePayload(r: { obligation: string; against?: string[] }): Uint8Array {
   const m = new Map<number, unknown>([[0, unhex(r.obligation)]]);
   if (r.against?.length) m.set(1, r.against.map(unhex));
   return cborEncode(m);
 }
 
-/** A release to the public domain (Law type 5, rule 17, F121 shape D). */
+/** A release to the public domain (Agreements type 5, rule 17, F121 shape D). */
 export interface ReleaseAct {
   work: string;
   /** The stakes it ends: [agreement, index]. */
@@ -265,7 +265,7 @@ export function releasePayload(r: ReleaseAct): Uint8Array {
   return cborEncode(m);
 }
 
-/** One payout of a split (Law type 8, F121 Q9). */
+/** One payout of a split (Agreements type 8, F121 Q9). */
 export interface PayoutIn {
   receiver: string;
   amount: number;
@@ -276,9 +276,9 @@ export interface PayoutIn {
 }
 
 /**
- * A split (Law type 8). `tally`: for each stake it pays, the running count
+ * A split (Agreements type 8). `tally`: for each stake it pays, the running count
  * of leftover units each holder has received from the service's splits for
- * that stake, this one included, as `[stake, [[holder, count]]]` (Law rule
+ * that stake, this one included, as `[stake, [[holder, count]]]` (Agreements rule
  * 15a, F165, F171, F178 item 15): field 4, a PROPOSED format, to confirm
  * with Nobody, allegedly (the spec gives the field, not its key). The split
  * act cites, in `refs`, the service's previous split for each stake.
@@ -307,7 +307,7 @@ export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: st
   return cborEncode(m);
 }
 
-/** A grant (Law type 9) to act for the grantor: here, a split service's.
+/** A grant (Agreements type 9) to act for the grantor: here, a split service's.
  * `key`: the grant key (field 9, F128), the public part of a signing key
  * the grantee made and keeps, as Identity's `[scheme, key]`: acts signed
  * with it are the collective's own, a strand of its actions chain, within
@@ -324,7 +324,7 @@ export function grantPayload(grantee: string, key: [number, Uint8Array], byThis 
   return cborEncode(m);
 }
 
-/** A payee's grant to a deal's split service (Law type 9, F129 H4): signed
+/** A payee's grant to a deal's split service (Agreements type 9, F129 H4): signed
  * by the payee with its own key, public, managing "this agreement" (scope 1,
  * field 2 written null), the deal whose terms list it in field 14, one grant
  * per payee. It counts once every party has signed that deal, and the
@@ -342,7 +342,7 @@ export function dealGrantPayload(service: string, key: [number, Uint8Array]): Ui
   );
 }
 
-/** An obligation (Finance type 1), signed by the debtor. */
+/** An obligation (Money type 1), signed by the debtor. */
 export function obligationPayload(o: { debtor: string; creditor: string; unit: string; value: number; pointer: string }): Uint8Array {
   return cborEncode(
     new Map<number, unknown>([
@@ -354,7 +354,7 @@ export function obligationPayload(o: { debtor: string; creditor: string; unit: s
   );
 }
 
-/** A payee pointer (Finance type 0): rails, each [rail Module, address bytes]. */
+/** A payee pointer (Money type 0): rails, each [rail Module, address bytes]. */
 export function pointerPayload(p: { payee: string; version: number; previous?: string; rails: [string, Uint8Array][] }): Uint8Array {
   const m = new Map<number, unknown>([
     [0, unhex(p.payee)],
@@ -365,7 +365,7 @@ export function pointerPayload(p: { payee: string; version: number; previous?: s
   return cborEncode(m);
 }
 
-/** A settlement receipt (Finance type 2), signed by the payee of the hop; `purchase`, for a purchase, the claim it pays under: [agreement, line] (field 9, F126). */
+/** A settlement receipt (Money type 2), signed by the payee of the hop; `purchase`, for a purchase, the claim it pays under: [agreement, line] (field 9, F126). */
 export function receiptPayload(r: { rail: string; payee: string; unit: string; value: number; fulfils: string; payer?: string; purchase?: [string, string] }): Uint8Array {
   const m = new Map<number, unknown>([
     [0, unhex(r.rail)],
@@ -379,12 +379,12 @@ export function receiptPayload(r: { rail: string; payee: string; unit: string; v
   return cborEncode(m);
 }
 
-/** What a clone changes, and the powers its mark must name (Law rule 44c). */
+/** What a clone changes, and the powers its mark must name (Agreements rule 44c). */
 export function clonePlan(parent: CollectiveTerms, clone: CollectiveTerms): {
   changes: { form: string; tier: string; field?: number; task?: number; area?: number }[];
   needs: { form: string; area?: number }[];
 } {
-  return lawClonePlan(encodeTerms(parent), encodeTerms({ ...clone, mark: [{ power: { clone: true }, signers: [clone.parties[0]] }] }), LAW_SPECS);
+  return agreementsClonePlan(encodeTerms(parent), encodeTerms({ ...clone, mark: [{ power: { clone: true }, signers: [clone.parties[0]] }] }), AGREEMENTS_SPECS);
 }
 
 /** Whether the powers a mark names are exactly those a plan needs. */
@@ -421,10 +421,10 @@ export async function propose(by: TestIdentity, t: CollectiveTerms, relays: stri
 
 /**
  * Propose terms given as their exact payload, already checked and shown to
- * the proposer (Law rule 4a): a clone names its parent in `objects`.
+ * the proposer (Agreements rule 4a): a clone names its parent in `objects`.
  */
 export async function proposePayload(by: TestIdentity, payload: Uint8Array, parent: string | undefined, relays: string[]) {
-  checkTerms(payload, LAW_SPECS);
+  checkTerms(payload, AGREEMENTS_SPECS);
   const objects: [string, string][] | undefined = parent ? [[parent, parent]] : undefined;
   // F189 (6): a version settling a deal's fork also cites each tip it
   // settles (field 26, a list since QF3), after its parent, in that order,
@@ -432,18 +432,18 @@ export async function proposePayload(by: TestIdentity, payload: Uint8Array, pare
   const settles = (cborDecode(payload) as Map<number, unknown>).get(26);
   if (objects && Array.isArray(settles)) for (const x of settles) if (x instanceof Uint8Array) objects.push([hex(x), hex(x)]);
   await carryChain(by, relays);
-  return by.publish(REPO_SPECS.law, LAW_TYPES.terms, payload, { public: true, relays, objects });
+  return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.terms, payload, { public: true, relays, objects });
 }
 
 /**
- * The latest of `by`'s own payee pointers (Finance type 0) found on
+ * The latest of `by`'s own payee pointers (Money type 0) found on
  * `relays`, where its pointers are published, whichever of its devices
- * published it (Finance rule 14, F163): each pointer valid on `by`'s chain,
+ * published it (Money rule 14, F163): each pointer valid on `by`'s chain,
  * naming `by` as its payee; the latest of the unbroken chain, or at a fork
  * the last before it (rule 12). Null where none is found.
  */
 export async function latestPointer(by: TestIdentity, relays: string[]): Promise<string | null> {
-  const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
   for (const a of by.chainActs()) v.add(a);
   const found = new Map<string, { version: number; previous: string | null }>();
   for (const h of relays) {
@@ -455,7 +455,7 @@ export async function latestPointer(by: TestIdentity, relays: string[]): Promise
           if (it.kind !== 'act') continue;
           try {
             const d = describeAct(it.item) as { id: string; spec?: string; type?: number; payload?: Uint8Array };
-            if (d.spec !== MIPS.finance || d.type !== FINANCE_POINTER || !d.payload) continue;
+            if (d.spec !== MIPS.money || d.type !== MONEY_POINTER || !d.payload) continue;
             const m = cborDecode(d.payload) as Map<number, unknown>;
             const payee = m.get(0);
             if (!(payee instanceof Uint8Array) || hex(payee) !== by.id) continue;
@@ -485,13 +485,13 @@ export async function latestPointer(by: TestIdentity, relays: string[]): Promise
   }
 }
 
-/** Finance's payee pointer type (Finance draft 6, type 0). */
-const FINANCE_POINTER = 0;
+/** Money's payee pointer type (Money draft 6, type 0). */
+const MONEY_POINTER = 0;
 
 /**
- * Sign an act: a Law signature act that follows the act it signs. Where it
+ * Sign an act: an Agreements signature act that follows the act it signs. Where it
  * signs terms or an offer, which can pay its signer, it cites in `refs` the
- * latest of the signer's payee pointers found on `relays` (Finance rule 14,
+ * latest of the signer's payee pointers found on `relays` (Money rule 14,
  * F163, client conformance): an identity keeps one sequence per device, so
  * a deal signed on one device finds a wallet published from another.
  */
@@ -502,7 +502,7 @@ export async function sign(by: TestIdentity, act: string, relays: string[]) {
     const p = await latestPointer(by, relays);
     if (p) refs = [p];
   }
-  return by.publish(REPO_SPECS.law, LAW_TYPES.signature, signaturePayload(act), {
+  return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(act), {
     public: true,
     relays,
     objects: [[act, act]],
@@ -510,14 +510,14 @@ export async function sign(by: TestIdentity, act: string, relays: string[]) {
   });
 }
 
-/** Whether the act signed is terms or a standing offer (Law types 0 and 6), as a relay holding it shows. */
+/** Whether the act signed is terms or a standing offer (Agreements types 0 and 6), as a relay holding it shows. */
 async function canPaySigner(act: string, relays: string[], via: Via): Promise<boolean> {
   for (const h of relays) {
     try {
       const a = await relayAt(h, via).getAct(act);
       if (!a) continue;
       const d = describeAct(a) as { spec?: string; type?: number };
-      return d.spec === REPO_SPECS.law && (d.type === LAW_TYPES.terms || d.type === LAW_TYPES.offer);
+      return d.spec === REPO_SPECS.agreements && (d.type === AGREEMENTS_TYPES.terms || d.type === AGREEMENTS_TYPES.offer);
     } catch {
       // that relay is away
     }
@@ -526,7 +526,7 @@ async function canPaySigner(act: string, relays: string[], via: Via): Promise<bo
 }
 
 /**
- * Leave the collective alone (Law rule 37a): a resignation act naming the
+ * Leave the collective alone (Agreements rule 37a): a resignation act naming the
  * agreement, signed by the member with their own key, no one else's. It
  * takes effect for the collective at the line its record draws. `drafts`:
  * the versions the member signed and leaves behind (F207), none of which
@@ -534,7 +534,7 @@ async function canPaySigner(act: string, relays: string[], via: Via): Promise<bo
  */
 export async function resign(by: TestIdentity, agreement: string, relays: string[], area?: number, drafts?: string[]) {
   await carryChain(by, relays);
-  return by.publish(REPO_SPECS.law, LAW_TYPES.resignation, resignationPayload(agreement, area, drafts?.length ? drafts : undefined), {
+  return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.resignation, resignationPayload(agreement, area, drafts?.length ? drafts : undefined), {
     public: true,
     relays,
     objects: [[agreement, agreement]],
@@ -542,7 +542,7 @@ export async function resign(by: TestIdentity, agreement: string, relays: string
 }
 
 /**
- * An abandonment declaration (Law type 13, B12): the agreement, the version
+ * An abandonment declaration (Agreements type 13, B12): the agreement, the version
  * whose clause it applies (the last the party signed), the party and the
  * outcomes. Signed by the authority, here one of the other members, with
  * their own key; where the clause asks for more of them, the others add
@@ -558,7 +558,7 @@ export async function declare(
   // member it names; it is published, and also delivered to that member's
   // inbox, so they see it early (a SHOULD; the safeguard is that it counts
   // only where they can obtain it).
-  return by.publish(REPO_SPECS.law, LAW_TYPES.declaration, declarationPayload(d.agreement, d.clause, d.party, Uint32Array.from(d.outcomes)), {
+  return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.declaration, declarationPayload(d.agreement, d.clause, d.party, Uint32Array.from(d.outcomes)), {
     public: true,
     relays,
     to: [d.party],
@@ -567,14 +567,14 @@ export async function declare(
 }
 
 /**
- * A contest of a declaration of absence (Law type 14, rule 52; BQ4,
+ * A contest of a declaration of absence (Agreements type 14, rule 52; BQ4,
  * decided by Nobody, allegedly, 9 October 2026), signed by the party the
  * declaration names: it shows presence and the dispute, and voids nothing.
  * Public, and delivered to the declaration's signer.
  */
 export async function contest(by: TestIdentity, declaration: { act: string; signer: string }, relays: string[]) {
   await carryChain(by, relays);
-  return by.publish(REPO_SPECS.law, LAW_TYPES.contest, contestPayload(declaration.act), {
+  return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.contest, contestPayload(declaration.act), {
     public: true,
     relays,
     to: [declaration.signer],
@@ -583,9 +583,9 @@ export async function contest(by: TestIdentity, declaration: { act: string; sign
 }
 
 /**
- * The agreements of `chain` (oldest first) that `member` signed, by a Law
+ * The agreements of `chain` (oldest first) that `member` signed, by an Agreements
  * signature act its relays hold: the newest of them is the clause version
- * a declaration against that member applies (Law rule 51, B12). The core
+ * a declaration against that member applies (Agreements rule 51, B12). The core
  * library checks it again when it judges the declaration.
  */
 export async function signedVersions(member: string, chain: string[], relays: string[], via: Via = {}): Promise<string[]> {
@@ -594,7 +594,7 @@ export async function signedVersions(member: string, chain: string[], relays: st
 }
 
 /**
- * Every act `member` signed by a Law signature act its relays hold (terms
+ * Every act `member` signed by an Agreements signature act its relays hold (terms
  * or offers), by hash: for the versions a resignation leaves behind (F207)
  * and the clause version a declaration applies (rule 51).
  */
@@ -609,7 +609,7 @@ export async function signedBy(member: string, relays: string[], via: Via = {}):
           if (it.kind !== 'act') continue;
           try {
             const d = describeAct(it.item) as { spec?: string; type?: number; payload?: Uint8Array };
-            if (d.spec !== REPO_SPECS.law || d.type !== LAW_TYPES.signature || !d.payload) continue;
+            if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.signature || !d.payload) continue;
             const m = cborDecode(d.payload) as Map<number, unknown>;
             const x = m.get(0);
             if (x instanceof Uint8Array) signed.add(hex(x));
@@ -628,11 +628,11 @@ export async function signedBy(member: string, relays: string[], via: Via = {}):
 }
 
 /**
- * The collective's record (Law type 17), its everyday line: it writes a
+ * The collective's record (Agreements type 17), its everyday line: it writes a
  * complete clone with the signature acts that complete it (A2), and
- * registers departures (A1). Signed with the collective's everyday key.
+ * registers departures (A1). Signed with the collective's signing key.
  * A test collective keeps one sequence, so it names no other. `acks`:
- * acts it acknowledges (Envelope), which places members' signature acts at
+ * acts it acknowledges (Envelopes), which places members' signature acts at
  * this line ("Made before, made after", 2): the signatures completing a
  * declaration it registers (B15).
  */
@@ -648,7 +648,7 @@ export async function record(
     registers: r.registers?.length ? r.registers : null,
   });
   const named = r.clone ?? r.inForce;
-  return collective.publish(REPO_SPECS.law, LAW_TYPES.record, payload, {
+  return collective.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.record, payload, {
     public: true,
     relays,
     objects: [[named, named]],

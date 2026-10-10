@@ -53,7 +53,7 @@ MOR was designed with this failure in mind: **rewards attach to settlements, nev
 **The library grows,** and Priya cannot maintain it alone. She and three regular contributors form a collective: an identity with its own keys and founding agreement.
 
 - Any two maintainers can sign a release.
-- All four are needed to rotate the collective's safety key. Because that alone would freeze the project if one of them vanished for good, the grammar names its way through: a fifth share held in escrow by a custodian under the collective's grant, released by the abandonment authority the agreement names. Every key grammar must leave a way to rotate that needs less than everyone; this is theirs.
+- All four are needed to rotate the collective's chain key. Because that alone would freeze the project if one of them vanished for good, the grammar names its way through: a fifth share held in escrow by a custodian under the collective's grant, released by the abandonment authority the agreement names. Every key grammar must leave a way to rotate that needs less than everyone; this is theirs.
 - The project's income is split by an agreement all four signed, with shares for past contributors.
 
 **Nobody is irreplaceable, and nobody is trapped.** When a maintainer burns out and leaves, the others clone the agreement without her and rotate the keys. Her share in past work keeps paying her. The project does not depend on one exhausted person. And who judges a member's absence, or which keeper records the shares, cannot change without the signature of every member whose voice remains; once she has left, she is judged by the clause in force.
@@ -84,7 +84,7 @@ What changes is that everything a company takes from the open-source commons, an
 
 ## 7. MOR itself
 
-**MOR's cMIPs and modules are software.** Each module is a work, frozen under its hash. Each Module names the cMIP it implements. The Production MIP pays the makers of cMIPs and modules when their work takes part in a settlement, through the module fees in each split. A module's use is evidenced by a party, never by the module, which signs nothing: for a payment rail module, by the receipt or claim naming it; for a service someone runs on a module, by a use record signed by whoever runs it.
+**MOR's cMIPs and modules are software.** Each module is a work, frozen under its hash. Each Module names the cMIP it implements. The Development MIP pays the makers of cMIPs and modules when their work takes part in a settlement, through the module fees in each split. A module's use is evidenced by a party, never by the module, which signs nothing: for a payment rail module, by the receipt or claim naming it; for a service someone runs on a module, by a use record signed by whoever runs it.
 
 **This case study is MOR's own economy.** A developer who writes a split module, a rating cMIP or a consent module for the other case studies is paid the way Priya is paid: through lineage, when real settlements use their work and the paying agreement honours the terms. Everything these case studies list under "open for others to build" is an invitation on these terms.
 

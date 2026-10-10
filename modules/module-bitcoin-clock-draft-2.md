@@ -25,7 +25,7 @@
 1. **An on-chain payment** (F201), under the on-chain rail Module draft 2: the anchoring cMIP's "commitment naming its act". The act is a receipt or claim; the verifier recomputes its payment commitment under the payment cMIP and runs the on-chain rail's rule on the act's proof, with the chain followed. Where the rule answers valid, the anchor places the act at the height of the payment's block. Otherwise there is no anchor: pending, short of the depth, a block off the chain followed, invalid, or another rail.
 2. **A batch anchor** (step 14a): the anchoring cMIP's batch, its root committed by pay-to-contract.
 
-**This Module reads the on-chain rail's proofs as payments' anchors** (F201): on this clock, Finance rule 15 compares the payer's valid claims of a payment, the payment's block among their anchors, and a pending claim's anchor counts for nothing (Finance rule 15, F203 applying only on other clocks). *Declared as the pair (this Module, the on-chain rail Module); format open, as a rail's kind is (F140 item 1).*
+**This Module reads the on-chain rail's proofs as payments' anchors** (F201): on this clock, Money rule 15 compares the payer's valid claims of a payment, the payment's block among their anchors, and a pending claim's anchor counts for nothing (Money rule 15, F203 applying only on other clocks). *Declared as the pair (this Module, the on-chain rail Module); format open, as a rail's kind is (F140 item 1).*
 
 ## A batch anchor
 
@@ -53,4 +53,4 @@
 
 ## Reference implementation
 
-`modules/onchain/src/clock.rs` (crate `mor-onchain`): the reference, the pair it declares, an on-chain payment's anchor (`BitcoinClock::payment_anchor`), a batch anchor (`BatchAnchor`, `BitcoinClock::batch_anchor`, the core's `AnchoringCmip::verify`), and the leaf reading the service's judgment uses (`BatchClock`). Tested in `modules/onchain/tests/finance.rs`, `tests/anchor.rs` and `tests/service.rs`, and end to end on regtest in `harness/tests/anchoring.rs`. Regtest only before step 17.
+`modules/onchain/src/clock.rs` (crate `mor-onchain`): the reference, the pair it declares, an on-chain payment's anchor (`BitcoinClock::payment_anchor`), a batch anchor (`BatchAnchor`, `BitcoinClock::batch_anchor`, the core's `AnchoringCmip::verify`), and the leaf reading the service's judgment uses (`BatchClock`). Tested in `modules/onchain/tests/money.rs`, `tests/anchor.rs` and `tests/service.rs`, and end to end on regtest in `harness/tests/anchoring.rs`. Regtest only before step 17.

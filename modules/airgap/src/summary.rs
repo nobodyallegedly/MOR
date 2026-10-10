@@ -140,7 +140,7 @@ pub fn describe(
     identity: &Hash,
     r: &Rotation,
     before: &Before,
-    finance: Option<&Hash>,
+    money: Option<&Hash>,
     escape_announced: bool,
 ) {
     s.plain(format!("Identity: {}", hexs(identity)));
@@ -212,7 +212,7 @@ pub fn describe(
         )),
     }
     for d in r.declarations.iter().flatten() {
-        if Some(&d.spec) == finance && d.kind == 0 {
+        if Some(&d.spec) == money && d.kind == 0 {
             vault(s, d.value.as_ref(), before);
         } else {
             s.warn(format!(
@@ -252,7 +252,7 @@ pub fn describe(
 
 fn vault(s: &mut Summary, value: Option<&Value>, before: &Before) {
     let Some(v) = value else {
-        s.warn("VAULT REMOVED: every payment goes to the flow pointer, which the everyday key can change");
+        s.warn("VAULT REMOVED: every payment goes to the flow pointer, which the signing key can change");
         return;
     };
     let Some(entries) = vault_entries(v) else {
@@ -303,7 +303,7 @@ struct VaultEntry {
     limit: u64,
 }
 
-/// `vault-entry = [ unit: hash, rail-module: hash, source: bstr, limit: uint ]` (Finance).
+/// `vault-entry = [ unit: hash, rail-module: hash, source: bstr, limit: uint ]` (Money).
 fn vault_entries(v: &Value) -> Option<Vec<VaultEntry>> {
     let Value::Array(es) = v else { return None };
     if es.is_empty() {

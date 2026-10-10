@@ -1,12 +1,12 @@
 # MOR Case Study: From Pocket Game to Open Market
 
-*Case study, draft 3, 9 October 2026. The author's own redraft of draft 2, checked against the current core (Identity draft 11, Finance draft 6, Law draft 10), with four fixes from the project lead's technical check, accepted by Nobody, allegedly: a clone of a deal needs every party's signature, not only those whose terms change (F107, Law rule 45b); the asset pack's "tools used" share is a named share, known before any sale, not a role share (Law rule 22); the citizens' initiative named by its official title, with its outcome (over 1.29 million signatures; the European Commission's reply, 16 June 2026); a capital letter. The draft 1 note that this text predates the current core no longer applies. Draft 2's note follows.*
+*Case study, draft 3, 9 October 2026. The author's own redraft of draft 2, checked against the current core (Identity draft 11, Money draft 6, Agreements draft 10), with four fixes from the project lead's technical check, accepted by Nobody, allegedly: a clone of a deal needs every party's signature, not only those whose terms change (F107, Agreements rule 45b); the asset pack's "tools used" share is a named share, known before any sale, not a role share (Agreements rule 22); the citizens' initiative named by its official title, with its outcome (over 1.29 million signatures; the European Commission's reply, 16 June 2026); a capital letter. The draft 1 note that this text predates the current core no longer applies. Draft 2's note follows.*
 
 *Case study, draft 2, 9 October 2026. Draft 1 with the technical pass of 9 October 2026 applied (`docs/technical-pass-2026-10-09.md`), items 1 to 5, nothing else changed; items 6 and 7 needed no change. The rest is unchanged, for the author's own passes and the redraft. Draft 1's notes follow.*
 
 *Case study, draft 1, 27 September 2026. What MOR could be, with your help.*
 
-*Note, 6 October 2026: this draft predates the current core (Identity draft 11, Finance draft 6, Law draft 10) and the review rounds that changed it. Some rules it describes have since changed. It is to be redrafted (roadmap, 9 October 2026).*
+*Note, 6 October 2026: this draft predates the current core (Identity draft 11, Money draft 6, Agreements draft 10) and the review rounds that changed it. Some rules it describes have since changed. It is to be redrafted (roadmap, 9 October 2026).*
 
 ## Why this case study
 
@@ -18,7 +18,7 @@ MOR does not run games. Engines, servers, matchmaking and anti-cheat stay outsid
 
 ## 1. Solo: a mobile game
 
-**Mina makes a small puzzle game** on her own. She has an identity with a signing key on her laptop and a safety key on an offline device.
+**Mina makes a small puzzle game** on her own. She has an identity with a signing key on her laptop and a chain key on an offline device.
 
 **The game is a work,** bound to her by a claim. Each version she releases is a new work naming the previous one, since nothing on MOR is updated.
 

@@ -109,7 +109,7 @@ export interface Status {
   policyText: string | null;
   limits: { act: number; media: number; feed: number; wait: number };
   operator: string | null;
-  holdsSafetyKey: boolean;
+  holdsChainKey: boolean;
   closed: boolean;
   counts: { acts: number; sealed: number; media: number; bytes: number };
   arrivals: number;

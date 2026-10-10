@@ -1,5 +1,5 @@
 //! X-Wing, the hybrid key exchange for encryption keys and sealed
-//! containers (Envelope, "Encryption keys and key delivery"; F98).
+//! containers (Envelopes, "Encryption keys and key delivery"; F98).
 //!
 //! In plain words: a recipient publishes a public key made of two halves,
 //! one post-quantum (ML-KEM-768) and one classical (X25519). A sender uses

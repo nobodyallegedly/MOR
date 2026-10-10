@@ -1,4 +1,4 @@
-//! Anchoring, an Envelope task (Envelope draft 7, Tasks, "Anchoring"; F173).
+//! Anchoring, an Envelopes task (Envelopes draft 7, Tasks, "Anchoring"; F173).
 //!
 //! In plain words: MOR has no clock. An **anchoring cMIP** takes any act id
 //! and gives a proof that the act existed by some point on a **time
@@ -9,15 +9,15 @@
 //! - two anchors compare only on the same reference; anchors on references
 //!   that cannot be compared order nothing;
 //! - anyone may anchor any act, so an act may carry many anchors: on each
-//!   reference, it is judged by its earliest (Finance rule 15, F178).
+//!   reference, it is judged by its earliest (Money rule 15, F178).
 //!
-//! Every layer above may rely on it: Finance for a lock change after a
-//! theft (rule 15), Law for deadlines and time references, absence-proof
+//! Every layer above may rely on it: Money for a lock change after a
+//! theft (rule 15), Agreements for deadlines and time references, absence-proof
 //! modules for presence. Identity's validity never does (F63).
 //!
 //! Precisely: a [`Reference`] is an anchoring cMIP's specification hash and
-//! its parameters, which together name one time reference (Finance's clock
-//! entry and Law's time reference have this shape, F181). A point is a
+//! its parameters, which together name one time reference (Money's clock
+//! entry and Agreements' time reference have this shape, F181). A point is a
 //! `u64` in the order the cMIP defines on that reference; the core only
 //! compares points of one reference. A cMIP plugs in by
 //! [`AnchoringCmip`]; a verifier keeps what it has checked in [`Anchors`].
@@ -28,7 +28,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 /// One time reference: an anchoring cMIP and its parameters (`[ hash, any ]`
-/// in Finance's clock and Law's time reference).
+/// in Money's clock and Agreements' time reference).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Reference {
     pub cmip: Hash,

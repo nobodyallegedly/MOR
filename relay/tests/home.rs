@@ -202,9 +202,9 @@ async fn a_home_refuses_an_invalid_rotation() {
     let hs = homes(1).await;
     let (g, alice) = genesis("alice", vec![hs[0].home()], None, None);
     hs[0].client.put_act(&g.encode()).await.unwrap();
-    // Signed with a safety key other than the one committed.
+    // Signed with a chain key other than the one committed.
     let mut wrong = alice.clone();
-    wrong.safety = slh("mallory", 0);
+    wrong.chain_key = slh("mallory", 0);
     let (bad, _) = rotation(&wrong, Rot::default());
     assert_eq!(
         wire_err(hs[0].client.put_act(&bad.encode()).await).code,
@@ -328,7 +328,7 @@ async fn a_live_home_objects_to_a_homeless_rotation() {
     let relay = Running::start(Role::Relay, Policy::Open).await;
     let (g, alice) = genesis("alice", vec![hs[0].home()], None, None);
     hs[0].client.put_act(&g.encode()).await.unwrap();
-    // A thief holding the safety key claims the home is gone, and moves to
+    // A thief holding the chain key claims the home is gone, and moves to
     // a home of its own choosing.
     let (homeless, _) = rotation(
         &alice,
@@ -615,8 +615,8 @@ async fn a_home_serves_an_identitys_private_acts_with_its_links() {
 }
 
 /// A home runs under an operator identity made elsewhere, like anyone's,
-/// holding only its everyday signing key: no class of operator identities,
-/// and no safety key on the server.
+/// holding only its signing key: no class of operator identities,
+/// and no chain key on the server.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_home_runs_under_an_identity_made_elsewhere() {
     use mor_relay::node::OperatorSetup;
@@ -638,7 +638,7 @@ async fn a_home_runs_under_an_identity_made_elsewhere() {
         identity: op.id,
         binding: rot.id(),
         signing_secret: sha256(b"operator-main/sign/1"),
-        safety: None,
+        chain_key: None,
     };
     assert_eq!(keys.signing_key().key, op1.sign.public().to_vec());
     // A key file that does not match the act it names is refused.
@@ -681,9 +681,9 @@ async fn a_home_runs_under_an_identity_made_elsewhere() {
     assert!(
         Keys::load(&h.dir.join("operator.key"))
             .unwrap()
-            .safety
+            .chain_key
             .is_none(),
-        "no safety key on the server"
+        "no chain key on the server"
     );
     // It serves its operator's chain, so readers find it beside the receipts.
     let rec = h.client.identity(&op.id, None).await.unwrap();

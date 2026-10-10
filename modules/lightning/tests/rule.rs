@@ -7,7 +7,7 @@ use bitcoin::hashes::{sha256 as bh, Hash as _};
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use lightning_invoice::{Bolt11Invoice, Currency, InvoiceBuilder, PaymentSecret};
 use mor_core::act::Scheme;
-use mor_core::finance::{Amount, Anonymous, Citations, Claim, PayeePointer, Payer, Rail, Receipt, VaultEntry};
+use mor_core::money::{Amount, Anonymous, Citations, Claim, PayeePointer, Payer, Rail, Receipt, VaultEntry};
 use mor_core::identity::SigningKey;
 use mor_core::sig::SchnorrKey;
 use mor_core::hash::{sha256, Hash};
@@ -147,10 +147,10 @@ impl Held for World {
     fn vault(&self, id: &Hash) -> Option<(Hash, Vec<VaultEntry>)> {
         (id == &self.vault_id).then(|| (self.payee, self.vault.clone()))
     }
-    fn obligation(&self, _: &Hash) -> Option<mor_core::finance::Obligation> {
+    fn obligation(&self, _: &Hash) -> Option<mor_core::money::Obligation> {
         None
     }
-    fn holding(&self, _: &Hash, _: &Hash) -> Option<mor_core::finance::Holding> {
+    fn holding(&self, _: &Hash, _: &Hash) -> Option<mor_core::money::Holding> {
         None
     }
     fn voided_pointer(&self, _: &Hash) -> Option<(PayeePointer, Hash)> {
@@ -167,7 +167,7 @@ impl Held for World {
     fn vault_in_force(&self, payee: &Hash) -> Option<Vec<VaultEntry>> {
         (payee == &self.payee).then(|| self.vault.clone())
     }
-    fn payment_counts(&self, _: &Hash, _: &mor_core::finance::PaidAt, _: &mor_core::finance::Amount, _: &[u8], _: &Hash) -> Option<bool> {
+    fn payment_counts(&self, _: &Hash, _: &mor_core::money::PaidAt, _: &mor_core::money::Amount, _: &[u8], _: &Hash) -> Option<bool> {
         None
     }
 }

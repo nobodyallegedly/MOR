@@ -24,25 +24,25 @@ export const sha256 = (data: Uint8Array | string): string => createHash('sha256'
  * freeze; until then, the same test values as the relays and the core's tests. */
 export const SPECS = {
   identity: sha256('IDENTITY, test value until the freeze'),
-  envelope: sha256('ENVELOPE, test value until the freeze'),
+  envelopes: sha256('ENVELOPE, test value until the freeze'),
   text: sha256('TEXT, test value until the freeze'),
 };
 
-/** The six MIPs' spec hashes, as the core library's Law calls take them
- * (Law draft 7 reads an act's layer from its spec hash). Test values. */
+/** The six MIPs' spec hashes, as the core library's Agreements calls take them
+ * (Agreements draft 7 reads an act's layer from its spec hash). Test values. */
 export const MIPS = {
   ...SPECS,
-  finance: sha256('FINANCE, test value until the freeze'),
-  law: sha256('LAW, test value until the freeze'),
-  production: sha256('PRODUCTION, test value until the freeze'),
+  money: sha256('FINANCE, test value until the freeze'),
+  agreements: sha256('LAW, test value until the freeze'),
+  development: sha256('PRODUCTION, test value until the freeze'),
 };
 
 export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15, chainSignature: 16 } as const;
 
-/** The specifications whose act types may carry acknowledgements (Envelope
- * draft 7, rule 4a, F110): Identity, Finance and Law. Any other act carrying
+/** The specifications whose act types may carry acknowledgements (Envelopes
+ * draft 7, rule 4a, F110): Identity, Money and Agreements. Any other act carrying
  * `acks` is invalid. */
-export const ACK_SPECS: readonly string[] = [MIPS.identity, MIPS.finance, MIPS.law];
+export const ACK_SPECS: readonly string[] = [MIPS.identity, MIPS.money, MIPS.agreements];
 
 export { WITNESS_EXPLANATION } from './witness.ts';
-export const ENVELOPE_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 } as const;
+export const ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 } as const;

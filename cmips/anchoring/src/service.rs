@@ -26,7 +26,7 @@
 //!   repayment, and shows it repaid ([`standing`]).
 //!
 //! The offer is an Agreements act (type 6) the core reads
-//! (`mor_core::law::Offer`); the ticket and the publication are this
+//! (`mor_core::agreements::Offer`); the ticket and the publication are this
 //! cMIP's acts (types 2 and 3) the service's identity signs, naming the
 //! offer. The caller checks them as acts, and this module reads their
 //! payloads. *Draft 2's own offer, type 1 of this cMIP, is retired: reading
@@ -45,10 +45,10 @@
 //! the payer's check.*
 
 use mor_core::cbor::{self, Value};
-use mor_core::envelope::anchoring::Reference;
-use mor_core::finance::{Amount, Payer, RefundTo};
+use mor_core::envelopes::anchoring::Reference;
+use mor_core::money::{Amount, Payer, RefundTo};
 use mor_core::hash::Hash;
-use mor_core::law::{self, RefundTerms, Sold};
+use mor_core::agreements::{self, RefundTerms, Sold};
 use mor_payment::{Answer, Commitment, PaidTo};
 
 /// The act types of this cMIP. *Mechanic, the build's: the numbers.*
@@ -171,8 +171,8 @@ impl Terms {
     /// its price (field 2) the most one hash costs, its own time reference
     /// (field 6) the terms' reference, its own refund terms (field 7) where
     /// it sets a refund point on it.
-    pub fn standing_offer(&self, unit: Hash, words: Option<String>, refund_until: Option<u64>) -> law::Offer {
-        law::Offer {
+    pub fn standing_offer(&self, unit: Hash, words: Option<String>, refund_until: Option<u64>) -> agreements::Offer {
+        agreements::Offer {
             under: None,
             sold: vec![Sold::Access(crate::spec(), cbor::encode(&self.to_value()))],
             price: Amount { unit, value: self.most() },
@@ -206,8 +206,8 @@ impl Offer {
     /// cMIP's: a lone seller's (F215), selling exactly these terms, on its
     /// own time reference the terms' own, its field 2 the most one hash
     /// costs, in a unit, not withdrawn. Whether it counts as an offer
-    /// (public, valid) is Agreements' (`LawView::offer`), checked beside.
-    pub fn read(id: Hash, signer: Hash, o: &law::Offer) -> Result<Offer, String> {
+    /// (public, valid) is Agreements' (`AgreementsView::offer`), checked beside.
+    pub fn read(id: Hash, signer: Hash, o: &agreements::Offer) -> Result<Offer, String> {
         if o.under.is_some() {
             return Err("an anchoring offer is a lone seller's (F215, F225): no co-owners' agreement behind it".into());
         }
@@ -403,7 +403,7 @@ pub struct Refund {
 }
 
 /// Where a refund stands, given what Money shows repaid toward it
-/// (`mor_core::law::LawView::refund_repaid`).
+/// (`mor_core::agreements::AgreementsView::refund_repaid`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Standing {
     /// Owed, `left` still to pay.

@@ -57,7 +57,7 @@ test('found, release, sign, verify from the command line', async () => {
     '--relay', relay.base, '--scheme', '3',
   );
   assert.match(found, /founding agreement [0-9a-f]{64}, signed by 3 members/);
-  // Law rule 49 (F172, F178 item 11): the abandonment clause in plain words, before anything is signed.
+  // Agreements rule 49 (F172, F178 item 11): the abandonment clause in plain words, before anything is signed.
   assert.match(found, /Absence: any 2 of the other members together may declare a member absent\. What may then follow: the member loses their voice .*\. No absence-proof cMIP stands between: their word alone is enough/);
   assert.ok(found.indexOf('No absence-proof cMIP stands between') < found.search(/founding agreement [0-9a-f]{64}/), 'shown before the signatures');
   assert.equal((found.match(/: receipt/g) ?? []).length, 3);
@@ -88,13 +88,13 @@ test('found, release, sign, verify from the command line', async () => {
 
 // F187 (9): the command line is a test tool, not a client. It marks a
 // member change from this device's copy of the collective, never asking
-// Law first, so it can sign a mark Law calls false (the step 11b fault);
+// Agreements first, so it can sign a mark Agreements call false (the step 11b fault);
 // its help says so before anything else, and points to the collective
 // client.
 test('the command line says it is a test tool, not a client', async () => {
   const help = await cli('help');
   assert.match(help.split('\n').slice(0, 6).join('\n'), /A TEST TOOL, NOT A CLIENT/);
-  assert.match(help, /marks a member change from this device's copy of the collective, without asking Law first/);
+  assert.match(help, /marks a member change from this device's copy of the collective, without asking Agreements first/);
   assert.match(help, /clients\/collective/);
   assert.match(readFileSync(join(here, 'README.md'), 'utf8'), /The command line is a test tool, not a client/);
 });

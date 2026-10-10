@@ -145,7 +145,7 @@ pub fn is_canonical(s: &str) -> bool {
 }
 
 /// Check every text string inside a CBOR value, map keys included: every
-/// `tstr` in an act is canonical text (Identity, "Encoding"; Envelope rule 5).
+/// `tstr` in an act is canonical text (Identity, "Encoding"; Envelopes rule 5).
 pub fn check_value(v: &Value) -> Result<(), TextError> {
     match v {
         Value::Text(s) => check(s),

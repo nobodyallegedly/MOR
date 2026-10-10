@@ -1,10 +1,10 @@
-//! Finance rule 15, theft: anchor or bear the loss (F169, F176 to F181),
+//! Money rule 15, theft: anchor or bear the loss (F169, F176 to F181),
 //! over real signed acts: identity chains with homes, receipts, rotations,
 //! payee pointers, deals, debts and claims, and anchors checked by a test
-//! anchoring cMIP through the core library's Envelope interface (F173).
+//! anchoring cMIP through the core library's Envelopes interface (F173).
 //!
 //! In plain words: the owner names a clock (a main time reference and,
-//! optionally, a backup) with the safety key. After a theft, the owner
+//! optionally, a backup) with the chain key. After a theft, the owner
 //! changes the locks by rotation. While that lock change is not anchored,
 //! every payment that followed the chain as published counts: the owner
 //! bears the theft window. Once its home quorum's receipts are anchored on
@@ -23,11 +23,11 @@ use common::{home, Person, Rot, World};
 use mor_core::act::{Object, Ref};
 use mor_core::cbor::Value;
 use mor_core::chain::{Quorum, Status};
-use mor_core::envelope::anchoring::{AnchoringCmip, Anchors, Reference};
-use mor_core::finance::{self as fin, Amount, Claim, Clock, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
+use mor_core::envelopes::anchoring::{AnchoringCmip, Anchors, Reference};
+use mor_core::money::{self as fin, Amount, Claim, Clock, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
 use mor_core::hash::{sha256, tagged_hash, Hash};
 use mor_core::identity::{Declaration, HomeRule};
-use mor_core::law::{self, LawView, Mips};
+use mor_core::agreements::{self, AgreementsView, Mips};
 use mor_core::sig::{self, SchnorrKey, Verdict};
 use std::collections::BTreeMap;
 
@@ -35,11 +35,11 @@ fn mips() -> Mips {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mips {
         identity: common::identity_spec(),
-        envelope: t("ENVELOPE"),
+        envelopes: t("ENVELOPE"),
         text: t("TEXT"),
-        finance: common::finance_spec(),
-        law: common::law_spec(),
-        production: t("PRODUCTION"),
+        money: common::money_spec(),
+        agreements: common::agreements_spec(),
+        development: t("PRODUCTION"),
     }
 }
 
@@ -139,8 +139,8 @@ impl Lab {
         }
     }
 
-    fn view(&self) -> LawView<'_> {
-        let mut v = LawView::new(&self.w.v, mips());
+    fn view(&self) -> AgreementsView<'_> {
+        let mut v = AgreementsView::new(&self.w.v, mips());
         v.rail_valid = self.rail_valid.clone();
         v.anchored = self.anchors.clone();
         v
@@ -197,11 +197,11 @@ impl Lab {
 
     fn pointer(&mut self, p: &mut Person, payee: Hash, version: u64, previous: Option<Hash>, node: &str) -> Hash {
         let x = Payload::PayeePointer(PayeePointer { payee, version, previous, rails: vec![Rail { module: rail(), address: node.as_bytes().to_vec() }] });
-        self.act(p, mips().finance, fin::types::PAYEE_POINTER, x.to_map(), None, None)
+        self.act(p, mips().money, fin::types::PAYEE_POINTER, x.to_map(), None, None)
     }
 
     fn terms(&mut self, by: &mut Person) -> Hash {
-        self.act(by, mips().law, law::types::TERMS, vec![], None, None)
+        self.act(by, mips().agreements, agreements::types::TERMS, vec![], None, None)
     }
 
     /// `p`'s signature act on `terms`, citing `refs` (a conforming client
@@ -209,12 +209,12 @@ impl Lab {
     fn sign(&mut self, p: &mut Person, terms: Hash, refs: Vec<Hash>) -> Hash {
         let o = Some(vec![Object { chain: terms, predecessor: terms }]);
         let refs = (!refs.is_empty()).then(|| refs.into_iter().map(Ref::Act).collect());
-        self.act(p, mips().law, law::types::SIGNATURE, law::signature_payload(&terms), o, refs)
+        self.act(p, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&terms), o, refs)
     }
 
     fn debt(&mut self, debtor: &mut Person, creditor: Hash, value: u64, named: Hash, agreement: Hash) -> Hash {
         let o = Payload::Obligation(Obligation { debtor: debtor.id, creditor, amount: amount(value), pointer: named, agreement: Some(agreement) });
-        self.act(debtor, mips().finance, fin::types::OBLIGATION, o.to_map(), None, None)
+        self.act(debtor, mips().money, fin::types::OBLIGATION, o.to_map(), None, None)
     }
 
     /// The payer's claim, its rail answer stated valid, paid at `at`.
@@ -231,7 +231,7 @@ impl Lab {
             anonymous: None,
             purchase: None,
         };
-        let id = self.act(payer, mips().finance, fin::types::CLAIM, Payload::Claim(c).to_map(), None, None);
+        let id = self.act(payer, mips().money, fin::types::CLAIM, Payload::Claim(c).to_map(), None, None);
         self.rail_valid.insert(id, at);
         id
     }
@@ -251,7 +251,7 @@ impl Lab {
             batch: None,
             purchase: None,
         });
-        self.act(signer, mips().finance, fin::types::RECEIPT, r.to_map(), None, None)
+        self.act(signer, mips().money, fin::types::RECEIPT, r.to_map(), None, None)
     }
 
     fn paid(&self, debt: &Hash) -> u64 {
@@ -260,11 +260,11 @@ impl Lab {
 }
 
 fn clock_decl(c: &Clock) -> Declaration {
-    fin::clock_declaration(&mips().finance, c)
+    fin::clock_declaration(&mips().money, c)
 }
 
 fn vault_decl(limit: u64, source: &str) -> Declaration {
-    fin::vault_declaration(&mips().finance, &[VaultEntry { unit: unit(), rail_module: rail(), source: source.as_bytes().to_vec(), limit }])
+    fin::vault_declaration(&mips().money, &[VaultEntry { unit: unit(), rail_module: rail(), source: source.as_bytes().to_vec(), limit }])
 }
 
 // ---------------------------------------------------------------- the clock (F176, F179, F181)
@@ -277,13 +277,13 @@ fn the_clock_declares_a_main_reference_and_an_optional_backup() {
     for c in [l.clock(false), l.clock(true)] {
         assert_eq!(Clock::decode(&c.to_value()).unwrap(), c);
         let d = clock_decl(&c);
-        assert_eq!(fin::clock_in(&mips().finance, &[d]).unwrap(), Some(Some(c)));
+        assert_eq!(fin::clock_in(&mips().money, &[d]).unwrap(), Some(Some(c)));
     }
     let three = Value::Array(vec![l.main.reference().to_value(); 3]);
     assert!(Clock::decode(&three).is_err(), "one backup at most");
     assert!(Clock::decode(&Value::Array(vec![])).is_err(), "a main reference is required");
-    let removed = Declaration { spec: mips().finance, kind: fin::CLOCK_KIND, value: None };
-    assert_eq!(fin::clock_in(&mips().finance, &[removed]).unwrap(), Some(None));
+    let removed = Declaration { spec: mips().money, kind: fin::CLOCK_KIND, value: None };
+    assert_eq!(fin::clock_in(&mips().money, &[removed]).unwrap(), Some(None));
 }
 
 // ---------------------------------------------------------------- the stolen key re-points a deal
@@ -689,7 +689,7 @@ fn a_vault_payment_names_its_entry() {
     }
     let mut l = Lab::new();
     let c = l.clock(false);
-    let two = |a: &str| fin::vault_declaration(&mips().finance, &[VaultEntry { unit: unit(), rail_module: rail(), source: a.as_bytes().to_vec(), limit: 1_000 }, VaultEntry { unit: unit(), rail_module: rail(), source: b"the kept vault".to_vec(), limit: 1_000 }]);
+    let two = |a: &str| fin::vault_declaration(&mips().money, &[VaultEntry { unit: unit(), rail_module: rail(), source: a.as_bytes().to_vec(), limit: 1_000 }, VaultEntry { unit: unit(), rail_module: rail(), source: b"the kept vault".to_vec(), limit: 1_000 }]);
     let mut owner = l.owner("owner", vec![clock_decl(&c), two("the old vault")], None);
     let mut debtor = l.person("debtor");
     let oid = owner.id;

@@ -1,10 +1,10 @@
 //! A reference absence-proof module: **experimental, outside the core
-//! path** (Law rule 51, task "Absence proof"; F172).
+//! path** (Agreements rule 51, task "Absence proof"; F172).
 //!
 //! In plain words: the core no longer proves absence by time. An
 //! abandonment clause may name an absence-proof cMIP (key 3) that must
 //! accept a declaration before it counts; the core reads no cMIP, and takes
-//! that answer from its caller ([`LawView::absence_accepted`]). This file
+//! that answer from its caller ([`AgreementsView::absence_accepted`]). This file
 //! keeps the time checks the core used before F172 (F136, F148, F158, F162
 //! items 3 and 5) as one such module, so a caller can compute an answer
 //! with it. It is a reference, not a specification: no MIP defines it,
@@ -27,11 +27,11 @@
 //! must run it on a verifier holding that history only, and must not
 //! revise an answer it gave for an act already put in force.
 
-use super::LawView;
+use super::AgreementsView;
 use crate::cbor::Value;
 use crate::chain::Held;
 use crate::hash::{sha256, Hash};
-use crate::law::formats::{decode_signature, types, R};
+use crate::agreements::formats::{decode_signature, types, R};
 use std::collections::BTreeMap;
 
 /// This reference module's spec hash, as a clause names it in key 3.
@@ -46,7 +46,7 @@ pub fn params(period: u64) -> Value {
     Value::Uint(period)
 }
 
-impl<'a> LawView<'a> {
+impl<'a> AgreementsView<'a> {
     /// The reference module's answer for declaration `decl` on `anchors`
     /// (each act's point on the agreement's time reference): `Ok(())` for
     /// accepted, or why it refuses. A declaration failing its own checks
@@ -74,7 +74,7 @@ impl<'a> LawView<'a> {
             let later: Vec<Hash> = self
                 .v
                 .held_acts()
-                .filter(|h| self.is_law(h, types::TERMS) && !versions.contains(&h.id))
+                .filter(|h| self.is_agreements(h, types::TERMS) && !versions.contains(&h.id))
                 .filter(|h| self.terms(&h.id).ok().and_then(|t| t.parent).is_some_and(|p| versions.contains(&p)))
                 .map(|h| h.id)
                 .collect();
@@ -87,7 +87,7 @@ impl<'a> LawView<'a> {
         let on_agreement = |h: &Held| {
             h.inside.objects.iter().flatten().any(|o| {
                 versions.contains(&o.chain) || versions.contains(&o.predecessor) || collective.as_ref() == Some(&o.chain)
-            }) || (self.is_law(h, types::SIGNATURE) && decode_signature(&h.inside).is_ok_and(|x| versions.contains(&x)))
+            }) || (self.is_agreements(h, types::SIGNATURE) && decode_signature(&h.inside).is_ok_and(|x| versions.contains(&x)))
         };
         let presence: Vec<u64> = self
             .v

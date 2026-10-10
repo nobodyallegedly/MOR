@@ -1,5 +1,5 @@
-//! The Finance MIP's act formats, the vault, and where a payment may go
-//! (Finance draft 6: "Act formats", "The vault", rules 12 to 14b and 16).
+//! The Money MIP's act formats, the vault, and where a payment may go
+//! (Money draft 6: "Act formats", "The vault", rules 12 to 14b and 16).
 //!
 //! Each payload decodes strictly, as Identity's do: its CDDL map is closed,
 //! so an unknown key, a missing required key or a value of the wrong kind
@@ -7,8 +7,8 @@
 //! can build acts.
 //!
 //! What a rail's proof shows is not here: the payment cMIP and its rail
-//! Modules check it (Finance rule 2, F112). This module answers only what
-//! the Finance MIP itself decides: the formats, which pointer counts, and,
+//! Modules check it (Money rule 2, F112). This module answers only what
+//! the Money MIP itself decides: the formats, which pointer counts, and,
 //! from the vault the payee declared, where a payment of a given amount may
 //! be paid (rule 14a), or why it cannot be paid at all (rule 16); which
 //! flow pointer version counts for a payment or a debt, the latest the
@@ -16,8 +16,8 @@
 //! whether a payment to the flow can count for it; the clock the owner
 //! declares, and whether a payment a lock change affects counts as made:
 //! anchor or bear the loss (rule 15, F169, F176 to F181). Which acts are
-//! the payee's own, and which lock changes affect a payment, is Law's to
-//! read (the Law view).
+//! the payee's own, and which lock changes affect a payment, is Agreements' to
+//! read (the Agreements view).
 
 use crate::act::{Inside, Object, Ref, Signature};
 use crate::cbor::{self, Value};
@@ -25,39 +25,39 @@ use crate::hash::{tagged_hash, Hash};
 use crate::identity::{self, Declaration, SigningKey};
 use crate::sig::{self, Verdict};
 use crate::chain::Quorum;
-use crate::envelope::anchoring::{Anchors, Reference};
+use crate::envelopes::anchoring::{Anchors, Reference};
 use std::fmt;
 
-/// The types this MIP defines (Finance, "Act formats").
+/// The types this MIP defines (Money, "Act formats").
 pub mod types {
     pub const PAYEE_POINTER: u64 = 0;
     pub const OBLIGATION: u64 = 1;
     pub const RECEIPT: u64 = 2;
     pub const CLAIM: u64 = 3;
-    /// The creditor's release (F126, from Law type 21): the creditor an
+    /// The creditor's release (F126, from Agreements type 21): the creditor an
     /// obligation names ends it without full payment.
     pub const RELEASE: u64 = 4;
 }
 
-/// The vault's kind in the Identity declarations slot (Finance, "The vault").
+/// The vault's kind in the Identity declarations slot (Money, "The vault").
 pub const VAULT_KIND: u64 = 0;
 
-/// Why a Finance act is invalid on its own.
+/// Why a Money act is invalid on its own.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FinError {
     /// The payload is not in the type's shape. Names the field.
     Shape(&'static str),
     /// A type number this MIP does not define.
     UnknownType(u64),
-    /// A rule of the Finance MIP fails. Names it.
+    /// A rule of the Money MIP fails. Names it.
     Check(&'static str),
 }
 
 impl fmt::Display for FinError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FinError::Shape(w) => write!(f, "payload not in the Finance format: {w}"),
-            FinError::UnknownType(t) => write!(f, "type {t} is not defined by the Finance MIP"),
+            FinError::Shape(w) => write!(f, "payload not in the Money format: {w}"),
+            FinError::UnknownType(t) => write!(f, "type {t} is not defined by the Money MIP"),
             FinError::Check(w) => write!(f, "{w}"),
         }
     }
@@ -187,7 +187,7 @@ pub struct Obligation {
     pub amount: Amount,
     /// The creditor's payee-pointer act in force when the obligation arose.
     pub pointer: Hash,
-    /// The agreement or offer it arises from (Law).
+    /// The agreement or offer it arises from (Agreements).
     pub agreement: Option<Hash>,
 }
 
@@ -329,7 +329,7 @@ pub enum Payload {
 
 /// The claim a purchase pays under (receipt and claim field 9, F126): the
 /// work's claiming agreement, and the line at which the payer's client
-/// read it current. *A Law reference: a Finance-only client shows it as
+/// read it current. *An Agreements reference: a Money-only client shows it as
 /// unknown, and cannot make one.*
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Purchase {
@@ -353,14 +353,14 @@ impl Purchase {
     }
 }
 
-/// The creditor's release (type 4, F126; Law type 21 under F125): the
+/// The creditor's release (type 4, F126; Agreements type 21 under F125): the
 /// creditor the obligation names ends it, wholly, without full payment.
-/// Signed by the creditor alone; a collective creditor by its Finance lane.
+/// Signed by the creditor alone; a collective creditor by its Money lane.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Release {
     /// 0: the obligation it ends.
     pub obligation: Hash,
-    /// 1: what the creditor took instead, for the record (receipts, a Law
+    /// 1: what the creditor took instead, for the record (receipts, an Agreements
     /// agreement it was traded for, stake transfers); never checked.
     pub against: Vec<Hash>,
 }
@@ -474,9 +474,9 @@ pub fn vault_entries(v: &Value) -> R<Vec<VaultEntry>> {
 }
 
 /// A vault declaration for an identity's genesis or rotation.
-pub fn vault_declaration(finance: &Hash, entries: &[VaultEntry]) -> Declaration {
+pub fn vault_declaration(money: &Hash, entries: &[VaultEntry]) -> Declaration {
     Declaration {
-        spec: *finance,
+        spec: *money,
         kind: VAULT_KIND,
         value: Some(Value::Array(entries.iter().map(|e| e.to_value()).collect())),
     }
@@ -485,12 +485,12 @@ pub fn vault_declaration(finance: &Hash, entries: &[VaultEntry]) -> Declaration 
 /// What a genesis or rotation says about the vault: `None` if nothing,
 /// `Some(None)` if it removes the vault, `Some(Some(entries))` if it sets it.
 pub fn vault_in(
-    finance: &Hash,
+    money: &Hash,
     declarations: &[Declaration],
 ) -> R<Option<Option<Vec<VaultEntry>>>> {
     match declarations
         .iter()
-        .find(|d| &d.spec == finance && d.kind == VAULT_KIND)
+        .find(|d| &d.spec == money && d.kind == VAULT_KIND)
     {
         None => Ok(None),
         Some(Declaration { value: None, .. }) => Ok(Some(None)),
@@ -530,7 +530,7 @@ impl Referral {
 }
 
 impl Payload {
-    /// Decode a Finance act's payload by its type.
+    /// Decode a Money act's payload by its type.
     pub fn decode(type_: u64, p: &[(Value, Value)]) -> R<Payload> {
         use types::*;
         Ok(match type_ {
@@ -720,11 +720,11 @@ fn put(m: &mut Vec<(Value, Value)>, k: u64, v: Value) {
 
 // ---------------------------------------------------------------- signers
 
-/// Who must sign a Finance act (Finance: a pointer by its payee, F46; an
+/// Who must sign a Money act (Money: a pointer by its payee, F46; an
 /// obligation by its debtor, F66; a receipt by the payee of the hop; a
 /// claim by its payer, who is the claim's signer by definition, or, for an
 /// anonymous payer, the key in its field 8, whose signature must verify:
-/// Finance rule 1, F113).
+/// Money rule 1, F113).
 ///
 /// `cited` is the act's own `objects`, `acks` and `refs`
 /// ([`Citations::of`] its inside): an anonymous payer's key signs them
@@ -734,7 +734,7 @@ pub fn check_signer(payload: &Payload, signer: &Hash, cited: &Citations) -> R<()
         if let Some(s) = c.anonymous_signature() {
             if sig::verify(&s, &c.anonymous_message(cited)) != Verdict::Valid {
                 return Err(FinError::Check(
-                    "an anonymous claim's key 8 must verify under the key it names (Finance rule 1, F113)",
+                    "an anonymous claim's key 8 must verify under the key it names (Money rule 1, F113)",
                 ));
             }
         }
@@ -746,7 +746,7 @@ pub fn check_signer(payload: &Payload, signer: &Hash, cited: &Citations) -> R<()
         Payload::Receipt(r) => &r.payee == signer,
         Payload::Claim(_) => true,
         // Its signer must be the obligation's creditor: checked where the
-        // obligation is held (Law's view, `debt_release`).
+        // obligation is held (Agreements' view, `debt_release`).
         Payload::Release(_) => true,
     };
     if ok {
@@ -762,7 +762,7 @@ pub fn check_signer(payload: &Payload, signer: &Hash, cited: &Citations) -> R<()
 
 // ---------------------------------------------------------------- rule 10a: who a refund is owed to
 
-/// Who a refund owed on a payment is owed to (rule 10a, F80, F113; Law
+/// Who a refund owed on a payment is owed to (rule 10a, F80, F113; Agreements
 /// rule 32).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RefundTo {
@@ -785,7 +785,7 @@ pub fn refund_owed_to(receipt: &Receipt) -> RefundTo {
 }
 
 /// Whether a claim, signed by `signer`, claims the refund owed on the
-/// payment this receipt records (rule 10a, F113; Law rule 32): it names the
+/// payment this receipt records (rule 10a, F113; Agreements rule 32): it names the
 /// same rail, proof, payee and amount, says where to be paid (key 7), and
 /// is made by the payer the payment committed to: the named payer, or a
 /// claim carrying a valid signature of the committed key (key 8), whoever
@@ -912,12 +912,12 @@ impl fmt::Display for Undeliverable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             Undeliverable::UnitNotCovered => {
-                "the payee's vault has no entry for this unit, so it cannot be paid to the flow (Finance rule 14a)"
+                "the payee's vault has no entry for this unit, so it cannot be paid to the flow (Money rule 14a)"
             }
             Undeliverable::NoSharedRail => {
-                "the payee offers no rail this wallet can pay on for this payment (Finance rule 16)"
+                "the payee offers no rail this wallet can pay on for this payment (Money rule 16)"
             }
-            Undeliverable::NoPointer => "the payee has no payee pointer (Finance rule 16)",
+            Undeliverable::NoPointer => "the payee has no payee pointer (Money rule 16)",
         })
     }
 }
@@ -1119,7 +1119,7 @@ pub fn history(v: &crate::chain::Verifier, inside: &Inside, anonymous: bool) -> 
 /// a payment or an obligation (rules 14 and 15, F145): the payee's
 /// signature act on the agreement, or the offer the agreement accepts; for
 /// an obligation with neither, the payee's own acts acknowledging it.
-/// Which acts those are is Law's to say (a Law client checks it, F66).
+/// Which acts those are is Agreements' to say (an Agreements client checks it, F66).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Holding {
     /// The payee's payee-pointer acts they hold, whatever their standing
@@ -1167,27 +1167,27 @@ pub fn rule_14(holding: &Holding, chain: &[(Hash, PayeePointer)], paid: u64) -> 
     match select_pointer(&holding.pointers, chain) {
         Some((_, named)) if counts_toward(named, PaidInto::Flow(paid)) => Rule14::Counts,
         _ if !holding.complete => Rule14::Unknown(
-            "what the payee's own act holds is not known from the acts held: a later pointer may lie behind an act not held (Finance rule 14, F145)",
+            "what the payee's own act holds is not known from the acts held: a later pointer may lie behind an act not held (Money rule 14, F145)",
         ),
         None => Rule14::Vault(
-            "no act of the payee's own (its signature act on the agreement, the offer, or an act acknowledging the obligation) holds a pointer of its that counts: it counts only if paid to the vault (Finance rule 14, F145)",
+            "no act of the payee's own (its signature act on the agreement, the offer, or an act acknowledging the obligation) holds a pointer of its that counts: it counts only if paid to the vault (Money rule 14, F145)",
         ),
         Some(_) => Rule14::Vault(
-            "the payee's own act holds only an earlier flow pointer than the one it was paid to: it counts only if paid to the vault (Finance rule 14, F145, F155)",
+            "the payee's own act holds only an earlier flow pointer than the one it was paid to: it counts only if paid to the vault (Money rule 14, F145, F155)",
         ),
     }
 }
 
 // ---------------------------------------------------------------- rule 15: theft, anchor or bear the loss
 
-/// The clock's kind in the Identity declarations slot (Finance, "The
+/// The clock's kind in the Identity declarations slot (Money, "The
 /// clock", F176).
 pub const CLOCK_KIND: u64 = 1;
 
-/// `clock = [ FINANCE, 1, [ main: [ hash, any ], ? backup: [ hash, any ] ] ]`:
+/// `clock = [ MONEY, 1, [ main: [ hash, any ], ? backup: [ hash, any ] ] ]`:
 /// the main anchoring reference and, optionally, a backup, each an
 /// anchoring cMIP and its parameters naming one time reference (F176,
-/// F179, F181). Declared with the safety key, as the vault is.
+/// F179, F181). Declared with the chain key, as the vault is.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Clock {
     pub main: Reference,
@@ -1214,9 +1214,9 @@ impl Clock {
 }
 
 /// A clock declaration for an identity's genesis or rotation.
-pub fn clock_declaration(finance: &Hash, clock: &Clock) -> Declaration {
+pub fn clock_declaration(money: &Hash, clock: &Clock) -> Declaration {
     Declaration {
-        spec: *finance,
+        spec: *money,
         kind: CLOCK_KIND,
         value: Some(clock.to_value()),
     }
@@ -1224,8 +1224,8 @@ pub fn clock_declaration(finance: &Hash, clock: &Clock) -> Declaration {
 
 /// What a genesis or rotation says about the clock: `None` if nothing,
 /// `Some(None)` if it removes the clock, `Some(Some(clock))` if it sets it.
-pub fn clock_in(finance: &Hash, declarations: &[Declaration]) -> R<Option<Option<Clock>>> {
-    match declarations.iter().find(|d| &d.spec == finance && d.kind == CLOCK_KIND) {
+pub fn clock_in(money: &Hash, declarations: &[Declaration]) -> R<Option<Option<Clock>>> {
+    match declarations.iter().find(|d| &d.spec == money && d.kind == CLOCK_KIND) {
         None => Ok(None),
         Some(Declaration { value: None, .. }) => Ok(Some(None)),
         Some(Declaration { value: Some(v), .. }) => Ok(Some(Some(Clock::decode(v)?))),

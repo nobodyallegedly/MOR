@@ -17,7 +17,7 @@ fn homeless(basis: Basis, final_: bool) -> How {
 /// The inbox and the encryption key that count for an identity, from the
 /// routes and encryption-key chains the reader holds: void or invalid acts
 /// never count (Identity, "Declarations, succession, routes...").
-fn inbox_and_key(rd: &Reader, id: &Hash) -> Option<(String, envelope::EncKey)> {
+fn inbox_and_key(rd: &Reader, id: &Hash) -> Option<(String, envelopes::EncKey)> {
     let specs = Specs::test();
     let counts = |h: &Hash| matches!(rd.status(h), Status::Valid | Status::Disputed);
     let mut routes = vec![];
@@ -30,19 +30,19 @@ fn inbox_and_key(rd: &Reader, id: &Hash) -> Option<(String, envelope::EncKey)> {
             if let Ok(r) = Routes::decode(&h.inside.payload) {
                 routes.push((h.id, r));
             }
-        } else if h.inside.spec == specs.envelope && h.inside.type_ == 4 {
+        } else if h.inside.spec == specs.envelopes && h.inside.type_ == 4 {
             if let Ok(k) = EncryptionKey::decode(&h.inside.payload) {
                 keys.push((h.id, k));
             }
         }
     }
-    let r = envelope::latest(
+    let r = envelopes::latest(
         &routes
             .iter()
             .map(|(i, r)| (*i, r.version))
             .collect::<Vec<_>>(),
     );
-    let k = envelope::latest(
+    let k = envelopes::latest(
         &keys
             .iter()
             .map(|(i, k)| (*i, k.version))
@@ -54,7 +54,7 @@ fn inbox_and_key(rd: &Reader, id: &Hash) -> Option<(String, envelope::EncKey)> {
     Some((inbox.hints[0].clone(), key.1.key.clone()))
 }
 
-fn seal_to(msg: &Act, key: &[u8; 32], id: &Hash, ek: envelope::EncKey) -> envelope::Sealed {
+fn seal_to(msg: &Act, key: &[u8; 32], id: &Hash, ek: envelopes::EncKey) -> envelopes::Sealed {
     let one_time_secret = loop {
         let s = random::<32>();
         if mor_core::sig::SchnorrKey::from_secret(&s).is_some() {
@@ -68,7 +68,7 @@ fn seal_to(msg: &Act, key: &[u8; 32], id: &Hash, ek: envelope::EncKey) -> envelo
         one_time_secret,
         aux: random::<32>(),
     };
-    envelope::seal(
+    envelopes::seal(
         msg,
         Some(key),
         &[Recipient::Identity { id: *id, key: ek }],
@@ -225,7 +225,7 @@ impl Gauntlet {
         self.check(
             "5.7",
             real,
-            "a thief holding A's safety key arrives second at every home: each answers error 4 with A's rotation and its receipt, and A's rotation counts",
+            "a thief holding A's chain key arrives second at every home: each answers error 4 with A's rotation and its receipt, and A's rotation counts",
             ok,
             Self::answers(&thief),
         );
@@ -254,7 +254,7 @@ impl Gauntlet {
                     identity: b.id,
                     binding: b.id,
                     signing_secret: b.signing_secret(),
-                    safety: None,
+                    chain_key: None,
                 };
                 let chain = vec![g.encode()];
                 made = Some((g, b));
@@ -271,7 +271,7 @@ impl Gauntlet {
             puts.iter().all(receipted),
             Self::answers(&puts),
         );
-        let warning = "B is self-hosted: its rotations count on its own signature, with no receipt. A thief holding B's safety key would win at once, as at a single lax home (Identity rule 22a).";
+        let warning = "B is self-hosted: its rotations count on its own signature, with no receipt. A thief holding B's chain key would win at once, as at a single lax home (Identity rule 22a).";
         self.report.say(warning);
         self.check(
             "5.6",
@@ -331,7 +331,7 @@ impl Gauntlet {
         self.check(
             "5.7",
             t,
-            "a thief holding J's safety key submits a rotation first: both strict homes refuse it (error 5, no approval), the lax home receipts it",
+            "a thief holding J's chain key submits a rotation first: both strict homes refuse it (error 5, no approval), the lax home receipts it",
             code_of(&tp[0]) == Some(code::REFUSED)
                 && code_of(&tp[1]) == Some(code::REFUSED)
                 && receipted(&tp[2]),
@@ -442,7 +442,7 @@ impl Gauntlet {
 
         let (keys, own) = h.stolen_keys();
         let mut stolen =
-            Person::from_everyday_key("home-7b", h.op(), keys.binding, &keys.signing_secret, own);
+            Person::from_signing_key("home-7b", h.op(), keys.binding, &keys.signing_secret, own);
         let forged = stolen.receipt(&j.id, &sha256(b"a made-up rotation"), 1, 1000);
         self.to_relays(&forged).await;
         let rd = self.read(&j.id, &[&h], &[&aud], &[h.op()]).await;
@@ -450,7 +450,7 @@ impl Gauntlet {
         self.check(
             "5.7b",
             t,
-            "a thief with the home operator's everyday key signs a receipt naming a made-up act: it changes nothing, and J7b is never contested",
+            "a thief with the home operator's signing key signs a receipt naming a made-up act: it changes nothing, and J7b is never contested",
             rd.v.get(&forged.id()).is_some()
                 && rd.chain(&j.id) == vec![j.id, r1.id()]
                 && res.contested.is_empty(),
@@ -496,7 +496,7 @@ impl Gauntlet {
             after.err().unwrap_or_default().to_string(),
         );
 
-        // Closure needs the operator's safety key.
+        // Closure needs the operator's chain key.
         let (fake, _) = stolen.rotation(Rot {
             closure: true,
             ..Default::default()
@@ -527,7 +527,7 @@ impl Gauntlet {
         self.check(
             "5.7b",
             t,
-            "the thief cannot close the home: a \"closure\" without the operator's safety key is no rotation, the home is not gone, and it objects to a homeless rotation",
+            "the thief cannot close the home: a \"closure\" without the operator's chain key is no rotation, the home is not gone, and it objects to a homeless rotation",
             ok,
             Self::answers(std::slice::from_ref(&at_home)),
         );
@@ -730,14 +730,14 @@ impl Gauntlet {
             format!("carried {carried}, chain {} long", rd.chain(&j.id).len()),
         );
         self.done(&rd);
-        // Rule 8a's exception: one normal rotation with the same safety key.
+        // Rule 8a's exception: one normal rotation with the same chain key.
         let (own, _) = j.rotation(Rot::default());
         let put = Self::put(&h, &own).await;
         let rd = self.read(&j.id, &[&h, &th], &[], &[h.op()]).await;
         self.check(
             "5.7c",
             t,
-            "after the voided homeless rotation, the owner's one normal rotation with the same safety key counts",
+            "after the voided homeless rotation, the owner's one normal rotation with the same chain key counts",
             receipted(&put) && rd.chain(&j.id) == vec![j.id, own.id()],
             Self::answers(std::slice::from_ref(&put)),
         );
@@ -831,7 +831,7 @@ impl Gauntlet {
         Self::put_all(&[&c], &r1).await;
         Self::put_all(&[&c], &r2).await;
         let _ = c.with_node(|x| x.rotate_operator(true));
-        // A thief finds the first, long-used safety key on an old backup.
+        // A thief finds the first, long-used chain key on an old backup.
         let (thr, t1) = j0.rotation(Rot {
             homeless: true,
             homes: Some(vec![th.home()]),
@@ -844,7 +844,7 @@ impl Gauntlet {
         self.check(
             "5.7c",
             t,
-            "(F92) after the home closes, a thief with the first, used safety key makes a homeless rotation at that old position and rotates again at once: the rotations the home receipted still count, the thief's chain counts for nothing",
+            "(F92) after the home closes, a thief with the first, used chain key makes a homeless rotation at that old position and rotates again at once: the rotations the home receipted still count, the thief's chain counts for nothing",
             rd.chain(&j0.id) == vec![j0.id, r1.id(), r2.id()]
                 && rd.status(&thr.id()) == Status::Invalid
                 && rd.status(&t2.id()) == Status::Invalid,
@@ -898,7 +898,7 @@ impl Gauntlet {
         self.check(
             "5.7c",
             t,
-            "(F93) a thief holding the safety key of an audited identity drops auditing in a homeless rotation and names an auditor of its own: neither the reader's failed attempt nor the thief's auditor makes the live home gone",
+            "(F93) a thief holding the chain key of an audited identity drops auditing in a homeless rotation and names an auditor of its own: neither the reader's failed attempt nor the thief's auditor makes the live home gone",
             reached == Reached::No && rd.chain(&j.id) == vec![j.id],
             format!("{:?}", rd.resolve(&j.id).stop),
         );
@@ -1031,8 +1031,8 @@ impl Gauntlet {
                 .client(&inbox)
                 .put_sealed(&sealed.encode(), &[])
                 .await;
-            thief_opened = envelope::open(&sealed, Some(&j.id), &kt).is_ok();
-            owner_opened_first = envelope::open(&sealed, Some(&j.id), &k1).is_ok();
+            thief_opened = envelopes::open(&sealed, Some(&j.id), &kt).is_ok();
+            owner_opened_first = envelopes::open(&sealed, Some(&j.id), &k1).is_ok();
         }
         self.check(
             "5.7c",
@@ -1058,7 +1058,7 @@ impl Gauntlet {
                 .client(&inbox)
                 .put_sealed(&sealed.encode(), &[])
                 .await;
-            owner_opened = put.is_ok() && envelope::open(&sealed, Some(&j.id), &k1).is_ok();
+            owner_opened = put.is_ok() && envelopes::open(&sealed, Some(&j.id), &k1).is_ok();
         }
         self.check(
             "5.7c",
@@ -1088,7 +1088,7 @@ impl Gauntlet {
         let size = summary_size(&sum).expect("a summary");
         let (keys, seq) = h.stolen_keys();
         let mut stolen =
-            Person::from_everyday_key("home-7d", h.op(), keys.binding, &keys.signing_secret, seq);
+            Person::from_signing_key("home-7d", h.op(), keys.binding, &keys.signing_secret, seq);
         let forged = stolen.receipt(&j.id, &rival.id(), 1, size);
         self.to_relays(&rival).await;
         self.to_relays(&forged).await;
@@ -1097,7 +1097,7 @@ impl Gauntlet {
         self.check(
             "5.7d",
             t,
-            "a thief holding J7d's safety key gets a genuine rival rotation receipted with the home's stolen operator key: J7d is contested at that position, not frozen",
+            "a thief holding J7d's chain key gets a genuine rival rotation receipted with the home's stolen operator key: J7d is contested at that position, not frozen",
             matches!(res.stop, Stop::Contested(_)) && res.contested == vec![1] && rd.chain(&j.id) == vec![j.id],
             format!("{:?}", res.stop),
         );
@@ -1144,7 +1144,7 @@ impl Gauntlet {
         for d in [&d1, &d2, &d3] {
             let _ = aud.cosign_latest(d).await;
         }
-        // The theft: J's safety key for position 2, and home 1's everyday key.
+        // The theft: J's chain key for position 2, and home 1's signing key.
         let (rival, _) = j1.rotation(Rot {
             signing_key: Some(j.thief_key("7d-audited")),
             ..Default::default()
@@ -1158,7 +1158,7 @@ impl Gauntlet {
             log.push(Act::decode(&b).expect("an act").id());
         }
         let (keys, seq) = d1.stolen_keys();
-        let mut stolen = Person::from_everyday_key(
+        let mut stolen = Person::from_signing_key(
             "audited-1",
             d1.op(),
             keys.binding,

@@ -8,20 +8,20 @@ const test = (s: string) => sha256(s);
 
 export const SITE_SPECS = {
   identity: SPECS.identity,
-  /** The Envelope MIP (`ENVELOPE`): a version is a publication. */
-  envelope: SPECS.envelope,
-  /** The Law MIP (`LAW`): only to tell that a signer is a collective. */
-  law: test('LAW, test value until the freeze'),
+  /** The Envelopes MIP (`ENVELOPES`): a version is a publication. */
+  envelopes: SPECS.envelopes,
+  /** The Agreements MIP (`AGREEMENTS`): only to tell that a signer is a collective. */
+  agreements: test('LAW, test value until the freeze'),
   /** The website cMIP (cmips/cmip-website-draft-3.md). Draft 3 adds the icon
    * (rule 16a) and leaves the manifest as it was, so the test value stays
    * draft 2's: versions already published still verify. */
   site: test('website cMIP, draft 2, test value until publication'),
 };
 
-/** The six MIPs, as the core library's Law calls take them (with the site's
- * Law value), only to tell that a signer is a collective. */
-export const SITE_LAW_SPECS = { ...MIPS, law: SITE_SPECS.law };
+/** The six MIPs, as the core library's Agreements calls take them (with the site's
+ * Agreements value), only to tell that a signer is a collective. */
+export const SITE_AGREEMENTS_SPECS = { ...MIPS, agreements: SITE_SPECS.agreements };
 
-/** Envelope types: a publication and a withdrawal. */
+/** Envelopes types: a publication and a withdrawal. */
 export const PUBLICATION = 0;
 export const WITHDRAWAL = 3;

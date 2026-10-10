@@ -138,7 +138,7 @@ export async function publishSite(
   );
   await carryChain(by, opts.relays);
   // The publication first: a relay that keeps media only for publications it holds then takes the manifest.
-  const made = await by.publish(SITE_SPECS.envelope, PUBLICATION, payload, { public: true, relays: opts.relays });
+  const made = await by.publish(SITE_SPECS.envelopes, PUBLICATION, payload, { public: true, relays: opts.relays });
   let kept = 0;
   const errors: string[] = [];
   for (const hint of opts.relays) {

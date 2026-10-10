@@ -549,7 +549,7 @@ fn random_sweep() {
     assert!(t.honest_runs > 0 && t.omitting_runs > 0 && t.lagging_runs > 0);
 }
 
-/// Law draft 7, seventh pass, C5: the treasurer's own rotation forgets the tablet, and the
+/// Agreements draft 7, seventh pass, C5: the treasurer's own rotation forgets the tablet, and the
 /// collective registers the rotation on its line. Receipts the collective signed before that
 /// line keep the tablet's signature; an old-key signature on a receipt after it does not
 /// count. (Under the rule as first tested, `boundary_member_rotation` above, they were lost.)
@@ -609,7 +609,7 @@ fn c5_member_rotation_registered_on_the_line() {
     assert!(!root(&w).area_of(x), "without C5, Identity takes it back");
 }
 
-/// The rules as Law draft 7's seventh pass writes them, over a sweep of random worlds.
+/// The rules as Agreements draft 7's seventh pass writes them, over a sweep of random worlds.
 #[test]
 fn written_rules_random_sweep() {
     let mut t = WrittenTally::default();
@@ -620,7 +620,7 @@ fn written_rules_random_sweep() {
     assert!(t.member_rotation_runs > 0 && t.member_rotations_registered > 0);
 }
 
-/// Law draft 8, B11 (rule 47): a clone of one branch of the fork, recorded after both
+/// Agreements draft 8, B11 (rule 47): a clone of one branch of the fork, recorded after both
 /// lines, resolves it under the rules as written; the rule tested alone (no B11) leaves
 /// the parent in force.
 #[test]
@@ -646,7 +646,7 @@ fn b11_a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
     assert_eq!(old.in_force_at(x), 0);
 }
 
-/// Law draft 8, B11: a sweep of worlds that each start from a fork of the agreement (two
+/// Agreements draft 8, B11: a sweep of worlds that each start from a fork of the agreement (two
 /// sibling clones recorded on two devices that do not hear of each other), then run on at
 /// random: clones of any earlier clone, recorded after both lines, after one, or
 /// concurrently; area acts; departures and their registration; acknowledgements. Every

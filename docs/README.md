@@ -29,19 +29,20 @@ Each records what a session built, what it found, and what it left open. They ar
 
 | Report | What |
 | --- | --- |
-| [law-ordering-rule-test.md](law-ordering-rule-test.md) | The ordering rule tested before Law draft 7. |
-| [law-7-code-rework.md](law-7-code-rework.md), [law-draft-8-code.md](law-draft-8-code.md), [law-draft-9-code.md](law-draft-9-code.md) | The core library brought up to Law drafts 7 to 9. |
-| [lightning-rail-step-12.md](lightning-rail-step-12.md) | The Lightning rail, Finance draft 6 and the payment cMIP. |
+| [law-ordering-rule-test.md](law-ordering-rule-test.md) | The ordering rule tested before Agreements draft 7. |
+| [law-7-code-rework.md](law-7-code-rework.md), [law-draft-8-code.md](law-draft-8-code.md), [law-draft-9-code.md](law-draft-9-code.md) | The core library brought up to Agreements drafts 7 to 9. |
+| [lightning-rail-step-12.md](lightning-rail-step-12.md) | The Lightning rail, Money draft 6 and the payment cMIP. |
 | [core-pass-v21.md](core-pass-v21.md) | The core pass: every draft read alike, and the regtest steps (section 5). |
-| [law-draft-10.md](law-draft-10.md) | Law draft 10, pass by pass (F118 to F130), and the set approved on 5 October 2026. |
-| [law-invariants.md](law-invariants.md) | Law stress testing: invariant hunting over random histories, F131 and F132. |
+| [law-draft-10.md](law-draft-10.md) | Agreements draft 10, pass by pass (F118 to F130), and the set approved on 5 October 2026. |
+| [law-invariants.md](law-invariants.md) | Agreements stress testing: invariant hunting over random histories, F131 and F132. |
 | [small-fixes-2026-10-04.md](small-fixes-2026-10-04.md) | Small client fixes. |
 | [dubsar-org-layout-2026-10-08.md](dubsar-org-layout-2026-10-08.md) | The dubsar.org layout of 7 October 2026 built: the first act's fit, the shortcuts, the four sections, the footer with the clay tablet, the tab icon; website cMIP draft 3. |
 | [dubsar-org-first-screen-b-2026-10-09.md](dubsar-org-first-screen-b-2026-10-09.md) | dubsar.org's first screen, option B: the photograph whole at the act's width; the checking bar briefer on phones, the shortcuts side by side, the sections through a gradient; screenshots in `first-screen-b/`. |
 | [dubsar-org-doors-2026-10-09.md](dubsar-org-doors-2026-10-09.md) | dubsar.org's fourteen departments' doors, a folder each, unlisted from the main door; their folder names, tests and four questions. |
-| [step-11b-false-mark-2026-10-08.md](step-11b-false-mark-2026-10-08.md) | The collective client's false clone mark from the human test of 8 October 2026: marks and the collective's box from Law's own reading. |
+| [step-11b-false-mark-2026-10-08.md](step-11b-false-mark-2026-10-08.md) | The collective client's false clone mark from the human test of 8 October 2026: marks and the collective's box from Agreements' own reading. |
 | [adversarial-test-plan-v2.md](adversarial-test-plan-v2.md), [v3](adversarial-test-plan-v3.md) | Earlier versions of the test plan. |
 | [project-lead-prompt.md](project-lead-prompt.md) | The brief the AI project lead worked from. |
+| [rename-pass.md](rename-pass.md) | The rename pass: the layers (Envelopes, Money, Agreements, Development) and the keys (chain key, signing key), wording only; what was left and why, the wire proof, and Money read against F225. |
 
 ## The paper and its reviews
 

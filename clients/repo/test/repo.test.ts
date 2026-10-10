@@ -12,13 +12,13 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MIPS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, rebuildSafety, signaturePayload, verifyShare } from '../../genesis/src/core.ts';
+import { MIPS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, rebuildChainKey, signaturePayload, verifyShare } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { TestCollective, type Governance } from '../src/collective.ts';
-import { LAW_SPECS, dealGrantPayload, latestPointer, pointerPayload, sign } from '../src/law.ts';
-import { LAW_TYPES, REPO_SPECS } from '../src/specs.ts';
+import { AGREEMENTS_SPECS, dealGrantPayload, latestPointer, pointerPayload, sign } from '../src/agreements.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from '../src/specs.ts';
 import {
   compareWithTree,
   decodeManifest,
@@ -45,7 +45,7 @@ const governance: Governance = {
   releaseThreshold: 2,
   cloneThreshold: 2,
   abandonmentOthers: 2,
-  text: 'The MOR test collective. It publishes releases of the MOR code and nothing else. Its everyday key is held by one member; its safety key is split among the members, any two of whom rebuild it. A release counts only when two members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any two members and by each member who joins, and a rotation of the collective declaring it. The other two members together decide whether a member is absent; the outcome is that member losing their voice.',
+  text: 'The MOR test collective. It publishes releases of the MOR code and nothing else. Its signing key is held by one member; its chain key is split among the members, any two of whom rebuild it. A release counts only when two members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any two members and by each member who joins, and a rotation of the collective declaring it. The other two members together decide whether a member is absent; the outcome is that member losing their voice.',
 };
 
 const small: FileIn[] = [
@@ -168,7 +168,7 @@ test('a member leaves alone and another joins, by record, clone and rotation', a
   assert.ok(v1.ok, v1.problems.join('; '));
   assert.equal(v1.agreement, c.f.agreements[0]);
 
-  // The old everyday key signs a "release" after the rotation: void (F100).
+  // The old signing key signs a "release" after the rotation: void (F100).
   const ghost = new TestCollective({ ...c.f, identity: old, releases: [] });
   const g = await publishRelease(ghost, { name: 'MOR test tree', version: 'ghost', files: small });
   await signRelease(m1, g.id, c.f.relays);
@@ -271,7 +271,7 @@ test('manifests are strict', () => {
 
 test('a key grammar that one lost holder would freeze is refused (F96)', () => {
   const h = (n: number) => new Uint8Array(32).fill(n);
-  const terms = (safety: unknown[], extra: [number, unknown][] = []) =>
+  const terms = (chainKey: unknown[], extra: [number, unknown][] = []) =>
     cborEncode(
       new Map<number, unknown>([
         [0, [h(1), h(2), h(3)]],
@@ -280,26 +280,26 @@ test('a key grammar that one lost holder would freeze is refused (F96)', () => {
         [4, [0]],
         [5, [1, 2]],
         [9, new Map<number, unknown>([[0, [1, 2]], [1, [0]]])],
-        [12, new Map<number, unknown>([[0, [0, h(1)]], [1, safety]])],
+        [12, new Map<number, unknown>([[0, [0, h(1)]], [1, chainKey]])],
         ...extra,
       ]),
     );
-  checkTerms(terms([1, 2, [h(1), h(2), h(3)]]), LAW_SPECS);
+  checkTerms(terms([1, 2, [h(1), h(2), h(3)]]), AGREEMENTS_SPECS);
   // F128: terms field 25 (the relays) is withdrawn; terms carrying it are refused.
   const relays = cborDecode(terms([1, 2, [h(1), h(2), h(3)]])) as Map<number, unknown>;
   relays.set(25, [[null, 'https://relay.test']]);
-  assert.throws(() => checkTerms(cborEncode(relays), LAW_SPECS), /^Error: law\/check:.*F128/);
-  assert.throws(() => checkTerms(terms([1, 3, [h(1), h(2), h(3)]]), LAW_SPECS), /^Error: law\/check:.*recovery/);
-  assert.throws(() => checkTerms(terms([0, h(1)]), LAW_SPECS), /^Error: law\/check:.*F96/);
+  assert.throws(() => checkTerms(cborEncode(relays), AGREEMENTS_SPECS), /^Error: law\/check:.*F128/);
+  assert.throws(() => checkTerms(terms([1, 3, [h(1), h(2), h(3)]]), AGREEMENTS_SPECS), /^Error: law\/check:.*recovery/);
+  assert.throws(() => checkTerms(terms([0, h(1)]), AGREEMENTS_SPECS), /^Error: law\/check:.*F96/);
   // Every member with constitutional power is covered by an abandonment
   // clause able to remove their voice (F105).
   assert.throws(
-    () => checkTerms(terms([1, 2, [h(1), h(2), h(3)]], [[9, new Map<number, unknown>([[0, [1, 2]], [1, [1]]])]]), LAW_SPECS),
+    () => checkTerms(terms([1, 2, [h(1), h(2), h(3)]], [[9, new Map<number, unknown>([[0, [1, 2]], [1, [1]]])]]), AGREEMENTS_SPECS),
     /^Error: law\/check:.*F105/,
   );
   // Draft 6's listed act types are retired: areas reach acts.
   assert.throws(
-    () => checkTerms(terms([1, 2, [h(1), h(2), h(3)]], [[12, new Map<number, unknown>([[0, [0, h(1)]], [1, [1, 2, [h(1), h(2), h(3)]]], [2, []]])]]), LAW_SPECS),
+    () => checkTerms(terms([1, 2, [h(1), h(2), h(3)]], [[12, new Map<number, unknown>([[0, [0, h(1)]], [1, [1, 2, [h(1), h(2), h(3)]]], [2, []]])]]), AGREEMENTS_SPECS),
     /^Error: law\/shape:/,
   );
 });
@@ -317,9 +317,9 @@ test("a deal lists its payees' grants in field 14, one per payee (F129, H4)", ()
         [14, f14],
       ]),
     );
-  checkTerms(deal([h(7), h(8)]), LAW_SPECS);
-  assert.throws(() => checkTerms(deal(h(7)), LAW_SPECS), /^Error: law\/check:.*H4/);
-  assert.throws(() => checkTerms(deal([h(7), h(7)]), LAW_SPECS), /^Error: law\/check:.*H4/);
+  checkTerms(deal([h(7), h(8)]), AGREEMENTS_SPECS);
+  assert.throws(() => checkTerms(deal(h(7)), AGREEMENTS_SPECS), /^Error: law\/check:.*H4/);
+  assert.throws(() => checkTerms(deal([h(7), h(7)]), AGREEMENTS_SPECS), /^Error: law\/check:.*H4/);
   const g = cborDecode(dealGrantPayload(hex(h(9)), [0, h(5)])) as Map<number, unknown>;
   assert.equal(g.get(1), 1);
   assert.equal(g.get(2), null);
@@ -330,12 +330,12 @@ test('shares check alone, and fewer than the threshold rebuild nothing', () => {
   const tampered = new Uint8Array(s[0]);
   tampered[tampered.length - 1] ^= 1;
   assert.throws(() => verifyShare(tampered));
-  assert.throws(() => rebuildSafety([s[0]]), /shares; the dealing needs 2/);
-  assert.equal((rebuildSafety([s[1], s[2]]) as { commit: string }).commit, c.f.safety.commit);
+  assert.throws(() => rebuildChainKey([s[0]]), /shares; the dealing needs 2/);
+  assert.equal((rebuildChainKey([s[1], s[2]]) as { commit: string }).commit, c.f.safety.commit);
 });
 
 test("a deal signed on the phone cites the wallet published from the laptop (F163)", async () => {
-  // Ana keeps two devices, two sequences of one identity (Envelope,
+  // Ana keeps two devices, two sequences of one identity (Envelopes,
   // "Sequences"). Her laptop publishes her wallet; her phone signs a deal.
   const relays = [relay.base];
   const laptop = TestIdentity.create({ homes: homes.map((h) => h.home), scheme: 3 });
@@ -344,20 +344,20 @@ test("a deal signed on the phone cites the wallet published from the laptop (F16
   const label = TestIdentity.create({ homes: homes.map((h) => h.home), scheme: 3 });
   await label.publishGenesis();
   const wallet = (version: number, previous?: string) =>
-    pointerPayload({ payee: laptop.id, version, previous, rails: [[REPO_SPECS.law, text(`Ana's wallet ${version}`)]] });
-  const v1 = await laptop.publish(MIPS.finance, 0, wallet(1), { public: true, relays });
-  const v2 = await laptop.publish(MIPS.finance, 0, wallet(2, v1.id), { public: true, relays });
+    pointerPayload({ payee: laptop.id, version, previous, rails: [[REPO_SPECS.agreements, text(`Ana's wallet ${version}`)]] });
+  const v1 = await laptop.publish(MIPS.money, 0, wallet(1), { public: true, relays });
+  const v2 = await laptop.publish(MIPS.money, 0, wallet(2, v1.id), { public: true, relays });
   assert.equal(await latestPointer(phone, relays), v2.id, 'the latest, published from the other device');
-  const terms = (n: string) => label.publish(REPO_SPECS.law, LAW_TYPES.terms, cborEncode(new Map([[0, n]])), { public: true, relays });
+  const terms = (n: string) => label.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.terms, cborEncode(new Map([[0, n]])), { public: true, relays });
   const holding = (deal: string, acts: Uint8Array[]) => {
-    const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+    const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
     for (const a of [...laptop.chainActs(), ...label.chainActs(), v1.act, v2.act, ...acts]) v.add(a);
-    return v.lawPointerHolding(LAW_SPECS, deal, laptop.id) as { pointers: string[]; complete: boolean };
+    return v.agreementsPointerHolding(AGREEMENTS_SPECS, deal, laptop.id) as { pointers: string[]; complete: boolean };
   };
   // A signature from the phone citing nothing holds no pointer: its line
   // has none, so the deal's royalties could go only to the vault.
   const bare = await terms('a deal signed bare');
-  const uncited = await phone.publish(REPO_SPECS.law, LAW_TYPES.signature, signaturePayload(bare.id), { public: true, relays, objects: [[bare.id, bare.id]] });
+  const uncited = await phone.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(bare.id), { public: true, relays, objects: [[bare.id, bare.id]] });
   assert.deepEqual(holding(bare.id, [bare.act, uncited.act]).pointers, []);
   // The client's `sign` cites the latest pointer it finds where they are
   // published: the laptop's wallet is reached.
@@ -365,7 +365,7 @@ test("a deal signed on the phone cites the wallet published from the laptop (F16
   const signed = await sign(phone, deal.id, relays);
   assert.deepEqual(holding(deal.id, [deal.act, signed.act]).pointers.sort(), [v1.id, v2.id].sort());
   // Signing what cannot pay its signer cites nothing.
-  const other = await label.publish(REPO_SPECS.law, LAW_TYPES.signature, signaturePayload(deal.id), { public: true, relays, objects: [[deal.id, deal.id]] });
+  const other = await label.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(deal.id), { public: true, relays, objects: [[deal.id, deal.id]] });
   const d = describeAct((await sign(phone, other.id, relays)).act) as { refs?: string[] | null };
   assert.ok(!d.refs?.length, 'a signature on a signature pays nobody');
 });

@@ -59,7 +59,7 @@ async fn acts_go_in_and_come_back_byte_for_byte() {
     assert_eq!(info.bases, vec![r.base.clone()]);
     assert_eq!(info.operator, None);
     assert_eq!(info.roles, vec![wire::role::RELAY, wire::role::INBOX]);
-    // No commitment: its construction is still open in Envelope.
+    // No commitment: its construction is still open in Envelopes.
     assert_eq!(code_of(r.client.commitment().await), code::NOT_HELD);
     // A basic relay is not a home.
     assert_eq!(
@@ -122,10 +122,10 @@ async fn what_a_relay_checks_on_arrival() {
         code_of(r.client.put_act(&wrong.encode()).await),
         code::INVALID
     );
-    // An act signed with a safety key that is not a rotation: invalid.
+    // An act signed with a chain key that is not a rotation: invalid.
     let mut s = alice.clone();
-    let mut a = post(&mut s, "signed with the safety key");
-    a.signature = alice.safety.sign(&a.id(), None);
+    let mut a = post(&mut s, "signed with the chain key");
+    a.signature = alice.chain_key.sign(&a.id(), None);
     assert_eq!(code_of(r.client.put_act(&a.encode()).await), code::INVALID);
 
     // A private act: the relay cannot open it and need not.
@@ -142,11 +142,11 @@ async fn what_a_relay_checks_on_arrival() {
         true,
     );
     r.client.put_act(&unknown.encode()).await.unwrap();
-    // An everyday key under a scheme this relay does not implement (scenario
+    // A signing key under a scheme this relay does not implement (scenario
     // 8.4): carried where the relay cannot tell, since it does not hold the
     // act that bound the key...
     let unknown_scheme = mor_core::act::Signature {
-        scheme: mor_core::act::Scheme::Spec(sha256(b"a post-quantum everyday scheme")),
+        scheme: mor_core::act::Scheme::Spec(sha256(b"a post-quantum signing-key scheme")),
         key: vec![1; 40],
         sig: vec![2; 90],
     };

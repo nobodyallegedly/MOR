@@ -1,5 +1,5 @@
 // A post with a picture, as MOR acts (F27): the picture is a public
-// publication (Envelope type 0) of a JPEG (the JPEG Module); the post is a
+// publication (Envelopes type 0) of a JPEG (the JPEG Module); the post is a
 // text act (Text MIP, type 0) whose refs name that publication. Publishing
 // and reading go through the genesis client's identity and transport, and
 // every judgement through the core library.
@@ -51,7 +51,7 @@ export interface PublishedPicture {
 
 /**
  * Publish a JPEG, public: stripped to the picture alone (JPEG Module, rule
- * 6), locked with its own key (Envelope, "Media"), described by a public
+ * 6), locked with its own key (Envelopes, "Media"), described by a public
  * publication, and its locked bytes sent to the relays after it, so that a
  * relay that keeps only media some publication names takes them.
  */
@@ -70,7 +70,7 @@ export async function publishPicture(by: TestIdentity, jpeg: Uint8Array, relays:
     ]),
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelope, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, removed: s.removed, picture: s.picture, work: l.workHash, size: s.bytes.length };
 }
@@ -109,12 +109,12 @@ export async function post(
 }
 
 /**
- * Withdraw a publication (Envelope, "Withdrawal"): an act of type 3 naming
+ * Withdraw a publication (Envelopes, "Withdrawal"): an act of type 3 naming
  * it in `objects`, the publication being the root of its own chain. Only its
  * signer, or the identity in its `for`, can.
  */
 export async function withdraw(by: TestIdentity, publication: string, relays: string[]): Promise<{ id: string }> {
-  const made = await by.publish(POST_SPECS.envelope, WITHDRAWAL, cborEncode(new Map()), {
+  const made = await by.publish(POST_SPECS.envelopes, WITHDRAWAL, cborEncode(new Map()), {
     public: true,
     relays,
     objects: [[publication, publication]],
@@ -199,7 +199,7 @@ class Judge {
     private hints: string[],
     private via: Via,
   ) {
-    this.v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+    this.v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
   }
   async standing(act: Uint8Array, id: string, signer: string): Promise<string> {
     if (!this.looked.has(signer)) {
@@ -248,7 +248,7 @@ async function readRef(id: string, hints: string[], via: Via, judge: Judge): Pro
   }
   if (!d.public) return { kind: 'act', id, what: 'a private act' };
   if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: 'act', id, what: 'a text act' };
-  if (d.spec !== POST_SPECS.envelope || d.type !== PUBLICATION) return { kind: 'act', id, what: 'an act of a specification this client does not implement' };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: 'act', id, what: 'an act of a specification this client does not implement' };
   return readPicture(act, d, hints, via, judge);
 }
 
@@ -312,7 +312,7 @@ async function readPicture(act: Uint8Array, d: Described, hints: string[], via: 
 }
 
 /**
- * Look for a withdrawal of a publication at the relays asked: an Envelope
+ * Look for a withdrawal of a publication at the relays asked: an Envelopes
  * act of type 3, naming it in `objects`, valid, and signed by its signer or
  * by the identity in its `for`. Silence proves nothing (relay transport
  * cMIP): a picture is shown when none is found where the reader looked.
@@ -345,7 +345,7 @@ async function findWithdrawal(
           } catch {
             continue;
           }
-          if (d.spec !== POST_SPECS.envelope || d.type !== WITHDRAWAL || !d.signer) continue;
+          if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
           if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
           if ((await judge.standing(it.item, d.id, d.signer)) === 'valid') return d.id;
         }

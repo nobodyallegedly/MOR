@@ -62,7 +62,7 @@ async function publishRaw(
     [4, l.nonce],
   ]);
   if (opts.publicKey !== false) m.set(5, l.key);
-  const made = await by.publish(POST_SPECS.envelope, PUBLICATION, cborEncode(m), { public: true, relays: [relay.base] });
+  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, cborEncode(m), { public: true, relays: [relay.base] });
   await relayAt(relay.base).putMedia(l.locked);
   return made.id;
 }

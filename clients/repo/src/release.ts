@@ -1,6 +1,6 @@
 // Releases of the code (release manifest cMIP, draft 1): a manifest naming
 // every file by its hash, the release before and the libraries it depends
-// on, published by the collective as a public Envelope publication; the
+// on, published by the collective as a public Envelopes publication; the
 // members' visible signatures that make it a release; and the checks a fresh
 // machine runs to fetch one and verify every file.
 
@@ -23,7 +23,7 @@ import {
 import { lookUp, type TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import type { TestCollective } from './collective.ts';
-import { LAW_SPECS, carryChain, sign } from './law.ts';
+import { AGREEMENTS_SPECS, carryChain, sign } from './agreements.ts';
 import { REPO_SPECS } from './specs.ts';
 
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
@@ -312,7 +312,7 @@ export async function publishPrepared(p: Publisher, r: Prepared, via: Via = {}):
   if ((last?.id ?? null) !== r.manifest.previous) throw new Error('another release was published since this one was made: make it again');
   await carryChain(p.id, p.relays);
   // The publication first: a relay that keeps media only for publications it holds then takes the manifest.
-  const made = await p.id.publish(SPECS.envelope, 0, r.payload, { public: true, relays: p.relays });
+  const made = await p.id.publish(SPECS.envelopes, 0, r.payload, { public: true, relays: p.relays });
   const refused = await toRelays(p.relays, via, (x) => x.putMedia(r.lockedManifest));
   for (const u of r.upload) refused.push(...(await toRelays(p.relays, via, (x) => x.putMedia(u))));
   p.releases.push({ id: made.id, version: r.manifest.version, manifest: b64(r.encoded) });
@@ -332,7 +332,7 @@ export async function publishRelease(
   return publishPrepared(p, prepareRelease(p, opts), opts.via);
 }
 
-/** A member signs a release: a Law signature act naming it. Save the member's file after. */
+/** A member signs a release: an Agreements signature act naming it. Save the member's file after. */
 export async function signRelease(member: TestIdentity, release: string, relays: string[]) {
   return sign(member, release, relays);
 }
@@ -344,11 +344,11 @@ export interface Verified {
   ok: boolean;
   release: string;
   collective?: string;
-  /** Law's answer: under which agreement, which rule, who signed. */
+  /** Agreements' answer: under which agreement, which rule, who signed. */
   agreement?: string;
   rule?: string;
-  /** Law's verdict on it as an act of its publisher (`lawConsent`): its kind ("areas", "no-area", "not-collective", "broken", …) and Law's reason. */
-  law?: { kind: string; reason?: string };
+  /** Agreements' verdict on it as an act of its publisher (`agreementsConsent`): its kind ("areas", "no-area", "not-collective", "broken", …) and Agreements' reason. */
+  agreements?: { kind: string; reason?: string };
   signers: string[];
   manifest?: Manifest;
   /** Files checked against their hashes. */
@@ -406,7 +406,7 @@ interface Described {
  * 1. the publication: public, of the manifest's media type;
  * 2. its signer's identity chain, from its homes: the publication is valid
  *    (bound by a counting chain act, not voided by a rotation);
- * 3. Law: the agreement the collective declared in force at the
+ * 3. Agreements: the agreement the collective declared in force at the
  *    publication's binding, and the visible member signatures its grammar
  *    requires, every member's chain resolved in turn;
  * 4. the manifest: its locked hash, its work hash, its format;
@@ -431,7 +431,7 @@ export async function verifyRelease(
   if (!act) return fail(`the release ${release} was not found at ${hints.join(', ')}`);
   const d = describeAct(act) as Described;
   if (!d.public || !d.payload) return fail('the release is not a public act');
-  if (d.spec !== SPECS.envelope || d.type !== 0) return fail('the release is not a publication (Envelope type 0)');
+  if (d.spec !== SPECS.envelopes || d.type !== 0) return fail('the release is not a publication (Envelopes type 0)');
   const media = cborDecode(d.payload) as Map<number, unknown>;
   if (!(media.get(0) instanceof Uint8Array) || hex(media.get(0) as Uint8Array) !== REPO_SPECS.manifest) {
     return fail('the publication is not a release manifest');
@@ -443,7 +443,7 @@ export async function verifyRelease(
   }
 
   // 2. The signer's chain, and the publication's standing.
-  const v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
   let homes: string[];
   try {
     const l = await lookUp(d.signer, hints, via, v);
@@ -455,7 +455,7 @@ export async function verifyRelease(
   // The signer's other acts first: a release that is no longer the latest
   // act a rotation kept is valid only through the acts after it, which link
   // it to the kept tip (Identity, kept ancestry). A collective's records
-  // (Law draft 7) put such acts after a release before the next rotation.
+  // (Agreements draft 7) put such acts after a release before the next rotation.
   for (const a of await allBy(d.signer, [...new Set([...hints, ...homes])], via)) {
     try {
       v.add(a);
@@ -466,12 +466,12 @@ export async function verifyRelease(
   const standing = v.status(release);
   if (standing !== 'valid') return fail(`the publication is ${standing}, not valid, for its signer's identity chain`);
 
-  // 3. Law: the agreements the collective declared, their parties' chains and signature acts.
+  // 3. Agreements: the agreements the collective declared, their parties' chains and signature acts.
   const places = [...new Set([...hints, ...((media.get(6) as string[]) ?? []), ...homes])];
   const res = v.resolve(d.signer) as { links: { act: string }[] };
   const agreements = new Set<string>();
   for (const link of res.links) {
-    const a = v.lawDeclared(LAW_SPECS, d.signer, link.act);
+    const a = v.agreementsDeclared(AGREEMENTS_SPECS, d.signer, link.act);
     if (a) agreements.add(a);
   }
   const parties = new Set<string>();
@@ -482,7 +482,7 @@ export async function verifyRelease(
     if (seen.has(id)) continue;
     seen.add(id);
     const t = await fetchFirst(places, via, (x) => x.getAct(id));
-    if (!t) continue; // Law will say what is missing
+    if (!t) continue; // Agreements will say what is missing
     try {
       v.add(t);
       const td = describeAct(t) as Described;
@@ -490,7 +490,7 @@ export async function verifyRelease(
       for (const x of (p.get(0) as Uint8Array[]) ?? []) parties.add(hex(x));
       if (p.get(11) instanceof Uint8Array) queue.push(hex(p.get(11) as Uint8Array));
     } catch {
-      // malformed: Law will refuse it
+      // malformed: Agreements will refuse it
     }
   }
   for (const party of parties) {
@@ -508,7 +508,7 @@ export async function verifyRelease(
     }
   }
   // The collective's own acts: its records (its everyday line, which writes
-  // its ordinary clones and registers departures, Law draft 7, F109), and
+  // its ordinary clones and registers departures, Agreements draft 7, F109), and
   // the clones they name with their signature acts.
   // The collective's acts, its records included (F127): this verifier
   // states where it found each, as information only (F128).
@@ -542,12 +542,12 @@ export async function verifyRelease(
   }
   r.foundAt = foundAt;
   try {
-    consent = v.lawConsent(LAW_SPECS, release);
+    consent = v.agreementsConsent(AGREEMENTS_SPECS, release);
   } catch (e) {
-    return fail(`Law: ${e instanceof Error ? e.message : e}`);
+    return fail(`Agreements: ${e instanceof Error ? e.message : e}`);
   }
   r.agreement = consent.agreement;
-  r.law = { kind: consent.kind, ...(consent.reason ? { reason: consent.reason } : {}) };
+  r.agreements = { kind: consent.kind, ...(consent.reason ? { reason: consent.reason } : {}) };
   r.signers = consent.areas.flatMap((a) => a.signers);
   const area = consent.areas[0];
   const counted = ['areas', 'no-area', 'not-collective'].includes(consent.kind);
@@ -562,14 +562,14 @@ export async function verifyRelease(
           ? "its signer's own signature (not a collective)"
           : undefined;
   if (!counted) {
-    // No signature can make it a release: say what Law reads, as a sentence.
+    // No signature can make it a release: say what Agreements read, as a sentence.
     fail(
       consent.kind === 'broken'
-        ? v.lawBroken(LAW_SPECS, d.signer)
-          ? `Law reads the collective that published it as broken: no agreement can be found in force for it, so no member's signature can make this a release. Law's reason: ${consent.reason ?? 'none given'}`
-          : // Rolled back since (Law rule 37d, F185): the act stays in the broken stretch.
-            `It was published while Law read the collective that published it as broken, before the rollback that brought the collective back: it counts for nothing, for good, so no member's signature can make this a release (Law rule 37d). Law's reason for the broken act: ${consent.reason ?? 'none given'}`
-        : `Law counts it as no release of its publisher, whatever signatures it gathers: ${consent.reason ?? consent.kind}`,
+        ? v.agreementsBroken(AGREEMENTS_SPECS, d.signer)
+          ? `Agreements read the collective that published it as broken: no agreement can be found in force for it, so no member's signature can make this a release. Agreements' reason: ${consent.reason ?? 'none given'}`
+          : // Rolled back since (Agreements rule 37d, F185): the act stays in the broken stretch.
+            `It was published while Agreements read the collective that published it as broken, before the rollback that brought the collective back: it counts for nothing, for good, so no member's signature can make this a release (Agreements rule 37d). Agreements' reason for the broken act: ${consent.reason ?? 'none given'}`
+        : `Agreements count it as no release of its publisher, whatever signatures it gathers: ${consent.reason ?? consent.kind}`,
     );
   } else if (!consent.met) {
     fail(`not a release: ${r.rule} must sign it; ${r.signers.length} did (${r.signers.join(', ') || 'none'})`);

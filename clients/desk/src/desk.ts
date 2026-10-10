@@ -8,12 +8,12 @@
 // desk reads the file again, checks its bytes hash to that digest, reads it
 // again, and signs only if nothing blocks it. What you sign is what you saw.
 
-import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPE_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts } from '../../genesis/src/core.ts';
+import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts } from '../../genesis/src/core.ts';
 import { TestIdentity, sealFor, type Home } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
 import { record as recordKex } from '../../genesis/src/kex.ts';
-import { LAW_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { dealRoot, sellerAlarm, splitGaps } from '../../repo/src/deal.ts';
 import type { Line, Section } from '../../collective/src/explain.ts';
 import {
@@ -479,17 +479,17 @@ export class Desk {
         // breaks the plan, as a reset of the tally chain is (F171).
         const repeated = [...new Set(numbers.filter((n, i) => numbers.indexOf(n) !== i))].sort((a, b) => a - b);
         const top = items.reduce((a, b) => ((b.split!.number ?? 0) > (a.split!.number ?? 0) ? b : a));
-        for (const x of items) if (x.alarm?.startsWith('ALARM (Law rule 15a')) delete x.alarm;
+        for (const x of items) if (x.alarm?.startsWith('ALARM (Agreements rule 15a')) delete x.alarm;
         if (gaps.length || unnumbered || repeated.length) {
           top.alarm = [
             gaps.length
-              ? `ALARM (Law rule 15a, F188): this service's splits under this deal skip: ${gaps.length === 1 ? `the split numbered ${gaps[0]} was` : `the splits numbered ${gaps.join(', ')} were`} never delivered here. Splits are being made where this identity is not shown: the deal may have a branch hidden from it.`
-              : 'ALARM (Law rule 15a, QF4): the numbers on this service\'s splits under this deal break the plan.',
+              ? `ALARM (Agreements rule 15a, F188): this service's splits under this deal skip: ${gaps.length === 1 ? `the split numbered ${gaps[0]} was` : `the splits numbered ${gaps.join(', ')} were`} never delivered here. Splits are being made where this identity is not shown: the deal may have a branch hidden from it.`
+              : 'ALARM (Agreements rule 15a, QF4): the numbers on this service\'s splits under this deal break the plan.',
             unnumbered
-              ? `${unnumbered} split${unnumbered === 1 ? '' : 's'} of this service under this deal carr${unnumbered === 1 ? 'ies' : 'y'} no number: a deviation that breaks the plan (Law rule 15a, QF4).`
+              ? `${unnumbered} split${unnumbered === 1 ? '' : 's'} of this service under this deal carr${unnumbered === 1 ? 'ies' : 'y'} no number: a deviation that breaks the plan (Agreements rule 15a, QF4).`
               : '',
             ...repeated.map(
-              (n) => `The number ${n} is carried by ${numbers.filter((m) => m === n).length} splits: a deviation that breaks the plan (Law rule 15a, QF4).`,
+              (n) => `The number ${n} is carried by ${numbers.filter((m) => m === n).length} splits: a deviation that breaks the plan (Agreements rule 15a, QF4).`,
             ),
             'Look at the whole deal with every party, and ask the service for the splits missing or repeated.',
           ]
@@ -558,7 +558,7 @@ export class Desk {
       }
     }
     const refs = d.refs ?? [];
-    // F110: only Identity, Finance and Law acts acknowledge; any other act
+    // F110: only Identity, Money and Agreements acts acknowledge; any other act
     // carrying acks is invalid and acknowledges nothing.
     const acksAllowed = !d.spec || ACK_SPECS.includes(d.spec);
     const acks = acksAllowed ? (d.acks ?? []) : [];
@@ -587,13 +587,13 @@ export class Desk {
     if (isText && item.answers.length) item.kind = 'reply';
     else if (item.acknowledges.length) item.kind = 'acknowledgement';
     else if (isText) item.kind = 'message';
-    else if (d.spec === DESK_SPECS.finance) item.kind = 'payment';
-    else if (d.spec === SPECS.envelope && d.type === ENVELOPE_TYPES.keyDelivery) item.kind = 'key delivery';
+    else if (d.spec === DESK_SPECS.money) item.kind = 'payment';
+    else if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery) item.kind = 'key delivery';
     if (d.spec === SPECS.identity && d.type === IDENTITY_TYPES.witness) item.witness = true;
-    if (!acksAllowed && d.acks?.length) item.problem = 'It carries acknowledgements, which only Identity, Finance and Law acts may carry (Envelope rule 4a, F110): it is invalid, and acknowledges nothing.';
+    if (!acksAllowed && d.acks?.length) item.problem = 'It carries acknowledgements, which only Identity, Money and Agreements acts may carry (Envelopes rule 4a, F110): it is invalid, and acknowledges nothing.';
     if (item.kind === 'payment') {
-      item.problem = 'A Finance act (a payment claim, a receipt or an obligation): this desk does not read Finance yet, nor check a rail’s proof (Lightning module, roadmap step 12). It is shown as received, not as paid. It does check the version of a deal a payment names.';
-      // Client conformance (Law rule 45b, F186): a seller's client raises
+      item.problem = 'A Money act (a payment claim, a receipt or an obligation): this desk does not read Money yet, nor check a rail’s proof (Lightning module, roadmap step 12). It is shown as received, not as paid. It does check the version of a deal a payment names.';
+      // Client conformance (Agreements rule 45b, F186): a seller's client raises
       // the alarm when a payment names a version of the deal that does not
       // descend from the version it holds, showing both branches.
       try {
@@ -602,11 +602,11 @@ export class Desk {
         if (alarm?.kind === 'older') item.notice = alarm.words.join(' ');
         else if (alarm) item.alarm = alarm.words.join(' ');
       } catch (e) {
-        item.alarm = `The version of the deal this payment names could not be checked (${err(e)}): look at the deal before relying on it (Law rule 45b, F186).`;
+        item.alarm = `The version of the deal this payment names could not be checked (${err(e)}): look at the deal before relying on it (Agreements rule 45b, F186).`;
       }
     }
-    if (d.spec === REPO_SPECS.law) item.problem = 'A Law act: read it in the collective client.';
-    if (d.spec === REPO_SPECS.law && d.type === LAW_TYPES.split && d.signer) {
+    if (d.spec === REPO_SPECS.agreements) item.problem = 'An Agreements act: read it in the collective client.';
+    if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.split && d.signer) {
       // F188 (DQ6): a split's number, read for the holder's alarm.
       try {
         const m = cborDecode(d.payload) as Map<number, unknown>;

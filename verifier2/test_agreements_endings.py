@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Tests for verifier2, each a story from Law draft 10's freeze scenarios (suite v21,
+"""Tests for verifier2, each a story from Agreements draft 10's freeze scenarios (suite v21,
 3.9f, 3.9l, 3.9n, 3.9p, 3.9w, 3.9x, 3.9y, 3.9ab, 3.9ac) or from the smallest stories
 in docs/law-invariants.md (IC5, IC8, IC9), written from the text.
 
-Run: python3 test_law_endings.py        (also writes each story to stories/*.json)
+Run: python3 test_agreements_endings.py        (also writes each story to stories/*.json)
 """
 
 import json
@@ -11,7 +11,7 @@ import os
 import sys
 import unittest
 
-from law_endings import verify
+from agreements_endings import verify
 
 STORIES: dict[str, dict] = {}
 
@@ -100,7 +100,7 @@ class Endings(unittest.TestCase):
         their collective.  Cy, who did not sign it, drafts a second closing naming
         nothing in its objects, and Ben signs it: it names the first through Ben's chain,
         counts for nothing, and the first stays final.  A closing signed by signature
-        acts (Law type 1), the old way, has no signature at all."""
+        acts (Agreements type 1), the old way, has no signature at all."""
         s = story("u1", ["ana", "ben", "cy"], [
             genesis(),
             act("p1", "publication", cites=["genesis"]),
@@ -317,7 +317,7 @@ class TieRule(unittest.TestCase):
         self.assertEqual(v["debtors"], {"D": ["S1"]})
 
     def test_ic9_a_departure_racing_a_citation_takes_no_voice(self):
-        """A grant the Finance area's two holders sign, cited by the other device; both
+        """A grant the Money area's two holders sign, cited by the other device; both
         holders then leave by records on a device that never saw the citation: the grant
         counts, the departures racing its citation set aside."""
         acts = [

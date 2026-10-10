@@ -2,7 +2,7 @@
 //! one canonical proof per leaf (review 7d and section 9, item 6; F200).
 
 use mor_anchoring::tree::{self, Batch};
-use mor_core::finance::{Amount, Payer};
+use mor_core::money::{Amount, Payer};
 use mor_core::hash::{sha256, Hash};
 use mor_payment::{Commitment, PaidTo};
 

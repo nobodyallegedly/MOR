@@ -1,7 +1,7 @@
 // The step's "done when", through the program's requests exactly as the page
 // sends them, against three real homes and a relay: a release under one's
 // own name; a test collective founded with two simulated members; one member
-// added and one removed; a release under the new rules; leaving (Law draft
+// added and one removed; a release under the new rules; leaving (Agreements draft
 // 7: a resignation alone, registered by the collective's record), then the
 // refit; an ordinary change by words; stepping down until the release area
 // freezes. Each step is read back in plain words before anything is signed,
@@ -13,9 +13,9 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { signaturePayload } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
-import { sign as lawSign } from '../../repo/src/law.ts';
+import { sign as agreementsSign } from '../../repo/src/agreements.ts';
 import { verifyRelease } from '../../repo/src/release.ts';
-import { REPO_SPECS, LAW_TYPES } from '../../repo/src/specs.ts';
+import { REPO_SPECS, AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import type { Done, State } from '../src/page/api.ts';
 import { commit, prepare, sign, state, words, world, type World } from './setup.ts';
 
@@ -59,7 +59,7 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(f.reading.title, /Found the collective “Makers”/);
   assert.match(fw, /3 parties: Ada \(you\).*, Sim One.* and Sim Two/);
   assert.match(fw, /exists only once every one of them has signed it: nobody is founded into a collective without signing/);
-  assert.match(fw, /Ada \(you\) \[[^\]]+\] holds the collective's everyday key/);
+  assert.match(fw, /Ada \(you\) \[[^\]]+\] holds the collective's signing key/);
   assert.match(fw, /cut into 3 shares.*Any 2 of them together rebuild it/);
   assert.match(fw, /If one member is lost, the other 2 can still rotate/);
   assert.match(fw, /“Releases” \(area 1\): held by Ada \(you\).*, Sim One.* and Sim Two.*; any 2 of them decide together/);
@@ -68,8 +68,8 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(fw, /Any member can leave alone, at any time/);
   assert.match(fw, /any 2 of the other parties together may declare them absent/);
   assert.match(fw, /their voice is removed \(they no longer count in any rule or area\)/);
-  // Law rule 49 (F172, F178 item 11): before signing, whether an absence-proof cMIP stands between.
-  assert.match(fw, /No absence-proof cMIP stands between: their word alone is enough.*\(Law rules 49 and 51, a stated cost\)/);
+  // Agreements rule 49 (F172, F178 item 11): before signing, whether an absence-proof cMIP stands between.
+  assert.match(fw, /No absence-proof cMIP stands between: their word alone is enough.*\(Agreements rules 49 and 51, a stated cost\)/);
   assert.match(fw, /Every member with a say in the constitution is covered/);
   assert.match(fw, /Their consent is simulated/);
   assert.match(fw, /release manifest cMIP/);
@@ -137,13 +137,13 @@ test('the author, without a terminal: identities, a release, a collective founde
   const leave = await sign(c, { kind: 'leave', collective: col.id, member: ada });
   const lw = words(leave.review.reading);
   assert.match(leave.review.reading.title, /Ada \(you\) .* leaves “Makers”/);
-  assert.match(lw, /signs a resignation from the agreement in force .*alone: nobody else's signature is asked for, and nobody can stop it \(Law rule 37a\)/);
+  assert.match(lw, /signs a resignation from the agreement in force .*alone: nobody else's signature is asked for, and nobody can stop it \(Agreements rule 37a\)/);
   assert.match(lw, /registers it at once by a record, its line/);
   assert.match(lw, /Nothing else changes now: no rule is rewritten, no key rotates/);
   assert.match(lw, /keeps what they own/);
   assert.match(lw, /A release needs all of Sim Two .* and Sim Three/);
   assert.match(lw, /The members who stay then refit the collective: Change members, removing Ada/);
-  assert.match(lw, /With 2 members left, a safety key needing 2 of them would be lost with any one of them: the refit must ask fewer to rebuild it \(F96\)/);
+  assert.match(lw, /With 2 members left, a chain key needing 2 of them would be lost with any one of them: the refit must ask fewer to rebuild it \(F96\)/);
   assert.match(leave.done.title, /Ada \(you\) .* left “Makers”/);
   s = await state(c);
   assert.deepEqual(s.collectives[0].members.map((m) => [m.id, m.left]), [[ada, true], [two, false], [three, false]]);
@@ -165,18 +165,18 @@ test('the author, without a terminal: identities, a release, a collective founde
 
   // 7. The refit: Change members, removing the member who left. Not asked to resign again.
   const stuck = await prepare(c, { kind: 'change', collective: col.id, leave: [ada] });
-  assert.match(stuck.reading.blocking[0], /^With 2 members, a safety key that needs all 2 of them would be lost with any one of them \(F96\)/);
+  assert.match(stuck.reading.blocking[0], /^With 2 members, a chain key that needs all 2 of them would be lost with any one of them \(F96\)/);
   assert.match(stuck.reading.blocking[1], /^Absence is judged by some of the other members: between 1 and 1 of them\.$/);
-  assert.match(stuck.reading.blocking[2], /^Law refuses these terms\. Law's own words: “/);
+  assert.match(stuck.reading.blocking[2], /^Agreements refuse these terms\. Agreements' own words: “/);
   assert.equal(stuck.reading.blocking.length, 3);
   const refit = await sign(c, { kind: 'change', collective: col.id, leave: [ada], rules: { safety: 1, release: 2, clone: 2, others: 1 } });
   const fw2 = words(refit.review.reading);
   assert.match(fw2, /Ada \(you\) .* already left: their resignation, or the declaration of their absence, is on the collective's record, so nothing more is asked of them/);
   assert.doesNotMatch(fw2, /signs a resignation, alone/);
   assert.match(fw2, /Ada \(you\) \[[^\]]+\] leaves\. They hand over nothing/);
-  assert.match(fw2, /The everyday key passes to Sim Two/);
+  assert.match(fw2, /The signing key passes to Sim Two/);
   assert.match(fw2, /2 shares, any 1 rebuild it \(was 3 shares, any 2\)/);
-  assert.match(fw2, /Any one member alone can rebuild the safety key/);
+  assert.match(fw2, /Any one member alone can rebuild the chain key/);
   assert.match(fw2, /Absence is now judged by any 1 of the other parties \(was any 2 of the other parties\)\. A protected clause/);
   assert.match(fw2, /The constitution's words change/);
   assert.equal(refit.review.reading.plain.length, 2, 'the new words and the old, both shown');
@@ -209,7 +209,7 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(ww.review.reading.title, /New words for the Releases area of “Makers”/);
   assert.match(www, /An ordinary change: it changes only the Releases area's own words, an operational matter in that area/);
   assert.match(www, /marked with the Releases area's power and signed by Sim Two .* and Sim Three/);
-  assert.match(www, /The collective writes it on its record at once, signed with its everyday key: no rotation, no new keys \(Law rule 37c, Q8\)/);
+  assert.match(www, /The collective writes it on its record at once, signed with its signing key: no rotation, no new keys \(Agreements rule 37c, Q8\)/);
   assert.match(www, /A change to the “Releases” area's own words: operational, in the “Releases” area/);
   assert.match(www, /Its mark names exactly that/);
   assert.equal(ww.review.reading.plain[0].text, 'We release only what we both checked.');
@@ -296,7 +296,7 @@ test('before drawing a record, a warning when the relays hold acts of the collec
   // Another device of the collective: the same keys, its own sequence, started afresh.
   const file = w.app.store.collective(col.id).f;
   const other = new TestIdentity({ ...structuredClone(file.identity), sequence: [] });
-  const stray = await other.publish(REPO_SPECS.law, LAW_TYPES.signature, signaturePayload(file.agreement), {
+  const stray = await other.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(file.agreement), {
     public: true,
     relays: file.relays,
     objects: [[file.agreement, file.agreement]],
@@ -307,7 +307,7 @@ test('before drawing a record, a warning when the relays hold acts of the collec
   assert.ok(line, words(warned.reading));
   assert.equal(line!.tone, 'warn');
   assert.match(line!.text, new RegExp(`^1 act signed by the collective is at its relays but not in this device's sequence \\(latest ${stray.id.slice(0, 8)}…${stray.id.slice(-4)}\\)`));
-  assert.match(line!.text, /will count as made after its line \(Law, “Made before, made after”\)\. Client conformance: the collective's devices share their tips before a line is drawn\./);
+  assert.match(line!.text, /will count as made after its line \(Agreements, “Made before, made after”\)\. Client conformance: the collective's devices share their tips before a line is drawn\./);
   assert.deepEqual(warned.reading.blocking, [], 'a warning, not a refusal');
   // The same warning before a member change that draws a record.
   const rm = await prepare(c, { kind: 'change', collective: col.id, leave: [three] });
@@ -326,7 +326,7 @@ test('before drawing a record, a warning when the relays hold acts of the collec
   }
 });
 
-test('a judicial change: who judges absence, every member signing, recorded at once, no rotation (Law draft 8, B13; Law draft 10, F121)', async () => {
+test('a judicial change: who judges absence, every member signing, recorded at once, no rotation (Agreements draft 8, B13; Agreements draft 10, F121)', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, two, three] = ['Ada', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
@@ -339,13 +339,13 @@ test('a judicial change: who judges absence, every member signing, recorded at o
   assert.match(jw, /A judicial change: only who judges absence changes\. The abandonment clause is a protected clause, in the judicial tier/);
   assert.match(jw, /Today any 2 of the other members together decide whether a member is absent; after the change, any 1\./);
   assert.match(jw, /The clone is marked with the judicial tier's power and signed by .*: every member whose voice remains/);
-  assert.match(jw, /one version for everyone: the new clause judges each member \(Law draft 10, F121\)/);
+  assert.match(jw, /one version for everyone: the new clause judges each member \(Agreements draft 10, F121\)/);
   assert.match(jw, /Absence is now judged by any 1 of the other parties \(was any 2 of the other parties\)/);
-  // Law rule 49: the clause as it will read, before anyone signs the clone.
+  // Agreements rule 49: the clause as it will read, before anyone signs the clone.
   assert.match(jw, /any 1 of the other parties together may declare them absent\. What may then follow: their voice is removed .*\. No absence-proof cMIP stands between/);
   assert.match(jw, /A change to .*: judicial, a protected clause/);
   assert.match(jw, /Its mark names exactly that/);
-  assert.match(jw, /no rotation, no new keys \(Law rule 37c, Q8\)/);
+  assert.match(jw, /no rotation, no new keys \(Agreements rule 37c, Q8\)/);
   assert.match(jw, /The words are constitutional, so this judicial change cannot rewrite them/);
   assert.ok(j.done.lines.some((l) => /written on the collective's record at once; no rotation/.test(l.text)), JSON.stringify(j.done));
   s = await state(c);
@@ -367,7 +367,7 @@ test('a judicial change: who judges absence, every member signing, recorded at o
   assert.match(same.reading.blocking.join(' '), /Nothing changes/);
 });
 
-test("declaring absence under the collective's own rule: one signs, the others add signature acts, the record places them (Law draft 8, B15)", async () => {
+test("declaring absence under the collective's own rule: one signs, the others add signature acts, the record places them (Agreements draft 8, B15)", async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, one, two, three] = ['Ada', 'Sim One', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
@@ -386,7 +386,7 @@ test("declaring absence under the collective's own rule: one signs, the others a
   assert.match(d.review.reading.title, /Sim Three .* is declared absent from “Absences”/);
   assert.match(dw, /Ada \(you\) .* signs a declaration that Sim Three .* is absent, with one outcome: Sim Three .*'s voice removed/);
   assert.match(dw, /It applies the clause Sim Three .* signed last/);
-  assert.match(dw, /The clause asks for all of .*: Sim One .* and Sim Two .* add a signature act naming it, as for terms\. It counts once 3 have signed \(Law draft 8, B15\)/);
+  assert.match(dw, /The clause asks for all of .*: Sim One .* and Sim Two .* add a signature act naming it, as for terms\. It counts once 3 have signed \(Agreements draft 8, B15\)/);
   assert.match(dw, /acknowledging those signatures so that they count at the line/);
   assert.match(dw, /keeps what they own: outcome 0 removes the voice, never the stake/);
   assert.match(dw, /A release needs any 2 of Ada \(you\).*, Sim One.* and Sim Two/);
@@ -409,7 +409,7 @@ test("declaring absence under the collective's own rule: one signs, the others a
   await c.ask('cancel', { plan: absent.plan });
   // Signed with the core's own act, bypassing the client: it still counts for nothing.
   const t3 = w.app.store.identity(three);
-  await lawSign(t3, relId, w.app.store.collective(col.id).f.relays);
+  await agreementsSign(t3, relId, w.app.store.collective(col.id).f.relays);
   await sign(c, { kind: 'sign', member: one, release: relId });
   const half = await verifyRelease(relId, [w.relay.base]);
   assert.equal(half.ok, false, 'Sim One and the absent Sim Three do not make two');
@@ -424,11 +424,11 @@ test("declaring absence under the collective's own rule: one signs, the others a
   await c.ask('cancel', { plan: refit.plan });
 });
 
-test("declaring the everyday key's holder absent: no record, and the recovery rotation names the others' signatures (Law draft 9, C7, B16, B18)", async () => {
+test("declaring the signing key's holder absent: no record, and the recovery rotation names the others' signatures (Agreements draft 9, C7, B16, B18)", async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, one, two, three] = ['Ada', 'Sim One', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
-  // Four members; Ada, the first founder, holds the everyday key; absence is judged by any 3 of the others.
+  // Four members; Ada, the first founder, holds the signing key; absence is judged by any 3 of the others.
   await sign(c, { kind: 'found', name: 'Recovery', members: [ada, one, two, three], rules: {} });
   s = await state(c);
   const col = s.collectives.find((x) => x.name === 'Recovery')!;
@@ -436,9 +436,9 @@ test("declaring the everyday key's holder absent: no record, and the recovery ro
   const d = await sign(c, { kind: 'declare', collective: col.id, member: ada });
   const dw = words(d.review.reading);
   assert.match(d.review.reading.title, /Ada .* is declared absent from “Recovery”/);
-  assert.match(dw, /Ada .* holds the collective's everyday key, so the collective cannot draw its line without them: no record is made now/);
+  assert.match(dw, /Ada .* holds the collective's signing key, so the collective cannot draw its line without them: no record is made now/);
   assert.match(dw, /takes effect at the recovery rotation, the member change that removes Ada .*names those signature acts beside the clone’s, so that they count there/);
-  assert.match(dw, /the collective's everyday key signs nothing now/);
+  assert.match(dw, /the collective's signing key signs nothing now/);
   assert.equal(d.done.acts.length, 3, 'the declaration and two signature acts; no record');
   s = await state(c);
   let now = s.collectives.find((x) => x.name === 'Recovery')!;
@@ -451,14 +451,14 @@ test("declaring the everyday key's holder absent: no record, and the recovery ro
     { kind: 'declare', collective: col.id, member: three },
   ]) {
     const p = await prepare(c, x);
-    assert.match(p.reading.blocking.join(' '), /who holds the collective's everyday key, was declared absent: the collective draws no line with their key\. Refit it first/, x.kind);
+    assert.match(p.reading.blocking.join(' '), /who holds the collective's signing key, was declared absent: the collective draws no line with their key\. Refit it first/, x.kind);
     await c.ask('cancel', { plan: p.plan });
   }
 
   // The refit removing Ada is the recovery rotation: it names the two others' signature acts on the declaration.
   // Three remain: absence then judged by any 2 of the other members.
   const r = await sign(c, { kind: 'change', collective: col.id, leave: [ada], rules: { safety: 2, release: 2, clone: 2, others: 2 } });
-  assert.match(words(r.review.reading), /Ada .* was declared absent while holding the everyday key: this rotation is where the declaration takes effect .* It names the 2 other members’ signature acts on the declaration beside the clone’s, so that they count there \(Law draft 9, B18\)\. The clone is counted without Ada/);
+  assert.match(words(r.review.reading), /Ada .* was declared absent while holding the signing key: this rotation is where the declaration takes effect .* It names the 2 other members’ signature acts on the declaration beside the clone’s, so that they count there \(Agreements draft 9, B18\)\. The clone is counted without Ada/);
   s = await state(c);
   now = s.collectives.find((x) => x.name === 'Recovery')!;
   assert.equal(now.pending, false, 'the rotation counts');
@@ -474,7 +474,7 @@ test("declaring the everyday key's holder absent: no record, and the recovery ro
   assert.equal(v.agreement, now.agreement, 'judged under the clone the recovery rotation put in force');
 });
 
-test('money and endings (Law draft 10, F121 to F124): stakes at founding, a member leaving as a departed holder, a split service, the pointer check, every payout matching its stake, a debt sealed to every member, a release by the collective, a fork founding its successors first, a closing refused while a debt is open, a creditor\'s release, a closing', async () => {
+test('money and endings (Agreements draft 10, F121 to F124): stakes at founding, a member leaving as a departed holder, a split service, the pointer check, every payout matching its stake, a debt sealed to every member, a release by the collective, a fork founding its successors first, a closing refused while a debt is open, a creditor\'s release, a closing', async () => {
   const c = w.client;
   for (const n of ['Lea', 'Lee', 'Lou', 'Lyn', 'Lia', 'Splitter', 'Supplier']) await sign(c, { kind: 'identity', name: n, mine: false });
   let s = await state(c);
@@ -531,11 +531,11 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   assert.match(words(sp.review.reading), /cites no previous split: the first for the stake/);
   for (const n of ['Lea', 'Lee', 'Lou', 'Lyn', 'Lia']) assert.match(spw, new RegExp(`${n} \\[[^\\]]*\\]'s client: the split continues the chain it keeps`), spw);
   assert.doesNotMatch(spw, /TALLY CHAIN|RUNNING COUNT|DOES NOT CONTINUE/);
-  // Leftovers by largest remainder (Law rule 15a, F150): 2 units over 40/15/15/15/15 go one to Lea
+  // Leftovers by largest remainder (Agreements rule 15a, F150): 2 units over 40/15/15/15/15 go one to Lea
   // (0.8) and one to the four tied at 0.3 by turns along the service's receipts, then the smallest
   // identity hash (F165), never both to the first listed.
   const small = await sign(c, { kind: 'split', collective: col.id, amount: 102, fee: 100 });
-  assert.match(words(small.review.reading), /take turns, the one with the fewest leftover units from this stake so far first.*\(Law rule 15a, F165\)/);
+  assert.match(words(small.review.reading), /take turns, the one with the fewest leftover units from this stake so far first.*\(Agreements rule 15a, F165\)/);
   const smallw = small.done.lines.map((l) => l.text).join('\n');
   assert.match(smallw, /Paid: 1 to Lea/);
   assert.equal((smallw.match(/Paid: 1 to /g) ?? []).length, 2, smallw);
@@ -553,7 +553,7 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   assert.equal(checked.breaks, 0, 'a payout off its stake, but the chain continued: the count adds up what was paid');
 
   // F171: a split citing the latest split's own previous forks the chain; one citing none resets it. Each breaks
-  // the plan (Law rule 15a, rule 46b): the core shows the pair, and every holder's client, keeping the chain as
+  // the plan (Agreements rule 15a, rule 46b): the core shows the pair, and every holder's client, keeping the chain as
   // the splits arrive, refuses the newcomer and keeps its chain as it was.
   const fork = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100, cite: 'before-latest' });
   const forkw = fork.done.lines.map((l) => l.text).join('\n');
@@ -601,7 +601,7 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   assert.match(fkw, /Lou.* \(15%\) keep their share in every successor/);
   assert.match(fkw, /Every debt is handed out/);
   assert.match(fkw, /the ending wins/);
-  assert.match(fk.done.title, /is forked, and closed in Law/, JSON.stringify(fk.done));
+  assert.match(fk.done.title, /is forked, and closed in Agreements/, JSON.stringify(fk.done));
   s = await state(c);
   col = s.collectives.find((x) => x.name === 'Ledger')!;
   assert.ok(col.closed && fk.done.acts.includes(col.closed));
@@ -627,7 +627,7 @@ test('money and endings (Law draft 10, F121 to F124): stakes at founding, a memb
   // N9: a collective that holds nothing and owes nothing closes.
   const cl = await sign(c, { kind: 'closing', collective: side.id });
   assert.match(words(cl.review.reading), /It owes nothing/);
-  assert.match(cl.done.title, /is closed in Law/, JSON.stringify(cl.done));
+  assert.match(cl.done.title, /is closed in Agreements/, JSON.stringify(cl.done));
   s = await state(c);
   assert.ok(s.collectives.find((x) => x.id === side.id)!.closed);
 });

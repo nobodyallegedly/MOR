@@ -132,9 +132,9 @@ export interface Item {
   witness?: boolean;
   refs: string[];
   problem?: string;
-  /** The seller's alarm (Law rule 45b, F186): a payment naming a version of a deal that does not descend from the version this identity holds. */
+  /** The seller's alarm (Agreements rule 45b, F186): a payment naming a version of a deal that does not descend from the version this identity holds. */
   alarm?: string;
-  /** A payment naming an older version of a deal, with no fork: a plain notice, not the alarm (Law rule 45b, F188, DQ7). */
+  /** A payment naming an older version of a deal, with no fork: a plain notice, not the alarm (Agreements rule 45b, F188, DQ7). */
   notice?: string;
   found: number;
   sorted: Sorted;

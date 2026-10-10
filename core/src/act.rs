@@ -1,12 +1,12 @@
-//! The act (Envelope, "The act").
+//! The act (Envelopes, "The act").
 //!
 //! ```cddl
 //! act = [ outside, locked: bstr, signature ]
 //! ```
 //!
-//! This module decodes and encodes acts in exactly the Envelope MIP's shape,
+//! This module decodes and encodes acts in exactly the Envelopes MIP's shape,
 //! computes act ids and inside commitments, seals an inside into an act's
-//! outside and locked bytes, opens it again with every check the Envelope
+//! outside and locked bytes, opens it again with every check the Envelopes
 //! requires, and checks an everyday act's place in its sequence.
 //!
 //! Signatures are carried and decoded here but not verified: that, and every
@@ -27,7 +27,7 @@ pub type Salt = [u8; 16];
 pub enum ActError {
     /// Not deterministic CBOR.
     Cbor(CborError),
-    /// Deterministic CBOR, but not in the Envelope's shape: a missing or
+    /// Deterministic CBOR, but not in the Envelopes' shape: a missing or
     /// unknown field, or a field of the wrong kind. Names the field.
     Shape(&'static str),
     /// A text string that is not canonical text.
@@ -46,7 +46,7 @@ impl fmt::Display for ActError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ActError::Cbor(e) => write!(f, "not deterministic CBOR: {e}"),
-            ActError::Shape(what) => write!(f, "not in the Envelope's shape: {what}"),
+            ActError::Shape(what) => write!(f, "not in the Envelopes' shape: {what}"),
             ActError::Text(e) => write!(f, "not canonical text: {e}"),
             ActError::LockedHash => f.write_str("the locked bytes do not match the locked hash"),
             ActError::Unlock => f.write_str("the content key does not open the inside"),
@@ -211,7 +211,7 @@ impl Outside {
 }
 
 /// Inside key 3, `objects`, as the act encodes it: `[* [chain, predecessor]]`.
-/// *Also signed by an anonymous payer's key over its claim (Finance, F147).*
+/// *Also signed by an anonymous payer's key over its claim (Money, F147).*
 pub fn objects_value(objs: &[Object]) -> Value {
     Value::Array(
         objs.iter()
@@ -359,7 +359,7 @@ fn as_hashes(v: &Value, what: &'static str, non_empty: bool) -> R<Vec<Hash>> {
 }
 
 /// The entries of a map whose keys must all be small unsigned integers from
-/// `allowed`. An unknown key makes the act invalid (Envelope rule 1).
+/// `allowed`. An unknown key makes the act invalid (Envelopes rule 1).
 fn int_map<'a>(v: &'a Value, allowed: u64, what: &'static str) -> R<Vec<(u64, &'a Value)>> {
     let Value::Map(entries) = v else {
         return Err(ActError::Shape(what));
@@ -484,7 +484,7 @@ impl Inside {
         })
     }
 
-    /// Decode an unlocked inside: deterministic CBOR, the Envelope's shape,
+    /// Decode an unlocked inside: deterministic CBOR, the Envelopes' shape,
     /// and canonical text in every text string, payload included.
     pub fn decode(bytes: &[u8]) -> R<Self> {
         let v = cbor::decode(bytes)?;
@@ -534,8 +534,8 @@ impl Act {
         })
     }
 
-    /// Decode an act from its bytes: deterministic CBOR in the Envelope's
-    /// shape (Envelope rule 1). Its inside stays locked; see [`Act::open`].
+    /// Decode an act from its bytes: deterministic CBOR in the Envelopes'
+    /// shape (Envelopes rule 1). Its inside stays locked; see [`Act::open`].
     pub fn decode(bytes: &[u8]) -> R<Self> {
         let v = cbor::decode(bytes)?;
         let act = Act::from_value(&v)?;
@@ -544,7 +544,7 @@ impl Act {
     }
 
     /// Check the locked bytes against the locked hash, the check any relay
-    /// can make (Envelope rule 2, first half).
+    /// can make (Envelopes rule 2, first half).
     pub fn check_locked_hash(&self) -> R<()> {
         if sha256(&self.locked) != self.outside.locked_hash {
             return Err(ActError::LockedHash);
@@ -624,7 +624,7 @@ pub fn seal_encoded(
     (outside, locked)
 }
 
-/// Open an act's inside and check it against its outside (Envelope rules 2,
+/// Open an act's inside and check it against its outside (Envelopes rules 2,
 /// 3 and 5; Identity, "Every act", step 2):
 ///
 /// 1. the locked bytes hash to the locked hash;
@@ -649,7 +649,7 @@ pub fn open(outside: &Outside, locked: &[u8], key: Option<&ContentKey>) -> R<Ins
 
 // ---------------------------------------------------------------- sequences
 
-/// Why an everyday act does not fit its place in a sequence (Envelope rule 4).
+/// Why an everyday act does not fit its place in a sequence (Envelopes rule 4).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SequenceError {
     /// An everyday act carries `prev` (empty for the first act of a sequence).

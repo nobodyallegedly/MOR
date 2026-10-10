@@ -27,10 +27,10 @@ use mor_anchoring::service::{self, Judgment, Offer, Payment, Price, Standing, Te
 use mor_anchoring::tree;
 use mor_core::act::Ref;
 use mor_core::chain::Status;
-use mor_core::finance::{self as fin, Amount, Citations, Claim, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, RefundTo, VaultEntry};
+use mor_core::money::{self as fin, Amount, Citations, Claim, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, RefundTo, VaultEntry};
 use mor_core::hash::Hash;
 use mor_core::identity::Payload as Id;
-use mor_core::law::{self, LawView, Mips};
+use mor_core::agreements::{self, AgreementsView, Mips};
 use mor_lightning::bolt11::Network as LnNetwork;
 use mor_lightning::{Lightning, LnAddress, LnProof};
 use mor_onchain::clock::{self, BitcoinClock};
@@ -44,10 +44,10 @@ fn mips() -> Mips {
     Mips {
         identity: common::identity_spec(),
         text: h("a text specification"),
-        envelope: h("the envelope specification"),
-        finance: common::finance_spec(),
-        law: common::law_spec(),
-        production: h("the production specification"),
+        envelopes: h("the envelope specification"),
+        money: common::money_spec(),
+        agreements: common::agreements_spec(),
+        development: h("the production specification"),
     }
 }
 
@@ -55,23 +55,23 @@ fn sat(n: u64) -> Amount {
     Amount { unit: mor_onchain::unit(Network::Regtest), value: n }
 }
 
-// ---------------------------------------------------------------- a Law client's Held
+// ---------------------------------------------------------------- an Agreements client's Held
 
-struct LawHeld<'a> {
-    view: LawView<'a>,
+struct AgreementsHeld<'a> {
+    view: AgreementsView<'a>,
 }
 
-impl LawHeld<'_> {
+impl AgreementsHeld<'_> {
     fn fin(&self, id: &Hash) -> Option<(Payload, Hash)> {
         let x = self.view.v.get(id)?;
-        if x.inside.spec != mips().finance {
+        if x.inside.spec != mips().money {
             return None;
         }
         Some((Payload::decode(x.inside.type_, &x.inside.payload).ok()?, x.act.outside.signer?))
     }
 }
 
-impl Held for LawHeld<'_> {
+impl Held for AgreementsHeld<'_> {
     fn pointer(&self, id: &Hash) -> Option<PayeePointer> {
         match self.fin(id)? {
             (Payload::PayeePointer(p), s) if s == p.payee && self.view.v.binding_status(id) == Status::Valid => Some(p),
@@ -85,7 +85,7 @@ impl Held for LawHeld<'_> {
             Id::Rotation(r) => (x.act.outside.signer?, r.declarations.clone()?),
             _ => return None,
         };
-        Some((who, fin::vault_in(&mips().finance, &decls).ok()??.unwrap_or_default()))
+        Some((who, fin::vault_in(&mips().money, &decls).ok()??.unwrap_or_default()))
     }
     fn obligation(&self, id: &Hash) -> Option<Obligation> {
         match self.fin(id)? {
@@ -153,7 +153,7 @@ impl Story {
         let mut ben = w.genesis("ben", vec![own_home()], None, None);
         let pointer = |w: &mut World, p: &mut Person, node: &str| {
             let x = PayeePointer { payee: p.id, version: 1, previous: None, rails: ln_rail(&secret(node)) };
-            let a = w.everyday_act(p, mips().finance, fin::types::PAYEE_POINTER, Payload::PayeePointer(x).to_map(), None, None);
+            let a = w.everyday_act(p, mips().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(x).to_map(), None, None);
             w.add(&a)
         };
         let service_pointer = pointer(&mut w, &mut service, "the service's node");
@@ -163,13 +163,13 @@ impl Story {
         // (Money rule 14's client conformance for an act that can pay its
         // signer).
         let offer = terms.standing_offer(mor_onchain::unit(Network::Regtest), Some("Anchoring on Bitcoin regtest, priced by urgency".into()), None);
-        let a = w.everyday_act_refs(&mut service, mips().law, law::types::STANDING_OFFER, offer.to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
+        let a = w.everyday_act_refs(&mut service, mips().agreements, agreements::types::STANDING_OFFER, offer.to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
         let offer_id = w.add(&a);
         Story { w, service, ana, ben, service_pointer, ana_pointer, ben_pointer, offer_id, rail_valid: BTreeMap::new(), payments: BTreeMap::new() }
     }
 
-    fn view(&self) -> LawView<'_> {
-        let mut v = LawView::new(&self.w.v, mips());
+    fn view(&self) -> AgreementsView<'_> {
+        let mut v = AgreementsView::new(&self.w.v, mips());
         v.rail_valid = self.rail_valid.clone();
         v.payments = self.payments.clone();
         v
@@ -178,19 +178,19 @@ impl Story {
     /// The offer as the anchoring cMIP reads it from the held act.
     fn offer(&self) -> Offer {
         let x = self.w.v.get(&self.offer_id).unwrap();
-        let o = law::Offer::decode(&x.inside).expect("an offer in Agreements' format").offer;
+        let o = agreements::Offer::decode(&x.inside).expect("an offer in Agreements' format").offer;
         Offer::read(self.offer_id, self.service.id, &o).expect("an anchoring offer")
     }
 
     /// Sign and hold a claim; where the Lightning rail answers valid, state
-    /// it to the Law view as a Law client does. Its act id and the answer.
+    /// it to the Agreements view as an Agreements client does. Its act id and the answer.
     fn claim(&mut self, payer: &mut Person, c: &Claim) -> (Hash, Answer) {
-        let a = self.w.everyday_act(payer, mips().finance, fin::types::CLAIM, Payload::Claim(c.clone()).to_map(), None, None);
+        let a = self.w.everyday_act(payer, mips().money, fin::types::CLAIM, Payload::Claim(c.clone()).to_map(), None, None);
         let id = self.w.add(&a);
         let rec = Record::Claim(c, payer.id, &Citations::default());
         let ln = Lightning;
         let modules = Modules::new().adopt(&ln);
-        let answer = verify(rec.clone(), &LawHeld { view: self.view() }, &modules).answer;
+        let answer = verify(rec.clone(), &AgreementsHeld { view: self.view() }, &modules).answer;
         if answer == Answer::Valid {
             self.rail_valid.insert(id, paid_at(&rec).unwrap());
             if let Some(p) = mor_payment::payment(&rec, &modules) {
@@ -242,8 +242,8 @@ fn f225_the_core_reads_the_services_offer_as_a_standing_offer_and_the_payment_as
     assert_eq!(answer, Answer::Valid, "paid over Lightning, verified by the Lightning rail Module");
     let x = s.w.v.get(&claim).unwrap();
     let Ok(Payload::Claim(cl)) = Payload::decode(x.inside.type_, &x.inside.payload) else { panic!() };
-    assert_eq!(beside(Record::Claim(&cl, ana.id, &Citations::default()), &LawHeld { view: s.view() }), Answer::Valid, "the pointer the service's offer holds");
-    assert_eq!(s.view().purchase(&claim).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase, "accepted under the offer's terms (F215)");
+    assert_eq!(beside(Record::Claim(&cl, ana.id, &Citations::default()), &AgreementsHeld { view: s.view() }), Answer::Valid, "the pointer the service's offer holds");
+    assert_eq!(s.view().purchase(&claim).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "accepted under the offer's terms (F215)");
     let ticket = Ticket { offer: oid, leaf: tree::leaf(&h("ana's act"), &h("ana's blind")), commitment: c.hash(), tier: 0, batch: 0, deadline: 102, quote: None };
     assert_eq!(service::acceptable(&offer, &ticket, &c, 100, None), Ok(()));
     // A tip to the service's pointer: no purchase, no ticket.

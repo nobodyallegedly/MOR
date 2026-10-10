@@ -34,21 +34,21 @@ use std::path::{Path, PathBuf};
 pub struct Specs {
     /// `IDENTITY`: receipts, routes, log summaries, objections...
     pub identity: Hash,
-    /// `ENVELOPE`: publications, encryption keys.
-    pub envelope: Hash,
+    /// `ENVELOPES`: publications, encryption keys.
+    pub envelopes: Hash,
 }
 
 impl Specs {
     pub fn test() -> Self {
         Specs {
             identity: sha256(b"IDENTITY, test value until the freeze"),
-            envelope: sha256(b"ENVELOPE, test value until the freeze"),
+            envelopes: sha256(b"ENVELOPE, test value until the freeze"),
         }
     }
 }
 
-/// Envelope types a relay reads.
-pub mod envelope_types {
+/// Envelopes types a relay reads.
+pub mod envelopes_types {
     pub const PUBLICATION: u64 = 0;
     pub const ENCRYPTION_KEY: u64 = 4;
 }
@@ -61,7 +61,7 @@ pub enum Role {
     Home,
 }
 
-/// Whose acts this relay keeps (Envelope, relays rule 5: the relay's policy).
+/// Whose acts this relay keeps (Envelopes, relays rule 5: the relay's policy).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Policy {
     /// Anyone's.
@@ -241,7 +241,7 @@ pub enum OperatorSetup {
     /// up to that act, oldest first.
     Existing { keys: Keys, chain: Vec<Vec<u8>> },
     /// The stopgap until the genesis client exists (roadmap step 5): a new
-    /// test identity, self-hosted at this home, its safety key in software.
+    /// test identity, self-hosted at this home, its chain key in software.
     NewTest,
 }
 
@@ -551,10 +551,10 @@ impl Node {
         Ok(self.store.log_len()?)
     }
 
-    /// Whether the key file holds the operator's safety key (a test operator),
+    /// Whether the key file holds the operator's chain key (a test operator),
     /// so that the home can rotate its operator by itself.
-    pub fn holds_safety_key(&self) -> bool {
-        self.keys.as_ref().is_some_and(|k| k.safety.is_some())
+    pub fn holds_chain_key(&self) -> bool {
+        self.keys.as_ref().is_some_and(|k| k.chain_key.is_some())
     }
 
     /// The browsers paired with the management page.
@@ -602,7 +602,7 @@ impl Node {
     ///
     /// Clients find a home's addresses in its operator's routes (relay
     /// transport cMIP, "Addresses"). Where the operator is held here alone
-    /// (the test operator, its safety key in the key file), this home is the
+    /// (the test operator, its chain key in the key file), this home is the
     /// only one that signs for it, so it also publishes the next version of
     /// the operator's routes, the new address added to the outbox route for
     /// `IDENTITY`. Otherwise the operator's routes are signed where its
@@ -645,7 +645,7 @@ impl Node {
                 "this home is closed for good: it signs nothing more".into(),
             ));
         }
-        let signs_routes = self.keys.as_ref().is_some_and(|k| k.safety.is_some());
+        let signs_routes = self.keys.as_ref().is_some_and(|k| k.chain_key.is_some());
         self.store.begin()?;
         let done = (|| {
             let routes = if signs_routes {
@@ -677,7 +677,7 @@ impl Node {
     /// naming every base address in its outbox route for `IDENTITY`, and
     /// keeping every other route as it was.
     fn next_routes(&mut self, bases: &[String], drop: Option<&str>) -> R<Hash> {
-        use mor_core::envelope::{latest, Route, Routes, Version};
+        use mor_core::envelopes::{latest, Route, Routes, Version};
         let op = self
             .operator()
             .ok_or_else(|| Fail::Internal("a relay has no operator".into()))?;
@@ -740,21 +740,21 @@ impl Node {
         self.sign_and_store(spec, types::ROUTES, payload, None)
     }
 
-    /// Rotate the operator of a home whose key file holds the safety key
-    /// (the test operator): a new signing key and safety key, keeping the
+    /// Rotate the operator of a home whose key file holds the chain key
+    /// (the test operator): a new signing key and chain key, keeping the
     /// home's own sequence; with `closure`, the home closes for good. The
     /// rotation is held here, where the operator is self-hosted, and the key
     /// file is replaced. Stop the running home first, or call this on the
     /// running node.
     pub fn rotate_operator(&mut self, closure: bool) -> R<Hash> {
-        use mor_core::identity::{KeptTip, SafetyCommit, SigningKey};
+        use mor_core::identity::{KeptTip, ChainKeyCommit, SigningKey};
         use mor_core::sig::{SchnorrKey, SlhKey};
         let keys = self
             .keys
             .clone()
             .ok_or_else(|| Fail::Internal("a relay has no operator".into()))?;
-        let safety = keys.safety().ok_or_else(|| {
-            Fail::Internal("the operator's safety key is not on this server: rotate where it is kept, then give this home the rotation and the new key file (mor-relay rotated)".into())
+        let chain_key = keys.chain_key().ok_or_else(|| {
+            Fail::Internal("the operator's chain key is not on this server: rotate where it is kept, then give this home the rotation and the new key file (mor-relay rotated)".into())
         })?;
         let op = keys.identity;
         let states = self.chain_states(&op)?;
@@ -768,11 +768,11 @@ impl Node {
                 "the key file is not bound by the operator's latest chain act".into(),
             ));
         }
-        let scheme = match before.safety.scheme {
+        let scheme = match before.chain_key.scheme {
             mor_core::act::Scheme::Founding(n @ 2..=3) => n,
             _ => {
                 return Err(Fail::Internal(
-                    "the operator's safety scheme is not SLH-DSA".into(),
+                    "the operator's chain-key scheme is not SLH-DSA".into(),
                 ))
             }
         };
@@ -807,7 +807,7 @@ impl Node {
                 scheme: sig::SCHNORR,
                 key: key.public().to_vec(),
             },
-            safety: SafetyCommit {
+            chain_key: ChainKeyCommit {
                 scheme: next.scheme(),
                 commit: next.commitment(),
             },
@@ -835,19 +835,19 @@ impl Node {
             salt: operator::random::<16>(),
         };
         let act = operator::seal_public(&inside, Some(op), None, |id| {
-            safety.sign(id, Some(&operator::random::<16>()))
+            chain_key.sign(id, Some(&operator::random::<16>()))
         });
         self.put_act(&act.encode())?;
         self.replace_keys(Keys {
             identity: op,
             binding: act.id(),
             signing_secret: secret,
-            safety: Some((scheme, seeds)),
+            chain_key: Some((scheme, seeds)),
         })?;
         Ok(act.id())
     }
 
-    /// The operator rotated elsewhere, where its safety key is kept: hold
+    /// The operator rotated elsewhere, where its chain key is kept: hold
     /// the rotation and take the new key file (its signing key and the
     /// rotation that bound it).
     pub fn operator_rotated(&mut self, rotation: &[u8], keys: Keys) -> R<Hash> {
@@ -927,12 +927,12 @@ impl Node {
             Some(i) if i.spec == self.specs.identity => Some(self.identity_payload(&act, i)?),
             _ => None,
         };
-        // Identity rule 2: an act signed with a safety key must be a rotation
+        // Identity rule 2: an act signed with a chain key must be a rotation
         // or a chain signature (F132).
         if sig::is_slh(&act.signature.scheme) && !matches!(payload, Some(Payload::Rotation(_) | Payload::ChainSignature(_))) {
             return wire(
                 code::INVALID,
-                "an act signed with a safety key must be a rotation or a chain signature",
+                "an act signed with a chain key must be a rotation or a chain signature",
             );
         }
         self.check_binding(&act)?;
@@ -1104,12 +1104,12 @@ impl Node {
             );
         }
         let s = &act.signature;
-        if s.scheme != before.safety.scheme
-            || sig::safety_commitment(&s.scheme, &s.key) != before.safety.commit
+        if s.scheme != before.chain_key.scheme
+            || sig::chain_key_commitment(&s.scheme, &s.key) != before.chain_key.commit
         {
             return wire(
                 code::INVALID,
-                "the revealed safety key does not match the commitment of the act before",
+                "the revealed chain key does not match the commitment of the act before",
             );
         }
         let after = before
@@ -1193,8 +1193,8 @@ impl Node {
             return wire(code::NOT_SUPPORTED, "the chain signature is signed under a scheme this home does not implement");
         }
         let s = &act.signature;
-        if s.scheme != before.safety.scheme || sig::safety_commitment(&s.scheme, &s.key) != before.safety.commit {
-            return wire(code::INVALID, "the revealed safety key does not match the commitment of the act before");
+        if s.scheme != before.chain_key.scheme || sig::chain_key_commitment(&s.scheme, &s.key) != before.chain_key.commit {
+            return wire(code::INVALID, "the revealed chain key does not match the commitment of the act before");
         }
         let names_us = self.names_us(&before.homes);
         let own = Some(identity) == self.operator();
@@ -1368,7 +1368,7 @@ impl Node {
         Ok(())
     }
 
-    /// The relay's own policy (Envelope, relays rule 5; Identity rule 12).
+    /// The relay's own policy (Envelopes, relays rule 5; Identity rule 12).
     fn check_policy(
         &self,
         act: &Act,
@@ -1433,7 +1433,7 @@ impl Node {
     }
 
     /// What a public act concerns, for the identity record: its `objects`,
-    /// and the fields of Identity and Envelope payloads that name an
+    /// and the fields of Identity and Envelopes payloads that name an
     /// identity, an act or media.
     fn about(&self, inside: &Inside) -> Vec<Hash> {
         let mut out = vec![];
@@ -1468,7 +1468,7 @@ impl Node {
                 _ => {}
             }
         }
-        if inside.spec == self.specs.envelope && inside.type_ == envelope_types::PUBLICATION {
+        if inside.spec == self.specs.envelopes && inside.type_ == envelopes_types::PUBLICATION {
             out.extend(as_hash(field(2)));
         }
         out.sort();
@@ -1622,7 +1622,7 @@ impl Node {
         if self.cfg.policy == Policy::Allowlist
             && !self
                 .store
-                .any_about(&h, &self.specs.envelope, envelope_types::PUBLICATION)?
+                .any_about(&h, &self.specs.envelopes, envelopes_types::PUBLICATION)?
         {
             return wire(
                 code::NOT_ACCEPTED,
@@ -1751,8 +1751,8 @@ impl Node {
         if want(part::ENCRYPTION_KEY) {
             rec.encryption_keys = bytes_of(self.store.acts_by(
                 identity,
-                &self.specs.envelope,
-                &[envelope_types::ENCRYPTION_KEY],
+                &self.specs.envelopes,
+                &[envelopes_types::ENCRYPTION_KEY],
             )?);
         }
         if want(part::NAMES) {

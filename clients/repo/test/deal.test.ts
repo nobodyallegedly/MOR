@@ -10,7 +10,7 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { dealPayload, offerCheck, sellerAlarm } from '../src/deal.ts';
-import { proposePayload, sign } from '../src/law.ts';
+import { proposePayload, sign } from '../src/agreements.ts';
 
 let homes: Running[] = [];
 let relay: Running;
@@ -29,17 +29,17 @@ async function person(): Promise<TestIdentity> {
   return t;
 }
 
-/** A buyer's claim for a payment to `payee`, naming the claim it pays under (Finance field 9). */
+/** A buyer's claim for a payment to `payee`, naming the claim it pays under (Money field 9). */
 async function pay(buyer: TestIdentity, payee: string, agreement: string, line: string, proof: string) {
   const claim = new Map<number, unknown>([
-    [0, unhex(MIPS.finance)],
+    [0, unhex(MIPS.money)],
     [1, new TextEncoder().encode(proof)],
     [2, unhex(payee)],
-    [3, [unhex(MIPS.finance), 120]],
+    [3, [unhex(MIPS.money), 120]],
     [4, unhex(agreement)],
     [9, [unhex(agreement), unhex(line)]],
   ]);
-  const p = await buyer.publish(MIPS.finance, 3, cborEncode(claim), { public: true, relays: [relay.base], to: [payee] });
+  const p = await buyer.publish(MIPS.money, 3, cborEncode(claim), { public: true, relays: [relay.base], to: [payee] });
   return (await relayAt(relay.base).getAct(p.id))!;
 }
 

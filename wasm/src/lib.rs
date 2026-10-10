@@ -19,16 +19,16 @@
 use mor_core::act::{self, Act, Addressing, Inside, Object, Ref, Scheme};
 use mor_core::cbor::{self, Value};
 use mor_core::chain::{self, How, Status, Stop};
-use mor_core::envelope::{
+use mor_core::envelopes::{
     self, DecKey, EncKey, EncryptionKey, KeyDelivery, Recipient, Route, Routes, SealRandom, Sealed,
     Version,
 };
 use mor_core::hash::Hash;
 use mor_core::identity::{
-    self, Genesis, Home, HomeRule, KeptTip, Payload, Rotation, SafetyCommit, SigningKey,
+    self, Genesis, Home, HomeRule, KeptTip, Payload, Rotation, ChainKeyCommit, SigningKey,
 };
-use mor_core::finance;
-use mor_core::law;
+use mor_core::money;
+use mor_core::agreements;
 use mor_core::mmr;
 use mor_core::sig::{self, SchnorrKey, SlhKey};
 use mor_core::xwing;
@@ -90,9 +90,9 @@ fn schnorr(secret: &[u8]) -> R<SchnorrKey> {
 
 fn slh(scheme: u8, seeds: &[u8]) -> R<SlhKey> {
     if !(2..=3).contains(&scheme) {
-        return Err(err("safety schemes are 2 (SLH-DSA-SHA2-128s) and 3 (128f)"));
+        return Err(err("chain-key schemes are 2 (SLH-DSA-SHA2-128s) and 3 (128f)"));
     }
-    let s = arr::<48>(seeds, "safety seeds")?;
+    let s = arr::<48>(seeds, "chain-key seeds")?;
     Ok(SlhKey::from_seeds(
         scheme,
         s[..16].try_into().unwrap(),
@@ -231,7 +231,7 @@ pub fn signing_public(secret: &[u8]) -> R<Vec<u8>> {
 }
 
 #[derive(Serialize)]
-struct SafetyOut {
+struct ChainKeyOut {
     scheme: u8,
     #[serde(with = "serde_bytes")]
     seeds: Vec<u8>,
@@ -240,18 +240,18 @@ struct SafetyOut {
     commit: String,
 }
 
-/// A fresh safety key held in software: its FIPS 205 seeds (48 bytes), its
+/// A fresh chain key held in software: its FIPS 205 seeds (48 bytes), its
 /// public key and its commitment. **For test identities only** (build
-/// brief: the real identity's safety key is made by the air-gapped Module).
-#[wasm_bindgen(js_name = newTestSafetyKey)]
-pub fn new_test_safety_key(scheme: u8) -> R<JsValue> {
-    safety_from_seeds(scheme, &random::<48>())
+/// brief: the real identity's chain key is made by the air-gapped Module).
+#[wasm_bindgen(js_name = newTestChainKey)]
+pub fn new_test_chain_key(scheme: u8) -> R<JsValue> {
+    chain_key_from_seeds(scheme, &random::<48>())
 }
 
-#[wasm_bindgen(js_name = safetyFromSeeds)]
-pub fn safety_from_seeds(scheme: u8, seeds: &[u8]) -> R<JsValue> {
+#[wasm_bindgen(js_name = chainKeyFromSeeds)]
+pub fn chain_key_from_seeds(scheme: u8, seeds: &[u8]) -> R<JsValue> {
     let k = slh(scheme, seeds)?;
-    to_js(&SafetyOut {
+    to_js(&ChainKeyOut {
         scheme,
         seeds: seeds.to_vec(),
         public: k.public(),
@@ -323,7 +323,7 @@ struct Described {
     refs: Option<Vec<String>>,
     /// Web resources it refers to, `[address, hash or null]`, when opened.
     web_refs: Option<Vec<(String, Option<String>)>>,
-    /// Acts by other identities it acknowledges (Envelope, "Acknowledgements"), when opened.
+    /// Acts by other identities it acknowledges (Envelopes, "Acknowledgements"), when opened.
     acks: Option<Vec<String>>,
     #[serde(with = "serde_bytes")]
     payload: Option<Vec<u8>>,
@@ -400,28 +400,28 @@ struct DivideIn {
     holders: Vec<(String, u64)>,
     /// Each holder's leftover units from this stake so far, as the split
     /// service's previous split act for the stake carries them, in the
-    /// holders' order (F165, F171): from `Verifier.lawSplitTurns`. Absent:
+    /// holders' order (F165, F171): from `Verifier.agreementsSplitTurns`. Absent:
     /// a tie is reported, not settled.
     #[serde(default)]
     turns: Option<Vec<u64>>,
 }
 
-/// Law rule 15a (F150, F165): `{ total, holders: [[hex, share]], turns }`
+/// Agreements rule 15a (F150, F165): `{ total, holders: [[hex, share]], turns }`
 /// divided among the holders by their shares, each holder its exact share
 /// rounded down, leftover units one each to the largest fractional
 /// remainders; holders with equal remainders take turns: the fewest
 /// leftover units so far (`turns`) first, then the smallest identity hash.
 /// The parts, in the holders' order; an error where a tie decides a unit
 /// and no turns are given.
-#[wasm_bindgen(js_name = lawDivideStake)]
-pub fn law_divide_stake(input: JsValue) -> R<Vec<f64>> {
+#[wasm_bindgen(js_name = agreementsDivideStake)]
+pub fn agreements_divide_stake(input: JsValue) -> R<Vec<f64>> {
     let i: DivideIn = from_js(input)?;
     let holders = i.holders.iter().map(|(h, n)| Ok((unhex(h)?, *n))).collect::<R<Vec<_>>>()?;
     let ties = match &i.turns {
-        Some(t) => law::Ties::Turns(t),
-        None => law::Ties::Open,
+        Some(t) => agreements::Ties::Turns(t),
+        None => agreements::Ties::Open,
     };
-    let parts = law::divide_stake(i.total, &holders, ties).map_err(|w| JsError::new(&w))?;
+    let parts = agreements::divide_stake(i.total, &holders, ties).map_err(|w| JsError::new(&w))?;
     Ok(parts.into_iter().map(|n| n as f64).collect())
 }
 
@@ -439,24 +439,24 @@ struct TallyIn {
     before: Vec<(String, u64)>,
 }
 
-/// Law rule 15a (F165, F171): the running count a split act carries for a
+/// Agreements rule 15a (F165, F171): the running count a split act carries for a
 /// stake (field 4, PROPOSED format, to confirm with Nobody, allegedly):
 /// `{ pot, holders, paid, before }` gives `before` plus each holder's
 /// leftover units in `paid` (what it was paid above its exact share of
 /// `pot` rounded down), every holder named, as `[hex, count]` sorted by
 /// identity hash.
-#[wasm_bindgen(js_name = lawSplitTally)]
-pub fn law_split_tally(input: JsValue) -> R<JsValue> {
+#[wasm_bindgen(js_name = agreementsSplitTally)]
+pub fn agreements_split_tally(input: JsValue) -> R<JsValue> {
     let i: TallyIn = from_js(input)?;
     let pairs = |v: &[(String, u64)]| v.iter().map(|(h, n)| Ok((unhex(h)?, *n))).collect::<R<Vec<_>>>();
     let holders = pairs(&i.holders)?;
     let mut before = pairs(&i.before)?;
     before.extend(holders.iter().map(|(h, _)| (*h, 0)));
-    let c = law::running_count(&before, &law::leftovers(i.pot, &holders, &pairs(&i.paid)?));
+    let c = agreements::running_count(&before, &agreements::leftovers(i.pot, &holders, &pairs(&i.paid)?));
     to_js(&c.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>())
 }
 
-/// The running summary of a sequence of act ids (Envelope, "Sequences").
+/// The running summary of a sequence of act ids (Envelopes, "Sequences").
 #[wasm_bindgen(js_name = runningSummary)]
 pub fn running_summary(ids: Vec<String>) -> R<String> {
     let ids = ids.iter().map(|s| unhex(s)).collect::<R<Vec<_>>>()?;
@@ -522,8 +522,8 @@ struct GenesisIn {
     identity_spec: String,
     #[serde(with = "serde_bytes")]
     signing_secret: Vec<u8>,
-    safety_scheme: u8,
-    safety_commit: String,
+    chain_key_scheme: u8,
+    chain_key_commit: String,
     homes: Vec<HomeIn>,
     rule: Option<Vec<u64>>,
     /// High-risk settings of higher MIPs (Identity, declarations slot).
@@ -531,28 +531,28 @@ struct GenesisIn {
 }
 
 /// `declaration = [ spec, kind, value ]`, with a hash as its value (a
-/// collective's founding agreement, Law), or null to remove the kind.
+/// collective's founding agreement, Agreements), or null to remove the kind.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct DeclIn {
     spec: String,
     kind: u64,
     value: Option<String>,
-    /// For a rotation's Law declaration of a clone: the signature acts that
-    /// complete it (Law draft 7, Flaw M): the value is `[clone, [+ hash]]`.
+    /// For a rotation's Agreements declaration of a clone: the signature acts that
+    /// complete it (Agreements draft 7, Flaw M): the value is `[clone, [+ hash]]`.
     signatures: Option<Vec<String>>,
     /// For a recovery rotation (C7): the signature acts on the declaration
-    /// taking effect there, which it places (Law draft 9, Flaw B18): the
+    /// taking effect there, which it places (Agreements draft 9, Flaw B18): the
     /// value is `[clone, [+ hash], [+ hash]]`.
     absence: Option<Vec<String>>,
-    /// For a rollback (Law rule 37d, F185): the broken act it names, a
+    /// For a rollback (Agreements rule 37d, F185): the broken act it names, a
     /// rotation of the collective, by its id; the value is then
     /// `[clone, [+ hash], broken, [* hash]]`, with `registers`.
     broken: Option<String>,
     /// For a rollback: the resignations and steppings down it registers,
     /// possibly none.
     registers: Option<Vec<String>>,
-    /// Any other value, as its deterministic CBOR (Finance's clock, F176):
+    /// Any other value, as its deterministic CBOR (Money's clock, F176):
     /// given instead of `value`.
     #[serde(default)]
     cbor: Option<serde_bytes::ByteBuf>,
@@ -644,9 +644,9 @@ pub fn make_genesis(input: JsValue) -> R<Vec<u8>> {
             scheme: sig::SCHNORR,
             key: key.public().to_vec(),
         },
-        safety: SafetyCommit {
-            scheme: Scheme::Founding(g.safety_scheme),
-            commit: unhex(&g.safety_commit)?,
+        chain_key: ChainKeyCommit {
+            scheme: Scheme::Founding(g.chain_key_scheme),
+            commit: unhex(&g.chain_key_commit)?,
         },
         homes: homes_of(&g.homes)?,
         rule: g.rule.as_deref().map(rule_of).transpose()?,
@@ -684,14 +684,14 @@ struct RotationIn {
     identity: String,
     previous: String,
     position: u64,
-    /// The safety key the previous act committed, revealed now.
-    safety_scheme: u8,
+    /// The chain key the previous act committed, revealed now.
+    chain_key_scheme: u8,
     #[serde(with = "serde_bytes")]
-    safety_seeds: Vec<u8>,
+    chain_key_seeds: Vec<u8>,
     #[serde(with = "serde_bytes")]
     new_signing_public: Vec<u8>,
-    next_safety_scheme: u8,
-    next_safety_commit: String,
+    next_chain_key_scheme: u8,
+    next_chain_key_commit: String,
     kept: Vec<TipIn>,
     homes: Option<Vec<HomeIn>>,
     /// Absent: left in place. `[]`: back to the default (null). Otherwise a rule.
@@ -700,16 +700,16 @@ struct RotationIn {
     declarations: Option<Vec<DeclIn>>,
 }
 
-/// A rotation (Identity type 1), signed by the revealed safety key.
+/// A rotation (Identity type 1), signed by the revealed chain key.
 ///
-/// The safety key here is held in software: **test identities only**. The
+/// The chain key here is held in software: **test identities only**. The
 /// signature is hedged (fresh randomness), as the air-gapped Module signs;
 /// the caller keeps the returned bytes and sends exactly them to every home
 /// (Identity rule 8a).
 #[wasm_bindgen(js_name = makeRotation)]
 pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
     let r: RotationIn = from_js(input)?;
-    let safety = slh(r.safety_scheme, &r.safety_seeds)?;
+    let chain_key = slh(r.chain_key_scheme, &r.chain_key_seeds)?;
     let payload = Rotation {
         prev: unhex(&r.previous)?,
         position: r.position,
@@ -717,9 +717,9 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
             scheme: sig::SCHNORR,
             key: arr::<32>(&r.new_signing_public, "a signing public key")?.to_vec(),
         },
-        safety: SafetyCommit {
-            scheme: Scheme::Founding(r.next_safety_scheme),
-            commit: unhex(&r.next_safety_commit)?,
+        chain_key: ChainKeyCommit {
+            scheme: Scheme::Founding(r.next_chain_key_scheme),
+            commit: unhex(&r.next_chain_key_commit)?,
         },
         kept: r
             .kept
@@ -755,7 +755,7 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
         &random::<32>(),
         &random::<24>(),
         &public_addr(Some(unhex(&r.identity)?)),
-        |id| safety.sign(id, Some(&random::<16>())),
+        |id| chain_key.sign(id, Some(&random::<16>())),
     );
     identity::check_rotation_shape(&a, &inside, &payload).map_err(err)?;
     Ok(a.encode())
@@ -768,34 +768,34 @@ struct ChainSignatureIn {
     identity: String,
     previous: String,
     position: u64,
-    /// The safety key the previous act committed, revealed now.
-    safety_scheme: u8,
+    /// The chain key the previous act committed, revealed now.
+    chain_key_scheme: u8,
     #[serde(with = "serde_bytes")]
-    safety_seeds: Vec<u8>,
-    next_safety_scheme: u8,
-    next_safety_commit: String,
+    chain_key_seeds: Vec<u8>,
+    next_chain_key_scheme: u8,
+    next_chain_key_commit: String,
     /// The act it signs.
     signs: String,
 }
 
 /// A chain signature (Identity type 16, F132): an act on the identity
-/// chain, signed by the revealed safety key, naming the act it signs and
-/// committing the next safety key; nothing else changes. Law's members sign
+/// chain, signed by the revealed chain key, naming the act it signs and
+/// committing the next chain key; nothing else changes. Agreements' members sign
 /// forks and closings with it.
 ///
-/// The safety key here is held in software: **test identities only**. As
+/// The chain key here is held in software: **test identities only**. As
 /// for a rotation, the caller keeps the returned bytes and sends exactly
 /// them to every home (Identity rule 8a).
 #[wasm_bindgen(js_name = makeChainSignature)]
 pub fn make_chain_signature(input: JsValue) -> R<Vec<u8>> {
     let c: ChainSignatureIn = from_js(input)?;
-    let safety = slh(c.safety_scheme, &c.safety_seeds)?;
+    let chain_key = slh(c.chain_key_scheme, &c.chain_key_seeds)?;
     let payload = identity::ChainSignature {
         prev: unhex(&c.previous)?,
         position: c.position,
-        safety: SafetyCommit {
-            scheme: Scheme::Founding(c.next_safety_scheme),
-            commit: unhex(&c.next_safety_commit)?,
+        chain_key: ChainKeyCommit {
+            scheme: Scheme::Founding(c.next_chain_key_scheme),
+            commit: unhex(&c.next_chain_key_commit)?,
         },
         signs: unhex(&c.signs)?,
     };
@@ -809,7 +809,7 @@ pub fn make_chain_signature(input: JsValue) -> R<Vec<u8>> {
         &random::<32>(),
         &random::<24>(),
         &public_addr(Some(unhex(&c.identity)?)),
-        |id| safety.sign(id, Some(&random::<16>())),
+        |id| chain_key.sign(id, Some(&random::<16>())),
     );
     identity::check_chain_signature_shape(&a, &inside, &payload).map_err(err)?;
     Ok(a.encode())
@@ -833,9 +833,9 @@ struct EverydayIn {
     to: Option<Vec<String>>,
     /// `[chain, predecessor]` pairs.
     objects: Option<Vec<(String, String)>>,
-    /// Acts this one refers to, by id (Envelope, "References").
+    /// Acts this one refers to, by id (Envelopes, "References").
     refs: Option<Vec<String>>,
-    /// Acts this one acknowledges, by id (Envelope, `acks`).
+    /// Acts this one acknowledges, by id (Envelopes, `acks`).
     #[serde(default)]
     acks: Option<Vec<String>>,
 }
@@ -851,7 +851,7 @@ struct Made {
 }
 
 /// An everyday act, next in the signer's sequence: position and running
-/// summary computed from the sequence given (Envelope rule 4).
+/// summary computed from the sequence given (Envelopes rule 4).
 #[wasm_bindgen(js_name = makeEveryday)]
 pub fn make_everyday(input: JsValue) -> R<JsValue> {
     let e: EverydayIn = from_js(input)?;
@@ -957,7 +957,7 @@ pub fn routes_payload(input: JsValue) -> R<Vec<u8>> {
     Ok(cbor::encode(&Value::Map(m)))
 }
 
-/// An encryption-key payload (Envelope type 4), for an X-Wing public key, as CBOR.
+/// An encryption-key payload (Envelopes type 4), for an X-Wing public key, as CBOR.
 #[wasm_bindgen(js_name = encryptionKeyPayload)]
 pub fn encryption_key_payload(version: u32, previous: Option<String>, public: &[u8]) -> R<Vec<u8>> {
     let e = EncryptionKey {
@@ -972,7 +972,7 @@ pub fn encryption_key_payload(version: u32, previous: Option<String>, public: &[
     Ok(cbor::encode(&Value::Map(m)))
 }
 
-/// A key-delivery payload (Envelope type 1), as CBOR.
+/// A key-delivery payload (Envelopes type 1), as CBOR.
 #[wasm_bindgen(js_name = keyDeliveryPayload)]
 pub fn key_delivery_payload(target: &str, key: &[u8], media: bool) -> R<Vec<u8>> {
     let d = KeyDelivery {
@@ -1046,7 +1046,7 @@ struct SealIn {
 }
 
 /// Seal an act, with its content key if private, for its recipients
-/// (Envelope, "Sealed containers"). Randomness is drawn fresh unless given.
+/// (Envelopes, "Sealed containers"). Randomness is drawn fresh unless given.
 #[wasm_bindgen(js_name = seal)]
 pub fn seal(input: JsValue) -> R<Vec<u8>> {
     let s: SealIn = from_js(input)?;
@@ -1090,7 +1090,7 @@ pub fn seal(input: JsValue) -> R<Vec<u8>> {
             aux: random::<32>(),
         },
     };
-    Ok(envelope::seal(&a, key.as_ref(), &recipients, &rnd)
+    Ok(envelopes::seal(&a, key.as_ref(), &recipients, &rnd)
         .map_err(err)?
         .encode())
 }
@@ -1135,7 +1135,7 @@ pub fn open_sealed(bytes: &[u8], me: Option<String>, secret: &[u8]) -> R<JsValue
     let s = Sealed::decode(bytes).map_err(err)?;
     let me = me.as_deref().map(unhex).transpose()?;
     let dk = DecKey::from_secret(arr::<32>(secret, "an X-Wing secret")?);
-    let o = envelope::open(&s, me.as_ref(), &dk).map_err(err)?;
+    let o = envelopes::open(&s, me.as_ref(), &dk).map_err(err)?;
     let described = describe_act(&o.act, o.key.as_ref());
     to_js(&OpenedOut {
         act: o.act.encode(),
@@ -1182,8 +1182,8 @@ struct ResolutionOut {
     contested: Vec<u64>,
     /// The state the latest counting act leaves.
     signing_key: Option<serde_bytes::ByteBuf>,
-    safety_scheme: Option<u8>,
-    safety_commit: Option<String>,
+    chain_key_scheme: Option<u8>,
+    chain_key_commit: Option<String>,
     homes: Vec<HomeOut>,
     rule: Option<Vec<u64>>,
     /// The effective rule, in words.
@@ -1219,16 +1219,16 @@ fn how(h: &How) -> String {
 #[wasm_bindgen]
 impl Verifier {
     /// A verifier for the given Identity spec hash (`IDENTITY`; a test value
-    /// until the freeze). Given the Finance and Law spec hashes too, it can
+    /// until the freeze). Given the Money and Agreements spec hashes too, it can
     /// tell which acts may carry acknowledgements (F110); without them, an
     /// act of another specification carrying `acks` is unknown to it.
     #[wasm_bindgen(constructor)]
-    pub fn new(identity_spec: &str, finance_spec: Option<String>, law_spec: Option<String>) -> R<Verifier> {
+    pub fn new(identity_spec: &str, money_spec: Option<String>, agreements_spec: Option<String>) -> R<Verifier> {
         let identity = unhex(identity_spec)?;
-        let inner = match (finance_spec, law_spec) {
+        let inner = match (money_spec, agreements_spec) {
             (Some(f), Some(l)) => chain::Verifier::with_mips(identity, unhex(&f)?, unhex(&l)?),
             (None, None) => chain::Verifier::new(identity),
-            _ => return Err(JsError::new("give both the Finance and the Law spec hashes, or neither")),
+            _ => return Err(JsError::new("give both the Money and the Agreements spec hashes, or neither")),
         };
         Ok(Verifier { inner, held: vec![] })
     }
@@ -1263,14 +1263,14 @@ impl Verifier {
         Ok(())
     }
 
-    /// The home quorum of a counting rotation (Finance rule 15, F180): the
+    /// The home quorum of a counting rotation (Money rule 15, F180): the
     /// receipts the home rule in effect before it requires, each passing
     /// the receipt checks, per home operator, and how many operators are
     /// needed. `kind` is "own" (it counts on its own signatures: anchor the
     /// rotation itself), "homes", or "homeless" (the new homes' receipts,
     /// under the new home rule, F182); null where it is not a counting
     /// rotation. *The owner's client anchors these after a lock
-    /// change (Finance rule 15, F181).*
+    /// change (Money rule 15, F181).*
     pub fn quorum(&self, identity: &str, rotation: &str) -> R<JsValue> {
         #[derive(Serialize)]
         struct Out {
@@ -1316,11 +1316,11 @@ impl Verifier {
             signing_key: latest
                 .as_ref()
                 .map(|s| serde_bytes::ByteBuf::from(s.signing_key.key.clone())),
-            safety_scheme: latest.as_ref().map(|s| match s.safety.scheme {
+            chain_key_scheme: latest.as_ref().map(|s| match s.chain_key.scheme {
                 Scheme::Founding(n) => n,
                 Scheme::Spec(_) => 0,
             }),
-            safety_commit: latest.as_ref().map(|s| hx(&s.safety.commit)),
+            chain_key_commit: latest.as_ref().map(|s| hx(&s.chain_key.commit)),
             homes: latest
                 .as_ref()
                 .map(|s| {
@@ -1345,7 +1345,7 @@ impl Verifier {
 
     /// The standing of an act held: "valid", "disputed", "void", "pending",
     /// "invalid", "unknown", or "scoped" (signed with a key a higher MIP's
-    /// act installs, a grant key: Law judges it, F128).
+    /// act installs, a grant key: Agreements judge it, F128).
     pub fn status(&self, act: &str) -> R<String> {
         Ok(match self.inner.status(&unhex(act)?) {
             Status::Valid => "valid",
@@ -1406,9 +1406,9 @@ impl Verifier {
         .into())
     }
 
-    /// The routes act (Identity type 3) or encryption-key act (Envelope type
+    /// The routes act (Identity type 3) or encryption-key act (Envelopes type
     /// 4) that counts for an identity: its valid acts of that spec and type,
-    /// followed from version 1 (Identity, "Routes"; Envelope, "Encryption
+    /// followed from version 1 (Identity, "Routes"; Envelopes, "Encryption
     /// key"). Returns the act, whether the chain is contested past it, and
     /// its payload as CBOR.
     pub fn latest(&self, identity: &str, spec: &str, type_: u32) -> R<JsValue> {
@@ -1464,7 +1464,7 @@ impl Verifier {
                 entries.push((*h, version));
             }
         }
-        let l = envelope::latest(&entries);
+        let l = envelopes::latest(&entries);
         let payload = l
             .act
             .and_then(|a| self.inner.get(&a))
@@ -1482,27 +1482,27 @@ impl Verifier {
     }
 }
 
-// ---------------------------------------------------------------- Law (Law draft 7)
+// ---------------------------------------------------------------- Agreements (Agreements draft 7)
 
-/// A Law error, with a stable code before its words (`law/check: ...`), so
+/// An Agreements error, with a stable code before its words (`agreements/check: ...`), so
 /// that clients read the code and never match the wording.
-fn lerr(e: law::LawError) -> JsError {
+fn lerr(e: agreements::AgreementsError) -> JsError {
     JsError::new(&format!("law/{}: {e}", e.code()))
 }
 
 /// The six MIPs' spec hashes, the layers each extension declares
-/// (Production field 10, read by the caller from the specifications it
-/// holds), and each keeper operator's records in order (Law type 2 is still
+/// (Development field 10, read by the caller from the specifications it
+/// holds), and each keeper operator's records in order (Agreements type 2 is still
 /// open, so a client states what it holds).
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SpecsIn {
     identity: String,
-    envelope: String,
+    envelopes: String,
     text: String,
-    finance: String,
-    law: String,
-    production: String,
+    money: String,
+    agreements: String,
+    development: String,
     #[serde(default)]
     ext_layers: std::collections::BTreeMap<String, Vec<u64>>,
     #[serde(default)]
@@ -1519,7 +1519,7 @@ struct SpecsIn {
     /// them (F131, IT3): wrong receipts, counting for nothing.
     #[serde(default)]
     rail_invalid: Vec<String>,
-    /// Absence proof (Law rule 51, F172): pairs `[declaration, act]`, an
+    /// Absence proof (Agreements rule 51, F172): pairs `[declaration, act]`, an
     /// abandonment declaration and the record or clone using it, that the
     /// absence-proof cMIP its clause names (key 3) accepted, as the client
     /// read that cMIP's answer. Under such a clause a declaration counts
@@ -1531,16 +1531,16 @@ struct SpecsIn {
     /// (F184): where listed, the object the record names is checked against
     /// the payment's. Any act offered as evidence for a role share counts
     /// only where the payer the payment commits to acknowledges it,
-    /// whether listed or not (Law rules 19, 22; QG3, F193, F194).
+    /// whether listed or not (Agreements rules 19, 22; QG3, F193, F194).
     #[serde(default)]
     delivery_records: Vec<String>,
-    /// The chain of judgment for a deal's judge of forks (Law rule 34a;
+    /// The chain of judgment for a deal's judge of forks (Agreements rule 34a;
     /// QG4): pairs `[settlement request, judge]` whose period to act on
     /// that request has passed on the deal's time reference with no
     /// settlement of theirs, as the client read that time reference.
     #[serde(default)]
     judges_lapsed: Vec<(String, String)>,
-    /// Notices to a payer owed money back (Law type 24; F197) whose
+    /// Notices to a payer owed money back (Agreements type 24; F197) whose
     /// deadline has passed on their time reference with no address given,
     /// as the client read that time reference.
     #[serde(default)]
@@ -1548,14 +1548,14 @@ struct SpecsIn {
 }
 
 impl SpecsIn {
-    fn mips(&self) -> R<law::Mips> {
-        Ok(law::Mips {
+    fn mips(&self) -> R<agreements::Mips> {
+        Ok(agreements::Mips {
             identity: unhex(&self.identity)?,
-            envelope: unhex(&self.envelope)?,
+            envelopes: unhex(&self.envelopes)?,
             text: unhex(&self.text)?,
-            finance: unhex(&self.finance)?,
-            law: unhex(&self.law)?,
-            production: unhex(&self.production)?,
+            money: unhex(&self.money)?,
+            agreements: unhex(&self.agreements)?,
+            development: unhex(&self.development)?,
         })
     }
 
@@ -1566,8 +1566,8 @@ impl SpecsIn {
             .collect()
     }
 
-    fn view<'a>(&self, v: &'a chain::Verifier) -> R<law::LawView<'a>> {
-        let mut view = law::LawView::new(v, self.mips()?);
+    fn view<'a>(&self, v: &'a chain::Verifier) -> R<agreements::AgreementsView<'a>> {
+        let mut view = agreements::AgreementsView::new(v, self.mips()?);
         view.ext_layers = self.ext()?;
         for (k, log) in &self.keeper_logs {
             view.keeper_logs
@@ -1599,13 +1599,13 @@ fn specs_of(v: JsValue) -> R<SpecsIn> {
     from_js(v)
 }
 
-/// Check a terms payload (Law type 0), given as CBOR: its format and every
+/// Check a terms payload (Agreements type 0), given as CBOR: its format and every
 /// check that needs no other act (key grammar, areas, judges, F105 for
-/// founding terms). Throws `law/<code>: <why>`.
+/// founding terms). Throws `agreements/<code>: <why>`.
 #[wasm_bindgen(js_name = checkTerms)]
 pub fn check_terms(payload: &[u8], specs: JsValue) -> R<()> {
     let s = specs_of(specs)?;
-    let t = law::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
+    let t = agreements::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
     t.check(&s.mips()?).map_err(lerr)
 }
 
@@ -1621,7 +1621,7 @@ struct HoldingOut {
     grant: Option<String>,
 }
 
-fn holding_out(h: &law::Holding) -> HoldingOut {
+fn holding_out(h: &agreements::Holding) -> HoldingOut {
     let mut o = HoldingOut {
         form: String::new(),
         holder: None,
@@ -1631,16 +1631,16 @@ fn holding_out(h: &law::Holding) -> HoldingOut {
         grant: None,
     };
     match h {
-        law::Holding::One(x) => {
+        agreements::Holding::One(x) => {
             o.form = "one".into();
             o.holder = Some(hx(x));
         }
-        law::Holding::Shares { threshold, members } => {
+        agreements::Holding::Shares { threshold, members } => {
             o.form = "shares".into();
             o.threshold = Some(*threshold);
             o.members = Some(members.iter().map(hx).collect());
         }
-        law::Holding::Custodian { custodian, grant } => {
+        agreements::Holding::Custodian { custodian, grant } => {
             o.form = "custodian".into();
             o.custodian = Some(hx(custodian));
             o.grant = Some(hx(grant));
@@ -1663,7 +1663,7 @@ struct RecoveryOut {
 #[serde(rename_all = "camelCase")]
 struct GrammarOut {
     signing: HoldingOut,
-    safety: HoldingOut,
+    chain_key: HoldingOut,
     recovery: Option<RecoveryOut>,
 }
 
@@ -1700,15 +1700,15 @@ struct KindOut {
     type_: Option<u64>,
 }
 
-fn kind_out(k: &law::Kind) -> KindOut {
+fn kind_out(k: &agreements::Kind) -> KindOut {
     match k {
-        law::Kind::Layer(l) => KindOut {
+        agreements::Kind::Layer(l) => KindOut {
             form: "layer".into(),
             layer: Some(*l),
             spec: None,
             type_: None,
         },
-        law::Kind::Type { spec, type_ } => KindOut {
+        agreements::Kind::Type { spec, type_ } => KindOut {
             form: "type".into(),
             layer: None,
             spec: Some(hx(spec)),
@@ -1745,13 +1745,13 @@ struct PowerOut {
     party: Option<String>,
 }
 
-fn power_out(p: &law::Power) -> PowerOut {
+fn power_out(p: &agreements::Power) -> PowerOut {
     let (form, area, party) = match p {
-        law::Power::Constitutional => ("constitutional", None, None),
-        law::Power::Clone => ("clone", None, None),
-        law::Power::Area(a) => ("area", Some(*a), None),
-        law::Power::Plan(h) => ("plan", None, Some(hx(h))),
-        law::Power::Judicial => ("judicial", None, None),
+        agreements::Power::Constitutional => ("constitutional", None, None),
+        agreements::Power::Clone => ("clone", None, None),
+        agreements::Power::Area(a) => ("area", Some(*a), None),
+        agreements::Power::Plan(h) => ("plan", None, Some(hx(h))),
+        agreements::Power::Judicial => ("judicial", None, None),
     };
     PowerOut {
         form: form.into(),
@@ -1775,7 +1775,7 @@ struct ProblemOut {
     text: String,
 }
 
-fn problem(e: &law::LawError) -> ProblemOut {
+fn problem(e: &agreements::AgreementsError) -> ProblemOut {
     ProblemOut {
         code: e.code().into(),
         text: e.to_string(),
@@ -1838,15 +1838,15 @@ struct TermsOut {
 /// collective (S1).
 type StakeOut = (Option<String>, Vec<(Option<String>, u64)>);
 
-/// Read a terms payload (Law type 0) as the core library decodes it, field
+/// Read a terms payload (Agreements type 0) as the core library decodes it, field
 /// by field, so a client can say in plain words what signing it means from
-/// the exact bytes that are signed (Law rule 4a). Throws if the payload is
-/// not terms in Law's format, or uses a field whose format is still open;
-/// `problem` says why terms in the format still fail Law's checks.
+/// the exact bytes that are signed (Agreements rule 4a). Throws if the payload is
+/// not terms in Agreements' format, or uses a field whose format is still open;
+/// `problem` says why terms in the format still fail Agreements' checks.
 #[wasm_bindgen(js_name = readTerms)]
 pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
     let s = specs_of(specs)?;
-    let t = law::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
+    let t = agreements::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
     let hs = |v: &Vec<Hash>| v.iter().map(hx).collect::<Vec<_>>();
     let pairs = |v: &Vec<(Hash, u64)>| v.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>();
     to_js(&TermsOut {
@@ -1858,7 +1858,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             .as_ref()
             .map(|k| (hs(&k.operators), rule_out(&k.rule))),
         signing: match &t.field4 {
-            law::Field4::Rule(r) => Some(rule_out(r)),
+            agreements::Field4::Rule(r) => Some(rule_out(r)),
             _ => None,
         },
         mark: t.field4.mark().map(|m| {
@@ -1885,11 +1885,11 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                     .iter()
                     .flatten()
                     .map(|f| match f {
-                        law::FieldRef::Field(n) => FieldRefOut {
+                        agreements::FieldRef::Field(n) => FieldRefOut {
                             form: "field".into(),
                             number: *n,
                         },
-                        law::FieldRef::Task(n) => FieldRefOut {
+                        agreements::FieldRef::Task(n) => FieldRefOut {
                             form: "task".into(),
                             number: *n,
                         },
@@ -1901,8 +1901,8 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         time: t.time.as_ref().map(|(h, _)| hx(h)),
         abandonment: t.abandonment.as_ref().map(|a| {
             let (authority, identity, threshold) = match &a.authority {
-                law::Authority::Named(h) => ("named", Some(hx(h)), None),
-                law::Authority::Others(k) => ("others", None, Some(*k)),
+                agreements::Authority::Named(h) => ("named", Some(hx(h)), None),
+                agreements::Authority::Others(k) => ("others", None, Some(*k)),
             };
             AbandonmentOut {
                 authority: authority.into(),
@@ -1915,15 +1915,15 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         parent: t.parent.as_ref().map(hx),
         grammar: t.grammar.as_ref().map(|g| GrammarOut {
             signing: holding_out(&g.signing),
-            safety: holding_out(&g.safety),
+            chain_key: holding_out(&g.chain_key),
             recovery: g.recovery.as_ref().map(|r| match r {
-                law::Recovery::Custodian { custodian, grant } => RecoveryOut {
+                agreements::Recovery::Custodian { custodian, grant } => RecoveryOut {
                     form: "custodian".into(),
                     custodian: Some(hx(custodian)),
                     grant: Some(hx(grant)),
                     authority: None,
                 },
-                law::Recovery::Escrow { authority } => RecoveryOut {
+                agreements::Recovery::Escrow { authority } => RecoveryOut {
                     form: "escrow".into(),
                     custodian: None,
                     grant: None,
@@ -1958,9 +1958,9 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             .flatten()
             .map(|l| {
                 let j = match &l.judge {
-                    law::Judge::Task(n) => format!("task {n}"),
-                    law::Judge::Identity(h) => hx(h),
-                    law::Judge::SplitService => "split service".into(),
+                    agreements::Judge::Task(n) => format!("task {n}"),
+                    agreements::Judge::Identity(h) => hx(h),
+                    agreements::Judge::SplitService => "split service".into(),
                 };
                 (j, l.next.iter().map(|(t, p)| (t.hashes().iter().map(hx).collect(), *p)).collect())
             })
@@ -1997,23 +1997,23 @@ struct ClonePlanOut {
 /// What a clone changes from its parent, each change's tier, and the powers
 /// its mark must name (rules 44a to 44c), from the two terms payloads. For
 /// a client preparing a clone's mark, and showing what it changes.
-#[wasm_bindgen(js_name = lawClonePlan)]
-pub fn law_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<JsValue> {
+#[wasm_bindgen(js_name = agreementsClonePlan)]
+pub fn agreements_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<JsValue> {
     let s = specs_of(specs)?;
-    let p = law::Terms::decode(&payload_of(parent)?).map_err(lerr)?;
-    let c = law::Terms::decode(&payload_of(clone)?).map_err(lerr)?;
+    let p = agreements::Terms::decode(&payload_of(parent)?).map_err(lerr)?;
+    let c = agreements::Terms::decode(&payload_of(clone)?).map_err(lerr)?;
     let ext = s.ext()?;
-    let needs = law::powers_needed(&p, &c, &s.mips()?, &|e: &Hash| {
-        ext.get(e).cloned().ok_or(law::LawError::Missing(*e))
+    let needs = agreements::powers_needed(&p, &c, &s.mips()?, &|e: &Hash| {
+        ext.get(e).cloned().ok_or(agreements::AgreementsError::Missing(*e))
     })
     .map_err(lerr)?;
-    let tier = |t: law::Tier| match t {
-        law::Tier::Constitutional => "constitutional",
-        law::Tier::Judicial => "judicial",
-        law::Tier::Operational => "operational",
+    let tier = |t: agreements::Tier| match t {
+        agreements::Tier::Constitutional => "constitutional",
+        agreements::Tier::Judicial => "judicial",
+        agreements::Tier::Operational => "operational",
     };
     to_js(&ClonePlanOut {
-        changes: law::changes(&p, &c)
+        changes: agreements::changes(&p, &c)
             .iter()
             .map(|ch| {
                 let mut o = ChangeOut {
@@ -2025,19 +2025,19 @@ pub fn law_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<JsValue>
                     tier: tier(ch.tier()).into(),
                 };
                 match ch {
-                    law::Change::Field(f) => {
+                    agreements::Change::Field(f) => {
                         o.form = "field".into();
                         o.field = Some(*f);
                     }
-                    law::Change::Task(t) => {
+                    agreements::Change::Task(t) => {
                         o.form = "task".into();
                         o.task = Some(*t);
                     }
-                    law::Change::Extension(e) => {
+                    agreements::Change::Extension(e) => {
                         o.form = "extension".into();
                         o.extension = Some(hx(e));
                     }
-                    law::Change::Words(a) => {
+                    agreements::Change::Words(a) => {
                         o.form = "words".into();
                         o.area = Some(*a);
                     }
@@ -2049,33 +2049,33 @@ pub fn law_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<JsValue>
     })
 }
 
-/// The powers a rollback's mark names (Law rule 37d, F185), from the terms
+/// The powers a rollback's mark names (Agreements rule 37d, F185), from the terms
 /// of the agreement in force just before the broken act and the rollback's
 /// clone: the constitutional change rule, and the judicial tier's rule
 /// where the clone changes a judge, whatever its other changes.
-#[wasm_bindgen(js_name = lawRollbackPlan)]
-pub fn law_rollback_plan(parent: &[u8], clone: &[u8]) -> R<JsValue> {
-    let p = law::Terms::decode(&payload_of(parent)?).map_err(lerr)?;
-    let c = law::Terms::decode(&payload_of(clone)?).map_err(lerr)?;
+#[wasm_bindgen(js_name = agreementsRollbackPlan)]
+pub fn agreements_rollback_plan(parent: &[u8], clone: &[u8]) -> R<JsValue> {
+    let p = agreements::Terms::decode(&payload_of(parent)?).map_err(lerr)?;
+    let c = agreements::Terms::decode(&payload_of(clone)?).map_err(lerr)?;
     #[derive(Serialize)]
     struct Out {
         needs: Vec<PowerOut>,
     }
     to_js(&Out {
-        needs: law::rollback_powers(&p, &c).iter().map(power_out).collect(),
+        needs: agreements::rollback_powers(&p, &c).iter().map(power_out).collect(),
     })
 }
 
-/// A signature payload (Law type 1), as CBOR. The act carries, in
+/// A signature payload (Agreements type 1), as CBOR. The act carries, in
 /// `objects`, `[signed, signed]`: a signature follows the act it signs.
 #[wasm_bindgen(js_name = signaturePayload)]
 pub fn signature_payload(signed: &str) -> R<Vec<u8>> {
-    Ok(cbor::encode(&Value::Map(law::signature_payload(&unhex(
+    Ok(cbor::encode(&Value::Map(agreements::signature_payload(&unhex(
         signed,
     )?))))
 }
 
-/// A resignation payload (Law type 16): the whole voice, or, with `area`,
+/// A resignation payload (Agreements type 16): the whole voice, or, with `area`,
 /// stepping down from that area (by id). The act carries, in `objects`,
 /// `[agreement, agreement]`. With `drafts`, the versions its signer had
 /// signed and leaves behind (F207): none of them ever brings them back.
@@ -2085,7 +2085,7 @@ pub fn resignation_payload(agreement: &str, area: Option<u32>, drafts: Option<Ve
     drafts.sort();
     drafts.dedup();
     Ok(cbor::encode(&Value::Map(
-        law::Resignation {
+        agreements::Resignation {
             agreement: unhex(agreement)?,
             area: area.map(u64::from),
             drafts,
@@ -2094,16 +2094,16 @@ pub fn resignation_payload(agreement: &str, area: Option<u32>, drafts: Option<Ve
     )))
 }
 
-/// A settlement request payload (Law type 22; DQ8, F188): the deal's
+/// A settlement request payload (Agreements type 22; DQ8, F188): the deal's
 /// reference version, the version with two complete clones, whose
 /// arbitrator a party who signed it asks to settle the fork. The act
 /// carries, in `objects`, `[reference, reference]`.
 #[wasm_bindgen(js_name = settlementRequestPayload)]
 pub fn settlement_request_payload(reference: &str) -> R<Vec<u8>> {
-    Ok(cbor::encode(&Value::Map(law::SettlementRequest { reference: unhex(reference)? }.to_map())))
+    Ok(cbor::encode(&Value::Map(agreements::SettlementRequest { reference: unhex(reference)? }.to_map())))
 }
 
-/// A fork settlement payload (Law type 23; DQ8, F188): the settlement of
+/// A fork settlement payload (Agreements type 23; DQ8, F188): the settlement of
 /// the judge of forks the reference names (terms field 27, QF2), or of the
 /// link of its chain of judgment that took over (QG4), naming the request
 /// that activated it, the version of the fork it keeps and every tip it
@@ -2114,16 +2114,16 @@ pub fn fork_settlement_payload(request: &str, kept: &str, discarded: Vec<String>
     let mut d = discarded.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
     d.sort();
     if d.windows(2).any(|w| w[0] == w[1]) {
-        return Err(err("a tip dropped is named once (Law type 23, field 2; QF3)"));
+        return Err(err("a tip dropped is named once (Agreements type 23, field 2; QF3)"));
     }
-    let x = law::ForkSettlement { request: unhex(request)?, kept: unhex(kept)?, discarded: d };
+    let x = agreements::ForkSettlement { request: unhex(request)?, kept: unhex(kept)?, discarded: d };
     if x.discarded.contains(&x.kept) {
-        return Err(err("the version kept is not among the tips dropped (Law type 23)"));
+        return Err(err("the version kept is not among the tips dropped (Agreements type 23)"));
     }
     Ok(cbor::encode(&Value::Map(x.to_map())))
 }
 
-/// A notice payload (Law type 24; F197): before closing, the collective's
+/// A notice payload (Agreements type 24; F197): before closing, the collective's
 /// notice to a payer owed money back who gave no address, naming the
 /// payment (one receipt or claim of it) and a deadline on a time reference
 /// (its hash, and the point on it, as an unsigned integer). The act is
@@ -2131,25 +2131,25 @@ pub fn fork_settlement_payload(request: &str, kept: &str, discarded: Vec<String>
 /// payment]`.
 #[wasm_bindgen(js_name = noticePayload)]
 pub fn notice_payload(payment: &str, time_reference: &str, deadline: u64) -> R<Vec<u8>> {
-    let n = law::Notice { payment: unhex(payment)?, deadline: (unhex(time_reference)?, Value::Uint(deadline)) };
+    let n = agreements::Notice { payment: unhex(payment)?, deadline: (unhex(time_reference)?, Value::Uint(deadline)) };
     Ok(cbor::encode(&Value::Map(n.to_map())))
 }
 
-/// A contest payload (Law type 14; BQ4, F188): the declaration of absence
+/// A contest payload (Agreements type 14; BQ4, F188): the declaration of absence
 /// it answers. Signed by the party the declaration names; the act carries,
 /// in `objects`, `[declaration, declaration]`. It voids nothing (rule 52).
 #[wasm_bindgen(js_name = contestPayload)]
 pub fn contest_payload(declaration: &str) -> R<Vec<u8>> {
-    Ok(cbor::encode(&Value::Map(law::Contest { declaration: unhex(declaration)? }.to_map())))
+    Ok(cbor::encode(&Value::Map(agreements::Contest { declaration: unhex(declaration)? }.to_map())))
 }
 
-/// An abandonment declaration payload (Law type 13, B12): the agreement,
+/// An abandonment declaration payload (Agreements type 13, B12): the agreement,
 /// the version whose clause it applies (the last the party signed), the
 /// party, and the outcomes, ascending. The act carries, in `objects`,
 /// `[agreement, agreement]`.
 #[wasm_bindgen(js_name = declarationPayload)]
 pub fn declaration_payload(agreement: &str, clause: &str, party: &str, outcomes: Vec<u32>) -> R<Vec<u8>> {
-    let d = law::AbsenceDeclaration {
+    let d = agreements::AbsenceDeclaration {
         agreement: unhex(agreement)?,
         clause: unhex(clause)?,
         party: unhex(party)?,
@@ -2171,7 +2171,7 @@ struct RecordIn {
     registers: Option<Vec<String>>,
 }
 
-/// A record payload (Law type 17): the collective's everyday line. Its act
+/// A record payload (Agreements type 17): the collective's everyday line. Its act
 /// carries, in `objects`, `[clone, clone]`, or, naming no clone, the
 /// agreement in force. Checked by the core's decoder before it is returned.
 #[wasm_bindgen(js_name = recordPayload)]
@@ -2182,7 +2182,7 @@ pub fn record_payload(input: JsValue) -> R<Vec<u8>> {
             .map(|v| v.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>())
             .transpose()
     };
-    let rec = law::Record {
+    let rec = agreements::Record {
         clone: r.clone.as_deref().map(unhex).transpose()?,
         signatures: hs(&r.signatures)?,
         kept: r
@@ -2214,19 +2214,19 @@ struct RuleOut {
     named: Option<Vec<String>>,
 }
 
-fn rule_out(r: &law::Rule) -> RuleOut {
+fn rule_out(r: &agreements::Rule) -> RuleOut {
     match r {
-        law::Rule::All => RuleOut {
+        agreements::Rule::All => RuleOut {
             form: "all".into(),
             threshold: None,
             named: None,
         },
-        law::Rule::Threshold(k) => RuleOut {
+        agreements::Rule::Threshold(k) => RuleOut {
             form: "threshold".into(),
             threshold: Some(*k),
             named: None,
         },
-        law::Rule::Named(n) => RuleOut {
+        agreements::Rule::Named(n) => RuleOut {
             form: "named".into(),
             threshold: None,
             named: Some(n.iter().map(hx).collect()),
@@ -2274,7 +2274,7 @@ struct ConsentOut {
     agreement: Option<String>,
     reason: Option<String>,
     areas: Vec<AreaCountOut>,
-    /// Whether the act counts, as far as Law goes.
+    /// Whether the act counts, as far as Agreements goes.
     met: bool,
 }
 
@@ -2290,14 +2290,14 @@ struct DepartureOut {
     area: Option<u64>,
 }
 
-fn departure_out(d: &law::Departure) -> DepartureOut {
+fn departure_out(d: &agreements::Departure) -> DepartureOut {
     let (kind, agreement, area) = match &d.kind {
-        law::DepartureKind::Resigned { agreement } => ("resigned", Some(hx(agreement)), None),
-        law::DepartureKind::SteppedDown { agreement, area } => {
+        agreements::DepartureKind::Resigned { agreement } => ("resigned", Some(hx(agreement)), None),
+        agreements::DepartureKind::SteppedDown { agreement, area } => {
             ("stepped-down", Some(hx(agreement)), Some(*area))
         }
-        law::DepartureKind::Rotated { .. } => ("rotated", None, None),
-        law::DepartureKind::Declared { agreement } => ("declared", Some(hx(agreement)), None),
+        agreements::DepartureKind::Rotated { .. } => ("rotated", None, None),
+        agreements::DepartureKind::Declared { agreement } => ("declared", Some(hx(agreement)), None),
     };
     DepartureOut {
         act: hx(&d.act),
@@ -2325,11 +2325,11 @@ struct RecordOut {
     registers: Vec<DepartureOut>,
 }
 
-fn record_out(e: &law::RecordEval) -> RecordOut {
+fn record_out(e: &agreements::RecordEval) -> RecordOut {
     let (state, why) = match e.clone.as_ref().map(|c| &c.1) {
-        Some(law::CloneState::Complete) => (Some("complete"), None),
-        Some(law::CloneState::Draft(w)) => (Some("draft"), Some(w.clone())),
-        Some(law::CloneState::Invalid(w)) => (Some("invalid"), Some(w.clone())),
+        Some(agreements::CloneState::Complete) => (Some("complete"), None),
+        Some(agreements::CloneState::Draft(w)) => (Some("draft"), Some(w.clone())),
+        Some(agreements::CloneState::Invalid(w)) => (Some("invalid"), Some(w.clone())),
         None => (None, None),
     };
     RecordOut {
@@ -2391,8 +2391,8 @@ impl Verifier {
     /// deal, founding terms) or is ready to be recorded (a collective's
     /// clone), and the powers its mark must name. `specs`: the six MIP
     /// hashes, and the layers of extensions it adds or drops.
-    #[wasm_bindgen(js_name = lawAgreement)]
-    pub fn law_agreement(&self, specs: JsValue, id: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsAgreement)]
+    pub fn agreements_agreement(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let a = view.agreement(&unhex(id)?).map_err(lerr)?;
@@ -2410,10 +2410,10 @@ impl Verifier {
         })
     }
 
-    /// A clone read as a rollback's (Law rule 37d, F185): as `lawAgreement`,
+    /// A clone read as a rollback's (Agreements rule 37d, F185): as `agreementsAgreement`,
     /// its mark checked against the powers a rollback names.
-    #[wasm_bindgen(js_name = lawRollbackAgreement)]
-    pub fn law_rollback_agreement(&self, specs: JsValue, id: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsRollbackAgreement)]
+    pub fn agreements_rollback_agreement(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let a = view.rollback_agreement(&unhex(id)?).map_err(lerr)?;
@@ -2433,8 +2433,8 @@ impl Verifier {
 
     /// The agreement an identity's chain declares at the chain act
     /// `binding`, if any (for a rotation: the clone it declares).
-    #[wasm_bindgen(js_name = lawDeclared)]
-    pub fn law_declared(&self, specs: JsValue, identity: &str, binding: &str) -> R<Option<String>> {
+    #[wasm_bindgen(js_name = agreementsDeclared)]
+    pub fn agreements_declared(&self, specs: JsValue, identity: &str, binding: &str) -> R<Option<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         Ok(view
@@ -2444,17 +2444,17 @@ impl Verifier {
 
     /// The agreement in force for an act of a collective (rule 37c, F109),
     /// or null if its signer is not a collective.
-    #[wasm_bindgen(js_name = lawInForce)]
-    pub fn law_in_force(&self, specs: JsValue, act: &str) -> R<Option<String>> {
+    #[wasm_bindgen(js_name = agreementsInForce)]
+    pub fn agreements_in_force(&self, specs: JsValue, act: &str) -> R<Option<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         Ok(view.in_force(&unhex(act)?).map_err(lerr)?.map(|h| hx(&h)))
     }
 
-    /// Law's answer for an act of a collective: which areas reach it, and
+    /// Agreements' answer for an act of a collective: which areas reach it, and
     /// whether their holders' signature acts meet each (rule 36a, 44d).
-    #[wasm_bindgen(js_name = lawConsent)]
-    pub fn law_consent(&self, specs: JsValue, act: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsConsent)]
+    pub fn agreements_consent(&self, specs: JsValue, act: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let c = view.consent(&unhex(act)?).map_err(lerr)?;
@@ -2467,74 +2467,74 @@ impl Verifier {
             met,
         };
         match c {
-            law::Consent::NotCollective => o.kind = "not-collective".into(),
-            law::Consent::Closed { by } => {
+            agreements::Consent::NotCollective => o.kind = "not-collective".into(),
+            agreements::Consent::Closed { by } => {
                 o.kind = "closed".into();
                 o.reason = Some(format!(
-                    "the collective was ended by its fork or closing {}: what its keys sign after it counts for nothing in Law (rule 47a)",
+                    "the collective was ended by its fork or closing {}: what its keys sign after it counts for nothing in Agreements (rule 47a)",
                     hx(&by)
                 ));
             }
-            law::Consent::Broken { reason } => {
+            agreements::Consent::Broken { reason } => {
                 o.kind = "broken".into();
                 o.reason = Some(reason);
             }
-            law::Consent::NotDone { agreement, reason } => {
+            agreements::Consent::NotDone { agreement, reason } => {
                 o.kind = "not-done".into();
                 o.agreement = Some(hx(&agreement));
                 o.reason = Some(reason);
             }
-            law::Consent::Uncited { reason } => {
+            agreements::Consent::Uncited { reason } => {
                 o.kind = "uncited".into();
                 o.reason = Some(reason);
             }
-            law::Consent::Line { agreement } => {
+            agreements::Consent::Line { agreement } => {
                 o.kind = "line".into();
                 o.agreement = Some(hx(&agreement));
             }
-            law::Consent::NoArea { agreement } => {
+            agreements::Consent::NoArea { agreement } => {
                 o.kind = "no-area".into();
                 o.agreement = Some(hx(&agreement));
             }
-            law::Consent::Unadopted { agreement } => {
+            agreements::Consent::Unadopted { agreement } => {
                 o.kind = "unadopted".into();
                 o.agreement = Some(hx(&agreement));
             }
-            law::Consent::RailNotAccepted { agreement, rail } => {
+            agreements::Consent::RailNotAccepted { agreement, rail } => {
                 o.kind = "rail-not-accepted".into();
                 o.agreement = Some(hx(&agreement));
                 o.reason = Some(format!(
-                    "a receipt or claim on rail Module {}, which the collective's payee pointers and vault never named: it counts for nothing (Finance rule 12a)",
+                    "a receipt or claim on rail Module {}, which the collective's payee pointers and vault never named: it counts for nothing (Money rule 12a)",
                     hx(&rail)
                 ));
             }
-            law::Consent::Invalid { agreement, reason } => {
+            agreements::Consent::Invalid { agreement, reason } => {
                 o.kind = "invalid".into();
                 o.agreement = Some(hx(&agreement));
                 o.reason = Some(reason);
             }
-            law::Consent::Granted { agreement, grant } => {
+            agreements::Consent::Granted { agreement, grant } => {
                 o.kind = "granted".into();
                 o.agreement = Some(hx(&agreement));
                 o.reason = Some(format!("signed with the grant key of grant {}, which backs it (F128)", hx(&grant)));
             }
-            law::Consent::Ungranted { grant, reason } => {
+            agreements::Consent::Ungranted { grant, reason } => {
                 o.kind = "ungranted".into();
                 o.reason = Some(format!("signed with the grant key of grant {}, which does not back it: {reason}", hx(&grant)));
             }
-            law::Consent::Unknown { grant, reason } => {
+            agreements::Consent::Unknown { grant, reason } => {
                 o.kind = "unknown".into();
                 o.reason = Some(format!("signed with the grant key of grant {}: whether it backs it is unknown (rule 18d): {reason}", hx(&grant)));
             }
-            law::Consent::Talk => {
+            agreements::Consent::Talk => {
                 o.kind = "talk".into();
                 o.reason = Some("a negotiation message: talk, binding nothing, on neither of the collective's chains (F128, W6)".into());
             }
-            law::Consent::Identity => {
+            agreements::Consent::Identity => {
                 o.kind = "identity".into();
-                o.reason = Some("one of Identity's own everyday acts of the collective (a witness act, routes, an encryption key): on neither of its chains, it counts for nothing in Law and places nothing; Identity governs it (rule 35b, F156)".into());
+                o.reason = Some("one of Identity's own everyday acts of the collective (a witness act, routes, an encryption key): on neither of its chains, it counts for nothing in Agreements and places nothing; Identity governs it (rule 35b, F156)".into());
             }
-            law::Consent::Areas { agreement, areas, .. } => {
+            agreements::Consent::Areas { agreement, areas, .. } => {
                 o.kind = "areas".into();
                 o.agreement = Some(hx(&agreement));
                 o.areas = areas
@@ -2556,8 +2556,8 @@ impl Verifier {
 
     /// A record act of a collective, judged: whether it is a line, the
     /// clone it names and whether it puts it in force, and what it registers.
-    #[wasm_bindgen(js_name = lawRecord)]
-    pub fn law_record(&self, specs: JsValue, collective: &str, record: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsRecord)]
+    pub fn agreements_record(&self, specs: JsValue, collective: &str, record: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let e = view
@@ -2569,8 +2569,8 @@ impl Verifier {
     /// The collective's state after everything held under its latest key:
     /// the agreement in force, who left, who stepped down from which area,
     /// which areas are frozen, its records. Null if it is not a collective.
-    #[wasm_bindgen(js_name = lawCurrent)]
-    pub fn law_current(&self, specs: JsValue, collective: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsCurrent)]
+    pub fn agreements_current(&self, specs: JsValue, collective: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let c = view.current(&unhex(collective)?).map_err(lerr)?;
@@ -2588,31 +2588,31 @@ impl Verifier {
         }
     }
 
-    /// Why Law reads a collective as broken (the agreement its latest key
+    /// Why Agreements read a collective as broken (the agreement its latest key
     /// lives under cannot be found: a rotation's declared clone incomplete,
     /// a false mark, rules 37 and 45a), or null where it reads it as working.
-    #[wasm_bindgen(js_name = lawBroken)]
-    pub fn law_broken(&self, specs: JsValue, collective: &str) -> R<Option<String>> {
+    #[wasm_bindgen(js_name = agreementsBroken)]
+    pub fn agreements_broken(&self, specs: JsValue, collective: &str) -> R<Option<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         view.broken(&unhex(collective)?).map_err(lerr)
     }
 
-    /// Who counts for a power (`{ form, area }`, as `lawClonePlan` gives
+    /// Who counts for a power (`{ form, area }`, as `agreementsClonePlan` gives
     /// it) of the collective's agreement in force, at its next line, after
     /// every act held (rule 44d), `leaving` taken out: the agreement, the
     /// parties counted among, the voices that remain, and how many meet it
     /// (null where none remains); or `{ error }`, why there is no such count.
-    #[wasm_bindgen(js_name = lawNextVoices)]
-    pub fn law_next_voices(&self, specs: JsValue, collective: &str, power: JsValue, leaving: Vec<String>) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsNextVoices)]
+    pub fn agreements_next_voices(&self, specs: JsValue, collective: &str, power: JsValue, leaving: Vec<String>) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let p: PowerIn = from_js(power)?;
         let power = match (p.form.as_str(), p.area) {
-            ("constitutional", _) => law::Power::Constitutional,
-            ("clone", _) => law::Power::Clone,
-            ("judicial", _) => law::Power::Judicial,
-            ("area", Some(a)) => law::Power::Area(a),
+            ("constitutional", _) => agreements::Power::Constitutional,
+            ("clone", _) => agreements::Power::Clone,
+            ("judicial", _) => agreements::Power::Judicial,
+            ("area", Some(a)) => agreements::Power::Area(a),
             _ => return Err(JsError::new("a power is constitutional, clone, judicial, or an area with its id")),
         };
         let leaving = leaving.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
@@ -2628,12 +2628,12 @@ impl Verifier {
         }
     }
 
-    /// Where Law reads a collective as broken and a rollback can bring it
-    /// back (Law rule 37d, F185): `{ act, before, reason }`, the broken act
+    /// Where Agreements read a collective as broken and a rollback can bring it
+    /// back (Agreements rule 37d, F185): `{ act, before, reason }`, the broken act
     /// (a rotation of the collective), the agreement in force just before
-    /// it, a rollback's parent, and Law's reason; null otherwise.
-    #[wasm_bindgen(js_name = lawBrokenAct)]
-    pub fn law_broken_act(&self, specs: JsValue, collective: &str) -> R<JsValue> {
+    /// it, a rollback's parent, and Agreements' reason; null otherwise.
+    #[wasm_bindgen(js_name = agreementsBrokenAct)]
+    pub fn agreements_broken_act(&self, specs: JsValue, collective: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         #[derive(Serialize)]
@@ -2654,19 +2654,19 @@ impl Verifier {
 
     /// Who counts for a power (`{ form, area }`) of the agreement in force
     /// just before a broken collective's broken act, at a rollback made
-    /// next (Law rules 37d, 44d), `leaving` taken out (the parties whose
-    /// resignations the rollback registers): as `lawNextVoices`; or
+    /// next (Agreements rules 37d, 44d), `leaving` taken out (the parties whose
+    /// resignations the rollback registers): as `agreementsNextVoices`; or
     /// `{ error }`, why there is no such count.
-    #[wasm_bindgen(js_name = lawRollbackVoices)]
-    pub fn law_rollback_voices(&self, specs: JsValue, collective: &str, power: JsValue, leaving: Vec<String>) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsRollbackVoices)]
+    pub fn agreements_rollback_voices(&self, specs: JsValue, collective: &str, power: JsValue, leaving: Vec<String>) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let p: PowerIn = from_js(power)?;
         let power = match (p.form.as_str(), p.area) {
-            ("constitutional", _) => law::Power::Constitutional,
-            ("clone", _) => law::Power::Clone,
-            ("judicial", _) => law::Power::Judicial,
-            ("area", Some(a)) => law::Power::Area(a),
+            ("constitutional", _) => agreements::Power::Constitutional,
+            ("clone", _) => agreements::Power::Clone,
+            ("judicial", _) => agreements::Power::Judicial,
+            ("area", Some(a)) => agreements::Power::Area(a),
             _ => return Err(JsError::new("a power is constitutional, clone, judicial, or an area with its id")),
         };
         let leaving = leaving.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
@@ -2687,8 +2687,8 @@ impl Verifier {
     /// departure `{ act, party, kind }` ("resigned", "stepped-down",
     /// "declared"). A client asks it from a fresh reading of the relays
     /// before it sends the rollback's rotation.
-    #[wasm_bindgen(js_name = lawRollbackRegisters)]
-    pub fn law_rollback_registers(&self, specs: JsValue, collective: &str, registers: Vec<String>) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsRollbackRegisters)]
+    pub fn agreements_rollback_registers(&self, specs: JsValue, collective: &str, registers: Vec<String>) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let registers = registers.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
@@ -2703,10 +2703,10 @@ impl Verifier {
 
     /// The resignations the parties of a collective's agreement published,
     /// registered or not (rule 37a; F187, 3): departures `{ act, party,
-    /// kind, agreement }`. What a client reads beside Law's count of the
+    /// kind, agreement }`. What a client reads beside Agreements' count of the
     /// voices that remain, to warn the last voice.
-    #[wasm_bindgen(js_name = lawPublishedResignations)]
-    pub fn law_published_resignations(&self, specs: JsValue, collective: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsPublishedResignations)]
+    pub fn agreements_published_resignations(&self, specs: JsValue, collective: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let ds = view.published_resignations(&unhex(collective)?).map_err(lerr)?;
@@ -2720,8 +2720,8 @@ impl Verifier {
     /// `{ numbers: [number, split][], gaps, repeated, unnumbered }`. Client
     /// conformance: a holder's client MUST raise the alarm where the
     /// numbers it receives skip (`gaps`).
-    #[wasm_bindgen(js_name = lawSplitNumbers)]
-    pub fn law_split_numbers(&self, specs: JsValue, service: &str, agreement: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsSplitNumbers)]
+    pub fn agreements_split_numbers(&self, specs: JsValue, service: &str, agreement: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let n = view.split_numbers(&unhex(service)?, &unhex(agreement)?).map_err(lerr)?;
@@ -2733,8 +2733,8 @@ impl Verifier {
         })
     }
 
-    #[wasm_bindgen(js_name = lawDeclarationsNaming)]
-    pub fn law_declarations_naming(&self, specs: JsValue, party: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsDeclarationsNaming)]
+    pub fn agreements_declarations_naming(&self, specs: JsValue, party: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let out: Vec<DeclarationNamingOut> = view
@@ -2757,8 +2757,8 @@ impl Verifier {
     /// The payments a collective received during a broken stretch and owes
     /// back, the sale not signed anew after the rollback (rule 37d, RB2):
     /// open obligations, each `{ payment, to, unit, value, stillBroken }`.
-    #[wasm_bindgen(js_name = lawOwedBack)]
-    pub fn law_owed_back(&self, specs: JsValue, collective: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsOwedBack)]
+    pub fn agreements_owed_back(&self, specs: JsValue, collective: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let out: Vec<OwedBackOut> = view
@@ -2768,14 +2768,14 @@ impl Verifier {
             .map(|o| OwedBackOut {
                 payment: hx(&o.payment),
                 to: match &o.to {
-                    finance::RefundTo::Identity(h) => Some(hx(h)),
-                    finance::RefundTo::Key(_) => Some("the key the payment committed to".into()),
-                    finance::RefundTo::Nobody => None,
+                    money::RefundTo::Identity(h) => Some(hx(h)),
+                    money::RefundTo::Key(_) => Some("the key the payment committed to".into()),
+                    money::RefundTo::Nobody => None,
                 },
                 to_kind: match &o.to {
-                    finance::RefundTo::Identity(_) => "identity",
-                    finance::RefundTo::Key(_) => "key",
-                    finance::RefundTo::Nobody => "nobody",
+                    money::RefundTo::Identity(_) => "identity",
+                    money::RefundTo::Key(_) => "key",
+                    money::RefundTo::Nobody => "nobody",
                 }
                 .into(),
                 unit: hx(&o.amount.unit),
@@ -2797,15 +2797,15 @@ impl Verifier {
     /// judge's among them, neither holding the other). What a buyer's
     /// client checks an offer against before paying (F188, a strong
     /// SHOULD).
-    #[wasm_bindgen(js_name = lawVersionInForce)]
-    pub fn law_version_in_force(&self, specs: JsValue, agreement: &str) -> R<String> {
+    #[wasm_bindgen(js_name = agreementsVersionInForce)]
+    pub fn agreements_version_in_force(&self, specs: JsValue, agreement: &str) -> R<String> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         Ok(hx(&view.version_in_force(&unhex(agreement)?).map_err(lerr)?))
     }
 
-    #[wasm_bindgen(js_name = lawDealFork)]
-    pub fn law_deal_fork(&self, specs: JsValue, agreement: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsDealFork)]
+    pub fn agreements_deal_fork(&self, specs: JsValue, agreement: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         match view.deal_fork(&unhex(agreement)?).map_err(lerr)? {
@@ -2824,8 +2824,8 @@ impl Verifier {
     /// else `{ named, held, shared, kind, heldLine, namedLine }`, `kind`
     /// "fork" (the alarm), "unheld" (a version this verifier does not hold:
     /// the alarm, F189 3) or "older" (a plain notice, F188 DQ7).
-    #[wasm_bindgen(js_name = lawForkAlarm)]
-    pub fn law_fork_alarm(&self, specs: JsValue, payment: &str, held: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsForkAlarm)]
+    pub fn agreements_fork_alarm(&self, specs: JsValue, payment: &str, held: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         match view.fork_alarm(&unhex(payment)?, &unhex(held)?).map_err(lerr)? {
@@ -2835,9 +2835,9 @@ impl Verifier {
                 held: hx(&a.held),
                 shared: hx(&a.shared),
                 kind: match a.kind {
-                    mor_core::law::AlarmKind::Fork => "fork",
-                    mor_core::law::AlarmKind::Unheld => "unheld",
-                    mor_core::law::AlarmKind::Older => "older",
+                    mor_core::agreements::AlarmKind::Fork => "fork",
+                    mor_core::agreements::AlarmKind::Unheld => "unheld",
+                    mor_core::agreements::AlarmKind::Older => "older",
                 },
                 held_line: a.held_line.iter().map(hx).collect(),
                 named_line: a.named_line.iter().map(hx).collect(),
@@ -2847,25 +2847,25 @@ impl Verifier {
 
     /// Whether the collective's act `x` counts as made before the line
     /// `line` (a record or a rotation of it), on its own sequences (F109).
-    #[wasm_bindgen(js_name = lawBefore)]
-    pub fn law_before(&self, specs: JsValue, x: &str, line: &str) -> R<bool> {
+    #[wasm_bindgen(js_name = agreementsBefore)]
+    pub fn agreements_before(&self, specs: JsValue, x: &str, line: &str) -> R<bool> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         view.counts_before(&unhex(x)?, &unhex(line)?).map_err(lerr)
     }
 
     /// Whether an act under a grant binds the collective that issued it.
-    #[wasm_bindgen(js_name = lawBacking)]
-    pub fn law_backing(&self, specs: JsValue, act: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsBacking)]
+    pub fn agreements_backing(&self, specs: JsValue, act: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let b = view.backing(&unhex(act)?).map_err(lerr)?;
         let (kind, grant, reason) = match b {
-            law::Backing::NotUnderGrant => ("not-under-grant", None, None),
-            law::Backing::Backed { grant } => ("backed", Some(grant), None),
-            law::Backing::NotBacked { grant, reason } => ("not-backed", Some(grant), Some(reason)),
-            law::Backing::Binds { grant } => ("binds", Some(grant), None),
-            law::Backing::Unknown { grant, reason } => ("unknown", Some(grant), Some(reason)),
+            agreements::Backing::NotUnderGrant => ("not-under-grant", None, None),
+            agreements::Backing::Backed { grant } => ("backed", Some(grant), None),
+            agreements::Backing::NotBacked { grant, reason } => ("not-backed", Some(grant), Some(reason)),
+            agreements::Backing::Binds { grant } => ("binds", Some(grant), None),
+            agreements::Backing::Unknown { grant, reason } => ("unknown", Some(grant), Some(reason)),
         };
         to_js(&BackingOut {
             kind: kind.into(),
@@ -2881,8 +2881,8 @@ impl Verifier {
     /// founding agreement where it fits, and the obligations in the history
     /// it cites that it does not hand out, which keep it from taking effect
     /// (F127, replacing F125 D1).
-    #[wasm_bindgen(js_name = lawFork)]
-    pub fn law_fork(&self, specs: JsValue, id: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsFork)]
+    pub fn agreements_fork(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let e = view.fork(&unhex(id)?).map_err(lerr)?;
@@ -2916,8 +2916,8 @@ impl Verifier {
     /// `agreement` in force there: every obligation in the history it would
     /// cite, its own and those an earlier fork handed to it. Null where the
     /// line does not hold.
-    #[wasm_bindgen(js_name = lawHandOut)]
-    pub fn law_hand_out(&self, specs: JsValue, collective: &str, agreement: &str, chain_act: &str, tips: JsValue) -> R<Option<Vec<String>>> {
+    #[wasm_bindgen(js_name = agreementsHandOut)]
+    pub fn agreements_hand_out(&self, specs: JsValue, collective: &str, agreement: &str, chain_act: &str, tips: JsValue) -> R<Option<Vec<String>>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let tips: Vec<TipIn> = from_js(tips)?;
@@ -2934,8 +2934,8 @@ impl Verifier {
     /// The acts the history a line at `chain_act` and `tips` would cite
     /// that this verifier does not hold (F127): a member's client signs no
     /// fork or closing while any is missing (F131 IT2b, client conformance).
-    #[wasm_bindgen(js_name = lawLineUnheld)]
-    pub fn law_line_unheld(&self, specs: JsValue, collective: &str, chain_act: &str, tips: JsValue) -> R<Vec<String>> {
+    #[wasm_bindgen(js_name = agreementsLineUnheld)]
+    pub fn agreements_line_unheld(&self, specs: JsValue, collective: &str, chain_act: &str, tips: JsValue) -> R<Vec<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let tips: Vec<TipIn> = from_js(tips)?;
@@ -2949,16 +2949,16 @@ impl Verifier {
     /// Every fork and closing of `collective` held, complete or not: what a
     /// new ending names in its `objects`, `[agreement, ending]` (F131 IT1,
     /// client conformance).
-    #[wasm_bindgen(js_name = lawEndingActs)]
-    pub fn law_ending_acts(&self, specs: JsValue, collective: &str) -> R<Vec<String>> {
+    #[wasm_bindgen(js_name = agreementsEndingActs)]
+    pub fn agreements_ending_acts(&self, specs: JsValue, collective: &str) -> R<Vec<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         Ok(view.ending_acts(&unhex(collective)?).iter().map(hx).collect())
     }
 
     /// A closing act, judged (rule 47a, F124 N9).
-    #[wasm_bindgen(js_name = lawClosing)]
-    pub fn law_closing(&self, specs: JsValue, id: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsClosing)]
+    pub fn agreements_closing(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let e = view.closing(&unhex(id)?).map_err(lerr)?;
@@ -2977,26 +2977,26 @@ impl Verifier {
 
     /// The collective whose genesis declares the root of `agreement`'s
     /// lineage, where held: what null names in its terms (S1).
-    #[wasm_bindgen(js_name = lawCollectiveOf)]
-    pub fn law_collective_of(&self, specs: JsValue, agreement: &str) -> R<Option<String>> {
+    #[wasm_bindgen(js_name = agreementsCollectiveOf)]
+    pub fn agreements_collective_of(&self, specs: JsValue, agreement: &str) -> R<Option<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         Ok(view.collective_of(&unhex(agreement)?).map_err(lerr)?.map(|h| hx(&h)))
     }
 
-    /// Payer-side splitting (F124 P2): what a paying wallet reading Law pays
+    /// Payer-side splitting (F124 P2): what a paying wallet reading Agreements pays
     /// each holder for `amount` on the stake in `object` (hex, or null for
     /// the collective itself), or why it cannot. Leftovers by largest
     /// remainder; a tied unit is the payer's to decide, at most one per tie
-    /// (Law rule 15a, F165, F168): this wallet gives it to the tied holder
+    /// (Agreements rule 15a, F165, F168): this wallet gives it to the tied holder
     /// with the smallest identity hash, a choice, not a rule.
-    #[wasm_bindgen(js_name = lawPayerSplit)]
-    pub fn law_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsPayerSplit)]
+    pub fn agreements_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let o = match object {
-            Some(x) => law::Who::Id(unhex(&x)?),
-            None => law::Who::This,
+            Some(x) => agreements::Who::Id(unhex(&x)?),
+            None => agreements::Who::This,
         };
         let r = view.payer_split(&unhex(agreement)?, &o, amount).map_err(lerr)?;
         to_js(&match r {
@@ -3013,8 +3013,8 @@ impl Verifier {
     /// yet, every count zero. In the order of `holders` (hex). Null where
     /// `previous` is not held, not one of the service's splits for the
     /// stake, or carries no count.
-    #[wasm_bindgen(js_name = lawSplitTurns)]
-    pub fn law_split_turns(&self, specs: JsValue, service: &str, agreement: &str, stake: u64, holders: Vec<String>, previous: Option<String>) -> R<Option<Vec<f64>>> {
+    #[wasm_bindgen(js_name = agreementsSplitTurns)]
+    pub fn agreements_split_turns(&self, specs: JsValue, service: &str, agreement: &str, stake: u64, holders: Vec<String>, previous: Option<String>) -> R<Option<Vec<f64>>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let in_force = view.version_in_force(&unhex(agreement)?).map_err(lerr)?;
@@ -3026,29 +3026,29 @@ impl Verifier {
 
     /// Whether an obligation binds its debtor: for a collective, once done
     /// (F128, N13's public outside withdrawn); null if not one.
-    #[wasm_bindgen(js_name = lawObligationBinds)]
-    pub fn law_obligation_binds(&self, specs: JsValue, id: &str) -> R<Option<bool>> {
+    #[wasm_bindgen(js_name = agreementsObligationBinds)]
+    pub fn agreements_obligation_binds(&self, specs: JsValue, id: &str) -> R<Option<bool>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         view.obligation_binds(&unhex(id)?).map_err(lerr)
     }
 
     /// What is paid toward an obligation, as a binding answer: an error
-    /// coded `law/own-attempt` where it rests on this client's own failed
+    /// coded `agreements/own-attempt` where it rests on this client's own failed
     /// attempts to reach homes, shown as unknown (F153).
-    #[wasm_bindgen(js_name = lawPaid)]
-    pub fn law_paid(&self, specs: JsValue, id: &str) -> R<u64> {
+    #[wasm_bindgen(js_name = agreementsPaid)]
+    pub fn agreements_paid(&self, specs: JsValue, id: &str) -> R<u64> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         view.paid(&unhex(id)?).map_err(lerr)
     }
 
     /// The payee's pointer acts its own acts hold, for what a payment
-    /// follows (an obligation, an agreement or an offer; Finance rule 14,
+    /// follows (an obligation, an agreement or an offer; Money rule 14,
     /// F145, F157, F163, F168): `{ pointers, complete }`, or null where
     /// `fulfils` is none of these.
-    #[wasm_bindgen(js_name = lawPointerHolding)]
-    pub fn law_pointer_holding(&self, specs: JsValue, fulfils: &str, payee: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsPointerHolding)]
+    pub fn agreements_pointer_holding(&self, specs: JsValue, fulfils: &str, payee: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         #[derive(Serialize)]
@@ -3062,18 +3062,18 @@ impl Verifier {
     /// Who owes an obligation of a collective a fork closed (N13): the
     /// successors it assigns it to, every successor where it assigns it to
     /// none (F125, D1); null where its debtor is not closed by a fork.
-    #[wasm_bindgen(js_name = lawDebtors)]
-    pub fn law_debtors(&self, specs: JsValue, id: &str) -> R<Option<Vec<String>>> {
+    #[wasm_bindgen(js_name = agreementsDebtors)]
+    pub fn agreements_debtors(&self, specs: JsValue, id: &str) -> R<Option<Vec<String>>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         Ok(view.debtors(&unhex(id)?).map_err(lerr)?.map(|v| v.iter().map(hx).collect()))
     }
 
-    /// A creditor's release, judged (Finance type 4, F126; rule 47b):
+    /// A creditor's release, judged (Money type 4, F126; rule 47b):
     /// whether it ends the obligation it names (signed by that obligation's
-    /// creditor, a collective by its Finance lane).
-    #[wasm_bindgen(js_name = lawDebtRelease)]
-    pub fn law_debt_release(&self, specs: JsValue, id: &str) -> R<JsValue> {
+    /// creditor, a collective by its Money lane).
+    #[wasm_bindgen(js_name = agreementsDebtRelease)]
+    pub fn agreements_debt_release(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let e = view.debt_release(&unhex(id)?).map_err(lerr)?;
@@ -3088,8 +3088,8 @@ impl Verifier {
     /// Whether an act in a collective's name is done (F126, F128): sealed to
     /// every member, or public; where it is held decides nothing. `{ done,
     /// why }`, or null where the act is not in a collective's name.
-    #[wasm_bindgen(js_name = lawDone)]
-    pub fn law_done(&self, specs: JsValue, act: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsDone)]
+    pub fn agreements_done(&self, specs: JsValue, act: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         match view.done(&unhex(act)?).map_err(lerr)? {
@@ -3107,23 +3107,23 @@ impl Verifier {
     /// or "wrong-receipt" (F131 IT3: a receipt `specs.railInvalid` names,
     /// whose claim the payment did not commit to; it counts for nothing);
     /// null where the payment is not for a work.
-    #[wasm_bindgen(js_name = lawPurchase)]
-    pub fn law_purchase(&self, specs: JsValue, id: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsPurchase)]
+    pub fn agreements_purchase(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let Some(e) = view.purchase(&unhex(id)?).map_err(lerr)? else {
             return Ok(JsValue::NULL);
         };
         let (verdict, why) = match &e.verdict {
-            law::PurchaseVerdict::Purchase => ("purchase", None),
-            law::PurchaseVerdict::NoPurchase { why } => ("no-purchase", Some(why.clone())),
-            law::PurchaseVerdict::Unrecorded => ("unrecorded", None),
-            law::PurchaseVerdict::WrongReceipt { why } => ("wrong-receipt", Some(why.clone())),
+            agreements::PurchaseVerdict::Purchase => ("purchase", None),
+            agreements::PurchaseVerdict::NoPurchase { why } => ("no-purchase", Some(why.clone())),
+            agreements::PurchaseVerdict::Unrecorded => ("unrecorded", None),
+            agreements::PurchaseVerdict::WrongReceipt { why } => ("wrong-receipt", Some(why.clone())),
         };
         let refund_to = match &e.refund_to {
-            finance::RefundTo::Identity(h) => Some(hx(h)),
-            finance::RefundTo::Key(_) => Some("the key the payment committed to".into()),
-            finance::RefundTo::Nobody => None,
+            money::RefundTo::Identity(h) => Some(hx(h)),
+            money::RefundTo::Key(_) => Some("the key the payment committed to".into()),
+            money::RefundTo::Nobody => None,
         };
         to_js(&PurchaseOut {
             verdict: verdict.into(),
@@ -3136,33 +3136,33 @@ impl Verifier {
     /// What a collective owes now (F125, D5): its obligations that bind,
     /// and those it owes as a fork's successor, neither paid in full by the
     /// receipts held nor ended by a creditor's release.
-    #[wasm_bindgen(js_name = lawOwes)]
-    pub fn law_owes(&self, specs: JsValue, collective: &str) -> R<Vec<String>> {
+    #[wasm_bindgen(js_name = agreementsOwes)]
+    pub fn agreements_owes(&self, specs: JsValue, collective: &str) -> R<Vec<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         Ok(view.owes(&unhex(collective)?).map_err(lerr)?.iter().map(hx).collect())
     }
 
     /// The pointer check (rule 18, F123): whether the payee pointer of
-    /// `owners` counts for Law under `agreement`: "no-split-service",
+    /// `owners` counts for Agreements under `agreement`: "no-split-service",
     /// "ordinary", "bypasses" (with the addresses no service's own pointer
     /// carries, as hex) or "undetermined".
-    #[wasm_bindgen(js_name = lawPointerCheck)]
-    pub fn law_pointer_check(&self, specs: JsValue, owners: &str, agreement: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsPointerCheck)]
+    pub fn agreements_pointer_check(&self, specs: JsValue, owners: &str, agreement: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let c = view
             .pointer_check(&unhex(owners)?, &unhex(agreement)?)
             .map_err(lerr)?;
         let o = match c {
-            law::PointerCheck::NoSplitService => PointerOut { kind: "no-split-service".into(), ..Default::default() },
-            law::PointerCheck::Ordinary { pointer, service } => PointerOut {
+            agreements::PointerCheck::NoSplitService => PointerOut { kind: "no-split-service".into(), ..Default::default() },
+            agreements::PointerCheck::Ordinary { pointer, service } => PointerOut {
                 kind: "ordinary".into(),
                 pointer: Some(hx(&pointer)),
                 service: Some(hx(&service)),
                 ..Default::default()
             },
-            law::PointerCheck::Bypasses { pointer, missing, vault_missing } => PointerOut {
+            agreements::PointerCheck::Bypasses { pointer, missing, vault_missing } => PointerOut {
                 kind: "bypasses".into(),
                 pointer: Some(hx(&pointer)),
                 missing: missing
@@ -3175,7 +3175,7 @@ impl Verifier {
                     .collect(),
                 ..Default::default()
             },
-            law::PointerCheck::Undetermined { reason } => PointerOut {
+            agreements::PointerCheck::Undetermined { reason } => PointerOut {
                 kind: "undetermined".into(),
                 reason: Some(reason),
                 ..Default::default()
@@ -3188,8 +3188,8 @@ impl Verifier {
     /// sums to what arrived, each fee and who received it, the holders it
     /// pays and was not delivered to, and every payout that does not match
     /// its stake.
-    #[wasm_bindgen(js_name = lawSplit)]
-    pub fn law_split(&self, specs: JsValue, id: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsSplit)]
+    pub fn agreements_split(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let e = view.split(&unhex(id)?).map_err(lerr)?;
@@ -3217,30 +3217,30 @@ impl Verifier {
                 .map(|b| {
                     let pairs = |v: &[(mor_core::hash::Hash, u64)]| v.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>();
                     match b {
-                        law::ChainBreak::Reset { stake, with } => BreakOut { stake: *stake, kind: "reset".into(), with: with.iter().map(hx).collect(), ..Default::default() },
-                        law::ChainBreak::Fork { stake, previous, with } => {
+                        agreements::ChainBreak::Reset { stake, with } => BreakOut { stake: *stake, kind: "reset".into(), with: with.iter().map(hx).collect(), ..Default::default() },
+                        agreements::ChainBreak::Fork { stake, previous, with } => {
                             BreakOut { stake: *stake, kind: "fork".into(), previous: Some(hx(previous)), with: with.iter().map(hx).collect(), ..Default::default() }
                         }
-                        law::ChainBreak::Count { stake, carried, expected } => BreakOut { stake: *stake, kind: "count".into(), carried: pairs(carried), expected: pairs(expected), ..Default::default() },
-                        law::ChainBreak::NoCount { stake } => BreakOut { stake: *stake, kind: "no-count".into(), ..Default::default() },
+                        agreements::ChainBreak::Count { stake, carried, expected } => BreakOut { stake: *stake, kind: "count".into(), carried: pairs(carried), expected: pairs(expected), ..Default::default() },
+                        agreements::ChainBreak::NoCount { stake } => BreakOut { stake: *stake, kind: "no-count".into(), ..Default::default() },
                     }
                 })
                 .collect(),
             count_unknown: e.count_unknown.clone(),
             numbering: e.numbering.as_ref().map(|n| match n {
-                law::NumberBreak::Unnumbered => NumberingOut { kind: "unnumbered".into(), number: None, with: vec![] },
-                law::NumberBreak::Repeated { number, with } => NumberingOut { kind: "repeated".into(), number: Some(*number), with: with.iter().map(hx).collect() },
+                agreements::NumberBreak::Unnumbered => NumberingOut { kind: "unnumbered".into(), number: None, with: vec![] },
+                agreements::NumberBreak::Repeated { number, with } => NumberingOut { kind: "repeated".into(), number: Some(*number), with: with.iter().map(hx).collect() },
             }),
             cites: e.cites.iter().map(hx).collect(),
             tally: e.split.tally.iter().flatten().map(|(st, v)| (*st, v.iter().map(|(h, n)| (hx(h), *n)).collect())).collect(),
         })
     }
 
-    /// What a split service owes (Law rule 29): every incoming receipt and
+    /// What a split service owes (Agreements rule 29): every incoming receipt and
     /// payer's claim without its split, and every payout without the
     /// receiver's receipt, each naming one receiver and one agreement.
-    #[wasm_bindgen(js_name = lawServiceAccount)]
-    pub fn law_service_account(&self, specs: JsValue, service: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsServiceAccount)]
+    pub fn agreements_service_account(&self, specs: JsValue, service: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let a = view.service_account(&unhex(service)?).map_err(lerr)?;
@@ -3252,8 +3252,8 @@ impl Verifier {
     }
 
     /// A public domain release, judged (rule 17, F121 shape D).
-    #[wasm_bindgen(js_name = lawRelease)]
-    pub fn law_release(&self, specs: JsValue, id: &str) -> R<JsValue> {
+    #[wasm_bindgen(js_name = agreementsRelease)]
+    pub fn agreements_release(&self, specs: JsValue, id: &str) -> R<JsValue> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         let e = view.release(&unhex(id)?).map_err(lerr)?;
@@ -3272,8 +3272,8 @@ impl Verifier {
 
     /// Whether a claim on a work is shown as made after its release: the
     /// release, if so (F121, D).
-    #[wasm_bindgen(js_name = lawClaimAfterRelease)]
-    pub fn law_claim_after_release(&self, specs: JsValue, claim: &str, work: &str) -> R<Option<String>> {
+    #[wasm_bindgen(js_name = agreementsClaimAfterRelease)]
+    pub fn agreements_claim_after_release(&self, specs: JsValue, claim: &str, work: &str) -> R<Option<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         Ok(view
@@ -3354,7 +3354,7 @@ struct OwedBackOut {
     payment: String,
     to: Option<String>,
     /// Who it is owed to: "identity", "key" (an anonymous payer's bare
-    /// key, Finance rule 10a) or "nobody" (no key committed: it does not
+    /// key, Money rule 10a) or "nobody" (no key committed: it does not
     /// block a closing that names it, QG1).
     to_kind: String,
     unit: String,
@@ -3513,7 +3513,7 @@ struct ReleaseOut {
     timed: Option<String>,
 }
 
-// ---------------------------------------------------------------- split safety keys
+// ---------------------------------------------------------------- split chain keys
 
 /// Randomness from the platform, for the share dealing's polynomials.
 struct PlatformRng;
@@ -3564,20 +3564,20 @@ struct DealOut {
     fingerprint: String,
 }
 
-/// Deal a fresh safety key of a collective as shares, any `threshold` of
+/// Deal a fresh chain key of a collective as shares, any `threshold` of
 /// which rebuild it, with Pedersen commitments (air-gapped Module, section
-/// 5; Law rule 36; F97). The key itself is never returned: only the
+/// 5; Agreements rule 36; F97). The key itself is never returned: only the
 /// shares, its commitment and the dealing's fingerprint. **Test
 /// collectives only**: here the dealing device is this program, in
 /// software; a real collective deals on an offline device.
-#[wasm_bindgen(js_name = dealSafety)]
-pub fn deal_safety(input: JsValue) -> R<JsValue> {
+#[wasm_bindgen(js_name = dealChainKey)]
+pub fn deal_chain_key(input: JsValue) -> R<JsValue> {
     use mor_airgap::msg::{Holder, Message, Role};
     use mor_airgap::seed::SeedModule;
     use mor_airgap::shares;
     let d: DealIn = from_js(input)?;
     if !(2..=3).contains(&d.scheme) {
-        return Err(err("safety schemes are 2 and 3"));
+        return Err(err("chain-key schemes are 2 and 3"));
     }
     if d.threshold == 0 || d.threshold > d.holders.len() as u64 {
         return Err(err("1 ≤ threshold ≤ holders"));
@@ -3609,7 +3609,7 @@ pub fn deal_safety(input: JsValue) -> R<JsValue> {
             .map(|s| serde_bytes::ByteBuf::from(Message::Share(s).encode()))
             .collect(),
         scheme: d.scheme,
-        commit: hx(&dealing.safety.commit),
+        commit: hx(&dealing.chain_key.commit),
         fingerprint: hx(&dealing.fingerprint()),
     })
 }
@@ -3646,11 +3646,11 @@ pub fn verify_share(bytes: &[u8]) -> R<JsValue> {
         threshold: d.threshold,
         holders: d.holders.len(),
         index: d.index,
-        scheme: match d.safety.scheme {
+        scheme: match d.chain_key.scheme {
             Scheme::Founding(n) => n,
             _ => 0,
         },
-        commit: hx(&d.safety.commit),
+        commit: hx(&d.chain_key.commit),
         fingerprint: hx(&d.fingerprint()),
     })
 }
@@ -3663,35 +3663,35 @@ struct RebuiltOut {
     commit: String,
 }
 
-/// Rebuild a collective's safety key from `threshold` shares, each checked,
+/// Rebuild a collective's chain key from `threshold` shares, each checked,
 /// and check it against the dealing's commitment (Module 5.1: the rebuild
 /// check; at a rotation, the rotating device). Returns the FIPS 205 seeds to
 /// sign one rotation with. **Test collectives only.**
-#[wasm_bindgen(js_name = rebuildSafety)]
-pub fn rebuild_safety(shares: Vec<js_sys::Uint8Array>) -> R<JsValue> {
+#[wasm_bindgen(js_name = rebuildChainKey)]
+pub fn rebuild_chain_key(shares: Vec<js_sys::Uint8Array>) -> R<JsValue> {
     let shares = shares
         .iter()
         .map(|b| share_of(&b.to_vec()))
         .collect::<R<Vec<_>>>()?;
     let (seed, d) = mor_airgap::shares::rebuild(&shares).map_err(err)?;
-    let scheme = match d.safety.scheme {
+    let scheme = match d.chain_key.scheme {
         Scheme::Founding(n @ (2 | 3)) => n,
-        _ => return Err(err("the dealing's safety scheme")),
+        _ => return Err(err("the dealing's chain-key scheme")),
     };
     let key = seed.key(scheme, d.index);
-    if key.commitment() != d.safety.commit {
+    if key.commitment() != d.chain_key.commit {
         return Err(err(mor_airgap::shares::ShareError::WrongKey));
     }
     to_js(&RebuiltOut {
         scheme,
         seeds: seed.key_seeds(scheme, d.index).to_vec(),
-        commit: hx(&d.safety.commit),
+        commit: hx(&d.chain_key.commit),
     })
 }
 
 // ---------------------------------------------------------------- media
 
-/// The work hash of a plaintext, `tagged_hash("MOR/work", plaintext)` (Envelope, "Media").
+/// The work hash of a plaintext, `tagged_hash("MOR/work", plaintext)` (Envelopes, "Media").
 #[wasm_bindgen(js_name = workHash)]
 pub fn work_hash(plaintext: &[u8]) -> String {
     hx(&mor_core::hash::work_hash(plaintext))
@@ -3710,7 +3710,7 @@ struct LockedOut {
     work_hash: String,
 }
 
-/// Lock a media object with a fresh content key and nonce (Envelope,
+/// Lock a media object with a fresh content key and nonce (Envelopes,
 /// "Media": XChaCha20-Poly1305, no associated data).
 #[wasm_bindgen(js_name = lockMedia)]
 pub fn lock_media(plaintext: &[u8]) -> R<JsValue> {
@@ -3727,7 +3727,7 @@ pub fn lock_media(plaintext: &[u8]) -> R<JsValue> {
 }
 
 /// Open a locked media object. Throws if the key and nonce do not open it.
-/// The caller checks the plaintext against the work hash (Envelope rule 14).
+/// The caller checks the plaintext against the work hash (Envelopes rule 14).
 #[wasm_bindgen(js_name = openMedia)]
 pub fn open_media(locked: &[u8], key: &[u8], nonce: &[u8]) -> R<Vec<u8>> {
     mor_core::lock::unlock(

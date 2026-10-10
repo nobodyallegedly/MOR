@@ -1,4 +1,4 @@
-//! Finance rules 12, 14 and 15 over the Lightning rail Module, as freeze
+//! Money rules 12, 14 and 15 over the Lightning rail Module, as freeze
 //! test suite scenario 1, step 5c tells it: a thief with a contributor's
 //! stolen signing key changes the contributor's flow pointer. Royalties
 //! owed under the earlier pointer cannot be collected through the thief's
@@ -9,17 +9,17 @@
 //! published pointer and vault counts; after the rotation that invalidates
 //! it, whether it still counts is rule 15's (theft: anchor or bear the
 //! loss, F169, F176 to F181), which the core library reads over the payee's
-//! chain and the anchors (`core/tests/finance_rule_15.rs`).
+//! chain and the anchors (`core/tests/money_rule_15.rs`).
 //!
 //! Without a node: invoices are made and signed by `lightning-invoice`, as
 //! in `rule.rs`. What the verifier holds is stated by hand ([`Contributor`]);
 //! what an act holds is computed over real acts by the core library
-//! (`core/tests/finance_f145.rs`). Test identities and regtest units only.
+//! (`core/tests/money_f145.rs`). Test identities and regtest units only.
 
 use bitcoin::hashes::{sha256 as bh, Hash as _};
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
-use mor_core::finance::{
+use mor_core::money::{
     self, Amount, Citations, Claim, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt,
     VaultEntry,
 };
@@ -79,7 +79,7 @@ struct Contributor {
     /// act holds (F145).
     holdings: BTreeMap<Hash, Holding>,
     /// The core library's rule 15 answer for each payment, by rail proof
-    /// (`LawView::payment_counts`), where this verifier reads it.
+    /// (`AgreementsView::payment_counts`), where this verifier reads it.
     rule_15: BTreeMap<Vec<u8>, bool>,
     genesis: Hash,
     /// The vault its chain declares now.
@@ -334,7 +334,7 @@ fn an_obligation_the_thief_reissues_is_no_obligation() {
     };
     // Signed by the creditor's identity, with the stolen key.
     assert!(
-        finance::check_signer(&Payload::Obligation(reissued.clone()), &s.c.id, &Citations::default()).is_err(),
+        money::check_signer(&Payload::Obligation(reissued.clone()), &s.c.id, &Citations::default()).is_err(),
         "an obligation signed by its creditor is invalid (F66)"
     );
     // A verifier holds only valid obligations, so it does not hold this one:
@@ -356,7 +356,7 @@ fn an_obligation_the_thief_reissues_is_no_obligation() {
 fn a_tip_that_followed_the_published_pointer_counts() {
     let s = story();
     let (r, c) = paid(&s, s.fan, s.thief_pointer, to_flow(s.thief_pointer), &s.thief_node, sat(2_100));
-    assert!(finance::flow_followed_vault(Some(&s.c.vault), &r.amount));
+    assert!(money::flow_followed_vault(Some(&s.c.vault), &r.amount));
     for (rail, rule_14) in judged(&s, &r, &c, s.fan) {
         assert_eq!((rail, rule_14), (Answer::Valid, Answer::Valid));
     }
@@ -373,7 +373,7 @@ fn a_tip_that_followed_the_published_pointer_counts() {
 /// signature act, the contributor's own until the rotation, holds the
 /// thief's version 2, so paid to that flow it counts. This is the stream
 /// between theft and rotation, a stated cost that no clockless rule closes
-/// (Finance, "Reasoning").
+/// (Money, "Reasoning").
 #[test]
 fn an_obligation_whose_payees_act_holds_the_later_pointer_counts_on_that_flow() {
     let mut s = story();
@@ -397,7 +397,7 @@ fn an_obligation_whose_payees_act_holds_the_later_pointer_counts_on_that_flow() 
 
 /// What rule 14 cannot read: what a payment fulfils that is no obligation,
 /// agreement or offer this verifier can read the payee's own acts on (a
-/// Finance-only verifier reads none), or one whose payee's act holds what
+/// Money-only verifier reads none), or one whose payee's act holds what
 /// the verifier cannot tell, answers unknown, never valid. One whose
 /// payee's acts hold no pointer at all answers invalid: only the vault.
 /// The version an obligation names, held or not, the payee's or not, is
@@ -524,7 +524,7 @@ fn an_iou_counts_on_the_flow_only_once_the_payee_acknowledges_it() {
     }
 }
 
-/// Finance rule 12 (audit, October 2026, gap 1): the thief does not extend
+/// Money rule 12 (audit, October 2026, gap 1): the thief does not extend
 /// the chain but forks it. The owner's current pointer is version 2; with
 /// the stolen signing key the thief signs a second version 2 naming the
 /// same predecessor. The owner's act holds both of its own pointers, but a
@@ -550,7 +550,7 @@ fn a_thiefs_same_version_pointer_cannot_collect_debts_naming_the_owners() {
         },
     );
     // `thief_pointer` is also version 2 naming `own_pointer`: a fork.
-    assert!(finance::latest_pointer(&s.c.pointers_of(&s.c.id)).contested);
+    assert!(money::latest_pointer(&s.c.pointers_of(&s.c.id)).contested);
     let debt = h("a debt naming the owner's version 2");
     s.c.obligations.insert(
         debt,
@@ -585,7 +585,7 @@ fn a_thiefs_same_version_pointer_cannot_collect_debts_naming_the_owners() {
     }
 }
 
-/// Finance rules 14a and 15 applied to a payment received (audit, October
+/// Money rules 14a and 15 applied to a payment received (audit, October
 /// 2026, gap 6): a payment to the flow above the vault's limit, or in a
 /// unit the vault does not cover, verifies on the rail and passes rule 14,
 /// but did not follow the published vault: judged beside, it does not
@@ -656,7 +656,7 @@ fn rotate(s: &mut Story) -> Hash {
 /// now the voided pointer is in force for nothing; whether the payment
 /// counts all the same is the core library's answer over the payee's
 /// chain and anchors, which the payment cMIP asks for beside. Where the
-/// verifier cannot read it (a Finance-only wallet), unknown, never valid.
+/// verifier cannot read it (a Money-only wallet), unknown, never valid.
 /// The rail's own answer stays valid: the payee's key signed that address.
 #[test]
 fn after_the_rotation_a_tip_to_the_voided_pointer_is_rule_15s() {
@@ -671,7 +671,7 @@ fn after_the_rotation_a_tip_to_the_voided_pointer_is_rule_15s() {
         assert!(matches!(&now, Answer::Invalid(w) if w.contains("voided")), "{now}");
     }
     for a in both(&s) {
-        assert!(matches!(&a, Answer::Unknown(w) if w.contains("rule 15")), "a Finance-only wallet: {a}");
+        assert!(matches!(&a, Answer::Unknown(w) if w.contains("rule 15")), "a Money-only wallet: {a}");
     }
     s.c.rule_15.insert(r.proof.clone(), true);
     assert_eq!(both(&s), [Answer::Valid, Answer::Valid], "the core says it counts: the lock change is not anchored, or the claim is");
@@ -681,7 +681,7 @@ fn after_the_rotation_a_tip_to_the_voided_pointer_is_rule_15s() {
     }
 }
 
-/// F169 (Finance rule 14a; F160 withdrawn): the vault applies as the
+/// F169 (Money rule 14a; F160 withdrawn): the vault applies as the
 /// payee's chain declares it, so a lower limit applies at once. The
 /// contributor signed the film's deal under a limit of 100,000 sat, then
 /// lowers it to 10,000: royalties of 40,000 paid to its flow no longer

@@ -1,7 +1,7 @@
 //! # mor-ordering-sim
 //!
 //! A model of a collective's members, their devices and sequences, and the events done in
-//! the collective's name, to test one ordering rule proposed for Law draft 7's flaws E to L:
+//! the collective's name, to test one ordering rule proposed for Agreements draft 7's flaws E to L:
 //! for anything done in a collective's name, "before" and "after" are judged only on the
 //! collective's own sequence, never on members' personal sequences.
 //!

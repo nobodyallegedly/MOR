@@ -1,4 +1,4 @@
-//! Finance rules 10, 14 and 15 in Law's debt discharge, over real signed
+//! Money rules 10, 14 and 15 in Agreements' debt discharge, over real signed
 //! acts (F145, F146, F147, F151, F154, F155; the hostile review of F133 to
 //! F144, findings 1, 2, 7, 10, 16 and 17). Replaces F133's tests: the
 //! pointer is no longer judged by the agreement act or the obligation
@@ -9,7 +9,7 @@
 //!   holds through its citations: its signature act on the agreement, or
 //!   its offer; for an IOU, an act of its own acknowledging it. The
 //!   version the debt names is informative only.
-//! - Rule 15 is in `finance_rule_15.rs` (F169, F176 to F181: theft,
+//! - Rule 15 is in `money_rule_15.rs` (F169, F176 to F181: theft,
 //!   anchor or bear the loss), which replaces the tests of F139, F146,
 //!   F147's reading together and F160 that were here.
 //! - Rule 10 (F151): where the rail binds no payee or purpose, the payer's
@@ -22,20 +22,20 @@ mod common;
 use common::{own_home, Person, World};
 use mor_core::act::{Object, Ref};
 use mor_core::chain::Status;
-use mor_core::finance::{self as fin, Amount, Claim, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt};
+use mor_core::money::{self as fin, Amount, Claim, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt};
 use mor_core::hash::{sha256, Hash};
-use mor_core::law::{self, Disagreement, LawView, Mips};
+use mor_core::agreements::{self, Disagreement, AgreementsView, Mips};
 use std::collections::{BTreeMap, BTreeSet};
 
 fn mips() -> Mips {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mips {
         identity: common::identity_spec(),
-        envelope: t("ENVELOPE"),
+        envelopes: t("ENVELOPE"),
         text: t("TEXT"),
-        finance: common::finance_spec(),
-        law: common::law_spec(),
-        production: t("PRODUCTION"),
+        money: common::money_spec(),
+        agreements: common::agreements_spec(),
+        development: t("PRODUCTION"),
     }
 }
 
@@ -68,8 +68,8 @@ impl Lab {
         Lab { w: World::new(), rail_valid: BTreeMap::new(), unbound: BTreeSet::new() }
     }
 
-    fn view(&self) -> LawView<'_> {
-        let mut v = LawView::new(&self.w.v, mips());
+    fn view(&self) -> AgreementsView<'_> {
+        let mut v = AgreementsView::new(&self.w.v, mips());
         v.rail_valid = self.rail_valid.clone();
         v.unbound_rails = self.unbound.clone();
         v
@@ -93,36 +93,36 @@ impl Lab {
             previous,
             rails: vec![Rail { module: rail(), address: node.as_bytes().to_vec() }],
         });
-        self.act(p, mips().finance, fin::types::PAYEE_POINTER, x.to_map(), None, None, None)
+        self.act(p, mips().money, fin::types::PAYEE_POINTER, x.to_map(), None, None, None)
     }
 
-    /// Terms (Law type 0) drafted by `by`, citing `refs`: only what they
+    /// Terms (Agreements type 0) drafted by `by`, citing `refs`: only what they
     /// cite matters here.
     fn terms(&mut self, by: &mut Person, refs: Vec<Hash>) -> Hash {
         let refs = (!refs.is_empty()).then(|| refs.into_iter().map(Ref::Act).collect());
-        self.act(by, mips().law, law::types::TERMS, vec![], None, None, refs)
+        self.act(by, mips().agreements, agreements::types::TERMS, vec![], None, None, refs)
     }
 
-    /// `p`'s signature act (Law type 1) on `terms`.
+    /// `p`'s signature act (Agreements type 1) on `terms`.
     fn sign(&mut self, p: &mut Person, terms: Hash) -> Hash {
         let o = Some(vec![Object { chain: terms, predecessor: terms }]);
-        self.act(p, mips().law, law::types::SIGNATURE, law::signature_payload(&terms), o, None, None)
+        self.act(p, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&terms), o, None, None)
     }
 
-    /// `p`'s signature act (Law type 1) on `terms`, citing `refs` in
+    /// `p`'s signature act (Agreements type 1) on `terms`, citing `refs` in
     /// `refs`, as a conforming client cites the payee's latest pointer
     /// (F163).
     fn sign_citing(&mut self, p: &mut Person, terms: Hash, refs: Vec<Hash>) -> Hash {
         let o = Some(vec![Object { chain: terms, predecessor: terms }]);
         let refs = Some(refs.into_iter().map(Ref::Act).collect());
-        self.act(p, mips().law, law::types::SIGNATURE, law::signature_payload(&terms), o, None, refs)
+        self.act(p, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&terms), o, None, refs)
     }
 
     /// An obligation signed by its debtor, naming `named` in field 3.
     fn debt(&mut self, debtor: &mut Person, creditor: Hash, value: u64, named: Hash, agreement: Option<Hash>, refs: Vec<Hash>) -> Hash {
         let o = Payload::Obligation(Obligation { debtor: debtor.id, creditor, amount: amount(value), pointer: named, agreement });
         let refs = (!refs.is_empty()).then(|| refs.into_iter().map(Ref::Act).collect());
-        self.act(debtor, mips().finance, fin::types::OBLIGATION, o.to_map(), None, None, refs)
+        self.act(debtor, mips().money, fin::types::OBLIGATION, o.to_map(), None, None, refs)
     }
 
     /// The payer's claim (type 3) toward `fulfils`, its rail answer stated
@@ -131,7 +131,7 @@ impl Lab {
     fn claim(&mut self, payer: &mut Person, payee: Hash, fulfils: Hash, value: u64, proof: &str, at: PaidAt, refs: Vec<Hash>) -> Hash {
         let c = claim_payload(payee, fulfils, value, proof);
         let refs = (!refs.is_empty()).then(|| refs.into_iter().map(Ref::Act).collect());
-        let id = self.act(payer, mips().finance, fin::types::CLAIM, Payload::Claim(c).to_map(), None, None, refs);
+        let id = self.act(payer, mips().money, fin::types::CLAIM, Payload::Claim(c).to_map(), None, None, refs);
         self.rail_valid.insert(id, at);
         id
     }
@@ -151,7 +151,7 @@ impl Lab {
             batch: None,
             purchase: None,
         });
-        let id = self.act(payee, mips().finance, fin::types::RECEIPT, r.to_map(), None, None, None);
+        let id = self.act(payee, mips().money, fin::types::RECEIPT, r.to_map(), None, None, None);
         if let Some(at) = at {
             self.rail_valid.insert(id, at);
         }
@@ -245,7 +245,7 @@ fn the_pointer_is_judged_by_the_payees_own_signature_act() {
 /// F157 (flaw 1 of the build of F145 to F156, decided by Nobody,
 /// allegedly): for selecting the payee's pointer, the walk passes only
 /// through the payee's own acts, never through an act another identity
-/// signed. A signature act must cite the terms it signs (Law, type 1), so
+/// signed. A signature act must cite the terms it signs (Agreements, type 1), so
 /// before F157 the owner's signature on terms its debtor drafted to cite
 /// the thief's version 3 held version 3 through the terms, and a debt
 /// under them counted on the thief's flow; an act of the owner's
@@ -276,7 +276,7 @@ fn the_payees_pointer_is_found_through_its_own_acts_only() {
     // IOU's `prev` leads to the debtor's terms citing version 3, which the
     // walk no longer enters.
     let iou = l.debt(&mut debtor, oid, 30, v1, None, vec![]);
-    l.act(&mut owner, mips().law, law::types::NEGOTIATION, vec![], None, Some(vec![iou]), None);
+    l.act(&mut owner, mips().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![iou]), None);
     let holding = l.view().pointer_holding(&iou, &oid).unwrap();
     assert!(!holding.pointers.contains(&v3), "never through the debtor's history");
     l.claim(&mut debtor, oid, iou, 30, "iou to the thief", PaidAt::Flow(v3), vec![]);
@@ -322,7 +322,7 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     // creditor's own acts, F157.)
     let mut friend = l.person("a second debtor");
     let acked = l.debt(&mut friend, cid, 30, v1, None, vec![]);
-    let ack = l.act(&mut creditor, mips().law, law::types::NEGOTIATION, vec![], None, Some(vec![acked]), None);
+    let ack = l.act(&mut creditor, mips().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![acked]), None);
     assert_eq!(l.w.v.status(&ack), Status::Valid);
     let holding = l.view().pointer_holding(&acked, &cid).unwrap();
     assert_eq!(BTreeSet::from_iter(holding.pointers), BTreeSet::from([v1, v2]));
@@ -331,7 +331,7 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     assert_eq!(l.paid(&acked), 30);
     // Never the thief's version 3, newer than any the creditor's act holds.
     let acked3 = l.debt(&mut friend, cid, 30, v3, None, vec![]);
-    l.act(&mut creditor, mips().law, law::types::NEGOTIATION, vec![], None, Some(vec![acked3]), None);
+    l.act(&mut creditor, mips().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![acked3]), None);
     l.claim(&mut friend, cid, acked3, 30, "acked3 to v3", PaidAt::Flow(v3), vec![]);
     assert_eq!(l.paid(&acked3), 0);
 }
@@ -345,11 +345,11 @@ fn an_offer_is_the_payees_own_act_only_when_the_payee_signed_it() {
     let mut buyer = l.person("a buyer");
     let sid = seller.id;
     let v1 = l.pointer(&mut seller, sid, 1, None, "the seller's node");
-    let offer = l.act(&mut seller, mips().law, law::types::STANDING_OFFER, vec![], None, None, None);
+    let offer = l.act(&mut seller, mips().agreements, agreements::types::STANDING_OFFER, vec![], None, None, None);
     let d = l.debt(&mut buyer, sid, 5, v1, Some(offer), vec![]);
     l.claim(&mut buyer, sid, d, 5, "to v1", PaidAt::Flow(v1), vec![]);
     assert_eq!(l.paid(&d), 5);
-    let not_hers = l.act(&mut buyer, mips().law, law::types::STANDING_OFFER, vec![], None, None, Some(vec![Ref::Act(v1)]));
+    let not_hers = l.act(&mut buyer, mips().agreements, agreements::types::STANDING_OFFER, vec![], None, None, Some(vec![Ref::Act(v1)]));
     assert_eq!(l.view().pointer_holding(&not_hers, &sid).unwrap().pointers, Vec::<Hash>::new());
     let d2 = l.debt(&mut buyer, sid, 5, v1, Some(not_hers), vec![]);
     l.claim(&mut buyer, sid, d2, 5, "d2 to v1", PaidAt::Flow(v1), vec![]);
@@ -409,7 +409,7 @@ fn a_payee_accepting_anothers_offer_is_paid_by_what_its_acceptance_holds() {
     let mut buyer = l.person("a buyer posting a bounty");
     let rid = remixer.id;
     let v1 = l.pointer(&mut remixer, rid, 1, None, "the remixer's node");
-    let bounty = l.act(&mut buyer, mips().law, law::types::STANDING_OFFER, vec![], None, None, Some(vec![Ref::Act(v1)]));
+    let bounty = l.act(&mut buyer, mips().agreements, agreements::types::STANDING_OFFER, vec![], None, None, Some(vec![Ref::Act(v1)]));
     assert!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers.is_empty(), "the buyer's citation chooses nothing");
     l.sign_citing(&mut remixer, bounty, vec![v1]);
     assert_eq!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers, vec![v1]);

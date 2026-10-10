@@ -23,7 +23,7 @@ use crate::reader::{Reached, Reader};
 use crate::report::{Ran, Report};
 use mor_core::act::Act;
 use mor_core::chain::{Basis, How, Status, Stop};
-use mor_core::envelope::{self, DecKey, EncryptionKey, Recipient, Routes, SealRandom};
+use mor_core::envelopes::{self, DecKey, EncryptionKey, Recipient, Routes, SealRandom};
 use mor_core::hash::{sha256, Hash};
 use mor_core::identity::{Audit, Home, LogSummary, Payload};
 use mor_core::merkle;
@@ -309,7 +309,7 @@ impl Gauntlet {
         self.check(
             "slh",
             Ran::Throwaway,
-            "every safety-key signature met is checked by both SLH-DSA implementations, and they agree",
+            "every chain-key signature met is checked by both SLH-DSA implementations, and they agree",
             n > 0 && d == 0,
             format!("{n} signatures checked, {d} disagreements"),
         );

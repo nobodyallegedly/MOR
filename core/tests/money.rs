@@ -1,11 +1,11 @@
-//! The Finance MIP's formats, the pointer that counts (rule 12), where a
+//! The Money MIP's formats, the pointer that counts (rule 12), where a
 //! payment may go under the vault (rules 14a and 16, F114), and an
 //! anonymous payer's key (rules 1 and 10a, F113), and which flow pointer
 //! version a payment to the flow can count for (rule 14).
 
 use mor_core::act::Scheme;
 use mor_core::cbor::{self, Value};
-use mor_core::finance::*;
+use mor_core::money::*;
 use mor_core::hash::{sha256, Hash};
 use mor_core::identity::SigningKey;
 use mor_core::sig::SchnorrKey;
@@ -84,7 +84,7 @@ fn every_payload_round_trips() {
         anonymous: None,
         purchase: Some(Purchase { agreement: h("claiming agreement"), line: h("its version") }),
     }));
-    // F126: the creditor's release, a Finance act (type 4).
+    // F126: the creditor's release, a Money act (type 4).
     roundtrip(Payload::Release(Release { obligation: h("a debt"), against: vec![h("a receipt"), h("a deal")] }));
     roundtrip(Payload::Release(Release { obligation: h("a debt"), against: vec![] }));
     // F113: a receipt naming an anonymous payer's bare key; a claim carrying it.
@@ -286,7 +286,7 @@ fn shapes_are_strict() {
     let mut m = good;
     m.push((Value::Uint(2), Value::Bytes(h("x").to_vec())));
     assert!(Payload::decode(types::PAYEE_POINTER, &m).is_err());
-    // A type Finance does not define.
+    // A type Money does not define.
     assert_eq!(Payload::decode(5, &[]), Err(FinError::UnknownType(5)));
 }
 

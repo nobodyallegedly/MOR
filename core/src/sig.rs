@@ -30,9 +30,9 @@ pub const SLH_CONTEXT: &[u8] = b"MOR";
 
 /// Schnorr over secp256k1 (BIP-340), for signing keys.
 pub const SCHNORR: Scheme = Scheme::Founding(1);
-/// SLH-DSA-SHA2-128s, for safety keys (recommended).
+/// SLH-DSA-SHA2-128s, for chain keys (recommended).
 pub const SLH_128S: Scheme = Scheme::Founding(2);
-/// SLH-DSA-SHA2-128f, for safety keys.
+/// SLH-DSA-SHA2-128f, for chain keys.
 pub const SLH_128F: Scheme = Scheme::Founding(3);
 
 /// The answer to "is this signature valid for this act id?".
@@ -56,7 +56,7 @@ pub fn lengths(scheme: &Scheme) -> Option<(usize, usize)> {
     }
 }
 
-/// Whether a scheme is a safety-key scheme this library implements.
+/// Whether a scheme is a chain-key scheme this library implements.
 pub fn is_slh(scheme: &Scheme) -> bool {
     matches!(scheme, Scheme::Founding(2) | Scheme::Founding(3))
 }
@@ -105,7 +105,7 @@ fn verify_schnorr(key: &[u8], sig: &[u8], msg: &Hash) -> bool {
     vk.verify_raw(msg, &s).is_ok()
 }
 
-/// The scheme's bytes as a safety commitment hashes them: the one-byte
+/// The scheme's bytes as a chain-key commitment hashes them: the one-byte
 /// number, or the 32-byte specification hash.
 pub fn scheme_bytes(scheme: &Scheme) -> Vec<u8> {
     match scheme {
@@ -114,9 +114,9 @@ pub fn scheme_bytes(scheme: &Scheme) -> Vec<u8> {
     }
 }
 
-/// A safety key commitment: `tagged_hash("MOR/safety", scheme || key)`.
-pub fn safety_commitment(scheme: &Scheme, key: &[u8]) -> Hash {
-    tagged_hash_parts(tag::SAFETY, &[&scheme_bytes(scheme), key])
+/// A chain key commitment: `tagged_hash("MOR/chain_key", scheme || key)`.
+pub fn chain_key_commitment(scheme: &Scheme, key: &[u8]) -> Hash {
+    tagged_hash_parts(tag::CHAIN_KEY, &[&scheme_bytes(scheme), key])
 }
 
 // ---------------------------------------------------------------- signing
@@ -188,7 +188,7 @@ impl SlhKey {
 
     /// The commitment that must precede this key's use.
     pub fn commitment(&self) -> Hash {
-        safety_commitment(&self.scheme(), &self.public())
+        chain_key_commitment(&self.scheme(), &self.public())
     }
 
     /// Sign an act id, context `MOR`. With `opt_rand` absent the signature is

@@ -2,13 +2,13 @@
 
 *Case study, draft 4, 9 October 2026. Draft 3 with one change, decided by Nobody, allegedly: Elena pays her pre-release reviewers for their time, with no share of the lesson ("remove the share at that point. The idea is eventually explored later in the document", in section 4, where raters share through a named receiver). Draft 3's note follows.*
 
-*Case study, draft 3, 9 October 2026. The author's own redraft of draft 2, checked against the current core (Identity draft 11, Finance draft 6, Law draft 10), with fixes from the project lead's technical check, accepted by Nobody, allegedly: a reviewer paid with a share of the lesson is paid visibly, so an accreditation module can weigh a stakeholder's review (suggested by the project lead; the author: the share was "a reflex triggered by when this idea was meant to run on blockchains, and everyone had to be rewarded in the proof of contribution. No issuance, no problems"); tutors, locations and equipment, known in advance, are paid through named shares, not role shares (Law rule 22); raters are paid through shares, not stakes; "value added" said in plain words where its definition was cut; grammar. The draft 1 note that this text predates the current core no longer applies. Draft 2's note follows.*
+*Case study, draft 3, 9 October 2026. The author's own redraft of draft 2, checked against the current core (Identity draft 11, Money draft 6, Agreements draft 10), with fixes from the project lead's technical check, accepted by Nobody, allegedly: a reviewer paid with a share of the lesson is paid visibly, so an accreditation module can weigh a stakeholder's review (suggested by the project lead; the author: the share was "a reflex triggered by when this idea was meant to run on blockchains, and everyone had to be rewarded in the proof of contribution. No issuance, no problems"); tutors, locations and equipment, known in advance, are paid through named shares, not role shares (Agreements rule 22); raters are paid through shares, not stakes; "value added" said in plain words where its definition was cut; grammar. The draft 1 note that this text predates the current core no longer applies. Draft 2's note follows.*
 
 *Case study, draft 2, 9 October 2026. Draft 1 with the technical pass of 9 October 2026 applied (`docs/technical-pass-2026-10-09.md`), items 1 to 4, nothing else changed; item 5 needed no change. The rest is unchanged, for the author's own passes and the redraft. Draft 1's notes follow.*
 
 *Case study, draft 1, 27 September 2026. What MOR could be, with your help.*
 
-*Note, 6 October 2026: this draft predates the current core (Identity draft 11, Finance draft 6, Law draft 10) and the review rounds that changed it. Some rules it describes have since changed. It is to be redrafted (roadmap, 9 October 2026).*
+*Note, 6 October 2026: this draft predates the current core (Identity draft 11, Money draft 6, Agreements draft 10) and the review rounds that changed it. Some rules it describes have since changed. It is to be redrafted (roadmap, 9 October 2026).*
 
 ## Why this case study
 

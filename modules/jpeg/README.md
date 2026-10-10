@@ -1,6 +1,6 @@
 # mor-jpeg
 
-The JPEG Module (roadmap step 9): the founding implementation of `modules/module-jpeg-draft-1.md`, a media type for task 5 of the Envelope MIP. The barebone client (`clients/barebone`) posts and shows pictures with it; the web reader (step 10) will too.
+The JPEG Module (roadmap step 9): the founding implementation of `modules/module-jpeg-draft-1.md`, a media type for task 5 of the Envelopes MIP. The barebone client (`clients/barebone`) posts and shows pictures with it; the web reader (step 10) will too.
 
 ## In plain words
 

@@ -1,7 +1,7 @@
 //! The chain's headers, handed to the rule as data (F204): a verifier
 //! checks a Bitcoin proof against the headers of the chain it follows,
 //! never against the proof's own headers alone. The rule stays frozen and
-//! reads no network (Production rule 12): the client supplies the headers,
+//! reads no network (Development rule 12): the client supplies the headers,
 //! and the rule reads them as it reads the proof.
 //!
 //! *Mechanics chosen by the build under the delegation of F204 (the
