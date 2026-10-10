@@ -1,6 +1,6 @@
 //! # mor-anchoring
 //!
-//! The anchoring cMIP, draft 2 (`cmips/cmip-anchoring-draft-2.md`): the
+//! The anchoring cMIP, draft 3 (`cmips/cmip-anchoring-draft-3.md`): the
 //! Envelope's anchoring task (F173), one cMIP with each clock a Module under
 //! it (F202). **Experimental**: an instrument for testing the core.
 //!
@@ -8,7 +8,8 @@
 //!   clock, domain-separated (leaf, node and root hashes distinct, a batch
 //!   root never equal to a payment commitment) with one canonical proof per
 //!   leaf (F200 applied to the batch).
-//! - [`service`]: the pooled anchoring service: its offer (urgency tiers,
+//! - [`service`]: the pooled anchoring service: its standing offer
+//!   (an Agreements offer, F225), its terms (urgency tiers,
 //!   each priced), the ticket it signs for each paid hash, the publication
 //!   of each batch, and the judgment: delivered, provably omitted, late, or
 //!   not delivered by the deadline (a default), each default a refund.

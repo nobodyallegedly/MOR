@@ -1,3 +1,5 @@
+*Superseded, 10 October 2026 (night), by draft 3 (`cmips/cmip-anchoring-draft-3.md`, step 14a's second pass, `docs/anchoring-second-pass.md`). Kept as written.*
+
 # cMIP: Anchoring
 
 *Draft 2, 10 October 2026 (roadmap step 14a; `docs/anchoring-step-14a.md`). Draft 1 (findings F201, F202 and F204) is kept unchanged in its first five sections; draft 2 adds the batch, the pooled anchoring service, omission and default, urgency tiers, and what the service learns. **Experimental, not approved:** an instrument for testing the core, not a product. It fills the Envelope's anchoring task (Envelope draft 7, "Anchoring", F173). Its hash stays a draft hash until its creator is named at step 17. Not core: a founding cMIP, frozen at publication, competing with any other anchoring cMIP.* *Decided by Nobody, allegedly, 10 October 2026 (F202): "We need tu ensure that anchoring to multiple clocks is possible, cMIP is the anchoring, modules are the clocks."*
