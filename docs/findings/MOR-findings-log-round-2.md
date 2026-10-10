@@ -2662,6 +2662,14 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Core changes:** Agreements (Law) draft 10, rule 45b (finality restated; the exploration not adopted) and the client conformance line; F192's tests and Fable's `review_fdb_*` tests stand as the pins. *To build:* with F206.
 
+## F222. QH2: a stated cost, narrowed by the joiner's client check; a keeper for deals that want more (10 October 2026, evening)
+
+**From** QH2 (a newcomer on a branch the settlers hid, dropped by a settlement that does not name it), after F221 (finality stands; no silent double signing of one version's successors). *Laid beside it:* DQ5 ("Carla needs to sign either way"); Q28 ("deals that need protection name a keeper"); F176 (protection is available; whoever does not take it bears); Fable's review, section 12.
+
+**Decided by Nobody, allegedly, 10 October 2026 ("Agreed"):** QH2 is F192's stated cost, now reached only by settlers who knowingly double-signed past their clients' warnings, their signatures public for good. *Client conformance:* before a newcomer signs onto a deal, her client looks for another successor of the version she joins, at the parties' relays and keepers, and warns her if it finds one. *For deals that want more:* a keeper, as Q28 already says; nothing new in the core. *Suggested by the project lead.* Not chosen: settlements signed as chain signatures (a ceremony on every settlement).
+
+**Core changes:** Agreements (Law) draft 10, rule 45b's stated cost and the client conformance line. *To build:* with F206 and F221.
+
 ## Step 14a's readings, taken under the delegation (10 October 2026, evening)
 
 *Taken by the project lead under the delegation of mechanics, each reading a decided rule (step 14a's "a paid hash missing after the deadline is a provable default"; F201, F204, F205), none changing what a rule does; recorded as the project lead's.* From `docs/anchoring-step-14a.md` (merged): (1) a leaf moved to a later batch is an omission from the batch its ticket named, and still counts as an anchor at its block; (2) late is a default, owing the price back, and still counts as an anchor at its block; (3) a payment for a hash follows the service's payee pointer as a tip does, the anchoring offer being an act of the anchoring cMIP, not a Law offer; (4) the default is read on the verifier's own chain once its tip reaches the deadline plus five. **Three questions for Nobody, allegedly, open:** AQ1 (who pays when a batch costs more than its pool collected), AQ2 (where the refund owed on a default lives: Finance by rule 10a's path, or the offer's terms in Law), AQ3 (whether an owner's client SHOULD anchor a lock change through two services, or by its own transaction).
