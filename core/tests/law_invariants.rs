@@ -1076,7 +1076,7 @@ impl ColWorld {
                     return;
                 }
                 let area_only = area_only && self.lane_now().contains(&who);
-                let res = Resignation { agreement: self.current, area: area_only.then_some(2) };
+                let res = Resignation { agreement: self.current, area: area_only.then_some(2), drafts: vec![] };
                 let cur = self.current;
                 let res = law_act(&mut self.w, &mut self.m[i][0], law::types::RESIGNATION, res.to_map(), obj(cur));
                 let d = dev as usize % devs;

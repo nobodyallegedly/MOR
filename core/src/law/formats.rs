@@ -2160,11 +2160,18 @@ pub fn deal_citations(inside: &Inside, t: &Terms) -> Vec<Hash> {
 // ---------------------------------------------------------------- resignation
 
 /// Resignation (type 16): giving up one's voice in a collective's
-/// agreement, or stepping down from one area of it (field 1).
+/// agreement, or stepping down from one area of it (field 1). Field 2
+/// (F207, decided 10 October 2026): the drafts its signer had signed and
+/// leaves behind, ascending, none twice (the field's number and shape, the
+/// build's mechanic); a version it names never brings its signer back. Her
+/// client names them (client conformance); one it fails to name is her
+/// stated cost (F195).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Resignation {
     pub agreement: Hash,
     pub area: Option<u64>,
+    /// 2: the drafts left behind (F207).
+    pub drafts: Vec<Hash>,
 }
 
 impl Resignation {
@@ -2172,6 +2179,9 @@ impl Resignation {
         let mut m = vec![(Value::Uint(0), b(&self.agreement))];
         if let Some(a) = self.area {
             m.push((Value::Uint(1), Value::Uint(a)));
+        }
+        if !self.drafts.is_empty() {
+            m.push((Value::Uint(2), hashes_value(&self.drafts)));
         }
         m
     }
@@ -2181,16 +2191,26 @@ impl Resignation {
     pub fn decode(inside: &Inside) -> R<Resignation> {
         let mut agreement = None;
         let mut area = None;
+        let mut drafts = vec![];
         for (k, v) in &inside.payload {
             match k {
                 Value::Uint(0) => agreement = Some(hash(v, "resignation: the agreement")?),
                 Value::Uint(1) => area = Some(uint(v, "resignation: the area")?),
+                Value::Uint(2) => {
+                    drafts = nonempty(v, "resignation: the drafts left behind")?
+                        .iter()
+                        .map(|x| hash(x, "resignation: a draft left behind"))
+                        .collect::<R<Vec<_>>>()?;
+                    if !drafts.windows(2).all(|w| w[0] < w[1]) {
+                        return Err(LawError::Check("resignation: the drafts left behind are ascending, none twice (F207)"));
+                    }
+                }
                 _ => return Err(LawError::Shape("resignation: unknown field")),
             }
         }
         let agreement = agreement.ok_or(LawError::Shape("resignation: the agreement"))?;
         check_objects_self(inside, &agreement, "resignation: objects must name the agreement")?;
-        Ok(Resignation { agreement, area })
+        Ok(Resignation { agreement, area, drafts })
     }
 }
 

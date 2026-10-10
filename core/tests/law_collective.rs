@@ -447,7 +447,12 @@ impl Lab {
 
     /// A member's resignation, from a given device (a Person).
     fn resign_from(&mut self, dev: &mut Person, agreement: Hash, area: Option<u64>) -> Hash {
-        let r = Resignation { agreement, area };
+        self.resign_leaving(dev, agreement, area, vec![])
+    }
+
+    /// A resignation naming the drafts its signer leaves behind (F207).
+    fn resign_leaving(&mut self, dev: &mut Person, agreement: Hash, area: Option<u64>, drafts: Vec<Hash>) -> Hash {
+        let r = Resignation { agreement, area, drafts: sorted(drafts) };
         law_act(&mut self.w, dev, law::types::RESIGNATION, r.to_map(), obj(agreement))
     }
 
@@ -7508,8 +7513,9 @@ fn f187_6_a_departing_members_placed_signature_counts_at_the_rollback() {
     let k1 = lab.propose(ANA, &k1);
     let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
     let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    // F207: her resignation names the drafts she signed and leaves behind.
     let mut cy = lab.m[CY].clone();
-    let res_c = lab.resign_from(&mut cy, f, None);
+    let res_c = lab.resign_leaving(&mut cy, f, None, vec![two, three]);
     roll_back(&mut lab, two, &s2[..2], rot1, &[res_c]);
     let b = lab.view().broken_act(&col).unwrap();
     assert_eq!(b.map(|b| b.act), Some(rot1), "Cy's placed signature counts: two is too few");
@@ -10270,4 +10276,82 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     let n = notice(&mut lab, owed, vec![spec("someone else")]);
     let e = close_with(&mut lab, label, rot1, vec![law::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
     assert!(owed_why(&e), "not sealed to the payer: {:?}", e.why);
+}
+
+// ---------------------------------------------------------------------------
+// Step 12b, the open formats (10 October 2026): `docs/formats-build-12b.md`.
+// Each test was written first and seen to fail for the reason the decision
+// gives. Test identities only.
+// ---------------------------------------------------------------------------
+
+/// F208, decided by Nobody, allegedly, 10 October 2026 ("Agreed"): F197
+/// applies to a one-time key too. A notice addressed to the key, published
+/// naming the payment (a bare signing key cannot be sealed to: the
+/// mechanic, the build's), with a deadline: once it lapses with no address
+/// given, the closing names the debt and does not wait. Without a notice,
+/// or before the deadline, the debt still blocks.
+#[test]
+fn f208_a_one_time_key_is_noticed_and_never_blocks_a_closing_for_good() {
+    use mor_core::finance::Payer;
+    let owed_why = |e: &law::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
+    let key = SchnorrKey::from_secret(&spec("a one-time key, F208")).unwrap();
+    let bare = mor_core::identity::SigningKey { scheme: mor_core::act::Scheme::Founding(1), key: key.public().to_vec() };
+    let public_notice = |lab: &mut Lab, owed: Hash| {
+        let n = law::Notice { payment: owed, deadline: (spec("a block height reference"), Value::Uint(900_000)) };
+        let mut dev = lab.c[0].clone();
+        let a = lab.w.everyday_act(&mut dev, mips().law, law::types::NOTICE, n.to_map(), obj(owed), None);
+        let x = lab.w.add(&a);
+        lab.c[0] = dev;
+        x
+    };
+    // Named, no notice: it blocks.
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Key(bare.clone())), b"a key's penny");
+    let e = close_with(&mut lab, label, rot1, vec![law::OpenOwed { payment: owed, notice: None, holder: None }], &[]);
+    assert!(owed_why(&e), "{:?}", e.why);
+    // A public notice, its deadline not passed: it blocks.
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Key(bare.clone())), b"a key's penny");
+    let n = public_notice(&mut lab, owed);
+    let e = close_with(&mut lab, label, rot1, vec![law::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[]);
+    assert!(owed_why(&e), "the deadline has not passed: {:?}", e.why);
+    // Lapsed: the collective may close, the debt named and visible.
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Key(bare)), b"a key's penny");
+    let n = public_notice(&mut lab, owed);
+    let e = close_with(&mut lab, label, rot1, vec![law::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
+    assert!(!owed_why(&e), "{:?}", e.why);
+    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "the debt stays visible, unpaid");
+}
+
+/// F207, decided by Nobody, allegedly, 10 October 2026 ("Yes. If the
+/// resignation needs it, the resignation gets it."): a resignation names
+/// the drafts its signer had signed and leaves behind; a version it names
+/// never brings its signer back, whichever line puts it in force. A draft
+/// it fails to name is her stated cost (F195): it brings her back.
+#[test]
+fn f207_a_resignation_names_the_drafts_it_leaves_behind() {
+    let run = |named: bool| {
+        let mut lab = Lab::new(&|_| {});
+        let f = lab.founding;
+        let col = lab.c[0].id;
+        // A constitutional draft every member signs, Cy among them.
+        let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|t| t.text = "A draft Cy signed.".into());
+        let draft = lab.propose(ANA, &t);
+        let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &draft)).collect();
+        for x in &s {
+            lab.acknowledge(0, *x);
+        }
+        // Cy resigns; a first line registers it, putting nothing in force.
+        let mut cy = lab.m[CY].clone();
+        let res = lab.resign_leaving(&mut cy, f, None, if named { vec![draft] } else { vec![] });
+        lab.m[CY] = cy;
+        lab.record(0, None, &[], vec![res], f);
+        let n0 = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+        assert!(!n0.voices.contains(&lab.ids()[CY]), "registered: Cy has left");
+        // A later line, a rotation, declares the draft (rule 37).
+        lab.rotate(Some((draft, s)), &[0]);
+        assert_eq!(lab.view().current(&col).unwrap().unwrap().agreement, draft);
+        let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+        n.voices.contains(&lab.ids()[CY])
+    };
+    assert!(!run(true), "named in her resignation: the draft never brings her back");
+    assert!(run(false), "not named: her stated cost, the draft brings her back (F195)");
 }

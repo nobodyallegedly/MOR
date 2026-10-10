@@ -1339,13 +1339,13 @@ impl<'a> LawView<'a> {
                     "the rollback registers a resignation from an agreement not in force just before the broken act (rule 37a)".into(),
                 ));
             }
-            if at.is_none() && res.area.is_none() && self.resignation_spent(&p, before, &res.agreement)? {
+            if at.is_none() && res.area.is_none() && self.resignation_spent(&p, before, &res.agreement, &res.drafts)? {
                 return Ok(Err(
                     "the rollback registers a resignation its signer made before coming back: spent, it registers nothing (F189, 1)".into(),
                 ));
             }
             if let (None, Some(area)) = (at, res.area) {
-                if self.stepping_down_spent(&p, before, &res.agreement, area)? {
+                if self.stepping_down_spent(&p, before, &res.agreement, area, &res.drafts)? {
                     return Ok(Err(
                         "the rollback registers a stepping down its signer made before holding the area again: spent, it registers nothing (QF6)".into(),
                     ));
@@ -1574,7 +1574,7 @@ impl<'a> LawView<'a> {
                     continue;
                 }
                 let Ok(r) = Resignation::decode(&h.inside) else { continue };
-                if r.area.is_none() && lineage.contains(&r.agreement) && !self.resignation_spent(p, &ag, &r.agreement)? {
+                if r.area.is_none() && lineage.contains(&r.agreement) && !self.resignation_spent(p, &ag, &r.agreement, &r.drafts)? {
                     out.push(Departure { act: h.id, party: *p, kind: DepartureKind::Resigned { agreement: r.agreement } });
                 }
             }
@@ -2629,12 +2629,13 @@ impl<'a> LawView<'a> {
                 if &d.party != p {
                     continue;
                 }
-                // The version the line registering it puts in force, which
-                // counts a departing member's signature placed before it
-                // (C2; F187, 6), never brings them back (reading, to
-                // confirm; QH4).
-                let puts = self.line_puts(col, *l);
-                let returns: Vec<Hash> = returns.iter().filter(|v| Some(**v) != puts).copied().collect();
+                // F207 (decided 10 October 2026, replacing QH4's reading): a
+                // version the resignation or stepping down names among the
+                // drafts it leaves behind never brings its signer back,
+                // whichever line puts it in force; what she signed while
+                // present still speaks where C2 counts it.
+                let left = self.drafts_left_behind(&d.act);
+                let returns: Vec<Hash> = returns.iter().filter(|v| !left.contains(v)).copied().collect();
                 // F189 (1), F195: a resignation is spent once its signer
                 // came back by a version naming them (B10), registered or
                 // not; a line registers only one naming the version of their
@@ -2647,7 +2648,7 @@ impl<'a> LawView<'a> {
                 // QF6 (decided 9 October 2026, F190): so is a stepping down,
                 // once its signer holds the area again.
                 if let DepartureKind::SteppedDown { agreement, area: a } = &d.kind {
-                    let back: Vec<Hash> = self.came_back(p, &lineage, Some(*a))?.into_iter().filter(|v| Some(*v) != puts).collect();
+                    let back: Vec<Hash> = self.came_back(p, &lineage, Some(*a))?.into_iter().filter(|v| !left.contains(v)).collect();
                     if area == Some(*a) && self.spent(agreement, &back)? {
                         continue;
                     }
@@ -2667,8 +2668,9 @@ impl<'a> LawView<'a> {
                 if !hits || !(lineage.contains(&from) || later) {
                     continue;
                 }
-                // Named again by a later version they signed, after the line.
-                if self.restored(col, p, &lineage, &from, area, *l)? {
+                // Named again by a later version they signed, after the line,
+                // and not one their departure left behind (F207).
+                if self.restoring(col, p, &lineage, &from, area, *l)?.is_some_and(|v| !left.contains(&v)) {
                     continue;
                 }
                 regs.push(*l);
@@ -2738,16 +2740,29 @@ impl<'a> LawView<'a> {
 
     /// Whether `p`'s stepping down from `area` naming `agreement` is spent,
     /// counted in agreement `ag` (QF6, F190; F195).
-    fn stepping_down_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash, area: u64) -> R<bool> {
+    fn stepping_down_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash, area: u64, drafts: &[Hash]) -> R<bool> {
         let lineage: Vec<Hash> = self.lineage(ag)?.into_iter().map(|(i, _)| i).collect();
-        self.spent(agreement, &self.came_back(p, &lineage, Some(area))?)
+        let back: Vec<Hash> = self.came_back(p, &lineage, Some(area))?.into_iter().filter(|v| !drafts.contains(v)).collect();
+        self.spent(agreement, &back)
+    }
+
+    /// The drafts a resignation or stepping down leaves behind (F207): its
+    /// field 2; none where `act` is no resignation.
+    fn drafts_left_behind(&self, act: &Hash) -> Vec<Hash> {
+        self.v
+            .get(act)
+            .filter(|h| self.is_law(h, types::RESIGNATION))
+            .and_then(|h| Resignation::decode(&h.inside).ok())
+            .map(|r| r.drafts)
+            .unwrap_or_default()
     }
 
     /// Whether `p`'s resignation naming `agreement` is spent, counted in
     /// agreement `ag` (F189, 1; F195).
-    fn resignation_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash) -> R<bool> {
+    fn resignation_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash, drafts: &[Hash]) -> R<bool> {
         let lineage: Vec<Hash> = self.lineage(ag)?.into_iter().map(|(i, _)| i).collect();
-        self.spent(agreement, &self.came_back(p, &lineage, None)?)
+        let back: Vec<Hash> = self.came_back(p, &lineage, None)?.into_iter().filter(|v| !drafts.contains(v)).collect();
+        self.spent(agreement, &back)
     }
 
     /// Whether a resignation or stepping down naming `agreement` is spent
@@ -6204,7 +6219,14 @@ impl<'a> LawView<'a> {
             let named = c.open.iter().find(|x| of.contains(&x.payment));
             let left_open = match (&o.to, named) {
                 (crate::finance::RefundTo::Nobody, Some(_)) => true,
-                (crate::finance::RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, payer, &of)),
+                (crate::finance::RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, Some(payer), &of)),
+                // F208 (decided 10 October 2026): a one-time key is noticed
+                // too, and never blocks a closing for good. The notice is
+                // public, naming the payment (mechanic, the build's: a bare
+                // signing key cannot be sealed to, so its holder finds the
+                // notice by looking; the cost to the payer's privacy, the
+                // key linked to this collective, is stated).
+                (crate::finance::RefundTo::Key(_), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, None, &of)),
                 _ => false,
             };
             if !left_open {
@@ -8029,12 +8051,14 @@ impl<'a> LawView<'a> {
     /// `payer`, valid, public or sealed to that payer and to every member
     /// (done, rule 35a), whose deadline the caller states lapsed with no
     /// address given ([`Self::notices_lapsed`]).
-    fn notice_lapsed(&self, n: &Hash, collective: &Hash, payer: &Hash, of: &[Hash]) -> bool {
+    fn notice_lapsed(&self, n: &Hash, collective: &Hash, payer: Option<&Hash>, of: &[Hash]) -> bool {
         let Some(h) = self.v.get(n) else { return false };
         self.is_law(h, types::NOTICE)
             && h.act.outside.signer.as_ref() == Some(collective)
             && self.valid(n)
-            && (h.act.outside.content_key.is_some() || h.act.outside.to.iter().flatten().any(|q| q == payer))
+            // To an identity: public or sealed to it; to a one-time key
+            // (F208): public.
+            && (h.act.outside.content_key.is_some() || payer.is_some_and(|p| h.act.outside.to.iter().flatten().any(|q| q == p)))
             // Rule 35a: an act in the collective's name is done once sealed
             // to every member, or public.
             && self.current(collective).ok().flatten().and_then(|c| self.terms(&c.agreement).ok()).is_some_and(|t| self.sealed_to_all(h, &t))
