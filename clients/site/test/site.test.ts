@@ -17,6 +17,7 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { withdraw } from '../../barebone/src/post.ts';
 import { parse, title } from '../../longform/src/format.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
+import { strip as stripFilm } from '../../../modules/video/src/video.ts';
 import { TestCollective } from '../../repo/src/collective.ts';
 import { Gateway } from '../src/gateway.ts';
 import { findLater } from '../src/latest.ts';
@@ -31,6 +32,8 @@ const here = fileURLToPath(new URL('..', import.meta.url));
 const run = promisify(execFile);
 const utf8 = (s: string) => new TextEncoder().encode(s);
 const page = (body: string) => utf8(`<!doctype html><title>t</title>${body}`);
+/** One of the video Module's test films (synthetic: ffmpeg's test pattern). */
+const film = (name: string) => new Uint8Array(readFileSync(new URL(`../../../modules/video/test/fixtures/${name}`, import.meta.url)));
 
 let w: World;
 
@@ -62,9 +65,10 @@ function getAs(base: string, path: string, host: string): Promise<{ status: numb
   });
 }
 
-test('paths: lower-case, four kinds, addresses both ways', () => {
-  for (const p of ['index.html', 'a/b-c_d.e.css', 'earth.jpg', 'notes.txt']) assert.ok(kindOf(p), p);
-  for (const p of ['Index.html', 'a.js', 'a.png', '.hidden.html', 'a//b.html', 'a/../b.html', 'é.html', 'a b.html', 'html', '/a.html', 'a/']) {
+test('paths: lower-case, five kinds, addresses both ways', () => {
+  for (const p of ['index.html', 'a/b-c_d.e.css', 'earth.jpg', 'notes.txt', 'film.mp4']) assert.ok(kindOf(p), p);
+  assert.equal(kindOf('films/the-film.mp4'), 'film', 'draft 4: a film');
+  for (const p of ['Index.html', 'a.js', 'a.png', 'a.mov', 'a.webm', 'a.MP4', '.hidden.html', 'a//b.html', 'a/../b.html', 'é.html', 'a b.html', 'html', '/a.html', 'a/']) {
     assert.equal(kindOf(p), null, p);
   }
   assert.equal(kindOf(`${'a'.repeat(101)}.txt`), null, 'a segment of at most 100 characters');
@@ -107,6 +111,8 @@ test('files the cMIP refuses are refused before anything is published, every rea
     { path: 'app.js', bytes: utf8('alert(1)') },
     { path: 'photo.jpg', bytes: phone },
     { path: 'broken.html', bytes: new Uint8Array([0x3c, 0xff, 0xfe]) },
+    { path: 'tagged.mp4', bytes: film('tagged.mp4') },
+    { path: 'hevc.mp4', bytes: film('hevc.mp4') },
   ];
   assert.throws(
     () => checkFiles(files),
@@ -115,9 +121,15 @@ test('files the cMIP refuses are refused before anything is published, every rea
       /app\.js: not a path/.test(e.message) &&
       /photo\.jpg: carries more than the picture/.test(e.message) &&
       /broken\.html: not UTF-8/.test(e.message) &&
+      /tagged\.mp4: carries more than the film \(.*where it was filmed/.test(e.message) &&
+      /hevc\.mp4: not a film the video Module plays: pictures coded as "hvc1"/.test(e.message) &&
       /no front page/.test(e.message),
   );
-  checkFiles([{ path: 'index.html', bytes: page('ok') }, { path: 'photo.jpg', bytes: strip(phone).bytes }]);
+  checkFiles([
+    { path: 'index.html', bytes: page('ok') },
+    { path: 'photo.jpg', bytes: strip(phone).bytes },
+    { path: 'film.mp4', bytes: stripFilm(film('tagged.mp4')).bytes },
+  ]);
 });
 
 test('the dubsar.org site is published as a version of its owner, and every file verifies from a relay', async () => {
@@ -206,6 +218,7 @@ test('the gateway checks before it serves, serves its display client at every ad
       assert.equal(r.status, 200, a);
       assert.equal(await r.text(), shell, `${a}: the display client, never the page itself`);
       assert.match(r.headers.get('content-security-policy')!, /script-src 'self' 'wasm-unsafe-eval'/);
+      assert.match(r.headers.get('content-security-policy')!, /media-src blob:;/, 'films play only from checked bytes');
       assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
     }
     const missing = await fetch(base + '/nothing.html');

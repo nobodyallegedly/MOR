@@ -1,7 +1,7 @@
 {
   "name": "mor-site",
   "version": "0.1.0",
-  "description": "Websites on MOR (website cMIP, draft 2): a site as a signed manifest of its files, published on relays; a gateway that serves it at an address, with a display client that checks every page in the visitor's browser.",
+  "description": "Websites on MOR (website cMIP, draft 4): a site as a signed manifest of its files, published on relays; a gateway that serves it at an address, with a display client that checks every page in the visitor's browser.",
   "license": "MIT OR Apache-2.0",
   "private": true,
   "type": "module",

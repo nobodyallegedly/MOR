@@ -12,6 +12,7 @@ Specifications above the core that MOR V1 builds on. Not core: they compete like
 | `module-bitcoin-clock-draft-2.md` | A clock Module under the anchoring cMIP (`cmips/cmip-anchoring-draft-2.md`, now draft 3): a point on Bitcoin is the block; an on-chain payment's proof is that payment's anchor (F201, F202); a batch anchor, the anchoring cMIP's batch with its root committed by pay-to-contract, checked by a sibling of the rail's rule (the same tweak and header checks against the chain followed, no amount, six confirmations), roadmap step 14a. Draft 2: **experimental, not approved**; draft 1 (`module-bitcoin-clock-draft-1.md`) kept, superseded. Code: `onchain/src/clock.rs` (crate `mor-onchain`). |
 | `units-bitcoin-draft-1.md` | Four units: the satoshi, and the satoshis of testnet, signet and regtest, which are not satoshis. Not yet approved. |
 | `module-jpeg-draft-1.md` | A media type (task 5): a JPEG file as a picture, which way up and in what colours, and how a posting client strips it to the picture alone (roadmap step 9). |
+| `module-video-draft-1.md` | A media type (task 5): an MP4 file with H.264 pictures and optional AAC sound as a film; what a client checks before playing, what it refuses, its limits, and how a publishing client strips it to the film alone (F243). Draft 1, **not yet approved**. |
 
 | Code | What it is |
 | --- | --- |
@@ -19,3 +20,4 @@ Specifications above the core that MOR V1 builds on. Not core: they compete like
 | `lightning/` | The Lightning rail Module in Rust (crate `mor-lightning`): the BOLT 11 decoder and the rule, a client for lnd (feature `lnd`), and the regtest network for the end-to-end test. See its README. |
 | `onchain/` | The on-chain rail Module in Rust (crate `mor-onchain`): the tweak, the transaction and header decoder, the rule, and a btcd client (feature `btcd`) for the end-to-end test on regtest. See its README. |
 | `jpeg/` | The JPEG Module in TypeScript (`mor-jpeg`): reading and stripping, with test pictures and vectors checked by Pillow. See its README. |
+| `video/` | The video Module in TypeScript (`mor-video`): checking and stripping, with synthetic test films and vectors checked by ffprobe and ffmpeg. See its README. |

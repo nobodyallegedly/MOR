@@ -15,6 +15,7 @@ on:
       - clients/longform/**
       - clients/genesis/**
       - modules/jpeg/**
+      - modules/video/**
       - docs/dubsar.org/**
       - .github/workflows/site-webkit.yml
   pull_request:
@@ -25,6 +26,7 @@ on:
       - clients/longform/**
       - clients/genesis/**
       - modules/jpeg/**
+      - modules/video/**
       - docs/dubsar.org/**
       - .github/workflows/site-webkit.yml
   workflow_dispatch:
@@ -56,11 +58,12 @@ jobs:
           cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
           for p in barebone reader longform site; do (cd ../$p && npm ci --no-audit --no-fund); done
           cd ../../modules/jpeg && npm ci --no-audit --no-fund
+          cd ../video && npm ci --no-audit --no-fund
           cd ../.. && cargo build -q -p mor-relay
       - name: WebKit, Playwright's build
         run: cd clients/site && npx playwright-core install --with-deps webkit
       - name: Browser tests in WebKit (Safari's engine)
-        run: cd clients/site && MOR_BROWSER=webkit node --import tsx --test test/browser.test.ts
+        run: cd clients/site && MOR_BROWSER=webkit node --import tsx --test test/browser.test.ts test/film.test.ts
       - name: Browser tests in Chromium
         if: success() || failure()
-        run: cd clients/site && node --import tsx --test test/browser.test.ts
+        run: cd clients/site && node --import tsx --test test/browser.test.ts test/film.test.ts

@@ -1,4 +1,4 @@
-// The site manifest (website cMIP, draft 2): one version of a site, file by
+// The site manifest (website cMIP, draft 4; the manifest unchanged since draft 2): one version of a site, file by
 // file, each named by its hash, in the same file entries as a release of the
 // code. Written for both Node and a browser: no Buffer here.
 
@@ -22,10 +22,10 @@ export interface SiteManifest {
   files: FileEntry[];
 }
 
-export type Kind = 'page' | 'stylesheet' | 'picture' | 'text';
+export type Kind = 'page' | 'stylesheet' | 'picture' | 'text' | 'film';
 
-/** Rule 4: the extension decides what a file is; any other extension is invalid. */
-export const KINDS: Record<string, Kind> = { html: 'page', css: 'stylesheet', jpg: 'picture', txt: 'text' };
+/** Rule 4: the extension decides what a file is; any other extension is invalid. Draft 4 adds films (the video Module). */
+export const KINDS: Record<string, Kind> = { html: 'page', css: 'stylesheet', jpg: 'picture', txt: 'text', mp4: 'film' };
 
 export const FRONT = 'index.html';
 

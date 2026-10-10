@@ -4,7 +4,8 @@
 // core library (the publication, its signer's chain, the manifest), fetches
 // the file this address names, checks its bytes against the manifest, and
 // only then shows it, under a bar that says who signed it and whether it
-// verified. A file that does not match is not shown.
+// verified. A file that does not match is not shown. A film is fetched and
+// checked only when the visitor presses play (draft 4, rule 12a; film.ts).
 
 import { releaseLoad } from './hold.ts';
 import { readPost } from '../../../barebone/src/post.ts';
@@ -13,8 +14,9 @@ import { kindOf, pathFor, type FileEntry } from '../manifest.ts';
 import { parseSiteSettings, type SiteSettings } from '../settings.ts';
 import { findLater } from '../latest.ts';
 import { matches, openVersion, type Version } from '../verify.ts';
+import { filmPlayer, layOver } from './film.ts';
 import { preparePage } from './page.ts';
-import { ACT_STYLE, bar, briefWords, failingWords, verifiedWords, type BarState } from './view.ts';
+import { ACT_STYLE, bar, briefWords, failingWords, verifiedWords, type BarState, type FilmLine } from './view.ts';
 
 const barEl = document.getElementById('mor-bar')!;
 const view = document.getElementById('mor-view')!;
@@ -29,6 +31,7 @@ const state: BarState = {
   path: null,
   work: null,
   acts: [],
+  films: [],
   reasons: [],
   newer: null,
 };
@@ -122,6 +125,30 @@ function showIcon(bytes: Uint8Array): void {
 }
 
 /**
+ * Give each film of the page its player, laid over the place the page gave
+ * it. The poster's own shape, once known, becomes the place's shape (a page's
+ * stylesheet may still size it), so the film is not cropped.
+ */
+function showFilms(frame: HTMLIFrameElement, films: { entry: FileEntry; poster: Uint8Array | null }[]): void {
+  const doc = frame.contentDocument;
+  if (!doc || !films.length) return;
+  const players = new Map<HTMLElement, HTMLElement>();
+  for (const spot of [...doc.querySelectorAll<HTMLElement>('.mor-film[data-film]')]) {
+    const film = films[Number(spot.dataset.film)];
+    if (!film) continue;
+    const line: FilmLine = { path: film.entry.path, state: 'waiting', why: null };
+    state.films.push(line);
+    const shape = (w: number, h: number) => {
+      if (w && h) spot.style.aspectRatio = `${w} / ${h}`;
+    };
+    players.set(spot, filmPlayer(film.entry, film.poster, gatewayFile, line, paint, shape));
+  }
+  view.append(...players.values());
+  layOver(frame, players);
+  paint();
+}
+
+/**
  * Look for later versions of the site, whatever the gateway's setting, and
  * say when a newer one exists (cMIP rule 24). The page is already shown:
  * this never holds it back.
@@ -208,6 +235,7 @@ async function main(): Promise<void> {
       'load',
       () => {
         fitFrame(frame);
+        showFilms(frame, prepared.films);
         void showActs(frame, settings);
       },
       { once: true },
@@ -221,12 +249,20 @@ async function main(): Promise<void> {
 
   document.title = `${entry.path} · ${version.manifest!.name}`;
   state.phase = 'ok';
-  state.words = verifiedWords(settings, kind === 'picture' ? 'picture' : 'file');
+  state.words = verifiedWords(settings, kind === 'picture' ? 'picture' : kind === 'film' ? 'film' : 'file');
   state.brief = briefWords(settings);
   paint();
   const box = document.createElement('div');
   box.className = 'file';
-  if (kind === 'picture') {
+  if (kind === 'film') {
+    // The film at its own address: its bytes are already here and checked
+    // (that is how this address works for every file), so the player only
+    // reads them with the video Module when the visitor presses play.
+    const line: FilmLine = { path: entry.path, state: 'waiting', why: null };
+    state.films = [line];
+    const checkedBytes = bytes;
+    box.append(filmPlayer(entry, null, async () => checkedBytes, line, paint));
+  } else if (kind === 'picture') {
     const img = document.createElement('img');
     img.alt = entry.path;
     img.src = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'image/jpeg' }));

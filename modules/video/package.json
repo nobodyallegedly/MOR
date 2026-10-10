@@ -1,0 +1,25 @@
+{
+  "name": "mor-video",
+  "version": "0.1.0",
+  "description": "The MOR video Module: an MP4 file (H.264, optional AAC) checked before it plays, and stripped to the film alone before it is published.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-video": "./src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "cli": "node --import tsx src/cli.ts",
+    "vectors": "node --import tsx scripts/vectors.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

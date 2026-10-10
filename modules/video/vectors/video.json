@@ -1,0 +1,365 @@
+{
+  "module": "modules/module-video-draft-1.md",
+  "fixtures": "../test/fixtures",
+  "vectors": [
+    {
+      "file": "external.mp4",
+      "sha256": "90f5c23d7496fcaa079b989f8fdefb4ed45ff0eea6596b13cb3bba66ec173403",
+      "refused": {
+        "kind": "refused",
+        "reason": "a track whose samples are stored outside this file (a data reference to elsewhere)"
+      }
+    },
+    {
+      "file": "fragmented.mp4",
+      "sha256": "3632b4b9aa3f83099d036d69b804a4f4fb2eb6c245b40cb764c72df22ec3fda2",
+      "refused": {
+        "kind": "refused",
+        "reason": "a fragmented MP4 (as a live stream writes): only a whole film with one index is played"
+      }
+    },
+    {
+      "file": "hevc.mp4",
+      "sha256": "6742cee94d1d68515ec7925bf514ac99146009ef4530565b7860d8f3c0a729f6",
+      "refused": {
+        "kind": "refused",
+        "reason": "pictures coded as \"hvc1\", not H.264: only H.264 (avc1) is played"
+      }
+    },
+    {
+      "file": "hidden.mp4",
+      "sha256": "274486aee656e47c6791b8569f767ec8150c87581ac5f5348a9d42e88550b80a",
+      "film": {
+        "brand": "isom",
+        "duration": 1,
+        "video": {
+          "codec": "avc1.42c00c",
+          "profile": "Baseline",
+          "level": 12,
+          "width": 320,
+          "height": 180,
+          "rotation": 0,
+          "shown": {
+            "width": 320,
+            "height": 180
+          },
+          "samples": 25,
+          "rate": 25
+        },
+        "audio": null,
+        "type": "video/mp4; codecs=\"avc1.42c00c\"",
+        "indexFirst": false,
+        "carried": [
+          "metadata",
+          "names",
+          "free",
+          "unknown",
+          "unused-media"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/hidden.mp4",
+        "sha256": "339ec3f3ca16ce552f242f6f889e4a772af50ee25559975ceec4db5274222e38",
+        "removed": [
+          "metadata",
+          "names",
+          "free",
+          "unknown",
+          "unused-media"
+        ]
+      }
+    },
+    {
+      "file": "high-444.mp4",
+      "sha256": "c177835959b04833282f06f82c85f41d9b90f891f6545fbf21b1d027bea6ab1d",
+      "refused": {
+        "kind": "refused",
+        "reason": "H.264 with colour sampled otherwise than 4:2:0, which phones do not all play"
+      }
+    },
+    {
+      "file": "index-last.mp4",
+      "sha256": "26b9f6f43ad4074bd709e93e228f455e8117f1c274976b48d38ce200106b3568",
+      "film": {
+        "brand": "isom",
+        "duration": 2.023,
+        "video": {
+          "codec": "avc1.4d400c",
+          "profile": "Main",
+          "level": 12,
+          "width": 256,
+          "height": 144,
+          "rotation": 0,
+          "shown": {
+            "width": 256,
+            "height": 144
+          },
+          "samples": 50,
+          "rate": 25
+        },
+        "audio": {
+          "codec": "mp4a.40.2",
+          "channels": 1,
+          "sampleRate": 44100,
+          "samples": 88
+        },
+        "type": "video/mp4; codecs=\"avc1.4d400c, mp4a.40.2\"",
+        "indexFirst": false,
+        "carried": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/index-last.mp4",
+        "sha256": "fbbb3b92bfbd15de56e7fb873bd954c943b12a78d54f31858b4a8c809082d0d7",
+        "removed": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      }
+    },
+    {
+      "file": "mp3-sound.mp4",
+      "sha256": "05352ab4f91bf6c435816a73441abc82e30f1553c09240042aa586e0eebd3692",
+      "refused": {
+        "kind": "refused",
+        "reason": "sound that is not MPEG-4 audio (AAC): only AAC-LC is played"
+      }
+    },
+    {
+      "file": "mpeg4-part2.mp4",
+      "sha256": "fdc23804ce8c8c7bdd96fa20c741284ffb6c6fe59fcbf3e9e2ec24b96abba2d2",
+      "refused": {
+        "kind": "refused",
+        "reason": "pictures coded as \"mp4v\", not H.264: only H.264 (avc1) is played"
+      }
+    },
+    {
+      "file": "not-an-mp4.mp4",
+      "sha256": "5f561442f7bc0135c3528593e36d57a5fad57e7f019315fc2a705cfd7da2c37b",
+      "refused": {
+        "kind": "structure",
+        "reason": "it does not begin with a file type box (ftyp)"
+      }
+    },
+    {
+      "file": "plain.mp4",
+      "sha256": "da2cfaf686f6e209e4da06075f71e40acf19489fd2acf878615f308ed175ccd0",
+      "film": {
+        "brand": "isom",
+        "duration": 2,
+        "video": {
+          "codec": "avc1.42c00c",
+          "profile": "Baseline",
+          "level": 12,
+          "width": 320,
+          "height": 180,
+          "rotation": 0,
+          "shown": {
+            "width": 320,
+            "height": 180
+          },
+          "samples": 50,
+          "rate": 25
+        },
+        "audio": null,
+        "type": "video/mp4; codecs=\"avc1.42c00c\"",
+        "indexFirst": true,
+        "carried": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/plain.mp4",
+        "sha256": "f6722ff801e4d3ea566e1541c0f3c5caa1d0672fe6f77e215795fc4622f9812d",
+        "removed": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      }
+    },
+    {
+      "file": "sound.mp4",
+      "sha256": "17814d3bf97b2155d08d96e82ba857d96dab4b7153520a0a80082a057523fe58",
+      "film": {
+        "brand": "isom",
+        "duration": 2.021,
+        "video": {
+          "codec": "avc1.64000c",
+          "profile": "High",
+          "level": 12,
+          "width": 320,
+          "height": 180,
+          "rotation": 0,
+          "shown": {
+            "width": 320,
+            "height": 180
+          },
+          "samples": 50,
+          "rate": 25
+        },
+        "audio": {
+          "codec": "mp4a.40.2",
+          "channels": 2,
+          "sampleRate": 48000,
+          "samples": 95
+        },
+        "type": "video/mp4; codecs=\"avc1.64000c, mp4a.40.2\"",
+        "indexFirst": true,
+        "carried": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/sound.mp4",
+        "sha256": "467f68f56824b58da65345993e56ac8333337b75c01f98694fbeef3163b2c4d6",
+        "removed": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      }
+    },
+    {
+      "file": "subtitles.mp4",
+      "sha256": "770f2285d2e32db30e965620fe06c4da905c2c36f0717a5eb32df0149abd08c7",
+      "refused": {
+        "kind": "refused",
+        "reason": "a track of kind \"sbtl\" (text, subtitles, timecode, metadata or hints): a film holds pictures and sound only"
+      }
+    },
+    {
+      "file": "tagged.mp4",
+      "sha256": "b2ba930cfa533e1e2acaecddd3a5edb583f828b514f2f14e05cea4db7cf682d9",
+      "film": {
+        "brand": "isom",
+        "duration": 2.021,
+        "video": {
+          "codec": "avc1.64000c",
+          "profile": "High",
+          "level": 12,
+          "width": 320,
+          "height": 180,
+          "rotation": 0,
+          "shown": {
+            "width": 320,
+            "height": 180
+          },
+          "samples": 50,
+          "rate": 25
+        },
+        "audio": {
+          "codec": "mp4a.40.2",
+          "channels": 1,
+          "sampleRate": 48000,
+          "samples": 95
+        },
+        "type": "video/mp4; codecs=\"avc1.64000c, mp4a.40.2\"",
+        "indexFirst": true,
+        "carried": [
+          "metadata",
+          "location",
+          "names",
+          "free"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/tagged.mp4",
+        "sha256": "88a973d77994e2566f7ea72399dc274e562a150919c4572254aaccbe6a13d9e7",
+        "removed": [
+          "metadata",
+          "location",
+          "names",
+          "free"
+        ]
+      }
+    },
+    {
+      "file": "too-fast.mp4",
+      "sha256": "27d4a8392a65568012b88c7955ef14381378ffb7f86a2e906e7f736c6bd90e29",
+      "refused": {
+        "kind": "limits",
+        "reason": "120 pictures a second, beyond 60"
+      }
+    },
+    {
+      "file": "too-large.mp4",
+      "sha256": "cb0ad66c0fb9e5e447ab25bf196f00e8a2b5dda04c799882f3406bd8e4028b9d",
+      "refused": {
+        "kind": "limits",
+        "reason": "pictures of 2560 x 1440, beyond 1920 x 1080"
+      }
+    },
+    {
+      "file": "too-long.mp4",
+      "sha256": "2869f9981213436417f72122838bb9c83cf86d91aea674f9fa59853ed648ae87",
+      "refused": {
+        "kind": "limits",
+        "reason": "601 seconds long, beyond 600"
+      }
+    },
+    {
+      "file": "truncated.mp4",
+      "sha256": "4e419576570c740198ffacf298b2fce9b08fb169aeae97b7a13d66d46f46f72b",
+      "refused": {
+        "kind": "structure",
+        "reason": "the box \"mdat\" runs past its parent"
+      }
+    },
+    {
+      "file": "turned.mp4",
+      "sha256": "873d45c6803f1b7dfaab7786df8c79205fe92c7c8a2ae2fd27067bb03dea59ba",
+      "film": {
+        "brand": "isom",
+        "duration": 2,
+        "video": {
+          "codec": "avc1.4d400c",
+          "profile": "Main",
+          "level": 12,
+          "width": 320,
+          "height": 180,
+          "rotation": 90,
+          "shown": {
+            "width": 180,
+            "height": 320
+          },
+          "samples": 50,
+          "rate": 25
+        },
+        "audio": null,
+        "type": "video/mp4; codecs=\"avc1.4d400c\"",
+        "indexFirst": true,
+        "carried": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/turned.mp4",
+        "sha256": "4fa54ea6b60debd1a01ba439a2b1f2c390b608a4dae9615c5d18d040df798d1b",
+        "removed": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      }
+    },
+    {
+      "file": "two-pictures.mp4",
+      "sha256": "8b4d9863a4ce33a66964609dec57191671a2479b7f10c3bb5970132bb75c342e",
+      "refused": {
+        "kind": "refused",
+        "reason": "2 picture tracks: a film has exactly one"
+      }
+    }
+  ]
+}

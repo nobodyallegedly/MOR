@@ -18,6 +18,14 @@ export const SITE_DIR = fileURLToPath(new URL('../../../docs/dubsar.org', import
 export const phone = new Uint8Array(readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url)));
 
 /**
+ * WebKit's notice that a frame's size changed again while being fitted, or a
+ * film's player laid over its place: the remaining notices come at the next
+ * frame, as the observer's rules say, so nothing is lost. Not counted as an
+ * error by either browser test file.
+ */
+export const benign = (m: string) => /ResizeObserver loop completed with undelivered notifications/.test(m);
+
+/**
  * The departments' doors (decided by Nobody, allegedly, 9 October 2026): a folder each within the one site, in
  * the order of the working list (docs/roadmap-v1.md, "Doors on the site"), with the name each page carries.
  * Every pitch sends the main door and the department's; the main door does not list them.

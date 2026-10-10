@@ -21,7 +21,7 @@ cargo test --workspace --locked
 echo "== Core library for the clients (WebAssembly)"
 (cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm)
 
-for pkg in clients/* modules/jpeg; do
+for pkg in clients/* modules/jpeg modules/video; do
   [ -f "$pkg/package.json" ] || continue
   echo "== $pkg"
   (cd "$pkg" && npm ci --no-audit --no-fund && npm test)

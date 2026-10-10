@@ -10,6 +10,7 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { workHash } from '../../genesis/src/core.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
+import { CARRIED_WORDS as FILM_CARRIED, strip as stripFilm } from '../../../modules/video/src/video.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import { Gateway, type Loaded } from './gateway.ts';
 import { findLater } from './latest.ts';
@@ -46,9 +47,11 @@ checks every page in the visitor's browser before showing it.
         followed from it, looked for again every "look" seconds. On SIGHUP it
         reads the settings again; it switches only to a version that
         verifies. It serves the display client from DIR (default: built/).
-  strip FILE.jpg
-        Strip a JPEG to the picture alone, in place (JPEG Module, rule 6), so
-        that it may go into a site.
+  strip FILE.jpg | FILE.mp4
+        Strip a JPEG to the picture alone, in place (JPEG Module, rule 6), or
+        a film to the film alone (video Module, rule 10), so that it may go
+        into a site. A film the video Module refuses is not changed: the
+        reason is said.
 
 Every command that reaches relays takes --via URL=LOCAL to reach an address
 another way (for example an onion address through a local port).`;
@@ -235,7 +238,13 @@ async function main(argv: string[]): Promise<number> {
 
   if (cmd === 'strip') {
     const file = pos[0];
-    if (!file) throw new Error('strip takes a JPEG file');
+    if (!file) throw new Error('strip takes a JPEG or an MP4 file');
+    if (file.endsWith('.mp4')) {
+      const s = stripFilm(new Uint8Array(readFileSync(file)));
+      writeFileSync(file, s.bytes);
+      console.log(s.removed.length ? `stripped ${file}: removed ${s.removed.map((c) => FILM_CARRIED[c]).join('; ')}` : `${file} carried only the film`);
+      return 0;
+    }
     const s = strip(new Uint8Array(readFileSync(file)));
     writeFileSync(file, s.bytes);
     console.log(s.removed.length ? `stripped ${file}: removed ${s.removed.map((c) => CARRIED_WORDS[c]).join('; ')}` : `${file} carried only the picture`);
