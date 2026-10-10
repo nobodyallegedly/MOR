@@ -48,6 +48,18 @@ pub struct TransferEval {
     /// buyer's client (F217, client conformance). The window before the
     /// service's first split citing it is a stated cost, legible.
     pub splits_paying_seller: Vec<Hash>,
+    /// What the seller still held of the stake at the transfer's place on
+    /// its own line (F224): its share in the version the transfer names,
+    /// less every transfer of the same stake that conferred before it on
+    /// that line. Unplaced, what it holds after every placed one.
+    pub held_before: Option<u64>,
+    /// Placed on the seller's line, it sells more than the seller still
+    /// held there: an over-sale, conferring nothing (F224).
+    pub over_sale: bool,
+    /// Where it is an over-sale, the payments for it (a receipt or claim
+    /// fulfilling it, or one its field 4 names): money received for
+    /// nothing, owed back by the seller (F224; Money rule 10c).
+    pub owed_back: Vec<Hash>,
 }
 
 impl<'a> LawView<'a> {
@@ -106,12 +118,20 @@ impl<'a> LawView<'a> {
         if !self.valid(id) {
             problems.push("it is not valid under Identity".into());
         }
-        match self.terms(&transfer.agreement).ok().and_then(|t| t.stakes.clone()).and_then(|s| s.get(transfer.stake as usize).cloned()) {
-            Some(st) if st.share_of(&Who::Id(seller)) >= transfer.share => {}
-            Some(_) => problems.push("the seller holds less of the stake than it sells (rule 14)".into()),
+        let place = self.transfer_place(id, &seller);
+        let held_before = self.held_before(id, &transfer, &seller, place);
+        let mut over_sale = false;
+        match held_before {
+            Some(h) if h >= transfer.share => {}
+            Some(h) => {
+                over_sale = place.is_some();
+                problems.push(format!(
+                    "an over-sale: the seller still held {h} millionths of the stake at its place on its own line, and it sells {}; it confers nothing (F224)",
+                    transfer.share
+                ));
+            }
             None => problems.push("the version it names defines no such stake (rule 14)".into()),
         }
-        let place = self.transfer_place(id, &seller);
         if place.is_none() {
             problems.push("the seller has not signed it by a chain signature, which fixes its place on the seller's own line (F217; F132)".into());
         }
@@ -135,7 +155,178 @@ impl<'a> LawView<'a> {
         }
         splits_paying_seller.sort();
         wrong_receipts.sort();
-        Ok(TransferEval { id: *id, transfer, seller, effective, problems, place, wrong_receipts, splits_paying_seller })
+        let owed_back = if over_sale { self.transfer_payments(id, &transfer) } else { vec![] };
+        Ok(TransferEval { id: *id, transfer, seller, effective, problems, place, wrong_receipts, splits_paying_seller, held_before, over_sale, owed_back })
+    }
+
+    /// Client conformance (F224): a buyer's client pays only once the
+    /// seller's transfer is on the seller's own line, its chain signature
+    /// counted there (receipted by the seller's homes where it has operated
+    /// homes: the line counts it by their receipts), and checked against
+    /// what the seller still holds. `Ok` with what the seller keeps after
+    /// it; `Err` with why not to pay yet. The buyer's own signature may come
+    /// before or after paying (mechanic, the build's).
+    pub fn transfer_payable(&self, id: &Hash) -> R<Result<u64, String>> {
+        let e = self.transfer(id)?;
+        if e.place.is_none() {
+            return Ok(Err("not yet on the seller's own line: its chain signature is not counted there (receipted by the seller's homes); do not pay yet (F224)".into()));
+        }
+        let blocking: Vec<&String> = e.problems.iter().filter(|p| !p.contains("buyer has not completed")).collect();
+        if !blocking.is_empty() {
+            return Ok(Err(blocking.iter().map(|p| p.as_str()).collect::<Vec<_>>().join("; ")));
+        }
+        Ok(Ok(e.held_before.unwrap_or(0) - e.transfer.share))
+    }
+
+    /// The stake a transfer sells, by its object (FR7), with the seller's
+    /// share in the version it names.
+    fn sold_stake(&self, t: &StakeTransfer, seller: &Hash) -> Option<(Who, u64)> {
+        let st = self.terms(&t.agreement).ok()?.stakes?.get(t.stake as usize).cloned()?;
+        Some((st.object, st.share_of(&Who::Id(*seller))))
+    }
+
+    /// The seller's transfers of the same stake (its object, across the
+    /// agreement's lineage, FR7), valid and placed on its own line, in
+    /// the order of their places: each `(place, id, share)`.
+    fn sales_on_line(&self, t: &StakeTransfer, seller: &Hash) -> Vec<(u64, Hash, u64)> {
+        let Some((object, _)) = self.sold_stake(t, seller) else { return vec![] };
+        let root = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
+        let mut out = vec![];
+        for h in self.v.signed_by(seller) {
+            if !self.is_law(h, crate::law::open_formats::new_types::STAKE_TRANSFER) || !self.valid(&h.id) {
+                continue;
+            }
+            let Ok(o) = StakeTransfer::decode(&h.inside) else { continue };
+            if root(&o.agreement).is_none() || root(&o.agreement) != root(&t.agreement) {
+                continue;
+            }
+            if self.sold_stake(&o, seller).map(|x| x.0) != Some(object) {
+                continue;
+            }
+            if let Some(p) = self.transfer_place(&h.id, seller) {
+                out.push((p, h.id, o.share));
+            }
+        }
+        out.sort();
+        out
+    }
+
+    /// What the seller still held of the stake a transfer sells, at its
+    /// place on the seller's own line (F224): its share in the version the
+    /// transfer names, less each transfer of the same stake placed before
+    /// it that fitted what was left, whether its buyer has completed it
+    /// yet or not (mechanic, the build's: the seller's chain signature is
+    /// the sale's place, so a later buyer's client sees it before paying).
+    /// Transfers follow the stake across versions (FR7), so one naming
+    /// another version of the lineage counts too (mechanic, the build's;
+    /// see question QK2 in `docs/deals-owning-build.md`). Unplaced, after
+    /// every placed one.
+    fn held_before(&self, id: &Hash, t: &StakeTransfer, seller: &Hash, place: Option<u64>) -> Option<u64> {
+        let (_, base) = self.sold_stake(t, seller)?;
+        let mut left = base;
+        for (p, x, share) in self.sales_on_line(t, seller) {
+            if &x == id || place.is_some_and(|q| p >= q) {
+                break;
+            }
+            // An earlier over-sale consumes nothing.
+            if share <= left {
+                left -= share;
+            }
+        }
+        Some(left)
+    }
+
+    /// The payments for a transfer (F224): Money receipts and claims
+    /// fulfilling it, and those its field 4 names.
+    fn transfer_payments(&self, id: &Hash, t: &StakeTransfer) -> Vec<Hash> {
+        use crate::finance::Payload as Fin;
+        let mut out: Vec<Hash> = vec![];
+        for h in self.v.held_acts() {
+            if h.inside.spec != self.mips.finance {
+                continue;
+            }
+            let fulfils = match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::Receipt(r)) => r.fulfils,
+                Ok(Fin::Claim(c)) => c.fulfils,
+                _ => continue,
+            };
+            if &fulfils == id || t.record.contains(&h.id) {
+                out.push(h.id);
+            }
+        }
+        out.sort();
+        out
+    }
+
+    /// The stake transfer a payment pays for (F224): the one it fulfils, or
+    /// one whose field 4 names it.
+    pub(super) fn transfer_paid_by(&self, payment: &Hash, fulfils: &Hash) -> Option<Hash> {
+        let is_transfer = |h: &Held| self.is_law(h, crate::law::open_formats::new_types::STAKE_TRANSFER);
+        if self.v.get(fulfils).is_some_and(is_transfer) {
+            return Some(*fulfils);
+        }
+        self.v
+            .held_acts()
+            .filter(|h| is_transfer(h))
+            .find(|h| StakeTransfer::decode(&h.inside).is_ok_and(|t| t.record.contains(payment)))
+            .map(|h| h.id)
+    }
+
+    /// F223 (decided by Nobody, allegedly, 10 October 2026): from a split
+    /// service's first split citing a transfer (split key 8), every payout
+    /// to the seller for that stake is the service's debt to the buyer,
+    /// receipted or not. "From" is read on the service's split numbers
+    /// under the deal (DQ6): the citing split itself, and every split of
+    /// the service under the same lineage numbered above the lowest citing
+    /// one (mechanic, the build's). Each `(split, payout index, buyer,
+    /// owed)`: what the payout gives the seller above its due once the
+    /// transfer and those before it on the seller's line are followed,
+    /// capped at the share sold of the stake's pot (mechanic, the build's).
+    pub(super) fn owed_from_citing_splits(&self, splits: &[(&'a Held, Split)]) -> Vec<(Hash, usize, Hash, u64)> {
+        let mut out = vec![];
+        let root = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
+        let mut cited: Vec<Hash> = splits.iter().flat_map(|(_, s)| s.transfers.iter().map(|(_, t)| *t)).collect();
+        cited.sort();
+        cited.dedup();
+        for tid in cited {
+            let Ok(e) = self.transfer(&tid) else { continue };
+            if !e.effective {
+                continue;
+            }
+            let Some((object, _)) = self.sold_stake(&e.transfer, &e.seller) else { continue };
+            let lineage = root(&e.transfer.agreement);
+            let from = splits
+                .iter()
+                .filter(|(_, s)| root(&s.agreement) == lineage && s.transfers.iter().any(|(_, t)| *t == tid))
+                .filter_map(|(_, s)| s.number)
+                .min();
+            let held = e.held_before.unwrap_or(0);
+            let keeps = held.saturating_sub(e.transfer.share);
+            for (h, s) in splits {
+                if root(&s.agreement) != lineage {
+                    continue;
+                }
+                let cites = s.transfers.iter().any(|(_, t)| *t == tid);
+                if !cites && !(from.is_some() && s.number.is_some_and(|n| Some(n) > from)) {
+                    continue;
+                }
+                let Ok(st) = self.terms(&s.agreement) else { continue };
+                let on_stake = |p: &Payout| p.stake.and_then(|k| st.stakes.as_ref()?.get(k as usize).map(|x| x.object)) == Some(object);
+                let pot: u128 = s.payouts.iter().filter(|p| on_stake(p)).map(|p| p.amount as u128).sum();
+                for (i, p) in s.payouts.iter().enumerate() {
+                    if p.receiver != e.seller || !on_stake(p) {
+                        continue;
+                    }
+                    let due = (pot * keeps as u128 / super::super::formats::MILLION as u128) as u64;
+                    let cap = (pot * e.transfer.share as u128 / super::super::formats::MILLION as u128) as u64;
+                    let owed = p.amount.saturating_sub(due).min(cap);
+                    if owed > 0 {
+                        out.push((h.id, i, e.transfer.to, owed));
+                    }
+                }
+            }
+        }
+        out
     }
 
     /// The position on the seller's identity chain of the chain signature

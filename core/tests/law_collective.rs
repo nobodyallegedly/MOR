@@ -9282,8 +9282,8 @@ fn review_f190_1_a_party_left_alone_on_a_dropped_branch_reopens_nothing() {
 /// decides anything. A verifier tells the second from the first by
 /// history: here the second drops a version citing the first. Where
 /// neither holds the other (the judge's first settlement uncited), which
-/// came first cannot be told: the verifier refuses, and question QH1 is
-/// open ("Open in this draft").
+/// came first cannot be told: F206 (a), decided 10 October 2026, reads
+/// the two as the judge answering "unknown" (QH1 closed).
 #[test]
 fn review_f190_2_the_judge_speaks_once_and_no_plain_version_decides() {
     let lab = |cite: bool| {
@@ -9307,9 +9307,11 @@ fn review_f190_2_the_judge_speaks_once_and_no_plain_version_decides() {
     assert_eq!(l.in_force().unwrap(), a2, "a plain version on B decides nothing");
     let a3 = l.version(a2, "A harmless change on A.", None);
     assert_eq!(l.in_force().unwrap(), a3, "a version on the line in force changes the deal, as any version does");
-    // The first settlement uncited: neither holds the other.
+    // The first settlement uncited: neither holds the other. F206 (a),
+    // decided 10 October 2026: both count for nothing, the judge answered
+    // "unknown"; with no next link, the deal stays on its reference.
     let (l, _, _) = lab(false);
-    assert!(matches!(l.in_force(), Err(LawError::Unsettled(w)) if w.contains("QH1")), "{:?}", l.in_force());
+    assert_eq!(l.in_force().unwrap(), l.d, "a judge that contradicts itself has spoken for nothing (F206)");
 }
 
 /// Review finding 5 (BREAKS as built, rules 19 and 22, F184): the
@@ -11259,4 +11261,425 @@ fn of24_of23_a_request_reaches_its_judge_and_presence_is_shown() {
     assert!(!view(&w).liveness(&quiet).unwrap());
     let shown = w.private_act(&mut ben, mips().law, law::new_types::LIVENESS, l.to_map(), obj(d), vec![aid, bid]);
     assert!(view(&w).liveness(&shown).unwrap());
+}
+
+// ---------------------------------------------------------------------------
+// Deals and owning (10 October 2026, evening): F206, F221 to F224 and QJ2
+// (a), `docs/deals-owning-build.md`. Each test was written first and seen
+// to fail for the reason the decision gives. Test identities only.
+// ---------------------------------------------------------------------------
+
+/// F206 (a), decided by Nobody, allegedly, 10 October 2026 ("If nothing
+/// new is created, agreed."): a judge's two settlements of one fork,
+/// neither holding the other, both count for nothing, read as the judge
+/// answering "unknown": the deal stays on its reference and the next link
+/// of the chain of judgment settles (rule 34a, QG4), with no period to
+/// wait. The double signature stays visible.
+#[test]
+fn f206_a_a_judge_that_contradicts_itself_has_spoken_for_nothing() {
+    let (mut l, mut judges) = judged_deal(1);
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let request = ask_judge(&mut l);
+    let j1 = judge_settles(&mut l, &mut judges[0], request, a1, vec![b1], vec![]);
+    assert_eq!(l.in_force().unwrap(), a1, "one settlement: the judge keeps A");
+    let j2 = judge_settles(&mut l, &mut judges[0], request, b1, vec![a1], vec![]);
+    assert_eq!(l.in_force().unwrap(), d, "two, neither holding the other: both count for nothing, the deal stays on its reference");
+    let f = view(&l.w).deal_fork(&d).unwrap().expect("still forked");
+    assert_eq!(f.branches.len(), 2);
+    let seen = view(&l.w).judges_contradicted(&d).unwrap();
+    assert_eq!(seen, vec![(judges[0].id, sorted(vec![j1, j2]))], "the double signature stays visible");
+    // The next link settles, at once: the first answered "unknown".
+    let mut next = judges.remove(1);
+    judge_settles(&mut l, &mut next, request, b1, vec![a1], vec![]);
+    assert_eq!(l.in_force().unwrap(), b1, "the chain of judgment moved on");
+    // A judge settling the same way twice has not contradicted itself.
+    let (mut l, mut judges) = judged_deal(0);
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let request = ask_judge(&mut l);
+    judge_settles(&mut l, &mut judges[0], request, a1, vec![b1], vec![]);
+    let other = ask_judge(&mut l);
+    judge_settles(&mut l, &mut judges[0], other, a1, vec![b1], vec![]);
+    assert_eq!(l.in_force().unwrap(), a1);
+    assert!(view(&l.w).judges_contradicted(&d).unwrap().is_empty());
+}
+
+/// F206 (b): a settlement signed by every party and a judge's, neither
+/// holding the other: the parties' holds, the judge's counts for nothing
+/// (rule 45b: the judge is a fallback a request activates). Where one
+/// holds the other, the first is final (F192), whoever signed it.
+#[test]
+fn f206_b_the_parties_settlement_beats_a_judges_neither_holding_the_other() {
+    for judge_first in [true, false] {
+        let (mut l, mut judges) = judged_deal(0);
+        let d = l.d;
+        let a1 = l.version(d, "A.", None);
+        let b1 = l.version(d, "B.", None);
+        let request = ask_judge(&mut l);
+        let (s, j) = if judge_first {
+            let j = judge_settles(&mut l, &mut judges[0], request, a1, vec![b1], vec![]);
+            (l.version(b1, "Settled by both for B, naming A, not the judge's.", Some(a1)), j)
+        } else {
+            let s = l.version(b1, "Settled by both for B, naming A.", Some(a1));
+            (s, judge_settles(&mut l, &mut judges[0], request, a1, vec![b1], vec![]))
+        };
+        assert_eq!(l.in_force().unwrap(), s, "the parties' settlement holds (judge first: {judge_first})");
+        let _ = j;
+    }
+    // The parties' settlement holding the judge's: the judge's was first, and final.
+    let (mut l, mut judges) = judged_deal(0);
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let request = ask_judge(&mut l);
+    let j = judge_settles(&mut l, &mut judges[0], request, a1, vec![b1], vec![]);
+    l.version_full(b1, "For B, naming A, having seen the judge's settlement.", vec![a1], vec![j]);
+    assert_eq!(l.in_force().unwrap(), a1, "made after the judge's settlement: final, it stands (F192)");
+}
+
+/// A split by the deal's service under `l.deal`, numbered (DQ6), following
+/// `transfers` (split key 8).
+fn numbered_split(l: &mut ServiceDeal, receipt: Hash, payouts: Vec<law::Payout>, number: u64, transfers: Vec<(u64, Hash)>) -> Hash {
+    let s = law::Split { receipt, payouts, cmip: spec("a split cMIP"), agreement: l.deal, tally: None, number: Some(number), modules: vec![], metric_records: vec![], transfers };
+    let all = vec![l.ana.id, l.ben.id];
+    l.w.private_act(&mut l.svc, mips().law, law::types::SPLIT, s.to_map(), None, all)
+}
+
+/// Ben's stake transfer of `share` of stake 0 to `to`, completed by the
+/// buyer; not yet chain-signed.
+fn ben_sells(l: &mut ServiceDeal, buyer: &mut Person, share: u64, record: Vec<Hash>) -> Hash {
+    let t = law::StakeTransfer { agreement: l.deal, stake: 0, to: buyer.id, share, record };
+    let x = law_act(&mut l.w, &mut l.ben, law::new_types::STAKE_TRANSFER, t.to_map(), obj(l.deal));
+    sign(&mut l.w, buyer, &x);
+    x
+}
+
+/// F223, decided by Nobody, allegedly, 10 October 2026 ("Agreed"), option
+/// (b), no Identity change: a seller's payout receipt for a stake he
+/// transferred is "after" the transfer, and wrong, once bound to a rotation
+/// later than the transfer's chain signature (the seller's identity line).
+/// Until then, what moves the money is the service: from its first split
+/// citing the transfer (split key 8), every payout to the seller for that
+/// stake is the service's debt to the buyer, in the share sold, receipted
+/// or not; "first" and "from" read on the service's split numbers under
+/// the deal (DQ6). Before it, the window: a stated cost, with its second
+/// edge, the seller's next rotation.
+#[test]
+fn f223_from_the_services_first_split_citing_the_transfer_the_buyer_is_owed() {
+    use mor_core::finance::{Amount, Payer, Payload as Fin, Receipt};
+    let mut l = ServiceDeal::new();
+    let bid = l.ben.id;
+    let mut carla = l.w.genesis("carla, who buys", vec![own_home()], None, None);
+    let x = ben_sells(&mut l, &mut carla, 200_000, vec![]);
+    let ben = l.ben.clone();
+    let (_, ben) = l.w.chain_sign(&ben, x);
+    l.ben = ben;
+    assert!(view(&l.w).transfer(&x).unwrap().effective);
+    let receipt_for = |w: &mut World, ben: &mut Person, split: Hash, proof: &[u8]| {
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("the service"))), payee: bid, amount: Amount { unit: spec("a unit"), value: 320 }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(ben, mips().finance, 2, r.to_map(), None, None);
+        w.add(&a)
+    };
+    // The window: split 1 does not cite the transfer; Ben receipts it,
+    // bound to his rotation before the chain signature. Not yet owed.
+    let (r1, _) = l.sale(b"sale one", vec![]);
+    let s1 = { let p = l.stake_payouts(); numbered_split(&mut l, r1, p, 1, vec![]) };
+    let mut b = l.ben.clone();
+    receipt_for(&mut l.w, &mut b, s1, b"s1");
+    assert!(view(&l.w).service_account(&l.svc.id).unwrap().owed_to_buyers.is_empty(), "the window before the first citing split: a stated cost");
+    // Split 2 cites the transfer and still pays Ben on the old holdings,
+    // and Ben's receipt is bound before his chain signature: owed anyway.
+    let (r2, _) = l.sale(b"sale two", vec![]);
+    let s2 = { let p = l.stake_payouts(); numbered_split(&mut l, r2, p, 2, vec![(0, x)]) };
+    receipt_for(&mut l.w, &mut b, s2, b"s2");
+    // Split 3 does not cite it, but comes after split 2 on the service's numbers.
+    let (r3, _) = l.sale(b"sale three", vec![]);
+    let s3 = { let p = l.stake_payouts(); numbered_split(&mut l, r3, p, 3, vec![]) };
+    // Split 4 follows the transfer rightly: Ben 160, Carla 160.
+    let (r4, _) = l.sale(b"sale four", vec![]);
+    let right = vec![
+        law::Payout { stake: Some(0), ..payout(l.ana.id, 480) },
+        law::Payout { stake: Some(0), ..payout(bid, 160) },
+        law::Payout { stake: Some(0), ..payout(carla.id, 160) },
+    ];
+    numbered_split(&mut l, r4, right, 4, vec![(0, x)]);
+    let mut owed = view(&l.w).service_account(&l.svc.id).unwrap().owed_to_buyers;
+    owed.sort();
+    let mut want = vec![(s2, 1, carla.id, 160), (s3, 1, carla.id, 160)];
+    want.sort();
+    assert_eq!(owed, want, "from the first split citing the transfer, the service owes the buyer");
+    // The second edge: Ben rotates; his receipt for split 1, bound to the
+    // new rotation, is after the transfer, and wrong (F217, F223).
+    let (_, mut b) = l.w.rotate(&b, Rot::default());
+    let late = receipt_for(&mut l.w, &mut b, s1, b"s1, after the rotation");
+    assert!(view(&l.w).transfer(&x).unwrap().wrong_receipts.contains(&late));
+    assert!(view(&l.w).service_account(&l.svc.id).unwrap().owed_to_buyers.contains(&(s1, 1, carla.id, 160)));
+}
+
+/// F224, decided by Nobody, allegedly, 10 October 2026 ("Yes"): a stake's
+/// transfers are ordered on the seller's own line (their chain
+/// signatures); each is checked against what the seller still held at that
+/// point; transfers that fit are all valid (two partial sales are not a
+/// fork); an over-sale confers nothing, and its payment is owed back by
+/// the seller (Money, rule 10c: money received for nothing). The order is
+/// the chain signatures', never the order the transfers were written in.
+#[test]
+fn f224_a_stake_sold_twice_is_settled_on_the_sellers_own_line() {
+    use mor_core::finance::{Amount, Claim, Payload as Fin};
+    let mut l = ServiceDeal::new();
+    let bid = l.ben.id;
+    let mut carla = l.w.genesis("carla", vec![own_home()], None, None);
+    let mut dan = l.w.genesis("dan", vec![own_home()], None, None);
+    let mut eve = l.w.genesis("eve", vec![own_home()], None, None);
+    // Ben holds 400,000. Written first, signed on his line last: 300,000 to Eve.
+    let to_eve = ben_sells(&mut l, &mut eve, 300_000, vec![]);
+    let to_carla = ben_sells(&mut l, &mut carla, 200_000, vec![]);
+    let to_dan = ben_sells(&mut l, &mut dan, 100_000, vec![]);
+    for t in [to_carla, to_dan, to_eve] {
+        let ben = l.ben.clone();
+        let (_, ben) = l.w.chain_sign(&ben, t);
+        l.ben = ben;
+    }
+    let v = view(&l.w);
+    let (c, d, e) = (v.transfer(&to_carla).unwrap(), v.transfer(&to_dan).unwrap(), v.transfer(&to_eve).unwrap());
+    assert!(c.effective && d.effective, "two partial sales that fit are both valid, not a fork: {:?} {:?}", c.problems, d.problems);
+    assert_eq!((c.held_before, d.held_before), (Some(400_000), Some(200_000)), "each checked against what Ben still held");
+    assert!(c.place < d.place && d.place < e.place);
+    assert!(!e.effective && e.over_sale, "300,000 of the 100,000 Ben still held: it confers nothing ({:?})", e.problems);
+    assert_eq!(e.held_before, Some(100_000));
+    // Payments: each names the transfer it pays for (fulfils). Eve's is owed
+    // back by Ben; Carla's is a purchase.
+    let pays = |w: &mut World, buyer: &mut Person, t: Hash, proof: &[u8]| {
+        let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: proof.to_vec(), payee: bid, amount: Amount { unit: spec("a unit"), value: 5000 }, fulfils: t, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None });
+        let a = w.everyday_act(buyer, mips().finance, 3, c.to_map(), None, None);
+        w.add(&a)
+    };
+    let pe = pays(&mut l.w, &mut eve, to_eve, b"eve pays");
+    let pc = pays(&mut l.w, &mut carla, to_carla, b"carla pays");
+    let v = view(&l.w);
+    assert!(matches!(v.purchase(&pe).unwrap().map(|p| p.verdict), Some(law::PurchaseVerdict::NoPurchase { why }) if why.contains("F224")), "the over-sale's payment is owed back by the seller");
+    assert_eq!(v.purchase(&pc).unwrap().map(|p| p.verdict), Some(law::PurchaseVerdict::Purchase));
+    assert_eq!(v.transfer(&to_eve).unwrap().owed_back, vec![pe]);
+    assert!(v.transfer(&to_carla).unwrap().owed_back.is_empty());
+    // A payment made first (against the client conformance line), named by
+    // the transfer in field 4: an over-sale owes it back too.
+    let mut fay = l.w.genesis("fay", vec![own_home()], None, None);
+    let early = pays(&mut l.w, &mut fay, spec("Ben's word, before any transfer"), b"fay pays first");
+    let to_fay = ben_sells(&mut l, &mut fay, 50_000, vec![early]);
+    let ben = l.ben.clone();
+    l.w.chain_sign(&ben, to_fay);
+    let f = view(&l.w).transfer(&to_fay).unwrap();
+    assert!(f.effective, "50,000 of the 100,000 still held: it fits ({:?})", f.problems);
+    let _ = f;
+}
+
+/// F224, client conformance: a buyer's client pays only once the seller's
+/// transfer is on the seller's resolved line (receipted by his homes,
+/// where he has operated homes) and checked against what he still holds.
+#[test]
+fn f224_a_buyers_client_pays_only_once_the_transfer_is_placed_and_fits() {
+    let mut l = ServiceDeal::new();
+    let mut carla = l.w.genesis("carla", vec![own_home()], None, None);
+    let mut dan = l.w.genesis("dan", vec![own_home()], None, None);
+    let x = ben_sells(&mut l, &mut carla, 300_000, vec![]);
+    assert!(view(&l.w).transfer_payable(&x).unwrap().is_err(), "not yet on Ben's line: do not pay");
+    let ben = l.ben.clone();
+    let (_, ben) = l.w.chain_sign(&ben, x);
+    l.ben = ben;
+    assert_eq!(view(&l.w).transfer_payable(&x).unwrap(), Ok(100_000), "placed and fits: pay; Ben keeps 100,000");
+    let y = ben_sells(&mut l, &mut dan, 200_000, vec![]);
+    let ben = l.ben.clone();
+    let (_, ben) = l.w.chain_sign(&ben, y);
+    l.ben = ben;
+    assert!(view(&l.w).transfer_payable(&y).unwrap().is_err_and(|w| w.contains("over-sale")), "Dan's client sees the earlier sale: do not pay");
+}
+
+/// QJ2, settled by the project lead under F216's delegation, option (a):
+/// with split services, the publication's split pays the work's line to a
+/// payee of the work's agreement (its field 14), and the work's service's
+/// receipt names the publication's split, as Money's routes chain
+/// receipts; the work's service then splits it under the work's
+/// agreement. Built: the payout to a payee of the work's agreement matches
+/// that agreement's holding. Not built: the work's service's receipt
+/// discharging it, which F129 (H5) and F130 (H7) forbid a grant key to
+/// sign (question QK3).
+#[test]
+fn qj2_a_the_publications_split_pays_the_works_line_to_a_payee_of_the_works_agreement() {
+    use mor_core::finance::{Amount, Payer, Payload as Fin, Receipt};
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut label = w.genesis("a publisher", vec![own_home()], None, None);
+    let mut svc_w = w.genesis("the work's split service", vec![own_home()], None, None);
+    let mut svc_p = w.genesis("the publication's split service", vec![own_home()], None, None);
+    let grant = |w: &mut World, by: &mut Person, svc: &mut Person, tag: &str| {
+        let sid = svc.id;
+        let (k, p) = grant_key(&format!("{sid:?} for {tag}, QJ2"));
+        let g = Grant { grantee: sid, scope: 1, agreements: None, this_agreement: true, key: p, ..plain_grant(sid, false) };
+        let gh = law_act(w, by, law::types::GRANT, g.to_map(), None);
+        sign(w, svc, &gh);
+        let mut s = by.clone();
+        s.binding = gh;
+        s.sign = k;
+        s.seq = vec![];
+        s.cite = Some((by.id, vec![gh]));
+        (gh, s)
+    };
+    let (ga, mut sa) = grant(&mut w, &mut ana, &mut svc_w, "ana");
+    let (gb, _) = grant(&mut w, &mut ben, &mut svc_w, "ben");
+    let (gl, mut sl) = grant(&mut w, &mut label, &mut svc_p, "the label");
+    let work = spec("a song, QJ2");
+    let mut we = deal_terms(ana.id, ben.id);
+    we.payee_grants = Some(vec![ga, gb]);
+    we.stakes = Some(vec![law::Stake { object: law::Who::Id(work), holders: vec![(law::Who::Id(ana.id), 600_000), (law::Who::Id(ben.id), 400_000)] }]);
+    let we = law_act(&mut w, &mut ana, law::types::TERMS, we.to_map(), None);
+    sign(&mut w, &mut ana, &we);
+    sign(&mut w, &mut ben, &we);
+    let publication = {
+        let x = w.everyday_act(&mut label, mips().envelope, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, QJ2").to_vec()))], None, None);
+        w.add(&x)
+    };
+    let mut pe = deal_terms(we, label.id);
+    pe.payee_grants = Some(vec![gl]);
+    pe.stakes = Some(vec![law::Stake { object: law::Who::Id(publication), holders: vec![(law::Who::Id(we), 850_000), (law::Who::Id(label.id), 150_000)] }]);
+    let pe = law_act(&mut w, &mut label, law::types::TERMS, pe.to_map(), None);
+    for p in [&mut label, &mut ana, &mut ben] {
+        sign(&mut w, p, &pe);
+    }
+    assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true));
+    let receipt = |w: &mut World, by: &mut Person, payee: Hash, payer: Hash, value: u64, fulfils: Hash, purchase: Option<Hash>, proof: &[u8]| {
+        let r = Fin::Receipt(Receipt {
+            rail: spec("a rail Module"),
+            proof: proof.to_vec(),
+            payer: Some(Payer::Identity(payer)),
+            payee,
+            amount: Amount { unit: spec("a unit"), value },
+            fulfils,
+            previous: None,
+            forward: None,
+            batch: None,
+            purchase: purchase.map(|a| law_purchase(a)),
+        });
+        let a = w.everyday_act(by, mips().finance, 2, r.to_map(), None, None);
+        w.add(&a)
+    };
+    let fan = spec("a fan");
+    let incoming = receipt(&mut w, &mut sl, label.id, fan, 1000, publication, Some(pe), b"the fan pays");
+    // The publication's split: the label's share, and the work's line to
+    // Ana, a payee of the work's agreement (its field 14).
+    let s = law::Split {
+        receipt: incoming,
+        payouts: vec![
+            law::Payout { stake: Some(0), ..payout(label.id, 150) },
+            law::Payout { stake: Some(0), ..payout(ana.id, 850) },
+        ],
+        cmip: spec("a split cMIP"),
+        agreement: pe,
+        tally: None,
+        number: Some(1),
+        modules: vec![],
+        metric_records: vec![],
+        transfers: vec![],
+    };
+    let ps = w.private_act(&mut svc_p, mips().law, law::types::SPLIT, s.to_map(), None, vec![label.id, ana.id, ben.id]);
+    let e = view(&w).split(&ps).unwrap();
+    assert!(e.mismatched.is_empty(), "the work's line, paid to a payee of the work's agreement: {:?}", e.mismatched);
+    // Paid to someone who is no payee of the work's agreement: a mismatch.
+    let stranger = spec("someone the work's agreement never names");
+    let s2 = law::Split { payouts: vec![law::Payout { stake: Some(0), ..payout(label.id, 150) }, law::Payout { stake: Some(0), ..payout(stranger, 850) }], number: Some(2), ..s.clone() };
+    let bad = w.private_act(&mut svc_p, mips().law, law::types::SPLIT, s2.to_map(), None, vec![label.id, ana.id, ben.id]);
+    assert!(!view(&w).split(&bad).unwrap().mismatched.is_empty());
+    // The work's service's receipt in Ana's name naming the publication's
+    // split: F129 (H5) and F130 (H7) say a split service's grant key never
+    // signs a split's payout. As built it counts for nothing and the payout
+    // stays unpaid; question QK3 in `docs/deals-owning-build.md`.
+    let unpaid_ana = |w: &World| view(w).service_account(&svc_p.id).unwrap().unpaid.iter().any(|u| u.split == ps && u.receiver == ana.id);
+    let line = receipt(&mut w, &mut sa, ana.id, svc_p.id, 850, ps, None, b"the work's line");
+    assert!(matches!(view(&w).consent(&line).unwrap(), Consent::Ungranted { .. }), "H5: refused, as the rule stands");
+    assert!(unpaid_ana(&w), "as built: the work's service's receipt discharges nothing (QK3)");
+    // Ana's own receipt, with her own key, naming the split, discharges it.
+    let mut a2 = ana.clone();
+    receipt(&mut w, &mut a2, ana.id, svc_p.id, 850, ps, None, b"Ana's own receipt");
+    assert!(!unpaid_ana(&w));
+    let _ = (&mut svc_w, gb);
+}
+
+fn law_purchase(a: Hash) -> mor_core::finance::Purchase {
+    mor_core::finance::Purchase { agreement: a, line: a }
+}
+
+/// F221, decided by Nobody, allegedly, 10 October 2026 ("Yes, if that is
+/// the version that shifts the weight and the responsible party the
+/// best."), client conformance: before signing a successor of a version,
+/// a client checks, across all its owner's devices, whether its owner has
+/// already signed another successor of the same version, and shows the
+/// first; a settling version its client signs names every successor of
+/// the reference its owner signed. Finality stands (rule 45b; F192 and the
+/// `review_fdb_*` pins).
+#[test]
+fn f221_a_client_never_signs_two_successors_of_one_version_silently() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let (aid, bid) = (l.ana.id, l.ben.id);
+    let a1 = l.version(d, "A.", None);
+    // Ben's second device: a retry of the same change, proposed by Ana.
+    let retry = l.propose(d, "A, retried from a device out of step.", None);
+    let c = view(&l.w).before_signing(&bid, &retry).unwrap();
+    assert_eq!(c.already_signed, vec![a1], "Ben already signed A1: his client shows it first");
+    assert!(!c.clear());
+    // Ana proposed the retry: proposing is signing, from whatever device.
+    assert_eq!(view(&l.w).before_signing(&aid, &a1).unwrap().already_signed, vec![retry]);
+    // Ben signs anyway, past the warning: the deal is forked.
+    sign(&mut l.w, &mut l.ben, &retry);
+    sign(&mut l.w, &mut l.ana, &retry);
+    assert_eq!(l.in_force().unwrap(), d);
+    // A settling version names every successor of the reference its
+    // owner signed.
+    let plain = l.propose(a1, "A plain change on A, settling nothing.", None);
+    assert!(view(&l.w).before_signing(&bid, &plain).unwrap().clear(), "a plain version needs no naming");
+    let good = l.propose(a1, "Settled for A, naming the retry.", Some(retry));
+    assert!(view(&l.w).before_signing(&bid, &good).unwrap().clear(), "names every successor of the reference Ben signed");
+    // A third, Ana's draft only: unnamed by `good`, and only Ana signed it.
+    let c3 = l.propose(d, "C, Ana's draft from a third device.", None);
+    assert!(view(&l.w).before_signing(&bid, &good).unwrap().unnamed.is_empty(), "Ben never signed C");
+    assert_eq!(view(&l.w).before_signing(&aid, &good).unwrap().unnamed, vec![c3], "Ana's client names her own draft before she settles");
+}
+
+/// F222, decided by Nobody, allegedly, 10 October 2026 ("Agreed"): QH2 is
+/// F192's stated cost (a newcomer on a branch the settlers hid is dropped
+/// by their settlement); client conformance: before a newcomer signs onto
+/// a deal, her client looks for another successor of a version on the line
+/// she joins, at the parties' relays and keepers, and warns her. A branch
+/// a settlement on her line already dropped is not warned of.
+#[test]
+fn f222_a_newcomers_client_looks_for_another_successor_and_warns() {
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A: in the open.", None);
+    let b1 = l.version(d, "B: kept out of sight.", None);
+    // Carla is asked to join on B.
+    let mut carla = l.w.genesis("carla", vec![own_home()], None, None);
+    let join = {
+        let mut c = l.t.clone();
+        c.parent = Some(b1);
+        c.text = "B2: Carla joins.".into();
+        c.parties = sorted(vec![l.ana.id, l.ben.id, carla.id]);
+        c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![l.ana.id, l.ben.id]) }]);
+        law_act(&mut l.w, &mut l.ana, law::types::TERMS, c.to_map(), obj(b1))
+    };
+    assert_eq!(view(&l.w).joining_warnings(&join).unwrap(), vec![a1], "her client finds A beside the line she joins, and warns her");
+    // The stated cost, unchanged: if she signs anyway and the settlers
+    // settle for A naming only B1, her branch is dropped (F192).
+    sign(&mut l.w, &mut carla, &join);
+    // On a line that settled its fork, the branch dropped is not warned of.
+    let mut l = DealLab::new();
+    let d = l.d;
+    let a1 = l.version(d, "A.", None);
+    let b1 = l.version(d, "B.", None);
+    let s = l.version(a1, "Settled for A, naming B.", Some(b1));
+    let next = l.propose(s, "Carla joins the settled line.", None);
+    assert!(view(&l.w).joining_warnings(&next).unwrap().is_empty());
 }
