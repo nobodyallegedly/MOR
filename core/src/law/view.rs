@@ -771,7 +771,29 @@ impl<'a> LawView<'a> {
     /// The distinct identities with a valid signature act naming `act`, in
     /// the order of `among`.
     pub fn signers(&self, act: &Hash, among: &[Hash]) -> Vec<Hash> {
-        self.valid_sigs(act, among).into_iter().map(|(p, _)| p).collect()
+        let own: Vec<Hash> = self.valid_sigs(act, among).into_iter().map(|(p, _)| p).collect();
+        // F216 (decided 10 October 2026): a work's agreement named as one
+        // participant of another agreement (a publication's) acts as a
+        // single-use collective: it signs where every party of its version
+        // in force signed, each by its own signature act (a deal's rule,
+        // F107; mechanic, the build's: one level, no deal inside a deal).
+        among
+            .iter()
+            .filter(|p| own.contains(p) || self.deal_signed(act, p))
+            .copied()
+            .collect()
+    }
+
+    /// Whether `party`, a deal's version held as terms, signed `act` by
+    /// every party of its version in force signing it (F216).
+    fn deal_signed(&self, act: &Hash, party: &Hash) -> bool {
+        let Some(h) = self.v.get(party) else { return false };
+        if !self.is_law(h, types::TERMS) {
+            return false;
+        }
+        let Ok(v) = self.version_in_force(party) else { return false };
+        let Ok(t) = self.terms(&v) else { return false };
+        !t.is_collective() && !t.parties.is_empty() && self.valid_sigs(act, &t.parties).len() == t.parties.len()
     }
 
     /// The checks a clone needs against its parent and lineage (rules 44c,
@@ -8777,6 +8799,23 @@ impl<'a> LawView<'a> {
             None => out.push((h, n)),
         };
         for ((id, _), n) in ids.into_iter().zip(parts) {
+            // F216: a holder that is a work's agreement (a deal) passes its
+            // line on, outside in, to its stake in the work the publication
+            // carries (or the object itself where it is the work).
+            if self.v.get(&id).is_some_and(|h| self.is_law(h, types::TERMS)) {
+                let v = self.version_in_force(&id)?;
+                if !self.terms(&v)?.is_collective() {
+                    let work = match object {
+                        Who::Id(x) => self.publication_field(x, 1).unwrap_or(*x),
+                        Who::This => return Ok(Err("a work's agreement holds no stake in a collective itself".into())),
+                    };
+                    match self.payer_split_depth(&v, &Who::Id(work), n, depth + 1)? {
+                        Ok(inner) => inner.into_iter().for_each(|(x, m)| add(x, m)),
+                        Err(w) => return Ok(Err(w)),
+                    }
+                    continue;
+                }
+            }
             let inner = match self.current(&id)? {
                 Some(cur) if Some(id) != this || *object != Who::This => {
                     let ct = self.terms(&cur.agreement)?;

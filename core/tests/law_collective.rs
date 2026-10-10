@@ -11056,3 +11056,49 @@ fn f217_a_stakes_sale_takes_effect_on_the_sellers_own_line() {
     let acct = view(&l.w).service_account(&l.svc.id).unwrap();
     assert_eq!(acct.owed_to_buyers, vec![(split, 1, carla.id, 160)], "Ben's payout, in the share sold, owed to Carla");
 }
+
+/// F216, decided by Nobody, allegedly, 10 October 2026 ("Yes. The owners
+/// have to all sign that agreement according to the rules of their deal
+/// and define the terms of the publication. The agreement of the work acts
+/// as a single use collective."): a publication carries two agreements.
+/// The publication's agreement (PE) names the work's agreement (WE) as one
+/// participant, whose consent is given by its own rule (in a deal, every
+/// party signing the PE); a sale through the publication passes outside
+/// in: the PE's split gives the WE its line, the WE's divides what reaches
+/// it. Mechanics, the build's: the WE is named by its version's hash, as a
+/// party and as a stake holder; its line passes on to its stake in the
+/// work the publication carries.
+#[test]
+fn f216_a_publication_carries_two_agreements() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut label = w.genesis("a publisher", vec![own_home()], None, None);
+    let work = spec("a song, F216");
+    let mut we = deal_terms(ana.id, ben.id);
+    we.stakes = Some(vec![law::Stake { object: law::Who::Id(work), holders: vec![(law::Who::Id(ana.id), 600_000), (law::Who::Id(ben.id), 400_000)] }]);
+    let we = law_act(&mut w, &mut ana, law::types::TERMS, we.to_map(), None);
+    sign(&mut w, &mut ana, &we);
+    sign(&mut w, &mut ben, &we);
+    let publication = {
+        let x = w.everyday_act(&mut label, mips().envelope, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F216").to_vec()))], None, None);
+        w.add(&x)
+    };
+    let mut pe = deal_terms(we, label.id);
+    pe.stakes = Some(vec![law::Stake { object: law::Who::Id(publication), holders: vec![(law::Who::Id(we), 850_000), (law::Who::Id(label.id), 150_000)] }]);
+    let pe = law_act(&mut w, &mut label, law::types::TERMS, pe.to_map(), None);
+    sign(&mut w, &mut label, &pe);
+    sign(&mut w, &mut ana, &pe);
+    assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(false), "the WE consents only by its own rule: Ben has not signed");
+    sign(&mut w, &mut ben, &pe);
+    let a = view(&w).agreement(&pe).unwrap();
+    assert_eq!(a.exists, Some(true), "every party of the WE signed: the WE signed, as a single-use collective");
+    assert!(a.signed.contains(&we));
+    // Payer-side, outside in: the PE gives the publisher 15%, the WE 85%,
+    // which the WE divides 60/40.
+    let mut paid = view(&w).payer_split(&pe, &law::Who::Id(publication), 1000).unwrap().unwrap();
+    paid.sort();
+    let mut want = vec![(label.id, 150), (ana.id, 510), (ben.id, 340)];
+    want.sort();
+    assert_eq!(paid, want);
+}
