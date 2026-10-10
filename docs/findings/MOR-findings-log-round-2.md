@@ -2686,6 +2686,10 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Open for Nobody, allegedly:** QK1 (two links of the chain of judgment each settling the fork, neither holding the other); QK3 (QJ2's receipt by the work's service against H5 and H7: a grant key never signs a split's payout); the live work review's six questions (`docs/reviews/live-work-review.md`); a step-down naming drafts.
 
+## Terminology: a stream, not a "live work" (10 October 2026, night)
+
+**Asked by Nobody, allegedly:** "Let's use the right terminology, if I get told off for using work, let's be careful onwards." *Settled by the project lead under the delegation of technical wording (no rule changed):* from here on, what F229 to F231 call a "live work" is **a stream**: a chain of segments signed by its opener, **named by the id of the act that opens it** (F230). **A work** keeps its one meaning: complete content with a work hash, what ownership points to. A stream's **recording**, once it ends, is a work, its work hash computed from the stream's segments in order (F230). F229 to F231 keep their wording as records; texts written from them say "stream".
+
 ## F231. Only the opener, and its grant keys, add segments to a live work (live work review, question 2, 10 October 2026, night)
 
 **From** Fable's review of F229, finding 4: "each later segment names the one before, signed as it goes": signed by whom? If anyone, a stranger's segment becomes part of the opener's work and its claim covers content the opener never made. *Laid beside it:* F128 (a grant key's act is the grantor's own); case study 17 ("each feed is a work with its own maker"); F217 ("Make it legible, don't ban it"); rule 15 ("The core records claims and their order, never legitimacy").
