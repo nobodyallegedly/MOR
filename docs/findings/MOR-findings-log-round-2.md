@@ -2690,6 +2690,20 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Open for Nobody, allegedly:** QK1 (two links of the chain of judgment each settling the fork, neither holding the other); QK3 (QJ2's receipt by the work's service against H5 and H7: a grant key never signs a split's payout); the live work review's six questions (`docs/reviews/live-work-review.md`); a step-down naming drafts.
 
+## The layers-and-judges build: readings, and F244 (10 October 2026, night)
+
+**From `docs/layers-judges-build.md` (merged, pull request 1):** F242 written in (Money keeps payments, fields and states; Agreements state each obligation once); F235 with its amendment built (layer by layer, each service receipting in its own name; an owner's grant signs an incoming share only with the rail's proof; three layers); F236 built (the earlier judge in the chain prevails); F207's stepping-down half built (the collective client names the drafts left behind). Rust 585, TypeScript 205; no format changed, the vectors unchanged. *Readings R1 to R7 taken by the project lead under the delegation of mechanics,* each respecting the decided rule (R2: the grant is the one the owner already gave as a payee of the next layer's agreement, no new kind; R3: the rail's proof is the verifier holding the rail's valid answer for that receipt; R5: a deal inside a deal, up to eight layers; R7: a stepping down names the same drafts a resignation would).
+
+## F244. The publisher pays the pointer the work's agreement names (QL1, 10 October 2026, night)
+
+**From** the build, QL1: F235 has each layer pay the next layer's split service, but an agreement may name none (payer-side splitting); as built, the split showed a mismatch. *Options put:* (a) such an agreement cannot be carried; (b) the earlier service pays the owners directly; (c) as built.
+
+**Nobody, allegedly:** "Split services become pointers where needed, if there is nothing to split at the work level no split is needed… but publishers will always need one." "A work with several owners has its own agreement. Either use a split service or have someone act as a treasury for the joint venture. I'd pick the first." **Decided: "The publisher pays the pointer specified by the work's agreement."**
+
+So the layer above never divides the next layer's share: it pays the one pointer the next layer's agreement names for money arriving from above. Behind that pointer is the next agreement's own business: a lone owner's payee pointer (nothing to split), a split service, or an owner acting as treasury for the joint venture (preferred by Nobody, allegedly: a split service). An agreement naming no such pointer cannot be paid through a layer until it names one. *Suggested by the project lead (the restatement); the rule Nobody, allegedly's.*
+
+**Core changes:** Agreements draft 10, rule 16 and the split plan (the receiver of a layer's share is the pointer the next agreement names; replaces "the next layer's split service"); the library's `split` and `layer_services` read that pointer. *To build,* with the vow grammar build.
+
 ## F243. The explainer film plays on dubsar.org's front page, carried by MOR (10 October 2026, night)
 
 **Asked by Nobody, allegedly:** "What will be needed to run the video via MOR?" *The project lead's answer:* nothing in the core (a film is bytes; Envelopes carry any bytes); above it, a video Module (the format, MP4 with H.264, and the checks a client runs before playing), room on the homes (64 MB per media object today; the 3-minute draft is 23 MB), a website cMIP draft letting a page use a video file of its own signed version, a player in the display client, and publication by the test identity. **Decided by Nobody, allegedly ("Project managers hate me. Yes it should"):** the film lives on dubsar.org's front page. *Noted:* a longer or sharper film needs the media cMIP that serves one object in parts from many homes, not yet written.
