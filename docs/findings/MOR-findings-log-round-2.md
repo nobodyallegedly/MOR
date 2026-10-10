@@ -2626,6 +2626,14 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Core changes:** Agreements (Law) draft 10, rule 22 (the default) and rule 15 (the default holder where a claim's agreement writes no shares); the plan format (field 3 absent means `[0]`). *To build:* with step 12b's formats.
 
+## F219. A refund past its terms is ended; bad-faith terms stay public (formats OF7, 10 October 2026, afternoon)
+
+**From** the open formats proposal, OF7 (how a refund's "how long" is measured, and whether a lapsed refund blocks a closing) and format 3's "the owners keep the money"; Fable's review (Finance rule 7 lists "past its terms" as a state beside "discharged" without saying the obligation ends; the closing half belongs with Part F). *Laid beside it:* F215 (the buyer accepts an offer's terms by paying); QG1 and F197 (what can never be paid must not freeze a collective forever).
+
+**Decided by Nobody, allegedly, 10 October 2026 ("Yes, and bad faith terms remain public."):** a refund past the terms the buyer accepted by paying is **ended**: the obligation closes there, the owners keep the money, and it does not block a closing. Terms written in bad faith (a deadline too short to use, say) are not refused; they stay public, as every agreement's terms do, for anyone to judge. *Suggested by the project lead.* **The mechanic, the project lead's under the delegation:** the deadline is a fixed point on the agreement's time reference (OF7 a; for a lone seller's offer, on the offer's own, F215); *client conformance:* the buyer's client shows it before paying.
+
+**Core changes:** Money (Finance) draft 6, rule 7 ("past its terms" ends the obligation); Agreements (Law) draft 10, the closing (a refund past its terms is not a debt that binds it), terms field 17; the formats (refund terms, OF7). *To build:* with step 12b's formats.
+
 ## F191 to F199 built (10 October 2026, early afternoon)
 
 `docs/f191-f199-build-2026-10-10.md` (merged): F191 to F199 written into Law draft 10, Finance draft 6, Production draft 6, core v21 and the freeze suite (each revised in place for Nobody, allegedly, to approve again) and built, each with a test that fails first; Rust 502 passed; both FORK-HANDS-OUT seeds and every invariant pass at 5,000 cases; Fable's `review_f190_*` tests rewritten to pin the fixes (5b, the offer's object, unchanged: QH3). The display client released again. **Six questions for Nobody, allegedly, open:** QH1 (two settlements of one fork, neither holding the other, one the judge's); QH2 (a branch nobody named, carrying a newcomer, dropped by F192 without her signature); QH3 (the object a relay's record names, and a purchase naming an offer; joins step 12b's OF1); QH4 (a resignation and the very version that registers it); QH5 (a one-time key that gave no refund address); QH6 (a pointer inside a fork's history whose taking-on the fork left out). Nine readings to confirm.
