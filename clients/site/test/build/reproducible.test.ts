@@ -30,9 +30,18 @@ after(() => rmSync(scratch, { recursive: true, force: true }));
 const run = (cmd: string, args: string[], cwd: string) =>
   execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 
+/** The Rust workspace's crates, as `Cargo.toml` lists them: Cargo reads every one before it builds any, so a
+ * crate missing from the copies stops their build (found 10 October 2026, when step 12a added modules/onchain). */
+function workspaceMembers(): string[] {
+  const manifest = readFileSync(join(root, 'Cargo.toml'), 'utf8');
+  const list = manifest.match(/^members\s*=\s*\[([^\]]*)\]/m);
+  assert.ok(list, 'Cargo.toml lists the workspace members');
+  return [...list[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+}
+
 /** What the WebAssembly build reads: the Rust workspace and the build script, as committed or changed here. */
 function copySources(to: string): void {
-  const files = run('git', ['ls-files', '-co', '--exclude-standard', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'core', 'wasm', 'cmips/payment', 'modules/airgap', 'modules/lightning', 'relay', 'harness', 'clients/genesis/scripts'], root)
+  const files = run('git', ['ls-files', '-co', '--exclude-standard', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', ...workspaceMembers(), 'clients/genesis/scripts'], root)
     .split('\n')
     .filter(Boolean);
   for (const f of files) {
@@ -41,11 +50,16 @@ function copySources(to: string): void {
   }
 }
 
-/** Build the WebAssembly in a checkout at `dir`, its own target folder inside it. */
+/** Build the WebAssembly in a checkout at `dir`, its own target folder inside it; if it fails, with Cargo's last words. */
 function buildWasm(dir: string): { wasm: Buffer; glue: Buffer } {
   const env = { ...process.env };
   delete env.CARGO_TARGET_DIR;
-  execFileSync('sh', ['clients/genesis/scripts/build-wasm.sh'], { cwd: dir, env, stdio: 'ignore' });
+  try {
+    execFileSync('sh', ['clients/genesis/scripts/build-wasm.sh'], { cwd: dir, env, stdio: ['ignore', 'ignore', 'pipe'], encoding: 'utf8' });
+  } catch (e) {
+    const said = String((e as { stderr?: string }).stderr ?? '').trim().split('\n').slice(-12).join('\n');
+    throw new Error(`the WebAssembly build failed in ${dir}:\n${said}`);
+  }
   return {
     wasm: readFileSync(join(dir, 'clients/genesis/wasm/mor_wasm_bg.wasm')),
     glue: readFileSync(join(dir, 'clients/genesis/wasm/mor_wasm.js')),
