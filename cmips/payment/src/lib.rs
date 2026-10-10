@@ -236,6 +236,14 @@ pub trait RailModule {
     /// The unit a rail address or vault source carries, if the address is
     /// one this Module reads.
     fn unit(&self, address: &[u8]) -> Option<Hash>;
+    /// What "the same payment" is on this rail (F200): the payment a rail
+    /// proof shows, the same bytes in every proof of that payment, whatever
+    /// else differs between them (on Lightning the payment hash; on-chain
+    /// the output the transaction created). `None` where the proof shows no
+    /// payment yet (a request only). Finance's rules that tell payments
+    /// apart (8a, 10, 15) read it through [`payment`], never through the
+    /// proof's bytes.
+    fn payment(&self, rail_proof: &[u8]) -> Option<Vec<u8>>;
     /// The Module's verification rule.
     fn check(&self, input: &RailInput) -> Verification;
 }
@@ -487,6 +495,22 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
         address: &addr,
         rail_proof: &p.rail,
     })
+}
+
+/// The payment a receipt or claim is (F200), as its rail Module says:
+/// `[rail, payment]` in deterministic CBOR, the rail Module's spec hash and
+/// what the Module gives ([`RailModule::payment`]). What a Law client hands
+/// the core's Law view (`LawView::payments`), keyed by the act's proof, so
+/// that two proofs of one payment count once. `None` where the Module is
+/// not adopted, the proof is not in this cMIP's shape, or it shows no
+/// payment yet.
+pub fn payment(record: &Record, modules: &Modules) -> Option<Vec<u8>> {
+    let (rail, proof) = match record {
+        Record::Receipt(r) => (&r.rail, &r.proof),
+        Record::Claim(c, ..) => (&c.rail, &c.proof),
+    };
+    let id = modules.get(rail)?.payment(&Proof::decode(proof)?.rail)?;
+    Some(cbor::encode(&Value::Array(vec![Value::Bytes(rail.to_vec()), Value::Bytes(id)])))
 }
 
 /// Where a receipt or claim was paid, as its proof shows it; `None` where

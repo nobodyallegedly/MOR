@@ -1,7 +1,7 @@
 //! # mor-onchain
 //!
-//! The on-chain Bitcoin rail Module, draft 1
-//! (`modules/module-onchain-rail-draft-1.md`), a rail Module under the
+//! The on-chain Bitcoin rail Module, draft 2
+//! (`modules/module-onchain-rail-draft-2.md`), a rail Module under the
 //! payment cMIP (`mor-payment`). **Experimental**: an instrument for testing
 //! the Finance MIP, never for real money.
 //!
@@ -14,8 +14,13 @@
 //!   goes to, the key that signs requests, and an optional script tree.
 //! - [`Onchain`]: the verification rule: a request signed by the payee's
 //!   request key; a transaction paying exactly the amount to the key tweaked
-//!   by the commitment; in a block with [`CONFIRMATIONS`] headers of work:
-//!   valid; fewer: pending.
+//!   by the commitment; at its one canonical position in a block of the
+//!   chain the verifier follows ([`chain::HeaderChain`], F204), with
+//!   [`CONFIRMATIONS`] headers on that chain (or more, where the request
+//!   names more, F205): valid; fewer: pending; a block not on that chain,
+//!   or no chain held: unknown.
+//! - [`clock`]: the Bitcoin clock Module (F201, F202): a payment's proof
+//!   read as an anchor, the point being the block.
 //! - `btcd` (feature `btcd`): a client for a btcd node, with which the tests
 //!   pay on regtest.
 //!
@@ -25,6 +30,8 @@
 pub mod block;
 #[cfg(feature = "btcd")]
 pub mod btcd;
+pub mod chain;
+pub mod clock;
 pub mod p2c;
 pub mod tx;
 
@@ -35,11 +42,13 @@ use mor_payment::{Answer, RailInput, RailKind, RailModule, Verification};
 /// This Module's spec hash. A test value until the Module is published by
 /// its creator (roadmap step 17).
 pub fn spec() -> Hash {
-    sha256(b"on-chain rail Module, draft 1, test value until publication")
+    sha256(b"on-chain rail Module, draft 2, test value until publication")
 }
 
-/// The confirmations a payment needs: the headers a valid proof carries,
-/// the block's own included. A parameter of this Module.
+/// The confirmations a payment needs at least: the headers a valid proof
+/// carries, the block's own included. A parameter of this Module; a
+/// payee's request may name more (F205). The Bitcoin clock Module reads
+/// anchors at the same depth (F205: one number for both).
 pub const CONFIRMATIONS: usize = 6;
 
 /// A Bitcoin network, numbered as the Lightning rail Module numbers it.
@@ -69,18 +78,6 @@ impl Network {
             3 => Network::Regtest,
             _ => return None,
         })
-    }
-
-    /// The easiest target a header may state on this network, as compact
-    /// `bits`: on Bitcoin, a difficulty of about 2^44; on a test network,
-    /// its own proof-of-work limit (the Module's "floor").
-    pub fn floor(self) -> u32 {
-        match self {
-            Network::Mainnet => 0x170f_ffff,
-            Network::Testnet => 0x1d00_ffff,
-            Network::Signet => 0x1e03_77ae,
-            Network::Regtest => 0x207f_ffff,
-        }
     }
 }
 
@@ -190,19 +187,27 @@ pub struct Paid {
     pub block: Option<Block>,
 }
 
-/// `onchain-proof = [ request, ? [ tx, output, ? [ index, branch, headers ] ] ]`:
-/// the rail proof a receipt or claim carries, inside the payment cMIP's
-/// proof.
+/// `onchain-proof = [ request, ? [ tx, output, ? [ index, branch, headers ] ] ]`,
+/// `request = bstr .size 64 / [ bstr .size 64, confirmations ]`: the rail
+/// proof a receipt or claim carries, inside the payment cMIP's proof.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OnchainProof {
     /// The payee's side's BIP 340 signature over the request message.
     pub request: [u8; 64],
+    /// The confirmations the payee's request names, where it names more
+    /// than [`CONFIRMATIONS`] (F205): the payment counts only at that
+    /// depth. Signed with the request.
+    pub confirmations: Option<u64>,
     pub paid: Option<Paid>,
 }
 
 impl OnchainProof {
     pub fn encode(&self) -> Vec<u8> {
-        let mut a = vec![Value::Bytes(self.request.to_vec())];
+        let request = match self.confirmations {
+            None => Value::Bytes(self.request.to_vec()),
+            Some(k) => Value::Array(vec![Value::Bytes(self.request.to_vec()), Value::Uint(k)]),
+        };
+        let mut a = vec![request];
         if let Some(p) = &self.paid {
             let mut q = vec![Value::Bytes(p.tx.clone()), Value::Uint(p.output)];
             if let Some(b) = &p.block {
@@ -222,8 +227,16 @@ impl OnchainProof {
             return None;
         };
         let (request, paid) = match a.as_slice() {
-            [Value::Bytes(r)] => (r, None),
-            [Value::Bytes(r), Value::Array(p)] => (r, Some(p)),
+            [r] => (r, None),
+            [r, Value::Array(p)] => (r, Some(p)),
+            _ => return None,
+        };
+        let (request, confirmations) = match request {
+            Value::Bytes(r) => (r, None),
+            Value::Array(x) => match x.as_slice() {
+                [Value::Bytes(r), Value::Uint(k)] => (r, Some(*k)),
+                _ => return None,
+            },
             _ => return None,
         };
         let request: [u8; 64] = request.as_slice().try_into().ok()?;
@@ -272,7 +285,13 @@ impl OnchainProof {
                 })
             }
         };
-        Some(OnchainProof { request, paid })
+        Some(OnchainProof { request, confirmations, paid })
+    }
+
+    /// The confirmations this proof's payment needs: what its request
+    /// names, or [`CONFIRMATIONS`].
+    pub fn needs(&self) -> u64 {
+        self.confirmations.unwrap_or(CONFIRMATIONS as u64)
     }
 
     /// The hash of the block the proof places the transaction in, in
@@ -290,15 +309,44 @@ impl OnchainProof {
         let p = self.paid.as_ref()?;
         Some((tx::dsha256(&p.tx), p.output))
     }
+
+    /// What "the same payment" is on this rail (F200): the output the
+    /// payment created, `[txid, output]`, encoded in deterministic CBOR.
+    /// Every proof of the payment names it, pending or valid, in whichever
+    /// block a reorganisation puts it. `None` before a transaction is shown.
+    pub fn payment(&self) -> Option<Vec<u8>> {
+        let (txid, i) = self.outpoint()?;
+        Some(cbor::encode(&Value::Array(vec![Value::Bytes(txid.to_vec()), Value::Uint(i)])))
+    }
+
+    /// The height of the proof's block on `chain`, if it is on it.
+    pub fn height_on(&self, chain: &chain::HeaderChain) -> Option<u64> {
+        chain.height_of(&self.block_hash()?)
+    }
 }
 
-/// The on-chain rail Module.
+/// The on-chain rail Module, as a verifier adopts it: with the headers of
+/// the chain it follows (F204), or with none, offline, where every mined
+/// payment answers unknown.
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Onchain;
+pub struct Onchain<'a> {
+    pub chain: Option<&'a chain::HeaderChain>,
+}
 
-impl Onchain {
-    /// The rule itself, on its inputs (the Module's "Verification rule").
-    pub fn rule(input: &RailInput) -> Answer {
+impl<'a> Onchain<'a> {
+    /// The Module with the chain the verifier follows.
+    pub fn on(chain: &'a chain::HeaderChain) -> Self {
+        Onchain { chain: Some(chain) }
+    }
+
+    /// The Module with no chain: a client offline, or keeping no headers.
+    pub fn offline() -> Self {
+        Onchain { chain: None }
+    }
+
+    /// The rule itself, on its inputs and the chain's headers handed to it
+    /// as data (the Module's "Verification rule"; Production rule 12).
+    pub fn rule(input: &RailInput, chain: Option<&chain::HeaderChain>) -> Answer {
         // 1. The shapes.
         let Some(addr) = OnchainAddress::decode(input.address) else {
             return Answer::Invalid("the address is not an on-chain rail address".into());
@@ -310,12 +358,16 @@ impl Onchain {
         if input.amount.unit != unit(addr.network) {
             return Answer::Invalid("the amount is not in the rail's unit".into());
         }
-        // 3. The payee's side's request, for this commitment.
+        // 3. The payee's side's request, for this commitment, naming at
+        // least N confirmations where it names any (F205).
+        if proof.confirmations.is_some_and(|k| k < CONFIRMATIONS as u64) {
+            return Answer::Invalid(format!("the request names fewer confirmations than this Module's {CONFIRMATIONS}"));
+        }
         let signed = k256::schnorr::VerifyingKey::from_bytes(&addr.request).ok().zip(k256::schnorr::Signature::try_from(proof.request.as_slice()).ok());
         let Some((rk, sig)) = signed else {
             return Answer::Invalid("the request is not a signature by the address's request key".into());
         };
-        if rk.verify_raw(&p2c::request_message(&input.commitment), &sig).is_err() {
+        if rk.verify_raw(&p2c::request_message_for(&input.commitment, proof.confirmations), &sig).is_err() {
             return Answer::Invalid("the request is not signed by the payee's request key for this commitment".into());
         }
         // 4. The address the commitment gives.
@@ -323,6 +375,7 @@ impl Onchain {
             return Answer::Invalid("the address's key gives no Taproot output key for this commitment".into());
         };
         // 5. Not paid.
+        let need = proof.needs();
         let Some(paid) = proof.paid else {
             return Answer::Pending("the payment is not made: a request only".into());
         };
@@ -343,7 +396,8 @@ impl Onchain {
         let Some(b) = paid.block else {
             return Answer::Pending("the transaction is unconfirmed".into());
         };
-        // 8. In the block, under headers that carry their work.
+        // 8. In the block, at its one canonical position, under headers
+        // that build on each other and meet their targets.
         let mut headers = Vec::with_capacity(b.headers.len());
         for (i, raw) in b.headers.iter().enumerate() {
             let Some(hd) = block::Header::decode(raw) else {
@@ -360,24 +414,38 @@ impl Onchain {
         if block::merkle_root(&t.txid, b.index, &b.branch) != Some(headers[0].merkle_root) {
             return Answer::Invalid("the Merkle branch does not place the transaction in the block".into());
         }
-        // 9. Work this rule can tell from nothing.
-        let floor = block::target(addr.network.floor()).expect("a floor is a target");
-        if headers.iter().any(|hd| block::target(hd.bits).is_none_or(|t| block::easier(&t, &floor))) {
-            return Answer::Unknown("a header states a target easier than this network's floor: this rule cannot tell it from one made without real work".into());
+        if !block::canonical(&t.txid, b.index, &b.branch) {
+            return Answer::Invalid("the index is not canonical: where the tree repeats a node, only the node's own position is its proof (one payment, one proof, F200)".into());
         }
-        // 10, 11. N confirmations, exactly.
-        match headers.len() {
-            k if k < CONFIRMATIONS => Answer::Pending(format!("{k} of {CONFIRMATIONS} confirmations")),
-            k if k > CONFIRMATIONS => Answer::Invalid(format!(
-                "{k} headers: one payment has one proof, with exactly {CONFIRMATIONS}"
-            )),
-            // 12.
-            _ => Answer::Valid,
+        // 9. On the chain this verifier follows (F204).
+        let Some(chain) = chain.filter(|c| c.network() == addr.network) else {
+            return Answer::Unknown("this verifier holds no headers of the address's network: a mined payment is checked against the chain it follows, never against its own headers alone (F204)".into());
+        };
+        let Some(height) = chain.height_of(&headers[0].hash) else {
+            return Answer::Unknown("the proof's block is not on the chain this verifier follows (F204)".into());
+        };
+        for (i, hd) in headers.iter().enumerate().skip(1) {
+            match chain.hash_at(height + i as u64) {
+                Some(x) if x == hd.hash => {}
+                Some(_) => return Answer::Unknown("the proof's confirmations are on another branch than the chain this verifier follows (F204)".into()),
+                None => break,
+            }
         }
+        // 10, 11. The confirmations: on the proof, and on the chain held.
+        let shown = headers.len() as u64;
+        let held = chain.tip() - height + 1;
+        if shown < need || held < need {
+            return Answer::Pending(format!("{} of {need} confirmations", shown.min(held)));
+        }
+        if shown > need {
+            return Answer::Invalid(format!("{shown} headers: one payment has one proof, with exactly {need}"));
+        }
+        // 12.
+        Answer::Valid
     }
 }
 
-impl RailModule for Onchain {
+impl RailModule for Onchain<'_> {
     fn spec(&self) -> Hash {
         spec()
     }
@@ -394,9 +462,14 @@ impl RailModule for Onchain {
         OnchainAddress::decode(address).map(|a| unit(a.network))
     }
 
+    /// The same payment (F200): the output the transaction created.
+    fn payment(&self, rail_proof: &[u8]) -> Option<Vec<u8>> {
+        OnchainProof::decode(rail_proof)?.payment()
+    }
+
     fn check(&self, input: &RailInput) -> Verification {
         Verification {
-            answer: Onchain::rule(input),
+            answer: Onchain::rule(input, self.chain),
             module: spec(),
             trusted: None,
         }

@@ -60,3 +60,13 @@ pub fn pay_to_contract(key: &[u8; 32], tree: Option<&[u8; 32]>, commitment: &[u8
 pub fn request_message(commitment: &[u8; 32]) -> [u8; 32] {
     tagged_hash("MOR/module/onchain/request", commitment)
 }
+
+/// The request message, naming the confirmations where the payee's side
+/// asks for more than the Module's minimum (F205): the commitment, then the
+/// number as eight bytes, big-endian. With none, [`request_message`].
+pub fn request_message_for(commitment: &[u8; 32], confirmations: Option<u64>) -> [u8; 32] {
+    match confirmations {
+        None => request_message(commitment),
+        Some(k) => tagged_hash_parts("MOR/module/onchain/request", &[commitment, &k.to_be_bytes()]),
+    }
+}

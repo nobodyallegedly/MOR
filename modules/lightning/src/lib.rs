@@ -208,6 +208,14 @@ impl RailModule for Lightning {
         LnAddress::decode(address).map(|a| unit(a.network))
     }
 
+    /// The same payment (F200): the invoice's payment hash, which one
+    /// payment settles once.
+    fn payment(&self, rail_proof: &[u8]) -> Option<Vec<u8>> {
+        let p = LnProof::decode(rail_proof)?;
+        p.preimage?;
+        Some(bolt11::decode(&p.invoice).ok()?.payment_hash.to_vec())
+    }
+
     fn check(&self, input: &RailInput) -> Verification {
         Verification {
             answer: Lightning::rule(input),
