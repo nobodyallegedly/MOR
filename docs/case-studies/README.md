@@ -14,7 +14,7 @@ They are not part of the core. The core document and the six MIPs in `spec/` def
 - [Shown, Not Listed](14-MOR-case-study-learning-and-work-v4.md): accreditation computed from signed evidence, and profiles that show what people can do. *Draft 4: the author's redraft, checked against the current core.*
 - [Paid for Results, Seen for What It Is](15-MOR-case-study-advertising-v3.md): advertising paid on real sales, and attention deals made legible.
 - [No Firm Required](16-MOR-case-study-commerce-v2.md): an open marketplace and logistics network with no owner, Coase revisited. *Draft 2: draft 1 with the technical pass of 9 October 2026 applied; still older than the current core.*
-- [From the Stands to the Main League](17-MOR-case-study-live-sports-v3.md): live streaming, from a phone in the stands to co-streaming a main league.
+- [From the Stands to the Main League](17-MOR-case-study-live-sports-v4.md): live streaming, from a phone in the stands to co-streaming a main league. *Draft 4: aligned with the current core, 10 October 2026, before the author's redraft.*
 - [Adult Content, Consent on the Record](18-MOR-case-study-adult-content-v3.md): signed consent, age proofs without exposure, and payment rails that cannot switch a sector off alone.
 - [Paying the Ones Everything Stands On](19-MOR-case-study-software-v3.md): open-source maintainers paid through dependency lineage, targets and bounties.
 - [From Agents to Open Intelligence](20-MOR-case-study-ai-v5.md): AI agents under grants, then AI itself made by many, with data on stated terms, a market for compute and training collectives. *Draft 5: the author's redraft, 10 October 2026.*
