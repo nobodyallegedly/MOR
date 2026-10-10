@@ -5391,6 +5391,12 @@ pub struct ServiceAccount {
     /// them owed (F214): each `(split, module)`, an open obligation of the
     /// service (rule 29).
     pub fees_skipped: Vec<(Hash, Hash)>,
+    /// Payouts its splits made to a seller for a stake the seller had
+    /// transferred, which the seller receipted after the transfer on its
+    /// own line (F217): each `(split, payout index, buyer, amount)`, the
+    /// share sold, owed to the buyer as the service's open obligation
+    /// (rule 29); the service settles with the seller.
+    pub owed_to_buyers: Vec<(Hash, usize, Hash, u64)>,
 }
 
 /// An incoming payment with no split by the service (rules 20, 29).
@@ -9417,6 +9423,7 @@ impl<'a> LawView<'a> {
         }
         // Each payout, discharged by the receiver's own receipts naming the split.
         let mut unpaid = vec![];
+        let mut owed_to_buyers: Vec<(Hash, usize, Hash, u64)> = vec![];
         for (sh, s) in &splits {
             for (i, p) in s.payouts.iter().enumerate() {
                 let mut received: u64 = 0;
@@ -9427,6 +9434,16 @@ impl<'a> LawView<'a> {
                     let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
                     let names = x.fulfils == sh.id || r.inside.objects.iter().flatten().any(|o| o.chain == sh.id || o.predecessor == sh.id);
                     if x.payee != p.receiver || !names || !self.consent(&r.id)?.counts() {
+                        continue;
+                    }
+                    // F217: a seller's payout receipt for a stake it has
+                    // transferred, after the transfer on its own line, is a
+                    // wrong receipt: it discharges nothing, and the buyer is
+                    // owed the share sold.
+                    if let Some((_, buyer, split, idx, owed)) = self.wrong_payout_receipt(r) {
+                        if split == sh.id && idx == i && !owed_to_buyers.contains(&(split, idx, buyer, owed)) {
+                            owed_to_buyers.push((split, idx, buyer, owed));
+                        }
                         continue;
                     }
                     received = received.saturating_add(x.amount.value);
@@ -9450,7 +9467,7 @@ impl<'a> LawView<'a> {
                 fees_skipped.push((sh.id, m));
             }
         }
-        Ok(ServiceAccount { service: *service, unsplit, unpaid, fees_skipped })
+        Ok(ServiceAccount { service: *service, unsplit, unpaid, fees_skipped, owed_to_buyers })
     }
 
     // ------------------------------------------------------------ the release

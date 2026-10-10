@@ -11001,3 +11001,58 @@ fn f218_the_default_holder_is_the_creator_who_opened_the_claim() {
     let b = law_act(&mut w, &mut ana, law::types::WORK_CLAIM, bad.to_map(), None);
     assert!(!view(&w).work_owners(&work).unwrap().claims.contains(&b));
 }
+
+/// F217, decided by Nobody, allegedly, 10 October 2026 ("Yes, it's an
+/// acceptable cost. Make it legible, don't ban it."): a stake's sale takes
+/// effect on the seller's own line. The seller signs the transfer by a
+/// chain signature (F132), fixing its place; the buyer completes it. Once
+/// signed, a payout receipt the seller signs for that stake after it on his
+/// own line is a wrong receipt, counting for nothing; that payout is owed
+/// to the buyer as the service's open obligation (rule 29). A split paying
+/// the seller for the stake is shown beside the transfer (client
+/// conformance); the window before the service follows is a stated cost.
+#[test]
+fn f217_a_stakes_sale_takes_effect_on_the_sellers_own_line() {
+    use mor_core::finance::{Amount, Payer, Payload as Fin, Receipt};
+    let mut l = ServiceDeal::new();
+    let (bid, deal) = (l.ben.id, l.deal);
+    let mut carla = l.w.genesis("carla, who buys", vec![own_home()], None, None);
+    let t = law::StakeTransfer { agreement: deal, stake: 0, to: carla.id, share: 200_000, record: vec![] };
+    let x = law_act(&mut l.w, &mut l.ben, law::new_types::STAKE_TRANSFER, t.to_map(), obj(deal));
+    let e = view(&l.w).transfer(&x).unwrap();
+    assert!(!e.effective, "no chain signature, no buyer: {:?}", e.problems);
+    sign(&mut l.w, &mut carla, &x);
+    assert!(!view(&l.w).transfer(&x).unwrap().effective, "still no chain signature");
+    // A payout receipt Ben signs before his chain signature: not wrong.
+    let (receipt, _) = l.sale(b"a sale", vec![]);
+    let split = l.split(receipt, l.stake_payouts(), vec![]);
+    let payout_receipt = |w: &mut World, ben: &mut Person, proof: &[u8]| {
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("the service"))), payee: bid, amount: Amount { unit: spec("a unit"), value: 320 }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(ben, mips().finance, 2, r.to_map(), None, None);
+        w.add(&a)
+    };
+    let mut ben = l.ben.clone();
+    let before = payout_receipt(&mut l.w, &mut ben, b"before");
+    let (cs, after_ben) = l.w.chain_sign(&ben, x);
+    let e = view(&l.w).transfer(&x).unwrap();
+    assert!(e.effective, "{:?}", e.problems);
+    assert!(e.place.is_some());
+    assert_eq!(e.splits_paying_seller, vec![split], "shown beside the transfer");
+    // Identity binds an everyday act to genesis or a rotation only, never to
+    // a chain signature: a receipt bound to the chain signature is invalid
+    // (question QJ1 in the build report). As built, a receipt is after the
+    // transfer on Ben's line once bound to a rotation after it.
+    let mut stale = after_ben.clone();
+    stale.binding = cs;
+    let bad = payout_receipt(&mut l.w, &mut stale, b"bound to the chain signature");
+    assert_eq!(l.w.v.status(&bad), Status::Invalid);
+    let still_before = payout_receipt(&mut l.w, &mut after_ben.clone(), b"same rotation as before");
+    let (_, mut ben) = l.w.rotate(&after_ben, Rot::default());
+    let after = payout_receipt(&mut l.w, &mut ben, b"after");
+    assert_eq!(l.w.v.status(&after), Status::Valid);
+    assert!(!view(&l.w).transfer(&x).unwrap().wrong_receipts.contains(&still_before), "bound to the rotation before the chain signature: not after it (QJ1)");
+    let e = view(&l.w).transfer(&x).unwrap();
+    assert_eq!(e.wrong_receipts, vec![after], "the receipt after the transfer is wrong; the one before is not ({before:?})");
+    let acct = view(&l.w).service_account(&l.svc.id).unwrap();
+    assert_eq!(acct.owed_to_buyers, vec![(split, 1, carla.id, 160)], "Ben's payout, in the share sold, owed to Carla");
+}
