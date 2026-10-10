@@ -2686,6 +2686,16 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Open for Nobody, allegedly:** QK1 (two links of the chain of judgment each settling the fork, neither holding the other); QK3 (QJ2's receipt by the work's service against H5 and H7: a grant key never signs a split's payout); the live work review's six questions (`docs/reviews/live-work-review.md`); a step-down naming drafts.
 
+## F236. When two judges in the chain each settle a fork, the earlier in the chain prevails (QK1, 10 October 2026, night)
+
+**From** `docs/deals-owning-build.md`, QK1: the chain of judgment turns per request, so where the first judge let its period pass on one party's request but answered another's, the first and the next judge can each settle the same fork, neither holding the other; as built, the verifier refuses to name a version in force. *Laid beside it:* QG4 ("If a fork ends up being disputed it needs to follow the chain described in the agreement"); F206 (a judge that contradicts itself has spoken for nothing; the chain moves on). *Options put:* both void (deadlock a party could engineer); the earlier prevails; the later prevails (rewarding a request left to lapse).
+
+**Decided by Nobody, allegedly, 10 October 2026 ("Yes … The second judge only gets actioned under pre set rules. Once the rules apply, its voice stops mattering."):** the earlier judge in the chain prevails: once it has settled the fork, on any party's request, the later judge's settlement of the same fork counts for nothing; a later judge acts only as the agreement's rules call it, and its voice stops mattering once the earlier one has spoken. F206 still applies within one judge. *Suggested by the project lead.*
+
+**A principle restated by Nobody, allegedly, with it** (on F235's grant: "my point was that my statement always applies, within the limits. The question asked me whether something could happen, and that something could happen if the participant wished it"): within the protocol's limits, what a participant may do with what it holds is its own choice; a question "can this happen?" is answered by whether a participant who wished it could, within those limits.
+
+**Core changes:** Agreements (Law) draft 10, rule 45b and rule 34a (the chain's order decides between links). *To build:* with F235.
+
 ## F235. Money passes envelope by envelope: each layer's split service receives in its own name and splits under its own agreement (QK3, 10 October 2026, night)
 
 **From** `docs/deals-owning-build.md`, QK3: QJ2 (a), the project lead's mechanic, needed the work's split service to sign, with a grant key, for a payout of the publication's split; F129 (H5) and F130 (H7), decided 5 October, forbid a split service's grant key ever signing a split's payout ("a payout without the payee's own receipt stays the service's open obligation"). *Laid beside it:* H5, H7; F216 (outside in); F112 (one operator, two identities); freeze scenario 7 (a music service's pro-rata and user-centric sharing). *Options put:* (a) an exception to H5/H7 (open to one operator running both services); (b) the payee signing each time with her own key; (c) the work's split service named as the receiver of the work's share, receipting in its own name.
