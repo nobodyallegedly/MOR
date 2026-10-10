@@ -2077,13 +2077,18 @@ pub fn signature_payload(signed: &str) -> R<Vec<u8>> {
 
 /// A resignation payload (Law type 16): the whole voice, or, with `area`,
 /// stepping down from that area (by id). The act carries, in `objects`,
-/// `[agreement, agreement]`.
+/// `[agreement, agreement]`. With `drafts`, the versions its signer had
+/// signed and leaves behind (F207): none of them ever brings them back.
 #[wasm_bindgen(js_name = resignationPayload)]
-pub fn resignation_payload(agreement: &str, area: Option<u32>) -> R<Vec<u8>> {
+pub fn resignation_payload(agreement: &str, area: Option<u32>, drafts: Option<Vec<String>>) -> R<Vec<u8>> {
+    let mut drafts = drafts.unwrap_or_default().iter().map(|d| unhex(d)).collect::<R<Vec<Hash>>>()?;
+    drafts.sort();
+    drafts.dedup();
     Ok(cbor::encode(&Value::Map(
         law::Resignation {
             agreement: unhex(agreement)?,
             area: area.map(u64::from),
+            drafts,
         }
         .to_map(),
     )))

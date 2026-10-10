@@ -110,6 +110,9 @@ fn label() -> Terms {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     }
 }
 
@@ -162,16 +165,16 @@ fn terms_round_trip_and_decode_strictly() {
     let c = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
     assert_eq!(roundtrip(&c), c, "a mark round-trips");
 
-    for (k, what) in [
-        (8, "split plan"),
-        (10, "concurrency rule"),
-        (17, "refund"),
-    ] {
+    // Step 12b: fields 8 and 17 have their formats, refused only when
+    // malformed; field 10, the concurrency rule, is withdrawn.
+    for k in [8, 17] {
         let mut m = t.to_map();
         m.push((Value::Uint(k), Value::Array(vec![])));
-        let e = Terms::decode(&m).unwrap_err();
-        assert!(matches!(e, LawError::Unsupported(w) if w.contains(what)), "{e}");
+        assert!(matches!(Terms::decode(&m), Err(LawError::Shape(_))), "field {k}: not in its format");
     }
+    let mut m = t.to_map();
+    m.push((Value::Uint(10), Value::Array(vec![])));
+    assert!(matches!(Terms::decode(&m), Err(LawError::Check(w)) if w.contains("withdrawn")));
 
     let mut m = t.to_map();
     m.push((Value::Uint(21), Value::Uint(0)));
@@ -794,4 +797,122 @@ fn a_constitutional_version_changing_a_judge_needs_both_rules() {
     // A constitutional version that changes no judge needs that rule alone.
     c2.cmips = p2.cmips.clone();
     assert_eq!(needs(&p2, &c2), vec![Power::Constitutional]);
+}
+
+// ---------------------------------------------------------------- step 12b, the open formats
+
+fn plan_with(shares: Vec<law::ShareRule>) -> law::SplitPlan {
+    law::SplitPlan {
+        shares,
+        cmip: h(80),
+        unfilled: law::Unfilled::Stakes,
+        top: vec![],
+        service_bears_rail_fees: false,
+        max_rail_fee: None,
+        params: None,
+        metrics: vec![],
+    }
+}
+
+fn label_with_stake() -> Terms {
+    let mut t = label();
+    t.stakes = Some(vec![Stake { object: Who::Id(h(40)), holders: vec![(Who::Id(h(1)), 600_000), (Who::Id(h(2)), 400_000)] }]);
+    t
+}
+
+/// Step 12b: the split plan (terms field 8) has its format. A role share is
+/// named by its role, never a transport cMIP's hash (review 7.2); a plan
+/// writing no choice for an unfilled role sends it to the stakes (F218).
+#[test]
+fn f12b_the_split_plan_round_trips_roles_by_name_unfilled_to_the_stakes() {
+    let mut t = label_with_stake();
+    t.plan = Some(plan_with(vec![
+        law::ShareRule::Stake { stake: 0, part: 880_000 },
+        law::ShareRule::Role { role: "relay".into(), part: 50_000 },
+        law::ShareRule::Receiver { receiver: h(81), part: 70_000 },
+    ]));
+    assert_eq!(roundtrip(&t), t);
+    check(&t).unwrap();
+    // Absent field 3 reads as [0], to the stakes (F218).
+    let Value::Map(pm) = t.plan.as_ref().unwrap().to_value() else { panic!() };
+    assert!(!pm.iter().any(|(k, _)| *k == Value::Uint(3)), "the default is not written");
+    assert_eq!(roundtrip(&t).plan.unwrap().unfilled, law::Unfilled::Stakes);
+    // A role carrying a cMIP's hash and type, as the proposal drafted it,
+    // is not a role share (review 7.2).
+    let mut m = t.to_map();
+    for (k, v) in m.iter_mut() {
+        if *k == Value::Uint(8) {
+            *v = Value::Map(vec![
+                (Value::Uint(0), Value::Array(vec![Value::Array(vec![Value::Uint(1), Value::Text("relay".into()), Value::Array(vec![Value::Uint(1), Value::Bytes(h(82).to_vec()), Value::Uint(0)]), Value::Uint(5)])])),
+                (Value::Uint(1), Value::Bytes(h(80).to_vec())),
+            ]);
+        }
+    }
+    assert!(Terms::decode(&m).is_err());
+    // A stake index outside field 7 is refused.
+    let mut bad = t.clone();
+    bad.plan = Some(plan_with(vec![law::ShareRule::Stake { stake: 3, part: 1 }]));
+    assert!(matches!(check(&bad), Err(LawError::Check(_))));
+    // Fees are not the plan's: key 2 is refused (F213).
+    let mut m = t.to_map();
+    for (k, v) in m.iter_mut() {
+        if *k == Value::Uint(8) {
+            if let Value::Map(pm) = v {
+                pm.push((Value::Uint(2), Value::Array(vec![])));
+            }
+        }
+    }
+    assert!(matches!(Terms::decode(&m), Err(LawError::Check(w)) if w.contains("F213")));
+}
+
+/// F213, decided by Nobody, allegedly, 10 October 2026: fees are their own
+/// field (28), so a constitution places them on their own: an area may
+/// reach fees without the plan, and the plan without fees. A clone adding a
+/// fee changes field 28, not field 8, so the plan's holder alone cannot add
+/// one. F214: each fee carries its scope.
+#[test]
+fn f213_fees_are_their_own_field_placed_by_areas() {
+    let mut t = label_with_stake();
+    t.plan = Some(plan_with(vec![law::ShareRule::Stake { stake: 0, part: 1 }]));
+    t.fees = Some(vec![
+        law::Fee { module: h(83), part: 20_000, scope: law::FeeScope::Every },
+        law::Fee { module: h(84), part: 10_000, scope: law::FeeScope::Rail(h(PAY)) },
+    ]);
+    // The treasurer's area reaches the plan; the release manager's, fees.
+    t.areas.as_mut().unwrap()[1].fields = Some(vec![FieldRef::Field(8)]);
+    t.areas.as_mut().unwrap()[0].fields = Some(vec![FieldRef::Field(law::FEES_FIELD)]);
+    assert_eq!(roundtrip(&t), t);
+    check(&t).unwrap();
+    let mut c = t.clone();
+    c.fees.as_mut().unwrap().push(law::Fee { module: h(85), part: 50_000, scope: law::FeeScope::Publication(h(86)) });
+    assert_eq!(law::changes(&t, &c), vec![law::Change::Field(law::FEES_FIELD)], "a new fee changes field 28 only");
+    let need = needs(&t, &c);
+    assert_eq!(need, vec![Power::Area(1)], "the area holding fees, not the plan's holder");
+    // Unplaced, fees fall to the clone rule, never to the plan's holder.
+    let mut u = t.clone();
+    u.areas.as_mut().unwrap()[0].fields = None;
+    let mut uc = u.clone();
+    uc.fees = None;
+    assert_eq!(needs(&u, &uc), vec![Power::Clone]);
+}
+
+/// F219 (OF7 a, the mechanic delegated with it): refund terms are a fixed
+/// point on the agreement's time reference, so terms carrying field 17
+/// name one (rule 33).
+#[test]
+fn f219_refund_terms_are_a_point_on_the_time_reference() {
+    let mut t = label();
+    t.refund = Some(law::RefundTerms { until: Value::Uint(900_000) });
+    assert!(matches!(check(&t), Err(LawError::Check(w)) if w.contains("time reference")));
+    t.time = Some((h(CLOCK), Value::Null));
+    check(&t).unwrap();
+    assert_eq!(roundtrip(&t), t);
+    // A period is not a form (F219: a fixed point).
+    let mut m = t.to_map();
+    for (k, v) in m.iter_mut() {
+        if *k == Value::Uint(17) {
+            *v = Value::Map(vec![(Value::Uint(0), Value::Array(vec![Value::Uint(1), Value::Uint(100)]))]);
+        }
+    }
+    assert!(Terms::decode(&m).is_err());
 }

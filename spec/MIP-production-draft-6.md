@@ -8,6 +8,8 @@
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
+*Revised in place again, 10 October 2026 (evening), for Nobody, allegedly, to approve again (`docs/formats-build-12b.md`, roadmap step 12b): **field 7 is the Module's own fee** (F211: the rate and who is paid; Law type 15 retired), rule 16 reads accordingly; **a rail Module declares its kind in field 11** (Fable's reading of OF26, option a); the use record's format is the cMIP's the service runs under (Fable's reading of OF12, option b).*
+
 ## Purpose
 
 Production defines how the protocol treats everything built above the core: cMIPs and Modules. It answers:
@@ -50,11 +52,17 @@ spec = {
   ? 4 => [+ hash],            ; dependencies: MIPs and specifications it relies on
   ? 5 => hash,                ; implements: the cMIP a Module implements
   ? 6 => [+ rule-ref],        ; verification rules: executable rules, as locked objects
-  ? 7 => hash,                ; fee terms: a standing offer (Law), if the creator charges
+  ? 7 => fee,                 ; the Module's own fee, if the creator charges (F211): machine-readable, informative
   ? 8 => hash,                ; predecessor: an earlier specification this one replaces for its users
   9 => tstr,                  ; the specification itself, as canonical text
-  ? 10 => [+ uint]            ; layers: for an extension, the layers it acts on beyond Production (Q18)
+  ? 10 => [+ uint],           ; layers: for an extension, the layers it acts on beyond Production (Q18)
+  ? 11 => uint                ; a rail Module's kind (OF26 a): 0 a request rail, binding payee and purpose; 1 a push rail binding
+                              ;   the commitment where the Module says; 2 a push rail binding nothing (Finance rules 10, 10c)
 }
+
+fee = [ rate, ? paid: hash ]   ; who is paid: absent, the creator (F211)
+rate = [ 0, part: uint ]        ; millionths of each payment the Module runs on
+     / [ 1, amount ]            ; a fixed amount per payment
 
 task-ref = [ mip: hash, task: uint ]
 type-def = [ type: uint, name: tstr, payload-schema: tstr ]   ; schema written in CDDL
@@ -135,8 +143,8 @@ The tasks the core defines:
 
 ### Earning
 
-16. **Fees are standing offers.** A creator who charges publishes fee terms as a standing offer (Law). A fee can only be charged where whoever bears it signed for it, and a split that omits a declared fee is visible (Law).
-17. **Usage is evidenced, not tracked, and always by a party** (F116). Receipts and splits name the specifications they ran under (Finance, Law). The evidence that a Module was used is signed by a party, never by the Module, which is a specification and signs nothing: for a rail Module, the receipt or the payer's claim naming it in field 0 (Finance); for a service someone runs on a Module, a use record signed by the identity running the service. **That record alone pays nothing** (F194, decided by Nobody, allegedly, 10 October 2026): a service the owners chose in advance is paid by a named share, with no evidence; a service the payer chose at payment time is paid by a role share only when the payer the payment commits to acknowledges its use record in its claim (Law rule 22, the relay's rule; F193); a service evidenced only by its own record is not paid. *The record is the role-filler's own signature, the self-evidence F184 closed for relays ("paying for usage invites faking usage"). Whether a client carries a user's choice of service into the payment is good practice for client developers, legible to those who look.* A plain tip carries no module fees (Finance). *The use record's format is open (F140): to be defined with the split plan's format before freeze; until then no act counts as one.*
+16. **A creator who charges states its fee in its specification** (field 7; F211, decided by Nobody, allegedly, 10 October 2026, "specs should carry as much as possible"). The rate is informative: a client shows a plan paying less than the specification asks; **only an agreement's fee entry, signed by the power that places fees (Law rule 27, terms field 28), makes a fee owed**, and nothing is forced (F42). Law's Module fee terms act (type 15) is retired. *Before step 12b: fees were standing offers.*
+17. **Usage is evidenced, not tracked, and always by a party** (F116). Receipts and splits name the specifications they ran under (Finance, Law). The evidence that a Module was used is signed by a party, never by the Module, which is a specification and signs nothing: for a rail Module, the receipt or the payer's claim naming it in field 0 (Finance); for a service someone runs on a Module, a use record signed by the identity running the service. **That record alone pays nothing** (F194, decided by Nobody, allegedly, 10 October 2026): a service the owners chose in advance is paid by a named share, with no evidence; a service the payer chose at payment time is paid by a role share only when the payer the payment commits to acknowledges its use record in its claim (Law rule 22, the relay's rule; F193); a service evidenced only by its own record is not paid. *The record is the role-filler's own signature, the self-evidence F184 closed for relays ("paying for usage invites faking usage"). Whether a client carries a user's choice of service into the payment is good practice for client developers, legible to those who look.* A plain tip carries no module fees (Finance). *The use record is defined by the cMIP the service runs under (step 12b, Fable's reading of OF12, option b), as the relay transport cMIP defines the delivery record; it binds to the object served, and is spent for its payer's other claims naming the same object (F210); F194's rule applies whatever cMIP defines it (QG3).*
 18. **Bounties.** A client or collective may offer a share of future splits to whoever builds a specification it needs. A bounty is an agreement like any other.
 
 ### Discovery and the trust root

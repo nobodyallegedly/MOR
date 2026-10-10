@@ -157,6 +157,9 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     f(&mut t);
     t
@@ -447,7 +450,12 @@ impl Lab {
 
     /// A member's resignation, from a given device (a Person).
     fn resign_from(&mut self, dev: &mut Person, agreement: Hash, area: Option<u64>) -> Hash {
-        let r = Resignation { agreement, area };
+        self.resign_leaving(dev, agreement, area, vec![])
+    }
+
+    /// A resignation naming the drafts its signer leaves behind (F207).
+    fn resign_leaving(&mut self, dev: &mut Person, agreement: Hash, area: Option<u64>, drafts: Vec<Hash>) -> Hash {
+        let r = Resignation { agreement, area, drafts: sorted(drafts) };
         law_act(&mut self.w, dev, law::types::RESIGNATION, r.to_map(), obj(agreement))
     }
 
@@ -1793,14 +1801,22 @@ fn a_members_own_rotation_is_registered_on_the_line() {
 
 #[test]
 fn open_formats_are_refused_not_guessed() {
-    // An import (type 11): its format is open. A revocation's is exact
-    // since F128: one naming no grant is invalid.
+    // Step 12b: the import (type 11, OF22 b), the delivery confirmation
+    // (type 7, OF6 b) and Module fee terms (type 15, F211) are retired,
+    // never reused: an act of a retired type is invalid. A revocation's
+    // format is exact since F128: one naming no grant is invalid.
     let mut lab = Lab::new(&|_| {});
-    let a = lab
-        .w
-        .everyday_act(&mut lab.c[0], mips().law, law::types::IMPORT, vec![], None, None);
+    for retired in [law::types::IMPORT, 7, 15] {
+        let a = lab
+            .w
+            .everyday_act(&mut lab.c[0], mips().law, retired, vec![], None, None);
+        let x = lab.w.add(&a);
+        assert!(matches!(lab.view().consent(&x), Ok(Consent::Invalid { .. })), "type {retired} is retired");
+    }
+    // An offer not in its format is invalid, not guessed.
+    let a = lab.w.everyday_act(&mut lab.c[0], mips().law, law::types::STANDING_OFFER, vec![], None, None);
     let x = lab.w.add(&a);
-    assert!(matches!(lab.view().consent(&x), Err(LawError::Unsupported(_))));
+    assert!(matches!(lab.view().consent(&x), Ok(Consent::Invalid { .. })), "an offer selling nothing at no price");
     let a = lab
         .w
         .everyday_act(&mut lab.c[0], mips().law, law::types::REVOCATION, vec![], None, None);
@@ -2999,6 +3015,9 @@ fn a_deal_changes_only_with_everyone() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -3077,6 +3096,9 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             release_rule: None,
             settles: None,
             fork_judge: None,
+            plan: None,
+            refund: None,
+            fees: None,
         };
         let d = law_act(&mut w, &mut m[0], law::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -3172,6 +3194,9 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mips());
@@ -3340,6 +3365,9 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     assert_eq!(terms.check(&mips()), Ok(()));
     let d = law_act(&mut w, &mut m[0], law::types::TERMS, terms.to_map(), None);
@@ -3877,15 +3905,16 @@ fn every_payout_matches_its_stake() {
     let split = |receipt: Hash, ana: u64, ben: u64, cy: u64| law::Split {
         receipt,
         payouts: vec![
-            law::Payout { receiver: svc_id, amount: 100, stake: None, role: None, evidence: None, fee_module: Some(fee_module), rail_fee: None },
-            law::Payout { receiver: ids[ANA], amount: ana, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[BEN], amount: ben, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[CY], amount: cy, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
+            law::Payout { receiver: svc_id, amount: 100, stake: None, role: None, evidence: None, fee_module: Some(fee_module), rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[ANA], amount: ana, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[BEN], amount: ben, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[CY], amount: cy, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
         ],
         cmip: spec("a split cMIP"),
         agreement: f,
         tally: None,
         number: None,
+        ..Default::default()
     };
     let everyone = ids.clone();
     let r1 = receipt(&mut lab, &mut svc, 1000);
@@ -3992,11 +4021,12 @@ fn unit_split(lab: &mut Lab, svc: &mut Person, f: Hash, stake: u64, receipt: Has
     use mor_core::act::Ref;
     let s = law::Split {
         receipt,
-        payouts: vec![law::Payout { receiver: to, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None }],
+        payouts: vec![law::Payout { receiver: to, amount: 1, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() }],
         cmip: spec("a split cMIP"),
         agreement: f,
         tally: count.map(|c| vec![(stake, c)]),
         number: None,
+        ..Default::default()
     };
     let everyone = lab.ids()[..2].to_vec();
     lab.w.private_act_refs(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone, previous.map(|p| vec![Ref::Act(p)]))
@@ -4225,8 +4255,8 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     };
     assert!(matches!(lab.view().backing(&incoming).unwrap(), Backing::Backed { .. }));
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
-    let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None, number: None };
+    let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() };
+    let split = |agreement: Hash, payouts: Vec<law::Payout>| law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement, tally: None, number: None, ..Default::default() };
     let by_stakes = vec![pay(ids[ANA], 400), pay(ids[BEN], 300), pay(ids[CY], 300)];
     let everyone = ids.clone();
     // The service's own split, naming the version in force: no problem.
@@ -4274,7 +4304,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     let mut fan = lab.w.genesis("a fan", vec![own_home()], None, None);
     let post = lab.w.post(&mut fan, "I sent them here");
     let own_word = lab.w.post(&mut svc, "I say the fan sent them");
-    let role = |who: Hash, amount: u64, evidence: Option<Hash>| law::Payout { receiver: who, amount, stake: None, role: Some("referral".into()), evidence, fee_module: None, rail_fee: None };
+    let role = |who: Hash, amount: u64, evidence: Option<Hash>| law::Payout { receiver: who, amount, stake: None, role: Some("referral".into()), evidence, fee_module: None, rail_fee: None, ..Default::default() };
     let rest = vec![pay(ids[ANA], 630), pay(ids[BEN], 270)];
     let with = |lab: &mut Lab, svc: &mut Person, extra: law::Payout| {
         let mut ps = rest.clone();
@@ -4305,9 +4335,9 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     let module_share = law::Payout { role: Some("rail".into()), ..role(spec("the Module's maintainer"), 100, Some(incoming)) };
     assert!(with(&mut lab, &mut svc, module_share).unevidenced.is_empty(), "the receipt names the rail the label's pointer names");
     // A fee, or a named receiver: only the plan could justify them.
-    let fee = law::Payout { receiver: svc.id, amount: 100, stake: None, role: None, evidence: None, fee_module: Some(spec("a fee Module")), rail_fee: None };
+    let fee = law::Payout { receiver: svc.id, amount: 100, stake: None, role: None, evidence: None, fee_module: Some(spec("a fee Module")), rail_fee: None, ..Default::default() };
     assert_eq!(with(&mut lab, &mut svc, fee).unplanned, vec![svc.id]);
-    let named = law::Payout { receiver: spec("a position"), amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None };
+    let named = law::Payout { receiver: spec("a position"), amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() };
     assert_eq!(with(&mut lab, &mut svc, named).unplanned, vec![spec("a position")]);
 }
 
@@ -4362,8 +4392,8 @@ fn a_split_service_is_held_to_account() {
     assert_eq!(account.unsplit, vec![Unsplit { payment: r1, claim: false, receiver: label, agreement: k, amount: Amount { unit, value: 1000 } }]);
     assert!(account.unpaid.is_empty());
     let stake = lab.view().terms(&k).unwrap().own_stake().unwrap().0 as u64;
-    let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None };
-    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None, number: None };
+    let pay = |who: Hash, amount: u64| law::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() };
+    let split = |receipt: Hash| law::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None, number: None, ..Default::default() };
     // A stranger's split names it: the service still owes a split.
     let _ = lab.w.private_act(&mut stranger, mips().law, law::types::SPLIT, split(r1).to_map(), None, ids.clone());
     assert_eq!(lab.view().service_account(&svc.id).unwrap().unsplit.len(), 1);
@@ -4559,6 +4589,9 @@ fn payer_side_splitting_follows_the_claim() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     let d = law_act(&mut lab.w, &mut lab.m[ANA], law::types::TERMS, deal.to_map(), None);
     let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
@@ -4600,6 +4633,9 @@ fn leftovers_go_by_largest_remainder_whatever_the_order() {
         release_rule: None,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     let listed = [vec![(ids[ANA], 333_333), (ids[BEN], 333_333), (ids[CY], 333_334)], vec![(ids[CY], 333_334), (ids[ANA], 333_333), (ids[BEN], 333_333)]];
     for holders in listed.iter() {
@@ -4695,7 +4731,20 @@ fn a_collective_forks() {
     let before = lab.publish(0);
     lab.sign(ANA, &before);
     let offer = {
-        let a = lab.w.everyday_act(&mut lab.c[0], mips().law, law::types::STANDING_OFFER, vec![(Value::Uint(0), Value::Text("an offer".into()))], None, None);
+        // Step 12b: an offer in its format, under the label's agreement,
+        // selling access (no publication), paid to the label, whose split
+        // service the agreement names.
+        let o = law::Offer {
+            under: Some(k),
+            sold: vec![law::Sold::Access(spec("a live stream cMIP"), mor_core::cbor::encode(&Value::Null))],
+            price: mor_core::finance::Amount { unit: spec("a unit"), value: 300 },
+            paid: Some(law::Paid::Payee(label)),
+            words: None,
+            until: None,
+            time: None,
+            refund: None,
+        };
+        let a = lab.w.everyday_act(&mut lab.c[0], mips().law, law::types::STANDING_OFFER, o.to_map(), obj(k), None);
         lab.w.add(&a)
     };
     let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
@@ -5249,6 +5298,9 @@ fn a_work_is_released_to_the_public_domain() {
         release_rule: rule,
         settles: None,
         fork_judge: None,
+        plan: None,
+        refund: None,
+        fees: None,
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
@@ -5546,6 +5598,9 @@ fn a_timed_release() {
             release_rule: None,
             settles: None,
             fork_judge: None,
+            plan: None,
+            refund: None,
+            fees: None,
         };
         let x = law_act(w, ana, law::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
@@ -6509,12 +6564,11 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
     // Nor a split's payout, whoever is named as payer.
     let split = law::Split {
         receipt: sale,
-        payouts: vec![law::Payout { receiver: bid, amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None }],
+        payouts: vec![law::Payout { receiver: bid, amount: 100, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() }],
         cmip: spec("a split cMIP"),
         agreement: deal,
         tally: None,
-        number: None,
-    };
+        number: None, ..Default::default() };
     let sp = law_act(&mut w, &mut svc, law::types::SPLIT, split.to_map(), None);
     let named = add(&mut w, &mut sb, rc(bid, fid, sp, None, None));
     assert!(reason(&w, &named).contains("payout"));
@@ -7508,8 +7562,9 @@ fn f187_6_a_departing_members_placed_signature_counts_at_the_rollback() {
     let k1 = lab.propose(ANA, &k1);
     let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
     let rot1 = lab.rotate(Some((k1, ks)), &[0]);
+    // F207: her resignation names the drafts she signed and leaves behind.
     let mut cy = lab.m[CY].clone();
-    let res_c = lab.resign_from(&mut cy, f, None);
+    let res_c = lab.resign_leaving(&mut cy, f, None, vec![two, three]);
     roll_back(&mut lab, two, &s2[..2], rot1, &[res_c]);
     let b = lab.view().broken_act(&col).unwrap();
     assert_eq!(b.map(|b| b.act), Some(rot1), "Cy's placed signature counts: two is too few");
@@ -8647,12 +8702,11 @@ fn f188_dq6_one_numbering_across_a_deals_splits_shows_a_hidden_branch() {
     let mut split = |l: &mut DealLab, agreement: Hash, number: Option<u64>| {
         let s = law::Split {
             receipt: spec(&format!("a receipt {number:?} {agreement:?}")),
-            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None }],
+            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() }],
             cmip: spec("a split cMIP"),
             agreement,
             tally: None,
-            number,
-        };
+            number, ..Default::default() };
         law_act(&mut l.w, &mut svc, law::types::SPLIT, s.to_map(), None)
     };
     split(&mut l, a1, Some(1));
@@ -8671,8 +8725,8 @@ fn f188_dq6_one_numbering_across_a_deals_splits_shows_a_hidden_branch() {
     let n = view(&l.w).split_numbers(&svc_id, &d).unwrap();
     assert_eq!((n.repeated, n.unnumbered.len()), (vec![4], 1));
     // A number counts from 1.
-    let mut s = law::Split { receipt: spec("r"), payouts: vec![], cmip: spec("c"), agreement: d, tally: None, number: Some(0) };
-    s.payouts.push(law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None });
+    let mut s = law::Split { receipt: spec("r"), payouts: vec![], cmip: spec("c"), agreement: d, tally: None, number: Some(0), ..Default::default() };
+    s.payouts.push(law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() });
     assert!(law::Split::decode(&s.to_map()).is_err());
 }
 
@@ -8932,12 +8986,11 @@ fn f190_qf4_a_missing_or_repeated_number_breaks_the_plan() {
     let mut split = |l: &mut DealLab, number: Option<u64>, tag: &str| {
         let s = law::Split {
             receipt: spec(&format!("a receipt {tag}")),
-            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None }],
+            payouts: vec![law::Payout { receiver: ana, amount: 1, stake: Some(0), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() }],
             cmip: spec("a split cMIP"),
             agreement: d,
             tally: None,
-            number,
-        };
+            number, ..Default::default() };
         law_act(&mut l.w, &mut svc, law::types::SPLIT, s.to_map(), None)
     };
     let one = split(&mut l, Some(1), "one");
@@ -9128,12 +9181,12 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
     let relay_id = relay.id;
     let read = |lab: &mut Lab, svc: &mut Person, evidence: Hash| {
         let payouts = vec![
-            law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: relay_id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(evidence), fee_module: None, rail_fee: None },
+            law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: relay_id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(evidence), fee_module: None, rail_fee: None, ..Default::default() },
         ];
-        let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None };
+        let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None, ..Default::default() };
         let x = lab.w.private_act(svc, mips().law, law::types::SPLIT, s.to_map(), None, everyone.clone());
         let mut v = lab.view();
         v.delivery_records.insert(transport);
@@ -9339,12 +9392,12 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
     lab.w.add(&a);
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let payouts = vec![
-        law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None },
+        law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None, ..Default::default() },
     ];
-    let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None };
+    let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None, ..Default::default() };
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, s.to_map(), None, ids.clone());
     let mut v = lab.view();
     v.delivery_records.insert(transport);
@@ -9414,15 +9467,15 @@ fn review_f190_7_a_complete_version_naming_a_tip_nobody_holds_is_a_plain_version
     assert_eq!(l.in_force().unwrap(), s);
 }
 
-/// Review finding 5b (BREAKS, rule 22, F184): "the object the payment was
-/// for" is read from the publication the payment names in `fulfils`. A
-/// purchase that names the standing offer instead (Finance, receipt field
-/// 5: "the obligation, agreement, offer or payee-pointer act this hop
-/// follows") is a purchase to the core, but names no publication the
-/// reading can follow: no delivery record ever counts for it, however
-/// plainly the buyer's claim acknowledges it.
+/// Review finding 5b (BREAKS, rule 22, F184), closed by step 12b (Fable's
+/// 4b): "the object the payment was for" is read from the publication the
+/// payment names in `fulfils`, or, for a purchase naming the standing
+/// offer, from a publication the offer sells (its field 1). Before the
+/// offer had a format, no delivery record could ever count for such a
+/// purchase; now the record of the song the offer sells, acknowledged by
+/// the buyer's claim, fills the relay's role.
 #[test]
-fn review_f190_5b_no_delivery_record_counts_on_a_purchase_naming_the_offer() {
+fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_offer_that_sells_it() {
     use mor_core::finance::{Amount, Claim, Payer, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
@@ -9445,13 +9498,23 @@ fn review_f190_5b_no_delivery_record_counts_on_a_purchase_naming_the_offer() {
     let ptr = lab.pointer(0, 1, None, &[rail]);
     lab.sign(BEN, &ptr);
     let locked = spec("the song's locked bytes");
-    let _song = {
+    let song = {
         let x = lab.w.everyday_act(&mut lab.c[0], mips().envelope, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
         lab.w.add(&x)
     };
-    // The collective's standing offer for the song (its format is open).
+    // The collective's standing offer for the song, in its format (step 12b).
     let offer = {
-        let x = lab.w.everyday_act(&mut lab.c[0], mips().law, law::types::STANDING_OFFER, vec![], None, None);
+        let o = law::Offer {
+            under: Some(k1),
+            sold: vec![law::Sold::Publication(song)],
+            price: Amount { unit: spec("a unit"), value: 1000 },
+            paid: Some(law::Paid::Payee(label)),
+            words: None,
+            until: None,
+            time: None,
+            refund: None,
+        };
+        let x = lab.w.everyday_act(&mut lab.c[0], mips().law, law::types::STANDING_OFFER, o.to_map(), obj(k1), None);
         lab.w.add(&x)
     };
     let proof = b"the fan's payment under the offer".to_vec();
@@ -9498,16 +9561,16 @@ fn review_f190_5b_no_delivery_record_counts_on_a_purchase_naming_the_offer() {
     lab.rail_valid.push((a, mor_core::finance::PaidAt::Flow(ptr)));
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let payouts = vec![
-        law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-        law::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None },
+        law::Payout { receiver: ids[ANA], amount: 360, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: ids[BEN], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: ids[CY], amount: 270, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+        law::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None, ..Default::default() },
     ];
-    let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None };
+    let s = law::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None, ..Default::default() };
     let x = lab.w.private_act(&mut svc, mips().law, law::types::SPLIT, s.to_map(), None, ids.clone());
     let mut v = lab.view();
     v.delivery_records.insert(transport);
-    assert_eq!(v.split(&x).unwrap().unevidenced, vec![relay.id], "acknowledged by the payer, for the song served, and still evidence of nothing: the payment names the offer, not the publication");
+    assert!(v.split(&x).unwrap().unevidenced.is_empty(), "acknowledged by the payer, for the song the offer sells: the relay's role is filled");
 }
 
 /// Review, what held: the judge's settlement made after the parties'
@@ -9921,12 +9984,12 @@ impl RoleLab {
     fn unevidenced(&mut self, to: Hash, evidence: Hash, told: Option<Hash>) -> Vec<Hash> {
         let ids = self.lab.ids();
         let payouts = vec![
-            law::Payout { receiver: ids[ANA], amount: 360, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[BEN], amount: 270, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: ids[CY], amount: 270, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None },
-            law::Payout { receiver: to, amount: 100, stake: None, role: Some("a helper".into()), evidence: Some(evidence), fee_module: None, rail_fee: None },
+            law::Payout { receiver: ids[ANA], amount: 360, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[BEN], amount: 270, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: ids[CY], amount: 270, stake: Some(self.stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() },
+            law::Payout { receiver: to, amount: 100, stake: None, role: Some("a helper".into()), evidence: Some(evidence), fee_module: None, rail_fee: None, ..Default::default() },
         ];
-        let s = law::Split { receipt: self.incoming, payouts, cmip: spec("a split cMIP"), agreement: self.k1, tally: None, number: None };
+        let s = law::Split { receipt: self.incoming, payouts, cmip: spec("a split cMIP"), agreement: self.k1, tally: None, number: None, ..Default::default() };
         let x = self.lab.w.private_act(&mut self.svc, mips().law, law::types::SPLIT, s.to_map(), None, ids);
         let mut v = self.lab.view();
         v.delivery_records.extend(told);
@@ -10044,8 +10107,13 @@ fn owed_back_lab(payer: Option<mor_core::finance::Payer>, proof: &[u8]) -> (Lab,
 /// [`owed_back_lab`], the payer made in the lab first: `make` gives the
 /// payer the receipt names, and the person, where there is one.
 fn owed_back_lab_with(make: impl FnOnce(&mut Lab) -> (Option<mor_core::finance::Payer>, Option<Person>), proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash, Option<Person>) {
+    owed_back_lab_terms(&|_| {}, make, proof)
+}
+
+/// [`owed_back_lab_with`], the founding terms shaped by `f`.
+fn owed_back_lab_terms(f: &dyn Fn(&mut Terms), make: impl FnOnce(&mut Lab) -> (Option<mor_core::finance::Payer>, Option<Person>), proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash, Option<Person>) {
     use mor_core::finance::{Amount, Payload as Fin, Purchase, Receipt};
-    let mut lab = Lab::new(&|_| {});
+    let mut lab = Lab::new(f);
     let (payer, person) = make(&mut lab);
     let label = lab.c[0].id;
     let (k1, _, _, rot1) = break_by_lost_record(&mut lab);
@@ -10395,4 +10463,800 @@ fn review_fdb_4_today_a_second_settlement_from_the_reference_naming_the_first_ch
     // Under the explored shape, r2 is a third complete child of d beside a1
     // and b1 (closed) and s's line: the deal reads as broken again or r2
     // undoes s. Neither is what A3 decided.
+}
+
+// ---------------------------------------------------------------------------
+// Step 12b, the open formats (10 October 2026): `docs/formats-build-12b.md`.
+// Each test was written first and seen to fail for the reason the decision
+// gives. Test identities only.
+// ---------------------------------------------------------------------------
+
+/// F208, decided by Nobody, allegedly, 10 October 2026 ("Agreed"): F197
+/// applies to a one-time key too. A notice addressed to the key, published
+/// naming the payment (a bare signing key cannot be sealed to: the
+/// mechanic, the build's), with a deadline: once it lapses with no address
+/// given, the closing names the debt and does not wait. Without a notice,
+/// or before the deadline, the debt still blocks.
+#[test]
+fn f208_a_one_time_key_is_noticed_and_never_blocks_a_closing_for_good() {
+    use mor_core::finance::Payer;
+    let owed_why = |e: &law::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
+    let key = SchnorrKey::from_secret(&spec("a one-time key, F208")).unwrap();
+    let bare = mor_core::identity::SigningKey { scheme: mor_core::act::Scheme::Founding(1), key: key.public().to_vec() };
+    let public_notice = |lab: &mut Lab, owed: Hash| {
+        let n = law::Notice { payment: owed, deadline: (spec("a block height reference"), Value::Uint(900_000)) };
+        let mut dev = lab.c[0].clone();
+        let a = lab.w.everyday_act(&mut dev, mips().law, law::types::NOTICE, n.to_map(), obj(owed), None);
+        let x = lab.w.add(&a);
+        lab.c[0] = dev;
+        x
+    };
+    // Named, no notice: it blocks.
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Key(bare.clone())), b"a key's penny");
+    let e = close_with(&mut lab, label, rot1, vec![law::OpenOwed { payment: owed, notice: None, holder: None }], &[]);
+    assert!(owed_why(&e), "{:?}", e.why);
+    // A public notice, its deadline not passed: it blocks.
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Key(bare.clone())), b"a key's penny");
+    let n = public_notice(&mut lab, owed);
+    let e = close_with(&mut lab, label, rot1, vec![law::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[]);
+    assert!(owed_why(&e), "the deadline has not passed: {:?}", e.why);
+    // Lapsed: the collective may close, the debt named and visible.
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Key(bare)), b"a key's penny");
+    let n = public_notice(&mut lab, owed);
+    let e = close_with(&mut lab, label, rot1, vec![law::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
+    assert!(!owed_why(&e), "{:?}", e.why);
+    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "the debt stays visible, unpaid");
+}
+
+/// F207, decided by Nobody, allegedly, 10 October 2026 ("Yes. If the
+/// resignation needs it, the resignation gets it."): a resignation names
+/// the drafts its signer had signed and leaves behind; a version it names
+/// never brings its signer back, whichever line puts it in force. A draft
+/// it fails to name is her stated cost (F195): it brings her back.
+#[test]
+fn f207_a_resignation_names_the_drafts_it_leaves_behind() {
+    let run = |named: bool| {
+        let mut lab = Lab::new(&|_| {});
+        let f = lab.founding;
+        let col = lab.c[0].id;
+        // A constitutional draft every member signs, Cy among them.
+        let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|t| t.text = "A draft Cy signed.".into());
+        let draft = lab.propose(ANA, &t);
+        let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &draft)).collect();
+        for x in &s {
+            lab.acknowledge(0, *x);
+        }
+        // Cy resigns; a first line registers it, putting nothing in force.
+        let mut cy = lab.m[CY].clone();
+        let res = lab.resign_leaving(&mut cy, f, None, if named { vec![draft] } else { vec![] });
+        lab.m[CY] = cy;
+        lab.record(0, None, &[], vec![res], f);
+        let n0 = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+        assert!(!n0.voices.contains(&lab.ids()[CY]), "registered: Cy has left");
+        // A later line, a rotation, declares the draft (rule 37).
+        lab.rotate(Some((draft, s)), &[0]);
+        assert_eq!(lab.view().current(&col).unwrap().unwrap().agreement, draft);
+        let n = lab.view().next_voices(&col, &Power::Constitutional, &[]).unwrap().unwrap();
+        n.voices.contains(&lab.ids()[CY])
+    };
+    assert!(!run(true), "named in her resignation: the draft never brings her back");
+    assert!(run(false), "not named: her stated cost, the draft brings her back (F195)");
+}
+
+/// Fable's formats review, 2.6, taken under the delegation (F189 (8) by
+/// analogy): a request to a judge counts, and the judge's period runs, only
+/// where the request is public or sealed to the judge it reaches. A
+/// settlement request Ben keeps sealed to himself activates no judge: the
+/// judge's settlement made on it settles nothing. Sealed to the judge, it
+/// does.
+#[test]
+fn review_2_6_a_settlement_request_counts_only_where_it_reaches_the_judge() {
+    for reaches in [false, true] {
+        let (mut l, mut judges) = judged_deal(0);
+        let d = l.d;
+        let a1 = l.version(d, "Branch A.", None);
+        let b1 = l.version(d, "Branch B.", None);
+        assert_eq!(l.in_force().unwrap(), d);
+        let r = law::SettlementRequest { reference: d };
+        let to = if reaches { vec![l.ben.id, judges[0].id] } else { vec![l.ben.id] };
+        let rq = l.w.private_act(&mut l.ben, mips().law, law::types::SETTLEMENT_REQUEST, r.to_map(), obj(d), to);
+        judge_settles(&mut l, &mut judges[0], rq, a1, vec![b1], vec![]);
+        if reaches {
+            assert_eq!(l.in_force().unwrap(), a1, "sealed to the judge: the settlement counts");
+        } else {
+            assert_eq!(l.in_force().unwrap(), d, "sealed to nobody but the asker: no judge was asked");
+        }
+    }
+}
+
+/// A deal of Ana and Ben naming a split service by one grant each (F129,
+/// H4), a song published by Ana, and a fan: the selling side of step 12b.
+struct ServiceDeal {
+    w: World,
+    ana: Person,
+    ben: Person,
+    svc: Person,
+    fan: Person,
+    deal: Hash,
+    song: Hash,
+    locked: Hash,
+    sa: Person,
+    sb: Person,
+}
+
+impl ServiceDeal {
+    fn new() -> ServiceDeal {
+        Self::with(&|_| {})
+    }
+
+    fn with(f: &dyn Fn(&mut Terms)) -> ServiceDeal {
+        let mut w = World::new();
+        let mut ana = w.genesis("ana", vec![own_home()], None, None);
+        let mut ben = w.genesis("ben", vec![own_home()], None, None);
+        let mut svc = w.genesis("a split service", vec![own_home()], None, None);
+        let fan = w.genesis("a fan", vec![own_home()], None, None);
+        let sid = svc.id;
+        let deal_grant = |who: &str| {
+            let (k, p) = grant_key(&format!("{sid:?} for {who}, 12b"));
+            (k, Grant { grantee: sid, scope: 1, agreements: None, this_agreement: true, key: p, ..plain_grant(sid, false) })
+        };
+        let (ka, gra) = deal_grant("ana");
+        let (kb, grb) = deal_grant("ben");
+        let ga = law_act(&mut w, &mut ana, law::types::GRANT, gra.to_map(), None);
+        let gb = law_act(&mut w, &mut ben, law::types::GRANT, grb.to_map(), None);
+        sign(&mut w, &mut svc, &ga);
+        sign(&mut w, &mut svc, &gb);
+        let locked = spec("the song's locked bytes, 12b");
+        let work = spec("the song, 12b");
+        let mut t = deal_terms(ana.id, ben.id);
+        t.payee_grants = Some(vec![ga, gb]);
+        t.stakes = Some(vec![law::Stake { object: law::Who::Id(work), holders: vec![(law::Who::Id(ana.id), 600_000), (law::Who::Id(ben.id), 400_000)] }]);
+        f(&mut t);
+        let deal = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+        sign(&mut w, &mut ana, &deal);
+        sign(&mut w, &mut ben, &deal);
+        let song = {
+            let x = w.everyday_act(&mut ana, mips().envelope, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
+            w.add(&x)
+        };
+        let strand = |p: &Person, g: Hash, k: &SchnorrKey| {
+            let mut s = p.clone();
+            s.binding = g;
+            s.sign = k.clone();
+            s.seq = vec![];
+            s.cite = Some((p.id, vec![g]));
+            s
+        };
+        let sa = strand(&ana, ga, &ka);
+        let sb = strand(&ben, gb, &kb);
+        ServiceDeal { w, ana, ben, svc, fan, deal, song, locked, sa, sb }
+    }
+
+    /// An offer by `by`, under `under`, paying `paid`, for the song.
+    fn offer(&mut self, by: usize, under: Option<Hash>, paid: Option<law::Paid>) -> Hash {
+        let o = law::Offer {
+            under,
+            sold: vec![law::Sold::Publication(self.song)],
+            price: mor_core::finance::Amount { unit: spec("a unit"), value: 1000 },
+            paid,
+            words: None,
+            until: None,
+            time: None,
+            refund: None,
+        };
+        let p = if by == 0 { &mut self.ana } else { &mut self.ben };
+        law_act(&mut self.w, p, law::types::STANDING_OFFER, o.to_map(), under.map(|u| vec![Object { chain: u, predecessor: u }]))
+    }
+
+    /// A receipt for a fan's payment, in `payee`'s name, by its signer
+    /// `by` (a person, or the service's strand), following `fulfils` and
+    /// naming the claim `purchase`.
+    fn receipt(w: &mut World, by: &mut Person, payee: Hash, payer: Hash, fulfils: Hash, purchase: Option<Hash>, proof: &[u8]) -> Hash {
+        use mor_core::finance::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+        let r = Fin::Receipt(Receipt {
+            rail: spec("a rail Module"),
+            proof: proof.to_vec(),
+            payer: Some(Payer::Identity(payer)),
+            payee,
+            amount: Amount { unit: spec("a unit"), value: 1000 },
+            fulfils,
+            previous: None,
+            forward: None,
+            batch: None,
+            purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
+        });
+        let a = w.everyday_act(by, mips().finance, 2, r.to_map(), None, None);
+        w.add(&a)
+    }
+}
+
+/// Fable's formats review 2.1 to 2.3 and OF3 (a), taken under the
+/// delegation: an offer under a deal is signed by every party; its field 3
+/// is checked against field 14 (a payee the deal's grants list); under a
+/// deal naming no split service it is paid by the stakes; a lone seller's
+/// offer pays the signer, or one who accepted it (Finance rule 14). An
+/// offer is always public (F215).
+#[test]
+fn review_2_1_to_2_3_the_offers_field_3_and_every_partys_signature() {
+    let mut l = ServiceDeal::new();
+    let (aid, bid, deal) = (l.ana.id, l.ben.id, l.deal);
+    let o = l.offer(0, Some(deal), Some(law::Paid::Payee(aid)));
+    let e = view(&l.w).offer(&o).unwrap();
+    assert!(!e.counts && e.unsigned == vec![bid], "Ana alone: outside the claiming agreement ({:?})", e.problems);
+    sign(&mut l.w, &mut l.ben, &o);
+    let e = view(&l.w).offer(&o).unwrap();
+    assert!(e.counts, "every party signed, paying a payee field 14 lists: {:?}", e.problems);
+    assert_eq!(e.latest, vec![o]);
+    // Paying someone who is no payee of the deal (2.2), or the stakes
+    // where the deal names a service (2.1): never.
+    let carla = spec("Carla, a party who granted nothing");
+    for paid in [law::Paid::Payee(carla), law::Paid::ByStakes] {
+        let x = l.offer(0, Some(deal), Some(paid));
+        sign(&mut l.w, &mut l.ben, &x);
+        assert!(!view(&l.w).offer(&x).unwrap().counts);
+    }
+    // A deal naming no split service: paid by the stakes (2.1).
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let t = deal_terms(ana.id, ben.id);
+    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    for (paid, ok) in [(law::Paid::Payee(ana.id), false), (law::Paid::ByStakes, true)] {
+        let o = law::Offer { under: Some(d), sold: vec![law::Sold::Access(spec("a live stream cMIP"), cbor_null())], price: mor_core::finance::Amount { unit: spec("a unit"), value: 5 }, paid: Some(paid), words: None, until: None, time: None, refund: None };
+        let x = law_act(&mut w, &mut ana, law::types::STANDING_OFFER, o.to_map(), obj(d));
+        sign(&mut w, &mut ben, &x);
+        assert_eq!(view(&w).offer(&x).unwrap().counts, ok);
+    }
+    // A lone seller (F215): her own offer counts; one paying Dan counts
+    // only once Dan accepts it (2.3); a sealed offer never.
+    let mut dan = l.w.genesis("dan", vec![own_home()], None, None);
+    let lone = |l: &mut ServiceDeal, paid: Option<law::Paid>| l.offer(1, None, paid);
+    let x = lone(&mut l, None);
+    assert!(view(&l.w).offer(&x).unwrap().counts);
+    let y = lone(&mut l, Some(law::Paid::Payee(dan.id)));
+    assert!(!view(&l.w).offer(&y).unwrap().counts);
+    sign(&mut l.w, &mut dan, &y);
+    assert!(view(&l.w).offer(&y).unwrap().counts, "Dan accepted it");
+    let o = law::Offer { under: None, sold: vec![law::Sold::Publication(l.song)], price: mor_core::finance::Amount { unit: spec("a unit"), value: 1 }, paid: None, words: None, until: None, time: None, refund: None };
+    let sealed = l.w.private_act(&mut l.ben, mips().law, law::types::STANDING_OFFER, o.to_map(), None, vec![l.fan.id]);
+    assert!(!view(&l.w).offer(&sealed).unwrap().counts, "an offer is always public (F215)");
+}
+
+fn cbor_null() -> Vec<u8> {
+    mor_core::cbor::encode(&Value::Null)
+}
+
+/// OF4 (a), Fable's reading: an offer changes by versions on its own chain
+/// (`[first, previous]`); the latest replaces the earlier; one selling
+/// nothing withdraws it; two versions naming the same previous are the
+/// seller's fork, both shown.
+#[test]
+fn of4_an_offer_chain_of_versions() {
+    let mut l = ServiceDeal::new();
+    let first = l.offer(1, None, None);
+    let v = |l: &mut ServiceDeal, prev: Hash, sold: Vec<law::Sold>| {
+        let o = law::Offer { under: None, sold, price: mor_core::finance::Amount { unit: spec("a unit"), value: 2000 }, paid: None, words: None, until: None, time: None, refund: None };
+        law_act(&mut l.w, &mut l.ben, law::types::STANDING_OFFER, o.to_map(), Some(vec![Object { chain: first, predecessor: prev }]))
+    };
+    let song = l.song;
+    let v2 = v(&mut l, first, vec![law::Sold::Publication(song)]);
+    assert_eq!(view(&l.w).offer(&first).unwrap().latest, vec![v2]);
+    let gone = v(&mut l, v2, vec![]);
+    let e = view(&l.w).offer(&gone).unwrap();
+    assert!(e.withdraws && e.counts && e.latest == vec![gone]);
+    let other = v(&mut l, v2, vec![law::Sold::Publication(song)]);
+    assert_eq!(view(&l.w).offer(&first).unwrap().latest, sorted(vec![gone, other]), "a fork of the seller's: both tips shown");
+}
+
+/// H5's reading 4, lifted (Fable's review X3): a split service's grant key
+/// may sign a receipt following an offer that pays its grantor under the
+/// grantor's own claim; not one following an offer paying another.
+#[test]
+fn h5_reading_4_lifted_a_service_receipts_under_its_grantors_offer() {
+    let mut l = ServiceDeal::new();
+    let (aid, bid, fid, deal) = (l.ana.id, l.ben.id, l.fan.id, l.deal);
+    let to_ana = l.offer(0, Some(deal), Some(law::Paid::Payee(aid)));
+    sign(&mut l.w, &mut l.ben, &to_ana);
+    let to_ben = l.offer(0, Some(deal), Some(law::Paid::Payee(bid)));
+    sign(&mut l.w, &mut l.ben, &to_ben);
+    let mut sa = l.sa.clone();
+    let ok = ServiceDeal::receipt(&mut l.w, &mut sa, aid, fid, to_ana, Some(deal), b"one");
+    assert!(matches!(view(&l.w).backing(&ok).unwrap(), Backing::Backed { .. }), "{:?}", view(&l.w).backing(&ok).unwrap());
+    let wrong = ServiceDeal::receipt(&mut l.w, &mut sa, aid, fid, to_ben, Some(deal), b"two");
+    assert!(matches!(view(&l.w).backing(&wrong).unwrap(), Backing::NotBacked { .. }), "the offer pays Ben: Ana's grant key cannot receipt under it");
+}
+
+/// F215, decided by Nobody, allegedly, 10 October 2026: a lone seller's
+/// offer is itself the agreement with the buyer: a payment following it
+/// names no claim and is accepted under the offer's terms. A payment
+/// following co-owners' offer names their agreement, or it is no purchase
+/// (the offer's field 0; mechanic, the build's); one naming another
+/// agreement is no purchase under this offer.
+#[test]
+fn f215_a_lone_sellers_offer_is_the_agreement_with_the_buyer() {
+    let mut l = ServiceDeal::new();
+    let (bid, fid, deal) = (l.ben.id, l.fan.id, l.deal);
+    let lone = l.offer(1, None, None);
+    let mut ben = l.ben.clone();
+    let paid = ServiceDeal::receipt(&mut l.w, &mut ben, bid, fid, lone, None, b"a lone sale");
+    let e = view(&l.w).purchase(&paid).unwrap().unwrap();
+    assert_eq!(e.verdict, law::PurchaseVerdict::Purchase, "accepted under the offer's terms");
+    // Under the deal: a payment naming no claim is no purchase.
+    let under = l.offer(0, Some(deal), Some(law::Paid::Payee(bid)));
+    sign(&mut l.w, &mut l.ben, &under);
+    let none = ServiceDeal::receipt(&mut l.w, &mut ben, bid, fid, under, None, b"no claim");
+    assert!(matches!(view(&l.w).purchase(&none).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { .. }));
+    // An offer not every party signed sells nothing under the deal.
+    let alone = l.offer(1, Some(deal), Some(law::Paid::Payee(bid)));
+    let x = ServiceDeal::receipt(&mut l.w, &mut ben, bid, fid, alone, Some(deal), b"outside");
+    assert!(matches!(view(&l.w).purchase(&x).unwrap().unwrap().verdict, law::PurchaseVerdict::NoPurchase { why } if why.contains("offer")));
+}
+
+/// T-1, dissolved by the reading of Finance 10c taken under the delegation
+/// (Fable's review 6.1; rule 15b, F72): "the work's current one" is the
+/// current version of the claim the payment names. Two agreements hold
+/// stakes in one work: the shared deal of Ana and Ben, and Ana's own,
+/// selling it alone under a 100% plan (scenario 2, step 1). A payment
+/// naming Ana's own agreement is a purchase under it, shown outside the
+/// shared one, the contest beside it.
+#[test]
+fn t1_a_purchase_under_either_agreement_holding_a_stake_in_the_work() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let fan = w.genesis("a fan", vec![own_home()], None, None);
+    let work = spec("a song two agreements claim");
+    let staked = |t: &mut Terms, holders: Vec<(Hash, u64)>| {
+        t.stakes = Some(vec![law::Stake { object: law::Who::Id(work), holders: holders.into_iter().map(|(h, n)| (law::Who::Id(h), n)).collect() }]);
+    };
+    let mut shared = deal_terms(ana.id, ben.id);
+    staked(&mut shared, vec![(ana.id, 500_000), (ben.id, 500_000)]);
+    let shared = law_act(&mut w, &mut ana, law::types::TERMS, shared.to_map(), None);
+    sign(&mut w, &mut ana, &shared);
+    sign(&mut w, &mut ben, &shared);
+    let mut own = deal_terms(ana.id, spec("nobody else"));
+    own.parties = vec![ana.id];
+    staked(&mut own, vec![(ana.id, 1_000_000)]);
+    let own = law_act(&mut w, &mut ana, law::types::TERMS, own.to_map(), None);
+    sign(&mut w, &mut ana, &own);
+    let publication = {
+        let x = w.everyday_act(&mut ana, mips().envelope, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked").to_vec()))], None, None);
+        w.add(&x)
+    };
+    let aid = ana.id;
+    let paid = ServiceDeal::receipt(&mut w, &mut ana, aid, fan.id, publication, Some(own), b"under her own");
+    assert_eq!(view(&w).purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase, "a purchase under the agreement it names");
+    let paid = ServiceDeal::receipt(&mut w, &mut ana, aid, fan.id, publication, Some(shared), b"under the shared deal");
+    assert_eq!(view(&w).purchase(&paid).unwrap().unwrap().verdict, law::PurchaseVerdict::Purchase);
+}
+
+fn plan_of(shares: Vec<law::ShareRule>, metrics: Vec<law::Metric>) -> law::SplitPlan {
+    law::SplitPlan { shares, cmip: spec("a split cMIP"), unfilled: law::Unfilled::Stakes, top: vec![], service_bears_rail_fees: false, max_rail_fee: None, params: None, metrics }
+}
+
+fn payout(receiver: Hash, amount: u64) -> law::Payout {
+    law::Payout { receiver, amount, stake: None, role: None, evidence: None, fee_module: None, rail_fee: None, metric: None }
+}
+
+impl ServiceDeal {
+    /// A sale under the deal, receipted in Ana's name by the service's
+    /// strand, with the fan's claim acknowledging `acks`, its rail proof
+    /// valid: the payer the payment commits to is the fan (F193).
+    fn sale(&mut self, proof: &[u8], acks: Vec<Hash>) -> (Hash, Hash) {
+        use mor_core::finance::{Amount, Claim, Payload as Fin, Purchase};
+        let (aid, fid, deal, song) = (self.ana.id, self.fan.id, self.deal, self.song);
+        let mut sa = self.sa.clone();
+        let r = ServiceDeal::receipt(&mut self.w, &mut sa, aid, fid, song, Some(deal), proof);
+        self.sa = sa;
+        let c = Fin::Claim(Claim {
+            rail: spec("a rail Module"),
+            proof: proof.to_vec(),
+            payee: aid,
+            amount: Amount { unit: spec("a unit"), value: 1000 },
+            fulfils: song,
+            disagrees: None,
+            referral: None,
+            refund: None,
+            anonymous: None,
+            purchase: Some(Purchase { agreement: deal, line: deal }),
+        });
+        let a = self.w.everyday_act(&mut self.fan, mips().finance, 3, c.to_map(), None, (!acks.is_empty()).then_some(acks));
+        (r, self.w.add(&a))
+    }
+
+    fn split(&mut self, receipt: Hash, payouts: Vec<law::Payout>, metrics: Vec<Hash>) -> Hash {
+        let s = law::Split { receipt, payouts, cmip: spec("a split cMIP"), agreement: self.deal, tally: None, number: Some(1), modules: vec![], metric_records: metrics, transfers: vec![] };
+        let all = vec![self.ana.id, self.ben.id];
+        self.w.private_act(&mut self.svc, mips().law, law::types::SPLIT, s.to_map(), None, all)
+    }
+
+    fn stake_payouts(&self) -> Vec<law::Payout> {
+        vec![
+            law::Payout { stake: Some(0), ..payout(self.ana.id, 480) },
+            law::Payout { stake: Some(0), ..payout(self.ben.id, 320) },
+        ]
+    }
+}
+
+/// Fable's review 7.2, taken under the delegation: a role share is named
+/// by its role; a payout filling a role the plan names counts on any act
+/// the committed payer acknowledges, whatever cMIP defines it; a payout
+/// filling a role the plan does not name is unplanned. Several fillers of
+/// one role divide it equally (OF11 a, Fable's reading).
+#[test]
+fn review_7_2_a_role_share_is_named_by_its_role() {
+    let mut l = ServiceDeal::with(&|t| {
+        t.plan = Some(plan_of(vec![law::ShareRule::Stake { stake: 0, part: 800_000 }, law::ShareRule::Role { role: "relay".into(), part: 200_000 }], vec![]));
+    });
+    let mut r1 = l.w.genesis("relay one", vec![own_home()], None, None);
+    let mut r2 = l.w.genesis("relay two", vec![own_home()], None, None);
+    let rec = |w: &mut World, p: &mut Person, cmip: &str| {
+        let a = w.everyday_act(p, spec(cmip), 0, vec![(Value::Uint(0), Value::Bytes(spec("the song's locked bytes, 12b").to_vec()))], None, None);
+        w.add(&a)
+    };
+    // Two transport cMIPs, neither named in the plan.
+    let e1 = rec(&mut l.w, &mut r1, "a relay transport cMIP, draft 3");
+    let e2 = rec(&mut l.w, &mut r2, "its successor, draft 4");
+    let (receipt, claim) = l.sale(b"a sale", vec![e1, e2]);
+    let mut ps = l.stake_payouts();
+    ps.push(law::Payout { role: Some("relay".into()), evidence: Some(e1), ..payout(r1.id, 100) });
+    ps.push(law::Payout { role: Some("relay".into()), evidence: Some(e2), ..payout(r2.id, 100) });
+    let x = l.split(receipt, ps.clone(), vec![]);
+    let mut v = view(&l.w);
+    v.rail_valid.insert(claim, mor_core::finance::PaidAt::Flow(spec("a pointer")));
+    let e = v.split(&x).unwrap();
+    assert!(e.unevidenced.is_empty() && e.unplanned.is_empty() && e.unequal_roles.is_empty(), "{e:?}");
+    // Unequal: 150 and 50.
+    ps[2].amount = 150;
+    ps[3].amount = 50;
+    let x = l.split(receipt, ps.clone(), vec![]);
+    let mut v = view(&l.w);
+    v.rail_valid.insert(claim, mor_core::finance::PaidAt::Flow(spec("a pointer")));
+    assert_eq!(v.split(&x).unwrap().unequal_roles, vec!["relay".to_string()]);
+    // A role the plan does not name.
+    ps[3].role = Some("mastering".into());
+    let x = l.split(receipt, ps, vec![]);
+    let mut v = view(&l.w);
+    v.rail_valid.insert(claim, mor_core::finance::PaidAt::Flow(spec("a pointer")));
+    assert_eq!(v.split(&x).unwrap().unplanned, vec![r2.id]);
+}
+
+/// F214, decided by Nobody, allegedly, 10 October 2026 ("A service not
+/// respecting this is liable"): a fee entry says when it applies; a split
+/// leaving out a fee its entry makes owed is a wrong split, and the fee is
+/// the service's open obligation (rule 29). The split's list of Modules
+/// (key 6) is the service's statement, never what decides. A fee scoped to
+/// another rail is not owed.
+#[test]
+fn f214_a_skipped_fee_is_the_services_open_obligation() {
+    let (m, n) = (spec("a publishing Module, 12b"), spec("an on-chain rail Module, 12b"));
+    let mut l = ServiceDeal::with(&|t| {
+        t.plan = Some(plan_of(vec![law::ShareRule::Stake { stake: 0, part: 1 }], vec![]));
+        t.fees = Some(vec![
+            law::Fee { module: spec("a publishing Module, 12b"), part: 20_000, scope: law::FeeScope::Every },
+            law::Fee { module: spec("an on-chain rail Module, 12b"), part: 10_000, scope: law::FeeScope::Rail(spec("an on-chain rail Module, 12b")) },
+        ]);
+    });
+    let creator = spec("the publishing Module's creator");
+    let (receipt, _) = l.sale(b"a sale", vec![]);
+    let x = l.split(receipt, l.stake_payouts(), vec![]);
+    let e = view(&l.w).split(&x).unwrap();
+    assert_eq!(e.fees_skipped, vec![m], "owed on every payment; the rail fee is not owed on another rail");
+    assert!(!e.fees_skipped.contains(&n));
+    assert!(e.problems.iter().any(|w| w.contains("F214")));
+    let svc = l.svc.id;
+    assert_eq!(view(&l.w).service_account(&svc).unwrap().fees_skipped, vec![(x, m)]);
+    let mut ps = l.stake_payouts();
+    ps.push(law::Payout { fee_module: Some(m), ..payout(creator, 20) });
+    let y = l.split(receipt, ps, vec![]);
+    let e = view(&l.w).split(&y).unwrap();
+    assert!(e.fees_skipped.is_empty() && e.unplanned.is_empty(), "{e:?}");
+}
+
+/// Fable's review 2.7, taken under the delegation (F194), with OF13 (a)
+/// and (d), Fable's readings: a metric's measurer is none of the
+/// identities its metric divides among, nor the split service; the metric
+/// pays only identities the plan already pays; its record is signed by the
+/// measurer, of the metric's Module.
+#[test]
+fn review_2_7_a_measurer_never_weighs_its_own_share() {
+    let module = spec("a play-count Module");
+    let run = |measurer_is_ana: bool| {
+        let carla = spec("Carla, who runs the play-count service");
+        let mut l = ServiceDeal::with(&|_| {});
+        let (aid, bid) = (l.ana.id, l.ben.id);
+        let measurer = if measurer_is_ana { aid } else { l.fan.id };
+        let mut t = view(&l.w).terms(&l.deal).unwrap();
+        t.plan = Some(plan_of(
+            vec![law::ShareRule::Stake { stake: 0, part: 500_000 }, law::ShareRule::Receiver { receiver: aid, part: 0 }, law::ShareRule::Receiver { receiver: bid, part: 0 }, law::ShareRule::Metric { metric: 0, part: 500_000 }],
+            vec![law::Metric { module, measurer, params: None }],
+        ));
+        let _ = carla;
+        // A fresh deal carrying the plan, the same grants.
+        let deal = law_act(&mut l.w, &mut l.ana, law::types::TERMS, t.to_map(), None);
+        sign(&mut l.w, &mut l.ana, &deal);
+        sign(&mut l.w, &mut l.ben, &deal);
+        l.deal = deal;
+        let counts = {
+            let mut who = if measurer_is_ana { l.ana.clone() } else { l.fan.clone() };
+            let a = l.w.everyday_act(&mut who, module, 0, vec![(Value::Uint(0), Value::Uint(600))], None, None);
+            l.w.add(&a)
+        };
+        let (receipt, _) = l.sale(b"a month", vec![]);
+        let mut ps = vec![law::Payout { stake: Some(0), ..payout(aid, 300) }, law::Payout { stake: Some(0), ..payout(bid, 200) }];
+        ps.push(law::Payout { metric: Some(3), ..payout(aid, 300) });
+        ps.push(law::Payout { metric: Some(3), ..payout(bid, 200) });
+        let x = l.split(receipt, ps, vec![counts]);
+        view(&l.w).split(&x).unwrap().metric_problems
+    };
+    assert!(run(true).iter().any(|w| w.contains("measurer")), "Ana measures and is paid by the metric: refused");
+    assert!(run(false).is_empty(), "{:?}", run(false));
+}
+
+/// F210, decided by Nobody, allegedly, 10 October 2026 ("Yes. The grammar
+/// is there to make it work, responsibility then goes onto the clients."):
+/// no held shares, no completing split. A record acknowledged by the claim
+/// written at payment fills the role; one record acknowledged again by the
+/// same payer's claim for another payment is spent there (review 2.10):
+/// it counts for the first claim on the payer's sequence (mechanic, the
+/// build's).
+#[test]
+fn f210_one_record_is_spent_for_its_payers_other_claims() {
+    let mut l = ServiceDeal::with(&|t| {
+        t.plan = Some(plan_of(vec![law::ShareRule::Stake { stake: 0, part: 800_000 }, law::ShareRule::Role { role: "relay".into(), part: 200_000 }], vec![]));
+    });
+    let mut relay = l.w.genesis("a relay", vec![own_home()], None, None);
+    let rec = {
+        let a = l.w.everyday_act(&mut relay, spec("a relay transport cMIP, draft 3"), 0, vec![(Value::Uint(0), Value::Bytes(l.locked.to_vec()))], None, None);
+        l.w.add(&a)
+    };
+    let (r1, c1) = l.sale(b"first", vec![rec]);
+    let (r2, c2) = l.sale(b"second", vec![rec]);
+    let split_for = |l: &mut ServiceDeal, r: Hash| {
+        let mut ps = l.stake_payouts();
+        ps.push(law::Payout { role: Some("relay".into()), evidence: Some(rec), ..payout(relay.id, 200) });
+        l.split(r, ps, vec![])
+    };
+    let x1 = split_for(&mut l, r1);
+    let x2 = split_for(&mut l, r2);
+    let mut v = view(&l.w);
+    for c in [c1, c2] {
+        v.rail_valid.insert(c, mor_core::finance::PaidAt::Flow(spec("a pointer")));
+    }
+    assert!(v.split(&x1).unwrap().unevidenced.is_empty(), "the first claim acknowledging it");
+    assert_eq!(v.split(&x2).unwrap().unevidenced, vec![relay.id], "spent for the payer's other claim");
+}
+
+/// F219, decided by Nobody, allegedly, 10 October 2026 ("Yes, and bad faith
+/// terms remain public."): a refund past the terms the buyer accepted by
+/// paying is ended: the obligation closes there, the owners keep the
+/// money, and it does not block a closing. Past its terms is the time
+/// reference's answer, which the caller states; before it, the refund is
+/// owed and blocks as before. Terms with no refund terms never lapse
+/// (rule 32: the core sets no lapse).
+#[test]
+fn f219_a_refund_past_its_terms_is_ended() {
+    use mor_core::finance::Payer;
+    let carla = spec("Carla, a payer, F219");
+    let refundable = |t: &mut Terms| {
+        t.time = Some((spec("a block height reference"), Value::Uint(0)));
+        t.refund = Some(law::RefundTerms { until: Value::Uint(900_000) });
+    };
+    let owed_why = |e: &law::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
+    let (mut lab, label, owed, _, rot1, _) = owed_back_lab_terms(&refundable, |_| (Some(Payer::Identity(carla)), None), b"a refund with terms");
+    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "before its point: owed");
+    let mut v = lab.view();
+    v.refunds_past_terms.insert(owed);
+    assert!(v.owed_back(&label).unwrap().is_empty(), "past its terms: ended");
+    drop(v);
+    let e = close_with_past(&mut lab, label, rot1, &[owed]);
+    assert!(!owed_why(&e), "it does not block a closing: {:?}", e.why);
+    // Terms with no refund terms: the caller's word changes nothing.
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a refund with no terms");
+    let e = close_with_past(&mut lab, label, rot1, &[owed]);
+    assert!(owed_why(&e), "no lapse without terms: {:?}", e.why);
+}
+
+/// [`close_with`], refunds stated past their terms.
+fn close_with_past(lab: &mut Lab, label: Hash, rot1: Hash, past: &[Hash]) -> law::ClosingEval {
+    let f = lab.founding;
+    if lab.view().broken(&label).unwrap().is_some() {
+        let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
+        let r = lab.propose(ANA, &same);
+        let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
+        roll_back(lab, r, &rs, rot1, &[]);
+    }
+    let r = lab.view().current(&label).unwrap().unwrap().agreement;
+    let c = law::Closing { agreement: r, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
+    let eo = ending_obj(lab, r, label);
+    let x = law_act(&mut lab.w, &mut lab.m[ANA], law::types::CLOSING, c.to_map(), eo);
+    lab.end(ANA, &x);
+    lab.end(BEN, &x);
+    lab.end(CY, &x);
+    let mut v = lab.view();
+    v.refunds_past_terms.extend(past.iter().copied());
+    v.closing(&x).unwrap()
+}
+
+/// The work claim (type 3, rule 15), with Fable's readings of OF16 (a,
+/// public or addressed to every creator) and OF17 (a, no roles), and F218,
+/// decided by Nobody, allegedly, 10 October 2026 ("Yes"): in MOR's eyes the
+/// owners are who the recorded work claim names, with the shares its
+/// agreement gives; where no agreement writes shares, the default holder is
+/// the creator who opened the work claim. A claim binds once every other
+/// creator signs it; a second claim on the same work shows it contested.
+#[test]
+fn f218_the_default_holder_is_the_creator_who_opened_the_claim() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut stranger = w.genesis("a stranger", vec![own_home()], None, None);
+    let work = spec("a song, F218");
+    let claim = law::WorkClaim { work, creators: sorted(vec![ana.id, ben.id]), commitment: None };
+    let c = law_act(&mut w, &mut ana, law::types::WORK_CLAIM, claim.to_map(), None);
+    let o = view(&w).work_owners(&work).unwrap();
+    assert_eq!(o.default_holder, None, "not bound until Ben signs");
+    sign(&mut w, &mut ben, &c);
+    let o = view(&w).work_owners(&work).unwrap();
+    assert_eq!(o.claims, vec![c]);
+    assert_eq!(o.default_holder, Some(ana.id), "no shares written: the creator who opened it");
+    assert!(!o.contested);
+    // A sealed claim, addressed to Ana only, counts for nothing (OF16 a).
+    let sealed = law::WorkClaim { work, creators: sorted(vec![ben.id, stranger.id]), commitment: None };
+    w.private_act(&mut stranger, mips().law, law::types::WORK_CLAIM, sealed.to_map(), None, vec![ana.id]);
+    assert!(!view(&w).work_owners(&work).unwrap().contested);
+    // A stranger's public claim: contested, shown as recorded.
+    let theirs = law::WorkClaim { work, creators: vec![stranger.id], commitment: None };
+    let s = law_act(&mut w, &mut stranger, law::types::WORK_CLAIM, theirs.to_map(), None);
+    let o = view(&w).work_owners(&work).unwrap();
+    assert!(o.contested && o.claims == sorted(vec![c, s]));
+    // Once an agreement writes shares in the work, those are the owners.
+    let mut t = deal_terms(ana.id, ben.id);
+    t.stakes = Some(vec![law::Stake { object: law::Who::Id(work), holders: vec![(law::Who::Id(ana.id), 300_000), (law::Who::Id(ben.id), 700_000)] }]);
+    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let o = view(&w).work_owners(&work).unwrap();
+    assert_eq!(o.default_holder, None);
+    assert_eq!(o.agreements, vec![d]);
+    // A claim the opener is not among the creators of is refused.
+    let bad = law::WorkClaim { work, creators: vec![ben.id], commitment: None };
+    let b = law_act(&mut w, &mut ana, law::types::WORK_CLAIM, bad.to_map(), None);
+    assert!(!view(&w).work_owners(&work).unwrap().claims.contains(&b));
+}
+
+/// F217, decided by Nobody, allegedly, 10 October 2026 ("Yes, it's an
+/// acceptable cost. Make it legible, don't ban it."): a stake's sale takes
+/// effect on the seller's own line. The seller signs the transfer by a
+/// chain signature (F132), fixing its place; the buyer completes it. Once
+/// signed, a payout receipt the seller signs for that stake after it on his
+/// own line is a wrong receipt, counting for nothing; that payout is owed
+/// to the buyer as the service's open obligation (rule 29). A split paying
+/// the seller for the stake is shown beside the transfer (client
+/// conformance); the window before the service follows is a stated cost.
+#[test]
+fn f217_a_stakes_sale_takes_effect_on_the_sellers_own_line() {
+    use mor_core::finance::{Amount, Payer, Payload as Fin, Receipt};
+    let mut l = ServiceDeal::new();
+    let (bid, deal) = (l.ben.id, l.deal);
+    let mut carla = l.w.genesis("carla, who buys", vec![own_home()], None, None);
+    let t = law::StakeTransfer { agreement: deal, stake: 0, to: carla.id, share: 200_000, record: vec![] };
+    let x = law_act(&mut l.w, &mut l.ben, law::new_types::STAKE_TRANSFER, t.to_map(), obj(deal));
+    let e = view(&l.w).transfer(&x).unwrap();
+    assert!(!e.effective, "no chain signature, no buyer: {:?}", e.problems);
+    sign(&mut l.w, &mut carla, &x);
+    assert!(!view(&l.w).transfer(&x).unwrap().effective, "still no chain signature");
+    // A payout receipt Ben signs before his chain signature: not wrong.
+    let (receipt, _) = l.sale(b"a sale", vec![]);
+    let split = l.split(receipt, l.stake_payouts(), vec![]);
+    let payout_receipt = |w: &mut World, ben: &mut Person, proof: &[u8]| {
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("the service"))), payee: bid, amount: Amount { unit: spec("a unit"), value: 320 }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(ben, mips().finance, 2, r.to_map(), None, None);
+        w.add(&a)
+    };
+    let mut ben = l.ben.clone();
+    let before = payout_receipt(&mut l.w, &mut ben, b"before");
+    let (cs, after_ben) = l.w.chain_sign(&ben, x);
+    let e = view(&l.w).transfer(&x).unwrap();
+    assert!(e.effective, "{:?}", e.problems);
+    assert!(e.place.is_some());
+    assert_eq!(e.splits_paying_seller, vec![split], "shown beside the transfer");
+    // Identity binds an everyday act to genesis or a rotation only, never to
+    // a chain signature: a receipt bound to the chain signature is invalid
+    // (question QJ1 in the build report). As built, a receipt is after the
+    // transfer on Ben's line once bound to a rotation after it.
+    let mut stale = after_ben.clone();
+    stale.binding = cs;
+    let bad = payout_receipt(&mut l.w, &mut stale, b"bound to the chain signature");
+    assert_eq!(l.w.v.status(&bad), Status::Invalid);
+    let still_before = payout_receipt(&mut l.w, &mut after_ben.clone(), b"same rotation as before");
+    let (_, mut ben) = l.w.rotate(&after_ben, Rot::default());
+    let after = payout_receipt(&mut l.w, &mut ben, b"after");
+    assert_eq!(l.w.v.status(&after), Status::Valid);
+    assert!(!view(&l.w).transfer(&x).unwrap().wrong_receipts.contains(&still_before), "bound to the rotation before the chain signature: not after it (QJ1)");
+    let e = view(&l.w).transfer(&x).unwrap();
+    assert_eq!(e.wrong_receipts, vec![after], "the receipt after the transfer is wrong; the one before is not ({before:?})");
+    let acct = view(&l.w).service_account(&l.svc.id).unwrap();
+    assert_eq!(acct.owed_to_buyers, vec![(split, 1, carla.id, 160)], "Ben's payout, in the share sold, owed to Carla");
+}
+
+/// F216, decided by Nobody, allegedly, 10 October 2026 ("Yes. The owners
+/// have to all sign that agreement according to the rules of their deal
+/// and define the terms of the publication. The agreement of the work acts
+/// as a single use collective."): a publication carries two agreements.
+/// The publication's agreement (PE) names the work's agreement (WE) as one
+/// participant, whose consent is given by its own rule (in a deal, every
+/// party signing the PE); a sale through the publication passes outside
+/// in: the PE's split gives the WE its line, the WE's divides what reaches
+/// it. Mechanics, the build's: the WE is named by its version's hash, as a
+/// party and as a stake holder; its line passes on to its stake in the
+/// work the publication carries.
+#[test]
+fn f216_a_publication_carries_two_agreements() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut label = w.genesis("a publisher", vec![own_home()], None, None);
+    let work = spec("a song, F216");
+    let mut we = deal_terms(ana.id, ben.id);
+    we.stakes = Some(vec![law::Stake { object: law::Who::Id(work), holders: vec![(law::Who::Id(ana.id), 600_000), (law::Who::Id(ben.id), 400_000)] }]);
+    let we = law_act(&mut w, &mut ana, law::types::TERMS, we.to_map(), None);
+    sign(&mut w, &mut ana, &we);
+    sign(&mut w, &mut ben, &we);
+    let publication = {
+        let x = w.everyday_act(&mut label, mips().envelope, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F216").to_vec()))], None, None);
+        w.add(&x)
+    };
+    let mut pe = deal_terms(we, label.id);
+    pe.stakes = Some(vec![law::Stake { object: law::Who::Id(publication), holders: vec![(law::Who::Id(we), 850_000), (law::Who::Id(label.id), 150_000)] }]);
+    let pe = law_act(&mut w, &mut label, law::types::TERMS, pe.to_map(), None);
+    sign(&mut w, &mut label, &pe);
+    sign(&mut w, &mut ana, &pe);
+    assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(false), "the WE consents only by its own rule: Ben has not signed");
+    sign(&mut w, &mut ben, &pe);
+    let a = view(&w).agreement(&pe).unwrap();
+    assert_eq!(a.exists, Some(true), "every party of the WE signed: the WE signed, as a single-use collective");
+    assert!(a.signed.contains(&we));
+    // Payer-side, outside in: the PE gives the publisher 15%, the WE 85%,
+    // which the WE divides 60/40.
+    let mut paid = view(&w).payer_split(&pe, &law::Who::Id(publication), 1000).unwrap().unwrap();
+    paid.sort();
+    let mut want = vec![(label.id, 150), (ana.id, 510), (ben.id, 340)];
+    want.sort();
+    assert_eq!(paid, want);
+}
+
+/// Fable's readings of OF24 (a) with review 2.6, and OF23 (a): a request
+/// to a judge is its own act (type 25), by a party who signed the version,
+/// naming a judge the terms name; it counts, and the judge's period runs,
+/// only where public or sealed to the judge. A liveness act counts only
+/// where public or addressed to the agreement's other parties.
+#[test]
+fn of24_of23_a_request_reaches_its_judge_and_presence_is_shown() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let arb = w.genesis("an arbitrator", vec![own_home()], None, None);
+    let mut t = deal_terms(ana.id, ben.id);
+    t.arbitrators = Some(vec![arb.id]);
+    let d = law_act(&mut w, &mut ana, law::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let (aid, bid) = (ana.id, ben.id);
+    let milestone = spec("a milestone in dispute");
+    let r = law::JudgeRequest { agreement: d, judge: law::Judge::Identity(arb.id), question: milestone };
+    let kept = w.private_act(&mut ana, mips().law, law::new_types::JUDGE_REQUEST, r.to_map(), obj(d), vec![aid]);
+    assert!(view(&w).judge_request(&kept).unwrap().is_err(), "kept to herself: no judge was asked");
+    let sent = w.private_act(&mut ana, mips().law, law::new_types::JUDGE_REQUEST, r.to_map(), obj(d), vec![aid, arb.id]);
+    assert_eq!(view(&w).judge_request(&sent).unwrap(), Ok(vec![arb.id]));
+    let other = law::JudgeRequest { judge: law::Judge::Identity(spec("someone the terms never name")), ..r.clone() };
+    let x = law_act(&mut w, &mut ana, law::new_types::JUDGE_REQUEST, other.to_map(), obj(d));
+    assert!(view(&w).judge_request(&x).unwrap().is_err(), "a judge the terms name");
+    let l = law::Liveness { agreement: d };
+    let quiet = w.private_act(&mut ben, mips().law, law::new_types::LIVENESS, l.to_map(), obj(d), vec![bid]);
+    assert!(!view(&w).liveness(&quiet).unwrap());
+    let shown = w.private_act(&mut ben, mips().law, law::new_types::LIVENESS, l.to_map(), obj(d), vec![aid, bid]);
+    assert!(view(&w).liveness(&shown).unwrap());
 }

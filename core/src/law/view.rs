@@ -43,6 +43,13 @@ use std::collections::{BTreeMap, BTreeSet};
 /// (F172): the time checks the core used before, for a caller to compute
 /// [`LawView::absence_accepted`] with.
 pub mod reference_absence_proof;
+/// The selling side of step 12b: offers judged, and what a purchase under
+/// one paid for.
+mod selling;
+pub use selling::OfferEval;
+/// The owning side of step 12b: work claims and stake transfers.
+mod owning;
+pub use owning::{TransferEval, WorkOwners};
 use std::rc::Rc;
 
 /// Read Law from what a verifier holds.
@@ -159,6 +166,18 @@ pub struct LawView<'a> {
     /// `judges_lapsed`. A closing may then leave that payment open, naming
     /// it with its notice (rule 37d; the closing's field 4).
     pub notices_lapsed: BTreeSet<Hash>,
+    /// Payments following an offer that the time reference places past the
+    /// offer's deadline (its field 5): the time reference's answer, a fact
+    /// the caller states, like `notices_lapsed`. A payment whose place is
+    /// undetermined is not listed, and is a purchase: on a push rail the
+    /// seller who chose it bears the undetermined place (Fable's reading of
+    /// OF4, in W4's shape); on a request rail the seller's request decides.
+    pub paid_past_until: BTreeSet<Hash>,
+    /// Refunds owed on payments (by one receipt or claim of the payment)
+    /// whose refund terms' point the time reference places passed (terms
+    /// field 17, or a lone seller's offer's field 7): ended (F219). The
+    /// time reference's answer, a fact the caller states.
+    pub refunds_past_terms: BTreeSet<Hash>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -488,6 +507,8 @@ impl<'a> LawView<'a> {
             delivery_records: BTreeSet::new(),
             judges_lapsed: BTreeSet::new(),
             notices_lapsed: BTreeSet::new(),
+            paid_past_until: BTreeSet::new(),
+            refunds_past_terms: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -543,6 +564,8 @@ impl<'a> LawView<'a> {
             delivery_records: self.delivery_records.clone(),
             judges_lapsed: self.judges_lapsed.clone(),
             notices_lapsed: self.notices_lapsed.clone(),
+            paid_past_until: self.paid_past_until.clone(),
+            refunds_past_terms: self.refunds_past_terms.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -747,7 +770,29 @@ impl<'a> LawView<'a> {
     /// The distinct identities with a valid signature act naming `act`, in
     /// the order of `among`.
     pub fn signers(&self, act: &Hash, among: &[Hash]) -> Vec<Hash> {
-        self.valid_sigs(act, among).into_iter().map(|(p, _)| p).collect()
+        let own: Vec<Hash> = self.valid_sigs(act, among).into_iter().map(|(p, _)| p).collect();
+        // F216 (decided 10 October 2026): a work's agreement named as one
+        // participant of another agreement (a publication's) acts as a
+        // single-use collective: it signs where every party of its version
+        // in force signed, each by its own signature act (a deal's rule,
+        // F107; mechanic, the build's: one level, no deal inside a deal).
+        among
+            .iter()
+            .filter(|p| own.contains(p) || self.deal_signed(act, p))
+            .copied()
+            .collect()
+    }
+
+    /// Whether `party`, a deal's version held as terms, signed `act` by
+    /// every party of its version in force signing it (F216).
+    fn deal_signed(&self, act: &Hash, party: &Hash) -> bool {
+        let Some(h) = self.v.get(party) else { return false };
+        if !self.is_law(h, types::TERMS) {
+            return false;
+        }
+        let Ok(v) = self.version_in_force(party) else { return false };
+        let Ok(t) = self.terms(&v) else { return false };
+        !t.is_collective() && !t.parties.is_empty() && self.valid_sigs(act, &t.parties).len() == t.parties.len()
     }
 
     /// The checks a clone needs against its parent and lineage (rules 44c,
@@ -1339,13 +1384,13 @@ impl<'a> LawView<'a> {
                     "the rollback registers a resignation from an agreement not in force just before the broken act (rule 37a)".into(),
                 ));
             }
-            if at.is_none() && res.area.is_none() && self.resignation_spent(&p, before, &res.agreement)? {
+            if at.is_none() && res.area.is_none() && self.resignation_spent(&p, before, &res.agreement, &res.drafts)? {
                 return Ok(Err(
                     "the rollback registers a resignation its signer made before coming back: spent, it registers nothing (F189, 1)".into(),
                 ));
             }
             if let (None, Some(area)) = (at, res.area) {
-                if self.stepping_down_spent(&p, before, &res.agreement, area)? {
+                if self.stepping_down_spent(&p, before, &res.agreement, area, &res.drafts)? {
                     return Ok(Err(
                         "the rollback registers a stepping down its signer made before holding the area again: spent, it registers nothing (QF6)".into(),
                     ));
@@ -1574,7 +1619,7 @@ impl<'a> LawView<'a> {
                     continue;
                 }
                 let Ok(r) = Resignation::decode(&h.inside) else { continue };
-                if r.area.is_none() && lineage.contains(&r.agreement) && !self.resignation_spent(p, &ag, &r.agreement)? {
+                if r.area.is_none() && lineage.contains(&r.agreement) && !self.resignation_spent(p, &ag, &r.agreement, &r.drafts)? {
                     out.push(Departure { act: h.id, party: *p, kind: DepartureKind::Resigned { agreement: r.agreement } });
                 }
             }
@@ -2629,12 +2674,13 @@ impl<'a> LawView<'a> {
                 if &d.party != p {
                     continue;
                 }
-                // The version the line registering it puts in force, which
-                // counts a departing member's signature placed before it
-                // (C2; F187, 6), never brings them back (reading, to
-                // confirm; QH4).
-                let puts = self.line_puts(col, *l);
-                let returns: Vec<Hash> = returns.iter().filter(|v| Some(**v) != puts).copied().collect();
+                // F207 (decided 10 October 2026, replacing QH4's reading): a
+                // version the resignation or stepping down names among the
+                // drafts it leaves behind never brings its signer back,
+                // whichever line puts it in force; what she signed while
+                // present still speaks where C2 counts it.
+                let left = self.drafts_left_behind(&d.act);
+                let returns: Vec<Hash> = returns.iter().filter(|v| !left.contains(v)).copied().collect();
                 // F189 (1), F195: a resignation is spent once its signer
                 // came back by a version naming them (B10), registered or
                 // not; a line registers only one naming the version of their
@@ -2647,7 +2693,7 @@ impl<'a> LawView<'a> {
                 // QF6 (decided 9 October 2026, F190): so is a stepping down,
                 // once its signer holds the area again.
                 if let DepartureKind::SteppedDown { agreement, area: a } = &d.kind {
-                    let back: Vec<Hash> = self.came_back(p, &lineage, Some(*a))?.into_iter().filter(|v| Some(*v) != puts).collect();
+                    let back: Vec<Hash> = self.came_back(p, &lineage, Some(*a))?.into_iter().filter(|v| !left.contains(v)).collect();
                     if area == Some(*a) && self.spent(agreement, &back)? {
                         continue;
                     }
@@ -2667,8 +2713,9 @@ impl<'a> LawView<'a> {
                 if !hits || !(lineage.contains(&from) || later) {
                     continue;
                 }
-                // Named again by a later version they signed, after the line.
-                if self.restored(col, p, &lineage, &from, area, *l)? {
+                // Named again by a later version they signed, after the line,
+                // and not one their departure left behind (F207).
+                if self.restoring(col, p, &lineage, &from, area, *l)?.is_some_and(|v| !left.contains(&v)) {
                     continue;
                 }
                 regs.push(*l);
@@ -2691,14 +2738,6 @@ impl<'a> LawView<'a> {
             }
         }
         Ok((voices, remaining))
-    }
-
-    /// Whether `p`, departed from agreement `from` at line `l`, is named
-    /// again by a version between `from` (excluded) and the agreement
-    /// counted (lineage[0]) that `p` signed by a signature not placed before
-    /// that line (third pass reading).
-    fn restored(&self, col: &Col, p: &Hash, lineage: &[Hash], from: &Hash, area: Option<u64>, l: Line<'a>) -> R<bool> {
-        Ok(self.restoring(col, p, lineage, from, area, l)?.is_some())
     }
 
     /// The versions by which `p` came back (B10; F189, 1; QF6; F195,
@@ -2727,27 +2766,31 @@ impl<'a> LawView<'a> {
         Ok(out)
     }
 
-    /// The version a line puts in force, where it puts one: a record's
-    /// clone (field 0), or the clone a rollback declares (rule 37d).
-    fn line_puts(&self, col: &Col, l: Line<'a>) -> Option<Hash> {
-        match l {
-            Line::Record(r) => Record::decode(&r.inside).ok().and_then(|x| x.clone),
-            Line::Rotation(m) => col.res.states.get(m).and_then(|st| declared_in(&st.declarations, &self.law())).and_then(|d| d.ok()).map(|d| d.agreement),
-        }
-    }
-
     /// Whether `p`'s stepping down from `area` naming `agreement` is spent,
     /// counted in agreement `ag` (QF6, F190; F195).
-    fn stepping_down_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash, area: u64) -> R<bool> {
+    fn stepping_down_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash, area: u64, drafts: &[Hash]) -> R<bool> {
         let lineage: Vec<Hash> = self.lineage(ag)?.into_iter().map(|(i, _)| i).collect();
-        self.spent(agreement, &self.came_back(p, &lineage, Some(area))?)
+        let back: Vec<Hash> = self.came_back(p, &lineage, Some(area))?.into_iter().filter(|v| !drafts.contains(v)).collect();
+        self.spent(agreement, &back)
+    }
+
+    /// The drafts a resignation or stepping down leaves behind (F207): its
+    /// field 2; none where `act` is no resignation.
+    fn drafts_left_behind(&self, act: &Hash) -> Vec<Hash> {
+        self.v
+            .get(act)
+            .filter(|h| self.is_law(h, types::RESIGNATION))
+            .and_then(|h| Resignation::decode(&h.inside).ok())
+            .map(|r| r.drafts)
+            .unwrap_or_default()
     }
 
     /// Whether `p`'s resignation naming `agreement` is spent, counted in
     /// agreement `ag` (F189, 1; F195).
-    fn resignation_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash) -> R<bool> {
+    fn resignation_spent(&self, p: &Hash, ag: &Hash, agreement: &Hash, drafts: &[Hash]) -> R<bool> {
         let lineage: Vec<Hash> = self.lineage(ag)?.into_iter().map(|(i, _)| i).collect();
-        self.spent(agreement, &self.came_back(p, &lineage, None)?)
+        let back: Vec<Hash> = self.came_back(p, &lineage, None)?.into_iter().filter(|v| !drafts.contains(v)).collect();
+        self.spent(agreement, &back)
     }
 
     /// Whether a resignation or stepping down naming `agreement` is spent
@@ -3652,8 +3695,15 @@ impl<'a> LawView<'a> {
         if let Some(reason) = self.not_done(x, &ag)? {
             return Ok(Consent::NotDone { agreement: ag, reason });
         }
-        if self.is_law(x, types::IMPORT) {
-            return Err(LawError::Unsupported("imports (type 11): the format is open"));
+        // Step 12b: retired types (7, 11, 15, 21) are never reused; an act
+        // of one is invalid. An offer not in its format is invalid.
+        if x.inside.spec == self.mips.law && super::open_formats::RETIRED_TYPES.contains(&x.inside.type_) {
+            return Ok(Consent::Invalid { agreement: ag, reason: format!("Law type {} is retired, never reused (step 12b)", x.inside.type_) });
+        }
+        if self.is_law(x, types::STANDING_OFFER) {
+            if let Err(e) = super::open_formats::Offer::decode(&x.inside) {
+                return Ok(Consent::Invalid { agreement: ag, reason: e.to_string() });
+            }
         }
         if let Some(rail) = self.rail_not_accepted(&col, &c, x, b)? {
             return Ok(Consent::RailNotAccepted { agreement: ag, rail });
@@ -4115,6 +4165,12 @@ impl<'a> LawView<'a> {
         let objects_split = y.inside.objects.iter().flatten().any(|o| names_split(&o.chain) || names_split(&o.predecessor));
         if r.batch.is_some() || names_split(&r.fulfils) || objects_split {
             return Some("a split service's grant key never signs a split's payout, one its grantor is owed (F129, H5; F130, H7; rule 29)".into());
+        }
+        // Step 12b (H5's reading 4, lifted): a receipt following an offer
+        // is the grantor's only where the offer pays the grantor under its
+        // own claim.
+        if let Some(Some(w)) = self.offer_receipt_problem(&r.fulfils, grantor, own) {
+            return Some(w);
         }
         let incoming = r.purchase.as_ref().is_some_and(|p| own.contains(&p.agreement)) || own.contains(&r.fulfils);
         if !incoming {
@@ -4985,27 +5041,40 @@ impl<'a> LawView<'a> {
                 (crate::cbor::Value::Uint(0), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
                 _ => None,
             });
-            // The object paid for: the media of the publication the payment fulfils.
-            let paid_for: Option<Hash> = self.v.get(&fulfils).filter(|f| f.inside.spec == self.mips.envelope && f.inside.type_ == 0).and_then(|f| {
-                f.inside.payload.iter().find_map(|(k, v)| match (k, v) {
-                    (crate::cbor::Value::Uint(2), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
-                    _ => None,
-                })
-            });
-            if object.is_none() || object != paid_for {
+            // The object paid for: the media of the publication the payment
+            // fulfils; for a payment following an offer, of a publication
+            // the offer sells (step 12b; Fable's 4b).
+            let mut paid_for: Vec<Hash> = self.publication_field(&fulfils, 2).into_iter().collect();
+            paid_for.extend(self.offer_media(&fulfils));
+            if !object.is_some_and(|o| paid_for.contains(&o)) {
                 return false;
             }
         }
         let mut claims: Vec<&Held> = vec![p];
         claims.extend(self.same_payment(payment).into_iter().filter_map(|(x, _)| self.v.get(&x)));
-        claims.into_iter().any(|c| {
-            let Ok(Fin::Claim(cl)) = Fin::decode(c.inside.type_, &c.inside.payload) else { return false };
-            c.inside.spec == self.mips.finance
+        let acknowledging = |c: &Held| -> Option<Vec<u8>> {
+            let Ok(Fin::Claim(cl)) = Fin::decode(c.inside.type_, &c.inside.payload) else { return None };
+            (c.inside.spec == self.mips.finance
                 && self.payers_claim(c)
                 && self.rail_valid.contains_key(&c.id)
                 && !self.rail_invalid.contains(&c.id)
                 && !self.unbound_rails.contains(&cl.rail)
-                && (c.inside.acks.iter().flatten().any(|a| a == evidence) || cl.referral.as_ref().is_some_and(|r| &r.evidence == evidence))
+                && (c.inside.acks.iter().flatten().any(|a| a == evidence) || cl.referral.as_ref().is_some_and(|r| &r.evidence == evidence)))
+            .then(|| self.payment_of(&cl.proof))
+        };
+        claims.into_iter().any(|c| {
+            let Some(this) = acknowledging(c) else { return false };
+            // F210 (review 2.10): one record acknowledged by the same
+            // payer's claims for several payments is spent after the first,
+            // by position on the payer's sequence; two at one position (two
+            // devices) leave it spent for both (mechanic, the build's).
+            let pos = c.inside.position.unwrap_or(0);
+            let spent = c.act.outside.signer.is_some_and(|payer| {
+                self.v.signed_by(&payer).any(|o| {
+                    o.id != c.id && acknowledging(o).is_some_and(|other| other != this) && o.inside.position.unwrap_or(0) <= pos
+                })
+            });
+            !spent
         })
     }
 
@@ -5251,6 +5320,18 @@ pub struct SplitEval {
     /// The acts the split's envelope cites (`objects`, `acks`, `refs`):
     /// among them, the service's previous split act for each stake.
     pub cites: Vec<Hash>,
+    /// Step 12b, the plan's roles (OF11 a, Fable's reading): roles whose
+    /// fillers are not paid equally, within one unit.
+    pub unequal_roles: Vec<String>,
+    /// F214: fees the agreement's fee entries make owed on this payment,
+    /// by their module, that the split leaves out: a wrong split, each
+    /// fee the service's open obligation (rule 29).
+    pub fees_skipped: Vec<Hash>,
+    /// Rule 28 with Fable's review 2.7 and OF13 (a), (d): what is wrong
+    /// with its metric payouts (a measurer paid by its own metric, or the
+    /// split service; a receiver the plan does not already pay; a record
+    /// not signed by the measurer, or not of the metric's Module).
+    pub metric_problems: Vec<String>,
 }
 
 /// A break in a split service's tally chain for a stake (rule 15a, rule
@@ -5327,6 +5408,16 @@ pub struct ServiceAccount {
     /// Payouts of its splits that no receipt of the receiver discharges
     /// (rules 23, 24, 24a, 29).
     pub unpaid: Vec<Unpaid>,
+    /// Fees its splits left out though the agreement's fee entry made
+    /// them owed (F214): each `(split, module)`, an open obligation of the
+    /// service (rule 29).
+    pub fees_skipped: Vec<(Hash, Hash)>,
+    /// Payouts its splits made to a seller for a stake the seller had
+    /// transferred, which the seller receipted after the transfer on its
+    /// own line (F217): each `(split, payout index, buyer, amount)`, the
+    /// share sold, owed to the buyer as the service's open obligation
+    /// (rule 29); the service settles with the seller.
+    pub owed_to_buyers: Vec<(Hash, usize, Hash, u64)>,
 }
 
 /// An incoming payment with no split by the service (rules 20, 29).
@@ -6204,7 +6295,14 @@ impl<'a> LawView<'a> {
             let named = c.open.iter().find(|x| of.contains(&x.payment));
             let left_open = match (&o.to, named) {
                 (crate::finance::RefundTo::Nobody, Some(_)) => true,
-                (crate::finance::RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, payer, &of)),
+                (crate::finance::RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, Some(payer), &of)),
+                // F208 (decided 10 October 2026): a one-time key is noticed
+                // too, and never blocks a closing for good. The notice is
+                // public, naming the payment (mechanic, the build's: a bare
+                // signing key cannot be sealed to, so its holder finds the
+                // notice by looking; the cost to the payer's privacy, the
+                // key linked to this collective, is stated).
+                (crate::finance::RefundTo::Key(_), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, None, &of)),
                 _ => false,
             };
             if !left_open {
@@ -7251,6 +7349,9 @@ impl<'a> LawView<'a> {
     /// some agreement held carries a stake in it (a claimed work); `None`
     /// for a standing offer (its format is open) or anything else.
     fn work_of(&self, fulfils: &Hash) -> Option<Hash> {
+        if let Some(w) = self.offer_work(fulfils) {
+            return Some(w);
+        }
         let x = self.v.get(fulfils)?;
         if x.inside.spec != self.mips.envelope || x.inside.type_ != 0 {
             return None;
@@ -7635,6 +7736,15 @@ impl<'a> LawView<'a> {
                 if r.reference != *at || !t.parties.contains(&asker) || self.signers(at, &[asker]).is_empty() {
                     continue;
                 }
+                // Fable's formats review 2.6, taken under the delegation
+                // (F189 (8) by analogy): a request counts, and a judge's
+                // period runs, only where the request is public or sealed to
+                // that judge; every link it passes through must have been
+                // reached (mechanic, the build's).
+                let reaches = |j: &Hash| rq.act.outside.content_key.is_some() || rq.act.outside.to.iter().flatten().any(|q| q == j);
+                if !links[..=i].iter().all(reaches) {
+                    continue;
+                }
                 // QG4: its turn has come, and has not passed.
                 let lapsed = |j: &Hash| self.judges_lapsed.contains(&(s.request, *j));
                 if !links[..i].iter().all(lapsed) || lapsed(link) {
@@ -7790,6 +7900,37 @@ impl<'a> LawView<'a> {
             e.verdict = PurchaseVerdict::NoPurchase { why: w.into() };
             Ok(Some(e))
         };
+        // Step 12b, a payment following a standing offer: the offer must
+        // count; a lone seller's offer is itself the agreement with the
+        // buyer, so a payment following it names no claim and is accepted
+        // under its terms (F215); one following co-owners' offer names
+        // their agreement, a version of its lineage (the offer's field 0;
+        // mechanic, the build's).
+        if for_offer {
+            let o = match self.offer(&fulfils) {
+                Ok(o) => o,
+                Err(w) => return no(e, &format!("the offer it follows is not in the offer's format: {w}")),
+            };
+            if !o.counts {
+                return no(e, &format!("the offer it follows does not count: {}", o.problems.join("; ")));
+            }
+            if o.withdraws {
+                return no(e, "it follows a version of the offer that withdraws it: no purchase, owed back (rule 32)");
+            }
+            if self.paid_past_until.contains(id) {
+                return no(e, "paid past the offer's deadline, as the time reference answers: owed back (rule 32; OF4)");
+            }
+            match (&o.offer.under, &purchase) {
+                (None, _) => return Ok(Some(e)),
+                (Some(u), Some(p)) => {
+                    let same = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
+                    if same(u).is_none() || same(u) != same(&p.agreement) {
+                        return no(e, "it names another agreement than the one the offer is made under (the offer's field 0)");
+                    }
+                }
+                (Some(_), None) => {}
+            }
+        }
         // F131 (IT3): the payment decides. The claim is the one the
         // payment's commitment names; a receipt naming another is a wrong
         // receipt, which the rail shows: its commitment, recomputed from it,
@@ -8029,12 +8170,14 @@ impl<'a> LawView<'a> {
     /// `payer`, valid, public or sealed to that payer and to every member
     /// (done, rule 35a), whose deadline the caller states lapsed with no
     /// address given ([`Self::notices_lapsed`]).
-    fn notice_lapsed(&self, n: &Hash, collective: &Hash, payer: &Hash, of: &[Hash]) -> bool {
+    fn notice_lapsed(&self, n: &Hash, collective: &Hash, payer: Option<&Hash>, of: &[Hash]) -> bool {
         let Some(h) = self.v.get(n) else { return false };
         self.is_law(h, types::NOTICE)
             && h.act.outside.signer.as_ref() == Some(collective)
             && self.valid(n)
-            && (h.act.outside.content_key.is_some() || h.act.outside.to.iter().flatten().any(|q| q == payer))
+            // To an identity: public or sealed to it; to a one-time key
+            // (F208): public.
+            && (h.act.outside.content_key.is_some() || payer.is_some_and(|p| h.act.outside.to.iter().flatten().any(|q| q == p)))
             // Rule 35a: an act in the collective's name is done once sealed
             // to every member, or public.
             && self.current(collective).ok().flatten().and_then(|c| self.terms(&c.agreement).ok()).is_some_and(|t| self.sealed_to_all(h, &t))
@@ -8072,6 +8215,11 @@ impl<'a> LawView<'a> {
                     // debt, by a payment naming what it repays.
                     let mut names = vec![h.id];
                     names.extend(self.same_payment(&h.id).into_iter().map(|(x, _)| x));
+                    // F219: past the terms the buyer accepted by paying, the
+                    // refund is ended, and owed no more.
+                    if self.refund_ended(&names, e.purchase.as_ref()) {
+                        continue;
+                    }
                     let back = self.repaid(&names, &e.refund_to, &amount.unit);
                     if back < amount.value {
                         out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken });
@@ -8080,6 +8228,33 @@ impl<'a> LawView<'a> {
             }
         }
         Ok(out)
+    }
+
+    /// Whether a refund owed on a payment (`names`, its receipts and
+    /// claims) is ended (F219, decided 10 October 2026): the terms the
+    /// buyer accepted by paying carry refund terms (the version of the
+    /// claim the payment names, field 17; or a lone seller's offer it
+    /// follows, field 7, F215), and the caller states the payment past
+    /// their point on the time reference ([`Self::refunds_past_terms`]).
+    /// Without refund terms nothing lapses (rule 32: the core sets none).
+    fn refund_ended(&self, names: &[Hash], purchase: Option<&crate::finance::Purchase>) -> bool {
+        use crate::finance::Payload as Fin;
+        if !names.iter().any(|n| self.refunds_past_terms.contains(n)) {
+            return false;
+        }
+        let from_claim = purchase.is_some_and(|p| {
+            let v = if self.v.get(&p.line).is_some_and(|l| self.is_law(l, types::TERMS)) { p.line } else { p.agreement };
+            self.terms(&v).is_ok_and(|t| t.refund.is_some())
+        });
+        let from_offer = names.iter().filter_map(|n| self.v.get(n)).any(|h| {
+            let fulfils = match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::Receipt(r)) => r.fulfils,
+                Ok(Fin::Claim(c)) => c.fulfils,
+                _ => return false,
+            };
+            self.offer_act(&fulfils).is_some_and(|(_, o)| o.offer.under.is_none() && o.offer.refund.is_some())
+        });
+        from_claim || from_offer
     }
 
     /// What has been paid back toward a payment owed back, `owed` being the
@@ -8623,6 +8798,23 @@ impl<'a> LawView<'a> {
             None => out.push((h, n)),
         };
         for ((id, _), n) in ids.into_iter().zip(parts) {
+            // F216: a holder that is a work's agreement (a deal) passes its
+            // line on, outside in, to its stake in the work the publication
+            // carries (or the object itself where it is the work).
+            if self.v.get(&id).is_some_and(|h| self.is_law(h, types::TERMS)) {
+                let v = self.version_in_force(&id)?;
+                if !self.terms(&v)?.is_collective() {
+                    let work = match object {
+                        Who::Id(x) => self.publication_field(x, 1).unwrap_or(*x),
+                        Who::This => return Ok(Err("a work's agreement holds no stake in a collective itself".into())),
+                    };
+                    match self.payer_split_depth(&v, &Who::Id(work), n, depth + 1)? {
+                        Ok(inner) => inner.into_iter().for_each(|(x, m)| add(x, m)),
+                        Err(w) => return Ok(Err(w)),
+                    }
+                    continue;
+                }
+            }
             let inner = match self.current(&id)? {
                 Some(cur) if Some(id) != this || *object != Who::This => {
                     let ct = self.terms(&cur.agreement)?;
@@ -8719,7 +8911,28 @@ impl<'a> LawView<'a> {
         });
         let mut unevidenced = vec![];
         let mut unplanned = vec![];
+        // Step 12b: the plan (terms field 8) and the fees (field 28) of
+        // the version in force say which roles, receivers, fees and metric
+        // shares a payout may pay; without a plan, none can be checked.
+        let plan = t.plan.clone();
+        let fee_entries = t.fees.clone().unwrap_or_default();
+        let planned = |p: &Payout| -> bool {
+            let Some(plan) = &plan else { return false };
+            if let Some(r) = &p.role {
+                return plan.roles().contains(&r.as_str());
+            }
+            if let Some(m) = &p.fee_module {
+                return fee_entries.iter().any(|f| &f.module == m);
+            }
+            if let Some(i) = p.metric {
+                return matches!(plan.shares.get(i as usize), Some(super::open_formats::ShareRule::Metric { .. }));
+            }
+            plan.receivers().contains(&p.receiver)
+        };
         for p in &s.payouts {
+            if p.role.is_some() && plan.is_some() && !planned(p) && !unplanned.contains(&p.receiver) {
+                unplanned.push(p.receiver);
+            }
             if p.role.is_some() {
                 let holds = match (p.evidence, payee, h.act.outside.signer) {
                     (Some(ev), Some(payee), Some(service)) => {
@@ -8737,8 +8950,87 @@ impl<'a> LawView<'a> {
                 if !holds && !unevidenced.contains(&p.receiver) {
                     unevidenced.push(p.receiver);
                 }
-            } else if p.stake.is_none() && !unplanned.contains(&p.receiver) {
+            } else if p.stake.is_none() && !planned(p) && !unplanned.contains(&p.receiver) {
                 unplanned.push(p.receiver);
+            }
+        }
+        // OF11 (a), Fable's reading: several fillers of one role, equally.
+        let mut unequal_roles: Vec<String> = vec![];
+        let mut roles: Vec<&String> = s.payouts.iter().filter_map(|p| p.role.as_ref()).collect();
+        roles.sort();
+        roles.dedup();
+        for r in roles {
+            let mut by: BTreeMap<Hash, u128> = BTreeMap::new();
+            for p in s.payouts.iter().filter(|p| p.role.as_ref() == Some(r)) {
+                *by.entry(p.receiver).or_default() += p.amount as u128;
+            }
+            let (lo, hi) = (by.values().min().copied().unwrap_or(0), by.values().max().copied().unwrap_or(0));
+            if hi > lo + 1 {
+                unequal_roles.push(r.clone());
+            }
+        }
+        // F214: a fee is owed as its entry states; the service applies it.
+        let (paid_for, rail_of) = match self.v.get(&s.receipt).map(|r| Fin::decode(r.inside.type_, &r.inside.payload)) {
+            Some(Ok(Fin::Receipt(x))) => (Some(x.fulfils), Some(x.rail)),
+            Some(Ok(Fin::Claim(x))) => (Some(x.fulfils), Some(x.rail)),
+            _ => (None, None),
+        };
+        let mut fees_skipped: Vec<Hash> = vec![];
+        for f in &fee_entries {
+            let owed = match &f.scope {
+                super::open_formats::FeeScope::Every => true,
+                super::open_formats::FeeScope::Rail(r) => rail_of.as_ref() == Some(r),
+                super::open_formats::FeeScope::Publication(pb) => {
+                    paid_for.as_ref() == Some(pb)
+                        || paid_for.is_some_and(|x| {
+                            self.offer_act(&x).is_some_and(|(_, o)| o.offer.sold.contains(&super::open_formats::Sold::Publication(*pb)))
+                        })
+                }
+            };
+            if owed && !s.payouts.iter().any(|p| p.fee_module == Some(f.module)) && !fees_skipped.contains(&f.module) {
+                fees_skipped.push(f.module);
+            }
+        }
+        if !fees_skipped.is_empty() {
+            problems.push("it leaves out a fee the agreement's fee entry makes owed on this payment: a wrong split, the fee the service's open obligation (F214; rule 29)".into());
+        }
+        // Rule 28 (metrics), with Fable's review 2.7 and OF13 (a), (d).
+        let mut metric_problems: Vec<String> = vec![];
+        let metric_payouts: Vec<&Payout> = s.payouts.iter().filter(|p| p.metric.is_some()).collect();
+        if !metric_payouts.is_empty() {
+            match &plan {
+                None => metric_problems.push("a metric payout, and no plan naming a metric (rule 28)".into()),
+                Some(plan) => {
+                    let mut already: Vec<Hash> = plan.receivers();
+                    for st in t.stakes.iter().flatten() {
+                        already.extend(st.holders.iter().filter_map(|(w, _)| w.resolve(collective.as_ref())));
+                    }
+                    for p in &metric_payouts {
+                        let i = p.metric.unwrap_or_default() as usize;
+                        let Some(super::open_formats::ShareRule::Metric { metric, .. }) = plan.shares.get(i) else {
+                            metric_problems.push("a metric payout names no metric share of the plan".into());
+                            continue;
+                        };
+                        let Some(m) = plan.metrics.get(*metric as usize) else { continue };
+                        if Some(m.measurer) == h.act.outside.signer {
+                            metric_problems.push("the metric's measurer is the split service (rule 28)".into());
+                        }
+                        if metric_payouts.iter().any(|q| q.metric == p.metric && q.receiver == m.measurer) {
+                            metric_problems.push("the metric's measurer is paid by its own metric (review 2.7; F194)".into());
+                        }
+                        if !already.contains(&p.receiver) {
+                            metric_problems.push("a metric pays only identities the plan already pays (OF13 a)".into());
+                        }
+                        let recorded = s.metric_records.iter().any(|r| {
+                            self.v.get(r).is_some_and(|x| x.inside.spec == m.module && x.act.outside.signer == Some(m.measurer) && self.valid(r))
+                        });
+                        if !recorded {
+                            metric_problems.push("no record of the metric's Module signed by its measurer is named (rule 28; OF13 d)".into());
+                        }
+                    }
+                    metric_problems.sort();
+                    metric_problems.dedup();
+                }
             }
         }
         let mut mismatched = vec![];
@@ -8874,6 +9166,9 @@ impl<'a> LawView<'a> {
             count_unknown,
             numbering,
             cites: crate::finance::Citations::of(&h.inside).acts(),
+            unequal_roles,
+            fees_skipped,
+            metric_problems,
         })
     }
 
@@ -9166,6 +9461,7 @@ impl<'a> LawView<'a> {
         }
         // Each payout, discharged by the receiver's own receipts naming the split.
         let mut unpaid = vec![];
+        let mut owed_to_buyers: Vec<(Hash, usize, Hash, u64)> = vec![];
         for (sh, s) in &splits {
             for (i, p) in s.payouts.iter().enumerate() {
                 let mut received: u64 = 0;
@@ -9176,6 +9472,16 @@ impl<'a> LawView<'a> {
                     let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
                     let names = x.fulfils == sh.id || r.inside.objects.iter().flatten().any(|o| o.chain == sh.id || o.predecessor == sh.id);
                     if x.payee != p.receiver || !names || !self.consent(&r.id)?.counts() {
+                        continue;
+                    }
+                    // F217: a seller's payout receipt for a stake it has
+                    // transferred, after the transfer on its own line, is a
+                    // wrong receipt: it discharges nothing, and the buyer is
+                    // owed the share sold.
+                    if let Some((_, buyer, split, idx, owed)) = self.wrong_payout_receipt(r) {
+                        if split == sh.id && idx == i && !owed_to_buyers.contains(&(split, idx, buyer, owed)) {
+                            owed_to_buyers.push((split, idx, buyer, owed));
+                        }
                         continue;
                     }
                     received = received.saturating_add(x.amount.value);
@@ -9192,7 +9498,14 @@ impl<'a> LawView<'a> {
                 }
             }
         }
-        Ok(ServiceAccount { service: *service, unsplit, unpaid })
+        // F214: each fee its splits left out, its open obligation.
+        let mut fees_skipped = vec![];
+        for (sh, _) in &splits {
+            for m in self.split(&sh.id)?.fees_skipped {
+                fees_skipped.push((sh.id, m));
+            }
+        }
+        Ok(ServiceAccount { service: *service, unsplit, unpaid, fees_skipped, owed_to_buyers })
     }
 
     // ------------------------------------------------------------ the release
