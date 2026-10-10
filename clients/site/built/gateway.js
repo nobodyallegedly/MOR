@@ -85,6 +85,864 @@ var Verifier = class {
     }
   }
   /**
+   * An agreement as held: its parties, who signed, whether it exists (a
+   * deal, founding terms) or is ready to be recorded (a collective's
+   * clone), and the powers its mark must name. `specs`: the six MIP
+   * hashes, and the layers of extensions it adds or drops.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsAgreement(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsAgreement(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether an act under a grant binds the collective that issued it.
+   * @param {any} specs
+   * @param {string} act
+   * @returns {any}
+   */
+  agreementsBacking(specs, act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsBacking(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether the collective's act `x` counts as made before the line
+   * `line` (a record or a rotation of it), on its own sequences (F109).
+   * @param {any} specs
+   * @param {string} x
+   * @param {string} line
+   * @returns {boolean}
+   */
+  agreementsBefore(specs, x, line) {
+    const ptr0 = passStringToWasm0(x, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(line, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsBefore(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] !== 0;
+  }
+  /**
+   * Where Agreements read a collective as broken and a rollback can bring it
+   * back (Agreements rule 37d, F185): `{ act, before, reason }`, the broken act
+   * (a rotation of the collective), the agreement in force just before
+   * it, a rollback's parent, and Agreements' reason; null otherwise.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  agreementsBrokenAct(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsBrokenAct(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Why Agreements read a collective as broken (the agreement its latest key
+   * lives under cannot be found: a rotation's declared clone incomplete,
+   * a false mark, rules 37 and 45a), or null where it reads it as working.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {string | undefined}
+   */
+  agreementsBroken(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsBroken(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
+  }
+  /**
+   * Whether a claim on a work is shown as made after its release: the
+   * release, if so (F121, D).
+   * @param {any} specs
+   * @param {string} claim
+   * @param {string} work
+   * @returns {string | undefined}
+   */
+  agreementsClaimAfterRelease(specs, claim, work) {
+    const ptr0 = passStringToWasm0(claim, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(work, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsClaimAfterRelease(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v3;
+    if (ret[0] !== 0) {
+      v3 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v3;
+  }
+  /**
+   * A closing act, judged (rule 47a, F124 N9).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsClosing(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsClosing(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The collective whose genesis declares the root of `agreement`'s
+   * lineage, where held: what null names in its terms (S1).
+   * @param {any} specs
+   * @param {string} agreement
+   * @returns {string | undefined}
+   */
+  agreementsCollectiveOf(specs, agreement) {
+    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsCollectiveOf(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
+  }
+  /**
+   * Agreements' answer for an act of a collective: which areas reach it, and
+   * whether their holders' signature acts meet each (rule 36a, 44d).
+   * @param {any} specs
+   * @param {string} act
+   * @returns {any}
+   */
+  agreementsConsent(specs, act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsConsent(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The collective's state after everything held under its latest key:
+   * the agreement in force, who left, who stepped down from which area,
+   * which areas are frozen, its records. Null if it is not a collective.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  agreementsCurrent(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsCurrent(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * @param {any} specs
+   * @param {string} agreement
+   * @returns {any}
+   */
+  agreementsDealFork(specs, agreement) {
+    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDealFork(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A creditor's release, judged (Money type 4, F126; rule 47b):
+   * whether it ends the obligation it names (signed by that obligation's
+   * creditor, a collective by its Money lane).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsDebtRelease(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDebtRelease(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who owes an obligation of a collective a fork closed (N13): the
+   * successors it assigns it to, every successor where it assigns it to
+   * none (F125, D1); null where its debtor is not closed by a fork.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {string[] | undefined}
+   */
+  agreementsDebtors(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDebtors(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    }
+    return v2;
+  }
+  /**
+   * @param {any} specs
+   * @param {string} party
+   * @returns {any}
+   */
+  agreementsDeclarationsNaming(specs, party) {
+    const ptr0 = passStringToWasm0(party, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDeclarationsNaming(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The agreement an identity's chain declares at the chain act
+   * `binding`, if any (for a rotation: the clone it declares).
+   * @param {any} specs
+   * @param {string} identity
+   * @param {string} binding
+   * @returns {string | undefined}
+   */
+  agreementsDeclared(specs, identity, binding) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(binding, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDeclared(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v3;
+    if (ret[0] !== 0) {
+      v3 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v3;
+  }
+  /**
+   * Whether an act in a collective's name is done (F126, F128): sealed to
+   * every member, or public; where it is held decides nothing. `{ done,
+   * why }`, or null where the act is not in a collective's name.
+   * @param {any} specs
+   * @param {string} act
+   * @returns {any}
+   */
+  agreementsDone(specs, act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDone(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Every fork and closing of `collective` held, complete or not: what a
+   * new ending names in its `objects`, `[agreement, ending]` (F131 IT1,
+   * client conformance).
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {string[]}
+   */
+  agreementsEndingActs(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsEndingActs(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
+   * Client conformance (rule 45b, F186): the alarm a seller's client and
+   * a split service raise when a payment names a version of the deal that
+   * does not descend from the version they hold. Null where it does;
+   * else `{ named, held, shared, kind, heldLine, namedLine }`, `kind`
+   * "fork" (the alarm), "unheld" (a version this verifier does not hold:
+   * the alarm, F189 3) or "older" (a plain notice, F188 DQ7).
+   * @param {any} specs
+   * @param {string} payment
+   * @param {string} held
+   * @returns {any}
+   */
+  agreementsForkAlarm(specs, payment, held2) {
+    const ptr0 = passStringToWasm0(payment, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(held2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsForkAlarm(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A fork of a collective, judged (rule 47a, F121 shape B, F124):
+   * whether it closes the original, the members whose voice remains,
+   * who signed and who leaves on no side, each side's default share, who
+   * every successor keeps as a departed holder, each side's successor's
+   * founding agreement where it fits, and the obligations in the history
+   * it cites that it does not hand out, which keep it from taking effect
+   * (F127, replacing F125 D1).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsFork(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsFork(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * What a fork of `collective` must hand out (F127), its line drawn at
+   * `chain_act` and `tips` (`[{ act, position, summary }]`) with
+   * `agreement` in force there: every obligation in the history it would
+   * cite, its own and those an earlier fork handed to it. Null where the
+   * line does not hold.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {string} agreement
+   * @param {string} chain_act
+   * @param {any} tips
+   * @returns {string[] | undefined}
+   */
+  agreementsHandOut(specs, collective, agreement, chain_act, tips) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, tips);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v4;
+    if (ret[0] !== 0) {
+      v4 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    }
+    return v4;
+  }
+  /**
+   * The agreement in force for an act of a collective (rule 37c, F109),
+   * or null if its signer is not a collective.
+   * @param {any} specs
+   * @param {string} act
+   * @returns {string | undefined}
+   */
+  agreementsInForce(specs, act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsInForce(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
+  }
+  /**
+   * The acts the history a line at `chain_act` and `tips` would cite
+   * that this verifier does not hold (F127): a member's client signs no
+   * fork or closing while any is missing (F131 IT2b, client conformance).
+   * @param {any} specs
+   * @param {string} collective
+   * @param {string} chain_act
+   * @param {any} tips
+   * @returns {string[]}
+   */
+  agreementsLineUnheld(specs, collective, chain_act, tips) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, tips);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v3;
+  }
+  /**
+   * Who counts for a power (`{ form, area }`, as `agreementsClonePlan` gives
+   * it) of the collective's agreement in force, at its next line, after
+   * every act held (rule 44d), `leaving` taken out: the agreement, the
+   * parties counted among, the voices that remain, and how many meet it
+   * (null where none remains); or `{ error }`, why there is no such count.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {any} power
+   * @param {string[]} leaving
+   * @returns {any}
+   */
+  agreementsNextVoices(specs, collective, power, leaving) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsNextVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether an obligation binds its debtor: for a collective, once done
+   * (F128, N13's public outside withdrawn); null if not one.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {boolean | undefined}
+   */
+  agreementsObligationBinds(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsObligationBinds(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] === 16777215 ? void 0 : ret[0] !== 0;
+  }
+  /**
+   * The payments a collective received during a broken stretch and owes
+   * back, the sale not signed anew after the rollback (rule 37d, RB2):
+   * open obligations, each `{ payment, to, unit, value, stillBroken }`.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  agreementsOwedBack(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsOwedBack(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * What a collective owes now (F125, D5): its obligations that bind,
+   * and those it owes as a fork's successor, neither paid in full by the
+   * receipts held nor ended by a creditor's release.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {string[]}
+   */
+  agreementsOwes(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsOwes(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
+   * What is paid toward an obligation, as a binding answer: an error
+   * coded `agreements/own-attempt` where it rests on this client's own failed
+   * attempts to reach homes, shown as unknown (F153).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {bigint}
+   */
+  agreementsPaid(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPaid(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return BigInt.asUintN(64, ret[0]);
+  }
+  /**
+   * Payer-side splitting (F124 P2): what a paying wallet reading Agreements pays
+   * each holder for `amount` on the stake in `object` (hex, or null for
+   * the collective itself), or why it cannot. Leftovers by largest
+   * remainder; a tied unit is the payer's to decide, at most one per tie
+   * (Agreements rule 15a, F165, F168): this wallet gives it to the tied holder
+   * with the smallest identity hash, a choice, not a rule.
+   * @param {any} specs
+   * @param {string} agreement
+   * @param {string | null | undefined} object
+   * @param {bigint} amount
+   * @returns {any}
+   */
+  agreementsPayerSplit(specs, agreement, object, amount) {
+    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The pointer check (rule 18, F123): whether the payee pointer of
+   * `owners` counts for Agreements under `agreement`: "no-split-service",
+   * "ordinary", "bypasses" (with the addresses no service's own pointer
+   * carries, as hex) or "undetermined".
+   * @param {any} specs
+   * @param {string} owners
+   * @param {string} agreement
+   * @returns {any}
+   */
+  agreementsPointerCheck(specs, owners, agreement) {
+    const ptr0 = passStringToWasm0(owners, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPointerCheck(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee's pointer acts its own acts hold, for what a payment
+   * follows (an obligation, an agreement or an offer; Money rule 14,
+   * F145, F157, F163, F168): `{ pointers, complete }`, or null where
+   * `fulfils` is none of these.
+   * @param {any} specs
+   * @param {string} fulfils
+   * @param {string} payee
+   * @returns {any}
+   */
+  agreementsPointerHolding(specs, fulfils, payee) {
+    const ptr0 = passStringToWasm0(fulfils, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPointerHolding(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The resignations the parties of a collective's agreement published,
+   * registered or not (rule 37a; F187, 3): departures `{ act, party,
+   * kind, agreement }`. What a client reads beside Agreements' count of the
+   * voices that remain, to warn the last voice.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  agreementsPublishedResignations(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublishedResignations(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A payment for a work, judged (F126, F127 W2, F128 W4): "purchase",
+   * "no-purchase" (a refund owed to the payer, with why), or "unrecorded"
+   * (on a request rail, a collective seller's actions chain has not
+   * recorded it yet; on a push rail (`specs.pushRails`), a holder has not
+   * signed its receipt yet, or receipts of one payment name different
+   * claims and the rail has not shown which the payment committed to),
+   * or "wrong-receipt" (F131 IT3: a receipt `specs.railInvalid` names,
+   * whose claim the payment did not commit to; it counts for nothing);
+   * null where the payment is not for a work.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsPurchase(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPurchase(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A record act of a collective, judged: whether it is a line, the
+   * clone it names and whether it puts it in force, and what it registers.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {string} record
+   * @returns {any}
+   */
+  agreementsRecord(specs, collective, record) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(record, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRecord(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A public domain release, judged (rule 17, F121 shape D).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsRelease(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRelease(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A clone read as a rollback's (Agreements rule 37d, F185): as `agreementsAgreement`,
+   * its mark checked against the powers a rollback names.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsRollbackAgreement(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRollbackAgreement(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * What a rollback made next would register (rule 37d, RB3; F187 2),
+   * checked from what this verifier holds: `{ error, departures }`, each
+   * departure `{ act, party, kind }` ("resigned", "stepped-down",
+   * "declared"). A client asks it from a fresh reading of the relays
+   * before it sends the rollback's rotation.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {string[]} registers
+   * @returns {any}
+   */
+  agreementsRollbackRegisters(specs, collective, registers) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(registers, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRollbackRegisters(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who counts for a power (`{ form, area }`) of the agreement in force
+   * just before a broken collective's broken act, at a rollback made
+   * next (Agreements rules 37d, 44d), `leaving` taken out (the parties whose
+   * resignations the rollback registers): as `agreementsNextVoices`; or
+   * `{ error }`, why there is no such count.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {any} power
+   * @param {string[]} leaving
+   * @returns {any}
+   */
+  agreementsRollbackVoices(specs, collective, power, leaving) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRollbackVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * What a split service owes (Agreements rule 29): every incoming receipt and
+   * payer's claim without its split, and every payout without the
+   * receiver's receipt, each naming one receiver and one agreement.
+   * @param {any} specs
+   * @param {string} service
+   * @returns {any}
+   */
+  agreementsServiceAccount(specs, service) {
+    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsServiceAccount(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The declarations of absence naming `party` this verifier holds (RB3,
+   * client conformance): `{ act, signer, agreement, clause, outcomes,
+   * contests }`, `contests` the party's contests of it (BQ4).
+   * The numbers on the splits a service made under a deal (DQ6, F188):
+   * `{ numbers: [number, split][], gaps, repeated, unnumbered }`. Client
+   * conformance: a holder's client MUST raise the alarm where the
+   * numbers it receives skip (`gaps`).
+   * @param {any} specs
+   * @param {string} service
+   * @param {string} agreement
+   * @returns {any}
+   */
+  agreementsSplitNumbers(specs, service, agreement) {
+    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsSplitNumbers(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Rule 15a's turns (F165, F171): for `stake` (its index) of
+   * `agreement`'s version in force, the leftover units each holder has
+   * received so far from `service`'s splits, as `previous` (the
+   * service's latest split act for the stake, which its next split
+   * cites) carries them in its running count; null `previous`: no split
+   * yet, every count zero. In the order of `holders` (hex). Null where
+   * `previous` is not held, not one of the service's splits for the
+   * stake, or carries no count.
+   * @param {any} specs
+   * @param {string} service
+   * @param {string} agreement
+   * @param {bigint} stake
+   * @param {string[]} holders
+   * @param {string | null} [previous]
+   * @returns {Float64Array | undefined}
+   */
+  agreementsSplitTurns(specs, service, agreement, stake, holders, previous) {
+    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(holders, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    var ptr3 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len3 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v5;
+    if (ret[0] !== 0) {
+      v5 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+      wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    }
+    return v5;
+  }
+  /**
+   * A split, judged (rules 20, 21, 26; F121 Q9, F124 N10): whether it
+   * sums to what arrived, each fee and who received it, the holders it
+   * pays and was not delivered to, and every payout that does not match
+   * its stake.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsSplit(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsSplit(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Where a deal stands forked (rule 45b, F186): `{ reference, branches,
+   * tangled }`, each branch its versions from the split to its latest,
+   * `tangled` the reason where the fork is tangled (F188, DQ1 to DQ4: the
+   * deal stays on its reference); null where it is not forked. Throws
+   * where the shape is not decided (QH1, refused rather than guessed).
+   * The version of an agreement in force, as rule 45b reads a deal's
+   * forks (F186, F188, F192): while forked or tangled, the reference.
+   * Throws where the shape is not decided (QH1: two settlements, a
+   * judge's among them, neither holding the other). What a buyer's
+   * client checks an offer against before paying (F188, a strong
+   * SHOULD).
+   * @param {any} specs
+   * @param {string} agreement
+   * @returns {string}
+   */
+  agreementsVersionInForce(specs, agreement) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+      const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_agreementsVersionInForce(this.__wbg_ptr, specs, ptr0, len0);
+      var ptr2 = ret[0];
+      var len2 = ret[1];
+      if (ret[3]) {
+        ptr2 = 0;
+        len2 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred3_0 = ptr2;
+      deferred3_1 = len2;
+      return getStringFromWasm0(ptr2, len2);
+    } finally {
+      wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+  }
+  /**
    * The standing of an act for everything binding (keeper records,
    * payments, discharge of debts, agreements, forks, closings): as
    * `status`, except "unknown" where the answer rests on this client's
@@ -160,9 +1018,9 @@ var Verifier = class {
     return v1;
   }
   /**
-   * The routes act (Identity type 3) or encryption-key act (Envelope type
+   * The routes act (Identity type 3) or encryption-key act (Envelopes type
    * 4) that counts for an identity: its valid acts of that spec and type,
-   * followed from version 1 (Identity, "Routes"; Envelope, "Encryption
+   * followed from version 1 (Identity, "Routes"; Envelopes, "Encryption
    * key"). Returns the act, whether the chain is contested past it, and
    * its payload as CBOR.
    * @param {string} identity
@@ -180,864 +1038,6 @@ var Verifier = class {
       throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * An agreement as held: its parties, who signed, whether it exists (a
-   * deal, founding terms) or is ready to be recorded (a collective's
-   * clone), and the powers its mark must name. `specs`: the six MIP
-   * hashes, and the layers of extensions it adds or drops.
-   * @param {any} specs
-   * @param {string} id
-   * @returns {any}
-   */
-  lawAgreement(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawAgreement(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * Whether an act under a grant binds the collective that issued it.
-   * @param {any} specs
-   * @param {string} act
-   * @returns {any}
-   */
-  lawBacking(specs, act) {
-    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawBacking(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * Whether the collective's act `x` counts as made before the line
-   * `line` (a record or a rotation of it), on its own sequences (F109).
-   * @param {any} specs
-   * @param {string} x
-   * @param {string} line
-   * @returns {boolean}
-   */
-  lawBefore(specs, x, line) {
-    const ptr0 = passStringToWasm0(x, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(line, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawBefore(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return ret[0] !== 0;
-  }
-  /**
-   * Where Law reads a collective as broken and a rollback can bring it
-   * back (Law rule 37d, F185): `{ act, before, reason }`, the broken act
-   * (a rotation of the collective), the agreement in force just before
-   * it, a rollback's parent, and Law's reason; null otherwise.
-   * @param {any} specs
-   * @param {string} collective
-   * @returns {any}
-   */
-  lawBrokenAct(specs, collective) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawBrokenAct(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * Why Law reads a collective as broken (the agreement its latest key
-   * lives under cannot be found: a rotation's declared clone incomplete,
-   * a false mark, rules 37 and 45a), or null where it reads it as working.
-   * @param {any} specs
-   * @param {string} collective
-   * @returns {string | undefined}
-   */
-  lawBroken(specs, collective) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawBroken(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    let v2;
-    if (ret[0] !== 0) {
-      v2 = getStringFromWasm0(ret[0], ret[1]);
-      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    }
-    return v2;
-  }
-  /**
-   * Whether a claim on a work is shown as made after its release: the
-   * release, if so (F121, D).
-   * @param {any} specs
-   * @param {string} claim
-   * @param {string} work
-   * @returns {string | undefined}
-   */
-  lawClaimAfterRelease(specs, claim, work) {
-    const ptr0 = passStringToWasm0(claim, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(work, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawClaimAfterRelease(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    let v3;
-    if (ret[0] !== 0) {
-      v3 = getStringFromWasm0(ret[0], ret[1]);
-      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    }
-    return v3;
-  }
-  /**
-   * A closing act, judged (rule 47a, F124 N9).
-   * @param {any} specs
-   * @param {string} id
-   * @returns {any}
-   */
-  lawClosing(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawClosing(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * The collective whose genesis declares the root of `agreement`'s
-   * lineage, where held: what null names in its terms (S1).
-   * @param {any} specs
-   * @param {string} agreement
-   * @returns {string | undefined}
-   */
-  lawCollectiveOf(specs, agreement) {
-    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawCollectiveOf(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    let v2;
-    if (ret[0] !== 0) {
-      v2 = getStringFromWasm0(ret[0], ret[1]);
-      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    }
-    return v2;
-  }
-  /**
-   * Law's answer for an act of a collective: which areas reach it, and
-   * whether their holders' signature acts meet each (rule 36a, 44d).
-   * @param {any} specs
-   * @param {string} act
-   * @returns {any}
-   */
-  lawConsent(specs, act) {
-    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawConsent(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * The collective's state after everything held under its latest key:
-   * the agreement in force, who left, who stepped down from which area,
-   * which areas are frozen, its records. Null if it is not a collective.
-   * @param {any} specs
-   * @param {string} collective
-   * @returns {any}
-   */
-  lawCurrent(specs, collective) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawCurrent(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * @param {any} specs
-   * @param {string} agreement
-   * @returns {any}
-   */
-  lawDealFork(specs, agreement) {
-    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawDealFork(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * A creditor's release, judged (Finance type 4, F126; rule 47b):
-   * whether it ends the obligation it names (signed by that obligation's
-   * creditor, a collective by its Finance lane).
-   * @param {any} specs
-   * @param {string} id
-   * @returns {any}
-   */
-  lawDebtRelease(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawDebtRelease(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * Who owes an obligation of a collective a fork closed (N13): the
-   * successors it assigns it to, every successor where it assigns it to
-   * none (F125, D1); null where its debtor is not closed by a fork.
-   * @param {any} specs
-   * @param {string} id
-   * @returns {string[] | undefined}
-   */
-  lawDebtors(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawDebtors(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    let v2;
-    if (ret[0] !== 0) {
-      v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
-      wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    }
-    return v2;
-  }
-  /**
-   * @param {any} specs
-   * @param {string} party
-   * @returns {any}
-   */
-  lawDeclarationsNaming(specs, party) {
-    const ptr0 = passStringToWasm0(party, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawDeclarationsNaming(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * The agreement an identity's chain declares at the chain act
-   * `binding`, if any (for a rotation: the clone it declares).
-   * @param {any} specs
-   * @param {string} identity
-   * @param {string} binding
-   * @returns {string | undefined}
-   */
-  lawDeclared(specs, identity, binding) {
-    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(binding, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawDeclared(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    let v3;
-    if (ret[0] !== 0) {
-      v3 = getStringFromWasm0(ret[0], ret[1]);
-      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    }
-    return v3;
-  }
-  /**
-   * Whether an act in a collective's name is done (F126, F128): sealed to
-   * every member, or public; where it is held decides nothing. `{ done,
-   * why }`, or null where the act is not in a collective's name.
-   * @param {any} specs
-   * @param {string} act
-   * @returns {any}
-   */
-  lawDone(specs, act) {
-    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawDone(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * Every fork and closing of `collective` held, complete or not: what a
-   * new ending names in its `objects`, `[agreement, ending]` (F131 IT1,
-   * client conformance).
-   * @param {any} specs
-   * @param {string} collective
-   * @returns {string[]}
-   */
-  lawEndingActs(specs, collective) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawEndingActs(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
-    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    return v2;
-  }
-  /**
-   * Client conformance (rule 45b, F186): the alarm a seller's client and
-   * a split service raise when a payment names a version of the deal that
-   * does not descend from the version they hold. Null where it does;
-   * else `{ named, held, shared, kind, heldLine, namedLine }`, `kind`
-   * "fork" (the alarm), "unheld" (a version this verifier does not hold:
-   * the alarm, F189 3) or "older" (a plain notice, F188 DQ7).
-   * @param {any} specs
-   * @param {string} payment
-   * @param {string} held
-   * @returns {any}
-   */
-  lawForkAlarm(specs, payment, held2) {
-    const ptr0 = passStringToWasm0(payment, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(held2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawForkAlarm(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * A fork of a collective, judged (rule 47a, F121 shape B, F124):
-   * whether it closes the original, the members whose voice remains,
-   * who signed and who leaves on no side, each side's default share, who
-   * every successor keeps as a departed holder, each side's successor's
-   * founding agreement where it fits, and the obligations in the history
-   * it cites that it does not hand out, which keep it from taking effect
-   * (F127, replacing F125 D1).
-   * @param {any} specs
-   * @param {string} id
-   * @returns {any}
-   */
-  lawFork(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawFork(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * What a fork of `collective` must hand out (F127), its line drawn at
-   * `chain_act` and `tips` (`[{ act, position, summary }]`) with
-   * `agreement` in force there: every obligation in the history it would
-   * cite, its own and those an earlier fork handed to it. Null where the
-   * line does not hold.
-   * @param {any} specs
-   * @param {string} collective
-   * @param {string} agreement
-   * @param {string} chain_act
-   * @param {any} tips
-   * @returns {string[] | undefined}
-   */
-  lawHandOut(specs, collective, agreement, chain_act, tips) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, tips);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    let v4;
-    if (ret[0] !== 0) {
-      v4 = getArrayJsValueFromWasm0(ret[0], ret[1]);
-      wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    }
-    return v4;
-  }
-  /**
-   * The agreement in force for an act of a collective (rule 37c, F109),
-   * or null if its signer is not a collective.
-   * @param {any} specs
-   * @param {string} act
-   * @returns {string | undefined}
-   */
-  lawInForce(specs, act) {
-    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawInForce(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    let v2;
-    if (ret[0] !== 0) {
-      v2 = getStringFromWasm0(ret[0], ret[1]);
-      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    }
-    return v2;
-  }
-  /**
-   * The acts the history a line at `chain_act` and `tips` would cite
-   * that this verifier does not hold (F127): a member's client signs no
-   * fork or closing while any is missing (F131 IT2b, client conformance).
-   * @param {any} specs
-   * @param {string} collective
-   * @param {string} chain_act
-   * @param {any} tips
-   * @returns {string[]}
-   */
-  lawLineUnheld(specs, collective, chain_act, tips) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, tips);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    var v3 = getArrayJsValueFromWasm0(ret[0], ret[1]);
-    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    return v3;
-  }
-  /**
-   * Who counts for a power (`{ form, area }`, as `lawClonePlan` gives
-   * it) of the collective's agreement in force, at its next line, after
-   * every act held (rule 44d), `leaving` taken out: the agreement, the
-   * parties counted among, the voices that remain, and how many meet it
-   * (null where none remains); or `{ error }`, why there is no such count.
-   * @param {any} specs
-   * @param {string} collective
-   * @param {any} power
-   * @param {string[]} leaving
-   * @returns {any}
-   */
-  lawNextVoices(specs, collective, power, leaving) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawNextVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * Whether an obligation binds its debtor: for a collective, once done
-   * (F128, N13's public outside withdrawn); null if not one.
-   * @param {any} specs
-   * @param {string} id
-   * @returns {boolean | undefined}
-   */
-  lawObligationBinds(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawObligationBinds(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return ret[0] === 16777215 ? void 0 : ret[0] !== 0;
-  }
-  /**
-   * The payments a collective received during a broken stretch and owes
-   * back, the sale not signed anew after the rollback (rule 37d, RB2):
-   * open obligations, each `{ payment, to, unit, value, stillBroken }`.
-   * @param {any} specs
-   * @param {string} collective
-   * @returns {any}
-   */
-  lawOwedBack(specs, collective) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawOwedBack(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * What a collective owes now (F125, D5): its obligations that bind,
-   * and those it owes as a fork's successor, neither paid in full by the
-   * receipts held nor ended by a creditor's release.
-   * @param {any} specs
-   * @param {string} collective
-   * @returns {string[]}
-   */
-  lawOwes(specs, collective) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawOwes(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
-    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    return v2;
-  }
-  /**
-   * What is paid toward an obligation, as a binding answer: an error
-   * coded `law/own-attempt` where it rests on this client's own failed
-   * attempts to reach homes, shown as unknown (F153).
-   * @param {any} specs
-   * @param {string} id
-   * @returns {bigint}
-   */
-  lawPaid(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawPaid(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return BigInt.asUintN(64, ret[0]);
-  }
-  /**
-   * Payer-side splitting (F124 P2): what a paying wallet reading Law pays
-   * each holder for `amount` on the stake in `object` (hex, or null for
-   * the collective itself), or why it cannot. Leftovers by largest
-   * remainder; a tied unit is the payer's to decide, at most one per tie
-   * (Law rule 15a, F165, F168): this wallet gives it to the tied holder
-   * with the smallest identity hash, a choice, not a rule.
-   * @param {any} specs
-   * @param {string} agreement
-   * @param {string | null | undefined} object
-   * @param {bigint} amount
-   * @returns {any}
-   */
-  lawPayerSplit(specs, agreement, object, amount) {
-    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * The pointer check (rule 18, F123): whether the payee pointer of
-   * `owners` counts for Law under `agreement`: "no-split-service",
-   * "ordinary", "bypasses" (with the addresses no service's own pointer
-   * carries, as hex) or "undetermined".
-   * @param {any} specs
-   * @param {string} owners
-   * @param {string} agreement
-   * @returns {any}
-   */
-  lawPointerCheck(specs, owners, agreement) {
-    const ptr0 = passStringToWasm0(owners, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawPointerCheck(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * The payee's pointer acts its own acts hold, for what a payment
-   * follows (an obligation, an agreement or an offer; Finance rule 14,
-   * F145, F157, F163, F168): `{ pointers, complete }`, or null where
-   * `fulfils` is none of these.
-   * @param {any} specs
-   * @param {string} fulfils
-   * @param {string} payee
-   * @returns {any}
-   */
-  lawPointerHolding(specs, fulfils, payee) {
-    const ptr0 = passStringToWasm0(fulfils, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawPointerHolding(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * The resignations the parties of a collective's agreement published,
-   * registered or not (rule 37a; F187, 3): departures `{ act, party,
-   * kind, agreement }`. What a client reads beside Law's count of the
-   * voices that remain, to warn the last voice.
-   * @param {any} specs
-   * @param {string} collective
-   * @returns {any}
-   */
-  lawPublishedResignations(specs, collective) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawPublishedResignations(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * A payment for a work, judged (F126, F127 W2, F128 W4): "purchase",
-   * "no-purchase" (a refund owed to the payer, with why), or "unrecorded"
-   * (on a request rail, a collective seller's actions chain has not
-   * recorded it yet; on a push rail (`specs.pushRails`), a holder has not
-   * signed its receipt yet, or receipts of one payment name different
-   * claims and the rail has not shown which the payment committed to),
-   * or "wrong-receipt" (F131 IT3: a receipt `specs.railInvalid` names,
-   * whose claim the payment did not commit to; it counts for nothing);
-   * null where the payment is not for a work.
-   * @param {any} specs
-   * @param {string} id
-   * @returns {any}
-   */
-  lawPurchase(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawPurchase(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * A record act of a collective, judged: whether it is a line, the
-   * clone it names and whether it puts it in force, and what it registers.
-   * @param {any} specs
-   * @param {string} collective
-   * @param {string} record
-   * @returns {any}
-   */
-  lawRecord(specs, collective, record) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(record, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawRecord(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * A public domain release, judged (rule 17, F121 shape D).
-   * @param {any} specs
-   * @param {string} id
-   * @returns {any}
-   */
-  lawRelease(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawRelease(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * A clone read as a rollback's (Law rule 37d, F185): as `lawAgreement`,
-   * its mark checked against the powers a rollback names.
-   * @param {any} specs
-   * @param {string} id
-   * @returns {any}
-   */
-  lawRollbackAgreement(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawRollbackAgreement(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * What a rollback made next would register (rule 37d, RB3; F187 2),
-   * checked from what this verifier holds: `{ error, departures }`, each
-   * departure `{ act, party, kind }` ("resigned", "stepped-down",
-   * "declared"). A client asks it from a fresh reading of the relays
-   * before it sends the rollback's rotation.
-   * @param {any} specs
-   * @param {string} collective
-   * @param {string[]} registers
-   * @returns {any}
-   */
-  lawRollbackRegisters(specs, collective, registers) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArrayJsValueToWasm0(registers, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawRollbackRegisters(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * Who counts for a power (`{ form, area }`) of the agreement in force
-   * just before a broken collective's broken act, at a rollback made
-   * next (Law rules 37d, 44d), `leaving` taken out (the parties whose
-   * resignations the rollback registers): as `lawNextVoices`; or
-   * `{ error }`, why there is no such count.
-   * @param {any} specs
-   * @param {string} collective
-   * @param {any} power
-   * @param {string[]} leaving
-   * @returns {any}
-   */
-  lawRollbackVoices(specs, collective, power, leaving) {
-    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawRollbackVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * What a split service owes (Law rule 29): every incoming receipt and
-   * payer's claim without its split, and every payout without the
-   * receiver's receipt, each naming one receiver and one agreement.
-   * @param {any} specs
-   * @param {string} service
-   * @returns {any}
-   */
-  lawServiceAccount(specs, service) {
-    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawServiceAccount(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * The declarations of absence naming `party` this verifier holds (RB3,
-   * client conformance): `{ act, signer, agreement, clause, outcomes,
-   * contests }`, `contests` the party's contests of it (BQ4).
-   * The numbers on the splits a service made under a deal (DQ6, F188):
-   * `{ numbers: [number, split][], gaps, repeated, unnumbered }`. Client
-   * conformance: a holder's client MUST raise the alarm where the
-   * numbers it receives skip (`gaps`).
-   * @param {any} specs
-   * @param {string} service
-   * @param {string} agreement
-   * @returns {any}
-   */
-  lawSplitNumbers(specs, service, agreement) {
-    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawSplitNumbers(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * Rule 15a's turns (F165, F171): for `stake` (its index) of
-   * `agreement`'s version in force, the leftover units each holder has
-   * received so far from `service`'s splits, as `previous` (the
-   * service's latest split act for the stake, which its next split
-   * cites) carries them in its running count; null `previous`: no split
-   * yet, every count zero. In the order of `holders` (hex). Null where
-   * `previous` is not held, not one of the service's splits for the
-   * stake, or carries no count.
-   * @param {any} specs
-   * @param {string} service
-   * @param {string} agreement
-   * @param {bigint} stake
-   * @param {string[]} holders
-   * @param {string | null} [previous]
-   * @returns {Float64Array | undefined}
-   */
-  lawSplitTurns(specs, service, agreement, stake, holders, previous) {
-    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passArrayJsValueToWasm0(holders, wasm.__wbindgen_malloc);
-    const len2 = WASM_VECTOR_LEN;
-    var ptr3 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len3 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
-    if (ret[3]) {
-      throw takeFromExternrefTable0(ret[2]);
-    }
-    let v5;
-    if (ret[0] !== 0) {
-      v5 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
-      wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
-    }
-    return v5;
-  }
-  /**
-   * A split, judged (rules 20, 21, 26; F121 Q9, F124 N10): whether it
-   * sums to what arrived, each fee and who received it, the holders it
-   * pays and was not delivered to, and every payout that does not match
-   * its stake.
-   * @param {any} specs
-   * @param {string} id
-   * @returns {any}
-   */
-  lawSplit(specs, id) {
-    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_lawSplit(this.__wbg_ptr, specs, ptr0, len0);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
-   * Where a deal stands forked (rule 45b, F186): `{ reference, branches,
-   * tangled }`, each branch its versions from the split to its latest,
-   * `tangled` the reason where the fork is tangled (F188, DQ1 to DQ4: the
-   * deal stays on its reference); null where it is not forked. Throws
-   * where the shape is not decided (QH1, refused rather than guessed).
-   * The version of an agreement in force, as rule 45b reads a deal's
-   * forks (F186, F188, F192): while forked or tangled, the reference.
-   * Throws where the shape is not decided (QH1: two settlements, a
-   * judge's among them, neither holding the other). What a buyer's
-   * client checks an offer against before paying (F188, a strong
-   * SHOULD).
-   * @param {any} specs
-   * @param {string} agreement
-   * @returns {string}
-   */
-  lawVersionInForce(specs, agreement) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-      const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-      const len0 = WASM_VECTOR_LEN;
-      const ret = wasm.verifier_lawVersionInForce(this.__wbg_ptr, specs, ptr0, len0);
-      var ptr2 = ret[0];
-      var len2 = ret[1];
-      if (ret[3]) {
-        ptr2 = 0;
-        len2 = 0;
-        throw takeFromExternrefTable0(ret[2]);
-      }
-      deferred3_0 = ptr2;
-      deferred3_1 = len2;
-      return getStringFromWasm0(ptr2, len2);
-    } finally {
-      wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
-    }
   }
   /**
    * A link between two MOR identities as the act `seenBy` sees it
@@ -1072,19 +1072,19 @@ var Verifier = class {
   }
   /**
    * A verifier for the given Identity spec hash (`IDENTITY`; a test value
-   * until the freeze). Given the Finance and Law spec hashes too, it can
+   * until the freeze). Given the Money and Agreements spec hashes too, it can
    * tell which acts may carry acknowledgements (F110); without them, an
    * act of another specification carrying `acks` is unknown to it.
    * @param {string} identity_spec
-   * @param {string | null} [finance_spec]
-   * @param {string | null} [law_spec]
+   * @param {string | null} [money_spec]
+   * @param {string | null} [agreements_spec]
    */
-  constructor(identity_spec, finance_spec, law_spec) {
+  constructor(identity_spec, money_spec, agreements_spec) {
     const ptr0 = passStringToWasm0(identity_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    var ptr1 = isLikeNone(finance_spec) ? 0 : passStringToWasm0(finance_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var ptr1 = isLikeNone(money_spec) ? 0 : passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len1 = WASM_VECTOR_LEN;
-    var ptr2 = isLikeNone(law_spec) ? 0 : passStringToWasm0(law_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var ptr2 = isLikeNone(agreements_spec) ? 0 : passStringToWasm0(agreements_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len2 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_new(ptr0, len0, ptr1, len1, ptr2, len2);
     if (ret[2]) {
@@ -1095,14 +1095,14 @@ var Verifier = class {
     return this;
   }
   /**
-   * The home quorum of a counting rotation (Finance rule 15, F180): the
+   * The home quorum of a counting rotation (Money rule 15, F180): the
    * receipts the home rule in effect before it requires, each passing
    * the receipt checks, per home operator, and how many operators are
    * needed. `kind` is "own" (it counts on its own signatures: anchor the
    * rotation itself), "homes", or "homeless" (the new homes' receipts,
    * under the new home rule, F182); null where it is not a counting
    * rotation. *The owner's client anchors these after a lock
-   * change (Finance rule 15, F181).*
+   * change (Money rule 15, F181).*
    * @param {string} identity
    * @param {string} rotation
    * @returns {any}
@@ -1135,7 +1135,7 @@ var Verifier = class {
   /**
    * The standing of an act held: "valid", "disputed", "void", "pending",
    * "invalid", "unknown", or "scoped" (signed with a key a higher MIP's
-   * act installs, a grant key: Law judges it, F128).
+   * act installs, a grant key: Agreements judge it, F128).
    * @param {string} act
    * @returns {string}
    */
@@ -2278,18 +2278,18 @@ var base64 = (b) => {
 var sha2562 = (data) => hex(sha256(typeof data === "string" ? new TextEncoder().encode(data) : data));
 var SPECS = {
   identity: sha2562("IDENTITY, test value until the freeze"),
-  envelope: sha2562("ENVELOPE, test value until the freeze"),
+  envelopes: sha2562("ENVELOPE, test value until the freeze"),
   text: sha2562("TEXT, test value until the freeze")
 };
 var MIPS = {
   ...SPECS,
-  finance: sha2562("FINANCE, test value until the freeze"),
-  law: sha2562("LAW, test value until the freeze"),
-  production: sha2562("PRODUCTION, test value until the freeze")
+  money: sha2562("FINANCE, test value until the freeze"),
+  agreements: sha2562("LAW, test value until the freeze"),
+  development: sha2562("PRODUCTION, test value until the freeze")
 };
-var ACK_SPECS = [MIPS.identity, MIPS.finance, MIPS.law];
+var ACK_SPECS = [MIPS.identity, MIPS.money, MIPS.agreements];
 var IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15, chainSignature: 16 };
-var ENVELOPE_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 };
+var ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 };
 
 // src/web/core.ts
 var slow = setTimeout(stillLoading, 2e4);
@@ -2450,7 +2450,7 @@ var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
 
 // ../genesis/src/lookup.ts
 async function lookUp(identity, hints, via = {}, into) {
-  const v = into ?? new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+  const v = into ?? new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
   const tried = /* @__PURE__ */ new Set();
   const unreachable = [];
   const operatorActs = /* @__PURE__ */ new Map();
@@ -2560,7 +2560,7 @@ async function lookUp(identity, hints, via = {}, into) {
       });
     }
   }
-  const e = v.latest(identity, SPECS.envelope, ENVELOPE_TYPES.encryptionKey);
+  const e = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
   let encryptionKey = null;
   if (e.payload) {
     const p = cborDecode(e.payload);
@@ -2870,8 +2870,8 @@ var test2 = (s) => sha2562(s);
 var POST_SPECS = {
   /** The Text MIP (`TEXT`). */
   text: LONGFORM_SPECS.text,
-  /** The Envelope MIP (`ENVELOPE`). */
-  envelope: SPECS.envelope,
+  /** The Envelopes MIP (`ENVELOPES`). */
+  envelopes: SPECS.envelopes,
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
@@ -2905,7 +2905,7 @@ var Judge = class {
   constructor(hints, via) {
     this.hints = hints;
     this.via = via;
-    this.v = new Verifier(SPECS.identity, MIPS.finance, MIPS.law);
+    this.v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
   }
   v;
   looked = /* @__PURE__ */ new Set();
@@ -2946,7 +2946,7 @@ async function readRef(id, hints, via, judge) {
   }
   if (!d.public) return { kind: "act", id, what: "a private act" };
   if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, what: "a text act" };
-  if (d.spec !== POST_SPECS.envelope || d.type !== PUBLICATION) return { kind: "act", id, what: "an act of a specification this client does not implement" };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, what: "an act of a specification this client does not implement" };
   return readPicture(act, d, hints, via, judge);
 }
 async function readPicture(act, d, hints, via, judge) {
@@ -3025,7 +3025,7 @@ async function findWithdrawal(publication, signer, forId, hints, via, judge) {
           } catch {
             continue;
           }
-          if (d.spec !== POST_SPECS.envelope || d.type !== WITHDRAWAL || !d.signer) continue;
+          if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
           if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
           if (await judge.standing(it.item, d.id, d.signer) === "valid") return d.id;
         }
@@ -4086,16 +4086,16 @@ function parseSiteSettings(raw) {
 var test3 = (s) => sha2562(s);
 var SITE_SPECS = {
   identity: SPECS.identity,
-  /** The Envelope MIP (`ENVELOPE`): a version is a publication. */
-  envelope: SPECS.envelope,
-  /** The Law MIP (`LAW`): only to tell that a signer is a collective. */
-  law: test3("LAW, test value until the freeze"),
+  /** The Envelopes MIP (`ENVELOPES`): a version is a publication. */
+  envelopes: SPECS.envelopes,
+  /** The Agreements MIP (`AGREEMENTS`): only to tell that a signer is a collective. */
+  agreements: test3("LAW, test value until the freeze"),
   /** The website cMIP (cmips/cmip-website-draft-3.md). Draft 3 adds the icon
    * (rule 16a) and leaves the manifest as it was, so the test value stays
    * draft 2's: versions already published still verify. */
   site: test3("website cMIP, draft 2, test value until publication")
 };
-var SITE_LAW_SPECS = { ...MIPS, law: SITE_SPECS.law };
+var SITE_AGREEMENTS_SPECS = { ...MIPS, agreements: SITE_SPECS.agreements };
 var PUBLICATION2 = 0;
 var WITHDRAWAL2 = 3;
 
@@ -4123,7 +4123,7 @@ async function openVersion(version, expected, hints, via = {}) {
     return fail2(`the version is not a valid act: ${e instanceof Error ? e.message : e}`);
   }
   if (!d.public || !d.payload) return fail2("the version is not a public act");
-  if (d.spec !== SITE_SPECS.envelope || d.type !== PUBLICATION2) return fail2("the version is not a publication (Envelope type 0)");
+  if (d.spec !== SITE_SPECS.envelopes || d.type !== PUBLICATION2) return fail2("the version is not a publication (Envelopes type 0)");
   if (!d.signer) return fail2("the version has no signer");
   r.signer = d.signer;
   let media;
@@ -4148,8 +4148,8 @@ async function openVersion(version, expected, hints, via = {}) {
   if (r.standing !== "valid") fail2(`the version is ${r.standing}, not valid, for its signer's identity chain`);
   const res = v.resolve(d.signer);
   for (const link of res.links) {
-    if (v.lawDeclared(SITE_LAW_SPECS, d.signer, link.act)) {
-      fail2("the signer is a collective (its chain declares an agreement): a collective's site counts only once Law draft 7 is approved, under its Envelope lane (website cMIP, rule 3)");
+    if (v.agreementsDeclared(SITE_AGREEMENTS_SPECS, d.signer, link.act)) {
+      fail2("the signer is a collective (its chain declares an agreement): a collective's site counts only once Agreements draft 7 is approved, under its Envelopes lane (website cMIP, rule 3)");
       break;
     }
   }
@@ -4197,7 +4197,7 @@ async function findWithdrawal2(version, signer, hints, via, v) {
         } catch {
           continue;
         }
-        if (d.spec !== SITE_SPECS.envelope || d.type !== WITHDRAWAL2 || d.signer !== signer) continue;
+        if (d.spec !== SITE_SPECS.envelopes || d.type !== WITHDRAWAL2 || d.signer !== signer) continue;
         if (!(d.objects ?? []).some(([chain]) => chain === version)) continue;
         try {
           v.add(it.item);
@@ -4247,7 +4247,7 @@ async function candidates(signer, places, via) {
           continue;
         }
         if (found.has(d.id) || d.signer !== signer || !d.public || !d.payload) continue;
-        if (d.spec !== SITE_SPECS.envelope || d.type !== PUBLICATION2) continue;
+        if (d.spec !== SITE_SPECS.envelopes || d.type !== PUBLICATION2) continue;
         const previous = await previousOf(d.payload, places, via);
         if (previous !== void 0) found.set(d.id, { id: d.id, previous });
       }
@@ -4320,7 +4320,7 @@ function standingWords2(s) {
     case "invalid":
       return { ok: false, words: "Invalid: the signature or the act does not check." };
     case "scoped":
-      return { ok: false, words: "Signed with a grant key: a key of a collective scoped to one of its grants (Law, F128). Whether the grant backs it is Law's to say, and this reader does not judge Law." };
+      return { ok: false, words: "Signed with a grant key: a key of a collective scoped to one of its grants (Agreements, F128). Whether the grant backs it is Agreements' to say, and this reader does not judge Agreements." };
     default:
       return { ok: false, words: `Not verified (${s}): this browser could not establish who signed it.` };
   }
