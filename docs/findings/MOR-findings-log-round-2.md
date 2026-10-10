@@ -2634,6 +2634,16 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Core changes:** Money (Finance) draft 6, rule 7 ("past its terms" ends the obligation); Agreements (Law) draft 10, the closing (a refund past its terms is not a debt that binds it), terms field 17; the formats (refund terms, OF7). *To build:* with step 12b's formats.
 
+## F220. A payment counted, then erased by a deeper rewrite: final for whoever counted it (rail build Q1, 10 October 2026, evening)
+
+**From** `docs/onchain-rail-f200-f205-build-2026-10-10.md`, Q1: after a rewrite of Bitcoin deeper than the confirmations, F205 keeps a counted payment counted while F204 answers "unknown" for a block not on the chain followed; a verifier that only ever saw the new chain cannot hold both. *Laid beside it:* F204 ("Yes B."); F205 ("Hard for me to imagine, so I will agree with you. But, never say never."); F192 ("settle is final for what signers could see").
+
+**Decided by Nobody, allegedly, 10 October 2026 ("Yes, 1 seems right"):** option 1, as built. A payment is final for whoever counted it, and nothing built on it reopens on its own; a verifier that never held its block answers "unknown". After such a rewrite two verifiers can disagree: that is the stated cost F205 already names. F204 stays exact. *Suggested by the build and the project lead.* Not chosen: a kept branch counting (changes F204's "not on the chain"); a side branch at the chain's own difficulty counting (reopens forgery, undoing F204).
+
+**The build's four readings, taken by the project lead under the delegation** (each reads a decision, none changes a rule): (1) a pending claim protects only with a payment shown (on-chain the transaction; on Lightning the preimage), F203; (2) where a clock's main and backup references differ, rule 15 reads each its own way (F201 on Bitcoin, F203 elsewhere), F179; (3) "before or at" on Bitcoin includes the lock change's own block (F178, item 6); (4) a lock change's point on the Bitcoin clock needs its home receipts anchored on Bitcoin, which step 14a's service does; until then a client states those anchors.
+
+**Core changes:** none beyond the build (the Module's "Costs, stated" and Finance rule 15 already carry it). *Merged the same evening, main `5dfa1d4`; the display client to be released again.*
+
 ## F200 to F205 built (10 October 2026, evening)
 
 `docs/onchain-rail-f200-f205-build-2026-10-10.md` (branch `claude/onchain-rail-f200-f205`, merged the same evening by the project lead): the on-chain rail Module draft 2, the anchoring cMIP draft 1 and the Bitcoin clock Module draft 1 written; Finance draft 6 (rules 8a, 10, 15, the clock format), Envelope draft 7 (anchoring), Production draft 6 (rule 12), the payment cMIP and the Lightning Module revised in place; each change built with a test that fails first; Fable's review tests rewritten to pin the fixes; regtest end to end with two btcd nodes. Every mechanic chosen under the delegation is marked as the build's in the report. **One question for Nobody, allegedly:** Q1, a payment counted and then rewritten deeper than its confirmations: F205 keeps it counted, F204 makes its block, off the chain followed, answer unknown; as built, the rule follows F204.
