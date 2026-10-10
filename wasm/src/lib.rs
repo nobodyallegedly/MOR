@@ -1534,12 +1534,19 @@ struct SpecsIn {
     /// whether listed or not (Agreements rules 19, 22; QG3, F193, F194).
     #[serde(default)]
     delivery_records: Vec<String>,
-    /// The chain of judgment for a deal's judge of forks (Agreements rule 34a;
-    /// QG4): pairs `[settlement request, judge]` whose period to act on
-    /// that request has passed on the deal's time reference with no
-    /// settlement of theirs, as the client read that time reference.
+    /// The chain of judgment (Agreements rule 34a; QG4; F246, per question,
+    /// never per party): pairs `[question, judge]` whose stage on that
+    /// question has passed on the agreement's time reference with no answer
+    /// of theirs, as the client read that time reference; for a deal's fork,
+    /// the question is the fork's reference, the version the settlement
+    /// requests name.
     #[serde(default)]
     judges_lapsed: Vec<(String, String)>,
+    /// Judges' settlements the time reference places before their link's
+    /// stage opened (F246: a settlement outside its link's active window
+    /// counts for nothing), as the client read that time reference.
+    #[serde(default)]
+    settled_out_of_turn: Vec<String>,
     /// Notices to a payer owed money back (Agreements type 24; F197) whose
     /// deadline has passed on their time reference with no address given,
     /// as the client read that time reference.
@@ -1587,6 +1594,9 @@ impl SpecsIn {
         }
         for (r, j) in &self.judges_lapsed {
             view.judges_lapsed.insert((unhex(r)?, unhex(j)?));
+        }
+        for x in &self.settled_out_of_turn {
+            view.settled_out_of_turn.insert(unhex(x)?);
         }
         for n in &self.notices_lapsed {
             view.notices_lapsed.insert(unhex(n)?);
