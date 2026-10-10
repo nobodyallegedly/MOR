@@ -32,4 +32,6 @@ The doc comments of `LawView::split`'s `unplanned` (`core/src/law/view.rs`) and 
 
 ## Results
 
-RESULTS_PLACEHOLDER
+- **Before**, on this branch's base (`845f168`): `clients/collective`, 37 passed, 1 failed (above).
+- **Locally, after** (`scripts/test-all.sh`, WebAssembly rebuilt with wasm-bindgen 0.2.129): all passed. Rust workspace 558 passed, 0 failed, 1 ignored (unchanged: nothing in Rust changed); `clients/collective` 39 passed, 0 failed (38 before, the rewritten test among them, plus `f207.test.ts`); `clients/repo` 18 passed; every other package as before, 0 failed. No Chromium path was set locally, so the site's browser test ran only on GitHub.
+- **The "tests" workflow on this branch** (run by hand, workflow_dispatch, run 38062131736 on `d5c7492`, the commit before this report's results): Rust workspace, the WebAssembly, and every client and module step (barebone, collective, connector, desk, genesis, longform, manage, reader, repo, site, jpeg) **passed**. "Reproducible build of the display client" and the fingerprints step **failed**, as expected until the display client's release follows 12b's change to the core (`clients/site/built/` was not touched here).
