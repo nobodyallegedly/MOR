@@ -2690,6 +2690,12 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Open for Nobody, allegedly:** QK1 (two links of the chain of judgment each settling the fork, neither holding the other); QK3 (QJ2's receipt by the work's service against H5 and H7: a grant key never signs a split's payout); the live work review's six questions (`docs/reviews/live-work-review.md`); a step-down naming drafts.
 
+## F242. What Money states and what Agreements decide: the rename pass's M1 to M8, item by item (10 October 2026, night)
+
+**Asked by Nobody, allegedly:** "Let's verify what belongs where." Each sentence the rename pass found (`docs/rename-pass.md`, part 3) is read against F225: Money says which rails, units, where to, that money moved, or asks that it move; Agreements say what must happen in return or in consequence.
+
+- **M1, Money rule 7, "past its terms": decided ("Yes").** Money keeps the state and shows it (past its terms: nothing moved); the obligation's end, who keeps the money and that it blocks no closing are Agreements' (rule 32, F219), and Money points there.
+
 **Main went red after the merge, and was fixed (10 October 2026, evening;** `docs/rename-ci-fix.md`, merged**).** A test file added to main while the rename branch was open still used the old module names; the merge had no textual conflict, so it compiled on neither side's tests but failed on their union. One test file renamed; Rust 581 and TypeScript 204 passing; the vectors unchanged. *The project lead's error, stated:* the merged tree was pushed to main untested. *Working practice from now on:* a branch is merged through a pull request (the tests run on pull requests), or its merged tree waits for the tests before the next step builds on it.
 
 ## The rename pass's questions: readings taken under the delegation (10 October 2026, evening)
