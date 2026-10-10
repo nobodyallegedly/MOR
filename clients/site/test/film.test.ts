@@ -21,7 +21,7 @@ import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { strip as stripFilm } from '../../../modules/video/src/video.ts';
 import { Gateway } from '../src/gateway.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
-import { gatewayFor, phone, siteCopy, world, type World } from './world.ts';
+import { benign, gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -95,7 +95,9 @@ async function open(address: string, o: { phone?: boolean; canPlay?: boolean } =
     if (r.url().includes('/_mor/file/')) fetched.push(r.url().replace(/^.*\/_mor\/file\//, ''));
     if (!/^(http:\/\/127\.0\.0\.1:|blob:|data:|about:)/.test(r.url())) elsewhere.push(r.url());
   });
-  page.on('pageerror', (e) => problems.push(String(e)));
+  page.on('pageerror', (e) => {
+    if (!benign(String(e))) problems.push(String(e));
+  });
   await page.goto(base + address);
   await page.waitForSelector('#mor-bar.ok, #mor-bar.bad', { timeout: 60_000 });
   return { page, ctx, fetched, elsewhere, problems };

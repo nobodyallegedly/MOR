@@ -19,7 +19,7 @@ import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { Gateway } from '../src/gateway.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
 import { post } from '../../barebone/src/post.ts';
-import { DOORS, gatewayFor, phone, siteCopy, world, type World } from './world.ts';
+import { benign, DOORS, gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -119,13 +119,6 @@ async function open(url: string, refusals = csp) {
   await page.waitForSelector('#mor-bar.ok, #mor-bar.bad', { timeout: 60_000 });
   return { page, ctx, problems, elsewhere, sandbox };
 }
-
-/**
- * WebKit's notice that a frame's size changed again while being fitted: the
- * remaining notices come at the next frame, as the observer's rules say, so
- * nothing is lost.
- */
-const benign = (m: string) => /ResizeObserver loop completed with undelivered notifications/.test(m);
 
 const standing = (page: Page) => page.textContent('#mor-standing');
 const fp = async (page: Page) => (await page.textContent('#mor-signer'))!.replace(/ /g, '');
