@@ -42,6 +42,7 @@ Each records what a session built, what it found, and what it left open. They ar
 | [step-11b-false-mark-2026-10-08.md](step-11b-false-mark-2026-10-08.md) | The collective client's false clone mark from the human test of 8 October 2026: marks and the collective's box from Agreements' own reading. |
 | [adversarial-test-plan-v2.md](adversarial-test-plan-v2.md), [v3](adversarial-test-plan-v3.md) | Earlier versions of the test plan. |
 | [project-lead-prompt.md](project-lead-prompt.md) | The brief the AI project lead worked from. |
+| [rename-pass.md](rename-pass.md) | The rename pass: the layers (Envelopes, Money, Agreements, Development) and the keys (chain key, signing key), wording only; what was left and why, the wire proof, and Money read against F225. |
 
 ## The paper and its reviews
 
