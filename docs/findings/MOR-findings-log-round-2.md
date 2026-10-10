@@ -2616,6 +2616,16 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Core changes:** Agreements (Law) draft 10, rule 14 (a transfer takes effect on the seller's own line; the wrong receipt; the service's obligation), the stake transfer format (a chain signature), the window stated as a cost with its client conformance; the formats proposal, OF19. *To build:* with step 12b's formats.
 
+## F218. A role share nobody fills goes back to the owners unless the plan says otherwise (formats, the `unfilled` default, 10 October 2026, afternoon)
+
+**From** Fable's formats review, section 4 (the `unfilled` default `[0]` is a choice, not a reading: rule 22 gives three outcomes, to the owners pro rata, held open as an obligation, or to a named party). *Laid beside it:* F210 (the relay acknowledged in the claim written at payment, so an unfilled share means none was acknowledged); Production rule 15 (a client shows what a plan computes on a concrete example before signing).
+
+**Decided by Nobody, allegedly, 10 October 2026 ("Yes"):** absent a choice in the plan, an unfilled role share goes to the stakes, in proportion to their parts; held open or to a named party stays the plan's to write; the signer's client shows it before signing (rule 15). *Suggested by the project lead.*
+
+**Added by Nobody, allegedly, with it, open:** "and who « owns the work » in shared ownerships is either defined or defaults to creator of the first act." *To be laid beside rule 15 before it is recorded as a rule* (a work is bound to its creators only by an explicit work claim; a publication is a neutral carrier; order is not evidence of authorship).
+
+**Core changes:** Agreements (Law) draft 10, rule 22 (the default); the plan format (field 3 absent means `[0]`). *To build:* with step 12b's formats.
+
 ## F191 to F199 built (10 October 2026, early afternoon)
 
 `docs/f191-f199-build-2026-10-10.md` (merged): F191 to F199 written into Law draft 10, Finance draft 6, Production draft 6, core v21 and the freeze suite (each revised in place for Nobody, allegedly, to approve again) and built, each with a test that fails first; Rust 502 passed; both FORK-HANDS-OUT seeds and every invariant pass at 5,000 cases; Fable's `review_f190_*` tests rewritten to pin the fixes (5b, the offer's object, unchanged: QH3). The display client released again. **Six questions for Nobody, allegedly, open:** QH1 (two settlements of one fork, neither holding the other, one the judge's); QH2 (a branch nobody named, carrying a newcomer, dropped by F192 without her signature); QH3 (the object a relay's record names, and a purchase naming an offer; joins step 12b's OF1); QH4 (a resignation and the very version that registers it); QH5 (a one-time key that gave no refund address); QH6 (a pointer inside a fork's history whose taking-on the fork left out). Nine readings to confirm.
