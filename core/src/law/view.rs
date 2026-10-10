@@ -50,7 +50,6 @@ pub use selling::OfferEval;
 /// The owning side of step 12b: work claims and stake transfers.
 mod owning;
 pub use owning::{TransferEval, WorkOwners};
-use super::open_formats::{Offer, OfferAct};
 use std::rc::Rc;
 
 /// Read Law from what a verifier holds.

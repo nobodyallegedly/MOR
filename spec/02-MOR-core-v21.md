@@ -356,7 +356,7 @@ Finance defines how a simple payment moves: never the rails, and nothing about w
 
 ## Open before freeze
 
-- [ ] Exact formats for every act in Finance, Law and Production (the Identity, Envelope and Text drafts already have them).
+- [ ] Exact formats for every act in Finance, Law and Production (the Identity, Envelope and Text drafts already have them). *Step 12b (10 October 2026, `docs/formats-build-12b.md`): written in and built, to approve: the standing offer, refund terms, the split plan and fees, metrics, the work claim, the stake transfer, the request to a judge, liveness; types 7, 11 and 15 retired; field 10 withdrawn. Left in text only: the general contest, the keeper record, the rail kind field (the library still takes them as stated). Open: the questions QJ1 to QJ3.*
 - [ ] Law draft 10's open points: the readings taken writing F130 in; the three readings taken writing F132 in; QH1 to QH6 and the readings taken writing F191 to F199 in (Law draft 10, "Open in this draft"). U1 to U3, found writing F131 in, are answered (F132); QF1 to QF6, found writing F188 and F189 in, are answered (F190); QG1 to QG5, found writing F190 in, are answered (F191, with F192 to F199).
 - [ ] Technical review of the RV32IM verification profile and its test vectors, the running-summary test vector, the signature-scheme specification format, and the pinned Unicode version.
 - [ ] Human adversarial review (round 3).
