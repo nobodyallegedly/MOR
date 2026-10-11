@@ -2698,17 +2698,25 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **From** `docs/reviews/case-studies-vs-vows.md` (Q-G1): can a vow sell something that already exists but has no bytes (a bowl in stock, an hourly rate, storage)? *Laid beside it, his words:* "MOR truly needed a structured way of selling something that has no bytes, or no bytes yet"; "IOU of services that need to come at a later date". *Options:* (a) yes; (b) only what does not exist yet, the rest sold through the access form with no sale state; (c) the cMIPs decide. **Decided by Nobody, allegedly: "Yes, a. I think my quote settles it."** A vow is any act naming something MOR cannot hash, existing or to come; every sale of a physical good or a service names one, and gets pending, confirmed or contested. One form for one task (Fable's finding 7). *Suggested by the project lead.* *Noted for the texts' redraft:* what the access form `[ 2, [cMIP, params] ]` still serves once vows cover goods and services (access to bytes, such as a subscription's keys) is to be said there.
 
+## F260. A direct buyer tries the services the agreement names, in order (QS1, 11 October 2026, late morning)
+
+**From** `docs/split-module-build.md`, QS1: through a publisher, a backup is paid at its own address (F250); a buyer paying the owners directly pays their payee pointer, which leads to one service only, so if it fails the buyer has no signed address for the backup. *Options:* (a) the owner's pointer carries the main service and its backups, in order; (b) the buyer pays the backup's own address, the backup receipting in the owners' name; (c) backups serve publisher payments only. **Decided by Nobody, allegedly: "Yes, b."** Every payer, publisher or buyer, follows one rule: try the services the agreement names (field 14, then field 29), in order, attempts per payment. A backup paid directly receipts in the owners' name with the grants it already holds (H6); Money's pointer format is unchanged. *Suggested by the project lead.*
+
+**To build** with the next Agreements change: rules 16 and 18a extended to a direct buyer's payment; the cut check follows it.
+
 ## The split Module build: readings (11 October 2026, late morning)
 
 **From `docs/split-module-build.md` (merged, pull request 7):** F250 written in and built. Backups sit in terms field 29 (judicial, as field 14), after field 14's designated pointer; the split service's link `[ 2 ]` in the chain of judgment is withdrawn and never reused; rule 18a hands the split task (task 8, extended) to the split cMIP, which chooses the receiver per payment; rule 18b is each participant's check. Rust 604, TypeScript 219, no vector changed; the CI's only failure the expected reproducible-build check before a release. *Readings 1 to 16 taken by the project lead under the delegation of mechanics,* each respecting F249 and F250 (notably: the failed attempt is stated by the caller per payment, failing closed to the designated pointer; every attempt failed leaves the money an open obligation of whoever holds it; the cut check counts only the participant's own receipts). *Stated cost, in the split cMIP draft 1, not the core:* a failed attempt is the payer's word; the core's guarantee bounds it (money only to a service every owner signed, split by the same plan).
 
-**Open for Nobody, allegedly:** QS1, a buyer paying the owners directly when the first service fails: the owners' payee pointer leads to one service only.
+**QS1** decided as F260.
 
 ## F259. Two vows on one event stay separate; one may point to the other as reference (Q17-1, 11 October 2026, late morning)
 
 **From** `docs/reviews/case-studies-vs-vows.md`, Q17-1 (the live sports study: the club's vow for the match, selling tickets; Dario's vow for his stream, selling access; the club's 20% under the live-rights agreement). *Options:* (a) two vows, unconnected in the core; (b) the live-rights agreement claims Dario's stream vow, the club holding a stake, so F247 marks offers outside it; (c) the live-rights cMIP decides. **Decided by Nobody, allegedly: "It could point to it as reference, but they are separate vows, even though they relate to the same event. How Dario manages the rights of his own vow is his business."** Two vows on one event are separate acts. Dario's vow may name the club's as a reference: the reference carries no claim, no stake and no F247 marking. Whether Dario's own vow is claimed by an agreement, and how its rights are managed, is his choice; the study does not show the club claiming it. *The project lead's lean (b) not taken.*
 
-**For the live sports study's next draft:** Dario's stream vow names the club's match vow as its reference; the club's 20% stays in the live-rights agreement.
+**Sharpened by Nobody, allegedly, the same morning:** "The vow is not for the football game, the vow is for a place in the stand to watch it, and with Dario access to a stream to watch it. None are the football game, both need their own agreement." A vow names what is promised to the buyer (a seat, access to a stream), never the event itself; each has its own agreement.
+
+**For the live sports study's next draft:** the club's vow is for a place in the stand, Dario's for access to his stream; his may name the club's as a reference; each sits under its own agreement, the club's 20% in the live-rights agreement.
 
 ## F258. A resale under a fresh vow escapes F247: a stated cost, for the provenance cMIP (Q16-2, 11 October 2026, late morning)
 
