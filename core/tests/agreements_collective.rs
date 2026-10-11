@@ -8612,7 +8612,7 @@ fn bq4_a_contest_names_the_declaration_and_is_signed_by_the_party_named() {
     let ids = lab.ids();
     let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
     lab.record(0, None, &[], vec![d], f);
-    let c = agreements::Contest { act: d };
+    let c = agreements::Contest::of_declaration(d);
     let mut cy = lab.m[CY].clone();
     let x = agreements_act(&mut lab.w, &mut cy, agreements::types::CONTEST, c.to_map(), obj(d));
     // Someone else's "contest" of it shows nothing.
@@ -11284,6 +11284,158 @@ fn f216_a_publication_carries_two_agreements() {
     let mut want = vec![(label.id, 150), (ana.id, 510), (ben.id, 340)];
     want.sort();
     assert_eq!(paid, want);
+}
+
+// ---------------------------------------------------------------------------
+// Agreements draft 11, rule 15 (new in draft 11, F254): any agreement may
+// be a party of another, named by its line, consenting by its own rule; no
+// loops; nesting bounded at 8 (`docs/agreements-draft-11-build.md`).
+// ---------------------------------------------------------------------------
+
+/// A deal's terms between `parties`, with the stake `object` split among
+/// `holders`.
+fn deal_of(parties: &[Hash], text: &str) -> Terms {
+    let mut t = deal_terms(parties[0], parties[1]);
+    t.parties = parties.to_vec();
+    t.text = text.into();
+    t
+}
+
+/// Propose `t` by the first of `signers`, and have each sign it.
+fn deal_signed_by(w: &mut World, t: &Terms, signers: &mut [&mut Person], parent: Option<Hash>) -> Hash {
+    let x = agreements_act(w, signers[0], agreements::types::TERMS, t.to_map(), parent.map(|p| obj(p)).unwrap_or(None));
+    for p in signers.iter_mut() {
+        sign(w, p, &x);
+    }
+    x
+}
+
+/// A clone of the deal `parent` (terms `pt`), changed by `f`, its mark the
+/// clone rule and the parent's parties.
+fn deal_clone(pt: &Terms, parent: Hash, f: &dyn Fn(&mut Terms)) -> Terms {
+    let mut c = pt.clone();
+    c.parent = Some(parent);
+    f(&mut c);
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(pt.parties.clone()) }]);
+    c
+}
+
+/// Draft 11, rule 15 (F254, part 3): an agreement is named as a party by
+/// its line, its founding version. A publication's agreement naming the
+/// work's agreement by a later version is refused; named by its line, it
+/// counts. What the line signed it carries through every later version:
+/// once Ana and Ben signed the publication's agreement for the work's
+/// agreement, a re-version replacing Ben with Cy does not undo it.
+#[test]
+fn draft_11_f254_an_agreement_is_named_by_its_line_and_carries_what_it_signed() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut cy = w.genesis("cy", vec![own_home()], None, None);
+    let mut label = w.genesis("a publisher", vec![own_home()], None, None);
+    let wt = deal_of(&[ana.id, ben.id], "The work's agreement.");
+    let we = deal_signed_by(&mut w, &wt, &mut [&mut ana, &mut ben], None);
+    // A later version of it: the text changes.
+    let w2t = deal_clone(&wt, we, &|t| t.text = "The work's agreement, amended.".into());
+    let we2 = deal_signed_by(&mut w, &w2t, &mut [&mut ana, &mut ben], Some(we));
+    assert_eq!(view(&w).version_in_force(&we).unwrap(), we2);
+    // Named by the later version: refused, failing closed.
+    let bad = deal_signed_by(&mut w, &deal_of(&[we2, label.id], "Named by a version."), &mut [&mut label, &mut ana, &mut ben], None);
+    let a = view(&w).agreement(&bad).unwrap();
+    assert!(a.invalid.as_deref().is_some_and(|x| x.contains("by its line")), "{:?}", a.invalid);
+    assert_eq!(a.exists, Some(false));
+    // Named by its line: Ana and Ben sign, the line consents.
+    let pt = deal_of(&[we, label.id], "The publication's agreement.");
+    let pe = deal_signed_by(&mut w, &pt, &mut [&mut label, &mut ana, &mut ben], None);
+    assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true));
+    // The work's agreement re-versions: Ben out, Cy in. What the line
+    // signed stays signed.
+    let w3t = deal_clone(&w2t, we2, &|t| t.parties = vec![t.parties[0], cy.id]);
+    let we3 = deal_signed_by(&mut w, &w3t, &mut [&mut ana, &mut ben, &mut cy], Some(we2));
+    assert_eq!(view(&w).version_in_force(&we).unwrap(), we3);
+    assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true), "carried through every later version (F254)");
+    // A new act the line signs under its version in force: Ana and Cy.
+    let nt = deal_of(&[we, label.id], "A second publication.");
+    let ne = deal_signed_by(&mut w, &nt, &mut [&mut label, &mut ana], None);
+    assert_eq!(view(&w).agreement(&ne).unwrap().exists, Some(false), "Cy has not signed");
+    sign(&mut w, &mut cy, &ne);
+    assert_eq!(view(&w).agreement(&ne).unwrap().exists, Some(true));
+}
+
+/// Draft 11, rule 15 (F254, part 4): an agreement is never a party of
+/// itself, directly or through others; terms making one so are refused,
+/// failing closed. The founding version that was named first is never the
+/// one refused: whatever names its line was made after it.
+#[test]
+fn draft_11_f254_no_loops() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut cy = w.genesis("cy", vec![own_home()], None, None);
+    let at = deal_of(&[ana.id, ben.id], "Deal A.");
+    let a = deal_signed_by(&mut w, &at, &mut [&mut ana, &mut ben], None);
+    // Directly: a version of A naming its own line.
+    let selft = deal_clone(&at, a, &|t| t.parties.push(a));
+    let own = deal_signed_by(&mut w, &selft, &mut [&mut ana, &mut ben], Some(a));
+    let e = view(&w).agreement(&own).unwrap();
+    assert!(e.invalid.as_deref().is_some_and(|x| x.contains("party of itself")), "{:?}", e.invalid);
+    assert_eq!(e.exists, Some(false));
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a, "refused: A stays in force");
+    // Through another: B has A as a party; a version of A naming B.
+    let bt = deal_of(&[a, cy.id], "Deal B.");
+    let b = deal_signed_by(&mut w, &bt, &mut [&mut cy, &mut ana, &mut ben], None);
+    let eb = view(&w).agreement(&b).unwrap();
+    assert_eq!(eb.exists, Some(true), "B's founding version names A: no loop {:?} {:?}", eb.invalid, eb.signed);
+    let loopt = deal_clone(&at, a, &|t| t.parties.push(b));
+    let looped = deal_signed_by(&mut w, &loopt, &mut [&mut ana, &mut ben, &mut cy], Some(a));
+    let e = view(&w).agreement(&looped).unwrap();
+    assert!(e.invalid.as_deref().is_some_and(|x| x.contains("loop")), "{:?}", e.invalid);
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a);
+    assert_eq!(view(&w).agreement(&b).unwrap().exists, Some(true), "B, named first, stands");
+}
+
+/// Draft 11, rule 15 and "Open technical parameters" (F254, part 4):
+/// nesting is bounded at 8 layers, one constant. An agreement with eight
+/// layers of agreements below it stands; a ninth is refused, failing
+/// closed, and gives no consent.
+#[test]
+fn draft_11_f254_nesting_is_bounded_at_8() {
+    assert_eq!(agreements::NESTING_BOUND, 8, "a freeze parameter");
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut inner = deal_signed_by(&mut w, &deal_of(&[ana.id, ben.id], "Layer 0."), &mut [&mut ana, &mut ben], None);
+    let mut layers = vec![inner];
+    for i in 1..=9 {
+        // Each layer: the one below and Ben, Ana signing for every layer
+        // below (each is Ana and Ben, all the way down).
+        let t = deal_of(&[inner, ben.id], &format!("Layer {i}."));
+        inner = deal_signed_by(&mut w, &t, &mut [&mut ana, &mut ben], None);
+        layers.push(inner);
+    }
+    let at = |i: usize| view(&w).agreement(&layers[i]).unwrap();
+    assert_eq!((at(8).invalid, at(8).exists), (None, Some(true)), "eight layers of agreements below it");
+    let e = at(9);
+    assert!(e.invalid.as_deref().is_some_and(|x| x.contains("nesting bound")), "{:?}", e.invalid);
+    assert_eq!(e.exists, Some(false));
+}
+
+/// Draft 11, rule 7 (F254): a manifest neither claims its parts nor is
+/// reached by their claims. The album's claim binds the album's hash; a
+/// song's claim binds the song. Neither owner is shown owning the other.
+#[test]
+fn draft_11_f254_a_manifest_neither_claims_its_parts_nor_is_reached_by_them() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut label = w.genesis("a label", vec![own_home()], None, None);
+    let song = spec("a song");
+    let album = spec("an album naming the song");
+    let (aid, lid) = (ana.id, label.id);
+    let sc = agreements_act(&mut w, &mut ana, agreements::types::WORK_CLAIM, agreements::WorkClaim { work: song, creators: vec![aid], commitment: None }.to_map(), None);
+    let ac = agreements_act(&mut w, &mut label, agreements::types::WORK_CLAIM, agreements::WorkClaim { work: album, creators: vec![lid], commitment: None }.to_map(), None);
+    let (s, a) = (view(&w).work_owners(&song).unwrap(), view(&w).work_owners(&album).unwrap());
+    assert_eq!((s.claims, s.default_holder, s.contested), (vec![sc], Some(ana.id), false));
+    assert_eq!((a.claims, a.default_holder, a.contested), (vec![ac], Some(label.id), false));
 }
 
 /// Fable's readings of OF24 (a) with review 2.6, and OF23 (a): a request

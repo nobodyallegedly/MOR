@@ -150,9 +150,17 @@ fn acknowledging_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: 
     w.add(&a)
 }
 
-/// A contest (Agreements type 14) naming the vow, signed by `p`.
-fn contest(w: &mut World, p: &mut Person, name: Hash) -> Hash {
-    let c = agreements::Contest { act: name };
+/// A contest (Agreements type 14) of the sale `sale` of the vow `name`,
+/// signed by `p` (Agreements draft 11, rule 13, F253): field 0 the sale,
+/// the vow in `objects`.
+fn contest(w: &mut World, p: &mut Person, name: Hash, sale: Hash) -> Hash {
+    contest_with(w, p, name, sale, None)
+}
+
+/// As [`contest`], naming the promise not kept (field 1, optional,
+/// reading (Q3)).
+fn contest_with(w: &mut World, p: &mut Person, name: Hash, sale: Hash, promise: Option<agreements::Promise>) -> Hash {
+    let c = agreements::Contest::of_sale(name, sale, promise);
     agreements_act(w, p, agreements::types::CONTEST, c.to_map(), Some(vec![Object { chain: name, predecessor: name }]))
 }
 
@@ -230,12 +238,13 @@ fn only_the_buyer_confirms_or_contests_and_a_contest_prevails() {
     let _ = witnessed;
     assert_eq!(c.state(), vec![(fid, SaleState::Pending)], "the seller cannot confirm its own sale");
     let mut stranger = c.w.genesis("a stranger", vec![own_home()], None, None);
-    contest(&mut c.w, &mut stranger, name);
+    let sale = c.claims[0];
+    contest(&mut c.w, &mut stranger, name, sale);
     assert_eq!(c.state(), vec![(fid, SaleState::Pending)], "a stranger who never signed on has no standing: its contest shows nothing");
     let ack = acknowledging_claim(&mut c.w, &mut c.fan, club, offer, PROOF, vec![delivered]);
     c.claims.push(ack);
     assert_eq!(c.state(), vec![(fid, SaleState::Confirmed { by: vec![ack] })]);
-    let k = contest(&mut c.w, &mut c.fan, name);
+    let k = contest(&mut c.w, &mut c.fan, name, sale);
     assert_eq!(c.state(), vec![(fid, SaleState::Contested { by: vec![k] })], "the buyer's contest marks the sale contested, and voids nothing");
     assert!(view(&c.w).offer(&offer).unwrap().counts, "the offer stands");
 }
@@ -270,8 +279,11 @@ fn a_free_offer_is_signed_onto_by_a_signature_act() {
     assert_eq!(e.sales.iter().map(|x| (x.act, x.buyer, x.state.clone())).collect::<Vec<_>>(), vec![(s, citizen.id, SaleState::Pending)]);
     let built = about(&mut w, &mut town, name, "the bench is in");
     let seen = w.ack(&mut citizen, built);
-    assert_eq!(view(&w).vow(&name).unwrap().sales[0].state, SaleState::Confirmed { by: vec![seen] }, "the citizen acknowledged it");
-    let k = contest(&mut w, &mut citizen, name);
+    assert_eq!(view(&w).vow(&name).unwrap().sales[0].state, SaleState::Pending, "draft 11, rule 13: a confirmation names the sale, and this one names only the act about the vow");
+    let seen = w.everyday_act(&mut citizen, common::identity_spec(), mor_core::identity::types::WITNESS, vec![], None, Some(vec![built, s]));
+    let seen = w.add(&seen);
+    assert_eq!(view(&w).vow(&name).unwrap().sales[0].state, SaleState::Confirmed { by: vec![seen] }, "the citizen acknowledged it, naming the sale");
+    let k = contest(&mut w, &mut citizen, name, s);
     assert_eq!(view(&w).vow(&name).unwrap().sales[0].state, SaleState::Contested { by: vec![k] });
 }
 
@@ -321,4 +333,127 @@ fn an_offer_naming_a_vow_carries_its_words_and_names_a_vow() {
     let bad = w.everyday_act(&mut club, mips().envelopes, mor_core::envelopes::types::VOW, vec![(Value::Uint(0), Value::Text("x".into())), (Value::Uint(9), Value::Null)], None, None);
     let bad = w.add(&bad);
     assert!(view(&w).vow(&bad).is_err(), "a field outside the format: no vow");
+}
+
+// ---------------------------------------------------------------- Agreements draft 11
+
+/// A season vow, two matches bought by one fan: two payments, two sales.
+fn season() -> (World, Person, Person, Hash, Hash, Vec<Hash>) {
+    let mut w = World::new();
+    let mut club = w.genesis("the club", vec![own_home()], None, None);
+    let mut fan = w.genesis("a fan", vec![own_home()], None, None);
+    let name = vow(&mut w, &mut club, "The season: a seat at each home match");
+    let offer = lone_offer(&mut w, &mut club, name, "One match.");
+    let fid = fan.id;
+    let mut claims = vec![];
+    for proof in [b"match one".as_slice(), b"match two".as_slice()] {
+        receipt(&mut w, &mut club, fid, offer, None, proof);
+        claims.push(payers_claim(&mut w, &mut fan, club.id, offer, None, proof));
+    }
+    (w, club, fan, name, offer, claims)
+}
+
+fn states(w: &World, name: &Hash, claims: &[Hash]) -> Vec<(Hash, SaleState)> {
+    view_with(w, claims).vow(name).unwrap().sales.into_iter().map(|s| (s.act, s.state)).collect()
+}
+
+/// Agreements draft 11, rule 13 (F253, replacing draft 10's V-R9): a vow
+/// holds promises, bundled as the seller chooses (a season); a contest
+/// names the sale it contests, never the whole vow. One failed match
+/// marks one sale contested: the fan's other sale of the same vow stays
+/// as it was. A contest naming the vow in field 0, draft 10's form, names
+/// no sale and marks nothing.
+#[test]
+fn draft_11_f253_a_contest_names_the_sale_not_the_vow() {
+    let (mut w, _club, mut fan, name, _offer, claims) = season();
+    let mut sorted = claims.clone();
+    sorted.sort();
+    assert_eq!(states(&w, &name, &claims), sorted.iter().map(|c| (*c, SaleState::Pending)).collect::<Vec<_>>());
+    // Draft 10's form: field 0 the vow's name.
+    let old = agreements::Contest { act: name, vow: None, promise: None };
+    agreements_act(&mut w, &mut fan, agreements::types::CONTEST, old.to_map(), Some(vec![Object { chain: name, predecessor: name }]));
+    assert!(states(&w, &name, &claims).iter().all(|(_, s)| *s == SaleState::Pending), "a contest naming the vow names no sale (F253)");
+    // The second match failed: the fan contests that sale.
+    let k = contest(&mut w, &mut fan, name, claims[1]);
+    let got = states(&w, &name, &claims);
+    for (act, st) in got {
+        if act == claims[1] {
+            assert_eq!(st, SaleState::Contested { by: vec![k] });
+        } else {
+            assert_eq!(st, SaleState::Pending, "the other match's sale is not contested");
+        }
+    }
+}
+
+/// Reading (Q3): naming the promise not kept is optional (field 1), in
+/// words as canonical text or in a cMIP's terms; a contest names the same
+/// sale either way. Field 1 belongs to a vow's contest only.
+#[test]
+fn draft_11_q3_the_promise_not_kept_is_optional() {
+    let (mut w, _club, mut fan, name, _offer, claims) = season();
+    let k = contest_with(&mut w, &mut fan, name, claims[0], Some(agreements::Promise::Words("The match was not played.".into())));
+    let x = w.v.get(&k).unwrap();
+    let c = agreements::Contest::decode(&x.inside).unwrap();
+    assert_eq!((c.act, c.vow, c.promise.clone()), (claims[0], Some(name), Some(agreements::Promise::Words("The match was not played.".into()))));
+    let st: Vec<SaleState> = states(&w, &name, &claims).into_iter().filter(|(a, _)| *a == claims[0]).map(|(_, s)| s).collect();
+    assert_eq!(st, vec![SaleState::Contested { by: vec![k] }]);
+    let terms = agreements::Promise::Terms(spec("a ticketing cMIP"), Value::Uint(2));
+    let k2 = contest_with(&mut w, &mut fan, name, claims[1], Some(terms.clone()));
+    assert_eq!(agreements::Contest::decode(&w.v.get(&k2).unwrap().inside).unwrap().promise, Some(terms));
+    // A declaration's contest carries no promise.
+    let d = spec("a declaration of absence");
+    let bad = agreements::Contest { act: d, vow: None, promise: Some(agreements::Promise::Words("x".into())) };
+    let a = agreements_act(&mut w, &mut fan, agreements::types::CONTEST, bad.to_map(), Some(vec![Object { chain: d, predecessor: d }]));
+    assert!(agreements::Contest::decode(&w.v.get(&a).unwrap().inside).is_err(), "field 1 is for a vow's contest only");
+    // Words that are not canonical text never make an act at all (core: every
+    // text in an act is canonical), so the contest's own check is a second line.
+}
+
+/// Draft 11, rule 13: a confirmation likewise names the sale. For a
+/// payment, the buyer's claim is the sale; a claim of the second payment
+/// acknowledging the door's record confirms the second sale only.
+#[test]
+fn draft_11_f253_a_confirmation_names_the_sale() {
+    let (mut w, club, mut fan, name, offer, mut claims) = season();
+    let mut door = w.genesis("the door", vec![own_home()], None, None);
+    let scanned = about(&mut w, &mut door, name, "match two, seat 14, scanned");
+    let ack = acknowledging_claim(&mut w, &mut fan, club.id, offer, b"match two", vec![scanned]);
+    claims.push(ack);
+    let got = states(&w, &name, &claims);
+    assert_eq!(got.len(), 2);
+    for (act, st) in got {
+        if act == claims[1] {
+            assert_eq!(st, SaleState::Confirmed { by: vec![ack] });
+        } else {
+            assert_eq!(st, SaleState::Pending);
+        }
+    }
+}
+
+/// Reading (Q2): a vow naming another vow in its `refs` is not an act
+/// about it, and moves none of its sales' states: a fan who acknowledges
+/// Dario's stream vow, which names the club's seat vow, confirms no seat.
+/// Any other act naming the seat vow in `refs` (the door's record) still
+/// is about it.
+#[test]
+fn draft_11_q2_a_vows_reference_to_another_vow_confirms_nothing() {
+    let mut c = Concert::new();
+    let (fid, club, name, offer) = (c.fan.id, c.club.id, c.name, c.offer);
+    let mut dario = c.w.genesis("dario", vec![own_home()], None, None);
+    let stream = Vow { words: "My stream of the concert".into(), cmip: None };
+    let a = c.w.everyday_act_refs(&mut dario, mips().envelopes, mor_core::envelopes::types::VOW, stream.to_map(), None, None, Some(vec![mor_core::act::Ref::Act(name)]));
+    let stream = c.w.add(&a);
+    let ack = acknowledging_claim(&mut c.w, &mut c.fan, club, offer, PROOF, vec![stream]);
+    c.claims.push(ack);
+    assert_eq!(c.state(), vec![(fid, SaleState::Pending)], "a vow's reference to another vow is not an act about it (Q2)");
+    let mut door = c.w.genesis("the door", vec![own_home()], None, None);
+    let scanned = about(&mut c.w, &mut door, name, "seat 14, scanned");
+    let ack2 = acknowledging_claim(&mut c.w, &mut c.fan, club, offer, PROOF, vec![scanned]);
+    c.claims.push(ack2);
+    assert_eq!(c.state(), vec![(fid, SaleState::Confirmed { by: vec![ack2] })]);
+    // The vow's own later version stays about it.
+    let v2 = Vow { words: "A concert in the hall, 13 December".into(), cmip: None };
+    let a = c.w.everyday_act(&mut c.club, mips().envelopes, mor_core::envelopes::types::VOW, v2.to_map(), Some(vec![Object { chain: name, predecessor: name }]), None);
+    let later = c.w.add(&a);
+    assert!(view(&c.w).vow(&name).unwrap().versions.contains(&later));
 }

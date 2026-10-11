@@ -249,7 +249,8 @@ fn an_offer_naming_a_streams_vow_is_judged_apart_from_any_claim_on_its_name() {
         let a = w.everyday_act(&mut fan, mips().money, 3, x.to_map(), None, None);
         w.add(&a)
     };
-    let k = agreements::Contest { act: opening };
+    // Draft 11, F253: a contest names the sale; Dario names the fan's.
+    let k = agreements::Contest::of_sale(opening, c, None);
     agreements_act(&mut w, &mut dario, agreements::types::CONTEST, k.to_map(), Some(vec![Object { chain: opening, predecessor: opening }]));
     let mut v = view(&w);
     v.rail_valid.insert(c, PaidAt::Flow(spec("the stranger's pointer")));

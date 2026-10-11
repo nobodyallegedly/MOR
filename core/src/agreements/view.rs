@@ -57,6 +57,10 @@ pub use owning::{TransferEval, WorkOwners};
 /// each sale's state.
 mod vows;
 pub use vows::{SaleState, VowEval, VowSale};
+/// Agreements as parties of agreements (Agreements draft 11, rule 15,
+/// F254): named by their line, consenting by their own rule, no loops, the
+/// nesting bound.
+mod parties;
 use std::rc::Rc;
 
 /// Read Agreements from what a verifier holds.
@@ -818,31 +822,16 @@ impl<'a> AgreementsView<'a> {
         // at each layer (mechanic, the layers-and-judges build, replacing
         // the F216 build's "one level"; at most eight layers, as payer-side
         // splitting reads them).
+        // Agreements draft 11, rule 15 (F254): such a party is any
+        // agreement, named by its line, consenting by every version of that
+        // line up to the one in force; no loops; at most `NESTING_BOUND`
+        // layers ([`Self::line_signed`]).
+        let mut path: Vec<Hash> = self.line_of(act).into_iter().collect();
         among
             .iter()
-            .filter(|p| own.contains(p) || self.deal_signed(act, p, 0))
+            .filter(|p| own.contains(p) || self.line_signed(act, p, 0, &mut path))
             .copied()
             .collect()
-    }
-
-    /// Whether `party`, a deal's version held as terms, signed `act` by
-    /// every party of its version in force signing it (F216), a party
-    /// that is itself a deal signing the same way (F235).
-    fn deal_signed(&self, act: &Hash, party: &Hash, depth: usize) -> bool {
-        if depth > 8 {
-            return false;
-        }
-        let Some(h) = self.v.get(party) else { return false };
-        if !self.is_agreements(h, types::TERMS) {
-            return false;
-        }
-        let Ok(v) = self.version_in_force(party) else { return false };
-        let Ok(t) = self.terms(&v) else { return false };
-        if t.is_collective() || t.parties.is_empty() {
-            return false;
-        }
-        let own: Vec<Hash> = self.valid_sigs(act, &t.parties).into_iter().map(|(p, _)| p).collect();
-        t.parties.iter().all(|p| own.contains(p) || self.deal_signed(act, p, depth + 1))
     }
 
     /// The checks a clone needs against its parent and lineage (rules 44c,
@@ -1018,14 +1007,16 @@ impl<'a> AgreementsView<'a> {
         let lineage = self.lineage(id)?;
         let terms = lineage[0].1.clone();
         let signed = self.signers(id, &terms.parties);
+        // Draft 11, rule 15 (F254): named by line, no loops, the bound.
+        let refused = self.party_problem(id, &terms);
         let Some(pid) = terms.parent else {
-            let exists = terms.parties.iter().all(|p| signed.contains(p));
+            let exists = refused.is_none() && terms.parties.iter().all(|p| signed.contains(p));
             return Ok(Agreement {
                 id: *id,
                 terms,
                 signed,
                 needs: None,
-                invalid: None,
+                invalid: refused,
                 exists: Some(exists),
                 ready: exists,
             });
@@ -1033,7 +1024,7 @@ impl<'a> AgreementsView<'a> {
         let parent = &lineage[1].1;
         let st = self.clone_static(parent, &terms, &lineage[1..], rollback)?;
         let (needs, mut invalid) = match st {
-            Ok(n) => (Some(n), None),
+            Ok(n) => (Some(n), refused),
             Err(e) => (None, Some(e)),
         };
         let parent_signers = self.signers(id, &parent.parties);
@@ -1742,7 +1733,7 @@ impl<'a> AgreementsView<'a> {
             .filter(|h| {
                 self.is_agreements(h, types::CONTEST)
                     && self.valid(&h.id)
-                    && Contest::decode(&h.inside).is_ok_and(|c| &c.act == declaration)
+                    && Contest::decode(&h.inside).is_ok_and(|c| c.vow.is_none() && &c.act == declaration)
             })
             .map(|h| h.id)
             .collect())
@@ -8955,8 +8946,8 @@ impl<'a> AgreementsView<'a> {
     }
 
     fn payer_split_depth(&self, agreement: &Hash, object: &Who, amount: u64, depth: usize) -> R<Result<Vec<(Hash, u64)>, String>> {
-        if depth > 8 {
-            return Ok(Err("collectives nested deeper than 8".into()));
+        if depth >= NESTING_BOUND {
+            return Ok(Err("agreements nested deeper than the nesting bound, 8 (draft 11, rule 15, F254)".into()));
         }
         let t = self.terms(agreement)?;
         if t.split_grant.is_some() || t.payee_grants.is_some() {
@@ -8988,6 +8979,11 @@ impl<'a> AgreementsView<'a> {
             // line on, outside in, to its stake in the work the publication
             // carries (or the object itself where it is the work).
             if self.v.get(&id).is_some_and(|h| self.is_agreements(h, types::TERMS)) {
+                // Draft 11, rule 15 (F254): named by its line, its founding
+                // version; a later version names no line, and is not paid.
+                if !self.names_a_line(&id) {
+                    return Ok(Err("a holder names an agreement by a later version, not its line (rule 15, F254)".into()));
+                }
                 let v = self.version_in_force(&id)?;
                 if !self.terms(&v)?.is_collective() {
                     let work = match object {
@@ -9909,7 +9905,7 @@ impl<'a> AgreementsView<'a> {
 
     fn cut_walk(&self, payment: &Hash, me: &Hash, depth: usize, seen: &mut BTreeSet<Hash>, out: &mut CutCheck) -> R<()> {
         use crate::money::Payload as Fin;
-        if depth > 8 || !seen.insert(*payment) {
+        if depth >= NESTING_BOUND || !seen.insert(*payment) {
             return Ok(());
         }
         let Some(ph) = self.v.get(payment).filter(|h| h.inside.spec == self.mips.money) else {
