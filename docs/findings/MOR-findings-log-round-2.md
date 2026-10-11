@@ -2698,6 +2698,34 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **From** `docs/reviews/case-studies-vs-vows.md` (Q-G1): can a vow sell something that already exists but has no bytes (a bowl in stock, an hourly rate, storage)? *Laid beside it, his words:* "MOR truly needed a structured way of selling something that has no bytes, or no bytes yet"; "IOU of services that need to come at a later date". *Options:* (a) yes; (b) only what does not exist yet, the rest sold through the access form with no sale state; (c) the cMIPs decide. **Decided by Nobody, allegedly: "Yes, a. I think my quote settles it."** A vow is any act naming something MOR cannot hash, existing or to come; every sale of a physical good or a service names one, and gets pending, confirmed or contested. One form for one task (Fable's finding 7). *Suggested by the project lead.* *Noted for the texts' redraft:* what the access form `[ 2, [cMIP, params] ]` still serves once vows cover goods and services (access to bytes, such as a subscription's keys) is to be said there.
 
+## Agreements draft 11, Q6: Money waits for its redraft (11 October 2026, midday)
+
+**Q6** (Money draft 6, rule 14, still counts a refund to the refund rail at any size, against F255 in draft 11). *Options:* (a) leave Money until its redraft, after Agreements (F251's order); (b) revise Money draft 6 now, one sentence. **Decided by Nobody, allegedly: "I'm fine, 'until then' is not a problem at the moment."** (a): draft 11 points to the Money rules F255 changes; Money's sentence is changed in its redraft. *Suggested by the project lead.* All six questions of draft 11 answered.
+
+## F263. A deal ends by a clone stating its new conditions (Q5 of Agreements draft 11, 11 October 2026, midday)
+
+**From** `docs/agreements-draft-11.md`, Q5: a deal may be a party of another agreement (F254), but only a collective has a closing act. *Options:* (a) a last clone every party signs, after stakes moved by ordinary transfers (F262's shape); (b) a closing act for deals; (c) deals never close as parties. **Decided by Nobody, allegedly: "Agreed. An closing the deal is simply creating a clone that states the new conditions. It really depends on the kind of agreement."** A deal ends, or winds down, by a clone every party signs (F107), stating its new conditions: where its stakes went, what is still owed, as an open obligation, and to whom its outer agreement now pays. What those conditions are depends on the deal; no closing act for deals. An absent party is handled by the absence rules (B19). *Suggested by the project lead.*
+
+## F262. A collective is liquidated by ordinary acts before its closing; the closing names what is still owed (Q4 of Agreements draft 11, 11 October 2026, midday)
+
+**From** `docs/agreements-draft-11.md`, Q4: F254 says that at closing a collective's stakes are liquidated per the closing, absentees' shares becoming open obligations; a closing (type 20) counts only when the collective holds nothing. *Options:* (a) a new closing field saying where each stake goes, "holds nothing" judged after; (b) stakes sold or transferred by ordinary acts before the closing, an absentee's money share an open obligation named in the closing's field for money owed. **Decided by Nobody, allegedly: "I think B is cleaner, A is the act of batching these decisions which also works, but not always the cleanest option."** Liquidation is the ordinary sales and transfers before the closing; the closing still counts only when the collective holds nothing, and names an absentee's money share as an open obligation in its existing field. No new field. Batching those acts together is a client's or a cMIP's convenience, never a second way in the core. *Suggested by the project lead (the session leaned to a).*
+
+*Also said, on F259's match:* "The match could exist as an investment vehicle for the club, broken match by match. But it is none of our business."
+
+## Agreements draft 11, Q2 and Q3: readings (11 October 2026, midday)
+
+**Q2** (a vow naming another vow in its references counts, as built, as "an act about" it, so acknowledging one could confirm a sale of the other). F259's example is gone (revised above), but any vow may still name another. *Reading taken by the project lead under the delegation of mechanics, following F259 (a reference carries no claim, no stake, no marking):* a vow's reference to another vow is not an act about it, and moves none of its sales' states.
+
+**Q3** (must a contest name the promise that failed?). F253's mechanic, the project lead's, says a contest "may say" which promise failed; the draft 11 prompt, also the project lead's, said "names", the error. *Settled as recorded in F253:* optional (a buyer may know only that something went wrong); the contest names the sale.
+
+## F261. Two classes of offers: proven and promised (Q1 of Agreements draft 11, 11 October 2026, midday)
+
+**From** `docs/agreements-draft-11.md`, Q1: F252 says every sale of a good or service names a vow, yet the pooled anchoring service (anchoring cMIP draft 3, F225) sells a service through the access form, its cMIP judging delivery. *Laid beside it:* F240 (only a signer of the vow confirms or contests it); Fable's finding 7 (one form for one task). **Nobody, allegedly, first:** "Technically, it is not a work, and therefore becomes a vow. It is simply that the cMIP behind this vow can deliver its own confirmation. Core does not care how confirmation is delivered, it simply looks for one." *The project lead noted F240* (a cMIP never signed onto the vow) and suggested a vow naming its confirming cMIP, then withdrew it. **Nobody, allegedly:** "I'm fine with this being a different class of offers. Maybe we simply need to define it, what else falls within the same category?" **Decided by Nobody, allegedly: "Yes, great idea."** Offers are of two classes. *Proven:* delivery leaves a proof any verifier can check from data alone, no one's word trusted (anchoring, a hash in a batch; access to bytes, a key decrypting to the promised hash; a rail swap, the payment's proof; a deterministic computation, re-run to the same hash; a bounty whose answer checks itself). Proven offers use the access form, widened from access to bytes to any delivery so proven. *Promised:* a vow, confirmed or contested by its signers (F240); a service's mere signed word (counts, checks, quality) and anything ongoing (hosting over time) stay promised. A cMIP may produce a proof; the verifier checks the proof, never the cMIP's say-so. *Suggested by the project lead.* F252 is read as: every sale of a good or service names a vow, unless its delivery is proven.
+
+**Asked by Nobody, allegedly, the same midday:** "In some cases it adds a layer of verification, right?" *Answered by the project lead:* yes, both ways: a proven offer needs no one's confirmation, and inside a vow a proof can sit as evidence beside the signer's confirmation or contest, without replacing it.
+
+**Core changes:** Agreements draft 11, F252's statement, the access form's definition and rule 11; anchoring cMIP unchanged (it already uses the access form). *For the next pass on draft 11.*
+
 ## Q17-2 to Q17-4: not the core's to decide (11 October 2026, late morning)
 
 **Q17-2** (what a subscription signs onto: one vow per match, or a season vow with a sale per month). **Nobody, allegedly: "Not to us to decide. Why are we even discussing this?"** The core allows both (F252, F253); how a seller structures a subscription is the seller's choice, and the study may show either. *The project lead's error:* putting a seller's choice as a foundation question.
@@ -2722,7 +2750,9 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Sharpened by Nobody, allegedly, the same morning:** "The vow is not for the football game, the vow is for a place in the stand to watch it, and with Dario access to a stream to watch it. None are the football game, both need their own agreement." A vow names what is promised to the buyer (a seat, access to a stream), never the event itself; each has its own agreement.
 
-**For the live sports study's next draft:** the club's vow is for a place in the stand, Dario's for access to his stream; his may name the club's as a reference; each sits under its own agreement, the club's 20% in the live-rights agreement.
+**Revised by Nobody, allegedly, midday (Q2 of Agreements draft 11):** "I think that Dario's referencing the seat was a bad idea. Both the seat and the stream reference the football game, if that was to ever exist on MOR." Neither vow references the other; each may reference the event, where the event exists on MOR as an act of its own (never a vow, since a vow names what is promised).
+
+**For the live sports study's next draft:** the club's vow is for a place in the stand, Dario's for access to his stream; each may reference the match, if it exists on MOR; each sits under its own agreement, the club's 20% in the live-rights agreement.
 
 ## F258. A resale under a fresh vow escapes F247: a stated cost, for the provenance cMIP (Q16-2, 11 October 2026, late morning)
 
