@@ -2708,6 +2708,8 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Core changes:** Agreements draft 11, rule 9 (one sentence); the library's turn count.
 
+**Built and merged, 11 October 2026, evening** (`docs/invariant-deal-promises-fix.md`, pull request 9): rule 9's sentence written in; `tally_member` carries the count across the versions on the line of the version in force, finding the stake by its work; the seed variables read as `AGREEMENTS_INVARIANT_*`, the old names kept as fallbacks for earlier records' replay commands; two named tests. The failing seed and 50 others pass; Rust 608, TypeScript 220, no vector changed. *Readings taken by the project lead under the delegation of mechanics:* "on the line" (a branch's chain takes in the splits before the fork, never the other branch's, keeping rule 9's turns per branch); a split under a version that stopped counting stays in the chain.
+
 ## Agreements draft 11 approved (11 October 2026, afternoon)
 
 **Approved by Nobody, allegedly: "Approved."** Agreements draft 11 (`docs/agreements-draft-11.md`, pull request 8, three passes): draft 10 written for plain reading, rules renumbered 1 to 93 with the old numbers beside, "vow" throughout, no rule changed (the code's tests unchanged and passing; a second independent reading); F252 to F265 written in, "to build" where the code does not do them yet; thirteen points carried from draft 10 for the freeze-ready draft. Merged by the project lead. *Mechanic taken by the project lead:* draft 10 stays in `spec/` as the superseded reference that code, tests, records, core v21 and freeze suite v21 still cite by its numbers, until the freeze-ready draft (F251's mechanic); core v21 names draft 11 at its next revision.
