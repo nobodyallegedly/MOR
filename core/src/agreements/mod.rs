@@ -26,7 +26,7 @@ pub use open_formats::{
 };
 pub use tiers::{changes, judicial_changes, powers_needed, rollback_powers, Change, Tier};
 pub use view::{
-    Agreement, AreaCount, Backing, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement,
+    Agreement, AreaCount, Backing, CutCheck, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement,
     BrokenAct, ChainBreak, DepartureKind, ForkEval, AgreementsView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,
     ReleaseEval, Role, ServiceAccount, SplitEval, PurchaseEval, PurchaseVerdict, Unpaid, Unsplit, DealFork, DealState, ForkAlarm,
     AlarmKind, NumberBreak, OwedBack, SplitNumbers, OfferEval, TransferEval, WorkOwners, SuccessorCheck, SaleState, VowEval, VowSale,

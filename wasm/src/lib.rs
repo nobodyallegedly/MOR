@@ -1970,9 +1970,8 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 let j = match &l.judge {
                     agreements::Judge::Task(n) => format!("task {n}"),
                     agreements::Judge::Identity(h) => hx(h),
-                    agreements::Judge::SplitService => "split service".into(),
                 };
-                (j, l.next.iter().map(|(t, p)| (t.hashes().iter().map(hx).collect(), *p)).collect())
+                (j, l.next.iter().map(|(t, p)| (vec![hx(t)], *p)).collect())
             })
             .collect(),
         forked_from: t.forked_from.as_ref().map(hx),

@@ -1847,6 +1847,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mor-split"
+version = "0.1.0"
+dependencies = [
+ "mor-core",
+ "slh-dsa",
+]
+
+[[package]]
 name = "mor-wasm"
 version = "0.1.0"
 dependencies = [

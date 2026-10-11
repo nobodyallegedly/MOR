@@ -121,7 +121,7 @@ export interface TermsRead {
   stakes: [string | null, [string | null, number][]][];
   /** The departed members entry (field 22): who left (F121, F124 N5). */
   departed: string[];
-  /** The chain of judgment (field 21): each judge, and those that take over with their periods (F121, Q7); each one hash, or, taking over from a deal's split service, the service's grants, one per payee (F130, H6). */
+  /** The chain of judgment (field 21): each judge, and those that take over with their periods (F121, Q7); each one hash, in a one-element list. The split service left the chain (F249, F250): its backups are the split cMIP's, terms field 29. */
   chain: [string, [string[], number][]][];
   /** Forked from (field 23): the original collective, a back-link (F121, F124 N4). */
   forkedFrom: string | null;

@@ -87,8 +87,17 @@ pub const JUDICIAL_TASKS: [u64; 4] = [9, 10, 11, 14];
 /// names its cMIP, and a chain of judgment names it as `[ 0, 14 ]`.
 pub const ABSENCE_PROOF_TASK: u64 = 14;
 
+/// The split task (Development task 8): the split cMIP, named in field 2
+/// or by the split plan's key 1 (F250).
+pub const SPLIT_TASK: u64 = 8;
+
 /// The time reference task (field 6 is a naming for it, Q25).
 pub const TIME_REFERENCE_TASK: u64 = 10;
+
+/// Terms field 29: the split service's backups, in order, and what counts
+/// as a failed attempt, fields of the split cMIP the plan names (F249,
+/// F250). Judicial, as field 14 (rule 44a).
+pub const BACKUPS_FIELD: u64 = 29;
 
 /// Stakes and succession shares are written in millionths.
 pub const MILLION: u64 = 1_000_000;
@@ -730,16 +739,18 @@ pub enum Judge {
     /// `[ 1, identity ]`: an identity the terms name as a keeper's
     /// operator, an arbitrator or verifier, or the abandonment authority.
     Identity(Hash),
-    /// `[ 2 ]`: the split service, named by the grant of field 14.
-    SplitService,
 }
+// `[ 2 ]`, the split service, is withdrawn from the chain of judgment
+// (F249, F250, decided by Nobody, allegedly, 11 October 2026: "A judge
+// chain has stages. A back up chain has attempts if previous one fails."):
+// a split service's backups are the split cMIP's, in terms field 29
+// ([`Backups`]). Never reused: terms carrying it are invalid.
 
 impl Judge {
     pub fn to_value(&self) -> Value {
         match self {
             Judge::Task(t) => Value::Array(vec![Value::Uint(0), Value::Uint(*t)]),
             Judge::Identity(h) => Value::Array(vec![Value::Uint(1), b(h)]),
-            Judge::SplitService => Value::Array(vec![Value::Uint(2)]),
         }
     }
 
@@ -749,53 +760,120 @@ impl Judge {
     }
 }
 
-/// One that takes over from a judge (F121; F130, H6): a specification, an
-/// identity or a grant, by its hash; or, for a deal's split service, the
-/// service taking over by a group of grants, one per payee, each naming
-/// "this agreement" by null like field 14's.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Taker {
-    /// `hash`.
-    One(Hash),
-    /// `[+ hash]`: in a deal, one grant per payee to the service taking
-    /// over from its split service.
-    Grants(Vec<Hash>),
-}
-
-impl From<Hash> for Taker {
-    fn from(h: Hash) -> Self {
-        Taker::One(h)
-    }
-}
-
-impl Taker {
-    pub fn to_value(&self) -> Value {
-        match self {
-            Taker::One(h) => b(h),
-            Taker::Grants(g) => Value::Array(g.iter().map(b).collect()),
-        }
-    }
-
-    /// Every hash it names: one, or the group's grants.
-    pub fn hashes(&self) -> Vec<Hash> {
-        match self {
-            Taker::One(h) => vec![*h],
-            Taker::Grants(g) => g.clone(),
-        }
-    }
-}
-
-/// `chain = [ judge, [+ [ next: hash / [+ hash], period: uint ]] ]`: a
-/// judge, and in order those that take over when it answers "unknown" or
-/// cannot act: specifications for a judicial task, identities for an
-/// identity, grants for the split service (in a deal, a group of grants per
-/// service taking over, one per payee, F130 H6). Each names the period, on
-/// the agreement's time reference, that the one before it has to act once
-/// asked, after which it may act (Q7): compulsory, above zero.
+/// `chain = [ judge, [+ [ next: hash, period: uint ]] ]`: a judge, and in
+/// order those that take over when it answers "unknown" or cannot act:
+/// specifications for a judicial task, identities for an identity. Each
+/// names the period, on the agreement's time reference, that the one
+/// before it has to act once asked, after which it may act (Q7):
+/// compulsory, above zero. *The split service's backups left the chain
+/// (F249, F250): they are terms field 29, attempts per payment, not
+/// stages.*
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChainLink {
     pub judge: Judge,
-    pub next: Vec<(Taker, u64)>,
+    pub next: Vec<(Hash, u64)>,
+}
+
+/// The grants by which the owners name one split service: in a
+/// collective, its one grant; in a deal, one grant per payee, each naming
+/// "this agreement" by null (F129, H4; H6's grants per payee, F250).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ServiceGrants {
+    /// `hash`: a collective's grant.
+    One(Hash),
+    /// `[+ hash]`: a deal's grants, one per payee, as many as field 14
+    /// lists.
+    PerPayee(Vec<Hash>),
+}
+
+impl From<Hash> for ServiceGrants {
+    fn from(h: Hash) -> Self {
+        ServiceGrants::One(h)
+    }
+}
+
+impl ServiceGrants {
+    pub fn to_value(&self) -> Value {
+        match self {
+            ServiceGrants::One(h) => b(h),
+            ServiceGrants::PerPayee(g) => hashes_value(g),
+        }
+    }
+
+    /// Every grant it names.
+    pub fn hashes(&self) -> Vec<Hash> {
+        match self {
+            ServiceGrants::One(h) => vec![*h],
+            ServiceGrants::PerPayee(g) => g.clone(),
+        }
+    }
+}
+
+/// Terms field 29 (F249, F250, decided by Nobody, allegedly, 11 October
+/// 2026: "That agreement names a cMIP and within the cMIP fields it specify
+/// the split service, its backup and its failure condition to move from
+/// primary to back up service"): the split service's backups, after field
+/// 14's, in order, and what counts as a failed attempt, as the split cMIP
+/// the plan names (field 8, key 1) defines it. Signed with the terms.
+///
+/// ```cddl
+/// backups = {
+///   0 => [+ hash / [+ hash]],  ; each backup service, in order: a collective's grant, or a deal's grants, one per payee
+///   ? 1 => any                 ; what counts as a failed attempt: the split cMIP's parameters for it
+/// }
+/// ```
+///
+/// Attempts run per payment, never by stages (F249): field 14's service
+/// first, the next only where the attempt before it failed as the split
+/// cMIP defines failure; the next payment starts again from field 14's.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Backups {
+    /// 0: each backup service, in order.
+    pub services: Vec<ServiceGrants>,
+    /// 1: the split cMIP's parameters for a failed attempt; the core never
+    /// reads them.
+    pub failure: Option<Value>,
+}
+
+impl Backups {
+    pub fn to_value(&self) -> Value {
+        let mut m = vec![(Value::Uint(0), Value::Array(self.services.iter().map(ServiceGrants::to_value).collect()))];
+        if let Some(f) = &self.failure {
+            m.push((Value::Uint(1), f.clone()));
+        }
+        Value::Map(m)
+    }
+
+    fn decode(v: &Value) -> R<Backups> {
+        let Value::Map(m) = v else {
+            return Err(AgreementsError::Shape("terms field 29: the split service's backups"));
+        };
+        let mut services = None;
+        let mut failure = None;
+        for (k, x) in m {
+            match uint(k, "backups key")? {
+                0 => {
+                    services = Some(
+                        nonempty(x, "backups: the services")?
+                            .iter()
+                            .map(|e| match e {
+                                Value::Array(_) => Ok(ServiceGrants::PerPayee(hashes(e, "backups: a service's grants, one per payee")?)),
+                                e => Ok(ServiceGrants::One(hash(e, "backups: a service's grant")?)),
+                            })
+                            .collect::<R<Vec<_>>>()?,
+                    )
+                }
+                1 => failure = Some(x.clone()),
+                _ => return Err(AgreementsError::Shape("backups: unknown key")),
+            }
+        }
+        Ok(Backups { services: services.ok_or(AgreementsError::Shape("backups: the services"))?, failure })
+    }
+
+    /// Every grant it names, in order.
+    pub fn grants(&self) -> Vec<Hash> {
+        self.services.iter().flat_map(ServiceGrants::hashes).collect()
+    }
 }
 
 impl ChainLink {
@@ -805,20 +883,19 @@ impl ChainLink {
             Value::Array(
                 self.next
                     .iter()
-                    .map(|(t, p)| Value::Array(vec![t.to_value(), Value::Uint(*p)]))
+                    .map(|(t, p)| Value::Array(vec![b(t), Value::Uint(*p)]))
                     .collect(),
             ),
         ])
     }
 
-    /// Those that take over, in order, without their periods: one hash
-    /// each, or, for a group, the hashes of its grants in its place.
+    /// Those that take over, in order, without their periods.
     pub fn successors(&self) -> Vec<Hash> {
-        self.next.iter().flat_map(|(t, _)| t.hashes()).collect()
+        self.next.iter().map(|(t, _)| *t).collect()
     }
 
-    /// Whether this judge is one that can stay silent: an identity or a
-    /// split service, rather than a specification, which always answers.
+    /// Whether this judge is one that can stay silent: an identity, rather
+    /// than a specification, which always answers.
     pub fn can_stay_silent(&self) -> bool {
         !matches!(self.judge, Judge::Task(_))
     }
@@ -1033,6 +1110,9 @@ pub struct Terms {
     pub refund: Option<super::open_formats::RefundTerms>,
     /// 28: fees, their own field (F213), each with its scope (F214).
     pub fees: Option<Vec<super::open_formats::Fee>>,
+    /// 29: the split service's backups, in order, and what counts as a
+    /// failed attempt: the split cMIP's fields (F249, F250).
+    pub backups: Option<Backups>,
 }
 
 impl Terms {
@@ -1064,6 +1144,12 @@ impl Terms {
     /// The cMIP named for a task.
     pub fn cmip(&self, task: u64) -> Option<&Hash> {
         self.cmips.iter().find(|(t, _)| *t == task).map(|(_, h)| h)
+    }
+
+    /// The split cMIP the terms name (F250): field 2's for task 8, or the
+    /// split plan's key 1.
+    pub fn split_cmip(&self) -> Option<Hash> {
+        self.cmip(SPLIT_TASK).copied().or_else(|| self.plan.as_ref().map(|p| p.cmip))
     }
 
     pub fn extensions(&self) -> &[Hash] {
@@ -1212,6 +1298,9 @@ impl Terms {
         if let Some(x) = &self.fees {
             m.push((Value::Uint(super::open_formats::FEES_FIELD), super::open_formats::Fee::field_value(x)));
         }
+        if let Some(x) = &self.backups {
+            m.push((Value::Uint(BACKUPS_FIELD), x.to_value()));
+        }
         m
     }
 
@@ -1248,7 +1337,7 @@ impl Terms {
                         "terms field 25 (the relays) is withdrawn: an act is done by its signatures, seals and citations, wherever held (F128)",
                     ))
                 }
-                Value::Uint(n) if *n <= 24 || *n == 26 || *n == 27 || *n == super::open_formats::FEES_FIELD => f.push((*n, v)),
+                Value::Uint(n) if *n <= 24 || *n == 26 || *n == 27 || *n == super::open_formats::FEES_FIELD || *n == BACKUPS_FIELD => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("terms: unknown field")),
             }
         }
@@ -1360,6 +1449,7 @@ impl Terms {
             plan: get(8).map(super::open_formats::SplitPlan::decode).transpose()?,
             refund: get(17).map(super::open_formats::RefundTerms::decode).transpose()?,
             fees: get(super::open_formats::FEES_FIELD).map(super::open_formats::Fee::decode_field).transpose()?,
+            backups: get(BACKUPS_FIELD).map(Backups::decode).transpose()?,
         })
     }
 
@@ -1504,6 +1594,7 @@ impl Terms {
         }
         self.check_judges()?;
         self.check_chain()?;
+        self.check_backups()?;
         self.check_departed()?;
         self.check_stakes()?;
         if let Some(r) = &self.release_rule {
@@ -1719,40 +1810,7 @@ impl Terms {
                     }
                     *x
                 }
-                Judge::SplitService => match (&self.split_grant, &self.payee_grants) {
-                    (Some(g), _) => *g,
-                    // F130, H6: in a deal, each service taking over carries
-                    // one grant per payee, grouped by service, as many as
-                    // field 14 lists; every grant is listed once.
-                    (None, Some(list)) => {
-                        if !l.next.iter().all(|(t, _)| matches!(t, Taker::Grants(g) if g.len() == list.len())) {
-                            return Err(AgreementsError::Check(
-                                "in a deal, each service taking over from the split service is a group of grants, one per payee, as many as field 14 lists (F130, H6)",
-                            ));
-                        }
-                        let mut all = list.clone();
-                        all.extend(l.successors());
-                        if !distinct(&all) {
-                            return Err(AgreementsError::Check(
-                                "a deal lists each grant to its split service, and to each service taking over, once (F130, H6)",
-                            ));
-                        }
-                        list[0]
-                    }
-                    (None, None) => {
-                        return Err(AgreementsError::Check(
-                            "the chain of judgment follows a split service the terms do not name (F121)",
-                        ))
-                    }
-                },
             };
-            // A group of grants takes over only from a deal's split service.
-            let grouped = l.next.iter().any(|(t, _)| matches!(t, Taker::Grants(_)));
-            if grouped && (l.judge != Judge::SplitService || self.payee_grants.is_none()) {
-                return Err(AgreementsError::Check(
-                    "a group of grants takes over only from a deal's split service; every other one that takes over is one hash (F130, H6)",
-                ));
-            }
             let next = l.successors();
             if l.next.iter().any(|(_, p)| *p == 0) {
                 return Err(AgreementsError::Check(
@@ -1788,6 +1846,63 @@ impl Terms {
         {
             return Err(AgreementsError::Check(
                 "a chain of judgment following a judge that can stay silent needs a time reference (Q7)",
+            ));
+        }
+        Ok(())
+    }
+
+    /// The split service's backups (field 29, F249, F250): only where field
+    /// 14 names a split service and the terms name the split cMIP whose
+    /// fields they are (field 2's task 8, or the plan's key 1, the same
+    /// where both); in a collective each backup one grant, in a deal
+    /// one grant per payee, as many as field 14 lists (H6's grants per
+    /// payee); every grant of field 14 and field 29 listed once. Who signed
+    /// each grant, and that each names one service of its own, is the
+    /// view's ([`crate::agreements::AgreementsView`]): a deal whose grants
+    /// break it carries none of them (F129 reading 3).
+    fn check_backups(&self) -> R<()> {
+        let Some(bk) = &self.backups else { return Ok(()) };
+        if self.split_grant.is_none() && self.payee_grants.is_none() {
+            return Err(AgreementsError::Check(
+                "backups follow a split service: terms field 29 needs field 14 (F249, F250)",
+            ));
+        }
+        // The split cMIP whose fields they are: field 2's for task 8, or the
+        // plan's key 1; where both name one, the same (reading, the build's).
+        match (self.cmip(SPLIT_TASK), self.plan.as_ref().map(|p| &p.cmip)) {
+            (None, None) => {
+                return Err(AgreementsError::Check(
+                    "backups are fields of the split cMIP the agreement names: terms field 29 needs a split cMIP, in field 2 (task 8) or the split plan (F250)",
+                ))
+            }
+            (Some(a), Some(b)) if a != b => {
+                return Err(AgreementsError::Check(
+                    "field 2 and the split plan name two split cMIPs: field 29's backups belong to one (F250)",
+                ))
+            }
+            _ => {}
+        }
+        let mut all: Vec<Hash> = self.split_grant.iter().copied().chain(self.payee_grants.iter().flatten().copied()).collect();
+        for e in &bk.services {
+            match (e, &self.payee_grants) {
+                (ServiceGrants::One(_), None) => {}
+                (ServiceGrants::PerPayee(g), Some(list)) if g.len() == list.len() => {}
+                (_, None) => {
+                    return Err(AgreementsError::Check(
+                        "in a collective, each backup split service is one grant of the collective (F250)",
+                    ))
+                }
+                (_, Some(_)) => {
+                    return Err(AgreementsError::Check(
+                        "in a deal, each backup split service is a group of grants, one per payee, as many as field 14 lists (H6, F250)",
+                    ))
+                }
+            }
+            all.extend(e.hashes());
+        }
+        if !distinct(&all) {
+            return Err(AgreementsError::Check(
+                "each grant to the split service and to each backup is listed once (H6, F250)",
             ));
         }
         Ok(())
@@ -1860,7 +1975,6 @@ impl Terms {
         let first = match judge {
             Judge::Task(t) => self.task_judge(*t)?,
             Judge::Identity(x) => *x,
-            Judge::SplitService => self.split_grant?,
         };
         let mut out = vec![first];
         if let Some(l) = self.chain.iter().flatten().find(|l| &l.judge == judge) {
@@ -3729,7 +3843,13 @@ pub(crate) fn judge(v: &Value) -> R<Judge> {
     Ok(match (uint(&j[0], "judge form")?, j.len()) {
         (0, 2) => Judge::Task(uint(&j[1], "judge task")?),
         (1, 2) => Judge::Identity(hash(&j[1], "judge identity")?),
-        (2, 1) => Judge::SplitService,
+        // F249, F250: the split service left the chain of judgment; its
+        // backups are terms field 29. Never reused.
+        (2, 1) => {
+            return Err(AgreementsError::Check(
+                "the chain of judgment no longer follows the split service: its backups are the split cMIP's, in order, in terms field 29 (F249, F250)",
+            ))
+        }
         _ => return Err(AgreementsError::Shape("judge")),
     })
 }
@@ -3741,11 +3861,7 @@ fn chain_link(v: &Value) -> R<ChainLink> {
         .iter()
         .map(|n| {
             let x = tuple(n, 2, "chain of judgment: one that takes over, and its period")?;
-            let taker = match &x[0] {
-                Value::Array(_) => Taker::Grants(hashes(&x[0], "chain of judgment: a service's grants, one per payee")?),
-                v => Taker::One(hash(v, "chain of judgment")?),
-            };
-            Ok((taker, uint(&x[1], "chain of judgment: period")?))
+            Ok((hash(&x[0], "chain of judgment")?, uint(&x[1], "chain of judgment: period")?))
         })
         .collect::<R<Vec<_>>>()?;
     Ok(ChainLink { judge, next })

@@ -113,6 +113,7 @@ fn label() -> Terms {
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     }
 }
 
@@ -624,9 +625,6 @@ fn a_chain_follows_named_judges_and_its_specifications_judge_only() {
         ("an identity the terms name as no judge", Box::new(|t| {
             t.chain.as_mut().unwrap()[1].judge = Judge::Identity(h(ARBITRATOR2))
         })),
-        ("a split service the terms do not name", Box::new(|t| {
-            t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::SplitService, next: vec![(h(94).into(), 30)] })
-        })),
         ("links out of order", Box::new(|t| t.chain.as_mut().unwrap().reverse())),
     ];
     for (why, f) in bad {
@@ -634,13 +632,21 @@ fn a_chain_follows_named_judges_and_its_specifications_judge_only() {
         f(&mut t);
         assert!(check(&t).is_err(), "{why}");
     }
-    // The split service, named by its grant, followed by another grant.
+    // F249, F250: the split service left the chain of judgment. A link
+    // following it (`[ 2 ]`) no longer decodes: its backups are the split
+    // cMIP's fields, terms field 29.
     let mut t = label_with_chain();
     t.split_grant = Some(h(94));
-    // `[ 2 ]` encodes before `[ 0, task ]`: it comes first.
-    t.chain.as_mut().unwrap().insert(0, ChainLink { judge: Judge::SplitService, next: vec![(h(95).into(), 30)] });
-    assert_eq!(check(&t), Ok(()));
-    assert_eq!(t.chain_of(&Judge::SplitService), Some(vec![h(94), h(95)]));
+    let mut m = t.to_map();
+    for (k, v) in m.iter_mut() {
+        if *k == Value::Uint(21) {
+            if let Value::Array(links) = v {
+                let next = Value::Array(vec![Value::Array(vec![Value::Bytes(h(95).to_vec()), Value::Uint(30)])]);
+                links.insert(0, Value::Array(vec![Value::Array(vec![Value::Uint(2)]), next]));
+            }
+        }
+    }
+    assert!(matches!(Terms::decode(&m), Err(AgreementsError::Check(w)) if w.contains("F250")));
     // The abandonment authority, named as an identity, may be followed.
     let mut t = label();
     t.time = Some((h(CLOCK), Value::Uint(0)));
@@ -800,6 +806,81 @@ fn a_constitutional_version_changing_a_judge_needs_both_rules() {
 }
 
 // ---------------------------------------------------------------- step 12b, the open formats
+
+/// F249, F250 (step 13): the split service's backups, in order, and what
+/// counts as a failed attempt, are fields of the split cMIP the plan names,
+/// carried in terms field 29 and signed with the terms; judicial, as field
+/// 14 (rule 44a), so no area holder changes where money may go.
+#[test]
+fn backups_are_the_split_cmips_fields_signed_with_the_terms() {
+    use agreements::{changes, Backups, Change, ServiceGrants, Tier};
+    let failure = Value::Map(vec![(Value::Uint(0), Value::Uint(60))]);
+    let mut t = label();
+    t.split_grant = Some(h(94));
+    t.stakes = Some(vec![Stake { object: Who::This, holders: vec![(Who::Id(h(1)), 1_000_000)] }]);
+    t.plan = Some(plan_with(vec![agreements::ShareRule::Stake { stake: 0, part: 1_000_000 }]));
+    t.backups = Some(Backups { services: vec![h(95).into(), h(96).into()], failure: Some(failure.clone()) });
+    check(&t).unwrap();
+    assert_eq!(roundtrip(&t), t);
+    assert_eq!(t.backups.as_ref().unwrap().grants(), vec![h(95), h(96)]);
+    assert_eq!(t.split_cmip(), Some(h(80)));
+    // The split cMIP named in field 2 (task 8) serves as well.
+    let mut x = t.clone();
+    x.plan = None;
+    x.cmips.insert(1, (8, h(80)));
+    check(&x).unwrap();
+    // Judicial, as field 14: compared by a clone, and changed only by the
+    // judicial tier.
+    let mut c = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
+    c.backups = Some(Backups { services: vec![h(95).into()], failure: Some(failure.clone()) });
+    let ch = changes(&t, &c);
+    assert!(ch.contains(&Change::Field(29)), "{ch:?}");
+    assert_eq!(Change::Field(29).tier(), Tier::Judicial);
+    assert_eq!(Change::Field(14).tier(), Tier::Judicial);
+
+    let bad: Vec<(&str, Box<dyn Fn(&mut Terms)>)> = vec![
+        ("no split service in field 14", Box::new(|t| t.split_grant = None)),
+        ("no split cMIP named", Box::new(|t| t.plan = None)),
+        ("two split cMIPs", Box::new(|t| t.cmips.push((8, h(81))))),
+        ("a group of grants in a collective", Box::new(|t| t.backups.as_mut().unwrap().services[0] = ServiceGrants::PerPayee(vec![h(97), h(98)]))),
+        ("field 14's grant again", Box::new(|t| t.backups.as_mut().unwrap().services[0] = h(94).into())),
+        ("one backup twice", Box::new(|t| t.backups.as_mut().unwrap().services[1] = h(95).into())),
+    ];
+    for (why, f) in bad {
+        let mut x = t.clone();
+        f(&mut x);
+        assert!(check(&x).is_err(), "{why}");
+    }
+    // Malformed: no services.
+    let mut m = t.to_map();
+    for (k, v) in m.iter_mut() {
+        if *k == Value::Uint(29) {
+            *v = Value::Map(vec![(Value::Uint(1), failure.clone())]);
+        }
+    }
+    assert!(matches!(Terms::decode(&m), Err(AgreementsError::Shape(_))));
+
+    // In a deal: one grant per payee for each backup, as many as field 14
+    // lists (H6's grants per payee stay).
+    let mut d = label();
+    d.grammar = None;
+    d.areas = None;
+    d.area_words = None;
+    d.abandonment = None;
+    d.clone = Rule::All;
+    d.parties = vec![h(1), h(2)];
+    d.payee_grants = Some(vec![h(94), h(93)]);
+    d.stakes = Some(vec![Stake { object: Who::Id(h(77)), holders: vec![(Who::Id(h(1)), 500_000), (Who::Id(h(2)), 500_000)] }]);
+    d.plan = Some(plan_with(vec![agreements::ShareRule::Stake { stake: 0, part: 1_000_000 }]));
+    d.backups = Some(Backups { services: vec![ServiceGrants::PerPayee(vec![h(95), h(96)])], failure: None });
+    check(&d).unwrap();
+    assert_eq!(roundtrip(&d), d);
+    let mut x = d.clone();
+    x.backups = Some(Backups { services: vec![ServiceGrants::PerPayee(vec![h(95)])], failure: None });
+    assert!(check(&x).is_err(), "a group short of a payee");
+    x.backups = Some(Backups { services: vec![h(95).into()], failure: None });
+    assert!(check(&x).is_err(), "one grant for a deal's backup");
+}
 
 fn plan_with(shares: Vec<agreements::ShareRule>) -> agreements::SplitPlan {
     agreements::SplitPlan {
