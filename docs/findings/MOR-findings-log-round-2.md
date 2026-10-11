@@ -19,6 +19,10 @@ Each finding names its pattern before its fix. Round 2 named three; the reaction
 
 Where the core offers the owner several options, one of them is the default when none is selected. The default is one of the declared options, never a third, weaker rule. This may be repeated elsewhere in the protocol when needed.
 
+## Working rule: core business, or the participants' choice (Nobody, allegedly, F265)
+
+Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
+
 ## Working rule: rare cases and markets (Nobody, allegedly, F63)
 
 Costs that fall only on rare cases mostly super users will care about are acceptable. MOR expects markets to kick in where there is value to be protected.
@@ -2697,6 +2701,14 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 ## F252. A vow covers anything MOR cannot hash, existing or to come (Q-G1, 11 October 2026, morning)
 
 **From** `docs/reviews/case-studies-vs-vows.md` (Q-G1): can a vow sell something that already exists but has no bytes (a bowl in stock, an hourly rate, storage)? *Laid beside it, his words:* "MOR truly needed a structured way of selling something that has no bytes, or no bytes yet"; "IOU of services that need to come at a later date". *Options:* (a) yes; (b) only what does not exist yet, the rest sold through the access form with no sale state; (c) the cMIPs decide. **Decided by Nobody, allegedly: "Yes, a. I think my quote settles it."** A vow is any act naming something MOR cannot hash, existing or to come; every sale of a physical good or a service names one, and gets pending, confirmed or contested. One form for one task (Fable's finding 7). *Suggested by the project lead.* *Noted for the texts' redraft:* what the access form `[ 2, [cMIP, params] ]` still serves once vows cover goods and services (access to bytes, such as a subscription's keys) is to be said there.
+
+## F265. An absentee's share at liquidation follows the collective's own rules (Q8 of Agreements draft 11, second pass, 11 October 2026, afternoon)
+
+**From** `docs/agreements-draft-11.md`, second pass, Q8: how does the closing's field 4 (written for money owed back) name an absentee's money share (F262)? *Options:* (a) widen the refund entry, a notice sealed to the absentee; (b) the same entry with no notice; (c) through the split, rule 24 keeping what cannot be delivered. **Nobody, allegedly:** "Let's slow down… what is actually being evaluated. A 'liquidation' with an absentee. Right? The liquidation happens with the rules the collective chose." **Decided by Nobody, allegedly: "Yes. The question is always: is this core business? Or has core defined how the choice is made by participants?"** Where an absentee's share goes, and how the absentee is reached or waited for, is the collective's own rules (its split plan, its absence clause, its terms), written before anyone left. The core checks two things only: the closing counts only when the collective holds nothing; and nothing owed vanishes silently, what the collective's rules could not deliver staying visible as an open obligation wherever those rules sent it. The closing needs no entry for it; field 4 stays for money owed back. F262's "named in the closing" is read this way. *Suggested by the project lead, after his correction.* His question becomes a standing working rule (above).
+
+## F264. A key delivered under a vow is evidence, not a proven sale (Q7 of Agreements draft 11, second pass, 11 October 2026, afternoon)
+
+**From** `docs/agreements-draft-11.md`, second pass, Q7: is access to a live stream a proven offer (the access form) or a promised one (a vow)? A key to the segments the stream's opener signs can be checked from data; "the match is streamed in full, live" cannot, and no hash exists at the sale. *Options:* (a) always promised; (b) always proven; (c) the class follows what is sold. **Nobody, allegedly:** "So the problem arises because the vow Dario makes eventually gets an access key." *Answered by the project lead:* F261's evidence clause already covers it. **Decided by Nobody, allegedly: "Yes."** A seller who promises the stream sells a vow; the key delivered in keeping it is a proof that sits in the sale as evidence, and the buyer still confirms or contests (a stream cut short: the key worked, the promise did not). A seller selling only a key to what already exists (the recording) sells a proven offer through the access form. The class follows what is sold; no new rule. *Suggested by the project lead* ((c), resolved by F261; the session leaned to a).
 
 ## Agreements draft 11, Q6: Money waits for its redraft (11 October 2026, midday)
 
