@@ -11664,6 +11664,54 @@ fn f254_a_clone_its_drafters_alone_signed_gives_no_consent() {
     assert_eq!((e.invalid, e.exists), (None, Some(true)), "the album's later version stands");
     assert_eq!(view(&w).version_in_force(&a).unwrap(), a2);
 }
+
+/// F254's loop walk reads a deal's clone made after a party's voice was
+/// removed as rule 45b does (B19, Q28; mechanic, settled by the project
+/// lead, `docs/closing-owes-fix.md`). The song agreement B has a keeper and
+/// names an absence authority. The album's later version adds B, every
+/// party signing. B's clone drops Ben and names A, signed by Ana, the Label
+/// and Carla: while Ben's voice remains it is a draft, and the album's
+/// later version stands. Once the authority declares Ben absent, removing
+/// his voice, the clone is B's version as rule 45b reads it, and the loop
+/// it makes is refused, failing closed: both later versions.
+#[test]
+fn f254_a_loop_through_a_clone_after_an_absence_is_refused() {
+    let mut w = World::new();
+    let mut label = w.genesis("a label", vec![own_home()], None, None);
+    let mut carla = w.genesis("carla", vec![own_home()], None, None);
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let keeper = w.genesis("the song's keeper", vec![own_home()], None, None);
+    let mut authority = w.genesis("the song's absence authority", vec![own_home()], None, None);
+    let at = deal_of(&[label.id, carla.id], "The album's agreement.");
+    let a = deal_signed_by(&mut w, &at, &mut [&mut label, &mut carla], None);
+    let mut bt = deal_of(&[ana.id, ben.id], "The song's agreement.");
+    bt.keepers = Some(Keepers { operators: vec![keeper.id], rule: Rule::All });
+    bt.abandonment = Some(Abandonment { authority: Authority::Named(authority.id), outcomes: vec![outcomes::VOICE_REMOVED], proof: None });
+    let b = deal_signed_by(&mut w, &bt, &mut [&mut ana, &mut ben], None);
+    let a2t = deal_clone(&at, a, &|t| t.parties.push(b));
+    let a2 = deal_signed_by(&mut w, &a2t, &mut [&mut label, &mut carla, &mut ana, &mut ben], Some(a));
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a2);
+    // B's clone: Ben out, A in; its mark names the voice that remains.
+    let (aid, bid) = (ana.id, ben.id);
+    let mut b2t = deal_clone(&bt, b, &|t| t.parties = vec![aid, a]);
+    b2t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: vec![aid] }]);
+    let b2 = deal_signed_by(&mut w, &b2t, &mut [&mut ana, &mut label, &mut carla], Some(b));
+    let e = view(&w).agreement(&a2).unwrap();
+    assert_eq!((e.invalid, e.exists), (None, Some(true)), "Ben's voice remains: the clone is a draft");
+    // The authority declares Ben absent; the keeper records it.
+    let decl = AbsenceDeclaration { agreement: b, clause: b, party: bid, outcomes: vec![outcomes::VOICE_REMOVED] };
+    let x = agreements_act(&mut w, &mut authority, agreements::types::DECLARATION, decl.to_map(), obj(b));
+    let mut v = view(&w);
+    v.keeper_logs.insert(keeper.id, vec![x]);
+    for y in [a2, b2] {
+        let e = v.agreement(&y).unwrap();
+        assert!(e.invalid.as_deref().is_some_and(|m| m.contains("loop")), "{:?}", e.invalid);
+        assert_eq!(e.exists, Some(false));
+    }
+    assert_eq!(v.version_in_force(&a).unwrap(), a, "the album returns to its earlier version");
+    assert_eq!(v.version_in_force(&b).unwrap(), b);
+}
 /// Draft 11, rule 15 and "Open technical parameters" (F254, part 4):
 /// nesting is bounded at 8 layers, one constant. An agreement with eight
 /// layers of agreements below it stands; a ninth is refused, failing
