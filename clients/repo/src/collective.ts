@@ -436,8 +436,9 @@ export class TestCollective {
    * over nothing), and committing to a next key dealt to the new members
    * only. A member removed without resigning (`members` leaving them out)
    * must still sign, unless the constitutional change rule needs fewer.
-   * With `governance`, the clone also rewrites the rules. Save every file
-   * after.
+   * With `governance`, the clone also rewrites the rules. `drafts`: for a
+   * member in `leaving`, the versions they signed and leave behind, which
+   * their resignation names (F207). Save every file after.
    */
   async changeMembers(opts: {
     members: string[];
@@ -445,6 +446,8 @@ export class TestCollective {
     signers: TestIdentity[];
     rebuilders: string[];
     leaving?: TestIdentity[];
+    /** For each member in `leaving`, by id: the drafts their resignation names (F207). */
+    drafts?: Record<string, string[]>;
     governance?: Governance;
     /** The exact clone payload shown to the members: refused if the clone made now differs. */
     expect?: Uint8Array;
@@ -461,7 +464,7 @@ export class TestCollective {
     const resigned: Signed[] = [];
     let line: string | undefined;
     for (const m of opts.leaving ?? []) {
-      resigned.push({ member: m.id, act: (await resign(m, this.f.agreement, this.f.relays)).id });
+      resigned.push({ member: m.id, act: (await resign(m, this.f.agreement, this.f.relays, undefined, opts.drafts?.[m.id])).id });
     }
     if (resigned.length) {
       line = (await record(this.id, { registers: resigned.map((r) => r.act), inForce: this.f.agreement }, this.f.relays)).id;

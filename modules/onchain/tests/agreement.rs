@@ -108,6 +108,13 @@ impl Held for AgreementsHeld<'_> {
     fn payment_counts(&self, payee: &Hash, at: &PaidAt, amount: &Amount, proof: &[u8], fulfils: &Hash) -> Option<bool> {
         Some(self.view.payment_counts(payee, at, amount, proof, fulfils))
     }
+    fn claim(&self, id: &Hash) -> Option<(Claim, Hash, Citations)> {
+        let x = self.view.v.get(id)?;
+        match self.fin(id)? {
+            (Payload::Claim(c), s) if self.view.v.binding_status(id) == Status::Valid => Some((c, s, Citations::of(&x.inside))),
+            _ => None,
+        }
+    }
 }
 
 // ---------------------------------------------------------------- the world
@@ -204,12 +211,18 @@ impl Story {
     /// following `fulfils`, settled: its commitment and the payer's claim.
     #[allow(clippy::too_many_arguments)]
     fn pay(&mut self, payer: &mut Person, payee: Hash, pointer: Hash, node: &str, amount: u64, fulfils: Hash, label: &str) -> (Commitment, Hash, Answer) {
-        let paid_to = PaidTo::Flow { pointer, rail: 0 };
+        self.pay_to(payer, payee, PaidTo::Flow { pointer, rail: 0 }, node, amount, fulfils, label, None)
+    }
+
+    /// As [`Self::pay`], paid to `paid_to`, the payer's claim naming
+    /// `refund` as its refund rail (key 7) where given.
+    #[allow(clippy::too_many_arguments)]
+    fn pay_to(&mut self, payer: &mut Person, payee: Hash, paid_to: PaidTo, node: &str, amount: u64, fulfils: Hash, label: &str, refund: Option<Rail>) -> (Commitment, Hash, Answer) {
         let salt: [u8; 16] = h(label)[..16].try_into().unwrap();
         let c = Commitment { rail: mor_lightning::spec(), payee, amount: sat(amount), fulfils, payer: Some(Payer::Identity(payer.id)), paid_to, salt, purchase: None };
         let preimage = h(&format!("{label}: the preimage"));
         let ln = LnProof { invoice: invoice(&secret(node), amount * 1000, &c.hash(), &preimage), preimage: Some(preimage) };
-        let claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee, amount: sat(amount), fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+        let claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee, amount: sat(amount), fulfils, disagrees: None, referral: None, refund, anonymous: None, purchase: None };
         let (id, a) = self.claim(payer, &claim);
         (c, id, a)
     }
@@ -294,4 +307,94 @@ fn f225_a_default_is_refunded_for_real_and_shown_repaid() {
     assert!(s.rail_valid.contains_key(&back));
     assert_eq!(repaid(&s), 50, "Money shows it repaid: the service's claim, with the rail's proof");
     assert_eq!(service::standing(&refund, repaid(&s), &clock), Standing::Repaid);
+}
+
+/// RQ1, taken as option 1, for QG2 (Money rule 14, decided 9 October 2026,
+/// "Agreed"): Ana's claim on her payment names a refund rail (key 7), so a
+/// refund owed to her is paid there. The service pays it back over
+/// Lightning to `[2, claim]`, "the refund rail this claim names": the
+/// payment cMIP finds the address in Ana's claim, as it does in a pointer,
+/// and the Lightning rule checks the invoice against it. Money shows it
+/// repaid, checked, not stated by hand. A refund to her pointer now repays
+/// nothing; one whose invoice another node signed, one to a claim naming no
+/// refund rail, and one naming another identity as payee are invalid.
+#[test]
+fn rq1_a_refund_to_the_refund_rail_the_payers_claim_names_is_checked_and_shown_repaid() {
+    let mut s = Story::new(&terms());
+    let mut ana = s.ana.clone();
+    let mut service = s.service.clone();
+    let (aid, sid, sp, ap, oid) = (ana.id, s.service.id, s.service_pointer, s.ana_pointer, s.offer_id);
+    let refund_rail = ln_rail(&secret("ana's refund node")).remove(0);
+    let (_, owed, a) = s.pay_to(&mut ana, sid, PaidTo::Flow { pointer: sp, rail: 0 }, "the service's node", 50, oid, "ana buys one hash", Some(refund_rail));
+    assert_eq!(a, Answer::Valid);
+    let to = RefundTo::Identity(aid);
+    let repaid = |s: &Story| s.view().refund_repaid(&owed, &to, &sat(1).unit);
+    // To her pointer: valid on the rail, but her claim named a refund rail.
+    let (_, _, a) = s.pay(&mut service, aid, ap, "ana's node", 50, owed, "back to ana's pointer");
+    assert_eq!(a, Answer::Valid);
+    assert_eq!(repaid(&s), 0, "her claim names a refund rail: a repayment elsewhere repays nothing (QG2)");
+    // To her claim's refund rail, but the invoice signed by another node.
+    let there = PaidTo::Refund { claim: owed };
+    let (_, _, a) = s.pay_to(&mut service, aid, there, "ana's node", 50, owed, "signed by the wrong node", None);
+    assert!(matches!(a, Answer::Invalid(_)), "{a:?}");
+    assert_eq!(repaid(&s), 0);
+    // Naming another identity as payee: the claim is Ana's act, not Ben's.
+    let bid = s.ben.id;
+    let (_, _, a) = s.pay_to(&mut service, bid, there, "ana's refund node", 50, owed, "payee ben", None);
+    assert_eq!(a, Answer::Invalid("paid to the refund rail of another identity's claim".into()));
+    // A claim naming no refund rail: the service's own first repayment claim.
+    let (_, plain, _) = s.pay(&mut ana, sid, sp, "the service's node", 5, sp, "a tip naming no refund rail");
+    let (_, _, a) = s.pay_to(&mut service, aid, PaidTo::Refund { claim: plain }, "ana's refund node", 5, plain, "to no refund rail", None);
+    assert_eq!(a, Answer::Invalid("the claim names no refund rail".into()));
+    // A claim not held: unknown.
+    let (_, _, a) = s.pay_to(&mut service, aid, PaidTo::Refund { claim: h("a claim nobody holds") }, "ana's refund node", 50, owed, "to a claim not held", None);
+    assert!(matches!(a, Answer::Unknown(_)), "{a:?}");
+    assert_eq!(repaid(&s), 0);
+    // Where her claim said: checked by the rail's rule, and repaid.
+    let (_, back, a) = s.pay_to(&mut service, aid, there, "ana's refund node", 50, owed, "back to ana's refund rail", None);
+    assert_eq!(a, Answer::Valid, "the address read from her claim's key 7, the invoice signed by that node");
+    assert_eq!(s.rail_valid.get(&back), Some(&PaidAt::Flow(owed)), "the core's reading: paid at the claim");
+    let x = s.w.v.get(&back).unwrap();
+    let Ok(Payload::Claim(cl)) = Payload::decode(x.inside.type_, &x.inside.payload) else { panic!() };
+    assert_eq!(beside(Record::Claim(&cl, service.id, &Citations::default()), &AgreementsHeld { view: s.view() }), Answer::Valid);
+    assert_eq!(repaid(&s), 50, "Money shows it repaid, its rail answer checked (QG2)");
+}
+
+/// RQ1, taken as option 1, for QG1 (Money rule 10a, decided 9 October
+/// 2026): an anonymous payer commits a bare key, and its claim, signed by a
+/// one-time identity and carrying the key's signature, names a refund rail.
+/// The refund owed to the key is paid to `[2, claim]`, its payee the
+/// one-time identity that signed the claim; the payment cMIP checks it
+/// against the rail, and Money shows it repaid to the key.
+#[test]
+fn rq1_a_refund_to_a_bare_key_is_checked_where_its_claim_said() {
+    use mor_core::money::Anonymous;
+    use mor_core::sig::SchnorrKey;
+    let mut s = Story::new(&terms());
+    let mut service = s.service.clone();
+    let (sid, sp, oid) = (s.service.id, s.service_pointer, s.offer_id);
+    let key = SchnorrKey::from_secret(&h("a one-time key")).unwrap();
+    let bare = mor_core::identity::SigningKey { scheme: mor_core::act::Scheme::Founding(1), key: key.public().to_vec() };
+    let mut once = s.w.genesis("a one-time identity", vec![own_home()], None, None);
+    // The anonymous payment: its commitment names the bare key as payer.
+    let paid_to = PaidTo::Flow { pointer: sp, rail: 0 };
+    let salt: [u8; 16] = h("an anonymous purchase")[..16].try_into().unwrap();
+    let c = Commitment { rail: mor_lightning::spec(), payee: sid, amount: sat(50), fulfils: oid, payer: Some(Payer::Key(bare.clone())), paid_to, salt, purchase: None };
+    let preimage = h("the anonymous preimage");
+    let ln = LnProof { invoice: invoice(&secret("the service's node"), 50_000, &c.hash(), &preimage), preimage: Some(preimage) };
+    let refund_rail = ln_rail(&secret("the key's refund node")).remove(0);
+    let mut claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee: sid, amount: sat(50), fulfils: oid, disagrees: None, referral: None, refund: Some(refund_rail), anonymous: None, purchase: None };
+    claim.anonymous = Some(Anonymous { key: bare.clone(), sig: key.sign(&claim.anonymous_message(&Citations::default()), &[0; 32]).sig });
+    let (owed, a) = s.claim(&mut once, &claim);
+    assert_eq!(a, Answer::Valid, "the anonymous payment, verified");
+    let to = RefundTo::Key(bare);
+    let repaid = |s: &Story| s.view().refund_repaid(&owed, &to, &sat(1).unit);
+    assert_eq!(repaid(&s), 0);
+    let there = PaidTo::Refund { claim: owed };
+    let (_, _, a) = s.pay_to(&mut service, once.id, there, "the service's node", 50, owed, "to the wrong node", None);
+    assert!(matches!(a, Answer::Invalid(_)), "{a:?}");
+    assert_eq!(repaid(&s), 0);
+    let (_, _, a) = s.pay_to(&mut service, once.id, there, "the key's refund node", 50, owed, "back where the key's claim said", None);
+    assert_eq!(a, Answer::Valid, "the address read from the claim the key signed");
+    assert_eq!(repaid(&s), 50, "Money shows it repaid to the key, its rail answer checked (QG1)");
 }
