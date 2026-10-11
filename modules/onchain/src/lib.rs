@@ -316,13 +316,20 @@ impl OnchainProof {
     /// block a reorganisation puts it. `None` before a transaction is shown.
     pub fn payment(&self) -> Option<Vec<u8>> {
         let (txid, i) = self.outpoint()?;
-        Some(cbor::encode(&Value::Array(vec![Value::Bytes(txid.to_vec()), Value::Uint(i)])))
+        Some(payment_of(&txid, i))
     }
 
     /// The height of the proof's block on `chain`, if it is on it.
     pub fn height_on(&self, chain: &chain::HeaderChain) -> Option<u64> {
         chain.height_of(&self.block_hash()?)
     }
+}
+
+/// What "the same payment" is on this rail (F200) for the output `index`
+/// of the transaction `txid`: `[txid, index]`, in deterministic CBOR, as
+/// [`OnchainProof::payment`] names it.
+pub fn payment_of(txid: &[u8; 32], index: u64) -> Vec<u8> {
+    cbor::encode(&Value::Array(vec![Value::Bytes(txid.to_vec()), Value::Uint(index)]))
 }
 
 /// The on-chain rail Module, as a verifier adopts it: with the headers of

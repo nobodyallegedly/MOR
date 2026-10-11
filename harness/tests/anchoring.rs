@@ -11,6 +11,15 @@
 //! pointer and signs its claim naming the payment refunded, and the core's
 //! Agreements view shows it repaid.
 //!
+//! **The pool as visible custody** (anchoring cMIP draft 4): the service
+//! puts its tickets and its receipts on its home. It funds the batch from
+//! its own coins by a payment to its own pointer's on-chain rail, and pays
+//! the batch's change back to itself the same way, each shown by a receipt
+//! it signs. A third party then follows the batch's money from the payers'
+//! payments to the transaction that anchors it: in, paid back, the fee,
+//! the output, and what the service kept, here a loss, the service's
+//! (F228), shown.
+//!
 //! The acts (the pointers, the standing offer, tickets and publications,
 //! the claims, the acts anchored) are real acts on a throwaway home, read
 //! back and checked by a reader and the core's Agreements view.
@@ -33,16 +42,19 @@
 //! identities and regtest coins only.
 
 use bitcoin::hashes::{sha256 as bh, Hash as _};
+use bitcoin::key::{Keypair, TapTweak};
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
-use bitcoin::sighash::{EcdsaSighashType, SighashCache};
+use bitcoin::sighash::{EcdsaSighashType, Prevouts, SighashCache, TapSighashType};
+use bitcoin::taproot::TapNodeHash;
 use bitcoin::{absolute, consensus, transaction, Address, CompressedPublicKey, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness};
 use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
+use mor_anchoring::custody::{self, Anchoring, Coin, Paid as Sold};
 use mor_anchoring::service::{self, Judgment, Offer, Payment, Price, Publication, Standing, Terms, Ticket, Tier};
 use mor_anchoring::tree::{self, Batch};
 use mor_core::act::{Act, Object};
 use mor_core::chain::Status;
 use mor_core::envelopes::anchoring::Anchors;
-use mor_core::money::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payer, Payload, Rail, VaultEntry};
+use mor_core::money::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, RefundTo, VaultEntry};
 use mor_core::hash::{sha256, Hash};
 use mor_core::agreements::{self, AgreementsView, Mips};
 use mor_harness::net::{Http, Site};
@@ -53,7 +65,7 @@ use mor_lightning::lnd::Lnd;
 use mor_lightning::{Lightning, LnAddress, LnProof};
 use mor_onchain::btcd::{Btcd, Node};
 use mor_onchain::clock::{self, BatchAnchor, BitcoinClock};
-use mor_onchain::{Network, CONFIRMATIONS};
+use mor_onchain::{Network, Onchain, OnchainAddress, OnchainProof, CONFIRMATIONS};
 use mor_payment::{paid_at, verify, Answer, Commitment, Held, Modules, PaidTo, Proof, Record};
 use mor_relay::operator::random;
 use mor_relay::{Policy, Role};
@@ -337,6 +349,65 @@ fn claim_of(c: &Commitment, ln: &LnProof) -> Claim {
     Claim { rail: mor_lightning::spec(), proof: Proof { paid_to: c.paid_to, salt: c.salt, rail: ln.encode() }.encode(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None }
 }
 
+/// The service's receipt of a payment it received, carrying the same rail
+/// proof as the payer's claim (Money rule 10's double entry).
+fn receipt_of(c: &Commitment, ln: &LnProof) -> Receipt {
+    Receipt { rail: c.rail, proof: Proof { paid_to: c.paid_to, salt: c.salt, rail: ln.encode() }.encode(), payer: c.payer.clone(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, previous: None, forward: None, batch: None, purchase: None }
+}
+
+/// The payment commitment a receipt recomputes (payment cMIP).
+fn commitment_of(r: &Receipt) -> Commitment {
+    let p = Proof::decode(&r.proof).expect("the payment cMIP's proof");
+    Commitment { rail: r.rail, payee: r.payee, amount: r.amount, fulfils: r.fulfils, payer: r.payer.clone(), paid_to: p.paid_to, salt: p.salt, purchase: r.purchase.clone() }
+}
+
+/// The service's own on-chain coins, under its pointer's on-chain rail: the
+/// address, its key and request key. A payment of the service to itself
+/// there is a pool coin, shown by the receipt it signs.
+struct Pool {
+    key: SecretKey,
+    request: SecretKey,
+}
+
+impl Pool {
+    fn new() -> Pool {
+        Pool { key: secret("the anchoring pool's on-chain key, regtest only"), request: secret("the anchoring pool's request key, regtest only") }
+    }
+    fn address(&self) -> OnchainAddress {
+        let x = |sk: &SecretKey| Keypair::from_secret_key(&Secp256k1::new(), sk).x_only_public_key().0.serialize();
+        OnchainAddress { network: Network::Regtest, key: x(&self.key), request: x(&self.request), tree: None, endpoint: Some("in-process, for this test".into()) }
+    }
+    /// A payment of `svc` to its own pointer's on-chain rail (rail 1).
+    fn to_itself(&self, svc: Hash, pointer: Hash, amount: u64) -> (Commitment, Vec<u8>) {
+        let c = Commitment { rail: mor_onchain::spec(), payee: svc, amount: sat(amount), fulfils: pointer, payer: Some(Payer::Identity(svc)), paid_to: PaidTo::Flow { pointer, rail: 1 }, salt: random::<16>(), purchase: None };
+        let script = self.address().script(&c.hash()).unwrap();
+        (c, script)
+    }
+    /// The service's side's request for a payment to it.
+    fn request(&self, c: &Commitment) -> [u8; 64] {
+        let kp = Keypair::from_secret_key(&Secp256k1::new(), &self.request);
+        Secp256k1::new().sign_schnorr_with_aux_rand(&Message::from_digest(mor_onchain::p2c::request_message(&c.hash())), &kp, &random::<32>()).serialize()
+    }
+    /// A transaction spending the pool coin `prev` (paid under `c`, worth
+    /// `value`) by the key path, its key tweaked by the commitment, paying
+    /// `outputs`.
+    fn spend(&self, c: &Commitment, prev: OutPoint, value: u64, outputs: &[(Vec<u8>, u64)]) -> Transaction {
+        let secp = Secp256k1::new();
+        let tweaked = Keypair::from_secret_key(&secp, &self.key).tap_tweak(&secp, Some(TapNodeHash::from_byte_array(c.hash())));
+        let spent = TxOut { value: bitcoin::Amount::from_sat(value), script_pubkey: ScriptBuf::from_bytes(self.address().script(&c.hash()).unwrap()) };
+        let mut t = Transaction {
+            version: transaction::Version::TWO,
+            lock_time: absolute::LockTime::ZERO,
+            input: vec![TxIn { previous_output: prev, script_sig: ScriptBuf::new(), sequence: Sequence::MAX, witness: Witness::new() }],
+            output: outputs.iter().map(|(s, v)| TxOut { value: bitcoin::Amount::from_sat(*v), script_pubkey: ScriptBuf::from_bytes(s.clone()) }).collect(),
+        };
+        let sighash = SighashCache::new(&t).taproot_key_spend_signature_hash(0, &Prevouts::All(&[spent]), TapSighashType::Default).unwrap();
+        let sig = secp.sign_schnorr_with_aux_rand(&Message::from_digest(sighash.to_byte_array()), &tweaked.to_keypair(), &random::<32>());
+        t.input[0].witness.push(sig.serialize());
+        t
+    }
+}
+
 fn lightning(node: [u8; 33]) -> Vec<Rail> {
     vec![Rail { module: mor_lightning::spec(), address: LnAddress { network: LnNetwork::Regtest, node, endpoint: Some("in-process, for this test".into()) }.encode() }]
 }
@@ -364,7 +435,12 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
 
     // ------------------------------------------------ the service: pointer and standing offer
     let mut svc = born(&site, &seed, "the anchoring service").await;
-    let pointer = PayeePointer { payee: svc.id, version: 1, previous: None, rails: lightning(ln.node_key(Side::Service).await) };
+    // Its pointer: Lightning (rail 0), where buyers pay; on-chain (rail 1),
+    // where its own coins for the pool sit.
+    let pool = Pool::new();
+    let mut rails = lightning(ln.node_key(Side::Service).await);
+    rails.push(Rail { module: mor_onchain::spec(), address: pool.address().encode() });
+    let pointer = PayeePointer { payee: svc.id, version: 1, previous: None, rails };
     let pointer_act = svc.act(money_spec(), money::types::PAYEE_POINTER, Payload::PayeePointer(pointer.clone()).to_map(), None, None);
     put(&site, &pointer_act).await;
     let terms = Terms { reference: clock::reference(Network::Regtest), tiers: vec![Tier { price: Price::Fixed(50), blocks: 2 }, Tier { price: Price::Fixed(20), blocks: 6 }, Tier { price: Price::Fixed(5), blocks: 144 }] };
@@ -420,6 +496,11 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         assert_eq!(verify(Record::Claim(&claim, p.id, &Citations::default()), &Pointers(pointers.clone()), &modules).answer, Answer::Valid);
         let claim_act = p.act(money_spec(), money::types::CLAIM, Payload::Claim(claim).to_map(), None, None);
         put(&site, &claim_act).await;
+        // Visible custody: the service puts the ticket on its home, and its
+        // receipt of the payment, the same rail proof (Money rule 10).
+        put(&site, &ticket_act).await;
+        let receipt_act = svc.act(money_spec(), money::types::RECEIPT, Payload::Receipt(receipt_of(&commitment, &proof)).to_map(), None, None);
+        put(&site, &receipt_act).await;
         eprintln!("{name} pays {} satoshis over Lightning, following the standing offer, for one hash (tier {tier}, batch {batch}, by block {})", price.value, ticket.deadline);
         buyers.push(Buyer { name, p, act: act.id(), blind, pointer: own_act.id(), commitment, claim: claim_act, ticket_act, ticket });
     }
@@ -428,14 +509,29 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     let leaves = vec![buyers[0].ticket.leaf, buyers[1].ticket.leaf];
     let batch = Batch::new(leaves.clone()).unwrap();
     let out = mor_onchain::tx::taproot_script(&mor_onchain::p2c::pay_to_contract(&pool_key, None, &batch.root()).unwrap());
-    let t = coins.pay(&out, 330);
+    // The service puts 10,000 of its own coins into the pool: a payment to
+    // its own pointer's on-chain rail, shown by its receipt.
+    let (deposit, deposit_script) = pool.to_itself(svc.id, pointer_act.id(), 10_000);
+    let t0 = coins.pay(&deposit_script, 10_000);
+    let t0id = node.rpc.send(&consensus::serialize(&t0)).await.expect("the node takes the deposit");
+    node.rpc.generate(1).await.unwrap();
+    // The batch's transaction spends that coin: the batch's 330-satoshi
+    // output, its change back to the service's own pointer (a receipt
+    // again), and a fee of 1,000 to the miners, the rest.
+    let (change, change_script) = pool.to_itself(svc.id, pointer_act.id(), 10_000 - 330 - 1_000);
+    let t = pool.spend(&deposit, OutPoint { txid: Txid::from_byte_array(t0id), vout: 0 }, 10_000, &[(out.clone(), 330), (change_script, change.amount.value)]);
     let txid = node.rpc.send(&consensus::serialize(&t)).await.expect("the node takes the batch's transaction");
     node.rpc.generate(1).await.unwrap();
     let publication = Publication { offer: offer_act.id(), batch: 0, leaves, tx: txid, output: 0 };
     let pub_act = svc.act(mor_anchoring::spec(), service::PUBLICATION, publication.to_map(), under_offer.clone(), None);
     put(&site, &pub_act).await;
     node.rpc.generate(CONFIRMATIONS as u64 - 1).await.unwrap();
-    eprintln!("batch 0 anchored: two leaves, one output of 330 satoshis to the service's key tweaked by the root, no OP_RETURN; its publication signed under the offer and on the home");
+    for (c, raw, output) in [(&deposit, stripped(&t0), 0u64), (&change, stripped(&t), 1)] {
+        let rail = node.rpc.proof(pool.request(c), &raw, output).await.expect("a proof from the node");
+        let r = Receipt { rail: c.rail, proof: Proof { paid_to: c.paid_to, salt: c.salt, rail: rail.encode() }.encode(), payer: c.payer.clone(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, previous: None, forward: None, batch: None, purchase: None };
+        put(&site, &svc.act(money_spec(), money::types::RECEIPT, Payload::Receipt(r).to_map(), None, None)).await;
+    }
+    eprintln!("batch 0 anchored: two leaves, one output of 330 satoshis to the service's key tweaked by the root, no OP_RETURN, funded by a coin the service paid itself and paying its change back to itself, each shown by its receipt; its publication signed under the offer and on the home");
 
     // ------------------------------------------------ anyone verifies, from the chain and the acts
     let mut who = vec![svc.id];
@@ -531,6 +627,57 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         assert_eq!(service::standing(r, repaid, &bitcoin), Standing::Repaid, "{}", b.name);
         eprintln!("{}: {} satoshis paid back over Lightning to {}'s own pointer; the service's claim names the payment refunded, with the rail's proof: shown repaid", b.name, repaid, b.name);
     }
+
+    // ------------------------------------------------ the pool as visible custody
+    // A third party reads what the service put on its home: its tickets,
+    // its receipts (the payments in, and the pool's coins), its
+    // publications; Money's view of what was paid back. It follows batch
+    // 0's money from the payers' payments to the transaction anchoring it.
+    let chain = node.rpc.chain(Network::Regtest).await.unwrap();
+    let onchain = Onchain::on(&chain);
+    let both = Modules::new().adopt(&lnm).adopt(&onchain);
+    let mine = |t: u64| eve.v.signed_by(&svc.id).filter(move |a| a.inside.type_ == t).map(|a| a.id).collect::<Vec<Hash>>();
+    let tickets: Vec<Ticket> = eve.v.signed_by(&svc.id).filter(|a| a.inside.spec == mor_anchoring::spec() && a.inside.type_ == service::TICKET).map(|a| Ticket::from_map(&payload(&eve, &a.id)).unwrap()).collect();
+    assert_eq!(tickets.len(), 4, "the four tickets, on the home");
+    let receipts: Vec<(Hash, Receipt)> = mine(money::types::RECEIPT)
+        .into_iter()
+        .filter(|id| eve.v.get(id).unwrap().inside.spec == money_spec())
+        .map(|id| match Payload::decode(money::types::RECEIPT, &payload(&eve, &id)) {
+            Ok(Payload::Receipt(r)) => (id, r),
+            _ => panic!("a receipt"),
+        })
+        .collect();
+    for (_, r) in &receipts {
+        assert_eq!(verify(Record::Receipt(r), &held, &both).answer, Answer::Valid, "each of the service's receipts verifies");
+    }
+    let unit = mor_onchain::unit(Network::Regtest);
+    let sold: Vec<Sold> = tickets
+        .iter()
+        .map(|t| {
+            let (id, r) = receipts.iter().find(|(_, r)| commitment_of(r).hash() == t.commitment).expect("a receipt of each ticket's payment");
+            let b = buyers.iter().find(|b| b.ticket == *t).unwrap();
+            Sold { ticket: t.clone(), payment: Payment { commitment: commitment_of(r), answer: verify(Record::Receipt(r), &held, &both).answer }, shown_by: *id, repaid: v.refund_repaid(&b.claim.id(), &RefundTo::Identity(b.p.id), &unit) }
+        })
+        .collect();
+    let pool_coins: Vec<(Hash, OnchainProof, u64)> = receipts
+        .iter()
+        .filter(|(_, r)| r.rail == mor_onchain::spec() && r.payee == svc.id)
+        .map(|(id, r)| (*id, OnchainProof::decode(&Proof::decode(&r.proof).unwrap().rail).unwrap(), r.amount.value))
+        .collect();
+    let coins_shown: Vec<Coin> = pool_coins.iter().map(|(id, p, a)| Coin { shown_by: *id, payment: p.payment().unwrap(), amount: *a }).collect();
+    let txs: Vec<Vec<u8>> = pool_coins.iter().map(|(_, p, _)| p.paid.as_ref().unwrap().tx.clone()).collect();
+    let account = custody::follow(&offer, &sold, &published, &txs, &coins_shown, &BitcoinClock { chain: &chain });
+    let l0 = &account.lines[0];
+    assert_eq!((l0.batch, l0.paid_in(), l0.paid_back), (0, 90, 20), "batch 0: Ana 50, Ben 20, Cal 20 in; Cal's 20 paid back");
+    let Anchoring::Shown { tx, spent, output, change: back, elsewhere, fee } = &l0.anchoring else { panic!("batch 0's money followed: {:?}", l0.anchoring) };
+    assert_eq!((*tx, spent.len(), *output, back.len(), elsewhere.is_empty(), *fee), (publication.tx, 1, 330, 1, true, 1_000));
+    assert_eq!((spent[0].1, back[0].1), (10_000, 8_670));
+    assert_eq!(l0.kept(), Some(90 - 20 - 1_330), "the batch cost more than it brought in: the service's loss, shown");
+    let l1 = &account.lines[1];
+    assert_eq!((l1.batch, l1.paid_in(), l1.paid_back, &l1.anchoring, l1.kept()), (1, 50, 50, &Anchoring::NotPublished, Some(0)));
+    assert_eq!(account.unspent(), 8_670, "the pool holds batch 0's change on the chain");
+    eprintln!("custody, batch 0: {} in over Lightning (each payment shown by the service's receipt), {} paid back; its transaction spent a coin of {} (a receipt), paid the batch's output {} and change {} back (a receipt): fee {}; kept {}, a loss the service bears", l0.paid_in(), l0.paid_back, spent[0].1, output, back[0].1, fee, l0.kept().unwrap());
+    eprintln!("custody, batch 1: {} in, {} paid back, never published: kept {}; the pool holds {} on the chain", l1.paid_in(), l1.paid_back, l1.kept().unwrap(), account.unspent());
 
     // The tickets and publication are acts the service signed under the
     // offer; each counts for a reader.

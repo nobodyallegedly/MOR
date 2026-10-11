@@ -1,6 +1,6 @@
 //! # mor-anchoring
 //!
-//! The anchoring cMIP, draft 3 (`cmips/cmip-anchoring-draft-3.md`): the
+//! The anchoring cMIP, draft 4 (`cmips/cmip-anchoring-draft-4.md`): the
 //! Envelopes' anchoring task (F173), one cMIP with each clock a Module under
 //! it (F202). **Experimental**: an instrument for testing the core.
 //!
@@ -12,8 +12,13 @@
 //!   (an Agreements offer, F225), its terms (urgency tiers,
 //!   each priced), the ticket it signs for each paid hash, the publication
 //!   of each batch, and the judgment: delivered, provably omitted, late, or
-//!   not delivered by the deadline (a default), each default a refund.
+//!   not delivered by the deadline (a default), each default a refund; and
+//!   its checker for the core (`service::Checker`), a proven offer (F261).
+//! - [`custody`]: the pool as visible custody: each batch's money followed
+//!   from the payers' payments to the transaction anchoring it, from
+//!   receipts and the service's own acts, and what the service kept.
 
+pub mod custody;
 pub mod service;
 pub mod tree;
 

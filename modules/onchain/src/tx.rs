@@ -103,6 +103,25 @@ pub fn decode(b: &[u8]) -> Option<Tx> {
     })
 }
 
+/// The outputs a transaction serialised without witness spends, in its
+/// inputs' order: `(txid, index)`, the txid in Bitcoin's own byte order.
+/// `None` where the bytes are not one transaction ([`decode`]).
+pub fn spends(b: &[u8]) -> Option<Vec<([u8; 32], u64)>> {
+    decode(b)?;
+    let mut r = Reader { b, at: 0 };
+    r.take(4)?; // version
+    let n = usize::try_from(r.varint()?).ok()?;
+    let mut out = Vec::with_capacity(n);
+    for _ in 0..n {
+        let txid: [u8; 32] = r.take(32)?.try_into().ok()?;
+        let index = u32::from_le_bytes(r.take(4)?.try_into().ok()?);
+        r.bytes()?; // its script
+        r.take(4)?; // sequence
+        out.push((txid, index as u64));
+    }
+    Some(out)
+}
+
 /// The script of a Taproot output (witness version 1) paying the x-only
 /// output key `q`: `OP_1 <32 bytes>`.
 pub fn taproot_script(q: &[u8; 32]) -> Vec<u8> {
