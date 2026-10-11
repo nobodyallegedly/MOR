@@ -1585,6 +1585,32 @@ impl ColWorld {
         }
     }
 
+    /// Whether the debt `d`, of the collective's own, binds it on the
+    /// history `he` of an ending, judged as if that ending counted (F143:
+    /// "its own debts, its own departures"): in the history, done, cited,
+    /// and its consent counting among that history's lines (the Money lane,
+    /// or its grant), the tie rule applied. A fork hands out such a debt; a
+    /// closing owes it until it is paid or released.
+    fn binds_in(&self, lv: &AgreementsView, d: &Hash, he: &BTreeSet<Hash>) -> bool {
+        let f = &self.info[d];
+        he.contains(d)
+            && f.seal != Seal::TooFew
+            && f.cited
+            && match f.grant {
+                None => self.shape.lane.is_none() || (!f.lane_signed.is_empty() && self.lane_counts(&lv, d, &he)),
+                // A grant key's debt that a revocation of its
+                // grant, or a line emptying its area, voids by the
+                // tie rule, never adopted, binds no one, and is not
+                // handed out (rules 37b, 40; G1, G2; IC3). Found
+                // by the Agreements invariants
+                // (`docs/fork-hands-out-2026-10-09.md`, OF2).
+                // A grant within the area counts only as the
+                // area's own act: the lane judged at the grant's
+                // place (OF5).
+                Some(_) => self.in_reach(d) && { let g = &self.grants[f.grant.unwrap()]; g.accepted && (!g.in_area || (g.holders_signed && self.lane_counts(&lv, &g.id, &he))) } && self.voiding_revocations(&lv, d).is_empty() && self.voiding_lines(&lv, d).is_empty(),
+            }
+    }
+
     /// Paid in full to the creditor (Money rule 7: routes ending at the
     /// creditor), or released by the creditor (rule 47b).
     fn settled(&self, o: &Hash) -> bool {
@@ -1691,23 +1717,7 @@ impl ColWorld {
                 }
                 let listed: Vec<Hash> = fe.fork.debts.iter().map(|(d, _)| *d).collect();
                 for d in &self.debts {
-                    let f = &self.info[d];
-                    let should = he.contains(d)
-                        && f.seal != Seal::TooFew
-                        && f.cited
-                        && match f.grant {
-                            None => self.shape.lane.is_none() || (!f.lane_signed.is_empty() && self.lane_counts(&lv, d, &he)),
-                            // A grant key's debt that a revocation of its
-                            // grant, or a line emptying its area, voids by the
-                            // tie rule, never adopted, binds no one, and is not
-                            // handed out (rules 37b, 40; G1, G2; IC3). Found
-                            // by the Agreements invariants
-                            // (`docs/fork-hands-out-2026-10-09.md`, OF2).
-                            // A grant within the area counts only as the
-                            // area's own act: the lane judged at the grant's
-                            // place (OF5).
-                            Some(_) => self.in_reach(d) && { let g = &self.grants[f.grant.unwrap()]; g.accepted && (!g.in_area || (g.holders_signed && self.lane_counts(&lv, &g.id, &he))) } && self.voiding_revocations(&lv, d).is_empty() && self.voiding_lines(&lv, d).is_empty(),
-                        };
+                    let should = self.binds_in(&lv, d, &he);
                     if should && !listed.contains(d) {
                         bad.push(format!("FORK-HANDS-OUT: a complete fork {:?} leaves out a debt in its history: {d:?}", en.id));
                     }
@@ -1735,7 +1745,12 @@ impl ColWorld {
                     continue;
                 }
                 for d in &self.debts {
-                    if he.contains(d) && lv.obligation_binds(d).ok().flatten() == Some(true) && !self.settled(d) {
+                    // Judged on the closing's own history, as the fork's
+                    // debts are (F143: "its own debts, its own departures"):
+                    // a debt the closing's own departures void binds no one
+                    // there, though it binds where the fork counts
+                    // (`docs/closing-owes-fix.md`, seed 9763223879668712927).
+                    if self.binds_in(&lv, d, &he) && !self.settled(d) {
                         bad.push(format!("CLOSING-OWES: a complete closing {:?} with an open debt in its history: {d:?} (paid to the creditor or released: no)", en.id));
                     }
                 }
