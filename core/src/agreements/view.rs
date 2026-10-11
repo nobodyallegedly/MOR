@@ -9398,7 +9398,9 @@ impl<'a> AgreementsView<'a> {
     /// carries them in its running count (field 4); in the holders' order.
     /// With no `previous`, no split so far: every count is zero. `None`
     /// where `previous` is not held, is not one of the service's splits
-    /// for the stake under that agreement, or carries no count for it:
+    /// for the same stake under a version on that agreement's line
+    /// (Agreements draft 11, rule 9, F266: the count runs across versions),
+    /// or carries no count for it:
     /// shown as unknown, never guessed.
     ///
     /// *Since F171 the count is read from two acts; F165's walk back
@@ -9406,27 +9408,44 @@ impl<'a> AgreementsView<'a> {
     pub fn turns(&self, service: &Hash, in_force: &Hash, idx: u64, holders: &[(Hash, u64)], previous: Option<&Hash>) -> R<Option<Vec<u64>>> {
         let Some(p) = previous else { return Ok(Some(vec![0; holders.len()])) };
         let Some(ph) = self.v.get(p) else { return Ok(None) };
-        let Some(split) = self.tally_member(ph, service, in_force, idx)? else { return Ok(None) };
-        let Some(count) = split.tally_of(idx) else { return Ok(None) };
+        let Some((split, j)) = self.tally_member(ph, service, in_force, idx)? else { return Ok(None) };
+        let Some(count) = split.tally_of(j) else { return Ok(None) };
         Ok(Some(holders.iter().map(|(w, _)| count.iter().filter(|(x, _)| x == w).map(|(_, n)| *n).sum()).collect()))
     }
 
     /// The split `h` as a link of `service`'s tally chain for stake `idx`
-    /// under the agreement in force `in_force` (F171): one of the service's
-    /// splits, valid and signed with its own key, paying that stake, under
-    /// an agreement whose version in force is `in_force`. `None` otherwise.
-    fn tally_member(&self, h: &Held, service: &Hash, in_force: &Hash, idx: u64) -> R<Option<Split>> {
+    /// of the agreement in force `in_force` (F171): one of the service's
+    /// splits, valid and signed with its own key, under a version judged
+    /// under `in_force` (as before F266: a version whose act is read under
+    /// it, such as one that no longer counts) or on its line (a version
+    /// before it), paying the same stake; with the index that stake has in the version the split
+    /// names. `None` otherwise.
+    ///
+    /// Agreements draft 11, rule 9 (new in draft 11, F266): the turn count
+    /// runs along the service's receipts across every version of the deal;
+    /// "the same stake" is the same holders' share in the same work (the
+    /// stake's object), whatever its place in the list; a new holder starts
+    /// at zero. *Mechanic, the build's:* a split's stake indexes are read on
+    /// the version it names; "a version on the line" keeps the turns per
+    /// branch while a deal stands forked (rule 9: "along that branch's
+    /// receipts"), the splits before the fork belonging to both branches.
+    fn tally_member(&self, h: &Held, service: &Hash, in_force: &Hash, idx: u64) -> R<Option<(Split, u64)>> {
         if h.act.outside.signer.as_ref() != Some(service) || !self.is_agreements(h, types::SPLIT) || !self.valid(&h.id) || self.key_grant(h).is_some() {
             return Ok(None);
         }
         let Ok(x) = Split::decode(&h.inside.payload) else { return Ok(None) };
-        if !x.payouts.iter().any(|p| p.stake == Some(idx)) {
+        let judged_here = self.version_for(&x.agreement).ok().as_ref() == Some(in_force);
+        let on_line = judged_here || self.lineage(in_force).is_ok_and(|l| l.iter().any(|(v, _)| *v == x.agreement));
+        if !on_line {
             return Ok(None);
         }
-        if self.version_for(&x.agreement).ok().as_ref() != Some(in_force) {
+        let Some(work) = self.terms(in_force)?.stakes.iter().flatten().nth(idx as usize).map(|st| st.object.clone()) else { return Ok(None) };
+        let Ok(named) = self.terms(&x.agreement) else { return Ok(None) };
+        let Some(j) = named.stakes.iter().flatten().position(|st| st.object == work).map(|j| j as u64) else { return Ok(None) };
+        if !x.payouts.iter().any(|p| p.stake == Some(j)) {
             return Ok(None);
         }
-        Ok(Some(x))
+        Ok(Some((x, j)))
     }
 
     /// Where `h` sits in `service`'s tally chain for stake `idx` (F171):
@@ -9509,7 +9528,12 @@ impl<'a> AgreementsView<'a> {
         }
         let before: Option<Vec<(Hash, u64)>> = match &prior {
             Prior::First => Some(vec![]),
-            Prior::After(p) => self.v.get(p).and_then(|x| Split::decode(&x.inside.payload).ok()).and_then(|x| x.tally_of(idx).map(|c| c.to_vec())),
+            // F266: the previous split's count for the same stake, by its
+            // index in the version that split names.
+            Prior::After(p) => match self.v.get(p) {
+                Some(x) => self.tally_member(x, service, in_force, idx)?.and_then(|(x, j)| x.tally_of(j).map(|c| c.to_vec())),
+                None => None,
+            },
             Prior::Unknown => None,
         };
         let carried = s.tally_of(idx);

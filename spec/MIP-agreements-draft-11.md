@@ -299,6 +299,8 @@ Leftover units from dividing a stake go one each to the holders whose exact shar
 
 Holders with equal remainders take turns. A tied unit goes to the tied holder that has received the fewest leftover units from this stake so far, counted along the dividing split service's own receipts for the stake. Where that count is equal, it goes to the holder whose identity hash is smallest (F165).
 
+**The count runs along the service's receipts across every version of the deal, the same stake being the same holder's share in the same work whatever its place in the list, and a new holder starting at zero (new in draft 11, F266).**
+
 The order in which holders are listed decides nothing (F150).
 
 **The chain of receipts.** Each receipt of a split service carries, per stake, the running count of leftover units each holder has received, and cites the service's previous receipt for that stake. So a tie is checked from two acts.
