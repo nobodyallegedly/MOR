@@ -225,7 +225,7 @@ test("a deal's backup split services are the split cMIP's fields, field 29, one 
   // A deal's backup is never one grant.
   assert.match(JSON.stringify(termsOf(deal([[29, new Map<number, unknown>([[0, [h(9)]]])]])).problem ?? ''), /H6/);
   // The chain of judgment following the split service is withdrawn.
-  assert.match(JSON.stringify(termsOf(deal([[6, [h(3), 0]], [21, [[[2], [[h(9), 30]]]]]])).problem ?? ''), /F250/);
+  assert.throws(() => termsOf(deal([[6, [h(3), 0]], [21, [[[2], [[h(9), 30]]]]]])), /F250/);
 });
 
 test('Agreements rule 49 (F172, F178 item 11): before signing terms with an abandonment clause, who may declare a party absent, with which outcomes, and whether an absence-proof cMIP stands between', () => {
