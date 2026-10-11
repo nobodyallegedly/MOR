@@ -19,7 +19,7 @@
 | --- | --- |
 | [case-studies/](case-studies/) | What MOR could be, each written as an invitation, each ending with the cMIPs and Modules it needs. Working drafts. |
 | [companions/](companions/) | "Who can earn on MOR", and the principle of legible greed. Working drafts. |
-| [run-guide-draft-1.md](run-guide-draft-1.md) | Running a relay or a site. |
+| [run-guide-draft-2.md](run-guide-draft-2.md) | Running a relay or a site. |
 | [dubsar.org/](dubsar.org/) | The pages of the first site published on MOR. |
 | [marks/](marks/) | The site's marks as drawn (SVG): the clay tablet and the KI icon. The site holds them as JPEGs. |
 
@@ -48,7 +48,7 @@ Each records what a session built, what it found, and what it left open. They ar
 
 | Document | What |
 | --- | --- |
-| [paper/mor-paper-draft-2.md](paper/mor-paper-draft-2.md) | The paper: design, claims marked run or reasoned, threat model, evaluation, related work, open problems. Draft 1 is kept beside it. |
+| [paper/mor-paper-draft-3.md](paper/mor-paper-draft-3.md) | The paper: design, claims marked run or reasoned, threat model, evaluation, related work, open problems. Drafts 1 and 2 are kept beside it. |
 | [verifier2-report.md](verifier2-report.md) | An independent verifier of collectives' endings, written from the text alone (`verifier2/`), compared with the reference library. |
 | [must-audit-2026-10.md](must-audit-2026-10.md) | Every rule of the six MIPs and the payment cMIP mapped to the code and tests that check it. |
 | [reviews/fable-paper-review-1.md](reviews/fable-paper-review-1.md) | A hostile review of draft 1, by an AI reviewer, which draft 2 answers. |
