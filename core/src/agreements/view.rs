@@ -221,6 +221,10 @@ pub struct AgreementsView<'a> {
     ending: RefCell<BTreeSet<Hash>>,
     citing: RefCell<BTreeSet<Hash>>,
     adopting: RefCell<BTreeSet<Hash>>,
+    /// The lines whose consent [`AgreementsView::line_signed`] is reading
+    /// (F254): a line asked again while its own answer is being read gives
+    /// no consent, failing closed.
+    consenting: RefCell<BTreeSet<Hash>>,
     histories: RefCell<BTreeMap<(Hash, usize, Vec<Hash>), Rc<History>>>,
     /// While a fork's check of the debts it must hand out runs, or a
     /// closing's of the debts it must have paid (F199; F143): the
@@ -554,6 +558,7 @@ impl<'a> AgreementsView<'a> {
             ending: RefCell::new(BTreeSet::new()),
             citing: RefCell::new(BTreeSet::new()),
             adopting: RefCell::new(BTreeSet::new()),
+            consenting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
             fork_line: RefCell::new(None),
             ending_sigs: RefCell::new(BTreeMap::new()),
@@ -613,6 +618,7 @@ impl<'a> AgreementsView<'a> {
             ending: RefCell::new(BTreeSet::new()),
             citing: RefCell::new(BTreeSet::new()),
             adopting: RefCell::new(BTreeSet::new()),
+            consenting: RefCell::new(BTreeSet::new()),
             histories: RefCell::new(BTreeMap::new()),
             fork_line: RefCell::new(None),
             ending_sigs: RefCell::new(BTreeMap::new()),
