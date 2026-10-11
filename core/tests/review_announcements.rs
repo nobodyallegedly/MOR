@@ -208,6 +208,7 @@ fn deal_on(parties: [Hash; 2], object: Hash) -> Terms {
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     }
 }
 

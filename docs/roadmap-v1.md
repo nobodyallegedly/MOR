@@ -184,6 +184,7 @@ The core's "Open before freeze" asks for exact formats for every act in Finance,
 **13. Split Module** *(Module, then code; Law)*
 A split over stakes: a payment divided among test identities, exactly.
 *Done when:* the specification is approved, and a payment is split, balances to the unit, and each share is paid and receipted.
+*Built, 11 October 2026 (night)* (`docs/split-module-build.md`, branch `claude/split-module-implementation-5h6pi5`, not merged): F250 written into Agreements draft 10 (the split task handed to the split cMIP the agreement names; terms field 29, the backups and the failure condition, judicial; attempts per payment; the address guarantee; each participant's check, rules 18a and 18b; H6's placement in the chain of judgment removed, its grants per payee kept) and built; the split cMIP draft 1 and crate `mor-split`; the step's payment split exactly through a backup, each cut found at its owner's flow address. Rust 604 passed, TypeScript 219; no vector changed. **Open for Nobody, allegedly:** QS1 (a buyer paying the work directly: how a backup is reached). Sixteen readings to confirm.
 
 **14. Deal-assessment tool** *(Law)*
 "Something to assess deals" (Nobody, allegedly). What it assesses is defined with Nobody, allegedly at the start of the step. *Suggested (Claude): it reads an agreement and shows, in plain words, who signed, what each party is bound to, the shares, and how the deal ends.*

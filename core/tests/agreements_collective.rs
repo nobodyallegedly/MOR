@@ -160,6 +160,7 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     };
     f(&mut t);
     t
@@ -3018,6 +3019,7 @@ fn a_deal_changes_only_with_everyone() {
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     };
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -3099,6 +3101,7 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             plan: None,
             refund: None,
             fees: None,
+            backups: None,
         };
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -3197,6 +3200,7 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mips());
@@ -3368,6 +3372,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     };
     assert_eq!(terms.check(&mips()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, terms.to_map(), None);
@@ -4471,10 +4476,13 @@ fn a_split_service_is_held_to_account() {
 /// reaching the vault. The label's pointer counts for Agreements only if every
 /// address in it is in the split service's own signed pointer in force, and
 /// every entry of its vault in the service's own vault, or both in those of
-/// a service its chain of judgment names to take over (reading 4).
+/// a backup the split cMIP's fields name (field 29; reading 4, F250).
 #[test]
 fn the_pointer_check() {
-    let mut lab = Lab::new(&|_| {});
+    let mut lab = Lab::new(&|t| {
+        t.cmips.push((8, spec("a split cMIP")));
+        t.cmips.sort();
+    });
     let f = lab.founding;
     let mut svc = lab.w.genesis_with(
         "a split service",
@@ -4489,8 +4497,7 @@ fn the_pointer_check() {
     let g2 = lab.grant(&plain_grant(svc2.id, false));
     let t = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
         t.split_grant = Some(g1);
-        t.time = Some((spec("a clock"), Value::Uint(0)));
-        t.chain = Some(vec![agreements::ChainLink { judge: agreements::Judge::SplitService, next: vec![(g2.into(), 30)] }]);
+        t.backups = Some(agreements::Backups { services: vec![g2.into()], failure: None });
     });
     let k = lab.propose(ANA, &t);
     let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k)).collect();
@@ -4592,6 +4599,7 @@ fn payer_side_splitting_follows_the_claim() {
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     };
     let d = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::TERMS, deal.to_map(), None);
     let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
@@ -4636,6 +4644,7 @@ fn leftovers_go_by_largest_remainder_whatever_the_order() {
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     };
     let listed = [vec![(ids[ANA], 333_333), (ids[BEN], 333_333), (ids[CY], 333_334)], vec![(ids[CY], 333_334), (ids[ANA], 333_333), (ids[BEN], 333_333)]];
     for holders in listed.iter() {
@@ -5301,6 +5310,7 @@ fn a_work_is_released_to_the_public_domain() {
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
@@ -5601,6 +5611,7 @@ fn a_timed_release() {
             plan: None,
             refund: None,
             fees: None,
+            backups: None,
         };
         let x = agreements_act(w, ana, agreements::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
@@ -6674,62 +6685,54 @@ fn a_deal_names_one_split_service_one_grant_per_payee() {
     assert!(matches!(view(&w).backing(&x).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("one split service")));
 }
 
-/// Freeze suite v21, 3.9u (F130, H6): a deal's chain of judgment follows its
-/// split service. Each service taking over is a group of grants, one per
-/// payee, as many as field 14 lists, each listed once, signed with the
-/// terms. A collective's service taking over stays one grant; a group takes
-/// over from nothing else.
+/// Freeze suite v21, 3.9u (F130, H6; F249, F250): a deal's backup split
+/// services are the split cMIP's fields (terms field 29), no longer its
+/// chain of judgment's. Each backup is a group of grants, one per payee, as
+/// many as field 14 lists, each listed once, signed with the terms (H6's
+/// grants per payee stay). A collective's backup stays one grant. No time
+/// reference is needed: attempts, not stages (F249).
 #[test]
-fn a_deals_chain_of_judgment_follows_its_split_service() {
-    use agreements::{ChainLink, Judge, Taker};
+fn a_deals_backups_are_the_split_cmips_fields() {
+    use agreements::{Backups, ServiceGrants};
     let (a, b) = (spec("ana"), spec("ben"));
     let mut d = deal_terms(a, b);
     d.payee_grants = Some(vec![spec("ana to S"), spec("ben to S")]);
-    d.time = Some((spec("a clock"), Value::Uint(0)));
-    let group = |x: &[&str]| Taker::Grants(x.iter().map(|n| spec(n)).collect());
-    d.chain = Some(vec![ChainLink {
-        judge: Judge::SplitService,
-        next: vec![(group(&["ana to T", "ben to T"]), 30), (group(&["ana to U", "ben to U"]), 60)],
-    }]);
+    d.cmips.push((8, spec("a split cMIP")));
+    d.cmips.sort();
+    let group = |x: &[&str]| ServiceGrants::PerPayee(x.iter().map(|n| spec(n)).collect());
+    d.backups = Some(Backups { services: vec![group(&["ana to T", "ben to T"]), group(&["ana to U", "ben to U"])], failure: Some(Value::Uint(60)) });
+    assert_eq!(d.time, None);
     assert_eq!(d.check(&mips()), Ok(()));
     assert_eq!(Terms::decode(&d.to_map()).unwrap(), d, "a group is written as a list");
-    let with = |n: Vec<(Taker, u64)>| {
+    let with = |n: Vec<ServiceGrants>| {
         let mut x = d.clone();
-        x.chain = Some(vec![ChainLink { judge: Judge::SplitService, next: n }]);
+        x.backups = Some(Backups { services: n, failure: None });
         x.check(&mips())
     };
     // One grant per payee: as many as field 14 lists.
-    assert!(matches!(with(vec![(group(&["ana to T"]), 30)]), Err(agreements::AgreementsError::Check(w)) if w.contains("H6")));
-    // A deal's service taking over is never one hash.
-    assert!(matches!(with(vec![(spec("ana to T").into(), 30)]), Err(agreements::AgreementsError::Check(w)) if w.contains("H6")));
+    assert!(matches!(with(vec![group(&["ana to T"])]), Err(agreements::AgreementsError::Check(w)) if w.contains("H6")));
+    // A deal's backup is never one hash.
+    assert!(matches!(with(vec![spec("ana to T").into()]), Err(agreements::AgreementsError::Check(w)) if w.contains("H6")));
     // Each grant once, across field 14 and every group.
-    assert!(matches!(with(vec![(group(&["ana to S", "ben to T"]), 30)]), Err(agreements::AgreementsError::Check(w)) if w.contains("H6")));
+    assert!(matches!(with(vec![group(&["ana to S", "ben to T"])]), Err(agreements::AgreementsError::Check(w)) if w.contains("H6")));
     assert!(matches!(
-        with(vec![(group(&["ana to T", "ben to T"]), 30), (group(&["ana to T", "ben to U"]), 30)]),
+        with(vec![group(&["ana to T", "ben to T"]), group(&["ana to T", "ben to U"])]),
         Err(agreements::AgreementsError::Check(w)) if w.contains("H6")
     ));
-    // The time reference stays compulsory: a service can stay silent.
-    let mut x = d.clone();
-    x.time = None;
-    assert!(x.check(&mips()).is_err());
-    // A group takes over from nothing but a deal's split service.
-    let mut x = d.clone();
-    x.arbitrators = Some(vec![spec("an arbitrator")]);
-    x.chain = Some(vec![ChainLink { judge: Judge::Identity(spec("an arbitrator")), next: vec![(group(&["one", "two"]), 30)] }]);
-    assert!(matches!(x.check(&mips()), Err(agreements::AgreementsError::Check(w)) if w.contains("H6")));
     let mut c = label_terms(&[a, b, spec("cy")], spec("an authority"), spec("a keeper"), &|_| {});
     c.split_grant = Some(spec("a grant"));
-    c.time = Some((spec("a clock"), Value::Uint(0)));
-    c.chain = Some(vec![ChainLink { judge: Judge::SplitService, next: vec![(spec("another grant").into(), 30)] }]);
+    c.cmips.push((8, spec("a split cMIP")));
+    c.cmips.sort();
+    c.backups = Some(Backups { services: vec![spec("another grant").into()], failure: None });
     assert_eq!(c.check(&mips()), Ok(()));
-    c.chain = Some(vec![ChainLink { judge: Judge::SplitService, next: vec![(group(&["one", "two", "three"]), 30)] }]);
-    assert!(matches!(c.check(&mips()), Err(agreements::AgreementsError::Check(w)) if w.contains("H6")), "a collective's is one grant");
+    c.backups = Some(Backups { services: vec![group(&["one", "two", "three"])], failure: None });
+    assert!(matches!(c.check(&mips()), Err(agreements::AgreementsError::Check(w)) if w.contains("collective")), "a collective's is one grant");
 }
 
-/// Freeze suite v21, 3.9u (F130, H6, readings 1 to 3): a deal's backup
-/// service. Ana and Ben grant S (field 14) and, should S fail, T (the chain
-/// of judgment), each with its own grant naming this agreement, signed with
-/// the terms. T's grant keys count once the deal exists, as S's do, under
+/// Freeze suite v21, 3.9u (F130, H6, readings 1 to 3; F250): a deal's backup
+/// service. Ana and Ben grant S (field 14) and, should an attempt at S
+/// fail, T (the split cMIP's backup, field 29), each with its own grant
+/// naming this agreement, signed with the terms. T's grant keys count once the deal exists, as S's do, under
 /// the same limit (H7); the pointer check accepts T's own pointer. A group
 /// signed by other payees than field 14's, or naming S again, leaves the
 /// deal carrying none of its grants (fail closed).
@@ -6757,8 +6760,9 @@ fn a_deals_backup_service_holds_one_grant_per_payee() {
         let mut d = deal_terms(aid, bid);
         d.text = words.into();
         d.payee_grants = Some(vec![as_, bs]);
-        d.time = Some((spec("a clock"), Value::Uint(0)));
-        d.chain = Some(vec![agreements::ChainLink { judge: agreements::Judge::SplitService, next: vec![(agreements::Taker::Grants(group), 30)] }]);
+        d.cmips.push((8, spec("a split cMIP")));
+        d.cmips.sort();
+        d.backups = Some(agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(group)], failure: None });
         assert_eq!(d.check(&mips()), Ok(()));
         let x = agreements_act(w, ana, agreements::types::TERMS, d.to_map(), None);
         sign(w, ana, &x);
@@ -9627,7 +9631,7 @@ fn judged_deal(takers: usize) -> (DealLab, Vec<Person>) {
         t.time = Some((spec("a block height reference"), Value::Uint(0)));
         t.chain = Some(vec![agreements::ChainLink {
             judge: agreements::Judge::Identity(judges[0].id),
-            next: judges[1..].iter().map(|j| (agreements::Taker::One(j.id), 30)).collect(),
+            next: judges[1..].iter().map(|j| (j.id, 30)).collect(),
         }]);
     }
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
@@ -12026,6 +12030,12 @@ impl F244Lab {
     /// Whether the publication's split paying the work's share to `to`
     /// shows a mismatch.
     fn mismatched(&mut self, to: Hash, number: u64) -> bool {
+        self.mismatched_after(to, number, &[])
+    }
+
+    /// The same, the caller stating, as the split cMIP answers, that the
+    /// attempts at `failed` failed for this payment (F249, F250).
+    fn mismatched_after(&mut self, to: Hash, number: u64, failed: &[Hash]) -> bool {
         let (label, pe, publication) = (self.label.id, self.pe, self.publication);
         let proof = format!("a fan pays, {number}");
         let incoming = layer_receipt(&mut self.w, &mut self.sl, label, spec("a fan"), 1000, publication, Some(pe), proof.as_bytes());
@@ -12045,7 +12055,9 @@ impl F244Lab {
         to_all.sort();
         to_all.dedup();
         let ps = self.w.private_act(&mut self.svc_p, mips().agreements, agreements::types::SPLIT, s.to_map(), None, to_all);
-        let e = view(&self.w).split(&ps).unwrap();
+        let mut v = view(&self.w);
+        v.attempts_failed = failed.iter().map(|f| (ps, *f)).collect();
+        let e = v.split(&ps).unwrap();
         assert!(e.problems.is_empty(), "{:?}", e.problems);
         !e.mismatched.is_empty()
     }
@@ -12127,9 +12139,11 @@ fn f244_an_agreement_naming_no_pointer_cannot_be_paid_through_a_layer() {
 /// accept payments at the same addresses. The publisher simply points to
 /// it."): the work's agreement designates one pointer, field 14's split
 /// service, and the publication's split pays it, dividing nothing. A
-/// service the work's chain of judgment names to take over (rule 34a, H6)
-/// is not the designation: a payout to it on the work's holding is a
-/// mismatch (before F248 it was read as paid). A deal whose payees grant
+/// backup of the split cMIP's fields (field 29; F249, F250) is not the
+/// designation: a payout to it on the work's holding is a mismatch, unless
+/// the attempt at the designated pointer failed for that payment, as the
+/// split cMIP defines failure; the next payment starts again from field
+/// 14's service (attempts, not stages). A deal whose payees grant
 /// two different services names several and designates none (F129 reading
 /// 3): it cannot be paid through a layer until it designates one.
 #[test]
@@ -12145,8 +12159,9 @@ fn f248_the_work_agreement_designates_one_pointer_and_the_layer_pays_it() {
     let (gbt, _) = layer_grant(&mut w, &mut ben, &mut svc_t, "ben to T");
     let mut we = deal_terms(ana.id, ben.id);
     we.payee_grants = Some(vec![gas, gbs]);
-    we.time = Some((spec("a clock"), Value::Uint(0)));
-    we.chain = Some(vec![agreements::ChainLink { judge: agreements::Judge::SplitService, next: vec![(agreements::Taker::Grants(vec![gat, gbt]), 30)] }]);
+    we.cmips.push((8, spec("a split cMIP")));
+    we.cmips.sort();
+    we.backups = Some(agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(vec![gat, gbt])], failure: None });
     we.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(spec("a song, F244")), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
     assert_eq!(we.check(&mips()), Ok(()));
     let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, we.to_map(), None);
@@ -12156,8 +12171,14 @@ fn f248_the_work_agreement_designates_one_pointer_and_the_layer_pays_it() {
     let (aid, sid, tid) = (ana.id, svc_s.id, svc_t.id);
     let mut l = F244Lab::new(w, we, &mut [&mut ana, &mut ben]);
     assert!(!l.mismatched(sid, 1), "the designated pointer, field 14's service, receives the work's share");
-    assert!(l.mismatched(tid, 2), "a service the chain names to take over is not the designation");
+    assert!(l.mismatched(tid, 2), "a backup is not the designation");
     assert!(l.mismatched(aid, 3), "nor is an owner: the layer above divides nothing");
+    // F249, F250: per payment, a backup receives once the attempt before it
+    // failed, as the split cMIP defines failure (the caller states it).
+    assert!(!l.mismatched_after(tid, 4, &[sid]), "S's attempt failed for this payment: T receives it");
+    assert!(l.mismatched_after(sid, 5, &[sid]), "S's attempt failed: the payment goes on to T, not to S");
+    assert!(l.mismatched_after(aid, 6, &[sid, tid]), "every attempt failed: never an address the owners did not sign");
+    assert!(!l.mismatched(sid, 7), "the next payment starts again from S");
     // Payees granting two different services in field 14: none designated.
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);

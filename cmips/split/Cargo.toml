@@ -1,0 +1,14 @@
+[package]
+name = "mor-split"
+version = "0.1.0"
+description = "The split cMIP, draft 1 (Agreements task 8, roadmap step 13): which signed split service receives a payment, attempt by attempt, and how a payment is divided by the plan, exactly."
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mor-core = { path = "../../core" }
+
+[dev-dependencies]
+# The core's test world (`core/tests/common`) checks every SLH-DSA
+# signature against this second implementation.
+slh-dsa = "=0.2.0-rc.5"

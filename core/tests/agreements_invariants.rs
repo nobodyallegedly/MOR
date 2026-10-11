@@ -628,6 +628,7 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         plan: None,
         refund: None,
         fees: None,
+        backups: None,
     }
 }
 
@@ -2266,7 +2267,7 @@ impl DealWorld {
             keepers: None,
             field4: Field4::Rule(Rule::All),
             clone: Rule::All,
-            time: s.backup.then(|| (spec("a clock"), Value::Uint(0))),
+            time: None,
             abandonment: None,
             parent: None,
             grammar: None,
@@ -2278,16 +2279,28 @@ impl DealWorld {
             constitutional: None,
             areas: None,
             area_words: None,
-            chain: s.backup.then(|| vec![agreements::ChainLink { judge: agreements::Judge::SplitService, next: vec![(agreements::Taker::Grants(backup_grants.iter().map(|g| g.0).collect()), 30)] }]),
+            // F250: the backup is the split cMIP's field 29, no longer the
+            // chain of judgment's; no time reference is needed (F249).
+            chain: None,
             departed: None,
             stakes: Some(vec![agreements::Stake { object: Who::Id(work), holders: stakes.iter().map(|(h, n)| (Who::Id(*h), *n)).collect() }]),
             forked_from: None,
             release_rule: None,
             settles: None,
             fork_judge: None,
-            plan: None,
+            plan: s.backup.then(|| agreements::SplitPlan {
+                shares: vec![agreements::ShareRule::Stake { stake: 0, part: 1_000_000 }],
+                cmip: spec("a split cMIP"),
+                unfilled: agreements::Unfilled::Stakes,
+                top: vec![],
+                service_bears_rail_fees: false,
+                max_rail_fee: None,
+                params: None,
+                metrics: vec![],
+            }),
             refund: None,
             fees: None,
+            backups: s.backup.then(|| agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(backup_grants.iter().map(|g| g.0).collect())], failure: None }),
         };
         assert_eq!(t.check(&mips()), Ok(()), "the generator's own deal terms");
         let deal = agreements_act(&mut w, &mut p[0], agreements::types::TERMS, t.to_map(), None);

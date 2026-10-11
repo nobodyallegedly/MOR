@@ -44,7 +44,9 @@ impl Change {
             Change::Field(f) => match f {
                 // 25, the relays, is withdrawn (F128) and never reused.
                 0 | 1 | 5 | 12 | 18 | 19 | 22 => Tier::Constitutional,
-                3 | 6 | 9 | 10 | 13 | 14 | 16 | 21 => Tier::Judicial,
+                // 29, the split service's backups (F250): judicial, as
+                // field 14, able to move money.
+                3 | 6 | 9 | 10 | 13 | 14 | 16 | 21 | 29 => Tier::Judicial,
                 // 7, 8, 17; 24, the release rule, in no area: the clone
                 // rule, with every owner's signature besides (N8).
                 _ => Tier::Operational,
@@ -70,8 +72,9 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
     let mut out = vec![];
     // Field 23 is never compared: a clone never carries it. Field 24, the
     // release rule, may change by a clone every owner signs (F124, N8).
-    // 28, fees (F213), is an operational field like 8.
-    for n in (0..=24u64).filter(|n| *n != 23).chain([super::open_formats::FEES_FIELD]) {
+    // 28, fees (F213), is an operational field like 8; 29, the split
+    // service's backups (F250), a judicial one like 14.
+    for n in (0..=24u64).filter(|n| *n != 23).chain([super::open_formats::FEES_FIELD, super::formats::BACKUPS_FIELD]) {
         if n == 16 && removal_only(parent, clone) {
             // M1 (F124): the seat part of a removed member's plan goes with
             // the removal, as their areas do; the stake part stays.
