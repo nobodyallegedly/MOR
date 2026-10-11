@@ -386,3 +386,41 @@ One at a time, most important first.
 *How it ran:* the first attempt passed the Rust half, then stopped because this container had no `wasm-bindgen`. The script names the tool it needs, so I installed that version (`cargo install wasm-bindgen-cli --version 0.2.129 --locked`). I then ran the whole script again on the merge commit, in a separate checkout, and it passed as above.
 
 **After the texts commit** (same options): **all tests passed**, the same counts: Rust 606 passed, 0 failed, 1 ignored; TypeScript 220 passed, 0 failed. Only texts changed, so this confirms that nothing in the code moved.
+
+## Third pass
+
+*11 October 2026. Roadmap: Agreements draft 11, third pass (F251), texts only. Same branch, after merging main (which brought F264, F265 and the working rule "core business, or the participants' choice"). One commit for the texts, one for this report.*
+
+### In plain words
+
+Nobody, allegedly, answered the two questions the second pass left (Q7 and Q8). This pass writes both answers into draft 11 and removes their "Open" markers.
+
+- **A live stream (Q7, F264).** What the seller sells decides the class. Promising the stream is a vow: the key the buyer receives is evidence, and the buyer still says whether the promise was kept (a stream cut short: the key worked, the promise did not). Selling only a key to something that already exists, such as the recording, is a proven offer.
+- **An absentee at liquidation (Q8, F265).** Where an absent member's money goes is the collective's own business, set by the rules it wrote before anyone left. The core checks only two things: the collective holds nothing when it closes, and nothing owed disappears without a trace. The closing does not list the share; its field 4 stays for money owed back.
+- **A working rule** is now in "How to read this draft": where the core gives participants the means to choose, the choice is theirs; the core keeps only what no choice may break.
+
+### What changed
+
+- **F264, rule 11.** The sentence on paid access to a live stream now says: a promised stream is a vow, its key a proof sitting in the sale as evidence (rule 13's evidence clause); a key alone to what exists is a proven offer under the access form. An offer selling a stream's access through the access form with no vow, as the code's tests do, is read as selling the key only; those tests stay as they are. The comment on the access form in the standing offer's format now cites F264 instead of Q7.
+- **F265, correcting F262's "named in field 4".**
+  - Rule 15 (the F254 list): an absentee's share follows the collective's own rules; what they could not deliver stays visible wherever they sent it; the closing needs no entry; field 4 stays for money owed back. The "to build" item "an absentee's share in the closing's field 4" is gone.
+  - Rule 91 (shape D), the "Closing" definition and "Closing (type 20)": the same. The format's field 4 comment, its "In short" and the "owes nothing" condition no longer mention an absentee's share in field 4. The paragraph "An absentee's money share" now lists the core's two checks, with rule 24 (a split service keeps what it cannot deliver) as an example of where the rules may send it.
+- **Working rule (F265)** in "How to read this draft", one line.
+- **Elsewhere in the draft:** the header mentions Q7, Q8, F264, F265 and findings up to F265; "Open in this draft" records Q7 and Q8 as answered.
+- **Core v21**, the dissolution bullet. The sentence "A collective cannot close while it owes anything, save what the closing names as left open, an absentee's money share among it (Agreements draft 11, F262, to build)" now reads "… save what the closing names as left open; an absentee's money share follows the collective's own rules and stays visible wherever they sent it, without blocking the closing (Agreements draft 11, F262, F265)". Its sentence on paid live access ("sold by a standing offer") still holds, and is unchanged.
+- **Freeze suite v21:** nothing quotes a changed sentence. **`spec/README.md`**: draft 11's line mentions Q7 and Q8.
+- No code, test or record was edited.
+
+### Questions
+
+None. One point was checked against the working rule and not put: a collective whose own rules keep an absentee's share with itself, rather than with a split service or a holder. Where the share goes is the collective's choice, and the core already keeps what no choice may break (holds nothing, nothing vanishes silently).
+
+### Tests
+
+**After merging main, before writing anything** (`scripts/test-all.sh`, without `--reproducible` and without regtest): **all tests passed** (merge commit `c391564`).
+- Rust workspace: 606 passed, 0 failed, 1 ignored (the Lightning regtest, skipped unless `MOR_LN_REGTEST` is set).
+- TypeScript: 220 passed, 0 failed, in 12 packages: barebone 9, collective 41, connector 12, desk 12, genesis 17, longform 26, manage 7, reader 16, repo 18, site 42, jpeg 14, video 6.
+
+*How it ran:* as in the second pass, the first attempt stopped after the Rust half because this container had no `wasm-bindgen`. I installed the version the script names (`cargo install wasm-bindgen-cli --version 0.2.129 --locked`), then ran the whole script again on the merge commit, in a separate checkout, and it passed as above.
+
+**After the texts commit** (`1f1bfa0`, same options): **all tests passed**, the same counts: Rust 606 passed, 0 failed, 1 ignored; TypeScript 220 passed, 0 failed. Only texts changed, so this confirms that nothing in the code moved.
