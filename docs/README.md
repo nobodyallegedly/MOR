@@ -2,7 +2,7 @@
 
 **Before anything else:** [Thank You For the Shower](thank-you-for-the-shower.md), written in 2014, the essence MOR serves.
 
-**Start here:** [MOR in one page](07-MOR-in-one-page-v6.md).
+**Start here:** [MOR in one page](07-MOR-in-one-page-v6.md) (version 6, the last approved; the latest draft is [version 11](07-MOR-in-one-page-v11.md)).
 
 ## Plan and record
 
@@ -41,7 +41,7 @@ Each records what a session built, what it found, and what it left open. They ar
 | [dubsar-org-doors-2026-10-09.md](dubsar-org-doors-2026-10-09.md) | dubsar.org's fourteen departments' doors, a folder each, unlisted from the main door; their folder names, tests and four questions. |
 | [step-11b-false-mark-2026-10-08.md](step-11b-false-mark-2026-10-08.md) | The collective client's false clone mark from the human test of 8 October 2026: marks and the collective's box from Agreements' own reading. |
 | [adversarial-test-plan-v2.md](adversarial-test-plan-v2.md), [v3](adversarial-test-plan-v3.md) | Earlier versions of the test plan. |
-| [project-lead-prompt.md](project-lead-prompt.md) | The brief the AI project lead worked from. |
+| [project-lead-prompt-v3.md](project-lead-prompt-v3.md) | The brief the AI project lead works from (version 3; earlier versions kept beside it). |
 | [rename-pass.md](rename-pass.md) | The rename pass: the layers (Envelopes, Money, Agreements, Development) and the keys (chain key, signing key), wording only; what was left and why, the wire proof, and Money read against F225. |
 
 ## The paper and its reviews
