@@ -133,30 +133,43 @@ impl<'a> AgreementsView<'a> {
         if !founding && lines.contains(&me) {
             return Some("it names its own line as a party: an agreement is never a party of itself (rule 15, F254)".into());
         }
-        // Depth-first over the lines below, each at its layer.
-        let mut todo: Vec<(Hash, usize)> = lines.into_iter().map(|l| (l, 1)).collect();
-        let mut seen: BTreeSet<(Hash, usize)> = BTreeSet::new();
-        while let Some((line, layer)) = todo.pop() {
-            if line == me {
-                if founding {
-                    continue;
-                }
-                return Some("it makes a loop: through its parties, its own line is a party of itself (rule 15, F254)".into());
+        // Depth-first over the lines below, carrying the path: a line met
+        // again on its own path is another agreement's loop, refused where
+        // it is made, and not followed round (mechanic, the build's).
+        let mut path = vec![me];
+        for l in lines {
+            if let Some(w) = self.loop_walk(&me, founding, &l, 1, &mut path) {
+                return Some(w);
             }
-            if layer > NESTING_BOUND {
-                return Some("its agreement-parties nest deeper than the nesting bound, 8 layers (rule 15, F254)".into());
-            }
-            if !seen.insert((line, layer)) {
-                continue;
-            }
-            for (_, v) in self.signed_versions(&line) {
-                for p in v.parties.iter().filter(|p| held_terms(p)) {
-                    if let Some(l) = self.line_of(p) {
-                        todo.push((l, layer + 1));
+        }
+        None
+    }
+
+    /// One step of [`Self::party_problem`]'s walk: the line `line`, at
+    /// `layer` below the version judged, whose own line is `me`.
+    fn loop_walk(&self, me: &Hash, founding: bool, line: &Hash, layer: usize, path: &mut Vec<Hash>) -> Option<String> {
+        if line == me {
+            return (!founding).then(|| "it makes a loop: through its parties, its own line is a party of itself (rule 15, F254)".into());
+        }
+        if layer > NESTING_BOUND {
+            return Some("its agreement-parties nest deeper than the nesting bound, 8 layers (rule 15, F254)".into());
+        }
+        if path.contains(line) {
+            return None;
+        }
+        path.push(*line);
+        let mut below: Vec<Hash> = vec![];
+        for (_, v) in self.signed_versions(line) {
+            for p in &v.parties {
+                if let Some(l) = self.line_of(p) {
+                    if !below.contains(&l) {
+                        below.push(l);
                     }
                 }
             }
         }
-        None
+        let found = below.iter().find_map(|l| self.loop_walk(me, founding, l, layer + 1, path));
+        path.pop();
+        found
     }
 }

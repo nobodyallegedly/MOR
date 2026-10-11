@@ -8452,7 +8452,9 @@ impl<'a> AgreementsView<'a> {
     ///   pointer Money rule 14 selects from the payer's own acts on the
     ///   payment, or its pointer in force where they hold none, judged as
     ///   for any payment ([`Self::payment_counts`], rules 12 to 15); or
-    ///   the payer's vault, always.
+    ///   the payer's vault, always. A refund to the refund rail counts
+    ///   only within the payer's vault limit for its unit (Agreements
+    ///   draft 11, rule 11, F255); above it, only at the vault.
     /// - **To a bare key** (QG1, decided 9 October 2026): a claim counts
     ///   where the rail shows the money reached the refund rail a claim
     ///   carrying that key's signature names (Money rule 10a, key 7).
@@ -8480,9 +8482,19 @@ impl<'a> AgreementsView<'a> {
             })
             .map(|h| h.id)
             .collect();
+        // Agreements draft 11, rule 11 (new in draft 11, F255): a refund
+        // paid to that refund rail counts only up to the payer's vault
+        // limit for its unit, as Money rule 14a judges a payment to the
+        // flow; above it, only once it reaches the payer's vault. A payer
+        // with no vault has no vault rule (rule 14a), and a bare key has
+        // none (draft 11's reading, to confirm). *Mechanic, the build's:*
+        // per payment, as rule 14a reads it, against the payer's vault in
+        // force.
+        let vault: Vec<crate::money::VaultEntry> = who.map(|w| self.vault_in_force(&w)).unwrap_or_default();
+        let within_vault = |amount: &crate::money::Amount| crate::money::flow_followed_vault((!vault.is_empty()).then_some(vault.as_slice()), amount);
         let counts = |at: &PaidAt, amount: &crate::money::Amount, proof: &[u8]| match (at, who) {
             (PaidAt::VaultEntry(..), Some(w)) => self.payment_counts(&w, at, amount, proof, &owed[0]),
-            (PaidAt::Flow(c), _) if !refund_rails.is_empty() => refund_rails.contains(c),
+            (PaidAt::Flow(c), _) if !refund_rails.is_empty() => refund_rails.contains(c) && within_vault(amount),
             (PaidAt::Flow(_), Some(w)) => self.payment_counts(&w, at, amount, proof, &owed[0]),
             _ => false,
         };
@@ -9080,6 +9092,17 @@ impl<'a> AgreementsView<'a> {
                 problems.push("the agreement in force names no split service this verifier can read (rule 18): payer-side splitting, or grants not held, and no split is its".into())
             }
             _ => problems.push("its signer is none of the split services the agreement in force names (rule 20)".into()),
+        }
+        // Agreements draft 11, rules 15 and 17 applied to a direct buyer's
+        // payment (new in draft 11, F260): every payer tries the services
+        // in order, attempt by attempt. A backup that received a buyer's
+        // payment directly, not a layer's share, splits it only where every
+        // attempt before it failed for that payment.
+        if let Some(signer) = h.act.outside.signer {
+            let direct = self.v.get(&s.receipt).is_some_and(|r| self.layer_share(r, &signer).is_none());
+            if direct && services.first().is_some_and(|f| *f != signer) && services.contains(&signer) && self.direct_receiver(&s.agreement, &s.receipt) != Some(signer) {
+                problems.push("a backup splits a buyer's payment only once every attempt before it failed for that payment (rules 15, 17; F260)".into());
+            }
         }
         // Rule 22: each role payout names its evidence, which must hold. A
         // rail Module's share is evidenced by a receipt or claim naming the
@@ -9701,6 +9724,20 @@ impl<'a> AgreementsView<'a> {
     /// an address the owners did not sign.
     pub fn receiver_for(&self, holder: &Hash, payment: &Hash) -> Option<Hash> {
         self.signed_receivers(holder).into_iter().find(|s| !self.attempts_failed.contains(&(*payment, *s)))
+    }
+
+    /// The receiver for a buyer's payment made directly to the owners
+    /// (Agreements draft 11, rule 17, new in draft 11, F260): as
+    /// [`Self::receiver_for`], every payer trying the services the
+    /// agreement names, field 14's then field 29's, in order, attempt by
+    /// attempt; the attempts stated failed for any act of the same rail
+    /// payment (`payment`, the buyer's claim or the receipt) count for it
+    /// (mechanic, the build's: one payment, whichever of its acts the
+    /// split cMIP's answer names).
+    pub fn direct_receiver(&self, agreement: &Hash, payment: &Hash) -> Option<Hash> {
+        let mut acts = vec![*payment];
+        acts.extend(self.same_payment(payment).into_iter().map(|(h, _)| h));
+        self.signed_receivers(agreement).into_iter().find(|s| !acts.iter().any(|a| self.attempts_failed.contains(&(*a, *s))))
     }
 
     /// The pointer that receives an agreement's share in a layer above, for

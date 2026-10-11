@@ -6729,6 +6729,85 @@ fn a_deals_backups_are_the_split_cmips_fields() {
     assert!(matches!(c.check(&mips()), Err(agreements::AgreementsError::Check(w)) if w.contains("collective")), "a collective's is one grant");
 }
 
+/// Agreements draft 11, rules 15, 17 and 18 (new in draft 11, F260): every
+/// payer tries the services in order, a direct buyer too. A fan pays Ana
+/// directly; T, the backup (field 29), receipts in Ana's name with the
+/// grant it already holds, and splits it. Unless the attempt at S, field
+/// 14's, is stated failed for that payment, T's split breaks the plan, and
+/// Ana's cut check says so; once it is, T is the receiver in order, the
+/// split stands, and the check follows it to Ana's payout.
+#[test]
+fn f260_a_direct_buyer_tries_the_services_in_order() {
+    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut s = w.genesis("service S", vec![own_home()], None, None);
+    let mut t = w.genesis("service T", vec![own_home()], None, None);
+    let (aid, bid, sid, tid) = (ana.id, ben.id, s.id, t.id);
+    let mk = |w: &mut World, payee: &mut Person, svc: &mut Person, tag: &str| {
+        let (k, p) = grant_key(&format!("{:?} {tag}, F260", svc.id));
+        let g = Grant { grantee: svc.id, scope: 1, this_agreement: true, key: p, ..plain_grant(svc.id, false) };
+        let g = agreements_act(w, payee, agreements::types::GRANT, g.to_map(), None);
+        sign(w, svc, &g);
+        (g, k)
+    };
+    let (as_, _) = mk(&mut w, &mut ana, &mut s, "ana");
+    let (bs, _) = mk(&mut w, &mut ben, &mut s, "ben");
+    let (at, kat) = mk(&mut w, &mut ana, &mut t, "ana");
+    let (bt, _) = mk(&mut w, &mut ben, &mut t, "ben");
+    let work = spec("a song, F260");
+    let mut d = deal_terms(aid, bid);
+    d.payee_grants = Some(vec![as_, bs]);
+    d.cmips.push((8, spec("a split cMIP")));
+    d.cmips.sort();
+    d.backups = Some(agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(vec![at, bt])], failure: None });
+    d.stakes = Some(vec![agreements::Stake { object: Who::Id(work), holders: vec![(Who::Id(aid), 500_000), (Who::Id(bid), 500_000)] }]);
+    let deal = agreements_act(&mut w, &mut ana, agreements::types::TERMS, d.to_map(), None);
+    sign(&mut w, &mut ana, &deal);
+    sign(&mut w, &mut ben, &deal);
+    // T, with Ana's grant key, receipts the fan's payment in Ana's name.
+    let mut st = ana.clone();
+    st.binding = at;
+    st.sign = kat;
+    st.seq = vec![];
+    st.cite = Some((aid, vec![at]));
+    let r = Fin::Receipt(Receipt {
+        rail: spec("a rail Module"),
+        proof: b"a fan pays Ana directly".to_vec(),
+        payer: Some(Payer::Identity(spec("a fan"))),
+        payee: aid,
+        amount: Amount { unit: spec("a unit"), value: 10 },
+        fulfils: deal,
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: Some(Purchase { agreement: deal, line: deal }),
+    });
+    let a = w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+    let receipt = w.add(&a);
+    assert!(matches!(view(&w).backing(&receipt).unwrap(), Backing::Backed { .. }), "a backup receipts in the owners' name with the grants it holds");
+    // T splits it, 5 and 5.
+    let pay = |who: Hash| agreements::Payout { receiver: who, amount: 5, stake: Some(0), ..Default::default() };
+    let sp = agreements::Split { receipt, payouts: vec![pay(aid), pay(bid)], cmip: spec("a split cMIP"), agreement: deal, tally: Some(vec![(0, vec![(aid, 0), (bid, 0)])]), number: Some(1), ..Default::default() };
+    let x = w.private_act(&mut t, mips().agreements, agreements::types::SPLIT, sp.to_map(), None, sorted(vec![aid, bid]));
+    let order = |v: &AgreementsView| v.split(&x).unwrap().problems.iter().any(|p| p.contains("F260"));
+    let v = view(&w);
+    assert_eq!(v.direct_receiver(&deal, &receipt), Some(sid), "S first: no attempt stated failed");
+    assert!(order(&v), "T took it out of order: its split breaks the plan");
+    let check = v.cut_check(&receipt, &aid).unwrap();
+    assert!(check.stops.iter().any(|w| w.contains("breaks its plan")), "{:?}", check.stops);
+    // The attempt at S failed for this payment, as the split cMIP answers.
+    let mut v = view(&w);
+    v.attempts_failed.insert((receipt, sid));
+    assert_eq!(v.direct_receiver(&deal, &receipt), Some(tid));
+    let e = v.split(&x).unwrap();
+    assert!(e.problems.is_empty() && e.mismatched.is_empty(), "{:?} {:?}", e.problems, e.mismatched);
+    let check = v.cut_check(&receipt, &aid).unwrap();
+    assert_eq!(check.due, 5, "the participant's check follows a direct buyer's payment to its payout");
+    assert!(!check.stops.iter().any(|w| w.contains("breaks its plan")), "{:?}", check.stops);
+}
+
 /// Freeze suite v21, 3.9u (F130, H6, readings 1 to 3; F250): a deal's backup
 /// service. Ana and Ben grant S (field 14) and, should an attempt at S
 /// fail, T (the split cMIP's backup, field 29), each with its own grant
@@ -10207,6 +10286,41 @@ fn qg2_money_owed_back_follows_the_debt_rule() {
     assert!(lab.view().owed_back(&label).unwrap().is_empty(), "repaid where the payer's own claim said");
 }
 
+/// Freeze suite v21, 7w, "The debt rule" (QG2), with Agreements draft 11,
+/// rule 11 (new in draft 11, F255): a refund paid to the refund rail the
+/// payer's own claim names counts only up to the payer's vault limit for
+/// its unit; above it, only once it reaches the payer's vault. A payer
+/// whose vault lets 5 units to the flow is owed 7: the 7 paid to the
+/// refund rail repays nothing; paid to the vault, it repays. With a limit
+/// of 10, the refund rail repays it, as before F255.
+#[test]
+fn f255_the_vault_limit_protects_a_refund_to_the_refund_rail() {
+    use mor_core::money::{vault_declaration, PaidAt, VaultEntry};
+    let unit = spec("a unit");
+    for (limit, rail_repays) in [(5u64, false), (10, true)] {
+        let with_vault = |lab: &mut Lab| {
+            let v = VaultEntry { unit: spec("a unit"), rail_module: spec("a rail Module"), source: b"the patron's vault".to_vec(), limit };
+            let p = lab.w.genesis_with("a patron with a vault", vec![own_home()], None, None, Some(vec![vault_declaration(&mips().money, &[v])]), 3);
+            (Some(mor_core::money::Payer::Identity(p.id)), Some(p))
+        };
+        let (mut lab, label, owed, k1, _, patron) = owed_back_lab_with(with_vault, b"gift");
+        let mut patron = patron.unwrap();
+        let pid = patron.id;
+        let own = payers_claim_on(&mut lab, &mut patron, label, b"gift", k1, Some(b"the patron's refund address"), None);
+        let mut payer = lab.c[0].clone();
+        let to_rail = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"back to the refund rail");
+        lab.rail_valid.push((to_rail, PaidAt::Flow(own)));
+        lab.c[0] = payer.clone();
+        assert_eq!(lab.view().owed_back(&label).unwrap().is_empty(), rail_repays, "limit {limit}: the refund rail repays 7 only within the vault's limit (F255)");
+        if !rail_repays {
+            let to_vault = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"back to the vault");
+            lab.rail_valid.push((to_vault, PaidAt::VaultEntry(pid, 0)));
+            lab.c[0] = payer;
+            assert!(lab.view().owed_back(&label).unwrap().is_empty(), "above the limit, repaid once it reaches the vault");
+        }
+    }
+}
+
 /// QG2, the second branch: the payer's own act on the payment holds an
 /// earlier pointer; a repayment to a newer one counts for nothing, as for
 /// a debt (Money rule 14: the selected wallet or an older one, never a
@@ -11385,7 +11499,7 @@ fn draft_11_f254_no_loops() {
     let bt = deal_of(&[a, cy.id], "Deal B.");
     let b = deal_signed_by(&mut w, &bt, &mut [&mut cy, &mut ana, &mut ben], None);
     let eb = view(&w).agreement(&b).unwrap();
-    assert_eq!(eb.exists, Some(true), "B's founding version names A: no loop {:?} {:?}", eb.invalid, eb.signed);
+    assert_eq!(eb.exists, Some(true), "B's founding version names A: no loop ({:?})", eb.invalid);
     let loopt = deal_clone(&at, a, &|t| t.parties.push(b));
     let looped = deal_signed_by(&mut w, &loopt, &mut [&mut ana, &mut ben, &mut cy], Some(a));
     let e = view(&w).agreement(&looped).unwrap();
