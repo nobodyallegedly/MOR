@@ -78,7 +78,8 @@
 
 Run after rebasing onto main (`0718a46`):
 
-- `cargo test --workspace --locked`: RUST_RESULT
-- `scripts/test-all.sh`: TS_RESULT
+- `cargo test --workspace --locked`: 604 passed, 0 failed, 1 ignored (the ignored one, as before, is the Lightning regtest test). In the first full run, one relay test (`relay/tests/relay.rs`, `too_large`) failed with a transport error: under load the relay closed the connection on an oversized upload before the client finished sending. The relay is untouched by this step. Run alone it passed three times of three, and it passed again in the full run inside `scripts/test-all.sh`.
+- `scripts/test-all.sh`: all passed. The Rust workspace as above; the WebAssembly binding rebuilt; TypeScript 219 tests across eleven packages, none failing (collective 40, site 42, longform 26, repo 18, genesis 17, reader 16, jpeg 14, connector 12, desk 12, barebone 9, manage 7, video 6). Not run: the reproducible-build check (`--reproducible`) and the Lightning regtest test.
+- **No test vector changed** (`core/vectors/` untouched).
 
 New tests: `core/tests/agreements.rs` (field 29's format, tier and checks; the withdrawn link refused), `core/tests/agreements_collective.rs` (3.9u and 3.7r on field 29; F248's designation with attempts per payment: a backup paid only after a stated failure, the next payment back to S, never an address not signed), `core/tests/agreements_invariants.rs` (the generator's backup now in field 29), `cmips/split/tests/divide.rs` and `cmips/split/tests/step13.rs`, and the collective client's terms reading.
