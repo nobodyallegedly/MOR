@@ -1,6 +1,6 @@
 # MIP: Money
 
-*Draft 7, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for the split Module build) written for plain reading, in Agreements draft 11's style. **No rule changes**: how a payment runs most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Agreements MIP draft 11, Development MIP draft 6, the payment cMIP draft 2, the Lightning rail Module draft 2 and the findings. The record of how each rule came about (the revision notes of drafts 1 to 6, and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 7, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for the split Module build) written for plain reading, in Agreements draft 11's style. It comes in two parts. **The first part changes no rule**: how a payment runs most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. **The second part writes in F255**, the one sentence Agreements draft 11 points to (its rule 11, "Money rules 14 and 14a"), marked "new in draft 7 (F255)" where it stands: rule 17 (was 14), with a pointer from rule 3 (was 14a). Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Agreements MIP draft 11, Development MIP draft 6, the payment cMIP draft 2, the Lightning rail Module draft 2 and the findings F1 to F266. The record of how each rule came about (the revision notes of drafts 1 to 6, and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -13,6 +13,7 @@ Some marks recur, and each matters to the next review:
 - *Client conformance:* a duty of clients (wallets, a payer's or an owner's client). The protocol cannot check it from acts alone, so it is stated for builders.
 - *Stated cost:* a weakness the rules accept knowingly, written down so nobody mistakes it for an oversight.
 - *Reading:* a reading taken where the text was silent, with whether it is confirmed.
+- **New in draft 7 (Fxxx):** a statement this draft adds, from a decided finding.
 
 The MIP has four parts. Part one is a payment as it runs most of the time: where it goes, how it is proven, who is seen, debts, buying and refunds, fees. Part two is the rare cases: routes across rails through conversion services, and theft of the signing key. Part three is the act formats, for reference. Part four is the tasks, the reasoning, the open parameters and the freeze scenarios.
 
@@ -97,6 +98,8 @@ Where a vault is declared:
 - a limit of zero means every payment in that unit goes to the vault.
 
 **Where the vault has several entries for one unit, the smallest of their limits is that unit's limit** (F114): no larger single payment counts as paid to the flow, and a limit of zero on any of them turns the flow off for that unit.
+
+**The same limit bounds a refund paid to a payer's refund rail** (rule 17; new in draft 7, F255).
 
 A payment in a unit for which the declared vault has no entry MUST NOT be paid to the flow: it is undeliverable until the owner adds an entry by rotation, and stays an open obligation (rule 5).
 
@@ -235,7 +238,7 @@ An obligation is released when a creditor's release (type 4) names it, valid und
 
 #### Rule 17 (was 14). Which pointer a debt is paid to
 
-*In short: a payment to the flow counts toward a debt only if it went to the pointer the creditor's own acts on that debt saw, or a later one; a payment to the vault counts. An obligation with no act of the payee's on its agreement counts only if paid to the vault, unless the payee acknowledges it. Money owed back follows the same rule.*
+*In short: a payment to the flow counts toward a debt only if it went to the pointer the creditor's own acts on that debt saw, or a later one; a payment to the vault counts. An obligation with no act of the payee's on its agreement counts only if paid to the vault, unless the payee acknowledges it. Money owed back follows the same rule; a refund to the payer's refund rail counts only up to the payer's vault limit, above it only at the vault.*
 
 **The rule.** A payment to an identity's flow pointer counts only toward what has, as its version that counts, that flow pointer's version or a later one:
 
@@ -265,10 +268,12 @@ An obligation with no such act, such as one naming no agreement act (field 4 abs
 
 **Money owed back follows this rule exactly** (Agreements rule 93; QG2, F191). A refund owed to an identity on a payment is paid:
 
-- to the refund rail the payer's own claim on that payment names (key 7), where it names one;
+- to the refund rail the payer's own claim on that payment names (key 7), where it names one, **counting as repaid only up to the payer's vault limit for its unit, as rule 3 reads it; above it, only once it reaches the payer's vault** (new in draft 7, F255);
 - otherwise, to the pointer this rule selects from the payer's own acts on that payment (its claims for it, its acts acknowledging a receipt or claim of it), or to the payer's pointer in force where they hold none.
 
-A payment to the payer's vault always counts, and the payer's own receipt counts wherever the money went.
+A payment to the payer's vault always counts, and the payer's own receipt counts wherever the money went. A payer that declares no vault has no vault rule (rule 3). **A refund owed to a bare key has no vault, so no limit** (new in draft 7, F255): it is paid where the claim signed with that key says (rules 15 and 19).
+
+*Why the limit (F255): a thief holding the payer's signing key during a theft window could sign a claim naming their own refund rail; "vault partly exists to take care of big IOUs" (Nobody, allegedly).*
 
 *A repayment to any pointer the payer ever published would let a debtor repay a thief's pointer and be cleared; this rule and rule 29 stop that for every debt.*
 
