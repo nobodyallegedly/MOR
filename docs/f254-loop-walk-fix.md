@@ -31,6 +31,7 @@ All of it is in `core/src/agreements/view/parties.rs`, plus one field in `core/s
 ### Stated limits, not fixed here
 
 - **A deal's clone made after a party's voice was removed (B19, absence).** The rule-45b check counts that clone without the absent party's signature. The walk requires every party of the parent, so it does not follow such a clone. A loop made only through such a clone would go unrefused. That is the convenient side of a rare case, so it is named here: should the walk read deal voices (rule 45b)? That needs the keepers' records and declarations, which the walk does not read today. This is for the project lead.
+  *Fixed, 11 October 2026 (`docs/closing-owes-fix.md`, part 2): the walk reads deal voices as rule 45b does.*
 - **The guard depends on the order of questions.** Inside one question, a line asked twice gives no consent. So an answer computed in the middle of a cycle can differ from the same answer asked on its own. Every question the tests ask gives the expected answer, each asked of a fresh view. A cycle needs versions naming each other's lines, and where every party signed them, the walk refuses them anyway.
 
 ## Tests
