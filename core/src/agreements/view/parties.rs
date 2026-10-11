@@ -108,17 +108,27 @@ impl<'a> AgreementsView<'a> {
     /// the loop and bound walk reads it (F254, the walk's mechanic, settled
     /// 11 October 2026): each by its own signature act; a party that is an
     /// agreement only through its own line ([`Self::walk_line_signed`]).
-    /// A deal's clone also needs every party of its parent: a deal changes
-    /// only unanimously (F107), so a clone signed by its own parties alone
-    /// (anyone may draft one naming themselves) is no version of the line
-    /// (mechanic, the build's). `path` holds the lines on the way.
+    /// A deal's clone needs whom rule 45b needs (F107, B19, Q28): every
+    /// party of its parent whose voice remains for it, every newcomer, and
+    /// every holder it takes a stake from; so a clone signed by its own
+    /// parties alone (anyone may draft one naming themselves) is no version
+    /// of the line, and one made after a party's voice was removed is, as
+    /// rule 45b reads it (mechanic, the build's; the voices read as
+    /// [`Self::deal_voices`] reads them, from declarations, signatures and
+    /// the keepers' records the caller states, never from a verdict).
+    /// Where those cannot be read, the clone is followed, failing closed:
+    /// the walk may then refuse a loop that is not there, never miss one.
+    /// `path` holds the lines on the way.
     fn walk_signed(&self, id: &Hash, t: &Terms, depth: usize, path: &mut Vec<Hash>) -> bool {
-        let mut need = t.parties.clone();
-        if !t.is_collective() {
-            if let Some(pt) = t.parent.and_then(|p| self.terms(&p).ok()) {
-                need = union(&need, &pt.parties);
+        let need = match t.parent {
+            Some(_) if !t.is_collective() => {
+                let Ok(lineage) = self.lineage(id) else { return true };
+                let Ok(voices) = self.deal_voices(id, &lineage) else { return true };
+                let parent = &lineage[1].1;
+                union(&union(&voices, &Self::newcomers(parent, t)), &Self::must_sign(parent, t))
             }
-        }
+            _ => t.parties.clone(),
+        };
         let own: Vec<Hash> = self.valid_sigs(id, &need).into_iter().map(|(p, _)| p).collect();
         need.iter().all(|p| own.contains(p) || self.walk_line_signed(id, p, depth, path))
     }
