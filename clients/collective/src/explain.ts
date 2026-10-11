@@ -123,6 +123,8 @@ export interface TermsRead {
   departed: string[];
   /** The chain of judgment (field 21): each judge, and those that take over with their periods (F121, Q7); each one hash, in a one-element list. The split service left the chain (F249, F250): its backups are the split cMIP's, terms field 29. */
   chain: [string, [string[], number][]][];
+  /** The split service's backups (field 29, F249, F250): each after field 14's, in order, by its grants (one in a collective, one per payee in a deal); the split cMIP whose fields they are; whether the terms carry its failure condition. */
+  backups?: { services: string[][]; splitCmip: string | null; failure: boolean } | null;
   /** Forked from (field 23): the original collective, a back-link (F121, F124 N4). */
   forkedFrom: string | null;
   /** The release rule (field 24); null: every stake holder signs a release (F121, D). */
@@ -584,9 +586,14 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   if (t.departed?.length) {
     more.push({ text: `Departed holders: ${list(t.departed.map(names))}. No voice and no veto; their share of the collective's income is in its stakes above (Agreements rule 46b, F124 N5).` });
   }
+  if (t.backups?.services.length) {
+    const service = (hs: string[]) => (hs.length === 1 ? `the service granted by ${short(hs[0])}` : `the service granted by ${list(hs.map(short))} (one grant per payee, signed with this deal)`);
+    more.push({
+      text: `Backup split services, in order: ${list(t.backups.services.map(service))}. Each payment is tried at the split service first; only if that attempt fails, as the split cMIP ${t.backups.splitCmip ? short(t.backups.splitCmip) : ''} defines failure${t.backups.failure ? ' (its terms for it are signed with this agreement)' : ' (its defaults)'}, does it go to the next, and the next payment starts again from the first. Money only ever goes to a service named here (Agreements rule 18a, F249, F250).`,
+    });
+  }
   for (const [judge, next] of t.chain ?? []) {
-    const taker = (hs: string[]) => (judge !== 'split service' || !t.payeeGrants?.length ? names(hs[0]) : `the service granted by ${list(hs.map(short))} (one grant per payee, signed with this deal, F130 H6)`);
-    more.push({ text: `If ${judge === 'split service' ? 'the split service' : judge.startsWith('task ') ? `the judge for ${judge}` : names(judge)} answers “unknown”, or does not act within its period, ${list(next.map(([hs, p]) => `${taker(hs)} (after ${p} on the time reference)`))} take${next.length === 1 ? 's' : ''} over, in that order (Agreements rule 34a, F121).` });
+    more.push({ text: `If ${judge.startsWith('task ') ? `the judge for ${judge}` : names(judge)} answers “unknown”, or does not act within its period, ${list(next.map(([hs, p]) => `${names(hs[0])} (after ${p} on the time reference)`))} take${next.length === 1 ? 's' : ''} over, in that order (Agreements rule 34a, F121).` });
   }
   more.push({
     text: "Whatever is done in the collective's name binds it once it is sealed to every member (or public) and on its chain, citing its latest decision; before that, even signed, it binds no one (Agreements rule 35a, F128). Where it is stored decides nothing: the relays are only where its clients publish and look first.",

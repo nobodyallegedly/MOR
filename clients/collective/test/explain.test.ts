@@ -202,29 +202,30 @@ test('what a clone changes, by tier, and the powers its mark must name', () => {
   assert.match(bad[0].text, /Its mark names the clone rule: a false mark sinks the clone \(F104\)/);
 });
 
-test("a deal's chain of judgment follows its split service: one grant per payee for each service taking over (F130, H6)", () => {
+test("a deal's backup split services are the split cMIP's fields, field 29, one grant per payee each; the chain of judgment no longer follows the split service (F249, F250)", () => {
   const h = (n: number) => new Uint8Array(32).fill(n);
   const hx = (n: number) => Buffer.from(h(n)).toString('hex');
-  const deal = (link: unknown) =>
+  const deal = (extra: [number, unknown][]) =>
     cborEncode(
       new Map<number, unknown>([
         [0, [h(1), h(2)]],
         [1, 'a song'],
-        [2, new Map()],
+        [2, new Map([[8, h(4)]])],
         [4, [0]],
         [5, [0]],
-        [6, [h(3), 0]],
         [14, [h(7), h(8)]],
-        [21, [link]],
+        ...extra,
       ]),
     );
-  const t = termsOf(deal([[2], [[[h(9), h(10)], 30]]]));
+  const t = termsOf(deal([[29, new Map<number, unknown>([[0, [[h(9), h(10)]]], [1, new Map([[0, 60]])]])]]));
   assert.ok(!t.problem, `Agreements accepts it: ${JSON.stringify(t.problem)}`);
-  assert.deepEqual(t.chain, [['split service', [[[hx(9), hx(10)], 30]]]]);
+  assert.deepEqual(t.backups, { services: [[hx(9), hx(10)]], splitCmip: hx(4), failure: true });
   const w = all(readAgreement(t, names));
-  assert.match(w, /the service granted by .* \(one grant per payee, signed with this deal, F130 H6\) \(after 30 on the time reference\) takes over/);
-  // A deal's service taking over is never one grant.
-  assert.match(JSON.stringify(termsOf(deal([[2], [[h(9), 30]]])).problem ?? ''), /H6/);
+  assert.match(w, /Backup split services, in order: the service granted by .* \(one grant per payee, signed with this deal\)\. Each payment is tried at the split service first/);
+  // A deal's backup is never one grant.
+  assert.match(JSON.stringify(termsOf(deal([[29, new Map<number, unknown>([[0, [h(9)]]])]])).problem ?? ''), /H6/);
+  // The chain of judgment following the split service is withdrawn.
+  assert.match(JSON.stringify(termsOf(deal([[6, [h(3), 0]], [21, [[[2], [[h(9), 30]]]]]])).problem ?? ''), /F250/);
 });
 
 test('Agreements rule 49 (F172, F178 item 11): before signing terms with an abandonment clause, who may declare a party absent, with which outcomes, and whether an absence-proof cMIP stands between', () => {

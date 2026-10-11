@@ -5485,7 +5485,7 @@ pub struct CutCheck {
     /// its unit: the payment itself where the participant is its payee
     /// (payer-side splitting, or a lone owner); otherwise each payout to it
     /// of a split that follows the payment, layer by layer, a split that
-    /// breaks its plan included (its payouts are shown in `stops`).
+    /// breaks its plan included (named in `stops`).
     pub due: u64,
     /// What the participant's own receipts show arrived for it, each valid,
     /// counting by its consent, with the rail's answer (`rail_valid`)

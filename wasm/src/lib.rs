@@ -1825,11 +1825,13 @@ struct TermsOut {
     stakes: Vec<StakeOut>,
     /// The departed members entry (field 22): who left (N5).
     departed: Vec<String>,
-    /// The chain of judgment (field 21): each judge ("task N", an identity,
-    /// "split service"), and those that take over with their periods: each
-    /// one hash, or, taking over from a deal's split service, the service's
-    /// grants, one per payee (F130, H6).
+    /// The chain of judgment (field 21): each judge ("task N", or an
+    /// identity), and those that take over with their periods, each one
+    /// hash in a one-element list. The split service left the chain (F249,
+    /// F250): its backups are `backups`.
     chain: Vec<(String, Vec<(Vec<String>, u64)>)>,
+    /// The split service's backups (field 29, F249, F250), or null.
+    backups: Option<BackupsOut>,
     /// Forked from (field 23): the original collective, a back-link (N4).
     forked_from: Option<String>,
     /// The release rule (field 24); null: every holder.
@@ -1842,6 +1844,19 @@ struct TermsOut {
     fork_judge: Option<String>,
     /// Why the terms fail the checks that need no other act, or null.
     problem: Option<ProblemOut>,
+}
+
+/// Terms field 29 as `readTerms` shows it (F249, F250): each backup split
+/// service after field 14's, in order, by its grants (one in a collective,
+/// one per payee in a deal); the split cMIP whose fields they are; and
+/// whether the terms carry that cMIP's failure condition (key 1, which the
+/// core never reads).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BackupsOut {
+    services: Vec<Vec<String>>,
+    split_cmip: Option<String>,
+    failure: bool,
 }
 
 /// A stake as `readTerms` shows it: its object and holders, null for this
@@ -1974,6 +1989,11 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 (j, l.next.iter().map(|(t, p)| (vec![hx(t)], *p)).collect())
             })
             .collect(),
+        backups: t.backups.as_ref().map(|b| BackupsOut {
+            services: b.services.iter().map(|e| e.hashes().iter().map(hx).collect()).collect(),
+            split_cmip: t.split_cmip().as_ref().map(hx),
+            failure: b.failure.is_some(),
+        }),
         forked_from: t.forked_from.as_ref().map(hx),
         release_rule: t.release_rule.as_ref().map(rule_out),
         settles: t.settles.as_ref().map(|x| x.iter().map(hx).collect()),
