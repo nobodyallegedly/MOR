@@ -1,6 +1,6 @@
 # MIP: Agreements
 
-*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading. **No rule changes in this rewrite**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 6, Development MIP draft 6 and findings F1 to F251. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in two parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 6, Development MIP draft 6 and findings F1 to F260. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -14,6 +14,7 @@ Some marks recur, and each matters to the next review:
 - *Stated cost:* a weakness the rules accept knowingly, written down so nobody mistakes it for an oversight.
 - *Reading, to confirm:* a reading taken where the text was silent, still to be confirmed by Nobody, allegedly.
 - *Mechanic, the build's* (or the project lead's): a mechanical choice taken under Nobody, allegedly's delegation of mechanics, not a decision of principle.
+- **New in draft 11 (Fxxx):** a statement this draft adds, from a decided finding. *To build:* the code does not do it yet; until it does, the code does what draft 10 says.
 
 The MIP has five parts. Part one is agreements as they run most of the time: making and signing, works and stakes, selling, splits, judges, keepers, changing a deal, defaults and the public domain. Part two is collectives: an agreement with its own identity, its tiers, members, grants, succession and abandonment. Part three is the rare cases: forks of records, how a collective ends, a broken collective, and how "before" and "after" are read in a collective. Part four is the act formats, for reference. Part five is the tasks, the reasoning and the freeze scenarios.
 
@@ -63,7 +64,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   - On a push rail, each holder the claim names settles it on its own chain (rule 12, F128, W4).
 
   Where the seller is a collective, the purchase becomes a **sale** once the collective's actions chain records it (rule 12, F127, W2).
-- **Vow.** An act naming in words something to come, something MOR cannot hash or cannot hash yet: its own chain, its genesis id its name for good (Envelopes type 5, F237). Offers naming it sell it, and each sale of it is pending, confirmed or contested (rule 13, F240). *"Vow" replaces "announcement" (F238, F239, F241): Envelopes draft 7 still says "announcement" for the same act, type 5, with the same format, until its own redraft.*
+- **Vow.** An act naming in words something to come, something MOR cannot hash or cannot hash yet: its own chain, its genesis id its name for good (Envelopes type 5, F237). Offers naming it sell it, and each sale of it is pending, confirmed or contested (rule 13, F240). **New in draft 11:** a vow covers anything MOR cannot hash, existing or to come, and every sale of a physical good or of a service names one (F252); it holds one or more promises, which may be bundled (F253); it names what is promised to the buyer, never the event itself (F259). *"Vow" replaces "announcement" (F238, F239, F241): Envelopes draft 7 still says "announcement" for the same act, type 5, with the same format, until its own redraft.*
 - **Request rail, push rail.** A request rail is one on which the payee's side commits to each payment before it is made (the payment cMIP's commitment, which an invoice carries). A push rail is one on which the payer pays an address with no such request. The rail Module's specification says which it is (payment cMIP; F128, W4).
 
 ### Money and splits
@@ -273,6 +274,8 @@ Where claims from different identities conflict, priority can only be decided wh
 
 In MOR's eyes the owners are who the recorded work claim names, with the shares its agreement gives. **Where no agreement writes shares, the default holder is the creator who opened the work claim** (F218). A client shows it "as recorded", any contest beside it, never as legitimacy.
 
+**A manifest neither claims its parts nor is reached by their claims (new in draft 11, F254).** A manifest work (an album naming its songs) is a work of its own: its claim binds the manifest's hash, never the parts it names, and a claim on a part never reaches the manifest. The parts' owners take part in it by agreement: the manifest's agreement has the parts' agreements as parties (rule 15).
+
 #### Rule 8 (was 13). Stake rule
 
 Any act that changes the size of a stake requires its holder's signature.
@@ -405,11 +408,15 @@ A refund owed on a payment whose payer is not named is owed to whoever signs wit
 
 The obligation stays open and visible until claimed and discharged. A seller who refuses a valid claim is visibly in the wrong.
 
+**The vault's limit protects refunds too (new in draft 11, F255).** A refund paid to the refund rail a payer's claim names counts as repaid only up to the payer's vault limit for its unit; above it, only once it reaches the payer's vault (Money rules 14 and 14a). A payer that declares no vault has no vault rule (Money rule 14a). *Why: a thief holding the payer's signing key during a theft window could sign a claim naming their own refund rail; "vault partly exists to take care of big IOUs" (Nobody, allegedly).* *Reading, to confirm:* a refund owed to a bare key (Money rule 10a) has no vault, so the limit does not reach it. *To build:* the library's `repaid`. *Money draft 6, rule 14, still counts such a refund at any size; it follows at Money's redraft (F255).*
+
 The offer's terms MAY say how long a refund stays claimable, on the time reference. The core sets no lapse (F80). **A refund past the terms the buyer accepted by paying is ended** (F219): the obligation closes there, the owners keep the money, and it does not block a closing. The terms are a fixed point on the time reference (terms field 17, or a lone seller's offer's own; mechanic delegated with F219). Terms written in bad faith are not refused: they stay public, for anyone to judge.
 
 *Client conformance:* the buyer's client shows the deadline before paying.
 
 Paid access to a live stream, which has no work hash until it ends, is sold by a standing offer, not a publication. The offer names the stream's vow where it has one (rule 13; the live media cMIP).
+
+**What the access form still serves (new in draft 11, F252).** An offer selling `[ 2, [ cMIP, params ] ]` sells access to bytes under that cMIP's terms, such as a subscription's keys. A physical good or a service is sold by an offer naming a vow (rule 13). *Open (Q1 in `docs/agreements-draft-11.md`): the pooled anchoring service sells a service under the access form ("A service sold under a cMIP's terms"); how F252 meets it is put to Nobody, allegedly.*
 
 #### Rule 12 (was 32a). A purchase names the claim it pays under
 
@@ -500,7 +507,7 @@ The core keeps only the grammar:
 **Each sale is pending, confirmed or contested.**
 
 - **Confirmed:** the buyer acknowledges an act about the vow (F193's shape). For a payment, this is done in a payer's claim of that payment by the payer its commitment names (rule 22: never the payer a receipt names), its `acks` naming an act about the vow, held and valid (Envelopes rule 4).
-- **Contested:** the buyer signs a contest naming the vow (type 14).
+- **Contested:** the buyer signs a contest naming the sale (type 14; new in draft 11, F253: draft 10's contest named the vow, and marked every sale of its signer contested).
 - Otherwise, **pending**.
 
 **Only someone who signed onto the vow may confirm or contest it** (F240), **at any price, including none**. They sign on:
@@ -509,6 +516,18 @@ The core keeps only the grammar:
 - for an offer at no price, by a signature act naming the offer.
 
 **A vow nobody signed onto carries no state.**
+
+**What a vow covers (new in draft 11, F252).** A vow covers anything MOR cannot hash, existing or to come: a good in stock or to be made, a service, an hourly rate, storage, a seat. **Every sale of a physical good or of a service names a vow** (an offer's `[ 3, vow ]`), so each such sale is pending, confirmed or contested. One form for one task. *"MOR truly needed a structured way of selling something that has no bytes, or no bytes yet" (Nobody, allegedly).*
+
+**Promises, and bundles (new in draft 11, F253).** A vow holds one or more promises. A seller bundles them as it chooses, in public: a season, a series, a single match. What each promise is, and how promises are listed, is the vow's words or a cMIP's (F237).
+
+- **A contest names the sale it contests, and the promise that failed**, never the whole vow ("Contest (type 14)"). One failed match marks one buyer's sale contested, not the season's every sale.
+- **A confirmation likewise names the sale** it confirms. *Reading, to confirm:* a buyer's claim of a payment is that sale, so a confirmation made there names it; for a free sale, the buyer's act acknowledges both the act about the vow and its own signature act on the offer.
+- **What a buyer is owed back when part of a bundle fails is set by the bundle's terms**: the offer's words, its agreement's, or a cMIP's. The core fixes no partial refund.
+
+*To build:* the contest naming the sale, and the per-sale reading (draft 10's V-R9 is what the code does until then).
+
+**A vow names what is promised to the buyer, never the event itself (new in draft 11, F259).** A place in the stand to watch a match is one vow; access to a stream of the match is another; neither is "the match". Two vows on one event are separate acts, each under its own agreement. **One may name the other as a reference** (in its `refs`, Envelopes; mechanic, this draft's, to confirm): the reference carries no claim, no stake and no marking under rule 14. Whether an agreement claims a vow, and how its rights are managed, is its signer's business. *"None are the football game, both need their own agreement" (Nobody, allegedly).* *Open (Q2 in `docs/agreements-draft-11.md`): under the mechanic below, an act naming a vow in `refs` is "an act about" it, so the other vow could serve to confirm a sale of this one.*
 
 *"Only a person who signed to use the vow should be able to contest it" (Nobody, allegedly).*
 
@@ -553,6 +572,8 @@ A publication or standing offer for a work with an existing claim, not signed un
 
 **After the fork of a collective, the original's stake passes to the successors in the shares the fork act gives them (rule 91, F121): a successor's sale is under the claiming agreement, as a holder of that stake, never outside it.**
 
+*Stated cost (new in draft 11, F258):* a resale under a fresh vow escapes this marking. A holder of a claimed piece who signs a fresh vow for the same object and sells under it is marked by nothing here: this rule reads only offers naming the claimed vow, and the core cannot tell that two vows describe one object, since the object is what MOR cannot hash (F237, F252). Catching it is the provenance cMIP's, with registries and reputation. The point of cheating stays easy to find (F256): it is the fresh vow, signed by the reseller. *"We cannot police this" (Nobody, allegedly).*
+
 #### Rule 15 (was 16). A publication carries two agreements
 
 A publication carries two agreements (F216): the publication's own, and the work's.
@@ -568,7 +589,7 @@ A sale through the publication passes outside in. The publication's split gives 
 
 A publisher holds a stake in the publication's agreement, never in the work, by construction. No stake is marked as a publisher's. Recoupment and every other shape are the publication's split cMIP's.
 
-*Mechanics, the build's:* the work's agreement is named by its version's hash, as a party and as a holder of the publication's stake. Its line passes on to its stake in the work the publication carries (payer-side splitting as built).
+*Mechanics, the build's (replaced by F254 below; what the code does until it is built):* the work's agreement is named by its version's hash, as a party and as a holder of the publication's stake. Its line passes on to its stake in the work the publication carries (payer-side splitting as built).
 
 **Money passes layer by layer** (F235, QK3, option c generalised): a pool (a subscription service's, splitting by its stated rules; freeze scenario 7), then each publication's agreement, then the work's agreement, as many layers as the agreements chain. *"Money is split envelope by envelope, deal by deal, and can involve more participants than simply the work and the publisher, to reward the pipe" (Nobody, allegedly).*
 
@@ -613,6 +634,22 @@ Each layer may pay more participants than the work and the publisher (relays and
 **H5 and H7 stand** everywhere else.
 
 *Mechanic, the layers-and-judges build:* a deal that is a party of another deal signs it where every party of its version in force signs it, a party that is itself a deal signing the same way, at most eight layers deep.
+
+**Any agreement may be a party to another (new in draft 11, F254).** The two agreements of a publication are one case of a general rule. *"The way publishing is structured a work agreement needs it" (Nobody, allegedly).*
+
+- **Any agreement may be a party of any agreement**, consenting by its own rule. A collective signs with its own keys. A deal, having none, consents when its own parties sign under its own rule: every party (rule 47).
+- **As a party it holds stakes**, paid at the one pointer it designates (F248).
+- **It is named by its line**: its founding version, never a single later version. Every later version of the inner agreement carries what it signed outward, and cannot escape it by re-versioning. Money goes to the pointer the inner agreement's version in force designates. *"What happens in that envelope is separated from the publishing deal" (Nobody, allegedly).*
+- **No loops.** An agreement is never a party of itself, directly or through others: terms making one so are refused, failing closed.
+- **Nesting is bounded at 8 layers**, a freeze parameter ("Open technical parameters").
+- **At closing, stakes are liquidated per the closing.** When an inner agreement closes, its closing says where each of its stakes goes: a successor agreement, or its parties directly, in their shares. The outer agreement keeps paying the one pointer that closing designates, its own terms unchanged. **Where the closing names nowhere for someone** (an absentee), **that share becomes an open obligation**, owed and visible until a valid claim appears: never lost, never taken. *Open (Q4 and Q5 in `docs/agreements-draft-11.md`): a collective's closing (type 20) needs the collective to hold nothing first, and a deal has no closing act.*
+- **A manifest neither claims its parts nor is reached by their claims** (rule 7).
+
+*To build:* naming by line, the loop refusal, the bound as a checked parameter, and the closing's stakes.
+
+**Responsibility ends at the designated pointer, in every chain of agreements (new in draft 11, F256).** Any agreement paying another agreement pays the pointer that agreement designates, and its responsibility for that payment ends there, Money's receipt the proof: a publisher paying a work, an agency paying a production company paying its crew, a compilation paying its parts. What follows is the receiving agreement's alone. *"The idea of the network is to segment everything so that the point of failure or cheating is easily found" (Nobody, allegedly).*
+
+**A compilation is a layer with its parts' consent, a derivative without it (new in draft 11, F257).** With the parts' agreements as its parties, a compilation (a course of lessons by different teachers, an anthology) is a layer: it pays each part's designated pointer, and its responsibility ends there. Without their consent it is a derivative: its own work, paying its sources by its own agreement, its published split showing whether it honours them.
 
 ### 4. Splits
 
@@ -676,6 +713,8 @@ The split task is handed to the split cMIP the agreement names (F250, F249).
 
 A payer's obligation ends when the payment reaches the first service in order whose attempt succeeds, Money's receipt the proof.
 
+**Every payer tries the services in order (new in draft 11, F260).** A buyer paying the owners directly follows the same rule as a publisher or a layer above: it tries the services the agreement names, field 14's then field 29's, in order, attempt by attempt, each payment starting again from the first. **A backup paid directly receipts in the owners' name, with the grants it already holds** (field 29's, one per payee in a deal; "What a split service's grant key may sign"). Money's pointer format is unchanged: the owners' payee pointer leads to the first service, and a backup's address is the one its own signed pointer carries, which the pointer check accepts (rule 16). *To build:* rules 15 and 17 applied to a direct buyer's payment, and the participant's check (rule 18) following it.
+
 **The task:** the cMIP accepts the agreement and the attempts made for a payment, and produces the receiver for this payment.
 
 **The guarantee, the core's: money goes only to an address the owners signed.**
@@ -697,7 +736,7 @@ Once a purchase triggers the agreement, each participant checks: **is my cut at 
 Its cut is what the splits that follow the purchase assign it, layer by layer (rule 15):
 
 - the payment itself, where it is the payee (payer-side splitting, or a lone owner);
-- otherwise, its payouts in each split naming the payment, signed by a service the agreement names, field 14's or a backup's.
+- otherwise, its payouts in each split naming the payment, signed by a service the agreement names, field 14's or a backup's, whoever paid, a direct buyer included (new in draft 11, F260; to build).
 
 It has arrived when its own receipts, valid, each with the rail's answer, place that much at its payee pointer or at an entry of its vault (Money rules 12, 14a).
 
@@ -2223,7 +2262,7 @@ Repaid in full, it is no longer owed.
 
 **It follows the debt rule exactly** (QG2; Money rule 14). The repayment goes:
 
-- to the refund rail the payer's own claim on the payment names (key 7), where it names one;
+- to the refund rail the payer's own claim on the payment names (key 7), where it names one, counting up to the payer's vault limit for its unit and, above it, only once it reaches the payer's vault (new in draft 11, F255; rule 11; to build);
 - otherwise, to the pointer Money rule 14 selects from the payer's own acts on that payment, or the payer's pointer in force where they hold none.
 
 A payment to the payer's vault always counts, and the payer's own receipt counts wherever the money went.
@@ -3068,7 +3107,8 @@ Its text is shown as a text act's is, plain text always available (Text MIP rule
 
 ```cddl
 contest-payload = {
-  0 => hash                 ; the act it answers: a declaration of absence (type 13), or a vow's name (Envelopes type 5)
+  0 => hash,                ; the act it answers: a declaration of absence (type 13); or, for a vow, the sale it contests (F253)
+  ? 1 => tstr / [hash, any] ; for a vow only: the promise not kept, in words (canonical text) or in a cMIP's terms (F253)
 }
 ```
 
@@ -3078,7 +3118,7 @@ A contest of a declaration is signed by the party the declaration names, with it
 
 *Client conformance:* the declared member's client lets them sign it, and publishes it.
 
-A contest of a vow (F237, F240): field 0 names the vow by its name (its genesis id), as chain and predecessor likewise. Signed by someone who signed onto it (rule 13), it marks each of that signer's sales of it contested, and voids nothing. Signed by anyone else, it shows nothing.
+A contest of a vow (F237, F240; **new in draft 11, F253**): field 0 names **the sale it contests**: the buyer's payer's claim of the payment that is a purchase under an offer naming the vow, or, for an offer at no price, the signature act by which the buyer signed onto it (rule 13). Its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`. Field 1 says which of the vow's promises was not kept. Signed by the buyer of that sale, it marks that sale contested, and voids nothing. Signed by anyone else, it shows nothing. *Mechanics, this draft's, to confirm:* the field numbers, the vow in `objects`, and field 1 optional, as F253 says a contest "may say" which promise failed (Q3 in `docs/agreements-draft-11.md`). *To build:* the code reads draft 10's form, field 0 the vow's name, marking every sale of the signer.
 
 *The format is written for the two cases decided; a contest of another act, or by another with standing (rule 54), keeps its format open: "as new needs are discovered the grammar needs definition" (Nobody, allegedly).*
 
@@ -3573,6 +3613,7 @@ These are decided in text only, and not written in code by build step 12b, the s
 
 - Exact formats for every act type other than terms, signatures, grants (fields 5 to 9, and field 2's null, F129), revocations (F128), resignations, records, abandonment declarations, negotiation messages, splits, releases, forks and closings. Also exact formats for terms fields 8, 10 and 17 (split plan, concurrency rule, refund terms). The closing (type 20) is exact (F124).
 - Encoding of conditions and grant limits.
+- **The nesting bound** (new in draft 11, F254): an agreement may sit at most 8 layers deep among agreements that are parties of agreements (rule 15). A freeze parameter.
 
 ### Freeze scenarios
 
