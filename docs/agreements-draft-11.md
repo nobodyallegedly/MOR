@@ -322,3 +322,67 @@ Writing a text for plain reading is also a review. These were in draft 10, were 
 - TypeScript: 220 passed, 0 failed, in 12 packages: barebone 9, collective 41, connector 12, desk 12, genesis 17, longform 26, manage 7, reader 16, repo 18, site 42, jpeg 14, video 6.
 
 **The branch, after both commits** (`scripts/test-all.sh`, same options): **all tests passed**, the same counts as on main: Rust 606 passed, 0 failed, 1 ignored; TypeScript 220 passed, 0 failed. No code or test changed, so the code's tests pass unchanged: the check that no rule moved.
+
+## Second pass
+
+*11 October 2026. Roadmap: Agreements draft 11, second pass (F251), texts only. Same branch, after merging main (which brought F259 revised, F261, F262, F263 and the readings of Q2, Q3 and Q6). One commit for the texts, one for this report.*
+
+### In plain words
+
+The first pass left six questions (Q1 to Q6). Nobody, allegedly, has answered all six, and this pass writes the answers into draft 11. Every "Open: Qn" marker for them is gone. Each change says where it comes from: "new in draft 11 (F261)" for a decided finding, "reading (Q2)" or "reading (Q3)" for a reading.
+
+In short:
+
+- **Two kinds of offer.** Some deliveries prove themselves: anyone can check them from the data, trusting no one's word (a hash in an anchoring batch, a key that unlocks the promised file). Those are *proven* offers and use the access form. Everything else rests on someone's word and is a *promised* offer, sold under a vow and confirmed or contested by its buyers. So the anchoring service needs no vow, and it does not change.
+- **Two vows on one event stay apart.** The seat and the stream do not point to each other; each may point to the match, if the match is on MOR as an act of its own. A vow that does point to another vow does not count as confirming anything about it.
+- **A contest names the sale.** Naming which promise failed is optional.
+- **Ending.** A collective sells or gives away what it holds using the normal acts, then closes. Money it cannot pay to an absent person stays visible as owed, listed in the closing. A deal has no closing: it ends with a last version that all its parties sign, saying where things went and what is still owed.
+- **Money draft 6 stays as it is** until its own redraft.
+
+Writing this exposed **two new questions** (Q7 and Q8, below). Neither is worked around: each is marked "Open" in the draft.
+
+### What changed, item by item
+
+- **F261, Q1 (proven and promised offers).**
+  - Definitions: a new entry, "Proven offer, promised offer". The "Vow" entry now says every sale of a good or service names a vow *unless its delivery is proven*.
+  - Rule 11: what an offer sells now lists the three forms (publication, vow, proven delivery). The paragraph "What the access form still serves" is replaced by "Two classes of offers": the access form is widened from access to bytes to any delivery proven from data alone; a cMIP may produce the proof, but the verifier checks the proof itself, never the cMIP's say-so; the pooled anchoring service is a proven offer, unchanged.
+  - Rule 13: F252's sentence gains "unless its delivery is proven". New paragraph: a proof may sit inside a vow as evidence beside a confirmation or contest, without replacing either; the sale's state is still the signer's.
+  - Act formats: the comment on `[ 2, [ cmip, any ] ]` in the standing offer, and the paragraph "A service sold under a cMIP's terms", now say the access form is the proven offer's form.
+  - *To build:* no format changes. The code judges a delivery under the access form only for the anchoring cMIP; checking any other proven offer's proof is not built.
+- **F259, revised.** Rule 13 and the "Vow" definition: two vows on one event stay separate and neither references the other; each may reference the event where the event exists on MOR as an act of its own, never as a vow. The old sentence "one may name the other as a reference" is gone. The text says this describes how such vows are made and is not a check a verifier runs, because Q2's reading still allows a vow to name another.
+- **Reading (Q2).** Rule 13: a vow's reference to another vow is not "an act about" it, and moves none of its sales' states. The build's mechanic ("an act about the vow") now has that exception. *To build:* `about_vow` in `core/src/agreements/view/vows.rs` still counts any valid act naming the vow in `refs`, a vow included.
+- **Reading (Q3).** Rule 13 and the contest's format: the contest names the sale; naming the failed promise (field 1) is optional. The "Mechanics, to confirm" note no longer carries field 1.
+- **F262, Q4 (a collective's liquidation).** Rule 15 (the F254 list), rule 91 (shape D), the "Closing" definition and the closing's format: liquidation is the ordinary sales, transfers and releases before the closing. The closing still counts only when the collective holds nothing. An absentee's money share is an open obligation named in field 4, and does not block the closing. No new field. Batching is a client's or cMIP's convenience, never a second way in the core. *To build.* *Open: Q8* (how the field 4 entry names such a share).
+- **F263, Q5 (a deal's end).** Rule 47 (new paragraph), rule 15 (the F254 list) and a new definition, "A deal's end": a deal ends or winds down by a clone every party signs (F107). The clone states where the deal's stakes went, what is still owed, and to whom its outer agreement now pays. Deals have no closing act. An absent party is handled by the absence rules (B19): the declaration removes the voice where the deal provides it, and the stake is never reduced without its holder (rule 48). Nothing to build: it is an ordinary clone of a deal.
+- **Q6.** Rule 11's F255 paragraph now records that Money draft 6 is unchanged until its redraft, and keeps its pointer to Money rules 14 and 14a.
+- **Elsewhere in the draft.** The header now describes a third part and findings up to F263. "How to read this draft" explains the "Reading (Qn)" mark. "Open in this draft" records Q1 to Q6 as answered and lists Q7 and Q8.
+- **Core v21**, two sentences that quote a changed sentence:
+  - "Announcements": the contest names the sale "and optionally the promise not kept" (Q3).
+  - The dissolution bullet: a collective cannot close while it owes anything "save what the closing names as left open, an absentee's money share among it" (F262).
+- **Freeze suite v21**, one sentence: the component line "Announcements", with the same change for Q3. The suite's closing lines ("a closing ending a collective that holds nothing", scenario 9f) do not quote anything that changed.
+- **`spec/README.md`**: draft 11's line mentions the second pass.
+- **Left alone, as asked:** the thirteen points carried from draft 10, for the freeze-ready draft. No code, test or record was edited.
+
+### New questions for Nobody, allegedly
+
+One at a time, most important first.
+
+**Q7. Is access to a live stream a proven offer or a promised one (F261)?** Rule 11 says paid access to a live stream is sold by a standing offer that names the stream's vow "where it has one". The code's tests also sell stream access through the access form with no vow. Under F261, the access form is for proven deliveries only. A key that decrypts the segments the stream's opener signs can be checked from data. But "the match is streamed in full, live" cannot be checked, and no hash is known when the sale is made. F259 treats Dario's stream as sold under a vow.
+- (a) Promised: stream access always names a vow. The access form stays for deliveries whose hash or proof is fixed when the offer is made. *My lean: the buyer pays for the stream happening, and only the buyer can say whether it did.*
+- (b) Proven: a key to the signed segments is the proof, so the access form stays. A seller who also promises the stream will happen in full adds a vow.
+- (c) The seller chooses, each offer in its own class: the access form for the key only, a vow for the stream.
+
+**Q8. How does the closing's field 4 name an absentee's money share (F262)?** F262 puts that share in "the closing's existing field for money owed", with no new field. Field 4's entries are written for money owed *back*: `[ payment, notice / null, ? holder ]`, meaning a receipt or claim of the refunded payment, the notice sent to its payer (type 24) or null for money owed to nobody, and an optional holder. An absentee's share is not a refund, and no element names who it is owed to. A notice today is sent only to a payer owed back, with a deadline.
+- (a) The same entry, read more widely: the payment is the receipt or claim of the money the share comes from (a stake's sale), and the notice is a notice (type 24) sealed to the absentee, its use widened to a share owed. F197's shape applies: the share is left open once the notice's deadline has passed with no address given, and a holder may be named. *My lean: no new field, and the notice names whom it is owed to.*
+- (b) The same entry with a null notice: the share is left open at once, and whom it is owed to is read from the agreement (its stakes and departed members entry), not from the closing.
+- (c) An absentee's share is paid through the split like any income, and anything undeliverable is the split service's open obligation (rule 24). Field 4 then names nothing for it, and F262's "named in the closing" is read as "visible beside it".
+
+### Tests
+
+**After merging main, before writing anything** (`scripts/test-all.sh`, without `--reproducible` and without regtest): **all tests passed** (merge commit `d76015a`).
+- Rust workspace: 606 passed, 0 failed, 1 ignored (the Lightning regtest, skipped unless `MOR_LN_REGTEST` is set).
+- TypeScript: 220 passed, 0 failed, in 12 packages: barebone 9, collective 41, connector 12, desk 12, genesis 17, longform 26, manage 7, reader 16, repo 18, site 42, jpeg 14, video 6.
+
+*How it ran:* the first attempt passed the Rust half, then stopped because this container had no `wasm-bindgen`. The script names the tool it needs, so I installed that version (`cargo install wasm-bindgen-cli --version 0.2.129 --locked`). I then ran the whole script again on the merge commit, in a separate checkout, and it passed as above.
+
+**After the texts commit** (same options): **all tests passed**, the same counts: Rust 606 passed, 0 failed, 1 ignored; TypeScript 220 passed, 0 failed. Only texts changed, so this confirms that nothing in the code moved.
