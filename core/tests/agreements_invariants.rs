@@ -17,7 +17,8 @@
 //!
 //! Every run prints its random seed, and names it again if it fails. Set
 //! `AGREEMENTS_INVARIANT_SEED` to that number, with the same `AGREEMENTS_INVARIANT_CASES`,
-//! to replay the run exactly: the same stories, in the same order, the same
+//! to replay the run exactly (the names before the rename, `LAW_INVARIANT_SEED`
+//! and `LAW_INVARIANT_CASES`, still work, for earlier records' replays): the same stories, in the same order, the same
 //! failure shrunk the same way (`docs/law-invariants.md`, "Seeds").
 
 mod common;
@@ -71,8 +72,17 @@ fn unit() -> Hash {
     spec("a unit")
 }
 
+/// An environment variable by its name, `AGREEMENTS_INVARIANT_…`, or by
+/// the name it had before the rename, `LAW_INVARIANT_…`, which the replay
+/// commands in earlier records use (`docs/law-invariants.md`,
+/// `docs/fork-hands-out-2026-10-09.md`); records are never edited, so
+/// both are read, the new name first.
+fn invariant_var(name: &str) -> Option<String> {
+    std::env::var(format!("AGREEMENTS_INVARIANT_{name}")).or_else(|_| std::env::var(format!("LAW_INVARIANT_{name}"))).ok()
+}
+
 fn cases(default: u32) -> u32 {
-    std::env::var("LAW_INVARIANT_CASES").ok().and_then(|s| s.parse().ok()).unwrap_or(default)
+    invariant_var("CASES").and_then(|s| s.parse().ok()).unwrap_or(default)
 }
 
 fn config(n: u32) -> Config {
@@ -89,9 +99,9 @@ fn config(n: u32) -> Config {
 /// shuffle is drawn from the story itself, so the seed and the number of
 /// cases decide the whole run.
 fn seed() -> u64 {
-    match std::env::var("LAW_INVARIANT_SEED") {
-        Ok(s) => s.trim().parse().expect("LAW_INVARIANT_SEED must be a whole number"),
-        Err(_) => {
+    match invariant_var("SEED") {
+        Some(s) => s.trim().parse().expect("AGREEMENTS_INVARIANT_SEED must be a whole number"),
+        None => {
             use std::hash::{BuildHasher, Hasher};
             // The standard library's per-process random keys, and the time.
             let mut h = std::collections::hash_map::RandomState::new().build_hasher();
@@ -111,7 +121,7 @@ struct Run {
 impl Run {
     fn replay(&self) -> String {
         format!(
-            "LAW_INVARIANT_SEED={} LAW_INVARIANT_CASES={} cargo test -p mor-core --test agreements_invariants -- --exact {} --nocapture",
+            "AGREEMENTS_INVARIANT_SEED={} AGREEMENTS_INVARIANT_CASES={} cargo test -p mor-core --test agreements_invariants -- --exact {} --nocapture",
             self.seed, self.cases, self.name
         )
     }
@@ -3295,6 +3305,56 @@ fn ic7_sums_that_overflow_never_pass() {
     t.stakes = Some(vec![agreements::Stake { object: Who::Id(spec("a work")), holders: vec![(Who::Id(a), u64::MAX), (Who::Id(b), 1_000_001)] }]);
     t.parties = vec![a, b];
     assert!(t.check(&mips()).is_err(), "shares wrapping round to 1,000,000 are refused");
+}
+
+/// F266 (Agreements draft 11, rule 9, new in draft 11): the turns for a
+/// tied leftover unit run along the split service's receipts across every
+/// version of the deal. Found by `deal_promises_hold`, seed
+/// 17655411432439988002 (`docs/invariant-deal-promises-fix.md`): a split,
+/// two clones changing the shares, then a split whose one leftover unit
+/// ties two holders at 500,000 each. The holder who had the earlier
+/// split's leftover unit has had one; the tie goes to the other. The
+/// library restarted the count at the version in force, gave the unit to
+/// the smaller identity hash, and judged this exact split as breaking its
+/// plan.
+#[test]
+fn f266_turns_run_across_a_deals_versions() {
+    let shape = DealShape { parties: 2, shares: vec![3, 13, 1, 1], service: true, backup: false, all_found: true };
+    let split = |fee: u16| DOp::Split { receipt: 0, mode: SplitMode::Exact, fee, deliver_all: false, cite: SplitCite::Latest, lie: false };
+    let ops = [
+        DOp::Receipt { payee: 0, backup: false, disguise: DealDisguise::None, proof: 0, line_latest: false },
+        split(11),
+        DOp::Clone { shares: vec![504, 504, 1, 1], signers: 255, thieves: 0, from_latest: false },
+        DOp::Clone { shares: vec![31, 255, 150, 416], signers: 255, thieves: 0, from_latest: false },
+        split(19),
+    ];
+    let d = run_deal(&shape, &ops, 516758650211236343);
+    let last = d.splits.last().unwrap().0;
+    let e = d.view().split(&last).unwrap();
+    assert!(e.mismatched.is_empty() && e.breaks.is_empty(), "an exact split, its count carried across the versions: {:?} {:?}", e.mismatched, e.breaks);
+    d.check().unwrap();
+}
+
+/// F266, its edge: a split made under a version that later stops counting
+/// (a clone a thief signed, voided by the party's rotation) stays in the
+/// chain: the version in force judges it, as before F266. Found by
+/// `deal_promises_hold`, seed 6593261315724059014, against a first attempt
+/// at F266 that kept only the versions before the one in force.
+#[test]
+fn f266_a_split_under_a_version_that_stopped_counting_stays_in_the_chain() {
+    let shape = DealShape { parties: 2, shares: vec![1, 1, 1, 1], service: true, backup: false, all_found: true };
+    let split = DOp::Split { receipt: 0, mode: SplitMode::Exact, fee: 0, deliver_all: false, cite: SplitCite::Latest, lie: false };
+    let ops = [
+        DOp::Clone { shares: vec![1, 2, 1, 1], signers: 255, thieves: 71, from_latest: false },
+        DOp::Receipt { payee: 0, backup: false, disguise: DealDisguise::None, proof: 0, line_latest: false },
+        split.clone(),
+        DOp::Rotate { party: 0 },
+        split,
+    ];
+    let d = run_deal(&shape, &ops, 0);
+    let last = d.splits.last().unwrap().0;
+    assert!(d.view().split(&last).unwrap().breaks.is_empty());
+    d.check().unwrap();
 }
 
 /// IC8 (rule 47a): after the line of the fork or closing that ended a
