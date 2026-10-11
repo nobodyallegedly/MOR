@@ -75,7 +75,8 @@ fn unit() -> Hash {
 /// An environment variable by its name, `AGREEMENTS_INVARIANT_…`, or by
 /// the name it had before the rename, `LAW_INVARIANT_…`, which the replay
 /// commands in earlier records use (`docs/law-invariants.md`,
-/// `docs/fork-hands-out-2026-10-09.md`); records are never edited, so
+/// `docs/fork-hands-out-2026-10-09.md`, `docs/f190-build-2026-10-09.md`);
+/// records are never edited, so
 /// both are read, the new name first.
 fn invariant_var(name: &str) -> Option<String> {
     std::env::var(format!("AGREEMENTS_INVARIANT_{name}")).or_else(|_| std::env::var(format!("LAW_INVARIANT_{name}"))).ok()

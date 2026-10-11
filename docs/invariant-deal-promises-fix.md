@@ -66,4 +66,32 @@ Checked against the working rule "core business, or the participants' choice": i
 
 - **On main, before anything** (`scripts/test-all.sh`, without `--reproducible` or regtest), in a separate clean checkout of `5a2ec0f`: it stopped in the Rust half. Rust: 331 passed, 1 failed (`deal_promises_hold`, the seed above), 1 ignored, then the script stopped, so the TypeScript half did not run.
 - **The failing seed replayed** on main: fails, the same way, every time.
-- Nothing is fixed yet. The fix, the failing seed passing, at least 50 other seeds all passing (listed), and a full `scripts/test-all.sh` run on this branch, with the source tree left alone while it runs, all wait for the answer.
+- *First pass:* nothing fixed until the answer. The fix and its tests are below.
+
+## The answer, and the fix
+
+**Decided by Nobody, allegedly: (a), recorded as F266.** The turn count for a stake runs along the split service's receipts across every version of the deal. "The same stake" is the same holder's share in the same work, whatever its place in the list. A new holder starts at zero. The library changes; the test stays.
+
+**The cause, as it now reads:** the library breaking a rule. It restarted the count at each version in force, where rule 9, as F266 settles it, carries the count on.
+
+### What changed
+
+- **`spec/MIP-agreements-draft-11.md`, rule 9:** one sentence, after the turns paragraph: "The count runs along the service's receipts across every version of the deal, the same stake being the same holder's share in the same work whatever its place in the list, and a new holder starting at zero (new in draft 11, F266)."
+- **Core v21 and freeze suite v21: unchanged.** Core v21 doesn't quote rule 9. The freeze suite's component line "Stakes in millionths…" paraphrases it ("ties taking turns along the split service's receipts", F150, F165) and stays true, so it doesn't quote a changed sentence.
+- **The library** (`core/src/agreements/view.rs`, `tally_member`): a split of the service joins the chain for a stake when the version it names is judged under the version in force (as before) **or is on that version's line, the version in force or one before it** (F266). The stake is found in the version the split names by its work (the stake's object), not its index. The previous split's count is read for that stake. `turns`, the public reading of the same count, follows.
+  - *Mechanic, the build's:* a split's stake indexes are read on the version it names. "On the line" keeps rule 9's "while a deal stands forked, the turns stay per branch": a branch's chain takes in the splits made before the fork, never the other branch's.
+  - *Kept from before:* a split under a version the version in force judges, such as a clone that no longer counts because a thief signed it, stays in the chain. My first attempt left this out, and seed `6593261315724059014` caught it: the rule now takes in both.
+  - A holder who left keeps their count in the running count, as `running_count` always did; a holder new to the stake counts zero.
+- **The seed variable** (`core/tests/agreements_invariants.rs`): the tests now read `AGREEMENTS_INVARIANT_SEED` and `AGREEMENTS_INVARIANT_CASES`, as their comments say, and print them in the replay line. `LAW_INVARIANT_SEED` and `LAW_INVARIANT_CASES` still work, read only where the new names are not set, because earlier records' replay commands use them: `docs/law-invariants.md`, `docs/fork-hands-out-2026-10-09.md` and `docs/f190-build-2026-10-09.md`. Records are never edited, and `docs/rename-pass.md` kept the old names for that reason. No script, workflow or other program reads them (`verifier2/shrink.py` doesn't).
+- **Two named tests** in the same file, as the file keeps every shrunk story:
+  - `f266_turns_run_across_a_deals_versions`: the failing story. It fails without the library change and passes with it.
+  - `f266_a_split_under_a_version_that_stopped_counting_stays_in_the_chain`: the edge found on the way. It passes on main as well, and guards it.
+
+### Tests
+
+- **The failing seed:** `AGREEMENTS_INVARIANT_SEED=17655411432439988002 AGREEMENTS_INVARIANT_CASES=48`: passes.
+- **50 other seeds**, 48 cases each, `deal_promises_hold` in a release build: **all 50 pass.** They were drawn by Python's `random.Random(266)`, 64 bits each, and are listed here: `1287561642494637117`, `12574277284111189583`, `1852040753349509833`, `13610763208458104430`, `10128165481948129306`, `7704514144835794906`, `16625378231343590593`, `17329446660181281660`, `1999199511132715324`, `2723116455538382426`, `17472445825655903725`, `15271091767503349299`, `16088056379714531964`, `17923504333786020968`, `18435014622509489492`, `2567909828430731484`, `17950578886456278471`, `680164493997165131`, `4826616290754181170`, `5061226411925134544`, `18326000541143159510`, `18398849431589961168`, `2617978788869363213`, `16906091495986824827`, `5563586558922497737`, `7238450587314818696`, `9920380738759472738`, `16582736545505608802`, `737103769149042304`, `17118571792635776939`, `6959848412539084609`, `16625710463506189552`, `12689076647177880209`, `13959064098384099592`, `8792861879614723326`, `612301277307663758`, `6337741437631789375`, `4403507063006882921`, `14184537097564618482`, `8252158103295549135`, `9336850153217516679`, `8050658042287601926`, `222717819044398675`, `11727029150839803555`, `1697951019850780549`, `8080884953938281400`, `8982649828286500953`, `17877909594258891618`, `5168889147028681613`, `9444934079867966471`.
+- **`scripts/test-all.sh`** on this branch at `02384ff` (without `--reproducible` or regtest), the tree untouched during the run: **all tests passed.**
+  - Rust workspace: 608 passed, 0 failed, 1 ignored (the Lightning regtest). That is 606 before, plus the two named tests.
+  - TypeScript: 220 passed, 0 failed, in 12 packages: barebone 9, collective 41, connector 12, desk 12, genesis 17, longform 26, manage 7, reader 16, repo 18, site 42, jpeg 14, video 6.
+- **No vector changed.**
