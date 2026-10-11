@@ -1,6 +1,6 @@
 # deal_promises_hold: the failure on main
 
-*11 October 2026. Its own step, before the Agreements draft 11 build resumes. Branch `claude/invariant-deal-promises-fix`, from main at `5a2ec0f`. **Stopped at a question for Nobody, allegedly:** the cause is a point Agreements draft 11 does not settle. No code is changed, and there is no pull request yet.*
+*11 October 2026. Its own step, before the Agreements draft 11 build resumes. Branch `claude/invariant-deal-promises-fix`, from main at `5a2ec0f`. The first pass stopped at a question for Nobody, allegedly: the cause was a point Agreements draft 11 did not settle. **Answered as F266 (option a); the fix and its tests are at the end ("The answer, and the fix").***
 
 ## In plain words
 
@@ -11,7 +11,7 @@ The property test that failed on main makes up random deal histories. In one of 
 - **The library** starts the count again from zero for each new version of the deal. Splits made under an earlier version don't count.
 - **The test** carries the count on from the split before, whatever version it was made under.
 
-With two holders at 50% each and one leftover unit, the two counts hand that unit to different holders. Both readings can be argued from draft 11's text, which never says whether the count runs across versions. Which one holds is a rule, not a mechanic, so it is put below as a question. Neither side is changed until it is answered.
+With two holders at 50% each and one leftover unit, the two counts hand that unit to different holders. Both readings could be argued from draft 11's text, which never said whether the count runs across versions. Nobody, allegedly, decided it (F266): **the count runs across every version of the deal.** The library now does so, and the test, which already did, stays as it was.
 
 ## The seed
 
