@@ -140,4 +140,8 @@ All ten pass. They were drawn by Python's `random.Random(11)`, 64 bits each: `15
 
 **After** (`scripts/test-all.sh` on this branch, without `--reproducible` or regtest, the tree untouched during the run):
 
-RESULTS_AFTER
+All tests passed, on commit `8cc7528`.
+- Rust workspace: 622 passed, 0 failed, 1 ignored (the Lightning regtest). That is 608 before, plus the 14 new tests.
+- TypeScript: 220 passed, 0 failed, in 12 packages: barebone 9, collective 41, connector 12, desk 12, genesis 17, longform 26, manage 7, reader 16, repo 18, site 42, jpeg 14, video 6. Unchanged: no client changed, and the clients build the new WebAssembly library.
+
+The one commit after the run adds this paragraph to the report and changes nothing else.
