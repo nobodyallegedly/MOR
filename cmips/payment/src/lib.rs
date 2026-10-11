@@ -31,8 +31,9 @@ pub fn spec() -> Hash {
     sha256(b"payment cMIP, draft 2, test value until publication")
 }
 
-/// Where a payment was paid: a rail of the payee's flow pointer, or an
-/// entry of the vault the payee's identity chain declared.
+/// Where a payment was paid: a rail of the payee's flow pointer, an entry
+/// of the vault the payee's identity chain declared, or the refund rail a
+/// claim names (key 7), for a refund owed on that claim's payment (RQ1).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PaidTo {
     /// `[0, pointer, rail]`: the payee-pointer act and the index of its rail.
@@ -40,6 +41,9 @@ pub enum PaidTo {
     /// `[1, declared-by, entry]`: the genesis or rotation that declared the
     /// vault in force, and the index of its entry.
     Vault { declared_by: Hash, entry: u64 },
+    /// `[2, claim]`: the refund rail the claim names (its key 7), for a
+    /// refund owed to its payer (Money rules 10a and 14; QG1, QG2; RQ1).
+    Refund { claim: Hash },
 }
 
 impl PaidTo {
@@ -55,11 +59,15 @@ impl PaidTo {
                 Value::Bytes(declared_by.to_vec()),
                 Value::Uint(*entry),
             ]),
+            PaidTo::Refund { claim } => Value::Array(vec![Value::Uint(2), Value::Bytes(claim.to_vec())]),
         }
     }
 
     pub fn decode(v: &Value) -> Option<Self> {
         let Value::Array(a) = v else { return None };
+        if let [Value::Uint(2), Value::Bytes(h)] = a.as_slice() {
+            return Some(PaidTo::Refund { claim: h.as_slice().try_into().ok()? });
+        }
         let [Value::Uint(kind), Value::Bytes(h), Value::Uint(i)] = a.as_slice() else {
             return None;
         };
@@ -295,6 +303,13 @@ pub trait Held {
     /// answer (`mor_core::agreements::AgreementsView::payment_counts`). `None` where this
     /// verifier cannot read it (a Money-only client).
     fn payment_counts(&self, payee: &Hash, paid_at: &fin::PaidAt, amount: &Amount, proof: &[u8], fulfils: &Hash) -> Option<bool>;
+    /// A claim by id, valid as an act, with its signer and its act's own
+    /// citations: where a refund paid to the refund rail it names (key 7)
+    /// finds its address (`[2, claim]`, RQ1). `None` where it is not held,
+    /// and a payment there is then unknown.
+    fn claim(&self, _id: &Hash) -> Option<(Claim, Hash, fin::Citations)> {
+        None
+    }
 }
 
 /// The rail Modules a verifier has adopted, by spec hash.
@@ -394,6 +409,37 @@ fn address(
                 ));
             }
             Ok(e.source.clone())
+        }
+        PaidTo::Refund { claim } => {
+            // As from a pointer: the claim is the payee's own act, here its
+            // signer (an identity paying in its own name, or the one-time
+            // identity an anonymous payer signed with, F113), and its refund
+            // rail names this rail Module and carries the amount's unit.
+            let (c, signer, cited) = held.claim(claim).ok_or_else(|| {
+                Answer::Unknown("the claim whose refund rail it was paid to is not held".into())
+            })?;
+            if fin::check_signer(&fin::Payload::Claim(c.clone()), &signer, &cited).is_err() {
+                return Err(Answer::Invalid(
+                    "the claim whose refund rail it was paid to is not signed by its payer (Money rule 1, F113)".into(),
+                ));
+            }
+            if &signer != payee {
+                return Err(Answer::Invalid("paid to the refund rail of another identity's claim".into()));
+            }
+            let r = c
+                .refund
+                .ok_or_else(|| Answer::Invalid("the claim names no refund rail".into()))?;
+            if &r.module != rail {
+                return Err(Answer::Invalid(
+                    "the claim's refund rail names another rail Module".into(),
+                ));
+            }
+            if m.unit(&r.address) != Some(amount.unit) {
+                return Err(Answer::Invalid(
+                    "the refund rail does not carry the amount's unit".into(),
+                ));
+            }
+            Ok(r.address)
         }
     }
 }
@@ -523,6 +569,9 @@ pub fn paid_at(record: &Record) -> Option<fin::PaidAt> {
     Some(match Proof::decode(proof)?.paid_to {
         PaidTo::Flow { pointer, .. } => fin::PaidAt::Flow(pointer),
         PaidTo::Vault { declared_by, entry } => fin::PaidAt::VaultEntry(declared_by, entry),
+        // The core reads a repayment paid to a claim's refund rail as paid at
+        // that claim (Agreements' `repaid`; QG1, QG2), unchanged by RQ1.
+        PaidTo::Refund { claim } => fin::PaidAt::Flow(claim),
     })
 }
 
@@ -574,8 +623,10 @@ pub fn beside(record: Record, held: &dyn Held) -> Answer {
 /// there (an entry for its unit, and no more than that unit's smallest
 /// limit, F114). The vault applies as the chain declares it, so a change
 /// applies at once (F169; F160 withdrawn); a payment that followed an
-/// earlier vault is rule 15's ([`beside`]). A payment to the vault, or to
-/// an identity that declares no vault, is valid here. *A thief who
+/// earlier vault is rule 15's ([`beside`]). A payment to the vault, to the
+/// refund rail a claim names (as the core reads Money rule 14's refunds, a
+/// question put in `docs/leftovers-rq1-change-members.md`), or to an
+/// identity that declares no vault, is valid here. *A thief who
 /// redirects the flow pointer cannot take a large payment through it, nor
 /// one in a unit the vault does not cover.*
 pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
@@ -603,6 +654,9 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
                 Answer::Invalid("paid to a vault entry the payee's chain no longer declares: a rotation replaced it (Money rules 14a and 15)".into())
             }
         }
+        // Where the payer's own claim said to pay a refund (Money rules 10a
+        // and 14, QG1, QG2): the payer chose the rail, as for the vault.
+        PaidTo::Refund { .. } => Answer::Valid,
         PaidTo::Flow { .. } => {
             if fin::flow_followed_vault(held.vault_in_force(payee).as_deref(), amount) {
                 Answer::Valid
@@ -619,7 +673,9 @@ pub fn followed_vault(record: Record, held: &dyn Held) -> Answer {
 /// Money rules 12 and 14, judged beside the verification answer
 /// ("What verification does not decide"), on the payee's chain as it
 /// stands now: whether the flow pointer a payment was paid to is in force
-/// for what it fulfils. A payment to the vault always is.
+/// for what it fulfils. A payment to the vault always is; so is one to the
+/// refund rail a claim names, whose payer chose it (whether that claim is
+/// the payer's own on the payment refunded, Agreements judge: QG1, QG2).
 ///
 /// - **Rule 12.** A flow pointer counts only on the payee's unbroken,
 ///   unforked chain: one forked by a second act naming the same

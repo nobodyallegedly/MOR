@@ -978,7 +978,8 @@ export class Actions {
   /**
    * A constitutional change (Agreements rules 37, 44c): members join or are
    * removed, the rules may be rewritten. Members removed who have not left
-   * yet first sign a resignation each, registered at once by a record; the
+   * yet first sign a resignation each, naming the drafts they leave behind
+   * (F207), registered at once by a record; the
    * clone's mark names the constitutional change rule and the members whose
    * voice remains who sign it; a rotation of the collective declares it.
    */
@@ -1116,11 +1117,17 @@ export class Actions {
       );
     }
     const warnings = resigning.length ? await this.unheard(c) : [];
+    // F207 (client conformance): each resignation signed here names the
+    // drafts its signer leaves behind, as leaving alone does, so none of
+    // them ever brings them back, whichever line puts it in force.
+    const drafts: Record<string, string[]> = {};
+    for (const m of resigning) drafts[m] = await this.draftsLeft(c, agreements, m, c.f.agreement);
     const reading: Reading = {
       title,
       summary,
       sections: [
         { heading: 'What changes', lines: [...changes, ...lm.lines, ...notes, ...warnings] },
+        ...(resigning.length ? [{ heading: 'Drafts left behind', lines: resigning.flatMap((m) => this.draftLines(names(m), drafts[m], 'resignation')) }] : []),
         ...read.sections.map((s) => ({ ...s, heading: `After the change: ${s.heading.charAt(0).toLowerCase()}${s.heading.slice(1)}` })),
         {
           heading: 'Signed on this device',
@@ -1141,7 +1148,7 @@ export class Actions {
     };
     return this.plan({
       kind: 'change',
-      digest: digestOf('change', a.collective, payload, JSON.stringify({ members, rebuilders: usedRebuilders, resigning })),
+      digest: digestOf('change', a.collective, payload, JSON.stringify({ members, rebuilders: usedRebuilders, resigning, drafts })),
       reading,
       depends: [a.collective, ...new Set([...c.f.members, ...join].filter((m) => this.store.holds(m)))],
       run: async () => {
@@ -1155,6 +1162,7 @@ export class Actions {
           signers: [...stay, ...joining],
           rebuilders: usedRebuilders,
           leaving,
+          drafts,
           governance: changedGovernance ? g : undefined,
           expect: payload,
           mark,
