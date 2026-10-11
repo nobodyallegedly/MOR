@@ -1,6 +1,6 @@
 # MIP: Agreements
 
-*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in three parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. **The third part writes in the answers to the questions the second part raised** (Q1 to Q6 in `docs/agreements-draft-11.md`): F261, F259 as revised, F262 and F263, each marked "new in draft 11 (Fxxx)", and the readings of Q2 and Q3, each marked "reading (Q2)" or "reading (Q3)"; Q6 leaves Money draft 6 as it is. Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 6, Development MIP draft 6 and findings F1 to F263. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in three parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. **The third part writes in the answers to the questions the second part raised** (Q1 to Q6 in `docs/agreements-draft-11.md`): F261, F259 as revised, F262 and F263, each marked "new in draft 11 (Fxxx)", and the readings of Q2 and Q3, each marked "reading (Q2)" or "reading (Q3)"; Q6 leaves Money draft 6 as it is. Then the answers to the two questions that pass raised, Q7 and Q8: F264 and F265, each marked "new in draft 11 (Fxxx)", F265 correcting F262's wording. Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 6, Development MIP draft 6 and findings F1 to F265. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -15,6 +15,8 @@ Some marks recur, and each matters to the next review:
 - *Reading, to confirm:* a reading taken where the text was silent, still to be confirmed by Nobody, allegedly.
 - *Mechanic, the build's* (or the project lead's): a mechanical choice taken under Nobody, allegedly's delegation of mechanics, not a decision of principle.
 - **New in draft 11 (Fxxx):** a statement this draft adds, from a decided finding. **Reading (Qn):** a reading taken on one of the questions this draft's second part raised (`docs/agreements-draft-11.md`), recorded in the findings log. *To build:* the code does not do it yet; until it does, the code does what draft 10 says.
+
+*Working rule (F265):* where the core gives participants the means to choose, the choice is theirs; the core keeps only what no choice may break.
 
 The MIP has five parts. Part one is agreements as they run most of the time: making and signing, works and stakes, selling, splits, judges, keepers, changing a deal, defaults and the public domain. Part two is collectives: an agreement with its own identity, its tiers, members, grants, succession and abandonment. Part three is the rare cases: forks of records, how a collective ends, a broken collective, and how "before" and "after" are read in a collective. Part four is the act formats, for reference. Part five is the tasks, the reasoning and the freeze scenarios.
 
@@ -190,7 +192,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   - Each successor names the original in "forked from", a back-link only.
 
   Not to be confused with a fork of records or of an agreement chain (rules 6, 72, 90), which the concurrency rule settles.
-- **Closing.** The end of a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor. It is a closing act, signed under the constitutional change rule. After its line, the collective's keys count for nothing in Agreements (type 20, rule 91, F124 N9, F125 D5). **New in draft 11 (F262):** the selling and releasing are ordinary acts before the closing, and an absentee's money share is left open, named in the closing (field 4).
+- **Closing.** The end of a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor. It is a closing act, signed under the constitutional change rule. After its line, the collective's keys count for nothing in Agreements (type 20, rule 91, F124 N9, F125 D5). **New in draft 11 (F262):** the selling and releasing are ordinary acts before the closing. **New in draft 11 (F265):** an absentee's money share follows the collective's own rules, and stays visible as an open obligation wherever they sent it; the closing names nothing for it.
 - **A deal's end (new in draft 11, F263).** A deal has no closing act. It ends, or winds down, by a clone every party signs, stating its new conditions: where its stakes went, what is still owed, and to whom its outer agreement now pays (rules 15, 47).
 - **Creditor's release.** An act by which a creditor ends an obligation owed to it without full payment, for instance against stakes or a partial payment. Only the creditor signs it (rule 92, F125). It is a Money act (Money type 4; Agreements type 21 retired) (F126). A collective creditor signs it by its Money lane alone. A release traded for future terms is also an Agreements agreement, signed by the collective's Agreements lane, which the release names. *MOR has no court and cannot force a creditor to let go: a debt ends by payment or by its creditor's word.*
 
@@ -419,7 +421,7 @@ The offer's terms MAY say how long a refund stays claimable, on the time referen
 
 *Client conformance:* the buyer's client shows the deadline before paying.
 
-Paid access to a live stream, which has no work hash until it ends, is sold by a standing offer, not a publication. The offer names the stream's vow where it has one (rule 13; the live media cMIP). *Open (Q7 in `docs/agreements-draft-11.md`, second pass): whether a live stream's access is a proven offer, under the access form, or a promised one, naming a vow (F261).*
+Paid access to a live stream, which has no work hash until it ends, is sold by a standing offer, not a publication. **The class follows what is sold (new in draft 11, F264).** A seller who promises the stream sells a vow, a promised offer (rule 13; the live media cMIP): the key delivered in keeping the vow is a proof that sits in the sale as evidence (rule 13), and the buyer still confirms or contests. *A stream cut short: the key worked, the promise did not.* A seller selling only a key to what already exists, such as the recording, sells a proven offer, under the access form. *An offer selling a stream's access under the access form with no vow, as the code's tests do, sells the key only, and is read so.*
 
 **Two classes of offers: proven and promised (new in draft 11, F261).** What an offer sells is delivered either with a proof or on someone's word.
 
@@ -661,13 +663,13 @@ Each layer may pay more participants than the work and the publisher (relays and
 - **No loops.** An agreement is never a party of itself, directly or through others: terms making one so are refused, failing closed.
 - **Nesting is bounded at 8 layers**, a freeze parameter ("Open technical parameters").
 - **When an inner agreement ends, its stakes move by ordinary acts, and what is still owed stays visible** (new in draft 11, F254 as F262 and F263 read it). F254's "liquidated per the closing" is read so:
-  - **A collective is liquidated by ordinary sales and transfers before its closing** (F262): each stake sold or moved by a stake transfer (rule 10), or released (rule 55). The closing (type 20) still counts only once the collective holds nothing (rule 91). **An absentee's money share is an open obligation, named in the closing's field 4**, the field for money owed it leaves open, owed and visible until a valid claim appears: never lost, never taken ("Closing (type 20)"). No new field. *Batching those acts together is a client's or a cMIP's convenience, never a second way in the core.*
+  - **A collective is liquidated by ordinary sales and transfers before its closing** (F262): each stake sold or moved by a stake transfer (rule 10), or released (rule 55). The closing (type 20) still counts only once the collective holds nothing (rule 91). **An absentee's money share follows the collective's own rules** (new in draft 11, F265): its split plan, its absence clause, its terms, written before anyone left. What those rules could not deliver stays visible as an open obligation wherever they sent it, until a valid claim appears: never lost, never taken ("Closing (type 20)"). The closing needs no entry for it; its field 4 stays for money owed back. No new field. *Batching those acts together is a client's or a cMIP's convenience, never a second way in the core.*
   - **A deal ends, or winds down, by a clone every party signs** (F263; F107, rule 47), **stating its new conditions**: where its stakes went, what is still owed, as open obligations, and to whom its outer agreement now pays (its designated pointer, F248). What those conditions are depends on the deal. **A deal has no closing act.** A party who is absent is handled by the absence rules: in a deal, one identity judges absence (rules 85 to 89, B19).
   - Either way, the outer agreement keeps paying the one pointer the inner agreement's version in force designates, its own terms unchanged.
   *"I think B is cleaner, A is the act of batching these decisions which also works, but not always the cleanest option"; "closing the deal is simply creating a clone that states the new conditions. It really depends on the kind of agreement" (Nobody, allegedly).*
 - **A manifest neither claims its parts nor is reached by their claims** (rule 7).
 
-*To build:* naming by line, the loop refusal, the bound as a checked parameter, and an absentee's share in the closing's field 4. A deal's last clone needs nothing new: it is an ordinary clone of a deal.
+*To build:* naming by line, the loop refusal and the bound as a checked parameter. A deal's last clone needs nothing new: it is an ordinary clone of a deal.
 
 **Responsibility ends at the designated pointer, in every chain of agreements (new in draft 11, F256).** Any agreement paying another agreement pays the pointer that agreement designates, and its responsibility for that payment ends there, Money's receipt the proof: a publisher paying a work, an agency paying a production company paying its crew, a compilation paying its parts. What follows is the receiving agreement's alone. *"The idea of the network is to segment everything so that the point of failure or cheating is easily found" (Nobody, allegedly).*
 
@@ -2190,7 +2192,7 @@ Collectives only (F121). *"A fork forces a whole lot of decisions to be taken ag
 
 - **C. Actively abandoned,** where everyone agrees the collective has ended but its works still earn: a plain collective, nothing new. It keeps its rules, changes rails, renews offers and pays every holder until winding it down makes sense. *"Plain collective enough, it's only how it is used by stakeholders that changes."*
 
-- **D. Dissolution,** where the collective dies. Its works are sold (stake transfers, rule 10) or released to the public domain (rule 55), then it closes. **A closing act (type 20), signed under the constitutional change rule like the fork act, ends a collective that holds nothing and owes nothing.** After its line, the collective's keys count for nothing in Agreements (F124, N9). A collective cannot close while it owes anything (F125, D5): one that cannot pay stays open, abandoned, its debts visible, until each is paid or its creditor releases it (rule 92). **New in draft 11 (F262):** this is the whole of liquidation: ordinary sales, transfers and releases before the closing, the closing naming no stake. An absentee's money share is an open obligation the closing names in field 4, beside the money owed back that field may leave open (rule 93), and it does not keep the collective from closing ("Closing (type 20)"). Batching them is a client's or a cMIP's convenience, never a second way in the core.
+- **D. Dissolution,** where the collective dies. Its works are sold (stake transfers, rule 10) or released to the public domain (rule 55), then it closes. **A closing act (type 20), signed under the constitutional change rule like the fork act, ends a collective that holds nothing and owes nothing.** After its line, the collective's keys count for nothing in Agreements (F124, N9). A collective cannot close while it owes anything (F125, D5): one that cannot pay stays open, abandoned, its debts visible, until each is paid or its creditor releases it (rule 92). **New in draft 11 (F262):** this is the whole of liquidation: ordinary sales, transfers and releases before the closing, the closing naming no stake. **New in draft 11 (F265):** an absentee's money share follows the collective's own rules (its split plan, its absence clause, its terms); what they could not deliver stays visible as an open obligation wherever they sent it, and it does not keep the collective from closing. The closing names nothing for it; field 4 stays for money owed back (rule 93, "Closing (type 20)"). Batching them is a client's or a cMIP's convenience, never a second way in the core.
 
 *"A fork closes the original" holds for shape B only. "Then maybe it is best no group keeps the original hash": a lone holdout keeping the identity, its history and its pointers while everyone else leaves was the cost that closing the original removes. Leaving costs the vote and the right to act, never a stake unless it is sold.*
 
@@ -2832,7 +2834,7 @@ offer-payload = {
 }
 sold = [ 0, publication: hash ]       ; a publication (Envelopes type 0), by its act id
      / [ 2, [ cmip: hash, any ] ]     ; a proven offer: a delivery whose proof any verifier checks from data alone, under a
-                                      ;   cMIP and its parameters (widened from access to bytes, F261; a live stream: Q7)
+                                      ;   cMIP and its parameters (widened from access to bytes, F261; a stream's key alone, F264)
      / [ 3, vow: hash ]               ; a vow (Envelopes type 5), by its name, its genesis id (F237)
 ```
 
@@ -3507,7 +3509,7 @@ Of the complete endings, the one that counts is the one every other names or is 
 
 ### Closing (type 20)
 
-*In short: a closing ends a collective for good. Its members sign it as they would a fork. It can complete only once the collective holds nothing and owes nothing, with a few kinds of money owed left open as the rules allow: some money owed back, and an absentee's share.*
+*In short: a closing ends a collective for good. Its members sign it as they would a fork. It can complete only once the collective holds nothing and owes nothing, with some money owed back left open as the rules allow. An absentee's share is left where the collective's own rules sent it.*
 
 ```cddl
 closing-payload = {
@@ -3515,7 +3517,7 @@ closing-payload = {
   1 => hash,                ; the collective
   2 => hash,                ; its identity-chain act its latest acts are bound to
   3 => [* kept-tip],        ; the latest act of every sequence it keeps under that chain act: the closing's line
-  ? 4 => [+ left-open]      ; money owed it leaves open: owed back (rule 93; QG1, F191; F197), or an absentee's share (F262):
+  ? 4 => [+ left-open]      ; money owed back it leaves open (rule 93; QG1, F191; F197):
                             ;   ascending by payment, none twice
 }
 left-open = [ payment: hash, notice: hash / null, ? holder: hash ]
@@ -3532,7 +3534,7 @@ left-open = [ payment: hash, notice: hash / null, ? holder: hash ]
 - **it is done** (W5, F128): sealed to every member of that agreement, or public (client conformance: made public);
 - its signer and the members whose chain signatures on it count (F132) are members whose voice remains at the line, its signer among them, and **meet the constitutional change rule**, counted as rule 65 says;
 - **the collective holds nothing**: no stake of a latest version of an agreement a verifier holds names it as a holder, by its identity or as null in its own terms, other than in its own income, unless the work's release (rule 55) counted with the collective's consent placed before the line;
-- **the collective owes nothing** (F125, D5): every obligation that binds it and lies before its line, that is, in the history it cites (F127; one outside it is void, the tie rule), and every obligation it owes as a fork's successor (rule 91), is fulfilled in full by receipts a verifier holds, or ended by its creditor's release (Money type 4, rule 92). An obligation it owes as a successor is placed by the original's line, not its own (F126 reading 5). **An absentee's money share that field 4 names is left open, and does not block the closing** (new in draft 11, F262; below);
+- **the collective owes nothing** (F125, D5): every obligation that binds it and lies before its line, that is, in the history it cites (F127; one outside it is void, the tie rule), and every obligation it owes as a fork's successor (rule 91), is fulfilled in full by receipts a verifier holds, or ended by its creditor's release (Money type 4, rule 92). An obligation it owes as a successor is placed by the original's line, not its own (F126 reading 5). **An absentee's money share, left where the collective's own rules sent it, does not block the closing** (new in draft 11, F262, F265; below);
 - **no money is owed back from a broken stretch**, whatever the closing's line (rule 93; F189, 7), save what field 4 leaves open as the rules allow (below);
 - **the collective is not broken** (F189, 7).
 
@@ -3543,7 +3545,12 @@ left-open = [ payment: hash, notice: hash / null, ? holder: hash ]
 
 Every such payment it leaves open, it names. *A holder that outlives the closing and pays the payer when they turn up may be named beside such a payment (F197: a keeper or custodian role, for a cMIP to define; Nobody, allegedly's reference: the Swiss 2nd pillar, where benefits an employee names no destination for go to a holding institution that then seeks the employee). The core allows it and shows it, and requires neither the holder nor any one notice period.* *Stated cost (QG1): a collective may close while visibly owing an anonymous payer who could never have been paid; (F197) and while visibly owing a payer who gave no address and let the notice's deadline pass.*
 
-**An absentee's money share (new in draft 11, F262).** A collective is liquidated by ordinary sales and transfers before its closing (rule 15): its stakes sold or moved by stake transfers, or released, so that it holds nothing. The money share of someone it has nowhere to pay, an absentee, is an open obligation of the collective, **named in field 4**, owed and visible until a valid claim appears: never lost, never taken. It does not block the closing. No new field; the closing names no stake and moves none. *Batching the sales, transfers and closing together is a client's or a cMIP's convenience, never a second way in the core.* *Open (Q8 in `docs/agreements-draft-11.md`, second pass): field 4's entry names a payment owed back and the notice sent to its payer; how it names an absentee's share, and whom it is owed to, is not yet said.* *To build.*
+**An absentee's money share (new in draft 11, F262).** A collective is liquidated by ordinary sales and transfers before its closing (rule 15): its stakes sold or moved by stake transfers, or released, so that it holds nothing. The money share of someone it has nowhere to pay, an absentee, does not block the closing. **New in draft 11 (F265):** where that share goes, and how the absentee is reached or waited for, follows the collective's own rules: its split plan, its absence clause, its terms, written before anyone left. The core checks two things only:
+
+- the closing counts only when the collective holds nothing (above);
+- nothing owed vanishes silently: what the collective's rules could not deliver stays visible as an open obligation wherever those rules sent it (its split service, for instance, rule 24), until a valid claim appears: never lost, never taken.
+
+The closing needs no entry for it: field 4 stays for money owed back. No new field; the closing names no stake and moves none. *Batching the sales, transfers and closing together is a client's or a cMIP's convenience, never a second way in the core.* *"Is this core business? Or has core defined how the choice is made by participants?" (Nobody, allegedly, F265).*
 
 A refund past the terms the buyer accepted by paying is ended, and is not a debt that binds the collective: it never blocks a closing (F219).
 
@@ -3827,10 +3834,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 
 Every question and reading draft 10 lists as open ("Open in this draft", with draft 10's rule numbers) stays open as listed there: this rewrite answers none of them. Readings still to confirm that sit inside a rule are marked there.
 
-**New in draft 11.** Writing in F252 to F260 raised six questions (Q1 to Q6 in `docs/agreements-draft-11.md`); all six are answered and written in (F261, F259 revised, the readings of Q2 and Q3, F262, F263, and Q6). Writing the answers raised two more, each marked "Open" where it stands:
-
-- **Q7.** Whether access to a live stream is a proven offer, under the access form, or a promised one, naming a vow (rule 11, F261).
-- **Q8.** How the closing's field 4 names an absentee's money share, and whom it is owed to ("Closing (type 20)", F262).
+**New in draft 11.** Writing in F252 to F260 raised six questions (Q1 to Q6 in `docs/agreements-draft-11.md`); all six are answered and written in (F261, F259 revised, the readings of Q2 and Q3, F262, F263, and Q6). Writing the answers raised two more, Q7 and Q8, both answered and written in: F264 (rule 11, a live stream's class follows what is sold) and F265 ("Closing (type 20)", an absentee's share follows the collective's own rules).
 
 
 ## Old numbers to new
