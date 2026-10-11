@@ -321,4 +321,4 @@ Writing a text for plain reading is also a review. These were in draft 10, were 
 - Rust workspace: 606 passed, 0 failed, 1 ignored (the Lightning regtest, skipped unless `MOR_LN_REGTEST` is set).
 - TypeScript: 220 passed, 0 failed, in 12 packages: barebone 9, collective 41, connector 12, desk 12, genesis 17, longform 26, manage 7, reader 16, repo 18, site 42, jpeg 14, video 6.
 
-**The branch, after both commits** (`scripts/test-all.sh`, same options): running at the time of writing; its result is added below when it finishes.
+**The branch, after both commits** (`scripts/test-all.sh`, same options): **all tests passed**, the same counts as on main: Rust 606 passed, 0 failed, 1 ignored; TypeScript 220 passed, 0 failed. No code or test changed, so the code's tests pass unchanged: the check that no rule moved.
