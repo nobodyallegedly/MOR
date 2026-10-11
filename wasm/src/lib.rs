@@ -2167,10 +2167,21 @@ pub fn notice_payload(payment: &str, time_reference: &str, deadline: u64) -> R<V
 /// A contest payload (Agreements type 14; BQ4, F188): the declaration of absence
 /// it answers. Signed by the party the declaration names; the act carries,
 /// in `objects`, `[declaration, declaration]`. It voids nothing (rule 52).
-/// The same format contests a vow by its name (rule 32b, F237, F240).
 #[wasm_bindgen(js_name = contestPayload)]
 pub fn contest_payload(declaration: &str) -> R<Vec<u8>> {
-    Ok(cbor::encode(&Value::Map(agreements::Contest { act: unhex(declaration)? }.to_map())))
+    Ok(cbor::encode(&Value::Map(agreements::Contest::of_declaration(unhex(declaration)?).to_map())))
+}
+
+/// A vow's contest payload (Agreements type 14; Agreements draft 11, rule
+/// 13, F253): the sale it contests (the buyer's own payer's claim of the
+/// payment, or its signature act on an offer at no price), and, optionally,
+/// the promise not kept, in words (reading (Q3)). Signed by the buyer; the
+/// act carries, in `objects`, `[vow, vow]`, the vow by its name. It marks
+/// that sale contested, and voids nothing.
+#[wasm_bindgen(js_name = vowContestPayload)]
+pub fn vow_contest_payload(vow: &str, sale: &str, promise: Option<String>) -> R<Vec<u8>> {
+    let promise = promise.map(agreements::Promise::Words);
+    Ok(cbor::encode(&Value::Map(agreements::Contest::of_sale(unhex(vow)?, unhex(sale)?, promise).to_map())))
 }
 
 /// An abandonment declaration payload (Agreements type 13, B12): the agreement,

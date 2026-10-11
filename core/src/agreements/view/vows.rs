@@ -6,7 +6,8 @@
 //! **contested**. Confirmed: the buyer acknowledged an act about the vow,
 //! in the buyer's own claim for the payment (F193's shape: only the payer
 //! the payment commits to). Contested: the buyer signed a contest naming
-//! the vow. Otherwise pending. Only someone who signed onto the vow, by a
+//! that sale (Agreements draft 11, rule 13, F253; draft 10's V-R9 named the
+//! vow and marked every sale of the buyer). Otherwise pending. Only someone who signed onto the vow, by a
 //! payment of their own or by signing a free offer, may confirm or contest
 //! it (F240); a vow nobody signed onto carries no state. What the vow
 //! promises, how it is delivered and what it becomes are the cMIPs'.
@@ -26,8 +27,9 @@ pub enum SaleState {
     Pending,
     /// The buyer acknowledged an act about the vow: the acknowledging acts.
     Confirmed { by: Vec<Hash> },
-    /// The buyer contested the vow: the contests. A contest prevails over a
-    /// confirmation, and voids nothing (mechanic, the build's).
+    /// The buyer contested this sale: the contests (draft 11, rule 13,
+    /// F253). A contest prevails over a confirmation, and voids nothing
+    /// (mechanic, the build's).
     Contested { by: Vec<Hash> },
 }
 
@@ -44,6 +46,14 @@ pub struct VowSale {
     /// signer of the signature act.
     pub buyer: Hash,
     pub state: SaleState,
+    /// Evidence beside the state (Agreements draft 11, rule 13, F261, F264):
+    /// valid acts naming the sale (its act, `act`) in their `refs`, such as
+    /// the seller's delivery of a key in keeping the vow, ascending. Shown,
+    /// and never moving the state: the sale's state is still the buyer's
+    /// confirmation or contest alone. What a proof is, and how it is
+    /// checked, is the cMIP's (F237). *Mechanic, the build's:* evidence
+    /// names the sale in `refs`.
+    pub evidence: Vec<Hash>,
 }
 
 /// A vow, read (F237).
@@ -182,8 +192,9 @@ impl<'a> AgreementsView<'a> {
                 seen_payments.push(payment);
                 match self.committed_buyer(&proof) {
                     Some((claim, buyer)) => {
-                        let state = self.sale_state(name, &buyer, Some(&proof));
-                        sales.push(VowSale { act: claim, offer: *o, buyer, state });
+                        let state = self.sale_state(name, &buyer, &claim, Some(&proof));
+                        let evidence = self.evidence_of(&claim);
+                        sales.push(VowSale { act: claim, offer: *o, buyer, state, evidence });
                     }
                     None => unsigned.push(x.id),
                 }
@@ -209,8 +220,9 @@ impl<'a> AgreementsView<'a> {
                     if own.contains(&buyer) || decode_signature(&s.inside).ok() != Some(*o) || sales.iter().any(|x| x.offer == *o && x.buyer == buyer) {
                         continue;
                     }
-                    let state = self.sale_state(name, &buyer, None);
-                    sales.push(VowSale { act: s.id, offer: *o, buyer, state });
+                    let state = self.sale_state(name, &buyer, &s.id, None);
+                    let evidence = self.evidence_of(&s.id);
+                    sales.push(VowSale { act: s.id, offer: *o, buyer, state, evidence });
                 }
             }
         }
@@ -243,10 +255,19 @@ impl<'a> AgreementsView<'a> {
 
     /// Whether `x` is about the vow `name`: one of its versions, or a valid
     /// act naming it by its name, in `objects` or `refs` (mechanic, the
-    /// build's).
+    /// build's), **except another vow naming it in `refs`**: a vow's
+    /// reference to another vow is not an act about it, and moves none of
+    /// its sales' states (Agreements draft 11, rule 13, reading (Q2)).
     fn about_vow(&self, name: &Hash, x: &Hash) -> bool {
-        if self.vow_act(x).is_some_and(|(_, v)| x == name || v.follows.is_some_and(|(f, _)| &f == name)) {
-            return true;
+        if let Some((_, v)) = self.vow_act(x) {
+            if x == name || v.follows.is_some_and(|(f, _)| &f == name) {
+                return true;
+            }
+            // Reading (Q2): a vow is about another only as its version.
+            let Some(h) = self.v.get(x) else { return false };
+            return self.valid(x)
+                && h.inside.objects.iter().flatten().any(|o| &o.chain == name || &o.predecessor == name)
+                && !h.inside.refs.iter().flatten().any(|r| matches!(r, crate::act::Ref::Act(a) if a == name));
         }
         let Some(h) = self.v.get(x) else { return false };
         self.valid(x)
@@ -254,18 +275,62 @@ impl<'a> AgreementsView<'a> {
                 || h.inside.refs.iter().flatten().any(|r| matches!(r, crate::act::Ref::Act(a) if a == name)))
     }
 
-    /// A sale's state (F237, F240). Contested: a valid contest (type 14)
-    /// the buyer signed naming the vow. Confirmed: for a payment, a payer's
-    /// claim of that payment, as F193 reads the payer, acknowledging an act
-    /// about the vow; for a free sale, any valid act of the buyer's
-    /// acknowledging one (mechanic, the build's). An acknowledgement counts
-    /// only alongside the act it names (Envelopes rule 4).
-    fn sale_state(&self, name: &Hash, buyer: &Hash, proof: Option<&[u8]>) -> SaleState {
+    /// The evidence held beside the sale `sale` (draft 11, rule 13, F261,
+    /// F264): valid acts naming it in their `refs`, ascending.
+    fn evidence_of(&self, sale: &Hash) -> Vec<Hash> {
+        let mut out: Vec<Hash> = self
+            .v
+            .held_acts()
+            .filter(|h| h.id != *sale && self.valid(&h.id) && h.inside.refs.iter().flatten().any(|r| matches!(r, crate::act::Ref::Act(a) if a == sale)))
+            .map(|h| h.id)
+            .collect();
+        out.sort();
+        out
+    }
+
+    /// The acts that are the sale `sale` (draft 11, rule 13, F253): for a
+    /// payment, every payer's claim of it, with the rail's answer, valid,
+    /// whose payer is the buyer (F193's shape), any of which a contest may
+    /// name (mechanic, the build's: one payment, one sale, whichever of the
+    /// buyer's own claims of it is named); for a free sale, the buyer's
+    /// signature act on the offer.
+    fn sale_acts(&self, buyer: &Hash, sale: &Hash, proof: Option<&[u8]>) -> Vec<Hash> {
         use crate::money::{Payer, Payload as Fin};
+        match proof {
+            Some(proof) => self
+                .payers_claims(proof)
+                .into_iter()
+                .filter(|id| {
+                    let Some(h) = self.v.get(id) else { return false };
+                    let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
+                    !self.rail_invalid.contains(id) && !self.unbound_rails.contains(&c.rail) && h.act.outside.signer.is_some_and(|s| c.payer(&s) == Payer::Identity(*buyer))
+                })
+                .collect(),
+            None => vec![*sale],
+        }
+    }
+
+    /// A sale's state (F237, F240; draft 11, rule 13, F253). Contested: a
+    /// valid contest (type 14) the buyer signed naming **this sale** (field
+    /// 0) and the vow (`[[vow, vow]]`), whatever promise its field 1 names,
+    /// if any (reading (Q3)). Confirmed: for a payment, a payer's claim of
+    /// that payment, as F193 reads the payer, acknowledging an act about
+    /// the vow (the claim is the sale, so it names it); for a free sale, a
+    /// valid act of the buyer's acknowledging both an act about the vow and
+    /// the buyer's own signature act on the offer, the sale (draft 11, rule
+    /// 13: "a confirmation likewise names the sale"; its reading, to
+    /// confirm). An acknowledgement counts only alongside the act it names
+    /// (Envelopes rule 4).
+    fn sale_state(&self, name: &Hash, buyer: &Hash, sale: &Hash, proof: Option<&[u8]>) -> SaleState {
+        let acts = self.sale_acts(buyer, sale, proof);
         let mut contests: Vec<Hash> = self
             .v
             .signed_by(buyer)
-            .filter(|h| self.is_agreements(h, types::CONTEST) && self.valid(&h.id) && Contest::decode(&h.inside).is_ok_and(|c| &c.act == name))
+            .filter(|h| {
+                self.is_agreements(h, types::CONTEST)
+                    && self.valid(&h.id)
+                    && Contest::decode(&h.inside).is_ok_and(|c| c.vow.as_ref() == Some(name) && acts.contains(&c.act))
+            })
             .map(|h| h.id)
             .collect();
         if !contests.is_empty() {
@@ -274,19 +339,13 @@ impl<'a> AgreementsView<'a> {
         }
         let acks_vow = |h: &Held| h.inside.acks.iter().flatten().any(|a| self.about_vow(name, a));
         let mut by: Vec<Hash> = match proof {
-            Some(proof) => self
-                .payers_claims(proof)
-                .into_iter()
-                .filter(|id| {
-                    let Some(h) = self.v.get(id) else { return false };
-                    let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
-                    !self.rail_invalid.contains(id)
-                        && !self.unbound_rails.contains(&c.rail)
-                        && h.act.outside.signer.is_some_and(|s| c.payer(&s) == Payer::Identity(*buyer))
-                        && acks_vow(h)
-                })
+            Some(_) => acts.into_iter().filter(|id| self.v.get(id).is_some_and(acks_vow)).collect(),
+            None => self
+                .v
+                .signed_by(buyer)
+                .filter(|h| self.valid(&h.id) && acks_vow(h) && h.inside.acks.iter().flatten().any(|a| a == sale))
+                .map(|h| h.id)
                 .collect(),
-            None => self.v.signed_by(buyer).filter(|h| self.valid(&h.id) && acks_vow(h)).map(|h| h.id).collect(),
         };
         if by.is_empty() {
             return SaleState::Pending;

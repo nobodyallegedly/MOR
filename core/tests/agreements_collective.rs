@@ -4472,6 +4472,82 @@ fn a_split_service_is_held_to_account() {
     assert_eq!(account.unpaid.len(), 2);
 }
 
+/// Agreements draft 11, rule 15, rule 91 and "Closing (type 20)" (new in
+/// draft 11, F262, F265): the core checks nothing new. An absentee's money
+/// share follows the collective's own rules: here its split plan pays the
+/// absentee through its split service, which keeps what it cannot deliver
+/// as its open obligation (rule 24). The absentee never takes their payout.
+/// The closing names nothing for it (field 4 stays for money owed back),
+/// and still counts: the collective holds nothing and owes nothing of its
+/// own. The share stays visible, owed by the service: nothing vanishes
+/// silently.
+#[test]
+fn f262_f265_an_absentees_share_follows_the_collectives_rules_and_the_closing_counts() {
+    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let absentee = spec("an absent holder");
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 300_000), (absentee, 200_000)])]);
+    });
+    let ids = lab.ids();
+    let label = lab.c[0].id;
+    let unit = spec("a unit");
+    let mut svc = lab.w.genesis("a split service", vec![own_home()], None, None);
+    let g = lab.grant(&Grant { area: Some(2), kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]), ..plain_grant(svc.id, false) });
+    lab.sign(BEN, &g);
+    sign(&mut lab.w, &mut svc, &g);
+    let t = lab.clone_terms(&lab.founding.clone(), vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| t.split_grant = Some(g));
+    let k = lab.propose(ANA, &t);
+    let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k)).collect();
+    let rec = lab.record(0, Some((k, sigs)), &[], vec![], k);
+    let mut st = lab.strand(g, &key_of(svc.id));
+    st.cite = Some((label, vec![g, rec]));
+    // A sale, receipted by the service in the label's name, and split by
+    // the plan: the absentee's 20% among it.
+    let r = Fin::Receipt(Receipt {
+        rail: spec("a rail Module"),
+        proof: b"the last sale".to_vec(),
+        payer: Some(Payer::Identity(spec("a fan"))),
+        payee: label,
+        amount: Amount { unit, value: 1000 },
+        fulfils: k,
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: Some(Purchase { agreement: k, line: k }),
+    });
+    let a = lab.w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+    let incoming = lab.w.add(&a);
+    let stake = lab.view().terms(&k).unwrap().own_stake().unwrap().0 as u64;
+    let pay = |who: Hash, amount: u64| agreements::Payout { receiver: who, amount, stake: Some(stake), ..Default::default() };
+    let sp = agreements::Split { receipt: incoming, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(absentee, 200)], cmip: spec("a split cMIP"), agreement: k, ..Default::default() };
+    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, sp.to_map(), None, ids.clone());
+    // Ana and Ben take theirs; the absentee never does.
+    for i in [ANA, BEN] {
+        let mut who = lab.m[i].clone();
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: vec![], payer: Some(Payer::Identity(svc.id)), payee: who.id, amount: Amount { unit, value: if i == ANA { 500 } else { 300 } }, fulfils: x, previous: None, forward: None, batch: None, purchase: None });
+        let a = lab.w.everyday_act(&mut who, mips().money, 2, r.to_map(), None, None);
+        lab.w.add(&a);
+        lab.m[i] = who;
+    }
+    let account = lab.view().service_account(&svc.id).unwrap();
+    assert_eq!(account.unpaid.iter().map(|u| (u.receiver, u.amount, u.received)).collect::<Vec<_>>(), vec![(absentee, 200, 0)], "the absentee's share: the service's open obligation (rule 24)");
+    // The closing names nothing for it, and counts.
+    let cur = lab.view().current(&label).unwrap().unwrap().agreement;
+    let c = agreements::Closing { agreement: cur, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
+    let eo = ending_obj(&lab, cur, label);
+    let closing = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::CLOSING, c.to_map(), eo);
+    lab.end(ANA, &closing);
+    lab.end(BEN, &closing);
+    lab.end(CY, &closing);
+    let e = lab.view().closing(&closing).unwrap();
+    assert!(e.complete && e.holds.is_empty() && e.open_debts.is_empty(), "{:?}", e.why);
+    assert!(e.closing.open.is_empty(), "field 4 stays for money owed back");
+    // Nothing vanished silently: still owed, still shown.
+    let account = lab.view().service_account(&svc.id).unwrap();
+    assert_eq!(account.unpaid.iter().map(|u| (u.receiver, u.amount)).collect::<Vec<_>>(), vec![(absentee, 200)]);
+}
+
 /// Freeze suite v21, 3.7r (F121, F123, F124 P2): the pointer check, now
 /// reaching the vault. The label's pointer counts for Agreements only if every
 /// address in it is in the split service's own signed pointer in force, and
@@ -6729,6 +6805,85 @@ fn a_deals_backups_are_the_split_cmips_fields() {
     assert!(matches!(c.check(&mips()), Err(agreements::AgreementsError::Check(w)) if w.contains("collective")), "a collective's is one grant");
 }
 
+/// Agreements draft 11, rules 15, 17 and 18 (new in draft 11, F260): every
+/// payer tries the services in order, a direct buyer too. A fan pays Ana
+/// directly; T, the backup (field 29), receipts in Ana's name with the
+/// grant it already holds, and splits it. Unless the attempt at S, field
+/// 14's, is stated failed for that payment, T's split breaks the plan, and
+/// Ana's cut check says so; once it is, T is the receiver in order, the
+/// split stands, and the check follows it to Ana's payout.
+#[test]
+fn f260_a_direct_buyer_tries_the_services_in_order() {
+    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut s = w.genesis("service S", vec![own_home()], None, None);
+    let mut t = w.genesis("service T", vec![own_home()], None, None);
+    let (aid, bid, sid, tid) = (ana.id, ben.id, s.id, t.id);
+    let mk = |w: &mut World, payee: &mut Person, svc: &mut Person, tag: &str| {
+        let (k, p) = grant_key(&format!("{:?} {tag}, F260", svc.id));
+        let g = Grant { grantee: svc.id, scope: 1, this_agreement: true, key: p, ..plain_grant(svc.id, false) };
+        let g = agreements_act(w, payee, agreements::types::GRANT, g.to_map(), None);
+        sign(w, svc, &g);
+        (g, k)
+    };
+    let (as_, _) = mk(&mut w, &mut ana, &mut s, "ana");
+    let (bs, _) = mk(&mut w, &mut ben, &mut s, "ben");
+    let (at, kat) = mk(&mut w, &mut ana, &mut t, "ana");
+    let (bt, _) = mk(&mut w, &mut ben, &mut t, "ben");
+    let work = spec("a song, F260");
+    let mut d = deal_terms(aid, bid);
+    d.payee_grants = Some(vec![as_, bs]);
+    d.cmips.push((8, spec("a split cMIP")));
+    d.cmips.sort();
+    d.backups = Some(agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(vec![at, bt])], failure: None });
+    d.stakes = Some(vec![agreements::Stake { object: Who::Id(work), holders: vec![(Who::Id(aid), 500_000), (Who::Id(bid), 500_000)] }]);
+    let deal = agreements_act(&mut w, &mut ana, agreements::types::TERMS, d.to_map(), None);
+    sign(&mut w, &mut ana, &deal);
+    sign(&mut w, &mut ben, &deal);
+    // T, with Ana's grant key, receipts the fan's payment in Ana's name.
+    let mut st = ana.clone();
+    st.binding = at;
+    st.sign = kat;
+    st.seq = vec![];
+    st.cite = Some((aid, vec![at]));
+    let r = Fin::Receipt(Receipt {
+        rail: spec("a rail Module"),
+        proof: b"a fan pays Ana directly".to_vec(),
+        payer: Some(Payer::Identity(spec("a fan"))),
+        payee: aid,
+        amount: Amount { unit: spec("a unit"), value: 10 },
+        fulfils: deal,
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: Some(Purchase { agreement: deal, line: deal }),
+    });
+    let a = w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+    let receipt = w.add(&a);
+    assert!(matches!(view(&w).backing(&receipt).unwrap(), Backing::Backed { .. }), "a backup receipts in the owners' name with the grants it holds");
+    // T splits it, 5 and 5.
+    let pay = |who: Hash| agreements::Payout { receiver: who, amount: 5, stake: Some(0), ..Default::default() };
+    let sp = agreements::Split { receipt, payouts: vec![pay(aid), pay(bid)], cmip: spec("a split cMIP"), agreement: deal, tally: Some(vec![(0, vec![(aid, 0), (bid, 0)])]), number: Some(1), ..Default::default() };
+    let x = w.private_act(&mut t, mips().agreements, agreements::types::SPLIT, sp.to_map(), None, sorted(vec![aid, bid]));
+    let order = |v: &AgreementsView| v.split(&x).unwrap().problems.iter().any(|p| p.contains("F260"));
+    let v = view(&w);
+    assert_eq!(v.direct_receiver(&deal, &receipt), Some(sid), "S first: no attempt stated failed");
+    assert!(order(&v), "T took it out of order: its split breaks the plan");
+    let check = v.cut_check(&receipt, &aid).unwrap();
+    assert!(check.stops.iter().any(|w| w.contains("breaks its plan")), "{:?}", check.stops);
+    // The attempt at S failed for this payment, as the split cMIP answers.
+    let mut v = view(&w);
+    v.attempts_failed.insert((receipt, sid));
+    assert_eq!(v.direct_receiver(&deal, &receipt), Some(tid));
+    let e = v.split(&x).unwrap();
+    assert!(e.problems.is_empty() && e.mismatched.is_empty(), "{:?} {:?}", e.problems, e.mismatched);
+    let check = v.cut_check(&receipt, &aid).unwrap();
+    assert_eq!(check.due, 5, "the participant's check follows a direct buyer's payment to its payout");
+    assert!(!check.stops.iter().any(|w| w.contains("breaks its plan")), "{:?}", check.stops);
+}
+
 /// Freeze suite v21, 3.9u (F130, H6, readings 1 to 3; F250): a deal's backup
 /// service. Ana and Ben grant S (field 14) and, should an attempt at S
 /// fail, T (the split cMIP's backup, field 29), each with its own grant
@@ -8612,7 +8767,7 @@ fn bq4_a_contest_names_the_declaration_and_is_signed_by_the_party_named() {
     let ids = lab.ids();
     let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
     lab.record(0, None, &[], vec![d], f);
-    let c = agreements::Contest { act: d };
+    let c = agreements::Contest::of_declaration(d);
     let mut cy = lab.m[CY].clone();
     let x = agreements_act(&mut lab.w, &mut cy, agreements::types::CONTEST, c.to_map(), obj(d));
     // Someone else's "contest" of it shows nothing.
@@ -10207,6 +10362,41 @@ fn qg2_money_owed_back_follows_the_debt_rule() {
     assert!(lab.view().owed_back(&label).unwrap().is_empty(), "repaid where the payer's own claim said");
 }
 
+/// Freeze suite v21, 7w, "The debt rule" (QG2), with Agreements draft 11,
+/// rule 11 (new in draft 11, F255): a refund paid to the refund rail the
+/// payer's own claim names counts only up to the payer's vault limit for
+/// its unit; above it, only once it reaches the payer's vault. A payer
+/// whose vault lets 5 units to the flow is owed 7: the 7 paid to the
+/// refund rail repays nothing; paid to the vault, it repays. With a limit
+/// of 10, the refund rail repays it, as before F255.
+#[test]
+fn f255_the_vault_limit_protects_a_refund_to_the_refund_rail() {
+    use mor_core::money::{vault_declaration, PaidAt, VaultEntry};
+    let unit = spec("a unit");
+    for (limit, rail_repays) in [(5u64, false), (10, true)] {
+        let with_vault = |lab: &mut Lab| {
+            let v = VaultEntry { unit: spec("a unit"), rail_module: spec("a rail Module"), source: b"the patron's vault".to_vec(), limit };
+            let p = lab.w.genesis_with("a patron with a vault", vec![own_home()], None, None, Some(vec![vault_declaration(&mips().money, &[v])]), 3);
+            (Some(mor_core::money::Payer::Identity(p.id)), Some(p))
+        };
+        let (mut lab, label, owed, k1, _, patron) = owed_back_lab_with(with_vault, b"gift");
+        let mut patron = patron.unwrap();
+        let pid = patron.id;
+        let own = payers_claim_on(&mut lab, &mut patron, label, b"gift", k1, Some(b"the patron's refund address"), None);
+        let mut payer = lab.c[0].clone();
+        let to_rail = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"back to the refund rail");
+        lab.rail_valid.push((to_rail, PaidAt::Flow(own)));
+        lab.c[0] = payer.clone();
+        assert_eq!(lab.view().owed_back(&label).unwrap().is_empty(), rail_repays, "limit {limit}: the refund rail repays 7 only within the vault's limit (F255)");
+        if !rail_repays {
+            let to_vault = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"back to the vault");
+            lab.rail_valid.push((to_vault, PaidAt::VaultEntry(pid, 0)));
+            lab.c[0] = payer;
+            assert!(lab.view().owed_back(&label).unwrap().is_empty(), "above the limit, repaid once it reaches the vault");
+        }
+    }
+}
+
 /// QG2, the second branch: the payer's own act on the payment holds an
 /// earlier pointer; a repayment to a newer one counts for nothing, as for
 /// a debt (Money rule 14: the selected wallet or an older one, never a
@@ -11284,6 +11474,158 @@ fn f216_a_publication_carries_two_agreements() {
     let mut want = vec![(label.id, 150), (ana.id, 510), (ben.id, 340)];
     want.sort();
     assert_eq!(paid, want);
+}
+
+// ---------------------------------------------------------------------------
+// Agreements draft 11, rule 15 (new in draft 11, F254): any agreement may
+// be a party of another, named by its line, consenting by its own rule; no
+// loops; nesting bounded at 8 (`docs/agreements-draft-11-build.md`).
+// ---------------------------------------------------------------------------
+
+/// A deal's terms between `parties`, with the stake `object` split among
+/// `holders`.
+fn deal_of(parties: &[Hash], text: &str) -> Terms {
+    let mut t = deal_terms(parties[0], parties[1]);
+    t.parties = parties.to_vec();
+    t.text = text.into();
+    t
+}
+
+/// Propose `t` by the first of `signers`, and have each sign it.
+fn deal_signed_by(w: &mut World, t: &Terms, signers: &mut [&mut Person], parent: Option<Hash>) -> Hash {
+    let x = agreements_act(w, signers[0], agreements::types::TERMS, t.to_map(), parent.map(|p| obj(p)).unwrap_or(None));
+    for p in signers.iter_mut() {
+        sign(w, p, &x);
+    }
+    x
+}
+
+/// A clone of the deal `parent` (terms `pt`), changed by `f`, its mark the
+/// clone rule and the parent's parties.
+fn deal_clone(pt: &Terms, parent: Hash, f: &dyn Fn(&mut Terms)) -> Terms {
+    let mut c = pt.clone();
+    c.parent = Some(parent);
+    f(&mut c);
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(pt.parties.clone()) }]);
+    c
+}
+
+/// Draft 11, rule 15 (F254, part 3): an agreement is named as a party by
+/// its line, its founding version. A publication's agreement naming the
+/// work's agreement by a later version is refused; named by its line, it
+/// counts. What the line signed it carries through every later version:
+/// once Ana and Ben signed the publication's agreement for the work's
+/// agreement, a re-version replacing Ben with Cy does not undo it.
+#[test]
+fn draft_11_f254_an_agreement_is_named_by_its_line_and_carries_what_it_signed() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut cy = w.genesis("cy", vec![own_home()], None, None);
+    let mut label = w.genesis("a publisher", vec![own_home()], None, None);
+    let wt = deal_of(&[ana.id, ben.id], "The work's agreement.");
+    let we = deal_signed_by(&mut w, &wt, &mut [&mut ana, &mut ben], None);
+    // A later version of it: the text changes.
+    let w2t = deal_clone(&wt, we, &|t| t.text = "The work's agreement, amended.".into());
+    let we2 = deal_signed_by(&mut w, &w2t, &mut [&mut ana, &mut ben], Some(we));
+    assert_eq!(view(&w).version_in_force(&we).unwrap(), we2);
+    // Named by the later version: refused, failing closed.
+    let bad = deal_signed_by(&mut w, &deal_of(&[we2, label.id], "Named by a version."), &mut [&mut label, &mut ana, &mut ben], None);
+    let a = view(&w).agreement(&bad).unwrap();
+    assert!(a.invalid.as_deref().is_some_and(|x| x.contains("by its line")), "{:?}", a.invalid);
+    assert_eq!(a.exists, Some(false));
+    // Named by its line: Ana and Ben sign, the line consents.
+    let pt = deal_of(&[we, label.id], "The publication's agreement.");
+    let pe = deal_signed_by(&mut w, &pt, &mut [&mut label, &mut ana, &mut ben], None);
+    assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true));
+    // The work's agreement re-versions: Ben out, Cy in. What the line
+    // signed stays signed.
+    let w3t = deal_clone(&w2t, we2, &|t| t.parties = vec![t.parties[0], cy.id]);
+    let we3 = deal_signed_by(&mut w, &w3t, &mut [&mut ana, &mut ben, &mut cy], Some(we2));
+    assert_eq!(view(&w).version_in_force(&we).unwrap(), we3);
+    assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true), "carried through every later version (F254)");
+    // A new act the line signs under its version in force: Ana and Cy.
+    let nt = deal_of(&[we, label.id], "A second publication.");
+    let ne = deal_signed_by(&mut w, &nt, &mut [&mut label, &mut ana], None);
+    assert_eq!(view(&w).agreement(&ne).unwrap().exists, Some(false), "Cy has not signed");
+    sign(&mut w, &mut cy, &ne);
+    assert_eq!(view(&w).agreement(&ne).unwrap().exists, Some(true));
+}
+
+/// Draft 11, rule 15 (F254, part 4): an agreement is never a party of
+/// itself, directly or through others; terms making one so are refused,
+/// failing closed. The founding version that was named first is never the
+/// one refused: whatever names its line was made after it.
+#[test]
+fn draft_11_f254_no_loops() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut cy = w.genesis("cy", vec![own_home()], None, None);
+    let at = deal_of(&[ana.id, ben.id], "Deal A.");
+    let a = deal_signed_by(&mut w, &at, &mut [&mut ana, &mut ben], None);
+    // Directly: a version of A naming its own line.
+    let selft = deal_clone(&at, a, &|t| t.parties.push(a));
+    let own = deal_signed_by(&mut w, &selft, &mut [&mut ana, &mut ben], Some(a));
+    let e = view(&w).agreement(&own).unwrap();
+    assert!(e.invalid.as_deref().is_some_and(|x| x.contains("party of itself")), "{:?}", e.invalid);
+    assert_eq!(e.exists, Some(false));
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a, "refused: A stays in force");
+    // Through another: B has A as a party; a version of A naming B.
+    let bt = deal_of(&[a, cy.id], "Deal B.");
+    let b = deal_signed_by(&mut w, &bt, &mut [&mut cy, &mut ana, &mut ben], None);
+    let eb = view(&w).agreement(&b).unwrap();
+    assert_eq!(eb.exists, Some(true), "B's founding version names A: no loop ({:?})", eb.invalid);
+    let loopt = deal_clone(&at, a, &|t| t.parties.push(b));
+    let looped = deal_signed_by(&mut w, &loopt, &mut [&mut ana, &mut ben, &mut cy], Some(a));
+    let e = view(&w).agreement(&looped).unwrap();
+    assert!(e.invalid.as_deref().is_some_and(|x| x.contains("loop")), "{:?}", e.invalid);
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a);
+    assert_eq!(view(&w).agreement(&b).unwrap().exists, Some(true), "B, named first, stands");
+}
+
+/// Draft 11, rule 15 and "Open technical parameters" (F254, part 4):
+/// nesting is bounded at 8 layers, one constant. An agreement with eight
+/// layers of agreements below it stands; a ninth is refused, failing
+/// closed, and gives no consent.
+#[test]
+fn draft_11_f254_nesting_is_bounded_at_8() {
+    assert_eq!(agreements::NESTING_BOUND, 8, "a freeze parameter");
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut inner = deal_signed_by(&mut w, &deal_of(&[ana.id, ben.id], "Layer 0."), &mut [&mut ana, &mut ben], None);
+    let mut layers = vec![inner];
+    for i in 1..=9 {
+        // Each layer: the one below and Ben, Ana signing for every layer
+        // below (each is Ana and Ben, all the way down).
+        let t = deal_of(&[inner, ben.id], &format!("Layer {i}."));
+        inner = deal_signed_by(&mut w, &t, &mut [&mut ana, &mut ben], None);
+        layers.push(inner);
+    }
+    let at = |i: usize| view(&w).agreement(&layers[i]).unwrap();
+    assert_eq!((at(8).invalid, at(8).exists), (None, Some(true)), "eight layers of agreements below it");
+    let e = at(9);
+    assert!(e.invalid.as_deref().is_some_and(|x| x.contains("nesting bound")), "{:?}", e.invalid);
+    assert_eq!(e.exists, Some(false));
+}
+
+/// Draft 11, rule 7 (F254): a manifest neither claims its parts nor is
+/// reached by their claims. The album's claim binds the album's hash; a
+/// song's claim binds the song. Neither owner is shown owning the other.
+#[test]
+fn draft_11_f254_a_manifest_neither_claims_its_parts_nor_is_reached_by_them() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut label = w.genesis("a label", vec![own_home()], None, None);
+    let song = spec("a song");
+    let album = spec("an album naming the song");
+    let (aid, lid) = (ana.id, label.id);
+    let sc = agreements_act(&mut w, &mut ana, agreements::types::WORK_CLAIM, agreements::WorkClaim { work: song, creators: vec![aid], commitment: None }.to_map(), None);
+    let ac = agreements_act(&mut w, &mut label, agreements::types::WORK_CLAIM, agreements::WorkClaim { work: album, creators: vec![lid], commitment: None }.to_map(), None);
+    let (s, a) = (view(&w).work_owners(&song).unwrap(), view(&w).work_owners(&album).unwrap());
+    assert_eq!((s.claims, s.default_holder, s.contested), (vec![sc], Some(ana.id), false));
+    assert_eq!((a.claims, a.default_holder, a.contested), (vec![ac], Some(label.id), false));
 }
 
 /// Fable's readings of OF24 (a) with review 2.6, and OF23 (a): a request

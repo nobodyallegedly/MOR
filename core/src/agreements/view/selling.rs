@@ -63,6 +63,47 @@ impl<'a> AgreementsView<'a> {
         Ok(Some(gs.iter().filter_map(|g| self.v.get(g)).filter(|g| self.is_agreements(g, types::GRANT)).filter_map(|g| g.act.outside.signer).collect()))
     }
 
+    /// The verdict on a proof of delivery under a proven offer (Agreements
+    /// draft 11, rule 11, new in draft 11, F261): the offer `offer` held,
+    /// selling at least one item in the access form, `[2, [cmip,
+    /// params]]`; the checker this verifier holds for that cMIP, among
+    /// `checkers` (by cMIP, borrowed for this call: a checker may read a
+    /// clock or the cMIP's own acts), judges `proof`. Where the offer sells several
+    /// such items, the first whose checker says proven decides (mechanic,
+    /// the build's). With no checker held for any of them, the verdict is
+    /// unknown: the delivery is not proven for this verifier ("A delivery
+    /// the verifier cannot check from data it holds is not proven,
+    /// whatever the cMIP signs"). An offer selling no item in the access
+    /// form is not a proven offer: an error.
+    pub fn proven_delivery(&self, offer: &Hash, proof: &[u8], checkers: &[(Hash, &dyn crate::agreements::ProofChecker)]) -> R<crate::agreements::ProofVerdict> {
+        use crate::agreements::{OfferClass, ProofVerdict};
+        let (_, o) = self.offer_act(offer).ok_or(AgreementsError::Check("not a standing offer held"))?;
+        let items: Vec<(Hash, Vec<u8>)> = o
+            .offer
+            .sold
+            .iter()
+            .filter_map(|x| match x.class() {
+                OfferClass::Proven { cmip, params } => Some((cmip, params)),
+                _ => None,
+            })
+            .collect();
+        if items.is_empty() {
+            return Err(AgreementsError::Check("not a proven offer: it sells nothing in the access form (rule 11, F261)"));
+        }
+        let mut last = None;
+        for (cmip, params) in &items {
+            let verdict = match checkers.iter().find(|(c, _)| c == cmip) {
+                Some((_, c)) => c.check(offer, params, proof),
+                None => ProofVerdict::Unknown("this verifier holds no checker for the offer's cMIP: not proven here (rule 11, F261)".into()),
+            };
+            if verdict == ProofVerdict::Proven {
+                return Ok(verdict);
+            }
+            last = Some(verdict);
+        }
+        Ok(last.expect("at least one item"))
+    }
+
     /// A standing offer, judged (rule 32; step 12b). Checks, each from a
     /// decision: valid under Identity; public (F215: an offer is always
     /// public); under co-owners' agreement (field 0), in a deal signed by

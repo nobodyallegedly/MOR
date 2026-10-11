@@ -2372,41 +2372,118 @@ impl Resignation {
     }
 }
 
+// ---------------------------------------------------------------- the nesting bound
+
+/// The nesting bound (Agreements draft 11, rule 15 and "Open technical
+/// parameters", F254, part 4): an agreement may sit at most this many
+/// layers deep among agreements that are parties of agreements, counting
+/// the agreements below the one consenting or paying: its own
+/// agreement-parties are the first layer. A freeze parameter, this one
+/// constant; past it, the core fails closed (no consent, no payment
+/// followed, the terms refused). *Mechanic, the build's: the layers
+/// counted below the outer agreement, the layers build's eight.*
+pub const NESTING_BOUND: usize = 8;
+
 // ---------------------------------------------------------------- contest
 
-/// Contest (type 14): names the act it answers, as chain and predecessor,
-/// `[[act, act]]`, and voids nothing: it is shown beside what it answers.
-/// Written for two cases: the party a declaration of absence names answers
-/// it, which shows presence (BQ4, decided 9 October 2026; rule 52, F172);
-/// and someone who signed onto a vow contests it, which marks each of their
-/// sales of it contested (F237, F240; the field names the vow by its name).
-/// A contest of any other act, or by another with standing (rule 57a),
-/// keeps its meaning open (OF25 a, decided in text).
+/// Contest (type 14): voids nothing: it is shown beside what it answers.
+/// Written for two cases (Agreements draft 11, "Contest (type 14)"):
+///
+/// - the party a declaration of absence names answers it, which shows
+///   presence (BQ4, decided 9 October 2026; rule 88, was 52, F172): field
+///   0 the declaration, named in `objects` as chain and predecessor,
+///   `[[declaration, declaration]]`;
+/// - someone who signed onto a vow contests **the sale** (draft 11, rule
+///   13, F253, replacing draft 10's V-R9, where field 0 named the vow and
+///   marked every sale of its signer): field 0 the sale (the buyer's
+///   payer's claim of the payment, or, for an offer at no price, the
+///   buyer's signature act on it), the vow named by its name in `objects`,
+///   `[[vow, vow]]`; field 1, optional, the promise not kept (reading (Q3):
+///   a buyer may know only that something went wrong).
+///
+/// A contest of any other act, or by another with standing (rule 54, was
+/// 57a), keeps its meaning open (OF25 a, decided in text).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Contest {
-    /// 0: the act it answers: a declaration of absence (type 13), or a
-    /// vow's name (Envelopes type 5, its genesis id).
+    /// 0: the act it answers: a declaration of absence (type 13), or, for a
+    /// vow, the sale it contests (F253).
     pub act: Hash,
+    /// The vow it contests a sale of, by its name (Envelopes type 5, its
+    /// genesis id), carried in `objects` as `[[vow, vow]]`; `None` where
+    /// `objects` names the act itself (a declaration's contest). Not in the
+    /// payload (draft 11, "Contest (type 14)": mechanics, to confirm).
+    pub vow: Option<Hash>,
+    /// 1: for a vow only, the promise not kept (F253, reading (Q3)).
+    pub promise: Option<Promise>,
+}
+
+/// Which of a vow's promises was not kept (contest field 1; draft 11, F253):
+/// in words, as canonical text, or in a cMIP's terms, `[cmip, any]`. What a
+/// promise is, and how promises are listed, is the vow's words or a
+/// cMIP's (F237): the core reads neither.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Promise {
+    Words(String),
+    Terms(Hash, Value),
 }
 
 impl Contest {
-    pub fn to_map(&self) -> Vec<(Value, Value)> {
-        vec![(Value::Uint(0), b(&self.act))]
+    /// A declaration's contest (BQ4).
+    pub fn of_declaration(declaration: Hash) -> Contest {
+        Contest { act: declaration, vow: None, promise: None }
     }
 
-    /// Decode, and check the inside names the act it answers as chain and
-    /// predecessor.
+    /// A vow's contest naming the sale (draft 11, rule 13, F253).
+    pub fn of_sale(vow: Hash, sale: Hash, promise: Option<Promise>) -> Contest {
+        Contest { act: sale, vow: Some(vow), promise }
+    }
+
+    /// The act its `objects` names as chain and predecessor: the vow, or
+    /// the act it answers.
+    pub fn named(&self) -> Hash {
+        self.vow.unwrap_or(self.act)
+    }
+
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        let mut m = vec![(Value::Uint(0), b(&self.act))];
+        match &self.promise {
+            Some(Promise::Words(w)) => m.push((Value::Uint(1), Value::Text(w.clone()))),
+            Some(Promise::Terms(c, x)) => m.push((Value::Uint(1), Value::Array(vec![b(c), x.clone()]))),
+            None => {}
+        }
+        m
+    }
+
+    /// Decode, and check the inside names, as chain and predecessor, the
+    /// act it answers or, for a vow's contest, the vow (F253).
     pub fn decode(inside: &Inside) -> R<Contest> {
         let mut act = None;
+        let mut promise = None;
         for (k, v) in &inside.payload {
             match k {
                 Value::Uint(0) => act = Some(hash(v, "contest: the act it answers")?),
-                _ => return Err(AgreementsError::Shape("contest: unknown field (the format is { 0 => the act it answers })")),
+                Value::Uint(1) => {
+                    promise = Some(match v {
+                        Value::Text(w) if crate::text::is_canonical(w) => Promise::Words(w.clone()),
+                        Value::Text(_) => return Err(AgreementsError::Check("contest: the promise not kept is not canonical text (Text MIP)")),
+                        Value::Array(x) if x.len() == 2 => Promise::Terms(hash(&x[0], "contest: the promise's cMIP")?, x[1].clone()),
+                        _ => return Err(AgreementsError::Shape("contest: field 1 is the promise not kept, in words or [cmip, any] (F253)")),
+                    })
+                }
+                _ => return Err(AgreementsError::Shape("contest: unknown field (the format is { 0 => the act it answers, ? 1 => the promise not kept })")),
             }
         }
         let act = act.ok_or(AgreementsError::Shape("contest: the act it answers"))?;
-        check_objects_self(inside, &act, "contest: objects must name the act it answers")?;
-        Ok(Contest { act })
+        let o = inside.objects.as_deref().unwrap_or(&[]);
+        let named = match chain_citations(o, 1) {
+            Ok((own, _)) if own.len() == 1 && own[0].chain == own[0].predecessor => own[0].chain,
+            _ => return Err(AgreementsError::Shape("contest: objects must name the act it answers, or the vow, as chain and predecessor")),
+        };
+        let vow = (named != act).then_some(named);
+        if vow.is_none() && promise.is_some() {
+            return Err(AgreementsError::Shape("contest: field 1, the promise not kept, is for a vow's contest only (F253)"));
+        }
+        Ok(Contest { act, vow, promise })
     }
 }
 
