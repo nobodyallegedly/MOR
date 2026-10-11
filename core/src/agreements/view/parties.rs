@@ -48,22 +48,30 @@ impl<'a> AgreementsView<'a> {
     /// agreement signs with the collective's keys, by its identity, never
     /// here. Fails closed: a party named by a later version, a line already
     /// on the way (a loop), or one more layer than [`NESTING_BOUND`] gives
-    /// no consent.
+    /// no consent. So does a line asked again while its own consent is
+    /// being read: two later versions naming each other's lines each read
+    /// the other's version in force, which reads the first again (the
+    /// build's walk recursed without end there, `docs/f254-loop-walk-fix.md`;
+    /// mechanic, the build's).
     pub(super) fn line_signed(&self, act: &Hash, party: &Hash, depth: usize, path: &mut Vec<Hash>) -> bool {
         if depth >= NESTING_BOUND || !self.names_a_line(party) || path.contains(party) {
             return false;
         }
-        let Ok(v) = self.version_in_force(party) else { return false };
-        let Ok(versions) = self.lineage(&v) else { return false };
+        if !self.consenting.borrow_mut().insert(*party) {
+            return false;
+        }
         path.push(*party);
-        let signed = versions.iter().any(|(id, t)| {
-            if t.is_collective() || t.parties.is_empty() || self.agreement_refused(id) {
-                return false;
-            }
-            let own: Vec<Hash> = self.valid_sigs(act, &t.parties).into_iter().map(|(p, _)| p).collect();
-            t.parties.iter().all(|p| own.contains(p) || self.line_signed(act, p, depth + 1, path))
+        let signed = self.version_in_force(party).ok().and_then(|v| self.lineage(&v).ok()).is_some_and(|versions| {
+            versions.iter().any(|(id, t)| {
+                if t.is_collective() || t.parties.is_empty() || self.agreement_refused(id) {
+                    return false;
+                }
+                let own: Vec<Hash> = self.valid_sigs(act, &t.parties).into_iter().map(|(p, _)| p).collect();
+                t.parties.iter().all(|p| own.contains(p) || self.line_signed(act, p, depth + 1, path))
+            })
         });
         path.pop();
+        self.consenting.borrow_mut().remove(party);
         signed
     }
 
@@ -74,12 +82,14 @@ impl<'a> AgreementsView<'a> {
     }
 
     /// The versions of the line `line` that may carry it into a loop or
-    /// past the bound: every held version of it whose parties that are not
-    /// themselves agreements have all signed it (mechanic, the build's: a
-    /// draft nobody signed moves nothing; one every such party signed is
-    /// the line's own act, whether or not it completes). Read from the
-    /// terms and signature acts alone, never from another version's
-    /// verdict, so no judgment depends on itself.
+    /// past the bound: every held version of it every party signed
+    /// ([`Self::walk_signed`]). Read from the terms and signature acts
+    /// alone, never from another version's verdict, so no judgment depends
+    /// on itself. A draft some party has not signed is no version of the
+    /// line and moves nothing (F254, F107; the build's earlier mechanic,
+    /// which counted only the parties that are not agreements, let the
+    /// parties of an inner agreement alone sign a version naming its outer
+    /// one: fixed, `docs/f254-loop-walk-fix.md`).
     fn signed_versions(&self, line: &Hash) -> Vec<(Hash, Terms)> {
         let mut out = vec![];
         for h in self.v.held_acts() {
@@ -87,12 +97,57 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             let Ok(t) = self.terms(&h.id) else { continue };
-            let people: Vec<Hash> = t.parties.iter().filter(|p| self.line_of(p).is_none()).copied().collect();
-            if self.valid_sigs(&h.id, &people).len() == people.len() {
+            if self.walk_signed(&h.id, &t, 0, &mut vec![*line]) {
                 out.push((h.id, t));
             }
         }
         out
+    }
+
+    /// Whether every party of the version `id` (terms `t`) signed it, as
+    /// the loop and bound walk reads it (F254, the walk's mechanic, settled
+    /// 11 October 2026): each by its own signature act; a party that is an
+    /// agreement only through its own line ([`Self::walk_line_signed`]).
+    /// A deal's clone also needs every party of its parent: a deal changes
+    /// only unanimously (F107), so a clone signed by its own parties alone
+    /// (anyone may draft one naming themselves) is no version of the line
+    /// (mechanic, the build's). `path` holds the lines on the way.
+    fn walk_signed(&self, id: &Hash, t: &Terms, depth: usize, path: &mut Vec<Hash>) -> bool {
+        let mut need = t.parties.clone();
+        if !t.is_collective() {
+            if let Some(pt) = t.parent.and_then(|p| self.terms(&p).ok()) {
+                need = union(&need, &pt.parties);
+            }
+        }
+        let own: Vec<Hash> = self.valid_sigs(id, &need).into_iter().map(|(p, _)| p).collect();
+        need.iter().all(|p| own.contains(p) || self.walk_line_signed(id, p, depth, path))
+    }
+
+    /// [`Self::line_signed`] as the walk reads it: the agreement-party
+    /// `party` (a line) signed `act` where every party of some version of
+    /// its line, itself signed by every party ([`Self::walk_signed`]),
+    /// signed it. Its version in force and its versions' verdicts are not
+    /// read: they depend on this walk. Fails closed: a party named by a
+    /// later version, a line already on the way, or one more layer than
+    /// [`NESTING_BOUND`] gives no consent.
+    fn walk_line_signed(&self, act: &Hash, party: &Hash, depth: usize, path: &mut Vec<Hash>) -> bool {
+        if depth >= NESTING_BOUND || !self.names_a_line(party) || path.contains(party) {
+            return false;
+        }
+        path.push(*party);
+        let signed = self.v.held_acts().any(|h| {
+            if !self.is_agreements(h, types::TERMS) || self.line_of(&h.id).as_ref() != Some(party) {
+                return false;
+            }
+            let Ok(t) = self.terms(&h.id) else { return false };
+            if t.is_collective() || t.parties.is_empty() || !self.walk_signed(&h.id, &t, depth + 1, path) {
+                return false;
+            }
+            let own: Vec<Hash> = self.valid_sigs(act, &t.parties).into_iter().map(|(p, _)| p).collect();
+            t.parties.iter().all(|p| own.contains(p) || self.walk_line_signed(act, p, depth + 1, path))
+        });
+        path.pop();
+        signed
     }
 
     /// What refuses the terms `t` of the version `id` as a party structure
@@ -101,8 +156,8 @@ impl<'a> AgreementsView<'a> {
     /// - a party or stake holder naming an agreement by a later version,
     ///   not its line;
     /// - a loop: the version's line reached again through its
-    ///   agreement-parties' lines, read on their signed versions
-    ///   ([`Self::signed_versions`]). A founding version is never refused
+    ///   agreement-parties' lines, read on the versions every party
+    ///   signed ([`Self::signed_versions`]). A founding version is never refused
     ///   for a loop: whatever names its line was made after it, so the
     ///   terms making the loop are the later ones (mechanic, the build's).
     ///   A later version is refused wherever such a loop holds: no clock

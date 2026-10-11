@@ -11584,6 +11584,86 @@ fn draft_11_f254_no_loops() {
     assert_eq!(view(&w).agreement(&b).unwrap().exists, Some(true), "B, named first, stands");
 }
 
+
+/// The album and the song (F254's loop walk, `docs/f254-loop-walk-fix.md`):
+/// the Label and Carla's album agreement A; Ana and Ben's song agreement B.
+/// A's later version adds B as a party, every party signing (Ana and Ben for
+/// B). Returns the world, the four people, A, B and A's later version.
+fn album_and_song() -> (World, [Person; 4], Hash, Terms, Hash, Terms, Hash) {
+    let mut w = World::new();
+    let mut label = w.genesis("a label", vec![own_home()], None, None);
+    let mut carla = w.genesis("carla", vec![own_home()], None, None);
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let at = deal_of(&[label.id, carla.id], "The album's agreement.");
+    let a = deal_signed_by(&mut w, &at, &mut [&mut label, &mut carla], None);
+    let bt = deal_of(&[ana.id, ben.id], "The song's agreement.");
+    let b = deal_signed_by(&mut w, &bt, &mut [&mut ana, &mut ben], None);
+    let a2t = deal_clone(&at, a, &|t| t.parties.push(b));
+    let a2 = deal_signed_by(&mut w, &a2t, &mut [&mut label, &mut carla, &mut ana, &mut ben], Some(a));
+    assert_eq!(view(&w).agreement(&a2).unwrap().exists, Some(true));
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a2, "the song is in the album");
+    (w, [label, carla, ana, ben], a, at, b, bt, a2)
+}
+
+/// F254's loop walk (settled 11 October 2026, evening; F254, F107): a
+/// version of B naming A needs A's consent, so B's own parties alone
+/// cannot make one. Ana and Ben sign a version of B naming A, the Label
+/// and Carla do not: it is no version of B, only a draft, and A's later
+/// version, which every party signed, stands. (The build's walk counted
+/// that draft and refused A's later version for a loop.)
+#[test]
+fn f254_a_draft_of_the_song_naming_the_album_does_not_undo_the_album() {
+    let (mut w, [_, _, mut ana, mut ben], a, _, b, bt, a2) = album_and_song();
+    let b2t = deal_clone(&bt, b, &|t| t.parties.push(a));
+    let b2 = deal_signed_by(&mut w, &b2t, &mut [&mut ana, &mut ben], Some(b));
+    let e = view(&w).agreement(&b2).unwrap();
+    assert_eq!(e.exists, Some(false), "without the album's consent it is no version of the song");
+    assert_eq!(view(&w).version_in_force(&b).unwrap(), b);
+    let e = view(&w).agreement(&a2).unwrap();
+    assert_eq!((e.invalid, e.exists), (None, Some(true)), "the album's later version stands");
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a2);
+}
+
+/// The same, then the Label and Carla sign B's version naming A too: every
+/// party consents to a loop, and the loop is refused, failing closed, as
+/// before: both later versions, each line returning to its earlier one.
+#[test]
+fn f254_a_loop_every_party_signed_is_still_refused() {
+    let (mut w, [mut label, mut carla, mut ana, mut ben], a, _, b, bt, a2) = album_and_song();
+    let b2t = deal_clone(&bt, b, &|t| t.parties.push(a));
+    let b2 = deal_signed_by(&mut w, &b2t, &mut [&mut ana, &mut ben], Some(b));
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a2, "a draft moves nothing");
+    sign(&mut w, &mut label, &b2);
+    sign(&mut w, &mut carla, &b2);
+    for x in [a2, b2] {
+        let e = view(&w).agreement(&x).unwrap();
+        assert!(e.invalid.as_deref().is_some_and(|m| m.contains("loop")), "{:?}", e.invalid);
+        assert_eq!(e.exists, Some(false));
+    }
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a);
+    assert_eq!(view(&w).version_in_force(&b).unwrap(), b);
+}
+
+/// The walk's consent comes from versions of the album's line every party
+/// signed, never from a clone its drafters alone signed (F107: a deal
+/// changes only unanimously; mechanic, the build's). Ana and Ben draft a
+/// clone of A naming themselves, sign it and B's version naming A: still
+/// no version of B, and A's later version stands.
+#[test]
+fn f254_a_clone_its_drafters_alone_signed_gives_no_consent() {
+    let (mut w, [_, _, mut ana, mut ben], a, at, b, bt, a2) = album_and_song();
+    let (aid, bid) = (ana.id, ben.id);
+    let ft = deal_clone(&at, a, &|t| t.parties = vec![aid, bid]);
+    let forged = deal_signed_by(&mut w, &ft, &mut [&mut ana, &mut ben], Some(a));
+    assert_eq!(view(&w).agreement(&forged).unwrap().exists, Some(false));
+    let b2t = deal_clone(&bt, b, &|t| t.parties.push(a));
+    let b2 = deal_signed_by(&mut w, &b2t, &mut [&mut ana, &mut ben], Some(b));
+    assert_eq!(view(&w).agreement(&b2).unwrap().exists, Some(false));
+    let e = view(&w).agreement(&a2).unwrap();
+    assert_eq!((e.invalid, e.exists), (None, Some(true)), "the album's later version stands");
+    assert_eq!(view(&w).version_in_force(&a).unwrap(), a2);
+}
 /// Draft 11, rule 15 and "Open technical parameters" (F254, part 4):
 /// nesting is bounded at 8 layers, one constant. An agreement with eight
 /// layers of agreements below it stands; a ninth is refused, failing
