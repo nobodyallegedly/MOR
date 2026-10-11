@@ -16,6 +16,8 @@
 
 pub mod formats;
 pub mod open_formats;
+/// Two classes of offers and the proof checker (Agreements draft 11, F261).
+pub mod proofs;
 pub mod tiers;
 pub mod view;
 
@@ -24,6 +26,7 @@ pub use open_formats::{
     new_types, Fee, FeeScope, JudgeRequest, Liveness, Metric, Offer, OfferAct, Paid, RefundTerms, ShareRule, Sold, SplitPlan,
     StakeTransfer, Unfilled, WorkClaim, FEES_FIELD, RETIRED_TYPES, WITHDRAWN_FIELDS,
 };
+pub use proofs::{OfferClass, ProofChecker, ProofVerdict};
 pub use tiers::{changes, judicial_changes, powers_needed, rollback_powers, Change, Tier};
 pub use view::{
     Agreement, AreaCount, Backing, CutCheck, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement,

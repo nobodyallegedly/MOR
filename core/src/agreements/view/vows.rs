@@ -46,6 +46,14 @@ pub struct VowSale {
     /// signer of the signature act.
     pub buyer: Hash,
     pub state: SaleState,
+    /// Evidence beside the state (Agreements draft 11, rule 13, F261, F264):
+    /// valid acts naming the sale (its act, `act`) in their `refs`, such as
+    /// the seller's delivery of a key in keeping the vow, ascending. Shown,
+    /// and never moving the state: the sale's state is still the buyer's
+    /// confirmation or contest alone. What a proof is, and how it is
+    /// checked, is the cMIP's (F237). *Mechanic, the build's:* evidence
+    /// names the sale in `refs`.
+    pub evidence: Vec<Hash>,
 }
 
 /// A vow, read (F237).
@@ -185,7 +193,8 @@ impl<'a> AgreementsView<'a> {
                 match self.committed_buyer(&proof) {
                     Some((claim, buyer)) => {
                         let state = self.sale_state(name, &buyer, &claim, Some(&proof));
-                        sales.push(VowSale { act: claim, offer: *o, buyer, state });
+                        let evidence = self.evidence_of(&claim);
+                        sales.push(VowSale { act: claim, offer: *o, buyer, state, evidence });
                     }
                     None => unsigned.push(x.id),
                 }
@@ -212,7 +221,8 @@ impl<'a> AgreementsView<'a> {
                         continue;
                     }
                     let state = self.sale_state(name, &buyer, &s.id, None);
-                    sales.push(VowSale { act: s.id, offer: *o, buyer, state });
+                    let evidence = self.evidence_of(&s.id);
+                    sales.push(VowSale { act: s.id, offer: *o, buyer, state, evidence });
                 }
             }
         }
@@ -263,6 +273,19 @@ impl<'a> AgreementsView<'a> {
         self.valid(x)
             && (h.inside.objects.iter().flatten().any(|o| &o.chain == name || &o.predecessor == name)
                 || h.inside.refs.iter().flatten().any(|r| matches!(r, crate::act::Ref::Act(a) if a == name)))
+    }
+
+    /// The evidence held beside the sale `sale` (draft 11, rule 13, F261,
+    /// F264): valid acts naming it in their `refs`, ascending.
+    fn evidence_of(&self, sale: &Hash) -> Vec<Hash> {
+        let mut out: Vec<Hash> = self
+            .v
+            .held_acts()
+            .filter(|h| h.id != *sale && self.valid(&h.id) && h.inside.refs.iter().flatten().any(|r| matches!(r, crate::act::Ref::Act(a) if a == sale)))
+            .map(|h| h.id)
+            .collect();
+        out.sort();
+        out
     }
 
     /// The acts that are the sale `sale` (draft 11, rule 13, F253): for a

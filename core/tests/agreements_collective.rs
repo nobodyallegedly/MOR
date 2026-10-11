@@ -4472,6 +4472,82 @@ fn a_split_service_is_held_to_account() {
     assert_eq!(account.unpaid.len(), 2);
 }
 
+/// Agreements draft 11, rule 15, rule 91 and "Closing (type 20)" (new in
+/// draft 11, F262, F265): the core checks nothing new. An absentee's money
+/// share follows the collective's own rules: here its split plan pays the
+/// absentee through its split service, which keeps what it cannot deliver
+/// as its open obligation (rule 24). The absentee never takes their payout.
+/// The closing names nothing for it (field 4 stays for money owed back),
+/// and still counts: the collective holds nothing and owes nothing of its
+/// own. The share stays visible, owed by the service: nothing vanishes
+/// silently.
+#[test]
+fn f262_f265_an_absentees_share_follows_the_collectives_rules_and_the_closing_counts() {
+    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let absentee = spec("an absent holder");
+    let mut lab = Lab::new(&|t| {
+        let p = t.parties.clone();
+        t.stakes = stakes(vec![own(vec![(p[ANA], 500_000), (p[BEN], 300_000), (absentee, 200_000)])]);
+    });
+    let ids = lab.ids();
+    let label = lab.c[0].id;
+    let unit = spec("a unit");
+    let mut svc = lab.w.genesis("a split service", vec![own_home()], None, None);
+    let g = lab.grant(&Grant { area: Some(2), kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]), ..plain_grant(svc.id, false) });
+    lab.sign(BEN, &g);
+    sign(&mut lab.w, &mut svc, &g);
+    let t = lab.clone_terms(&lab.founding.clone(), vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| t.split_grant = Some(g));
+    let k = lab.propose(ANA, &t);
+    let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k)).collect();
+    let rec = lab.record(0, Some((k, sigs)), &[], vec![], k);
+    let mut st = lab.strand(g, &key_of(svc.id));
+    st.cite = Some((label, vec![g, rec]));
+    // A sale, receipted by the service in the label's name, and split by
+    // the plan: the absentee's 20% among it.
+    let r = Fin::Receipt(Receipt {
+        rail: spec("a rail Module"),
+        proof: b"the last sale".to_vec(),
+        payer: Some(Payer::Identity(spec("a fan"))),
+        payee: label,
+        amount: Amount { unit, value: 1000 },
+        fulfils: k,
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: Some(Purchase { agreement: k, line: k }),
+    });
+    let a = lab.w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+    let incoming = lab.w.add(&a);
+    let stake = lab.view().terms(&k).unwrap().own_stake().unwrap().0 as u64;
+    let pay = |who: Hash, amount: u64| agreements::Payout { receiver: who, amount, stake: Some(stake), ..Default::default() };
+    let sp = agreements::Split { receipt: incoming, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(absentee, 200)], cmip: spec("a split cMIP"), agreement: k, ..Default::default() };
+    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, sp.to_map(), None, ids.clone());
+    // Ana and Ben take theirs; the absentee never does.
+    for i in [ANA, BEN] {
+        let mut who = lab.m[i].clone();
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: vec![], payer: Some(Payer::Identity(svc.id)), payee: who.id, amount: Amount { unit, value: if i == ANA { 500 } else { 300 } }, fulfils: x, previous: None, forward: None, batch: None, purchase: None });
+        let a = lab.w.everyday_act(&mut who, mips().money, 2, r.to_map(), None, None);
+        lab.w.add(&a);
+        lab.m[i] = who;
+    }
+    let account = lab.view().service_account(&svc.id).unwrap();
+    assert_eq!(account.unpaid.iter().map(|u| (u.receiver, u.amount, u.received)).collect::<Vec<_>>(), vec![(absentee, 200, 0)], "the absentee's share: the service's open obligation (rule 24)");
+    // The closing names nothing for it, and counts.
+    let cur = lab.view().current(&label).unwrap().unwrap().agreement;
+    let c = agreements::Closing { agreement: cur, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
+    let eo = ending_obj(&lab, cur, label);
+    let closing = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::CLOSING, c.to_map(), eo);
+    lab.end(ANA, &closing);
+    lab.end(BEN, &closing);
+    lab.end(CY, &closing);
+    let e = lab.view().closing(&closing).unwrap();
+    assert!(e.complete && e.holds.is_empty() && e.open_debts.is_empty(), "{:?}", e.why);
+    assert!(e.closing.open.is_empty(), "field 4 stays for money owed back");
+    // Nothing vanished silently: still owed, still shown.
+    let account = lab.view().service_account(&svc.id).unwrap();
+    assert_eq!(account.unpaid.iter().map(|u| (u.receiver, u.amount)).collect::<Vec<_>>(), vec![(absentee, 200)]);
+}
+
 /// Freeze suite v21, 3.7r (F121, F123, F124 P2): the pointer check, now
 /// reaching the vault. The label's pointer counts for Agreements only if every
 /// address in it is in the split service's own signed pointer in force, and

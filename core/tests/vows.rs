@@ -457,3 +457,76 @@ fn draft_11_q2_a_vows_reference_to_another_vow_confirms_nothing() {
     let later = c.w.add(&a);
     assert!(view(&c.w).vow(&name).unwrap().versions.contains(&later));
 }
+
+/// A checker for a test cMIP: a proof is the bytes `b"delivered"`.
+struct TestChecker;
+
+impl agreements::ProofChecker for TestChecker {
+    fn check(&self, _offer: &Hash, _params: &[u8], proof: &[u8]) -> agreements::ProofVerdict {
+        if proof == b"delivered" {
+            agreements::ProofVerdict::Proven
+        } else {
+            agreements::ProofVerdict::NotProven("not the delivered bytes".into())
+        }
+    }
+}
+
+/// Agreements draft 11, rule 11 (new in draft 11, F261): offers are of two
+/// classes. The core tells them apart by what the offer sells: the access
+/// form, `[2, [cMIP, params]]`, is a proven offer; `[3, vow]` a promised
+/// one. For a proven offer the core asks the checker this verifier holds
+/// for the named cMIP; with none, the delivery is not proven here. An offer
+/// naming a vow is no proven offer.
+#[test]
+fn draft_11_f261_a_proven_offer_is_judged_by_its_cmips_checker() {
+    let mut w = World::new();
+    let mut seller = w.genesis("a seller", vec![own_home()], None, None);
+    let cmip = spec("a test cMIP whose deliveries prove themselves");
+    let params = mor_core::cbor::encode(&Value::Uint(7));
+    let o = agreements::Offer {
+        under: None,
+        sold: vec![agreements::Sold::Access(cmip, params.clone())],
+        price: Amount { unit: spec("a unit"), value: 10 },
+        paid: None,
+        words: None,
+        until: None,
+        time: None,
+        refund: None,
+    };
+    assert_eq!(o.sold[0].class(), agreements::OfferClass::Proven { cmip, params });
+    let proven = agreements_act(&mut w, &mut seller, agreements::types::STANDING_OFFER, o.to_map(), None);
+    let name = vow(&mut w, &mut seller, "A table, made to order");
+    let promised = lone_offer(&mut w, &mut seller, name, "One table.");
+    assert_eq!(agreements::Sold::Vow(name).class(), agreements::OfferClass::Promised(name));
+    let v = view(&w);
+    assert!(matches!(v.proven_delivery(&proven, b"delivered", &[]).unwrap(), agreements::ProofVerdict::Unknown(_)), "no checker held: not proven here");
+    let held: [(Hash, &dyn agreements::ProofChecker); 1] = [(cmip, &TestChecker)];
+    assert!(v.proven_delivery(&promised, b"delivered", &held).is_err(), "a promised offer is no proven offer");
+    assert_eq!(v.proven_delivery(&proven, b"delivered", &held).unwrap(), agreements::ProofVerdict::Proven);
+    assert!(matches!(v.proven_delivery(&proven, b"something else", &held).unwrap(), agreements::ProofVerdict::NotProven(_)));
+    let other: [(Hash, &dyn agreements::ProofChecker); 1] = [(spec("another cMIP"), &TestChecker)];
+    assert!(matches!(v.proven_delivery(&proven, b"delivered", &other).unwrap(), agreements::ProofVerdict::Unknown(_)), "only the named cMIP's checker judges");
+}
+
+/// Agreements draft 11, rules 11 and 13 (new in draft 11, F264, with
+/// F261's evidence clause): a stream promised under a vow. The key the
+/// seller delivers in keeping it names the sale: it is held as evidence
+/// beside the sale, and the sale stays pending. The stream is cut short:
+/// the buyer contests, and the evidence stays shown beside the contest.
+/// The key worked; the promise did not.
+#[test]
+fn draft_11_f264_a_key_delivered_under_a_vow_is_evidence_not_a_state() {
+    let mut c = Concert::new();
+    let (fid, name) = (c.fan.id, c.name);
+    let sale = c.claims[0];
+    let key = {
+        let a = c.w.everyday_act_refs(&mut c.club, spec("a live media cMIP"), 1, vec![(Value::Uint(0), Value::Bytes(b"the stream's key, sealed to the fan".to_vec()))], None, None, Some(vec![mor_core::act::Ref::Act(sale)]));
+        c.w.add(&a)
+    };
+    let e = view_with(&c.w, &c.claims).vow(&name).unwrap();
+    assert_eq!((e.sales[0].buyer, e.sales[0].state.clone(), e.sales[0].evidence.clone()), (fid, SaleState::Pending, vec![key]), "evidence, shown; the state is the buyer's");
+    let k = contest_with(&mut c.w, &mut c.fan, name, sale, Some(agreements::Promise::Words("The stream stopped at half time.".into())));
+    let e = view_with(&c.w, &c.claims).vow(&name).unwrap();
+    assert_eq!(e.sales[0].state, SaleState::Contested { by: vec![k] });
+    assert_eq!(e.sales[0].evidence, vec![key], "the key worked; the promise did not");
+}

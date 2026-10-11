@@ -531,6 +531,66 @@ pub fn judge(offer: &Offer, ticket: &Ticket, payment: &Payment, publications: &[
     Judgment::Pending
 }
 
+/// The anchoring cMIP's checker for the core (Agreements draft 11, rule
+/// 11, new in draft 11, F261): the pooled anchoring service is a proven
+/// offer, and this checker is the first the core asks for a proof's
+/// verdict. It is [`judge`], unchanged: the hash is in the batch or it is
+/// not. What it reads beside the proof is what `judge` reads: the service's
+/// offers and publications, the payments as the caller verified them with
+/// the payment cMIP, and the clock as this verifier follows it.
+///
+/// The proof, in this cMIP's encoding (mechanic, the build's): `[ ticket,
+/// anchor / null ]`, the ticket's map and the clock Module's proof for its
+/// leaf. Anchored at or before the deadline: proven. Omitted, late or a
+/// default: not proven, the refund owed under the offer's terms. Pending,
+/// a clock this verifier does not follow, or an offer or payment it does
+/// not hold: unknown.
+pub struct Checker<'c> {
+    pub offers: Vec<Offer>,
+    pub publications: Vec<Publication>,
+    pub payments: Vec<Payment>,
+    pub clock: &'c dyn BatchClock,
+}
+
+impl agreements::ProofChecker for Checker<'_> {
+    fn check(&self, offer: &Hash, _params: &[u8], proof: &[u8]) -> agreements::ProofVerdict {
+        use agreements::ProofVerdict as V;
+        let Some(o) = self.offers.iter().find(|o| &o.id == offer) else {
+            return V::Unknown("this checker does not hold the offer as an anchoring offer".into());
+        };
+        let (ticket, anchor) = match cbor::decode(proof) {
+            Ok(Value::Array(x)) if x.len() == 2 => {
+                let Value::Map(m) = &x[0] else { return V::NotProven("not an anchoring proof: [ticket, anchor / null]".into()) };
+                let Some(t) = Ticket::from_map(m) else { return V::NotProven("the ticket is not in this cMIP's format".into()) };
+                let anchor = match &x[1] {
+                    Value::Bytes(a) => Some(a.clone()),
+                    Value::Null => None,
+                    _ => return V::NotProven("the anchor is a clock Module's proof, or null".into()),
+                };
+                (t, anchor)
+            }
+            _ => return V::NotProven("not an anchoring proof: [ticket, anchor / null]".into()),
+        };
+        let Some(payment) = self.payments.iter().find(|p| p.commitment.hash() == ticket.commitment) else {
+            return V::Unknown("the payment buying the ticket is not held".into());
+        };
+        match judge(o, &ticket, payment, &self.publications, anchor.as_deref(), self.clock) {
+            Judgment::Anchored { .. } => V::Proven,
+            Judgment::Pending => V::Unknown("pending: not anchored yet, the deadline not yet buried".into()),
+            Judgment::Unknown(w) => V::Unknown(w),
+            Judgment::NotPaid(w) => V::NotProven(format!("not paid: {w}")),
+            Judgment::Omitted { .. } => V::NotProven("a provable omission: the price is owed back".into()),
+            Judgment::Late { .. } => V::NotProven("anchored after the deadline: the price is owed back".into()),
+            Judgment::Default { .. } => V::NotProven("not anchored by the deadline: the price is owed back".into()),
+        }
+    }
+}
+
+/// The proof [`Checker`] reads: `[ ticket, anchor / null ]`, encoded.
+pub fn delivery_proof(ticket: &Ticket, anchor: Option<&[u8]>) -> Vec<u8> {
+    cbor::encode(&Value::Array(vec![Value::Map(ticket.to_map()), anchor.map(b).unwrap_or(Value::Null)]))
+}
+
 /// Where a refund stands (F225, F219): repaid in full where Money shows
 /// `repaid` (what the service's claims, with the rail's proof, show paid
 /// back toward it) reach its amount; otherwise ended once the clock stands

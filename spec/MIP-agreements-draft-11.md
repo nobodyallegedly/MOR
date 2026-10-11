@@ -417,7 +417,7 @@ A refund owed on a payment whose payer is not named is owed to whoever signs wit
 
 The obligation stays open and visible until claimed and discharged. A seller who refuses a valid claim is visibly in the wrong.
 
-**The vault's limit protects refunds too (new in draft 11, F255).** A refund paid to the refund rail a payer's claim names counts as repaid only up to the payer's vault limit for its unit; above it, only once it reaches the payer's vault (Money rules 14 and 14a). A payer that declares no vault has no vault rule (Money rule 14a). *Why: a thief holding the payer's signing key during a theft window could sign a claim naming their own refund rail; "vault partly exists to take care of big IOUs" (Nobody, allegedly).* *Reading, to confirm:* a refund owed to a bare key (Money rule 10a) has no vault, so the limit does not reach it. *To build:* the library's `repaid`. *Money draft 6, rule 14, still counts such a refund at any size; it follows at Money's redraft (F255). Money draft 6 is unchanged until then, and this rule's pointer to Money rules 14 and 14a stays (Q6, decided by Nobody, allegedly: "'until then' is not a problem at the moment").*
+**The vault's limit protects refunds too (new in draft 11, F255).** A refund paid to the refund rail a payer's claim names counts as repaid only up to the payer's vault limit for its unit; above it, only once it reaches the payer's vault (Money rules 14 and 14a). A payer that declares no vault has no vault rule (Money rule 14a). *Why: a thief holding the payer's signing key during a theft window could sign a claim naming their own refund rail; "vault partly exists to take care of big IOUs" (Nobody, allegedly).* *Reading, to confirm:* a refund owed to a bare key (Money rule 10a) has no vault, so the limit does not reach it. *Built (`docs/agreements-draft-11-build.md`):* the library's `repaid`. *Money draft 6, rule 14, still counts such a refund at any size; it follows at Money's redraft (F255). Money draft 6 is unchanged until then, and this rule's pointer to Money rules 14 and 14a stays (Q6, decided by Nobody, allegedly: "'until then' is not a problem at the moment").*
 
 The offer's terms MAY say how long a refund stays claimable, on the time reference. The core sets no lapse (F80). **A refund past the terms the buyer accepted by paying is ended** (F219): the obligation closes there, the owners keep the money, and it does not block a closing. The terms are a fixed point on the time reference (terms field 17, or a lone seller's offer's own; mechanic delegated with F219). Terms written in bad faith are not refused: they stay public, for anyone to judge.
 
@@ -434,7 +434,7 @@ Paid access to a live stream, which has no work hash until it ends, is sold by a
 
 *"Technically, it is not a work, and therefore becomes a vow. It is simply that the cMIP behind this vow can deliver its own confirmation. Core does not care how confirmation is delivered, it simply looks for one" (Nobody, allegedly); then: "I'm fine with this being a different class of offers." A proven offer needs no one's confirmation, since its proof is the confirmation; a promised one needs its signer's.*
 
-*To build:* the widening changes no format: the code reads the access form as before, and judges a delivery under it only for the anchoring cMIP (`cmips/anchoring`). Checking the proof of any other proven offer, in a client holding its cMIP, is not built.
+*Built (`docs/agreements-draft-11-build.md`):* the widening changes no format. The core tells the classes apart by what an offer sells, and asks the checker of the cMIP a proven offer names, among those the verifier holds, for a proof's verdict; with none held, the delivery is not proven for it. The anchoring cMIP's existing check is the first checker (`cmips/anchoring`); no other cMIP's checker is built.
 
 #### Rule 12 (was 32a). A purchase names the claim it pays under
 
@@ -545,11 +545,11 @@ The core keeps only the grammar:
 - **A confirmation likewise names the sale** it confirms. *Reading, to confirm:* a buyer's claim of a payment is that sale, so a confirmation made there names it; for a free sale, the buyer's act acknowledges both the act about the vow and its own signature act on the offer.
 - **What a buyer is owed back when part of a bundle fails is set by the bundle's terms**: the offer's words, its agreement's, or a cMIP's. The core fixes no partial refund.
 
-*To build:* the contest naming the sale, and the per-sale reading (draft 10's V-R9 is what the code does until then).
+*Built (`docs/agreements-draft-11-build.md`):* the contest naming the sale, and the per-sale reading, replacing draft 10's V-R9.
 
 **A vow names what is promised to the buyer, never the event itself (new in draft 11, F259).** A place in the stand to watch a match is one vow; access to a stream of the match is another; neither is "the match". **Two vows on one event stay separate** (new in draft 11, F259, revised): neither references the other. This is how they are made, not a check a verifier runs: a vow naming another stays valid (below). **Each may reference the event, where the event exists on MOR as an act of its own** (in its `refs`, Envelopes; mechanic, this draft's, to confirm), never as a vow, since a vow names what is promised. A reference carries no claim, no stake and no marking under rule 14. Each vow sits under its own agreement; whether an agreement claims a vow, and how its rights are managed, is its signer's business. *"None are the football game, both need their own agreement"; "Both the seat and the stream reference the football game, if that was to ever exist on MOR" (Nobody, allegedly).*
 
-**A vow's reference to another vow is not an act about it** (reading (Q2)). Any vow may still name another in its `refs`; that reference moves none of the other vow's sales' states: acknowledging the referring vow confirms no sale of the vow it names. *To build:* the code counts any valid act naming the vow in `refs`, a vow included, as an act about it.
+**A vow's reference to another vow is not an act about it** (reading (Q2)). Any vow may still name another in its `refs`; that reference moves none of the other vow's sales' states: acknowledging the referring vow confirms no sale of the vow it names. *Built (`docs/agreements-draft-11-build.md`):* another vow naming the vow in `refs` is no act about it.
 
 *"Only a person who signed to use the vow should be able to contest it" (Nobody, allegedly).*
 
@@ -611,7 +611,7 @@ A sale through the publication passes outside in. The publication's split gives 
 
 A publisher holds a stake in the publication's agreement, never in the work, by construction. No stake is marked as a publisher's. Recoupment and every other shape are the publication's split cMIP's.
 
-*Mechanics, the build's (replaced by F254 below; what the code does until it is built):* the work's agreement is named by its version's hash, as a party and as a holder of the publication's stake. Its line passes on to its stake in the work the publication carries (payer-side splitting as built).
+*Mechanics, the build's (replaced by F254 below, now built):* the work's agreement is named by its version's hash, as a party and as a holder of the publication's stake. Its line passes on to its stake in the work the publication carries (payer-side splitting as built).
 
 **Money passes layer by layer** (F235, QK3, option c generalised): a pool (a subscription service's, splitting by its stated rules; freeze scenario 7), then each publication's agreement, then the work's agreement, as many layers as the agreements chain. *"Money is split envelope by envelope, deal by deal, and can involve more participants than simply the work and the publisher, to reward the pipe" (Nobody, allegedly).*
 
@@ -671,7 +671,7 @@ Each layer may pay more participants than the work and the publisher (relays and
   *"I think B is cleaner, A is the act of batching these decisions which also works, but not always the cleanest option"; "closing the deal is simply creating a clone that states the new conditions. It really depends on the kind of agreement" (Nobody, allegedly).*
 - **A manifest neither claims its parts nor is reached by their claims** (rule 7).
 
-*To build:* naming by line, the loop refusal and the bound as a checked parameter. A deal's last clone needs nothing new: it is an ordinary clone of a deal.
+*Built (`docs/agreements-draft-11-build.md`):* naming by line, the loop refusal and the bound as a checked parameter. A deal's last clone needs nothing new: it is an ordinary clone of a deal.
 
 **Responsibility ends at the designated pointer, in every chain of agreements (new in draft 11, F256).** Any agreement paying another agreement pays the pointer that agreement designates, and its responsibility for that payment ends there, Money's receipt the proof: a publisher paying a work, an agency paying a production company paying its crew, a compilation paying its parts. What follows is the receiving agreement's alone. *"The idea of the network is to segment everything so that the point of failure or cheating is easily found" (Nobody, allegedly).*
 
@@ -739,7 +739,7 @@ The split task is handed to the split cMIP the agreement names (F250, F249).
 
 A payer's obligation ends when the payment reaches the first service in order whose attempt succeeds, Money's receipt the proof.
 
-**Every payer tries the services in order (new in draft 11, F260).** A buyer paying the owners directly follows the same rule as a publisher or a layer above: it tries the services the agreement names, field 14's then field 29's, in order, attempt by attempt, each payment starting again from the first. **A backup paid directly receipts in the owners' name, with the grants it already holds** (field 29's, one per payee in a deal; "What a split service's grant key may sign"). Money's pointer format is unchanged: the owners' payee pointer leads to the first service, and a backup's address is the one its own signed pointer carries, which the pointer check accepts (rule 16). *To build:* rules 15 and 17 applied to a direct buyer's payment, and the participant's check (rule 18) following it.
+**Every payer tries the services in order (new in draft 11, F260).** A buyer paying the owners directly follows the same rule as a publisher or a layer above: it tries the services the agreement names, field 14's then field 29's, in order, attempt by attempt, each payment starting again from the first. **A backup paid directly receipts in the owners' name, with the grants it already holds** (field 29's, one per payee in a deal; "What a split service's grant key may sign"). Money's pointer format is unchanged: the owners' payee pointer leads to the first service, and a backup's address is the one its own signed pointer carries, which the pointer check accepts (rule 16). *Built (`docs/agreements-draft-11-build.md`):* rules 15 and 17 applied to a direct buyer's payment, and the participant's check (rule 18) following it.
 
 **The task:** the cMIP accepts the agreement and the attempts made for a payment, and produces the receiver for this payment.
 
@@ -762,7 +762,7 @@ Once a purchase triggers the agreement, each participant checks: **is my cut at 
 Its cut is what the splits that follow the purchase assign it, layer by layer (rule 15):
 
 - the payment itself, where it is the payee (payer-side splitting, or a lone owner);
-- otherwise, its payouts in each split naming the payment, signed by a service the agreement names, field 14's or a backup's, whoever paid, a direct buyer included (new in draft 11, F260; to build).
+- otherwise, its payouts in each split naming the payment, signed by a service the agreement names, field 14's or a backup's, whoever paid, a direct buyer included (new in draft 11, F260; built).
 
 It has arrived when its own receipts, valid, each with the rail's answer, place that much at its payee pointer or at an entry of its vault (Money rules 12, 14a).
 
@@ -2290,7 +2290,7 @@ Repaid in full, it is no longer owed.
 
 **It follows the debt rule exactly** (QG2; Money rule 14). The repayment goes:
 
-- to the refund rail the payer's own claim on the payment names (key 7), where it names one, counting up to the payer's vault limit for its unit and, above it, only once it reaches the payer's vault (new in draft 11, F255; rule 11; to build);
+- to the refund rail the payer's own claim on the payment names (key 7), where it names one, counting up to the payer's vault limit for its unit and, above it, only once it reaches the payer's vault (new in draft 11, F255; rule 11; built);
 - otherwise, to the pointer Money rule 14 selects from the payer's own acts on that payment, or the payer's pointer in force where they hold none.
 
 A payment to the payer's vault always counts, and the payer's own receipt counts wherever the money went.
@@ -3147,7 +3147,7 @@ A contest of a declaration is signed by the party the declaration names, with it
 
 *Client conformance:* the declared member's client lets them sign it, and publishes it.
 
-A contest of a vow (F237, F240; **new in draft 11, F253**): field 0 names **the sale it contests**: the buyer's payer's claim of the payment that is a purchase under an offer naming the vow, or, for an offer at no price, the signature act by which the buyer signed onto it (rule 13). Its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`. Field 1, optional, says which of the vow's promises was not kept (reading (Q3): a buyer may know only that something went wrong). Signed by the buyer of that sale, it marks that sale contested, and voids nothing. Signed by anyone else, it shows nothing. *Mechanics, this draft's, to confirm:* the field numbers and the vow in `objects`. *To build:* the code reads draft 10's form, field 0 the vow's name, marking every sale of the signer.
+A contest of a vow (F237, F240; **new in draft 11, F253**): field 0 names **the sale it contests**: the buyer's payer's claim of the payment that is a purchase under an offer naming the vow, or, for an offer at no price, the signature act by which the buyer signed onto it (rule 13). Its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`. Field 1, optional, says which of the vow's promises was not kept (reading (Q3): a buyer may know only that something went wrong). Signed by the buyer of that sale, it marks that sale contested, and voids nothing. Signed by anyone else, it shows nothing. *Mechanics, this draft's, to confirm:* the field numbers and the vow in `objects`. *Built (`docs/agreements-draft-11-build.md`):* the code reads this form; draft 10's, field 0 the vow's name, now names no sale.
 
 *The format is written for the two cases decided; a contest of another act, or by another with standing (rule 54), keeps its format open: "as new needs are discovered the grammar needs definition" (Nobody, allegedly).*
 

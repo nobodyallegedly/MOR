@@ -398,3 +398,59 @@ fn rq1_a_refund_to_a_bare_key_is_checked_where_its_claim_said() {
     assert_eq!(a, Answer::Valid, "the address read from the claim the key signed");
     assert_eq!(repaid(&s), 50, "Money shows it repaid to the key, its rail answer checked (QG1)");
 }
+
+/// A clock standing in for the Bitcoin clock Module, for the checker's
+/// verdicts alone: it places a leaf at the point its proof states, as
+/// `"anchored at N"`. The Bitcoin clock's own batch anchors are tested in
+/// `anchor.rs`.
+struct StatedClock {
+    now: u64,
+}
+
+impl service::BatchClock for StatedClock {
+    fn reference(&self) -> mor_core::envelopes::anchoring::Reference {
+        clock::reference(Network::Regtest)
+    }
+    fn leaf_point(&self, _leaf: &Hash, proof: &[u8]) -> Result<u64, Answer> {
+        std::str::from_utf8(proof).ok().and_then(|s| s.strip_prefix("anchored at ")).and_then(|n| n.parse().ok()).ok_or(Answer::Invalid("no stated point".into()))
+    }
+    fn now(&self) -> Option<u64> {
+        Some(self.now)
+    }
+    fn depth(&self) -> u64 {
+        N as u64
+    }
+}
+
+/// Agreements draft 11, rule 11 (new in draft 11, F261): the pooled
+/// anchoring service is a proven offer, and the anchoring cMIP's existing
+/// judgment is the first checker the core asks. Ana's hash anchored by the
+/// deadline: proven. Anchored late, or left out of a batch the service
+/// published: not proven. A verifier holding no checker for the anchoring
+/// cMIP: not proven for it (unknown). The core reads the offer as a proven
+/// offer by its form alone.
+#[test]
+fn draft_11_f261_the_anchoring_check_is_the_first_proof_checker() {
+    let mut s = Story::new(&terms());
+    let offer = s.offer();
+    let mut ana = s.ana.clone();
+    let (sid, sp, oid) = (s.service.id, s.service_pointer, s.offer_id);
+    let (c, _, answer) = s.pay(&mut ana, sid, sp, "the service's node", 50, oid, "ana buys one hash");
+    assert_eq!(answer, Answer::Valid);
+    let leaf = tree::leaf(&h("ana's act"), &h("ana's blind"));
+    let ticket = Ticket { offer: oid, leaf, commitment: c.hash(), tier: 0, batch: 0, deadline: 102, quote: None };
+    let o = agreements::Offer::decode(&s.w.v.get(&oid).unwrap().inside).unwrap().offer;
+    assert!(matches!(o.sold[0].class(), agreements::OfferClass::Proven { cmip, .. } if cmip == mor_anchoring::spec()), "the access form: a proven offer");
+    let verdict = |s: &Story, publications: Vec<service::Publication>, anchor: Option<&[u8]>, now: u64, with_checker: bool| {
+        let clock = StatedClock { now };
+        let checker = service::Checker { offers: vec![offer.clone()], publications, payments: vec![Payment { commitment: c.clone(), answer: Answer::Valid }], clock: &clock };
+        let held: Vec<(Hash, &dyn agreements::ProofChecker)> = if with_checker { vec![(mor_anchoring::spec(), &checker)] } else { vec![] };
+        s.view().proven_delivery(&oid, &service::delivery_proof(&ticket, anchor), &held).unwrap()
+    };
+    assert_eq!(verdict(&s, vec![], Some(b"anchored at 101"), 120, true), agreements::ProofVerdict::Proven);
+    assert!(matches!(verdict(&s, vec![], Some(b"anchored at 110"), 120, true), agreements::ProofVerdict::NotProven(_)), "late");
+    let without = service::Publication { offer: oid, batch: 0, leaves: vec![h("someone else's leaf")], tx: h("the batch's transaction"), output: 0 };
+    assert!(matches!(verdict(&s, vec![without], None, 101, true), agreements::ProofVerdict::NotProven(_)), "left out of its batch");
+    assert!(matches!(verdict(&s, vec![], None, 101, true), agreements::ProofVerdict::Unknown(_)), "pending");
+    assert!(matches!(verdict(&s, vec![], Some(b"anchored at 101"), 120, false), agreements::ProofVerdict::Unknown(_)), "no checker held: not proven here");
+}
