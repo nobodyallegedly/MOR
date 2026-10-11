@@ -21,11 +21,11 @@ It is built to be a good ancestor. Identities, agreements and history can always
 - **Building steps are attacked by a separate AI reviewer**, and its reports are kept ([docs/reviews/](docs/reviews/)).
 - **The human adversarial review (round 3) has not happened yet.** That is the invitation: break it. What you break is the most useful contribution there is.
 
-What is run and what is only reasoned is stated claim by claim in the paper ([docs/paper/mor-paper-draft-2.md](docs/paper/mor-paper-draft-2.md), section 6.2). The freeze test suite ([spec/03-MOR-freeze-test-suite-v21.md](spec/03-MOR-freeze-test-suite-v21.md)) is the specification of what to test; marking each scenario is the freeze report, still to be written.
+What is run and what is only reasoned is stated claim by claim in the paper ([docs/paper/mor-paper-draft-3.md](docs/paper/mor-paper-draft-3.md), section 6.2). The freeze test suite ([spec/03-MOR-freeze-test-suite-v21.md](spec/03-MOR-freeze-test-suite-v21.md)) is the specification of what to test; marking each scenario is the freeze report, still to be written.
 
 ## Where to start reading
 
-1. [docs/07-MOR-in-one-page-v10.md](docs/07-MOR-in-one-page-v10.md): MOR in one page, in plain words.
+1. [docs/07-MOR-in-one-page-v11.md](docs/07-MOR-in-one-page-v11.md): MOR in one page, in plain words.
 2. [spec/02-MOR-core-v21.md](spec/02-MOR-core-v21.md): the core document, the map of the six MIPs.
 3. [spec/](spec/): the MIPs themselves, and the freeze test suite.
 4. [docs/findings/](docs/findings/): why each rule is the way it is.

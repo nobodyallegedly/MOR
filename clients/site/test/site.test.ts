@@ -432,7 +432,7 @@ test('from elsewhere, check a gateway: the same as signed and released, or where
 });
 
 test('the Run guide is a long-form document, canonical text, carrying no private details', () => {
-  const guide = readFileSync(new URL('../../../docs/run-guide-draft-1.md', import.meta.url), 'utf8').replace(/\n$/, '');
+  const guide = readFileSync(new URL('../../../docs/run-guide-draft-2.md', import.meta.url), 'utf8').replace(/\n$/, '');
   checkText(guide);
   assert.ok(title(parse(guide)), 'it has a title');
   assert.doesNotMatch(guide, /[0-9a-f]{64}/, 'no identity, key or act id');
