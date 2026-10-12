@@ -350,8 +350,8 @@ export interface Followed {
  * Follow a reference to the act it names (F272): first where the reader
  * already looks (`hints`), side by side; not found there, and the
  * reference names a signer, by that signer: its identity, the homes in
- * force, its routes, then the act, from its outbox routes and its homes
- * side by side. The act found must be the one named; where a signer is
+ * force, its routes, then the act, from its outbox routes side by side,
+ * and only if they hold nothing, from its homes side by side. The act found must be the one named; where a signer is
  * named, the act found must show it (the reference is wrong otherwise: an
  * error says so, and neither act becomes invalid by it). Nothing found is
  * no proof the act does not exist.
@@ -391,8 +391,10 @@ export async function followRef(r: Reference, hints: string[], via: Via = {}): P
     throw new Error(`the act ${id} was not found at ${hints.join(', ')}, and its signer ${named} could not be looked up there: ${e instanceof Error ? e.message : e}`);
   }
   for (const n of l.notTried) if (!notTried.some((x) => x.hint === n.hint)) notTried.push(n);
-  const places = (l.verifier as Verifier & { places(signer: string): string[] }).places(named);
-  const there = await fetchFrom(places.filter((p) => !hints.includes(p)));
+  const places = (l.verifier as Verifier & { places(signer: string): string[] }).places(named).filter((p) => !hints.includes(p));
+  // The signer's outbox routes first, where its content is kept; then its homes. Each group side by side.
+  const outbox = new Set(l.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints.map((h) => h.replace(/\/$/, ''))));
+  const there = (await fetchFrom(places.filter((p) => outbox.has(p)))) ?? (await fetchFrom(places.filter((p) => !outbox.has(p))));
   if (there) return { ...there, how: 'signer', notTried };
   throw new Error(`the act ${id} was not found at ${hints.join(', ')}, nor at its signer's routes and homes (${places.join(', ') || 'none found'})`);
 }

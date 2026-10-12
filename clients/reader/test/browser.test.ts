@@ -13,6 +13,8 @@ import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser } from 'playwright-core';
 import { TestIdentity } from '../../genesis/src/identity.ts';
+import { SPECS, cborEncode } from '../../genesis/src/core.ts';
+import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { publishDocument } from '../../longform/src/act.ts';
 import { post } from '../../barebone/src/post.ts';
@@ -39,6 +41,9 @@ let page0: string;
 let browser: Browser;
 let docId: string;
 let postId: string;
+let replyId: string;
+let keptId: string;
+const onion = 'http://exampleexampleexampleexampleexampleexampleexample7ad.onion';
 let settings: string;
 const csp: string[] = [];
 /** Set MOR_SCREENSHOTS to a folder to keep a picture of each page, for a person to look at. */
@@ -57,6 +62,17 @@ before(async () => {
   await owner.publishEncryptionKey();
   docId = (await publishDocument(owner, sample, [relay.base])).id;
   postId = (await post(owner, { text: 'Thank you for the shower… (a test post)', jpeg: phone, relays: [relay.base] })).id;
+  // F272: an identity whose post is kept at the second home only, one of its homes an onion address; the owner's reply names it with its signer.
+  const nym = TestIdentity.create({ homes: [...homes.map((h) => h.home), { operator: null, hint: onion }] });
+  await nym.publishGenesis();
+  await nym.publishRoutes([{ scope: null, hints: [homes[1].base] }]);
+  for (const a of nym.chainActs()) await relayAt(relay.base).putAct(a);
+  const kept = await nym.publish(SPECS.text, 0, cborEncode(new Map([[0, 'A post kept at home two.']])), { public: true, relays: [homes[1].base] });
+  keptId = kept.id;
+  const replier = TestIdentity.create({ homes: homes.map((h) => h.home) });
+  await replier.publishGenesis();
+  for (const a of replier.chainActs()) await relayAt(relay.base).putAct(a);
+  replyId = (await replier.publish(SPECS.text, 0, cborEncode(new Map([[0, 'A reply naming it.']])), { public: true, relays: [relay.base], refs: [[kept.id, nym.id]] })).id;
   settings = JSON.stringify({
     identity: owner.id,
     name: 'Nobody, allegedly',
@@ -176,6 +192,27 @@ test('a visitor sends a message over MOR from the page; the owner opens it, veri
   assert.equal(await page.inputValue('#message-text'), '');
   await shot(page, 'front-message-sent');
   assert.deepEqual(problems, []);
+  await ctx.close();
+});
+
+test('a reply shows the post it answers, found by its signer at another home; an onion home is not tried, and the page says so (F272; B3)', async () => {
+  const { page, ctx, problems } = await open(`#${replyId}`);
+  await page.waitForSelector('.standing', { timeout: 60_000 });
+  await page.waitForFunction(() => document.body.textContent?.includes('as the reference says'), undefined, { timeout: 60_000 });
+  const text = (await page.textContent('body'))!;
+  assert.match(text, /signed by [0-9a-f]{8}…[0-9a-f]{4} as the reference says: a text act/);
+  assert.match(text, /Not tried: http:\/\/example[a-z0-9]*\.onion, an onion address, which a web browser cannot reach/);
+  await shot(page, 'reply');
+  // The reader's own relay answers "not held" for the post before the signer is followed: an answer
+  // of the cMIP (error 8), which the browser logs as a 404. Nothing else: no request to the onion address.
+  const notHeld = `404 ${relay.base}/acts/${keptId}`;
+  assert.ok(problems.includes(notHeld), JSON.stringify(problems));
+  assert.deepEqual(
+    problems.filter((p) => p !== notHeld && !/^Failed to load resource: the server responded with a status of 404/.test(p)),
+    [],
+    'no request to the onion address, and nothing else in the console',
+  );
+  assert.equal(problems.filter((p) => /status of 404/.test(p)).length, 1);
   await ctx.close();
 });
 
