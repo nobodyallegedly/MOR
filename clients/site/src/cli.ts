@@ -14,6 +14,7 @@ import { CARRIED_WORDS as FILM_CARRIED, strip as stripFilm } from '../../../modu
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import { Gateway, type Loaded } from './gateway.ts';
 import { findLater } from './latest.ts';
+import { placeFilms, MAX_LABEL, type FilmIn } from './films.ts';
 import { addressOf } from './manifest.ts';
 import { publishSite, readFolder } from './publish.ts';
 import { BUILT, DISPLAY_FILES } from './released.ts';
@@ -52,6 +53,18 @@ checks every page in the visitor's browser before showing it.
         a film to the film alone (video Module, rule 10), so that it may go
         into a site. A film the video Module refuses is not changed: the
         reason is said.
+  films --dir FOLDER [--main FILM.mp4 --main-poster POSTER.jpg [--main-label TEXT]]
+        [--film FILM.mp4 --poster POSTER.jpg --label TEXT ...] [--page index.html]
+        Put films into a site before publishing it (website cMIP, draft 5): the
+        main film, shown in the page, and the films listed under it, each a
+        small button with its label (at most ${MAX_LABEL} characters) that plays it over
+        the page. Each film is checked by the video Module (at most
+        67,108,848 bytes, ten minutes, 1920 x 1080, 60 pictures a second) and
+        each poster by the JPEG Module; both are stripped, and written under
+        FOLDER/films/, the files given left as they are. The page gets their
+        markup between its two marks (<!-- mor-site films --> and
+        <!-- /mor-site films -->). With no films, the block is emptied.
+        Nothing is written unless every film and poster passes.
 
 Every command that reaches relays takes --via URL=LOCAL to reach an address
 another way (for example an onion address through a local port).`;
@@ -233,6 +246,31 @@ async function main(argv: string[]): Promise<number> {
       if (g.settings.sites.some((e) => e.serve === 'latest')) void reload('look');
     }, settings.look * 1000);
     await new Promise(() => {});
+    return 0;
+  }
+
+  if (cmd === 'films') {
+    const dir = resolve(one(opts, 'dir'));
+    const bytes = (f: string) => new Uint8Array(readFileSync(f));
+    const film = opts.film ?? [];
+    const poster = opts.poster ?? [];
+    const label = opts.label ?? [];
+    if (poster.length !== film.length || label.length !== film.length)
+      throw new Error(`each --film needs its --poster and its --label, in the same order (${film.length} films, ${poster.length} posters, ${label.length} labels)`);
+    if (!!opts.main !== !!opts['main-poster']) throw new Error('--main and --main-poster go together');
+    const main: FilmIn | undefined = opts.main
+      ? { film: bytes(opts.main[0]), poster: bytes(opts['main-poster'][0]), label: opts['main-label']?.[0], from: { film: opts.main[0], poster: opts['main-poster'][0] } }
+      : undefined;
+    const listed: FilmIn[] = film.map((f, i) => ({ film: bytes(f), poster: bytes(poster[i]), label: label[i], from: { film: f, poster: poster[i] } }));
+    const placed = placeFilms(dir, { main, listed, page: opts.page?.[0] });
+    if (!placed.length) console.log(`no films: the films block of ${opts.page?.[0] ?? 'index.html'} is empty`);
+    for (const p of placed) {
+      const f = p.film;
+      console.log(`${p.main ? 'main film' : `listed, "${p.label}"`}: ${p.path} (poster ${p.poster})`);
+      console.log(`  ${p.size} bytes, ${f.duration.toFixed(1)} s, ${f.video.shown.width} x ${f.video.shown.height}, ${f.video.profile} ${f.video.level / 10}, ${f.audio ? `sound ${f.audio.channels === 2 ? 'stereo' : 'mono'}` : 'no sound'}`);
+      console.log(p.removed.length ? `  stripped: removed ${p.removed.join('; ')}` : '  carried only the film and the picture');
+    }
+    console.log(`written into ${dir}; publish the folder as usual`);
     return 0;
   }
 

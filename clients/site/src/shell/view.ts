@@ -48,11 +48,21 @@ code,.fp{font-family:ui-monospace,Menlo,monospace;font-size:.92em;overflow-wrap:
 .mor-player>img,.mor-player>video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;max-width:none}
 .mor-player>button{position:relative;font:600 16px system-ui,sans-serif;padding:12px 20px;border:0;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;cursor:pointer}
 .mor-player>.mor-film-note{position:relative;max-width:90%;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.65);text-align:center}
-.mor-player.played>.mor-film-note{display:none}`;
+.mor-player.played>.mor-film-note{display:none}
+.mor-film-open{position:absolute;margin:0;padding:0;border:0;border-radius:999px;background:transparent;color:transparent;font:inherit;cursor:pointer;overflow:hidden;white-space:nowrap}
+.mor-film-open:hover{background:rgba(127,127,127,.18)}
+.mor-film-open:focus-visible{outline:3px solid Highlight;outline-offset:2px}
+.mor-popup{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.8)}
+.mor-popup-panel{display:flex;flex-direction:column;gap:8px;width:min(100%,64em);max-height:100%}
+.mor-popup-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff;font:600 16px/1.3 system-ui,sans-serif}
+.mor-popup-title{overflow-wrap:anywhere}
+.mor-popup-close{flex:none;min-height:44px;padding:8px 16px;border:2px solid #fff;border-radius:999px;background:#000;color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}
+.mor-popup .mor-player{position:relative;align-self:center;width:min(100%,calc((100vh - 96px) * var(--shape,1.7778)));width:min(100%,calc((100dvh - 96px) * var(--shape,1.7778)));aspect-ratio:var(--shape,16/9)}`;
 
 /** Put first in every page's frame: the boxes where acts are shown, the places films are played, and links that leave the site. */
 export const FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-film{display:block;width:100%;aspect-ratio:16/9;background:#000}
+.mor-film-link{display:inline-block;padding:.4em 1em;border:1px solid currentColor;border-radius:999px;font:600 14px/1.3 system-ui,sans-serif;white-space:nowrap}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 
@@ -84,6 +94,8 @@ export interface FilmLine {
   state: 'waiting' | 'checking' | 'verified' | 'failing' | 'cannot';
   /** Why it failed, or why this browser cannot play it. */
   why: string | null;
+  /** The label of a film the page lists (draft 5, rule 12b). */
+  label?: string;
 }
 
 export interface BarState {
@@ -118,7 +130,7 @@ function filmItem(f: FilmLine): string {
     failing: '<span class="bad-word">failing</span>: not played',
     cannot: '<span class="bad-word">not played</span> in this browser',
   }[f.state];
-  return `<li><code>${e(f.path)}</code>: ${words}${f.why ? `, ${e(f.why)}` : ''}</li>`;
+  return `<li><code>${e(f.path)}</code>${f.label ? ` (“${e(f.label)}”)` : ''}: ${words}${f.why ? `, ${e(f.why)}` : ''}</li>`;
 }
 
 /** The bar: whether this file is what the identity signed, who signed, and how to check without this gateway. */

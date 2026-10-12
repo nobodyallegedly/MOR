@@ -20,6 +20,14 @@ const ANY_H264 = 'video/mp4; codecs="avc1.42E01E"';
 
 const megabytes = (n: number) => (n < 1_000_000 ? `${Math.max(1, Math.round(n / 1000))} kB` : `${(n / 1_000_000).toFixed(n < 10_000_000 ? 1 : 0)} MB`);
 
+/** How a player starts and stops, beyond pressing its own play button. */
+export interface PlayerOptions {
+  /** Start at once, as if play were pressed: the visitor's press that opened the player was the ask (draft 5, rule 12b). */
+  now?: boolean;
+  /** Stop: the film is paused and let go, and nothing more is fetched or played. */
+  signal?: AbortSignal;
+}
+
 /**
  * A player for one film. `get` fetches the film's bytes and checks them
  * against its entry (null if they do not match); `changed` repaints the bar
@@ -28,11 +36,13 @@ const megabytes = (n: number) => (n < 1_000_000 ? `${Math.max(1, Math.round(n / 
 export function filmPlayer(
   entry: FileEntry,
   poster: Uint8Array | null,
-  get: (entry: FileEntry) => Promise<Uint8Array | null>,
+  get: (entry: FileEntry, signal?: AbortSignal) => Promise<Uint8Array | null>,
   line: FilmLine,
   changed: () => void,
   posterLoaded: (width: number, height: number) => void = () => {},
+  options: PlayerOptions = {},
 ): HTMLElement {
+  const signal = options.signal;
   const box = document.createElement('div');
   box.className = 'mor-player';
   box.dataset.film = entry.path;
@@ -70,7 +80,25 @@ export function filmPlayer(
   box.replaceChildren(...parts(posterImg(), button, note(`${megabytes(entry.size)}, checked against what was signed before it plays.`)));
   box.dataset.state = 'waiting';
 
-  button.addEventListener('click', async () => {
+  let video: HTMLVideoElement | null = null;
+  let filmUrl = '';
+  signal?.addEventListener(
+    'abort',
+    () => {
+      // Stopped: paused, its bytes let go, and the browser told to drop them.
+      if (video) {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      }
+      if (filmUrl) URL.revokeObjectURL(filmUrl);
+      if (line.state === 'checking') set('waiting');
+    },
+    { once: true },
+  );
+
+  const go = async () => {
+    if (signal?.aborted) return;
     const probe = document.createElement('video');
     if (!probe.canPlayType(ANY_H264)) {
       stop('cannot', 'this browser plays no H.264 film', 'This browser does not play H.264 films, so the film was not fetched. The rest of the page is as signed.');
@@ -81,11 +109,13 @@ export function filmPlayer(
     set('checking');
     let bytes: Uint8Array | null;
     try {
-      bytes = await get(entry);
+      bytes = await get(entry, signal);
     } catch (err) {
+      if (signal?.aborted) return;
       stop('failing', `not fetched (${err instanceof Error ? err.message : String(err)})`, 'The film could not be fetched from this gateway. Not played.');
       return;
     }
+    if (signal?.aborted) return;
     if (!bytes) {
       stop('failing', 'what this gateway served is not what was signed', 'What this gateway served for the film is not what was signed. Not played.');
       return;
@@ -102,7 +132,7 @@ export function filmPlayer(
       stop('cannot', `this browser cannot play ${type}`, 'The film is as signed, but this browser cannot play its kind. Not played.');
       return;
     }
-    const video = document.createElement('video');
+    video = document.createElement('video');
     video.controls = true;
     video.playsInline = true;
     video.setAttribute('playsinline', '');
@@ -111,22 +141,28 @@ export function filmPlayer(
     if (posterUrl) video.poster = posterUrl;
     video.addEventListener(
       'error',
-      () => stop('cannot', `this browser stopped playing it (error ${video.error?.code ?? '?'})`, 'This browser could not play the film. The film is as signed.'),
+      () => {
+        if (signal?.aborted) return;
+        stop('cannot', `this browser stopped playing it (error ${video?.error?.code ?? '?'})`, 'This browser could not play the film. The film is as signed.');
+      },
       { once: true },
     );
-    video.src = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'video/mp4' }));
+    filmUrl = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'video/mp4' }));
+    video.src = filmUrl;
     box.classList.add('played');
     box.replaceChildren(video, note('Checked: exactly what was signed. Press play.'));
     set('verified');
     // Played on the visitor's own press. If the browser holds that the press
     // was too long ago (the fetch took a while), its controls are there.
     video.play().catch(() => box.classList.remove('played'));
-  });
+  };
+  button.addEventListener('click', () => void go());
+  if (options.now) void go();
   return box;
 }
 
 /**
- * Lay each film's player on the place the page gave it, in the page's frame,
+ * Lay each film's player (or a listed film's button) on the place the page gave it, in the page's frame,
  * and keep it there as the page grows, shrinks or turns. The frame is as
  * tall as the page (nothing scrolls inside it), so a place's position in the
  * frame is its position under the frame's top.

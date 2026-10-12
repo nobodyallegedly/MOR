@@ -63,7 +63,7 @@ jobs:
       - name: WebKit, Playwright's build
         run: cd clients/site && npx playwright-core install --with-deps webkit
       - name: Browser tests in WebKit (Safari's engine)
-        run: cd clients/site && MOR_BROWSER=webkit node --import tsx --test test/browser.test.ts test/film.test.ts
+        run: cd clients/site && MOR_BROWSER=webkit node --import tsx --test test/browser.test.ts test/film.test.ts test/films.test.ts
       - name: Browser tests in Chromium
         if: success() || failure()
-        run: cd clients/site && node --import tsx --test test/browser.test.ts test/film.test.ts
+        run: cd clients/site && node --import tsx --test test/browser.test.ts test/film.test.ts test/films.test.ts
