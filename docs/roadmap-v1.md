@@ -210,6 +210,10 @@ An anchoring service paid per hash over Lightning pools the requests and commits
 
 Sessions launched by Nobody, allegedly, each reporting for the project lead: (a) Identity draft 12, plain reading (F251's order); (b) Envelopes draft 8 and Text draft 7, plain reading; (c) Development draft 7, plain reading; (d) Identity rule 17 in the clients that rotate (MOR Post's Q1); (e) a conversion cMIP, a rail swap as a proven offer, delivering freeze scenario 2, steps 4 and 4b; (f) the gateway's log naming a version it fell back from. The texts sessions change no rule and leave core v21 and freeze suite v21 to the project lead, listing the sentences to change. Then, with Nobody, allegedly: step 14's definition. **Reports, 12 October 2026, afternoon:** (f) merged (pull request 20); (e) the conversion cMIP draft 1 merged (pull request 24), its question decided as F267; (c) Development draft 7, its question decided as F268; (a) Identity draft 12 and (b) Envelopes draft 8 and Text draft 7, no question (Envelopes' F252 sentence to write in, already decided); the four drafts **approved and merged**; (d) rule 17 stopped at two tooling questions, read as mechanics, the build to follow.
 
+### The next wave: launched 12 October 2026, afternoon
+
+(g) The marked pass and core v22: F252 in Envelopes 8, F267 in Money 7, F268 in Development 7 and Agreements 11; core v22 and freeze suite v22 naming the six current drafts, with every quoted sentence the reports listed. (h) The build: F267, F268's declared field, rule 17 in the clients (the toolkit reporting `prev`; unreadable lines asked for). (i) Step 14, the deal-assessment tool. (j) The flaky test hunt.
+
 ### Documents awaiting the author's own redraft
 
 *Kept at the request of Nobody, allegedly (12 October 2026): documents approved "as is for now", to be redrafted in his own hand. Sessions may still correct facts in them; the redraft is his.*
