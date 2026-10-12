@@ -23,6 +23,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## Working practice: every question names its area (Nobody, allegedly, 12 October 2026)
+
+"From now on when asking questions or debating inform me of the area: core business, development layer business (modules and cMIP), presentation (site, companion documents…)." Each question put to Nobody, allegedly, opens with its area.
+
 ## Working rule: rare cases and markets (Nobody, allegedly, F63)
 
 Costs that fall only on rare cases mostly super users will care about are acceptable. MOR expects markets to kick in where there is value to be protected.
