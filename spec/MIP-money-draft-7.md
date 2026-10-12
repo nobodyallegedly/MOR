@@ -67,7 +67,7 @@ Identity, Envelopes and Text. Money never depends on Agreements or Development: 
 
 ### Routes
 
-- **Route.** One simple payment carried in several hops, across rails or units, through conversion services. Each receipt names the previous one; where the next payee signs no receipt, the paying hop's claim may name it instead (new in draft 7, F267; to build).
+- **Route.** One simple payment carried in several hops, across rails or units, through conversion services. Each receipt names the previous one; where the next payee signs no receipt, the paying hop's claim may also name it (new in draft 7, F267; to build).
 - **Conversion service.** An identity that receives on one rail or unit and pays on another, at the rate of its own offer: it signs a receipt as receiver, with a forward, and is the payer of the next hop. A party, not a specification.
 
 ## Part one: a payment as it runs most of the time
@@ -349,11 +349,11 @@ MOR only ever sees a payment and, in Agreements, its split. Tracking plays or vi
 
 #### Rule 24 (was 5). A valid route
 
-*In short: a route is a chain of hops, each shown by its receiver's receipt, or, where the receiver signs none, by the paying hop's own claim, each naming the hop before it and carrying on exactly what that hop forwarded.*
+*In short: a route is a chain of hops, each shown by its receiver's receipt or by the paying hop's own claim, each naming the hop before it and carrying on exactly what that hop forwarded.*
 
-A route is valid when every receipt and claim in it is valid, each hop names the previous hop's receipt, and each hop's received amount equals the previous hop's forward. **A hop names the previous hop's receipt by a valid receipt or claim of that hop: the next payee's receipt (field 6), or, where the next payee signs none, the paying hop's own claim (key 10)** (new in draft 7, F267; to build). *This is double entry along a route, as rule 11 gives a single hop: where the next payee signs no receipt, the paying hop's claim with a valid rail proof shows the money arrived, and so that the forward was passed on.*
+A route is valid when every receipt and claim in it is valid, each hop names the previous hop's receipt, and each hop's received amount equals the previous hop's forward. **A hop names the previous hop's receipt when a valid receipt or claim of that hop names it: the next payee's receipt (field 6), or the paying hop's own claim (key 10)** (new in draft 7, F267; to build). *Open (Q5, `docs/core-v22.md`): a receipt and a claim of one hop naming different previous receipts.* *This is double entry along a route, as rule 11 gives a single hop: where the next payee signs no receipt, the paying hop's claim with a valid rail proof shows the money arrived, and so that the forward was passed on.*
 
-**Rule 12 bounds it:** claims of one payment that name different previous receipts count only as rule 12 lets receipts or claims share a payment: one payment, one count (new in draft 7, F267; to build).
+**Rule 12 bounds it:** claims of one payment that name different previous receipts count only as rule 12 lets receipts or claims share a payment: one payment, one count (new in draft 7, F267; to build). *Open (Q4, `docs/core-v22.md`): whether a named batch lets one payment pass on several forwards, as rule 12 lets receipts share a payment, or one payment serves one forward only.*
 
 #### Rule 25 (was 6). Only conversion hops forward
 
@@ -361,7 +361,7 @@ Only conversion hops forward. A conversion hop forwards in the next unit, at the
 
 #### Rule 26 (was 8). Disclosure along the route
 
-Each hop's receipt MUST be disclosed at least to the next payee and to the final creditor, so the creditor can verify the whole route. Everything else may stay private.
+Each hop's receipt MUST be disclosed at least to the next payee and to the final creditor, so the creditor can verify the whole route. Everything else may stay private. *Open (Q6, `docs/core-v22.md`): a claim that shows a hop (rule 24, F267) is private by default; whether it must be disclosed as a receipt is.*
 
 #### Rule 27 (was 9). A hop that forwarded nothing
 

@@ -47,7 +47,7 @@ Identity, Envelopes, Text, Money and Agreements. Fees and usage rewards are defi
 ### Tasks and extensions
 
 - **Task.** A point where a MIP hands work to a cMIP that an agreement names by the task's number (Agreements, terms field 2; new in draft 7, F268). Tasks exist only where the MIPs define them. A hand-off no agreement names by a task number, such as the proof checker of a proven offer, is not a task (F268). *Reading, to confirm (Q1): "names" is read as "may name"; tasks 1 to 5, whose cMIP a text act, a publication or a client usually chooses, stay tasks, an agreement able to name a cMIP for any of them by its number.*
-- **Extension.** A cMIP an agreement names outside the listed tasks, for work nobody foresaw. An extension may add rules, never relax the core's.
+- **Extension.** A cMIP an agreement names outside the listed tasks, for work nobody foresaw. An extension may add rules, never relax the core's. *Open (Q3, `docs/core-v22.md`): whether the cMIP a proven offer names in its access form, a lone seller's offer being its agreement (F215), is an extension; read here as not, an extension being named in terms field 15.*
 
 ### Creators and users
 
