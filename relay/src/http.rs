@@ -6,14 +6,15 @@ use crate::client::{self, Client, ClientError, Reach};
 use crate::node::{self, Fail, Node, Put};
 use crate::store::Filter;
 use crate::wire::{self, code, part, WireError};
-use axum::body::{Body, Bytes};
-use axum::extract::rejection::BytesRejection;
-use axum::extract::{DefaultBodyLimit, Path, RawQuery, State};
+use axum::body::{Body, Bytes, HttpBody};
+use axum::extract::{Path, RawQuery, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::Router;
 use mor_core::hash::Hash;
+use std::future::poll_fn;
+use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tokio::sync::watch;
@@ -154,15 +155,70 @@ fn answer<T>(r: Result<T, Fail>, ok: impl FnOnce(T) -> Response) -> Response {
     }
 }
 
-/// A request body, or the cMIP's error for one too large to read.
-fn body(b: Result<Bytes, BytesRejection>) -> Result<Bytes, WireError> {
-    b.map_err(|r| match r.status() {
-        StatusCode::PAYLOAD_TOO_LARGE => WireError::new(
-            code::TOO_LARGE,
-            "the body is larger than this relay accepts",
-        ),
-        _ => WireError::malformed("the body could not be read"),
-    })
+/// How far past the largest body it reads a relay goes on reading, and
+/// throwing away, a body too large, so that its "too large" answer reaches
+/// the sender (findings log, "The relay's 'too large' answer always reaches
+/// the sender", 12 October 2026). A sender past this is cut off.
+pub const DISCARD: u64 = 16 * 1024 * 1024;
+
+/// The largest body a relay reads: its larger limit, and 64 KiB for the
+/// encoding around it.
+fn body_cap(s: &Shared) -> u64 {
+    let limits = s.node().config().limits;
+    limits.act.max(limits.media) + 64 * 1024
+}
+
+/// A request body, or the answer to send instead: the cMIP's error 6 for
+/// one too large, error 0 for one that could not be read.
+///
+/// A body over the cap is read to its end and thrown away, up to `DISCARD`
+/// more, before the answer goes out marked `Connection: close`. Closing a
+/// connection the sender is still writing to lets the sender's system
+/// throw the answer away; reading to the end first leaves nothing unread.
+/// A body declared, or found, larger than the cap and `DISCARD` together is
+/// answered at once and the connection closed: the sender may then see
+/// only a closed connection.
+async fn body(s: &Shared, mut b: Body) -> Result<Bytes, Response> {
+    let cap = body_cap(s);
+    let bound = cap + DISCARD;
+    if b.size_hint().lower() > bound {
+        return Err(too_large());
+    }
+    let mut kept: Vec<u8> = vec![];
+    let mut read: u64 = 0;
+    while let Some(frame) = poll_fn(|cx| Pin::new(&mut b).poll_frame(cx)).await {
+        let Ok(frame) = frame else {
+            return Err(error(malformed("the body could not be read")));
+        };
+        let Ok(data) = frame.into_data() else {
+            continue;
+        };
+        read += data.len() as u64;
+        if read > bound {
+            return Err(too_large());
+        }
+        if read <= cap {
+            kept.extend_from_slice(&data);
+        } else if !kept.is_empty() {
+            kept = vec![];
+        }
+    }
+    if read > cap {
+        return Err(too_large());
+    }
+    Ok(kept.into())
+}
+
+/// The cMIP's error 6 for a body over the cap, closing the connection so no
+/// client sends its next request on it.
+fn too_large() -> Response {
+    let mut r = error(WireError::new(
+        code::TOO_LARGE,
+        "the body is larger than this relay accepts",
+    ));
+    r.headers_mut()
+        .insert(header::CONNECTION, HeaderValue::from_static("close"));
+    r
 }
 
 // ---------------------------------------------------------------- queries
@@ -229,10 +285,10 @@ async fn info(State(s): State<Arc<Shared>>) -> Response {
     cbor(s.node().info().encode())
 }
 
-async fn put_act(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>) -> Response {
-    let body = match body(b) {
+async fn put_act(State(s): State<Arc<Shared>>, b: Body) -> Response {
+    let body = match body(&s, b).await {
         Ok(b) => b,
-        Err(e) => return error(e),
+        Err(r) => return r,
     };
     let r = s.node().put_act(&body);
     match r {
@@ -270,10 +326,10 @@ async fn get_act(State(s): State<Arc<Shared>>, Path(id): Path<String>) -> Respon
     answer(r, item)
 }
 
-async fn get_acts(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>) -> Response {
-    let body = match body(b) {
+async fn get_acts(State(s): State<Arc<Shared>>, b: Body) -> Response {
+    let body = match body(&s, b).await {
         Ok(b) => b,
-        Err(e) => return error(e),
+        Err(r) => return r,
     };
     let ids = match wire::decode_ids(&body) {
         Ok(ids) => ids,
@@ -283,10 +339,10 @@ async fn get_acts(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>
     answer(r, |v| cbor(wire::encode_maybe_items(&v)))
 }
 
-async fn put_sealed(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>) -> Response {
-    let body = match body(b) {
+async fn put_sealed(State(s): State<Arc<Shared>>, b: Body) -> Response {
+    let body = match body(&s, b).await {
         Ok(b) => b,
-        Err(e) => return error(e),
+        Err(r) => return r,
     };
     let r = s.node().put_sealed(&body);
     answer(r, |p| {
@@ -304,10 +360,10 @@ async fn get_sealed(State(s): State<Arc<Shared>>, Path(id): Path<String>) -> Res
     answer(r, item)
 }
 
-async fn put_media(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>) -> Response {
-    let body = match body(b) {
+async fn put_media(State(s): State<Arc<Shared>>, b: Body) -> Response {
+    let body = match body(&s, b).await {
         Ok(b) => b,
-        Err(e) => return error(e),
+        Err(r) => return r,
     };
     let r = s.node().put_media(&body);
     answer(r, |(h, size, arrival)| {
@@ -543,10 +599,10 @@ const PROBE_ADDRESSES: usize = 8;
 /// address and ask each for the identity record; answer every signed act
 /// that came back. Only base addresses under this cMIP's own paths are
 /// contacted.
-async fn probe(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>) -> Response {
-    let body = match body(b) {
+async fn probe(State(s): State<Arc<Shared>>, b: Body) -> Response {
+    let body = match body(&s, b).await {
         Ok(b) => b,
-        Err(e) => return error(e),
+        Err(r) => return r,
     };
     let p = match wire::Probe::decode(&body) {
         Ok(p) => p,
@@ -603,10 +659,10 @@ async fn probe(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>) -
 }
 
 /// `POST /proofs` (F101): carried inclusion proofs; answers how many were kept.
-async fn put_proofs(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejection>) -> Response {
-    let body = match body(b) {
+async fn put_proofs(State(s): State<Arc<Shared>>, b: Body) -> Response {
+    let body = match body(&s, b).await {
         Ok(b) => b,
-        Err(e) => return error(e),
+        Err(r) => return r,
     };
     let r = s.node().put_proofs(&body);
     answer(r, |n| {
@@ -617,8 +673,6 @@ async fn put_proofs(State(s): State<Arc<Shared>>, b: Result<Bytes, BytesRejectio
 // ---------------------------------------------------------------- the router
 
 pub fn router(shared: Arc<Shared>) -> Router {
-    let limits = shared.node().config().limits;
-    let body_limit = (limits.act.max(limits.media) + 64 * 1024) as usize;
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -648,7 +702,6 @@ pub fn router(shared: Arc<Shared>) -> Router {
                 "not a request of the relay transport cMIP",
             ))
         })
-        .layer(DefaultBodyLimit::max(body_limit))
         .layer(cors)
         // The management page, without CORS: only the page this relay
         // serves may call it from a browser.
