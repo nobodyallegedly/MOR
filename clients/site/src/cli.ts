@@ -210,6 +210,7 @@ async function main(argv: string[]): Promise<number> {
       for (const { entry, loaded: l } of all) {
         const site = g.sites.get(entry.hosts[0])!;
         const at = entry.hosts.join(', ');
+        for (const line of site.passedOver(l)) console.log(`${what}: ${at}: ${line}`);
         if (l.ok) console.log(`${what}: ${at}: version ${l.version.version} verified, ${site.files.size} files; serving it`);
         else console.log(`${what}: ${at}: version ${l.version.version} NOT VERIFIED${site.manifest ? `; still serving ${site.served}` : '; serving nothing'}\n  ${[...l.version.problems, ...l.problems].join('\n  ')}`);
         if (l.fork.length) console.log(`${what}: ${at}: later versions split (${l.fork.join(', ')}): following stops before them`);
