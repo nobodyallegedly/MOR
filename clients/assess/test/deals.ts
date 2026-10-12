@@ -159,7 +159,10 @@ const freeze: TestDeal[] = [
       stakes: [[named('the released work'), [[P.ana, 500_000], [P.ben, 400_000], [P.cy, 100_000]]]],
       releaseRule: { named: [P.ana, P.ben] },
     },
-    flags: ['no-exit', 'no-fork-judge', 'dilutable-stake', 'uncapped-fee', 'payer-side-split'],
+    // No uncapped fee: Cy, who is no party, signs a version adding a fee
+    // (Agreements draft 12, rule 48, F270), which the core now refuses
+    // without Cy.
+    flags: ['no-exit', 'no-fork-judge', 'dilutable-stake', 'payer-side-split'],
   }),
   deal({
     name: 'Two musicians, half each',

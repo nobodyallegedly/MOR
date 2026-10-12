@@ -960,10 +960,29 @@ impl<'a> AgreementsView<'a> {
     /// F124): every holder, named by identity, whose share of a stake the
     /// clone drops or lowers, member or not (rule 46); a departed holder
     /// whose own stake plan it changes or drops (M1's stake part, reading);
-    /// and, where it changes the release rule, every holder of every stake
-    /// the parent defines (N8). A holder written null is this collective,
-    /// whose consent is the mark itself.
+    /// where it changes the release rule, every holder of every stake the
+    /// parent defines (N8); and every holder it pays less who has no voice
+    /// in the power making the change (Agreements draft 12, rule 48: F270,
+    /// as F274 reads it; [`super::pay_signers`]). A holder written null is
+    /// this collective, whose consent is the mark itself. In a collective, a
+    /// departed holder asked for its pay alone may be reached instead by
+    /// F273's advance permission ([`Self::must_sign_parts`],
+    /// [`Self::pay_permitted`]); in a deal nothing replaces a non-party
+    /// holder's signature (F273).
     fn must_sign(parent: &Terms, clone: &Terms) -> Vec<Hash> {
+        let (mut out, pay) = Self::must_sign_parts(parent, clone);
+        for h in pay {
+            if !out.contains(&h) {
+                out.push(h);
+            }
+        }
+        out
+    }
+
+    /// [`Self::must_sign`] in two: those asked for their share, their stake
+    /// plan or the release rule, whose signature nothing replaces; and those
+    /// asked for their pay alone (F270), none of the first.
+    fn must_sign_parts(parent: &Terms, clone: &Terms) -> (Vec<Hash>, Vec<Hash>) {
         let mut out: Vec<Hash> = vec![];
         let mut add = |h: Hash| {
             if !out.contains(&h) {
@@ -993,7 +1012,55 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
-        out
+        let pay = super::pay_signers(parent, clone).into_iter().filter(|h| !out.contains(h)).collect();
+        (out, pay)
+    }
+
+    /// F273 (decided by Nobody, allegedly: "A) agreed"): the agreement's
+    /// advance permission reaches a collective's departed holder's pay, and
+    /// never a deal's non-party holder's (rule 48). Read here as rule 8
+    /// names an advance permission, an abandonment outcome (reading, to
+    /// confirm: `docs/f270-build.md`, Q1): a declaration of absence against
+    /// that departed holder, under the abandonment clause of a version of
+    /// `lineage` it signed as a member, counting as the act `by` uses it
+    /// ([`Self::declaration_used`]), and stating an outcome that takes its
+    /// stake (1, redistributed; 2, transferred), which rule 48's first
+    /// paragraph already reads as pre-authorised. A threshold authority is
+    /// counted at the line `at` where the clone is judged
+    /// ([`Self::authority_at`]); with no line, by the signature acts on the
+    /// declaration among the parent's parties. `lineage` starts at the
+    /// parent.
+    fn pay_permitted(&self, holder: &Hash, by: &Hash, lineage: &[(Hash, Terms)], at: Option<(&Col, Line<'a>, &Hash)>, own: &[Departure]) -> R<bool> {
+        let parent = &lineage[0].1;
+        if !parent.is_collective() || !parent.departed.iter().flatten().any(|d| d == holder) {
+            return Ok(false);
+        }
+        let mut everyone: Vec<Hash> = vec![];
+        for (_, t) in lineage {
+            for p in &t.parties {
+                if p != holder && !everyone.contains(p) {
+                    everyone.push(*p);
+                }
+            }
+        }
+        let takes = [outcomes::STAKE_REDISTRIBUTED, outcomes::STAKE_TRANSFERRED];
+        for (x, d, clause, signer) in self.declarations_against(holder, lineage, &everyone, by, at, &takes)? {
+            let counted = match (at, &clause.authority) {
+                (_, Authority::Named(_)) => true,
+                (Some((col, l, ag)), Authority::Others(_)) => {
+                    self.authority_at(col, Point::Line(l), ag, &clause, &d, &x, &signer, own)?.is_ok()
+                }
+                (None, Authority::Others(k)) => {
+                    let others: Vec<Hash> = parent.parties.iter().filter(|p| *p != holder).copied().collect();
+                    let n = 1 + self.valid_sigs(&x, &others).iter().filter(|(w, _)| *w != signer).count();
+                    others.contains(&signer) && Rule::Threshold(*k).needed(others.len()).is_some_and(|need| n >= need)
+                }
+            };
+            if counted {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     /// An agreement: its terms, who signed, and what can be said of it
@@ -1078,11 +1145,18 @@ impl<'a> AgreementsView<'a> {
             }
         }
         let mark = terms.field4.mark().unwrap_or(&[]);
-        let losing = Self::must_sign(parent, &terms);
+        let (losing, pay) = Self::must_sign_parts(parent, &terms);
+        let mut paid = true;
+        for h in &pay {
+            if self.signers(id, &[*h]).is_empty() && !self.pay_permitted(h, id, &lineage[1..], None, &[])? {
+                paid = false;
+            }
+        }
         let ready = invalid.is_none()
             && mark.iter().all(|e| e.signers.iter().all(|s| all_sigs.contains(s)))
             && Self::newcomers(parent, &terms).iter().all(|p| all_sigs.contains(p))
-            && losing.iter().all(|h| !self.signers(id, &[*h]).is_empty());
+            && losing.iter().all(|h| !self.signers(id, &[*h]).is_empty())
+            && paid;
         Ok(Agreement {
             id: *id,
             terms,
@@ -1108,7 +1182,7 @@ impl<'a> AgreementsView<'a> {
             let mut gone = false;
             // B19: the authority is one identity, which signs alone; terms
             // naming a threshold of the parties are invalid in a deal.
-            for (x, _, _, _) in self.declarations_against(p, up, &parent.parties, id, None)? {
+            for (x, _, _, _) in self.declarations_against(p, up, &parent.parties, id, None, &[outcomes::VOICE_REMOVED])? {
                 let placed = self
                     .valid_sigs(id, &[*p])
                     .iter()
@@ -3023,10 +3097,18 @@ impl<'a> AgreementsView<'a> {
                 "a party it adds, or makes a holder, has not signed it (Q11)".into(),
             ));
         }
-        if !Self::must_sign(parent, clone).iter().all(|h| by.contains_key(h)) {
+        let (losing, pay) = Self::must_sign_parts(parent, clone);
+        if !losing.iter().all(|h| by.contains_key(h)) {
             return Ok(CloneState::Draft(
                 "it lowers a holder's stake, changes a departed holder's plan or changes the release rule, and a holder it must have has not signed it (rules 46, 46b; N8)".into(),
             ));
+        }
+        for h in &pay {
+            if !by.contains_key(h) && !self.pay_permitted(h, k, &lineage[1..], Some((col, at, &pid)), own)? {
+                return Ok(CloneState::Draft(
+                    "it pays a departed holder less, and that holder has not signed it, nor does an advance permission reach its pay (Agreements draft 12, rule 48; F270, F273, F274)".into(),
+                ));
+            }
         }
         if let Some(w) = self.coverage(clone) {
             return Ok(CloneState::Invalid(w));
@@ -3269,8 +3351,8 @@ impl<'a> AgreementsView<'a> {
     /// signed, under the clauses of `lineage`: the identities they name, or
     /// the other parties of `parties`. Checked on their own, and as the act
     /// `by` uses them (the clone put in force under them: absence proof,
-    /// [`Self::declaration_used`]).
-    fn declarations_against(&self, party: &Hash, lineage: &[(Hash, Terms)], parties: &[Hash], by: &Hash, at: Option<(&Col, Line<'a>, &Hash)>) -> R<Vec<(Hash, AbsenceDeclaration, Abandonment, Hash)>> {
+    /// [`Self::declaration_used`]), stating one of the outcomes `stating`.
+    fn declarations_against(&self, party: &Hash, lineage: &[(Hash, Terms)], parties: &[Hash], by: &Hash, at: Option<(&Col, Line<'a>, &Hash)>, stating: &[u64]) -> R<Vec<(Hash, AbsenceDeclaration, Abandonment, Hash)>> {
         let mut who: Vec<Hash> = vec![];
         for (_, t) in lineage {
             match t.abandonment.as_ref().map(|a| &a.authority) {
@@ -3289,7 +3371,7 @@ impl<'a> AgreementsView<'a> {
                 }
                 if let Ok((d, c)) = self.declaration_used(&h.id, by, at)? {
                     if &d.party == party
-                        && d.outcomes.contains(&outcomes::VOICE_REMOVED)
+                        && stating.iter().any(|o| d.outcomes.contains(o))
                         && ids.contains(&d.agreement)
                     {
                         out.push((h.id, d, c, w));
@@ -3316,7 +3398,7 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             let mut open = None;
-            for (x, d, clause, signer) in self.declarations_against(p, &lineage, &t.parties, k, Some((col, Line::Rotation(j), at)))? {
+            for (x, d, clause, signer) in self.declarations_against(p, &lineage, &t.parties, k, Some((col, Line::Rotation(j), at)), &[outcomes::VOICE_REMOVED])? {
                 match self.authority_at(col, Point::Line(Line::Rotation(j)), at, &clause, &d, &x, &signer, &[]) {
                     Ok(Ok(())) => {
                         out.push(Departure {

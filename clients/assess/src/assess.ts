@@ -5,7 +5,7 @@
 // or, from the relays, its verdicts (`gather.ts`); nothing here re-decides
 // a rule. Each flag names the rule or stated cost it rests on.
 //
-// Rules are cited by their numbers in Agreements draft 11, with the number
+// Rules are cited by their numbers in Agreements draft 12, with the number
 // the code and the findings use where it differs ("was").
 
 import { agreementsClonePlan, cborDecode, cborEncode, sha256, unhex } from '../../genesis/src/core.ts';
@@ -370,7 +370,11 @@ function mustSign(t: TermsRead, p: PowerOut): string[] {
  * The identities whose signatures a change of terms field `field` (8, the
  * split plan; 28, the fees) needs, as the core library says: the powers it
  * asks of a version changing that field alone (`agreementsClonePlan`), and
- * those each power cannot do without. Null where the core cannot say.
+ * those each power cannot do without; and the holders with no voice in that
+ * power whom the change pays less (`paySigners`: Agreements draft 12, rule
+ * 48, F270, F274). The version probed changes the split cMIP's parameters,
+ * or adds a fee, both of which pay every stake less as F274 reads it. Null
+ * where the core cannot say.
  */
 function signersFor(payload: Uint8Array, t: TermsRead, field: 8 | 28): Set<string> | null {
   const m = new Map(cborDecode(payload) as Map<number, unknown>);
@@ -385,8 +389,8 @@ function signersFor(payload: Uint8Array, t: TermsRead, field: 8 | 28): Set<strin
     m.set(28, [[mark('a fee Module'), 1]]);
   }
   try {
-    const plan = agreementsClonePlan(payload, cborEncode(m), AGREEMENTS_SPECS) as { needs: PowerOut[] };
-    return new Set(plan.needs.flatMap((p) => mustSign(t, p)));
+    const plan = agreementsClonePlan(payload, cborEncode(m), AGREEMENTS_SPECS) as { needs: PowerOut[]; paySigners: string[] };
+    return new Set([...plan.needs.flatMap((p) => mustSign(t, p)), ...plan.paySigners]);
   } catch {
     return null;
   }
@@ -431,7 +435,7 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
     let bearers: string[] = [];
     if (t.plan && !t.plan.maxRailFee) {
       why.push('the split plan states no maximum fee per payout, so a payout may lose any rail fee and nothing beyond a maximum becomes the service’s obligation');
-      rests.push('Agreements rule 25 (was 24a): the split plan “states a maximum fee per payout”; Money rule 21');
+      rests.push('Agreements rule 25 (was 24a): the split plan “may state a maximum fee per payout”; “where it states none, there is no cap”, and a client must flag the absence before signing (F271); Money rule 21');
       cites.push(...A(25), { mir: 'Money', rule: 21 });
     }
     if (owners.length) {
@@ -439,8 +443,8 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
       bearers = need ? owners.filter((h) => !need.has(h)) : [];
       if (bearers.length) {
         why.push(`fees can be added or raised without ${who(bearers)}, who bear${bearers.length === 1 ? 's' : ''} them with every stake`);
-        rests.push('Agreements rule 28 (was 27): fees come off the top of every stake, and their bearers consent by the power the fees field falls under, not each by their own signature');
-        cites.push(...A(28));
+        rests.push('Agreements rule 28 (was 27): fees come off the top of every stake, and their bearers consent by the power the fees field falls under, not each by their own signature, save a holder with no voice in it, who signs a version paying its stake less (rule 48, F270)');
+        cites.push(...A(28, 48));
       }
     }
     if (why.length) out.push({ code: 'uncapped-fee', family: 'listed', who: bearers.length ? bearers : undefined, text: `Uncapped fee: ${why.join('; and ')}.`, rests: rests.join('; '), cites });
@@ -496,6 +500,15 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
       rests.push('Agreements rule 48 (was 46): no stake reduced without its holder’s signature “unless the agreement pre-authorised it”; rule 89, outcomes 1 and 2');
       cites.push(...A(48, 89));
     }
+    // F273: in a collective, the clause's power to take a departed holder's
+    // stake reaches its pay too (reading, to confirm: `docs/f270-build.md`).
+    const gone = deal ? [] : owners.filter((h) => (t.departed ?? []).includes(h));
+    if (a && lose.length && gone.length) {
+      for (const h of gone) hit.add(h);
+      why.push(`${who(gone)}, departed, may be declared absent under the clause signed as a member, and then be paid less (a fee added, the plan changed) without signing`);
+      rests.push('Agreements rule 48 (was 46), new in draft 12 (F273): the agreement’s advance permission “reaches a collective’s departed holder’s pay”; rule 89, outcomes 1 and 2');
+      cites.push(...A(48, 89));
+    }
     const r = t.releaseRule;
     if (r && r.form !== 'all') {
       const need = new Set(r.form === 'named' ? (r.named ?? []) : []);
@@ -512,7 +525,7 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
     if (left.length) {
       for (const h of left) hit.add(h);
       why.push(`the split plan, which sets what each stake is paid, can be changed without ${who(left)}`);
-      rests.push('Agreements rules 45 and 48: a new version needs a holder’s signature to lower its share, not to change the split plan (field 8), which falls under its own power (rules 62 to 65; every party in a deal, rule 47)');
+      rests.push('Agreements rules 45 and 48: the split plan (field 8) falls under its own power (rules 62 to 65; every party in a deal, rule 47); a version paying a stake less needs the signature of a holder with no voice in that power (a deal’s holder who is no party, a collective’s departed holder: rule 48, F270, F274), not of a member, whom the collective’s own rules bind');
       cites.push(...A(45, 48, 62, 63, 64, 65, 47));
     }
     if (why.length) out.push({ code: 'dilutable-stake', family: 'listed', who: owners.filter((h) => hit.has(h)), text: `A stake can be diluted without its holder: ${why.join('; and ')}.`, rests: rests.join('; '), cites: unique(cites) });

@@ -49,6 +49,9 @@ test('no exit: a party nobody can declare absent holds the whole deal (rule 47, 
 test('uncapped fee: a plan stating no maximum fee per payout (rule 25), or fees raised without their bearers (rule 28)', () => {
   const f = one({ ...base, ...grants, plan: plan() }, 'uncapped-fee');
   assert.match(f.rests, /rule 25/);
+  // Rule 25's current words (F271): the plan “may state” one; none, no cap.
+  assert.match(f.rests, /may state a maximum fee per payout/);
+  assert.match(f.rests, /there is no cap/);
   assert.match(f.text, /no maximum/i);
   none({ ...base, ...grants, plan: plan(20_000) }, 'uncapped-fee');
   none(base, 'uncapped-fee');
@@ -58,6 +61,12 @@ test('uncapped fee: a plan stating no maximum fee per payout (rule 25), or fees 
   assert.deepEqual([...(g.who ?? [])].sort(), [P.ben, P.cy].sort());
   // Every member must sign a change of the fees: nobody bears one they did not sign.
   none(collective({}), 'uncapped-fee');
+  // F270: a deal's holder who is no party signs a version adding a fee; the core refuses it otherwise.
+  none({ ...base, ...grants, plan: plan(20_000), stakes: [[work, [[P.ana, 400_000], [P.ben, 400_000], [P.cy, 200_000]]]] }, 'uncapped-fee');
+  // F270: so does a collective's departed holder, whatever area places the fees.
+  assert.equal(assess(encode(departed({})), names).problem, null, 'terms Agreements accept');
+  // Ben, a member outside the area, is left to the collective's rules, and still flagged; Cy is not.
+  assert.deepEqual(one(departed({ areas: [{ id: 1, name: 'Fees', holders: [P.ana], threshold: 1, fields: [28] }] }), 'uncapped-fee').who, [P.ben]);
 });
 
 test('judge who is also a party: an arbitrator, the judge of forks, a keeper, the absence authority or a later link', () => {
@@ -94,9 +103,16 @@ test('a stake diluted without its holder: pre-authorised outcomes (rule 48), a r
   const r = one({ ...base, stakes: [[work, [[P.ana, 400_000], [P.ben, 400_000], [P.cy, 200_000]]]], releaseRule: { named: [P.ana, P.ben] } }, 'dilutable-stake');
   assert.deepEqual(r.who, [P.cy]);
   assert.match(r.rests, /rule 55|field 24/);
-  // A holder who is no party of a deal: every party changes the plan, without them.
-  const h = one({ ...base, ...grants, plan: plan(1), stakes: [[work, [[P.ana, 400_000], [P.ben, 400_000], [P.cy, 200_000]]]] }, 'dilutable-stake');
-  assert.deepEqual(h.who, [P.cy]);
+  // A holder who is no party of a deal signs a version paying it less (F270): no longer a risk, the core refuses it.
+  none({ ...base, ...grants, plan: plan(1), stakes: [[work, [[P.ana, 400_000], [P.ben, 400_000], [P.cy, 200_000]]]] }, 'dilutable-stake');
+  // A collective's departed holder too (F270), whatever area reaches the plan; Ben, a member outside it, is still flagged.
+  assert.deepEqual(one(departed({ areas: [{ id: 1, name: 'Money', holders: [P.ana], threshold: 1, fields: [8] }] }), 'dilutable-stake').who, [P.ben]);
+  // Unless the clause may take its stake: that permission reaches its pay (F273).
+  const g = one(departed({ abandonment: { others: 1, outcomes: [0, 1], proof: P.proof } }), 'dilutable-stake');
+  assert.ok(g.who?.includes(P.cy), JSON.stringify(g.who));
+  assert.match(g.text, /departed, may be declared absent/);
+  assert.match(g.rests, /F273/);
+  assert.match(g.rests, /rule 48/);
   // A collective whose split plan one member's area reaches.
   const c = one(collective({ areas: [{ id: 1, name: 'Money', holders: [P.ana], threshold: 1, fields: [8] }] }), 'dilutable-stake');
   assert.deepEqual([...(c.who ?? [])].sort(), [P.ben, P.cy].sort());
@@ -139,6 +155,18 @@ function collective(over: Partial<Terms>): Terms {
     plan: plan(10_000),
     ...over,
   };
+}
+
+/** The same collective after Cy left, keeping a stake (field 22): Ana and Ben decide. */
+function departed(over: Partial<Terms>): Terms {
+  const m = [P.ana, P.ben];
+  return collective({
+    parties: m,
+    grammar: { signing: { threshold: 1, members: m }, chainKey: { threshold: 1, members: m } },
+    abandonment: { others: 1, outcomes: [0], proof: P.proof },
+    departed: [P.cy],
+    ...over,
+  });
 }
 
 test('before signing, the clients show the shares and fees and the risks; nothing for bytes that are not terms', async () => {
