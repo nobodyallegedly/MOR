@@ -4,31 +4,29 @@
 // and judge it, and prints the explanation and the risks in plain words.
 
 import { short } from '../../collective/src/explain.ts';
-import { quote, sectionsText } from '../../connector/src/words.ts';
 import type { Via } from '../../genesis/src/transport.ts';
-import { assess, type Assessment } from './assess.ts';
+import { answerText, ask, findKey, material, readingText, redact, settings } from './ask.ts';
+import { assess } from './assess.ts';
 import { gather } from './gather.ts';
 
 const USAGE = `mor-assess: explain an agreement in plain words, and flag its obvious risks.
 
   mor-assess ID --at URL [--at URL ...] [--via URL=LOCAL] [--json]
+  mor-assess ID --at URL [--at URL ...] --ask "QUESTION" [--json]
 
 ID is the agreement's id, its terms act. Every relay given with --at is asked
 for it, its earlier versions, its parties' signatures and later versions,
 and its split service's account; what they hold is judged by the core
 library. --via reaches an address another way (URL=LOCAL). --json prints
 the assessment as data. A flag is a risk worth reading before signing, each
-with the rule or stated cost it rests on; it is not a verdict on the deal.`;
+with the rule or stated cost it rests on; it is not a verdict on the deal.
 
-/** The assessment as text: the words signed by others fenced as data. */
-function assessmentText(id: string, a: Assessment): string {
-  return [
-    `# ${a.title}: ${id}`,
-    a.summary.join(' '),
-    sectionsText(a.sections),
-    ...a.plain.map((p) => quote(p.heading, p.text)),
-  ].join('\n\n');
-}
+--ask asks Claude a question about the deal, answered from this reading and
+the exact text of the rules its flags cite, nothing beyond them; each answer
+names the rules it rests on, and says "not claimed" where they do not settle
+it. It explains; it never advises signing or not. It needs an Anthropic API
+key, in ANTHROPIC_API_KEY or in ~/.config/mor/anthropic-key; the model is
+MOR_ASK_MODEL (README, "Ask about this deal").`;
 
 function parse(argv: string[]) {
   const pos: string[] = [];
@@ -37,7 +35,9 @@ function parse(argv: string[]) {
     const a = argv[i];
     if (a.startsWith('--')) {
       const k = a.slice(2);
-      (opts[k] ??= []).push(k === 'help' || k === 'json' ? 'true' : argv[++i]);
+      const v = k === 'help' || k === 'json' ? 'true' : argv[++i];
+      if (v === undefined) throw new Error(`--${k} needs a value`);
+      (opts[k] ??= []).push(v);
     } else pos.push(a);
   }
   return { pos, opts };
@@ -53,6 +53,11 @@ async function main() {
     return;
   }
   if (!/^[0-9a-f]{64}$/.test(id)) throw new Error(`${id} is not an act id (64 hexadecimal characters)`);
+  // The key and the settings first: with no key, say so before fetching anything.
+  const question = opts.ask?.join('\n');
+  const asking = question === undefined ? null : { key: findKey(), settings: settings() };
+  if (asking) key = asking.key.key;
+  if (asking?.key.warning) console.error(asking.key.warning);
   const via: Via = {};
   for (const v of opts.via ?? []) {
     const [from, to] = v.split('=');
@@ -61,10 +66,19 @@ async function main() {
   const names = (h: string) => short(h);
   const g = await gather(id, at, via, names);
   const a = assess(g.payload, names, g.found);
-  console.log(opts.json ? JSON.stringify({ id, ...a }, null, 2) : assessmentText(id, a));
+  if (!asking) {
+    console.log(opts.json ? JSON.stringify({ id, ...a }, null, 2) : readingText(id, a));
+    return;
+  }
+  const m = material(id, question!, a);
+  const answer = await ask(m, asking.key.key, asking.settings);
+  console.log(opts.json ? JSON.stringify({ id, question: m.question, ...answer }, null, 2) : answerText(m, answer));
 }
 
+/** The key, once read: scrubbed from anything printed on failure. */
+let key = '';
+
 main().catch((e) => {
-  console.error(e instanceof Error ? e.message : String(e));
+  console.error(redact(e instanceof Error ? e.message : String(e), key));
   process.exitCode = 1;
 });

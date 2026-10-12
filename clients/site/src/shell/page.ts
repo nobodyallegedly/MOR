@@ -10,6 +10,7 @@
 // whose sandbox forbids scripts, so even what this misses cannot run.
 
 import { addressOf, kindOf, resolveRef, type FileEntry, type SiteManifest } from '../manifest.ts';
+import type { Author } from '../feed.ts';
 import { FRAME_STYLE } from './view.ts';
 
 export interface Prepared {
@@ -22,6 +23,8 @@ export interface Prepared {
   films: { entry: FileEntry; poster: Uint8Array | null }[];
   /** The films the page lists (draft 5, rule 12b), in order: each one's entry, its poster's checked bytes, and its label. Their places carry `data-film-listed`, the index here. */
   listed: { entry: FileEntry; poster: Uint8Array | null; label: string }[];
+  /** The feeds the page shows (draft 6, rule 13a), in order: the identities each names. Their boxes carry `data-feed`, the index here. */
+  feeds: Author[][];
   /** The checked bytes of the picture the page names as its icon, for the browser tab (rule 16a). */
   icon: Uint8Array | null;
   /** Files the page uses whose bytes did not match: the page is then not shown. */
@@ -52,7 +55,7 @@ export async function preparePage(
 ): Promise<Prepared> {
   const doc = new DOMParser().parseFromString(new TextDecoder('utf-8', { fatal: true }).decode(bytes), 'text/html');
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out: Prepared = { html: '', title: null, acts: [], films: [], listed: [], icon: null, problems: [], dropped: 0 };
+  const out: Prepared = { html: '', title: null, acts: [], films: [], listed: [], feeds: [], icon: null, problems: [], dropped: 0 };
   const drop = (el: Element) => {
     el.remove();
     out.dropped++;
@@ -88,9 +91,10 @@ export async function preparePage(
   // until the visitor asks to play it. Its other attributes (autoplay, loop,
   // muted, sources, tracks) are not the page's to set. Any other `video` goes.
   // Only the places made here carry `data-film`: one a page wrote itself goes.
-  for (const el of [...doc.querySelectorAll('[data-film], [data-film-listed]')]) {
+  for (const el of [...doc.querySelectorAll('[data-film], [data-film-listed], [data-feed]')]) {
     el.removeAttribute('data-film');
     el.removeAttribute('data-film-listed');
+    el.removeAttribute('data-feed');
   }
   for (const video of [...doc.querySelectorAll('video')]) {
     const entry = filmOf(video);
@@ -241,6 +245,34 @@ export async function preparePage(
     } else {
       box.innerHTML = `<div class="mor-act-note">Not an act id: <code></code></div>`;
       box.querySelector('code')!.textContent = id || '(empty)';
+    }
+    el.replaceWith(box);
+  }
+
+  // Feeds (draft 6, rule 13a): a box each, filled by the display client with
+  // the public posts of the identities each `mor-feed` names, every one
+  // checked on its own. Of what it holds, only its `mor-author` elements
+  // count: each an identity hash, and its text, the page's name for it.
+  for (const el of [...doc.querySelectorAll('mor-feed')]) {
+    const authors: Author[] = [];
+    for (const a of [...el.querySelectorAll('mor-author')]) {
+      const identity = (a.getAttribute('identity') ?? '').trim();
+      if (!ACT.test(identity) || authors.some((x) => x.identity === identity)) {
+        out.dropped++;
+        continue;
+      }
+      const name = (a.textContent ?? '').replace(/\s+/g, ' ').trim();
+      authors.push({ identity, name: name || null });
+    }
+    const box = doc.createElement('div');
+    box.className = ['mor-feed', el.getAttribute('class') ?? ''].join(' ').trim();
+    if (el.id) box.id = el.id;
+    if (authors.length) {
+      box.setAttribute('data-feed', String(out.feeds.length));
+      box.innerHTML = `<div class="mor-act-note">Fetching and checking the public posts of ${authors.length === 1 ? 'one identity' : `${authors.length} identities`}…</div>`;
+      out.feeds.push(authors);
+    } else {
+      box.innerHTML = `<div class="mor-act-note">A feed naming no identity: nothing to show.</div>`;
     }
     el.replaceWith(box);
   }
