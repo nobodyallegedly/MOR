@@ -1,6 +1,6 @@
 # MIP: Money
 
-*Draft 7, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for the split Module build) written for plain reading, in Agreements draft 11's style. It comes in two parts. **The first part changes no rule**: how a payment runs most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. **The second part writes in F255**, the one sentence Agreements draft 11 points to (its rule 11, "Money rules 14 and 14a"), marked "new in draft 7 (F255)" where it stands: rule 17 (was 14), with a pointer from rule 3 (was 14a). Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Agreements MIP draft 11, Development MIP draft 6, the payment cMIP draft 2, the Lightning rail Module draft 2 and the findings F1 to F266. The record of how each rule came about (the revision notes of drafts 1 to 6, and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 7, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for the split Module build) written for plain reading, in Agreements draft 11's style. It comes in two parts. **The first part changes no rule**: how a payment runs most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. **The second part writes in F255**, the one sentence Agreements draft 11 points to (its rule 11, "Money rules 14 and 14a"), marked "new in draft 7 (F255)" where it stands: rule 17 (was 14), with a pointer from rule 3 (was 14a). **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`) **writes in F267**: a hop is passed on when a valid receipt or claim of the next hop names it, so a payment claim gains one optional field naming the previous hop's receipt; marked "new in draft 7 (F267)" and "to build" where it stands: rules 24 and 27 (were 5 and 9), the claim's format, and the definition of a route. **A second pass** (12 October 2026, evening; `docs/core-v22.md`, "Second pass") writes in the three readings the marked pass put as questions, each confirmed by Nobody, allegedly, and marked "reading, confirmed": a named batch lets one payment carry several forwards, for claims as for receipts (Q4, rules 12 and 24); a receipt and a claim of one hop naming different previous receipts are decided as rule 11 decides payee and purpose (Q5, rules 11, 24 and 27); and the claim that shows a hop is disclosed as its receipt would be (Q6, rule 26). Rule 21 (was 18a) also points to F271: a split plan stating no maximum fee per payout sets no cap. Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Agreements MIP draft 11, Development MIP draft 6, the payment cMIP draft 2, the Lightning rail Module draft 2 and the findings F1 to F266. The record of how each rule came about (the revision notes of drafts 1 to 6, and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -14,6 +14,8 @@ Some marks recur, and each matters to the next review:
 - *Stated cost:* a weakness the rules accept knowingly, written down so nobody mistakes it for an oversight.
 - *Reading:* a reading taken where the text was silent, with whether it is confirmed.
 - **New in draft 7 (Fxxx):** a statement this draft adds, from a decided finding.
+- *To build:* the code does not do it yet; until it does, the code does what the statement replaced says.
+- *Reading, confirmed (Qn):* a point F267's words left open, put to Nobody, allegedly, as a question by the marked pass (`docs/core-v22.md`) and confirmed as the lean (12 October 2026; findings log, "Core v22's six questions: the leans taken").
 
 The MIP has four parts. Part one is a payment as it runs most of the time: where it goes, how it is proven, who is seen, debts, buying and refunds, fees. Part two is the rare cases: routes across rails through conversion services, and theft of the signing key. Part three is the act formats, for reference. Part four is the tasks, the reasoning, the open parameters and the freeze scenarios.
 
@@ -66,7 +68,7 @@ Identity, Envelopes and Text. Money never depends on Agreements or Development: 
 
 ### Routes
 
-- **Route.** One simple payment carried in several hops, across rails or units, through conversion services. Each receipt names the previous one.
+- **Route.** One simple payment carried in several hops, across rails or units, through conversion services. Each receipt names the previous one; where the next payee signs no receipt, the paying hop's claim may also name it (new in draft 7, F267; to build).
 - **Conversion service.** An identity that receives on one rail or unit and pays on another, at the rate of its own offer: it signs a receipt as receiver, with a forward, and is the payer of the next hop. A party, not a specification.
 
 ## Part one: a payment as it runs most of the time
@@ -177,12 +179,12 @@ A client MUST NOT treat a receipt or claim as valid unless its verification answ
 
 A payment claim is admitted as evidence on equal footing with a receipt. A payer MAY publish one at any time.
 
-Where a claim and a receipt are of the same payment (rule 12, F200) and disagree in amount, payee, or what the payment fulfils, the disagreement is shown as an open question on the receiver, and the greater amount counts as received until the receiver signs a receipt matching the payment.
+Where a claim and a receipt are of the same payment (rule 12, F200) and disagree in amount, payee, what the payment fulfils, or, on a route, the previous hop's receipt it passes on (rule 24; new in draft 7, F267), the disagreement is shown as an open question on the receiver, and the greater amount counts as received until the receiver signs a receipt matching the payment.
 
-**Where they disagree in payee or in what the payment fulfils, the payment's own commitment decides** (as for a purchase, F131 IT3):
+**Where they disagree in payee, in what the payment fulfils, or in the previous hop's receipt, the payment's own commitment decides** (as for a purchase, F131 IT3; the previous hop new in draft 7, F267, to build; *reading, confirmed (Q5)*):
 
 - the act naming what the rail's proof commits to counts, the other counts for nothing;
-- where the rail binds no payee or purpose, the payer's claim decides what the payment fulfils, and the receiver's contrary receipt stays shown as a dispute on the receiver (F64, F151).
+- where the rail binds no payee or purpose, or no previous hop, the payer's claim decides what the payment fulfils and which forward it passes on, and the receiver's contrary receipt stays shown as a dispute on the receiver (F64, F151).
 
 *It is the payer's money, and the payer chose its purpose in paying; a receiver cannot rename it afterwards and hold a payment hostage by never resolving it. Stated cost (F168): nothing records what the payer chose in paying on such a rail, so a payer can later relabel a payment, an old tip as a debt payment; the receiver's receipt saying otherwise stays shown. It is rare, since every rail written so far binds payee and purpose; a rail Module declares whether it binds them (FORMAT OPEN, F140 item 1).*
 
@@ -192,7 +194,7 @@ Where a payer holds a valid rail proof and the payee has signed no receipt, the 
 
 What "the same payment" is, each rail Module says (F200: on Lightning the payment hash; on-chain the output the transaction created). Money's rules that tell payments apart (this rule, rules 11 and 29) read it through the rail Module, never through the proof's bytes: two proofs of one payment (a payment mined again after a chain reorganisation) are one payment, counted once. *A rail Module SHOULD also make its valid proof unique for a payment in a given place (the on-chain rail Module accepts one index where Bitcoin's tree repeats a node, F200); the identity of the payment does not rest on it.*
 
-Receipts or claims MAY share a payment only if they name the same batch, and their amounts together do not exceed what the payment shows. Otherwise a verifier holding both counts neither until the receiver signs a receipt that resolves them (F65).
+Receipts or claims MAY share a payment only if they name the same batch, and their amounts together do not exceed what the payment shows. Otherwise a verifier holding both counts neither until the receiver signs a receipt that resolves them (F65). **On a route, forwards too:** receipts or claims sharing one payment under a named batch may each name a different previous hop's receipt, one payment carrying several forwards in parts, for claims as for receipts; the money never counts twice (rule 24; new in draft 7, F267; to build). *Reading, confirmed (Q4).*
 
 **One push payment to several holders** (Agreements rule 12, F128 W4) is one payment: each holder's receipt carries its one rail proof, for the amount that holder received, without a batch (a reading, F131, confirmed, F132). Where they name different claims, the payment's commitment decides (rule 18, F131 IT3).
 
@@ -328,7 +330,7 @@ The evidence that a rail Module carried a payment is the receipt or claim naming
 
 #### Rule 21 (was 18a). Payouts net of fees
 
-A payout (Agreements) counts as discharged when its receipt shows the amount minus the rail fee the split plan says the receiver bears, and no more than the plan's maximum fee per payout; what the split service owes for a shortfall beyond it, Agreements say (the split plan, rule 25, F64, F214; F242, M8).
+A payout (Agreements) counts as discharged when its receipt shows the amount minus the rail fee the split plan says the receiver bears, and no more than the plan's maximum fee per payout, where the plan states one (a plan stating none sets no cap: Agreements rule 25; new in draft 7, F271); what the split service owes for a shortfall beyond it, Agreements say (the split plan, rule 25, F64, F214; F242, M8).
 
 Amounts below a rail's minimum cannot be moved until they reach it (F50; what the split service holds meanwhile, Agreements rule 24 says).
 
@@ -348,7 +350,11 @@ MOR only ever sees a payment and, in Agreements, its split. Tracking plays or vi
 
 #### Rule 24 (was 5). A valid route
 
-A route is valid when every receipt in it is valid, each names the previous hop's receipt, and each hop's received amount equals the previous hop's forward.
+*In short: a route is a chain of hops, each shown by its receiver's receipt or by the paying hop's own claim, each naming the hop before it and carrying on exactly what that hop forwarded.*
+
+A route is valid when every receipt and claim in it is valid, each hop names the previous hop's receipt, and each hop's received amount equals the previous hop's forward. **A hop names the previous hop's receipt when a valid receipt or claim of that hop names it: the next payee's receipt (field 6), or the paying hop's own claim (key 10)** (new in draft 7, F267; to build). **Where a receipt and a claim of one hop name different previous receipts, rule 11 decides:** the payment's commitment, where it binds the previous hop; otherwise the payer's claim, the receiver's contrary receipt shown as a dispute on the receiver (new in draft 7, F267; to build). *Reading, confirmed (Q5).* *This is double entry along a route, as rule 11 gives a single hop: where the next payee signs no receipt, the paying hop's claim with a valid rail proof shows the money arrived, and so that the forward was passed on.*
+
+**Rule 12 bounds it:** claims of one payment that name different previous receipts count only as rule 12 lets receipts or claims share a payment: one payment, one count (new in draft 7, F267; to build). A named batch lets one payment pass on several forwards in parts, for claims as for receipts; without one, neither counts until the receiver resolves them. *Reading, confirmed (Q4).*
 
 #### Rule 25 (was 6). Only conversion hops forward
 
@@ -356,11 +362,11 @@ Only conversion hops forward. A conversion hop forwards in the next unit, at the
 
 #### Rule 26 (was 8). Disclosure along the route
 
-Each hop's receipt MUST be disclosed at least to the next payee and to the final creditor, so the creditor can verify the whole route. Everything else may stay private.
+Each hop's receipt, or the claim that shows it (rule 24), MUST be disclosed at least to the next payee and to the final creditor, so the creditor can verify the whole route (the claim new in draft 7, F267). Everything else may stay private. *Reading, confirmed (Q6).* *A service relying on its claim to show a hop discloses it to the final creditor; undisclosed, the forward stays open for the creditor, so it is the service's interest anyway.*
 
 #### Rule 27 (was 9). A hop that forwarded nothing
 
-When a receipt declares a forward but no valid receipt from the next payee names it, the route stops at that hop. The forward stays an open obligation of that hop, under the agreement named in the forward.
+When a receipt declares a forward but no valid receipt or claim of the next hop names it, as rule 24 reads them (new in draft 7, F267; to build), the route stops at that hop. The forward stays an open obligation of that hop, under the agreement named in the forward.
 
 #### Rule 28 (was 11). Failure named
 
@@ -528,14 +534,16 @@ claim-payload = {
   ? 6 => referral,         ; referral: who led the payer to this payment, signed here by the payer (Agreements, role shares)
   ? 7 => rail,             ; where a refund owed on this payment is to be paid (F80)
   ? 8 => anonymous,        ; an anonymous payer's claim: the key the payment committed to as payer, and its signature (F113)
-  ? 9 => purchase          ; a purchase: the claim it pays under, as in the receipt (rule 18, F126)
+  ? 9 => purchase,         ; a purchase: the claim it pays under, as in the receipt (rule 18, F126)
+  ? 10 => hash             ; the previous hop's receipt, where this payment passes on a forward, as receipt field 6
+                           ;   (rules 24 and 27; new in draft 7, F267; to build)
 }
 
 referral  = [ identity: hash, evidence: hash ]   ; the referrer, and the act (a repost, a page) the payer followed
-anonymous = [ key: signing-key, sig: bstr ]       ; sig: by key, over tagged_hash("MOR/finance/anonymous-claim", [ field 0, field 1, field 2, field 3, field 4, field 5 or null, field 6 or null, field 7 or null, field 9 or null, inside key 3 or null, inside key 7 or null, inside key 8 or null ]) (F135, F147)
+anonymous = [ key: signing-key, sig: bstr ]       ; sig: by key, over tagged_hash("MOR/finance/anonymous-claim", [ field 0, field 1, field 2, field 3, field 4, field 5 or null, field 6 or null, field 7 or null, field 9 or null, field 10 or null, inside key 3 or null, inside key 7 or null, inside key 8 or null ]) (F135, F147; field 10 added, F267, to build)
 ```
 
-A claim carrying key 8 is the claim of the payer that committed to that key. Its signer, the act's signer, may be any identity, a one-time identity where the payer wishes to stay unnamed; the payer is the key, and the signature in key 8 binds it to this claim's rail, proof, payee, amount, purpose, disputed receipt, referral, refund rail and purchase, so nobody can lift it onto another claim. The signed bytes are the array shown, encoded in deterministic CBOR, with null where key 5, 6, 7 or 9 is absent (F135); the signature also covers the act's own citations, its `objects`, `acks` and `refs` (inside keys 3, 7 and 8, null where absent; F147), so nobody can re-wrap the payer's claim with other citations or acknowledgements. For an anonymous payer's claim, its history for rules 17 and 29 is only what those covered citations hold; its `prev`, which belongs to whoever signed the act, is not the payer's and does not count (F147). The signature scheme is the key's, as Identity defines it.
+A claim carrying key 8 is the claim of the payer that committed to that key. Its signer, the act's signer, may be any identity, a one-time identity where the payer wishes to stay unnamed; the payer is the key, and the signature in key 8 binds it to this claim's rail, proof, payee, amount, purpose, disputed receipt, referral, refund rail, purchase and previous hop (F267), so nobody can lift it onto another claim. The signed bytes are the array shown, encoded in deterministic CBOR, with null where key 5, 6, 7, 9 or 10 is absent (F135; key 10, new in draft 7, F267; to build); the signature also covers the act's own citations, its `objects`, `acks` and `refs` (inside keys 3, 7 and 8, null where absent; F147), so nobody can re-wrap the payer's claim with other citations or acknowledgements. For an anonymous payer's claim, its history for rules 17 and 29 is only what those covered citations hold; its `prev`, which belongs to whoever signed the act, is not the payer's and does not count (F147). The signature scheme is the key's, as Identity defines it.
 
 A payment claim is the payer's side of the record. It carries the rail's proof, so anyone can verify that the money reached the payee's rail address. It is private by default like every act; publishing it, to a counterparty or more widely, is the payer's choice and reveals the payer only to whom the payer chooses.
 
@@ -620,6 +628,7 @@ Splits are an Agreements task. A custodial flow service, which holds an identity
 #### Routes across rails
 
 - A cross-rail route through a conversion service, read as one chain of receipts; one hop fails to forward, and the receipts name that hop and its agreement: 2.
+- A conversion service pays on and the next payee signs no receipt: the service's claim naming the previous hop's receipt passes the forward on; two claims of one payment, naming two forwards and no batch, count for neither, and under a named batch count in parts (Q4); a receipt and a claim of one hop naming different previous receipts, the payer's claim deciding where the rail binds no previous hop, the receipt shown as a dispute (Q5); the claim disclosed to the final creditor (Q6) (new in draft 7, F267; to build): 2.
 
 #### Theft of the signing key
 
