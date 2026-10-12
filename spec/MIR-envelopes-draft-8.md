@@ -1,6 +1,6 @@
-# MIP: Envelopes
+# MIR: Envelopes
 
-*Draft 8, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 7 (approved 5 October 2026, revised in place since, last for F237) written for plain reading, in Agreements draft 11's and Money draft 7's style. **The rewrite changes no rule.** How an act runs most of the time comes first and the mechanics of rare cases after; the rules are numbered afresh in reading order, each with its old number beside it; and "vow" replaces "announcement" (F241), the type number (5) and the wire format unchanged. Written against core v21, Identity MIP draft 11, Text MIP draft 6, Money MIP draft 7, Agreements MIP draft 11, Development MIP draft 6 and the findings F1 to F266. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`) writes in F252, the one decided finding draft 8 had left out: a vow covers anything MOR cannot hash, existing or to come, marked "new in draft 8 (F252)" where it stands (section 9, and the vow's format), written against the six current drafts. The record of how each rule came about (the revision notes of drafts 4 to 7, "Decided for this pass", and the dates and words of each decision) stays in draft 7 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 8, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 7 (approved 5 October 2026, revised in place since, last for F237) written for plain reading, in Agreements draft 11's and Money draft 7's style. **The rewrite changes no rule.** How an act runs most of the time comes first and the mechanics of rare cases after; the rules are numbered afresh in reading order, each with its old number beside it; and "vow" replaces "announcement" (F241), the type number (5) and the wire format unchanged. Written against core v21, Identity MIR draft 11, Text MIR draft 6, Money MIR draft 7, Agreements MIR draft 11, Development MIR draft 6 and the findings F1 to F266. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`) writes in F252, the one decided finding draft 8 had left out: a vow covers anything MOR cannot hash, existing or to come, marked "new in draft 8 (F252)" where it stands (section 9, and the vow's format), written against the six current drafts. The record of how each rule came about (the revision notes of drafts 4 to 7, "Decided for this pass", and the dates and words of each decision) stays in draft 7 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -15,11 +15,11 @@ Two marks recur:
 - *Mechanic, the vow grammar build:* a mechanical choice taken under Nobody, allegedly's delegation of mechanics, not a decision of principle.
 - **New in draft 8 (Fxxx):** a statement the marked pass adds, from a decided finding.
 
-The MIP has four parts. Part one is an act as it runs most of the time: its shape, public and private acts, private delivery, sequences, chains, acknowledgements and references, how acts reach people, media, vows, withdrawal, relays, and what a client does with what it does not understand. Part two is the rare case: theft of the signing key. Part three is the act formats, for reference. Part four is the tasks, the reasoning, the open parameters and the freeze scenarios.
+The MIR has four parts. Part one is an act as it runs most of the time: its shape, public and private acts, private delivery, sequences, chains, acknowledgements and references, how acts reach people, media, vows, withdrawal, relays, and what a client does with what it does not understand. Part two is the rare case: theft of the signing key. Part three is the act formats, for reference. Part four is the tasks, the reasoning, the open parameters and the freeze scenarios.
 
 ## Purpose
 
-The Envelopes MIP is the grammar every act is written in. It defines:
+The Envelopes MIR is the grammar every act is written in. It defines:
 
 - the two parts of every act: a small **outside** that relays can see, and a locked **inside** that holds everything else;
 - how content is locked, and how its key is made public or delivered privately;
@@ -31,19 +31,19 @@ The Envelopes MIP is the grammar every act is written in. It defines:
 
 ## Dependencies
 
-Identity (signers, keys, bindings, sequences, routes) and Text (canonical text in every text field). Every client implements this MIP.
+Identity (signers, keys, bindings, sequences, routes) and Text (canonical text in every text field). Every client implements this MIR.
 
-## Words used in this MIP
+## Words used in this MIR
 
 ### Acts
 
 - **Act.** Any signed object. Every act has an outside, a locked inside, and a signature.
 - **Outside.** The part of an act every relay can read: only what a relay needs to store, route and check it.
 - **Inside.** Everything else: type, pointers, payload. Always locked with a content key.
-- **Specification.** The MIP or cMIP that defines an act's type, named by its hash.
-- **Chain.** The acts on one object, each naming the act or acts it follows. Each MIP that defines an object defines its chain rules; this MIP defines only what all chains share.
+- **Specification.** The MIR or cMIP that defines an act's type, named by its hash.
+- **Chain.** The acts on one object, each naming the act or acts it follows. Each MIR that defines an object defines its chain rules; this MIR defines only what all chains share.
 - **Fork.** Two acts naming the same predecessor in the same chain.
-- **Acknowledgement.** An act naming another identity's act, as received. Only act types defined by the Identity, Money and Agreements MIPs may carry one (F110).
+- **Acknowledgement.** An act naming another identity's act, as received. Only act types defined by the Identity, Money and Agreements MIRs may carry one (F110).
 - **Reference.** An act naming another act, or a web resource, without following or acknowledging it. A repost is a reference.
 
 ### Locking and delivery
@@ -96,7 +96,7 @@ An act's signature scheme is checked as Identity defines: a scheme the client do
 
 #### Rule 5 (was validity 5). Canonical text
 
-Every text field MUST be canonical text (Text MIP).
+Every text field MUST be canonical text (Text MIR).
 
 #### Rule 6 (was validity 6). Hints never decide
 
@@ -167,7 +167,7 @@ An act that belongs to an object's chain names, in `objects`, that chain and the
 
 #### Rule 15 (was chains 2). Forks
 
-Two valid acts naming the same predecessor in the same chain are a fork, provable from their signatures and insides. Whether a fork is normal or a conflict is defined by the MIP that defines the object (F4).
+Two valid acts naming the same predecessor in the same chain are a fork, provable from their signatures and insides. Whether a fork is normal or a conflict is defined by the MIR that defines the object (F4).
 
 #### Rule 16 (was chains 3). Order without a clock
 
@@ -181,13 +181,13 @@ An act acknowledges another identity's act by naming it in `acks`. It says only 
 
 #### Rule 18 (was chains 4a). Who may acknowledge
 
-Only an act whose type is defined by the Identity, Money or Agreements MIP may carry `acks` (F110). A text act, any other act of this MIP, and every act of a cMIP or Module MUST NOT carry `acks`; an act that does is invalid. *The rule limits which acts carry an acknowledgement, never which acts can be acknowledged: a post or a publication still becomes disputed, not void, after its signer's rotation when an Identity, Money or Agreements act acknowledges it (a witness act, a buyer's claim, a signature) or a keeper recorded it. To rely on a post or a message deliberately, an identity signs a witness act (Identity, type 15).*
+Only an act whose type is defined by the Identity, Money or Agreements MIR may carry `acks` (F110). A text act, any other act of this MIR, and every act of a cMIP or Module MUST NOT carry `acks`; an act that does is invalid. *The rule limits which acts carry an acknowledgement, never which acts can be acknowledged: a post or a publication still becomes disputed, not void, after its signer's rotation when an Identity, Money or Agreements act acknowledges it (a witness act, a buyer's claim, a signature) or a keeper recorded it. To rely on a post or a message deliberately, an identity signs a witness act (Identity, type 15).*
 
 Negotiation messages acknowledge the latest message received from the other side (Agreements rule 52). A negotiation message is an Agreements act type carrying text (Agreements type 18, F118), so it may carry `acks` under this rule; a text act in a negotiation thread may not, and is no part of the record.
 
 #### Rule 19 (was validity 7b). An act that may not acknowledge, and does, is invalid
 
-An act carrying `acks` whose type is not defined by the Identity, Money or Agreements MIP is invalid (F110). *A verifier needs the six MIP hashes to apply this, as it needs them for everything else; one that cannot tell which MIP an act's specification is shows the act as unknown, never as valid.*
+An act carrying `acks` whose type is not defined by the Identity, Money or Agreements MIR is invalid (F110). *A verifier needs the six MIR hashes to apply this, as it needs them for everything else; one that cannot tell which MIR an act's specification is shows the act as unknown, never as valid.*
 
 #### Rule 20 (was chains 5). References
 
@@ -203,7 +203,7 @@ Clients SHOULD deliver an act that concerns a counterparty to that counterparty'
 
 **Work hash.** The work hash is `tagged_hash("MOR/work", plaintext)`, over the complete plaintext of the work. For a text work, the plaintext is its canonical text. It is the same wherever the work travels and however it is locked or cut, and it is what ownership points to (Agreements).
 
-**Publication.** A publication is an act of type 0 of this MIP. Its payload describes a media object. *Its format is in Part three ("Publication").*
+**Publication.** A publication is an act of type 0 of this MIR. Its payload describes a media object. *Its format is in Part three ("Publication").*
 
 Media bytes are always stored locked, with their own content key, the same way as an inside: XChaCha20-Poly1305 with the nonce in the payload and no associated data. The size (field 3) is that of the media once unlocked: what a reader and a media module need to know; a relay measures the locked bytes it stores for itself (F108). For public media, the key sits in the publication's payload. For media on sale, the publication is public (anyone can see the offer) but the media key is absent, and is delivered to each buyer. After unlocking, a buyer checks the plaintext against the work hash.
 
@@ -231,7 +231,7 @@ Payment for a publication goes to the payee pointer of the identity named in `fo
 
 *"Vow" replaces "announcement" (F238, F239, F241); the act, type 5, and its format are unchanged, and the code already says "vow". "we must separate the claim and confirmation grammar from what will be claimed and confirmed … the core only wants to know whether it is confirmed, pending, or already contested" (Nobody, allegedly; F237).*
 
-A vow is an act of type 5 of this MIP, naming in words **something MOR cannot hash, existing or to come** (new in draft 8, F252): a good in stock or to be made, a service, an hourly rate, storage, a seat, a work not yet made. **It is its own chain** (Nobody, allegedly: "it's a fingerprint for the announcement, since it will have its own chain it has a genesis"): its first act is its **genesis**, **whose id is its name for good**; a later version (a new date, a changed description) is signed again on that chain by the genesis's signer, naming the genesis and the version it follows, as an offer's and an agreement's versions do. The name is the vow's fingerprint, never a work hash.
+A vow is an act of type 5 of this MIR, naming in words **something MOR cannot hash, existing or to come** (new in draft 8, F252): a good in stock or to be made, a service, an hourly rate, storage, a seat, a work not yet made. **It is its own chain** (Nobody, allegedly: "it's a fingerprint for the announcement, since it will have its own chain it has a genesis"): its first act is its **genesis**, **whose id is its name for good**; a later version (a new date, a changed description) is signed again on that chain by the genesis's signer, naming the genesis and the version it follows, as an offer's and an agreement's versions do. The name is the vow's fingerprint, never a work hash.
 
 *Its payload's format is in Part three ("Vow").*
 
@@ -245,7 +245,7 @@ Its `objects`: none on the genesis; a later version names `[genesis, previous]`,
 
 #### Rule 24 (was validity 15). Who may withdraw, and what it does
 
-A withdrawal is an act of type 3 of this MIP naming a publication in `objects`. It marks that publication as no longer offered.
+A withdrawal is an act of type 3 of this MIR naming a publication in `objects`. It marks that publication as no longer offered.
 
 A withdrawal is valid only if signed by the publication's signer or by the identity named in its `for` field.
 
@@ -270,7 +270,7 @@ A relay SHOULD check an act's signature and that its locked bytes match the lock
 
 #### Rule 28 (was relays 4). Commitments
 
-A relay operator may publish a commitment: a public act (type 2 of this MIP) holding the Merkle root over the sorted ids of the acts it holds, and their number.
+A relay operator may publish a commitment: a public act (type 2 of this MIR) holding the Merkle root over the sorted ids of the acts it holds, and their number.
 
 #### Rule 29 (was relays 5). Storage and delivery policy
 
@@ -288,7 +288,7 @@ A client MAY fetch an unknown specification by its hash, show it to the user, an
 
 #### Rule 32 (was validity 13). The one exception: a text's format
 
-The one exception is a text act's format (Text MIP): its text is always shown as plain text.
+The one exception is a text act's format (Text MIR): its text is always shown as plain text.
 
 ## Part two: rare cases
 
@@ -315,14 +315,14 @@ outside = {
 }
 
 inside = {
-  0 => hash,            ; spec: the MIP or cMIP defining the type
+  0 => hash,            ; spec: the MIR or cMIP defining the type
   1 => uint,            ; type, numbered within that spec
   ? 2 => [* hash],      ; prev: previous act in the signer's sequence (at most one, F24)
   ? 3 => [+ object],    ; objects: the chain(s) this act belongs to, and the act it follows in each
   4 => { * any => any },; payload, defined by the type
   ? 5 => uint,          ; position in the signer's sequence
   ? 6 => hash,          ; running summary of the signer's sequence up to this act
-  ? 7 => [+ hash],      ; acks: acts by other identities this act acknowledges; only on act types the Identity, Money and Agreements MIPs define (F110)
+  ? 7 => [+ hash],      ; acks: acts by other identities this act acknowledges; only on act types the Identity, Money and Agreements MIRs define (F110)
   ? 8 => [+ ref],       ; refs: acts or web resources this act refers to
   ? 9 => tstr,          ; hint: a timestamp or other hint, never load-bearing
   10 => bstr .size 16   ; salt: random, so the inside commitment cannot be guessed
@@ -390,7 +390,7 @@ contents = [ act: bstr, ? key: bstr .size 32 ]   ; the inner act, encoded whole,
 
 ### The running summary
 
-**Running summary.** The root of a Merkle mountain range over the act ids of the sequence, in order, up to and including the previous act. The first act of a sequence carries the empty summary: 32 zero bytes. Leaves are `tagged_hash("MOR/mmr-leaf", act id)`; internal nodes `tagged_hash("MOR/mmr-node", left || right)`. The range is a list of perfect binary trees, its peaks, highest on the left, as the binary digits of the number of acts. The peaks are bagged right to left into one root: start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left (F89). A single peak is its own root, with no further hashing. A test vector for a three-act sequence is published with this MIP before freeze (F78).
+**Running summary.** The root of a Merkle mountain range over the act ids of the sequence, in order, up to and including the previous act. The first act of a sequence carries the empty summary: 32 zero bytes. Leaves are `tagged_hash("MOR/mmr-leaf", act id)`; internal nodes `tagged_hash("MOR/mmr-node", left || right)`. The range is a list of perfect binary trees, its peaks, highest on the left, as the binary digits of the number of acts. The peaks are bagged right to left into one root: start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left (F89). A single peak is its own root, with no further hashing. A test vector for a three-act sequence is published with this MIR before freeze (F78).
 
 ### Publication (type 0)
 
@@ -403,7 +403,7 @@ media = {
   4 => bstr .size 24, ; nonce of the media lock
   ? 5 => bstr .size 32, ; the media's content key, for public media
   ? 6 => [+ tstr],    ; where the locked bytes can be fetched
-  ? 7 => any,         ; price, in the form the Money MIP defines
+  ? 7 => any,         ; price, in the form the Money MIR defines
   ? 8 => hash         ; for: the identity this publication is made for; payment goes to its payee pointer
 }
 ```
@@ -417,7 +417,7 @@ vow = {
 }
 ```
 
-### Types defined by this MIP
+### Types defined by this MIR
 
 | Type | Name | Public or private |
 | --- | --- | --- |
@@ -449,7 +449,7 @@ vow = {
 - **One size, the one readers need (F108).** *A field two conforming programs can read two ways is a flaw. The size of the unlocked media is what a reader shows and a media module needs; a relay counts what it stores itself.*
 - **A layer's rules use only that layer's data.** *The `for` field exists so that a wallet with no Agreements can pay the right identity, and a client with no Agreements can judge a withdrawal. Pushing one small field down is always better than pulling a rule up.*
 - **Delivery is the signer's interest.** *An act counts only where it is held, so whoever wants an act to count carries it to those who must hold it. A reserved inbox gives that carrying a destination without making any relay the meeting point by default.*
-- **One depth for everyone.** *A decoder must stop somewhere, or hostile input can crash it. If each stopped at its own depth, one verifier could accept an act that another cannot read. A fixed limit, far above any act the MIPs define, gives every verifier the same answer.*
+- **One depth for everyone.** *A decoder must stop somewhere, or hostile input can crash it. If each stopped at its own depth, one verifier could accept an act that another cannot read. A fixed limit, far above any act the MICS defines, gives every verifier the same answer.*
 - **Encryption for the long run.** *Content locked today may be stored and attacked for decades. A hybrid key exchange stays safe if either half holds. X-Wing combines the two halves with a combiner designed and reviewed for exactly this pair, rather than one made here (F98).*
 - **One place for the key exchange.** *A key that must be delivered privately cannot sit inside the act that delivers it. The sealed container is where every private act meets its recipient's key, so the key delivery can stay a plain statement, and the same statement, published, makes something public (F99).*
 

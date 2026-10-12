@@ -1,6 +1,6 @@
-# MIP: Money
+# MIR: Money
 
-*Draft 7, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for the split Module build) written for plain reading, in Agreements draft 11's style. It comes in two parts. **The first part changes no rule**: how a payment runs most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. **The second part writes in F255**, the one sentence Agreements draft 11 points to (its rule 11, "Money rules 14 and 14a"), marked "new in draft 7 (F255)" where it stands: rule 17 (was 14), with a pointer from rule 3 (was 14a). **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`) **writes in F267**: a hop is passed on when a valid receipt or claim of the next hop names it, so a payment claim gains one optional field naming the previous hop's receipt; marked "new in draft 7 (F267)" and "to build" where it stands: rules 24 and 27 (were 5 and 9), the claim's format, and the definition of a route. **A second pass** (12 October 2026, evening; `docs/core-v22.md`, "Second pass") writes in the three readings the marked pass put as questions, each confirmed by Nobody, allegedly, and marked "reading, confirmed": a named batch lets one payment carry several forwards, for claims as for receipts (Q4, rules 12 and 24); a receipt and a claim of one hop naming different previous receipts are decided as rule 11 decides payee and purpose (Q5, rules 11, 24 and 27); and the claim that shows a hop is disclosed as its receipt would be (Q6, rule 26). Rule 21 (was 18a) also points to F271: a split plan stating no maximum fee per payout sets no cap. Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Agreements MIP draft 11, Development MIP draft 6, the payment cMIP draft 2, the Lightning rail Module draft 2 and the findings F1 to F266. The record of how each rule came about (the revision notes of drafts 1 to 6, and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 7, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for the split Module build) written for plain reading, in Agreements draft 11's style. It comes in two parts. **The first part changes no rule**: how a payment runs most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. **The second part writes in F255**, the one sentence Agreements draft 11 points to (its rule 11, "Money rules 14 and 14a"), marked "new in draft 7 (F255)" where it stands: rule 17 (was 14), with a pointer from rule 3 (was 14a). **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`) **writes in F267**: a hop is passed on when a valid receipt or claim of the next hop names it, so a payment claim gains one optional field naming the previous hop's receipt; marked "new in draft 7 (F267)" and "to build" where it stands: rules 24 and 27 (were 5 and 9), the claim's format, and the definition of a route. **A second pass** (12 October 2026, evening; `docs/core-v22.md`, "Second pass") writes in the three readings the marked pass put as questions, each confirmed by Nobody, allegedly, and marked "reading, confirmed": a named batch lets one payment carry several forwards, for claims as for receipts (Q4, rules 12 and 24); a receipt and a claim of one hop naming different previous receipts are decided as rule 11 decides payee and purpose (Q5, rules 11, 24 and 27); and the claim that shows a hop is disclosed as its receipt would be (Q6, rule 26). Rule 21 (was 18a) also points to F271: a split plan stating no maximum fee per payout sets no cap. Written against core v21, Identity MIR draft 11, Envelopes MIR draft 7, Text MIR draft 6, Agreements MIR draft 11, Development MIR draft 6, the payment cMIP draft 2, the Lightning rail Module draft 2 and the findings F1 to F266. The record of how each rule came about (the revision notes of drafts 1 to 6, and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -17,7 +17,7 @@ Some marks recur, and each matters to the next review:
 - *To build:* the code does not do it yet; until it does, the code does what the statement replaced says.
 - *Reading, confirmed (Qn):* a point F267's words left open, put to Nobody, allegedly, as a question by the marked pass (`docs/core-v22.md`) and confirmed as the lean (12 October 2026; findings log, "Core v22's six questions: the leans taken").
 
-The MIP has four parts. Part one is a payment as it runs most of the time: where it goes, how it is proven, who is seen, debts, buying and refunds, fees. Part two is the rare cases: routes across rails through conversion services, and theft of the signing key. Part three is the act formats, for reference. Part four is the tasks, the reasoning, the open parameters and the freeze scenarios.
+The MIR has four parts. Part one is a payment as it runs most of the time: where it goes, how it is proven, who is seen, debts, buying and refunds, fees. Part two is the rare cases: routes across rails through conversion services, and theft of the signing key. Part three is the act formats, for reference. Part four is the tasks, the reasoning, the open parameters and the freeze scenarios.
 
 ## Purpose
 
@@ -30,13 +30,13 @@ It also gives every client a shared language for:
 - who owes whom, how much, in what unit (obligations);
 - where payment to an identity (a person, an organisation or a collective) goes (payee pointers), with a flow that is easy to change and a vault that is not.
 
-A payment to a work or a person, such as a tip, needs only this MIP and the payee pointer.
+A payment to a work or a person, such as a tip, needs only this MIR and the payee pointer.
 
 ## Dependencies
 
 Identity, Envelopes and Text. Money never depends on Agreements or Development: a Money-only client, such as a wallet that sends tips, is a complete client. Where a Money state depends on Agreements, a Money-only client shows it as unknown (F32). *A purchase names an Agreements claim (rule 18, F126): a Money-only client cannot make one, and shows the claim a receipt names as unknown; buying a work under an Agreements claim needs a client that reads Agreements.*
 
-## Words used in this MIP
+## Words used in this MIR
 
 ### Rails and units
 
@@ -146,7 +146,7 @@ When a receiver has no payee pointer, or no rail the payer shares, or the vault 
 
 #### Rule 7 (was 1). One format on every rail, signed by the parties
 
-Receipts and claims on every rail use the formats of this MIP (Part three). The rail's proof is the only part that differs between rails, in the format the payment cMIP and the rail Module define.
+Receipts and claims on every rail use the formats of this MIR (Part three). The rail's proof is the only part that differs between rails, in the format the payment cMIP and the rail Module define.
 
 A receipt is signed by the receiver of the hop:
 
@@ -428,7 +428,7 @@ The loss from a theft window falls on the owner until the lock change is anchore
 
 ## Part three: act formats
 
-All acts are Envelopes MIP acts. Payee pointers are public; obligations, receipts, payment claims and creditor's releases are private by default, visible to their parties.
+All acts are Envelopes MIR acts. Payee pointers are public; obligations, receipts, payment claims and creditor's releases are private by default, visible to their parties.
 
 ```cddl
 amount = [ unit: hash, value: uint ]      ; unit: the unit's specification; value in its smallest part
@@ -458,7 +458,7 @@ The publication's price is the plain-payment price, for Money-only clients. Wher
 
 ### The vault
 
-Declared in the Identity MIP's declarations slot, in genesis or a rotation, so only the chain key can change it (F10, F79):
+Declared in the Identity MIR's declarations slot, in genesis or a rotation, so only the chain key can change it (F10, F79):
 
 ```cddl
 vault       = [ MONEY, 0, [+ vault-entry] ]
@@ -471,7 +471,7 @@ Several entries may share a unit, on different rails, so a dead rail does not ma
 
 ### The clock (F176)
 
-Declared in the Identity MIP's declarations slot, in genesis or a rotation, so only the chain key can change it, as the vault is:
+Declared in the Identity MIR's declarations slot, in genesis or a rotation, so only the chain key can change it, as the vault is:
 
 ```cddl
 clock = [ MONEY, 1, [ main: [ hash, any ], ? backup: [ hash, any ] ] ]   ; the main anchoring reference and, optionally, a backup, each a clock Module under the anchoring cMIP and its parameters, naming one time reference (Envelopes, task "Anchoring"; F202), in that order (F179, F181)
@@ -517,7 +517,7 @@ payer   = hash / signing-key                              ; signing-key as Ident
 
 **An anonymous payer's key (F113).** A payer who stays unnamed but wants a refund to remain claimable puts a bare signing key of its own, in Identity's `signing-key` form and used for this payment only, where the payment names its payer: in the payment commitment the payment cMIP defines, and so in the receipt's field 2. *It names no identity: the key is fresh, and links to nothing else the payer signs. It is not the delivery key of rule 14, which is an encryption key and cannot sign; a payer who wants both supplies both.*
 
-A receipt is signed by the **payee of the hop**: the party that received the money. The previous hop's receipt is also named in `objects`, so a route is a chain in the Envelopes MIP's sense. *No receipt carries bytes nobody checks, and a referral is evidence only when the payer signs it (rule 20, F75).*
+A receipt is signed by the **payee of the hop**: the party that received the money. The previous hop's receipt is also named in `objects`, so a route is a chain in the Envelopes MIR's sense. *No receipt carries bytes nobody checks, and a referral is evidence only when the payer signs it (rule 20, F75).*
 
 A receipt carries no split. The final payee is the payee pointer; if that pointer belongs to a split service, the split and each payout are defined by the owners' agreement, in Agreements, and each payout is itself a simple Money payment with its own receipt.
 
@@ -580,7 +580,7 @@ Splits are an Agreements task. A custodial flow service, which holds an identity
 - **Per unit, fail closed.** *A limit in one unit cannot be compared with a payment in another, and a thief with the signing key chooses the unit. So every unit has its own limit, and a unit with none goes to the vault. Where several entries cover one unit, the smallest limit applies: a limit per rail would let the payer's, or a thief's, choice of rail pick the laxer one (F114).*
 - **The receiver decides how it is paid (F115).** *A payer cannot pay on a rail the payee does not accept. Rail Modules change far more often than agreements; if terms named them, every upgrade would need a clone, every party signing in a deal. So the agreement names the payment cMIP, and the payee's pointer or vault, which its owner changes alone, names the rails. A receipt on a rail the payee never named counts for nothing, so a collective's lanes and two clients agree on every receipt.*
 - **A refund goes to a key, not to a proof (F113).** *On Lightning the payee and every node on the route learn the preimage, so "whoever presents the proof" could be any of them. A key the payer committed to before paying is held by the payer alone.*
-- **Experimental rails, costs stated (F117).** *The first rail Module, Lightning, names the payee's node in its pointer or vault: a public node exposes its channels and the coins behind them, may expose its network address, links identities that share it, and a Lightning vault stops a thief with the signing key, not one who takes the node. It is an instrument for testing this MIP, labelled experimental, its costs stated in its text and shown by clients.*
+- **Experimental rails, costs stated (F117).** *The first rail Module, Lightning, names the payee's node in its pointer or vault: a public node exposes its channels and the coins behind them, may expose its network address, links identities that share it, and a Lightning vault stops a thief with the signing key, not one who takes the node. It is an instrument for testing this MIR, labelled experimental, its costs stated in its text and shown by clients.*
 - **One name per unit.** *A satoshi is a satoshi on every rail that carries it, Lightning or on-chain. Naming units by their own small specification stops every hop between two rail Modules from looking like a conversion. A test network's coin is a unit of its own: a regtest satoshi is not a satoshi.*
 - **Good faith protects payers.** *A payer who followed the published pointer and vault did everything right. Theft is the owner's risk, and protection against it is a market.*
 - **Private by default.** *Receipts and claims are acts like any other, locked (F29), and disclosed only as far as the route, or the payer's choice, requires.*

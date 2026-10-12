@@ -1,6 +1,6 @@
-# MIP: Identity
+# MIR: Identity
 
-*Draft 12, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 11 (approved 5 October 2026, revised in place since, last for F168) written for plain reading, in Agreements draft 11's and Money draft 7's style. **It changes no rule.** How an identity runs most of the time comes first (genesis, everyday acts, homes, a rotation as it usually runs) and the mechanics of rare cases after (chain signatures, succession, competing rotations, homeless rotations, escape, finality, audit); the rules are numbered afresh in reading order, each with its old number beside it. Written against core v21, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 7, Agreements MIP draft 11, Development MIP draft 6 and the findings F1 to F266. The record of how each rule came about (the revision notes of drafts 1 to 11, the "revised in place" notes, and the list of choices decided in drafts 2 to 11 with the dates and words of each decision) stays in draft 11 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 12, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 11 (approved 5 October 2026, revised in place since, last for F168) written for plain reading, in Agreements draft 11's and Money draft 7's style. **It changes no rule.** How an identity runs most of the time comes first (genesis, everyday acts, homes, a rotation as it usually runs) and the mechanics of rare cases after (chain signatures, succession, competing rotations, homeless rotations, escape, finality, audit); the rules are numbered afresh in reading order, each with its old number beside it. Written against core v21, Envelopes MIR draft 7, Text MIR draft 6, Money MIR draft 7, Agreements MIR draft 11, Development MIR draft 6 and the findings F1 to F266. The record of how each rule came about (the revision notes of drafts 1 to 11, the "revised in place" notes, and the list of choices decided in drafts 2 to 11 with the dates and words of each decision) stays in draft 11 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -16,19 +16,19 @@ Some marks recur, and each matters to the next review:
 - *Stated cost:* a weakness the rules accept knowingly, written down so nobody mistakes it for an oversight.
 - **Re-homed without audit:** an answer that rests on the verifier's own failed attempt to reach a home. It is said, and nothing binding rests on it (the paragraph after rule 35).
 
-The MIP has four parts. Part one is an identity as it runs most of the time: genesis, signing, everyday acts, homes and receipts, a rotation and what it keeps. Part two is the rare cases: chain signatures, succession, competing rotations, homeless rotations, escape with both keys, finality, and audit. Part three is the encoding and the act formats, for reference. Part four is the tasks, the reasoning, the open parameters and the freeze scenarios.
+The MIR has four parts. Part one is an identity as it runs most of the time: genesis, signing, everyday acts, homes and receipts, a rotation and what it keeps. Part two is the rare cases: chain signatures, succession, competing rotations, homeless rotations, escape with both keys, finality, and audit. Part three is the encoding and the act formats, for reference. Part four is the tasks, the reasoning, the open parameters and the freeze scenarios.
 
 ## Purpose
 
-Identity is the ground layer of MOR. It defines what an identity is, how it is born, how its keys are replaced, where others check it, how others reach it, and how it relates to other identities. Every act in MOR is signed in the name of an identity, so every client implements this MIP.
+Identity is the ground layer of MOR. It defines what an identity is, how it is born, how its keys are replaced, where others check it, how others reach it, and how it relates to other identities. Every act in MOR is signed in the name of an identity, so every client implements this MIR.
 
 The identity hash is the identity. It never changes. Keys are only the pens that sign for it, and are replaced by rotation. The home is where anyone holding the hash learns which pen currently speaks for it, and where its content and its inbox can be found.
 
 ## Dependencies
 
-None beneath it. Identity defines the envelope as far as it needs it; the Envelopes MIP completes it. It refers upward in two places only: acknowledgements (Envelopes) and keeper records (Agreements) can give an act standing after a rotation. Nothing in this MIP requires a client to hold data from a higher layer: every rule here is decided from identity chains, receipts, summaries and the acts a verifier already holds.
+None beneath it. Identity defines the envelope as far as it needs it; the Envelopes MIR completes it. It refers upward in two places only: acknowledgements (Envelopes) and keeper records (Agreements) can give an act standing after a rotation. Nothing in this MIR requires a client to hold data from a higher layer: every rule here is decided from identity chains, receipts, summaries and the acts a verifier already holds.
 
-## Words used in this MIP
+## Words used in this MIR
 
 ### Acts and keys
 
@@ -37,18 +37,18 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 - **Identity hash.** The hash of an identity's genesis act. It is the identity.
 - **Signing key.** The key that signs everyday acts. It cannot change the identity chain.
 - **Chain key.** A key from a post-quantum family, committed in advance by its hash, revealed and used once, to sign a rotation or a chain signature.
-- **Scoped key.** A key of an identity that an act of a higher MIP installs, limited to a scope that MIP defines: a grant key, a collective's or a person's (a payee's grant to a deal's split service among them, F129), installed by its grant and removed by its revocation (Agreements, F128). It signs everyday acts in the identity's name, never an identity-chain act, and only that MIP says whether it counts. *It is added and removed by everyday acts of the identity's signing key (for a grant key, the grant and its revocation), never by a rotation: no chain key is spent on it. The act that installed it is judged by the next rotation like any act of the key it replaces (rules 33 to 35), so a scoped key installed by a thief who stole the signing key is void once the owner rotates without keeping it.*
+- **Scoped key.** A key of an identity that an act of a higher MIR installs, limited to a scope that MIR defines: a grant key, a collective's or a person's (a payee's grant to a deal's split service among them, F129), installed by its grant and removed by its revocation (Agreements, F128). It signs everyday acts in the identity's name, never an identity-chain act, and only that MIR says whether it counts. *It is added and removed by everyday acts of the identity's signing key (for a grant key, the grant and its revocation), never by a rotation: no chain key is spent on it. The act that installed it is judged by the next rotation like any act of the key it replaces (rules 33 to 35), so a scoped key installed by a thief who stole the signing key is void once the owner rotates without keeping it.*
 
 ### Chains and sequences
 
 - **Identity chain.** Genesis followed by the identity's rotations and chain signatures, each naming the one before. Only the chain key adds to it. Genesis is position 0.
 - **Sequence.** A line of everyday acts by one identity, each naming the previous act in the line. An identity may keep one sequence or several; the split is the owner's choice.
 - **Kept ancestry.** The acts a rotation names as the latest genuine act of each sequence, and every act they descend from. For each tip, the rotation carries its position and the running summary including it, so anyone can prove an act lies in the kept ancestry without opening any private act.
-- **Chain signature.** An act on the identity chain, signed with the revealed chain key, that names another act and commits the next chain key, and changes nothing else (F132). *The one line of an identity that never branches is its identity chain; a signature placed there is ordered against every other one of the same identity, whatever devices the identity uses. A higher MIP says which of its acts need one: Agreements' forks and closings.*
+- **Chain signature.** An act on the identity chain, signed with the revealed chain key, that names another act and commits the next chain key, and changes nothing else (F132). *The one line of an identity that never branches is its identity chain; a signature placed there is ordered against every other one of the same identity, whatever devices the identity uses. A higher MIR says which of its acts need one: Agreements' forks and closings.*
 
 ### Homes
 
-- **Home.** A relay that focuses on the Identity MIP: it stores identity chains and serves them. A relay is not an identity; it is operated by one, a person or organisation with an ordinary MOR identity of its own, which signs everything the home states. A home is declared by its operator's identity hash plus the relay's address. It verifies what it stores and signs receipts for it, but never signs on the owner's behalf. "Home" names a role, not a size.
+- **Home.** A relay that focuses on the Identity MIR: it stores identity chains and serves them. A relay is not an identity; it is operated by one, a person or organisation with an ordinary MOR identity of its own, which signs everything the home states. A home is declared by its operator's identity hash plus the relay's address. It verifies what it stores and signs receipts for it, but never signs on the owner's behalf. "Home" names a role, not a size.
 - **Operator.** The identity that runs a home or an auditing relay and signs its receipts, log summaries, objections and absence statements. Homes are counted per operator.
 - **Self-hosted home.** A home operated by the identity itself. A self-hosted identity is trusted on its own signatures: its rotations count without receipts.
 - **Receipt.** A home's signed statement that it holds a given identity-chain act, at a given position in that chain, recorded at a given position in the home's own log, and that it is the first valid act the home accepted at that chain position. The home's log position is a sequence number, never a time. A receipt counts only alongside the act it names.
@@ -110,7 +110,7 @@ A self-hosted identity is trusted on its own signatures: its rotation counts wit
 
 ### 2. Signing: keys and bindings
 
-*In short: every act has one signer. Everyday acts are signed with the signing key and bound to the identity-chain act that set it; only the chain key adds to the identity chain; a scoped key, installed by a higher MIP, signs everyday acts whose standing that MIP decides.*
+*In short: every act has one signer. Everyday acts are signed with the signing key and bound to the identity-chain act that set it; only the chain key adds to the identity chain; a scoped key, installed by a higher MIR, signs everyday acts whose standing that MIR decides.*
 
 Every act has exactly one signer. An act that needs the agreement of two identities, such as a link, is made of two acts: one by each, the second naming the first.
 
@@ -120,7 +120,7 @@ The verification procedures are, in draft 11's order: the checks on every act (t
 
 #### Rule 5 (was 1). The verifier runs the checks
 
-A verifier MUST run the verification procedures of this MIP. In particular, it MUST check that the signature is valid for the key it names, and that the binding names an act in the signer's identity chain that bound that key.
+A verifier MUST run the verification procedures of this MIR. In particular, it MUST check that the signature is valid for the key it names, and that the binding names an act in the signer's identity chain that bound that key.
 
 
 #### Rule 6 (was 3). A signing key never adds to the identity chain
@@ -133,26 +133,26 @@ An act signed with a chain key MUST be a rotation or a chain signature (F132). A
 
 #### Rule 8 (was 1a). Scoped keys
 
-*In short: Identity checks only a scoped key's signature; the higher MIP that installed the key judges the act.*
+*In short: Identity checks only a scoped key's signature; the higher MIR that installed the key judges the act.*
 
-An everyday act signed with a scoped key is valid under Identity only as far as its signature: its status is "scoped", and the higher MIP whose act its `binding` names judges it (for a grant key, Agreements rules 73 to 80; F128).
+An everyday act signed with a scoped key is valid under Identity only as far as its signature: its status is "scoped", and the higher MIR whose act its `binding` names judges it (for a grant key, Agreements rules 73 to 80; F128).
 
-A client that does not implement that MIP MUST show the act as unknown, never as valid (rule 9).
+A client that does not implement that MIR MUST show the act as unknown, never as valid (rule 9).
 
 A scoped key never signs an Identity act, nor an act that adds to the identity chain; it never counts as the identity's signing key in a rotation's judgement (rules 33 to 35).
 
-*Identity cannot read Agreements (a lower layer never depends on a higher one), so it carries the key's signature and leaves the key's standing to the MIP that installed it, as it carries declarations whose kinds higher MIPs define (rule 31). Stated cost: a client without Agreements cannot tell that a grant key is the collective's; it shows the act as unknown.*
+*Identity cannot read Agreements (a lower layer never depends on a higher one), so it carries the key's signature and leaves the key's standing to the MIR that installed it, as it carries declarations whose kinds higher MIRs define (rule 31). Stated cost: a client without Agreements cannot tell that a grant key is the collective's; it shows the act as unknown.*
 
 
-#### Rule 9 (was 18a). A client implements every MIP it acts on
+#### Rule 9 (was 18a). A client implements every MIR it acts on
 
-A client MUST implement every MIP that defines an act it acts on. A client that meets an act defined by a MIP it does not implement MUST show that act as unknown, never as valid. In particular, a client that acts on agreements MUST implement Agreements.
+A client MUST implement every MIR that defines an act it acts on. A client that meets an act defined by a MIR it does not implement MUST show that act as unknown, never as valid. In particular, a client that acts on agreements MUST implement Agreements.
 
 #### The checks on every act
 
 These run on every act.
 
-1. Decode the act; reject it unless it is deterministic CBOR in the Envelopes MIP's shape.
+1. Decode the act; reject it unless it is deterministic CBOR in the Envelopes MIR's shape.
 2. Check that it is public: its content key is on the outside, and it opens the inside, which matches the inside commitment.
 3. Compute the act id from the outside.
 4. Check that the scheme is one this client implements and the signature is valid for the act id under the key in the signature. A scheme this client does not implement makes the act unknown, not invalid.
@@ -161,7 +161,7 @@ These run on every act.
 #### The everyday checks (types 2 to 15)
 
 1. `signer` and `binding` are present, and `prev` is present.
-2. `binding` names an act of the signer's identity chain that counts, genesis or a rotation, never a chain signature, and the key in the signature equals the signing key that act set; or, for an act signed with a scoped key (F128), `binding` names a held act of a higher MIP, never an Identity act nor the act itself, and the signature is valid for the key it names: the act's status is then **scoped**, and the MIP that defines the binding act says whether that act installs that key for the signer, and whether the act counts (rule 8).
+2. `binding` names an act of the signer's identity chain that counts, genesis or a rotation, never a chain signature, and the key in the signature equals the signing key that act set; or, for an act signed with a scoped key (F128), `binding` names a held act of a higher MIR, never an Identity act nor the act itself, and the signature is valid for the key it names: the act's status is then **scoped**, and the MIR that defines the binding act says whether that act installs that key for the signer, and whether the act counts (rule 8).
 3. If a later rotation of the signer counts, the act's status follows rules 33 to 35. A rotation judges only acts signed with the key it replaces, never an act signed with a scoped key.
 
 
@@ -169,11 +169,11 @@ These run on every act.
 
 *In short: an identity's everyday acts say where to find it (routes), what it is called (names), who else it is (links), and what it relies on (witness acts). All are public, except that a link may be private.*
 
-#### Every act of this MIP is public, except a private link
+#### Every act of this MIR is public, except a private link
 
-Every act defined by this MIP is public, except a private link: its content key travels on its outside, so homes, auditors and anyone checking an identity can open it. They are the public face of an identity (F29).
+Every act defined by this MIR is public, except a private link: its content key travels on its outside, so homes, auditors and anyone checking an identity can open it. They are the public face of an identity (F29).
 
-A link's claim, confirmation and termination (types 6 to 8) may instead be private, encrypted as the Envelopes MIP defines, their key delivered only to whoever should see them (F7, F134). For a private link act:
+A link's claim, confirmation and termination (types 6 to 8) may instead be private, encrypted as the Envelopes MIR defines, their key delivered only to whoever should see them (F7, F134). For a private link act:
 
 - It counts only if its sealed form is published at the homes its signer's chain names at the link act's binding (its place in that chain); a later move of homes does not void it (F152, F159).
 - What a verifier found at those homes is an input like its own attempts: a link gives no authority (rule 16), so a link never decides anything binding, and its standing from one verifier's fetch is never needed for anything that does (F168).
@@ -191,13 +191,13 @@ A witness act MUST carry `acks`, naming at least one act, and MUST NOT carry `ob
 
 A witness act says only: **"I received this act and rely on it."** It is the one act whose whole purpose is acknowledgement (F110).
 
-*It brings back, deliberately, what a like must never do: relying on a post or a message that nobody paid for or signed around (a public promise, a threat kept as evidence, a statement someone relies on). It keeps the acts it names visible as disputes if their signer later disowns them (rule 34), and it is the natural carrier for the acknowledgement of a voided home receipt (receipt check 6, F95). Like every act this MIP defines, it is public: it shows anyone which acts its signer relies on, never what they say.*
+*It brings back, deliberately, what a like must never do: relying on a post or a message that nobody paid for or signed around (a public promise, a threat kept as evidence, a statement someone relies on). It keeps the acts it names visible as disputes if their signer later disowns them (rule 34), and it is the natural carrier for the acknowledgement of a voided home receipt (receipt check 6, F95). Like every act this MIR defines, it is public: it shows anyone which acts its signer relies on, never what they say.*
 
 #### Rule 11 (was 18c). A witness act is never a side effect
 
 *Client conformance.* A client MUST NOT sign a witness act as a side effect of another gesture (a like, a reply, opening or saving a message). Before signing one, it MUST say what it does, in plain words, for example: "This keeps the act visible as disputed even if its author later disowns it. It is public: anyone can see that you rely on this act, though not what it says."
 
-*No verifier can check that a client did this; it is conformance, not validity, like the Text MIP's rule that what you sign is what you saw.*
+*No verifier can check that a client did this; it is conformance, not validity, like the Text MIR's rule that what you sign is what you saw.*
 
 #### Rule 12 (was 38). Anyone can find anyone
 
@@ -230,7 +230,7 @@ Copies of a private link MUST be encrypted separately, so that stored copies can
 
 #### Which value counts: declarations, succession, routes, names and links
 
-A disputed act never counts when choosing the latest value of anything below. *An act is disputed only by the rotation rules of this MIP (rules 33 to 35). No act of a higher layer changes that status; a contest (Agreements) is an objection shown alongside what it names and changes nothing here (F69).*
+A disputed act never counts when choosing the latest value of anything below. *An act is disputed only by the rotation rules of this MIR (rules 33 to 35). No act of a higher layer changes that status; a contest (Agreements) is an objection shown alongside what it names and changes nothing here (F69).*
 
 1. **Declarations:** for each spec and kind, the entry in the counting identity-chain act with the highest position counts. A null value means the kind is not declared.
 2. **Succession:** the successor field in the counting rotation with the highest position that carries one counts; null means no succession.
@@ -340,7 +340,7 @@ A home that holds a valid rotation or chain signature MUST reject any other rota
 
 #### Rule 31 (was 8b). Declarations ride on the chain key
 
-An entry in the declarations slot is valid only in genesis or in a rotation that counts. The latest such entry of each kind counts; a null value removes the kind. Higher MIPs define the kinds and what they mean.
+An entry in the declarations slot is valid only in genesis or in a rotation that counts. The latest such entry of each kind counts; a null value removes the kind. Higher MIRs define the kinds and what they mean.
 
 #### Rule 32 (was 37). Keep the two keys apart, and back both up
 
@@ -383,7 +383,7 @@ If it lies within the rotation's kept ancestry and is not listed as disowned, it
 
 If it lies outside the kept ancestry, or within it but listed as disowned, it is void, unless:
 
-- another identity acknowledged it (Envelopes; by an act of a type the Identity, Money or Agreements MIP defines, such as a witness act, F110);
+- another identity acknowledged it (Envelopes; by an act of a type the Identity, Money or Agreements MIR defines, such as a witness act, F110);
 - or a named keeper recorded it before recording the rotation (Agreements);
 
 then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements).
@@ -408,7 +408,7 @@ An answer that rests on the verifier's own failed attempts is marked as such ("r
 
 ## Part two: rare cases
 
-*Most identities never meet these. A chain signature is spent only where a higher MIP asks for one (today, Agreements' forks and closings). Succession is declared when an identity moves on. A competing rotation needs one chain key used twice. A homeless rotation needs homes that are gone, an escape a home that refuses, and audit an owner who asked for it.*
+*Most identities never meet these. A chain signature is spent only where a higher MIR asks for one (today, Agreements' forks and closings). Succession is declared when an identity moves on. A competing rotation needs one chain key used twice. A homeless rotation needs homes that are gone, an escape a home that refuses, and audit an owner who asked for it.*
 
 ### 7. Chain signatures
 
@@ -420,7 +420,7 @@ Once it counts, the identity chain's state is the one before it with only the ne
 
 It judges no act: rules 33 to 35 belong to rotations alone.
 
-The act it signs need not be held, nor be the signer's; what the signature means is defined by the MIP of the act it signs (Agreements: a member's signature on a fork or closing).
+The act it signs need not be held, nor be the signer's; what the signature means is defined by the MIR of the act it signs (Agreements: a member's signature on a fork or closing).
 
 *Stated cost (F132):* every chain signature spends a chain key, so it goes through the same ceremony as a rotation (the air-gapped device), and is as slow and heavy.
 
@@ -633,15 +633,15 @@ How often homes publish summaries, and which homes audit which, is left to the h
 
 ### Encoding and conventions
 
-*The envelope itself is defined by the Envelopes MIP. This section repeats only what Identity needs.*
+*The envelope itself is defined by the Envelopes MIR. This section repeats only what Identity needs.*
 
-**Encoding.** Every act is encoded in deterministic CBOR (RFC 8949, section 4.2.1, core deterministic encoding). A verifier MUST reject any act whose bytes are not in that encoding. Formats are written in CDDL (RFC 8610). Maps use small integer keys. Every `tstr` is canonical text (Text MIP), including address hints; a genesis with a trailing space in a hint is invalid. The core sets no length bound; homes set their own policy.
+**Encoding.** Every act is encoded in deterministic CBOR (RFC 8949, section 4.2.1, core deterministic encoding). A verifier MUST reject any act whose bytes are not in that encoding. Formats are written in CDDL (RFC 8610). Maps use small integer keys. Every `tstr` is canonical text (Text MIR), including address hints; a genesis with a trailing space in a hint is invalid. The core sets no length bound; homes set their own policy.
 
 **Hashes.** Every hash is SHA-256, 32 bytes. A tagged hash is computed as in BIP-340:
 `tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`.
 *Tags keep the hashes of different kinds of object apart, so one can never be passed off as another. A successor protocol MUST use a different tag prefix, so its acts can never replay here (Development).*
 
-**Act id.** The act id is `tagged_hash("MOR/act", outside)`, where `outside` is the encoded outside of the act, which commits to its locked inside (Envelopes MIP). The signature is not part of the act id, so a signature can never change which act is meant.
+**Act id.** The act id is `tagged_hash("MOR/act", outside)`, where `outside` is the encoded outside of the act, which commits to its locked inside (Envelopes MIR). The signature is not part of the act id, so a signature can never change which act is meant.
 
 **Signature schemes.** A scheme is named by a founding number, or by the hash of a signature-scheme specification (Development) that defines its key encoding, signature encoding and verification.
 
@@ -656,13 +656,13 @@ A signature always signs the 32-byte act id. SLH-DSA signatures use the context 
 
 **Chain key commitment.** A chain key is committed as `tagged_hash("MOR/safety", scheme || key)`, where `scheme` is the one-byte number or the 32-byte specification hash, and `key` the public key.
 
-**Spec hash.** Every act names the specification that defines its type by that specification's hash. For the acts below it is the hash of the frozen text of this MIP, written `IDENTITY` here.
+**Spec hash.** Every act names the specification that defines its type by that specification's hash. For the acts below it is the hash of the frozen text of this MIR, written `IDENTITY` here.
 
 ### The envelope
 
-Every act is an Envelopes MIP act: an outside (signer, binding, commitments, and for a public act its content key), a locked inside (spec, type, prev, objects, payload, position, summary, acks, refs, hint, salt), and a signature. Below, "signer" and "binding" are outside fields; "prev", "objects" and "payload" are inside fields.
+Every act is an Envelopes MIR act: an outside (signer, binding, commitments, and for a public act its content key), a locked inside (spec, type, prev, objects, payload, position, summary, acks, refs, hint, salt), and a signature. Below, "signer" and "binding" are outside fields; "prev", "objects" and "payload" are inside fields.
 
-Every act defined by this MIP is public, except a private link, as section 3 says (F29, F134).
+Every act defined by this MIR is public, except a private link, as section 3 says (F29, F134).
 
 Every act has exactly one signer (section 2).
 
@@ -691,7 +691,7 @@ successor   = [ protocol: tstr, identifier: bstr ]  ; protocol "mor" for a MOR i
 
 How an address hint and a null operator are read is in section 4 ("A home's address").
 
-### Types defined by this MIP
+### Types defined by this MIR
 
 | Type | Name | Signed by | Adds to |
 | --- | --- | --- | --- |
@@ -722,7 +722,7 @@ genesis-payload = {
   1 => chain-key-commit,     ; commitment to the first chain key
   2 => [+ home],          ; one or more homes
   ? 3 => home-rule,       ; only with several homes; absent means the default (rule 2)
-  ? 4 => [+ declaration], ; high-risk settings defined by higher MIPs
+  ? 4 => [+ declaration], ; high-risk settings defined by higher MIRs
   ? 5 => audit            ; require audited receipts; absent means not required
 }
 ```
@@ -802,7 +802,7 @@ link-claim-payload = {
 }
 ```
 
-A confirmation names the claim in `objects` and has an empty payload; it is signed by the MOR identity the claim names. When the other side is an account on another protocol, it confirms instead by signing the claim's act id in its own protocol; that signature is carried in the claim's proof field, and a cMIP for that protocol defines how to check it. Either side may start: an account elsewhere can sign first, and the MOR identity then publishes the claim carrying that proof. A termination names the claim in `objects`, has an empty payload, and is signed by the MOR side; an account elsewhere ends a link by the means its own protocol offers. A private link is stored as encrypted acts, in the form the Envelopes MIP defines.
+A confirmation names the claim in `objects` and has an empty payload; it is signed by the MOR identity the claim names. When the other side is an account on another protocol, it confirms instead by signing the claim's act id in its own protocol; that signature is carried in the claim's proof field, and a cMIP for that protocol defines how to check it. Either side may start: an account elsewhere can sign first, and the MOR identity then publishes the claim carrying that proof. A termination names the claim in `objects`, has an empty payload, and is signed by the MOR side; an account elsewhere ends a link by the means its own protocol offers. A private link is stored as encrypted acts, in the form the Envelopes MIR defines.
 
 ### Log summary (type 9) and cosignature (type 10)
 
@@ -892,7 +892,7 @@ Key storage, backup and recovery are Modules built on this vocabulary; they need
 - **Self-hosting is a trust model.** *An identity that is its own home has chosen to be trusted on its own signatures. Its rotation counts with no receipt, which is the only way it can rotate at all; a thief holding its chain key wins at once. That is the same risk as a single lax home, chosen knowingly, and the most sovereign setup is no longer the one that cannot rotate.*
 - **First held wins.** *Without a third key, the only order the protocol can see is the order in which homes accepted rotations. A stolen chain key is like a stolen bitcoin key, unless the owner chose homes that guard against it.*
 - **Links exist for signing in and for bridges.** *Signing in with MOR is essential, so the core gives every protocol and service one shared, two-way statement to read: this MOR identity and that account are the same entity. Anyone can build a bridge on it. A link needs both sides, otherwise anyone could claim to be anyone, and either side can leave, because nobody should be kept linked against their will. It confers no authority: a bridge that acts for someone needs a grant.*
-- **High-risk settings ride on the chain key.** *Anything whose theft would cause lasting harm, such as where money is protected, who succeeds the identity, or that a home has closed, is declared in genesis or a rotation. A thief holding only the signing key cannot change it. Higher MIPs decide what counts as high-risk; Identity only carries the slot.*
+- **High-risk settings ride on the chain key.** *Anything whose theft would cause lasting harm, such as where money is protected, who succeeds the identity, or that a home has closed, is declared in genesis or a rotation. A thief holding only the signing key cannot change it. Higher MIRs decide what counts as high-risk; Identity only carries the slot.*
 - **Every protection the owner chooses is removable by the chain key alone.** *An audit requirement is judged under the rotation that changes it, so auditors who have gone cannot lock the owner in. A device policy is the one protection the core cannot make removable, because a refusal leaves no evidence; so the text says what it costs, and clients never choose it by default.*
 - **Succession rides on rotation.** *The chain key keeps its single use. Tying succession to it means a thief holding only the signing key can never redirect an identity's followers, agreements or money. Leaving is as protected as a rotation, and as rare.*
 - **Reliance is a deliberate act (F110).** *An acknowledgement carries weight: it can keep a thief's act alive as a dispute. A gesture as light as a like must never carry that weight by accident, so acknowledgements live only on the act types of the three layers that need them, and reliance on anything else is a witness act, signed on purpose and explained before signing. A thief's accomplice can still witness the thief's acts, making a visible dispute, never a valid act, exactly as before; what disappears is likes and replies keeping a thief's words alive.*
@@ -912,9 +912,9 @@ Settled in this draft: hash function (SHA-256), encoding (deterministic CBOR), f
 Still open:
 
 - How a home is queried: the request and response formats for an identity's chain, receipts, routes, names and public links.
-- Efficient proof that an act lies within a kept ancestry (Envelopes MIP: sequence position and running summary, with the test vector of F78).
-- The encrypted form of private links (Envelopes MIP).
-- The final hash of this MIP, used as `IDENTITY` in every act it defines.
+- Efficient proof that an act lies within a kept ancestry (Envelopes MIR: sequence position and running summary, with the test vector of F78).
+- The encrypted form of private links (Envelopes MIR).
+- The final hash of this MIR, used as `IDENTITY` in every act it defines.
 
 ### Freeze scenarios
 
@@ -977,7 +977,7 @@ Draft 11's rules, in their old order, with their numbers in this draft. Every ol
 | 16 | 34 | Acts left out or disowned are void, unless relied on |
 | 17 | 35 | Sequences a rotation does not name |
 | 18 | 36 | Old disputes may be collapsed |
-| 18a | 9 | A client implements every MIP it acts on |
+| 18a | 9 | A client implements every MIR it acts on |
 | 18b | 10 | Witness acts |
 | 18c | 11 | A witness act is never a side effect |
 | 19 | 40 | The home rule decides between competing rotations |

@@ -1,6 +1,6 @@
-# MIP: Text
+# MIR: Text
 
-*Draft 7, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 30 September 2026, revised in place since, last for F182) written for plain reading, in Agreements draft 11's and Money draft 7's style. **It changes no rule.** How text runs most of the time comes first and the exact rules after, and the rules are numbered afresh in reading order, each with its old number beside it. Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Agreements MIP draft 11 and the findings F1 to F266. The record of how each rule came about stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 7, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 30 September 2026, revised in place since, last for F182) written for plain reading, in Agreements draft 11's and Money draft 7's style. **It changes no rule.** How text runs most of the time comes first and the exact rules after, and the rules are numbered afresh in reading order, each with its old number beside it. Written against core v21, Identity MIR draft 11, Envelopes MIR draft 7, Agreements MIR draft 11 and the findings F1 to F266. The record of how each rule came about stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -10,22 +10,22 @@ Draft 6 numbered two lists separately: the six rules of canonical text, and the 
 
 *One mark recurs: Client conformance, a rule for the signer's own client, which no verifier can check.*
 
-The MIP has four parts. Part one is text as it runs most of the time: one form for every text, the text act, and what a client shows. Part two is the exact rules of canonical text. Part three is the act format, for reference. Part four is the tasks (the bound on formats), the reasoning, the open parameters and the freeze scenarios.
+The MIR has four parts. Part one is text as it runs most of the time: one form for every text, the text act, and what a client shows. Part two is the exact rules of canonical text. Part three is the act format, for reference. Part four is the tasks (the bound on formats), the reasoning, the open parameters and the freeze scenarios.
 
 ## Purpose
 
-Text is the only native media of MOR, because the protocol itself speaks in text: terms, agreements, grants, names, messages. This MIP defines two things:
+Text is the only native media of MOR, because the protocol itself speaks in text: terms, agreements, grants, names, messages. This MIR defines two things:
 
 1. **Canonical text:** the one form every piece of text takes inside any act, so that the same words always give the same bytes, and therefore the same hash.
 2. **The text act:** a plain message every client can read. Whatever cMIPs two clients use, their users can always exchange text.
 
 ## Dependencies
 
-Identity, for signers. The act format is the envelope defined in the Identity MIP and completed by the Envelopes MIP. Every client implements this MIP.
+Identity, for signers. The act format is the envelope defined in the Identity MIR and completed by the Envelopes MIR. Every client implements this MIR.
 
-## Words used in this MIP
+## Words used in this MIR
 
-- **Canonical text.** A string that meets the rules below. Every text field of every act, in every MIP and cMIP, is canonical text.
+- **Canonical text.** A string that meets the rules below. Every text field of every act, in every MIR and cMIP, is canonical text.
 - **Text act.** An act whose payload is a canonical text, readable by any client.
 - **Format.** An optional cMIP that gives text extra meaning when displayed, such as emphasis or links. The text stays readable as plain text without it.
 - **Pinned Unicode version.** The version of the Unicode Standard whose tables every verifier uses for the normalization check: the latest version available when the core freezes (Unicode 17.0 as of this draft).
@@ -49,7 +49,7 @@ A client composing text SHOULD normalize it for the user: convert line breaks to
 
 ### 2. The text act
 
-A text act is an Envelopes MIP act. Outside: `signer` and `binding`. Inside: `spec` (the hash of this MIP, written `TEXT`), `type` 0, `prev`, the payload, and optionally `refs`: the acts or web resources it responds to or mentions. Like every act, its inside is locked: a public text carries its key, a private one is delivered to its recipients, possibly in a sealed container. A private text looks like any other act to a relay. *Its payload is in Part three.*
+A text act is an Envelopes MIR act. Outside: `signer` and `binding`. Inside: `spec` (the hash of this MIR, written `TEXT`), `type` 0, `prev`, the payload, and optionally `refs`: the acts or web resources it responds to or mentions. Like every act, its inside is locked: a public text carries its key, a private one is delivered to its recipients, possibly in a sealed container. A private text looks like any other act to a relay. *Its payload is in Part three.*
 
 #### Rule 3 (was validity 3). Plain text, always
 
@@ -135,7 +135,7 @@ text-payload = {
 - **The rules are fixed, not borrowed.** *Unicode grows every year. Rules that follow whatever version a machine has would let two verifiers disagree on whether an act is valid. So the space list is written out, control characters are defined by range, and normalization uses one pinned version. New characters, such as new emoji, remain usable. One rare edge remains: a combining mark added to Unicode after the pinned version is treated as unassigned, so two orders of such marks could both pass. Every verifier still agrees, which matters more. Unicode's stability policy guarantees that text in NFC under one version stays in NFC under every later one, so pinning never shuts out future text.*
 - **No TAB.** *A tab displays at different widths in different places, and can hide alignment tricks in terms. Text that needs layout uses a format.*
 - **Warnings, not rules, for lookalikes.** *Banning mixed scripts would exclude real people writing real languages. Deciding what looks alike is judgement, so it belongs to clients.*
-- **Every client can open text.** *Every client implements the Envelopes MIP, so every client can unlock a public text and any private text addressed to it. Locking everything does not weaken text's universality.*
+- **Every client can open text.** *Every client implements the Envelopes MIR, so every client can unlock a public text and any private text addressed to it. Locking everything does not weaken text's universality.*
 - **Formats never lock text away.** *Text is the one media every client understands, so no cMIP may make a message unreadable. A format adds meaning; it never replaces the words, and it never hides them.*
 
 ### Open technical parameters

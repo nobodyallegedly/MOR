@@ -1,6 +1,6 @@
-# MIP: Development
+# MIR: Development
 
-*Draft 7, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for F250 at the split Module build) written for plain reading, in Agreements draft 11's and Money draft 7's style. **The rewrite changes no rule**: how cMIPs and Modules are made, used and paid most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. The tasks table is brought up to date with what Agreements draft 11 already decided, each such item marked "carried from Agreements draft 11": the split task choosing the receiver for a payment (F250, a table line, already written into draft 6 in place at the split Module build, to approve again, and now marked), and the proof checker of a proven offer (F261, a paragraph under the table). Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 7, Agreements MIP draft 11 and the findings F1 to F266. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`) **writes in F268**, the answer to this draft's question: a proof checker of a proven offer is not a task, a task being a hand-off an agreement names by number (terms field 2), and a specification that checks proofs of delivery declares so by one field, field 12; marked "new in draft 7 (F268)" where it stands, the field "to build". **A second pass** (12 October 2026, evening; `docs/core-v22.md`, "Second pass") writes in the three readings the marked pass put as questions, each confirmed by Nobody, allegedly, and marked "reading, confirmed": a task is a hand-off an agreement *may* name by number, so tasks 1 to 5 stay tasks (Q1); field 12 serves discovery only (Q2); an extension is what terms field 15 names, and a proven offer's checker is none (Q3). The record of how each rule came about (the revision notes of drafts 4 to 6, "Decided in this draft", and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 7, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for F250 at the split Module build) written for plain reading, in Agreements draft 11's and Money draft 7's style. **The rewrite changes no rule**: how cMIPs and Modules are made, used and paid most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. The tasks table is brought up to date with what Agreements draft 11 already decided, each such item marked "carried from Agreements draft 11": the split task choosing the receiver for a payment (F250, a table line, already written into draft 6 in place at the split Module build, to approve again, and now marked), and the proof checker of a proven offer (F261, a paragraph under the table). Written against core v21, Identity MIR draft 11, Envelopes MIR draft 7, Text MIR draft 6, Money MIR draft 7, Agreements MIR draft 11 and the findings F1 to F266. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`) **writes in F268**, the answer to this draft's question: a proof checker of a proven offer is not a task, a task being a hand-off an agreement names by number (terms field 2), and a specification that checks proofs of delivery declares so by one field, field 12; marked "new in draft 7 (F268)" where it stands, the field "to build". **A second pass** (12 October 2026, evening; `docs/core-v22.md`, "Second pass") writes in the three readings the marked pass put as questions, each confirmed by Nobody, allegedly, and marked "reading, confirmed": a task is a hand-off an agreement *may* name by number, so tasks 1 to 5 stay tasks (Q1); field 12 serves discovery only (Q2); an extension is what terms field 15 names, and a proven offer's checker is none (Q3). The record of how each rule came about (the revision notes of drafts 4 to 6, "Decided in this draft", and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -15,7 +15,7 @@ Some marks recur, and each matters to the next review:
 - **Carried from Agreements draft 11 (Fxxx):** an item of the tasks table that states what Agreements draft 11 already decided. It is not new in this draft.
 - **New in draft 7 (Fxxx):** a statement the marked pass adds, from a decided finding. *To build:* the code does not do it yet. *Reading, confirmed (Qn):* a point the decided words left open, put to Nobody, allegedly, as a question (`docs/core-v22.md`) and confirmed as the lean (12 October 2026; findings log, "Core v22's six questions: the leans taken").
 
-The MIP has four parts. Part one is cMIPs and Modules as they run most of the time: naming a specification, freezing it, the tasks, adopting and leaving, signing what a rule computes, earning, and discovery. Part two is the rare cases and the mechanics: extensions, the machine verification rules run on, predecessors, and the trust root and successors. Part three is the specification format, for reference. Part four is the reasoning, the open parameters and the freeze scenarios.
+The MIR has four parts. Part one is cMIPs and Modules as they run most of the time: naming a specification, freezing it, the tasks, adopting and leaving, signing what a rule computes, earning, and discovery. Part two is the rare cases and the mechanics: extensions, the machine verification rules run on, predecessors, and the trust root and successors. Part three is the specification format, for reference. Part four is the reasoning, the open parameters and the freeze scenarios.
 
 ## Purpose
 
@@ -23,35 +23,35 @@ Development defines how the protocol treats everything built above the core: cMI
 
 - what a cMIP is, and what a Module is;
 - how each is written, identified and published;
-- how it plugs into the core, through the tasks the MIPs define;
+- how it plugs into the core, through the tasks the MICS defines;
 - how people adopt it, and leave it;
 - how its creator is paid when it is used.
 
-The core is frozen; everything above it competes. Development is the grammar of that competition: zero democracy on the MIPs, a free market on cMIPs and Modules, where adoption decides.
+The core is frozen; everything above it competes. Development is the grammar of that competition: zero democracy on the MICS, a free market on cMIPs and Modules, where adoption decides.
 
 ## Dependencies
 
-Identity, Envelopes, Text, Money and Agreements. Fees and usage rewards are defined in Money and Agreements, so a Money-only client never depends on this MIP.
+Identity, Envelopes, Text, Money and Agreements. Fees and usage rewards are defined in Money and Agreements, so a Money-only client never depends on this MIR.
 
-## Words used in this MIP
+## Words used in this MIR
 
 ### Specifications
 
-- **Specification.** A document that defines acts, rules or behaviour, identified by its spec hash. The MIPs are specifications; so are cMIPs, Modules, unit specifications, media types and signature schemes.
+- **Specification.** A document that defines acts, rules or behaviour, identified by its spec hash. The MIRs are specifications; so are cMIPs, Modules, unit specifications, media types and signature schemes.
 - **Spec hash.** `tagged_hash("MOR/spec", content)`, over a specification's canonical content. It is what acts name in their `spec` field and what agreements name per task. It is the same wherever the specification is published.
 - **cMIP.** A community specification for one task: what it accepts and produces in core terms, the act types it defines, and the rules a verifier runs. Many cMIPs may compete for the same task.
-- **Module.** An implementation or extension under a MIP or cMIP: code, a verification rule, the code that plays a media type, a split plan template, a rail. *A unit, a media type and a signature scheme are specifications of their own (kinds 2, 3 and 5; Money, "Unit"), not Modules; the code that plays a media type is a Module (QG5, F191).* Identified by its spec hash. *A Module is a specification: it signs nothing, holds nothing and is paid nothing by itself; the identities acting under it do (F112, F116).*
+- **Module.** An implementation or extension under a MIR or cMIP: code, a verification rule, the code that plays a media type, a split plan template, a rail. *A unit, a media type and a signature scheme are specifications of their own (kinds 2, 3 and 5; Money, "Unit"), not Modules; the code that plays a media type is a Module (QG5, F191).* Identified by its spec hash. *A Module is a specification: it signs nothing, holds nothing and is paid nothing by itself; the identities acting under it do (F112, F116).*
 - **Verification rule.** An executable program, part of a cMIP or Module, that anyone can run to check its outputs, such as a rail Module's check of a rail proof. The rule decides validity; the text explains it.
 - **Signature-scheme specification.** A specification of kind 5 that defines a signature scheme's key encoding, signature encoding and verification, so that Identity can name it as a scheme by its hash (F54).
 
 ### Tasks and extensions
 
-- **Task.** A point where a MIP hands work to a cMIP that an agreement may name by the task's number (Agreements, terms field 2; new in draft 7, F268). Tasks exist only where the MIPs define them. Tasks 1 to 5, whose cMIP a text act, a publication or a client usually chooses, are tasks: an agreement may name a cMIP for any of them by its number. A hand-off with no task number, such as the proof checker of a proven offer, is not a task (F268). *Reading, confirmed (Q1).*
+- **Task.** A point where a MIR hands work to a cMIP that an agreement may name by the task's number (Agreements, terms field 2; new in draft 7, F268). Tasks exist only where the MICS defines them. Tasks 1 to 5, whose cMIP a text act, a publication or a client usually chooses, are tasks: an agreement may name a cMIP for any of them by its number. A hand-off with no task number, such as the proof checker of a proven offer, is not a task (F268). *Reading, confirmed (Q1).*
 - **Extension.** A cMIP an agreement names in terms field 15, outside the listed tasks, for work nobody foresaw. An extension may add rules, never relax the core's. The cMIP a proven offer names in its access form is not an extension, a lone seller's offer being its agreement (F215) included: it checks the offer's proof and adds no rule to any agreement (new in draft 7, F268). *Reading, confirmed (Q3).*
 
 ### Creators and users
 
-- **Creator.** The identity that publishes a cMIP or Module and signs it as its own. MIPs have no creator: they are the protocol itself.
+- **Creator.** The identity that publishes a cMIP or Module and signs it as its own. MIRs have no creator: they are the protocol itself.
 - **Adoption.** A client's or user's opt-in to a specification, after which acts under it are no longer unknown to them.
 
 ## Part one: cMIPs and Modules as they run most of the time
@@ -70,7 +70,7 @@ Every act names its type within the specification that defines it (Envelopes, F2
 
 #### Rule 3 (was 3). Creator signature
 
-A cMIP or Module counts as its creator's only when published in an act signed by the creator named inside it. A MIP names no creator.
+A cMIP or Module counts as its creator's only when published in an act signed by the creator named inside it. A MIR names no creator.
 
 A specification naming a creator that never published it is shown as unclaimed by that creator; fee terms and reputation displays MUST NOT assume the named creator consented (F82, M28).
 
@@ -82,7 +82,7 @@ A changed specification is a new specification, with a new hash. A specification
 
 #### Rule 5 (was 5). Data formats outlive modules
 
-Modules format their data as the MIPs define, so users can move their activity off a fading branch.
+Modules format their data as the MICS defines, so users can move their activity off a fading branch.
 
 ### 3. Tasks: the contract between the core and the community
 
@@ -92,7 +92,7 @@ Every task has one global number, given in the table below. Agreements name thei
 
 #### Rule 7 (was 6). Task grammar
 
-For each task, the MIP that defines it states what a cMIP must accept and produce, in core terms. A cMIP that fills a task MUST accept everything the task requires and produce only what it allows.
+For each task, the MIR that defines it states what a cMIP must accept and produce, in core terms. A cMIP that fills a task MUST accept everything the task requires and produce only what it allows.
 
 #### Rule 8 (was 7). One per task, per agreement
 
@@ -104,7 +104,7 @@ Several Modules may operate at once under the one cMIP an agreement names for a 
 
 #### The tasks the core defines
 
-| Number | MIP | Task | A cMIP accepts | and produces |
+| Number | MIR | Task | A cMIP accepts | and produces |
 | --- | --- | --- | --- | --- |
 | 1 | Identity | Identity proofs and credentials | an identity hash and a claim | valid, invalid, pending or unknown |
 | 2 | Identity | Naming | a name, or an identity hash | an identity hash, or its names |
@@ -145,7 +145,7 @@ Agreements are always in core format, so activity on a fading cMIP moves by clon
 
 *Client conformance.* Before signing anything that runs through a rule (a split plan, fee terms, a condition), a client MUST show what the rule actually computes on a concrete example, such as: "on a sale of 10, this split pays Lea 4, the co-writer 4, the publisher 1, the service 0.20."
 
-*The signer approves the numbers the code produces, not the description. This extends the Text MIP's rule, what you sign is what you saw. No verifier can check that a client did this; it is conformance, not validity.*
+*The signer approves the numbers the code produces, not the description. This extends the Text MIR's rule, what you sign is what you saw. No verifier can check that a client did this; it is conformance, not validity.*
 
 ### 6. Earning
 
@@ -198,7 +198,7 @@ Discovery happens through use. Indexes, catalogues and repositories of specifica
 
 #### Rule 18 (was 8a). New kinds of things need no task
 
-A cMIP may define new act types for anything the MIPs did not foresee, built from core pieces (agreements, obligations, receipts, grants, text, media). Clients that have not adopted it show those acts as unknown.
+A cMIP may define new act types for anything the MICS did not foresee, built from core pieces (agreements, obligations, receipts, grants, text, media). Clients that have not adopted it show those acts as unknown.
 
 #### Rule 19 (was 8b). Extensions in agreements
 
@@ -250,7 +250,7 @@ Anyone can publish a specification naming another as predecessor; nothing ties a
 
 #### Rule 26 (was 20). The six hashes
 
-Below the MIPs there is one root: the six spec hashes of the frozen MIPs, published together alongside their texts in the genesis repository. A client learns them from that repository and its own build, and every act it accepts names one of them or a specification that depends on them.
+Below the MICS there is one root: the six spec hashes of its frozen MIRs, published together alongside their texts in the genesis repository. A client learns them from that repository and its own build, and every act it accepts names one of them or a specification that depends on them.
 
 A fork presenting six other hashes is a different protocol, and its acts cannot replay here because every tag begins with `MOR/` and a successor MUST use a different prefix (Envelopes, F82).
 
@@ -264,11 +264,11 @@ A specification is a public act (Envelopes type 0, a publication) whose media is
 
 ```cddl
 spec = {
-  0 => uint,                  ; kind: 0 cMIP, 1 Module, 2 unit, 3 media type, 4 MIP, 5 signature scheme
-  ? 1 => hash,                ; creator: identity hash (required for every kind except MIP)
+  0 => uint,                  ; kind: 0 cMIP, 1 Module, 2 unit, 3 media type, 4 MIR, 5 signature scheme
+  ? 1 => hash,                ; creator: identity hash (required for every kind except MIR)
   ? 2 => [+ task-ref],        ; tasks it fills
   ? 3 => [+ type-def],        ; act types it defines
-  ? 4 => [+ hash],            ; dependencies: MIPs and specifications it relies on
+  ? 4 => [+ hash],            ; dependencies: MIRs and specifications it relies on
   ? 5 => hash,                ; implements: the cMIP a Module implements
   ? 6 => [+ rule-ref],        ; verification rules: executable rules, as locked objects
   ? 7 => fee,                 ; the Module's own fee, if the creator charges (F211): machine-readable, informative
@@ -312,11 +312,11 @@ The spec hash covers this content, not the act that publishes it, so the same sp
 
 A rule's binary is not canonical text, so it is carried as a locked media object of its own, and the specification names it by the hash of its bytes; the content field stays canonical text and the spec hash stays stable (F82, M26).
 
-### MIPs have no creator
+### MIRs have no creator
 
-*Every identity's acts name the Identity MIP by its spec hash, so a MIP cannot name the hash of a creator whose own genesis needs the MIP's hash.*
+*Every identity's acts name the Identity MIR by its spec hash, so a MIR cannot name the hash of a creator whose own genesis needs the MIR's hash.*
 
-A MIP's hash is computed over its content alone; the act that publishes it is signed by its publisher, which shows who published it without making them part of its identity. cMIPs and Modules keep the creator field, so their spec hash covers the creator's identity: a cMIP is always "this specification, by this identity".
+A MIR's hash is computed over its content alone; the act that publishes it is signed by its publisher, which shows who published it without making them part of its identity. cMIPs and Modules keep the creator field, so their spec hash covers the creator's identity: a cMIP is always "this specification, by this identity".
 
 ## Part four: reasoning and freeze scenarios
 
@@ -331,14 +331,14 @@ A MIP's hash is computed over its content alone; the act that publishes it is si
 - **Rules anyone can run, on one machine that never changes.** *A verification answer is only as good as everyone's ability to check it. One instruction set, not two: "RV32IM or RV64IM" would have been two machines giving two answers. RV32IM is ratified and frozen, integer-only execution is deterministic by nature, metering is exact, and most zero-knowledge machines execute RISC-V, so a verifier could later check a proof that a rule ran instead of re-running it. Authors never write it by hand: common languages compile to it. Anything the profile does not define answers unknown, so a rule can never be right on one client and wrong on another.*
 - **The code decides, the signer sees the result.** *A misleading description can fool someone who only reads, but not someone signing through a client that shows what the rule computes. Anyone can compare a rule with its text on test cases, and indexers, reviewers and rival authors all have reason to.*
 - **Even cryptography is a specification.** *Naming a signature scheme by its specification's hash means the core never has to be reopened to add one. When a post-quantum signing-key scheme is ready, someone publishes it, clients adopt it, owners rotate to it.*
-- **MIPs belong to no one, and the six hashes belong to everyone.** *A MIP is the protocol itself. Leaving the creator out also breaks the circle of a MIP needing an identity that needs the MIP. What holds the whole thing together is six hashes anyone can check, and a prefix no successor may reuse.*
+- **MIRs belong to no one, and the six hashes belong to everyone.** *A MIR is the protocol itself. Leaving the creator out also breaks the circle of a MIR needing an identity that needs the MIR. What holds the whole thing together is six hashes anyone can check, and a prefix no successor may reuse.*
 
 ### Open technical parameters
 
 - The RV32IM execution profile: memory size, input and output encoding, entry point, and the treatment of every instruction outside the base set; test vectors (F78, for technical review).
 - The CDDL conventions for type definitions in specifications.
 - The signature-scheme specification format: how key and signature encodings and the verification procedure are stated (F54).
-- How the MIPs themselves are published, so their spec hashes (`IDENTITY`, `TEXT`, `ENVELOPES`, `MONEY`, `AGREEMENTS`, `DEVELOPMENT`) are fixed at freeze. A MIP's frozen text contains only these placeholders, never its own or another MIP's hash, and MIPs do not list each other by hash as dependencies: their dependencies are circular, so they are stated by name. The six hashes are published together, alongside the texts.
+- How the MIRs themselves are published, so their spec hashes (`IDENTITY`, `TEXT`, `ENVELOPES`, `MONEY`, `AGREEMENTS`, `DEVELOPMENT`) are fixed at freeze. A MIR's frozen text contains only these placeholders, never its own or another MIR's hash, and MIRs do not list each other by hash as dependencies: their dependencies are circular, so they are stated by name. The six hashes are published together, alongside the texts.
 
 ### Freeze scenarios
 
@@ -360,7 +360,7 @@ A MIP's hash is computed over its content alone; the act that publishes it is si
 - A rail Module's verification rule run by two different clients on the RV32IM profile, giving the same answer; a rule exceeding its budget, or making an environment call, answering unknown on both: 2, 8.
 - A signature-scheme specification published; an identity rotates to it; a client without it shows the identity's later acts as unknown and the rotation as valid: 8.
 - A successor specification by a different creator shown with the creator mismatch: 8.
-- The six MIP hashes stable wherever published; a read-only client checks them against its build: 8.
+- The six MIR hashes stable wherever published; a read-only client checks them against its build: 8.
 
 ## Old numbers to new
 

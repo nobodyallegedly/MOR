@@ -1,6 +1,6 @@
-# MIP: Agreements
+# MIR: Agreements
 
-*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in three parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. **The third part writes in the answers to the questions the second part raised** (Q1 to Q6 in `docs/agreements-draft-11.md`): F261, F259 as revised, F262 and F263, each marked "new in draft 11 (Fxxx)", and the readings of Q2 and Q3, each marked "reading (Q2)" or "reading (Q3)"; Q6 leaves Money draft 6 as it is. Then the answers to the two questions that pass raised, Q7 and Q8: F264 and F265, each marked "new in draft 11 (Fxxx)", F265 correcting F262's wording. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`): the proven offers' paragraph points to the field Development draft 7 adds for a proof-of-delivery checker (F268), and F255's paragraph points to Money draft 7, rule 17, now that Money draft 7 is approved; each marked "new in draft 11" with its finding where it stands, written against the six current drafts (Identity 12, Envelopes 8, Text 7, Money 7, Development 7). No rule changes. **Then a second pass** (12 October 2026, evening, for Nobody, allegedly, to approve; `docs/core-v22.md`, "Second pass") writes in two findings decided on the deal assessment tool's questions, each marked "new in draft 11 (Fxxx)": F270 in rule 48 (was 46), with rules 28, 45, 66 and 68 pointing to it, to build: what a stake is paid is not lowered without the signature of a holder with no voice in the power making the change; and F271 in rule 25 (was 24a): the split plan may state a maximum fee per payout, none meaning no cap, flagged before signing. It also corrects four slips the tool noticed, marked "text only, no rule changed": field 28 in the terms format and the tier table; field 10's withdrawal in the tier table, the glossary and rule 67, and so in rules 6 and 72, the reasoning and two freeze lines, which still read it as live; task 14 as judicial in the tier table and rule 67; the fee entry's comment citing rule 28. Two points it leaves open on F270 are marked "Open (core v22, Q7)" and "(Q8)". Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 6, Development MIP draft 6 and findings F1 to F265. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in three parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. **The third part writes in the answers to the questions the second part raised** (Q1 to Q6 in `docs/agreements-draft-11.md`): F261, F259 as revised, F262 and F263, each marked "new in draft 11 (Fxxx)", and the readings of Q2 and Q3, each marked "reading (Q2)" or "reading (Q3)"; Q6 leaves Money draft 6 as it is. Then the answers to the two questions that pass raised, Q7 and Q8: F264 and F265, each marked "new in draft 11 (Fxxx)", F265 correcting F262's wording. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`): the proven offers' paragraph points to the field Development draft 7 adds for a proof-of-delivery checker (F268), and F255's paragraph points to Money draft 7, rule 17, now that Money draft 7 is approved; each marked "new in draft 11" with its finding where it stands, written against the six current drafts (Identity 12, Envelopes 8, Text 7, Money 7, Development 7). No rule changes. **Then a second pass** (12 October 2026, evening, for Nobody, allegedly, to approve; `docs/core-v22.md`, "Second pass") writes in two findings decided on the deal assessment tool's questions, each marked "new in draft 11 (Fxxx)": F270 in rule 48 (was 46), with rules 28, 45, 66 and 68 pointing to it, to build: what a stake is paid is not lowered without the signature of a holder with no voice in the power making the change; and F271 in rule 25 (was 24a): the split plan may state a maximum fee per payout, none meaning no cap, flagged before signing. It also corrects four slips the tool noticed, marked "text only, no rule changed": field 28 in the terms format and the tier table; field 10's withdrawal in the tier table, the glossary and rule 67, and so in rules 6 and 72, the reasoning and two freeze lines, which still read it as live; task 14 as judicial in the tier table and rule 67; the fee entry's comment citing rule 28. Two points it leaves open on F270 are marked "Open (core v22, Q7)" and "(Q8)". Written against core v21, Identity MIR draft 11, Envelopes MIR draft 7, Text MIR draft 6, Money MIR draft 6, Development MIR draft 6 and findings F1 to F265. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -20,7 +20,7 @@ Some marks recur, and each matters to the next review:
 
 *Working rule (F265):* where the core gives participants the means to choose, the choice is theirs; the core keeps only what no choice may break.
 
-The MIP has five parts. Part one is agreements as they run most of the time: making and signing, works and stakes, selling, splits, judges, keepers, changing a deal, defaults and the public domain. Part two is collectives: an agreement with its own identity, its tiers, members, grants, succession and abandonment. Part three is the rare cases: forks of records, how a collective ends, a broken collective, and how "before" and "after" are read in a collective. Part four is the act formats, for reference. Part five is the tasks, the reasoning and the freeze scenarios.
+The MIR has five parts. Part one is agreements as they run most of the time: making and signing, works and stakes, selling, splits, judges, keepers, changing a deal, defaults and the public domain. Part two is collectives: an agreement with its own identity, its tiers, members, grants, succession and abandonment. Part three is the rare cases: forks of records, how a collective ends, a broken collective, and how "before" and "after" are read in a collective. Part four is the act formats, for reference. Part five is the tasks, the reasoning and the freeze scenarios.
 
 ## Purpose
 
@@ -45,7 +45,7 @@ Agreements are optional per client, but all or nothing: a client implements it f
 
 No rule of a lower layer depends on Agreements. Where Agreements need a lower layer to carry something, it is a field there (the publication's `for`, Envelopes).
 
-## Words used in this MIP
+## Words used in this MIR
 
 ### Agreements and signing
 
@@ -103,7 +103,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 
 ### Collectives
 
-- **Collective.** Several identities acting together as one identity. A collective is a full identity (Identity MIP), with its own genesis, homes, signing key and chain key. Its founding agreement says how its members hold and use those keys.
+- **Collective.** Several identities acting together as one identity. A collective is a full identity (Identity MIR), with its own genesis, homes, signing key and chain key. Its founding agreement says how its members hold and use those keys.
 - **This collective.** In a collective's own terms, null written as a stake's object or holder, or as a grant's grantor, names the collective whose agreement it is. This is the same device by which Identity lets a genesis name itself as its home's operator by null (F124, S1). Founding terms can so name a collective that does not exist yet.
 - **Key grammar.** The part of a collective's founding agreement that says how its keys are held and activated, and the way to rotate that needs less than every member.
 - **Tier.** In a collective's founding agreement and its clones, each field of the terms belongs to one of three tiers ("Tiers"):
@@ -116,7 +116,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   Together they are the judicial tier, which changes only with every member's signature, one version for everyone (rule 67, F121). The split service and its backups are operational in kind, and protected as a stated exception, since they can move money. A deal needs no protected clauses: no clone of it completes without every party (F107).
 - **Change rules.** The rules a collective's clone must meet, each covering part of the terms:
   - the **constitutional change rule** (terms field 18; every party when none was agreed);
-  - the **judicial tier's rule**: every party whose voice remains, fixed by this MIP and never by the terms (rule 67, F121);
+  - the **judicial tier's rule**: every party whose voice remains, fixed by this MIR and never by the terms (rule 67, F121);
   - the **clone rule** (field 5), for operational matters outside every area;
   - the **power** over each area.
 
@@ -130,8 +130,8 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 
   An area reaching a whole layer is also called that layer's **lane**: lanes and areas are one construct (Q10). A lane also decides which cMIPs the collective adopts for that layer's tasks, and the Development lane decides which extensions it adopts (F106).
 - **Layer.** One of MOR's layers (core, "Structure"): Identity; Envelopes and Text; Money; Agreements; Development. Which layer an act belongs to depends on its `spec`:
-  - An act whose `spec` is a MIP belongs to that MIP's layer.
-  - An act whose `spec` is a cMIP belongs to the layer of each task that the collective's agreement in force (rule 72) names that cMIP for (terms field 2). A task's layer is that of the MIP defining it (Development, table of tasks).
+  - An act whose `spec` is a MIR belongs to that MIR's layer.
+  - An act whose `spec` is a cMIP belongs to the layer of each task that the collective's agreement in force (rule 72) names that cMIP for (terms field 2). A task's layer is that of the MIR defining it (Development, table of tasks).
   - An act whose `spec` is an extension the agreement names (field 15) belongs to Development (F106).
   - An act whose `spec` is a specification the agreement in force names neither for a task nor as an extension belongs to no layer. In a collective with areas it counts for nothing, unless an area reaches it by a kind naming its type (rule 60, Q16).
 
@@ -228,7 +228,7 @@ An agreement names identity hashes, not keys. After a rotation, the party's new 
 
 - MUST be able to show its text as plain text;
 - SHOULD do so by default;
-- MUST show every bidirectional control visibly in that view (Text MIP, rule 5a).
+- MUST show every bidirectional control visibly in that view (Text MIR, rule 5a).
 
 #### Rule 5 (was 4). Positions
 
@@ -1334,7 +1334,7 @@ Its legal effect lies outside the core.
 
 A collective is a full identity, with its own genesis, homes, signing key and chain key.
 
-It uses the Identity MIP unchanged: it signs its own receipts, sets its own payee pointers, and rotates. Its genesis declares its founding agreement (an Agreements declaration in the declarations slot), and the agreement carries its key grammar.
+It uses the Identity MIR unchanged: it signs its own receipts, sets its own payee pointers, and rotates. Its genesis declares its founding agreement (an Agreements declaration in the declarations slot), and the agreement carries its key grammar.
 
 #### Rule 57 (was 35a). An act is done once sealed to every member and on the chain
 
@@ -1482,7 +1482,7 @@ An act no area reaches counts on the collective's own signature, as any identity
 
 **What a lane reaches.** An area reaching a layer reaches every act of that layer ("Layer"):
 
-- the MIP's own acts;
+- the MIR's own acts;
 - the acts of the cMIPs the agreement in force names for that layer's tasks;
 - for Development, the acts of the extensions it names (F106).
 
@@ -1500,7 +1500,7 @@ To count, the specification must first be adopted, under the powers its adoption
 - for an operational task, that task's lane;
 - as an extension, the Development lane with the lane of each layer it declares.
 
-An act of a MIP is never such an act.
+An act of a MIR is never such an act.
 
 *Otherwise an unlisted specification would be a way around every lane: whoever holds the collective's key could act under a specification nobody adopted, around the lane's holders. A rail is not adopted this way: it is named by the collective's own pointer or vault (Money rule 12a, F115). With adoption in the lane's own hands, waiting costs little.*
 
@@ -1520,7 +1520,7 @@ The Agreements lane adopts the cMIPs for Agreements' other tasks (8 split, 12 gr
 
 The declaration is not trusted for enforcement. In a collective, a verifier applies an extension's rules only to acts of Development and of the layers whose power its adoption met. So an extension that under-declares binds nothing beyond the lanes whose holders approved it.
 
-Nothing an extension does relaxes the core (Development 8c): the MIPs' own acts stay in their own layers, whatever an extension adds around them.
+Nothing an extension does relaxes the core (Development 8c): the MIRs' own acts stay in their own layers, whatever an extension adds around them.
 
 #### Rule 61 (was 36b). Every constitutional voice is covered
 
@@ -1922,7 +1922,7 @@ They are public (reading: "scoped and visible"; a person has no members to seal 
 
 A rotation of the grantor judges its grant like any act signed with the key it replaces (Identity rules 15 to 17). A grant the rotation does not keep is void, and its key with it. So a thief who stole the signing key and granted itself a key loses it at the owner's next rotation.
 
-A person's grant reaches the kinds it names (a MIP's layer, or a type of a specification). Naming none, it reaches every act but a decision (reading).
+A person's grant reaches the kinds it names (a MIR's layer, or a type of a specification). Naming none, it reaches every act but a decision (reading).
 
 *Stated cost: as with every act of the signing key, a thief holding it can also revoke the owner's grants until the owner rotates and grants again.*
 
@@ -2508,7 +2508,7 @@ Each takes effect for the collective's acts at a line. A line is a record (type 
 
 ## Part four: act formats
 
-All acts are Envelopes MIP acts, private by default, visible to the agreement's parties and keepers unless they choose otherwise.
+All acts are Envelopes MIR acts, private by default, visible to the agreement's parties and keepers unless they choose otherwise.
 
 Exact formats are set for: terms (type 0) and signatures (type 1), in the fields a collective needs and the tiers' fields, terms field 7 among them; grants, for the fields that tie them to an area (fields 5 and 6) and the grant key (field 9); revocations, resignations, records, abandonment declarations, negotiation messages, forks, closings, releases to the public domain and splits. The fields still marked open, and the other acts, are sketched, and their exact formats follow once the structure is settled. *A client that meets terms using a field whose format is still open refuses them rather than accepting them unchecked (Envelopes rule 11, fail closed).*
 
@@ -2793,9 +2793,9 @@ Terms breaking any of these are invalid.
 
 **Areas** (field 19) appear only in terms that carry a key grammar (field 12) (F103, scope). Area words (field 20) appear only for an area that exists.
 
-**No two areas reach the same act or the same field** (Q5). Two kinds overlap when some act could belong to both, as computed from the six MIP hashes and the terms' own fields 2 and 15 ("Layer"). So:
+**No two areas reach the same act or the same field** (Q5). Two kinds overlap when some act could belong to both, as computed from the six MIR hashes and the terms' own fields 2 and 15 ("Layer"). So:
 
-- `[0, layer]` overlaps `[1, spec, type]` when `spec` is a MIP of that layer, a cMIP the terms name for a task of that layer, or, for Development, an extension they name;
+- `[0, layer]` overlaps `[1, spec, type]` when `spec` is a MIR of that layer, a cMIP the terms name for a task of that layer, or, for Development, an extension they name;
 - a lane overlaps a field reference to a task of its own layer, since the lane already decides that task's cMIP (rule 63).
 
 The one exception is a specification the terms name for tasks of two layers or more, never a judicial task (Q20). Its acts belong to each of those layers, and are reached by the lane of each, which then decide them together (rule 60, R4).
@@ -2808,7 +2808,7 @@ Terms breaking any of these are invalid.
 
 **An area is followed by its id** (Q32). The ids of an agreement's areas (area key 5) are distinct. An area of a clone is the parent's area with the same id, wherever it sits in field 19. Grants (field 5), area words (field 20), steppings down (resignation field 1), marks (`[2, area]`) and a refit (rule 71) name an area by its id. A clone may drop an area, and adds one only under an id that no earlier version of the agreement, back to its founding terms, gave to an area. Terms breaking either are invalid. *An area keeps its id through any redraw, so removing or reordering areas never moves a grant, words or a refit onto another area.*
 
-*Which layer an act belongs to is computed from its own `spec` field, the six MIP hashes and the collective's own terms, never from a label the cMIP's author chose (F106). A collective that gives Money to some members gives them the Money MIP's own acts, its receipts and claims on every rail among them, and the acts of every Money cMIP it adopted, by its own list. A new rail Module needs no clone at all: the collective's payee pointer, an act of its Money lane, or its vault names it, and a receipt counts only on a rail Module so named (Money rule 12a, F115).*
+*Which layer an act belongs to is computed from its own `spec` field, the six MIR hashes and the collective's own terms, never from a label the cMIP's author chose (F106). A collective that gives Money to some members gives them the Money MIR's own acts, its receipts and claims on every rail among them, and the acts of every Money cMIP it adopted, by its own list. A new rail Module needs no clone at all: the collective's payee pointer, an act of its Money lane, or its vault names it, and a receipt counts only on a rail Module so named (Money rule 12a, F115).*
 
 *An act of a specification the terms name nowhere falls in no lane. In a collective with areas it counts for nothing, unless a `[1, spec, type]` kind of some area names it (Q16), since otherwise an unlisted specification would be a way around every lane.*
 
@@ -3022,7 +3022,7 @@ revocation-payload = {
 
 **The grant key** (field 9, F128). The grant names the public part of a signing key the grantee made and keeps (reading: the grantee makes it, so nobody else holds a key that acts as the grantee's within the collective). **The grant counts only once its grantee signed a signature act naming it** (type 1), accepting it, a grant by founding terms included (reading, F128).
 
-An act signed with the grant key names the grant as its `binding` (Identity: a scoped key, which this MIP judges), and its signer is the collective. It is the collective's own act, on the grantee's strand of the collective's actions chain, which cites the grant in `objects` as the decision it acts under (rule 58). It is judged at the latest link of the collective's identity chain among its grant and the decisions it cites (reading).
+An act signed with the grant key names the grant as its `binding` (Identity: a scoped key, which this MIR judges), and its signer is the collective. It is the collective's own act, on the grantee's strand of the collective's actions chain, which cites the grant in `objects` as the decision it acts under (rule 58). It is judged at the latest link of the collective's identity chain among its grant and the decisions it cites (reading).
 
 A publication a grantee makes with its grant key is the grantor's own, signed by it, so payment reaches the grantor whatever client pays (F128); it needs no `for` field.
 
@@ -3128,8 +3128,8 @@ A holder that is a collective signs by its own rules. Its signature (the release
 
 ```cddl
 negotiation-payload = {
-  0 => tstr,                ; the message, as canonical text (Text MIP)
-  ? 1 => hash               ; format: a text format cMIP, as a text act may name one (Text MIP)
+  0 => tstr,                ; the message, as canonical text (Text MIR)
+  ? 1 => hash               ; format: a text format cMIP, as a text act may name one (Text MIR)
 }
 ```
 
@@ -3144,7 +3144,7 @@ The two sides of a thread are the signer of its first message and the first othe
 
 Each message's `acks` name the latest message of the other side that its signer has received, and nothing else. A side that has received nothing from the other side yet carries no `acks`.
 
-Its text is shown as a text act's is, plain text always available (Text MIP rules 3 to 5, rule 4a).
+Its text is shown as a text act's is, plain text always available (Text MIR rules 3 to 5, rule 4a).
 
 *A text act carrying acknowledgements is invalid (Envelopes rule 4a, F110), so negotiation lives on Agreements' own layer, as F110's reasoning assumed: a reaction or a text reply can never be a negotiation message (F118).*
 
@@ -3383,7 +3383,7 @@ Every other complete clone is written by a record act in the collective's own se
 - the rotation places each at its own position; and
 - the clone is complete at the rotation only if it is complete (rule 45) judged with those signature acts alone, the powers its mark names counted as rule 65 says at the rotation.
 
-A signature act naming the clone that the declaration does not name counts nothing toward it there, whenever it was made. *So no signature arriving after the chain key's ceremony completes the clone late, and the records made since are never judged anew. Identity is unchanged: a declaration's value is the higher MIP's to define (Identity rule 8b). The genesis declares founding terms, which exist only when every founder has signed them (Q11), and names no signatures.*
+A signature act naming the clone that the declaration does not name counts nothing toward it there, whenever it was made. *So no signature arriving after the chain key's ceremony completes the clone late, and the records made since are never judged anew. Identity is unchanged: a declaration's value is the higher MIR's to define (Identity rule 8b). The genesis declares founding terms, which exist only when every founder has signed them (Q11), and names no signatures.*
 
 For an act the collective's key signs, the agreement in force is the agreement named by the latest declaration of kind 0 at the chain act its key is bound to. Where a valid record made since that declaration counts for it, it is instead the clone named by the latest such record (rule 72):
 
@@ -3618,7 +3618,7 @@ These are decided in text only, and not written in code by build step 12b, the s
 - **Terms plus signatures.** *One signer per act (F17) makes every consent a separate, visible act. An agreement is complete exactly when its rule is met, a party refuses simply by not signing, and nobody owes anything they did not sign for.*
 - **Identities, not keys.** *Keys change; promises should not. Naming identities means a rotation never breaks a deal.*
 - **Stakes and seats can go to different people.** *A stake is property: passing it changes only who is paid. A seat is trust: the other members chose to share control with that person. A plan can give the stake to an heir and the seat to someone trusted for the job, paid through a position.*
-- **Collectives are identities.** *A collective that receives money must sign receipts and rotate like anyone else. Giving it its own keys, held as its members choose, keeps one Identity MIP for everyone. The price is that a threshold signature looks like one signature; where individual consent matters, an area can require visible member signatures. And every grammar leaves a way through that survives the loss of any one key holder. So a dead member never freezes the key, not even a sole holder, whose successor holds an escrowed share: the rule is about the exit, not the number (F96). A collective's member signatures are judged under the rules its own chain declared when the key signed. So leaving is final: a former member's signature never again counts on what the collective signs after its line registering the departure (F100, F109), though it can still complete what the collective signed before it (C1).*
+- **Collectives are identities.** *A collective that receives money must sign receipts and rotate like anyone else. Giving it its own keys, held as its members choose, keeps one Identity MIR for everyone. The price is that a threshold signature looks like one signature; where individual consent matters, an area can require visible member signatures. And every grammar leaves a way through that survives the loss of any one key holder. So a dead member never freezes the key, not even a sole holder, whose successor holds an escrowed share: the rule is about the exit, not the number (F96). A collective's member signatures are judged under the rules its own chain declared when the key signed. So leaving is final: a former member's signature never again counts on what the collective signs after its line registering the departure (F100, F109), though it can still complete what the collective signed before it (C1).*
 - **Keepers stamp sealed envelopes, and only real ones.** *Proving an act existed before a rotation needs its id and signer, not its content. Keepers that never read keep private deals private; judging content is left to arbitrators and verifiers the parties choose and deliver keys to. A record counts only alongside the act it names, so a bought record of nothing changes nothing.*
 - **Protected clauses, one version for everyone** (F121). *A stake cannot be reduced without its holder's signature. But the clause that decides absence, the keeper who judges it and the split service could move the stake in two steps; and an arbitrator, a condition cMIP or an anchoring cMIP chosen after the fact could decide who wins. So in a collective they change only with every member's signature. Keeping, for each party, the version that party signed (F71) would leave two members with no judge they both signed. One version, signed by all, gives every dispute one judge; a holdout makes a standoff, which talking or a fork of the collective settles.*
 - **A chain of judgment** (F121). *Unanimity could trap a collective whose judge disappears. Naming in advance who takes over, signed by everyone, replaces a failing judge with no new signature.*

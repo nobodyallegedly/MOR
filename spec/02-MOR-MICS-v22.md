@@ -1,12 +1,14 @@
-# MOR Core
+# The MICS: MOR Inscribed Core Spec
 
 *Version 22, 12 October 2026, for Nobody, allegedly, to approve: version 21 with everything decided since written in (F242 to F268, then F270 and F271 at its second pass), naming the six current drafts, Identity draft 12, Text draft 7, Envelopes draft 8, Money draft 7, Agreements draft 11 and Development draft 7, which hold the exact formats and rules; this document is the map, and must stand on its own. Decided since version 21: Money states payments, their fields and states, and Agreements decide what follows from them, each obligation stated once (F242); a work's agreement designates the one pointer at which it accepts payments, and any agreement paying another pays that pointer, its responsibility for the payment ending there (F244, F248, F256); the chain of judgment runs on one agreed deadline per stage, the active judge alone settling, an earlier one void for that question (F245, F246); an offer on a claimed vow made outside the claiming agreement is shown so (F247), a resale under a fresh vow escaping it, a stated cost (F258); backup split services are attempts per payment, what counts as failure is the split cMIP's, every payer, a publisher or a direct buyer, tries the services in order, and money goes only to an address the owners signed (F249, F250, F260); the texts are written again for plain reading, Agreements first, no rule changed by the rewriting (F251); a vow covers anything MOR cannot hash, existing or to come, holds promises that may be bundled, and names what is promised, two vows on one event staying separate (F252, F253, F259); any agreement may be a party of another, consenting by its own rule, and a compilation is a layer when its parts consent, a derivative when they do not (F254, F257); the vault's limit protects refunds too (F255); offers are of two classes, proven and promised, a key delivered under a vow being evidence (F261, F264); a collective is liquidated by ordinary acts before its closing, an absentee's share following the collective's own rules, and a deal ends by a clone stating its new conditions (F262, F263, F265); leftover turns run across a deal's versions (F266); a route's hop is passed on when the next hop's receipt or the paying hop's claim names it (F267); a proof checker is not a task, and a cMIP that checks proofs of delivery declares so (F268), for discovery only; what a stake is paid is not lowered without the signature of a holder with no voice in the power making the change (F270); a split plan may state a maximum fee per payout, none meaning no cap, flagged before signing (F271). The second pass also writes in the six readings of F267 and F268 confirmed on 12 October 2026 (`docs/core-v22.md`). F243 concerns the site only; F269, the core texts' name, is left to its own pass. Two sentences that lagged earlier decisions are brought up to date: leftovers by largest remainder, ties taking turns (F150, F165), and a creator's fee stated in its specification, owed only through an agreement's fee entry (F211). A rule number cited without its draft is that of the draft version 21 named (Identity 11, Envelopes 7, Text 6, Money 6, Agreements 10, Development 6), as code and records cite them until the freeze-ready drafts; each current draft maps it in its table. The core names no particular use of MOR. The history of earlier versions is at the end.*
+
+*Renamed in place, 12 October 2026 (F269, `docs/mir-rename-pass.md`): the core's six texts are MIRs, the core as a whole the MICS, and this document the MICS's own; wording only, no rule changed.*
 
 *Reading this document: normal text is the protocol itself. Italic text is commentary, reasoning and examples.*
 
 ## Purpose
 
-This document defines the core of MOR (Media Over Relays): the MIPs. Once frozen, the core never changes. There is no MIP process; all choice and competition happen in cMIPs and Modules.
+This document defines the core of MOR (Media Over Relays): the **MICS**, MOR Inscribed Core Spec. The MICS is the core, and the six **MIRs**, MOR Inscribed Rules, offer a layer by layer look at it: each MIR is a set of rules, in its own text (the Identity MIR, the Money MIR, and so on), and this document is the map of all six. Once frozen, the core never changes. There is no MIR process; all choice and competition happen in cMIPs and Modules.
 
 The core is deliberately agnostic. It describes identities, media, money, agreements and specifications, never what anyone does with them. What MOR could become is shown separately, in the [case studies](../docs/case-studies/README.md) and the cMIPs and Modules they reference. For a plain-language walkthrough, see ["MOR in one page"](../docs/07-MOR-in-one-page-v6.md).
 
@@ -14,9 +16,9 @@ The core is deliberately agnostic. It describes identities, media, money, agreem
 
 ## Structure
 
-The core is six MIPs, organised in layers, each depending on those beneath it. No rule of a lower layer depends on data only a higher layer's client holds; where a higher layer needs a lower one to carry something, it is a field there.
+The core is six MIRs, organised in layers, each depending on those beneath it. No rule of a lower layer depends on data only a higher layer's client holds; where a higher layer needs a lower one to carry something, it is a field there.
 
-| Layer | MIPs | Contains |
+| Layer | MIRs | Contains |
 | --- | --- | --- |
 | Ground | Identity | Identity hash, keys, rotation, homes and receipts, sequences, routes and the inbox, links, succession, the way out |
 | Communication | Envelopes, Text | Acts (outside and locked inside), public and private, key delivery, chains, media, relays, delivery, withdrawal; canonical text |
@@ -24,15 +26,15 @@ The core is six MIPs, organised in layers, each depending on those beneath it. N
 | Agreements | Agreements | Agreements, keepers, stakes, work claims, splits, offers, time, collectives, grants, cloning, abandonment, contests |
 | Development | Development | How specifications are named, published, adopted and paid; tasks and extensions; the trust root |
 
-**Tasks.** A task is a point where a MIP hands work to a cMIP that an agreement may name by the task's number (F268). Tasks exist only where the MIPs define them; the full list is in Development. A hand-off with no task number is no task: a proven offer names its own proof checker.
+**Tasks.** A task is a point where a MIR hands work to a cMIP that an agreement may name by the task's number (F268). Tasks exist only where the MICS defines them; the full list is in Development. A hand-off with no task number is no task: a proven offer names its own proof checker.
 
 **Extensions.** An agreement may also name cMIPs outside the listed tasks, for work nobody foresaw. An extension may add rules, never relax the core's.
 
-**Client conformance.** Every client implements Identity, Envelopes and Text. Every other MIP is optional per client, but all-or-nothing: a client implements it fully, or shows its acts as unknown. A client must implement every MIP whose acts it acts on: a wallet that only sends tips needs Money; a client that acts on agreements needs Agreements. Rules that only the signer's own client can honour (what you sign is what you saw; showing what a rule computes; never choosing a device-bound policy by default) are marked as conformance, not validity: no verifier can check them, and the text says so.
+**Client conformance.** Every client implements Identity, Envelopes and Text. Every other MIR is optional per client, but all-or-nothing: a client implements it fully, or shows its acts as unknown. A client must implement every MIR whose acts it acts on: a wallet that only sends tips needs Money; a client that acts on agreements needs Agreements. Rules that only the signer's own client can honour (what you sign is what you saw; showing what a rule computes; never choosing a device-bound policy by default) are marked as conformance, not validity: no verifier can check them, and the text says so.
 
 **Admission test.** Something belongs in the core only if it is part of the shared language every act is written in, or a guarantee no module may be able to break.
 
-**Guiding question for every MIP:** what is the least the core needs to know to make this work?
+**Guiding question for every MIR:** what is the least the core needs to know to make this work?
 
 **Four review rules,** applied to every rule in the core (round 2): a record that decides status or money counts only alongside something the party who benefits cannot produce alone; a layer's validity depends only on data its own clients hold; every protection an owner chooses is removable by the owner's chain key alone, and every protection others hold over a party needs that party's signature to change; a rule that rests on a fact nobody can check becomes an act someone signs, a conformance rule, or nothing.
 
@@ -51,12 +53,12 @@ The core is six MIPs, organised in layers, each depending on those beneath it. N
 - **Signatures:** a scheme is a founding number or the hash of a signature-scheme specification. The founding schemes are schnorr over secp256k1 (BIP-340) for signing keys and SLH-DSA (FIPS 205), a hash-based post-quantum scheme, for chain keys. A client that meets a scheme it does not implement treats the act as unknown. *New schemes, including a post-quantum signing-key scheme, are added by publishing a specification, never by reopening the core.*
 - **Encryption:** XChaCha20-Poly1305 for content, with a new key per object; hybrid X25519 plus ML-KEM-768 (FIPS 203) for identities' encryption keys.
 - **No clock.** Timestamps are hints, never load-bearing. Every "before" is judged inside one named chain, by reference to a specific act. Agreements that need real time name a time reference, such as a block height.
-- **Canonical text** (Text MIP) in every text field.
+- **Canonical text** (Text MIR) in every text field.
 - **One signer per act.** Anything that needs two identities is two acts, the second naming the first.
 - **An act counts only where it is held.** A receipt, an acknowledgement or a keeper record counts only alongside the valid act it names; nothing forces propagation, and delivery is the signer's interest.
-- **A like is never an acknowledgement** (F110). Only act types the Identity, Money and Agreements MIPs define may carry acknowledgements; any other act carrying one is invalid. *An acknowledgement carries weight (it can keep a thief's act alive as a dispute), so nothing as light as a like or a reply may carry it by accident.*
+- **A like is never an acknowledgement** (F110). Only act types the Identity, Money and Agreements MIRs define may carry acknowledgements; any other act carrying one is invalid. *An acknowledgement carries weight (it can keep a thief's act alive as a dispute), so nothing as light as a like or a reply may carry it by accident.*
 
-## MIP: Identity
+## MIR: Identity
 
 **The identity.** An identity is the hash of its genesis act. It never changes. Keys are only the pens that sign for it:
 
@@ -66,7 +68,7 @@ The core is six MIPs, organised in layers, each depending on those beneath it. N
 
 There is no third key: the chain key is the recovery key.
 
-**Genesis** declares the first signing key, the commitment to the first chain key, the homes, optionally a home rule and an audit requirement, and a declarations slot for high-risk settings that higher MIPs define, such as Money's vault. Only the chain key can change what genesis declares; a declaration can be removed by a null entry.
+**Genesis** declares the first signing key, the commitment to the first chain key, the homes, optionally a home rule and an audit requirement, and a declarations slot for high-risk settings that higher MIRs define, such as Money's vault. Only the chain key can change what genesis declares; a declaration can be removed by a null entry.
 
 **Identity chain and sequences.** The identity chain holds only key events: genesis and rotations. Everyday acts form sequences, lines the owner keeps, one or several (for example one per device), each act naming the previous one. Every everyday act carries its position and a running summary of its sequence, so it can be proven cheaply to lie on the line leading to a later act. An identity may also hold **scoped keys**, installed by an act of a higher layer, such as a collective's grant key (F128): Identity checks only the signature, and the layer that installed the key says whether the act counts; a client without that layer shows the act as unknown.
 
@@ -94,7 +96,7 @@ There is no third key: the chain key is the recovery key.
 
 **Tasks:** identity proofs and credentials; naming; outside link proofs.
 
-## MIP: Text
+## MIR: Text
 
 - **Text is the only native media,** because the protocol itself speaks in text: terms, agreements, grants, names, messages.
 - **Canonical text:** valid UTF-8; LF line breaks only; no control characters other than LF (no TAB); no byte order mark anywhere; no noncharacters; no trailing spaces and no final line break; NFC, checked with the tables of one pinned Unicode version (the latest at freeze), so every verifier agrees and new characters stay usable.
@@ -102,14 +104,14 @@ There is no third key: the chain key is the recovery key.
 - **What you sign is what you saw:** before signing, the plain text is always available, and it is the default for agreements, terms and grants; before signing terms, a grant or a clone, bidirectional controls are shown visibly, so no clause can display in an order different from its bytes. Lookalike and invisible characters are otherwise client warnings, not rules.
 - **Task:** text format.
 
-## MIP: Envelopes
+## MIR: Envelopes
 
 - **Every act has an outside and a locked inside.** The outside carries only what a relay needs: the signer (or nothing, inside a sealed container), a commitment to the inside, the lock's details, the content key if the act is public, and recipients if it is addressed. Everything else, including type, pointers and payload, is locked. The inside carries a random salt, so short private replies cannot be guessed from their hash, and the outside commits to the unlocked inside, so one signature can never open to two contents.
 - **Everything encrypted by default.** Public means the key travels with the act; private means the key reaches chosen recipients inside a sealed container, locked to their encryption key or to a bare key they supplied, with the act itself or in a key delivery. Going public later is one act: publishing the key. *Relays cannot read private content at all; public acts carry their key, so anyone can read them. A private message is not a special kind that stands out, though an addressed act shows its recipient.* Identity acts are always public: they are an identity's public face. A thief holding the signing key can redirect the encryption key, or the inbox, until the owner rotates; deliveries made into that window are re-sent afterwards, and a seller who delivered into it did nothing wrong.
 - **Public receiver, private sender.** A sealed container shows its recipients, never its sender: it is signed by a one-time key, and only the recipients open the act inside and see who signed it.
 - **Types and specifications.** Every act names the specification defining its type by hash, and a type number within it.
-- **Chains and forks.** Acts on one object name, for each chain they belong to, that chain and the act they follow in it, so a merge of two branches is never confused with one act touching two objects; each MIP defines its own objects' chain rules. Two acts naming the same predecessor are a fork, provable from signatures. The running summary's empty value and its construction are fixed, with a test vector.
-- **Acknowledgements and references.** An acknowledgement says "I received this act", and counts only alongside the act it names. Only act types the Identity, Money and Agreements MIPs define may carry one: a text act, a publication or any cMIP's or Module's act that carries one is invalid (F110). The rule limits which acts acknowledge, never which acts can be acknowledged: a post still becomes a dispute, not void, when a witness act, a buyer's claim or a signature acknowledges it. A reference says "look at this", pointing to an act or a web resource, optionally with the hash of what was there. A repost is a reference: it pays nobody by itself.
+- **Chains and forks.** Acts on one object name, for each chain they belong to, that chain and the act they follow in it, so a merge of two branches is never confused with one act touching two objects; each MIR defines its own objects' chain rules. Two acts naming the same predecessor are a fork, provable from signatures. The running summary's empty value and its construction are fixed, with a test vector.
+- **Acknowledgements and references.** An acknowledgement says "I received this act", and counts only alongside the act it names. Only act types the Identity, Money and Agreements MIRs define may carry one: a text act, a publication or any cMIP's or Module's act that carries one is invalid (F110). The rule limits which acts acknowledge, never which acts can be acknowledged: a post still becomes a dispute, not void, when a witness act, a buyer's claim or a signature acknowledges it. A reference says "look at this", pointing to an act or a web resource, optionally with the hash of what was there. A repost is a reference: it pays nobody by itself.
 - **How acts reach people.** An act counts for a verifier only once the verifier holds it. Identity acts must reach the home; acts that concern a counterparty should reach that counterparty's inbox; publications are pulled from outbox routes; drafts never leave.
 - **Media.** The work hash fingerprints a work's complete plaintext, and is what ownership points to. Media is always stored locked, its locked bytes fingerprinted so relays can check storage; a publication states the size of the media once unlocked (F108); buyers check unlocked media against the work hash. A publication may say whom it is made for; payment goes to that identity's pointer, else the signer's, and a false "for" can only send money to the identity it names. Segmentation and streaming belong to the media cMIP; a live stream has no work hash until it ends, so paid live access is sold by a standing offer.
 - **Vows** (F237, F239, F240, F241). A vow names in words something MOR cannot hash, existing or to come (F252): its first act is its genesis, whose id is its name for good, and later versions are signed again on its own chain (Envelopes draft 8). It holds one or more promises, which its seller may bundle (F253), and names what is promised to the buyer, never an event: two vows on one event stay separate, and a vow naming another moves none of its sales (F259). Offers naming it sell it, with their words, and each sale is pending, confirmed (acts the buyer acknowledges) or contested (a contest act naming the sale, and optionally the promise not kept: Agreements draft 11, F253, reading (Q3), built); only someone who signed onto it, at any price including none, may confirm or contest it, and one nobody signed onto carries no state (Agreements rule 32b). Every sale of a physical good or of a service names a vow, unless its delivery is proven (F252, F261). An offer naming a vow an agreement claims, made outside that agreement, is shown so, as for a work (F247); a resale under a fresh vow escapes the marking, a stated cost: the fresh vow, signed by the reseller, is where to look (F258). The core keeps only this grammar: what is promised, delivered or became, quantities, kinds and streams belong to cMIPs (streams: the live media cMIP). A work claim still binds works only.
@@ -118,7 +120,7 @@ There is no third key: the chain key is the recovery key.
 - **Fail closed, scoped.** A client never signs, pays or accepts under a specification it does not implement; it shows such acts as unknown, and may adopt the specification by opt-in.
 - **Tasks:** media interpretation; anchoring (F173: a cMIP proves an act existed by a point on a named time reference; every layer above relies on it).
 
-## MIP: Money
+## MIR: Money
 
 Money defines how a simple payment moves: never the rails, and nothing about who owns what. Its job ends when money reaches a payee pointer.
 
@@ -140,9 +142,9 @@ Money defines how a simple payment moves: never the rails, and nothing about who
 - **A plain tip carries no module fees** beyond the rail's own. A referral counts as evidence only when the payer signs it.
 - **Tasks:** payment, one payment cMIP per agreement with a rail Module for each rail beneath it; conversion. Receipts are signed by receivers and claims by payers; no specification signs.
 
-## MIP: Agreements
+## MIR: Agreements
 
-*Agreements say who has agreed to what, who owns what, and who may act for whom. Money moves a payment to a payee pointer; Agreements say how it is shared, what is owed when something is not done, and how a group of people acts as one identity. This section is the map; the Agreements MIP holds the exact rules. Read it in order: agreements and deals first, then the pieces around them (keepers, stakes, works, splits, offers), then collectives, which carry most of the rules.*
+*Agreements say who has agreed to what, who owns what, and who may act for whom. Money moves a payment to a payee pointer; Agreements say how it is shared, what is owed when something is not done, and how a group of people acts as one identity. This section is the map; the Agreements MIR holds the exact rules. Read it in order: agreements and deals first, then the pieces around them (keepers, stakes, works, splits, offers), then collectives, which carry most of the rules.*
 
 ### Agreements and deals
 
@@ -234,7 +236,7 @@ Money defines how a simple payment moves: never the rails, and nothing about who
 **Areas and lanes: who decides what.** *In plain words: a collective can split up its work. Its founding agreement can say that some members run its payments and others its publications; each such share of the work is an area, and inside it only its holders decide.*
 - **Areas.** The founding agreement may give some of the collective's acts, and some of its operational matters (its split plan, for instance), to an **area** held by some of its members, the area's **holders**, with a number of them who must agree. An area may cover a whole layer, every Money act for instance, which makes it that layer's **lane**, or single act types. No two areas cover the same act or matter, save the acts of one specification named for tasks of two layers (below). Inside an area its holders alone decide: no other member, and no majority of members, can act there in their place; only a change to the constitution, under the constitutional change rule, can change what the area covers, who holds it, or anything in it, since that rule can change everything.
 - **How an act in an area counts.** The collective signs the act with its own key, as it signs every act. Then each holder who agrees signs a short act of their own naming it, a signature act, which anyone holding both can check; the act counts once enough holders have signed to meet the area's number, each a holder who signed the agreement (or a version it descends from) and whose voice remains for that act. Those signatures are judged under the collective's agreement **in force for that act**: the version its identity chain declared at the chain act its signing key is bound to (a rotation declaring nothing new carries the earlier one forward, with the versions recorded under it); or, where the collective has put a newer version in force by a record since that declaration, and the act is not before that record in the collective's own sequence, that newer version, the one furthest along. A record itself is judged only by the records before it.
-- **Choosing specifications.** For each task a MIP hands to a cMIP, the collective's agreement names the cMIP it uses: it **adopts** that cMIP.
+- **Choosing specifications.** For each task a MIR hands to a cMIP, the collective's agreement names the cMIP it uses: it **adopts** that cMIP.
   - A cMIP's acts belong to the layer of the task the collective adopted it for, and the holders of that layer's lane decide, alone, which cMIP to adopt; where no lane covers that layer, an area naming the task decides, else the clone rule. The new version of the agreement is written on the record at once.
   - Where the collective names one specification for tasks of two layers, it belongs to both. Naming it for the second layer needs whoever decides each of the two tasks, as just said: both lanes' holders where both lanes exist. Each of its acts counts only when the holders of each lane that covers it have signed it, each lane as its own number asks.
   - Four tasks judge rather than act: condition evaluation, time reference, anchoring and absence proof (the judicial tasks; F178); anchoring is an Envelopes task (F173). Which specification fills them is never a lane's choice, not even the Agreements lane's, though their acts, being Agreements acts, fall in the Agreements lane like any other. They change only with every member's signature, one version for everyone; a new version that also changes the constitution needs the constitutional change rule too (F122).
@@ -295,18 +297,18 @@ Money defines how a simple payment moves: never the rails, and nothing about who
 - **Contests.** Only parties, affected holders and named keepers, arbitrators or verifiers have standing to contest, and a contest changes nothing about any act's validity: it is shown alongside what it names.
 - **Tasks:** split; condition evaluation; time reference; absence proof; grant limits; work claims (anchoring is the Envelopes', F173).
 
-## MIP: Development
+## MIR: Development
 
-- **Specifications are named by the hash of their content,** wherever they are published. cMIPs and Modules name their creator inside, so names cannot collide or be stolen; a creator named by a specification it never published is shown as unclaimed. MIPs have no creator: they are the protocol itself. Signature schemes and units are specifications too.
+- **Specifications are named by the hash of their content,** wherever they are published. cMIPs and Modules name their creator inside, so names cannot collide or be stolen; a creator named by a specification it never published is shown as unclaimed. MIRs have no creator: they are the protocol itself. Signature schemes and units are specifications too.
 - **Frozen at publication.** A changed specification is a new one, which may name its predecessor for migration; a successor by a different creator is shown as such.
-- **Tasks are the contract** between the core and the community, each with one global number, by which an agreement may name the cMIP it uses (F268): for each, the defining MIP states what a cMIP accepts and produces. **Extensions**, named in an agreement's own extensions field, cover what no task foresaw, adding rules and never relaxing the core's; an extension declares in its specification the layers it acts on, so a collective knows whose approval adopting or dropping it needs.
+- **Tasks are the contract** between the core and the community, each with one global number, by which an agreement may name the cMIP it uses (F268): for each, the defining MIR states what a cMIP accepts and produces. **Extensions**, named in an agreement's own extensions field, cover what no task foresaw, adding rules and never relaxing the core's; an extension declares in its specification the layers it acts on, so a collective knows whose approval adopting or dropping it needs.
 - **Verification rules** that anyone must be able to run are programs for one frozen machine, RV32IM, with fixed memory, an exact step budget stated in the specification, a fixed input and output encoding, and no clocks, networks or randomness; a rule over budget, or outside the profile, answers unknown everywhere. A binary rule is carried as a locked object the specification names. The rule decides validity; the text explains it; a mismatch is a bug, fixed only by a new specification.
-- **Adoption by opt-in; no registry.** Discovery happens through use. Below the MIPs the one trust root is the six MIP hashes, published together with their texts in the genesis repository; a fork presenting six others is a different protocol, and a successor must change the `MOR/` tag prefix.
+- **Adoption by opt-in; no registry.** Discovery happens through use. Below the MICS the one trust root is the six MIR hashes, published together with their texts in the genesis repository; a fork presenting six others is a different protocol, and a successor must change the `MOR/` tag prefix.
 - **A proof checker is no task** (F268). Each proven offer names the cMIP whose checker reads its proof, so no agreement sets one checker for all its offers; a cMIP that checks proofs of delivery declares so by one field of its specification, so checkers can be found; the field serves discovery only, a verifier asking the checker of whatever cMIP the offer names.
 - **Earning through signed terms.** Creators earn through fees and role shares evidenced by signed records: a creator who charges states its fee in its specification, for information, and only an agreement's own fee entry makes it owed (F211); nothing is taken from a payment without a signature.
 - **Evidence of use comes from a party, never from a Module** (F116). A Module is a specification: it signs nothing. That a rail Module carried a payment is shown by the receipt or claim naming it, signed by the receiver or the payer; that a service someone runs was used is shown by a record signed by the identity running it. Several Modules may work under the one cMIP an agreement names for a task, such as several rail Modules under the payment cMIP, one per rail.
 
-*Zero democracy on the MIPs; a free market on cMIPs and Modules, where adoption decides.*
+*Zero democracy on the MICS; a free market on cMIPs and Modules, where adoption decides.*
 
 ## MOR 2
 
@@ -366,7 +368,7 @@ Money defines how a simple payment moves: never the rails, and nothing about who
 | Area | Acts of a collective and operational matters its founding agreement gives to some members, who alone decide there and may grant within it; an area reaching a whole layer is its lane. Each keeps a permanent id from version to version. |
 | Audit | A home's log summary checked and cosigned by another operator. |
 | Chain | The acts on one object, each naming the chain and the act it follows. |
-| Client | Software that implements Identity, Envelopes and Text, plus any other MIPs it chooses. |
+| Client | Software that implements Identity, Envelopes and Text, plus any other MIRs it chooses. |
 | Closing | The act that ends a collective holding nothing and owing nothing, signed under the constitutional change rule; after its line its keys count for nothing in Agreements. |
 | Creditor's release | The Money act by which a creditor, alone, ends an obligation owed to it without full payment; a collective signs it by its Money lane. |
 | Decisions chain, actions chain | A collective's two chains (F127): its decisions (founding, changes to its terms, who joins and leaves, its fork or closing), and every other act in its name, each citing the decision it acts under and the actions it follows. |
@@ -396,8 +398,10 @@ Money defines how a simple payment moves: never the rails, and nothing about who
 | Link | A two-way statement, claim plus confirmation, that two identities belong to the same entity. |
 | Negotiation message | An Agreements act carrying text, by which two sides negotiate; it acknowledges the latest message received from the other side. |
 | Mark | A clone's statement of the rules that brought it into force and whose signatures met them; checked by verifiers. |
-| MIP | A core specification. Frozen forever. Has no creator. |
-| Module | An implementation or extension under a MIP or cMIP, named by hash, frozen at publication. A specification: it signs nothing. |
+| MIR | MOR Inscribed Rules: one of the six core specifications, a set of rules giving a layer by layer look at the MICS (the Identity MIR, the Money MIR). Frozen forever. Has no creator. |
+| MICS | MOR Inscribed Core Spec: the core, the six MIRs together, mapped by this document. Frozen whole (F84). |
+| MIP | Reserved for proposals toward MOR 2 (F269). MOR 1 has none: its core texts are MIRs, and the community's specifications are cMIPs, which keep their name. |
+| Module | An implementation or extension under a MIR or cMIP, named by hash, frozen at publication. A specification: it signs nothing. |
 | Operator | The identity that runs a relay and signs what it states. |
 | Payee pointer | Where payment to an identity goes: a flow pointer, and a vault of safer entries. Publications pay the identity they are made for. |
 | Payment claim | A payer's record of a payment, with the rail's proof; equal evidence to a receipt. An anonymous payer's claim carries the signature of the key its payment committed to. |
@@ -417,7 +421,7 @@ Money defines how a simple payment moves: never the rails, and nothing about who
 | Split service | An identity named by grant key to divide incoming payments for a work's owners and pay them out: in a deal, one grant key per payee (F129). |
 | Stake | A share in a work, a publication or a collective's income, in millionths, held by whoever the transfer chain names; in a collective's own terms, null names the collective itself. |
 | Succession plan | Part of an agreement naming a party's stake successors and seat successors. |
-| Task | A point where a MIP hands work to a cMIP that an agreement may name by the task's number (F268). |
+| Task | A point where a MIR hands work to a cMIP that an agreement may name by the task's number (F268). |
 | Tie rule (Agreements) | Where a decision ending powers (a fork, a closing, a departure, a grant's revocation, a departure emptying an area) and an action using them cite neither each other, the ending wins: the action is void (F127, F128). |
 | Tier | One of a collective's three levels of rules: constitutional, judicial, operational; each changed by its own rule. |
 | Vault | An identity's chain-key-protected set of receiving entries, per unit and per rail, with limits; several entries for one unit take the smallest limit. |

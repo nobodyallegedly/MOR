@@ -2,11 +2,13 @@
 
 *Version 22, 12 October 2026, for Nobody, allegedly, to approve: version 21 with everything decided since written in (F242 to F268, then F270 and F271 at the second pass), matching core v22 and the six current drafts, Identity draft 12, Text draft 7, Envelopes draft 8, Money draft 7, Agreements draft 11 and Development draft 7. Decided since version 21, and where it is tested: the earlier part of that range is already in version 21's lines, from its revisions in place (F242, F244 to F250, F253, F255; F243 concerns the site only, F251 the texts' order, neither tested here); the vows line now reads a vow as naming something MOR cannot hash, existing or to come (F252), two vows on one event separate (F259), and a key delivered under a vow as evidence only (F264); new or extended lines: an agreement as a party of another, the pointer it designates ending a payer's responsibility, and a compilation a layer or a derivative (F254, F256, F257); every payer trying the split services in order (F260); two classes of offers (F261); a collective's liquidation and an absentee's share, and a deal's end by a clone (F262, F263, F265); leftover turns across a deal's versions (F266); a resale under a fresh vow escaping the marking, a stated cost, reasoned (F258); a hop passed on by the paying hop's claim (F267; new step 2.4g, to build); a proof checker no task, declared by its specification's field 12 (F268; new step 8.6, to build). **The second pass** (`docs/core-v22.md`) adds the six readings of F267 and F268 confirmed on 12 October 2026 (the route line and step 2.4g: a batch carrying several forwards, a receipt and a claim disagreeing on the previous hop, the claim disclosed; step 8.6: a checker without field 12 asked just the same), F270 (the departed holders' and stakes lines, a voiceless holder's pay lowered only with its signature, to build, scenario to write) and F271 (the fees line, a plan with no maximum fee flagged before signing), and says the concurrency rule withdrawn (step 12b), as the code already does. A line or step no scenario exercises yet says so. A rule number cited without its draft is that of the draft version 21 named (Identity 11, Envelopes 7, Text 6, Money 6, Agreements 10, Development 6), as code and records cite them until the freeze-ready drafts; each current draft maps it in its table. The history of earlier versions is at the end.*
 
+*Renamed in place, 12 October 2026 (F269, `docs/mir-rename-pass.md`): the core's six texts are MIRs and the core as a whole the MICS; wording only, no rule changed.*
+
 ## Purpose
 
 This is the end-game checklist for freezing the MOR core. It is for the founding team, not for readers of the protocol.
 
-**Freeze rule:** the six MIPs are frozen together, at the first release (F84). Before that, each scenario below is either **run**, exercised against the founding components and passed, or **reasoned**, walked through on paper against the texts without running code. Every scenario the founding components can run is run. The freeze publishes, with the six texts and their hashes, a **freeze report** marking each scenario and each core component run or reasoned. The cMIPs and Modules used may be clunky; only the core has to hold. A failure found before the freeze that needs a core change is a finding, fixed before the freeze.
+**Freeze rule:** the MICS is frozen whole, its six MIRs together, at the first release (F84). Before that, each scenario below is either **run**, exercised against the founding components and passed, or **reasoned**, walked through on paper against the texts without running code. Every scenario the founding components can run is run. The freeze publishes, with the six texts and their hashes, a **freeze report** marking each scenario and each core component run or reasoned. The cMIPs and Modules used may be clunky; only the core has to hold. A failure found before the freeze that needs a core change is a finding, fixed before the freeze.
 
 *A reasoned rule is frozen on argument, not evidence. The report says so, so nobody mistakes one for the other, and the next reviewer knows where to press first.*
 
@@ -111,7 +113,7 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 
 **Development**
 
-- [ ] Specifications named by content hash; creator inside for cMIPs and Modules; MIPs without creator; a successor by another creator shown as such (8)
+- [ ] Specifications named by content hash; creator inside for cMIPs and Modules; MIRs without creator; a successor by another creator shown as such (8)
 - [ ] Frozen at publication; a successor naming its predecessor (8)
 - [ ] Verification rule on the RV32IM profile, same answer on two clients; over budget or outside the profile answers unknown (2, 8)
 - [ ] Signing what a rule computes: a split shown with its payouts before signing *(conformance)* (2)
@@ -120,7 +122,7 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 - [ ] Task numbers used identically by every client (8)
 - [ ] Creator paid through fee terms and role shares evidenced by records a party signs: the receipt or claim naming a rail Module, or a record the identity running a service signs, acknowledged by the payer the payment commits to; never by a Module, and never by the service's record alone (F116, F194) (2)
 - [ ] A signature-scheme specification published and adopted (8)
-- [ ] The six MIP hashes stable wherever published; a read-only client checks them against its build (8)
+- [ ] The six MIR hashes stable wherever published; a read-only client checks them against its build (8)
 
 ## Scenarios
 
@@ -286,7 +288,7 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 
 ### 8. Specifications
 
-1. The six MIPs are published as specifications with no creator; anyone can republish them and their spec hashes stay the same. A read-only client shows them and checks the six hashes against its build. Two clients map an agreement's task numbers to the same tasks.
+1. The six MIRs are published as specifications with no creator; anyone can republish them and their spec hashes stay the same. A read-only client shows them and checks the six hashes against its build. Two clients map an agreement's task numbers to the same tasks.
 2. A cMIP author publishes a split cMIP with a verification rule on the RV32IM profile, its binary carried as a locked object the specification names; a fixed version is published later, naming the first as its predecessor. The first stays on record. A stranger publishes a "successor" naming the same predecessor; a client shows the creator mismatch.
 3. An agreement names an extension for a kind of work no task covers; its specification declares, in field 10, the layers it acts on beyond Development (Development draft 5). A client without the extension cannot sign; a client with it enforces the extra rule. Two clients read the same layers from field 10; a specification whose field 10 is out of order, or carries a number that is no layer, is invalid in both. An extension that tries to allow a split not summing exactly is overridden by the core: the act is rejected.
 4. A signature-scheme specification is published. An identity rotates to a signing key of that scheme; a client without it shows the rotation as valid and the identity's later acts as unknown; a client with it verifies them.
@@ -303,7 +305,7 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 4. Machine adversarial review: everything, the texts, the code and the draft freeze report, reviewed by a model given the budget to break things and propose fixes (Fable, F84).
 5. Specialist questions (F85): from the draft freeze report, each rule that is only reasoned becomes a targeted question to a specialist in its field, one person and one question at a time. Then human adversarial review (round 3): one reviewer attacks the whole, the running prototypes as well as the texts. Nobody outside decides the freeze.
 6. Fix any failure requiring a core change, and rerun or re-reason the affected scenarios.
-7. When every box is ticked, run or reasoned, the six MIPs are frozen: their texts, their hashes and the freeze report are published together.
+7. When every box is ticked, run or reasoned, the MICS is frozen: the six MIRs' texts, their hashes and the freeze report are published together.
 
 After the freeze, a flaw in the core is fixed only by a new protocol running alongside, with users migrating by choice.
 
