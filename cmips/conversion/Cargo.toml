@@ -1,0 +1,10 @@
+[package]
+name = "mor-conversion"
+version = "0.1.0"
+description = "The conversion cMIP, draft 1 (Money's conversion task): a rail swap sold as a proven offer, the order binding each forward before payment, the judgment of delivery from the onward hop's receipt, its checker for the core, and Money's route rules read over receipts."
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mor-core = { path = "../../core" }
+mor-payment = { path = "../payment" }

@@ -25,6 +25,9 @@
 //!   anchoring cMIP's batch, its root committed by pay-to-contract, checked
 //!   by a sibling of the rail's rule: the same tweak and header checks on
 //!   the chain followed, no amount to match, final at the rail's depth.
+//! - **The conversion cMIP's clock** ([`mor_conversion::DeliveryClock`]):
+//!   an onward payment on the on-chain rail is placed by its block, as any
+//!   payment's anchor is (F201), so "by the deadline" is read on the chain.
 
 use crate::chain::HeaderChain;
 use crate::{Block, Network, Onchain, OnchainProof};
@@ -262,6 +265,29 @@ impl BatchClock for BitcoinClock<'_> {
     }
 
     /// The rail's confirmations (F205).
+    fn depth(&self) -> u64 {
+        crate::CONFIRMATIONS as u64
+    }
+}
+
+/// The conversion cMIP reads "by the deadline" here (conversion cMIP draft
+/// 1): an onward payment's point is its anchor (F201), the block its
+/// on-chain proof places it in, once valid at the rail's depth on the chain
+/// followed ([`BitcoinClock::payment_anchor`]). A payment on another rail
+/// (Lightning) has no point on this clock.
+impl mor_conversion::DeliveryClock for BitcoinClock<'_> {
+    fn reference(&self) -> Reference {
+        reference(self.chain.network())
+    }
+
+    fn point(&self, hop: &mor_conversion::Hop, held: &dyn Held) -> Option<u64> {
+        self.payment_anchor(&hop.id, &Record::Receipt(&hop.receipt), held).map(|a| a.point)
+    }
+
+    fn now(&self) -> Option<u64> {
+        Some(self.chain.tip())
+    }
+
     fn depth(&self) -> u64 {
         crate::CONFIRMATIONS as u64
     }
