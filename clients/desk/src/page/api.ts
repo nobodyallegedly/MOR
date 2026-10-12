@@ -138,6 +138,8 @@ export interface Item {
   alarm?: string;
   /** A payment naming an older version of a deal, with no fork: a plain notice, not the alarm (Agreements rule 45b, F188, DQ7). */
   notice?: string;
+  /** Terms received: the deal-assessment tool's shares and fees, and risks (roadmap step 14). */
+  assessment?: { heading: string; lines: Line[] }[];
   found: number;
   sorted: Sorted;
 }

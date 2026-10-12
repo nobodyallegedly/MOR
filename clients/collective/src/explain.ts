@@ -80,6 +80,21 @@ export interface Problem {
   text: string;
 }
 
+/** The split plan (terms field 8) as the core library decodes it (`readTerms`). */
+export interface PlanRead {
+  shares: { kind: 'stake' | 'role' | 'receiver' | 'metric'; stake?: number | null; role?: string | null; receiver?: string | null; metric?: number | null; part: number }[];
+  cmip: string;
+  /** A role share nobody fills: to the stakes (F218), held open, or to a named identity. */
+  unfilled: 'stakes' | 'held-open' | 'to';
+  unfilledTo?: string | null;
+  /** Shares taken off the top, by index in `shares`. */
+  top: number[];
+  serviceBearsRailFees: boolean;
+  /** The largest rail fee a payout may lose; absent: the plan states none. */
+  maxRailFee?: { form: 'millionths' | 'absolute' | 'unread'; value: number; unit?: string | null } | null;
+  metrics: [string, string][];
+}
+
 /** Terms (Agreements type 0) as the core library decodes them (`readTerms`). A field absent from the terms is null or undefined. */
 export interface TermsRead {
   parties: string[];
@@ -129,6 +144,16 @@ export interface TermsRead {
   forkedFrom: string | null;
   /** The release rule (field 24); null: every stake holder signs a release (F121, D). */
   releaseRule: RuleOut | null;
+  /** In a deal's clone settling a fork, every tip it discards (field 26). */
+  settles?: string[] | null;
+  /** In a deal, the judge of its forks, one of field 13 (field 27); absent: none. */
+  forkJudge?: string | null;
+  /** The split plan (field 8), as the core decodes it. */
+  plan?: PlanRead | null;
+  /** The refund terms (field 17): the point on the time reference past which a refund owed is ended; null where it is no number. */
+  refund?: { until?: number | null } | null;
+  /** The fees (field 28): each Module owed, its part, and when it applies. */
+  fees?: { module: string; part: number; scope: 'every' | 'publication' | 'rail'; of?: string | null }[] | null;
   /** Why the terms fail Agreements' own checks, if they do: Agreements' code and its own words. */
   problem?: Problem | null;
 }
@@ -224,7 +249,7 @@ function fieldRefWords(f: AreaRead['fields'][number]): string {
   return f.form === 'field' ? (OPERATIONAL_FIELDS[f.number] ?? `field ${f.number}`) : `the cMIP for task ${f.number}`;
 }
 
-const OUTCOMES = [
+export const OUTCOMES = [
   'their voice is removed (they no longer count in any rule or area)',
   'their stake is shared among the remaining holders',
   'their stake is transferred to parties named or defined by role',

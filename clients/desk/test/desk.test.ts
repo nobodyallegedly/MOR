@@ -358,6 +358,24 @@ test('a payment naming the other branch of a forked deal raises the alarm at the
   assert.match(paid.alarm ?? '', /names both branches/);
 });
 
+// Roadmap step 14: terms an identity receives are assessed at the desk (the
+// shares and fees, the risks), and still signed only in the collective client.
+test('terms received at the desk are assessed: their risks shown, nothing signed here', async () => {
+  const { dealPayload } = await import('../../repo/src/deal.ts');
+  const relays = [w.relay.base];
+  const other = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
+  await other.publishGenesis();
+  for (const a of other.chainActs()) await relayAt(w.relay.base).putAct(a);
+  const p = await other.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.terms, dealPayload({ parties: [machine, other.id], text: 'Machine and another write a song together.' }), { public: true, relays, to: [machine] });
+  await w.client.ask('refresh', { identity: machine });
+  const got = (await state(w.client)).identities.find((i) => i.id === machine)!.received.find((x) => x.act === p.id)!;
+  assert.match(got.problem ?? '', /signed in the collective client, never here/);
+  const said = (got.assessment ?? []).map((s) => `${s.heading}: ${s.lines.map((l) => l.text).join(' ')}`).join('\n');
+  assert.match(said, /^Shares and fees: It divides no money/m);
+  assert.match(said, /^Risks, before you sign \(the deal-assessment tool\): .*cannot be declared absent.*Rests on: Agreements rule 47/m);
+  assert.match(said, /No judge of forks/);
+});
+
 // F188, DQ6 (decided by Nobody, allegedly, 9 October 2026), client
 // conformance: one numbering runs across every split a service makes under
 // a deal, on any branch; a holder's client raises the alarm where the

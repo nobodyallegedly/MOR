@@ -169,6 +169,7 @@ function item(identity: string, x: Item): string {
   return `<div class="item" data-item="${e(x.key)}" data-kind="${e(x.kind)}"><strong>${e(KIND[x.kind])}</strong> <span class="small">${facts.join(' ')}</span>
 ${x.alarm ? note('error', e(x.alarm)) : ''}${x.notice ? note('', e(x.notice)) : ''}
 ${x.problem ? note('warn', e(x.problem)) : ''}
+${(x.assessment ?? []).map((s) => `<h4>${e(s.heading)}</h4>${lines(s.lines)}`).join('')}
 ${x.text !== undefined ? plain(x.text) : ''}
 <div class="sorts">${sorts}</div>
 ${x.act && x.from && x.standing === 'valid' ? `<div class="row"><button class="quiet" data-action="witness" data-identity="${e(identity)}" data-act="${e(x.act)}">Rely on this act…</button></div>` : ''}</div>`;
