@@ -29,6 +29,7 @@
 use crate::chain::HeaderChain;
 use crate::{Block, Network, Onchain, OnchainProof};
 use mor_anchoring::service::BatchClock;
+use mor_anchoring::custody::{PoolChain, Spending};
 use mor_core::cbor;
 use mor_core::cbor::Value;
 use mor_core::envelopes::anchoring::{Anchor, AnchoringCmip, Reference};
@@ -263,6 +264,20 @@ impl BatchClock for BitcoinClock<'_> {
     /// The rail's confirmations (F205).
     fn depth(&self) -> u64 {
         crate::CONFIRMATIONS as u64
+    }
+}
+
+/// The anchoring cMIP's custody reads a batch's transaction here (draft 4,
+/// "The pool as visible custody"): its txid, the outputs it spends and
+/// what it pays, each output named as the on-chain rail names a payment
+/// (F200), so that a receipt of a payment to the service matches the coin
+/// it is.
+impl PoolChain for BitcoinClock<'_> {
+    fn spending(&self, tx: &[u8]) -> Option<Spending> {
+        let t = crate::tx::decode(tx)?;
+        let spends = crate::tx::spends(tx)?.iter().map(|(id, i)| crate::payment_of(id, *i)).collect();
+        let pays = t.outputs.iter().enumerate().map(|(i, o)| (crate::payment_of(&t.txid, i as u64), o.value)).collect();
+        Some(Spending { id: t.txid, spends, pays })
     }
 }
 

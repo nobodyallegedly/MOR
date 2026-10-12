@@ -23,6 +23,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## Working practice: every question names its area (Nobody, allegedly, 12 October 2026)
+
+"From now on when asking questions or debating inform me of the area: core business, development layer business (modules and cMIP), presentation (site, companion documents…)." Each question put to Nobody, allegedly, opens with its area.
+
 ## Working rule: rare cases and markets (Nobody, allegedly, F63)
 
 Costs that fall only on rare cases mostly super users will care about are acceptable. MOR expects markets to kick in where there is value to be protected.
@@ -2701,6 +2705,18 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 ## F252. A vow covers anything MOR cannot hash, existing or to come (Q-G1, 11 October 2026, morning)
 
 **From** `docs/reviews/case-studies-vs-vows.md` (Q-G1): can a vow sell something that already exists but has no bytes (a bowl in stock, an hourly rate, storage)? *Laid beside it, his words:* "MOR truly needed a structured way of selling something that has no bytes, or no bytes yet"; "IOU of services that need to come at a later date". *Options:* (a) yes; (b) only what does not exist yet, the rest sold through the access form with no sale state; (c) the cMIPs decide. **Decided by Nobody, allegedly: "Yes, a. I think my quote settles it."** A vow is any act naming something MOR cannot hash, existing or to come; every sale of a physical good or a service names one, and gets pending, confirmed or contested. One form for one task (Fable's finding 7). *Suggested by the project lead.* *Noted for the texts' redraft:* what the access form `[ 2, [cMIP, params] ]` still serves once vows cover goods and services (access to bytes, such as a subscription's keys) is to be said there.
+
+## The overnight reports (12 October 2026, morning)
+
+**Seed sweep** (`docs/seed-sweep-2026-10-12.md`, pull request 15, merged): six property tests, 300 seeds each, 1,800 runs, all passing; nothing to judge.
+
+**Step 14a's last pieces** (`docs/anchoring-custody.md`, pull request 17, merged): the pool as visible custody built from existing acts only (the service's own coins moved as payments to itself, each receipted; a batch's money followed from the payers' payments to its transaction; a loss shown as the service's; what cannot be shown shown as not shown); the anchoring cMIP draft 4 (item 10a: a proven offer, F261). Rust 633, TypeScript 220; regtest with btcd and real lnd. *Mechanics 1 to 5 and readings 1 to 4 taken by the project lead under the delegation.* **CQ1** (the Lightning-to-chain conversion through a conversion service has no offer format): *read by the project lead against the working rule:* which conversion terms are sold is the participants' (Money already hands conversion to a cMIP), so it is no core question; as built, the service converts by itself (option 2); a conversion cMIP, a proven offer with its checker, becomes its own roadmap step before the freeze, since it also delivers the freeze suite's route scenarios (scenario 2, steps 4 and 4b).
+
+**Money draft 7** (`docs/money-draft-7.md`, pull request 16): plain reading, 29 rules renumbered, no rule moved (tests unchanged, a script and a second reader; 11 wording slips fixed); F255 written in at rule 17 (was 14), with a pointer from rule 3 (was 14a). No question. Eight points carried for the freeze-ready draft, the first that Agreements draft 11's rule 11 lags Money once draft 7 is approved. **Approved by Nobody, allegedly, 12 October 2026, morning: "Approved"**, confirming draft 11's reading that a refund to a bare key has no vault, so no limit; merged (pull request 16); draft 6 kept as the superseded reference.
+
+**Case studies** (`docs/case-studies-update-2026-10-12.md`, pull request 14): 08, 12, 14, 16 and 17 brought up to date with vows and F252 to F266; fifteen points listed "Not claimed". Three for the author to glance at: "streams" of ratings renamed "strands" in 14; the ticket confirmed by acknowledging the door scanner's act in 17; the resale marking written conditionally in 16.
+
+*Answered by Nobody, allegedly, the same morning (area: presentation):* (1) **"Signals?"**: the learning study's ratings are "signals", not "strands" (the project lead had suggested "trails"). (2) **"If I were the event organizer I'd have them confirm on the way out"**: the fan's wallet confirms on leaving, once the seat and the match were delivered; the moment is the organiser's (the ticketing cMIP's). (3) **"Resale of physical items was maybe not the best example?"**: the project lead agreed (the core cannot see the vase; F258) and suggested both (a) the commerce study lets the provenance cMIP carry resale, the core's limit stated, the F247 marking dropped there, and (b) F247 shown where it bites, in the musician study, a band member taking preorders for the album outside the band's deal. **"Yes, sounds good. This mechanism works for resale of items of value where proving origin impacts the price."** The provenance cMIP's market is items whose origin moves the price.
 
 ## CLOSING-OWES and the walk reading deal voices (12 October 2026, just after midnight)
 
