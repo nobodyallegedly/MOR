@@ -21,8 +21,16 @@ qrcode = { version = "0.14", default-features = false }
 getrandom = { version = "0.2", optional = true }
 
 [features]
-default = ["cli"]
+default = ["cli", "carry"]
 cli = ["dep:getrandom", "rand_core/getrandom"]
+# The identity carry Module (src/carry.rs). Its own feature, off for the core
+# library's WebAssembly (mor-wasm takes no default features), so the display
+# client's released WebAssembly stays byte for byte as it is.
+carry = []
+
+[[example]]
+name = "carry_vectors"
+required-features = ["carry"]
 
 [[bin]]
 name = "mor-signer"

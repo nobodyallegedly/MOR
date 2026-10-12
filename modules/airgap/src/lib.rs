@@ -6,6 +6,8 @@
 //!
 //! - [`seed`]: the two seed Modules: how a chain-key seed is written down, and
 //!   how its keys are derived.
+//! - [`carry`]: the identity carry Module: an identity's signing seed written
+//!   as words, to carry it to another app (the chain key never travels).
 //! - [`msg`]: the messages that cross the air gap, strictly decoded.
 //! - [`device`]: the offline signer and its rules (3.1 to 3.7), clean-device
 //!   mode, and collectives' rotations.
@@ -18,6 +20,8 @@
 //!
 //! Written against Identity draft 9 and core v15, on the core library.
 
+#[cfg(feature = "carry")]
+pub mod carry;
 pub mod device;
 pub mod msg;
 pub mod online;

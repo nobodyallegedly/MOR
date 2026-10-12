@@ -1,0 +1,20 @@
+{
+  "name": "mor-carry",
+  "version": "0.1.0",
+  "description": "The MOR identity carry Module: an identity's ID and its signing seed written as words, to carry it to another app. The chain key never travels.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

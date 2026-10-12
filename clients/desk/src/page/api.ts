@@ -32,9 +32,9 @@ export function requestBody(hello: Hello, time: number, nonce: Uint8Array, op: s
   return new TextEncoder().encode(JSON.stringify({ app: hello.app, time, nonce: toHex(nonce), op, args }));
 }
 
-/** What the key signs for a body. */
-export function signedBytes(body: Uint8Array): Uint8Array<ArrayBuffer> {
-  const d = new TextEncoder().encode(DOMAIN);
+/** What the key signs for a body: the program's domain line, then the body. */
+export function signedBytes(body: Uint8Array, domain = DOMAIN): Uint8Array<ArrayBuffer> {
+  const d = new TextEncoder().encode(domain);
   const m = new Uint8Array(d.length + body.length);
   m.set(d);
   m.set(body, d.length);
@@ -49,11 +49,13 @@ export class Client {
     private readonly keys: CryptoKeyPair,
     readonly publicKey: string,
     private readonly base: string,
+    private readonly domain: string,
   ) {}
 
-  static async open(keys: CryptoKeyPair, base = ''): Promise<Client> {
+  /** `domain`: the domain line of the program this page talks to (MOR Post gives its own). */
+  static async open(keys: CryptoKeyPair, base = '', domain = DOMAIN): Promise<Client> {
     const raw = new Uint8Array(await crypto.subtle.exportKey('raw', keys.publicKey));
-    const c = new Client(keys, toHex(raw), base.replace(/\/$/, ''));
+    const c = new Client(keys, toHex(raw), base.replace(/\/$/, ''), domain);
     await c.greet();
     return c;
   }
@@ -69,7 +71,7 @@ export class Client {
   async ask<T = unknown>(op: string, args: object = {}): Promise<T> {
     const time = Math.floor(Date.now() / 1000) + this.offset;
     const body = requestBody(this.hello, time, crypto.getRandomValues(new Uint8Array(16)), op, args);
-    const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, this.keys.privateKey, signedBytes(body)));
+    const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, this.keys.privateKey, signedBytes(body, this.domain)));
     const r = await fetch(`${this.base}/api`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'mor-key': this.publicKey, 'mor-signature': toHex(sig) },

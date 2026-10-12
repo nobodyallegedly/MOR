@@ -13,10 +13,17 @@ import { build } from 'esbuild';
 const pkg = fileURLToPath(new URL('../', import.meta.url));
 
 /** The fingerprint of the program as it is on disk now, in hex. */
-export async function version(): Promise<string> {
+export const version = (): Promise<string> => fingerprint(pkg, ['src/cli.ts', 'src/page/app.ts']);
+
+/**
+ * The fingerprint of a program in the folder `pkg`: every file its
+ * `entries` bundle, its `static/index.html` and the core library's
+ * WebAssembly. Shared with MOR Post (`clients/poster`).
+ */
+export async function fingerprint(pkg: string, entries: string[]): Promise<string> {
   const out = await build({
     absWorkingDir: pkg,
-    entryPoints: ['src/cli.ts', 'src/page/app.ts'],
+    entryPoints: entries,
     bundle: true,
     write: false,
     outdir: 'out',
