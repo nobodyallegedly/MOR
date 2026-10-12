@@ -56,7 +56,7 @@ use mor_core::chain::Status;
 use mor_core::envelopes::anchoring::Anchors;
 use mor_core::money::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, RefundTo, VaultEntry};
 use mor_core::hash::{sha256, Hash};
-use mor_core::agreements::{self, AgreementsView, Mips};
+use mor_core::agreements::{self, AgreementsView, Mirs};
 use mor_harness::net::{Http, Site};
 use mor_harness::person::Person;
 use mor_harness::reader::Reader;
@@ -77,8 +77,8 @@ fn money_spec() -> Hash {
     sha256(b"FINANCE, test value until the freeze")
 }
 
-fn mips() -> Mips {
-    Mips {
+fn mirs() -> Mirs {
+    Mirs {
         identity: sha256(b"IDENTITY, test value until the freeze"),
         envelopes: sha256(b"ENVELOPE, test value until the freeze"),
         text: sha256(b"a text specification"),
@@ -445,7 +445,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     put(&site, &pointer_act).await;
     let terms = Terms { reference: clock::reference(Network::Regtest), tiers: vec![Tier { price: Price::Fixed(50), blocks: 2 }, Tier { price: Price::Fixed(20), blocks: 6 }, Tier { price: Price::Fixed(5), blocks: 144 }] };
     let standing = terms.standing_offer(mor_onchain::unit(Network::Regtest), Some("Anchoring on Bitcoin regtest: tiers of 2, 6 and 144 blocks at 50, 20 and 5 satoshis a hash. A hash left out of its batch, or not anchored by its deadline, is refunded.".into()), None);
-    let offer_act = svc.act(mips().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None);
+    let offer_act = svc.act(mirs().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None);
     put(&site, &offer_act).await;
     let under_offer = Some(vec![Object { chain: offer_act.id(), predecessor: offer_act.id() }]);
     let pool_key_sk = secret("the anchoring service's batch key");
@@ -469,7 +469,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         // The payer reads the service's standing offer from the home; the
         // core's Agreements view says it counts.
         let rd = read(&site, &[svc.id]).await;
-        assert!(AgreementsView::new(&rd.v, mips()).offer(&offer_act.id()).unwrap().counts, "the standing offer counts");
+        assert!(AgreementsView::new(&rd.v, mirs()).offer(&offer_act.id()).unwrap().counts, "the standing offer counts");
         let lo = agreements::Offer::decode(&rd.v.get(&offer_act.id()).unwrap().inside).expect("an offer in Agreements' format").offer;
         let o = Offer::read(offer_act.id(), svc.id, &lo).expect("an anchoring offer");
         // The act it anchors, and a random blind: the service sees only the leaf.
@@ -557,7 +557,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         state(&mut rail_valid, &mut payments, &held, &modules, b.claim.id(), &claim_in(&eve, &b.claim.id()), b.p.id);
     }
     {
-        let mut v = AgreementsView::new(&eve.v, mips());
+        let mut v = AgreementsView::new(&eve.v, mirs());
         v.rail_valid = rail_valid.clone();
         for b in &buyers {
             assert_eq!(v.purchase(&b.claim.id()).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "{}: a purchase accepted under the offer's terms (F215, F225)", b.name);
@@ -600,7 +600,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     let mut refund_claims = vec![];
     for (b, r) in [(cal, &cal_refund), (dan, &dan_refund)] {
         let shown = |rv: &BTreeMap<Hash, PaidAt>, pm: &BTreeMap<Vec<u8>, Vec<u8>>, rd: &Reader| {
-            let mut v = AgreementsView::new(&rd.v, mips());
+            let mut v = AgreementsView::new(&rd.v, mirs());
             v.rail_valid = rv.clone();
             v.payments = pm.clone();
             v.refund_repaid(&b.claim.id(), &r.to, &r.amount.unit)
@@ -619,7 +619,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     for (id, _, _) in &refund_claims {
         state(&mut rail_valid, &mut payments, &held, &modules, *id, &claim_in(&eve, id), svc.id);
     }
-    let mut v = AgreementsView::new(&eve.v, mips());
+    let mut v = AgreementsView::new(&eve.v, mirs());
     v.rail_valid = rail_valid.clone();
     v.payments = payments.clone();
     for (_, b, r) in &refund_claims {

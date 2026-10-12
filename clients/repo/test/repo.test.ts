@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MIPS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, rebuildChainKey, signaturePayload, verifyShare } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, rebuildChainKey, signaturePayload, verifyShare } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestIdentity, lookUp } from '../../genesis/src/identity.ts';
 import { actsBy } from '../../genesis/src/lines.ts';
@@ -346,12 +346,12 @@ test("a deal signed on the phone cites the wallet published from the laptop (F16
   await label.publishGenesis();
   const wallet = (version: number, previous?: string) =>
     pointerPayload({ payee: laptop.id, version, previous, rails: [[REPO_SPECS.agreements, text(`Ana's wallet ${version}`)]] });
-  const v1 = await laptop.publish(MIPS.money, 0, wallet(1), { public: true, relays });
-  const v2 = await laptop.publish(MIPS.money, 0, wallet(2, v1.id), { public: true, relays });
+  const v1 = await laptop.publish(MIRS.money, 0, wallet(1), { public: true, relays });
+  const v2 = await laptop.publish(MIRS.money, 0, wallet(2, v1.id), { public: true, relays });
   assert.equal(await latestPointer(phone, relays), v2.id, 'the latest, published from the other device');
   const terms = (n: string) => label.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.terms, cborEncode(new Map([[0, n]])), { public: true, relays });
   const holding = (deal: string, acts: Uint8Array[]) => {
-    const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
     for (const a of [...laptop.chainActs(), ...label.chainActs(), v1.act, v2.act, ...acts]) v.add(a);
     return v.agreementsPointerHolding(AGREEMENTS_SPECS, deal, laptop.id) as { pointers: string[]; complete: boolean };
   };

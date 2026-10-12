@@ -1,4 +1,4 @@
-// Composing canonical text (Text MIP, rule 6): what a client does to the
+// Composing canonical text (Text MIR, rule 6): what a client does to the
 // user's text before it goes into an act, so no one meets a rejection for
 // invisible reasons. The verifier's check is the core library's, with the
 // pinned Unicode tables; this uses the system's, which is enough to compose.

@@ -34,7 +34,7 @@ mod common;
 
 use common::{own_home, Person, Rot, World};
 use mor_core::act::Object;
-use mor_core::agreements::{self, AgreementsView, Field4, Mips, PurchaseVerdict, Rule, SaleState, Stake, Terms, Who};
+use mor_core::agreements::{self, AgreementsView, Field4, Mirs, PurchaseVerdict, Rule, SaleState, Stake, Terms, Who};
 use mor_core::cbor::Value;
 use mor_core::chain::Status;
 use mor_core::envelopes::vow::Vow;
@@ -43,9 +43,9 @@ use mor_core::identity::KeptTip;
 use mor_core::mmr::Mmr;
 use mor_core::money::{Amount, Claim, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
 
-fn mips() -> Mips {
+fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
-    Mips {
+    Mirs {
         identity: common::identity_spec(),
         envelopes: t("ENVELOPE"),
         text: t("TEXT"),
@@ -62,7 +62,7 @@ fn spec(s: &str) -> Hash {
 /// The view, with the rail's answer, valid, for every payer's claim in
 /// `claims` (the caller states it: the core reads no rail).
 fn view_with<'a>(w: &'a World, claims: &[Hash]) -> AgreementsView<'a> {
-    let mut v = AgreementsView::new(&w.v, mips());
+    let mut v = AgreementsView::new(&w.v, mirs());
     for c in claims {
         v.rail_valid.insert(*c, PaidAt::Flow(spec("the payee's pointer")));
     }
@@ -74,7 +74,7 @@ fn view(w: &World) -> AgreementsView<'_> {
 }
 
 fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
-    let a = w.everyday_act(p, mips().agreements, type_, payload, objects, None);
+    let a = w.everyday_act(p, mirs().agreements, type_, payload, objects, None);
     w.add(&a)
 }
 
@@ -86,7 +86,7 @@ fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
 /// what is to come. Its genesis id is its name.
 fn vow(w: &mut World, p: &mut Person, words: &str) -> Hash {
     let v = Vow { words: words.into(), cmip: None };
-    let a = w.everyday_act(p, mips().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None);
+    let a = w.everyday_act(p, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None);
     w.add(&a)
 }
 
@@ -94,7 +94,7 @@ fn vow(w: &mut World, p: &mut Person, words: &str) -> Hash {
 /// follows.
 fn vow_version(w: &mut World, p: &mut Person, genesis: Hash, previous: Hash, words: &str) -> Hash {
     let v = Vow { words: words.into(), cmip: None };
-    let a = w.everyday_act(p, mips().envelopes, mor_core::envelopes::types::VOW, v.to_map(), Some(vec![Object { chain: genesis, predecessor: previous }]), None);
+    let a = w.everyday_act(p, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), Some(vec![Object { chain: genesis, predecessor: previous }]), None);
     w.add(&a)
 }
 
@@ -151,7 +151,7 @@ fn receipt(w: &mut World, payee: &mut Person, payer: Hash, fulfils: Hash, purcha
         batch: None,
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
     });
-    let a = w.everyday_act(payee, mips().money, 2, r.to_map(), None, None);
+    let a = w.everyday_act(payee, mirs().money, 2, r.to_map(), None, None);
     w.add(&a)
 }
 
@@ -171,7 +171,7 @@ fn payers_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: Hash, p
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
         previous: None,
     });
-    let a = w.everyday_act(payer, mips().money, 3, c.to_map(), None, None);
+    let a = w.everyday_act(payer, mirs().money, 3, c.to_map(), None, None);
     w.add(&a)
 }
 
@@ -399,7 +399,7 @@ fn an_offer_naming_a_vow_under_a_second_agreement_is_shown_outside_the_first() {
     sign(&mut w, &mut dario, &song_deal);
     sign(&mut w, &mut club, &song_deal);
     let publication = {
-        let x = w.everyday_act(&mut dario, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(song.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked").to_vec()))], None, None);
+        let x = w.everyday_act(&mut dario, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(song.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked").to_vec()))], None, None);
         w.add(&x)
     };
     let mut ow = o.clone();

@@ -34,9 +34,9 @@ your current signing key, and a lost phone with no backup can mean a lost identi
 /// The specifications the device needs to know by hash.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Config {
-    /// The Identity MIP's spec hash, fixed at the freeze.
+    /// The Identity MIR's spec hash, fixed at the freeze.
     pub identity_spec: Hash,
-    /// The Money MIP's spec hash, to read the vault; `None` shows the
+    /// The Money MIR's spec hash, to read the vault; `None` shows the
     /// vault as a declaration this device cannot read.
     pub money_spec: Option<Hash>,
 }
@@ -271,7 +271,7 @@ fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
     }
     let inside = a.open(None).map_err(|e| p(format!("{e:?}")))?;
     if inside.spec != cfg.identity_spec {
-        return Err(p("not an act of the Identity MIP".into()));
+        return Err(p("not an act of the Identity MIR".into()));
     }
     match sig::verify(&a.signature, &a.id()) {
         Verdict::Valid => {}
@@ -355,7 +355,7 @@ fn parse_inside(bytes: &[u8], cfg: &Config) -> Result<Parsed, Refusal> {
         }
     }
     if spec.as_deref() != Some(&cfg.identity_spec[..]) {
-        return Err(Refusal::NotARotation("not an act of the Identity MIP"));
+        return Err(Refusal::NotARotation("not an act of the Identity MIR"));
     }
     if type_ != Some(identity::types::ROTATION) {
         return Err(Refusal::NotARotation("not of type 1"));

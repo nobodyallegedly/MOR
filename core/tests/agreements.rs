@@ -7,13 +7,13 @@ use mor_core::cbor::{self, Value};
 use mor_core::hash::{sha256, Hash};
 use mor_core::agreements::{
     self, judged, outcomes, powers_needed, Abandonment, Area, Authority, ChainLink, Who,
-    Field4, FieldRef, Holding, Judge, KeyGrammar, Kind, AgreementsError, MarkEntry, Mips, Power, Recovery,
+    Field4, FieldRef, Holding, Judge, KeyGrammar, Kind, AgreementsError, MarkEntry, Mirs, Power, Recovery,
     Rule, SuccessionPlan, Terms, chain_answer, ChainAnswer, Step, Stake,
 };
 
-pub fn mips() -> Mips {
+pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
-    Mips {
+    Mirs {
         identity: t("IDENTITY"),
         envelopes: t("ENVELOPE"),
         text: t("TEXT"),
@@ -41,7 +41,7 @@ const ARBITRATOR: u8 = 91;
 /// holds the Money lane (area 2). The chain key needs all three, with an
 /// escrowed share released by a third-party authority.
 fn label() -> Terms {
-    let m = mips();
+    let m = mirs();
     Terms {
         parties: vec![h(1), h(2), h(3)],
         text: "The label publishes its members' records.".into(),
@@ -141,7 +141,7 @@ fn ext_layers(e: &Hash) -> Result<Vec<u64>, AgreementsError> {
 }
 
 fn needs(parent: &Terms, clone: &Terms) -> Vec<Power> {
-    powers_needed(parent, clone, &mips(), &ext_layers).unwrap()
+    powers_needed(parent, clone, &mirs(), &ext_layers).unwrap()
 }
 
 fn roundtrip(t: &Terms) -> Terms {
@@ -153,7 +153,7 @@ fn roundtrip(t: &Terms) -> Terms {
 }
 
 fn check(t: &Terms) -> Result<(), AgreementsError> {
-    t.check(&mips())
+    t.check(&mirs())
 }
 
 // ---------------------------------------------------------------- formats
@@ -299,7 +299,7 @@ fn a_judge_never_handles_what_it_judges() {
 
 #[test]
 fn areas_are_checked() {
-    let m = mips();
+    let m = mirs();
     // Q21: founding terms never list an area without holders.
     let mut t = label();
     t.areas.as_mut().unwrap()[1].holders = vec![];
@@ -482,7 +482,7 @@ fn extensions_need_every_lane_they_declare() {
     // An extension whose specification is not held: asked for, never guessed.
     t.extensions = Some(vec![h(EXT), h(99)]);
     assert!(matches!(
-        powers_needed(&p, &t, &mips(), &ext_layers),
+        powers_needed(&p, &t, &mirs(), &ext_layers),
         Err(AgreementsError::Missing(_))
     ));
     // 3.7j: one declaring Money needs the treasurer too.
@@ -797,7 +797,7 @@ fn a_constitutional_version_changing_a_judge_needs_both_rules() {
     let mut c2 = c.clone();
     c2.constitutional = Some(Rule::Threshold(2));
     assert_eq!(
-        powers_needed(&p2, &c2, &mips(), &ext_layers),
+        powers_needed(&p2, &c2, &mirs(), &ext_layers),
         Ok(vec![Power::Constitutional, Power::Judicial])
     );
     // A constitutional version that changes no judge needs that rule alone.

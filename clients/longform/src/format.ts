@@ -1,12 +1,12 @@
 // The long-form text format (cmips/cmip-long-form-draft-1.md): a strict
-// subset of Markdown on top of canonical text (Text MIP, task 4).
+// subset of Markdown on top of canonical text (Text MIR, task 4).
 //
 // The parser never fails: every canonical text has exactly one reading, and
 // whatever is not markup is text. Every node keeps the positions of the
 // characters it shows, as offsets into the source, so that `shown()` can
 // list them; every piece of markup it hides is recorded with the entry of
 // the cMIP's markup declaration that hides it. So `checkBound()` can prove,
-// for any text, what the Text MIP requires of a format: it hides only its
+// for any text, what the Text MIR requires of a format: it hides only its
 // own declared markup, the characters the cMIP declares, in the positions
 // it declares them (F149, replacing F140's bound by Unicode category), it
 // adds nothing, and it shows the rest in the order of the bytes (F82 M7,
@@ -118,7 +118,7 @@ export const DECLARED: Readonly<Record<MarkRule, string>> = {
 };
 
 /**
- * The hidden characters that end a block (Text MIP, the Text format task,
+ * The hidden characters that end a block (Text MIR, the Text format task,
  * F178 item 16; the cMIP's markup declaration): the LF, and only the LF.
  * Every other character this format hides is markup inside a block, or at
  * a block's start.
@@ -128,7 +128,7 @@ export const ENDS_BLOCK = '\n';
 /** Characters a backslash escapes (rule 8). */
 const ESCAPABLE = new Set(['\\', '`', '*', '_', '#', '-', '+', '.', '>', '<', '[', ']', '(', ')', '!', '|', '~']);
 
-/** The space characters of canonical text (Text MIP, rule 4 of canonical text). */
+/** The space characters of canonical text (Text MIR, rule 4 of canonical text). */
 const SPACES = new Set([
   0x20, 0xa0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a,
   0x202f, 0x205f, 0x3000,
@@ -138,7 +138,7 @@ const isSpace = (s: string, i: number): boolean => SPACES.has(s.charCodeAt(i));
 /**
  * Is a link's closing `>`, at `i`, next to a digit (a character of category
  * N directly before or after it)? Then it is shown, not hidden: a
- * mathematical sign next to a digit lies under the Text MIP's floor
+ * mathematical sign next to a digit lies under the Text MIR's floor
  * (F174 item 10, F178 item 17).
  */
 export function linkCloseShown(s: string, i: number): boolean {
@@ -146,7 +146,7 @@ export function linkCloseShown(s: string, i: number): boolean {
 }
 
 /**
- * Is a link's opening `<`, at `i`, one the Text MIP's floor forbids hiding
+ * Is a link's opening `<`, at `i`, one the Text MIR's floor forbids hiding
  * (a mathematical sign directly after a digit)? Then it is shown, as text,
  * and the address is still the link (F182).
  */
@@ -214,7 +214,7 @@ class Parser {
 
   /**
    * Does this line open a quote? A `>` opening it does, unless the Text
-   * MIP's floor forbids hiding it (a mathematical sign directly before a
+   * MIR's floor forbids hiding it (a mathematical sign directly before a
    * digit, `>5`): then it is shown as text, and the line is no quote
    * (F182).
    */
@@ -340,7 +340,7 @@ class Parser {
   // -------------------------------------------------------------- inlines
 
   /**
-   * The inline content of one line (rule 9). Where the Text MIP's floor
+   * The inline content of one line (rule 9). Where the Text MIR's floor
    * forbids hiding a piece of emphasis, code or link markup (a run of
    * hidden markup between two digits, `1*2*3`, `1`2`3`), that piece is
    * shown as text rather than the document refused (F175, F182): the line
@@ -619,17 +619,17 @@ function shownIn(doc: Document): [number, number][] {
 
 // ---------------------------------------------------------------- the floor
 
-// F167, F174 items 10 and 11, F175, F178 items 16 and 17 (Text MIP draft 6,
+// F167, F174 items 10 and 11, F175, F178 items 16 and 17 (Text MIR draft 6,
 // the Text format task): the format's author writes its markup declaration,
 // and a hostile author could declare a decimal point or a minus sign as
-// markup. So under every declaration lies a floor the Text MIP sets:
+// markup. So under every declaration lies a floor the Text MIR sets:
 // characters no format hides, whatever its declaration says. The floor is
 // written here apart from this format's own declaration, so it holds for any
-// declaration. Each part below is one clause of the Text MIP's list.
+// declaration. Each part below is one clause of the Text MIR's list.
 
 /**
  * The percent, per-mille and per-ten-thousand signs, by code point as the
- * Text MIP lists them (F178 item 16): U+0025, U+066A, U+FE6A, U+FF05,
+ * Text MIR lists them (F178 item 16): U+0025, U+066A, U+FE6A, U+FF05,
  * U+2030, U+0609, U+2031. They are punctuation (Po), so no category covers
  * them. (U+060A, the Arabic-Indic per-ten-thousand sign, is not in the
  * list.)
@@ -764,7 +764,7 @@ interface Here {
 }
 
 /**
- * The floor, clause by clause, in the Text MIP's order: each clause names
+ * The floor, clause by clause, in the Text MIR's order: each clause names
  * why a character lies under it, and says whether this one does. A clause
  * that needs the rendering (a run of hidden characters between two digits,
  * emphasis or code markup between two digits) is checked in `checkBound()`.
@@ -792,7 +792,7 @@ export const FLOOR: readonly [string, (h: Here) => boolean][] = [
 ];
 
 /**
- * Why the character at offset `i` of `s` lies under the Text MIP's floor,
+ * Why the character at offset `i` of `s` lies under the Text MIR's floor,
  * so that no format may hide it, or null if a format may. Its neighbours
  * are the characters directly before and after it in the text. A line
  * break between two digits is reported here; `checkBound()` lets a format
@@ -807,7 +807,7 @@ export function underFloor(s: string, i: number): string | null {
 }
 
 /**
- * Check the Text MIP's bound on a format (task 4, with F102 and F149) for
+ * Check the Text MIR's bound on a format (task 4, with F102 and F149) for
  * one rendering: every character shown is the source's own, shown once and
  * in the order of the bytes, and every character hidden is the format's own
  * declared markup, in a position the cMIP's markup declaration declares it
@@ -815,7 +815,7 @@ export function underFloor(s: string, i: number): string | null {
  * itself, never taken from the reading: a rendering that hid a minus sign,
  * a decimal point, a vowel sign, or a markup character anywhere else (a
  * `-` before a number, a `*` between spaces, an LF inside a paragraph) is
- * refused. And whatever the declaration says, nothing under the Text MIP's
+ * refused. And whatever the declaration says, nothing under the Text MIR's
  * floor is hidden (F167, `underFloor()`). Returns the first breach found,
  * or null.
  *

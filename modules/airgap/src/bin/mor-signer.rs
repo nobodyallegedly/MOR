@@ -40,7 +40,7 @@ It holds the seeds unencrypted: keep it on this offline machine only, on an encr
 ";
 
 fn config() -> Config {
-    // Test values until the freeze fixes the MIPs' hashes.
+    // Test values until the freeze fixes the MIRs' hashes.
     Config {
         identity_spec: sha256(b"IDENTITY, test value until the freeze"),
         money_spec: Some(sha256(b"FINANCE, test value until the freeze")),

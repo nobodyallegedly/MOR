@@ -28,9 +28,9 @@ export const SPECS = {
   text: sha256('TEXT, test value until the freeze'),
 };
 
-/** The six MIPs' spec hashes, as the core library's Agreements calls take them
+/** The six MIRs' spec hashes, as the core library's Agreements calls take them
  * (Agreements draft 7 reads an act's layer from its spec hash). Test values. */
-export const MIPS = {
+export const MIRS = {
   ...SPECS,
   money: sha256('FINANCE, test value until the freeze'),
   agreements: sha256('LAW, test value until the freeze'),
@@ -42,7 +42,7 @@ export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, 
 /** The specifications whose act types may carry acknowledgements (Envelopes
  * draft 7, rule 4a, F110): Identity, Money and Agreements. Any other act carrying
  * `acks` is invalid. */
-export const ACK_SPECS: readonly string[] = [MIPS.identity, MIPS.money, MIPS.agreements];
+export const ACK_SPECS: readonly string[] = [MIRS.identity, MIRS.money, MIRS.agreements];
 
 export { WITNESS_EXPLANATION } from './witness.ts';
 export const ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 } as const;

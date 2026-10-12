@@ -1,4 +1,4 @@
-//! The Agreements MIP (Agreements draft 10): exact formats, tiers, and the checks a
+//! The Agreements MIR (Agreements draft 10): exact formats, tiers, and the checks a
 //! collective needs, judged on the collective's own sequence (F109); the
 //! negotiation record (F118) and role-share evidence (F119); the judicial
 //! tier changed only by every member, the chain of judgment and the

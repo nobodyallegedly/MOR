@@ -14,7 +14,7 @@
 //! (F237: "The core should not care").
 //!
 //! Precisely, an act of type [`types::VOW`](super::types::VOW) of the
-//! Envelopes MIP (the next free number; mechanic, the build's):
+//! Envelopes MIR (the next free number; mechanic, the build's):
 //!
 //! ```cddl
 //! vow-payload = {

@@ -76,7 +76,7 @@ export interface Sent {
 }
 
 /**
- * Send a message. The text is composed as canonical text first (Text MIP,
+ * Send a message. The text is composed as canonical text first (Text MIR,
  * rule 6) and checked by the core library. Throws, having sent nothing
  * private, if the recipient cannot receive or no home takes the genesis.
  */

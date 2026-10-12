@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node --import tsx
 // mor-longform: render a long-form text to a page, with its plain text one
-// tap away, and check the Text MIP's bound on it.
+// tap away, and check the Text MIR's bound on it.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { checkBound, parse, title } from './format.ts';
@@ -14,7 +14,7 @@ const USAGE = `mor-longform: the MOR long-form text format (cmips/cmip-long-form
   check <file>                         is it canonical text, and does the rendering keep the bound
 
 A file that is not canonical text is normalized first, as a composing client
-does (Text MIP, rule 6), and what changed is said.`;
+does (Text MIR, rule 6), and what changed is said.`;
 
 function load(path: string): string {
   const raw = readFileSync(path, 'utf8');

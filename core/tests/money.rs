@@ -1,4 +1,4 @@
-//! The Money MIP's formats, the pointer that counts (rule 12), where a
+//! The Money MIR's formats, the pointer that counts (rule 12), where a
 //! payment may go under the vault (rules 14a and 16, F114), and an
 //! anonymous payer's key (rules 1 and 10a, F113), and which flow pointer
 //! version a payment to the flow can count for (rule 14).

@@ -431,7 +431,7 @@ fn the_chain_key_signs_only_rotations() {
             ..p.clone()
         })
     };
-    // Another type of the Identity MIP (a routes act), another specification.
+    // Another type of the Identity MIR (a routes act), another specification.
     assert!(matches!(
         review(&mut o, &with(1, Value::Uint(3))),
         Err(Refusal::NotARotation(_))

@@ -4,7 +4,7 @@
 //! act = [ outside, locked: bstr, signature ]
 //! ```
 //!
-//! This module decodes and encodes acts in exactly the Envelopes MIP's shape,
+//! This module decodes and encodes acts in exactly the Envelopes MIR's shape,
 //! computes act ids and inside commitments, seals an inside into an act's
 //! outside and locked bytes, opens it again with every check the Envelopes
 //! requires, and checks an everyday act's place in its sequence.

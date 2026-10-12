@@ -419,7 +419,7 @@ fn nonempty<'a>(v: &'a Value, w: &'static str) -> R<&'a [Value]> {
     }
 }
 
-/// `chain-key-commit = [ scheme, commit: hash ]`, as in the Identity MIP.
+/// `chain-key-commit = [ scheme, commit: hash ]`, as in the Identity MIR.
 pub fn chain_key_commit(v: &Value) -> R<ChainKeyCommit> {
     let a = tuple(v, 2, "chain-key-commit")?;
     let scheme = match &a[0] {

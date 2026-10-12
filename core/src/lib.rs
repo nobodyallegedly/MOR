@@ -1,7 +1,7 @@
 //! # mor-core
 //!
 //! The MOR core library: the building blocks every act is made of, and the
-//! identity-chain checks, exactly as the MIP drafts define them.
+//! identity-chain checks, exactly as the MIR drafts define them.
 //!
 //! Part 1 (roadmap step 2):
 //!
@@ -19,20 +19,20 @@
 //!   chain key commitments (Identity, "Signature schemes").
 //! - [`merkle`]: a home's receipt log, RFC 9162 trees and proofs (Identity,
 //!   "Log summary").
-//! - [`identity`]: the Identity MIP's act formats, home rules and the
+//! - [`identity`]: the Identity MIR's act formats, home rules and the
 //!   checks that need no other act.
 //! - [`chain`]: which identity-chain act counts, and the standing of every
 //!   other act (Identity, "Verification procedures", "Validity rules").
 //!
 //! Money (roadmap step 12):
 //!
-//! - [`money`]: the Money MIP's exact formats (payee pointers, the vault,
+//! - [`money`]: the Money MIR's exact formats (payee pointers, the vault,
 //!   obligations, receipts, claims), which pointer counts, and where a
 //!   payment may go under the vault (rules 12 to 14a, 16).
 //!
 //! Agreements (roadmap step 5a, reworked to Agreements draft 7):
 //!
-//! - [`agreements`]: the Agreements MIP's exact formats (terms with marks, areas and the
+//! - [`agreements`]: the Agreements MIR's exact formats (terms with marks, areas and the
 //!   constitutional change rule; signatures; resignations; records; grants
 //!   within areas), the powers a clone needs (tiers), and the checks a
 //!   collective needs, judged on its own sequence (F109): which agreement

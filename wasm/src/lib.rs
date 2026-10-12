@@ -388,7 +388,7 @@ pub fn describe(bytes: &[u8]) -> R<JsValue> {
     to_js(&describe_act(&a, None))
 }
 
-/// Check that a string is canonical text (Text MIP), with the pinned Unicode
+/// Check that a string is canonical text (Text MIR), with the pinned Unicode
 /// tables; throws naming the rule broken.
 #[wasm_bindgen(js_name = checkText)]
 pub fn check_text(s: &str) -> R<()> {
@@ -532,7 +532,7 @@ struct GenesisIn {
     chain_key_commit: String,
     homes: Vec<HomeIn>,
     rule: Option<Vec<u64>>,
-    /// High-risk settings of higher MIPs (Identity, declarations slot).
+    /// High-risk settings of higher MIRs (Identity, declarations slot).
     declarations: Option<Vec<DeclIn>>,
 }
 
@@ -1232,7 +1232,7 @@ impl Verifier {
     pub fn new(identity_spec: &str, money_spec: Option<String>, agreements_spec: Option<String>) -> R<Verifier> {
         let identity = unhex(identity_spec)?;
         let inner = match (money_spec, agreements_spec) {
-            (Some(f), Some(l)) => chain::Verifier::with_mips(identity, unhex(&f)?, unhex(&l)?),
+            (Some(f), Some(l)) => chain::Verifier::with_mirs(identity, unhex(&f)?, unhex(&l)?),
             (None, None) => chain::Verifier::new(identity),
             _ => return Err(JsError::new("give both the Money and the Agreements spec hashes, or neither")),
         };
@@ -1350,7 +1350,7 @@ impl Verifier {
     }
 
     /// The standing of an act held: "valid", "disputed", "void", "pending",
-    /// "invalid", "unknown", or "scoped" (signed with a key a higher MIP's
+    /// "invalid", "unknown", or "scoped" (signed with a key a higher MIR's
     /// act installs, a grant key: Agreements judge it, F128).
     pub fn status(&self, act: &str) -> R<String> {
         Ok(match self.inner.status(&unhex(act)?) {
@@ -1496,7 +1496,7 @@ fn lerr(e: agreements::AgreementsError) -> JsError {
     JsError::new(&format!("law/{}: {e}", e.code()))
 }
 
-/// The six MIPs' spec hashes, the layers each extension declares
+/// The six MIRs' spec hashes, the layers each extension declares
 /// (Development field 10, read by the caller from the specifications it
 /// holds), and each keeper operator's records in order (Agreements type 2 is still
 /// open, so a client states what it holds).
@@ -1561,8 +1561,8 @@ struct SpecsIn {
 }
 
 impl SpecsIn {
-    fn mips(&self) -> R<agreements::Mips> {
-        Ok(agreements::Mips {
+    fn mirs(&self) -> R<agreements::Mirs> {
+        Ok(agreements::Mirs {
             identity: unhex(&self.identity)?,
             envelopes: unhex(&self.envelopes)?,
             text: unhex(&self.text)?,
@@ -1580,7 +1580,7 @@ impl SpecsIn {
     }
 
     fn view<'a>(&self, v: &'a chain::Verifier) -> R<agreements::AgreementsView<'a>> {
-        let mut view = agreements::AgreementsView::new(v, self.mips()?);
+        let mut view = agreements::AgreementsView::new(v, self.mirs()?);
         view.ext_layers = self.ext()?;
         for (k, log) in &self.keeper_logs {
             view.keeper_logs
@@ -1622,7 +1622,7 @@ fn specs_of(v: JsValue) -> R<SpecsIn> {
 pub fn check_terms(payload: &[u8], specs: JsValue) -> R<()> {
     let s = specs_of(specs)?;
     let t = agreements::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
-    t.check(&s.mips()?).map_err(lerr)
+    t.check(&s.mirs()?).map_err(lerr)
 }
 
 #[derive(Serialize)]
@@ -2099,7 +2099,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 })
                 .collect()
         }),
-        problem: t.check(&s.mips()?).err().map(|e| problem(&e)),
+        problem: t.check(&s.mirs()?).err().map(|e| problem(&e)),
     })
 }
 
@@ -2216,7 +2216,7 @@ pub fn agreements_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<J
     let p = agreements::Terms::decode(&payload_of(parent)?).map_err(lerr)?;
     let c = agreements::Terms::decode(&payload_of(clone)?).map_err(lerr)?;
     let ext = s.ext()?;
-    let needs = agreements::powers_needed(&p, &c, &s.mips()?, &|e: &Hash| {
+    let needs = agreements::powers_needed(&p, &c, &s.mirs()?, &|e: &Hash| {
         ext.get(e).cloned().ok_or(agreements::AgreementsError::Missing(*e))
     })
     .map_err(lerr)?;
@@ -2614,7 +2614,7 @@ struct BackingOut {
 impl Verifier {
     /// An agreement as held: its parties, who signed, whether it exists (a
     /// deal, founding terms) or is ready to be recorded (a collective's
-    /// clone), and the powers its mark must name. `specs`: the six MIP
+    /// clone), and the powers its mark must name. `specs`: the six MIR
     /// hashes, and the layers of extensions it adds or drops.
     #[wasm_bindgen(js_name = agreementsAgreement)]
     pub fn agreements_agreement(&self, specs: JsValue, id: &str) -> R<JsValue> {

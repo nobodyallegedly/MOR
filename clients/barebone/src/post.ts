@@ -1,11 +1,11 @@
 // A post with a picture, as MOR acts (F27): the picture is a public
 // publication (Envelopes type 0) of a JPEG (the JPEG Module); the post is a
-// text act (Text MIP, type 0) whose refs name that publication. Publishing
+// text act (Text MIR, type 0) whose refs name that publication. Publishing
 // and reading go through the genesis client's identity and transport, and
 // every judgement through the core library.
 
 import {
-  MIPS,
+  MIRS,
   SPECS,
   Verifier,
   cborDecode,
@@ -75,7 +75,7 @@ export async function publishPicture(by: TestIdentity, jpeg: Uint8Array, relays:
   return { id: made.id, removed: s.removed, picture: s.picture, work: l.workHash, size: s.bytes.length };
 }
 
-/** A text act's payload: the text and, optionally, its format (Text MIP, "Act format"). */
+/** A text act's payload: the text and, optionally, its format (Text MIR, "Act format"). */
 export function textPayload(text: string, format: string | null = null): Uint8Array {
   const m = new Map<number, unknown>([[0, text]]);
   if (format) m.set(1, unhex(format));
@@ -199,7 +199,7 @@ class Judge {
     private hints: string[],
     private via: Via,
   ) {
-    this.v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+    this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   }
   async standing(act: Uint8Array, id: string, signer: string): Promise<string> {
     if (!this.looked.has(signer)) {

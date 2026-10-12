@@ -33,7 +33,7 @@ fn founding_of(v: &Verifier, collective: &Hash) -> Option<Hash> {
     let h = v.get(collective)?;
     let Some(Ok(mor_core::identity::Payload::Genesis(g))) = &h.identity else { return None };
     for d in g.declarations.iter().flatten() {
-        if d.spec == mips().agreements && d.kind == agreements::kinds::FOUNDING_AGREEMENT {
+        if d.spec == mirs().agreements && d.kind == agreements::kinds::FOUNDING_AGREEMENT {
             if let Some(Value::Bytes(b)) = &d.value {
                 if b.len() == 32 {
                     let mut out = [0u8; 32];
@@ -83,7 +83,7 @@ fn story_json(cw: &ColWorld) -> J {
     // Signature acts (Agreements type 1): the act named -> its signers.
     let mut sigs_on: BTreeMap<Hash, Vec<Hash>> = BTreeMap::new();
     for h in v.held_acts() {
-        if h.inside.spec == mips().agreements && h.inside.type_ == agreements::types::SIGNATURE && v.status(&h.id) == Status::Valid {
+        if h.inside.spec == mirs().agreements && h.inside.type_ == agreements::types::SIGNATURE && v.status(&h.id) == Status::Valid {
             if let (Ok(x), Some(s)) = (agreements::decode_signature(&h.inside), h.act.outside.signer) {
                 sigs_on.entry(x).or_default().push(s);
             }
@@ -143,7 +143,7 @@ fn story_json(cw: &ColWorld) -> J {
         }
         let signer = signer.unwrap();
         // Members' chain signatures on endings.
-        if signer != col && members.contains(&signer) && h.inside.spec == mips().identity && h.inside.type_ == mor_core::identity::types::CHAIN_SIGNATURE {
+        if signer != col && members.contains(&signer) && h.inside.spec == mirs().identity && h.inside.type_ == mor_core::identity::types::CHAIN_SIGNATURE {
             if let Some(Ok(mor_core::identity::Payload::ChainSignature(c))) = &h.identity {
                 if endings.contains(&c.signs) {
                     let counts = v.resolve(&signer).position_of(&id).is_some();
@@ -153,7 +153,7 @@ fn story_json(cw: &ColWorld) -> J {
             continue;
         }
         // Endings, signed by a member.
-        if signer != col && members.contains(&signer) && h.inside.spec == mips().agreements && (h.inside.type_ == agreements::types::FORK || h.inside.type_ == agreements::types::CLOSING) {
+        if signer != col && members.contains(&signer) && h.inside.spec == mirs().agreements && (h.inside.type_ == agreements::types::FORK || h.inside.type_ == agreements::types::CLOSING) {
             let objects: Vec<String> = h.inside.objects.iter().flatten().map(|o| o.predecessor).filter(|p| endings.contains(p) && *p != id).map(|p| hx(&p)).collect();
             if h.inside.type_ == agreements::types::FORK {
                 let Ok(f) = agreements::Fork::decode(&h.inside) else { continue };
@@ -196,7 +196,7 @@ fn story_json(cw: &ColWorld) -> J {
             continue;
         }
         // Creditors' receipts and releases.
-        if signer != col && h.inside.spec == mips().money {
+        if signer != col && h.inside.spec == mirs().money {
             match Fin::decode(h.inside.type_, &h.inside.payload) {
                 Ok(Fin::Receipt(r)) if cw.debts.contains(&r.fulfils) => {
                     acts.push(json!({"id": hx(&id), "order": order.get(&id).copied().unwrap_or(0), "type": "payment", "signer": hx(&signer), "payee": hx(&r.payee), "obligation": hx(&r.fulfils), "amount": r.amount.value, "valid": valid}));
@@ -219,13 +219,13 @@ fn story_json(cw: &ColWorld) -> J {
         };
         let info = cw.info.get(&id);
         let lane = cw.shape.lane.is_some();
-        let (type_, extra): (&str, Map<String, J>) = if h.inside.spec == mips().identity {
+        let (type_, extra): (&str, Map<String, J>) = if h.inside.spec == mirs().identity {
             if h.inside.type_ != mor_core::identity::types::WITNESS {
                 skipped.push(json!({"id": hx(&id), "why": format!("identity type {}", h.inside.type_), "grant": grant.map(|g| hx(&g))}));
                 continue;
             }
             ("publication", Map::new())
-        } else if h.inside.spec == mips().agreements {
+        } else if h.inside.spec == mirs().agreements {
             match h.inside.type_ {
                 agreements::types::RECORD => {
                     // A record that does not decode (the generator's record signed with
@@ -275,7 +275,7 @@ fn story_json(cw: &ColWorld) -> J {
                     continue;
                 }
             }
-        } else if h.inside.spec == mips().money {
+        } else if h.inside.spec == mirs().money {
             match Fin::decode(h.inside.type_, &h.inside.payload) {
                 Ok(Fin::Obligation(o)) => {
                     let mut e = Map::new();
@@ -299,7 +299,7 @@ fn story_json(cw: &ColWorld) -> J {
                     continue;
                 }
             }
-        } else if h.inside.spec == mips().envelopes {
+        } else if h.inside.spec == mirs().envelopes {
             ("publication", Map::new())
         } else {
             skipped.push(json!({"id": hx(&id), "why": format!("spec {} type {}", hx(&h.inside.spec)[..8].to_string(), h.inside.type_), "grant": grant.map(|g| hx(&g))}));

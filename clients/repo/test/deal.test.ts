@@ -5,7 +5,7 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MIPS, cborEncode, unhex } from '../../genesis/src/core.ts';
+import { MIRS, cborEncode, unhex } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
@@ -32,14 +32,14 @@ async function person(): Promise<TestIdentity> {
 /** A buyer's claim for a payment to `payee`, naming the claim it pays under (Money field 9). */
 async function pay(buyer: TestIdentity, payee: string, agreement: string, line: string, proof: string) {
   const claim = new Map<number, unknown>([
-    [0, unhex(MIPS.money)],
+    [0, unhex(MIRS.money)],
     [1, new TextEncoder().encode(proof)],
     [2, unhex(payee)],
-    [3, [unhex(MIPS.money), 120]],
+    [3, [unhex(MIRS.money), 120]],
     [4, unhex(agreement)],
     [9, [unhex(agreement), unhex(line)]],
   ]);
-  const p = await buyer.publish(MIPS.money, 3, cborEncode(claim), { public: true, relays: [relay.base], to: [payee] });
+  const p = await buyer.publish(MIRS.money, 3, cborEncode(claim), { public: true, relays: [relay.base], to: [payee] });
   return (await relayAt(relay.base).getAct(p.id))!;
 }
 

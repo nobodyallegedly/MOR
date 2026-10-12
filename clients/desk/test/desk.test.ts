@@ -9,7 +9,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { IDENTITY_TYPES, MIPS, SPECS, WITNESS_EXPLANATION, cborEncode, signaturePayload, unhex } from '../../genesis/src/core.ts';
+import { IDENTITY_TYPES, MIRS, SPECS, WITNESS_EXPLANATION, cborEncode, signaturePayload, unhex } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { textPayload } from '../../barebone/src/post.ts';
@@ -339,17 +339,17 @@ test('a payment naming the other branch of a forked deal raises the alarm at the
   const b = await version('3B: the price is 120.', d);
   w.app.store.saveIdentity(seller);
   const claim = new Map<number, unknown>([
-    [0, unhex(MIPS.money)],
+    [0, unhex(MIRS.money)],
     [1, new TextEncoder().encode('a fan pays under 3B')],
     [2, unhex(machine)],
-    [3, [unhex(MIPS.money), 120]],
+    [3, [unhex(MIRS.money), 120]],
     [4, unhex(d)],
     [9, [unhex(d), unhex(b)]],
   ]);
   const fan = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
   await fan.publishGenesis();
   for (const a of fan.chainActs()) await relayAt(w.relay.base).putAct(a);
-  await fan.publish(MIPS.money, 3, cborEncode(claim), { public: true, relays, to: [machine] });
+  await fan.publish(MIRS.money, 3, cborEncode(claim), { public: true, relays, to: [machine] });
   await w.client.ask('refresh', { identity: machine });
   const got = (await state(w.client)).identities.find((i) => i.id === machine)!.received;
   const paid = got.find((x) => x.kind === 'payment' && x.from === fan.id)!;

@@ -1,7 +1,7 @@
 //! # mor-split
 //!
 //! The split cMIP, draft 1 (`cmips/cmip-split-draft-1.md`), filling the
-//! Agreements MIP's split task (task 8; F249, F250, roadmap step 13). It
+//! Agreements MIR's split task (task 8; F249, F250, roadmap step 13). It
 //! does two things, and signs nothing:
 //!
 //! - **The receiver for a payment** ([`route`]): given the split services

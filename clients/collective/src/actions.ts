@@ -7,7 +7,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, agreementsClonePlan, agreementsDivideStake, agreementsRollbackPlan, agreementsSplitTally, noticePayload, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, describeAct, hex, agreementsClonePlan, agreementsDivideStake, agreementsRollbackPlan, agreementsSplitTally, noticePayload, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { beforeSigning } from '../../assess/src/assess.ts';
@@ -2620,7 +2620,7 @@ export class Actions {
    * (F128, withdrawing N13's public outside).
    */
   private async agreementsVerifier(c: TestCollective, ids: string[]): Promise<{ v: Verifier; specs: typeof AGREEMENTS_SPECS }> {
-    const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
     const hints = this.hintsOf(c);
     // The relays are where this program looks first (client conformance);
     // where it found an act is never a condition of its validity (F128).
@@ -2893,7 +2893,7 @@ export class Actions {
     for (const x of await allBy(a.owner, hints, this.via)) {
       try {
         const d = describeAct(x) as { id: string; spec?: string; type?: number; payload?: Uint8Array };
-        if (d.spec !== MIPS.money || d.type !== MONEY_TYPES.pointer || !d.payload) continue;
+        if (d.spec !== MIRS.money || d.type !== MONEY_TYPES.pointer || !d.payload) continue;
         const v = (cborDecode(d.payload) as Map<number, unknown>).get(1) as number;
         if (v >= version) {
           version = v + 1;
@@ -2929,13 +2929,13 @@ export class Actions {
       run: async () => {
         if (isCol) {
           const col = this.store.collective(a.owner);
-          const x = await col.id.publish(MIPS.money, MONEY_TYPES.pointer, payload, { public: true, relays: col.f.relays });
+          const x = await col.id.publish(MIRS.money, MONEY_TYPES.pointer, payload, { public: true, relays: col.f.relays });
           col.f.pointers = [...(col.f.pointers ?? []), x.id];
           this.store.saveCollective(col);
           return { title: 'The pointer is published', lines: [{ text: `Pointer ${x.id}, version ${version}.`, tone: 'ok' }], acts: [x.id] };
         }
         const i = this.store.identity(a.owner);
-        const x = await i.publish(MIPS.money, MONEY_TYPES.pointer, payload, { public: true, relays: this.store.settings().relays });
+        const x = await i.publish(MIRS.money, MONEY_TYPES.pointer, payload, { public: true, relays: this.store.settings().relays });
         this.store.saveIdentity(i);
         return { title: 'The pointer is published', lines: [{ text: `Pointer ${x.id}, version ${version}.`, tone: 'ok' }], acts: [x.id] };
       },
@@ -3079,7 +3079,7 @@ export class Actions {
         const col = this.store.collective(a.collective);
         const svc = this.store.identity(service!);
         const relays = col.f.relays;
-        const r = await svc.publish(MIPS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: svc.f.identity, unit: TEST_RAIL, value: amount, fulfils: col.f.agreement }), { public: true, relays });
+        const r = await svc.publish(MIRS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: svc.f.identity, unit: TEST_RAIL, value: amount, fulfils: col.f.agreement }), { public: true, relays });
         const final: [string, number][] = payouts;
         const ps: PayoutIn[] = [
           ...(fee ? [{ receiver: svc.f.identity, amount: fee, feeModule: TEST_RAIL }] : []),
@@ -3267,7 +3267,7 @@ export class Actions {
       depends: [a.collective],
       run: async () => {
         const col = this.store.collective(a.collective);
-        const x = await col.id.publish(MIPS.money, MONEY_TYPES.obligation, payload, { public: false, to, relays: col.f.relays });
+        const x = await col.id.publish(MIRS.money, MONEY_TYPES.obligation, payload, { public: false, to, relays: col.f.relays });
         col.f.debts = [...(col.f.debts ?? []), { id: x.id, key: Buffer.from(x.key).toString('base64'), creditor: a.creditor }];
         this.store.saveCollective(col);
         return { title: 'The debt is signed and published', lines: [{ text: `Obligation ${x.id}, sealed to ${count(to.length, 'recipient')}.`, tone: 'ok' }], acts: [x.id] };
@@ -3717,7 +3717,7 @@ export class Actions {
       run: async () => {
         const col = debtor!;
         const creditor = this.store.identity(d!.creditor);
-        const x = await creditor.publish(MIPS.money, MONEY_TYPES.release, payload, { public: true, relays: col.f.relays });
+        const x = await creditor.publish(MIRS.money, MONEY_TYPES.release, payload, { public: true, relays: col.f.relays });
         this.store.saveIdentity(creditor);
         const { v, specs } = await this.agreementsVerifier(col, this.concerned(col));
         const e = v.agreementsDebtRelease(specs, x.id) as { counts: boolean; why: string | null };

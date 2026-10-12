@@ -11,7 +11,7 @@
 //! needed is read from the bytes, never from what the clone says of itself.
 
 use super::formats::{
-    layers, task_layer, FieldRef, AgreementsError, Mips, Power, Terms, JUDICIAL_TASKS, R,
+    layers, task_layer, FieldRef, AgreementsError, Mirs, Power, Terms, JUDICIAL_TASKS, R,
 };
 use crate::cbor;
 use crate::hash::Hash;
@@ -239,10 +239,10 @@ pub fn rollback_powers(parent: &Terms, clone: &Terms) -> Vec<Power> {
 pub fn powers_needed(
     parent: &Terms,
     clone: &Terms,
-    mips: &Mips,
+    mirs: &Mirs,
     ext_layers: &dyn Fn(&Hash) -> R<Vec<u64>>,
 ) -> R<Vec<Power>> {
-    let _ = mips;
+    let _ = mirs;
     if !parent.is_collective() {
         return Ok(vec![Power::Clone]);
     }

@@ -32,7 +32,7 @@ use mor_core::hash::{sha256, Hash};
 use mor_core::identity::KeptTip;
 use mor_core::agreements::{
     self, outcomes, Abandonment, Area, Authority, Backing, Field4, Grant, Holding, KeyGrammar, Kind,
-    AgreementsView, MarkEntry, Mips, Power, Record, Recovery, Resignation, Rule, Terms, Who,
+    AgreementsView, MarkEntry, Mirs, Power, Record, Recovery, Resignation, Rule, Terms, Who,
 };
 use mor_core::lock::ContentKey;
 use mor_core::mmr::Mmr;
@@ -44,9 +44,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 // ---------------------------------------------------------------- shared
 
-fn mips() -> Mips {
+fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
-    Mips {
+    Mirs {
         identity: common::identity_spec(),
         envelopes: t("ENVELOPE"),
         text: t("TEXT"),
@@ -147,7 +147,7 @@ fn obj(x: Hash) -> Option<Vec<Object>> {
 }
 
 fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
-    let a = w.everyday_act(p, mips().agreements, type_, payload, objects, None);
+    let a = w.everyday_act(p, mirs().agreements, type_, payload, objects, None);
     w.add(&a)
 }
 
@@ -224,7 +224,7 @@ fn cites_on(v: &Verifier, chain: &Hash, x: &Hash) -> Vec<Hash> {
     let Some(h) = v.get(x) else { return vec![] };
     let mut out: Vec<Hash> = h.inside.prev.iter().flatten().copied().collect();
     out.extend(h.inside.objects.iter().flatten().filter(|o| &o.chain == chain).map(|o| o.predecessor));
-    if h.inside.spec == mips().agreements && h.inside.type_ == agreements::types::RECORD {
+    if h.inside.spec == mirs().agreements && h.inside.type_ == agreements::types::RECORD {
         if let Ok(r) = Record::decode(&h.inside) {
             out.extend(r.kept.iter().map(|t| t.act));
         }
@@ -280,7 +280,7 @@ fn binds(b: &Backing) -> bool {
 type Rails = (BTreeSet<Hash>, BTreeSet<Hash>);
 
 fn verdicts(v: &Verifier, rails: &Rails) -> BTreeMap<Hash, String> {
-    let mut lv = AgreementsView::new(v, mips());
+    let mut lv = AgreementsView::new(v, mirs());
     lv.push_rails = rails.0.clone();
     lv.rail_invalid = rails.1.clone();
     let mut out = BTreeMap::new();
@@ -288,13 +288,13 @@ fn verdicts(v: &Verifier, rails: &Rails) -> BTreeMap<Hash, String> {
     for id in ids {
         let h = v.get(&id).unwrap();
         let mut s = format!("status={:?}", v.status(&id));
-        if h.inside.spec == mips().agreements || h.inside.spec == mips().money || h.inside.spec == mips().envelopes {
+        if h.inside.spec == mirs().agreements || h.inside.spec == mirs().money || h.inside.spec == mirs().envelopes {
             s += &format!(" consent={:?} backing={:?} done={:?}", lv.consent(&id), lv.backing(&id), lv.done(&id));
         }
-        if h.inside.spec == mips().money {
+        if h.inside.spec == mirs().money {
             s += &format!(" binds={:?} debtors={:?} purchase={:?}", lv.obligation_binds(&id), lv.debtors(&id), lv.purchase(&id).map(|p| p.map(|p| p.verdict)));
         }
-        if h.inside.spec == mips().agreements {
+        if h.inside.spec == mirs().agreements {
             match h.inside.type_ {
                 agreements::types::TERMS => s += &format!(" agreement={:?}", lv.agreement(&id).map(|a| (a.exists, a.ready, a.invalid))),
                 agreements::types::FORK => s += &format!(" fork={:?}", lv.fork(&id).map(|e| (e.complete, e.why, e.unassigned))),
@@ -320,12 +320,12 @@ fn replay(log: &[(Act, Option<ContentKey>)], seed: u64, probe: bool, push: &Rail
     for i in (1..order.len()).rev() {
         order.swap(i, r.below(i + 1));
     }
-    let mut v = Verifier::with_mips(common::identity_spec(), common::money_spec(), common::agreements_spec());
+    let mut v = Verifier::with_mirs(common::identity_spec(), common::money_spec(), common::agreements_spec());
     for (n, i) in order.iter().enumerate() {
         let (a, k) = &log[*i];
         v.add_with_key(a.clone(), k.as_ref()).unwrap();
         if probe && r.below(4) == 0 {
-            let lv = AgreementsView::new(&v, mips());
+            let lv = AgreementsView::new(&v, mirs());
             let held: Vec<Hash> = v.held_acts().map(|h| h.id).collect();
             for _ in 0..3 {
                 let x = held[r.below(held.len())];
@@ -663,12 +663,12 @@ impl ColWorld {
         let ids: Vec<Hash> = m.iter().map(|d| d[0].id).collect();
         let work = spec("a work the collective owns");
         let t = col_terms(&ids, authority.id, shape, work);
-        assert_eq!(t.check(&mips()), Ok(()), "the generator's own founding terms");
+        assert_eq!(t.check(&mirs()), Ok(()), "the generator's own founding terms");
         let founding = agreements_act(&mut w, &mut m[0][0], agreements::types::TERMS, t.to_map(), None);
         for d in m.iter_mut() {
             sign(&mut w, &mut d[0], &founding);
         }
-        let mut c0 = w.genesis_with("collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mips().agreements, &founding)]), 3);
+        let mut c0 = w.genesis_with("collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
         c0.cite = Some((c0.id, vec![c0.id]));
         let col = c0.id;
         let c = vec![c0; shape.devices];
@@ -719,7 +719,7 @@ impl ColWorld {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut lv = AgreementsView::new(&self.w.v, mips());
+        let mut lv = AgreementsView::new(&self.w.v, mirs());
         for (x, payee) in &self.paid {
             lv.rail_valid.insert(*x, mor_core::money::PaidAt::VaultEntry(*payee, 0));
         }
@@ -850,9 +850,9 @@ impl ColWorld {
             previous: None,
             rails: vec![mor_core::money::Rail { module: rail(), address: b"an address".to_vec() }],
         });
-        let x = self.act_on(Who2::Dev(0), mips().money, 0, ptr.to_map(), vec![], &[], true, Seal::Public, None, &[]);
+        let x = self.act_on(Who2::Dev(0), mirs().money, 0, ptr.to_map(), vec![], &[], true, Seal::Public, None, &[]);
         self.lane_sign(&x);
-        let p = self.act_on(Who2::Dev(0), mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(self.work.to_vec()))], vec![], &[], true, Seal::Public, None, &[]);
+        let p = self.act_on(Who2::Dev(0), mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(self.work.to_vec()))], vec![], &[], true, Seal::Public, None, &[]);
         self.note(p, Seal::Public, true, None, K::Publication);
         self.publication = Some(p);
     }
@@ -860,7 +860,7 @@ impl ColWorld {
     /// A record on device `d`: a decision citing by its kept tips (F127).
     fn record(&mut self, d: usize, r: Record, named: Hash, _tips: &[usize], inform: bool) -> Hash {
         let saved = self.c[d].cite.take();
-        let a = self.w.everyday_act(&mut self.c[d], mips().agreements, agreements::types::RECORD, r.to_map(), obj(named), None);
+        let a = self.w.everyday_act(&mut self.c[d], mirs().agreements, agreements::types::RECORD, r.to_map(), obj(named), None);
         self.c[d].cite = saved;
         let id = self.w.add(&a);
         for (i, dev) in self.c.iter_mut().enumerate() {
@@ -890,7 +890,7 @@ impl ColWorld {
             by_this: false,
             key: pk,
         };
-        let id = self.act_on(Who2::Dev(d), mips().agreements, agreements::types::GRANT, g.to_map(), vec![], &[], true, Seal::Public, None, &[]);
+        let id = self.act_on(Who2::Dev(d), mirs().agreements, agreements::types::GRANT, g.to_map(), vec![], &[], true, Seal::Public, None, &[]);
         self.note(id, Seal::Public, true, None, K::GrantAct);
         if in_area && holders_sign {
             let s = self.lane_sign(&id);
@@ -954,7 +954,7 @@ impl ColWorld {
         for i in members {
             sign(&mut self.w, &mut self.m[*i][0], &x);
         }
-        let mut p = self.w.genesis_with(&format!("successor {n}"), vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mips().agreements, &x)]), 3);
+        let mut p = self.w.genesis_with(&format!("successor {n}"), vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &x)]), 3);
         p.cite = Some((p.id, vec![p.id]));
         self.successors.push(p.id);
         self.succ_people.push(p.clone());
@@ -978,14 +978,14 @@ impl ColWorld {
         match *op {
             Op::Publish { dev, seal } => {
                 let d = dev as usize % devs;
-                let x = self.act_on(Who2::Dev(d), mips().envelopes, 0, vec![(Value::Uint(0), Value::Text("a publication".into()))], vec![], &[], true, seal, None, &[]);
+                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, vec![(Value::Uint(0), Value::Text("a publication".into()))], vec![], &[], true, seal, None, &[]);
                 self.note(x, seal, true, None, K::Publication);
             }
             Op::Debt { dev, seal, cited, creditor, amount, lane_sign } => {
                 let d = dev as usize % devs;
                 let cr = self.creditors[creditor as usize % 2].id;
                 let p = self.debt_payload(cr, amount as u64);
-                let x = self.act_on(Who2::Dev(d), mips().money, 1, p, vec![], &[], cited, seal, None, &[cr]);
+                let x = self.act_on(Who2::Dev(d), mirs().money, 1, p, vec![], &[], cited, seal, None, &[cr]);
                 self.note(x, seal, cited, None, K::Debt { creditor: cr, amount: amount as u64 });
                 if lane_sign && self.shape.lane.is_some() {
                     let s = self.lane_sign(&x);
@@ -1000,7 +1000,7 @@ impl ColWorld {
                 }
                 let d = dev as usize % devs;
                 let h = heads[other as usize % heads.len()];
-                let x = self.act_on(Who2::Dev(d), mips().envelopes, 0, vec![(Value::Uint(0), Value::Text("a joining publication".into()))], vec![], &[h], true, Seal::Public, None, &[]);
+                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, vec![(Value::Uint(0), Value::Text("a joining publication".into()))], vec![], &[h], true, Seal::Public, None, &[]);
                 self.note(x, Seal::Public, true, None, K::Publication);
                 if self.info.contains_key(&h) {
                     let lv = self.view();
@@ -1032,28 +1032,28 @@ impl ColWorld {
                 let (x, kind) = match what {
                     AgentWhat::InScope | AgentWhat::OutOfScope if money => {
                         let p = self.debt_payload(cr, 25);
-                        let x = self.act_on(Who2::Strand(gi, s), mips().money, 1, p, vec![], &[], true, seal, None, &[cr]);
+                        let x = self.act_on(Who2::Strand(gi, s), mirs().money, 1, p, vec![], &[], true, seal, None, &[cr]);
                         self.debts.push(x);
                         (x, K::Debt { creditor: cr, amount: 25 })
                     }
                     AgentWhat::InScope | AgentWhat::OutOfScope => {
-                        let x = self.act_on(Who2::Strand(gi, s), mips().envelopes, 0, vec![(Value::Uint(0), Value::Text("an agent's publication".into()))], vec![], &[], true, seal, None, &[]);
+                        let x = self.act_on(Who2::Strand(gi, s), mirs().envelopes, 0, vec![(Value::Uint(0), Value::Text("an agent's publication".into()))], vec![], &[], true, seal, None, &[]);
                         (x, K::Publication)
                     }
                     AgentWhat::Record => {
                         let r = Record { clone: None, signatures: None, kept: vec![], registers: Some(vec![spec("a departure")]) };
-                        let x = self.act_on(Who2::Strand(gi, s), mips().agreements, agreements::types::RECORD, r.to_map(), vec![Object { chain: self.current, predecessor: self.current }], &[], true, seal, None, &[]);
+                        let x = self.act_on(Who2::Strand(gi, s), mirs().agreements, agreements::types::RECORD, r.to_map(), vec![Object { chain: self.current, predecessor: self.current }], &[], true, seal, None, &[]);
                         (x, K::Record)
                     }
                     AgentWhat::Grant => {
                         let (_, pk) = grant_key("a grant the grant key made");
                         let g = Grant { grantee: self.agents[0].id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, by_this: false, key: pk };
-                        let x = self.act_on(Who2::Strand(gi, s), mips().agreements, agreements::types::GRANT, g.to_map(), vec![], &[], true, seal, None, &[]);
+                        let x = self.act_on(Who2::Strand(gi, s), mirs().agreements, agreements::types::GRANT, g.to_map(), vec![], &[], true, seal, None, &[]);
                         (x, K::GrantAct)
                     }
                     AgentWhat::Revocation => {
                         let r = agreements::Revocation { grant: self.grants[gi].id };
-                        let x = self.act_on(Who2::Strand(gi, s), mips().agreements, agreements::types::REVOCATION, r.to_map(), vec![], &[], true, seal, None, &[]);
+                        let x = self.act_on(Who2::Strand(gi, s), mirs().agreements, agreements::types::REVOCATION, r.to_map(), vec![], &[], true, seal, None, &[]);
                         (x, K::Revocation { grant: gi })
                     }
                 };
@@ -1066,7 +1066,7 @@ impl ColWorld {
                 let gi = grant as usize % self.grants.len();
                 let joined: Vec<Hash> = if join_strand { self.grants[gi].strands.iter().filter_map(|s| s.seq.last().copied()).collect() } else { vec![] };
                 let r = agreements::Revocation { grant: self.grants[gi].id };
-                let x = self.act_on(Who2::Dev(dev as usize % devs), mips().agreements, agreements::types::REVOCATION, r.to_map(), vec![], &joined, true, Seal::Public, None, &[]);
+                let x = self.act_on(Who2::Dev(dev as usize % devs), mirs().agreements, agreements::types::REVOCATION, r.to_map(), vec![], &joined, true, Seal::Public, None, &[]);
                 self.note(x, Seal::Public, true, None, K::Revocation { grant: gi });
                 if self.grants[gi].in_area && holders_sign {
                     let s = self.lane_sign(&x);
@@ -1177,7 +1177,7 @@ impl ColWorld {
                     _ => {
                         let keep = if seal == Seal::All { ids.len() } else { ids.len() - 1 };
                         let to: Vec<Hash> = ids.iter().take(keep).copied().collect();
-                        self.w.private_act(&mut self.m[signer][0], mips().agreements, agreements::types::FORK, f.to_map(), o, to)
+                        self.w.private_act(&mut self.m[signer][0], mirs().agreements, agreements::types::FORK, f.to_map(), o, to)
                     }
                 };
                 self.member_end(signer, &x, false);
@@ -1233,7 +1233,7 @@ impl ColWorld {
                     _ => {
                         let keep = if seal == Seal::All { ids.len() } else { ids.len() - 1 };
                         let to: Vec<Hash> = ids.iter().take(keep).copied().collect();
-                        self.w.private_act(&mut self.m[signer][0], mips().agreements, agreements::types::CLOSING, c.to_map(), o, to)
+                        self.w.private_act(&mut self.m[signer][0], mirs().agreements, agreements::types::CLOSING, c.to_map(), o, to)
                     }
                 };
                 for m in &signers {
@@ -1282,18 +1282,18 @@ impl ColWorld {
                 match by {
                     PaidBy::Creditor => {
                         let k = self.creditors.iter().position(|c| c.id == creditor).unwrap();
-                        let a = self.w.everyday_act(&mut self.creditors[k], mips().money, 2, rc(creditor, col), None, None);
+                        let a = self.w.everyday_act(&mut self.creditors[k], mirs().money, 2, rc(creditor, col), None, None);
                         let x = self.w.add(&a);
                         self.paid.push((x, creditor));
                     }
                     PaidBy::Debtor => {
-                        let x = self.act_on(Who2::Dev(0), mips().money, 2, rc(col, col), vec![], &[], true, Seal::Public, None, &[]);
+                        let x = self.act_on(Who2::Dev(0), mirs().money, 2, rc(col, col), vec![], &[], true, Seal::Public, None, &[]);
                         self.lane_sign(&x);
                         self.paid.push((x, col));
                     }
                     PaidBy::Stranger => {
                         let s = self.stranger.id;
-                        let a = self.w.everyday_act(&mut self.stranger, mips().money, 2, rc(s, col), None, None);
+                        let a = self.w.everyday_act(&mut self.stranger, mirs().money, 2, rc(s, col), None, None);
                         let x = self.w.add(&a);
                         self.paid.push((x, s));
                     }
@@ -1307,7 +1307,7 @@ impl ColWorld {
                 let K::Debt { creditor, .. } = self.info[&o].kind.clone() else { return };
                 let r = Fin::Release(fin::Release { obligation: o, against: vec![] }).to_map();
                 let who = if by_creditor { self.creditors.iter_mut().find(|c| c.id == creditor).unwrap() } else { &mut self.stranger };
-                let a = self.w.everyday_act(who, mips().money, fin::types::RELEASE, r, None, None);
+                let a = self.w.everyday_act(who, mirs().money, fin::types::RELEASE, r, None, None);
                 self.w.add(&a);
             }
             Op::Sale { strand, proof, disguise, lane_sign, line_current } => {
@@ -1327,7 +1327,7 @@ impl ColWorld {
                     batch: matches!(disguise, Disguise::Batch).then(|| spec("a batch")),
                     purchase: Some(Purchase { agreement: self.founding, line: if line_current { self.current } else { self.founding } }),
                 });
-                let x = self.act_on(who, mips().money, 2, r.to_map(), vec![], &[], true, Seal::Public, None, &[]);
+                let x = self.act_on(who, mirs().money, 2, r.to_map(), vec![], &[], true, Seal::Public, None, &[]);
                 let grant = match who {
                     Who2::Strand(g, _) => Some(g),
                     Who2::Dev(_) => None,
@@ -1618,7 +1618,7 @@ impl ColWorld {
         let mut paid = 0u64;
         let mut released = false;
         for h in self.w.v.held_acts() {
-            if h.inside.spec != mips().money || self.w.v.status(&h.id) != Status::Valid || h.act.outside.signer != Some(creditor) {
+            if h.inside.spec != mirs().money || self.w.v.status(&h.id) != Status::Valid || h.act.outside.signer != Some(creditor) {
                 continue;
             }
             match Fin::decode(h.inside.type_, &h.inside.payload) {
@@ -2328,7 +2328,7 @@ impl DealWorld {
             fees: None,
             backups: s.backup.then(|| agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(backup_grants.iter().map(|g| g.0).collect())], failure: None }),
         };
-        assert_eq!(t.check(&mips()), Ok(()), "the generator's own deal terms");
+        assert_eq!(t.check(&mirs()), Ok(()), "the generator's own deal terms");
         let deal = agreements_act(&mut w, &mut p[0], agreements::types::TERMS, t.to_map(), None);
         let mut sigs = vec![];
         for (i, x) in p.iter_mut().enumerate() {
@@ -2338,7 +2338,7 @@ impl DealWorld {
         }
         t.parent = None;
         let publication = {
-            let a = w.everyday_act(&mut p[0], mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+            let a = w.everyday_act(&mut p[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
             w.add(&a)
         };
         let strand = |x: &Person, g: &(Hash, SchnorrKey)| {
@@ -2380,7 +2380,7 @@ impl DealWorld {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut lv = AgreementsView::new(&self.w.v, mips());
+        let mut lv = AgreementsView::new(&self.w.v, mirs());
         lv.push_rails.insert(push_rail());
         lv.rail_invalid = self.wrong.clone();
         lv
@@ -2525,7 +2525,7 @@ impl DealWorld {
                     purchase: Some(Purchase { agreement: if matches!(disguise, DealDisguise::OtherDeal) { other } else { self.deal }, line: if matches!(disguise, DealDisguise::OtherDeal) { other } else { line } }),
                 };
                 let st = if backup { &mut self.backup_strands[i] } else { &mut self.strands[i] };
-                let a = self.w.everyday_act(st, mips().money, 2, Fin::Receipt(r).to_map(), None, None);
+                let a = self.w.everyday_act(st, mirs().money, 2, Fin::Receipt(r).to_map(), None, None);
                 let x = self.w.add(&a);
                 self.receipts.push((x, i, *disguise, backup));
             }
@@ -2551,7 +2551,7 @@ impl DealWorld {
                         batch: None,
                         purchase: Some(Purchase { agreement: self.deal, line }),
                     };
-                    let a = self.w.everyday_act(&mut self.p[i], mips().money, 2, Fin::Receipt(r).to_map(), None, None);
+                    let a = self.w.everyday_act(&mut self.p[i], mirs().money, 2, Fin::Receipt(r).to_map(), None, None);
                     let x = self.w.add(&a);
                     self.push.push((x, *proof));
                     if line != committed {
@@ -2636,7 +2636,7 @@ impl DealWorld {
                 let s = agreements::Split { receipt: rc, payouts, cmip: spec("a split cMIP"), agreement: latest, tally: Some(vec![(0, carried.clone())]), number: None, ..Default::default() };
                 let to: Vec<Hash> = if *deliver_all { ids.clone() } else { ids[1..].to_vec() };
                 let mut svp = self.svc.take().unwrap();
-                let x = self.w.private_act_refs(&mut svp, mips().agreements, agreements::types::SPLIT, s.to_map(), None, to, previous.map(|p| vec![mor_core::act::Ref::Act(p)]));
+                let x = self.w.private_act_refs(&mut svp, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, to, previous.map(|p| vec![mor_core::act::Ref::Act(p)]));
                 self.svc = Some(svp);
                 self.splits.push((x, *mode, *deliver_all, pot));
                 self.links.insert(x, (previous, carried, *lie));
@@ -2732,7 +2732,7 @@ impl DealWorld {
             Some(Ok(Fin::Receipt(r))) => r.purchase.map(|p| p.line),
             _ => None,
         };
-        let mut bare = AgreementsView::new(&self.w.v, mips());
+        let mut bare = AgreementsView::new(&self.w.v, mirs());
         bare.push_rails.insert(push_rail());
         for (answers, lv) in [(true, &lv), (false, &bare)] {
             let mut groups: BTreeMap<(Hash, u8), Vec<String>> = BTreeMap::new();
@@ -3050,12 +3050,12 @@ fn stake_check(c: &StakeCase) -> Result<(), String> {
     if c.departed > 0 {
         t.departed = Some(gone.iter().map(|p| p.id).collect());
     }
-    t.check(&mips()).map_err(|e| format!("generator's founding terms: {e:?}"))?;
+    t.check(&mirs()).map_err(|e| format!("generator's founding terms: {e:?}"))?;
     let founding = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
     for p in m.iter_mut() {
         sign(&mut w, p, &founding);
     }
-    let mut c0 = w.genesis_with("collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mips().agreements, &founding)]), 3);
+    let mut c0 = w.genesis_with("collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
     c0.cite = Some((c0.id, vec![c0.id]));
     // The clone: new shares; the clone rule's power, by the members it
     // needs (operational field 7, in no area).
@@ -3092,12 +3092,12 @@ fn stake_check(c: &StakeCase) -> Result<(), String> {
     let r = Record { clone: Some(clone), signatures: Some(named), kept: vec![], registers: None };
     let a = {
         let saved = c0.cite.take();
-        let a = w.everyday_act(&mut c0, mips().agreements, agreements::types::RECORD, r.to_map(), obj(clone), None);
+        let a = w.everyday_act(&mut c0, mirs().agreements, agreements::types::RECORD, r.to_map(), obj(clone), None);
         c0.cite = saved;
         a
     };
     let rec = w.add(&a);
-    let lv = AgreementsView::new(&w.v, mips());
+    let lv = AgreementsView::new(&w.v, mirs());
     let puts = lv.record(&c0.id, &rec).map_err(|e| format!("{e:?}"))?.puts;
     let fell: Vec<Hash> = holders
         .iter()
@@ -3320,7 +3320,7 @@ fn ic7_sums_that_overflow_never_pass() {
     t.payee_grants = None;
     t.stakes = Some(vec![agreements::Stake { object: Who::Id(spec("a work")), holders: vec![(Who::Id(a), u64::MAX), (Who::Id(b), 1_000_001)] }]);
     t.parties = vec![a, b];
-    assert!(t.check(&mips()).is_err(), "shares wrapping round to 1,000,000 are refused");
+    assert!(t.check(&mirs()).is_err(), "shares wrapping round to 1,000,000 are refused");
 }
 
 /// F266 (Agreements draft 11, rule 9, new in draft 11): the turns for a
@@ -3716,7 +3716,7 @@ fn it3_the_payments_claim_decides() {
             assert_eq!(got, agreements::PurchaseVerdict::Purchase);
         }
     }
-    let mut bare = AgreementsView::new(&d.w.v, mips());
+    let mut bare = AgreementsView::new(&d.w.v, mirs());
     bare.push_rails.insert(push_rail());
     for (x, _) in &d.push {
         assert_eq!(bare.purchase(x).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Unrecorded, "no rail answer yet");

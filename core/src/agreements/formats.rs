@@ -1,4 +1,4 @@
-//! The Agreements MIP's exact formats (Agreements draft 9, "Act formats"), and the checks
+//! The Agreements MIR's exact formats (Agreements draft 9, "Act formats"), and the checks
 //! that need no other act.
 //!
 //! In plain words: terms (an agreement's proposal), with the fields draft 7
@@ -207,7 +207,7 @@ pub fn divide_stake(total: u64, holders: &[(Hash, u64)], ties: Ties) -> Result<V
     Ok(parts)
 }
 
-/// The layer of a task's MIP (Development, task table).
+/// The layer of a task's MIR (Development, task table).
 pub fn task_layer(task: u64) -> Option<u64> {
     match task {
         1..=3 => Some(layers::IDENTITY),
@@ -218,11 +218,11 @@ pub fn task_layer(task: u64) -> Option<u64> {
     }
 }
 
-/// The six MIPs' spec hashes, fixed at the freeze. Agreements computes an act's
+/// The six MIRs' spec hashes, fixed at the freeze. Agreements computes an act's
 /// layer from its `spec` field, these hashes and the collective's own terms
 /// ("Layer", F106).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Mips {
+pub struct Mirs {
     pub identity: Hash,
     pub envelopes: Hash,
     pub text: Hash,
@@ -231,8 +231,8 @@ pub struct Mips {
     pub development: Hash,
 }
 
-impl Mips {
-    /// The layer of a MIP's own acts. Development defines none.
+impl Mirs {
+    /// The layer of a MIR's own acts. Development defines none.
     pub fn layer(&self, spec: &Hash) -> Option<u64> {
         if spec == &self.identity {
             Some(layers::IDENTITY)
@@ -249,7 +249,7 @@ impl Mips {
         }
     }
 
-    pub fn is_mip(&self, spec: &Hash) -> bool {
+    pub fn is_mir(&self, spec: &Hash) -> bool {
         self.layer(spec).is_some()
     }
 }
@@ -262,7 +262,7 @@ pub enum AgreementsError {
     /// A field or act whose exact format Agreements have not fixed yet: refused,
     /// never accepted unchecked.
     Unsupported(&'static str),
-    /// A rule of the Agreements MIP fails. Names it.
+    /// A rule of the Agreements MIR fails. Names it.
     Check(&'static str),
     /// An act the check needs is not held (or not opened).
     Missing(Hash),
@@ -1157,11 +1157,11 @@ impl Terms {
     }
 
     /// The layers a specification's acts belong to under these terms
-    /// ("Layer", F106): a MIP's layer; for a cMIP, the layer of each task
+    /// ("Layer", F106): a MIR's layer; for a cMIP, the layer of each task
     /// the terms name it for; Development for an extension. Empty: the
     /// specification is named nowhere.
-    pub fn spec_layers(&self, mips: &Mips, spec: &Hash) -> Vec<u64> {
-        if let Some(l) = mips.layer(spec) {
+    pub fn spec_layers(&self, mirs: &Mirs, spec: &Hash) -> Vec<u64> {
+        if let Some(l) = mirs.layer(spec) {
             return vec![l];
         }
         let mut out: Vec<u64> = self
@@ -1179,9 +1179,9 @@ impl Terms {
     }
 
     /// Whether some act of `spec` and `type_` could belong to `kind`.
-    pub fn kind_reaches(&self, mips: &Mips, kind: &Kind, spec: &Hash, type_: u64) -> bool {
+    pub fn kind_reaches(&self, mirs: &Mirs, kind: &Kind, spec: &Hash, type_: u64) -> bool {
         match kind {
-            Kind::Layer(l) => self.spec_layers(mips, spec).contains(l),
+            Kind::Layer(l) => self.spec_layers(mirs, spec).contains(l),
             Kind::Type { spec: s, type_: t } => s == spec && *t == type_,
         }
     }
@@ -1189,11 +1189,11 @@ impl Terms {
     /// Whether some act could belong to both kinds ("Areas"). Two lanes
     /// never overlap: a specification named for tasks of two layers belongs
     /// to both, and both lanes reach it (R4).
-    pub fn kinds_overlap(&self, mips: &Mips, a: &Kind, b: &Kind) -> bool {
+    pub fn kinds_overlap(&self, mirs: &Mirs, a: &Kind, b: &Kind) -> bool {
         match (a, b) {
             (Kind::Layer(x), Kind::Layer(y)) => x == y,
             (Kind::Layer(l), Kind::Type { spec, .. }) | (Kind::Type { spec, .. }, Kind::Layer(l)) => {
-                self.spec_layers(mips, spec).contains(l)
+                self.spec_layers(mirs, spec).contains(l)
             }
             (Kind::Type { .. }, Kind::Type { .. }) => a == b,
         }
@@ -1489,7 +1489,7 @@ impl Terms {
     /// founding terms, 48a, 49; "Areas"; F96, F105, F107, Q20, Q21, Q24,
     /// Q25, Q31, Q32). A clone's checks against its parent and lineage are
     /// the view's ([`super::AgreementsView::agreement`]).
-    pub fn check(&self, mips: &Mips) -> R<()> {
+    pub fn check(&self, mirs: &Mirs) -> R<()> {
         self.check_open_formats()?;
         let parties = &self.parties;
         if !distinct(parties) {
@@ -1683,7 +1683,7 @@ impl Terms {
         }
         if let Some(g) = &self.grammar {
             self.check_grammar(g)?;
-            self.check_areas(mips)?;
+            self.check_areas(mirs)?;
             if self.parent.is_none() {
                 // F105, rule 36b: every founder signs the founding terms, so
                 // each is judged under this clause. A clone's coverage is
@@ -1986,7 +1986,7 @@ impl Terms {
     /// "Areas" and Q21, Q32: fields 18 to 20, areas' holders, numbers,
     /// reach and ids. A clone's number left above its holders is checked
     /// against the parent (the view).
-    fn check_areas(&self, mips: &Mips) -> R<()> {
+    fn check_areas(&self, mirs: &Mirs) -> R<()> {
         let areas = self.areas();
         let ids: Vec<u64> = areas.iter().map(|a| a.id).collect();
         if ids.iter().enumerate().any(|(i, x)| ids[..i].contains(x)) {
@@ -2013,8 +2013,8 @@ impl Terms {
                         return Err(AgreementsError::Check("an area names a layer that does not exist"))
                     }
                     Kind::Type { spec, type_ }
-                        if (spec == &mips.identity && (*type_ == 0 || *type_ == 1))
-                            || (spec == &mips.agreements && *type_ == crate::agreements::types::RECORD) =>
+                        if (spec == &mirs.identity && (*type_ == 0 || *type_ == 1))
+                            || (spec == &mirs.agreements && *type_ == crate::agreements::types::RECORD) =>
                     {
                         // Genesis, rotations and records are never in an
                         // area's reach ("Areas").
@@ -2043,7 +2043,7 @@ impl Terms {
             for b2 in &areas[i + 1..] {
                 for x in a.kinds.iter().flatten() {
                     for y in b2.kinds.iter().flatten() {
-                        if self.kinds_overlap(mips, x, y) {
+                        if self.kinds_overlap(mirs, x, y) {
                             return Err(AgreementsError::Check("two areas reach the same acts (Q5)"));
                         }
                     }
@@ -2465,7 +2465,7 @@ impl Contest {
                 Value::Uint(1) => {
                     promise = Some(match v {
                         Value::Text(w) if crate::text::is_canonical(w) => Promise::Words(w.clone()),
-                        Value::Text(_) => return Err(AgreementsError::Check("contest: the promise not kept is not canonical text (Text MIP)")),
+                        Value::Text(_) => return Err(AgreementsError::Check("contest: the promise not kept is not canonical text (Text MIR)")),
                         Value::Array(x) if x.len() == 2 => Promise::Terms(hash(&x[0], "contest: the promise's cMIP")?, x[1].clone()),
                         _ => return Err(AgreementsError::Shape("contest: field 1 is the promise not kept, in words or [cmip, any] (F253)")),
                     })
@@ -3098,7 +3098,7 @@ impl NegotiationMessage {
         }
         let text = text.ok_or(AgreementsError::Shape("negotiation message: the text"))?;
         if !crate::text::is_canonical(&text) {
-            return Err(AgreementsError::Check("negotiation message: the text is not canonical (Text MIP)"));
+            return Err(AgreementsError::Check("negotiation message: the text is not canonical (Text MIR)"));
         }
         let follows = match inside.objects.as_deref() {
             None => None,

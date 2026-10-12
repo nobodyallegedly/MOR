@@ -17,7 +17,7 @@ mod common;
 use common::{own_home, schnorr, signing_key, Person, World};
 use mor_core::act::Object;
 use mor_core::agreements::{
-    self, AgreementsView, Backups, Field4, Grant, Mips, Rule, ServiceGrants, ShareRule, Split, SplitPlan, Stake, Terms,
+    self, AgreementsView, Backups, Field4, Grant, Mirs, Rule, ServiceGrants, ShareRule, Split, SplitPlan, Stake, Terms,
     Unfilled, Who,
 };
 use mor_core::cbor::Value;
@@ -25,9 +25,9 @@ use mor_core::hash::{sha256, Hash};
 use mor_core::money::{Amount, PaidAt, Payer, Payload as Fin, PayeePointer, Purchase, Rail, Receipt};
 use mor_split::{route, Attempt, Failure, Route};
 
-fn mips() -> Mips {
+fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
-    Mips {
+    Mirs {
         identity: common::identity_spec(),
         envelopes: t("ENVELOPE"),
         text: t("TEXT"),
@@ -46,7 +46,7 @@ fn obj(x: Hash) -> Option<Vec<Object>> {
 }
 
 fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
-    let a = w.everyday_act(p, mips().agreements, type_, payload, objects, None);
+    let a = w.everyday_act(p, mirs().agreements, type_, payload, objects, None);
     w.add(&a)
 }
 
@@ -90,7 +90,7 @@ fn pointer(w: &mut World, who: &mut Person) -> Hash {
         previous: None,
         rails: vec![Rail { module: spec("a rail Module"), address: format!("{}'s node", who.name).into_bytes() }],
     });
-    let a = w.everyday_act(who, mips().money, 0, p.to_map(), None, None);
+    let a = w.everyday_act(who, mirs().money, 0, p.to_map(), None, None);
     w.add(&a)
 }
 
@@ -109,7 +109,7 @@ fn receipt(w: &mut World, by: &mut Person, payee: Hash, payer: Hash, value: u64,
         batch: None,
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
     });
-    let a = w.everyday_act(by, mips().money, 2, r.to_map(), None, None);
+    let a = w.everyday_act(by, mirs().money, 2, r.to_map(), None, None);
     w.add(&a)
 }
 
@@ -165,7 +165,7 @@ fn deal(parties: Vec<Hash>, words: &str) -> Terms {
 /// divides it, a holder that is an agreement paid at `receiver`; private,
 /// delivered to every receiver (Q9).
 fn split(w: &mut World, svc: &mut Person, incoming: Hash, amount: u64, agreement: Hash, receiver: &dyn Fn(&Hash) -> Hash) -> Hash {
-    let t = AgreementsView::new(&w.v, mips()).terms(&agreement).unwrap();
+    let t = AgreementsView::new(&w.v, mirs()).terms(&agreement).unwrap();
     let d = mor_split::divide(amount, &t, None, &|_| vec![]).unwrap();
     let payouts: Vec<agreements::Payout> = d.payouts.into_iter().map(|p| agreements::Payout { receiver: receiver(&p.receiver), ..p }).collect();
     assert_eq!(payouts.iter().map(|p| p.amount).sum::<u64>(), amount, "the split balances to the unit");
@@ -183,7 +183,7 @@ fn split(w: &mut World, svc: &mut Person, incoming: Hash, amount: u64, agreement
         metric_records: vec![],
         transfers: vec![],
     };
-    w.private_act(svc, mips().agreements, agreements::types::SPLIT, s.to_map(), None, to)
+    w.private_act(svc, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, to)
 }
 
 #[test]
@@ -213,7 +213,7 @@ fn a_payment_is_split_exactly_each_cut_reaching_its_flow_address_through_a_backu
     wt.payee_grants = Some(vec![gas, gbs]);
     wt.backups = Some(Backups { services: vec![ServiceGrants::PerPayee(vec![gat, gbt])], failure: Some(Failure { wait: 60 }.to_value()) });
     wt.stakes = Some(vec![Stake { object: Who::Id(work), holders: vec![(Who::Id(aid), 600_000), (Who::Id(bid), 400_000)] }]);
-    assert_eq!(wt.check(&mips()), Ok(()));
+    assert_eq!(wt.check(&mirs()), Ok(()));
     let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, wt.to_map(), None);
     sign(&mut w, &mut ana, &we);
     sign(&mut w, &mut ben, &we);
@@ -221,20 +221,20 @@ fn a_payment_is_split_exactly_each_cut_reaching_its_flow_address_through_a_backu
     // The publication's agreement: the work's agreement 85%, the label 15%,
     // split by P.
     let publication = {
-        let x = w.everyday_act(&mut label, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, step 13").to_vec()))], None, None);
+        let x = w.everyday_act(&mut label, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, step 13").to_vec()))], None, None);
         w.add(&x)
     };
     let (gl, mut sl) = grant(&mut w, &mut label, &mut svc_p, "the label to P");
     let mut pt = deal(vec![we, lid], "The label publishes the song.");
     pt.payee_grants = Some(vec![gl]);
     pt.stakes = Some(vec![Stake { object: Who::Id(publication), holders: vec![(Who::Id(we), 850_000), (Who::Id(lid), 150_000)] }]);
-    assert_eq!(pt.check(&mips()), Ok(()));
+    assert_eq!(pt.check(&mirs()), Ok(()));
     let pe = agreements_act(&mut w, &mut label, agreements::types::TERMS, pt.to_map(), None);
     sign(&mut w, &mut label, &pe);
     sign(&mut w, &mut ana, &pe);
     sign(&mut w, &mut ben, &pe);
     {
-        let v = AgreementsView::new(&w.v, mips());
+        let v = AgreementsView::new(&w.v, mirs());
         assert_eq!(v.agreement(&we).unwrap().exists, Some(true));
         assert_eq!(v.agreement(&pe).unwrap().exists, Some(true));
         // The addresses the owners signed, in order: S, the designated
@@ -245,12 +245,12 @@ fn a_payment_is_split_exactly_each_cut_reaching_its_flow_address_through_a_backu
     // The condition triggered: a fan buys the publication; P receipts it
     // in the label's name, by the label's grant key (F129, H4).
     let incoming = receipt(&mut w, &mut sl, lid, fan, 1000, publication, Some(pe), "the fan pays, 1");
-    let c = AgreementsView::new(&w.v, mips()).cut_check(&incoming, &aid).unwrap();
+    let c = AgreementsView::new(&w.v, mirs()).cut_check(&incoming, &aid).unwrap();
     assert!(!c.arrived() && c.stops.iter().any(|s| s.contains("no split")), "before any split, the cut is the service's open obligation: {c:?}");
 
     // P's attempt at S: no payment request within the wait. The cMIP says
     // the attempt failed; T is next.
-    let services = AgreementsView::new(&w.v, mips()).signed_receivers(&we);
+    let services = AgreementsView::new(&w.v, mirs()).signed_receivers(&we);
     let failure = Failure::decode(wt.backups.as_ref().unwrap().failure.as_ref()).unwrap();
     let attempts = vec![Attempt::Silent { waited: 30 }];
     assert_eq!(route(&services, &attempts, &failure), Route::Try { at: 0, service: sid }, "before the wait has passed, S is still tried");
@@ -262,7 +262,7 @@ fn a_payment_is_split_exactly_each_cut_reaching_its_flow_address_through_a_backu
     // P divides the payment and pays the work's share to T, the label its own.
     let ps = split(&mut w, &mut svc_p, incoming, 1000, pe, &|h| if *h == we { tid } else { *h });
     {
-        let mut v = AgreementsView::new(&w.v, mips());
+        let mut v = AgreementsView::new(&w.v, mirs());
         let e = v.split(&ps).unwrap();
         assert!(!e.mismatched.is_empty(), "without the cMIP's answer, a payout to the backup is a mismatch");
         v.attempts_failed = failed.iter().map(|s| (ps, *s)).collect();
@@ -275,7 +275,7 @@ fn a_payment_is_split_exactly_each_cut_reaching_its_flow_address_through_a_backu
     // under the work's agreement: Ana 510, Ben 340.
     let shared = receipt(&mut w, &mut svc_t, tid, svc_p.id, 850, ps, None, "P pays T, 1");
     let ts = split(&mut w, &mut svc_t, shared, 850, we, &|h| *h);
-    let e = AgreementsView::new(&w.v, mips()).split(&ts).unwrap();
+    let e = AgreementsView::new(&w.v, mirs()).split(&ts).unwrap();
     assert!(e.problems.is_empty() && e.mismatched.is_empty() && e.breaks.is_empty() && e.numbering.is_none() && e.undelivered.is_empty(), "{e:?}");
     let amounts: Vec<(Hash, u64)> = e.split.payouts.iter().map(|p| (p.receiver, p.amount)).collect();
     assert!(amounts.contains(&(aid, 510)) && amounts.contains(&(bid, 340)), "{amounts:?}");
@@ -284,7 +284,7 @@ fn a_payment_is_split_exactly_each_cut_reaching_its_flow_address_through_a_backu
     let ra = receipt(&mut w, &mut ana, aid, tid, 510, ts, None, "T pays Ana, 1");
     let rb = receipt(&mut w, &mut ben, bid, tid, 340, ts, None, "T pays Ben, 1");
     let rl = receipt(&mut w, &mut label, lid, svc_p.id, 150, ps, None, "P pays the label, 1");
-    let mut v = AgreementsView::new(&w.v, mips());
+    let mut v = AgreementsView::new(&w.v, mirs());
     v.attempts_failed = failed.iter().map(|s| (ps, *s)).collect();
     v.rail_valid.insert(ra, PaidAt::Flow(pa));
     v.rail_valid.insert(rb, PaidAt::Flow(pb));

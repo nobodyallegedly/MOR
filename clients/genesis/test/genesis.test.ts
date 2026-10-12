@@ -387,7 +387,7 @@ test('before a genesis or rotation leaving no clock, the client says plainly tha
 
 // ---------------------------------------------------------------- Identity rule 35 (was 17) in the clients
 
-/** A text act's payload (Text MIP, type 0). */
+/** A text act's payload (Text MIR, type 0). */
 const said = (text: string) => cborEncode(new Map([[0, text]]));
 
 /** An identity whose acts are found at the relay its routes name, as an app's posts are. */

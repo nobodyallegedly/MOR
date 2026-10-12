@@ -42,7 +42,7 @@ use mor_core::envelopes::anchoring::{AnchoringCmip, Anchors, Reference};
 use mor_core::money::{self as fin, Amount, Citations, Claim, Clock, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, VaultEntry};
 use mor_core::hash::{sha256, tagged_hash, Hash};
 use mor_core::identity::Payload as Id;
-use mor_core::agreements::{self, AgreementsView, Mips};
+use mor_core::agreements::{self, AgreementsView, Mirs};
 use mor_core::sig::{self, SchnorrKey, Verdict};
 use mor_lightning::bolt11::Network;
 use mor_lightning::{unit, Lightning, LnAddress, LnProof};
@@ -54,9 +54,9 @@ fn h(label: &str) -> Hash {
     sha256(label.as_bytes())
 }
 
-fn mips() -> Mips {
+fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
-    Mips {
+    Mirs {
         identity: common::identity_spec(),
         envelopes: t("ENVELOPE"),
         text: t("TEXT"),
@@ -130,7 +130,7 @@ struct AgreementsHeld<'a> {
 impl AgreementsHeld<'_> {
     fn fin(&self, id: &Hash) -> Option<(Payload, Hash)> {
         let x = self.view.v.get(id)?;
-        if x.inside.spec != mips().money {
+        if x.inside.spec != mirs().money {
             return None;
         }
         Some((Payload::decode(x.inside.type_, &x.inside.payload).ok()?, x.act.outside.signer?))
@@ -151,7 +151,7 @@ impl Held for AgreementsHeld<'_> {
             Id::Rotation(r) => (x.act.outside.signer?, r.declarations.clone()?),
             _ => return None,
         };
-        Some((who, fin::vault_in(&mips().money, &decls).ok()??.unwrap_or_default()))
+        Some((who, fin::vault_in(&mirs().money, &decls).ok()??.unwrap_or_default()))
     }
     fn obligation(&self, id: &Hash) -> Option<Obligation> {
         match self.fin(id)? {
@@ -178,7 +178,7 @@ impl Held for AgreementsHeld<'_> {
         let res = self.view.v.resolve(payee);
         let mut out = None;
         for st in &res.states {
-            if let Ok(Some(v)) = fin::vault_in(&mips().money, &st.declarations) {
+            if let Ok(Some(v)) = fin::vault_in(&mirs().money, &st.declarations) {
                 out = v;
             }
         }
@@ -204,7 +204,7 @@ struct Story {
 
 impl Story {
     fn view(&self) -> AgreementsView<'_> {
-        let mut v = AgreementsView::new(&self.w.v, mips());
+        let mut v = AgreementsView::new(&self.w.v, mirs());
         v.rail_valid = self.rail_valid.clone();
         v.anchored = self.anchors.clone();
         v
@@ -245,7 +245,7 @@ impl Story {
             .to_string();
         let proof = Proof { paid_to, salt: [9; 16], rail: LnProof { invoice, preimage: Some(preimage) }.encode() }.encode();
         let claim = Claim { rail: mor_lightning::spec(), proof, payee: self.ana.id, amount, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
-        let id = self.act(payer, mips().money, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
+        let id = self.act(payer, mirs().money, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
         // The rail's answer, by the cMIP and the rail Module.
         let ln = Lightning;
         let held = AgreementsHeld { view: self.view() };
@@ -258,7 +258,7 @@ impl Story {
 
     fn debt(&mut self, label: &mut Person, deal: Hash, value: u64, named: Hash) -> Hash {
         let o = Payload::Obligation(Obligation { debtor: label.id, creditor: self.ana.id, amount: sat(value), pointer: named, agreement: Some(deal) });
-        self.act(label, mips().money, fin::types::OBLIGATION, o.to_map(), None, None)
+        self.act(label, mirs().money, fin::types::OBLIGATION, o.to_map(), None, None)
     }
 
     /// What the payment cMIP judges beside the rail, for a claim, through
@@ -281,8 +281,8 @@ fn the_stolen_phone() {
     let clock = Clock { main: main.reference(), backup: Some(backup.reference()) };
     let ana_vault = node("Ana's vault node");
     let decls = vec![
-        fin::clock_declaration(&mips().money, &clock),
-        fin::vault_declaration(&mips().money, &[VaultEntry { unit: unit(Network::Regtest), rail_module: mor_lightning::spec(), source: address(&ana_vault), limit: 50_000 }]),
+        fin::clock_declaration(&mirs().money, &clock),
+        fin::vault_declaration(&mirs().money, &[VaultEntry { unit: unit(Network::Regtest), rail_module: mor_lightning::spec(), source: address(&ana_vault), limit: 50_000 }]),
     ];
     let mut ana = w.genesis_with("Ana", homes.iter().map(home).collect(), None, None, Some(decls), 3);
     let mut s = Story { w, homes, anchors: Anchors::new(), rail_valid: BTreeMap::new(), main, backup, elsewhere, ana: ana.clone() };
@@ -295,11 +295,11 @@ fn the_stolen_phone() {
     let ana_node = node("Ana's node");
     let rail = |n: &SecretKey| vec![Rail { module: mor_lightning::spec(), address: address(n) }];
     let v1p = Payload::PayeePointer(PayeePointer { payee: aid, version: 1, previous: None, rails: rail(&ana_node) });
-    let v1 = s.act(&mut ana, mips().money, fin::types::PAYEE_POINTER, v1p.to_map(), None, None);
-    let deal = s.act(&mut label, mips().agreements, agreements::types::TERMS, vec![], None, None);
+    let v1 = s.act(&mut ana, mirs().money, fin::types::PAYEE_POINTER, v1p.to_map(), None, None);
+    let deal = s.act(&mut label, mirs().agreements, agreements::types::TERMS, vec![], None, None);
     let on = |t: Hash| Some(vec![Object { chain: t, predecessor: t }]);
-    s.act(&mut label, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), None);
-    s.act(&mut ana, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v1)]));
+    s.act(&mut label, mirs().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), None);
+    s.act(&mut ana, mirs().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v1)]));
 
     // The phone is stolen. The thief publishes its own wallet as Ana's
     // version 2 and signs the deal again, citing it: the deal is re-pointed
@@ -307,8 +307,8 @@ fn the_stolen_phone() {
     let thief_node = node("the thief's node");
     let mut thief = ana.clone();
     let v2p = Payload::PayeePointer(PayeePointer { payee: aid, version: 2, previous: Some(v1), rails: rail(&thief_node) });
-    let v2 = s.act(&mut thief, mips().money, fin::types::PAYEE_POINTER, v2p.to_map(), None, None);
-    let resigned = s.act(&mut thief, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v2)]));
+    let v2 = s.act(&mut thief, mirs().money, fin::types::PAYEE_POINTER, v2p.to_map(), None, None);
+    let resigned = s.act(&mut thief, mirs().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v2)]));
     assert_eq!(s.view().pointer_holding(&deal, &aid).unwrap().pointers.len(), 2, "the re-pointed deal now selects the thief's wallet");
 
     // The window. Royalties, each a debt under the deal, paid where the

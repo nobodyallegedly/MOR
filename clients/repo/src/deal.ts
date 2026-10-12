@@ -4,7 +4,7 @@
 // (F186, client conformance, decided by Nobody, allegedly, 9 October 2026).
 // Test identities only.
 
-import { MIPS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, settlementRequestPayload, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, settlementRequestPayload, unhex } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -83,12 +83,12 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
   } catch {
     return null;
   }
-  if (d.spec !== MIPS.money || (d.type !== 2 && d.type !== 3) || !d.payload) return null;
+  if (d.spec !== MIRS.money || (d.type !== 2 && d.type !== 3) || !d.payload) return null;
   const claim = (cborDecode(d.payload) as Map<number, unknown>).get(9);
   if (!Array.isArray(claim) || !(claim[0] instanceof Uint8Array) || !(claim[1] instanceof Uint8Array)) return null;
   const agreement = hex(claim[0]);
   const named = hex(claim[1]);
-  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   const add = (a: Uint8Array) => {
     try {
       v.add(a);
@@ -318,7 +318,7 @@ export interface OfferCheck {
  * protected, A4).
  */
 export async function offerCheck(offered: string, hints: string[], via: Via = {}): Promise<OfferCheck> {
-  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   const add = (a: Uint8Array) => {
     try {
       v.add(a);

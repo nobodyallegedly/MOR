@@ -30,7 +30,7 @@ use mor_core::chain::Status;
 use mor_core::money::{self as fin, Amount, Citations, Claim, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, RefundTo, VaultEntry};
 use mor_core::hash::Hash;
 use mor_core::identity::Payload as Id;
-use mor_core::agreements::{self, AgreementsView, Mips};
+use mor_core::agreements::{self, AgreementsView, Mirs};
 use mor_lightning::bolt11::Network as LnNetwork;
 use mor_lightning::{Lightning, LnAddress, LnProof};
 use mor_onchain::clock::{self, BitcoinClock};
@@ -40,8 +40,8 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 use support::{grow, h, mine, secret, N, REGTEST_BITS};
 
-fn mips() -> Mips {
-    Mips {
+fn mirs() -> Mirs {
+    Mirs {
         identity: common::identity_spec(),
         text: h("a text specification"),
         envelopes: h("the envelope specification"),
@@ -64,7 +64,7 @@ struct AgreementsHeld<'a> {
 impl AgreementsHeld<'_> {
     fn fin(&self, id: &Hash) -> Option<(Payload, Hash)> {
         let x = self.view.v.get(id)?;
-        if x.inside.spec != mips().money {
+        if x.inside.spec != mirs().money {
             return None;
         }
         Some((Payload::decode(x.inside.type_, &x.inside.payload).ok()?, x.act.outside.signer?))
@@ -85,7 +85,7 @@ impl Held for AgreementsHeld<'_> {
             Id::Rotation(r) => (x.act.outside.signer?, r.declarations.clone()?),
             _ => return None,
         };
-        Some((who, fin::vault_in(&mips().money, &decls).ok()??.unwrap_or_default()))
+        Some((who, fin::vault_in(&mirs().money, &decls).ok()??.unwrap_or_default()))
     }
     fn obligation(&self, id: &Hash) -> Option<Obligation> {
         match self.fin(id)? {
@@ -160,7 +160,7 @@ impl Story {
         let mut ben = w.genesis("ben", vec![own_home()], None, None);
         let pointer = |w: &mut World, p: &mut Person, node: &str| {
             let x = PayeePointer { payee: p.id, version: 1, previous: None, rails: ln_rail(&secret(node)) };
-            let a = w.everyday_act(p, mips().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(x).to_map(), None, None);
+            let a = w.everyday_act(p, mirs().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(x).to_map(), None, None);
             w.add(&a)
         };
         let service_pointer = pointer(&mut w, &mut service, "the service's node");
@@ -170,13 +170,13 @@ impl Story {
         // (Money rule 14's client conformance for an act that can pay its
         // signer).
         let offer = terms.standing_offer(mor_onchain::unit(Network::Regtest), Some("Anchoring on Bitcoin regtest, priced by urgency".into()), None);
-        let a = w.everyday_act_refs(&mut service, mips().agreements, agreements::types::STANDING_OFFER, offer.to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
+        let a = w.everyday_act_refs(&mut service, mirs().agreements, agreements::types::STANDING_OFFER, offer.to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
         let offer_id = w.add(&a);
         Story { w, service, ana, ben, service_pointer, ana_pointer, ben_pointer, offer_id, rail_valid: BTreeMap::new(), payments: BTreeMap::new() }
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut v = AgreementsView::new(&self.w.v, mips());
+        let mut v = AgreementsView::new(&self.w.v, mirs());
         v.rail_valid = self.rail_valid.clone();
         v.payments = self.payments.clone();
         v
@@ -192,7 +192,7 @@ impl Story {
     /// Sign and hold a claim; where the Lightning rail answers valid, state
     /// it to the Agreements view as an Agreements client does. Its act id and the answer.
     fn claim(&mut self, payer: &mut Person, c: &Claim) -> (Hash, Answer) {
-        let a = self.w.everyday_act(payer, mips().money, fin::types::CLAIM, Payload::Claim(c.clone()).to_map(), None, None);
+        let a = self.w.everyday_act(payer, mirs().money, fin::types::CLAIM, Payload::Claim(c.clone()).to_map(), None, None);
         let id = self.w.add(&a);
         let rec = Record::Claim(c, payer.id, &Citations::default());
         let ln = Lightning;

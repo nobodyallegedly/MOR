@@ -8,7 +8,7 @@
 // tool (roadmap step 14): who is bound, what each rule does, who decides
 // what (Agreements draft 7: tiers and areas), what changes.
 
-import { MIPS, SPECS, agreementsClonePlan, readTerms } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, agreementsClonePlan, readTerms } from '../../genesis/src/core.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import type { Manifest } from '../../repo/src/release.ts';
@@ -165,12 +165,12 @@ export function termsOf(payload: Uint8Array): TermsRead {
 
 /** The specs and cMIPs this client implements, by name. Anything else is unknown here. */
 const KNOWN: Record<string, string> = {
-  [SPECS.identity]: 'the Identity MIP',
-  [SPECS.envelopes]: 'the Envelopes MIP',
-  [SPECS.text]: 'the Text MIP',
-  [MIPS.money]: 'the Money MIP',
-  [MIPS.development]: 'the Development MIP',
-  [REPO_SPECS.agreements]: 'the Agreements MIP',
+  [SPECS.identity]: 'the Identity MIR',
+  [SPECS.envelopes]: 'the Envelopes MIR',
+  [SPECS.text]: 'the Text MIR',
+  [MIRS.money]: 'the Money MIR',
+  [MIRS.development]: 'the Development MIR',
+  [REPO_SPECS.agreements]: 'the Agreements MIR',
   [REPO_SPECS.manifest]: 'the release manifest cMIP (draft 1)',
 };
 
@@ -482,7 +482,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
       );
       const reach = [...a.kinds.map(kindWords), ...a.fields.map(fieldRefWords)];
       al.push({ text: `It reaches ${list(reach) || 'nothing'}.` });
-      const releases = a.kinds.some((k) => k.form === 'type' && k.spec === MIPS.envelopes && k.type === 0);
+      const releases = a.kinds.some((k) => k.form === 'type' && k.spec === MIRS.envelopes && k.type === 0);
       al.push({
         text: `${releases ? 'A release' : 'An act it reaches'} counts only once that many of its holders have signed it, each with a visible act of their own, under the agreement in force when the collective signed it (Agreements rule 36a, F100).`,
       });

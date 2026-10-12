@@ -1,4 +1,4 @@
-// The spec hashes a post names. All are test values: the MIPs' hashes are
+// The spec hashes a post names. All are test values: the MIRs' hashes are
 // fixed at the freeze, and the JPEG Module's once its creator is named at the
 // first acts (step 17).
 
@@ -8,9 +8,9 @@ import { LONGFORM_SPECS } from '../../longform/src/specs.ts';
 const test = (s: string) => sha256(s);
 
 export const POST_SPECS = {
-  /** The Text MIP (`TEXT`). */
+  /** The Text MIR (`TEXT`). */
   text: LONGFORM_SPECS.text,
-  /** The Envelopes MIP (`ENVELOPES`). */
+  /** The Envelopes MIR (`ENVELOPES`). */
   envelopes: SPECS.envelopes,
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
@@ -18,7 +18,7 @@ export const POST_SPECS = {
   jpeg: test('JPEG Module, draft 1, test value until publication'),
 };
 
-/** The text act (Text MIP, "Act format"). */
+/** The text act (Text MIR, "Act format"). */
 export const TEXT_ACT = 0;
 /** Envelopes types: a publication and a withdrawal. */
 export const PUBLICATION = 0;

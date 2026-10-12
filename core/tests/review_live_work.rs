@@ -34,12 +34,12 @@ use mor_core::act::Object;
 use mor_core::cbor::Value;
 use mor_core::money::{Amount, Claim, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
 use mor_core::hash::{sha256, Hash};
-use mor_core::agreements::{self, Field4, AgreementsView, Mips, PurchaseVerdict, Rule, SaleState, Stake, Terms, Who};
+use mor_core::agreements::{self, Field4, AgreementsView, Mirs, PurchaseVerdict, Rule, SaleState, Stake, Terms, Who};
 use mor_core::envelopes::vow::Vow;
 
-fn mips() -> Mips {
+fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
-    Mips {
+    Mirs {
         identity: common::identity_spec(),
         envelopes: t("ENVELOPE"),
         text: t("TEXT"),
@@ -54,11 +54,11 @@ fn spec(s: &str) -> Hash {
 }
 
 fn view(w: &World) -> AgreementsView<'_> {
-    AgreementsView::new(&w.v, mips())
+    AgreementsView::new(&w.v, mirs())
 }
 
 fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
-    let a = w.everyday_act(p, mips().agreements, type_, payload, objects, None);
+    let a = w.everyday_act(p, mirs().agreements, type_, payload, objects, None);
     w.add(&a)
 }
 
@@ -70,7 +70,7 @@ fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
 /// the live media cMIP draft 1 opens a stream.
 fn vow(w: &mut World, p: &mut Person, words: &str) -> Hash {
     let v = Vow { words: words.into(), cmip: Some((spec("the live media cMIP"), Value::Null)) };
-    let a = w.everyday_act(p, mips().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None);
+    let a = w.everyday_act(p, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None);
     w.add(&a)
 }
 
@@ -86,7 +86,7 @@ fn claim_alone(w: &mut World, p: &mut Person, work: Hash) -> Hash {
 fn publication(w: &mut World, p: &mut Person, work: Hash, locked: Hash) -> Hash {
     let x = w.everyday_act(
         p,
-        mips().envelopes,
+        mirs().envelopes,
         0,
         vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))],
         None,
@@ -127,7 +127,7 @@ fn receipt(w: &mut World, payee: &mut Person, payer: Hash, fulfils: Hash, purcha
         batch: None,
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
     });
-    let a = w.everyday_act(payee, mips().money, 2, r.to_map(), None, None);
+    let a = w.everyday_act(payee, mirs().money, 2, r.to_map(), None, None);
     w.add(&a)
 }
 
@@ -247,7 +247,7 @@ fn an_offer_naming_a_streams_vow_is_judged_apart_from_any_claim_on_its_name() {
             purchase: None,
             previous: None,
         });
-        let a = w.everyday_act(&mut fan, mips().money, 3, x.to_map(), None, None);
+        let a = w.everyday_act(&mut fan, mirs().money, 3, x.to_map(), None, None);
         w.add(&a)
     };
     // Draft 11, F253: a contest names the sale; Dario names the fan's.
@@ -354,7 +354,7 @@ fn today_the_recording_and_the_live_name_are_two_works_with_no_tie_the_core_read
     // Dario's publication of the recording, naming the live work in refs.
     let a = w.everyday_act_refs(
         &mut dario,
-        mips().envelopes,
+        mirs().envelopes,
         0,
         vec![(Value::Uint(1), Value::Bytes(recording.to_vec())), (Value::Uint(2), Value::Bytes(spec("the recording, locked").to_vec()))],
         None,

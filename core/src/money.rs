@@ -1,4 +1,4 @@
-//! The Money MIP's act formats, the vault, and where a payment may go
+//! The Money MIR's act formats, the vault, and where a payment may go
 //! (Money draft 6: "Act formats", "The vault", rules 12 to 14b and 16).
 //!
 //! Each payload decodes strictly, as Identity's do: its CDDL map is closed,
@@ -8,7 +8,7 @@
 //!
 //! What a rail's proof shows is not here: the payment cMIP and its rail
 //! Modules check it (Money rule 2, F112). This module answers only what
-//! the Money MIP itself decides: the formats, which pointer counts, and,
+//! the Money MIR itself decides: the formats, which pointer counts, and,
 //! from the vault the payee declared, where a payment of a given amount may
 //! be paid (rule 14a), or why it cannot be paid at all (rule 16); which
 //! flow pointer version counts for a payment or a debt, the latest the
@@ -28,7 +28,7 @@ use crate::chain::Quorum;
 use crate::envelopes::anchoring::{Anchors, Reference};
 use std::fmt;
 
-/// The types this MIP defines (Money, "Act formats").
+/// The types this MIR defines (Money, "Act formats").
 pub mod types {
     pub const PAYEE_POINTER: u64 = 0;
     pub const OBLIGATION: u64 = 1;
@@ -47,9 +47,9 @@ pub const VAULT_KIND: u64 = 0;
 pub enum FinError {
     /// The payload is not in the type's shape. Names the field.
     Shape(&'static str),
-    /// A type number this MIP does not define.
+    /// A type number this MIR does not define.
     UnknownType(u64),
-    /// A rule of the Money MIP fails. Names it.
+    /// A rule of the Money MIR fails. Names it.
     Check(&'static str),
 }
 
@@ -57,7 +57,7 @@ impl fmt::Display for FinError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             FinError::Shape(w) => write!(f, "payload not in the Money format: {w}"),
-            FinError::UnknownType(t) => write!(f, "type {t} is not defined by the Money MIP"),
+            FinError::UnknownType(t) => write!(f, "type {t} is not defined by the Money MIR"),
             FinError::Check(w) => write!(f, "{w}"),
         }
     }

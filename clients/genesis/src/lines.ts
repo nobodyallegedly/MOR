@@ -26,7 +26,7 @@
 // Every act is opened by the core library (`describeAct`, which gives
 // `prev` since this build); this file only follows ids.
 
-import { MIPS, ENVELOPES_TYPES, IDENTITY_TYPES, describeAct, runningSummary } from './core.ts';
+import { MIRS, ENVELOPES_TYPES, IDENTITY_TYPES, describeAct, runningSummary } from './core.ts';
 import { relayAt, type Via } from './transport.ts';
 
 /** What a rotation names to keep a line (Identity, rotation field 4). */
@@ -117,7 +117,7 @@ const AGREEMENTS_WORDS: Record<number, string> = {
 };
 
 /** What an act is, in plain words, from what its outside and inside show. */
-export function whatIs(d: { public: boolean; spec?: string; type?: number }, specs: Specs = MIPS): string {
+export function whatIs(d: { public: boolean; spec?: string; type?: number }, specs: Specs = MIRS): string {
   if (d.spec === undefined || d.type === undefined) return 'a private act: only those it was meant for can read what it is';
   const words =
     d.spec === specs.identity
@@ -179,7 +179,7 @@ export async function actsBy(signer: string, hints: string[], via: Via = {}): Pr
  * line is always among them, even where no relay holds it yet.
  */
 export function linesOf(o: { identity: string; binding: string; own: string[]; acts: Uint8Array[]; specs?: Specs }): FoundLine[] {
-  const specs = o.specs ?? MIPS;
+  const specs = o.specs ?? MIRS;
   const held = new Map<string, Described>();
   for (const a of o.acts) {
     let d: Described;

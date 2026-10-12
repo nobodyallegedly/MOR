@@ -145,7 +145,7 @@ fn a_found_private_link_binds_nothing_on_the_fetch_alone() {
     let claim = w.private_act(&mut ana, identity_spec(), types::LINK_CLAIM, claim_payload(&ben.id), None, vec![ben.id]);
     let post = w.post(&mut ana, "a public post");
     // Another verifier holding the same acts and content keys, no fetch.
-    let mut other = Verifier::with_mips(identity_spec(), money_spec(), agreements_spec());
+    let mut other = Verifier::with_mirs(identity_spec(), money_spec(), agreements_spec());
     for (a, k) in &w.log {
         other.add_with_key(a.clone(), k.as_ref()).unwrap();
     }
@@ -252,14 +252,14 @@ fn a_links_ending_applies_to_every_act_holding_the_termination() {
 
 /// F168 (B4): a scoped key never signs an Identity act (rule 1a), so a
 /// private link act signed by one, a key whose binding is an act of a
-/// higher MIP such as a grant, is invalid. Before, it showed as "scoped",
+/// higher MIR such as a grant, is invalid. Before, it showed as "scoped",
 /// with no home requirement at all.
 #[test]
 fn a_private_link_signed_by_a_scoped_key_is_invalid() {
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let ben = w.genesis("ben", vec![own_home()], None, None);
-    // An act of a higher MIP, standing for the grant that installs a key.
+    // An act of a higher MIR, standing for the grant that installs a key.
     let g = w.everyday_act(&mut ana, agreements_spec(), 9, vec![], None, None);
     let grant = w.add(&g);
     let mut scoped = ana.clone();
@@ -267,7 +267,7 @@ fn a_private_link_signed_by_a_scoped_key_is_invalid() {
     scoped.seq.clear();
     let public = w.everyday_act(&mut scoped, money_spec(), 2, vec![], None, None);
     let public = w.add(&public);
-    assert_eq!(w.v.status(&public), Status::Scoped, "a scoped key signs a higher MIP's act");
+    assert_eq!(w.v.status(&public), Status::Scoped, "a scoped key signs a higher MIR's act");
     let claim = w.private_act(&mut scoped, identity_spec(), types::LINK_CLAIM, claim_payload(&ben.id), None, vec![ben.id]);
     w.v.found_at_home(claim, ana.id);
     assert_eq!(w.v.status(&claim), Status::Invalid);

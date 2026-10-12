@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
-  MIPS,
+  MIRS,
   SPECS,
   Verifier,
   cborDecode,
@@ -443,7 +443,7 @@ export async function verifyRelease(
   }
 
   // 2. The signer's chain, and the publication's standing.
-  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   let homes: string[];
   try {
     const l = await lookUp(d.signer, hints, via, v);

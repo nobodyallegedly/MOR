@@ -221,12 +221,12 @@ function textOf(d: Draft, blocking: string[]): { text: string | null; format: un
     blocking.push('It has no text.');
     return { text: null, format, what };
   }
-  if (p && [...p.keys()].some((k) => k !== 0 && k !== 1)) blocking.push('Its payload has fields the Text MIP does not define.');
+  if (p && [...p.keys()].some((k) => k !== 0 && k !== 1)) blocking.push('Its payload has fields the Text MIR does not define.');
   if (d.objects.length) blocking.push('A text act names no objects.');
   try {
     checkText(text);
   } catch (e) {
-    blocking.push(`Its text is not canonical text (Text MIP, rule 1): ${err(e)}.`);
+    blocking.push(`Its text is not canonical text (Text MIR, rule 1): ${err(e)}.`);
   }
   if (format === undefined) what.push({ text: 'Plain text: what you read below is exactly what is signed.' });
   else if (format instanceof Uint8Array && hex(format) === POST_SPECS.longform) {
@@ -446,7 +446,7 @@ const checkRefs = (refs: string[] | undefined) => {
 };
 
 /**
- * A public text, as the barebone client posts it (Text MIP type 0), in plain
+ * A public text, as the barebone client posts it (Text MIR type 0), in plain
  * text or the long-form format. The text is composed first (Text rule 6),
  * and what composing changed is said.
  */

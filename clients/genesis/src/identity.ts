@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import {
   ACK_SPECS,
-  MIPS,
+  MIRS,
   SPECS,
   ENVELOPES_TYPES,
   IDENTITY_TYPES,
@@ -108,9 +108,9 @@ const sameRef = (a: ClockRef, b: ClockRef) => a.cmip === b.cmip && a.params === 
 
 /** The clock as a declaration (Identity's declarations slot): null removes it. */
 export function clockDeclaration(c: Clock | null): { spec: string; kind: number; cbor?: Uint8Array } {
-  if (!c) return { spec: MIPS.money, kind: CLOCK_KIND };
+  if (!c) return { spec: MIRS.money, kind: CLOCK_KIND };
   const ref = (r: ClockRef) => [unhex(r.cmip), cborDecode(unhex(r.params))];
-  return { spec: MIPS.money, kind: CLOCK_KIND, cbor: cborEncode([ref(c.main), ...(c.backup ? [ref(c.backup)] : [])]) };
+  return { spec: MIRS.money, kind: CLOCK_KIND, cbor: cborEncode([ref(c.main), ...(c.backup ? [ref(c.backup)] : [])]) };
 }
 
 interface Pending {
@@ -304,7 +304,7 @@ export class TestIdentity {
     }
     // F127: a collective's action cites, on its chain, the decision it acts
     // under, after the entries its type defines.
-    const isRecord = spec === MIPS.agreements && type === AGREEMENTS_RECORD;
+    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
     let objects = opts.objects;
     if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
       objects = [...(objects ?? []), ...this.f.cites.map((d): [string, string] => [this.f.identity, d])];
@@ -808,7 +808,7 @@ export interface Received {
   /** The sender's act, as the core library judges it after looking the sender up. */
   status?: string;
   delivery?: { target: string; key: Uint8Array; media: boolean };
-  /** A message: the text of a text act (Text MIP, type 0), as the core library opened it. */
+  /** A message: the text of a text act (Text MIR, type 0), as the core library opened it. */
   text?: string;
 }
 

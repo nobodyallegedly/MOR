@@ -17,12 +17,12 @@ use mor_core::mmr::Mmr;
 use mor_core::sig::{self, SchnorrKey, SlhKey, Verdict, SLH_CONTEXT};
 use slh_dsa::{Sha2_128f, Sha2_128s};
 
-/// The Identity MIP's spec hash in these tests. The real one is fixed at the freeze.
+/// The Identity MIR's spec hash in these tests. The real one is fixed at the freeze.
 pub fn identity_spec() -> Hash {
     sha256(b"IDENTITY, test value until the freeze")
 }
 
-/// The Money and Agreements MIPs' spec hashes in these tests: the act types
+/// The Money and Agreements MIRs' spec hashes in these tests: the act types
 /// that may carry acknowledgements beside Identity's (F110).
 pub fn money_spec() -> Hash {
     sha256(b"FINANCE, test value until the freeze")
@@ -177,7 +177,7 @@ impl Default for World {
 impl World {
     pub fn new() -> Self {
         World {
-            v: Verifier::with_mips(identity_spec(), money_spec(), agreements_spec()),
+            v: Verifier::with_mirs(identity_spec(), money_spec(), agreements_spec()),
             counter: 0,
             log: vec![],
         }

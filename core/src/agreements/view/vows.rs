@@ -87,11 +87,11 @@ pub struct VowEval {
 }
 
 impl<'a> AgreementsView<'a> {
-    /// A held vow act of this verifier's Envelopes MIP, in its format,
+    /// A held vow act of this verifier's Envelopes MIR, in its format,
     /// valid under Identity or not, with its decoded payload.
     fn vow_held(&self, id: &Hash) -> Option<(&'a Held, VowAct)> {
         let h = self.v.get(id)?;
-        if h.inside.spec != self.mips.envelopes || h.inside.type_ != crate::envelopes::types::VOW {
+        if h.inside.spec != self.mirs.envelopes || h.inside.type_ != crate::envelopes::types::VOW {
             return None;
         }
         Vow::decode(&h.inside, h.act.outside.signer.as_ref()).ok().map(|v| (h, v))
@@ -173,7 +173,7 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             // Paid: each payment following the offer that is a purchase.
-            for x in self.v.held_acts().filter(|x| x.inside.spec == self.mips.money) {
+            for x in self.v.held_acts().filter(|x| x.inside.spec == self.mirs.money) {
                 let (fulfils, proof) = match crate::money::Payload::decode(x.inside.type_, &x.inside.payload) {
                     Ok(crate::money::Payload::Receipt(r)) => (r.fulfils, r.proof),
                     Ok(crate::money::Payload::Claim(c)) => (c.fulfils, c.proof),
