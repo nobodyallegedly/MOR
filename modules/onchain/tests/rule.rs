@@ -462,7 +462,7 @@ fn paid(w: &World, paid_to: PaidTo, keys: &Keys, amount: Amount, payer: Option<P
     let proof = Proof { paid_to, salt: SALT, rail: p.encode() }.encode();
     (
         Receipt { rail: mor_onchain::spec(), proof: proof.clone(), payer: payer.clone(), payee: w.payee, amount, fulfils, previous: None, forward: None, batch: None, purchase: None },
-        Claim { rail: mor_onchain::spec(), proof, payee: w.payee, amount, fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None },
+        Claim { rail: mor_onchain::spec(), proof, payee: w.payee, amount, fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None },
     )
 }
 

@@ -190,6 +190,7 @@ export function identities(s: State): string {
       }).join('');
       return `<div class="card" data-identity="${e(i.id)}"><h3>${e(i.name)}</h3>
 <dl class="facts"><dt>Fingerprint</dt><dd><code>${e(i.id.match(/.{1,4}/g)!.join(' '))}</code><button class="quiet copy" data-action="copy" data-id="${e(i.id)}" title="Copies the whole ID, without spaces, to paste where an identity is asked for">Copy ID</button></dd>
+<dt>This desk's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd>
 <dt>Claude</dt><dd>${linkSwitch(i.id, i.linked)}</dd></dl>
 <div class="here" data-here="${e(i.id)}" role="status" aria-live="polite"></div>
 <div class="row"><button class="quiet" data-action="refresh" data-identity="${e(i.id)}">Look for what it received</button></div>

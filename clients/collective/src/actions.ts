@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, agreementsClonePlan, agreementsDivideStake, agreementsRollbackPlan, agreementsSplitTally, noticePayload, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
-import { TestCollective, collectiveTerms, type Governance } from '../../repo/src/collective.ts';
+import { TestCollective, collectiveTerms, type Governance, type KeptLines } from '../../repo/src/collective.ts';
+import { readCards, type Card } from '../../genesis/src/lines.ts';
 import {
   AGREEMENTS_SPECS,
   RELEASE_AREA,
@@ -804,6 +805,37 @@ export class Actions {
   }
 
   /**
+   * Before a rotation of the collective (Identity rule 35, was 17; client
+   * conformance): every line of its acts read from its homes and relays,
+   * shown in plain words, each kept unless named in `leaveOut` (by its
+   * latest act); a line this device cannot read (a private act another
+   * device made) kept by its card, given in `cards` as the device that made
+   * it shows it. A line left out, by name or for want of a card, is shown
+   * with the warning that its acts become void, which the review then
+   * carries: confirming it is the owner's leaving it out. Never a refusal.
+   * What the owner typed wrong (no such line, a card that contradicts one
+   * read here) blocks, with why.
+   */
+  private async keptLines(c: TestCollective, leaveOut: string[] = [], cardsText = '', blocking: string[]): Promise<{ section: Section; lines: KeptLines; digest: string }> {
+    let cards: Card[] = [];
+    let shown: Line[] = [];
+    let warning: string | null = null;
+    try {
+      cards = readCards(cardsText);
+      const plan = await c.planLines({ leaveOut, cards });
+      shown = plan.shown;
+      warning = plan.warning;
+    } catch (e) {
+      blocking.push(`The lines of the collective's acts: ${e instanceof Error ? e.message : e}.`);
+    }
+    return {
+      section: { heading: 'Lines of acts the rotation keeps (Identity rule 35)', lines: [...shown, ...(warning ? [{ text: warning, tone: 'bad' as const }] : [])] },
+      lines: { leaveOut, cards, warned: warning ?? undefined },
+      digest: JSON.stringify({ leaveOut, cards, warning }),
+    };
+  }
+
+  /**
    * Before drawing a record: acts of the collective its relays hold that
    * this device's sequence does not. A record names no other sequence, so
    * they would count as made after its line (Agreements, "Made before, made
@@ -983,7 +1015,7 @@ export class Actions {
    * clone's mark names the constitutional change rule and the members whose
    * voice remains who sign it; a rotation of the collective declares it.
    */
-  async prepareChange(a: { collective: string; join?: string[]; leave?: string[]; rules?: Rules; words?: string }) {
+  async prepareChange(a: { collective: string; join?: string[]; leave?: string[]; rules?: Rules; words?: string; leaveLines?: string[]; cards?: string }) {
     const names = this.store.names();
     const c = this.store.collective(a.collective);
     // Only who judges absence changes: a judicial change, under the clone
@@ -1117,6 +1149,7 @@ export class Actions {
       );
     }
     const warnings = resigning.length ? await this.unheard(c) : [];
+    const kept = await this.keptLines(c, a.leaveLines, a.cards, blocking);
     // F207 (client conformance): each resignation signed here names the
     // drafts its signer leaves behind, as leaving alone does, so none of
     // them ever brings them back, whichever line puts it in force.
@@ -1127,6 +1160,7 @@ export class Actions {
       summary,
       sections: [
         { heading: 'What changes', lines: [...changes, ...lm.lines, ...notes, ...warnings] },
+        kept.section,
         ...(resigning.length ? [{ heading: 'Drafts left behind', lines: resigning.flatMap((m) => this.draftLines(names(m), drafts[m], 'resignation')) }] : []),
         ...read.sections.map((s) => ({ ...s, heading: `After the change: ${s.heading.charAt(0).toLowerCase()}${s.heading.slice(1)}` })),
         {
@@ -1148,7 +1182,7 @@ export class Actions {
     };
     return this.plan({
       kind: 'change',
-      digest: digestOf('change', a.collective, payload, JSON.stringify({ members, rebuilders: usedRebuilders, resigning, drafts })),
+      digest: digestOf('change', a.collective, payload, JSON.stringify({ members, rebuilders: usedRebuilders, resigning, drafts }), kept.digest),
       reading,
       depends: [a.collective, ...new Set([...c.f.members, ...join].filter((m) => this.store.holds(m)))],
       run: async () => {
@@ -1172,6 +1206,8 @@ export class Actions {
           // count this mark (rules 44d, 45a).
           beforeClone: () => this.markHolds(col, mark, names, { leaving: recoveringOut }),
           beforeSend: (clone) => this.markHolds(col, mark, names, { clone, joining: join, leaving: recoveringOut }),
+          // Identity rule 35: the lines as shown, kept or left out after the warning shown.
+          lines: kept.lines,
         });
         if (got.stopped) {
           if (got.record) {
@@ -1567,7 +1603,7 @@ export class Actions {
    * counts again from the relays before the clone is proposed and before
    * the rotation is sent.
    */
-  async prepareRollback(a: { collective: string; rules?: Rules }) {
+  async prepareRollback(a: { collective: string; rules?: Rules; leaveLines?: string[]; cards?: string }) {
     const names = this.store.names();
     const c = this.store.collective(a.collective);
     const cname = this.store.book().collectives.find((x) => x.id === a.collective)?.name ?? short(a.collective);
@@ -1721,6 +1757,7 @@ export class Actions {
     if (rebuilders.length < c.f.safety.threshold) {
       blocking.push(`The rotation needs ${c.f.safety.threshold} shares of the collective's current chain key, the one the broken act dealt; only ${rebuilders.length} are held here by members who stay.`);
     }
+    const lineKeep = await this.keptLines(c, a.leaveLines, a.cards, blocking);
     const reading: Reading = {
       title,
       summary: [
@@ -1744,6 +1781,7 @@ export class Actions {
             { text: 'What a counterparty relied on during the broken stretch is signed anew after the rollback, never adopted (RB2). The collective keeps exactly what its rules before the break allowed, judged by the offer a payment names (BQ2, BQ3): a sale under an offer made before the break is kept, and what the collective owes for it is done once the rollback lets it act; a payment under an offer made during the stretch is owed back to its payer unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (RB2). Money owed back is a debt: the collective cannot close until those payers are settled (F189, 7). Grants made before the broken act work again after the rollback; what grantees signed during the stretch counts for nothing (RB1). The rollback restores every condition as at the act before the break.' },
           ],
         },
+        lineKeep.section,
         {
           heading: 'Signed on this device',
           lines: [
@@ -1758,7 +1796,7 @@ export class Actions {
     };
     return this.plan({
       kind: 'rollback',
-      digest: digestOf('rollback', a.collective, b.act, payload, JSON.stringify({ registering, rebuilders: usedRebuilders, rules: a.rules ?? null })),
+      digest: digestOf('rollback', a.collective, b.act, payload, JSON.stringify({ registering, rebuilders: usedRebuilders, rules: a.rules ?? null }), lineKeep.digest),
       reading,
       depends: [a.collective, ...signers],
       run: async () => {
@@ -1780,6 +1818,7 @@ export class Actions {
           // the clone is proposed and before the rotation is sent.
           beforeClone: () => this.rollbackHolds(col, b, mark, leaving, names, regs),
           beforeSend: (clone) => this.rollbackHolds(col, b, mark, leaving, names, regs, clone),
+          lines: lineKeep.lines,
         });
         for (const i of ids) this.store.saveIdentity(i);
         if (got.stopped) {

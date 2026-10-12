@@ -8,6 +8,7 @@ import { SPECS, WITNESS_EXPLANATION, cborEncode, hex, unhex } from './core.ts';
 import { createInterface } from 'node:readline/promises';
 import { TestIdentity, lookUp, type Home, type Submitted } from './identity.ts';
 import { relayAt, type Via } from './transport.ts';
+import { ownLine } from './lines.ts';
 
 const HELP = `mor-genesis: create and run MOR test identities.
 
@@ -23,9 +24,16 @@ never for a real identity. Keep the file secret: it holds every key.
         Publish new routes: where this identity's content is, where to deliver to it.
   enckey --file F
         Publish a new encryption key (X-Wing); the private half stays in the file.
-  rotate --file F [--home URL ...] [--rule R]
+  rotate --file F [--home URL ...] [--rule R] [--at URL ...]
+         [--leave ACT ...] [--card ACT:POSITION:SUMMARY ...]
         Sign a rotation with the chain key and send it to every home; take on the
         new keys once it counts. If one is pending, send the same bytes again.
+        First every line of this identity's acts is read from its homes, the
+        relays its routes name and --at, and shown: each line is kept (Identity
+        rule 35). --leave ACT leaves out the line ending at ACT; --card keeps a
+        line this client cannot read (a private act made elsewhere), as the app
+        that made it shows it. A line left out, or unread with no card, voids its
+        acts: that is said first, and nothing is signed until you type VOID.
   spread --file F
         Send every home what it missed, and the other homes' receipts.
   check ID --at URL
@@ -42,6 +50,8 @@ never for a real identity. Keep the file secret: it holds every key.
         Write operator.key (the signing key and its binding, no safety
         key) and operator-chain.mor, for \`mor-relay init --operator-key ...\`.
   show --file F
+        This identity, and this client's own line of acts: its latest act,
+        position and summary (what another client keeps it by, F152).
 
 Every command takes --via URL=LOCAL to reach an address another way (for
 example the onion home at its local port, on the machine that runs it).`;
@@ -155,7 +165,29 @@ async function main() {
         const homes = opts.home ? await homesOf(opts.home, via) : undefined;
         const warning = t.clockWarning();
         if (warning) console.log(`WARNING: ${warning}`);
-        const id = t.prepareRotation({ homes, rule: one('rule') === 'majority' ? [] : rule(one('rule')) });
+        const cards = (opts.card ?? []).map((c) => {
+          const [act, position, summary] = c.split(':');
+          return { act, position: Number(position), summary };
+        });
+        const leaveOut = opts.leave ?? [];
+        const hints = opts.at ?? [];
+        // Identity rule 35 (was 17): every line read, shown, kept unless left out.
+        const { plan } = await t.planRotation({ leaveOut, cards, hints });
+        console.log('Lines of acts this rotation judges:');
+        for (const l of plan.shown) console.log(`  ${l.tone === 'bad' ? '!' : l.tone === 'warn' ? '?' : '-'} ${l.text}`);
+        let warned: string | undefined;
+        if (plan.warning) {
+          console.log(`WARNING: ${plan.warning}`);
+          const rl = createInterface({ input: process.stdin, output: process.stdout });
+          const answer = (await rl.question('Type VOID to sign it anyway, anything else to stop: ')).trim();
+          rl.close();
+          if (answer !== 'VOID') {
+            console.log('Nothing signed.');
+            break;
+          }
+          warned = plan.warning;
+        }
+        const id = await t.prepareRotation({ homes, rule: one('rule') === 'majority' ? [] : rule(one('rule')), leaveOut, cards, hints, warned });
         t.save(need('file')); // before sending: a retry sends the same bytes
         console.log(`rotation ${id} signed with the chain key (held in software)`);
       } else console.log(`rotation ${t.f.pending.id} pending: sending the same bytes again`);
@@ -260,6 +292,9 @@ async function main() {
       console.log(`  homes: ${t.f.homes.map((h) => `${h.hint} (${h.operator ?? 'self'})`).join(', ')}`);
       console.log(`  next chain key: scheme ${t.f.safety.scheme}, commitment ${t.nextChainKey().commit}`);
       console.log(`  sequence: ${t.f.sequence.length} acts; routes v${t.f.routes?.version ?? 0}; encryption keys: ${t.f.encryption.length}`);
+      // F152: this client's own line, so the owner can tell it from a thief's.
+      const own = ownLine(t.f.sequence).card;
+      console.log(own ? `  this client's line: latest act ${own.act}, position ${own.position}, summary ${own.summary}` : "  this client's line: no act yet");
       if (t.f.pending) console.log(`  rotation pending: ${t.f.pending.id}`);
       break;
     }

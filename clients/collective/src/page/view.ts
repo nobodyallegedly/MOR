@@ -164,7 +164,7 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
       const others = s.identities.filter((i) => !c.members.some((m) => m.id === i.id));
       const mine = c.members.filter((m) => !m.left && s.identities.find((i) => i.id === m.id)?.mine);
       const agreementsNote = c.law.broken
-        ? note('error', `<strong>Agreements read this collective as broken.</strong> No agreement can be found in force for it, so nothing signed in its name counts, and no change of it can come into force. Agreements' reason: ${e(c.law.broken)}. <span class="small">The rules below are this device's copy, not rules in force.</span>${c.law.rollback ? `<br>The way back is a rollback: a new rotation brings back the agreement in force just before the broken act, signed under its rule for changing the constitution; what was signed since stays shown and counts for nothing. <button data-action="rollback" data-collective="${e(c.id)}">Review a rollback</button><details class="rollback"><summary>Roll back with new numbers</summary><p class="small">Where the rules before the broken act do not fit the members left after it.</p><form class="rollback" data-collective="${e(c.id)}">${rulesFields(c.rules)}<div class="row"><button type="submit">Review the rollback</button></div></form></details>` : ''}`)
+        ? note('error', `<strong>Agreements read this collective as broken.</strong> No agreement can be found in force for it, so nothing signed in its name counts, and no change of it can come into force. Agreements' reason: ${e(c.law.broken)}. <span class="small">The rules below are this device's copy, not rules in force.</span>${c.law.rollback ? `<br>The way back is a rollback: a new rotation brings back the agreement in force just before the broken act, signed under its rule for changing the constitution; what was signed since stays shown and counts for nothing. <button data-action="rollback" data-collective="${e(c.id)}">Review a rollback</button><details class="rollback"><summary>Roll back with new numbers</summary><p class="small">Where the rules before the broken act do not fit the members left after it.</p><form class="rollback" data-collective="${e(c.id)}">${rulesFields(c.rules)}${linesFields()}<div class="row"><button type="submit">Review the rollback</button></div></form></details>` : ''}`)
         : c.law.unread
           ? note('warn', `Agreements' own reading of this collective could not be had (${e(c.law.unread)}). <span class="small">The rules below are this device's copy; nothing is signed until Agreements can count.</span>`)
           : '';
@@ -211,10 +211,23 @@ ${c.members.filter((m) => !m.left).length > 1 ? `<details class="absence"><summa
 <fieldset><legend>Remove</legend>${c.members.map((m) => `<label class="check"><input type="checkbox" name="leave" value="${e(m.id)}"> ${e(nameOf(s, m.id))}</label>`).join('')}</fieldset>
 ${rulesFields(c.rules)}
 <label>The words (empty: the standard words, if the words were standard)</label><textarea name="words">${e(c.words)}</textarea>
+${linesFields()}
 <div class="row"><button type="submit">Review the change</button></div></form></details>
 ${money(s, c)}</div>`;
     })
     .join('');
+}
+
+/**
+ * A rotation keeps every line of the collective's acts (Identity rule 35):
+ * the review shows them. Here the owner may leave one out by name, or give
+ * the card of a line this device cannot read.
+ */
+function linesFields(): string {
+  return `<details class="lines"><summary>Lines of acts (rarely needed)</summary>
+<p class="small">The review shows every line of the collective's acts its homes and relays hold, and the rotation keeps them all. Leave one out only if no device of the collective made it: its acts become void, and the review says so first. A line this device cannot read (a private act another device made) is kept by its card, as that device shows it.</p>
+<label>Lines to leave out: the latest act of each, one per line</label><textarea name="leave-lines"></textarea>
+<label>Cards of lines this device cannot read: latest act, position and summary, one line each</label><textarea name="cards"></textarea></details>`;
 }
 
 /** Money and endings (Agreements draft 10, F121 to F124): stakes, the split service, the pointer, splits, debts, the fork, a release to the public domain, closing. */

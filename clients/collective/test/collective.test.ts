@@ -11,8 +11,9 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { signaturePayload } from '../../genesis/src/core.ts';
-import { TestIdentity } from '../../genesis/src/identity.ts';
+import { actId, signaturePayload } from '../../genesis/src/core.ts';
+import { TestIdentity, lookUp } from '../../genesis/src/identity.ts';
+import { actsBy, ownLine } from '../../genesis/src/lines.ts';
 import { sign as agreementsSign } from '../../repo/src/agreements.ts';
 import { verifyRelease } from '../../repo/src/release.ts';
 import { REPO_SPECS, AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
@@ -312,6 +313,10 @@ test('before drawing a record, a warning when the relays hold acts of the collec
   // The same warning before a member change that draws a record.
   const rm = await prepare(c, { kind: 'change', collective: col.id, leave: [three] });
   assert.match(words(rm.reading), /not in this device's sequence/);
+  // Identity rule 35 (was 17): its rotation keeps that device's line, shown first.
+  const rmLines = rm.reading.sections.find((x) => /Lines of acts the rotation keeps/.test(x.heading));
+  assert.ok(rmLines?.lines.some((l) => l.text.includes(stray.id) && /A line made elsewhere: 1 act, the latest .*its signature on an agreement.*Kept\./.test(l.text)), words(rm.reading));
+  await c.ask('cancel', { plan: rm.plan });
   const plainChange = await prepare(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 1, clone: 2, others: 2 } });
   assert.doesNotMatch(words(plainChange.reading), /not in this device's sequence/, 'no record, no warning');
   await c.ask('cancel', { plan: plainChange.plan });
@@ -631,3 +636,69 @@ test('money and endings (Agreements draft 10, F121 to F124): stakes at founding,
   s = await state(c);
   assert.ok(s.collectives.find((x) => x.id === side.id)!.closed);
 });
+
+test('Identity rule 35 (was 17): a rotation keeps the other devices’ lines; a private one is shown, its card asked for and accepted; one left out on purpose is warned about, then void', async () => {
+  const c = w.client;
+  let s = await state(c);
+  const [ada, two, three] = ['Ada', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
+  await sign(c, { kind: 'found', name: 'Lines', members: [ada, two, three], rules: {} });
+  s = await state(c);
+  const col = s.collectives.find((x) => x.name === 'Lines')!;
+  const device = () => {
+    const file = w.app.store.collective(col.id).f;
+    return { file, other: new TestIdentity({ ...structuredClone(file.identity), sequence: [] }) };
+  };
+  const signature = (file: { agreement: string; relays: string[] }, pub: boolean) => ({ public: pub, relays: file.relays, objects: [[file.agreement, file.agreement]] as [string, string][] });
+
+  // Another device: a public act, then a private one.
+  let { file, other } = device();
+  const p1 = await other.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(file.agreement), signature(file, true));
+  const x = await other.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(file.agreement), signature(file, false));
+  const change = { kind: 'change', collective: col.id, rules: { safety: 2, release: 1, clone: 2, others: 2 } };
+  const asked = await prepare(c, change);
+  const shown = asked.reading.sections.find((y) => /Lines of acts the rotation keeps/.test(y.heading))!;
+  const unread = shown.lines.find((l) => l.text.includes(x.id))!;
+  assert.match(unread.text, /A line made elsewhere that this device cannot read, ending at .*private act made elsewhere.*Give its card/s);
+  assert.match(unread.text, /No card was given, so it is left out/);
+  assert.ok(shown.lines.some((l) => l.tone === 'bad' && new RegExp(`${x.id}.*becomes void`, 's').test(l.text)), 'the warning, before signing');
+  assert.deepEqual(asked.reading.blocking, [], 'asked, never refused');
+  await c.ask('cancel', { plan: asked.plan });
+  // A card that names no number: refused, with why.
+  const typo = await prepare(c, { ...change, cards: `${x.id} two` });
+  assert.ok(typo.reading.blocking.some((b: string) => /a card is a latest act, a position and a summary/.test(b)), typo.reading.blocking.join(' | '));
+  await c.ask('cancel', { plan: typo.plan });
+  // Its card, as that device shows it: kept.
+  const card = ownLine(other.f.sequence).card!;
+  const kept = await sign(c, { ...change, cards: `${card.act} ${card.position} ${card.summary}` });
+  assert.ok(words(kept.review.reading).includes(`Kept by the card given: position 2, summary ${card.summary}`));
+  assert.doesNotMatch(words(kept.review.reading), /becomes void/);
+  assert.match(kept.done.title, /done$/, JSON.stringify(kept.done));
+  assert.equal(await standingOf(col.id, x.id, x.key), 'valid', 'the private act, kept by its card');
+  assert.equal(await standingOf(col.id, p1.id), 'valid');
+
+  // A line the members do not recognise, left out by name: warned, then void.
+  ({ file, other } = device());
+  const y = await other.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(file.agreement), signature(file, true));
+  const out = await sign(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 2, clone: 2, others: 2 }, leaveLines: [y.id] });
+  const ow = out.review.reading.sections.find((z) => /Lines of acts the rotation keeps/.test(z.heading))!.lines;
+  assert.ok(ow.some((l) => l.tone === 'bad' && l.text.includes(y.id) && /Left out by name: its acts become void/.test(l.text)));
+  assert.ok(ow.some((l) => l.tone === 'bad' && /becomes void, unless someone relied on it/.test(l.text)), 'the warning, shown in the review the owner confirms');
+  assert.match(out.done.title, /done$/, JSON.stringify(out.done));
+  assert.notEqual(await standingOf(col.id, y.id), 'valid', 'left out: void');
+  assert.equal(await standingOf(col.id, x.id, x.key), 'valid', 'the line kept before stays valid');
+});
+
+/** An act's standing, as a reader holding every act of the collective at its homes and relays judges it. */
+async function standingOf(identity: string, id: string, key?: Uint8Array): Promise<string> {
+  const hints = [w.relay.base, ...w.homes.map((h) => h.base)];
+  const l = await lookUp(identity, hints);
+  for (const a of await actsBy(identity, hints)) {
+    try {
+      if (key && actId(a) === id) l.verifier.addWithKey(a, key);
+      else l.verifier.add(a);
+    } catch {
+      // not this reader's to open
+    }
+  }
+  return l.verifier.status(id);
+}

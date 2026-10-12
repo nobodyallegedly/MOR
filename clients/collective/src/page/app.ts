@@ -255,9 +255,11 @@ app.addEventListener('submit', async (ev) => {
   if (form.classList.contains('debt-release')) return prepare({ kind: 'debt-release', debt: words(d.get('debt')) });
   if (form.classList.contains('release')) return prepare({ kind: 'release', publisher: collective, version: words(d.get('version')) });
   if (form.classList.contains('words')) return prepare({ kind: 'words', collective, text: words(d.get('text')) });
-  if (form.classList.contains('rollback')) return prepare({ kind: 'rollback', collective, rules: rulesOf(d) });
+  // Identity rule 35: lines left out by name, and cards of lines this device cannot read.
+  const lines = () => ({ leaveLines: String(d.get('leave-lines') ?? '').split(/\s+/).filter(Boolean), cards: String(d.get('cards') ?? '') });
+  if (form.classList.contains('rollback')) return prepare({ kind: 'rollback', collective, rules: rulesOf(d), ...lines() });
   if (form.classList.contains('change')) {
-    return prepare({ kind: 'change', collective, join: d.getAll('join').map(String), leave: d.getAll('leave').map(String), rules: rulesOf(d), words: words(d.get('words')) });
+    return prepare({ kind: 'change', collective, join: d.getAll('join').map(String), leave: d.getAll('leave').map(String), rules: rulesOf(d), words: words(d.get('words')), ...lines() });
   }
 });
 

@@ -19,6 +19,7 @@ import { TestIdentity, lookUp, receive, TEST_LABEL } from '../src/identity.ts';
 import { SPECS, WITNESS_EXPLANATION, actId, cborEncode, openWithKey, xwingDecapsulate, xwingEncapsulate } from '../src/core.ts';
 import { kexLog } from '../src/kex.ts';
 import { relayAt } from '../src/transport.ts';
+import { actsBy, ownLine, type FoundLine } from '../src/lines.ts';
 
 let homes: Running[] = [];
 let inbox: Running;
@@ -89,9 +90,9 @@ test('every home serves the chain, its receipts, the routes and the encryption k
 test('the identity rotates: pending until the homes hold it, then it counts by majority', async () => {
   const path = join(dir, 'alice.json');
   const before = alice.f.binding;
-  const rotation = alice.prepareRotation();
+  const rotation = await alice.prepareRotation();
   alice.save(path); // before sending: a retry sends the same bytes (rule 8a)
-  assert.throws(() => alice.prepareRotation(), /never sign a second one/);
+  await assert.rejects(alice.prepareRotation(), /never sign a second one/);
 
   const sent = await alice.submitRotation();
   assert.equal(sent.filter((s) => s.result?.receipt).length, 3);
@@ -118,7 +119,7 @@ test('the identity rotates: pending until the homes hold it, then it counts by m
 test('with one home switched off, two of three still make a rotation count', async () => {
   await homes[2].stop();
   try {
-    const rotation = alice.prepareRotation();
+    const rotation = await alice.prepareRotation();
     const sent = await alice.submitRotation();
     assert.equal(sent.filter((s) => s.result?.receipt).length, 2);
     assert.ok(sent.find((s) => s.home === homes[2].base)?.error);
@@ -151,7 +152,7 @@ test('one home of three is not a majority: the rotation stays pending', async ()
   await homes[1].stop();
   await homes[2].stop();
   try {
-    const rotation = alice.prepareRotation();
+    const rotation = await alice.prepareRotation();
     const sent = await alice.submitRotation();
     assert.equal(sent.filter((s) => s.result?.receipt).length, 1);
     const { counts, lookup } = await alice.settleRotation();
@@ -336,7 +337,7 @@ test('after a rotation the owner\'s client anchors its home quorum on the declar
   const l0 = await lookUp(t.id, hints());
   assert.equal(l0.verifier.status(t.id), 'valid', 'the genesis carrying a clock is valid');
 
-  const r1 = t.prepareRotation();
+  const r1 = await t.prepareRotation();
   const sent = await t.submitRotation();
   const receipts = sent.map((s) => actId(s.result!.receipt as Uint8Array)).sort();
   const one = await t.settleRotation([main, backup]);
@@ -354,14 +355,14 @@ test('after a rotation the owner\'s client anchors its home quorum on the declar
 
   // The main clock is down: the backup, once.
   const down = testAnchoring('the main clock', true);
-  t.prepareRotation();
+  await t.prepareRotation();
   const sent2 = await t.submitRotation();
   const two = await t.settleRotation([down, backup]);
   assert.ok(two.counts);
   assert.deepEqual([...backup.anchored].sort(), sent2.map((s) => actId(s.result!.receipt as Uint8Array)).sort());
   assert.ok(two.anchored.every((a) => a.on === 'backup'));
   // Neither: the rotation counts, and the owner is told it is not anchored.
-  t.prepareRotation();
+  await t.prepareRotation();
   await t.submitRotation();
   const three = await t.settleRotation([]);
   assert.ok(three.counts);
@@ -376,10 +377,116 @@ test('before a genesis or rotation leaving no clock, the client says plainly tha
   const c = TestIdentity.create({ homes: homes.map((h) => h.home), clock: { main: main.reference } });
   assert.match(c.clockWarning(null) ?? '', /no clock/, 'a rotation removing it');
   for (const s of await t.publishGenesis()) assert.ok(s.result?.receipt, s.error);
-  t.prepareRotation();
+  await t.prepareRotation();
   await t.submitRotation();
   const r = await t.settleRotation([main]);
   assert.ok(r.counts);
   assert.deepEqual(r.anchored, [], 'no clock declared: nothing to compare on');
   assert.deepEqual(main.anchored, []);
+});
+
+// ---------------------------------------------------------------- Identity rule 35 (was 17) in the clients
+
+/** A text act's payload (Text MIP, type 0). */
+const said = (text: string) => cborEncode(new Map([[0, text]]));
+
+/** An identity whose acts are found at the relay its routes name, as an app's posts are. */
+async function withLines(): Promise<TestIdentity> {
+  const t = TestIdentity.create({ homes: homes.map((h) => h.home) });
+  for (const s of await t.publishGenesis()) assert.ok(s.result?.receipt, s.error);
+  await t.publishRoutes([{ scope: null, hints: [inbox.base] }]);
+  await t.publish(SPECS.text, 0, said('From the genesis client.'), { public: true, relays: [inbox.base] });
+  return t;
+}
+
+/** Another app holding the same identity's signing key, keeping its own line (as MOR Post does). It holds no chain key. */
+function otherApp(t: TestIdentity): TestIdentity {
+  const f = structuredClone(t.f);
+  return new TestIdentity({ ...f, sequence: [], routes: null, encryption: [], pending: null, safety: { scheme: 0, seeds: '' } });
+}
+
+/** An act's standing, as a reader holding every act of the identity at its homes and relay judges it. */
+async function standing(t: TestIdentity, id: string, key?: Uint8Array): Promise<string> {
+  const l = await lookUp(t.id, hints());
+  for (const a of await actsBy(t.id, [...hints(), inbox.base])) {
+    try {
+      if (key && actId(a) === id) l.verifier.addWithKey(a, key);
+      else l.verifier.add(a);
+    } catch {
+      // a private act this reader cannot open: held as it is, or not at all
+    }
+  }
+  return l.verifier.status(id);
+}
+
+const rotate = async (t: TestIdentity, opts: Parameters<TestIdentity['prepareRotation']>[0] = {}) => {
+  await t.prepareRotation(opts);
+  await t.submitRotation();
+  assert.ok((await t.settleRotation()).counts);
+};
+
+test('Identity rule 35 (was 17): before a rotation the client reads every line from the homes and relays, and keeps them all', async () => {
+  const t = await withLines();
+  const app = otherApp(t);
+  const a1 = await app.publish(SPECS.text, 0, said('From another app.'), { public: true, relays: [inbox.base] });
+  const a2 = await app.publish(SPECS.text, 0, said('From another app, again.'), { public: true, relays: [inbox.base] });
+  const lines = await t.lines();
+  assert.equal(lines.length, 2, 'this client’s line and the other app’s');
+  const own = lines.find((l) => l.own)!;
+  assert.deepEqual(own.card, ownLine(t.f.sequence).card, 'its own line, as its sequence holds it');
+  const other = lines.find((l) => !l.own)!;
+  assert.ok(other.readable);
+  assert.deepEqual(other.card, ownLine(app.f.sequence).card, 'the other app’s line, followed back by prev: the same card it shows');
+  assert.equal(other.tip, a2.id);
+  assert.match(other.latest, /a text/);
+  await rotate(t);
+  for (const id of [a1.id, a2.id, ...t.f.sequence]) assert.equal(await standing(t, id), 'valid', id);
+});
+
+test('a line left out on purpose: the client warns that its acts become void, and only then leaves it out', async () => {
+  const t = await withLines();
+  const app = otherApp(t);
+  const a1 = await app.publish(SPECS.text, 0, said('A line the owner does not recognise.'), { public: true, relays: [inbox.base] });
+  const other = (await t.lines()).find((l) => !l.own)!;
+  // Not without the warning, shown and passed back.
+  await assert.rejects(t.prepareRotation({ leaveOut: [other.tip] }), /Nothing was signed.*becomes void/s);
+  assert.equal(t.f.pending, null, 'nothing signed');
+  const { plan } = await t.planRotation({ leaveOut: [other.tip] });
+  assert.match(plan.warning!, new RegExp(`${other.tip}.*becomes void`, 's'));
+  assert.ok(plan.shown.some((l) => l.tone === 'bad' && /Left out by name/.test(l.text)));
+  await assert.rejects(t.prepareRotation({ leaveOut: [other.tip], warned: 'something else' }), /Nothing was signed/);
+  await rotate(t, { leaveOut: [other.tip], warned: plan.warning! });
+  assert.notEqual(await standing(t, a1.id), 'valid', 'left out: void');
+  assert.equal(await standing(t, t.f.sequence.at(-1)!), 'valid', 'its own line kept');
+  await assert.rejects(t.planRotation({ leaveOut: ['00'.repeat(32)] }), /no line found ends at/);
+});
+
+test('a line this client cannot read (a private act made elsewhere) is shown as such, and its card asked for and accepted', async () => {
+  const t = await withLines();
+  const app = otherApp(t);
+  const p1 = await app.publish(SPECS.text, 0, said('Public, from another app.'), { public: true, relays: [inbox.base] });
+  const x = await app.publish(SPECS.text, 0, said('Private, from another app.'), { public: false, relays: [inbox.base] });
+  const lines = await t.lines();
+  const unread = lines.find((l) => l.tip === x.id) as FoundLine;
+  assert.ok(unread, 'shown');
+  assert.equal(unread.readable, false);
+  assert.equal(unread.card, null);
+  assert.match(unread.why ?? '', /private act made elsewhere/);
+  assert.match(unread.latest, /private/);
+  // Asked for, never refused, never a warning alone: given nothing, it is
+  // left out only after the warning.
+  const asked = await t.planRotation();
+  assert.ok(asked.plan.shown.some((l) => /cannot read.*Give its card/s.test(l.text)));
+  assert.match(asked.plan.warning ?? '', new RegExp(`${x.id}.*becomes void`, 's'));
+  await assert.rejects(t.prepareRotation(), /Nothing was signed/);
+  // A card that contradicts a line read here is refused.
+  await assert.rejects(t.planRotation({ cards: [{ act: p1.id, position: 2, summary: '00'.repeat(32) }] }), /does not match/);
+  // Its card, copied from the app that made it: kept.
+  const card = ownLine(app.f.sequence).card!;
+  const { plan } = await t.planRotation({ cards: [card] });
+  assert.equal(plan.warning, null, 'nothing left out');
+  assert.ok(plan.kept.some((k) => k.act === x.id && k.position === 2));
+  await rotate(t, { cards: [card] });
+  assert.equal(await standing(t, x.id, x.key), 'valid', 'the private act, kept by its card');
+  assert.equal(await standing(t, p1.id), 'valid');
 });

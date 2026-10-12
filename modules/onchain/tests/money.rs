@@ -270,7 +270,7 @@ impl Story {
     /// it. Returns the claim's act id and the rail's answer.
     fn claim(&mut self, payer: &mut Person, debt: Hash, paid_to: PaidTo, salt: [u8; 16], amount: Amount, rail_proof: &OnchainProof) -> (Hash, Answer) {
         let proof = Proof { paid_to, salt, rail: rail_proof.encode() }.encode();
-        let claim = Claim { rail: mor_onchain::spec(), proof, payee: self.payee, amount, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+        let claim = Claim { rail: mor_onchain::spec(), proof, payee: self.payee, amount, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
         let id = self.act(payer, mips().money, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
         let rec = Record::Claim(&claim, payer.id, &Citations::default());
         let answer = self.verify(&rec);
@@ -570,7 +570,7 @@ fn on_the_bitcoin_clock_the_payments_block_is_its_anchor() {
     assert_eq!(a, Answer::Valid);
     let bitcoin = BitcoinClock { chain: &t.s.chain };
     for (id, proof, debt, salt, block) in [(valid1, &proof1, d1, p1.salt, block1), (valid2, &mined2, d2, p2.salt, block2)] {
-        let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: proof.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+        let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: proof.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
         let held = AgreementsHeld { view: t.s.view() };
         let anchor = bitcoin.payment_anchor(&id, &Record::Claim(&c, t.label.id, &Citations::default()), &held).expect("the clock Module's check passes");
         assert_eq!((anchor.reference.clone(), anchor.point), (reference.clone(), block), "the point is the block");
@@ -588,7 +588,7 @@ fn on_the_bitcoin_clock_the_payments_block_is_its_anchor() {
     // short of the depth (F205).
     let offchain = support::chain(&[mine(h("another chain"), &[h("x")], REGTEST_BITS, 9)]);
     let held = AgreementsHeld { view: t.s.view() };
-    let c1 = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt: p1.salt, rail: mined1.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: d1, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+    let c1 = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt: p1.salt, rail: mined1.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: d1, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
     assert!(bitcoin.payment_anchor(&pending1, &Record::Claim(&c1, t.label.id, &Citations::default()), &held).is_none(), "two headers: not yet an anchor");
     let c1 = Claim { proof: Proof { paid_to: to_thief, salt: p1.salt, rail: proof1.encode() }.encode(), ..c1 };
     assert!(BitcoinClock { chain: &offchain }.payment_anchor(&valid1, &Record::Claim(&c1, t.label.id, &Citations::default()), &held).is_none(), "not on the chain the verifier follows");
@@ -674,7 +674,7 @@ fn on_the_bitcoin_clock_a_lock_changes_point_is_its_home_receipts_batch_anchor()
             let full = deep(p, at);
             let (id, a) = t.s.claim(&mut t.label, debt, to_thief, salt, sat(20_000), &full);
             assert_eq!(a, Answer::Valid);
-            let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: full.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+            let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: full.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
             let held = AgreementsHeld { view: t.s.view() };
             let pa = BitcoinClock { chain: &bitcoin_chain }.payment_anchor(&id, &Record::Claim(&c, t.label.id, &Citations::default()), &held).unwrap();
             t.s.anchors.add(&pa);
@@ -746,7 +746,7 @@ fn f226_the_earliest_of_two_services_anchors_closes_one_services_delay() {
         let full = deep(p, at);
         let (id, a) = t.s.claim(&mut t.label, debt, to_thief, salt, sat(20_000), &full);
         assert_eq!(a, Answer::Valid);
-        let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: full.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+        let c = Claim { rail: mor_onchain::spec(), proof: Proof { paid_to: to_thief, salt, rail: full.encode() }.encode(), payee: aid, amount: sat(20_000), fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
         let held = AgreementsHeld { view: t.s.view() };
         let pa = BitcoinClock { chain: &bitcoin_chain }.payment_anchor(&id, &Record::Claim(&c, t.label.id, &Citations::default()), &held).unwrap();
         t.s.anchors.add(&pa);

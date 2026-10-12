@@ -21,12 +21,12 @@ import {
   makeRotation,
   newSigningSecret,
   rebuildChainKey,
-  runningSummary,
   signingPublic,
   verifyShare,
 } from '../../genesis/src/core.ts';
 import { TestIdentity, type Home, type IdentityFile, type Submitted } from '../../genesis/src/identity.ts';
 import type { Via } from '../../genesis/src/transport.ts';
+import { checkWarned, type Card, type LinePlan } from '../../genesis/src/lines.ts';
 import {
   AGREEMENTS_SPECS,
   clonePlan,
@@ -271,6 +271,20 @@ function deal(members: string[], threshold: number, index: number, scheme: numbe
   };
 }
 
+/**
+ * What a rotation of the collective keeps besides this device's own line
+ * (Identity rule 35, was 17; `clients/genesis/src/lines.ts`): every line of
+ * the collective's acts its homes and relays hold is kept, unless named in
+ * `leaveOut` (by its latest act); a line this device cannot read is kept by
+ * its card in `cards`. Anything left out, by name or for want of a card, is
+ * left out only where `warned` is, word for word, the warning shown.
+ */
+export interface KeptLines {
+  leaveOut?: string[];
+  cards?: Card[];
+  warned?: string;
+}
+
 export class TestCollective {
   readonly id: TestIdentity;
 
@@ -283,6 +297,14 @@ export class TestCollective {
 
   get identity(): string {
     return this.f.identity.identity;
+  }
+
+  /**
+   * What a rotation of the collective would keep now (Identity rule 35):
+   * every line read from its homes and relays, as `KeptLines` leaves them.
+   */
+  async planLines(o: KeptLines = {}): Promise<LinePlan> {
+    return (await this.id.planRotation({ leaveOut: o.leaveOut, cards: o.cards, hints: this.f.relays, specs: AGREEMENTS_SPECS })).plan;
   }
 
   /**
@@ -457,8 +479,12 @@ export class TestCollective {
     beforeClone?: () => Promise<string | null>;
     /** Asked once the clone is signed, before the rotation is sent: a problem stops the change there, nothing sent. */
     beforeSend?: (clone: string) => Promise<string | null>;
+    /** The lines of the collective's acts the rotation keeps (Identity rule 35): all, unless left out after the warning. */
+    lines?: KeptLines;
   }): Promise<{ clone: string; rotation: string; record?: string; resigned: Signed[]; signed: Signed[]; sent: Submitted[]; stopped?: string }> {
     if (this.f.pending || this.f.identity.pending) throw new Error('a member change is already pending: resend it');
+    // Identity rule 35: before anything is signed, so that nothing is.
+    checkWarned(await this.planLines(opts.lines), opts.lines?.warned);
     const governance = this.departedAfter(opts.governance ?? this.f.governance, opts.members);
     const holder = this.nextHolder(opts.members);
     const resigned: Signed[] = [];
@@ -508,7 +534,7 @@ export class TestCollective {
       signatures: signed.map((s) => s.act),
       ...(absence.length ? { absence } : {}),
     };
-    const { id, sent, at } = await this.rotateTo({ agreement: proposed.id, members: opts.members, governance, holder, rebuilders: opts.rebuilders, declaration });
+    const { id, sent, at } = await this.rotateTo({ agreement: proposed.id, members: opts.members, governance, holder, rebuilders: opts.rebuilders, declaration, lines: opts.lines });
     for (const d of recovered) {
       d.rotation = id;
       d.at = at;
@@ -530,7 +556,12 @@ export class TestCollective {
     holder: string;
     rebuilders: string[];
     declaration: Record<string, unknown>;
+    lines?: KeptLines;
   }): Promise<{ id: string; sent: Submitted[]; at: number }> {
+    // Identity rule 35: every line read again now (this device's own has
+    // grown by the record), kept as the owner left them.
+    const plan = await this.planLines(o.lines);
+    checkWarned(plan, o.lines?.warned);
     // The rotating device: rebuild the current key from k shares of members who stay.
     const shares = this.f.safety.shares
       .filter((s) => o.rebuilders.includes(s.holder))
@@ -542,9 +573,7 @@ export class TestCollective {
     const f = this.f.identity;
     const newSigning = newSigningSecret();
     const seq = f.sequence;
-    const kept = seq.length
-      ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }]
-      : [];
+    const kept = plan.kept;
     const rotation = makeRotation({
       identitySpec: SPECS.identity,
       identity: f.identity,
@@ -604,8 +633,11 @@ export class TestCollective {
     expect?: Uint8Array;
     beforeClone?: () => Promise<string | null>;
     beforeSend?: (clone: string) => Promise<string | null>;
+    /** The lines of the collective's acts the rotation keeps (Identity rule 35): all, unless left out after the warning. */
+    lines?: KeptLines;
   }): Promise<{ clone: string; rotation: string; signed: Signed[]; sent: Submitted[]; stopped?: string }> {
     if (this.f.pending || this.f.identity.pending) throw new Error('a member change is already pending: resend it');
+    checkWarned(await this.planLines(opts.lines), opts.lines?.warned);
     const kept = this.rollbackRules(opts.before, opts.leaving, opts.voices);
     if (!kept) throw new Error('this device kept no rules for the agreement in force before the broken act');
     const r = opts.governance ? { ...kept, governance: opts.governance } : kept;
@@ -627,7 +659,7 @@ export class TestCollective {
       broken: opts.broken,
       registers: opts.registers,
     };
-    const { id, sent } = await this.rotateTo({ agreement: proposed.id, members: r.members, governance: r.governance, holder: r.holder, rebuilders: opts.rebuilders, declaration });
+    const { id, sent } = await this.rotateTo({ agreement: proposed.id, members: r.members, governance: r.governance, holder: r.holder, rebuilders: opts.rebuilders, declaration, lines: opts.lines });
     return { clone: proposed.id, rotation: id, signed, sent };
   }
 

@@ -222,7 +222,7 @@ impl Story {
         let c = Commitment { rail: mor_lightning::spec(), payee, amount: sat(amount), fulfils, payer: Some(Payer::Identity(payer.id)), paid_to, salt, purchase: None };
         let preimage = h(&format!("{label}: the preimage"));
         let ln = LnProof { invoice: invoice(&secret(node), amount * 1000, &c.hash(), &preimage), preimage: Some(preimage) };
-        let claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee, amount: sat(amount), fulfils, disagrees: None, referral: None, refund, anonymous: None, purchase: None };
+        let claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee, amount: sat(amount), fulfils, disagrees: None, referral: None, refund, anonymous: None, purchase: None, previous: None };
         let (id, a) = self.claim(payer, &claim);
         (c, id, a)
     }
@@ -383,7 +383,7 @@ fn rq1_a_refund_to_a_bare_key_is_checked_where_its_claim_said() {
     let preimage = h("the anonymous preimage");
     let ln = LnProof { invoice: invoice(&secret("the service's node"), 50_000, &c.hash(), &preimage), preimage: Some(preimage) };
     let refund_rail = ln_rail(&secret("the key's refund node")).remove(0);
-    let mut claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee: sid, amount: sat(50), fulfils: oid, disagrees: None, referral: None, refund: Some(refund_rail), anonymous: None, purchase: None };
+    let mut claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee: sid, amount: sat(50), fulfils: oid, disagrees: None, referral: None, refund: Some(refund_rail), anonymous: None, purchase: None, previous: None };
     claim.anonymous = Some(Anonymous { key: bare.clone(), sig: key.sign(&claim.anonymous_message(&Citations::default()), &[0; 32]).sig });
     let (owed, a) = s.claim(&mut once, &claim);
     assert_eq!(a, Answer::Valid, "the anonymous payment, verified");

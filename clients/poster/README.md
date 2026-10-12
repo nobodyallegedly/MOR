@@ -17,7 +17,7 @@ Then one window: **Write**, a picture if you want one, **Post**. The post appear
 
 Every picture is stripped before it leaves (the JPEG Module): no location, no camera data, no preview. The app says what it took out.
 
-**One identity, several apps.** Each app that posts as one identity keeps its own line of acts, and all of them are valid. But if the signing key is ever changed (with the chain key), the change must name every app's line, or the posts of a line it leaves out become void (Identity rule 17). The card **This identity** shows this app's line (its latest act, position and summary) to take to the device that changes the key. If the key was changed elsewhere, this app says so and signs nothing more.
+**One identity, several apps.** Each app that posts as one identity keeps its own line of acts, and all of them are valid. But if the signing key is ever changed (with the chain key), the change must name every app's line, or the posts of a line it leaves out become void (Identity rule 35, was 17). The client that changes the key (the genesis client, a collective's) reads every line from the homes and relays and keeps them all, this app's included, unless the owner leaves one out after a warning. The card **This identity** shows this app's line (its latest act, position and summary): what that client reads it by, and what to give it if it cannot read it. If the key was changed elsewhere, this app says so and signs nothing more.
 
 Not here, on purpose: no inbox, no drafts, no Claude connector, no agreements, no payments.
 
@@ -76,7 +76,7 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
   - **a withdrawal:** the picture no longer shown, the post standing; someone else's picture cannot be withdrawn;
   - **an identity made by the genesis client, brought in by its words,** its ID typed in groups of four, the current signing key checked; **a wrong set refused** (another identity's words, a changed word, a word off the list, twelve words, a short ID), nothing kept; no chain key held;
   - **two apps posting as one identity keep separate lines, both valid** (the genesis client's line goes on at positions 2 and 3, MOR Post's starts at 1), and a second MOR Post makes a third line, also valid;
-  - **rule 17, shown:** the genesis client rotates, keeping only its own line: its posts stay valid, MOR Post's become void, and MOR Post refuses to sign with the spent key;
+  - **rule 17 (now 35), shown:** the genesis client reads the three lines (its own and two MOR Posts'), the one it reads for this app the same as this app's card, and rotates keeping all of them: every post stays valid, and MOR Post refuses to sign with the spent key (before this build, MOR Post's posts became void);
   - **requests from an unpaired browser refused,** as are a key signing with another program's domain line, an unsigned request, and a pairing code asked without the owner's secret; the page under its content security policy;
   - **nothing listens beyond 127.0.0.1:** the program's address, no answer at the machine's other addresses, another host name refused.
 - `test/browser.test.ts`: the same in headless Chromium on a fresh profile, by clicks and typing alone: the two doors, the words shown and not shown again after a reload, a wrong word refused, the identity born, a post, a picture (what was taken out said), the list, a withdrawal, this app's line counted on the card, no console error. `MOR_SCREENSHOTS=DIR` keeps a picture of each step.

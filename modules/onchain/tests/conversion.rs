@@ -1,4 +1,4 @@
-//! The conversion cMIP, draft 1 (`cmips/cmip-conversion-draft-1.md`): a
+//! The conversion cMIP, draft 2 (`cmips/cmip-conversion-draft-2.md`): a
 //! rail swap sold as a proven offer, with receipts per hop, offline.
 //! Lightning in (real BOLT 11 invoices signed by a test node key, each
 //! committing to its payment commitment, checked by the Lightning rail
@@ -26,7 +26,7 @@ use common::{own_home, World};
 use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
 use mor_conversion::route::{self, Route};
 use mor_conversion::{acceptable, delivery_proof, judge, ordered, Checker, Hop, Judgment, Offer, Order, Owed, Payment, Rate, Terms};
-use mor_core::act::Ref;
+use mor_core::act::{Object, Ref};
 use mor_core::agreements::{self, AgreementsView, Mips, ProofChecker, ProofVerdict};
 use mor_core::hash::Hash;
 use mor_core::money::{self as fin, Amount, Citations, Claim, Forward, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
@@ -200,8 +200,10 @@ impl Story {
     fn first(&self, c: &Commitment, proof: Vec<u8>, forward: Option<Forward>, id: &str) -> Hop {
         let r = Receipt { rail: c.rail, proof, payer: c.payer.clone(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, previous: None, forward, batch: None, purchase: None };
         let ln = Lightning;
-        let answer = verify(Record::Receipt(&r), &self.pointers, &Modules::new().adopt(&ln)).answer;
-        Hop { id: h(id), receipt: r, objects: vec![], answer }
+        let modules = Modules::new().adopt(&ln);
+        let answer = verify(Record::Receipt(&r), &self.pointers, &modules).answer;
+        let payment = mor_payment::payment(&Record::Receipt(&r), &modules);
+        Hop::receipt(h(id), r, vec![], answer, payment)
     }
 
     /// The service pays `amount` on the chain to the owners' split service,
@@ -224,8 +226,24 @@ impl Story {
     fn onward(&self, c: &Commitment, proof: Vec<u8>, previous: &Hash, cites: bool, id: &str) -> Hop {
         let r = Receipt { rail: c.rail, proof, payer: c.payer.clone(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, previous: Some(*previous), forward: None, batch: None, purchase: None };
         let onchain = Onchain::on(&self.chain);
-        let answer = verify(Record::Receipt(&r), &self.pointers, &Modules::new().adopt(&onchain)).answer;
-        Hop { id: h(id), receipt: r, objects: if cites { vec![*previous] } else { vec![] }, answer }
+        let modules = Modules::new().adopt(&onchain);
+        let answer = verify(Record::Receipt(&r), &self.pointers, &modules).answer;
+        let payment = mor_payment::payment(&Record::Receipt(&r), &modules);
+        Hop::receipt(h(id), r, if cites { vec![*previous] } else { vec![] }, answer, payment)
+    }
+
+    /// The service's own claim of the onward payment (Money rule 11; F267),
+    /// naming `previous` in its field 10 and (where `cites`) in its act's
+    /// `objects`, checked by the on-chain rail Module on the chain
+    /// followed. The next payee signs nothing.
+    fn claim_on(&self, c: &Commitment, proof: Vec<u8>, previous: &Hash, cites: bool, id: &str) -> Hop {
+        let claim = Claim { rail: c.rail, proof, payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: Some(*previous) };
+        let cited = Citations { objects: cites.then(|| vec![Object { chain: *previous, predecessor: *previous }]), acks: None, refs: None };
+        let onchain = Onchain::on(&self.chain);
+        let modules = Modules::new().adopt(&onchain);
+        let answer = verify(Record::Claim(&claim, self.service, &cited), &self.pointers, &modules).answer;
+        let payment = mor_payment::payment(&Record::Claim(&claim, self.service, &cited), &modules);
+        Hop::claim(h(id), claim, self.service, cited, answer, payment)
     }
 
     fn judge(&self, order: &Order, paid: &Payment, first: Option<&Hop>, hops: &[Hop]) -> Judgment {
@@ -340,7 +358,7 @@ fn a_silent_service_still_owes_what_its_order_promised() {
     let mut s = Story::new(swap_terms());
     let deadline = s.now() + 6;
     let (c, order) = s.order("cal's swap", 5_000, None, deadline);
-    let claim = Claim { rail: c.rail, proof: s.pay_in(&c, "cal's swap"), payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+    let claim = Claim { rail: c.rail, proof: s.pay_in(&c, "cal's swap"), payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
     let ln = Lightning;
     let answer = verify(Record::Claim(&claim, s.ana, &Citations::default()), &s.pointers, &Modules::new().adopt(&ln)).answer;
     assert_eq!(answer, Answer::Valid, "the payer's claim alone shows the money arrived");
@@ -480,7 +498,7 @@ fn a_conversion_offer_is_a_lone_sellers_selling_these_terms() {
 
 /// An onward payment on a rail the offer's clock cannot read (Lightning,
 /// on the Bitcoin clock) completes the route, but "by the deadline" cannot
-/// be read: unknown, not proven (a stated cost of draft 1).
+/// be read: unknown, not proven (a stated cost of drafts 1 and 2).
 #[test]
 fn an_onward_payment_the_offers_clock_cannot_place_is_unknown() {
     let mut s = Story::new(Terms { out_rail: mor_lightning::spec(), ..swap_terms() });
@@ -499,7 +517,7 @@ fn an_onward_payment_the_offers_clock_cannot_place_is_unknown() {
     let lnm = Lightning;
     let answer = verify(Record::Receipt(&r), &s.pointers, &Modules::new().adopt(&lnm)).answer;
     assert_eq!(answer, Answer::Valid);
-    let onward = Hop { id: h("the owners' Lightning receipt"), receipt: r, objects: vec![first.id], answer };
+    let onward = Hop::receipt(h("the owners' Lightning receipt"), r, vec![first.id], answer, None);
     let held = vec![first.clone(), onward.clone()];
     assert_eq!(route::ending_at(&onward.id, &held), Route::Complete { hops: vec![first.id, onward.id] });
     assert!(matches!(s.judge(&order, &valid(&c), Some(&first), &held), Judgment::Unknown(_)));
@@ -507,26 +525,99 @@ fn an_onward_payment_the_offers_clock_cannot_place_is_unknown() {
 
 // ---------------------------------------------------------------- question CV1, pinned
 
-/// Question CV1 (`docs/conversion-cmip.md`), pinned as Money draft 7 reads
-/// today: the service pays the forward on the chain, and its own claim of
-/// that payment verifies valid (double entry, Money rule 11: "the claim
-/// alone shows the money arrived"). The next payee signs no receipt. A
-/// claim has no field naming the previous hop, so nothing ties that
-/// payment to the forward: rule 27 reads receipts only, the route stops at
-/// the service's hop, and past the deadline the forward is owed, though it
-/// was paid.
+/// F267 (CV1, decided by Nobody, allegedly, 12 October 2026): the next
+/// payee receives the forward and never signs a receipt. The service's own
+/// claim of the onward payment names its receipt of the first hop (claim
+/// field 10, and `objects`): "a valid receipt or claim of the next hop
+/// names it" (Money rules 24 and 27), so the route is one chain, the
+/// forward is not owed, and the delivery is proven. *Was pinned the other
+/// way, as Money draft 7 read it before F267: the route stopped and the
+/// forward stayed owed, though paid.*
 #[test]
-fn question_cv1_a_silent_next_payee_keeps_a_paid_forward_open() {
+fn f267_a_silent_next_payee_the_services_claim_carries_the_forward_on() {
     let mut s = Story::new(swap_terms());
     let deadline = s.now() + 6;
     let (c, order) = s.order("lea's swap", 6_000, None, deadline);
     let first = s.first(&c, s.pay_in(&c, "lea's swap"), Some(order.forward.clone()), "the service's receipt");
     let (c2, p2) = s.pay_on(5_900, order.onward, "lea's swap, on");
-    let claim = Claim { rail: c2.rail, proof: p2, payee: c2.payee, amount: c2.amount, fulfils: c2.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
-    let onchain = Onchain::on(&s.chain);
-    assert_eq!(verify(Record::Claim(&claim, s.service, &Citations::default()), &s.pointers, &Modules::new().adopt(&onchain)).answer, Answer::Valid, "the service's claim: the forward's money arrived");
     bury(&mut s, deadline);
-    let held = vec![first.clone()];
-    assert!(matches!(route::from(&first.id, &held), Route::Stopped { .. }), "rule 27 reads receipts only");
-    assert!(matches!(s.judge(&order, &valid(&c), Some(&first), &held), Judgment::Default { .. }), "the forward owed, though paid");
+    let claim = s.claim_on(&c2, p2, &first.id, true, "the service's claim of the onward payment");
+    assert_eq!(claim.answer, Answer::Valid, "the service's claim: the forward's money arrived (rule 11)");
+    let held = vec![first.clone(), claim.clone()];
+    let chain = Route::Complete { hops: vec![first.id, claim.id] };
+    assert_eq!(route::from(&first.id, &held), chain, "rule 24: a valid claim of the next hop names it");
+    assert_eq!(route::ending_at(&claim.id, &held), chain, "read back from the claim, as the final creditor reads it");
+    assert!(matches!(s.judge(&order, &valid(&c), Some(&first), &held), Judgment::Delivered { onward, .. } if onward == claim.id), "delivered: nothing owed");
+    assert_eq!(s.verdict(&order, &valid(&c), held, Some(&claim.id), true), ProofVerdict::Proven, "the checker proves it from the claim");
+}
+
+/// F267, mirroring a receipt (reading 4 of the conversion build): a claim
+/// naming the previous hop's receipt in its field 10 but not in its act's
+/// `objects` does not carry the forward on.
+#[test]
+fn f267_a_claim_not_citing_the_previous_hop_is_not_the_forward() {
+    let mut s = Story::new(swap_terms());
+    let deadline = s.now() + 6;
+    let (c, order) = s.order("mia's swap", 6_000, None, deadline);
+    let first = s.first(&c, s.pay_in(&c, "mia's swap"), Some(order.forward.clone()), "the service's receipt");
+    let (c2, p2) = s.pay_on(5_900, order.onward, "mia's swap, on");
+    bury(&mut s, deadline);
+    let claim = s.claim_on(&c2, p2, &first.id, false, "a claim naming it in field 10 only");
+    assert_eq!(claim.answer, Answer::Valid);
+    let held = vec![first.clone(), claim.clone()];
+    assert!(matches!(route::from(&first.id, &held), Route::Stopped { near, .. } if near.iter().any(|(id, _)| id == &claim.id)));
+    assert!(matches!(s.judge(&order, &valid(&c), Some(&first), &held), Judgment::Default { .. }));
+}
+
+/// F267, bounded by Money rule 12 (one payment, one count): one onward
+/// payment claimed by the service for two forwards serves neither. In two
+/// swaps to the same next payee, for the same amount, the service pays on
+/// once and claims the payment twice, each claim naming another first
+/// hop: both routes stop, both forwards stay owed.
+#[test]
+fn f267_one_payment_claimed_for_two_forwards_serves_neither() {
+    let mut s = Story::new(swap_terms());
+    let deadline = s.now() + 6;
+    let (ca, oa) = s.order("nia's swap", 6_000, None, deadline);
+    let (cb, ob) = s.order("oto's swap", 6_000, None, deadline);
+    assert_eq!(oa.forward, ob.forward, "the same forward twice: the same payee, amount and offer");
+    let fa = s.first(&ca, s.pay_in(&ca, "nia's swap"), Some(oa.forward.clone()), "the service's receipt for nia");
+    let fb = s.first(&cb, s.pay_in(&cb, "oto's swap"), Some(ob.forward.clone()), "the service's receipt for oto");
+    let (c2, p2) = s.pay_on(5_900, oa.onward, "one onward payment");
+    bury(&mut s, deadline);
+    let xa = s.claim_on(&c2, p2.clone(), &fa.id, true, "the service's claim, naming nia's hop");
+    let xb = s.claim_on(&c2, p2, &fb.id, true, "the service's claim of the same payment, naming oto's hop");
+    assert_eq!((xa.answer.clone(), xb.answer.clone()), (Answer::Valid, Answer::Valid), "each claim alone verifies");
+    assert_eq!(xa.payment, xb.payment, "one payment, as the rail Module tells payments apart (F200)");
+    let held = vec![fa.clone(), fb.clone(), xa.clone(), xb.clone()];
+    for (first, claim) in [(&fa, &xa), (&fb, &xb)] {
+        match route::from(&first.id, &held) {
+            Route::Stopped { near, .. } => assert!(near.iter().any(|(id, why)| id == &claim.id && why.contains("rule 12")), "{near:?}"),
+            other => panic!("one payment served two forwards: {other:?}"),
+        }
+    }
+    assert!(matches!(s.judge(&oa, &valid(&ca), Some(&fa), &held), Judgment::Default { .. }));
+    assert!(matches!(s.judge(&ob, &valid(&cb), Some(&fb), &held), Judgment::Default { .. }));
+    assert!(matches!(s.verdict(&oa, &valid(&ca), held, Some(&xa.id), true), ProofVerdict::NotProven(_)), "the checker sees the second claim of the payment");
+}
+
+/// F267 with Money rule 12: where the next payee does sign, its receipt
+/// decides which forward a payment served; the service's claim of the same
+/// payment naming another hop carries nothing on.
+#[test]
+fn f267_the_next_payees_receipt_decides_which_forward_a_payment_served() {
+    let mut s = Story::new(swap_terms());
+    let deadline = s.now() + 6;
+    let (ca, oa) = s.order("pia's swap", 6_000, None, deadline);
+    let (cb, ob) = s.order("quy's swap", 6_000, None, deadline);
+    let fa = s.first(&ca, s.pay_in(&ca, "pia's swap"), Some(oa.forward.clone()), "the service's receipt for pia");
+    let fb = s.first(&cb, s.pay_in(&cb, "quy's swap"), Some(ob.forward.clone()), "the service's receipt for quy");
+    let (c2, p2) = s.pay_on(5_900, oa.onward, "one onward payment, receipted");
+    bury(&mut s, deadline);
+    let receipt = s.onward(&c2, p2.clone(), &fa.id, true, "the owners' receipt, naming pia's hop");
+    let claim = s.claim_on(&c2, p2, &fb.id, true, "the service's claim of the same payment, naming quy's hop");
+    let held = vec![fa.clone(), fb.clone(), receipt.clone(), claim.clone()];
+    assert_eq!(route::from(&fa.id, &held), Route::Complete { hops: vec![fa.id, receipt.id] });
+    assert!(matches!(route::from(&fb.id, &held), Route::Stopped { near, .. } if near.iter().any(|(id, why)| id == &claim.id && why.contains("rule 12"))));
+    assert!(matches!(s.judge(&ob, &valid(&cb), Some(&fb), &held), Judgment::Default { .. }));
 }

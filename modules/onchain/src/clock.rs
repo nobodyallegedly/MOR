@@ -281,7 +281,7 @@ impl mor_conversion::DeliveryClock for BitcoinClock<'_> {
     }
 
     fn point(&self, hop: &mor_conversion::Hop, held: &dyn Held) -> Option<u64> {
-        self.payment_anchor(&hop.id, &Record::Receipt(&hop.receipt), held).map(|a| a.point)
+        self.payment_anchor(&hop.id, &hop.record(), held).map(|a| a.point)
     }
 
     fn now(&self) -> Option<u64> {

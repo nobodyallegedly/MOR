@@ -33,7 +33,6 @@ import {
   pickupTag,
   readKeyDelivery,
   routesPayload,
-  runningSummary,
   chainKeyFromSeeds,
   seal,
   sealedParts,
@@ -45,6 +44,7 @@ import { WITNESS_EXPLANATION } from './witness.ts';
 import { CODE, Relay, RelayError, type PutResult, type Via, relayAt, sealedId } from './transport.ts';
 import { record } from './kex.ts';
 import { lookUp, type Home, type Lookup, type RouteIn } from './lookup.ts';
+import { actsBy, checkWarned, linesOf, planLines, type Card, type FoundLine, type LinePlan, type Specs } from './lines.ts';
 
 export { lookUp, type Home, type Lookup, type Resolution, type RouteIn } from './lookup.ts';
 
@@ -392,20 +392,57 @@ export class TestIdentity {
   // ------------------------------------------------------------ rotation
 
   /**
-   * Prepare a rotation: a new signing key, a new committed chain key, the
-   * latest act of the sequence kept, and optionally new homes or rule
-   * (`rule: []` returns to the default). Signed with the chain key the
-   * current chain act committed. The rotation is stored as pending; save
-   * the file before submitting, so that a retry sends the same bytes.
+   * Every line of this identity's everyday acts that a rotation would judge
+   * (Identity rule 35, was 17; `lines.ts`): read from its homes, the
+   * relays its routes name, and `hints`, each followed back by `prev` to
+   * its first act; this device's own line among them.
    */
-  prepareRotation(opts: { homes?: Home[]; rule?: number[]; scheme?: 2 | 3; clock?: Clock | null } = {}): string {
+  async lines(o: { hints?: string[]; specs?: Specs } = {}): Promise<FoundLine[]> {
+    const homes = this.f.homes.map((h) => h.hint);
+    let routed: string[] = [];
+    try {
+      routed = (await lookUp(this.f.identity, homes, this.via)).routes.routes.flatMap((r) => r.hints);
+    } catch {
+      // its homes did not answer: what the hints hold is still read
+    }
+    const at = [...new Set([...homes, ...routed, ...(o.hints ?? [])])];
+    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: this.f.sequence, acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
+  }
+
+  /**
+   * What a rotation would keep (Identity rule 35, client conformance): the
+   * lines read now, every one kept unless named in `leaveOut` (by its
+   * latest act); a line this device cannot read kept by its card in
+   * `cards`, or, given none, left out. Show `plan.shown` to the owner, and
+   * `plan.warning` where it is not null, before signing.
+   */
+  async planRotation(o: { leaveOut?: string[]; cards?: Card[]; hints?: string[]; specs?: Specs } = {}): Promise<{ lines: FoundLine[]; plan: LinePlan }> {
+    const lines = await this.lines(o);
+    return { lines, plan: planLines(lines, o) };
+  }
+
+  /**
+   * Prepare a rotation: a new signing key, a new committed chain key, and
+   * every line of this identity's acts kept (`planRotation`): its own, the
+   * other apps' and devices', read from its homes and relays, and those it
+   * cannot read by the cards given. A line left out, by name or for want of
+   * a card, is left out only where `warned` is, word for word, the warning
+   * shown (`plan.warning`): otherwise nothing is signed. Optionally new
+   * homes or rule (`rule: []` returns to the default). Signed with the
+   * chain key the current chain act committed. The rotation is stored as
+   * pending; save the file before submitting, so that a retry sends the
+   * same bytes.
+   */
+  async prepareRotation(
+    opts: { homes?: Home[]; rule?: number[]; scheme?: 2 | 3; clock?: Clock | null; leaveOut?: string[]; cards?: Card[]; warned?: string; hints?: string[] } = {},
+  ): Promise<string> {
+    if (this.f.pending) throw new Error('a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)');
+    const { plan } = await this.planRotation(opts);
+    checkWarned(plan, opts.warned);
     if (this.f.pending) throw new Error('a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)');
     const newSigning = newSigningSecret();
     const next = newTestChainKey(opts.scheme ?? (this.f.safety.scheme as 2 | 3));
-    const seq = this.f.sequence;
-    const kept = seq.length
-      ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }]
-      : [];
+    const kept = plan.kept;
     // The latest identity-chain act: the binding, or a chain signature
     // made since (F132).
     const chain = this.chainActs();

@@ -1,6 +1,6 @@
 //! # mor-conversion
 //!
-//! The conversion cMIP, draft 1 (`cmips/cmip-conversion-draft-1.md`):
+//! The conversion cMIP, draft 2 (`cmips/cmip-conversion-draft-2.md`):
 //! Money's conversion task ("a cMIP defining how a conversion is offered
 //! and evidenced"). **Experimental**: an instrument for testing the core,
 //! never for real money.
@@ -9,7 +9,8 @@
 //! one rail (or unit) and pays on another, at the rate of its own offer
 //! (Money, "Conversion service"). It sells a **rail swap**, which is a
 //! **proven offer** (Agreements draft 11, rule 11, F261): its delivery
-//! leaves a proof anyone checks from data, the onward payment's receipt.
+//! leaves a proof anyone checks from data, the onward payment's receipt
+//! or, where the next payee signs none, the service's claim (F267).
 //!
 //! - The service publishes a **standing offer** (Agreements type 6, a lone
 //!   seller's, F215) selling this cMIP's **terms** in the access form,
@@ -25,15 +26,19 @@
 //!   receipt, after it is paid.*
 //! - It signs its **receipt** of the first hop with that forward (Money
 //!   receipt field 7), and pays the next hop; the next payee's **receipt**
-//!   names the first hop's (field 6, and `objects`).
-//! - **Delivered** where that onward receipt is valid, names the first
-//!   hop's receipt, is for the forward's amount to the forward's next
+//!   names the first hop's (field 6, and `objects`); where the next payee
+//!   signs nothing, the service's own **claim** of the onward payment names
+//!   it instead (claim field 10, and `objects`; F267, Money rule 11).
+//! - **Delivered** where that onward receipt or claim is valid, names the
+//!   first hop's receipt, its payment serving no other forward (Money rule
+//!   12), is for the forward's amount to the forward's next
 //!   payee, and its payment is placed by the deadline on the offer's clock
 //!   ([`judge`]; [`Checker`], the core's `ProofChecker`). **Forwarded
 //!   nothing** by the deadline: the forward stays an open obligation of the
 //!   service, under the offer (Money rule 27, was 9).
 //! - [`route`]: Money's route rules (24 to 28, were 5, 6, 8, 9 and 11) read
-//!   over receipts: one chain, or where it stops and who owes what.
+//!   over receipts and claims: one chain, or where it stops and who owes
+//!   what.
 
 pub mod route;
 
@@ -41,13 +46,13 @@ use mor_core::agreements::{self, Sold};
 use mor_core::cbor::{self, Value};
 use mor_core::envelopes::anchoring::Reference;
 use mor_core::hash::{sha256, Hash};
-use mor_core::money::{Amount, Forward, Payer, Receipt};
-use mor_payment::{Answer, Commitment, Held, PaidTo, Proof};
+use mor_core::money::{Amount, Citations, Claim, Forward, Payer, Receipt};
+use mor_payment::{Answer, Commitment, Held, PaidTo, Proof, Record};
 
 /// This cMIP's spec hash. A test value until its creator is named at step
 /// 17.
 pub fn spec() -> Hash {
-    sha256(b"conversion cMIP, draft 1, test value until publication")
+    sha256(b"conversion cMIP, draft 2, test value until publication")
 }
 
 /// The act type of an order under this cMIP. *Mechanic, the build's: the
@@ -378,23 +383,84 @@ pub fn acceptable(offer: &Offer, order: &Order, c: &Commitment, now: u64) -> Res
 
 // ---------------------------------------------------------------- receipts, as held
 
-/// A receipt the caller holds and checked as an act (signed by its payee,
-/// Money rule 7), with what its `objects` name and the rail's answer the
-/// caller got for it with the payment cMIP.
+/// One hop's record, as the caller holds it and checked it as an act: the
+/// receipt its payee signed (Money rule 7), or, where the next payee signs
+/// nothing, the paying hop's claim (Money rule 11, double entry; F267),
+/// with what its `objects` name and the rail's answer the caller got for it
+/// with the payment cMIP.
+///
+/// A claim is held in the receipt's shape, `receipt` (its rail, proof,
+/// payer as the claim names it, payee, amount, purpose, purchase, and its
+/// field 10 as the previous hop; no forward, no batch: a claim declares
+/// neither), so the route's rules read both alike; `by` says which it is.
 #[derive(Clone, Debug)]
 pub struct Hop {
-    /// The receipt act's id.
+    /// The receipt or claim act's id.
     pub id: Hash,
     pub receipt: Receipt,
     /// The acts its `objects` name (each entry's chain and predecessor).
     pub objects: Vec<Hash>,
     pub answer: Answer,
+    /// Who signed it.
+    pub by: By,
+    /// The payment it records, as its rail Module tells payments apart
+    /// (F200; `mor_payment::payment`): what Money rule 12 reads. `None`
+    /// where the caller's Modules cannot tell.
+    pub payment: Option<Vec<u8>>,
+}
+
+/// Who signed a hop's record.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum By {
+    /// The hop's payee: a settlement receipt.
+    Payee,
+    /// The hop's payer: a payment claim (F267), as signed, with its signer
+    /// and its act's own citations (what an anonymous payer's key signs).
+    Payer { claim: Claim, signer: Hash, cited: Citations },
 }
 
 impl Hop {
-    /// Whether this receipt names `previous` as the previous hop's: in its
-    /// field 6, and in its `objects` (Money, "Settlement receipt": "The
-    /// previous hop's receipt is also named in `objects`").
+    /// A receipt as held (by its payee).
+    pub fn receipt(id: Hash, receipt: Receipt, objects: Vec<Hash>, answer: Answer, payment: Option<Vec<u8>>) -> Hop {
+        Hop { id, receipt, objects, answer, by: By::Payee, payment }
+    }
+
+    /// A payment claim as held (by its payer, F267): read in the receipt's
+    /// shape, its field 10 as the previous hop's receipt.
+    pub fn claim(id: Hash, claim: Claim, signer: Hash, cited: Citations, answer: Answer, payment: Option<Vec<u8>>) -> Hop {
+        let receipt = Receipt {
+            rail: claim.rail,
+            proof: claim.proof.clone(),
+            payer: Some(claim.payer(&signer)),
+            payee: claim.payee,
+            amount: claim.amount,
+            fulfils: claim.fulfils,
+            previous: claim.previous,
+            forward: None,
+            batch: None,
+            purchase: claim.purchase.clone(),
+        };
+        let objects = cited.objects.iter().flatten().flat_map(|o| [o.chain, o.predecessor]).collect::<Vec<_>>();
+        Hop { id, receipt, objects, answer, by: By::Payer { claim, signer, cited }, payment }
+    }
+
+    /// Whether it is the paying hop's claim rather than its payee's receipt.
+    pub fn is_claim(&self) -> bool {
+        matches!(self.by, By::Payer { .. })
+    }
+
+    /// The record as the payment cMIP verifies it.
+    pub fn record(&self) -> Record<'_> {
+        match &self.by {
+            By::Payee => Record::Receipt(&self.receipt),
+            By::Payer { claim, signer, cited } => Record::Claim(claim, *signer, cited),
+        }
+    }
+
+    /// Whether this record names `previous` as the previous hop's receipt:
+    /// in its field 6 (a claim's field 10), and in its `objects` (Money,
+    /// "Settlement receipt": "The previous hop's receipt is also named in
+    /// `objects`"; for a claim, mirroring it, F267).
     pub fn names(&self, previous: &Hash) -> bool {
         self.receipt.previous.as_ref() == Some(previous) && self.objects.contains(previous)
     }
@@ -461,7 +527,7 @@ pub enum Judgment {
     /// Paid; no onward payment shown, and the deadline not yet buried at
     /// the clock's depth: wait.
     Pending,
-    /// The onward receipt `onward` shows the forward paid, placed at
+    /// The onward receipt or claim `onward` shows the forward paid, placed at
     /// `point`, by the deadline: delivered, proven.
     Delivered { point: u64, onward: Hash },
     /// The forward paid, but after the deadline: not delivered as the order
@@ -478,10 +544,19 @@ pub enum Judgment {
     Unknown(String),
 }
 
-/// Judge a conversion (draft 1, "Delivery and default") under `offer`,
+/// The records among `hops` that may be the onward hop after the
+/// service's receipt `r`: those carrying its forward on ([`route::carriers`]:
+/// a valid receipt or the service's claim naming it, rule 12 read over all
+/// of `hops`).
+fn candidates<'a>(r: &Hop, hops: &'a [Hop]) -> Vec<&'a Hop> {
+    route::carriers(r, hops).0
+}
+
+/// Judge a conversion (draft 2, "Delivery and default") under `offer`,
 /// from the order `order` (act `order_id`) the service signed, the first
 /// hop's `paid` payment, the service's receipt of it where held
-/// (`first`), the receipts held that may be the onward hop (`hops`), and
+/// (`first`), the receipts and claims held that may be the onward hop, or
+/// bear on it under rule 12 (`hops`), and
 /// the offer's clock as this verifier follows it. In order:
 ///
 /// 1. **Not paid:** the payment does not buy this order ([`ordered`]), or
@@ -490,8 +565,10 @@ pub enum Judgment {
 /// 3. **Contradicted:** the service's valid receipt of the first hop
 ///    declares another forward than the order's.
 /// 4. **Delivered or late:** a valid receipt naming the first hop's
-///    (field 6 and `objects`), signed by the forward's next payee, paid by
-///    the service, for exactly the forward's amount, on the terms' out
+///    (field 6 and `objects`), signed by the forward's next payee, or,
+///    where the next payee signed none, the service's valid claim naming it
+///    (field 10 and `objects`; F267, its payment serving no other forward,
+///    Money rule 12), paid by the service, for exactly the forward's amount, on the terms' out
 ///    rail, following the order's onward purpose: placed at or before the
 ///    deadline, delivered; after it, late. Placed nowhere this clock can
 ///    read: unknown.
@@ -516,7 +593,7 @@ pub fn judge(offer: &Offer, order_id: &Hash, order: &Order, paid: &Payment, firs
         if r.receipt.forward.as_ref() != Some(&order.forward) {
             return Judgment::Contradicted { owed: owed(*order_id) };
         }
-        let onward: Vec<&Hop> = hops.iter().filter(|h| route::link(r, h).is_ok() && h.receipt.fulfils == order.onward && h.receipt.rail == offer.terms.out_rail).collect();
+        let onward: Vec<&Hop> = candidates(r, hops).into_iter().filter(|h| h.receipt.fulfils == order.onward && h.receipt.rail == offer.terms.out_rail).collect();
         let points: Vec<(Option<u64>, Hash)> = onward.iter().map(|h| (clock.point(h, held), h.id)).collect();
         if let Some((point, id)) = points.iter().filter_map(|(p, id)| p.map(|p| (p, *id))).min() {
             return if point <= order.deadline { Judgment::Delivered { point, onward: id } } else { Judgment::Late { point, onward: id } };
@@ -542,8 +619,9 @@ pub fn judge(offer: &Offer, order_id: &Hash, order: &Order, paid: &Payment, firs
 /// not proven. Pending, or what this verifier cannot read: unknown.
 ///
 /// The proof, in this cMIP's encoding (mechanic, the build's): `[ order,
-/// onward / null ]`, the order act's id and the onward receipt's. What it
-/// reads beside it: the offers, orders, first payments and receipts the
+/// onward / null ]`, the order act's id and the onward receipt's or
+/// claim's (F267). What it reads beside it: the offers, orders, first
+/// payments, and the receipts and claims the
 /// caller holds and checked, the clock, and the pointers the payment cMIP
 /// asks for.
 pub struct Checker<'c> {
@@ -563,6 +641,12 @@ pub fn delivery_proof(order: &Hash, onward: Option<&Hash>) -> Vec<u8> {
 }
 
 impl agreements::ProofChecker for Checker<'_> {
+    /// This cMIP's specification declares that it checks proofs of
+    /// delivery (F268; its text, item 15).
+    fn checks_delivery(&self) -> bool {
+        true
+    }
+
     fn check(&self, offer: &Hash, _params: &[u8], proof: &[u8]) -> agreements::ProofVerdict {
         use agreements::ProofVerdict as V;
         let Some(o) = self.offers.iter().find(|o| &o.id == offer) else {
@@ -575,7 +659,7 @@ impl agreements::ProofChecker for Checker<'_> {
                     Value::Null => None,
                     v => match hash(Some(v)) {
                         Some(h) => Some(h),
-                        None => return V::NotProven("the onward receipt is named by its act id, or null".into()),
+                        None => return V::NotProven("the onward receipt or claim is named by its act id, or null".into()),
                     },
                 };
                 (order, onward)
@@ -589,8 +673,13 @@ impl agreements::ProofChecker for Checker<'_> {
             return V::Unknown("the payment buying the order is not held".into());
         };
         let first = self.hops.iter().find(|h| h.receipt.payee == o.service && commitment_of(&h.receipt).is_some_and(|c| c.hash() == order.commitment));
-        let named: Vec<Hop> = self.hops.iter().filter(|h| Some(h.id) == onward).cloned().collect();
-        match judge(o, &order_id, order, paid, first, &named, self.clock, self.held) {
+        // The onward record the proof names, judged beside every record
+        // held of the same payment, so that Money rule 12 sees another use
+        // of it (F267).
+        let payment = self.hops.iter().find(|h| Some(h.id) == onward).and_then(|h| h.payment.clone());
+        let named: Vec<Hop> = self.hops.iter().filter(|h| Some(h.id) == onward || (payment.is_some() && h.payment == payment)).cloned().collect();
+        let verdict = judge(o, &order_id, order, paid, first, &named, self.clock, self.held);
+        match verdict {
             Judgment::Delivered { .. } => V::Proven,
             Judgment::Pending => V::Unknown("pending: no onward payment shown, the deadline not yet buried".into()),
             Judgment::Unknown(w) => V::Unknown(w),

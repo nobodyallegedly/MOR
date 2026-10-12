@@ -553,6 +553,12 @@ pub struct Checker<'c> {
 }
 
 impl agreements::ProofChecker for Checker<'_> {
+    /// This cMIP's specification declares that it checks proofs of
+    /// delivery (F268; draft 4, the note under item 10a).
+    fn checks_delivery(&self) -> bool {
+        true
+    }
+
     fn check(&self, offer: &Hash, _params: &[u8], proof: &[u8]) -> agreements::ProofVerdict {
         use agreements::ProofVerdict as V;
         let Some(o) = self.offers.iter().find(|o| &o.id == offer) else {

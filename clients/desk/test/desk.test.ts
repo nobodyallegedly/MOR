@@ -109,6 +109,11 @@ test('a draft from Claude reaches the desk, is sent back with a note, reworked, 
   post = ok.acts[0];
   assert.equal(seq(), before + 1);
   assert.equal(w.app.store.identity(machine).f.sequence.at(-1), post);
+  // F152: its card shows this desk's own line, ending at the act just signed.
+  const card = (await state(w.client)).identities.find((i) => i.id === machine)!.line;
+  assert.equal(card.latest, post);
+  assert.equal(card.acts, seq());
+  assert.match(card.summary ?? '', /^[0-9a-f]{64}$/);
   assert.ok(ok.lines.some((l) => l.text === `${w.relay.base}: accepted`), JSON.stringify(ok.lines));
 
   // The relay holds it; any reader verifies it.

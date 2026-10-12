@@ -38,12 +38,18 @@
 //!   collective needs, judged on its own sequence (F109): which agreement
 //!   is in force for an act, and whether its areas' holders consented.
 //!
+//! Development (F268):
+//!
+//! - [`development`]: what a specification declares that the library
+//!   reads: a cMIP that checks proofs of delivery (field 12).
+//!
 //! Written against core v18, Identity draft 10, Envelopes draft 6, Text
 //! draft 6, Agreements draft 7 and Development draft 5.
 
 pub mod act;
 pub mod cbor;
 pub mod chain;
+pub mod development;
 pub mod envelopes;
 pub mod money;
 pub mod hash;

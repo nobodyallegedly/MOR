@@ -175,6 +175,7 @@ fn claim_payload(payee: Hash, fulfils: Hash, value: u64, proof: &str) -> Claim {
         refund: None,
         anonymous: None,
         purchase: None,
+        previous: None,
     }
 }
 

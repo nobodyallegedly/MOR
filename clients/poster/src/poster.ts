@@ -7,7 +7,8 @@
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
 import { randomInt } from 'node:crypto';
-import { describeAct, hex, runningSummary, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { describeAct, hex, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { ownLine } from '../../genesis/src/lines.ts';
 import { TestIdentity, TEST_LABEL, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -32,7 +33,7 @@ export const WORDS_SAY = [
 
 /** Said where an identity is brought in (the carry Module, 5.1, and Identity rule 17). */
 export const LINE_SAY =
-  'This app keeps its own line of acts for this identity. If the signing key is ever changed (with the chain key, on the device that holds it), that change must keep this line, or every post made here becomes void. Before a change, take this line’s latest act, position and summary to that device.';
+  'This app keeps its own line of acts for this identity. If the signing key is ever changed (with the chain key, on the device that holds it), that change must keep this line, or every post made here becomes void. The client making the change reads this line from the homes and relays and keeps it, unless you leave it out; if it cannot read it, give it this line’s latest act, position and summary, shown on this app’s card.';
 
 /** Said where the words do not give the current key (the carry Module, costs). */
 const NOT_CURRENT =
@@ -83,7 +84,8 @@ export class Poster {
     const me = this.store.identity();
     if (me) {
       const s = this.store.settings();
-      const seq = me.f.sequence;
+      // F152: this app's own line, as the rotating client reads it (`lines.ts`).
+      const own = ownLine(me.f.sequence);
       return {
         stage: 'ready',
         identity: {
@@ -92,7 +94,7 @@ export class Poster {
           kind: s.kind,
           homes: me.f.homes.map((h) => h.hint),
           relays: s.relays,
-          line: { acts: seq.length, latest: seq.at(-1) ?? null, summary: seq.length ? runningSummary(seq) : null },
+          line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
         },
       };
     }

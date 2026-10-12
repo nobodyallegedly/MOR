@@ -4332,6 +4332,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
         refund: None,
         anonymous: None,
         purchase: Some(Purchase { agreement: k1, line: k1 }),
+        previous: None,
     });
     let c = lab.w.everyday_act(&mut buyer, mips().money, 3, claim.to_map(), None, None);
     let c = lab.w.add(&c);
@@ -5630,6 +5631,7 @@ fn a_payment_naming_another_branch_raises_the_alarm() {
             refund: None,
             anonymous: None,
             purchase: Some(Purchase { agreement: d, line }),
+            previous: None,
         });
         let x = w.everyday_act(fan, mips().money, 3, c.to_map(), None, None);
         w.add(&x)
@@ -7100,6 +7102,7 @@ fn payment(
             refund: None,
             anonymous: None,
             purchase: None,
+            previous: None,
         }))
     } else {
         (2, Payload::Receipt(Receipt {
@@ -7994,6 +7997,7 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
             refund: None,
             anonymous: None,
             purchase: Some(Purchase { agreement: f, line }),
+            previous: None,
         });
         let x = w.everyday_act(fan, mips().money, 3, c.to_map(), None, None);
         w.add(&x)
@@ -8593,6 +8597,7 @@ fn f189_3_a_payment_naming_a_version_the_seller_does_not_hold_raises_the_alarm()
             refund: None,
             anonymous: None,
             purchase: Some(Purchase { agreement: d, line }),
+            previous: None,
         });
         let x = w.everyday_act(fan, mips().money, 3, c.to_map(), None, None);
         w.add(&x)
@@ -9365,6 +9370,7 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
         refund: None,
         anonymous: None,
         purchase: Some(Purchase { agreement: k1, line: k1 }),
+        previous: None,
     })
     .to_map();
     let a = lab.w.everyday_act(&mut relay, mips().money, 3, claim.clone(), None, Some(vec![served]));
@@ -9548,6 +9554,7 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
         refund: None,
         anonymous: None,
         purchase: Some(Purchase { agreement: k1, line: k1 }),
+        previous: None,
     });
     let a = lab.w.everyday_act(&mut puppet, mips().money, 3, claim.to_map(), None, Some(vec![served]));
     lab.w.add(&a);
@@ -9715,6 +9722,7 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_offer_that_s
         refund: None,
         anonymous: None,
         purchase: Some(Purchase { agreement: k1, line: k1 }),
+        previous: None,
     });
     let a = lab.w.everyday_act(&mut fan, mips().money, 3, claim.to_map(), None, Some(vec![served]));
     let a = lab.w.add(&a);
@@ -10138,6 +10146,7 @@ impl RoleLab {
             refund: None,
             anonymous: None,
             purchase: Some(Purchase { agreement: self.k1, line: self.k1 }),
+            previous: None,
         });
         let who = match who {
             Some(p) => p,
@@ -10330,6 +10339,7 @@ fn payers_claim_on(lab: &mut Lab, payer: &mut Person, label: Hash, owed_proof: &
         refund: refund.map(|a| Rail { module: spec("a rail Module"), address: a.to_vec() }),
         anonymous: None,
         purchase: Some(Purchase { agreement: lab.founding, line: k1 }),
+        previous: None,
     });
     let a = lab.w.everyday_act(payer, mips().money, 3, c.to_map(), cites, None);
     lab.w.add(&a)
@@ -10446,6 +10456,7 @@ fn qg1_a_refund_to_a_bare_key_is_repaid_by_the_collectives_claim() {
         refund: Some(Rail { module: spec("a rail Module"), address: b"the key's refund address".to_vec() }),
         anonymous: None,
         purchase: Some(Purchase { agreement: lab.founding, line: k1 }),
+        previous: None,
     };
     c.anonymous = Some(Anonymous { key: bare, sig: key.sign(&c.anonymous_message(&Citations::default()), &[0; 32]).sig });
     let a = lab.w.everyday_act(&mut once, mips().money, 3, Fin::Claim(c).to_map(), None, None);
@@ -11109,6 +11120,7 @@ impl ServiceDeal {
             refund: None,
             anonymous: None,
             purchase: Some(Purchase { agreement: deal, line: deal }),
+            previous: None,
         });
         let a = self.w.everyday_act(&mut self.fan, mips().money, 3, c.to_map(), None, (!acks.is_empty()).then_some(acks));
         (r, self.w.add(&a))
@@ -12113,7 +12125,7 @@ fn f224_a_stake_sold_twice_is_settled_on_the_sellers_own_line() {
     // Payments: each names the transfer it pays for (fulfils). Eve's is owed
     // back by Ben; Carla's is a purchase.
     let pays = |w: &mut World, buyer: &mut Person, t: Hash, proof: &[u8]| {
-        let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: proof.to_vec(), payee: bid, amount: Amount { unit: spec("a unit"), value: 5000 }, fulfils: t, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None });
+        let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: proof.to_vec(), payee: bid, amount: Amount { unit: spec("a unit"), value: 5000 }, fulfils: t, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
         let a = w.everyday_act(buyer, mips().money, 3, c.to_map(), None, None);
         w.add(&a)
     };

@@ -346,7 +346,7 @@ fn state(rail_valid: &mut BTreeMap<Hash, PaidAt>, payments: &mut BTreeMap<Vec<u8
 }
 
 fn claim_of(c: &Commitment, ln: &LnProof) -> Claim {
-    Claim { rail: mor_lightning::spec(), proof: Proof { paid_to: c.paid_to, salt: c.salt, rail: ln.encode() }.encode(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None }
+    Claim { rail: mor_lightning::spec(), proof: Proof { paid_to: c.paid_to, salt: c.salt, rail: ln.encode() }.encode(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None }
 }
 
 /// The service's receipt of a payment it received, carrying the same rail

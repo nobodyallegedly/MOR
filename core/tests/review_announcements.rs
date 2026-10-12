@@ -169,6 +169,7 @@ fn payers_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: Hash, p
         refund: None,
         anonymous: None,
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
+        previous: None,
     });
     let a = w.everyday_act(payer, mips().money, 3, c.to_map(), None, None);
     w.add(&a)

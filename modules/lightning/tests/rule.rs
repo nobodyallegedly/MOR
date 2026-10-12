@@ -278,6 +278,7 @@ fn paid(
             refund: None,
             anonymous: None,
             purchase: None,
+            previous: None,
         },
     )
 }

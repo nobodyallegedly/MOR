@@ -149,7 +149,14 @@ export interface State {
     via: Record<string, string>;
     drafts: string;
   };
-  identities: { id: string; name: string; linked: boolean; received: Item[] }[];
+  identities: {
+    id: string;
+    name: string;
+    linked: boolean;
+    /** This desk's own line of acts for it (F152): how many, the latest, its running summary. */
+    line: { acts: number; latest: string | null; summary: string | null };
+    received: Item[];
+  }[];
   history: { time: number; draft: string; verdict: string; signer: string; signerName: string; title: string; note: string; act?: string; resend: boolean }[];
   paired: { key: string; label: string; added: number; you: boolean }[];
 }

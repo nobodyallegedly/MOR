@@ -117,6 +117,7 @@ fn payers_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: Hash, p
         refund: None,
         anonymous: None,
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
+        previous: None,
     });
     let a = w.everyday_act(payer, mips().money, 3, c.to_map(), None, None);
     w.add(&a)
@@ -145,6 +146,7 @@ fn acknowledging_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: 
         refund: None,
         anonymous: None,
         purchase: None,
+        previous: None,
     });
     let a = w.everyday_act(payer, mips().money, 3, c.to_map(), None, Some(acks));
     w.add(&a)
@@ -469,6 +471,22 @@ impl agreements::ProofChecker for TestChecker {
             agreements::ProofVerdict::NotProven("not the delivered bytes".into())
         }
     }
+    fn checks_delivery(&self) -> bool {
+        true
+    }
+}
+
+/// The same checking, under a cMIP whose specification does not declare
+/// that it checks proofs of delivery (F268).
+struct Undeclared;
+
+impl agreements::ProofChecker for Undeclared {
+    fn check(&self, offer: &Hash, params: &[u8], proof: &[u8]) -> agreements::ProofVerdict {
+        TestChecker.check(offer, params, proof)
+    }
+    fn checks_delivery(&self) -> bool {
+        false
+    }
 }
 
 /// Agreements draft 11, rule 11 (new in draft 11, F261): offers are of two
@@ -506,6 +524,60 @@ fn draft_11_f261_a_proven_offer_is_judged_by_its_cmips_checker() {
     assert!(matches!(v.proven_delivery(&proven, b"something else", &held).unwrap(), agreements::ProofVerdict::NotProven(_)));
     let other: [(Hash, &dyn agreements::ProofChecker); 1] = [(spec("another cMIP"), &TestChecker)];
     assert!(matches!(v.proven_delivery(&proven, b"delivered", &other).unwrap(), agreements::ProofVerdict::Unknown(_)), "only the named cMIP's checker judges");
+}
+
+/// F268 (Development draft 7, Q1, decided by Nobody, allegedly, 12 October
+/// 2026): a proof checker is not a task; a cMIP that checks proofs of
+/// delivery declares so in its specification by one field. The core lists
+/// and asks only a checker whose cMIP declares it: one that does not is
+/// never asked, and the delivery is not proven by it.
+#[test]
+fn f268_only_a_cmip_declaring_it_checks_proofs_of_delivery() {
+    let mut w = World::new();
+    let mut seller = w.genesis("a seller", vec![own_home()], None, None);
+    let (declared, silent) = (spec("a cMIP declaring it checks deliveries"), spec("a cMIP declaring nothing"));
+    let offer = |cmip: Hash| agreements::Offer {
+        under: None,
+        sold: vec![agreements::Sold::Access(cmip, mor_core::cbor::encode(&Value::Uint(7)))],
+        price: Amount { unit: spec("a unit"), value: 10 },
+        paid: None,
+        words: None,
+        until: None,
+        time: None,
+        refund: None,
+    };
+    let a = agreements_act(&mut w, &mut seller, agreements::types::STANDING_OFFER, offer(declared).to_map(), None);
+    let b = agreements_act(&mut w, &mut seller, agreements::types::STANDING_OFFER, offer(silent).to_map(), None);
+    let held: [(Hash, &dyn agreements::ProofChecker); 2] = [(declared, &TestChecker), (silent, &Undeclared)];
+    assert_eq!(agreements::delivery_checkers(&held), vec![declared], "listed: only the declared checker");
+    let v = view(&w);
+    assert_eq!(v.proven_delivery(&a, b"delivered", &held).unwrap(), agreements::ProofVerdict::Proven);
+    match v.proven_delivery(&b, b"delivered", &held).unwrap() {
+        agreements::ProofVerdict::Unknown(why) => assert!(why.contains("F268"), "{why}"),
+        other => panic!("a checker its cMIP does not declare was asked: {other:?}"),
+    }
+}
+
+/// F268: the specification format's field marking a proof-of-delivery
+/// checker, as the library reads it from a specification's content. Field
+/// 12, `true`, on a cMIP (mechanic, the build's: the number and the value);
+/// absent, nothing declared; anything else, or on another kind, invalid.
+#[test]
+fn f268_the_specification_field_marks_a_proof_checker() {
+    use mor_core::development::checks_delivery;
+    let spec_of = |kind: u64, field_12: Option<Value>| {
+        let mut m = vec![(Value::Uint(0), Value::Uint(kind)), (Value::Uint(1), Value::Bytes(spec("its creator").to_vec())), (Value::Uint(9), Value::Text("The specification.".into()))];
+        if let Some(v) = field_12 {
+            m.push((Value::Uint(12), v));
+        }
+        Value::Map(m)
+    };
+    assert_eq!(checks_delivery(&spec_of(0, Some(Value::Bool(true)))), Ok(true), "a cMIP declaring it");
+    assert_eq!(checks_delivery(&spec_of(0, None)), Ok(false), "a cMIP declaring nothing");
+    assert!(checks_delivery(&spec_of(1, Some(Value::Bool(true)))).is_err(), "a Module: only a cMIP declares it");
+    assert!(checks_delivery(&spec_of(0, Some(Value::Bool(false)))).is_err(), "false is not written: absent says it");
+    assert!(checks_delivery(&spec_of(0, Some(Value::Uint(1)))).is_err());
+    assert!(checks_delivery(&Value::Map(vec![(Value::Uint(12), Value::Bool(true))])).is_err(), "no kind");
 }
 
 /// Agreements draft 11, rules 11 and 13 (new in draft 11, F264, with
