@@ -354,4 +354,4 @@ Both questions are about F270, in Agreements rule 48, marked "Open (core v22, Q7
 
 ### Tests
 
-The texts were written while the tests ran on a separate checkout of the branch after the merge (`a8b2225`), using `scripts/test-all.sh` without `--reproducible` or regtest. The working tree was untouched during the run. Only Markdown under `spec/` and `docs/` changed after that commit. Results: see below.
+The texts were written while the tests ran on a separate checkout of the branch after the merge (`a8b2225`), using `scripts/test-all.sh` without `--reproducible` or regtest. The working tree was untouched during the run. Only Markdown under `spec/` and `docs/` changed after that commit, as `git diff --stat a8b2225` shows, so the run covers the branch's code as it stands. **All tests passed:** Rust 647 passed, 0 failed, 1 ignored (the Lightning regtest, skipped unless `MOR_LN_REGTEST` is set); TypeScript 283 of 283 in 15 packages, as on main after the deal tool. `wasm-bindgen` 0.2.129 was installed outside the repository first, and the site's browser test used the container's Chromium. No code or test changed.
