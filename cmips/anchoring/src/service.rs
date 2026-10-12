@@ -451,7 +451,7 @@ pub const SLACK: u64 = 1;
 /// counts is Money's, rules 14 and 15), naming no claim (a lone seller's
 /// offer, F215), for exactly the tier's price (or, under a scheme, the
 /// price the ticket's quote gives, F228). The refund it would be owed.
-fn bought(offer: &Offer, ticket: &Ticket, c: &Commitment) -> Result<Refund, String> {
+pub(crate) fn bought(offer: &Offer, ticket: &Ticket, c: &Commitment) -> Result<Refund, String> {
     if ticket.offer != offer.id {
         return Err("the ticket names another offer".into());
     }
