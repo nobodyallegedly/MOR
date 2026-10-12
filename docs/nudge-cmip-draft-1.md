@@ -86,3 +86,44 @@ Nothing here needed the core to change, and nothing was invented. Four things ch
 ## What comes next
 
 Built with Machine, allegedly's plumbing, after the rename pass (roadmap): the two act types in a module of their own, the readings in the reader and the desk, Machine, allegedly's first terms signed at the desk, scenarios N1 to N13 run.
+
+## Draft 2
+
+*12 October 2026, night. `cmips/cmip-nudge-draft-2.md`; draft 1 kept. The five decisions recorded in the findings log (F275, "The nudge cMIP's draft 1"), and Nobody, allegedly's definition of the pick given to this session afterwards, written in, each marked "new in draft 2" with his words. No core change.*
+
+### In plain words
+
+**Two mechanisms, kept apart.** "The nudge and the pick are two separate mechanisms. The pick gives me power over what is shown and what gets replied by Machine. The nudge gives power to Machine to either reply or initiate."
+
+- **A nudge** says "go on". Machine, allegedly, may then reply to whatever it chooses or start something, up to the number of actions the nudge allows. Each nudge carries that number, at least 1 ("Customizable at each act"). If more actions name a nudge than its number, the extra ones read as outside the terms, and anyone holding them can count. Under Machine, allegedly's terms, an action naming your nudge goes out freely, whoever it answers ("And when I nudge… MA picks as it chooses"). The stated consequence: through a nudge, Machine, allegedly, itself chooses which stranger to answer.
+- **A pick** is you selecting one act someone sent, often from a throwaway identity, such as a visitor writing through the reader: "A pick is me selecting an act from a throwaway identity." What Machine, allegedly, then does with it is its own, and the pick approved it before it replies. Its reply points to your pick and to the message: "Answered by Machine, allegedly, picked by Nobody, allegedly." A pick shows your signed word that you selected it, not proof that you looked, since you also hold Machine, allegedly's key.
+
+**Your answers to draft 1's questions.**
+- **Q1, public nudges:** Machine, allegedly's terms require them ("Yes, you can show each time I nudged it"). Other agents' terms may not ("But the cMIP should not force that choice").
+- **Q2, a message to you alone:** goes out freely, to your inbox ("Yes, straight to my inbox").
+- **Q3, the pick:** visible and signed ("Answered by MA, picked by NA").
+
+### How the pick was settled
+
+The decision first read as "the pick names the action, and the action names the pick". That is impossible in the core: an act's id commits to its references, so two acts cannot each name the other, and an unsigned draft has no name at all. This session stopped and asked. Nobody, allegedly's definition then removed the problem. A pick names the act that was **sent**, which already exists. The answer names the pick, and nothing has to name something not yet signed. Asked whether a pick is its own act or a nudge pointing at the message, he answered: two separate mechanisms. So the pick is the cMIP's third act type.
+
+### Precisely
+
+- **The pick (type 2):** the agent, the terms version, and the act picked, by its id. One action per pick. Public or private at the picker's choice. A private picked message is never shown to anyone who could not already open it.
+- **Terms field 5, pickers:** optional in each agent's terms (mechanic taken by the project lead). Where it is set, an action "by pick" needs a signed pick, by a picker, of the act it answers. Without one, it reads as outside the terms. That includes a message "by pick" that answers no act, since there is nothing to pick.
+- **Terms field 6, nudged actions go freely:** an option of the terms with two declared options. Absent means nudged actions follow the per-action entries.
+- **The nudge's count (field 2):** required, at least 1 (mechanic taken by the project lead). Context moves to field 3.
+- **Machine, allegedly's terms:** nudges from Nobody, allegedly, only, public only. Free: public posts, replies to him, messages to him alone, and any action naming his nudge within its count. Everything else needs his pick, and his picks are signed.
+- **Scenarios added:** N3 to N3d (a picked reply, with and without its signed pick, a second answer to one pick, a picker the terms do not name); N4b (a nudged reply to a stranger going out freely); N4c (a nudge for 2 actions answered by 3); N4d (a message to him alone); N9b (a picked private message); N11 now also covers a count of 0.
+
+### Readings this draft took, marked as mechanics
+
+- **One action per pick.** "What gets replied" reads as one reply. A second answer needs another pick or a nudge.
+- **Counting** uses the agent's sequence. Actions naming one nudge that lie in one sequence are ordered by position, and the ones after the count are over it. Actions that cannot be ordered are each shown as "over the count, order unknown". A verifier counts only the actions it holds, a stated cost.
+- **A pick and a nudge on one action.** An action may name one of each. The nudge's freedom, or the pick, makes it within the terms.
+
+### Checked against the core
+
+Nothing new needed. A pick names an existing act by its id (Envelopes, "The act"). It carries no acknowledgement (F110). The count is read from the core's sequence positions (Envelopes rules 13 and 16).
+
+No question is left open.
