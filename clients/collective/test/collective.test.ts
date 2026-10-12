@@ -11,7 +11,8 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { actId, signaturePayload } from '../../genesis/src/core.ts';
+import { actId, openWithKey, signaturePayload } from '../../genesis/src/core.ts';
+import { relayAt } from '../../genesis/src/transport.ts';
 import { TestIdentity, lookUp } from '../../genesis/src/identity.ts';
 import { actsBy, ownLine } from '../../genesis/src/lines.ts';
 import { sign as agreementsSign } from '../../repo/src/agreements.ts';
@@ -550,6 +551,15 @@ test('money and endings (Agreements draft 10, F121 to F124): stakes at founding,
   assert.match(smallw, /Every payout matches its stake exactly/);
   // The second split cites the first, and the turns are read from the count the first carries (F171).
   assert.match(words(small.review.reading), /cites the service's previous split for the stake/);
+  {
+    // F272: the previous split is private, so the reference names it by its id alone (the writer's choice).
+    const f = w.app.store.collective(col.id).f;
+    const [first, second] = f.splits!;
+    const bytes = await relayAt(f.relays[0]).getAct(second.id);
+    const d = openWithKey(bytes!, new Uint8Array(Buffer.from(second.key, 'base64'))) as { refs?: string[]; refSigners?: (string | undefined)[] };
+    assert.deepEqual(d.refs, [first.id]);
+    assert.equal(d.refSigners?.[0] ?? null, null);
+  }
   assert.equal((smallw.match(/'s client: the split continues the chain it keeps/g) ?? []).length, 5, smallw);
   // Any deviation, either way, is shown.
   const bad = await sign(c, { kind: 'split', collective: col.id, amount: 1000, fee: 100, amounts: { [three]: 35, [ada]: 460 } });

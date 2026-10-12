@@ -270,10 +270,7 @@ impl Citations {
             out.push(o.predecessor);
         }
         out.extend(self.acks.iter().flatten().copied());
-        out.extend(self.refs.iter().flatten().filter_map(|r| match r {
-            Ref::Act(h) => Some(*h),
-            Ref::Web { .. } => None,
-        }));
+        out.extend(self.refs.iter().flatten().filter_map(Ref::act));
         out
     }
 }

@@ -8,10 +8,11 @@
 //! the acts themselves mean is for the core library's verifier to decide.
 
 use crate::store::Filter;
-use crate::wire::{self, IdentityRecord, Info, PutResult, PutSealed, WireError};
+use crate::wire::{self, IdentityRecord, Info, Limits, PutResult, PutSealed, WireError};
 use mor_core::act::Act;
 use mor_core::hash::{sha256, Hash};
 use std::fmt;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -23,6 +24,9 @@ pub enum ClientError {
     /// The relay answered something that is not a message of the cMIP, or
     /// an item that does not match what was asked for.
     Malformed(String),
+    /// Not sent: the body is larger than the relay's stated limit, read
+    /// from `GET /info` (cMIP draft 3, "Clients", 6).
+    TooLarge { size: u64, limit: u64 },
 }
 
 impl fmt::Display for ClientError {
@@ -31,6 +35,10 @@ impl fmt::Display for ClientError {
             ClientError::Wire(e) => e.fmt(f),
             ClientError::Transport(e) => write!(f, "unreachable: {e}"),
             ClientError::Malformed(e) => write!(f, "malformed answer: {e}"),
+            ClientError::TooLarge { size, limit } => write!(
+                f,
+                "not sent: {size} bytes is over the relay's stated limit of {limit}"
+            ),
         }
     }
 }
@@ -91,6 +99,11 @@ pub fn reach(addr: &str) -> Reach {
 pub struct Client {
     http: reqwest::Client,
     base: String,
+    /// The relay's stated limits, read once from `GET /info` before the
+    /// first body is sent; shared by clones.
+    limits: Arc<Mutex<Option<Limits>>>,
+    /// Whether to check a body against those limits before sending.
+    check_limits: bool,
 }
 
 /// The feed's query.
@@ -121,7 +134,16 @@ impl Client {
         Client {
             http,
             base: base.trim_end_matches('/').to_string(),
+            limits: Arc::new(Mutex::new(None)),
+            check_limits: true,
         }
+    }
+
+    /// A client that sends every body whatever the relay's stated limits:
+    /// for tests of how a relay answers a body too large, never for use.
+    pub fn without_limit_check(mut self) -> Self {
+        self.check_limits = false;
+        self
     }
 
     pub fn base(&self) -> &str {
@@ -165,11 +187,42 @@ impl Client {
     }
 
     pub async fn info(&self) -> R<Info> {
-        Ok(Info::decode(&self.get("/info").await?)?)
+        let info = Info::decode(&self.get("/info").await?)?;
+        *self.limits.lock().unwrap() = Some(info.limits.clone());
+        Ok(info)
     }
 
-    /// `POST /acts`.
+    /// The relay's stated limits, read from `GET /info` once and kept;
+    /// `None` when it does not say (unreachable, or no message of the
+    /// cMIP), and then the body is sent and the relay judges.
+    async fn limits(&self) -> Option<Limits> {
+        if let Some(l) = self.limits.lock().unwrap().clone() {
+            return Some(l);
+        }
+        self.info().await.ok().map(|i| i.limits)
+    }
+
+    /// cMIP draft 3, "Clients", 6: a client SHOULD NOT send a body larger
+    /// than the relay's stated limits. An act or a sealed container is
+    /// measured against `limits.0`, media against `limits.1`. *The relay
+    /// reads an oversized body only up to its own bound before cutting the
+    /// sender off; refusing here spares both sides.*
+    async fn fits(&self, size: usize, media: bool) -> R<()> {
+        if !self.check_limits {
+            return Ok(());
+        }
+        if let Some(l) = self.limits().await {
+            let limit = if media { l.media } else { l.act };
+            if size as u64 > limit {
+                return Err(ClientError::TooLarge { size: size as u64, limit });
+            }
+        }
+        Ok(())
+    }
+
+    /// `POST /acts`. Not sent if larger than the relay's stated limit.
     pub async fn put_act(&self, act: &[u8]) -> R<PutResult> {
+        self.fits(act.len(), false).await?;
         Ok(PutResult::decode(
             &self.post("/acts", act.to_vec(), "application/cbor").await?,
         )?)
@@ -177,6 +230,7 @@ impl Client {
 
     /// `POST /sealed`.
     pub async fn put_sealed(&self, sealed: &[u8], pickup: &[Hash]) -> R<PutResult> {
+        self.fits(sealed.len(), false).await?;
         let body = PutSealed {
             sealed: sealed.to_vec(),
             pickup: pickup.to_vec(),
@@ -189,6 +243,7 @@ impl Client {
 
     /// `POST /media`. Checks the answer against the bytes sent.
     pub async fn put_media(&self, bytes: &[u8]) -> R<Hash> {
+        self.fits(bytes.len(), true).await?;
         let (h, size) = wire::decode_media_result(
             &self
                 .post("/media", bytes.to_vec(), "application/octet-stream")

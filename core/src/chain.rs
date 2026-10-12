@@ -615,10 +615,7 @@ impl Verifier {
             let mut out: Vec<Hash> = i.prev.iter().flatten().copied().collect();
             out.extend(i.objects.iter().flatten().map(|o| o.predecessor));
             out.extend(i.acks.iter().flatten().copied());
-            out.extend(i.refs.iter().flatten().filter_map(|r| match r {
-                crate::act::Ref::Act(h) => Some(*h),
-                crate::act::Ref::Web { .. } => None,
-            }));
+            out.extend(i.refs.iter().flatten().filter_map(crate::act::Ref::act));
             out
         };
         if from == target {
@@ -719,6 +716,56 @@ impl Verifier {
         } else {
             LinkSeen::Linked { confirmation }
         }
+    }
+
+    /// The routes act that counts for an identity (Identity, "Routes"): its
+    /// valid routes acts, followed from version 1, and whether the routes
+    /// chain is contested past it.
+    pub fn current_routes(&self, identity: &Hash) -> (Option<crate::envelopes::Routes>, bool) {
+        let mut entries = vec![];
+        let mut decoded = BTreeMap::new();
+        for h in self.signed_by(identity) {
+            if h.inside.spec != self.identity_spec || h.inside.type_ != identity::types::ROUTES {
+                continue;
+            }
+            if self.status(&h.id) != Status::Valid {
+                continue;
+            }
+            if let Ok(r) = crate::envelopes::Routes::decode(&h.inside.payload) {
+                entries.push((h.id, r.version));
+                decoded.insert(h.id, r);
+            }
+        }
+        let l = crate::envelopes::latest(&entries);
+        (l.act.and_then(|a| decoded.remove(&a)), l.contested)
+    }
+
+    /// Where to look for an act a reference names beside its signer
+    /// (Envelopes draft 9, rule 20, F272): the signer's outbox routes that
+    /// count, those for everything first, then those scoped to one
+    /// specification (a reference does not say the act's type), then the
+    /// homes in force at the latest position of the signer's chain.
+    /// Addresses only, each once: hints, never evidence. The verifier must
+    /// hold the signer's chain and routes (a reader looks the signer up
+    /// first); the act found there is checked with [`crate::act::followed`].
+    pub fn places(&self, signer: &Hash) -> Vec<String> {
+        let mut out: Vec<String> = vec![];
+        let mut push = |h: &str| {
+            let h = h.trim_end_matches('/').to_string();
+            if !out.contains(&h) {
+                out.push(h);
+            }
+        };
+        if let (Some(r), _) = self.current_routes(signer) {
+            let outbox: Vec<_> = r.routes.iter().filter(|x| x.kind == 0).collect();
+            for x in outbox.iter().filter(|x| x.scope.is_none()).chain(outbox.iter().filter(|x| x.scope.is_some())) {
+                x.hints.iter().for_each(|h| push(h));
+            }
+        }
+        if let Some((_, state)) = self.resolve(signer).latest() {
+            state.homes.iter().for_each(|h| push(&h.hint));
+        }
+        out
     }
 
     /// Resolve an identity chain: which act counts at each position.

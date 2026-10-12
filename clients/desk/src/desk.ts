@@ -344,6 +344,20 @@ export class Desk {
         rec.sealed = b64(sealFor(made.act, made.key, [{ id: d.to[0], key: recipient.key }]));
         rec.key = b64(made.key);
         rec.inbox = recipient.inbox;
+      } else if (d.public && d.to.length) {
+        // Reading B1 (docs/f272-build.md; Envelopes, "How acts reach people"):
+        // a reply concerns the identity whose act it answers, so a copy goes
+        // to its inbox, sealed to it (a public act: no key in the container).
+        rec.copies = [];
+        rec.noCopy = [];
+        for (const to of d.to) {
+          try {
+            const r = await recipientOf(to, this.hints(), this.via);
+            rec.copies.push({ to, sealed: b64(sealFor(made.act, undefined, [{ id: to, key: r.key }])), inbox: r.inbox });
+          } catch (e) {
+            rec.noCopy.push({ to, why: err(e) });
+          }
+        }
       }
       this.store.saveSigned(rec);
       const sent = await this.send(rec, me);
@@ -418,6 +432,19 @@ export class Desk {
         out.push({ to: hint, accepted: false, answer: `refused: ${e instanceof RelayError ? e.reason : err(e)}` });
       }
     }
+    // A reply's copies, each sealed to the identity it answers, in its inbox.
+    for (const c of rec.copies ?? []) {
+      for (const hint of c.inbox) {
+        await carry(hint);
+        try {
+          await relayAt(hint, via).putSealed(unb64(c.sealed));
+          out.push({ to: `inbox ${hint}`, accepted: true, answer: `a copy sealed to ${c.to.slice(0, 12)}…, whose act it answers` });
+        } catch (e) {
+          out.push({ to: `inbox ${hint}`, accepted: false, answer: `the copy for ${c.to.slice(0, 12)}… refused: ${e instanceof RelayError ? e.reason : err(e)}` });
+        }
+      }
+    }
+    for (const n of rec.noCopy ?? []) out.push({ to: `inbox of ${n.to.slice(0, 12)}…`, accepted: false, answer: `no copy left: ${n.why}` });
     return out;
   }
 

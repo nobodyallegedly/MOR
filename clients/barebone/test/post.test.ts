@@ -11,7 +11,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import jpegjs from 'jpeg-js';
-import { cborEncode, lockMedia, unhex } from '../../genesis/src/core.ts';
+import { cborEncode, describeAct, lockMedia, unhex } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
@@ -227,4 +227,35 @@ test('references to acts that are not pictures are named, not shown', async () =
     ['a text act', 'not found at the relays asked'],
   );
   assert.ok(renderPage([got], 'A reply').includes('Refers to'));
+});
+
+test("a post names its picture's signer beside it, and a reader follows a reference by its signer to another home (F272)", async () => {
+  // The picture is a public act the poster holds: the post's reference names its signer.
+  const r = await post(author, { text: 'With a named picture.', jpeg: fixture('grey.jpg'), relays: [relay.base] });
+  const d = describeAct((await relayAt(relay.base).getAct(r.id))!) as { refs: string[]; refSigners: string[] };
+  assert.deepEqual(d.refs, [r.picture!.id]);
+  assert.deepEqual(d.refSigners, [author.id]);
+
+  // An identity keeping its posts at the second home only, its routes saying so.
+  const far = TestIdentity.create({ homes: homes.map((h) => h.home) });
+  await far.publishGenesis();
+  await far.publishRoutes([{ scope: null, hints: [homes[1].base] }]);
+  const kept = await far.publish(POST_SPECS.text, TEXT_ACT, cborEncode(new Map([[0, 'Kept at home two.']])), { public: true, relays: [homes[1].base] });
+  // A reply kept at the first home names it with its signer; a stranger knowing only that home follows it
+  // through the signer's identity (whose chain that home serves) and routes, to the second.
+  const reply = await other.publish(POST_SPECS.text, TEXT_ACT, cborEncode(new Map([[0, 'An answer.']])), { public: true, relays: [homes[0].base], refs: [[kept.id, far.id]] });
+  assert.equal(await relayAt(homes[0].base).getAct(kept.id), null);
+  const got = await readPost(reply.id, [homes[0].base]);
+  assert.deepEqual(
+    got.refs.map((x) => (x.kind === 'act' ? [x.id, x.signer, x.what] : x.kind)),
+    [[kept.id, far.id, 'a text act']],
+  );
+  // The same reply without the signer: nothing to look by.
+  const bare = await other.publish(POST_SPECS.text, TEXT_ACT, cborEncode(new Map([[0, 'A bare answer.']])), { public: true, relays: [homes[0].base], refs: [kept.id] });
+  assert.deepEqual((await readPost(bare.id, [homes[0].base])).refs.map((x) => (x.kind === 'act' ? x.what : x.kind)), ['not found at the relays asked']);
+  // A wrong signer is said, the act fetched showing its own.
+  const wrong = await other.publish(POST_SPECS.text, TEXT_ACT, cborEncode(new Map([[0, 'Wrong.']])), { public: true, relays: [relay.base], refs: [[r.picture!.id, other.id]] });
+  const w = await readPost(wrong.id, [relay.base]);
+  assert.match((w.refs[0] as { what: string }).what, /the reference is wrong/);
+  assert.equal(w.standing, 'valid', 'a wrong signer never makes the act naming it invalid');
 });

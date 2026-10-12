@@ -267,12 +267,12 @@ impl<'a> AgreementsView<'a> {
             let Some(h) = self.v.get(x) else { return false };
             return self.valid(x)
                 && h.inside.objects.iter().flatten().any(|o| &o.chain == name || &o.predecessor == name)
-                && !h.inside.refs.iter().flatten().any(|r| matches!(r, crate::act::Ref::Act(a) if a == name));
+                && !h.inside.refs.iter().flatten().any(|r| r.act().as_ref() == Some(name));
         }
         let Some(h) = self.v.get(x) else { return false };
         self.valid(x)
             && (h.inside.objects.iter().flatten().any(|o| &o.chain == name || &o.predecessor == name)
-                || h.inside.refs.iter().flatten().any(|r| matches!(r, crate::act::Ref::Act(a) if a == name)))
+                || h.inside.refs.iter().flatten().any(|r| r.act().as_ref() == Some(name)))
     }
 
     /// The evidence held beside the sale `sale` (draft 11, rule 13, F261,
@@ -281,7 +281,7 @@ impl<'a> AgreementsView<'a> {
         let mut out: Vec<Hash> = self
             .v
             .held_acts()
-            .filter(|h| h.id != *sale && self.valid(&h.id) && h.inside.refs.iter().flatten().any(|r| matches!(r, crate::act::Ref::Act(a) if a == sale)))
+            .filter(|h| h.id != *sale && self.valid(&h.id) && h.inside.refs.iter().flatten().any(|r| r.act().as_ref() == Some(sale)))
             .map(|h| h.id)
             .collect();
         out.sort();

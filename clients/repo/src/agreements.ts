@@ -23,6 +23,7 @@ import {
 } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
+import { referenceTo, type Reference } from '../../genesis/src/lookup.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from './specs.ts';
 
 /** `rule`: every party, any k of them, or named ones. */
@@ -443,6 +444,12 @@ export async function proposePayload(by: TestIdentity, payload: Uint8Array, pare
  * the last before it (rule 12). Null where none is found.
  */
 export async function latestPointer(by: TestIdentity, relays: string[]): Promise<string | null> {
+  return (await latestPointerAct(by, relays))?.id ?? null;
+}
+
+/** The latest payee pointer, as `latestPointer` finds it, with the act itself: held, to refer to (F272). */
+export async function latestPointerAct(by: TestIdentity, relays: string[]): Promise<{ id: string; act: Uint8Array } | null> {
+  const acts = new Map<string, Uint8Array>();
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   for (const a of by.chainActs()) v.add(a);
   const found = new Map<string, { version: number; previous: string | null }>();
@@ -463,6 +470,7 @@ export async function latestPointer(by: TestIdentity, relays: string[]): Promise
             if (v.status(id) !== 'valid') continue;
             const prev = m.get(2);
             found.set(id, { version: Number(m.get(1)), previous: prev instanceof Uint8Array ? hex(prev) : null });
+            acts.set(id, it.item);
           } catch {
             // not one of ours, or malformed
           }
@@ -480,7 +488,7 @@ export async function latestPointer(by: TestIdentity, relays: string[]): Promise
   let [at, p] = firsts[0];
   for (;;) {
     const next = [...found].filter(([, q]) => q.previous === at && q.version === p.version + 1);
-    if (next.length !== 1) return at;
+    if (next.length !== 1) return { id: at, act: acts.get(at)! };
     [at, p] = next[0];
   }
 }
@@ -493,14 +501,16 @@ const MONEY_POINTER = 0;
  * signs terms or an offer, which can pay its signer, it cites in `refs` the
  * latest of the signer's payee pointers found on `relays` (Money rule 14,
  * F163, client conformance): an identity keeps one sequence per device, so
- * a deal signed on one device finds a wallet published from another.
+ * a deal signed on one device finds a wallet published from another. The
+ * pointer is a public act the client holds, so the reference names its
+ * signer (Envelopes draft 9, rule 20, F272).
  */
 export async function sign(by: TestIdentity, act: string, relays: string[]) {
   await carryChain(by, relays);
-  let refs: string[] | undefined;
+  let refs: Reference[] | undefined;
   if (await canPaySigner(act, relays, by.via)) {
-    const p = await latestPointer(by, relays);
-    if (p) refs = [p];
+    const p = await latestPointerAct(by, relays);
+    if (p) refs = [referenceTo(p.act)];
   }
   return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(act), {
     public: true,

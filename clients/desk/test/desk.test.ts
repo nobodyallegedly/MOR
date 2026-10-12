@@ -302,6 +302,69 @@ test("an identity's received interactions: messages, replies, acknowledgements a
   assert.equal((await w.client.ask<{ added: number }>('refresh', { identity: me })).added, 0);
 });
 
+test('a reply names the signer of the post it answers, and leaves a copy sealed to that identity in its inbox (F272; reading B1)', async () => {
+  // Someone outside the desk, with an inbox and an encryption key, posts at the relay.
+  const other = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
+  await other.publishGenesis();
+  for (const a of other.chainActs()) await relayAt(w.relay.base).putAct(a);
+  await other.publishRoutes([
+    { scope: null, hints: [w.relay.base] },
+    { scope: null, hints: [w.relay.base], kind: 1 },
+  ]);
+  await other.publishEncryptionKey();
+  const theirs = await other.publish(POST_SPECS.text, 0, textPayload('A question for the machine.'), { public: true, relays: [w.relay.base] });
+
+  // Claude prepares Machine's reply naming it: the connector fetched it, names its signer, and addresses the reply to it.
+  const r = await ask('mor_prepare_post', { signer: machine, text: 'An answer.', refs: [theirs.id] });
+  assert.equal(r.isError, false, r.text);
+  const digest = handed(r.text);
+  const { draft } = (() => {
+    const f = readdirSync(w.drafts).find((x) => x.startsWith(digest))!;
+    return { draft: decodeDraft(new Uint8Array(readFileSync(join(w.drafts, f)))) };
+  })();
+  assert.deepEqual(draft.refs, [[theirs.id, other.id]]);
+  assert.deepEqual(draft.to, [other.id]);
+  const shown = (await waiting(w.client)).find((x) => x.digest === digest)!;
+  assert.deepEqual(shown.blocking, []);
+  assert.match(words(shown), /The reference names its signer/);
+  assert.match(words(shown), /a copy, sealed to that identity, is left in its inbox/);
+
+  // Approved: published at the relay, and a copy sealed to the other identity left in its inbox.
+  const ok = await w.client.ask<Done>('approve', { digest });
+  const reply = ok.acts[0];
+  assert.ok(ok.lines.some((l) => l.text === `${w.relay.base}: accepted`), JSON.stringify(ok.lines));
+  assert.ok(ok.lines.some((l) => /inbox .*: a copy sealed to/.test(l.text)), JSON.stringify(ok.lines));
+  const got = await other.readInbox({ inbox: [w.relay.base], senderHints: [w.relay.base, ...w.homes.map((h) => h.base)] });
+  const copy = got.find((x) => x.act === reply);
+  assert.ok(copy, 'the reply reached the inbox of the identity it answers');
+  assert.equal(copy!.from, machine);
+  assert.equal(copy!.status, 'valid');
+  // The relay sees a container for the other identity: its recipient, never its sender.
+  const page = await relayAt(w.relay.base).feed({ to: other.id });
+  assert.ok(page.items.some((i) => i.kind === 'sealed'));
+
+  // Fetched back, the act is the draft: its reference names the signer.
+  assert.equal((await ask('mor_drafts', { draft: digest.slice(0, 12) })).isError, false);
+
+  // A reference to an act the connector cannot find is never drafted: it must hold what it points at.
+  const missing = await ask('mor_prepare_post', { signer: machine, text: 'Pointing at nothing.', refs: ['ab'.repeat(32)] });
+  assert.equal(missing.isError, true);
+  assert.match(missing.text, /only to an act this client holds/);
+
+  // A draft written by hand naming a public act without its signer is refused at the desk.
+  const bare: Draft = { ...draft, refs: [theirs.id], note: null, reworks: null };
+  const bd = saveDraft(w.drafts, bare).digest;
+  const bv = (await waiting(w.client)).find((x) => x.digest === bd)!;
+  assert.ok(bv.blocking.some((b) => /without naming its signer/.test(b)), JSON.stringify(bv.blocking));
+  // And one naming the wrong signer.
+  const wrong: Draft = { ...draft, refs: [[theirs.id, me]], note: 'wrong', reworks: null };
+  const wd = saveDraft(w.drafts, wrong).digest;
+  const wv = (await waiting(w.client)).find((x) => x.digest === wd)!;
+  assert.ok(wv.blocking.some((b) => /but that act was signed by/.test(b)), JSON.stringify(wv.blocking));
+  await w.client.ask('decline', { digest: bd, note: '' });
+  await w.client.ask('decline', { digest: wd, note: '' });
+});
+
 test('unlinking an identity at the desk stops Claude preparing for it, and the desk refuses its drafts', async () => {
   const p = await ask('mor_prepare_post', { signer: me, text: 'Prepared while linked.' });
   const digest = handed(p.text);

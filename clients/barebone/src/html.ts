@@ -48,16 +48,23 @@ export function renderPost(p: ShownPost): string {
       : `<div class="mor-post-text" dir="auto">${escapeHtml(p.text)}</div>`;
   const others = p.refs
     .filter((r) => r.kind === 'act')
-    .map((r) => `<div class="mor-post-by">Refers to <code>${short(r.id)}</code>: ${escapeHtml(r.kind === 'act' ? r.what : '')}.</div>`)
+    .map((r) => {
+      const by = r.kind === 'act' && r.signer ? `, signed by <code title="${r.signer}">${short(r.signer)}</code> as the reference says` : '';
+      return `<div class="mor-post-by">Refers to <code>${short(r.id)}</code>${by}: ${escapeHtml(r.kind === 'act' ? r.what : '')}.</div>`;
+    })
     .join('');
   const pictures = p.refs
     .filter((r): r is ShownPicture => r.kind === 'picture')
     .map((r) => picture(r, p.signer))
     .join('');
+  // Reading B3: an address this client cannot reach is not tried, and said.
+  const notTried = (p.notTried ?? [])
+    .map((n) => `<div class="mor-post-by">Not tried: <code>${escapeHtml(n.hint)}</code>, ${escapeHtml(n.why)}. What it holds was not asked for; silence proves nothing.</div>`)
+    .join('');
   const bad = p.standing === 'valid' ? '' : ' mor-post-bad';
   return `<article class="mor-post">
 <div class="mor-post-by${bad}">By <code title="${p.signer}">${short(p.signer)}</code>, ${standingWords(p.standing)}. Post <code title="${p.id}">${short(p.id)}</code>.</div>
-${text}${pictures}${others}
+${text}${pictures}${others}${notTried}
 <details><summary>Plain text</summary>${plainHtml(p.text, { showControls: true })}</details>
 </article>`;
 }

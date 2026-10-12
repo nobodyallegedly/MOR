@@ -17,10 +17,12 @@
 //     3: type,
 //     4: payload,         ; the payload, as CBOR bytes, exactly as it will be inside
 //     5: public,          ; true: the act carries its key
-//     ? 6: [* act id],    ; refs
+//     ? 6: [* ref],       ; refs: an act id, or [act id, signer] (Envelopes draft 9, F272)
 //     ? 7: [* [chain, predecessor]],   ; objects
 //     8: [* relay],       ; where a public act is sent once signed
-//     ? 9: [recipient],   ; a message: the one identity it is sealed to and delivered to
+//     ? 9: [* recipient], ; a message: the one identity it is sealed to and delivered to;
+//                         ; a public reply: the identities whose acts it answers, each given
+//                         ; a sealed copy in its inbox (reading B1, docs/f272-build.md)
 //     ? 10: [* bstr],     ; media: locked bytes put on the relays after the act (a publication)
 //     ? 11: tstr,         ; Claude's note to the owner: not signed, never part of the act
 //     ? 12: digest,       ; the draft this one reworks (32 bytes)
@@ -39,7 +41,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { SPECS, checkText, cborDecode, cborEncode, describeAct, hex, lockMedia, openMedia, unhex, workHash } from '../../genesis/src/core.ts';
-import { lookUp } from '../../genesis/src/lookup.ts';
+import { lookUp, referTo, refAct, refSigner, type Reference } from '../../genesis/src/lookup.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { POST_SPECS, PUBLICATION, WITHDRAWAL } from '../../barebone/src/specs.ts';
@@ -59,10 +61,11 @@ export interface Draft {
   type: number;
   payload: Uint8Array;
   public: boolean;
-  refs: string[];
+  /** Each an act id, or `[act id, signer]` naming a public act's signer (F272). */
+  refs: Reference[];
   objects: [string, string][];
   relays: string[];
-  /** A message: the one identity it is sealed to. */
+  /** A message: the one identity it is sealed to. A public reply: the identities whose acts it answers (reading B1). */
   to: string[];
   /** Locked media bytes to put on the relays after the act. */
   media: Uint8Array[];
@@ -90,7 +93,7 @@ export function encodeDraft(d: Draft): Uint8Array {
     [4, d.payload],
     [5, d.public],
   ]);
-  if (d.refs.length) m.set(6, d.refs.map(unhex));
+  if (d.refs.length) m.set(6, d.refs.map((r) => (typeof r === 'string' ? unhex(r) : [unhex(r[0]), unhex(r[1])])));
   if (d.objects.length) m.set(7, d.objects.map(([c, p]) => [unhex(c), unhex(p)]));
   m.set(8, d.relays);
   if (d.to.length) m.set(9, d.to.map(unhex));
@@ -138,7 +141,13 @@ export function decodeDraft(bytes: Uint8Array): Draft {
     type,
     payload,
     public: pub,
-    refs: list(6, 'refs').map((r) => h(r, 'reference')),
+    refs: list(6, 'refs').map((r): Reference => {
+      if (Array.isArray(r)) {
+        if (r.length !== 2) throw new Error('a draft whose reference is neither an act id nor [act id, signer]');
+        return [h(r[0], 'reference'), h(r[1], 'reference signer')];
+      }
+      return h(r, 'reference');
+    }),
     objects: list(7, 'objects').map((o) => {
       if (!Array.isArray(o) || o.length !== 2) throw new Error('a draft whose objects are not pairs');
       return [h(o[0], 'object'), h(o[1], 'object')] as [string, string];
@@ -201,7 +210,7 @@ export async function readDraft(d: Draft, hints: string[], via: Via = {}): Promi
   else if (d.spec === POST_SPECS.envelopes && d.type === WITHDRAWAL) r = await readWithdrawal(d, who, hints, via);
   else r = { kind: 'refused', title: 'An act Claude does not prepare', summary: [], sections: [{ heading: 'Who signs', lines: who }], quoted: [], blocking: [notPreparable(d.spec, d.type)] };
   r.blocking.push(...extra);
-  if (r.kind !== 'message' && d.to.length) r.blocking.push('Only a message names a recipient.');
+  if (r.kind !== 'message' && r.kind !== 'post' && d.to.length) r.blocking.push('Only a message, or a public reply, names a recipient.');
   if (r.kind !== 'picture' && d.media.length) r.blocking.push('Only a publication carries media.');
   if (r.kind !== 'message' && r.kind !== 'refused' && !d.relays.length) r.blocking.push('It names no relay to send it to.');
   return r;
@@ -239,19 +248,62 @@ function textOf(d: Draft, blocking: string[]): { text: string | null; format: un
   return { text, format, what };
 }
 
-async function refLines(d: Draft, hints: string[], via: Via): Promise<Line[]> {
-  const out: Line[] = [];
+/**
+ * The acts a draft refers to, read, and F272's client conformance checked:
+ * the desk signs a reference only to an act it holds, and a reference to a
+ * public act names its signer, rightly. Returns the lines to show, and the
+ * identities whose public acts it answers (other than the signer).
+ */
+async function refLines(d: Draft, hints: string[], via: Via, blocking: string[]): Promise<{ lines: Line[]; answers: string[] }> {
+  const lines: Line[] = [];
+  const answers: string[] = [];
   for (const r of d.refs) {
-    const t = await readAct(r, hints, via, 0);
-    out.push({ text: `It refers to ${t.title.replace(/^A /, 'a ').replace(/^An /, 'an ')} (${short(r)}): ${t.verdict}`, tone: t.counts === false ? 'warn' : undefined });
+    const id = refAct(r);
+    const t = await readAct(id, hints, via, 0);
+    lines.push({ text: `It refers to ${t.title.replace(/^A /, 'a ').replace(/^An /, 'an ')} (${short(id)}): ${t.verdict}`, tone: t.counts === false ? 'warn' : undefined });
+    let held: Awaited<ReturnType<typeof referTo>>;
+    try {
+      held = await referTo(id, hints, via);
+    } catch {
+      blocking.push(`The act it refers to (${short(id)}) was not found at the relays asked: a reference is signed only to an act the desk holds (F272).`);
+      continue;
+    }
+    const named = refSigner(r);
+    if (held.public) {
+      if (!named) blocking.push(`It refers to a public act (${short(id)}) without naming its signer: a reference to a public act names it (Envelopes draft 9, rule 20, F272).`);
+      else if (named !== held.signer) blocking.push(`It names ${short(named)} as the signer of ${short(id)}, but that act was signed by ${short(held.signer)}.`);
+      else lines.push({ text: `The reference names its signer, ${short(held.signer)}, so a reader holding only this act can find it through that identity's homes and routes.` });
+      if (held.signer !== d.signer && !answers.includes(held.signer)) answers.push(held.signer);
+    } else if (named) {
+      lines.push({ text: `It names the signer of a private act (${short(id)}): readers of this act learn who sent it, which its sealed container hid.`, tone: 'warn' });
+    }
   }
-  return out;
+  return { lines, answers };
 }
 
 async function readPost(d: Draft, who: Line[], hints: string[], via: Via): Promise<DraftReading> {
   const blocking: string[] = [];
   const { text, what } = textOf(d, blocking);
-  what.push(...(await refLines(d, hints, via)));
+  const refs = await refLines(d, [...new Set([...hints, ...d.relays])], via, blocking);
+  what.push(...refs.lines);
+  // Reading B1: a reply names in `to` each identity whose public act it
+  // answers, and the desk leaves a copy, sealed to it, in its inbox; the
+  // relays there see the recipient, never the sender or what it answers.
+  if (JSON.stringify([...d.to].sort()) !== JSON.stringify([...refs.answers].sort())) {
+    blocking.push(
+      refs.answers.length
+        ? `A reply names in its recipients exactly the identities whose acts it answers: ${refs.answers.map(short).join(', ')} (Envelopes, "How acts reach people"; reading B1).`
+        : 'A post that answers no other identity\'s act names no recipient.',
+    );
+  }
+  for (const to of d.to) {
+    try {
+      const r = await recipientOf(to, hints, via);
+      what.push({ text: `It answers an act of the identity ${short(to)}: a copy, sealed to that identity, is left in its inbox at ${r.inbox.join(', ')}. The relays there see whom it is for, never who sent it or what it answers. The act itself names that identity among its recipients, which anyone reading it publicly can see, as they can see what it answers.` });
+    } catch (e) {
+      what.push({ text: `It answers an act of the identity ${short(to)}, which cannot be given a copy in its inbox: ${err(e)}. It is published all the same.`, tone: 'warn' });
+    }
+  }
   what.push({ text: 'It is public: anyone who fetches it can read it, and it cannot be unpublished; a later withdrawal only asks readers not to show it.' });
   return {
     kind: 'post',
@@ -289,7 +341,7 @@ async function readMessage(d: Draft, who: Line[], hints: string[], via: Via): Pr
       blocking.push(`It cannot be delivered: ${err(e)}.`);
     }
   }
-  what.push(...(await refLines(d, hints, via)));
+  what.push(...(await refLines(d, hints, via, blocking)).lines);
   what.push({ text: 'It is private: relays see a sealed container for the recipient and its size, never the text, nor who sent it. The recipient can read it, and can show it, signed, to anyone.' });
   return {
     kind: 'message',
@@ -432,7 +484,7 @@ interface Common {
   reworks?: string | null;
 }
 
-const base = (o: Common) => ({ signer: o.signer, refs: [] as string[], objects: [] as [string, string][], relays: o.relays, to: [] as string[], media: [] as Uint8Array[], note: o.note?.trim() ? o.note.trim() : null, reworks: o.reworks ?? null });
+const base = (o: Common) => ({ signer: o.signer, refs: [] as Reference[], objects: [] as [string, string][], relays: o.relays, to: [] as string[], media: [] as Uint8Array[], note: o.note?.trim() ? o.note.trim() : null, reworks: o.reworks ?? null });
 
 function composed(t: string): { text: string; changes: string[] } {
   const { text, changes } = compose(t);
@@ -440,10 +492,25 @@ function composed(t: string): { text: string; changes: string[] } {
   return { text, changes };
 }
 
-const checkRefs = (refs: string[] | undefined) => {
-  for (const r of refs ?? []) if (!HEX64.test(r)) throw new Error(`a reference is an act id, 64 hex digits: ${r}`);
-  return refs ?? [];
-};
+/**
+ * The references to write for act ids Claude names (F272, client
+ * conformance): each act fetched and held first, or no draft is written;
+ * a public act named with its signer, a private one by its id alone (its
+ * signer is the writer's choice, and naming it would expose the sender its
+ * sealed container hides). Also returns the identities whose public acts
+ * it answers, other than the signer.
+ */
+async function references(ids: string[] | undefined, signer: string, hints: string[], via: Via): Promise<{ refs: Reference[]; answers: string[] }> {
+  const refs: Reference[] = [];
+  const answers: string[] = [];
+  for (const id of ids ?? []) {
+    if (!HEX64.test(id)) throw new Error(`a reference is an act id, 64 hex digits: ${id}`);
+    const held = await referTo(id, hints, via);
+    refs.push(held.ref);
+    if (held.public && held.signer !== signer && !answers.includes(held.signer)) answers.push(held.signer);
+  }
+  return { refs, answers };
+}
 
 /**
  * A public text, as the barebone client posts it (Text MIR type 0), in plain
@@ -454,7 +521,8 @@ export async function postDraft(o: Common & { text: string; format: 'plain' | 'l
   await checkSigner(o.signer, hints, via);
   const { text, changes } = composed(o.text);
   const payload = textPayload(text, o.format === 'long-form' ? POST_SPECS.longform : null);
-  return { draft: { ...base(o), spec: POST_SPECS.text, type: 0, payload, public: true, refs: checkRefs(o.refs) }, changes };
+  const { refs, answers } = await references(o.refs, o.signer, [...new Set([...hints, ...o.relays])], via);
+  return { draft: { ...base(o), spec: POST_SPECS.text, type: 0, payload, public: true, refs, to: answers }, changes };
 }
 
 /** A private message (a text act) to one identity, sealed to its encryption key at the desk. */
@@ -463,7 +531,8 @@ export async function messageDraft(o: Common & { to: string; text: string; refs?
   if (!HEX64.test(o.to)) throw new Error('the recipient is an identity hash: 64 hex digits');
   await recipientOf(o.to, hints, via);
   const { text, changes } = composed(o.text);
-  return { draft: { ...base(o), relays: [], spec: POST_SPECS.text, type: 0, payload: textPayload(text), public: false, refs: checkRefs(o.refs), to: [o.to] }, changes };
+  const { refs } = await references(o.refs, o.signer, hints, via);
+  return { draft: { ...base(o), relays: [], spec: POST_SPECS.text, type: 0, payload: textPayload(text), public: false, refs, to: [o.to] }, changes };
 }
 
 /**
@@ -598,6 +667,7 @@ interface Described {
   type?: number;
   objects?: [string, string][];
   refs?: string[];
+  refSigners?: (string | undefined)[];
   acks?: string[];
   payload?: Uint8Array;
 }
@@ -605,7 +675,7 @@ interface Described {
 /**
  * Check that a public act says exactly what its draft said: the same
  * signer, spec, type, payload, references and objects, public, addressed to
- * no one, acknowledging nothing. Returns the act's id. What the desk adds
+ * the identities it answers and no one else, acknowledging nothing. Returns the act's id. What the desk adds
  * (its sequence, the key that binds it, the salt, the lock) is the signer's.
  */
 export function matchDraft(d: Draft, act: Uint8Array): string {
@@ -618,10 +688,11 @@ export function matchDraft(d: Draft, act: Uint8Array): string {
   const differ: string[] = [];
   if (x.signer !== d.signer) differ.push(`it is signed by ${x.signer ?? 'no one'}, not ${d.signer}`);
   if (!x.public || !x.payload) differ.push('it is not public as drafted');
-  if (x.to?.length) differ.push('it is addressed to someone');
+  if (JSON.stringify(x.to ?? []) !== JSON.stringify(d.to)) differ.push(d.to.length ? 'it is not addressed to the identities the draft answers' : 'it is addressed to someone');
   if (x.spec !== d.spec || x.type !== d.type) differ.push('it is of another kind');
   if (!x.payload || !same(x.payload, d.payload)) differ.push('its payload differs');
-  if (JSON.stringify(x.refs ?? []) !== JSON.stringify(d.refs)) differ.push('its references differ');
+  const refs: Reference[] = (x.refs ?? []).map((r, i) => (x.refSigners?.[i] ? [r, x.refSigners[i]!] : r));
+  if (JSON.stringify(refs) !== JSON.stringify(d.refs)) differ.push('its references differ');
   if (JSON.stringify(x.objects ?? []) !== JSON.stringify(d.objects)) differ.push('its objects differ');
   if (x.acks?.length) differ.push('it acknowledges acts the draft did not');
   if (differ.length) throw new Error(`the act is not the act drafted: ${differ.join('; ')}`);

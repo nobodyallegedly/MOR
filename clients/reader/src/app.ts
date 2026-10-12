@@ -39,15 +39,17 @@ async function route(settings: Settings): Promise<void> {
     const ids = (await documents(settings.identity, settings.relays)).slice(0, MAX_LISTED);
     if (me !== shown) return;
     list.innerHTML = ids.length ? '' : '<li class="small">No documents found at these relays.</li>';
-    for (const id of ids) {
-      try {
-        const s = await show(id, settings.relays, settings.identity);
-        if (me !== shown) return;
-        list.insertAdjacentHTML('beforeend', documentItem(s, makeLink(location.href, id)));
-      } catch (err) {
-        if (me !== shown) return;
-        list.insertAdjacentHTML('beforeend', `<li class="small">Act <code>${e(id)}</code>: ${e(message(err))}</li>`);
-      }
+    // Each document read side by side (reading B4), listed in order as each is ready.
+    const items = ids.map((id) =>
+      show(id, settings.relays, settings.identity).then(
+        (s) => documentItem(s, makeLink(location.href, id)),
+        (err) => `<li class="small">Act <code>${e(id)}</code>: ${e(message(err))}</li>`,
+      ),
+    );
+    for (const item of items) {
+      const html = await item;
+      if (me !== shown) return;
+      list.insertAdjacentHTML('beforeend', html);
     }
     return;
   }

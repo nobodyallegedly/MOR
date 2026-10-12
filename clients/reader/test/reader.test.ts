@@ -154,6 +154,28 @@ test('the front page lists the identity\'s documents, newest first, from every r
   assert.deepEqual(await documents(owner.id, ['http://127.0.0.1:9']), [], 'a relay that is away proves nothing');
 });
 
+test('a reply shows the post it answers, found by the signer it names at another home; an onion home is not tried, and said (F272; readings B2 to B4)', async () => {
+  const onion = 'http://exampleexampleexampleexampleexampleexampleexample7ad.onion';
+  const nym = TestIdentity.create({ homes: [...homes.map((h) => h.home), { operator: null, hint: onion }] });
+  await nym.publishGenesis();
+  await nym.publishRoutes([{ scope: null, hints: [homes[1].base] }]);
+  // Its chain is carried to the relay, as a posting client carries its signer's chain; its post is kept at the second home only.
+  for (const a of nym.chainActs()) await relayAt(relay.base).putAct(a);
+  const kept = await nym.publish(SPECS.text, 0, node.cborEncode(new Map([[0, 'A post kept at home two.']])), { public: true, relays: [homes[1].base] });
+  const replier = TestIdentity.create({ homes: homes.map((h) => h.home) });
+  await replier.publishGenesis();
+  for (const a of replier.chainActs()) await relayAt(relay.base).putAct(a);
+  const reply = await replier.publish(SPECS.text, 0, node.cborEncode(new Map([[0, 'A reply naming it.']])), { public: true, relays: [relay.base], refs: [[kept.id, nym.id]] });
+  const s = await show(reply.id, [relay.base], owner.id);
+  assert.equal(s.post.standing, 'valid');
+  assert.equal(s.byOwner, false);
+  assert.deepEqual(s.post.refs.map((r) => (r.kind === 'act' ? [r.id, r.signer, r.what] : r.kind)), [[kept.id, nym.id, 'a text act']]);
+  assert.deepEqual(s.post.notTried.map((n) => n.hint), [onion]);
+  const html = documentPage(s, settingsFor([relay.base]));
+  assert.match(html, /signed by <code[^>]*>[0-9a-f]{8}…[0-9a-f]{4}<\/code> as the reference says: a text act/);
+  assert.match(html, /Not tried: <code>http:\/\/example[a-z0-9]*\.onion<\/code>, an onion address/);
+});
+
 test('a visitor sends a message over MOR; only the owner opens it, and it verifies', async () => {
   const to = await recipient(owner.id, [relay.base]);
   assert.equal(to.warning, null);

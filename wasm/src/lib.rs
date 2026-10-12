@@ -324,8 +324,11 @@ struct Described {
     prev: Option<String>,
     /// `[chain, predecessor]` pairs, when opened.
     objects: Option<Vec<(String, String)>>,
-    /// Acts it refers to, by id, when opened.
+    /// Acts it refers to, by id, when opened, in either form.
     refs: Option<Vec<String>>,
+    /// The signer each of `refs` names beside it (F272), or null: the
+    /// same length and order as `refs`. A hint of where to look.
+    ref_signers: Option<Vec<Option<String>>>,
     /// Web resources it refers to, `[address, hash or null]`, when opened.
     web_refs: Option<Vec<(String, Option<String>)>>,
     /// Acts by other identities it acknowledges (Envelopes, "Acknowledgements"), when opened.
@@ -357,10 +360,15 @@ fn describe_act(a: &Act, key: Option<&[u8; 32]>) -> Described {
             i.refs
                 .iter()
                 .flatten()
-                .filter_map(|r| match r {
-                    Ref::Act(h) => Some(hx(h)),
-                    Ref::Web { .. } => None,
-                })
+                .filter_map(|r| r.act().as_ref().map(hx))
+                .collect()
+        }),
+        ref_signers: inside.as_ref().map(|i| {
+            i.refs
+                .iter()
+                .flatten()
+                .filter(|r| r.act().is_some())
+                .map(|r| r.signer().as_ref().map(hx))
                 .collect()
         }),
         web_refs: inside.as_ref().map(|i| {
@@ -369,7 +377,7 @@ fn describe_act(a: &Act, key: Option<&[u8; 32]>) -> Described {
                 .flatten()
                 .filter_map(|r| match r {
                     Ref::Web { address, hash } => Some((address.clone(), hash.as_ref().map(hx))),
-                    Ref::Act(_) => None,
+                    Ref::Act(_) | Ref::Signed { .. } => None,
                 })
                 .collect()
         }),
@@ -839,11 +847,21 @@ struct EverydayIn {
     to: Option<Vec<String>>,
     /// `[chain, predecessor]` pairs.
     objects: Option<Vec<(String, String)>>,
-    /// Acts this one refers to, by id (Envelopes, "References").
-    refs: Option<Vec<String>>,
+    /// Acts this one refers to (Envelopes, "References"): each an act id,
+    /// or `[act id, signer]` naming the act's signer beside it (F272).
+    refs: Option<Vec<RefIn>>,
     /// Acts this one acknowledges, by id (Envelopes, `acks`).
     #[serde(default)]
     acks: Option<Vec<String>>,
+}
+
+/// A reference as the clients give it: an act id, or an act id and its
+/// signer (Envelopes draft 9, F272).
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum RefIn {
+    Act(String),
+    Signed(String, String),
 }
 
 #[derive(Serialize)]
@@ -891,7 +909,15 @@ pub fn make_everyday(input: JsValue) -> R<JsValue> {
             .refs
             .map(|r| {
                 r.iter()
-                    .map(|s| Ok(Ref::Act(unhex(s)?)))
+                    .map(|r| {
+                        Ok(match r {
+                            RefIn::Act(s) => Ref::Act(unhex(s)?),
+                            RefIn::Signed(a, sg) => Ref::Signed {
+                                act: unhex(a)?,
+                                signer: unhex(sg)?,
+                            },
+                        })
+                    })
                     .collect::<R<Vec<_>>>()
             })
             .transpose()?,
@@ -1191,6 +1217,10 @@ struct ResolutionOut {
     chain_key_scheme: Option<u8>,
     chain_key_commit: Option<String>,
     homes: Vec<HomeOut>,
+    /// The homes in force at each counting position, genesis first (same
+    /// length as `links`): where a reader asks for that position (reading
+    /// B2 of `docs/f272-build.md`), never every home ever named.
+    homes_at: Vec<Vec<HomeOut>>,
     rule: Option<Vec<u64>>,
     /// The effective rule, in words.
     effective: Option<String>,
@@ -1339,6 +1369,19 @@ impl Verifier {
                         .collect()
                 })
                 .unwrap_or_default(),
+            homes_at: res
+                .states
+                .iter()
+                .map(|s| {
+                    s.homes
+                        .iter()
+                        .map(|h| HomeOut {
+                            operator: h.operator.as_ref().map(hx),
+                            hint: h.hint.clone(),
+                        })
+                        .collect()
+                })
+                .collect(),
             rule: latest.as_ref().and_then(|s| {
                 s.rule.map(|r| match r {
                     HomeRule::Authoritative(i) => vec![0, i],
@@ -1480,6 +1523,13 @@ impl Verifier {
             contested: l.contested,
             payload,
         })
+    }
+
+    /// Where to look for an act a reference names beside this signer
+    /// (Envelopes draft 9, rule 20, F272): its outbox routes that count,
+    /// then the homes in force at its latest position. Hints, each once.
+    pub fn places(&self, signer: &str) -> R<Vec<String>> {
+        Ok(self.inner.places(&unhex(signer)?))
     }
 
     /// Every act held, by id.
