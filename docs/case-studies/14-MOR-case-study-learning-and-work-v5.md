@@ -1,6 +1,6 @@
 # MOR Case Study: Shown, Not Listed
 
-*Case study, draft 5, 12 October 2026. Draft 4 brought up to date with vows and the decisions F252 to F266 (`docs/case-studies-update-2026-10-12.md`), nothing else changed: the services in it (the tutor's hours, the live session, the assessment, the advisor's help) are sold as vows, each sale pending, confirmed or contested by the student alone (F252, F253, F240); an aggregator's course is a layer when the lessons' agreements consent and a derivative when they do not (F254, F257); each unit's agreement designates one pointer, each participant checks their own cut (F248, F250, F256); "streams" of ratings become "strands", since a stream is now a technical word (the live media cMIP), a wording the author may change. Draft 4's note follows.*
+*Case study, draft 5, 12 October 2026. Draft 4 brought up to date with vows and the decisions F252 to F266 (`docs/case-studies-update-2026-10-12.md`), nothing else changed: the services in it (the tutor's hours, the live session, the assessment, the advisor's help) are sold as vows, each sale pending, confirmed or contested by the student alone (F252, F253, F240); an aggregator's course is a layer when the lessons' agreements consent and a derivative when they do not (F254, F257); each unit's agreement designates one pointer, each participant checks their own cut (F248, F250, F256); "streams" of ratings become "signals", the author's word, since a stream is now a technical word (the live media cMIP). Draft 4's note follows.*
 
 *Case study, draft 4, 9 October 2026. Draft 3 with one change, decided by Nobody, allegedly: Elena pays her pre-release reviewers for their time, with no share of the lesson ("remove the share at that point. The idea is eventually explored later in the document", in section 4, where raters share through a named receiver). Draft 3's note follows.*
 
@@ -18,7 +18,7 @@ Education and the job market speak to each other through a thin, old channel: th
 
 Meanwhile, people learn everywhere: from online lessons, tutors, workshops, jobs, and years of practice that no diploma records. Recognition of prior learning exists, but it is slow, local and with very little lateral transfer.
 
-This case study puts education and the job market side by side on the same rules. Its core is a **decentralised accreditation system**: instead of one authority granting accreditation, many signed strands of ratings are weighted and combined by a module of the user's choice into an accreditation score. On the other side, a person's profile no longer lists diplomas: it **shows** what they can do, each claim linked to the evidence behind it, a track record of proven or assessed skills and knowledge.
+This case study puts education and the job market side by side on the same rules. Its core is a **decentralised accreditation system**: instead of one authority granting accreditation, many signed rating signals are weighted and combined by a module of the user's choice into an accreditation score. On the other side, a person's profile no longer lists diplomas: it **shows** what they can do, each claim linked to the evidence behind it, a track record of proven or assessed skills and knowledge.
 
 It starts with one teacher and one lesson, and ends with universities and employers. Under MOR everyone can keep their place, it is only what’s humanly possible that changes. 
 
@@ -40,7 +40,7 @@ It starts with one teacher and one lesson, and ends with universities and employ
 
 **Elena teaches colour grading.** She records a lesson: videos, exercises, and a project. The lesson is a work, bound to her. Each improved version is a new work naming the previous one.
 
-**Experts review it before release.** Elena invites two industry colourists to review the lesson before it goes public. She pays them for their time. Their signed reviews are published with the lesson on release day. A pre-release review is a prediction: "this lesson will teach grading well". Later strands will show whether it was right.
+**Experts review it before release.** Elena invites two industry colourists to review the lesson before it goes public. She pays them for their time. Their signed reviews are published with the lesson on release day. A pre-release review is a prediction: "this lesson will teach grading well". Later signals will show whether it was right.
 
 **Students enrol and pay.** Enrolment is an agreement and a payment. The recorded lesson is bytes, delivered by a key; the rest is promised: a tutor's hour each week, a live session in a studio, grading panels on loan. So Elena's offer names a vow that bundles those promises with the lesson's keys, and each student's enrolment is a sale of it: pending until the student confirms, contested if the student says a promise was not kept, and nothing else moves it. Only an enrolled student can contest; the two experts Elena paid never enrolled, and cannot. What a student is owed back when one promise fails is in the enrolment's terms, not in the core. The lesson's agreement designates the one pointer at which it is paid; its split pays Elena, the tutor, the studio where the live session takes place, and the rental service that lends the grading panels, each with its own receipt, and each checks their own cut at their own flow address.
 
@@ -52,20 +52,20 @@ It starts with one teacher and one lesson, and ends with universities and employ
 
 **The assessor measures progress, not only results.** If Karim takes a short test before the lesson and a project after it, the assessor can judge both, so the record shows what the lesson added, not just what Karim already knew. 
 
-**The result belongs to Karim.** The assessor signs an attestation of attainment, bound to Karim's identity: what he can do, at what level, assessed by whom. It also feeds the lesson's accreditation, as the strongest strand it has.
+**The result belongs to Karim.** The assessor signs an attestation of attainment, bound to Karim's identity: what he can do, at what level, assessed by whom. It also feeds the lesson's accreditation, as the strongest signal it has.
 
 **Strictness is what assessors sell.** A lenient assessor who passes everyone would attract students at first. But every assessor has a Trust Score (section 5), and an attestation from a lenient one carries little weight in any accreditation module or with any employer. Students who want their attainment to count seek strict, credible assessors.
 
 ## 4. Accreditation, computed
 
-**Many strands, arriving over time:**
+**Many signals, arriving over time:**
 
 1. **before release:** industry experts' reviews;
 2. **during and after the lesson:** students, other teachers, aggregators;
 3. **after assessment:** attainment, judged by independent assessors, the anchor;
 4. **years later:** employers, once former students have used what they learned at work.
 
-**Nobody grants accreditation; modules compute it.** An accreditation module reads the strands, weighs each rating by its author's Trust Score and each strand by its reliability, and computes a score. A university, a trade association and an employer can each run a different module on the same public strands and get their own answer. Choosing a module is choosing a method.
+**Nobody grants accreditation; modules compute it.** An accreditation module reads the signals, weighs each rating by its author's Trust Score and each signal by its reliability, and computes a score. A university, a trade association and an employer can each run a different module on the same public signals and get their own answer. Choosing a module is choosing a method.
 
 **The score settles as evidence arrives.** It starts from predictions and opinions, and moves towards evidence as attainment and employer feedback come in.
 
@@ -128,7 +128,7 @@ Anyone reading the profile can follow each line to the signed record behind it. 
 
 **Recruiters match.** A recruiter matches Karim to a post-production studio, reading his demonstrated competences instead of guessing from a CV. The recruiter's fee is a share in the hiring agreement, naming the recruiter as its receiver, and everyone involved has ratings of their own. 
 
-**Employers close the loop.** A year after hiring Karim, the studio reports how well his grading skills held up at work. That feedback flows back: to the assessor who attested his level, to Elena's lesson, to the course, to the experts who predicted the lesson would teach well. Everyone's Trust Score adjusts. This loop takes years to fill; it is far away, and it is the most valuable strand of all.
+**Employers close the loop.** A year after hiring Karim, the studio reports how well his grading skills held up at work. That feedback flows back: to the assessor who attested his level, to Elena's lesson, to the course, to the experts who predicted the lesson would teach well. Everyone's Trust Score adjusts. This loop takes years to fill; it is far away, and it is the most valuable signal of all.
 
 **Employer feedback touches a person's working life,** so it needs their consent. **How it flows back is a question for a feedback cMIP**, for example:
 
@@ -139,7 +139,7 @@ Anyone reading the profile can follow each line to the signed record behind it. 
 ## 9. What universities and employers keep
 
 - **Universities keep their strengths:** their teachers, their campuses, their curricula, their brand. On MOR, a university is an aggregator, an assessor and a location at once, and its degree is a bundle of accredited units, each one visible.
-- **Their brand becomes evidence.** A university whose graduates perform well sees it in the strands, and every accreditation module weighs its assessments accordingly. Reputation stops being inherited and becomes demonstrated, which favours institutions that teach well.
+- **Their brand becomes evidence.** A university whose graduates perform well sees it in the signals, and every accreditation module weighs its assessments accordingly. Reputation stops being inherited and becomes demonstrated, which favours institutions that teach well.
 - **Accreditation bodies become modules.** A national accreditation agency can publish its own accreditation module and keep its role, with its method visible.
 - **Regulated professions stay regulated.** Medicine, law and other licensed professions still require licences from the state. A licence can be a signed credential on MOR; the state still issues it.
 - **Employers hire with less risk.** They read demonstrated competences, and their own feedback improves the pipeline they hire from.
@@ -151,7 +151,7 @@ Anyone reading the profile can follow each line to the signed record behind it. 
 **Open for others to build (cMIPs and Modules):**
 
 - **Rating and review cMIPs** for lessons, courses, teachers and locations.
-- **Accreditation cMIPs:** strands, weights, shares for raters, assigned raters.
+- **Accreditation cMIPs:** signals, weights, shares for raters, assigned raters.
 - **Accreditation modules:** the computations, one per method.
 - **Trust Score modules:** outcome calibration, peer agreement, coherence over time.
 - **Assessment cMIPs:** independence rules, before-and-after assessment, attestations of attainment.

@@ -1,6 +1,6 @@
 # MOR Case Study: No Firm Required
 
-*Case study, draft 3, 12 October 2026. Draft 2 brought up to date with vows and the decisions F252 to F266 (`docs/case-studies-update-2026-10-12.md`), nothing else changed: a listing names a vow, since a bowl is something MOR cannot hash, and each order is pending until the buyer confirms (F252, F240); made-to-order work and the numbered series are vows, the series one vow with twenty promises (F253); a resale offer naming Inès's claimed vow outside her agreement is shown as such (F247), and a resale under a fresh vow escapes it, a stated cost for the provenance cMIP (F258); stock is the listing cMIP's, never the core's (F237); the courier and the warehouse check their own cut (F248, F250). Draft 2's note follows.*
+*Case study, draft 3, 12 October 2026. Draft 2 brought up to date with vows and the decisions F252 to F266 (`docs/case-studies-update-2026-10-12.md`), nothing else changed: a listing names a vow, since a bowl is something MOR cannot hash, and each order is pending until the buyer confirms (F252, F240); made-to-order work and the numbered series are vows, the series one vow with twenty promises (F253); resale is carried by the provenance cMIP, with registries, certificates, reputation and authenticators, whose attestation is their signed word, not a proof the core checks (F261), the core's limit stated plainly: a resale under a fresh vow escapes, since the core cannot see the object (F258); the F247 marking is not used here, at the author's answer of 12 October ("This mechanism works for resale of items of value where proving origin impacts the price"); stock is the listing cMIP's, never the core's (F237); the courier and the warehouse check their own cut (F248, F250). Draft 2's note follows.*
 
 *Case study, draft 2, 9 October 2026. Draft 1 with the technical pass of 9 October 2026 applied (`docs/technical-pass-2026-10-09.md`), items 1, 3, 4 and 5, nothing else changed. Item 2 rests on F184's one referral per payment, still open, and is marked [OPEN: F184] where it stands. The rest is unchanged, for the author's own passes and the redraft. Draft 1's notes follow.*
 
@@ -34,13 +34,17 @@ This case study asks what happens when the costs Coase described fall without a 
 
 **Provenance is a chain of signed transfers.** When a collector resells vase 7/20, the transfer is a signed act of the provenance cMIP naming the previous one; the core's own transfers are of stakes, not of objects. Anyone can follow a vase's history back to Inès's workshop. A counterfeit has no chain.
 
-**Resale can pay the maker.** The EU and the UK give artists a share when original works of art are resold through the art market; on MOR, any maker can write it into the terms of sale. When vase 7/20 changes hands, the resale is a new sale under the reseller's terms, and it pays Inès her share if those terms honour hers; if they do not, the reseller's published split shows exactly that. Where an agreement of Inès's claims the series' vow, with her resale share in its terms, a reseller's offer naming that vow outside her agreement is a valid act, which a conforming client shows every buyer as outside it. A reseller who signs a fresh vow of their own for vase 7/20 escapes that marking: the core cannot tell that two vows describe one object, since the object is what it cannot hash. Catching it is the provenance cMIP's, with registries and reputation; the place to look is the fresh vow, signed by the reseller.
+**Resale can pay the maker.** The EU and the UK give artists a share when original works of art are resold through the art market; on MOR, any maker can write it into the terms of sale. When vase 7/20 changes hands, the resale is a new sale under the reseller's own vow and terms, and it pays Inès her share if those terms honour hers; if they do not, the reseller's published split shows exactly that. The core sees no further. The vase is what it cannot hash, so it cannot tell that the reseller's vow and Inès's describe one object: a resale under a fresh vow escapes anything the core could mark. Resale is carried by the provenance cMIP, with its registries, certificates and reputations, and the place to look is the fresh vow, signed by the reseller.
+
+**This is where a provenance cMIP earns its place:** items of value whose proven origin moves the price. A vase with an unbroken record back to Inès's workshop sells for more than the same vase without one, so sellers have a reason to keep the record and buyers a reason to ask for it. A bowl for the kitchen needs none of this.
 
 **A provenance cMIP is needed** to link a physical object to its record, for example:
 
 - **a signed certificate** kept by each owner and handed over with the object;
 - **a tag or code** in the object, linked to its record;
-- **an inspection** by a recognised expert at each resale, signed.
+- **an authenticator's attestation** at each resale, signed.
+
+**Authenticators examine the object.** A record says which vase was sold; only someone holding the vase can say that this is it. An authenticator examines the physical item and signs that it is the same item the vow and its earlier sales name: "yes, it is the same item". The examination is a service, sold like any other under a vow. The attestation is the authenticator's signed word, weighed by their reputation, not a proof the core checks; the provenance cMIP says how attestations are read. An authenticator who signs for a fake has signed it in their own name, and every later buyer can see who did.
 
 ## 3. Makers share a warehouse
 
@@ -106,7 +110,8 @@ The three costs that make firms necessary each fall on MOR:
 - **Ranking modules:** competing on search quality.
 - **Warehouses, couriers, carriers and customs brokers:** earning through fees and ratings.
 - **Insurers and custodians:** covering orders and holding payments.
-- **Provenance services:** certificates, tags and experts.
+- **Provenance services:** certificates, tags and registries.
+- **Authenticators:** examining items of value at resale and signing that each is the same item, earning through fees and a reputation for being right.
 - **Developers:** building listing tools, storefronts, ranking, tracking and logistics modules.
 
 ## 9. What MOR provides, and what it needs
@@ -118,7 +123,7 @@ The three costs that make firms necessary each fall on MOR:
 - **Listing cMIPs:** products, stock, variants, delivery terms, and how a vow's promises are listed.
 - **Rating cMIPs** for sellers, buyers, warehouses and couriers.
 - **Ranking cMIPs and modules:** relevance, distance, labelled paid placement.
-- **Provenance cMIPs:** certificates, tags, expert inspections, resale shares.
+- **Provenance cMIPs:** certificates, tags, registries, how authenticators' attestations are read, resale shares.
 - **Stock attestation cMIPs** for warehouses.
 - **Delivery cMIPs:** signed handovers, responsibility for failures, insurance.
 - **Returns and dispute cMIPs.**
@@ -127,7 +132,7 @@ The three costs that make firms necessary each fall on MOR:
 ## 10. Honest limits
 
 - **Physical goods can lie.** A signed listing can describe a fake; a signed handover can hide damage. Ratings, provenance and insurance reduce this; they do not end it.
-- **A fresh vow hides a resale.** The core cannot tell that two vows describe one object. A reseller who signs their own vow for a vase escapes the marking an offer on Inès's vow would carry; registries, tags and reputation catch it, not the core.
+- **The core cannot see the vase.** It cannot tell that two vows describe one object, so a reseller who signs their own vow for a vase escapes anything the core could mark. Certificates, registries, authenticators and reputation catch it, through the provenance cMIP, not the core; and an authenticator's attestation is a signed word, which can be wrong or bought, worth what the authenticator's reputation is worth.
 - **Scale is real.** Large networks of warehouses and fleets deliver faster and cheaper than small ones. An open network must grow dense before it can match next-day delivery.
 - **Returns cost money** and someone must bear it.
 - **Tax and customs** differ by country, and a decentralised network must still comply with each one.
@@ -136,4 +141,4 @@ The three costs that make firms necessary each fall on MOR:
 
 ## 11. What it demonstrates
 
-A bowl sold to a neighbour and a vase resold across borders use the same rules. Finding, agreeing and trusting, the three costs that made the largest marketplaces necessary, can be carried by an open catalogue, standing offers and portable reputations. The network keeps its coordination; it loses its owner. Every maker keeps their customers and their ratings, every fee is a line in a settlement, and anyone who organises part of the network, a storefront, a warehouse, a carrier, earns by doing it well, not by holding the others in place.
+A bowl sold to a neighbour and a vase resold across borders use the same rules. Finding, agreeing and trusting, the three costs that made the largest marketplaces necessary, can be carried by an open catalogue, standing offers and portable reputations. The network keeps its coordination; it loses its owner. Every maker keeps their customers and their ratings, every fee is a line in a settlement, and anyone who organises part of the network, a storefront, a warehouse, a carrier, an authenticator, earns by doing it well, not by holding the others in place.

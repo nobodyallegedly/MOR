@@ -92,6 +92,16 @@ None has a sentence the decisions contradict, so none gets a draft for this upda
 
 The five entries point to the new drafts, each with a one-line note; the paragraph on the latest drafts says what this update did and points to this report; 17's note no longer says that streams were "settled" by F229 to F232, which F237 moved out of the core.
 
+## Second pass
+
+*12 October 2026, after the author's three answers ("The overnight reports", `docs/findings/MOR-findings-log-round-2.md`). Same drafts, edited in place on this branch; each draft's note says what changed. Where the per-study notes above say otherwise, this section is the current reading.*
+
+- **14, draft 5:** "strands" becomes "signals", the author's word, in every place ratings are meant (the nine of the first pass, the section 10 line among them; "many signed strands of ratings" reads "many signed rating signals").
+- **17, draft 5:** "the door scanner's act" is gone. The fan's wallet confirms the seat on the way out, by acknowledging the exit scan, once the seat and the match were delivered; the moment is the organiser's, set by the ticketing cMIP, whose line in section 8 now names it. A fan who leaves a match abandoned at half-time does not confirm, and may contest; a fan turned away at the gate contests.
+- **16, draft 3:** the F247 marking is dropped from the resale story. Resale is carried by the provenance cMIP (registries, certificates, reputation), the core's limit stated plainly: a resale under a fresh vow escapes, since the core cannot see the object (F258). A short paragraph says this is where such a cMIP earns its place: items of value whose proven origin moves the price. **Authenticators** are added: they examine the physical item and sign that it is the same item the vow and its earlier sales name ("yes, it is the same item"); the attestation is their signed word, weighed by their reputation, not a proof the core checks (F261); the provenance cMIP says how attestations are read. They are named among those who earn in sections 8 and 11, and in the honest limit, which now reads "The core cannot see the vase". *Left as it was:* the storefront offering a maker's claimed vow outside the maker's agreement, shown as such (section 4), which is not a resale.
+- **08, draft 4:** F247 shown where it bites, one paragraph after the preorders. The deal claims the label's album vow; a band member takes preorders alone by an offer of their own; the offer names the claimed vow, so conforming clients show it as made outside the claiming agreement; the others, as parties to the deal, contest the offer (rule 14, standing under rule 54); the contest voids nothing and reputation follows. The core refuses nothing.
+- **"Not claimed"** gains items 16 and 17, and item 5 names the scan at the gate or the exit.
+
 ## Not claimed
 
 Things the review or the earlier drafts suggested, or a reader might expect, that the core does not support, and that no study says:
@@ -100,7 +110,7 @@ Things the review or the earlier drafts suggested, or a reader might expect, tha
 2. **That the club's agreement claims Dario's stream vow,** or that F247 marks unlicensed offers on his stream for the club. F259: two separate vows, each under its own agreement; the study does not show the club claiming his (17).
 3. **That a vow is the match,** or that Dario's vow names the club's, or the club's Dario's (F259 revised) (17).
 4. **That the core catches a resale under a fresh vow** (F258, a stated cost): the provenance cMIP's, written as a limit (16).
-5. **That the seller's proof of delivery confirms a sale:** a courier's photo, a handover, a delivered key. Each is evidence in the sale (F261, F264); only the buyer's confirmation or contest moves it (12, 16, 17).
+5. **That the seller's proof of delivery confirms a sale:** a courier's photo, a handover, a delivered key, a scan at the gate or the exit. Each is evidence in the sale (F261, F264); only the buyer's confirmation or contest moves it (12, 16, 17).
 6. **That a contest voids anything, refunds anything, or fixes what is owed back** when a promise or part of a bundle fails: the terms', the offer's words' or a cMIP's (rule 13) (12, 14, 16, 17).
 7. **That an accreditation module reads a student's contest** (Q14-2, "an overreach") (14).
 8. **That the core counts stock, seats or numbers** under an offer (F237): the listing, ticketing and provenance cMIPs' (16, 17).
@@ -111,3 +121,5 @@ Things the review or the earlier drafts suggested, or a reader might expect, tha
 13. **That the split service is a judge, or that its backups are stages:** attempts per payment, the next payment starting again from the first (F249, F250, rule 17) (08, 12, 14, 16).
 14. **That a stream never closed has a recording** (the live media cMIP's stated cost) (17).
 15. **That a cMIP's say-so proves a delivery** (F261): a verifier checks the proof itself; none of the five studies rests a sale on a service's signed word.
+16. **That an authenticator's attestation is a proof the core checks** (F261): it is the authenticator's signed word, weighed by their reputation; the provenance cMIP says how attestations are read (16, second pass).
+17. **That the core refuses a band member's offer outside the band's deal, or that the others' contest voids it:** the offer is valid, shown as outside the claiming agreement, the contest shown beside it (rule 14, rule 54) (08, second pass).
