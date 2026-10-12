@@ -2723,7 +2723,7 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 *Suggested by the project lead:* the form (b++) and the private carve-out. Built after the rename pass, with the inbox delivery of replies.
 
-*The remaining direction, from a post to its replies, which relays do not sort by:* **Nobody, allegedly: "I agree, that is a question for the people wishing to build a public square."** Area: development layer; left to the relays' market and the relay transport cMIP (the desk's open question 4, option b).
+*The remaining direction, from a post to its replies, which relays do not sort by:* **Nobody, allegedly: "I agree, that is a question for the people wishing to build a public square."** Area: development layer; left to the relays' market and the relay transport cMIP (the desk's open question 4, option b). And: "Focusing on this would turn into a Nostr or blue sky clone. Which is really not. But a clone can be built on Mor."
 
 ## Two identities on two homes: readings (Machine report `two-homes.md`, 12 October 2026, evening)
 
