@@ -45,7 +45,11 @@ The three failures before were the flaky hunt's two kinds: twice `relay.rs:20:18
 
 **The full workspace**, `cargo test --workspace --locked` (GitHub's step), one run after another on the untouched tree:
 
-WORKSPACE_RESULTS
+| Runs | Clean | Failed | Time per run |
+|---|---|---|---|
+| 20 | 20 | 0 | 235–259 s, mean 246 |
+
+Every run: 653 passed, 0 failed, 1 ignored (the Lightning regtest), `too_large` and `too_large_closes_the_connection` passing in all 20. (653, not the flaky hunt's 647: main has grown since, and one test is added here.) These ran one after another on an otherwise quiet machine; the load runs above are the ones that showed the bug before.
 
 ## What the decision did not foresee
 
