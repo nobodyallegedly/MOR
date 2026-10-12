@@ -227,6 +227,7 @@ fn rule_32_an_anonymous_refund_goes_to_the_committed_key() {
         refund: Some(Rail { module: h("ln"), address: b"buyer".to_vec() }),
         anonymous: None,
         purchase: None,
+        previous: None,
     };
     // The claim act cites the offer it paid (F147: the key signs that too).
     let cited = fin::Citations { objects: Some(vec![Object { chain: h("offer"), predecessor: h("offer") }]), acks: None, refs: None };

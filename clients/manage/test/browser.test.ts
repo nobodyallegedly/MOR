@@ -83,7 +83,7 @@ test('an operator runs a home from the page, without a terminal', async () => {
   await refresh(page);
   await page.click(`[data-action=strict][data-identity="${owner.id}"]`);
   await done(page, 'now wait for your approval');
-  owner.prepareRotation();
+  await owner.prepareRotation();
   const refused = await owner.submitRotation();
   assert.equal(refused[0].code, 5, JSON.stringify(refused));
   await refresh(page);

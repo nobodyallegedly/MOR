@@ -39,12 +39,16 @@ test('new, routes, enckey, rotate and check, from the command line', () => {
   run('enckey', '--file', file);
   const rot = run('rotate', '--file', file);
   assert.match(rot, /it counts: new keys in use/);
+  // Identity rule 35: its lines shown before signing, its own kept.
+  assert.match(rot, /This device’s line: 2 acts, the latest [0-9a-f]{64} \(a new encryption key.*\); summary [0-9a-f]{64}\. Kept\./);
   const c = run('check', id, '--at', homes[2].base);
   assert.match(c, /1: [0-9a-f]{64} \(homes\)/);
   assert.match(c, /then: end/);
   assert.match(c, /inbox  \* /);
   assert.match(c, /encryption key: [0-9a-f]{64}/);
-  assert.match(run('show', '--file', file), /position 1/);
+  const shown = run('show', '--file', file);
+  assert.match(shown, /position 1/);
+  assert.match(shown, /this client's line: latest act [0-9a-f]{64}, position 2, summary [0-9a-f]{64}/, 'F152: its own line');
 });
 
 test('an operator identity made here runs a home, its chain key never on the server', async () => {

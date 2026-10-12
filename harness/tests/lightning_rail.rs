@@ -536,6 +536,7 @@ impl Payment<'_> {
             }),
             anonymous: None,
             purchase: None,
+            previous: None,
         });
         // F113: an anonymous payer's key signs its claim.
         let claim = match (claim, self.anonymous) {

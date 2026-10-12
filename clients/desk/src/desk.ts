@@ -13,6 +13,7 @@ import { TestIdentity, sealFor, type Home } from '../../genesis/src/identity.ts'
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
 import { record as recordKex } from '../../genesis/src/kex.ts';
+import { ownLine } from '../../genesis/src/lines.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { dealRoot, sellerAlarm, splitGaps } from '../../repo/src/deal.ts';
 import type { Line, Section } from '../../collective/src/explain.ts';
@@ -673,10 +674,15 @@ export class Desk {
       settings: s,
       identities: b.identities.map((i) => {
         const r = this.store.received(i.id);
+        // F152: this desk's own line of acts for the identity, so the owner
+        // can tell it from a thief's, and keep it at a key change (Identity
+        // rule 35): the card the rotating client reads it by.
+        const own = ownLine(this.store.identity(i.id).f.sequence);
         return {
           id: i.id,
           name: i.name,
           linked: i.linked,
+          line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
           received: r.items.map((x) => ({ ...x, fromName: x.from ? names(x.from) : null, text: x.text === undefined ? undefined : escapeControls(x.text) })),
         };
       }),

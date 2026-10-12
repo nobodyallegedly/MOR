@@ -230,6 +230,13 @@ pub struct Claim {
     pub anonymous: Option<Anonymous>,
     /// 9: for a purchase, the claim it pays under (F126).
     pub purchase: Option<Purchase>,
+    /// 10: the previous hop's receipt, where this claim records a hop of a
+    /// route (F267, mirroring receipt field 6): the paying hop's word that
+    /// this payment carries that receipt's forward on, so a route reads
+    /// "a valid receipt or claim of the next hop names it" (Money rules 24
+    /// and 27), one payment serving one forward (rule 12). Also named in
+    /// `objects`, as a receipt's previous hop is.
+    pub previous: Option<Hash>,
 }
 
 /// An act's own citations other than `prev`: its inside keys 3
@@ -275,8 +282,10 @@ impl Claim {
     /// What an anonymous payer's key signs (F135, F147):
     /// `tagged_hash(ANONYMOUS_CLAIM_TAG, [ field 0, field 1, field 2, field
     /// 3, field 4, field 5 or null, field 6 or null, field 7 or null, field
-    /// 9 or null, inside key 3 or null, inside key 7 or null, inside key 8
-    /// or null ])`, the inside keys being the claim act's own `objects`,
+    /// 9 or null, field 10 or null, inside key 3 or null, inside key 7 or
+    /// null, inside key 8 or null ])`, field 10 added by F267 (the array
+    /// "extended by it"; *mechanic, the build's: in field order, after
+    /// field 9*), the inside keys being the claim act's own `objects`,
     /// `acks` and `refs`, encoded exactly as the act encodes them. *So
     /// nobody can lift the signature onto another claim, nor re-wrap this
     /// claim with other citations or acknowledgements.*
@@ -292,6 +301,7 @@ impl Claim {
             or_null(self.referral.as_ref().map(Referral::to_value)),
             or_null(self.refund.as_ref().map(Rail::to_value)),
             or_null(self.purchase.as_ref().map(Purchase::to_value)),
+            or_null(self.previous.as_ref().map(b)),
             or_null(cited.objects.as_deref().map(crate::act::objects_value)),
             or_null(cited.acks.as_deref().map(crate::act::acks_value)),
             or_null(cited.refs.as_deref().map(crate::act::refs_value)),
@@ -582,7 +592,7 @@ impl Payload {
                 })
             }
             CLAIM => {
-                let f = fields(p, 10, "claim: unknown key")?;
+                let f = fields(p, 11, "claim: unknown key")?;
                 Payload::Claim(Claim {
                     rail: hash(req(&f, 0, "claim 0: rail")?, "claim 0")?,
                     proof: bytes(req(&f, 1, "claim 1: proof")?, "claim 1")?,
@@ -594,6 +604,7 @@ impl Payload {
                     refund: get(&f, 7).map(Rail::decode).transpose()?,
                     anonymous: get(&f, 8).map(Anonymous::decode).transpose()?,
                     purchase: get(&f, 9).map(Purchase::decode).transpose()?,
+                    previous: get(&f, 10).map(|v| hash(v, "claim 10")).transpose()?,
                 })
             }
             RELEASE => {
@@ -697,6 +708,9 @@ impl Payload {
                 }
                 if let Some(x) = &c.purchase {
                     put(&mut m, 9, x.to_value());
+                }
+                if let Some(x) = &c.previous {
+                    put(&mut m, 10, b(x));
                 }
             }
             Payload::Release(r) => {

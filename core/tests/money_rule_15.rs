@@ -230,6 +230,7 @@ impl Lab {
             refund: None,
             anonymous: None,
             purchase: None,
+            previous: None,
         };
         let id = self.act(payer, mips().money, fin::types::CLAIM, Payload::Claim(c).to_map(), None, None);
         self.rail_valid.insert(id, at);

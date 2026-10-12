@@ -244,7 +244,7 @@ impl Story {
             .unwrap()
             .to_string();
         let proof = Proof { paid_to, salt: [9; 16], rail: LnProof { invoice, preimage: Some(preimage) }.encode() }.encode();
-        let claim = Claim { rail: mor_lightning::spec(), proof, payee: self.ana.id, amount, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+        let claim = Claim { rail: mor_lightning::spec(), proof, payee: self.ana.id, amount, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
         let id = self.act(payer, mips().money, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
         // The rail's answer, by the cMIP and the rail Module.
         let ln = Lightning;

@@ -14,7 +14,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MIPS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, rebuildChainKey, signaturePayload, verifyShare } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
-import { TestIdentity } from '../../genesis/src/identity.ts';
+import { TestIdentity, lookUp } from '../../genesis/src/identity.ts';
+import { actsBy } from '../../genesis/src/lines.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { TestCollective, type Governance } from '../src/collective.ts';
 import { AGREEMENTS_SPECS, dealGrantPayload, latestPointer, pointerPayload, sign } from '../src/agreements.ts';
@@ -368,4 +369,50 @@ test("a deal signed on the phone cites the wallet published from the laptop (F16
   const other = await label.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(deal.id), { public: true, relays, objects: [[deal.id, deal.id]] });
   const d = describeAct((await sign(phone, other.id, relays)).act) as { refs?: string[] | null };
   assert.ok(!d.refs?.length, 'a signature on a signature pays nobody');
+});
+
+// ---------------------------------------------------------------- Identity rule 35 (was 17)
+
+/** An act's standing, as a reader holding every act of the identity at its homes and relays judges it. */
+async function standingOf(identity: string, id: string): Promise<string> {
+  const l = await lookUp(identity, homes.map((h) => h.base));
+  for (const a of await actsBy(identity, [relay.base, ...homes.map((h) => h.base)])) {
+    try {
+      l.verifier.add(a);
+    } catch {
+      // not this reader's to open
+    }
+  }
+  return l.verifier.status(id);
+}
+
+/** Another device of the collective, holding its signing key, keeping its own line. */
+const otherDevice = (col: TestCollective) => new TestCollective({ ...structuredClone(col.f), identity: { ...structuredClone(col.f.identity), sequence: [] }, releases: [] });
+
+test('Identity rule 35 (was 17): a member change keeps the line another device of the collective made, and leaves one out only after the warning', async () => {
+  const [m1, m2, m3, m4] = m;
+  const col = (await TestCollective.found({ members: [m1, m2, m3, m4], homes: homes.map((h) => h.home), relays: [relay.base], governance, scheme: 3 })).collective;
+  const kept = await publishRelease(otherDevice(col), { name: 'Released from another device', version: 'kept', files: small });
+  const lines = await col.id.lines({ hints: col.f.relays, specs: AGREEMENTS_SPECS });
+  const other = lines.find((l) => !l.own)!;
+  assert.ok(other?.readable, 'the other device’s line, read from the relays');
+  assert.equal(other.tip, kept.id);
+  // Left out without the warning passed back: nothing is signed at all.
+  const agreement = col.f.agreement;
+  await assert.rejects(col.changeMembers({ members: [m1.id, m2.id, m4.id], proposer: m1, signers: [m1, m2, m4], rebuilders: [m1.id, m2.id], lines: { leaveOut: [other.tip] } }), /Nothing was signed.*becomes void/s);
+  assert.equal(col.f.pending, null);
+  assert.equal(col.f.agreement, agreement);
+  // Kept, by default.
+  await col.changeMembers({ members: [m1.id, m2.id, m4.id], proposer: m1, signers: [m1, m2, m4], rebuilders: [m1.id, m2.id], leaving: [m3] });
+  assert.equal(await col.settle(), true);
+  assert.equal(await standingOf(col.identity, kept.id), 'valid', 'the other device’s release is kept by the rotation');
+
+  // A line left out on purpose, after the warning: void.
+  const dropped = await publishRelease(otherDevice(col), { name: 'Released from a device the members do not recognise', version: 'dropped', files: small });
+  const { plan } = await col.id.planRotation({ leaveOut: [dropped.id], hints: col.f.relays, specs: AGREEMENTS_SPECS });
+  assert.match(plan.warning ?? '', /becomes void/);
+  await col.changeMembers({ members: [m1.id, m2.id, m4.id], proposer: m1, signers: [m1, m2, m4], rebuilders: [m1.id, m2.id], governance: { ...governance, text: `${governance.text} Its devices share their lines before a key change.` }, lines: { leaveOut: [dropped.id], warned: plan.warning! } });
+  assert.equal(await col.settle(), true);
+  assert.notEqual(await standingOf(col.identity, dropped.id), 'valid', 'left out: void');
+  assert.equal(await standingOf(col.identity, kept.id), 'valid', 'kept before, still valid');
 });

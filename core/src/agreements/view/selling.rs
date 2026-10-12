@@ -68,7 +68,9 @@ impl<'a> AgreementsView<'a> {
     /// selling at least one item in the access form, `[2, [cmip,
     /// params]]`; the checker this verifier holds for that cMIP, among
     /// `checkers` (by cMIP, borrowed for this call: a checker may read a
-    /// clock or the cMIP's own acts), judges `proof`. Where the offer sells several
+    /// clock or the cMIP's own acts), judges `proof`, where that cMIP
+    /// declares that it checks proofs of delivery (F268; otherwise it is
+    /// not asked, and the verdict is unknown). Where the offer sells several
     /// such items, the first whose checker says proven decides (mechanic,
     /// the build's). With no checker held for any of them, the verdict is
     /// unknown: the delivery is not proven for this verifier ("A delivery
@@ -93,7 +95,8 @@ impl<'a> AgreementsView<'a> {
         let mut last = None;
         for (cmip, params) in &items {
             let verdict = match checkers.iter().find(|(c, _)| c == cmip) {
-                Some((_, c)) => c.check(offer, params, proof),
+                Some((_, c)) if c.checks_delivery() => c.check(offer, params, proof),
+                Some(_) => ProofVerdict::Unknown("the offer's cMIP does not declare, in its specification, that it checks proofs of delivery: its checker is not asked, and the delivery is not proven here (Development, specification format field 12; F268)".into()),
                 None => ProofVerdict::Unknown("this verifier holds no checker for the offer's cMIP: not proven here (rule 11, F261)".into()),
             };
             if verdict == ProofVerdict::Proven {

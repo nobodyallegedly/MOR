@@ -83,6 +83,7 @@ fn every_payload_round_trips() {
         refund: Some(rail("ln")),
         anonymous: None,
         purchase: Some(Purchase { agreement: h("claiming agreement"), line: h("its version") }),
+        previous: None,
     }));
     // F126: the creditor's release, a Money act (type 4).
     roundtrip(Payload::Release(Release { obligation: h("a debt"), against: vec![h("a receipt"), h("a deal")] }));
@@ -119,6 +120,21 @@ fn every_payload_round_trips() {
             sig: vec![7; 64],
         }),
         purchase: None,
+        previous: None,
+    }));
+    // F267: a claim naming the previous hop's receipt (field 10).
+    roundtrip(Payload::Claim(Claim {
+        rail: h("chain"),
+        proof: vec![5],
+        payee: h("the next payee"),
+        amount: sat(5),
+        fulfils: h("its pointer"),
+        disagrees: None,
+        referral: None,
+        refund: None,
+        anonymous: None,
+        purchase: None,
+        previous: Some(h("the previous hop's receipt")),
     }));
 }
 
@@ -145,6 +161,7 @@ fn an_anonymous_claim_is_signed_by_its_committed_key() {
         refund: Some(rail("ln")),
         anonymous: None,
         purchase: None,
+        previous: None,
     };
     // The claim act cites the publication it pays for and acknowledges it
     // (freeze suite 2.5c).
@@ -175,6 +192,10 @@ fn an_anonymous_claim_is_signed_by_its_committed_key() {
     let mut x = c.clone();
     x.purchase = Some(Purchase { agreement: h("a claim"), line: h("a line") });
     assert!(check_signer(&Payload::Claim(x), &h("x"), &cited).is_err(), "field 9");
+    // F267: the previous hop's receipt, named after signing, or moved.
+    let mut x = c.clone();
+    x.previous = Some(h("another hop's receipt"));
+    assert!(check_signer(&Payload::Claim(x), &h("x"), &cited).is_err(), "field 10");
     // F147: the same payload and key 8, re-wrapped in an act with other
     // citations: one citing the owner's rotation, one stripped of the
     // acknowledgement, one adding a reference, one with none at all.
@@ -204,9 +225,10 @@ fn an_anonymous_claim_is_signed_by_its_committed_key() {
 }
 
 /// F147: the bytes an anonymous payer's key signs, exactly as the claim
-/// format shows them: fields 0 to 4, fields 5, 6, 7 and 9 or null, then
-/// the act's inside keys 3, 7 and 8 or null, each encoded as the act
-/// encodes it.
+/// format shows them: fields 0 to 4, fields 5, 6, 7, 9 and 10 or null,
+/// then the act's inside keys 3, 7 and 8 or null, each encoded as the act
+/// encodes it. Field 10, the previous hop's receipt, extends the array
+/// (F267; in field order, after field 9: mechanic, the build's).
 #[test]
 fn the_anonymous_message_is_the_array_the_format_shows() {
     use mor_core::act::{Inside, Object, Ref};
@@ -222,6 +244,7 @@ fn the_anonymous_message_is_the_array_the_format_shows() {
         refund: None,
         anonymous: None,
         purchase: Some(Purchase { agreement: h("a claim"), line: h("a line") }),
+        previous: Some(h("the previous hop's receipt")),
     };
     let inside = Inside {
         spec: h("FINANCE"),
@@ -249,6 +272,7 @@ fn the_anonymous_message_is_the_array_the_format_shows() {
         Value::Array(vec![b(h("a referrer")), b(h("a repost"))]),
         Value::Null,
         Value::Array(vec![b(h("a claim")), b(h("a line"))]),
+        b(h("the previous hop's receipt")),
         key(3),
         key(7),
         key(8),
@@ -288,6 +312,31 @@ fn shapes_are_strict() {
     assert!(Payload::decode(types::PAYEE_POINTER, &m).is_err());
     // A type Money does not define.
     assert_eq!(Payload::decode(5, &[]), Err(FinError::UnknownType(5)));
+    // F267: a claim's field 10 is the previous hop's receipt, a hash; no
+    // key after it.
+    let claim = Payload::Claim(Claim {
+        rail: h("chain"),
+        proof: vec![5],
+        payee: h("the next payee"),
+        amount: sat(5),
+        fulfils: h("its pointer"),
+        disagrees: None,
+        referral: None,
+        refund: None,
+        anonymous: None,
+        purchase: None,
+        previous: None,
+    })
+    .to_map();
+    let mut m = claim.clone();
+    m.push((Value::Uint(10), Value::Bytes(h("a receipt").to_vec())));
+    assert!(Payload::decode(types::CLAIM, &m).is_ok());
+    let mut m = claim.clone();
+    m.push((Value::Uint(10), Value::Bytes(vec![1, 2, 3])));
+    assert!(Payload::decode(types::CLAIM, &m).is_err(), "not a hash");
+    let mut m = claim;
+    m.push((Value::Uint(11), Value::Null));
+    assert!(Payload::decode(types::CLAIM, &m).is_err(), "an unknown key");
 }
 
 #[test]

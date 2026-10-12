@@ -149,7 +149,7 @@ test('a new identity: the words shown once, three typed back before anything is 
   assert.equal((await c2.ask<State>('state')).stage, 'doors');
 });
 
-test('an identity made by the genesis client, brought in by its words; a wrong set refused; two apps, two lines, both valid; a rotation elsewhere stops this app', async () => {
+test('an identity made by the genesis client, brought in by its words; a wrong set refused; two apps, two lines, both valid; a rotation elsewhere keeps every line, and stops this app signing', async () => {
   // Made by the genesis client, with routes naming the relay.
   const g = TestIdentity.create({ homes: homes.map((h) => h.home) });
   await g.publishGenesis();
@@ -204,13 +204,24 @@ test('an identity made by the genesis client, brought in by its words; a wrong s
   assert.equal((await reader(cp.post.id)).standing, 'valid');
   assert.equal(await position(cp.post.id), 1);
 
-  // Rule 17: the genesis client rotates, keeping only its own line. MOR
-  // Post's posts become void, and it refuses to sign with the spent key.
-  g.prepareRotation();
+  // Identity rule 35 (was 17): the genesis client rotates. It reads every
+  // line from the homes and the relays the routes name first, and keeps
+  // them all: its own, and both MOR Posts'. (Before this build it kept only
+  // its own line, and MOR Post's posts became void.) MOR Post then refuses
+  // to sign with the spent key.
+  const shown = await c.ask<State>('state');
+  const lines = await g.lines();
+  assert.equal(lines.length, 3, 'three apps, three lines');
+  const posterLine = lines.find((l) => l.tip === bp2.post.id)!;
+  assert.deepEqual(
+    { act: posterLine.card!.act, position: posterLine.card!.position, summary: posterLine.card!.summary },
+    { act: shown.identity!.line.latest, position: shown.identity!.line.acts, summary: shown.identity!.line.summary },
+    'the line the rotating client reads is the one MOR Post shows on its card (F152)',
+  );
+  await g.prepareRotation();
   await g.submitRotation();
   assert.ok((await g.settleRotation()).counts);
-  assert.equal((await reader(gp2.id)).standing, 'valid', 'the kept line stays valid');
-  assert.notEqual((await reader(bp2.post.id)).standing, 'valid', 'a line the rotation did not name is void');
+  for (const id of [gp.id, gp2.id, bp.post.id, bp2.post.id, cp.post.id]) assert.equal((await reader(id)).standing, 'valid', `kept: ${id}`);
   await refused(c.ask('post', { text: 'After the rotation.' }), /changed elsewhere.*Nothing was signed/);
 });
 

@@ -68,4 +68,19 @@ pub enum ProofVerdict {
 /// acts), is the cMIP's.
 pub trait ProofChecker {
     fn check(&self, offer: &Hash, params: &[u8], proof: &[u8]) -> ProofVerdict;
+    /// Whether its cMIP's specification declares that it checks proofs of
+    /// delivery (Development, the specification format's field 12; F268):
+    /// what [`crate::development::checks_delivery`] reads from the
+    /// specification's content. The core asks a checker, and lists it,
+    /// only where its cMIP declares so. *As a rail Module's kind is read
+    /// from the Module, never set by hand: until a cMIP's specification is
+    /// published with its creator (step 17), its code states what its
+    /// text declares.*
+    fn checks_delivery(&self) -> bool;
+}
+
+/// The checkers among `held` a verifier may ask (F268): those whose cMIP
+/// declares that it checks proofs of delivery, by cMIP.
+pub fn delivery_checkers(held: &[(Hash, &dyn ProofChecker)]) -> Vec<Hash> {
+    held.iter().filter(|(_, k)| k.checks_delivery()).map(|(c, _)| *c).collect()
 }

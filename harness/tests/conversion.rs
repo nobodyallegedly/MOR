@@ -1,4 +1,4 @@
-//! The conversion cMIP, draft 1 (`cmips/cmip-conversion-draft-1.md`), end
+//! The conversion cMIP, draft 2 (`cmips/cmip-conversion-draft-2.md`), end
 //! to end on regtest: a rail swap sold as a proven offer, with receipts per
 //! hop. Freeze suite, scenario 2, steps 4 and 4b, for the route.
 //!
@@ -320,7 +320,7 @@ fn hop(rd: &Reader, id: &Hash, held: &Pointers, modules: &Modules) -> Hop {
     let r = receipt_in(rd, id);
     let objects = Citations::of(&rd.v.get(id).unwrap().inside).objects.unwrap_or_default().iter().flat_map(|o| [o.chain, o.predecessor]).collect();
     let answer = verify(Record::Receipt(&r), held, modules).answer;
-    Hop { id: *id, receipt: r, objects, answer }
+    Hop::receipt(*id, r, objects, answer, None)
 }
 
 /// One conversion bought: the payer, the order act, the payment, the
@@ -406,7 +406,7 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
         // Paid over Lightning, settled; the payer's claim.
         let proof = ln.pay(paid, &commitment.hash()).await;
         let rail = Proof { paid_to: commitment.paid_to, salt: commitment.salt, rail: proof.encode() }.encode();
-        let claim = Claim { rail: commitment.rail, proof: rail.clone(), payee: svc.id, amount: commitment.amount, fulfils: offer_act.id(), disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+        let claim = Claim { rail: commitment.rail, proof: rail.clone(), payee: svc.id, amount: commitment.amount, fulfils: offer_act.id(), disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
         assert_eq!(verify(Record::Claim(&claim, p.id, &Citations::default()), &held, &ln_only).answer, Answer::Valid);
         let claim_act = p.act(money_spec(), money::types::CLAIM, Payload::Claim(claim).to_map(), None, None);
         put(&site, &claim_act).await;

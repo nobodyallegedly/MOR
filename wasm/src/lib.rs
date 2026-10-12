@@ -317,6 +317,11 @@ struct Described {
     #[serde(rename = "type")]
     type_: Option<u64>,
     position: Option<u64>,
+    /// The act before it in its signer's line (`prev`, Envelopes: at most
+    /// one, F24), when opened; absent for a line's first act. What a client
+    /// follows to read each line of an identity before a rotation (Identity
+    /// rule 35, was 17; Q1 of `docs/rule-17-clients.md`, read as mechanics).
+    prev: Option<String>,
     /// `[chain, predecessor]` pairs, when opened.
     objects: Option<Vec<(String, String)>>,
     /// Acts it refers to, by id, when opened.
@@ -340,6 +345,7 @@ fn describe_act(a: &Act, key: Option<&[u8; 32]>) -> Described {
         spec: inside.as_ref().map(|i| hx(&i.spec)),
         type_: inside.as_ref().map(|i| i.type_),
         position: inside.as_ref().and_then(|i| i.position),
+        prev: inside.as_ref().and_then(|i| i.prev.as_ref()).and_then(|p| p.first()).map(hx),
         objects: inside.as_ref().map(|i| {
             i.objects
                 .iter()

@@ -5,10 +5,12 @@
 // changes are marked from this device's copy, never asked of Agreements first.
 
 import { existsSync } from 'node:fs';
+import { createInterface } from 'node:readline/promises';
 import { resolve } from 'node:path';
 import { TestIdentity, type Home } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { hex } from '../../genesis/src/core.ts';
+import { readCards } from '../../genesis/src/lines.ts';
 import { TestCollective, abandonmentOf, governanceText, type Governance } from './collective.ts';
 import { absenceNotice } from './agreements.ts';
 import { compareWithTree, gitFiles, gitSource, publishRelease, signRelease, verifyRelease, type Verified } from './release.ts';
@@ -38,7 +40,8 @@ genesis client (clients/genesis: mor-genesis new).
         members' signatures (default 2). Changing members or these rules
         needs every member whose voice remains, or --constitution K of them.
   change --file C --stay M.json [--stay M.json ...] [--join M.json ...]
-        [--leave M.json ...] [--remove ID ...]
+        [--leave M.json ...] [--remove ID ...] [--leave-line ACT ...]
+        [--card ACT:POSITION:SUMMARY ...]
         Members leave and join. Each --leave member resigns alone, and the
         collective registers it at once by a record. Then a clone of the
         agreement, proposed by the first --stay member and signed by every
@@ -48,7 +51,13 @@ genesis client (clients/genesis: mor-genesis new).
         the next key dealt to the new members only. A member removed without
         resigning (--remove) is counted unless the founders agreed otherwise
         (--constitution at founding): by default nobody loses their say
-        without signing. If one is pending, resend it.
+        without signing. If one is pending, resend it. The rotation keeps every
+        line of the collective's acts its homes and relays hold, shown first
+        (Identity rule 35): --leave-line ACT leaves out the line ending at
+        ACT; --card keeps a line this device cannot read (a private act
+        another device made), as that device shows it. A line left out, or
+        unread with no card, voids its acts: that is said first, and nothing
+        is signed until you type VOID.
   words --file C --text T --member M.json [--member M.json ...]
         An ordinary change: the release area's own words, changed by its
         holders (enough of them to meet the release rule) and recorded by the
@@ -160,7 +169,26 @@ async function main() {
         for (const s of stay) if (!c.f.members.includes(s.id)) throw new Error(`${s.id} is not a member`);
         // Agreements rule 49: the clone carries the abandonment clause; shown before it is signed.
         console.log(absenceNotice(abandonmentOf(c.f.governance)) + '\n');
+        // Identity rule 35: every line of the collective's acts, shown, kept unless left out.
+        const leaveOut = opts['leave-line'] ?? [];
+        const cards = readCards((opts.card ?? []).join('\n'));
+        const plan = await c.planLines({ leaveOut, cards });
+        console.log("Lines of the collective's acts the rotation judges:");
+        for (const l of plan.shown) console.log(`  ${l.tone === 'bad' ? '!' : l.tone === 'warn' ? '?' : '-'} ${l.text}`);
+        let warned: string | undefined;
+        if (plan.warning) {
+          console.log(`WARNING: ${plan.warning}`);
+          const rl = createInterface({ input: process.stdin, output: process.stdout });
+          const answer = (await rl.question('Type VOID to sign it anyway, anything else to stop: ')).trim();
+          rl.close();
+          if (answer !== 'VOID') {
+            console.log('Nothing signed.');
+            break;
+          }
+          warned = plan.warning;
+        }
         const got = await c.changeMembers({
+          lines: { leaveOut, cards, warned },
           members,
           proposer: stay[0],
           signers: [...stay, ...join],

@@ -259,6 +259,7 @@ fn paid(s: &Story, payer: Hash, fulfils: Hash, paid_to: PaidTo, node: &SecretKey
             refund: None,
             anonymous: None,
             purchase: None,
+            previous: None,
         },
     )
 }

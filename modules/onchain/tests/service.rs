@@ -157,7 +157,7 @@ fn buy_quoted(w: &World, who: &str, tier: u64, paid: u64, settled: bool, batch: 
     let commitment = Commitment { rail: mor_lightning::spec(), payee: w.service, amount: sat(paid), fulfils: follows, payer: Some(Payer::Identity(h(who))), paid_to, salt, purchase: None };
     let preimage = h(&format!("{who}'s preimage"));
     let ln = LnProof { invoice: invoice(&w.node, paid * 1000, &commitment.hash(), &preimage), preimage: settled.then_some(preimage) };
-    let claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee: w.service, amount: sat(paid), fulfils: follows, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None };
+    let claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee: w.service, amount: sat(paid), fulfils: follows, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
     let deadline = now + w.offer.terms.tiers[tier as usize].blocks;
     let ticket = Ticket { offer: w.offer_id, leaf: tree::leaf(&act, &blind), commitment: commitment.hash(), tier, batch, deadline, quote };
     Bought { act, blind, commitment, claim, ticket }

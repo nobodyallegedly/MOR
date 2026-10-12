@@ -489,6 +489,7 @@ impl Wallet<'_> {
             refund: None,
             anonymous: None,
             purchase: None,
+            previous: None,
         });
         let a = self.alice.money_act(&claim, Some(view.id));
         put(self.site, &a).await;

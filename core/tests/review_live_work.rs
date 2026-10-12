@@ -245,6 +245,7 @@ fn an_offer_naming_a_streams_vow_is_judged_apart_from_any_claim_on_its_name() {
             refund: None,
             anonymous: None,
             purchase: None,
+            previous: None,
         });
         let a = w.everyday_act(&mut fan, mips().money, 3, x.to_map(), None, None);
         w.add(&a)
