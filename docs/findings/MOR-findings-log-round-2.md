@@ -2716,6 +2716,10 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 *Also noted:* pull request 23 (Identity draft 12, texts only) failed once in the Rust workspace on GitHub and passed on a rerun: another flaky test, its name unseen (the logs cannot be read from here). To find in the next seed or load sweep.
 
+## F267, F268 and rule 17 built (12 October 2026, evening)
+
+**From `docs/f267-f268-rule-17-build.md` (pull request 28, merged):** F267 (a claim names the previous hop's receipt; a route reads a receipt or a claim; one payment, one forward; the conversion cMIP's CV1 test turned), F268 (the declared checker field; the anchoring and conversion cMIPs declare it), Identity rule 17 (now 35) in the clients (the WebAssembly reports `prev`; every line found and kept before a key change; an unreadable line shown and its card asked for; each app shows its own line's latest act). No question. The WebAssembly's bytes changed: a display client release follows. *Noted:* its site tests failed once on GitHub and passed on a rerun, the flaky kind; watched.
+
 ## The relay's "too large" answer always reaches the sender (flaky test hunt, 12 October 2026, afternoon)
 
 **From `docs/flaky-test-hunt.md` (pull request 29, report only, merged):** 60 full workspace runs, 2 failures, both `relay/tests/relay.rs` `too_large` under load; no seed failed. *The cause, a relay bug:* the relay answers "too large", then closes while the sender is still sending, so under load the close can reach the sender first ("connection broken"), or a broken connection is reused. **Decided by Nobody, allegedly (area: development layer, the relay transport cMIP): "A it is."** The relay reads and discards the rest of an oversized body, up to a bound, before closing, and marks the answer `Connection: close`; the cMIP's "every error is answered" holds; the test unchanged. *Stated cost:* a relay reads junk it will not keep, up to the bound; a sender past the bound is cut off. *To build in its own session.*
