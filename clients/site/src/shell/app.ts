@@ -5,7 +5,9 @@
 // the file this address names, checks its bytes against the manifest, and
 // only then shows it, under a bar that says who signed it and whether it
 // verified. A file that does not match is not shown. A film is fetched and
-// checked only when the visitor presses play (draft 4, rule 12a; film.ts).
+// checked only when the visitor presses play (draft 4, rule 12a; film.ts);
+// a film the page lists, when its button is pressed, over the page (draft 5,
+// rule 12b; popup.ts).
 
 import { releaseLoad } from './hold.ts';
 import { readPost } from '../../../barebone/src/post.ts';
@@ -16,6 +18,7 @@ import { findLater } from '../latest.ts';
 import { matches, openVersion, type Version } from '../verify.ts';
 import { filmPlayer, layOver } from './film.ts';
 import { preparePage } from './page.ts';
+import { openPopup, type Listed } from './popup.ts';
 import { ACT_STYLE, bar, briefWords, failingWords, verifiedWords, type BarState, type FilmLine } from './view.ts';
 
 const barEl = document.getElementById('mor-bar')!;
@@ -51,8 +54,8 @@ function fail(what: string, reasons: string[] = []): void {
 }
 
 /** A file of the site as this gateway serves it, checked against its entry; null if it does not match. */
-async function gatewayFile(entry: FileEntry): Promise<Uint8Array | null> {
-  const r = await fetch(`/_mor/file/${entry.path}`, { cache: 'no-store' });
+async function gatewayFile(entry: FileEntry, signal?: AbortSignal): Promise<Uint8Array | null> {
+  const r = await fetch(`/_mor/file/${entry.path}`, { cache: 'no-store', signal });
   if (!r.ok) return null;
   const b = new Uint8Array(await r.arrayBuffer());
   return matches(entry, b) ? b : null;
@@ -127,12 +130,14 @@ function showIcon(bytes: Uint8Array): void {
 /**
  * Give each film of the page its player, laid over the place the page gave
  * it. The poster's own shape, once known, becomes the place's shape (a page's
- * stylesheet may still size it), so the film is not cropped.
+ * stylesheet may still size it), so the film is not cropped. Give each film
+ * the page lists its button, laid over its place, which opens the film over
+ * the page (draft 5, rule 12b).
  */
-function showFilms(frame: HTMLIFrameElement, films: { entry: FileEntry; poster: Uint8Array | null }[]): void {
+function showFilms(frame: HTMLIFrameElement, films: { entry: FileEntry; poster: Uint8Array | null }[], listed: Listed[]): void {
   const doc = frame.contentDocument;
-  if (!doc || !films.length) return;
-  const players = new Map<HTMLElement, HTMLElement>();
+  if (!doc || (!films.length && !listed.length)) return;
+  const over = new Map<HTMLElement, HTMLElement>();
   for (const spot of [...doc.querySelectorAll<HTMLElement>('.mor-film[data-film]')]) {
     const film = films[Number(spot.dataset.film)];
     if (!film) continue;
@@ -141,10 +146,27 @@ function showFilms(frame: HTMLIFrameElement, films: { entry: FileEntry; poster: 
     const shape = (w: number, h: number) => {
       if (w && h) spot.style.aspectRatio = `${w} / ${h}`;
     };
-    players.set(spot, filmPlayer(film.entry, film.poster, gatewayFile, line, paint, shape));
+    over.set(spot, filmPlayer(film.entry, film.poster, gatewayFile, line, paint, shape));
   }
-  view.append(...players.values());
-  layOver(frame, players);
+  for (const spot of [...doc.querySelectorAll<HTMLElement>('.mor-film-link[data-film-listed]')]) {
+    const film = listed[Number(spot.dataset.filmListed)];
+    if (!film) continue;
+    const line: FilmLine = { path: film.entry.path, state: 'waiting', why: null, label: film.label };
+    state.films.push(line);
+    // A film checked once is not fetched again when its pop-up opens again.
+    let kept: Uint8Array | null = null;
+    const get = async (entry: FileEntry, signal?: AbortSignal) => (kept ??= await gatewayFile(entry, signal));
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mor-film-open';
+    button.dataset.film = film.entry.path;
+    button.textContent = film.label;
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.addEventListener('click', () => openPopup(film, get, line, paint, button));
+    over.set(spot, button);
+  }
+  view.append(...over.values());
+  layOver(frame, over);
   paint();
 }
 
@@ -235,7 +257,7 @@ async function main(): Promise<void> {
       'load',
       () => {
         fitFrame(frame);
-        showFilms(frame, prepared.films);
+        showFilms(frame, prepared.films, prepared.listed);
         void showActs(frame, settings);
       },
       { once: true },

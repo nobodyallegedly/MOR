@@ -2,7 +2,8 @@
 // parsed, everything that would run code or load from elsewhere dropped,
 // pictures and stylesheets replaced by the checked bytes themselves, each
 // film turned into a place the display client fills with its own player
-// (draft 4, rule 12a), its poster checked as a picture is, links
+// (draft 4, rule 12a), each film it lists turned into a place for the
+// display client's button (draft 5, rule 12b), every poster checked as a picture is, links
 // to the site's own pages sent to the top window, links leaving the site
 // opened apart, and every `mor-act` turned into a box the display client
 // fills with the act, judged on its own. The page is then shown in a frame
@@ -19,6 +20,8 @@ export interface Prepared {
   acts: string[];
   /** The films the page shows (rule 12a), in order: each one's entry, and its poster's checked bytes. Their places carry `data-film`, the index here. */
   films: { entry: FileEntry; poster: Uint8Array | null }[];
+  /** The films the page lists (draft 5, rule 12b), in order: each one's entry, its poster's checked bytes, and its label. Their places carry `data-film-listed`, the index here. */
+  listed: { entry: FileEntry; poster: Uint8Array | null; label: string }[];
   /** The checked bytes of the picture the page names as its icon, for the browser tab (rule 16a). */
   icon: Uint8Array | null;
   /** Files the page uses whose bytes did not match: the page is then not shown. */
@@ -49,7 +52,7 @@ export async function preparePage(
 ): Promise<Prepared> {
   const doc = new DOMParser().parseFromString(new TextDecoder('utf-8', { fatal: true }).decode(bytes), 'text/html');
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out: Prepared = { html: '', title: null, acts: [], films: [], icon: null, problems: [], dropped: 0 };
+  const out: Prepared = { html: '', title: null, acts: [], films: [], listed: [], icon: null, problems: [], dropped: 0 };
   const drop = (el: Element) => {
     el.remove();
     out.dropped++;
@@ -61,28 +64,41 @@ export async function preparePage(
     return b;
   };
 
+  // The poster a film names, checked as a picture (a picture that does not
+  // match fails the page); none if it names anything but a picture of the version.
+  const posterOf = async (el: Element): Promise<Uint8Array | null> => {
+    const ref = el.getAttribute('poster');
+    if (ref === null) return null;
+    const pp = resolveRef(path, ref);
+    const pe = pp ? byPath.get(pp) : undefined;
+    if (pe && kindOf(pe.path) === 'picture') return checked(pe);
+    out.dropped++;
+    return null;
+  };
+  /** The film of the version an element's `src` names, or undefined. */
+  const filmOf = (el: Element): FileEntry | undefined => {
+    const p = resolveRef(path, el.getAttribute('src') ?? '');
+    const entry = p ? byPath.get(p) : undefined;
+    return entry && kindOf(entry.path) === 'film' ? entry : undefined;
+  };
+
   // Films (rule 12a): a `video` naming a film of the same version, with a poster
   // picture of the same version or none, becomes a place the display client
   // fills with its own player, outside the page; nothing of it is fetched
   // until the visitor asks to play it. Its other attributes (autoplay, loop,
   // muted, sources, tracks) are not the page's to set. Any other `video` goes.
   // Only the places made here carry `data-film`: one a page wrote itself goes.
-  for (const el of [...doc.querySelectorAll('[data-film]')]) el.removeAttribute('data-film');
+  for (const el of [...doc.querySelectorAll('[data-film], [data-film-listed]')]) {
+    el.removeAttribute('data-film');
+    el.removeAttribute('data-film-listed');
+  }
   for (const video of [...doc.querySelectorAll('video')]) {
-    const p = resolveRef(path, video.getAttribute('src') ?? '');
-    const entry = p ? byPath.get(p) : undefined;
-    if (!entry || kindOf(entry.path) !== 'film') {
+    const entry = filmOf(video);
+    if (!entry) {
       drop(video);
       continue;
     }
-    let poster: Uint8Array | null = null;
-    const posterRef = video.getAttribute('poster');
-    if (posterRef !== null) {
-      const pp = resolveRef(path, posterRef);
-      const pe = pp ? byPath.get(pp) : undefined;
-      if (pe && kindOf(pe.path) === 'picture') poster = await checked(pe);
-      else out.dropped++;
-    }
+    const poster = await posterOf(video);
     const place = doc.createElement('div');
     place.className = ['mor-film', video.getAttribute('class') ?? ''].join(' ').trim();
     if (video.id) place.id = video.id;
@@ -91,6 +107,31 @@ export async function preparePage(
     place.setAttribute('data-film', String(out.films.length));
     out.films.push({ entry, poster });
     video.replaceWith(place);
+  }
+
+  // Films listed (draft 5, rule 12b): a `mor-film` naming a film of the same
+  // version, with a poster of the same version or none, becomes a place for a
+  // small button carrying its label (its text, nothing else of what it holds);
+  // the display client lays its own button over it, which opens the film over
+  // the page. A `mor-film` naming anything else goes, with its label: no
+  // button is shown for a film the version does not hold.
+  for (const el of [...doc.querySelectorAll('mor-film')]) {
+    const entry = filmOf(el);
+    if (!entry) {
+      drop(el);
+      continue;
+    }
+    const poster = await posterOf(el);
+    const label = (el.textContent ?? '').replace(/\s+/g, ' ').trim() || entry.path;
+    const place = doc.createElement('span');
+    place.className = ['mor-film-link', el.getAttribute('class') ?? ''].join(' ').trim();
+    if (el.id) place.id = el.id;
+    place.textContent = label;
+    // The button laid over it carries the label to screen readers; the place only holds its room.
+    place.setAttribute('aria-hidden', 'true');
+    place.setAttribute('data-film-listed', String(out.listed.length));
+    out.listed.push({ entry, poster, label });
+    el.replaceWith(place);
   }
 
   for (const sel of DROP) for (const el of [...doc.querySelectorAll(sel)]) drop(el);

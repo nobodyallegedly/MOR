@@ -34,6 +34,15 @@ h1{font-weight:normal;font-size:1.6em;margin:.5em 0 .2em}
 .button{display:flex;align-items:center;justify-content:center;padding:12px 24px;border:2px solid var(--text);border-radius:999px;text-decoration:none;text-align:center;font:600 17px/1.3 system-ui,sans-serif}
 @media (max-width:32em){.shortcuts{gap:8px}.button{flex:1 1 0;min-width:0;padding:10px 12px;font-size:16px}}
 .button:hover,.button:focus{background:var(--text);color:var(--page)}
+/* The films, when the site holds them (written by mor-site films): at the top
+   of the sections, on the band's gradient, the four sections continuing on
+   the band below. The main film spans the page's width; its two small
+   buttons sit under it, side by side. The display client lays its player
+   and its buttons over these places. */
+.films{margin:0 -16px;padding:12px 16px 0;background:linear-gradient(to bottom,var(--page),var(--band) 8em)}
+.more-films{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:12px 0 0}
+.more-films .mor-film-link{padding:6px 14px;border:1px solid var(--soft);color:var(--text);font:600 14px/1.3 system-ui,sans-serif}
+.films+.doors{background:var(--band)}
 .doors{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:12px;margin:0 -16px;padding:12px 16px 24px;background:linear-gradient(to bottom,var(--page),var(--band) 8em)}
 .doors a{display:block;padding:16px;border:1px solid var(--line);border-radius:10px;text-decoration:none;background:transparent}
 .doors a:hover,.doors a:focus{border-color:var(--text)}
