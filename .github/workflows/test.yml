@@ -57,6 +57,9 @@ jobs:
       - name: clients/manage
         if: success() || failure()
         run: cd clients/manage && npm ci --no-audit --no-fund && npm test
+      - name: clients/poster
+        if: success() || failure()
+        run: cd clients/desk && npm ci --no-audit --no-fund && cd ../poster && npm ci --no-audit --no-fund && npm test
       - name: clients/reader
         if: success() || failure()
         run: cd clients/reader && npm ci --no-audit --no-fund && npm test
@@ -79,6 +82,9 @@ jobs:
       - name: modules/video
         if: success() || failure()
         run: cd modules/video && npm ci --no-audit --no-fund && npm test
+      - name: modules/carry
+        if: success() || failure()
+        run: cd modules/carry && npm ci --no-audit --no-fund && npm test
       - name: Reproducible build of the display client
         if: success() || failure()
         shell: bash

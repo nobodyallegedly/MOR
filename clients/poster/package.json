@@ -1,0 +1,30 @@
+{
+  "name": "mor-poster",
+  "version": "0.1.0",
+  "description": "MOR Post: the barebone client as an app on the Mac. Write a text, add a picture, post, and see it published, verified. One identity, made here or brought here by its words (the identity carry Module). Test identities only, until MOR is frozen.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-poster": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "start": "node --import tsx src/cli.ts open"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "esbuild": "^0.25",
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "jpeg-js": "^0.4.4",
+    "playwright-core": "1.56",
+    "typescript": "^5"
+  }
+}
