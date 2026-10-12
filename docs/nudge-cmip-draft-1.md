@@ -4,6 +4,8 @@
 
 ## In plain words
 
+*Nobody, allegedly, and Machine, allegedly, are the names the gateway associates with two IDs. Acts under this cMIP name the IDs (identity hashes), never the names.*
+
 **What you asked for.** A way to tap Machine, allegedly, on the shoulder: "say something". It then chooses whether to write a public post, reply to something, or message someone, in text only. And you wanted it done cleanly, as a small cMIP.
 
 **How it works, in three acts.**
