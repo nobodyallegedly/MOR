@@ -191,8 +191,13 @@ function describeChecked(act: Uint8Array, id: string): Described {
   return d;
 }
 
+/** What judges an act's standing through its signer's identity chain. */
+export interface Judging {
+  standing(act: Uint8Array, id: string, signer: string): Promise<string>;
+}
+
 /** Identities already looked up into this verifier. */
-class Judge {
+class Judge implements Judging {
   v: Verifier;
   private looked = new Set<string>();
   constructor(
@@ -217,9 +222,10 @@ class Judge {
  * signer's identity chain, and read every act it refers to. A picture is
  * shown only if its publication is valid, public, of the JPEG Module, not
  * withdrawn, and its bytes match the publication's hashes and size and read
- * as a JPEG.
+ * as a JPEG. With `judging`, several posts are judged together, each
+ * signer looked up once (the site's feed, website cMIP draft 6).
  */
-export async function readPost(id: string, hints: string[], via: Via = {}): Promise<ShownPost> {
+export async function readPost(id: string, hints: string[], via: Via = {}, judging?: Judging): Promise<ShownPost> {
   const act = await fetchAct(id, hints, via);
   if (!act) throw new Error(`the act ${id} was not found at ${hints.join(', ')}`);
   const d = describeChecked(act, id);
@@ -230,14 +236,14 @@ export async function readPost(id: string, hints: string[], via: Via = {}): Prom
   const text = p.get(0);
   if (typeof text !== 'string') throw new Error('the text act has no text');
   const f = p.get(1);
-  const judge = new Judge(hints, via);
+  const judge = judging ?? new Judge(hints, via);
   const standing = await judge.standing(act, id, d.signer);
   const refs: (ShownPicture | OtherRef)[] = [];
   for (const r of d.refs ?? []) refs.push(await readRef(r, hints, via, judge));
   return { id, signer: d.signer, standing, text, format: f instanceof Uint8Array ? hex(f) : null, refs };
 }
 
-async function readRef(id: string, hints: string[], via: Via, judge: Judge): Promise<ShownPicture | OtherRef> {
+async function readRef(id: string, hints: string[], via: Via, judge: Judging): Promise<ShownPicture | OtherRef> {
   const act = await fetchAct(id, hints, via);
   if (!act) return { kind: 'act', id, what: 'not found at the relays asked' };
   let d: Described;
@@ -252,7 +258,7 @@ async function readRef(id: string, hints: string[], via: Via, judge: Judge): Pro
   return readPicture(act, d, hints, via, judge);
 }
 
-async function readPicture(act: Uint8Array, d: Described, hints: string[], via: Via, judge: Judge): Promise<ShownPicture> {
+async function readPicture(act: Uint8Array, d: Described, hints: string[], via: Via, judge: Judging): Promise<ShownPicture> {
   const out: ShownPicture = {
     kind: 'picture',
     publication: d.id,
@@ -323,7 +329,7 @@ async function findWithdrawal(
   forId: unknown,
   hints: string[],
   via: Via,
-  judge: Judge,
+  judge: Judging,
 ): Promise<string | null> {
   const who = [signer];
   if (forId instanceof Uint8Array) who.push(hex(forId));
