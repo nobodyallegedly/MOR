@@ -55,12 +55,14 @@ Mechanics the decisions and the cMIP left open, taken under the delegation of me
 
 | | Main (`23a4fcb`) | This branch |
 | --- | --- | --- |
-| Rust workspace | 662 passed, 1 ignored | COUNTS_RUST |
-| TypeScript, all packages | 319 | COUNTS_TS |
-| of which `clients/desk` | 14 | 25 |
+| Rust workspace | 662 passed, 1 ignored | 662 passed, 1 ignored |
+| TypeScript, all packages | 319 of 319 | 352 of 353 (one failing, below) |
+| of which `clients/desk` | 14 | 26 |
 | of which `clients/nudge` (new) | | 22 |
 
-`scripts/test-all.sh`, both runs in this window, Chromium for the browser tests. New: `clients/nudge/test/nudge.test.ts` (22), `clients/desk/test/machine.test.ts` (10), `clients/desk/test/machine-browser.test.ts` (1). The step's asks, each a test: an author's DM answered on its own; a stranger's reply notified, not answered until picked, then answered naming the pick; a nudge for 2 producing at most 2; a nudged reply to a stranger naming no pick; the key in no output; the cap stopping calls.
+`scripts/test-all.sh` on main and on this branch, in this window, Chromium for the browser tests. On this branch it stops at `clients/assess` (one failing test, below), so each package was then run on its own for the counts. New: `clients/nudge/test/nudge.test.ts` (22), `clients/desk/test/machine.test.ts` (11), `clients/desk/test/machine-browser.test.ts` (1).
+
+**The one failing test is the deal tool's, in a package this session must not change.** `clients/assess/test/ask.test.ts`, "asking stays in the local process: no page's code imports it, nor the SDK", walks every client's files and accepts an import of Anthropic's SDK only in the deal tool's own three files. The desk's `src/claude.ts` now imports it too: in the desk's program, never in its page. The test's purpose holds: a new desk test builds the page's code exactly as it is served and finds neither the SDK nor the asking code in it. Hiding the import from the scan was set aside. **The fix belongs to the session working on `clients/assess`:** add `'desk/src/claude.ts'` to the list the test accepts (line 247), or check pages by what they bundle rather than by a text search. Until then `scripts/test-all.sh` stops at that test. The step's asks, each a test: an author's DM answered on its own; a stranger's reply notified, not answered until picked, then answered naming the pick; a nudge for 2 producing at most 2; a nudged reply to a stranger naming no pick; the key in no output; the cap stopping calls.
 
 ## Questions for Nobody, allegedly, one at a time
 
