@@ -13,6 +13,8 @@ mor-core = { path = "../../core" }
 mor-payment = { path = "../../cmips/payment" }
 # The batch tree the Bitcoin clock reads batch anchors with (step 14a).
 mor-anchoring = { path = "../../cmips/anchoring" }
+# The conversion cMIP's clock: an onward payment placed by its block (F201).
+mor-conversion = { path = "../../cmips/conversion" }
 sha2 = { version = "0.10", default-features = false }
 # secp256k1 point arithmetic for the Taproot tweak, and BIP-340 signatures
 # for the payee's side's requests.

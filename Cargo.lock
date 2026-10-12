@@ -1741,6 +1741,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mor-conversion"
+version = "0.1.0"
+dependencies = [
+ "mor-core",
+ "mor-payment",
+]
+
+[[package]]
 name = "mor-core"
 version = "0.1.0"
 dependencies = [
@@ -1772,6 +1780,7 @@ dependencies = [
  "clap",
  "lightning-invoice",
  "mor-anchoring",
+ "mor-conversion",
  "mor-core",
  "mor-lightning",
  "mor-onchain",
@@ -1809,6 +1818,7 @@ dependencies = [
  "k256",
  "lightning-invoice",
  "mor-anchoring",
+ "mor-conversion",
  "mor-core",
  "mor-lightning",
  "mor-payment",
