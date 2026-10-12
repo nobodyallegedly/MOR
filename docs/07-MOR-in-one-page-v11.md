@@ -1,6 +1,6 @@
 # MOR in One Page
 
-*Companion document, version 11, 11 October 2026. Not part of the core. Not yet approved. Version 10 with the layers' new names (F212, the rename pass of 10 October 2026): Envelopes, Money, Agreements and Development, in the author's note and in the list of rulebooks. Wording only: no sentence changed its meaning, and the earlier versions' histories below keep the names of their day. Version 10 is kept beside it. Version 10's history follows.*
+*Companion document, version 11, 11 October 2026. Not part of the core. Not yet approved. Version 10 with the layers' new names (F212, the rename pass of 10 October 2026): Envelopes, Money, Agreements and Development, in the author's note and in the list of rulebooks. Wording only: no sentence changed its meaning, and the earlier versions' histories below keep the names of their day. Version 10 is kept beside it. Renamed in place, 12 October 2026 (F269): the core document is the MICS document and the six MIPs the six MIRs, in one sentence. Version 10's history follows.*
 
 *Version 10, 9 October 2026. Not part of the core. Not yet approved. Version 9 with one sentence changed by Nobody, allegedly: "Three things follow, and they are why MOR exists" was too strong; it now says the three things influenced most of the decisions that shaped MOR. Version 9's history follows.*
 
@@ -50,4 +50,4 @@ MOR judges nothing. It cannot tell a fair deal from a harsh one, an author from 
 
 ## Where to go next
 
-The core document is the map; the six MIPs are the rules. The [case studies](case-studies/README.md) show what people could build on them, and end with what each one still needs. A small door to a big universe.
+The MICS document is the map; the six MIRs are the rules. The [case studies](case-studies/README.md) show what people could build on them, and end with what each one still needs. A small door to a big universe.

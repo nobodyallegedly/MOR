@@ -285,7 +285,7 @@ fee = [ rate, ? paid: hash ]   ; who is paid: absent, the creator (F211)
 rate = [ 0, part: uint ]        ; millionths of each payment the Module runs on
      / [ 1, amount ]            ; a fixed amount per payment
 
-task-ref = [ mip: hash, task: uint ]
+task-ref = [ mir: hash, task: uint ]
 type-def = [ type: uint, name: tstr, payload-schema: tstr ]   ; schema written in CDDL
 rule-ref = [ bytes-hash: hash, size: uint, budget: uint ]     ; the rule's binary, by the hash of its bytes, carried as a separate locked object named by this specification; its step budget
 ```
