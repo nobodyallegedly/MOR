@@ -45,9 +45,20 @@ export interface Flag {
   text: string;
   /** The rule or stated cost it rests on. */
   rests: string;
+  /** The rules `rests` cites, by their numbers in the current drafts, for quoting them in full (`rules.ts`). */
+  cites: Cite[];
   /** The identities it concerns, if any. */
   who?: string[];
 }
+
+/** A rule a flag cites: which MIR, and the rule's number in its current draft. */
+export interface Cite {
+  mir: 'Agreements' | 'Money';
+  rule: number;
+}
+
+/** Agreements rules, by number. */
+const A = (...rules: number[]): Cite[] => rules.map((rule) => ({ mir: 'Agreements', rule }));
 
 /** What the relays show of the agreement, every fact a verdict of the core library (`gather.ts`). */
 export interface Found {
@@ -79,6 +90,9 @@ export interface Assessment {
   /** Agreements' own objection to the terms, if any: the terms are then explained, not judged further. */
   problem: string | null;
 }
+
+/** Each cited rule once, in the order first cited. */
+const unique = (cites: Cite[]): Cite[] => cites.filter((c, i) => cites.findIndex((d) => d.mir === c.mir && d.rule === c.rule) === i);
 
 /** With a capital first letter. */
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
@@ -403,6 +417,7 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
         who: stuck,
         text: `${who(stuck)} cannot be declared absent: if ${stuck.length === 1 ? 'that party goes' : 'any of them goes'} silent, nobody can change or end the deal, and no party can leave it.`,
         rests: 'Agreements rule 47 (was 45b), stated cost: “one silent party blocks every change to a deal, however large”; the way out is an abandonment clause removing an absent party’s voice (rule 89, outcome 0)',
+        cites: A(47, 89),
       });
     }
   }
@@ -412,10 +427,12 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
   {
     const why: string[] = [];
     const rests: string[] = [];
+    const cites: Cite[] = [];
     let bearers: string[] = [];
     if (t.plan && !t.plan.maxRailFee) {
       why.push('the split plan states no maximum fee per payout, so a payout may lose any rail fee and nothing beyond a maximum becomes the service’s obligation');
       rests.push('Agreements rule 25 (was 24a): the split plan “states a maximum fee per payout”; Money rule 21');
+      cites.push(...A(25), { mir: 'Money', rule: 21 });
     }
     if (owners.length) {
       const need = signersFor(payload, t, 28);
@@ -423,9 +440,10 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
       if (bearers.length) {
         why.push(`fees can be added or raised without ${who(bearers)}, who bear${bearers.length === 1 ? 's' : ''} them with every stake`);
         rests.push('Agreements rule 28 (was 27): fees come off the top of every stake, and their bearers consent by the power the fees field falls under, not each by their own signature');
+        cites.push(...A(28));
       }
     }
-    if (why.length) out.push({ code: 'uncapped-fee', family: 'listed', who: bearers.length ? bearers : undefined, text: `Uncapped fee: ${why.join('; and ')}.`, rests: rests.join('; ') });
+    if (why.length) out.push({ code: 'uncapped-fee', family: 'listed', who: bearers.length ? bearers : undefined, text: `Uncapped fee: ${why.join('; and ')}.`, rests: rests.join('; '), cites });
   }
 
   // A judge who is also a party.
@@ -448,6 +466,7 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
         who: ids,
         text: `A judge who is also a party: ${list(ids.map((h) => `${names(h)} judges as ${list([...new Set(judges.get(h))])}`))}, in a question where they have a stake of their own.`,
         rests: 'Agreements rule 35 (was 34a), the chain of judgment, which every party signs; Agreements bar it for specifications only (“a judge never handles what it judges”, Q20), and let a party be the absence authority (rule 85)',
+        cites: A(35, 85),
       });
     }
   }
@@ -459,6 +478,7 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
       family: 'listed',
       text: 'No judge of forks: if two complete versions of the deal ever stand side by side, the deal stays on its reference until every party signs one settling version, and any party can keep it there.',
       rests: 'Agreements rule 47 (was 45b), field 27: “With no judge of forks named, the deal stays on its reference”; stated cost: “a party of either branch can refuse every settlement and keep the deal on its reference”',
+      cites: A(47),
     });
   }
 
@@ -467,12 +487,14 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
     const hit = new Set<string>();
     const why: string[] = [];
     const rests: string[] = [];
+    const cites: Cite[] = [];
     const lose = (a?.outcomes ?? []).filter((o) => o === 1 || o === 2);
     if (a && lose.length) {
       const declared = a.authority === 'named' ? owners.filter((h) => t.parties.includes(h) && h !== a.identity) : owners.filter((h) => t.parties.includes(h));
       for (const h of declared) hit.add(h);
       why.push(`a party declared absent may have its stake ${list(lose.map((o) => (o === 1 ? 'shared among the remaining holders' : 'transferred to parties named or defined by role')))}, without signing`);
       rests.push('Agreements rule 48 (was 46): no stake reduced without its holder’s signature “unless the agreement pre-authorised it”; rule 89, outcomes 1 and 2');
+      cites.push(...A(48, 89));
     }
     const r = t.releaseRule;
     if (r && r.form !== 'all') {
@@ -482,6 +504,7 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
         for (const h of left) hit.add(h);
         why.push(`a stake can be released to the public domain, ending what it earns, without ${who(left)}`);
         rests.push('Agreements rule 55 (was 17), field 24: the release rule says which holders sign a release');
+        cites.push(...A(55));
       }
     }
     const need = signersFor(payload, t, 8);
@@ -490,8 +513,9 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
       for (const h of left) hit.add(h);
       why.push(`the split plan, which sets what each stake is paid, can be changed without ${who(left)}`);
       rests.push('Agreements rules 45 and 48: a new version needs a holder’s signature to lower its share, not to change the split plan (field 8), which falls under its own power (rules 62 to 65; every party in a deal, rule 47)');
+      cites.push(...A(45, 48, 62, 63, 64, 65, 47));
     }
-    if (why.length) out.push({ code: 'dilutable-stake', family: 'listed', who: owners.filter((h) => hit.has(h)), text: `A stake can be diluted without its holder: ${why.join('; and ')}.`, rests: rests.join('; ') });
+    if (why.length) out.push({ code: 'dilutable-stake', family: 'listed', who: owners.filter((h) => hit.has(h)), text: `A stake can be diluted without its holder: ${why.join('; and ')}.`, rests: rests.join('; '), cites: unique(cites) });
   }
 
   // Stated costs the terms' own clauses bring.
@@ -501,6 +525,7 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
       family: 'stated cost',
       text: `Absence is on ${a.authority === 'named' ? `${names(a.identity ?? '')}’s` : 'the other members’'} word alone: no absence-proof cMIP checks it, and a party declared absent wrongly can only contest it, in public.`,
       rests: 'Agreements rule 87 (was 51), stated cost: a declaration is the authority’s judgment, “a stated cost the party accepted”; rule 85 (was 49), client conformance (F178)',
+      cites: A(87, 85),
     });
   }
   if (owners.length) {
@@ -510,6 +535,7 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
         family: 'stated cost',
         text: 'A split service holds the money between receiving and paying out: after a stake is sold, a seller and the service acting together can keep paying the seller until the first split citing the sale.',
         rests: 'Agreements rule 10 (was 14), stated cost (the window after a transfer); rule 32 (was 31), the trust that remains',
+        cites: A(10, 32),
       });
     } else {
       out.push({
@@ -517,6 +543,7 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
         family: 'stated cost',
         text: 'No split service: each payer divides its own payment, so a payer can pay some holders and not others, every holder’s pointer is visible to payers, and the payer decides who gets a leftover unit.',
         rests: 'Agreements rule 16 (was 18), stated cost (payer-side splitting); rule 9, stated cost (the payer decides tied units)',
+        cites: A(16, 9),
       });
     }
   }
