@@ -16,12 +16,13 @@
 // page's order of identities, then the position in the signer's sequence,
 // then the act id: an order of finding, which the feed says is not a time.
 
-import { MIRS, SPECS, Verifier, describeAct } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, describeAct, hex } from '../../genesis/src/core.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { readPost, type Judging, type ShownPost } from '../../barebone/src/post.ts';
 import { POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { relayAddress } from './settings.ts';
+import { NUDGE, NUDGE_TYPES } from './specs.ts';
 
 /** An identity a feed names, with the page's word for it. */
 export interface Author {
@@ -56,6 +57,17 @@ export interface FeedPost {
   problem: string | null;
   /** The text acts it names (Text MIR: a reply names the post it answers). */
   answers: string[];
+  /** Set on a visitor's note (draft 7): a public text act addressed to an identity the feed names, by an identity it does not name. */
+  note?: boolean;
+  /**
+   * For each visitor's note this post answers (draft 7, F275): who picked it,
+   * as the signed acts show it. A pick (nudge cMIP, type 2) signed by an
+   * identity the feed names, for this post's signer, naming the note: the
+   * pick's signer. Else a nudge (type 1) signed by an identity the feed
+   * names, for this post's signer: this post's signer, who chose the note
+   * under it. Else null.
+   */
+  picked?: Map<string, string | null>;
 }
 
 export interface Feed {
@@ -72,6 +84,8 @@ interface Described {
   id: string;
   signer?: string;
   public: boolean;
+  to?: string[];
+  payload?: Uint8Array;
   spec?: string;
   type?: number;
   position?: number;
@@ -223,6 +237,58 @@ async function readOne(id: string, signer: string, position: number | null, plac
   return p;
 }
 
+/**
+ * A pick or a nudge (nudge cMIP draft 2, types 2 and 1) a reply names, read
+ * from the signed act only: public, valid for its signer's chain, signed by
+ * an identity the feed names, and naming the reply's signer as its agent
+ * (field 0); a pick's field 2, the act picked. Whether the agent kept its
+ * published terms is the nudge cMIP's reading, not made here. Null for
+ * anything else.
+ */
+async function causeOf(
+  id: string,
+  agent: string,
+  named: Set<string>,
+  places: string[],
+  via: Via,
+  judge: FeedJudge,
+  found: Map<string, { d: Described; act: Uint8Array }>,
+): Promise<{ type: number; signer: string; picked: string | null } | null> {
+  let act = found.get(id)?.act ?? null;
+  for (const h of act ? [] : places) {
+    try {
+      act = await relayAt(h, via).getAct(id);
+      if (act) break;
+    } catch {
+      // try the next
+    }
+  }
+  if (!act) return null;
+  let d: Described;
+  try {
+    d = describeAct(act) as Described;
+  } catch {
+    return null;
+  }
+  if (d.id !== id || !d.public || !d.payload || !d.signer || d.spec !== NUDGE) return null;
+  if (d.type !== NUDGE_TYPES.pick && d.type !== NUDGE_TYPES.nudge) return null;
+  if (!named.has(d.signer)) return null;
+  let m: Map<number, unknown>;
+  try {
+    m = cborDecode(d.payload) as Map<number, unknown>;
+  } catch {
+    return null;
+  }
+  const f0 = m.get(0);
+  if (!(f0 instanceof Uint8Array) || hex(f0) !== agent) return null;
+  const f2 = m.get(2);
+  const picked = d.type === NUDGE_TYPES.pick ? (f2 instanceof Uint8Array ? hex(f2) : null) : null;
+  if (d.type === NUDGE_TYPES.pick && !picked) return null;
+  if (d.type === NUDGE_TYPES.nudge && !(typeof f2 === 'number' && f2 >= 1)) return null;
+  if ((await judge.standing(act, id, d.signer)) !== 'valid') return null;
+  return { type: d.type, signer: d.signer, picked };
+}
+
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 /**
@@ -305,6 +371,12 @@ export async function readFeed(authors: Author[], relays: string[], via: Via = {
         answered.set(r, { id: r, signer: '', position: null, post: null, problem: 'not found at the places asked', answers: [] });
       } else if (!isPost(d) || !d.signer) {
         continue; // a picture, or anything else that is not a post
+      } else if (!named.has(d.signer) && (d.to ?? []).some((t) => named.has(t))) {
+        // A visitor's note: shown beside a reply of an identity the feed
+        // names that names it (draft 7, F275), checked as any post.
+        const n = await readOne(r, d.signer, d.position ?? null, everywhere, via, judge, null);
+        n.note = true;
+        answered.set(r, n);
       } else if (!named.has(d.signer)) {
         answered.set(r, { id: r, signer: d.signer, position: d.position ?? null, post: null, problem: null, answers: [] });
       } else {
@@ -312,6 +384,22 @@ export async function readFeed(authors: Author[], relays: string[], via: Via = {
       }
       p.answers.push(r);
     }
+  }
+
+  // Who picked each note a post answers: the pick or nudge the post names,
+  // fetched and judged as signed by an identity the feed names.
+  for (const p of posts) {
+    const notes = p.answers.filter((r) => answered.get(r)?.note);
+    if (!notes.length) continue;
+    p.picked = new Map(notes.map((r) => [r, null]));
+    const causes = p.post!.refs.flatMap((x) => (x.kind === 'act' && !answered.has(x.id) ? [x.id] : []));
+    let nudged = false;
+    for (const c of causes) {
+      const cause = await causeOf(c, p.signer, named, everywhere, via, judge, found);
+      if (cause?.type === NUDGE_TYPES.pick && p.picked.has(cause.picked!)) p.picked.set(cause.picked!, cause.signer);
+      if (cause?.type === NUDGE_TYPES.nudge) nudged = true;
+    }
+    if (nudged) for (const [r, by] of p.picked) if (by === null) p.picked.set(r, p.signer);
   }
 
   for (const line of lines) {

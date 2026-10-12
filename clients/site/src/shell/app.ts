@@ -20,6 +20,7 @@ import { findLater } from '../latest.ts';
 import { matches, openVersion, type Version } from '../verify.ts';
 import { readFeed, type Author } from '../feed.ts';
 import { FEED_STYLE, feedHtml } from './feed-view.ts';
+import { writeBox } from './write-box.ts';
 import { filmPlayer, layOver } from './film.ts';
 import { preparePage } from './page.ts';
 import { openPopup, type Listed } from './popup.ts';
@@ -40,6 +41,7 @@ const state: BarState = {
   acts: [],
   films: [],
   feeds: [],
+  writes: [],
   reasons: [],
   newer: null,
 };
@@ -143,6 +145,37 @@ async function showFeeds(frame: HTMLIFrameElement, settings: SiteSettings, feeds
     box.dataset.done = '';
     paint();
   }
+}
+
+/**
+ * Lay a writing box over each place the page gave one (draft 7, rule 13b):
+ * the display client's own, outside the page, where its code runs. The
+ * place is made as tall as the box, so the page flows around it.
+ */
+function showWrites(frame: HTMLIFrameElement, settings: SiteSettings, writes: Author[][]): void {
+  const doc = frame.contentDocument;
+  if (!doc || !writes.length) return;
+  const over = new Map<HTMLElement, HTMLElement>();
+  for (const spot of [...doc.querySelectorAll<HTMLElement>('.mor-write[data-write]')]) {
+    const authors = writes[Number(spot.dataset.write)];
+    if (!authors) continue;
+    const box = writeBox(authors, settings.relays, settings.messageHomes);
+    box.style.visibility = 'hidden';
+    view.append(box);
+    // The box's own height, laid out at the place's width, sets the place's.
+    const fit = () => {
+      box.style.width = `${spot.getBoundingClientRect().width}px`;
+      const h = box.scrollHeight;
+      if (Math.abs(spot.offsetHeight - h) > 1) spot.style.height = `${h}px`;
+    };
+    fit();
+    const watch = new ResizeObserver(fit);
+    watch.observe(spot);
+    watch.observe(box.firstElementChild!);
+    box.style.visibility = '';
+    over.set(spot, box);
+  }
+  layOver(frame, over);
 }
 
 /**
@@ -291,6 +324,7 @@ async function main(): Promise<void> {
     }
     document.title = `${prepared.title ?? entry.path} · ${version.manifest!.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
+    state.writes = prepared.writes;
     state.feeds = prepared.feeds.map((authors) => ({ authors, found: null, shown: 0, verified: 0 }));
     state.phase = 'ok';
     state.words = verifiedWords(settings, 'page');
@@ -306,6 +340,7 @@ async function main(): Promise<void> {
       () => {
         fitFrame(frame);
         showFilms(frame, prepared.films, prepared.listed);
+        showWrites(frame, settings, prepared.writes);
         void showActs(frame, settings).then(() => showFeeds(frame, settings, prepared.feeds));
       },
       { once: true },

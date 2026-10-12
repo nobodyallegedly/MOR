@@ -36,7 +36,11 @@ body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-
 .f-post details{margin-top:8px;font-size:12px;color:var(--soft)}
 .f-post summary{cursor:pointer;min-height:24px}
 .f-post code,.f-fp{font-family:ui-monospace,Menlo,monospace;font-size:12px}
-.f-more{font-size:13px;color:var(--soft)}`;
+.f-more{font-size:13px;color:var(--soft)}
+.f-visitor{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,CanvasText 4%,Canvas)}
+.f-visitor .f-text{font-size:16px}
+.f-label{font-size:13px;font-weight:600;color:var(--soft)}
+.f-visitor .f-fp{display:block;margin-top:4px;font-size:11px;color:var(--soft)}`;
 
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
 
@@ -57,10 +61,20 @@ function text(post: ShownPost): string {
     : `<div class="f-text" dir="auto">${e(post.text)}</div>`;
 }
 
+/** A visitor's note a reply answers (draft 7, F275), above the reply, with who picked it. */
+function note(a: FeedPost, picked: string | null, authors: Author[]): string {
+  const label = picked ? ` <span class="f-label" data-picked="${picked}">Picked by ${e(nameOf(authors, picked))}</span>` : '';
+  if (!a.post || a.problem) {
+    return `<div class="f-visitor" data-note="${a.id}" data-verified="no"><div><span class="f-name">A visitor</span> <span class="f-no">not verified</span>${label}</div><div class="f-why">${e(a.problem ?? 'unknown')}. Its words are not shown.</div></div>`;
+  }
+  return `<div class="f-visitor" data-note="${a.id}" data-verified="yes"><div><span class="f-name">A visitor</span> <span class="f-ok">verified</span>${label}</div>${text(a.post)}<span class="f-fp">Signed by a one-time identity, ${fingerprint(a.signer)}</span></div>`;
+}
+
 /** The post a reply answers, above the reply's words. */
-function answered(feed: Feed, id: string, authors: Author[]): string {
+function answered(feed: Feed, id: string, authors: Author[], p: FeedPost): string {
   const a = feed.answered.get(id);
   if (!a) return '';
+  if (a.note) return note(a, p.picked?.get(id) ?? null, authors);
   if (!a.signer) return `<div class="f-answers">Answers a post not found at the places asked: <code>${short(id)}</code>.</div>`;
   if (!authors.some((x) => x.identity === a.signer)) {
     return `<div class="f-answers">Answers a post by another identity, not shown in this feed: <span class="f-fp">${fingerprint(a.signer)}</span>.</div>`;
@@ -86,15 +100,19 @@ function postHtml(feed: Feed, p: FeedPost, authors: Author[]): string {
 ${who(p)}</article>`;
   }
   const pictures = p.post.refs.filter((r): r is ShownPicture => r.kind === 'picture').map(picture).join('');
+  // A reply to a visitor's note that no pick or nudge chose: "Answered by" its signer (F275).
+  const answeredBy = [...(p.picked?.values() ?? [])].some((by) => by === null)
+    ? `<span class="f-label" data-answered="${p.signer}">Answered by ${name}</span>`
+    : '';
   return `<article class="f-post" data-post="${p.id}" data-verified="yes">
-<div class="f-head"><span class="f-name">${name}</span><span class="f-ok">Verified</span></div>
-${p.answers.map((id) => answered(feed, id, authors)).join('')}${text(p.post)}${pictures}
+${p.answers.map((id) => answered(feed, id, authors, p)).join('')}<div class="f-head"><span class="f-name">${name}</span><span class="f-ok">Verified</span>${answeredBy}</div>
+${text(p.post)}${pictures}
 ${who(p)}</article>`;
 }
 
 /** The feed's frame document. */
 export function feedHtml(feed: Feed, authors: Author[], style: string): string {
-  const note = `<p class="f-note">Public posts of ${authors.map((a) => e(a.name ?? short(a.identity))).join(', ')}, each checked in this browser. Newest first, as their signatures order them: a reply after what it answers, each identity's posts in the order it signed them. MOR has no clock: between posts nothing signed links, the order is not a time.</p>`;
+  const note = `<p class="f-note">Public posts of ${authors.map((a) => e(a.name ?? short(a.identity))).join(', ')}, each checked in this browser. Newest first, as their signatures order them: a reply after what it answers, each identity's posts in the order it signed them. MOR has no clock: between posts nothing signed links, the order is not a time. A visitor's public note is shown only beside an answer to it.</p>`;
   const body = feed.posts.length
     ? feed.posts.map((p) => postHtml(feed, p, authors)).join('\n')
     : '<p class="f-more">No public post found at the places asked.</p>';

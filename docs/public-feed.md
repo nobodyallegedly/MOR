@@ -94,3 +94,60 @@ On main, the first full run stopped at one site test timing out (the film pop-up
 - No page of dubsar.org carries the feed yet (Nobody, allegedly: "Not yet").
 - The display client is not released and the site is not published: the project lead releases after merging; the author publishes from the Mac.
 - The roadmap is left to the project lead to mark.
+
+## The feed's page (F275, 13 October 2026)
+
+*Built from F275, decided by Nobody, allegedly, 12 October 2026: "It will be on a separate page, with a link to the third thank you essay. And a box to write (public or private) to either NA or MA using a little switch to chose." And: "I think that we should have the option of showing the ones we reply to. It creates a nice rule: if it's not worthy of fitting the tableau, it goes unanswered." Website cMIP draft 7, new for him to approve; draft 6 stays, approved. Test identities only; nothing published, nothing released.*
+
+### In plain words
+
+dubsar.org now has a page of its own for the feed, `feed.html`. At the top, a button to the third thank-you text; it leads to a placeholder until you publish the text, and the page says so in one plain line. Under it, a box to write. Then the posts.
+
+**The box.** A visitor taps a name, Nobody, allegedly, or Machine, allegedly, then Private or Public, writes, and sends. Beside the box, in plain words: private means sealed in the browser so that only that identity can open it, then left in its inbox, and never shown on the page; public means left unsealed in its inbox, readable by anyone who holds it, and shown on the page only if one of you answers it. And always: the note is signed by a one-time identity made in the browser, whose keys are forgotten once it is sent, so no reply can reach the writer; nothing is kept in the browser. It is the reader's way of writing, used as it is.
+
+**What is shown.** A visitor's public note appears only above a reply of yours or of Machine's that names it. An unanswered note never appears. Labels, as you set them:
+
+| How the note was answered | Above, on the note | Below, the reply |
+| --- | --- | --- |
+| You signed a pick of it, Machine answered | "Picked by Nobody, allegedly" | Machine, allegedly, under its name alone |
+| Machine chose it under your nudge | "Picked by Machine, allegedly" | Machine, allegedly, under its name alone |
+| You answered it yourself | no pick | "Answered by Nobody, allegedly" |
+
+A label rests on the signed acts: before "Picked by Nobody, allegedly" is shown, the browser fetches your pick and checks that you signed it, for Machine, naming that very note. Whether Machine kept its published terms (the nudge cMIP's full reading) is not judged here; that comes with the nudge cMIP's own build.
+
+The page on a phone, with three answered notes (a test page, Chromium, 390 pixels wide): `docs/public-feed/feed-page-phone-chromium.png`.
+
+### Precisely
+
+- **Website cMIP draft 7** (`cmips/cmip-website-draft-7.md`): rule 13a gains "Visitors' notes" (what a note is, where it is looked for, the three labels), replacing draft 6's reading for notes; rule 13b, the writing box (`mor-write` with `mor-author` entries, the display client's own box, private and public, the one-time identity, the inbox from the routes); rule 21 names the new gateway setting; four stated costs added and "Pages without programs" amended. Draft 6 is unchanged in its own file.
+- **The page**: `docs/dubsar.org/feed.html`, the two identities' hashes in the box and the feed; the link `https://reader.dubsar.org/#THIRD-THANK-YOU`, a placeholder to replace with the act's id.
+- **The display client**: `src/write.ts` (private: the reader's `recipient` and `sendMessage`, imported unchanged; public: the same act unsealed, its one-time identity made as the reader makes one, copied, since the reader keeps that inside its private send); `src/shell/write-box.ts` (the box); `src/shell/page.ts` and `app.ts` (the box laid over its place, the place as tall as the box); `src/feed.ts` (notes found by the reply's reference at the places the feed asks, checked as posts, and who picked them read from the pick or nudge the reply names); `src/shell/feed-view.ts` (the note above its reply, the labels); `src/settings.ts` (`messageHomes`); the bar's new "Writing" row. `clients/reader` and `clients/genesis` are not changed.
+- **The nudge cMIP's spec hash** is a test value in `src/specs.ts`, `sha256("nudge cMIP, draft 2, test value until publication")`, since no code of that cMIP exists yet: the clients that sign picks and nudges must use the same.
+
+### Readings taken where the decision is silent
+
+For Nobody, allegedly, to confirm or change.
+
+1. **A visitor's note** is a public text act addressed (`to`) to an identity the feed names, by an identity it does not name. Anyone else's post a reply names stays as draft 6 shows it: named by its fingerprint, not shown.
+2. **The homes that take a visitor's one-time identity** are a gateway setting, `messageHomes`, as the reader's settings name them; with none, the box says the gateway takes no notes and sends nothing.
+3. **A public note is addressed to the identity chosen** (`to`), so the inbox relay files it for that identity, and readers can tell it was written to someone.
+4. **Private is the box's default**, Nobody, allegedly, the first name: the page's order.
+5. **The page has no link from the front page yet.** You said the feed goes on a separate page; where the front page points to it is your call. Until then, `dubsar.org/feed.html` opens it.
+6. **Finding a note:** at the places the feed already asks (each identity's outbox relays and the gateway's relays). A note sits at the inbox it was written to, so it is found when that inbox is one of those places, as on dubsar.org today, where each identity receives where it posts. Once F272 is merged, a reference names its signer, and the note is looked for at the one-time identity's routes too.
+
+### For the gateway on dubsar.org
+
+- `messageHomes` in the site's settings: the homes that take a visitor's one-time identity (as the reader's `messageHomes`).
+- Each identity needs an inbox route and, for private notes, a published encryption key that counts.
+- The gateway must run a display client released with draft 7.
+
+### Tests
+
+`clients/site/test/feed-page.test.ts`, 4 tests, dubsar.org's page with two test identities on two homes, a phone's screen:
+
+1. The placeholder link and its one line; the box, private by default, each choice and "nothing is kept" said in plain words, within the phone's width.
+2. **A visitor writes privately from the page**: the owner's inbox holds it sealed; the owner opens it, verified; no act readable in the open; nothing in the browser's storage.
+3. **A visitor writes publicly**: the inbox holds the act unsealed, addressed to the identity chosen; the feed does not show it unanswered.
+4. **Notes shown only beside a reply that names them, above it**: "Picked by Nobody, allegedly", Machine's reply under its name alone; "Picked by Machine, allegedly" under a nudge; "Answered by Nobody, allegedly" on his own reply; an unanswered note nowhere; nothing fetched beyond the gateway, the homes and the relays.
+
+`scripts/test-all.sh`, this branch against main (`c044b20`): COUNTS.

@@ -225,7 +225,7 @@ test('the gateway checks before it serves, serves its display client at every ad
     assert.equal(missing.status, 404);
     assert.equal(await missing.text(), shell, 'the display client says what is missing');
     const s = await (await fetch(base + '/_mor/site.json')).json();
-    assert.deepEqual(s, { version: w.site.id, identity: w.owner.id, name: 'Nobody, allegedly', relays: [w.relay.base], release: null, serve: 'pinned' });
+    assert.deepEqual(s, { version: w.site.id, identity: w.owner.id, name: 'Nobody, allegedly', relays: [w.relay.base], release: null, serve: 'pinned', messageHomes: [] });
     const f = await fetch(base + '/_mor/file/run.html');
     assert.equal(f.headers.get('content-type'), 'application/octet-stream');
     assert.equal(f.headers.get('content-disposition'), 'attachment');
@@ -267,6 +267,7 @@ test('the settings are checked, never guessed', () => {
   assert.throws(() => parseSiteSettings({ ...good, relays: ['http://relay.example.org'] }), /relays/, 'plain http only on this machine');
   assert.throws(() => parseSiteSettings({ ...good, release: 'x' }), /release/);
   assert.throws(() => parseSiteSettings({ ...good, serve: 'newest' }), /serve/);
+  assert.throws(() => parseSiteSettings({ ...good, messageHomes: ['http://home.example.org'] }), /messageHomes/, 'the writing box: https homes only');
   const site = { ...good, hosts: ['dubsar.org', 'abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrstuvwx.onion'] };
   const g = parseGatewaySettings({ sites: [site] });
   assert.equal(g.listen, '127.0.0.1:8090');
