@@ -87,7 +87,7 @@ var Verifier = class {
   /**
    * An agreement as held: its parties, who signed, whether it exists (a
    * deal, founding terms) or is ready to be recorded (a collective's
-   * clone), and the powers its mark must name. `specs`: the six MIP
+   * clone), and the powers its mark must name. `specs`: the six MIR
    * hashes, and the layers of extensions it adds or drops.
    * @param {any} specs
    * @param {string} id
@@ -1134,7 +1134,7 @@ var Verifier = class {
   }
   /**
    * The standing of an act held: "valid", "disputed", "void", "pending",
-   * "invalid", "unknown", or "scoped" (signed with a key a higher MIP's
+   * "invalid", "unknown", or "scoped" (signed with a key a higher MIR's
    * act installs, a grant key: Agreements judge it, F128).
    * @param {string} act
    * @returns {string}
@@ -2281,13 +2281,13 @@ var SPECS = {
   envelopes: sha2562("ENVELOPE, test value until the freeze"),
   text: sha2562("TEXT, test value until the freeze")
 };
-var MIPS = {
+var MIRS = {
   ...SPECS,
   money: sha2562("FINANCE, test value until the freeze"),
   agreements: sha2562("LAW, test value until the freeze"),
   development: sha2562("PRODUCTION, test value until the freeze")
 };
-var ACK_SPECS = [MIPS.identity, MIPS.money, MIPS.agreements];
+var ACK_SPECS = [MIRS.identity, MIRS.money, MIRS.agreements];
 var IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15, chainSignature: 16 };
 var ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 };
 
@@ -2450,7 +2450,7 @@ var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
 
 // ../genesis/src/lookup.ts
 async function lookUp(identity, hints, via = {}, into) {
-  const v = into ?? new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+  const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   const tried = /* @__PURE__ */ new Set();
   const unreachable = [];
   const operatorActs = /* @__PURE__ */ new Map();
@@ -2859,7 +2859,7 @@ function isOnlyOrientation(body) {
 // ../longform/src/specs.ts
 var test = (s) => sha2562(s);
 var LONGFORM_SPECS = {
-  /** The Text MIP (`TEXT`). */
+  /** The Text MIR (`TEXT`). */
   text: SPECS.text,
   /** The long-form text format cMIP (cmips/cmip-long-form-draft-1.md). */
   longform: test("long-form text format cMIP, draft 1, test value until publication")
@@ -2868,9 +2868,9 @@ var LONGFORM_SPECS = {
 // ../barebone/src/specs.ts
 var test2 = (s) => sha2562(s);
 var POST_SPECS = {
-  /** The Text MIP (`TEXT`). */
+  /** The Text MIR (`TEXT`). */
   text: LONGFORM_SPECS.text,
-  /** The Envelopes MIP (`ENVELOPES`). */
+  /** The Envelopes MIR (`ENVELOPES`). */
   envelopes: SPECS.envelopes,
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
@@ -2905,7 +2905,7 @@ var Judge = class {
   constructor(hints, via) {
     this.hints = hints;
     this.via = via;
-    this.v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+    this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   }
   v;
   looked = /* @__PURE__ */ new Set();
@@ -3134,7 +3134,7 @@ var Parser = class {
   }
   /**
    * Does this line open a quote? A `>` opening it does, unless the Text
-   * MIP's floor forbids hiding it (a mathematical sign directly before a
+   * MIR's floor forbids hiding it (a mathematical sign directly before a
    * digit, `>5`): then it is shown as text, and the line is no quote
    * (F182).
    */
@@ -3248,7 +3248,7 @@ var Parser = class {
   }
   // -------------------------------------------------------------- inlines
   /**
-   * The inline content of one line (rule 9). Where the Text MIP's floor
+   * The inline content of one line (rule 9). Where the Text MIR's floor
    * forbids hiding a piece of emphasis, code or link markup (a run of
    * hidden markup between two digits, `1*2*3`, `1`2`3`), that piece is
    * shown as text rather than the document refused (F175, F182): the line
@@ -3872,7 +3872,7 @@ var STYLE = `.mor-lf{white-space:pre-wrap;overflow-wrap:anywhere}
 function renderHtml(doc) {
   const breach = checkBound(doc);
   if (breach) {
-    return `<div class="mor-lf"><p class="mor-lf-refused">Shown plain: the long-form rendering would break the Text MIP's bound (${escapeHtml(breach)}).</p>${plainHtml(doc.source, { showControls: true })}</div>`;
+    return `<div class="mor-lf"><p class="mor-lf-refused">Shown plain: the long-form rendering would break the Text MIR's bound (${escapeHtml(breach)}).</p>${plainHtml(doc.source, { showControls: true })}</div>`;
   }
   const s = doc.source;
   const text = (x) => escapeHtml(s.slice(x.from, x.to));
@@ -4086,9 +4086,9 @@ function parseSiteSettings(raw) {
 var test3 = (s) => sha2562(s);
 var SITE_SPECS = {
   identity: SPECS.identity,
-  /** The Envelopes MIP (`ENVELOPES`): a version is a publication. */
+  /** The Envelopes MIR (`ENVELOPES`): a version is a publication. */
   envelopes: SPECS.envelopes,
-  /** The Agreements MIP (`AGREEMENTS`): only to tell that a signer is a collective. */
+  /** The Agreements MIR (`AGREEMENTS`): only to tell that a signer is a collective. */
   agreements: test3("LAW, test value until the freeze"),
   /** The website cMIP (cmips/cmip-website-draft-4.md). Draft 3 adds the icon
    * (rule 16a), draft 4 films (rules 4, 6a, 12a); both leave the manifest's
@@ -4096,7 +4096,7 @@ var SITE_SPECS = {
    * published still verify. */
   site: test3("website cMIP, draft 2, test value until publication")
 };
-var SITE_AGREEMENTS_SPECS = { ...MIPS, agreements: SITE_SPECS.agreements };
+var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements };
 var PUBLICATION2 = 0;
 var WITHDRAWAL2 = 3;
 
