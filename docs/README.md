@@ -51,5 +51,5 @@ Each records what a session built, what it found, and what it left open. They ar
 | --- | --- |
 | [paper/mor-paper-draft-3.md](paper/mor-paper-draft-3.md) | The paper: design, claims marked run or reasoned, threat model, evaluation, related work, open problems. Drafts 1 and 2 are kept beside it. |
 | [verifier2-report.md](verifier2-report.md) | An independent verifier of collectives' endings, written from the text alone (`verifier2/`), compared with the reference library. |
-| [must-audit-2026-10.md](must-audit-2026-10.md) | Every rule of the six MIPs and the payment cMIP mapped to the code and tests that check it. |
+| [must-audit-2026-10.md](must-audit-2026-10.md) | Every rule of the six MIRs and the payment cMIP mapped to the code and tests that check it. |
 | [reviews/fable-paper-review-1.md](reviews/fable-paper-review-1.md) | A hostile review of draft 1, by an AI reviewer, which draft 2 answers. |

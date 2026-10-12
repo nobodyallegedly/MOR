@@ -245,7 +245,7 @@ A six-page proposal by someone without a doctorate and a four-year programme wit
 
 ## 14. Open questions
 
-*Where the core and the MIP drafts read are silent or unclear on something this case study uses. None is answered here.*
+*Where the core and the MIR drafts read are silent or unclear on something this case study uses. None is answered here.*
 
 1. **Quoting a passage.** A reference (Envelopes) names a whole act or a web address, never a passage inside a text. Where does "this passage, quoted from that passage" live: in a citation cMIP's own act beside the text, or inside a text format? Can anyone holding both check a quote against its source? The travelling sentence of section 4 rests on the answer.
 2. **How a work names its sources and its earlier version.** The work claim's format (Agreements type 3) is still open, and work claims are a task handed to a cMIP. Is naming a source done by references, in the claim, or only by a lineage cMIP?

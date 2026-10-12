@@ -132,7 +132,7 @@ The agency and the independent do not live in separate worlds. They fill the sam
 
 **From the core, almost nothing new.** Identities, nyms, works and claims, standing offers, agreements with conditions, keepers and time references, splits and role shares, receipts, grants and publication stakes are already defined; lineage, custodians and targets are built from these core pieces.
 
-**One proposal for the core:** conforming clients that show a work must also show a correction signed by its author. This is a small rule in the spirit of "signing what you see", and it is up to the MIP drafts to decide where it belongs, or whether it is needed at all.
+**One proposal for the core:** conforming clients that show a work must also show a correction signed by its author. This is a small rule in the spirit of "signing what you see", and it is up to the MIR drafts to decide where it belongs, or whether it is needed at all.
 
 **Open for others to build (cMIPs and Modules):**
 

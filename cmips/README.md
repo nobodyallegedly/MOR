@@ -1,6 +1,6 @@
 # Founding cMIPs
 
-Community specifications for the tasks the MIPs hand out, and for what no task foresaw. Not core: each is named by its hash, frozen at publication, and competes with any other cMIP for the same job.
+Community specifications for the tasks the MICS hands out, and for what no task foresaw. Not core: each is named by its hash, frozen at publication, and competes with any other cMIP for the same job.
 
 Planned for MOR V1:
 

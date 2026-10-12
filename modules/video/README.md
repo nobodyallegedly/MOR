@@ -1,6 +1,6 @@
 # mor-video
 
-The video Module (F243): the founding implementation of `modules/module-video-draft-1.md`, a media type for task 5 of the Envelopes MIP. The website display client (`clients/site`) checks every film with it before playing, and `mor-site publish` refuses a film it would not play or that still carries more than the film.
+The video Module (F243): the founding implementation of `modules/module-video-draft-1.md`, a media type for task 5 of the Envelopes MIR. The website display client (`clients/site`) checks every film with it before playing, and `mor-site publish` refuses a film it would not play or that still carries more than the film.
 
 ## In plain words
 

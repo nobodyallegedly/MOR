@@ -1,6 +1,6 @@
 # Module: JPEG
 
-*Draft 1, 30 September 2026 (roadmap step 9). Approved by Nobody, allegedly, 30 September 2026. Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v17, the Envelopes MIP draft 6, the Text MIP draft 6, the Development MIP draft 4, the relay transport cMIP draft 2 and findings F1 to F102. Not core: a founding media type for task 5 (media interpretation), frozen at publication, competing with any other.*
+*Draft 1, 30 September 2026 (roadmap step 9). Approved by Nobody, allegedly, 30 September 2026. Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v17, the Envelopes MIR draft 6, the Text MIR draft 6, the Development MIR draft 4, the relay transport cMIP draft 2 and findings F1 to F102. Not core: a founding media type for task 5 (media interpretation), frozen at publication, competing with any other.*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 
@@ -12,7 +12,7 @@
 
 ## Purpose
 
-This Module fills task 5 of the Envelopes MIP (Development, task table: media interpretation) for one media type. It defines:
+This Module fills task 5 of the Envelopes MIR (Development, task table: media interpretation) for one media type. It defines:
 
 - what the media object's bytes are;
 - the picture a reader shows from them;
@@ -59,7 +59,7 @@ Envelopes (publication, media lock, work hash, withdrawal) and Development. Text
 
    *The compressed picture is copied as it was, so the stripped file decodes to exactly the same pixels, turned and coloured the same way. Nothing is re-encoded, so nothing is lost. A client strips before locking: the work hash, the locked hash and the size in the publication are those of the stripped file.*
 
-   *No verifier can tell whether a picture was stripped by choice or by accident, and the Module accepts any JPEG (rule 1), so this is conformance, like the Text MIP's rule 5a: it is the poster's own client that protects the poster.*
+   *No verifier can tell whether a picture was stripped by choice or by accident, and the Module accepts any JPEG (rule 1), so this is conformance, like the Text MIR's rule 5a: it is the poster's own client that protects the poster.*
 
 ## A picture in a post
 
@@ -68,7 +68,7 @@ Envelopes (publication, media lock, work hash, withdrawal) and Development. Text
    - shows it under the publication's own signer: a picture by another identity is shown as theirs, not the poster's (a repost is a reference, Envelopes);
    - fetches its locked bytes, checks them against the locked hash, opens them with the publication's key and nonce, and checks the plaintext against the work hash and the size before showing anything (Envelopes rule 14 asks this of purchases; a reader asks it of every picture);
    - shows it as not available once the publication is withdrawn (Envelopes, "Withdrawal"), wherever it finds the withdrawal; the post itself stands.
-   *A client without this Module still shows the post's text, and the reference as a reference (Text MIP, rule 3; Envelopes rule 11).*
+   *A client without this Module still shows the post's text, and the reference as a reference (Text MIR, rule 3; Envelopes rule 11).*
 
 ## Stated costs
 

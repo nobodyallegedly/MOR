@@ -98,7 +98,7 @@ Every term, however demanding, is legible to both sides before they sign. Nothin
 
 ## 7. What MOR provides, and what it needs
 
-**From the core, nothing new.** Everything above uses what the MIPs already define: identities, homes and routes; media objects and locked media with attached or delivered keys; key delivery to a bare application key; payee pointers, flow and vault; work claims, stakes, publication stakes and stake sales; collectives with a way to rotate, and grants; agreements, keepers, time references, deals that change only with every party's signature, and the negotiation record; splits, including splits that follow attention metrics evidenced by the service that measured them.
+**From the core, nothing new.** Everything above uses what the MICS already defines: identities, homes and routes; media objects and locked media with attached or delivered keys; key delivery to a bare application key; payee pointers, flow and vault; work claims, stakes, publication stakes and stake sales; collectives with a way to rotate, and grants; agreements, keepers, time references, deals that change only with every party's signature, and the negotiation record; splits, including splits that follow attention metrics evidenced by the service that measured them.
 
 **Open for others to build (cMIPs and Modules):**
 

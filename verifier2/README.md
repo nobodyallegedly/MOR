@@ -7,7 +7,7 @@ allegedly, recorded in `docs/verifier2-report.md`.*
 
 ## What it covers
 
-Agreements draft 10 on how a collective ends (`spec/MIP-agreements-draft-10.md`: "Made before, made
+Agreements draft 10 on how a collective ends (`spec/MIR-agreements-draft-10.md`: "Made before, made
 after", "Fork (type 19)", "Closing (type 20)", rules 35a, 35b, 36a, 37b, 40, 43, 44d,
 47a, 47b; Identity draft 11, "Chain signature (type 16)"; findings F131 and F132):
 

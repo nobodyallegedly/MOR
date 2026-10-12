@@ -2,7 +2,7 @@
 
 These case studies are invitations: what MOR could be, with your help. Each one follows people through a field and ends with the cMIPs and Modules it still needs, for others to build.
 
-They are not part of the core. The core document and the six MIPs in `spec/` define the protocol; the core names no case study, and nothing here adds a rule.
+They are not part of the core. The MICS, its document and its six MIRs in `spec/`, defines the protocol; the core names no case study, and nothing here adds a rule.
 
 - [Augmented Democracy](04-MOR-case-study-augmented-democracy-v4.md): points instead of candidates, from a neighbourhood association to a binding commune budget.
 - [From Bedroom to Label](08-MOR-case-study-musician-to-label-v4.md): a musician from stems and remixes to a band and a label deal. *Draft 4: draft 3 brought up to date with vows and F252 to F266, 12 October 2026.*

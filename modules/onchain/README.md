@@ -1,6 +1,6 @@
 # mor-onchain
 
-**Experimental**: an instrument for testing the Money MIP, never for real money; its costs are stated in its text. The on-chain Bitcoin rail Module (`../module-onchain-rail-draft-2.md`), under the payment cMIP (`../../cmips/cmip-payment-draft-2.md`, crate `mor-payment`).
+**Experimental**: an instrument for testing the Money MIR, never for real money; its costs are stated in its text. The on-chain Bitcoin rail Module (`../module-onchain-rail-draft-2.md`), under the payment cMIP (`../../cmips/cmip-payment-draft-2.md`, crate `mor-payment`).
 
 - `src/p2c.rs`: pay-to-contract on Taproot: the payee's key tweaked by the payment commitment gives the payment's address (BIP 341). The Bitcoin clock's batch anchors (step 14a) reuse it with a batch root.
 - `src/tx.rs`, `src/block.rs`: a transaction without its witness, block headers, targets and Merkle branches, as the rule reads them.

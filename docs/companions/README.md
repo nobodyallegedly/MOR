@@ -1,6 +1,6 @@
 # MOR companion documents
 
-Companion documents are written for readers outside the project. They explain MOR; they are not part of the core and add no rule. The core document and the six MIPs in `spec/` define the protocol.
+Companion documents are written for readers outside the project. They explain MOR; they are not part of the core and add no rule. The MICS, its document and its six MIRs in `spec/`, defines the protocol.
 
 - [The unwritten layer](05-MOR-the-unwritten-layer-v3.md): the economies people build on the six layers, in the shape of the third film: the economy we know made honest, eight others, and the one that rewards everyone along the pipe; the redraft of [Who Can Earn on MOR](05-MOR-who-can-earn-v6.md), version 6, which stays.
 - [Core principle: Don't ban greed, make it legible](Core-principle-legible-greed-v3.md): why the core never judges whether a deal is fair, and what it guarantees instead.

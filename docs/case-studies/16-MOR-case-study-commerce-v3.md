@@ -82,7 +82,7 @@ This case study asks what happens when the costs Coase described fall without a 
 - **the seller:** the seller answers to the buyer and settles with the chain afterwards;
 - **insurance:** each order carries insurance from a named insurer, paid through the split, and the insurer settles.
 
-**The route is disclosed.** Like payment routes in the Money MIP, each hop's fee is a line in the settlement. The buyer sees what delivery cost and who was paid; Inès sees which carriers are worth using.
+**The route is disclosed.** Like payment routes in the Money MIR, each hop's fee is a line in the settlement. The buyer sees what delivery cost and who was paid; Inès sees which carriers are worth using.
 
 **Returns and disputes** use the same tools: a return is a new agreement reversing the order, with the courier's fee named; a disagreement starts with the buyer's contest, which marks the sale contested and voids nothing, and goes to the dispute cMIP from the gig economy case study; what is owed back is what the order's terms say.
 

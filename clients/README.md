@@ -6,7 +6,7 @@ The TypeScript clients (build brief: "Rust for the core library, relays and home
 | --- | --- | --- |
 | `genesis/` | The genesis client: test identities, routes, encryption keys, rotations, key delivery. | step 5 |
 | `repo/` | The repo client: a test collective under a founding agreement, releases of the code as signed manifests, verification of every file. | step 5a |
-| `longform/` | The long-form text format: reading, rendering to HTML with the plain text one tap away, and the Text MIP's bound checked on every rendering; a document as a text act, published and read back verified. | step 8 |
+| `longform/` | The long-form text format: reading, rendering to HTML with the plain text one tap away, and the Text MIR's bound checked on every rendering; a document as a text act, published and read back verified. | step 8 |
 | `barebone/` | The barebone client: a post with a picture (a text act referring to a JPEG publication, stripped to the picture alone), shown verified; withdrawal. | step 9 |
 | `poster/` | MOR Post: the barebone client as an app on the Mac, for one person alone, no command line: one identity, made here (its signing words written down, three typed back) or brought here by its words (the identity carry Module); write, add a picture, post, and see it read back verified; this identity's posts; withdraw a picture. The desk's server and launcher. | step 9b |
 | `reader/` | The web reader, the door: opens by link, verifies in the browser, renders documents and posts, shows the signer's fingerprint; reach the owner by email or by a message sealed over MOR. | step 10 |
