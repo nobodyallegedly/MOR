@@ -220,6 +220,43 @@ async fn too_large() {
     assert_eq!(r.client.info().await.unwrap().limits, limits);
 }
 
+/// The answer to a body too large to read says the connection is closed,
+/// so no client sends its next request on it (findings log, "The relay's
+/// 'too large' answer always reaches the sender").
+#[tokio::test(flavor = "multi_thread")]
+async fn too_large_closes_the_connection() {
+    let limits = Limits {
+        act: 2000,
+        media: 100,
+        feed: 10,
+        wait: 2,
+    };
+    let r = Running::start_with(Role::Relay, Policy::Open, limits).await;
+    let http = reqwest::Client::new();
+    for path in ["acts", "media", "sealed"] {
+        let answer = http
+            .post(format!("{}/{path}", r.base))
+            .body(vec![1u8; 200_000])
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(answer.status(), 413);
+        assert_eq!(answer.headers()["connection"], "close");
+        let e = wire::WireError::decode(&answer.bytes().await.unwrap()).unwrap();
+        assert_eq!(e.code, code::TOO_LARGE);
+    }
+    // A body over the limit but within what the relay reads keeps the
+    // connection: it was read to its end.
+    let answer = http
+        .post(format!("{}/media", r.base))
+        .body(vec![1u8; 101])
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(answer.status(), 413);
+    assert!(answer.headers().get("connection").is_none());
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn the_feed() {
     let r = Running::start(Role::Relay, Policy::Open).await;

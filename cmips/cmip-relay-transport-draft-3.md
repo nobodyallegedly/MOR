@@ -377,6 +377,8 @@ error = {
 | 9 | not supported by this relay (including a probe it refuses) |
 | 10 | slow down |
 
+**A body too large is still answered** *(decided by Nobody, allegedly, 12 October 2026, findings log, "The relay's 'too large' answer always reaches the sender")*. A relay that refuses a body as too large reads the rest of it and throws it away, up to a bound of its own stated in its documentation, before closing the connection, and marks its error 6 with `Connection: close`. *A relay that closes while the sender is still sending can lose its own answer: the sender's system may throw it away unread. Cost, stated: a relay reads data it will not keep, up to its bound; a sender past the bound is cut off and may see only a closed connection.*
+
 **Silence is not evidence.** "Not held", an absent part and an empty feed say only what this relay answered once. A client MUST NOT treat any of them as proof that an act does not exist, was never made, or was withdrawn. *The core can prove life (an objection names an act that existed), never absence.*
 
 ## Clients
