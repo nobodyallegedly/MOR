@@ -1,0 +1,21 @@
+{
+  "name": "mor-nudge",
+  "version": "0.1.0",
+  "description": "The nudge cMIP (draft 2): an agent's agency terms, the nudge and the pick, made and read; the readings a verifier shows beside an action (within the terms, free or by pick; outside; unknown; unclear; over the count). Test identities only.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}
