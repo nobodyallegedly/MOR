@@ -2706,6 +2706,23 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **From** `docs/reviews/case-studies-vs-vows.md` (Q-G1): can a vow sell something that already exists but has no bytes (a bowl in stock, an hourly rate, storage)? *Laid beside it, his words:* "MOR truly needed a structured way of selling something that has no bytes, or no bytes yet"; "IOU of services that need to come at a later date". *Options:* (a) yes; (b) only what does not exist yet, the rest sold through the access form with no sale state; (c) the cMIPs decide. **Decided by Nobody, allegedly: "Yes, a. I think my quote settles it."** A vow is any act naming something MOR cannot hash, existing or to come; every sale of a physical good or a service names one, and gets pending, confirmed or contested. One form for one task (Fable's finding 7). *Suggested by the project lead.* *Noted for the texts' redraft:* what the access form `[ 2, [cMIP, params] ]` still serves once vows cover goods and services (access to bytes, such as a subscription's keys) is to be said there.
 
+## F272. A reference to a public act names its signer; a client holds what it points at (two homes report, 12 October 2026, evening)
+
+**Area: core business** (the reference's format is shared language). **Found by** the two homes report: a reader holding Machine, allegedly's reply at home2 learned which post it answered, by id, but not whose it was nor where it was kept, so it could not reach it by identity, home and routes; it could only guess at relays it knew.
+
+*Laid beside it:* F70 ("shared language, not a mandate"); Envelopes rule 20 (a reference means only "look at this"); "An act counts for a verifier only once the verifier holds it"; the working rule against rules that cannot be checked; client conformance is never the convenient path.
+
+*Walked with him:* (a) the signer required in every reference, checked by verifiers; (b) optional; (c) nothing in the core. His questions: "If optional it becomes cMIP no?" (no: the reference's form is closed in the core, so only the core can make room in it; optional pieces every client reads alike are core, as the inbox route is); "Then why optional and not must again?" (a verifier cannot check a named signer without fetching the act named); "Why shouldn't the fetch be forced?" (forcing the verifier to fetch would make an act's validity hostage to whoever keeps the act it names; the writer's fetch can be asked, as client conformance). Asked which the project lead would pick: b++, with a carve-out found while walking it, private acts, since naming the signer of a sealed message in a public reference would expose the sender the container hides.
+
+**Decided by Nobody, allegedly: "Sounds good. Public acts get their extra room to breathe."**
+
+- A reference to an act MAY carry the signer's identity hash beside the act id (Envelopes field 8). A reader uses it only to know where to look: identity, home, routes, act.
+- *Client conformance:* when the act referenced is public, the client MUST hold it and MUST name its signer. When it is private, naming the signer is the writer's choice. Web references are unchanged.
+- Validity is untouched: a missing signer never makes an act invalid; a wrong one fails when the reference is followed, since the fetched act shows its own signer.
+- *For the freeze suite:* a stranger holding only a reply at one home follows it, by the signer named, to the post at another home.
+
+*Suggested by the project lead:* the form (b++) and the private carve-out. Built after the rename pass, with the inbox delivery of replies.
+
 ## Two identities on two homes: readings (Machine report `two-homes.md`, 12 October 2026, evening)
 
 Nobody, allegedly, now keeps and receives at home1, Machine, allegedly, at home2 (routes version 3, act a5e8e9ba…; routes version 2, act 1877ff45…). A post at home1 and Machine, allegedly's reply at home2 were each found from the other home through their signers' routes, and verified. Two things did not resolve by themselves. Both are readings taken by the project lead under the delegation, not decisions of Nobody, allegedly.
