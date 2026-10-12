@@ -25,6 +25,8 @@ import { Reading, decodePick } from '../../nudge/src/nudge.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Client, newKey, type Done, type State } from '../src/page/api.ts';
 import { grounding } from '../src/claude.ts';
+import { pageScript } from '../src/local.ts';
+import { fileURLToPath } from 'node:url';
 
 const KEY = 'sk-ant-api03-FAKE-never-a-real-key-machine-0123456789';
 
@@ -303,4 +305,10 @@ test('answering off: nothing is looked at or called', async () => {
   const calls = api.seen.length;
   assert.equal((await look()).answered, 0);
   assert.equal(api.seen.length, calls);
+});
+
+test('the call to Claude stays in the program: the page’s code, as served, carries neither the SDK nor the asking code', async () => {
+  const page = await pageScript(fileURLToPath(new URL('../src/page/app.ts', import.meta.url)));
+  assert.doesNotMatch(page, /@anthropic-ai|api\.anthropic\.com|x-api-key|messages\.create|MOR_ANTHROPIC_KEY_FILE|You write as "Machine, allegedly"/i);
+  assert.doesNotMatch(page, /sk-ant-/);
 });
