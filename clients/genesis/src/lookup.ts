@@ -384,7 +384,12 @@ export async function followRef(r: Reference, hints: string[], via: Via = {}): P
   const here = await fetchFrom(hints);
   if (here) return { ...here, how: 'asked', notTried };
   if (!named) throw new Error(`the act ${id} was not found at ${hints.join(', ')}, and the reference names no signer to look by`);
-  const l = await lookUp(named, hints, via);
+  let l: Lookup;
+  try {
+    l = await lookUp(named, hints, via);
+  } catch (e) {
+    throw new Error(`the act ${id} was not found at ${hints.join(', ')}, and its signer ${named} could not be looked up there: ${e instanceof Error ? e.message : e}`);
+  }
   for (const n of l.notTried) if (!notTried.some((x) => x.hint === n.hint)) notTried.push(n);
   const places = (l.verifier as Verifier & { places(signer: string): string[] }).places(named);
   const there = await fetchFrom(places.filter((p) => !hints.includes(p)));

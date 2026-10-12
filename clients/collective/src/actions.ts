@@ -3095,6 +3095,9 @@ export class Actions {
           REPO_SPECS.agreements,
           AGREEMENTS_TYPES.split,
           splitPayload({ receipt: r.id, payouts: ps, cmip: TEST_RAIL, agreement: col.f.agreement, tally: [[index, tally]] }),
+          // The previous split is private: naming its signer beside it is the
+          // writer's choice (Envelopes draft 9, rule 20, F272); this client does
+          // not, so a reference does not say who sent what a sealed container hid.
           { public: false, to, relays, refs: previous ? [previous] : undefined },
         );
         col.f.splits = [...(col.f.splits ?? []), { id: x.id, key: Buffer.from(x.key).toString('base64'), receipt: r.id, service: service!, stake: index, previous }];

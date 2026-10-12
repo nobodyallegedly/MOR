@@ -203,7 +203,7 @@ export function makeServer(c: Config = fromEnv()): McpServer {
         ...common,
         text: z.string().describe('The text, exactly as it should be published.'),
         format: z.enum(['plain', 'long-form']).optional().describe('plain (default) or long-form (a strict subset of Markdown).'),
-        refs: z.array(z.string()).optional().describe('Act ids it refers to, if any: a picture it shows, a post it answers.'),
+        refs: z.array(z.string()).optional().describe('Act ids it refers to, if any: a picture it shows, a post it answers. Each act is fetched first; a public one is named with its signer (F272), and a post answering another identity\'s act also leaves a sealed copy in that identity\'s inbox once approved.'),
         relays: sendTo,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },

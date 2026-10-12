@@ -14,7 +14,8 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { collectiveTerms } from '../../repo/src/collective.ts';
 import { proposePayload, termsPayload } from '../../repo/src/agreements.ts';
 import { POST_SPECS } from '../../barebone/src/specs.ts';
-import { decodeDraft, draftDigest, saveLinked } from '../src/draft.ts';
+import { decodeDraft, draftDigest, encodeDraft, saveLinked } from '../src/draft.ts';
+import { cborEncode } from '../../genesis/src/core.ts';
 import { addTo, addToClaude, installDir } from '../scripts/add-to-claude.ts';
 import { connect, governance, world, type World } from './world.ts';
 
@@ -109,6 +110,27 @@ test('a post is prepared as a draft for the desk, for a linked identity, by hash
   const s = await mcp.ask('mor_drafts', { draft: h.digest.slice(0, 10) });
   assert.match(s.text, /Waiting at the desk: the owner has not answered yet\./);
   assert.match(s.text, /BEGIN WORDS SIGNED BY OTHERS[^\n]*\nHello from a test identity\./);
+});
+
+test('a reply is prepared naming the signer of the public act it answers, held first; a private act is named by its id alone (F272)', async () => {
+  const author = w.members[0];
+  const theirs = await author.publish(POST_SPECS.text, 0, cborEncode(new Map([[0, 'A post to answer.']])), { public: true, relays: [w.relay.base] });
+  const secret = await author.publish(POST_SPECS.text, 0, cborEncode(new Map([[0, 'Private.']])), { public: false, relays: [w.relay.base] });
+  const p = await mcp.ask('mor_prepare_post', { signer: 'Outsider', text: 'An answer.', refs: [theirs.id, secret.id] });
+  assert.equal(p.isError, false, p.text);
+  const d = decodeDraft(new Uint8Array(readFileSync(handed(p.text).path)));
+  assert.deepEqual(d.refs, [[theirs.id, author.id], secret.id]);
+  // Addressed to the identity whose public act it answers (reading B1); the private act's signer is not named.
+  assert.deepEqual(d.to, [author.id]);
+  assert.match(p.text, /The reference names its signer/);
+  // The draft's bytes carry the signed form and read back the same.
+  assert.deepEqual(decodeDraft(encodeDraft(d)), d);
+  // Not found where the connector looks: no draft.
+  const before = drafts();
+  const r = await mcp.ask('mor_prepare_post', { signer: 'Outsider', text: 'x', refs: ['cd'.repeat(32)] });
+  assert.equal(r.isError, true);
+  assert.match(r.text, /only to an act this client holds/);
+  assert.equal(drafts(), before);
 });
 
 test('nothing is prepared for an identity not linked at the desk', async () => {

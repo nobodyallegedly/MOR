@@ -114,6 +114,14 @@ export interface SignedRecord {
   /** Media to put after a publication, base64. */
   media?: string[];
   relays: string[];
+  /**
+   * A public reply: for each identity whose act it answers, the act sealed
+   * to that identity, base64, and its inboxes (reading B1, docs/f272-build.md).
+   * Made at signing, so sending again sends the same bytes.
+   */
+  copies?: { to: string; sealed: string; inbox: string[] }[];
+  /** Identities answered that could not be given a copy, and why. */
+  noCopy?: { to: string; why: string }[];
 }
 
 const writeJson = (path: string, v: unknown) => {

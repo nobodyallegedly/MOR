@@ -19,7 +19,7 @@ import {
   workHash,
 } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
-import { lookUp } from '../../genesis/src/lookup.ts';
+import { cannotReach, firstOf, followRef, lookUp, referenceTo, type NotTried, type Reference } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { NotJpeg, read, strip, type Carried, type Picture } from '../../../modules/jpeg/src/jpeg.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from './specs.ts';
@@ -42,6 +42,8 @@ async function carryChain(by: TestIdentity, relays: string[]): Promise<void> {
 export interface PublishedPicture {
   /** The publication's act id. */
   id: string;
+  /** The publication itself, as signed: held, so a post can refer to it (F272). */
+  act: Uint8Array;
   /** What was stripped out before publishing (JPEG Module, rule 6). */
   removed: Carried[];
   picture: Picture;
@@ -72,7 +74,7 @@ export async function publishPicture(by: TestIdentity, jpeg: Uint8Array, relays:
   await carryChain(by, relays);
   const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
-  return { id: made.id, removed: s.removed, picture: s.picture, work: l.workHash, size: s.bytes.length };
+  return { id: made.id, act: made.act, removed: s.removed, picture: s.picture, work: l.workHash, size: s.bytes.length };
 }
 
 /** A text act's payload: the text and, optionally, its format (Text MIR, "Act format"). */
@@ -90,7 +92,8 @@ export interface Posted {
 
 /**
  * Post a text, with a picture if one is given: the picture's publication
- * first, then the text act naming it in `refs`. The text must already be
+ * first, then the text act naming it in `refs`, with its signer (a public
+ * act, held: Envelopes draft 9, rule 20, F272). The text must already be
  * canonical (compose it first); the core library refuses it otherwise.
  * Save the identity file after: its sequence has grown.
  */
@@ -103,7 +106,7 @@ export async function post(
   const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, opts.format ?? null), {
     public: true,
     relays: opts.relays,
-    refs: picture ? [picture.id] : undefined,
+    refs: picture ? [referenceTo(picture.act)] : undefined,
   });
   return { id: made.id, picture };
 }
@@ -132,6 +135,8 @@ interface Described {
   type?: number;
   objects?: [string, string][];
   refs?: string[];
+  /** The signer each of `refs` names beside it (F272), or nothing. */
+  refSigners?: (string | undefined)[];
   payload?: Uint8Array;
 }
 
@@ -155,6 +160,8 @@ export interface ShownPicture {
 export interface OtherRef {
   kind: 'act';
   id: string;
+  /** The signer the reference names beside the act (F272), if any. */
+  signer?: string;
   /** What it is, in a few words, when it was found and opened. */
   what: string;
 }
@@ -166,18 +173,13 @@ export interface ShownPost {
   text: string;
   format: string | null;
   refs: (ShownPicture | OtherRef)[];
+  /** Addresses not tried, because this client cannot reach them (an onion address from a browser), each with why. */
+  notTried: NotTried[];
 }
 
+/** An act by id from the places asked, side by side; the first that holds it (reading B4). */
 async function fetchAct(id: string, hints: string[], via: Via): Promise<Uint8Array | null> {
-  for (const h of hints) {
-    try {
-      const a = await relayAt(h, via).getAct(id);
-      if (a) return a;
-    } catch {
-      // not reachable: try the next
-    }
-  }
-  return null;
+  return firstOf(hints.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getAct(id));
 }
 
 function describeChecked(act: Uint8Array, id: string): Described {
@@ -194,7 +196,9 @@ function describeChecked(act: Uint8Array, id: string): Described {
 /** Identities already looked up into this verifier. */
 class Judge {
   v: Verifier;
-  private looked = new Set<string>();
+  /** Addresses not tried by any lookup, each with why. */
+  notTried: NotTried[] = [];
+  private looked = new Map<string, Promise<void>>();
   constructor(
     private hints: string[],
     private via: Via,
@@ -202,10 +206,15 @@ class Judge {
     this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   }
   async standing(act: Uint8Array, id: string, signer: string): Promise<string> {
-    if (!this.looked.has(signer)) {
-      await lookUp(signer, this.hints, this.via, this.v);
-      this.looked.add(signer);
+    // One lookup per signer, shared by everything read side by side.
+    let l = this.looked.get(signer);
+    if (!l) {
+      l = lookUp(signer, this.hints, this.via, this.v).then((x) => {
+        for (const n of x.notTried) if (!this.notTried.some((y) => y.hint === n.hint)) this.notTried.push(n);
+      });
+      this.looked.set(signer, l);
     }
+    await l;
     this.v.add(act);
     return this.v.status(id);
   }
@@ -232,23 +241,38 @@ export async function readPost(id: string, hints: string[], via: Via = {}): Prom
   const f = p.get(1);
   const judge = new Judge(hints, via);
   const standing = await judge.standing(act, id, d.signer);
-  const refs: (ShownPicture | OtherRef)[] = [];
-  for (const r of d.refs ?? []) refs.push(await readRef(r, hints, via, judge));
-  return { id, signer: d.signer, standing, text, format: f instanceof Uint8Array ? hex(f) : null, refs };
+  const named: Reference[] = (d.refs ?? []).map((r, i) => (d.refSigners?.[i] ? [r, d.refSigners[i]!] : r));
+  const refs = await Promise.all(named.map((r) => readRef(r, hints, via, judge)));
+  return { id, signer: d.signer, standing, text, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge.notTried };
 }
 
-async function readRef(id: string, hints: string[], via: Via, judge: Judge): Promise<ShownPicture | OtherRef> {
-  const act = await fetchAct(id, hints, via);
-  if (!act) return { kind: 'act', id, what: 'not found at the relays asked' };
+/**
+ * Read an act a post refers to: from the places asked; not there, and the
+ * reference names a signer, by that signer's homes and routes (F272). A
+ * reference whose signer is wrong is said, the act fetched showing its own.
+ */
+async function readRef(r: Reference, hints: string[], via: Via, judge: Judge): Promise<ShownPicture | OtherRef> {
+  const id = typeof r === 'string' ? r : r[0];
+  const signer = typeof r === 'string' ? undefined : r[1];
+  let act: Uint8Array | null = null;
+  try {
+    const f = await followRef(r, hints, via);
+    act = f.act;
+    for (const n of f.notTried) if (!judge.notTried.some((x) => x.hint === n.hint)) judge.notTried.push(n);
+  } catch (e) {
+    const why = e instanceof Error ? e.message : String(e);
+    if (/the reference is wrong/.test(why)) return { kind: 'act', id, signer, what: why };
+  }
+  if (!act) return { kind: 'act', id, signer, what: signer ? "not found at the relays asked, nor at its signer's routes and homes" : 'not found at the relays asked' };
   let d: Described;
   try {
     d = describeChecked(act, id);
   } catch (e) {
-    return { kind: 'act', id, what: `not a valid act: ${e instanceof Error ? e.message : e}` };
+    return { kind: 'act', id, signer, what: `not a valid act: ${e instanceof Error ? e.message : e}` };
   }
-  if (!d.public) return { kind: 'act', id, what: 'a private act' };
-  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: 'act', id, what: 'a text act' };
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: 'act', id, what: 'an act of a specification this client does not implement' };
+  if (!d.public) return { kind: 'act', id, signer, what: 'a private act' };
+  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: 'act', id, signer, what: 'a text act' };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: 'act', id, signer, what: 'an act of a specification this client does not implement' };
   return readPicture(act, d, hints, via, judge);
 }
 
@@ -284,15 +308,9 @@ async function readPicture(act: Uint8Array, d: Described, hints: string[], via: 
 
   // The reader's own relays first; only then the places the publication names.
   const named = Array.isArray(m.get(6)) ? (m.get(6) as unknown[]).filter((x): x is string => typeof x === 'string') : [];
-  let locked: Uint8Array | null = null;
-  for (const h of [...hints, ...named.filter((n) => !hints.includes(n))]) {
-    try {
-      locked = await relayAt(h, via).getMedia(hex(lockedHash));
-      if (locked) break;
-    } catch {
-      // try the next
-    }
-  }
+  // Each group side by side (reading B4); the publication's places only if the reader's own relays hold nothing.
+  const media = (places: string[]) => firstOf(places.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getMedia(hex(lockedHash)));
+  const locked = (await media(hints)) ?? (await media(named.filter((n) => !hints.includes(n))));
   if (!locked) return no('its bytes were not found');
   let plain: Uint8Array;
   try {
@@ -327,34 +345,34 @@ async function findWithdrawal(
 ): Promise<string | null> {
   const who = [signer];
   if (forId instanceof Uint8Array) who.push(hex(forId));
-  for (const h of hints) {
-    for (const s of who) {
-      let after: number | undefined;
-      for (;;) {
-        let page;
-        try {
-          page = await relayAt(h, via).feed({ signer: s, after });
-        } catch {
-          break;
-        }
-        for (const it of page.items) {
-          if (it.kind !== 'act') continue;
-          let d: Described;
-          try {
-            d = describeAct(it.item) as Described;
-          } catch {
-            continue;
-          }
-          if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
-          if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
-          if ((await judge.standing(it.item, d.id, d.signer)) === 'valid') return d.id;
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
+  // Every relay and signer side by side (reading B4); the first valid withdrawal found counts.
+  const search = async (h: string, s: string): Promise<string | null> => {
+    let after: number | undefined;
+    for (;;) {
+      let page;
+      try {
+        page = await relayAt(h, via).feed({ signer: s, after });
+      } catch {
+        return null;
       }
+      for (const it of page.items) {
+        if (it.kind !== 'act') continue;
+        let d: Described;
+        try {
+          d = describeAct(it.item) as Described;
+        } catch {
+          continue;
+        }
+        if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
+        if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
+        if ((await judge.standing(it.item, d.id, d.signer)) === 'valid') return d.id;
+      }
+      if (!page.items.length || page.next === after) return null;
+      after = page.next;
     }
-  }
-  return null;
+  };
+  const pairs = hints.filter((h) => !cannotReach(h, via)).flatMap((h) => who.map((s) => [h, s] as const));
+  return firstOf(pairs, ([h, s]) => search(h, s));
 }
 
 /** The posts an identity has published at a relay, newest last: text acts only. */
