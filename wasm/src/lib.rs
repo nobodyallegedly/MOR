@@ -1842,8 +1842,79 @@ struct TermsOut {
     /// In a deal, the judge that settles its forks, one of field 13 (field
     /// 27, QF2, F190); null: none does.
     fork_judge: Option<String>,
+    /// The split plan (field 8), as the core decodes it; null if absent.
+    plan: Option<PlanOut>,
+    /// The refund terms (field 17, F219); null if absent.
+    refund: Option<RefundOut>,
+    /// The fees (field 28, F213, F214); null if absent.
+    fees: Option<Vec<FeeOut>>,
     /// Why the terms fail the checks that need no other act, or null.
     problem: Option<ProblemOut>,
+}
+
+/// A share of the split plan (field 8): its kind ("stake", "role",
+/// "receiver" or "metric"), what it names, and its part.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlanShareOut {
+    kind: String,
+    stake: Option<u64>,
+    role: Option<String>,
+    receiver: Option<String>,
+    metric: Option<u64>,
+    part: u64,
+}
+
+/// The largest rail fee a payout may lose (plan key 6): in millionths of
+/// the payout, or an absolute amount in a unit.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MaxFeeOut {
+    /// "millionths" or "absolute" ("unread" never: the core refuses any other).
+    form: String,
+    value: u64,
+    unit: Option<String>,
+}
+
+/// The split plan (terms field 8) as `readTerms` shows it.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlanOut {
+    shares: Vec<PlanShareOut>,
+    /// The split cMIP that computes the amounts (key 1).
+    cmip: String,
+    /// What happens to a role share nobody fills (key 3, F218): "stakes",
+    /// "held-open" or "to", with `unfilledTo`.
+    unfilled: String,
+    unfilled_to: Option<String>,
+    /// Shares taken off the top, by index in `shares` (key 4).
+    top: Vec<u64>,
+    /// Key 5: the split service bears each payout's rail fee; else each receiver.
+    service_bears_rail_fees: bool,
+    /// Key 6: null where the plan states no maximum.
+    max_rail_fee: Option<MaxFeeOut>,
+    /// The metrics' modules and measurers (key 8, rule 28).
+    metrics: Vec<(String, String)>,
+}
+
+/// Refund terms (field 17, F219): the fixed point on the time reference past
+/// which a refund owed is ended; a number where the point is one, else null
+/// (the time reference's cMIP reads it).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RefundOut {
+    until: Option<u64>,
+}
+
+/// A fee entry (field 28): the Module it is owed to, its part, and when it
+/// applies: "every" payment, payments for a "publication", or by a "rail".
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FeeOut {
+    module: String,
+    part: u64,
+    scope: String,
+    of: Option<String>,
 }
 
 /// Terms field 29 as `readTerms` shows it (F249, F250): each backup split
@@ -1998,7 +2069,114 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         release_rule: t.release_rule.as_ref().map(rule_out),
         settles: t.settles.as_ref().map(|x| x.iter().map(hx).collect()),
         fork_judge: t.fork_judge.as_ref().map(hx),
+        plan: t.plan.as_ref().map(plan_out),
+        refund: t.refund.as_ref().map(|r| RefundOut {
+            until: match &r.until {
+                Value::Uint(n) => Some(*n),
+                _ => None,
+            },
+        }),
+        fees: t.fees.as_ref().map(|f| {
+            f.iter()
+                .map(|x| {
+                    let (scope, of) = match &x.scope {
+                        agreements::FeeScope::Every => ("every", None),
+                        agreements::FeeScope::Publication(h) => ("publication", Some(hx(h))),
+                        agreements::FeeScope::Rail(h) => ("rail", Some(hx(h))),
+                    };
+                    FeeOut {
+                        module: hx(&x.module),
+                        part: x.part,
+                        scope: scope.into(),
+                        of,
+                    }
+                })
+                .collect()
+        }),
         problem: t.check(&s.mips()?).err().map(|e| problem(&e)),
+    })
+}
+
+fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
+    let share = |kind: &str, part: u64| PlanShareOut {
+        kind: kind.into(),
+        stake: None,
+        role: None,
+        receiver: None,
+        metric: None,
+        part,
+    };
+    let (unfilled, unfilled_to) = match &p.unfilled {
+        agreements::Unfilled::Stakes => ("stakes", None),
+        agreements::Unfilled::HeldOpen => ("held-open", None),
+        agreements::Unfilled::To(h) => ("to", Some(hx(h))),
+    };
+    PlanOut {
+        shares: p
+            .shares
+            .iter()
+            .map(|s| match s {
+                agreements::ShareRule::Stake { stake, part } => PlanShareOut { stake: Some(*stake), ..share("stake", *part) },
+                agreements::ShareRule::Role { role, part } => PlanShareOut { role: Some(role.clone()), ..share("role", *part) },
+                agreements::ShareRule::Receiver { receiver, part } => PlanShareOut { receiver: Some(hx(receiver)), ..share("receiver", *part) },
+                agreements::ShareRule::Metric { metric, part } => PlanShareOut { metric: Some(*metric), ..share("metric", *part) },
+            })
+            .collect(),
+        cmip: hx(&p.cmip),
+        unfilled: unfilled.into(),
+        unfilled_to,
+        top: p.top.clone(),
+        service_bears_rail_fees: p.service_bears_rail_fees,
+        // The core accepted key 6 when it decoded the plan: a number in
+        // millionths, or else an amount.
+        max_rail_fee: p.max_rail_fee.as_ref().map(|v| match v {
+            Value::Uint(n) => MaxFeeOut {
+                form: "millionths".into(),
+                value: *n,
+                unit: None,
+            },
+            v => match money::Amount::decode(v) {
+                Ok(a) => MaxFeeOut {
+                    form: "absolute".into(),
+                    value: a.value,
+                    unit: Some(hx(&a.unit)),
+                },
+                // Never reached: the core refused the plan otherwise.
+                Err(_) => MaxFeeOut {
+                    form: "unread".into(),
+                    value: 0,
+                    unit: None,
+                },
+            },
+        }),
+        metrics: p.metrics.iter().map(|m| (hx(&m.module), hx(&m.measurer))).collect(),
+    }
+}
+
+/// A grant (Agreements type 9) as the core decodes it: whom it names
+/// (field 0), its scope (0 sign new deals, 1 manage named ones, 2 act for
+/// an identity), and whether it names "this agreement", the deal whose
+/// terms list it in field 14 (F129, H4).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GrantOut {
+    grantee: String,
+    scope: u64,
+    this_agreement: bool,
+    agreements: Option<Vec<String>>,
+}
+
+/// Read a grant's payload as the core library decodes it, so a client can
+/// name the split service a deal's payees granted (terms field 14) without
+/// reading the format itself. Throws if the payload is not a grant.
+#[wasm_bindgen(js_name = readGrant)]
+pub fn read_grant(payload: &[u8]) -> R<JsValue> {
+    let g = agreements::Grant::decode(&payload_of(payload)?).map_err(lerr)?;
+    to_js(&GrantOut {
+        grantee: hx(&g.grantee),
+        scope: g.scope,
+        this_agreement: g.this_agreement,
+        agreements: g.agreements.as_ref().map(|v| v.iter().map(hx).collect()),
     })
 }
 

@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, agreementsClonePlan, agreementsDivideStake, agreementsRollbackPlan, agreementsSplitTally, noticePayload, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
+import { beforeSigning } from '../../assess/src/assess.ts';
 import { TestCollective, collectiveTerms, type Governance } from '../../repo/src/collective.ts';
 import {
   AGREEMENTS_SPECS,
@@ -943,6 +944,8 @@ export class Actions {
       plain: [{ heading: 'The words everyone signs', text: t.text }, ...read.plain],
       blocking,
     };
+    // The deal-assessment tool (roadmap step 14): the shares and fees, and the risks, before signing.
+    reading.sections.push(...beforeSigning(payload, names));
     return this.plan({
       kind: 'found',
       digest: digestOf('found', payload, JSON.stringify({ homes: s.homes, relays })),
@@ -1146,6 +1149,8 @@ export class Actions {
       ],
       blocking,
     };
+    // The deal-assessment tool (roadmap step 14): the shares and fees, and the risks, before signing.
+    reading.sections.push(...beforeSigning(payload, names));
     return this.plan({
       kind: 'change',
       digest: digestOf('change', a.collective, payload, JSON.stringify({ members, rebuilders: usedRebuilders, resigning, drafts })),
@@ -2066,6 +2071,8 @@ export class Actions {
       ],
       blocking,
     };
+    // The deal-assessment tool (roadmap step 14): the shares and fees, and the risks, before signing.
+    reading.sections.push(...beforeSigning(payload, names));
     return this.plan({
       kind: 'words',
       digest: digestOf('words', a.collective, payload),
@@ -2175,6 +2182,8 @@ export class Actions {
       plain: [],
       blocking,
     };
+    // The deal-assessment tool (roadmap step 14): the shares and fees, and the risks, before signing.
+    reading.sections.push(...beforeSigning(payload, names));
     return this.plan({
       kind: 'absence',
       digest: digestOf('absence', a.collective, payload),
@@ -2730,6 +2739,8 @@ export class Actions {
       plain: [],
       blocking,
     };
+    // The deal-assessment tool (roadmap step 14): the shares and fees, and the risks, before signing.
+    reading.sections.push(...beforeSigning(payload, names));
     return this.plan({
       kind: 'stakes',
       digest: digestOf('stakes', a.collective, payload),

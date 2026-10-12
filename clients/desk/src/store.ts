@@ -74,6 +74,8 @@ export interface Item {
   alarm?: string;
   /** A payment naming an older version of a deal, with no fork: a plain notice, not the alarm (Agreements rule 45b, F188, DQ7). */
   notice?: string;
+  /** Terms received (Agreements type 0): the deal-assessment tool's shares and fees, and risks (roadmap step 14). Signed in the collective client. */
+  assessment?: { heading: string; lines: { text: string; tone?: 'warn' | 'bad' | 'ok' }[] }[];
   /** A split received (Agreements type 8): its service, the deal version it pays under, and its number (F188, DQ6). */
   split?: { service: string; agreement: string; number: number | null };
   /** When this desk first found it (this machine's clock: a hint, never part of any act). */
