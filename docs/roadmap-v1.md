@@ -214,6 +214,10 @@ Sessions launched by Nobody, allegedly, each reporting for the project lead: (a)
 
 (g) The marked pass and core v22: F252 in Envelopes 8, F267 in Money 7, F268 in Development 7 and Agreements 11; core v22 and freeze suite v22 naming the six current drafts, with every quoted sentence the reports listed. (h) The build: F267, F268's declared field, rule 17 in the clients (the toolkit reporting `prev`; unreadable lines asked for). (i) Step 14, the deal-assessment tool. (j) The flaky test hunt. **Then (F269, decided 12 October 2026): the rename pass: one core text a MIR (MOR Inscribed Rules, a set of rules), the six together the MICS (MOR Inscribed Core Spec); cMIPs keep their name; MIP is reserved for MOR 2's proposals.**
 
+### Claude through the API (decided by Nobody, allegedly, 12 October 2026)
+
+*With an API credit, the question was where a direct line to Claude helps.* **Decided by Nobody, allegedly:** (1) **the deal tool asks Claude**: "ask about this deal", answered from the tool's own reading and the rules its flags cite, nothing beyond them; run locally on the author's Mac, the API key there only. (2) **No chat box on the site.** "If they want to chat with Machine, allegedly. I approve what gets replied and what not. All my interactions with MA must happen on MOR only, so no chatbox but API yes." Visitors write to Machine, allegedly, by a sealed MOR message; the API drafts a reply as Machine, allegedly; the draft waits at the author's desk; nothing is sent unless he approves it. *Mechanics taken by the project lead:* the API key never in the repository or a browser; replies grounded in the MICS, the case studies and the companions, with the "Not claimed" discipline. Both after the rename pass.
+
 ### Documents awaiting the author's own redraft
 
 *Kept at the request of Nobody, allegedly (12 October 2026): documents approved "as is for now", to be redrafted in his own hand. Sessions may still correct facts in them; the redraft is his.*
