@@ -2723,6 +2723,8 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 *Suggested by the project lead:* the form (b++) and the private carve-out. Built after the rename pass, with the inbox delivery of replies.
 
+*The remaining direction, from a post to its replies, which relays do not sort by:* **Nobody, allegedly: "I agree, that is a question for the people wishing to build a public square."** Area: development layer; left to the relays' market and the relay transport cMIP (the desk's open question 4, option b).
+
 ## Two identities on two homes: readings (Machine report `two-homes.md`, 12 October 2026, evening)
 
 Nobody, allegedly, now keeps and receives at home1, Machine, allegedly, at home2 (routes version 3, act a5e8e9ba…; routes version 2, act 1877ff45…). A post at home1 and Machine, allegedly's reply at home2 were each found from the other home through their signers' routes, and verified. Two things did not resolve by themselves. Both are readings taken by the project lead under the delegation, not decisions of Nobody, allegedly.
