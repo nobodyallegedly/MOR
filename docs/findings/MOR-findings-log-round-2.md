@@ -2716,6 +2716,10 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 *Also noted:* pull request 23 (Identity draft 12, texts only) failed once in the Rust workspace on GitHub and passed on a rerun: another flaky test, its name unseen (the logs cannot be read from here). To find in the next seed or load sweep.
 
+## Core v22 and freeze suite v22 approved (12 October 2026, late afternoon)
+
+**Approved by Nobody, allegedly: "Approved."** Core v22 and freeze suite v22 (`docs/core-v22.md`, two passes, pull request 26, merged): the six current drafts named; F242 to F271 summarised; the marked passes written in (F252 in Envelopes 8; F267 and core v22's Q4 to Q6 in Money 7; F268 and Q1 to Q3 in Development 7; F270, F271 and the four slips in Agreements 11). Core v21 and suite v21 superseded, kept for older citations. Next: the MIR and MICS rename pass (F269).
+
 ## F267, F268 and rule 17 built (12 October 2026, evening)
 
 **From `docs/f267-f268-rule-17-build.md` (pull request 28; main merged into its branch by the project lead, one import conflict with the deal tool in the collective client resolved by keeping both; merged once the merged tree's tests pass):** F267 (a claim names the previous hop's receipt; a route reads a receipt or a claim; one payment, one forward; the conversion cMIP's CV1 test turned), F268 (the declared checker field; the anchoring and conversion cMIPs declare it), Identity rule 17 (now 35) in the clients (the WebAssembly reports `prev`; every line found and kept before a key change; an unreadable line shown and its card asked for; each app shows its own line's latest act). No question. The WebAssembly's bytes changed: a display client release follows. *Noted:* its site tests failed once on GitHub and passed on a rerun, the flaky kind; watched.
