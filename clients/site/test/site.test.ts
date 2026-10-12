@@ -5,9 +5,9 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { request } from 'node:http';
+import { createServer, request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -372,6 +372,65 @@ test("following: a gateway serves the publisher's latest version; pinned, the on
   assert.ok(l.ok);
   assert.deepEqual(l.fork, [a.id, b.id].sort());
   assert.equal(at(following).served, v2.id);
+});
+
+test('following: when the newest version does not arrive whole, the gateway serves the one before it and logs why, once', async () => {
+  const pub = TestIdentity.create({ homes: w.homes.map((h) => h.home) });
+  await pub.publishGenesis();
+  const relays = [w.relay.base];
+  const dir = siteCopy(w.firstAct);
+  const edit = (words: string) => writeFileSync(join(dir, 'run.html'), readFileSync(join(w.dir, 'run.html'), 'utf8').replace('<h1>Run</h1>', `<h1>${words}</h1>`));
+  const v1 = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays });
+  edit('Run 2');
+  const v2 = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v1.id });
+  edit('Run 3');
+  const v3 = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v2.id });
+
+  // The way to the relay loses one file of the newest version: its run.html never arrives.
+  const lost = v3.manifest.files.find((f) => f.path === 'run.html')!.locked;
+  const lossy = createServer(async (req, res) => {
+    if (req.url === `/media/${lost}`) {
+      res.writeHead(404).end();
+      return;
+    }
+    const body: Buffer[] = [];
+    for await (const c of req) body.push(c as Buffer);
+    const r = await fetch(w.relay.base.replace(/\/$/, '') + req.url, {
+      method: req.method,
+      headers: req.headers['content-type'] ? { 'content-type': req.headers['content-type'] } : {},
+      body: body.length ? Buffer.concat(body) : undefined,
+    });
+    res.writeHead(r.status, { 'content-type': r.headers.get('content-type') ?? 'application/octet-stream' });
+    res.end(Buffer.from(await r.arrayBuffer()));
+  });
+  await new Promise<void>((r) => lossy.listen(0, '127.0.0.1', r));
+  const port = (lossy.address() as { port: number }).port;
+
+  const settings = join(mkdtempSync(join(tmpdir(), 'mor-site-gateway-')), 'gateway.json');
+  writeFileSync(settings, JSON.stringify({
+    listen: '127.0.0.1:0',
+    look: 1,
+    sites: [{ hosts: ['127.0.0.1'], version: v1.id, identity: pub.id, name: 'theirs', relays, serve: 'latest' }],
+  }));
+  const gw = spawn('node', ['--import', 'tsx', 'src/cli.ts', 'gateway', '--settings', settings, '--via', `${w.relay.base}=http://127.0.0.1:${port}`], { cwd: here });
+  let out = '';
+  try {
+    // The start, then two looks again.
+    await new Promise<void>((done, fail) => {
+      gw.stdout.on('data', (d) => {
+        out += d;
+        if ((out.match(/^look: /gm) ?? []).length >= 2) done();
+      });
+      gw.on('exit', (code) => fail(new Error(`the gateway stopped (${code}):\n${out}`)));
+    });
+  } finally {
+    gw.kill();
+    lossy.close();
+  }
+  const line = `start: 127.0.0.1: tried the newer version ${v3.id} and could not serve it: 1 file did not arrive or did not match what was signed (run.html); serving version ${v2.id} instead`;
+  assert.ok(out.includes(line + '\n'), out);
+  assert.equal(out.split(v3.id).length - 1, 1, 'once for that version, not at every look');
+  assert.match(out, new RegExp(`^look: 127\\.0\\.0\\.1: version ${v2.id} verified`, 'm'));
 });
 
 test('the display client a gateway serves by default is the copy published in the release', () => {

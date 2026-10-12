@@ -38,6 +38,8 @@ export interface Loaded {
   problems: string[];
   /** Following: where it stopped at a fork, the versions naming the same one. */
   fork: string[];
+  /** Following: newer versions tried and passed over, each with the files that did not arrive or did not match. */
+  passed: { version: string; files: string[] }[];
 }
 
 /** One site the gateway carries. */
@@ -48,24 +50,26 @@ export class Carried {
   /** The version being served. */
   served: string | null = null;
   last: Loaded | null = null;
+  /** Newer versions passed over that the log has named already: each is named once, not at every look. */
+  private told = new Set<string>();
 
   constructor(public entry: SiteEntry) {}
 
   /** Fetch one version's files and check each; only a version that verifies whole replaces the one served. */
   private async take(version: Version, via: Via): Promise<string[]> {
-    const problems: string[] = [];
+    const missing: string[] = [];
     const files = new Map<string, Uint8Array>();
     for (const f of version.manifest!.files) {
       const b = await fetchFile(f, version.places, via);
       if (b) files.set(f.path, b);
-      else problems.push(`${f.path}: not found, or not matching its entry`);
+      else missing.push(f.path);
     }
-    if (!problems.length) {
+    if (!missing.length) {
       this.files = files;
       this.manifest = version.manifest!;
       this.served = version.version;
     }
-    return problems;
+    return missing;
   }
 
   /**
@@ -76,19 +80,32 @@ export class Carried {
    */
   async load(entry: SiteEntry, via: Via): Promise<Loaded> {
     const named = await openVersion(entry.version, entry.identity, entry.relays, via);
-    let loaded: Loaded = { ok: false, version: named, problems: [], fork: [] };
+    let loaded: Loaded = { ok: false, version: named, problems: [], fork: [], passed: [] };
     if (named.ok) {
       const later = entry.serve === 'latest' ? await findLater(named, via) : { after: [], fork: [] };
       loaded.fork = later.fork;
       for (const v of [...later.after].reverse().concat(named)) {
-        const problems = await this.take(v, via);
-        loaded = { ...loaded, ok: !problems.length, version: v, problems };
+        const missing = await this.take(v, via);
+        loaded = { ...loaded, ok: !missing.length, version: v, problems: missing.map((p) => `${p}: not found, or not matching its entry`) };
         if (loaded.ok) break;
+        if (v !== named) loaded.passed = [...loaded.passed, { version: v.version, files: missing }];
       }
     }
     if (loaded.ok) this.entry = entry;
     this.last = loaded;
     return loaded;
+  }
+
+  /** For the log, in plain words: each newer version passed over in this load and not named before. */
+  passedOver(loaded: Loaded): string[] {
+    const lines: string[] = [];
+    for (const p of loaded.passed) {
+      if (this.told.has(p.version)) continue;
+      this.told.add(p.version);
+      const files = `${p.files.length} ${p.files.length === 1 ? 'file' : 'files'} did not arrive or did not match what was signed (${p.files.join(', ')})`;
+      lines.push(`tried the newer version ${p.version} and could not serve it: ${files}; serving ${this.served ? `version ${this.served}` : 'nothing'} instead`);
+    }
+    return lines;
   }
 }
 
