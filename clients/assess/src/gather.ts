@@ -5,7 +5,7 @@
 // "As far as the relays asked show" (the connector's reading 2): a relay
 // that holds less shows less.
 
-import { MIPS, SPECS, Verifier, cborDecode, describeAct, hex, readGrant } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, describeAct, hex, readGrant } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
@@ -78,7 +78,7 @@ export async function gather(id: string, hints: string[], via: Via = {}, names: 
   if (!d.payload) throw new Error(`Act ${id} is private: its terms cannot be read here.`);
   const payload = d.payload;
 
-  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   const add = (a: Uint8Array) => {
     try {
       v.add(a);

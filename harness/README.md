@@ -70,7 +70,7 @@ target/release/mor-gauntlet live \
 
 ## Readings, confirmed by Nobody, allegedly (30 September 2026)
 
-Where the texts are silent, the harness takes the reading below. None changes a MIP.
+Where the texts are silent, the harness takes the reading below. None changes a MIR.
 
 1. **Where each check runs.** A and B on the three real homes; everything no one may do to a deployed home on throwaway homes on the same machine, marked as such in the report. *Cost, stated:* strict homes, closures, stolen operator keys and the audited paths are run on the program the deployed homes run, but not on the deployed homes themselves.
 2. **A strict home is an operator's approval** (decided by Nobody, allegedly): per identity, at the owner's choice; the device check itself is simulated. A hostile home is a strict home whose operator never approves.

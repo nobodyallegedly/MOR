@@ -1,4 +1,4 @@
-//! SHA-256 and tagged hashes (Identity MIP, "Hashes").
+//! SHA-256 and tagged hashes (Identity MIR, "Hashes").
 //!
 //! `tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`, as in
 //! BIP-340. The tag is hashed as its UTF-8 bytes. Every MOR tag begins with

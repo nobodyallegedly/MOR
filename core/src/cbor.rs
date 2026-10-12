@@ -20,7 +20,7 @@
 //! puts no further constraint on them, and nor does the core.
 //!
 //! Checking that every text string is canonical text is a separate step
-//! (`crate::text::check_value`), because it is a Text MIP rule, not a CBOR one.
+//! (`crate::text::check_value`), because it is a Text MIR rule, not a CBOR one.
 
 use std::fmt;
 

@@ -32,7 +32,7 @@ export const STYLE = `.mor-lf{white-space:pre-wrap;overflow-wrap:anywhere}
 export function renderHtml(doc: Document): string {
   const breach = checkBound(doc);
   if (breach) {
-    return `<div class="mor-lf"><p class="mor-lf-refused">Shown plain: the long-form rendering would break the Text MIP's bound (${escapeHtml(breach)}).</p>${plainHtml(doc.source, { showControls: true })}</div>`;
+    return `<div class="mor-lf"><p class="mor-lf-refused">Shown plain: the long-form rendering would break the Text MIR's bound (${escapeHtml(breach)}).</p>${plainHtml(doc.source, { showControls: true })}</div>`;
   }
   const s = doc.source;
   const text = (x: Span) => escapeHtml(s.slice(x.from, x.to));
@@ -84,11 +84,11 @@ export function renderHtml(doc: Document): string {
   return `<div class="mor-lf">${blk(doc.blocks)}</div>`;
 }
 
-/** Invisible characters that can make text display differently from its bytes (Text MIP, rule 5). */
+/** Invisible characters that can make text display differently from its bytes (Text MIR, rule 5). */
 const INVISIBLE = /[\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
 
 /**
- * The plain text, character for character (Text MIP, rules 3 and 5a). With
+ * The plain text, character for character (Text MIR, rules 3 and 5a). With
  * `showControls`, bidirectional controls and the other invisible characters
  * of rule 5 are shown as escapes, marked as such, as rule 5a requires before
  * terms, a grant or a clone are signed.

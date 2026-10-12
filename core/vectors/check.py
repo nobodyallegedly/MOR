@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """An independent check of the published test vectors of the core library, part 1.
 
-A second implementation, written from the MIP texts rather than from the Rust
+A second implementation, written from the MIR texts rather than from the Rust
 code, so that the vectors are not only self-consistent: two implementations
 must agree (freeze test suite, scenario 8.5: "Two clients compute the same
 running summary for a three-act sequence from the published test vector").

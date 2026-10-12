@@ -95,7 +95,7 @@ async function homesOf(urls: string[], via: Via): Promise<Home[]> {
 
 /**
  * A message's text for a terminal: control and bidirectional characters are
- * written as visible escapes (Text MIP, rule 5a), so a sender cannot reach the
+ * written as visible escapes (Text MIR, rule 5a), so a sender cannot reach the
  * terminal or reorder what it shows. Line breaks stay.
  */
 export function shownPlain(t: string): string {

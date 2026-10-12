@@ -36,8 +36,8 @@ export const SPECS = {
   text: sha256('TEXT, test value until the freeze'),
 };
 
-/** The six MIPs' spec hashes, as in the genesis client. Test values. */
-export const MIPS = {
+/** The six MIRs' spec hashes, as in the genesis client. Test values. */
+export const MIRS = {
   ...SPECS,
   money: sha256('FINANCE, test value until the freeze'),
   agreements: sha256('LAW, test value until the freeze'),
@@ -45,7 +45,7 @@ export const MIPS = {
 };
 
 /** The specifications whose act types may carry acknowledgements (F110). */
-export const ACK_SPECS: readonly string[] = [MIPS.identity, MIPS.money, MIPS.agreements];
+export const ACK_SPECS: readonly string[] = [MIRS.identity, MIRS.money, MIRS.agreements];
 
 export { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 

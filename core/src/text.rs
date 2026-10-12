@@ -1,4 +1,4 @@
-//! Canonical text (Text MIP, "Canonical text").
+//! Canonical text (Text MIR, "Canonical text").
 //!
 //! Every text field of every act is canonical text. A verifier checks rules
 //! 1 to 5 exactly, and rule 6 (NFC) with the tables of the pinned Unicode
@@ -45,7 +45,7 @@ pub enum TextError {
 }
 
 impl TextError {
-    /// The rule number in the Text MIP.
+    /// The rule number in the Text MIR.
     pub fn rule(&self) -> u8 {
         match self {
             TextError::ByteOrderMark { .. } => 1,

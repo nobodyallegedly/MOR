@@ -1,6 +1,6 @@
 # Test vectors: core library, part 1
 
-Published test vectors for the pieces every act is made of. Any implementation of MOR should reproduce every value here. They are drafts until the freeze: the spec hashes they use are stand-ins, since the MIP hashes are fixed only then.
+Published test vectors for the pieces every act is made of. Any implementation of MOR should reproduce every value here. They are drafts until the freeze: the spec hashes they use are stand-ins, since the MIR hashes are fixed only then.
 
 Made by `cargo run -p mor-core --example gen_vectors`, checked by the Rust library (`core/tests/vectors.rs`) and by an independent Python implementation (`check.py`). All byte strings are lowercase hex.
 

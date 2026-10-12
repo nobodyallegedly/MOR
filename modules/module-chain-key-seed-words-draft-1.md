@@ -29,7 +29,7 @@ tagged_hash("MOR/module/seed-words/key", seed || s || i || 0x00)
 || tagged_hash("MOR/module/seed-words/key", seed || s || i || 0x01)
 ```
 
-in that order, with `s` one byte and `i` 8 bytes, big-endian. `tagged_hash` is the Identity MIP's.
+in that order, with `s` one byte and `i` 8 bytes, big-endian. `tagged_hash` is the Identity MIR's.
 
 *The scheme is in the hash, so the same index under the two variants gives unrelated keys. A scheme named by specification hash is not derived by this Module; a later seed Module may.*
 

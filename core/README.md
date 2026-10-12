@@ -9,7 +9,7 @@ Every act in MOR is built from a few small pieces. This library makes those piec
 - **One way to write data (deterministic CBOR).** Any value has exactly one correct byte form. The library writes that form, and refuses any other, even if it means the same thing.
 - **Labelled fingerprints (tagged hashes).** Each kind of fingerprint carries its own label (`MOR/act`, `MOR/inside`, and so on), so one kind can never be passed off as another.
 - **The act.** A small outside that relays can read, and a locked inside. The library locks an inside, builds the outside that vouches for it, computes the act's id, and opens an act again, checking that what opens is exactly what was vouched for.
-- **Canonical text.** The rules every piece of text in an act must meet, including the Unicode 17.0 normalization check the Text MIP pins.
+- **Canonical text.** The rules every piece of text in an act must meet, including the Unicode 17.0 normalization check the Text MIR pins.
 - **Running summaries.** A short fingerprint of everything a person has signed so far in one line of acts, so it is cheap to prove that one act led to another.
 
 Part 2 adds the signatures and the identity rules:
@@ -40,7 +40,7 @@ The library never draws randomness itself. Content keys, nonces and salts are gi
 
 It builds to WebAssembly (`cargo build -p mor-core --target wasm32-unknown-unknown`) for the TypeScript clients. The JavaScript bindings are the crate `mor-wasm` (`wasm/`), made with the genesis client (roadmap step 5).
 
-The Identity MIP's spec hash (`IDENTITY`) is fixed only at the freeze, so the `Verifier` takes it as a parameter; the tests use a fixed test value.
+The Identity MIR's spec hash (`IDENTITY`) is fixed only at the freeze, so the `Verifier` takes it as a parameter; the tests use a fixed test value.
 
 ## Tests and published vectors
 
@@ -52,14 +52,14 @@ python3 core/vectors/check.py                      # a second, independent imple
 
 - `vectors/`: the published test vectors, including the three-act running summary (F78). See `vectors/README.md`.
 - `tests/vectors.rs`: the library against every value in the published vectors.
-- `vectors/check.py`: an independent implementation in Python, written from the MIP texts and sharing no code with this library, checks the same vectors (freeze test suite, scenario 8.5: two clients compute the same running summary). It needs `cryptography` and `unicodedata2==17.0.0`.
+- `vectors/check.py`: an independent implementation in Python, written from the MIR texts and sharing no code with this library, checks the same vectors (freeze test suite, scenario 8.5: two clients compute the same running summary). It needs `cryptography` and `unicodedata2==17.0.0`.
 - `tests/unicode.rs`: rule 6 against Unicode's own conformance file for the pinned version, `tests/data/NormalizationTest-17.0.0.txt` (© Unicode, Inc., distributed under the Unicode License v3), and every code point not listed in it.
 - `tests/act.rs`: act shape, opening, private acts, and every way an act can break its place in a sequence.
 - `tests/signatures.rs`: Schnorr against BIP-340's own vectors 0 to 14. SLH-DSA, both variants, against a second, independent implementation (RustCrypto's `slh-dsa`, a dev-dependency): the same seeds give the same keys, the same act id gives byte-identical signatures, deterministic and hedged, and both reject every broken signature, key and context.
 - `tests/xwing.rs`: X-Wing against the draft's own three test vectors (`tests/data/xwing-draft-11.json`, from the draft's repository at tag `draft-connolly-cfrg-xwing-kem-11`), and every key exchange against a second, independent implementation (`tests/xwing2/`: libcrux's formally verified ML-KEM-768, X25519 and SHA-3, with the draft's construction written again): same keys, same ciphertexts, same secrets, and only the right key recovers the secret.
 - `tests/envelopes.rs`: encryption-key, routes and key-delivery formats, strict; which version counts; sealed containers to one identity, to several, and to a bare key; tampering (re-addressed, flipped, re-signed); a key delivery that opens the act it names; going public by a public key delivery. Every X-Wing exchange a container makes or opens is re-made by libcrux.
 - `tests/agreements.rs`: Agreements draft 6: terms round-trip and strict decoding, open fields refused; rules fitting the parties; F96's grammars (two of three; every member without and with an escrowed share; a sole holder without and with a successor; a sole custodian); the abandonment clause and succession plans; a collective on hand-made chains: a founding agreement not complete backs nothing; a publication counting with two members' signatures, never with a stranger's or a malformed signature; a member leaving and another joining by clone and rotation, the old release standing, the former member no longer counting, the old key's later act void; a declared agreement that is an incomplete clone, or no clone, refused.
-- `tests/chain.rs`: hand-made identity chains (37 tests) and the answers the Identity MIP requires: genesis checks; pending until receipted; majority, authoritative and default rules, per operator; self-hosting and its cost; routine rotation keeping years of posts behind a private tip; disowned and excluded acts void unless acknowledged or recorded; the thief at the lax home (5.7); forged receipts, stolen operator keys, audits and dishonesty by position (5.7b, 5.7d); closure, absence statements, objections, escape, finality and the censored reader (5.7c); operator loops; an unknown signing-key scheme (8.4); succession and declarations; the same act fetched from several homes, held once. Every SLH-DSA signature that enters a verifier in these tests is also checked by the second implementation (`tests/common/mod.rs`), and the two must agree.
+- `tests/chain.rs`: hand-made identity chains (37 tests) and the answers the Identity MIR requires: genesis checks; pending until receipted; majority, authoritative and default rules, per operator; self-hosting and its cost; routine rotation keeping years of posts behind a private tip; disowned and excluded acts void unless acknowledged or recorded; the thief at the lax home (5.7); forged receipts, stolen operator keys, audits and dishonesty by position (5.7b, 5.7d); closure, absence statements, objections, escape, finality and the censored reader (5.7c); operator loops; an unknown signing-key scheme (8.4); succession and declarations; the same act fetched from several homes, held once. Every SLH-DSA signature that enters a verifier in these tests is also checked by the second implementation (`tests/common/mod.rs`), and the two must agree.
 
 SLH-DSA is slow unoptimised, so the workspace builds the cryptography crates optimised even in tests (`Cargo.toml`, `[profile.dev.package.*]`); `tests/signatures.rs` still takes about a minute, mostly SHA2-128s signing.
 
@@ -84,7 +84,7 @@ Building the identity checks as a function of the acts a verifier holds exposed 
 
 ## Part 2: readings, confirmed
 
-Where the drafts are silent and the answer seemed forced, the library takes the reading below. Nobody, allegedly confirmed all ten (28 September 2026); none changes a MIP text yet.
+Where the drafts are silent and the answer seemed forced, the library takes the reading below. Nobody, allegedly confirmed all ten (28 September 2026); none changes a MIR text yet.
 
 1. **"Names X in `objects`."** An objection, absence statement or escape endorsement names the homeless rotation as `[identity hash, rotation]`: the chain is the identity chain, whose root act is the genesis. A cosignature is accepted with any chain whose predecessor is the log summary; which chain it should name (the summaries' own chain, rooted at the home's first summary) is left open.
 2. **Self-hosted "serves".** A self-hosted home's "rotation it serves" is the rotation the verifier holds at that position; two held there are a conflict (rule 22a, "Which rotation counts" step 2). A verifier cannot tell served from held.
@@ -99,7 +99,7 @@ Where the drafts are silent and the answer seemed forced, the library takes the 
 
 ## Fixed while building the relays (roadmap step 4)
 
-The verifier indexed an act again each time it was given it. A reader fetches the same chain from every home, so it held the same rotation several times and saw one rotation as two rivals: the identity showed as contested. Now the same act is held once, and a copy with a valid signature replaces one without (a signature is not part of the act id, so copies of one act can differ only there). Test: `the_same_act_from_several_homes_is_one_act`. No MIP text changes.
+The verifier indexed an act again each time it was given it. A reader fetches the same chain from every home, so it held the same rotation several times and saw one rotation as two rivals: the identity showed as contested. Now the same act is held once, and a copy with a valid signature replaces one without (a signature is not part of the act id, so copies of one act can differ only there). Test: `the_same_act_from_several_homes_is_one_act`. No MIR text changes.
 
 ## Decided while building the genesis client (roadmap step 5)
 

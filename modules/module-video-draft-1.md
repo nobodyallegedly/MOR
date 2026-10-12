@@ -1,6 +1,6 @@
 # Module: Video
 
-*Draft 1, 10 October 2026 (F243: the film on dubsar.org's front page). **Not yet approved.** Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v21, the Envelopes MIP draft 7, the Development MIP draft 6, the JPEG Module draft 1, the relay transport cMIP draft 3 and findings F1 to F243. Not core: a founding media type for task 5 (media interpretation), frozen at publication, competing with any other. Written on the pattern of the JPEG Module. The choices this draft makes where F243 is silent are listed in `docs/video-on-the-site.md`, for Nobody, allegedly, to confirm or change.*
+*Draft 1, 10 October 2026 (F243: the film on dubsar.org's front page). **Not yet approved.** Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against core v21, the Envelopes MIR draft 7, the Development MIR draft 6, the JPEG Module draft 1, the relay transport cMIP draft 3 and findings F1 to F243. Not core: a founding media type for task 5 (media interpretation), frozen at publication, competing with any other. Written on the pattern of the JPEG Module. The choices this draft makes where F243 is silent are listed in `docs/video-on-the-site.md`, for Nobody, allegedly, to confirm or change.*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 
@@ -14,7 +14,7 @@
 
 ## Purpose
 
-This Module fills task 5 of the Envelopes MIP (Development, task table: media interpretation) for one media type. It defines:
+This Module fills task 5 of the Envelopes MIR (Development, task table: media interpretation) for one media type. It defines:
 
 - what the media object's bytes are;
 - what a client checks before playing them, and what it refuses;

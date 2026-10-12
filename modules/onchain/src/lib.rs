@@ -3,7 +3,7 @@
 //! The on-chain Bitcoin rail Module, draft 2
 //! (`modules/module-onchain-rail-draft-2.md`), a rail Module under the
 //! payment cMIP (`mor-payment`). **Experimental**: an instrument for testing
-//! the Money MIP, never for real money.
+//! the Money MIR, never for real money.
 //!
 //! - [`p2c`]: pay-to-contract on Taproot: the payee's key tweaked by the
 //!   payment commitment gives the payment's address (BIP 341).

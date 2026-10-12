@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """verifier2: an independent verifier for one part of Agreements draft 10, collectives' endings.
 
-Written from the specification text alone (spec/MIP-agreements-draft-10.md, "Made before,
+Written from the specification text alone (spec/MIR-agreements-draft-10.md, "Made before,
 made after", "Fork (type 19)", "Closing (type 20)", rules 35a, 35b, 40, 43, 44d, 47a;
 Identity draft 11, "Chain signature (type 16)"; findings F131 and F132), without
 reading the reference implementation.  Acts are modelled abstractly: ids, signer,

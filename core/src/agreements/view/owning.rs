@@ -242,7 +242,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::Payload as Fin;
         let mut out: Vec<Hash> = vec![];
         for h in self.v.held_acts() {
-            if h.inside.spec != self.mips.money {
+            if h.inside.spec != self.mirs.money {
                 continue;
             }
             let fulfils = match Fin::decode(h.inside.type_, &h.inside.payload) {
@@ -335,7 +335,7 @@ impl<'a> AgreementsView<'a> {
         let res = self.v.resolve(seller);
         self.v
             .signed_by(seller)
-            .filter(|x| x.inside.spec == self.mips.identity && x.inside.type_ == crate::identity::types::CHAIN_SIGNATURE)
+            .filter(|x| x.inside.spec == self.mirs.identity && x.inside.type_ == crate::identity::types::CHAIN_SIGNATURE)
             .filter(|x| matches!(&x.identity, Some(Ok(Payload::ChainSignature(c))) if &c.signs == id))
             .filter(|x| !self.refuses(&x.id))
             .filter_map(|x| res.position_of(&x.id).map(|p| p as u64))
@@ -378,7 +378,7 @@ impl<'a> AgreementsView<'a> {
     /// seller's holding in the version the transfer names).
     pub(super) fn wrong_payout_receipt(&self, r: &Held) -> Option<(Hash, Hash, Hash, usize, u64)> {
         use crate::money::Payload as Fin;
-        if r.inside.spec != self.mips.money || self.key_grant(r).is_some() || !self.valid(&r.id) {
+        if r.inside.spec != self.mirs.money || self.key_grant(r).is_some() || !self.valid(&r.id) {
             return None;
         }
         let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { return None };

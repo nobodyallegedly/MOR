@@ -12,15 +12,15 @@ mod common;
 
 use common::{own_home, Person, World};
 use mor_core::act::Object;
-use mor_core::agreements::{self, AgreementsView, Mips, SaleState};
+use mor_core::agreements::{self, AgreementsView, Mirs, SaleState};
 use mor_core::cbor::Value;
 use mor_core::envelopes::vow::Vow;
 use mor_core::hash::{sha256, Hash};
 use mor_core::money::{Amount, Claim, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
 
-fn mips() -> Mips {
+fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
-    Mips {
+    Mirs {
         identity: common::identity_spec(),
         envelopes: t("ENVELOPE"),
         text: t("TEXT"),
@@ -37,7 +37,7 @@ fn spec(s: &str) -> Hash {
 /// The view, with the rail's answer, valid, for every payer's claim in
 /// `claims` (the caller states it: the core reads no rail).
 fn view_with<'a>(w: &'a World, claims: &[Hash]) -> AgreementsView<'a> {
-    let mut v = AgreementsView::new(&w.v, mips());
+    let mut v = AgreementsView::new(&w.v, mirs());
     for c in claims {
         v.rail_valid.insert(*c, PaidAt::Flow(spec("the payee's pointer")));
     }
@@ -49,7 +49,7 @@ fn view(w: &World) -> AgreementsView<'_> {
 }
 
 fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
-    let a = w.everyday_act(p, mips().agreements, type_, payload, objects, None);
+    let a = w.everyday_act(p, mirs().agreements, type_, payload, objects, None);
     w.add(&a)
 }
 
@@ -61,7 +61,7 @@ fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
 /// what is to come. Its genesis id is its name.
 fn vow(w: &mut World, p: &mut Person, words: &str) -> Hash {
     let v = Vow { words: words.into(), cmip: None };
-    let a = w.everyday_act(p, mips().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None);
+    let a = w.everyday_act(p, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None);
     w.add(&a)
 }
 
@@ -99,7 +99,7 @@ fn receipt(w: &mut World, payee: &mut Person, payer: Hash, fulfils: Hash, purcha
         batch: None,
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
     });
-    let a = w.everyday_act(payee, mips().money, 2, r.to_map(), None, None);
+    let a = w.everyday_act(payee, mirs().money, 2, r.to_map(), None, None);
     w.add(&a)
 }
 
@@ -119,7 +119,7 @@ fn payers_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: Hash, p
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
         previous: None,
     });
-    let a = w.everyday_act(payer, mips().money, 3, c.to_map(), None, None);
+    let a = w.everyday_act(payer, mirs().money, 3, c.to_map(), None, None);
     w.add(&a)
 }
 
@@ -148,7 +148,7 @@ fn acknowledging_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: 
         purchase: None,
         previous: None,
     });
-    let a = w.everyday_act(payer, mips().money, 3, c.to_map(), None, Some(acks));
+    let a = w.everyday_act(payer, mirs().money, 3, c.to_map(), None, Some(acks));
     w.add(&a)
 }
 
@@ -332,7 +332,7 @@ fn an_offer_naming_a_vow_carries_its_words_and_names_a_vow() {
     let z = lone_offer(&mut w, &mut club, spec("a vow this verifier does not hold"), "A seat.");
     assert!(view(&w).offer(&z).unwrap().counts, "a vow not held is not judged, as a publication is not");
     // The vow's format is closed.
-    let bad = w.everyday_act(&mut club, mips().envelopes, mor_core::envelopes::types::VOW, vec![(Value::Uint(0), Value::Text("x".into())), (Value::Uint(9), Value::Null)], None, None);
+    let bad = w.everyday_act(&mut club, mirs().envelopes, mor_core::envelopes::types::VOW, vec![(Value::Uint(0), Value::Text("x".into())), (Value::Uint(9), Value::Null)], None, None);
     let bad = w.add(&bad);
     assert!(view(&w).vow(&bad).is_err(), "a field outside the format: no vow");
 }
@@ -443,7 +443,7 @@ fn draft_11_q2_a_vows_reference_to_another_vow_confirms_nothing() {
     let (fid, club, name, offer) = (c.fan.id, c.club.id, c.name, c.offer);
     let mut dario = c.w.genesis("dario", vec![own_home()], None, None);
     let stream = Vow { words: "My stream of the concert".into(), cmip: None };
-    let a = c.w.everyday_act_refs(&mut dario, mips().envelopes, mor_core::envelopes::types::VOW, stream.to_map(), None, None, Some(vec![mor_core::act::Ref::Act(name)]));
+    let a = c.w.everyday_act_refs(&mut dario, mirs().envelopes, mor_core::envelopes::types::VOW, stream.to_map(), None, None, Some(vec![mor_core::act::Ref::Act(name)]));
     let stream = c.w.add(&a);
     let ack = acknowledging_claim(&mut c.w, &mut c.fan, club, offer, PROOF, vec![stream]);
     c.claims.push(ack);
@@ -455,7 +455,7 @@ fn draft_11_q2_a_vows_reference_to_another_vow_confirms_nothing() {
     assert_eq!(c.state(), vec![(fid, SaleState::Confirmed { by: vec![ack2] })]);
     // The vow's own later version stays about it.
     let v2 = Vow { words: "A concert in the hall, 13 December".into(), cmip: None };
-    let a = c.w.everyday_act(&mut c.club, mips().envelopes, mor_core::envelopes::types::VOW, v2.to_map(), Some(vec![Object { chain: name, predecessor: name }]), None);
+    let a = c.w.everyday_act(&mut c.club, mirs().envelopes, mor_core::envelopes::types::VOW, v2.to_map(), Some(vec![Object { chain: name, predecessor: name }]), None);
     let later = c.w.add(&a);
     assert!(view(&c.w).vow(&name).unwrap().versions.contains(&later));
 }

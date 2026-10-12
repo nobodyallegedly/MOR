@@ -1,7 +1,7 @@
 //! # mor-payment
 //!
 //! The payment cMIP, draft 2 (`cmips/cmip-payment-draft-2.md`), filling
-//! the Money MIP's task 6. It defines:
+//! the Money MIR's task 6. It defines:
 //!
 //! - the **payment commitment**: one hash binding a payment on a rail to
 //!   what the receipt and the claim say (payee, amount, what it fulfils,
@@ -447,7 +447,7 @@ fn address(
 /// Verify a receipt or claim (Money rules 2 to 4; the payment cMIP,
 /// "Verifying a receipt or claim").
 ///
-/// The receipt's own signer is checked by the Money MIP
+/// The receipt's own signer is checked by the Money MIR
 /// ([`mor_core::money::check_signer`]); a claim's payer is its signer.
 ///
 /// The receipt or claim must be one the payee accepts (Money rule 12a,

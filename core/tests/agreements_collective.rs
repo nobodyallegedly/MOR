@@ -21,14 +21,14 @@ use mor_core::hash::{sha256, Hash};
 use mor_core::identity::KeptTip;
 use mor_core::agreements::{
     self, outcomes, Abandonment, AbsenceDeclaration, Area, Authority, Backing, CloneState, Consent, Field4, Grant, Who,
-    Holding, KeyGrammar, Keepers, Kind, AgreementsError, AgreementsView, MarkEntry, Mips, Power, Record,
+    Holding, KeyGrammar, Keepers, Kind, AgreementsError, AgreementsView, MarkEntry, Mirs, Power, Record,
     Recovery, Resignation, Rule, SuccessionPlan, Terms,
 };
 use mor_core::mmr::Mmr;
 
-fn mips() -> Mips {
+fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
-    Mips {
+    Mirs {
         identity: common::identity_spec(),
         envelopes: t("ENVELOPE"),
         text: t("TEXT"),
@@ -90,7 +90,7 @@ fn grant_key(name: &str) -> (SchnorrKey, mor_core::identity::SigningKey) {
 
 /// The label's founding terms (scenario 3.1), with a change applied.
 fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Terms)) -> Terms {
-    let m = mips();
+    let m = mirs();
     let mut t = Terms {
         parties: ids.to_vec(),
         text: "The label publishes its members' records.".into(),
@@ -206,7 +206,7 @@ impl Lab {
             vec![own_home()],
             None,
             None,
-            Some(vec![agreements::founding_declaration(&mips().agreements, &founding)]),
+            Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]),
             3,
         );
         let mut c0 = c0;
@@ -237,7 +237,7 @@ impl Lab {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut v = AgreementsView::new(&self.w.v, mips());
+        let mut v = AgreementsView::new(&self.w.v, mirs());
         v.ext_layers.insert(ext(), vec![]);
         v.ext_layers
             .insert(spec("an extension declaring Money"), vec![agreements::layers::MONEY]);
@@ -327,7 +327,7 @@ impl Lab {
                 })
                 .collect(),
         });
-        let a = self.w.everyday_act(&mut self.c[d], mips().money, 0, p.to_map(), None, None);
+        let a = self.w.everyday_act(&mut self.c[d], mirs().money, 0, p.to_map(), None, None);
         self.w.add(&a)
     }
 
@@ -349,7 +349,7 @@ impl Lab {
             batch: None,
             purchase: None,
         });
-        let a = self.w.everyday_act(&mut self.c[d], mips().money, 2, r.to_map(), None, None);
+        let a = self.w.everyday_act(&mut self.c[d], mirs().money, 2, r.to_map(), None, None);
         self.w.add(&a)
     }
 
@@ -357,7 +357,7 @@ impl Lab {
     fn publish(&mut self, d: usize) -> Hash {
         let a = self.w.everyday_act(
             &mut self.c[d],
-            mips().envelopes,
+            mirs().envelopes,
             0,
             vec![(Value::Uint(0), Value::Text("a publication".into()))],
             None,
@@ -431,7 +431,7 @@ impl Lab {
         let saved = self.c[d].cite.take();
         let a = self.w.everyday_act(
             &mut self.c[d],
-            mips().agreements,
+            mirs().agreements,
             agreements::types::RECORD,
             r.to_map(),
             obj(named),
@@ -475,7 +475,7 @@ impl Lab {
     fn grant(&mut self, g: &Grant) -> Hash {
         let a = self.w.everyday_act(
             &mut self.c[0],
-            mips().agreements,
+            mirs().agreements,
             agreements::types::GRANT,
             g.to_map(),
             None,
@@ -488,7 +488,7 @@ impl Lab {
     /// signature acts named, keeping the tips of the devices given. Every
     /// device then signs with the new key.
     fn rotate(&mut self, decl: Option<(Hash, Vec<Hash>)>, tips_of: &[usize]) -> Hash {
-        let ds = decl.map(|(k, s)| vec![agreements::clone_declaration(&mips().agreements, &k, &s)]);
+        let ds = decl.map(|(k, s)| vec![agreements::clone_declaration(&mirs().agreements, &k, &s)]);
         self.rotate_with(ds, tips_of)
     }
 
@@ -496,7 +496,7 @@ impl Lab {
     /// declared party out, with its signature acts, and names the signature
     /// acts on the declaration that it places (Flaw B18).
     fn recover(&mut self, k: Hash, sigs: Vec<Hash>, absence: Vec<Hash>, tips_of: &[usize]) -> Hash {
-        let ds = vec![agreements::recovery_declaration(&mips().agreements, &k, &sigs, &absence)];
+        let ds = vec![agreements::recovery_declaration(&mirs().agreements, &k, &sigs, &absence)];
         self.rotate_with(Some(ds), tips_of)
     }
 
@@ -526,12 +526,12 @@ impl Lab {
 }
 
 fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
-    let a = w.everyday_act(p, mips().agreements, type_, payload, objects, None);
+    let a = w.everyday_act(p, mirs().agreements, type_, payload, objects, None);
     w.add(&a)
 }
 
 fn view(w: &World) -> AgreementsView<'_> {
-    AgreementsView::new(&w.v, mips())
+    AgreementsView::new(&w.v, mirs())
 }
 
 fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
@@ -1033,7 +1033,7 @@ fn a_rotation_declares_the_membership_clone_with_its_signatures() {
         // The old key signs after the rotation: void (F100).
         let mut old = old;
         old.seq = lab.c[0].seq.clone();
-        let late = lab.w.everyday_act(&mut old, mips().envelopes, 0, vec![], None, None);
+        let late = lab.w.everyday_act(&mut old, mirs().envelopes, 0, vec![], None, None);
         let late = lab.w.add(&late);
         assert_eq!(lab.w.v.status(&late), Status::Void);
     }
@@ -1188,7 +1188,7 @@ fn a_departed_holders_stake_never_shrinks_without_them() {
 fn an_emptied_area_ends_its_grants() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let env = mips().envelopes;
+    let env = mirs().envelopes;
     let mut publisher = lab.w.genesis("publisher", vec![own_home()], None, None);
     let mut agent = lab.w.genesis("agent", vec![own_home()], None, None);
     let pubs = Kind::Type { spec: env, type_: 0 };
@@ -1351,7 +1351,7 @@ fn an_emptied_area_ends_its_grants() {
 #[test]
 fn a_revocation_ends_the_grant_key() {
     let mut lab = Lab::new(&|_| {});
-    let env = mips().envelopes;
+    let env = mirs().envelopes;
     let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
     let grant = Grant {
         area: Some(1),
@@ -1372,7 +1372,7 @@ fn a_revocation_ends_the_grant_key() {
     // The revocation, on device 0, citing the head it saw (the cited act).
     let rev = |lab: &mut Lab| -> Hash {
         let o = lab.chain(&[cited]);
-        let a = lab.w.everyday_act(&mut lab.c[0], mips().agreements, agreements::types::REVOCATION, agreements::Revocation { grant: g }.to_map(), Some(o), None);
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::REVOCATION, agreements::Revocation { grant: g }.to_map(), Some(o), None);
         lab.w.add(&a)
     };
     let r = rev(&mut lab);
@@ -1431,7 +1431,7 @@ fn a_grant_reaches_only_its_scope_and_its_limits_answer_unknown() {
     use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let label = lab.c[0].id;
-    let env = mips().envelopes;
+    let env = mirs().envelopes;
     let mut friend = lab.w.genesis("a friend", vec![own_home()], None, None);
     let fid = friend.id;
     // Two deals the label is party to, held: one the manager is hired for.
@@ -1470,7 +1470,7 @@ fn a_grant_reaches_only_its_scope_and_its_limits_answer_unknown() {
         .to_map()
     };
     let add = |lab: &mut Lab, st: &mut Person, p: Vec<(Value, Value)>| {
-        let a = lab.w.everyday_act(st, mips().money, 2, p, None, None);
+        let a = lab.w.everyday_act(st, mirs().money, 2, p, None, None);
         lab.w.add(&a)
     };
     let reason = |lab: &Lab, x: &Hash| match lab.view().backing(x).unwrap() {
@@ -1501,7 +1501,7 @@ fn a_grant_reaches_only_its_scope_and_its_limits_answer_unknown() {
     let new_deal = {
         let mut d = deal_terms(label, fid);
         d.text = "A new deal the signer drafts.".into();
-        let a = lab.w.everyday_act(&mut ss, mips().agreements, agreements::types::TERMS, d.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut ss, mirs().agreements, agreements::types::TERMS, d.to_map(), None, None);
         lab.w.add(&a)
     };
     assert_eq!(reason(&lab, &new_deal), None, "{:?}", lab.view().backing(&new_deal));
@@ -1516,7 +1516,7 @@ fn a_grant_reaches_only_its_scope_and_its_limits_answer_unknown() {
     sign(&mut lab.w, &mut agent, &g2);
     let mut sa = lab.strand(g2, &key_of(agent.id));
     let drafted = {
-        let a = lab.w.everyday_act(&mut sa, mips().agreements, agreements::types::TERMS, deal_terms(label, fid).to_map(), None, None);
+        let a = lab.w.everyday_act(&mut sa, mirs().agreements, agreements::types::TERMS, deal_terms(label, fid).to_map(), None, None);
         lab.w.add(&a)
     };
     assert!(reason(&lab, &drafted).is_some_and(|r| r.contains("scope 2")));
@@ -1561,7 +1561,7 @@ fn a_collectives_negotiation_is_talk() {
     let saved = lab.c[0].cite.take();
     let m = lab.w.private_act(
         &mut lab.c[0],
-        mips().agreements,
+        mirs().agreements,
         agreements::types::NEGOTIATION,
         agreements::NegotiationMessage { text: "Shall we?".into(), format: None, follows: None, acks: None }.to_map(),
         None,
@@ -1624,7 +1624,7 @@ fn an_area_keeps_its_number_and_its_id() {
     });
     let k1 = lab.propose(ANA, &t);
     assert!(lab.view().agreement(&k1).unwrap().invalid.is_none());
-    let env = mips().envelopes;
+    let env = mirs().envelopes;
     let t = lab.clone_terms(&k1, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|t| {
         t.areas.as_mut().unwrap().push(Area {
             name: "Books".into(),
@@ -1663,7 +1663,7 @@ fn concurrent_lines() {
         kept,
         registers: Some(vec![res]),
     };
-    let a = lab.w.everyday_act(&mut lab.c[1], mips().agreements, agreements::types::RECORD, r.to_map(), obj(f), None);
+    let a = lab.w.everyday_act(&mut lab.c[1], mirs().agreements, agreements::types::RECORD, r.to_map(), obj(f), None);
     lab.w.add(&a);
     lab.record(0, None, &[], vec![res], f);
     assert!(lab.counts(&x_named), "before both lines");
@@ -1810,17 +1810,17 @@ fn open_formats_are_refused_not_guessed() {
     for retired in [agreements::types::IMPORT, 7, 15] {
         let a = lab
             .w
-            .everyday_act(&mut lab.c[0], mips().agreements, retired, vec![], None, None);
+            .everyday_act(&mut lab.c[0], mirs().agreements, retired, vec![], None, None);
         let x = lab.w.add(&a);
         assert!(matches!(lab.view().consent(&x), Ok(Consent::Invalid { .. })), "type {retired} is retired");
     }
     // An offer not in its format is invalid, not guessed.
-    let a = lab.w.everyday_act(&mut lab.c[0], mips().agreements, agreements::types::STANDING_OFFER, vec![], None, None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::STANDING_OFFER, vec![], None, None);
     let x = lab.w.add(&a);
     assert!(matches!(lab.view().consent(&x), Ok(Consent::Invalid { .. })), "an offer selling nothing at no price");
     let a = lab
         .w
-        .everyday_act(&mut lab.c[0], mips().agreements, agreements::types::REVOCATION, vec![], None, None);
+        .everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::REVOCATION, vec![], None, None);
     let x = lab.w.add(&a);
     assert!(matches!(lab.view().consent(&x), Ok(Consent::Invalid { .. })));
     // A record registering a declaration not in the format is no line.
@@ -2190,7 +2190,7 @@ fn abandonment_key_2_is_retired_and_key_3_names_a_cmip() {
     let pair = Value::Array(vec![Value::Bytes(spec("an absence-proof cMIP").to_vec()), params.clone()]);
     let got = Terms::decode(&(with((Value::Uint(3), pair)))).unwrap();
     assert_eq!(got.abandonment.as_ref().unwrap().proof, Some((spec("an absence-proof cMIP"), params)));
-    assert_eq!(got.check(&mips()), Ok(()));
+    assert_eq!(got.check(&mirs()), Ok(()));
     // Not a pair, or no hash: invalid.
     for bad in [Value::Uint(30), Value::Array(vec![Value::Uint(1), Value::Uint(2)])] {
         assert!(Terms::decode(&(with((Value::Uint(3), bad.clone())))).is_err(), "{bad:?}");
@@ -2214,7 +2214,7 @@ fn the_absence_proof_cmip_is_a_judge() {
         let lab = Lab::new(&|_| {});
         let mut t = lab.view().terms(&lab.founding).unwrap();
         t.abandonment.as_mut().unwrap().proof = Some((cmip, Value::Null));
-        let got = t.check(&mips());
+        let got = t.check(&mirs());
         assert!(matches!(&got, Err(AgreementsError::Check(w)) if w.contains("absence-proof")), "{case}: {got:?}");
     }
 }
@@ -2235,7 +2235,7 @@ fn absence_proof_is_task_14_in_the_chain_of_judgment() {
     let mut t = lab.view().terms(&lab.founding).unwrap();
     t.abandonment.as_mut().unwrap().proof = Some((proof, Value::Null));
     t.chain = Some(vec![ChainLink { judge: Judge::Task(14), next: vec![(next.into(), 30)] }]);
-    assert_eq!(t.check(&mips()), Ok(()));
+    assert_eq!(t.check(&mirs()), Ok(()));
     assert_eq!(t.chain_of(&Judge::Task(14)), Some(vec![proof, next]));
     let back = Terms::decode(&t.to_map()).unwrap();
     assert_eq!(back.chain_of(&Judge::Task(14)), Some(vec![proof, next]), "read back from its bytes");
@@ -2243,16 +2243,16 @@ fn absence_proof_is_task_14_in_the_chain_of_judgment() {
     let mut u = t.clone();
     u.cmips.push((9, next));
     u.cmips.sort();
-    assert!(matches!(u.check(&mips()), Err(AgreementsError::Check(w)) if w.contains("named nowhere else")));
+    assert!(matches!(u.check(&mirs()), Err(AgreementsError::Check(w)) if w.contains("named nowhere else")));
     // No absence-proof cMIP in the clause: the chain follows no judge.
     let mut u = t.clone();
     u.abandonment.as_mut().unwrap().proof = None;
-    assert!(matches!(u.check(&mips()), Err(AgreementsError::Check(w)) if w.contains("no judge")));
+    assert!(matches!(u.check(&mirs()), Err(AgreementsError::Check(w)) if w.contains("no judge")));
     // Field 2 does not name it.
     let mut u = t.clone();
     u.cmips.push((14, proof));
     u.cmips.sort();
-    assert!(matches!(u.check(&mips()), Err(AgreementsError::Check(w)) if w.contains("key 3")), "{:?}", u.check(&mips()));
+    assert!(matches!(u.check(&mirs()), Err(AgreementsError::Check(w)) if w.contains("key 3")), "{:?}", u.check(&mirs()));
 }
 
 /// Agreements rule 51 (F172; F178 item 12): where the clause names an
@@ -2297,7 +2297,7 @@ fn under_an_absence_proof_cmip_a_declaration_counts_only_where_accepted() {
         outcomes: vec![outcomes::VOICE_REMOVED],
         proof: Some((proof, Value::Null)),
     });
-    assert_eq!(deal.check(&mips()), Ok(()));
+    assert_eq!(deal.check(&mirs()), Ok(()));
     let x = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
     for p in m.iter_mut() {
         sign(&mut w, p, &x);
@@ -3203,7 +3203,7 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         backups: None,
     };
     for k in [1, 2] {
-        let got = deal(Authority::Others(k)).check(&mips());
+        let got = deal(Authority::Others(k)).check(&mirs());
         assert!(matches!(&got, Err(AgreementsError::Check(w)) if w.contains("B19")), "{k}: {got:?}");
         // Signed by every party, still no deal.
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal(Authority::Others(k)).to_map(), None);
@@ -3213,7 +3213,7 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         assert!(view(&w).agreement(&d).is_err(), "{k}");
     }
     let t = deal(Authority::Named(board.id));
-    assert_eq!(t.check(&mips()), Ok(()));
+    assert_eq!(t.check(&mirs()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
     for p in m.iter_mut() {
         sign(&mut w, p, &d);
@@ -3266,7 +3266,7 @@ fn scenario_1_step_9_absence_is_the_authoritys_judgment() {
         outcomes: vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED],
         proof: None,
     });
-    assert_eq!(terms.check(&mips()), Ok(()));
+    assert_eq!(terms.check(&mirs()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, terms.to_map(), None);
     for p in m.iter_mut() {
         sign(&mut w, p, &d);
@@ -3374,7 +3374,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         fees: None,
         backups: None,
     };
-    assert_eq!(terms.check(&mips()), Ok(()));
+    assert_eq!(terms.check(&mirs()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, terms.to_map(), None);
     for p in m.iter_mut() {
         sign(&mut w, p, &d);
@@ -3617,7 +3617,7 @@ fn obligation(lab: &mut Lab, creditor: &str, value: u64) -> Hash {
         pointer: spec("its pointer"),
         agreement: None,
     });
-    let a = lab.w.everyday_act(&mut lab.c[0], mips().money, 1, o.to_map(), None, None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 1, o.to_map(), None, None);
     let x = lab.w.add(&a);
     // A debt is a Money act: the Money lane's holder signs it, or it is
     // not the label's (rule 36a; `docs/law-invariants.md`, IC1).
@@ -3635,7 +3635,7 @@ fn obligation_to(lab: &mut Lab, creditor: Hash, value: u64) -> Hash {
         pointer: spec("its pointer"),
         agreement: None,
     });
-    let a = lab.w.everyday_act(&mut lab.c[0], mips().money, 1, o.to_map(), None, None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 1, o.to_map(), None, None);
     let x = lab.w.add(&a);
     lab.sign(BEN, &x);
     x
@@ -3665,7 +3665,7 @@ fn receipt_unanswered(w: &mut World, payee: &mut Person, payer: Hash, obligation
         batch: None,
         purchase: None,
     });
-    let a = w.everyday_act(payee, mips().money, 2, rc.to_map(), None, None);
+    let a = w.everyday_act(payee, mirs().money, 2, rc.to_map(), None, None);
     w.add(&a)
 }
 
@@ -3673,7 +3673,7 @@ fn receipt_unanswered(w: &mut World, payee: &mut Person, payer: Hash, obligation
 /// signed by `by`.
 fn debt_release(w: &mut World, by: &mut Person, obligation: Hash, against: Vec<Hash>) -> Hash {
     let r = mor_core::money::Payload::Release(mor_core::money::Release { obligation, against });
-    let a = w.everyday_act(by, mips().money, mor_core::money::types::RELEASE, r.to_map(), None, None);
+    let a = w.everyday_act(by, mirs().money, mor_core::money::types::RELEASE, r.to_map(), None, None);
     w.add(&a)
 }
 
@@ -3702,7 +3702,7 @@ fn pointer_of(w: &mut World, who: &mut Person, version: u64, previous: Option<Ha
             .map(|a| mor_core::money::Rail { module: spec("a rail Module"), address: a.to_vec() })
             .collect(),
     });
-    let a = w.everyday_act(who, mips().money, 0, p.to_map(), None, None);
+    let a = w.everyday_act(who, mirs().money, 0, p.to_map(), None, None);
     w.add(&a)
 }
 
@@ -3744,7 +3744,7 @@ fn founding_terms_carry_stakes_in_the_collective_itself() {
     // Its own grant in its founding terms, by null.
     let mut t2 = t.clone();
     t2.split_grant = Some(g);
-    assert_eq!(t2.check(&mips()), Ok(()));
+    assert_eq!(t2.check(&mirs()), Ok(()));
     assert!(agreements::Grant::decode(&plain_grant(svc.id, true).to_map()).unwrap().by_this);
     let mut bad = plain_grant(svc.id, true);
     bad.area = Some(1);
@@ -3758,11 +3758,11 @@ fn founding_terms_carry_stakes_in_the_collective_itself() {
     deal.area_words = None;
     deal.clone = Rule::All;
     deal.abandonment = None;
-    assert!(matches!(deal.check(&mips()), Err(AgreementsError::Check(w)) if w.contains("S1")));
+    assert!(matches!(deal.check(&mirs()), Err(AgreementsError::Check(w)) if w.contains("S1")));
     // A collective holds no stake in itself.
     let mut selfish = t.clone();
     selfish.stakes = stakes(vec![agreements::Stake { object: Who::This, holders: vec![(Who::This, 1_000_000)] }]);
-    assert!(selfish.check(&mips()).is_err());
+    assert!(selfish.check(&mirs()).is_err());
     // One meaning, one encoding: a clone writing the label's identity.
     let label = lab.c[0].id;
     let c = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| {
@@ -3806,7 +3806,7 @@ fn a_group_splits_off_and_its_members_become_departed_holders() {
     // share in the label is invalid (N5).
     let mut bad = t.clone();
     bad.departed = Some(vec![spec("someone with no stake")]);
-    assert!(bad.check(&mips()).is_err());
+    assert!(bad.check(&mirs()).is_err());
     let t2 = lab.clone_terms(&k2, vec![(Power::Constitutional, vec![ANA, CY])], &|t| t.text = "Other words.".into());
     let x = lab.propose(ANA, &t2);
     assert!(lab.view().agreement(&x).unwrap().invalid.is_some(), "a departed holder has no voice");
@@ -3902,7 +3902,7 @@ fn every_payout_matches_its_stake() {
             batch: None,
             purchase: None,
         });
-        let a = lab.w.everyday_act(svc, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(svc, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     let stake = lab.view().terms(&f).unwrap().own_stake().unwrap().0 as u64;
@@ -3923,7 +3923,7 @@ fn every_payout_matches_its_stake() {
     };
     let everyone = ids.clone();
     let r1 = receipt(&mut lab, &mut svc, 1000);
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(r1, 360, 270, 270).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(r1, 360, 270, 270).to_map(), None, everyone.clone());
     let e = lab.view().split(&x).unwrap();
     assert_eq!(e.sums, Some(true));
     assert_eq!(e.fees, vec![(fee_module, svc.id, 100)]);
@@ -3939,14 +3939,14 @@ fn every_payout_matches_its_stake() {
     let r2 = receipt(&mut lab, &mut svc, 901);
     let own: Vec<(Hash, u64)> = lab.view().terms(&f).unwrap().own_stake().unwrap().1.holders.iter().map(|(w, n)| (w.resolve(None).unwrap(), *n)).collect();
     assert_eq!(agreements::divide_stake(801, &own, agreements::Ties::Open).unwrap(), vec![321, 240, 240], "no tie: the remainders decide");
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(r2, 321, 240, 240).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(r2, 321, 240, 240).to_map(), None, everyone.clone());
     assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
     // F162 (11): over the exact share by a whole unit or more breaks the
     // plan, though no other holder is short by one: of 803, Ana's exact
     // share is 321.2; 323 is 1.8 over. The old tolerance, as many units as
     // the stake has holders, let it through.
     let r3 = receipt(&mut lab, &mut svc, 903);
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(r3, 323, 240, 240).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(r3, 323, 240, 240).to_map(), None, everyone.clone());
     let e = lab.view().split(&x).unwrap();
     assert_eq!(e.sums, Some(true));
     // Since F165 every unit is rule 15a's: Ben and Cy, owed 241 each, are
@@ -3956,14 +3956,14 @@ fn every_payout_matches_its_stake() {
     // take the two leftover units, by largest remainder: 321, 241, 241.
     // Giving one of them to Ana instead leaves every holder within one
     // unit of its exact share, and is a deviation all the same.
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(r3, 321, 241, 241).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(r3, 321, 241, 241).to_map(), None, everyone.clone());
     assert!(lab.view().split(&x).unwrap().mismatched.is_empty());
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(r3, 322, 241, 240).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(r3, 322, 241, 240).to_map(), None, everyone.clone());
     let who: Vec<Hash> = lab.view().split(&x).unwrap().mismatched.iter().map(|m| m.holder).collect();
     assert_eq!(std::collections::BTreeSet::from_iter(who), std::collections::BTreeSet::from([ids[ANA], ids[CY]]), "a leftover unit steered to Ana");
     // Any deviation, either way, breaks the plan (N10): Cy paid less, Ana
     // more. Not delivered to Cy, whom it pays.
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(r1, 430, 270, 200).to_map(), None, vec![ids[ANA], ids[BEN]]);
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(r1, 430, 270, 200).to_map(), None, vec![ids[ANA], ids[BEN]]);
     let e = lab.view().split(&x).unwrap();
     assert_eq!(e.sums, Some(true));
     let who: Vec<Hash> = e.mismatched.iter().map(|m| m.holder).collect();
@@ -3971,10 +3971,10 @@ fn every_payout_matches_its_stake() {
     assert_eq!(e.undelivered, vec![ids[CY]]);
     // Members paying a departed holder more is a deviation too: no
     // one-direction check remains.
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(r1, 300, 270, 330).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(r1, 300, 270, 330).to_map(), None, everyone.clone());
     assert_eq!(lab.view().split(&x).unwrap().mismatched.len(), 2);
     // A split that does not sum exactly is shown so (rule 21).
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(r1, 300, 270, 270).to_map(), None, everyone);
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(r1, 300, 270, 270).to_map(), None, everyone);
     assert_eq!(lab.view().split(&x).unwrap().sums, Some(false));
 }
 
@@ -4013,7 +4013,7 @@ fn unit_receipt(lab: &mut Lab, svc: &mut Person) -> Hash {
         batch: None,
         purchase: None,
     });
-    let a = lab.w.everyday_act(svc, mips().money, 2, r.to_map(), None, None);
+    let a = lab.w.everyday_act(svc, mirs().money, 2, r.to_map(), None, None);
     lab.w.add(&a)
 }
 
@@ -4034,7 +4034,7 @@ fn unit_split(lab: &mut Lab, svc: &mut Person, f: Hash, stake: u64, receipt: Has
         ..Default::default()
     };
     let everyone = lab.ids()[..2].to_vec();
-    lab.w.private_act_refs(svc, mips().agreements, agreements::types::SPLIT, s.to_map(), None, everyone, previous.map(|p| vec![Ref::Act(p)]))
+    lab.w.private_act_refs(svc, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, everyone, previous.map(|p| vec![Ref::Act(p)]))
 }
 
 /// F165 (review of F145 to F162, finding 4), as F171 builds it: leftover
@@ -4107,13 +4107,13 @@ fn a_split_service_cannot_steer_ties_by_grinding_salts() {
 
     // From two acts: a verifier holding s3 but neither s1 nor s2 still
     // checks s4's count, and a tie after s3.
-    let mut v = mor_core::chain::Verifier::with_mips(common::identity_spec(), common::money_spec(), agreements_spec());
+    let mut v = mor_core::chain::Verifier::with_mirs(common::identity_spec(), common::money_spec(), agreements_spec());
     for (a, key) in &lab.w.log {
         if a.id() != s1 && a.id() != s2 {
             v.add_with_key(a.clone(), key.as_ref()).unwrap();
         }
     }
-    let mut lv = AgreementsView::new(&v, mips());
+    let mut lv = AgreementsView::new(&v, mirs());
     lv.ext_layers.insert(ext(), vec![]);
     let e = lv.split(&s4).unwrap();
     assert!(matches!(e.breaks.as_slice(), [agreements::ChainBreak::Count { .. }]), "{:?}", e.breaks);
@@ -4255,7 +4255,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
             batch: None,
             purchase: Some(Purchase { agreement: k1, line: k1 }),
         });
-        let a = lab.w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut st, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     assert!(matches!(lab.view().backing(&incoming).unwrap(), Backing::Backed { .. }));
@@ -4265,19 +4265,19 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     let by_stakes = vec![pay(ids[ANA], 400), pay(ids[BEN], 300), pay(ids[CY], 300)];
     let everyone = ids.clone();
     // The service's own split, naming the version in force: no problem.
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(k1, by_stakes.clone()).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(k1, by_stakes.clone()).to_map(), None, everyone.clone());
     let e = lab.view().split(&x).unwrap();
     assert!(e.problems.is_empty(), "{:?}", e.problems);
     assert_eq!(e.in_force, k1);
     assert!(e.mismatched.is_empty() && e.unevidenced.is_empty() && e.unplanned.is_empty());
     // A stranger's split of the same receipt: not the service's (rule 20).
-    let x = lab.w.private_act(&mut stranger, mips().agreements, agreements::types::SPLIT, split(k1, by_stakes.clone()).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut stranger, mirs().agreements, agreements::types::SPLIT, split(k1, by_stakes.clone()).to_map(), None, everyone.clone());
     let e = lab.view().split(&x).unwrap();
     assert!(e.problems.iter().any(|p| p.contains("signer")), "{:?}", e.problems);
     // One signed with the grant key, the label's own act: not the
     // service's own key.
     let x = {
-        let a = lab.w.everyday_act(&mut st, mips().agreements, agreements::types::SPLIT, split(k1, by_stakes.clone()).to_map(), None, None);
+        let a = lab.w.everyday_act(&mut st, mirs().agreements, agreements::types::SPLIT, split(k1, by_stakes.clone()).to_map(), None, None);
         lab.w.add(&a)
     };
     assert!(lab.view().split(&x).unwrap().problems.iter().any(|p| p.contains("grant key")));
@@ -4291,13 +4291,13 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     let k2 = lab.propose(ANA, &t2);
     let sigs: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k2)).collect();
     let rec2 = lab.record(0, Some((k2, sigs)), &[], vec![], k2);
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(k1, by_stakes.clone()).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(k1, by_stakes.clone()).to_map(), None, everyone.clone());
     let e = lab.view().split(&x).unwrap();
     assert_eq!(e.in_force, k2, "{:?}", clone_state(&lab, &rec2));
     assert!(e.problems.iter().any(|p| p.contains("not in force")), "{:?}", e.problems);
     let who: Vec<Hash> = e.mismatched.iter().map(|m| m.holder).collect();
     assert!(who.contains(&ids[ANA]) && who.contains(&ids[CY]), "{who:?}");
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(k2, vec![pay(ids[ANA], 700), pay(ids[BEN], 300)]).to_map(), None, everyone.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(k2, vec![pay(ids[ANA], 700), pay(ids[BEN], 300)]).to_map(), None, everyone.clone());
     let e = lab.view().split(&x).unwrap();
     assert!(e.problems.is_empty() && e.mismatched.is_empty(), "{:?} {:?}", e.problems, e.mismatched);
     // Role shares (rule 22): a referral with no evidence, or evidenced by
@@ -4314,7 +4314,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
     let with = |lab: &mut Lab, svc: &mut Person, extra: agreements::Payout| {
         let mut ps = rest.clone();
         ps.push(extra);
-        let x = lab.w.private_act(svc, mips().agreements, agreements::types::SPLIT, split(k2, ps).to_map(), None, everyone.clone());
+        let x = lab.w.private_act(svc, mirs().agreements, agreements::types::SPLIT, split(k2, ps).to_map(), None, everyone.clone());
         lab.view().split(&x).unwrap()
     };
     assert_eq!(with(&mut lab, &mut svc, role(fan.id, 100, None)).unevidenced, vec![fan.id]);
@@ -4334,7 +4334,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
         purchase: Some(Purchase { agreement: k1, line: k1 }),
         previous: None,
     });
-    let c = lab.w.everyday_act(&mut buyer, mips().money, 3, claim.to_map(), None, None);
+    let c = lab.w.everyday_act(&mut buyer, mirs().money, 3, claim.to_map(), None, None);
     let c = lab.w.add(&c);
     lab.rail_valid.push((c, mor_core::money::PaidAt::Flow(ptr)));
     assert!(with(&mut lab, &mut svc, role(fan.id, 100, Some(post))).unevidenced.is_empty(), "the buyer's claim names the referral");
@@ -4390,7 +4390,7 @@ fn a_split_service_is_held_to_account() {
             batch: None,
             purchase: Some(Purchase { agreement: k, line: k }),
         });
-        let a = lab.w.everyday_act(st, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(st, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     let r1 = incoming(&mut lab, &mut st, 1000, b"the first sale");
@@ -4401,10 +4401,10 @@ fn a_split_service_is_held_to_account() {
     let pay = |who: Hash, amount: u64| agreements::Payout { receiver: who, amount, stake: Some(stake), role: None, evidence: None, fee_module: None, rail_fee: None, ..Default::default() };
     let split = |receipt: Hash| agreements::Split { receipt, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(ids[CY], 200)], cmip: spec("a split cMIP"), agreement: k, tally: None, number: None, ..Default::default() };
     // A stranger's split names it: the service still owes a split.
-    let _ = lab.w.private_act(&mut stranger, mips().agreements, agreements::types::SPLIT, split(r1).to_map(), None, ids.clone());
+    let _ = lab.w.private_act(&mut stranger, mirs().agreements, agreements::types::SPLIT, split(r1).to_map(), None, ids.clone());
     assert_eq!(lab.view().service_account(&svc.id).unwrap().unsplit.len(), 1);
     // The service's own split: nothing unsplit; three payouts unpaid.
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, split(r1).to_map(), None, ids.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, split(r1).to_map(), None, ids.clone());
     let account = lab.view().service_account(&svc.id).unwrap();
     assert!(account.unsplit.is_empty());
     let unpaid = |i: usize, who: Hash, amount: u64, received: u64| Unpaid { split: x, payout: i, receiver: who, agreement: k, amount, received };
@@ -4426,7 +4426,7 @@ fn a_split_service_is_held_to_account() {
             batch: None,
             purchase: None,
         });
-        let a = lab.w.everyday_act(who, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(who, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     let mut ana = lab.m[ANA].clone();
@@ -4439,7 +4439,7 @@ fn a_split_service_is_held_to_account() {
     forger.id = ids[CY];
     let _ = {
         let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: vec![], payer: Some(Payer::Identity(svc.id)), payee: ids[CY], amount: Amount { unit, value: 200 }, fulfils: x, previous: None, forward: None, batch: None, purchase: None });
-        let a = lab.w.everyday_act(&mut stranger, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut stranger, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     let account = lab.view().service_account(&svc.id).unwrap();
@@ -4464,7 +4464,7 @@ fn a_split_service_is_held_to_account() {
     // The label revokes the grant: the old service still owes on
     // everything it received before (rule 30).
     let o = lab.chain(&[r2]);
-    let rv = lab.w.everyday_act(&mut lab.c[0], mips().agreements, agreements::types::REVOCATION, agreements::Revocation { grant: g }.to_map(), Some(o), None);
+    let rv = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::REVOCATION, agreements::Revocation { grant: g }.to_map(), Some(o), None);
     let rv = lab.w.add(&rv);
     lab.sign(BEN, &rv);
     assert!(lab.counts(&rv));
@@ -4517,17 +4517,17 @@ fn f262_f265_an_absentees_share_follows_the_collectives_rules_and_the_closing_co
         batch: None,
         purchase: Some(Purchase { agreement: k, line: k }),
     });
-    let a = lab.w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+    let a = lab.w.everyday_act(&mut st, mirs().money, 2, r.to_map(), None, None);
     let incoming = lab.w.add(&a);
     let stake = lab.view().terms(&k).unwrap().own_stake().unwrap().0 as u64;
     let pay = |who: Hash, amount: u64| agreements::Payout { receiver: who, amount, stake: Some(stake), ..Default::default() };
     let sp = agreements::Split { receipt: incoming, payouts: vec![pay(ids[ANA], 500), pay(ids[BEN], 300), pay(absentee, 200)], cmip: spec("a split cMIP"), agreement: k, ..Default::default() };
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, sp.to_map(), None, ids.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, sp.to_map(), None, ids.clone());
     // Ana and Ben take theirs; the absentee never does.
     for i in [ANA, BEN] {
         let mut who = lab.m[i].clone();
         let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: vec![], payer: Some(Payer::Identity(svc.id)), payee: who.id, amount: Amount { unit, value: if i == ANA { 500 } else { 300 } }, fulfils: x, previous: None, forward: None, batch: None, purchase: None });
-        let a = lab.w.everyday_act(&mut who, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut who, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a);
         lab.m[i] = who;
     }
@@ -4566,7 +4566,7 @@ fn the_pointer_check() {
         vec![own_home()],
         None,
         None,
-        Some(vec![mor_core::money::vault_declaration(&mips().money, &[vault_entry(b"the service's vault")])]),
+        Some(vec![mor_core::money::vault_declaration(&mirs().money, &[vault_entry(b"the service's vault")])]),
         3,
     );
     let mut svc2 = lab.w.genesis("a second split service", vec![own_home()], None, None);
@@ -4602,7 +4602,7 @@ fn the_pointer_check() {
     // P2: the label's vault takes payments above its limit to an address
     // of the treasurer's own: the vault bypasses the service, shown so.
     lab.rotate_with(
-        Some(vec![mor_core::money::vault_declaration(&mips().money, &[vault_entry(b"the treasurer's own vault")])]),
+        Some(vec![mor_core::money::vault_declaration(&mirs().money, &[vault_entry(b"the treasurer's own vault")])]),
         &[0],
     );
     match lab.view().pointer_check(&label, &k).unwrap() {
@@ -4614,7 +4614,7 @@ fn the_pointer_check() {
     }
     // The vault the service's own vault carries: ordinary again.
     lab.rotate_with(
-        Some(vec![mor_core::money::vault_declaration(&mips().money, &[vault_entry(b"the service's vault")])]),
+        Some(vec![mor_core::money::vault_declaration(&mirs().money, &[vault_entry(b"the service's vault")])]),
         &[0],
     );
     assert_eq!(lab.view().pointer_check(&label, &k).unwrap(), agreements::PointerCheck::Ordinary { pointer: p3, service: svc.id });
@@ -4775,7 +4775,7 @@ fn found_successor(lab: &mut Lab, name: &str, members: &[usize], kept: &[(Hash, 
     for i in members {
         lab.sign(*i, &x);
     }
-    let mut p = lab.w.genesis_with(name, vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mips().agreements, &x)]), 3);
+    let mut p = lab.w.genesis_with(name, vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &x)]), 3);
     p.cite = Some((p.id, vec![p.id]));
     (p, x)
 }
@@ -4830,7 +4830,7 @@ fn a_collective_forks() {
             time: None,
             refund: None,
         };
-        let a = lab.w.everyday_act(&mut lab.c[0], mips().agreements, agreements::types::STANDING_OFFER, o.to_map(), obj(k), None);
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::STANDING_OFFER, o.to_map(), obj(k), None);
         lab.w.add(&a)
     };
     let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
@@ -4957,7 +4957,7 @@ fn a_collective_forks() {
             batch: None,
             purchase,
         });
-        let a = lab.w.everyday_act(svc, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(svc, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     let stray = pay(&mut lab, &mut svc, None);
@@ -5041,7 +5041,7 @@ fn a_fork_hands_out_its_whole_history() {
             pointer: spec("its pointer"),
             agreement: None,
         });
-        let a = lab.w.everyday_act(&mut lab.c[d], mips().money, 1, o.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut lab.c[d], mirs().money, 1, o.to_map(), None, None);
         let x = lab.w.add(&a);
         lab.sign(BEN, &x);
         x
@@ -5425,7 +5425,7 @@ fn a_work_is_released_to_the_public_domain() {
     sign(&mut w, &mut ben, &r2);
     assert!(view(&w).release(&r2).unwrap().complete);
     // A release that keeps its key private publishes nothing: incomplete.
-    let p = w.private_act(&mut ana, mips().agreements, agreements::types::RELEASE, release2.to_map(), obj(k), vec![ben.id]);
+    let p = w.private_act(&mut ana, mirs().agreements, agreements::types::RELEASE, release2.to_map(), obj(k), vec![ben.id]);
     assert!(!view(&w).release(&p).unwrap().complete);
     let bad = agreements::Release { work: spec("another work"), ..release2.clone() };
     let r3 = agreements_act(&mut w, &mut ana, agreements::types::RELEASE, bad.to_map(), obj(k));
@@ -5564,7 +5564,7 @@ fn two_complete_versions_of_a_deal() {
     // Field 26 is a deal's: founding terms, or a version naming its own parent, are invalid.
     let mut bad = t.clone();
     bad.settles = Some(vec![d]);
-    assert!(agreements::Terms::decode(&bad.to_map()).and_then(|x| x.check(&mips())).is_err());
+    assert!(agreements::Terms::decode(&bad.to_map()).and_then(|x| x.check(&mirs())).is_err());
 }
 
 /// F186 (decided 9 October 2026): settled only by a version naming both
@@ -5633,7 +5633,7 @@ fn a_payment_naming_another_branch_raises_the_alarm() {
             purchase: Some(Purchase { agreement: d, line }),
             previous: None,
         });
-        let x = w.everyday_act(fan, mips().money, 3, c.to_map(), None, None);
+        let x = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, None);
         w.add(&x)
     };
     let under_b = pay(&mut w, &mut fan, b, b"b");
@@ -5744,7 +5744,7 @@ fn a_collective_releases_its_work_and_closes() {
     // The release: the label signs it; it needs its Money lane too (N7).
     let rel = agreements::Release { work, stakes: vec![(f, 0)], claims: vec![], keys: vec![(spec("its publication"), vec![9; 32])], timed: None };
     let r = {
-        let a = lab.w.everyday_act(&mut lab.c[0], mips().agreements, agreements::types::RELEASE, rel.to_map(), obj(f), None);
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::RELEASE, rel.to_map(), obj(f), None);
         lab.w.add(&a)
     };
     assert!(!lab.view().release(&r).unwrap().complete, "the Money lane's holder has not signed");
@@ -5920,7 +5920,7 @@ fn a_creditors_release_has_one_format() {
     // Nothing more: an unknown field, or an act named twice, is not in the format.
     let mut extra = Fin::Release(r.clone()).to_map();
     extra.push((Value::Uint(2), Value::Uint(0)));
-    let a = w.everyday_act(&mut lender, mips().money, fin::types::RELEASE, extra, None, None);
+    let a = w.everyday_act(&mut lender, mirs().money, fin::types::RELEASE, extra, None, None);
     let y = w.add(&a);
     assert!(decode(&w, &y).is_err());
     let z = debt_release(&mut w, &mut lender, o, vec![spec("a receipt"), spec("a receipt")]);
@@ -5954,7 +5954,7 @@ fn an_act_in_the_collectives_name_is_done_once_sealed_wherever_held() {
             pointer: spec("its pointer"),
             agreement: None,
         });
-        let x = lab.w.private_act(&mut lab.c[0], mips().money, 1, o.to_map(), None, to);
+        let x = lab.w.private_act(&mut lab.c[0], mirs().money, 1, o.to_map(), None, to);
         lab.sign(BEN, &x);
         x
     };
@@ -6006,13 +6006,13 @@ fn terms_field_25_is_withdrawn() {
     let lab = Lab::new(&|_| {});
     let ids = lab.ids();
     let t = label_terms(&ids, lab.authority.id, lab.keeper.id, &|_| {});
-    assert!(t.check(&mips()).is_ok(), "a collective's terms name no relays");
+    assert!(t.check(&mirs()).is_ok(), "a collective's terms name no relays");
     let mut m = t.to_map();
     m.push((Value::Uint(25), Value::Array(vec![Value::Array(vec![Value::Null, Value::Text("https://relay.test".into())])])));
     assert!(Terms::decode(&m).unwrap_err().to_string().contains("F128"));
     let mut reach = t.clone();
     reach.areas.as_mut().unwrap()[0].fields = Some(vec![agreements::FieldRef::Field(25)]);
-    assert!(reach.check(&mips()).is_err());
+    assert!(reach.check(&mirs()).is_err());
 }
 
 /// F126 (E2): a collective forgives a debt owed to it by its Money lane
@@ -6031,11 +6031,11 @@ fn a_collective_releases_a_debt_by_its_money_lane() {
         pointer: spec("the label's pointer"),
         agreement: None,
     });
-    let a = lab.w.everyday_act(&mut debtor, mips().money, 1, o.to_map(), None, None);
+    let a = lab.w.everyday_act(&mut debtor, mirs().money, 1, o.to_map(), None, None);
     let d = lab.w.add(&a);
     let rel = {
         let r = Fin::Release(mor_core::money::Release { obligation: d, against: vec![] });
-        let a = lab.w.everyday_act(&mut lab.c[0], mips().money, mor_core::money::types::RELEASE, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, mor_core::money::types::RELEASE, r.to_map(), None, None);
         lab.w.add(&a)
     };
     let e = lab.view().debt_release(&rel).unwrap();
@@ -6074,7 +6074,7 @@ fn a_collective_keeps_two_chains() {
     // Citing only an act that is not on the chain: still uncited.
     let mut friend = lab.w.genesis("a friend", vec![own_home()], None, None);
     let post = lab.w.post(&mut friend, "hello");
-    let a = lab.w.everyday_act(&mut lab.c[0], mips().envelopes, 0, vec![], Some(vec![Object { chain: label, predecessor: post }]), None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![], Some(vec![Object { chain: label, predecessor: post }]), None);
     let odd = lab.w.add(&a);
     lab.sign(ANA, &odd);
     assert!(matches!(lab.consent(&odd), Consent::Uncited { reason } if reason.contains("not on it")));
@@ -6084,7 +6084,7 @@ fn a_collective_keeps_two_chains() {
     let other = lab.publish(1);
     lab.sign(ANA, &other);
     let o = lab.chain(&[other]);
-    let a = lab.w.everyday_act(&mut lab.c[0], mips().envelopes, 0, vec![], Some(o), None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![], Some(o), None);
     let join = lab.w.add(&a);
     lab.sign(ANA, &join);
     assert!(lab.counts(&join));
@@ -6098,7 +6098,7 @@ fn a_collective_keeps_two_chains() {
     let rot = lab.c[0].binding;
     let mut stale = old;
     stale.cite = Some((label, vec![rot]));
-    let a = lab.w.everyday_act(&mut stale, mips().envelopes, 0, vec![], None, None);
+    let a = lab.w.everyday_act(&mut stale, mirs().envelopes, 0, vec![], None, None);
     let y = lab.w.add(&a);
     assert!(matches!(lab.view().consent(&y), Ok(Consent::Uncited { .. }) | Err(_)));
     // An Agreements act of the label (its signature on terms of a deal, as a
@@ -6146,7 +6146,7 @@ fn a_record_not_done_is_no_line() {
     let res = lab.resign_from(&mut ben, k, None);
     let rec = Record { clone: None, signatures: None, kept: vec![], registers: Some(vec![res]) };
     let saved = lab.c[0].cite.take();
-    let line = lab.w.private_act(&mut lab.c[0], mips().agreements, agreements::types::RECORD, rec.to_map(), obj(k), vec![lab.m[BEN].id]);
+    let line = lab.w.private_act(&mut lab.c[0], mirs().agreements, agreements::types::RECORD, rec.to_map(), obj(k), vec![lab.m[BEN].id]);
     lab.c[0].cite = saved;
     let e = lab.view().record(&lab.c[0].id, &line).unwrap();
     assert!(!e.line && e.registers.is_empty());
@@ -6175,7 +6175,7 @@ fn the_ending_wins() {
         pointer: spec("its pointer"),
         agreement: None,
     });
-    let a = lab.w.everyday_act(&mut lab.c[1], mips().money, 1, o.to_map(), None, None);
+    let a = lab.w.everyday_act(&mut lab.c[1], mirs().money, 1, o.to_map(), None, None);
     let d = lab.w.add(&a);
     lab.sign(BEN, &d);
     assert_eq!(lab.view().obligation_binds(&d).unwrap(), Some(true), "done: it binds, for now");
@@ -6202,7 +6202,7 @@ fn the_ending_wins() {
         pointer: spec("its pointer"),
         agreement: None,
     });
-    let a = lab2.w.everyday_act(&mut lab2.c[1], mips().money, 1, o.to_map(), None, None);
+    let a = lab2.w.everyday_act(&mut lab2.c[1], mirs().money, 1, o.to_map(), None, None);
     let d2 = lab2.w.add(&a);
     lab2.sign(BEN, &d2);
     let closing = agreements::Closing { agreement: f2, collective: label2, chain_act: lab2.c[1].binding, tips: vec![tip(&lab2.c[1])], open: vec![] };
@@ -6238,7 +6238,7 @@ fn a_sale_is_recorded_on_the_actions_chain() {
     let ptr = lab.pointer(0, 1, None, &[rail]);
     lab.sign(BEN, &ptr);
     let publication = {
-        let a = lab.w.everyday_act(&mut lab.c[0], mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
         lab.w.add(&a)
     };
     lab.sign(ANA, &publication);
@@ -6255,7 +6255,7 @@ fn a_sale_is_recorded_on_the_actions_chain() {
             batch: None,
             purchase: Some(Purchase { agreement: f, line: f }),
         });
-        let a = lab.w.everyday_act(&mut lab.c[d], mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut lab.c[d], mirs().money, 2, r.to_map(), None, None);
         let x = lab.w.add(&a);
         lab.sign(BEN, &x);
         x
@@ -6285,7 +6285,7 @@ fn a_sale_is_recorded_on_the_actions_chain() {
             batch: None,
             purchase: Some(Purchase { agreement: f, line: f }),
         });
-        let a = lab.w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut st, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     assert!(matches!(lab.consent(&by_svc), Consent::Granted { .. }), "{:?}", lab.consent(&by_svc));
@@ -6347,7 +6347,7 @@ fn a_superseded_claim_settles_on_each_holders_chain() {
     sign(&mut w, &mut ana, &deal);
     sign(&mut w, &mut ben, &deal);
     let publication = {
-        let a = w.everyday_act(&mut ana, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let a = w.everyday_act(&mut ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
         w.add(&a)
     };
     let (request, push) = (spec("an invoice rail"), spec("a push rail"));
@@ -6364,11 +6364,11 @@ fn a_superseded_claim_settles_on_each_holders_chain() {
             batch: None,
             purchase: Some(Purchase { agreement: deal, line: deal }),
         });
-        let a = w.everyday_act(who, mips().money, 2, r.to_map(), None, None);
+        let a = w.everyday_act(who, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
     fn pview(w: &World, push: Hash) -> AgreementsView<'_> {
-        let mut v = AgreementsView::new(&w.v, mips());
+        let mut v = AgreementsView::new(&w.v, mirs());
         v.push_rails.insert(push);
         v
     }
@@ -6458,7 +6458,7 @@ fn a_closing_must_be_done() {
     let c = agreements::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
     let ben = lab.m[BEN].id;
     let eo = ending_obj(&lab, f, c.collective);
-    let quiet = lab.w.private_act(&mut lab.m[ANA], mips().agreements, agreements::types::CLOSING, c.to_map(), eo, vec![ben]);
+    let quiet = lab.w.private_act(&mut lab.m[ANA], mirs().agreements, agreements::types::CLOSING, c.to_map(), eo, vec![ben]);
     lab.end(ANA, &quiet);
     lab.end(BEN, &quiet);
     lab.end(CY, &quiet);
@@ -6485,7 +6485,7 @@ fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
     let mut w = World::new();
     let mut singer = w.genesis("a singer", vec![own_home()], None, None);
     let mut agent = w.genesis("her agent", vec![own_home()], None, None);
-    let env = mips().envelopes;
+    let env = mirs().envelopes;
     let grant = Grant { kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]), ..plain_grant(agent.id, false) };
     let g = agreements_act(&mut w, &mut singer, agreements::types::GRANT, grant.to_map(), None);
     assert!(w.v.get(&g).unwrap().act.outside.is_public());
@@ -6505,13 +6505,13 @@ fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
     let cited = post(&mut w, &mut s1);
     let racing = post(&mut w, &mut s2);
     fn view(w: &World) -> AgreementsView<'_> {
-        AgreementsView::new(&w.v, mips())
+        AgreementsView::new(&w.v, mirs())
     }
     assert_eq!(view(&w).backing(&cited).unwrap(), Backing::Backed { grant: g });
     assert!(matches!(view(&w).consent(&cited).unwrap(), Consent::Granted { .. }));
     // Beyond its reach: a Money act.
     let off = {
-        let a = w.everyday_act(&mut s1, mips().money, 0, vec![], None, None);
+        let a = w.everyday_act(&mut s1, mirs().money, 0, vec![], None, None);
         w.add(&a)
     };
     assert!(matches!(view(&w).backing(&off).unwrap(), Backing::NotBacked { .. }));
@@ -6550,7 +6550,7 @@ fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
     // grantee's acts, and backs nothing (reading).
     let mut quiet = w.genesis("a quiet agent", vec![own_home()], None, None);
     let qid = quiet.id;
-    let qg = w.private_act(&mut singer, mips().agreements, agreements::types::GRANT, plain_grant(qid, false).to_map(), None, vec![qid]);
+    let qg = w.private_act(&mut singer, mirs().agreements, agreements::types::GRANT, plain_grant(qid, false).to_map(), None, vec![qid]);
     sign(&mut w, &mut quiet, &qg);
     let mut qs = singer.clone();
     qs.binding = qg;
@@ -6598,7 +6598,7 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
     let mut t = deal_terms(aid, bid);
     t.payee_grants = Some(vec![ga, gb]);
     assert_eq!(Terms::decode(&t.to_map()).unwrap(), t);
-    assert_eq!(t.check(&mips()), Ok(()));
+    assert_eq!(t.check(&mirs()), Ok(()));
     let deal = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut ana, &deal);
     // The service's strand in each payee's name.
@@ -6628,7 +6628,7 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
         .to_map()
     };
     let add = |w: &mut World, s: &mut Person, p: Vec<(Value, Value)>| {
-        let a = w.everyday_act(s, mips().money, 2, p, None, None);
+        let a = w.everyday_act(s, mirs().money, 2, p, None, None);
         w.add(&a)
     };
     let backed = |w: &World, x: &Hash| matches!(view(w).backing(x).unwrap(), Backing::Backed { .. } | Backing::Binds { .. });
@@ -6670,7 +6670,7 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
     let not_hers = add(&mut w, &mut sa, rc(bid, fid, deal, Some(deal), None));
     assert!(reason(&w, &not_hers).contains("received"));
     let post = {
-        let a = w.everyday_act(&mut sa, mips().envelopes, 0, vec![], None, None);
+        let a = w.everyday_act(&mut sa, mirs().envelopes, 0, vec![], None, None);
         w.add(&a)
     };
     assert!(reason(&w, &post).contains("only receipts"));
@@ -6699,20 +6699,20 @@ fn field_14_is_one_grant_in_a_collective_and_a_list_in_a_deal() {
     let (a, b) = (spec("ana"), spec("ben"));
     let mut d = deal_terms(a, b);
     d.payee_grants = Some(vec![spec("ana's grant"), spec("ben's grant")]);
-    assert_eq!(d.check(&mips()), Ok(()));
+    assert_eq!(d.check(&mirs()), Ok(()));
     let mut x = d.clone();
     x.payee_grants = Some(vec![spec("ana's grant"), spec("ana's grant")]);
-    assert!(x.check(&mips()).is_err(), "each grant once");
+    assert!(x.check(&mirs()).is_err(), "each grant once");
     let mut x = d.clone();
     x.payee_grants = None;
     x.split_grant = Some(spec("one grant"));
-    assert!(x.check(&mips()).is_err(), "a deal lists its payees' grants");
+    assert!(x.check(&mirs()).is_err(), "a deal lists its payees' grants");
     let mut c = label_terms(&[a, b, spec("cy")], spec("an authority"), spec("a keeper"), &|_| {});
     c.payee_grants = Some(vec![spec("a grant")]);
-    assert!(c.check(&mips()).is_err(), "a collective names one grant");
+    assert!(c.check(&mirs()).is_err(), "a collective names one grant");
     c.payee_grants = None;
     c.split_grant = Some(spec("a grant"));
-    assert_eq!(c.check(&mips()), Ok(()));
+    assert_eq!(c.check(&mirs()), Ok(()));
 }
 
 /// F129, H4 (reading): one split service per deal, one grant per payee. A
@@ -6758,7 +6758,7 @@ fn a_deal_names_one_split_service_one_grant_per_payee() {
         batch: None,
         purchase: Some(mor_core::money::Purchase { agreement: deal, line: deal }),
     });
-    let a = w.everyday_act(&mut sa, mips().money, 2, rc.to_map(), None, None);
+    let a = w.everyday_act(&mut sa, mirs().money, 2, rc.to_map(), None, None);
     let x = w.add(&a);
     assert!(matches!(view(&w).backing(&x).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("one split service")));
 }
@@ -6780,12 +6780,12 @@ fn a_deals_backups_are_the_split_cmips_fields() {
     let group = |x: &[&str]| ServiceGrants::PerPayee(x.iter().map(|n| spec(n)).collect());
     d.backups = Some(Backups { services: vec![group(&["ana to T", "ben to T"]), group(&["ana to U", "ben to U"])], failure: Some(Value::Uint(60)) });
     assert_eq!(d.time, None);
-    assert_eq!(d.check(&mips()), Ok(()));
+    assert_eq!(d.check(&mirs()), Ok(()));
     assert_eq!(Terms::decode(&d.to_map()).unwrap(), d, "a group is written as a list");
     let with = |n: Vec<ServiceGrants>| {
         let mut x = d.clone();
         x.backups = Some(Backups { services: n, failure: None });
-        x.check(&mips())
+        x.check(&mirs())
     };
     // One grant per payee: as many as field 14 lists.
     assert!(matches!(with(vec![group(&["ana to T"])]), Err(agreements::AgreementsError::Check(w)) if w.contains("H6")));
@@ -6802,9 +6802,9 @@ fn a_deals_backups_are_the_split_cmips_fields() {
     c.cmips.push((8, spec("a split cMIP")));
     c.cmips.sort();
     c.backups = Some(Backups { services: vec![spec("another grant").into()], failure: None });
-    assert_eq!(c.check(&mips()), Ok(()));
+    assert_eq!(c.check(&mirs()), Ok(()));
     c.backups = Some(Backups { services: vec![group(&["one", "two", "three"])], failure: None });
-    assert!(matches!(c.check(&mips()), Err(agreements::AgreementsError::Check(w)) if w.contains("collective")), "a collective's is one grant");
+    assert!(matches!(c.check(&mirs()), Err(agreements::AgreementsError::Check(w)) if w.contains("collective")), "a collective's is one grant");
 }
 
 /// Agreements draft 11, rules 15, 17 and 18 (new in draft 11, F260): every
@@ -6862,13 +6862,13 @@ fn f260_a_direct_buyer_tries_the_services_in_order() {
         batch: None,
         purchase: Some(Purchase { agreement: deal, line: deal }),
     });
-    let a = w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+    let a = w.everyday_act(&mut st, mirs().money, 2, r.to_map(), None, None);
     let receipt = w.add(&a);
     assert!(matches!(view(&w).backing(&receipt).unwrap(), Backing::Backed { .. }), "a backup receipts in the owners' name with the grants it holds");
     // T splits it, 5 and 5.
     let pay = |who: Hash| agreements::Payout { receiver: who, amount: 5, stake: Some(0), ..Default::default() };
     let sp = agreements::Split { receipt, payouts: vec![pay(aid), pay(bid)], cmip: spec("a split cMIP"), agreement: deal, tally: Some(vec![(0, vec![(aid, 0), (bid, 0)])]), number: Some(1), ..Default::default() };
-    let x = w.private_act(&mut t, mips().agreements, agreements::types::SPLIT, sp.to_map(), None, sorted(vec![aid, bid]));
+    let x = w.private_act(&mut t, mirs().agreements, agreements::types::SPLIT, sp.to_map(), None, sorted(vec![aid, bid]));
     let order = |v: &AgreementsView| v.split(&x).unwrap().problems.iter().any(|p| p.contains("F260"));
     let v = view(&w);
     assert_eq!(v.direct_receiver(&deal, &receipt), Some(sid), "S first: no attempt stated failed");
@@ -6920,7 +6920,7 @@ fn a_deals_backup_service_holds_one_grant_per_payee() {
         d.cmips.push((8, spec("a split cMIP")));
         d.cmips.sort();
         d.backups = Some(agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(group)], failure: None });
-        assert_eq!(d.check(&mips()), Ok(()));
+        assert_eq!(d.check(&mirs()), Ok(()));
         let x = agreements_act(w, ana, agreements::types::TERMS, d.to_map(), None);
         sign(w, ana, &x);
         sign(w, ben, &x);
@@ -6948,7 +6948,7 @@ fn a_deals_backup_service_holds_one_grant_per_payee() {
         .to_map()
     };
     let add = |w: &mut World, st: &mut Person, p: Vec<(Value, Value)>| {
-        let a = w.everyday_act(st, mips().money, 2, p, None, None);
+        let a = w.everyday_act(st, mirs().money, 2, p, None, None);
         w.add(&a)
     };
     let reason = |w: &World, x: &Hash| match view(w).backing(x).unwrap() {
@@ -7033,7 +7033,7 @@ fn a_collectives_split_service_signs_only_incoming_receipts() {
         .to_map()
     };
     let add = |lab: &mut Lab, st: &mut Person, p: Vec<(Value, Value)>| {
-        let a = lab.w.everyday_act(st, mips().money, 2, p, None, None);
+        let a = lab.w.everyday_act(st, mirs().money, 2, p, None, None);
         lab.w.add(&a)
     };
     let reason = |lab: &Lab, x: &Hash| match lab.view().backing(x).unwrap() {
@@ -7118,7 +7118,7 @@ fn payment(
             purchase: None,
         }))
     };
-    let a = lab.w.everyday_act(signer, mips().money, t, p.to_map(), None, None);
+    let a = lab.w.everyday_act(signer, mirs().money, t, p.to_map(), None, None);
     lab.w.add(&a)
 }
 
@@ -7168,7 +7168,7 @@ fn a_receipt_pays_a_debt_only_with_the_rails_answer_and_in_its_unit() {
 fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
     use mor_core::money::{vault_declaration, Amount, Obligation, PaidAt, PayeePointer, Payload, Rail, VaultEntry};
     let mut lab = Lab::new(&|_| {});
-    let fin = mips().money;
+    let fin = mirs().money;
     let vault = VaultEntry { unit: spec("a unit"), rail_module: spec("a rail Module"), source: b"the printer's vault".to_vec(), limit: 50 };
     let mut printer = lab.w.genesis_with("the printer", vec![own_home()], None, None, Some(vec![vault_declaration(&fin, &[vault])]), 3);
     let pid = printer.id;
@@ -7199,7 +7199,7 @@ fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
     };
     // The printer acknowledges a debt with an act of its own (F145).
     let ack = |lab: &mut Lab, printer: &mut Person, d: Hash| {
-        let a = lab.w.everyday_act(printer, mips().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![d]));
+        let a = lab.w.everyday_act(printer, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![d]));
         lab.w.add(&a)
     };
     let paid = |lab: &mut Lab, printer: &mut Person, d: Hash, value: u64, at: PaidAt, proof: &str| {
@@ -7253,7 +7253,7 @@ fn a_debt_paid_through_a_readers_own_attempt_is_unknown() {
     use common::home;
     use mor_core::money::{Amount, Obligation, PaidAt, PayeePointer, Payload, Rail};
     let mut lab = Lab::new(&|_| {});
-    let fin = mips().money;
+    let fin = mirs().money;
     let old = lab.w.operator("the printer's old home");
     let mut new = lab.w.operator("the printer's new home");
     let printer = lab.w.genesis("the printer", vec![home(&old)], None, None);
@@ -7283,7 +7283,7 @@ fn a_debt_paid_through_a_readers_own_attempt_is_unknown() {
     // The printer acknowledges the IOU with an act of its own, which holds
     // its pointer through its sequence (F145): only then can it count on
     // the flow.
-    let a = lab.w.everyday_act(&mut p1, mips().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![d]));
+    let a = lab.w.everyday_act(&mut p1, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![d]));
     lab.w.add(&a);
     let mut payer = lab.c[0].clone();
     let c = payment(&mut lab, &mut payer, true, pid, d, spec("a unit"), 100, b"paid to the new node");
@@ -7431,7 +7431,7 @@ fn a_broken_collective_rolls_back() {
     let f = lab.founding;
     let col = lab.c[0].id;
     let ids = lab.ids();
-    let agreements = mips().agreements;
+    let agreements = mirs().agreements;
     let auth = lab.authority.id;
     let stay = vec![ids[ANA], ids[CY]];
     let without_ben = move |t: &mut Terms| {
@@ -7533,7 +7533,7 @@ fn a_rollback_may_change_nothing_and_needs_every_voice_that_remains() {
     let f = lab.founding;
     let col = lab.c[0].id;
     let ids = lab.ids();
-    let agreements = mips().agreements;
+    let agreements = mirs().agreements;
     // A rotation declaring a clone marked with the clone rule: broken (rule 37, B5).
     let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
     let k1 = lab.propose(ANA, &k1);
@@ -7598,7 +7598,7 @@ fn no_rollback_once_every_voice_has_resigned() {
     let f = lab.founding;
     let col = lab.c[0].id;
     let ids = lab.ids();
-    let agreements = mips().agreements;
+    let agreements = mirs().agreements;
     let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
     let k1 = lab.propose(ANA, &k1);
     let (s1, s2) = (lab.sign(ANA, &k1), lab.sign(BEN, &k1));
@@ -7666,7 +7666,7 @@ fn others_judge_absence(t: &mut Terms) {
 
 /// A rotation declaring a rollback.
 fn roll_back(lab: &mut Lab, k: Hash, sigs: &[Hash], broken: Hash, regs: &[Hash]) -> Hash {
-    let agreements = mips().agreements;
+    let agreements = mirs().agreements;
     lab.rotate_with(Some(vec![agreements::rollback_declaration(&agreements, &k, sigs, &broken, regs)]), &[0])
 }
 
@@ -7779,7 +7779,7 @@ fn rb4_a_missing_or_unreadable_declaration_is_a_break_with_a_rollback() {
         let mut lab = Lab::new(&|_| {});
         let f = lab.founding;
         let col = lab.c[0].id;
-        let agreements = mips().agreements;
+        let agreements = mirs().agreements;
         let value = match case {
             "removed" => None,
             _ => Some(Value::Uint(7)),
@@ -7867,7 +7867,7 @@ fn rb1_a_grant_is_quarantined_during_the_broken_stretch() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let col = lab.c[0].id;
-    let env = mips().envelopes;
+    let env = mirs().envelopes;
     let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
     let grant = Grant {
         area: Some(1),
@@ -7948,7 +7948,7 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
     let ptr = lab.pointer(0, 1, None, &[rail]);
     lab.sign(BEN, &ptr);
     let publication = {
-        let a = lab.w.everyday_act(&mut lab.c[0], mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
         lab.w.add(&a)
     };
     lab.sign(ANA, &publication);
@@ -7965,7 +7965,7 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
             batch: None,
             purchase: Some(Purchase { agreement: f, line }),
         });
-        let a = lab.w.everyday_act(&mut lab.c[0], mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
         let x = lab.w.add(&a);
         lab.sign(BEN, &x);
         x
@@ -7999,7 +7999,7 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
             purchase: Some(Purchase { agreement: f, line }),
             previous: None,
         });
-        let x = w.everyday_act(fan, mips().money, 3, c.to_map(), None, None);
+        let x = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, None);
         w.add(&x)
     };
     let by_claim = claim(&mut lab.w, &mut fan, k1, b"fay");
@@ -8086,7 +8086,7 @@ fn a_purchase_following_either_branch_counts() {
     sign(&mut w, &mut ana, &deal);
     sign(&mut w, &mut ben, &deal);
     let publication = {
-        let a = w.everyday_act(&mut ana, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let a = w.everyday_act(&mut ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
         w.add(&a)
     };
     let mut branch = |w: &mut World, ana: &mut Person, ben: &mut Person, a: u64| {
@@ -8115,12 +8115,12 @@ fn a_purchase_following_either_branch_counts() {
             batch: None,
             purchase: Some(Purchase { agreement: deal, line: b }),
         });
-        let a = w.everyday_act(who, mips().money, 2, r.to_map(), None, None);
+        let a = w.everyday_act(who, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
     let ra = receipt(&mut w, &mut ana);
     receipt(&mut w, &mut ben);
-    let mut v = AgreementsView::new(&w.v, mips());
+    let mut v = AgreementsView::new(&w.v, mirs());
     v.push_rails.insert(push);
     assert_eq!(v.version_in_force(&deal).unwrap(), deal, "forked: the reference");
     assert_eq!(v.purchase(&ra).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
@@ -8174,7 +8174,7 @@ fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
         batch: None,
         purchase: Some(Purchase { agreement: f, line: k1 }),
     });
-    let a = lab.w.everyday_act(&mut lab.c[0], mips().money, 2, r.to_map(), None, None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let x = lab.w.add(&a);
     let got = lab.view().purchase(&x).unwrap().unwrap();
     assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")), "{got:?}");
@@ -8510,7 +8510,7 @@ fn f188_a_buyer_under_a_tangled_version_stays_protected() {
     sign(&mut l.w, &mut l.ben, &d);
     l.d = d;
     let publication = {
-        let x = l.w.everyday_act(&mut l.ana, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let x = l.w.everyday_act(&mut l.ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
         l.w.add(&x)
     };
     let mut tangled = vec![];
@@ -8534,12 +8534,12 @@ fn f188_a_buyer_under_a_tangled_version_stays_protected() {
             batch: None,
             purchase: Some(Purchase { agreement: d, line: tangled[1] }),
         });
-        let x = l.w.everyday_act(p, mips().money, 2, r.to_map(), None, None);
+        let x = l.w.everyday_act(p, mirs().money, 2, r.to_map(), None, None);
         l.w.add(&x)
     };
     let ra = receipt(&mut l, 0);
     receipt(&mut l, 1);
-    let mut v = AgreementsView::new(&l.w.v, mips());
+    let mut v = AgreementsView::new(&l.w.v, mirs());
     v.push_rails.insert(push);
     assert_eq!(v.version_in_force(&d).unwrap(), d, "tangled: the reference");
     assert_eq!(v.purchase(&ra).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
@@ -8599,7 +8599,7 @@ fn f189_3_a_payment_naming_a_version_the_seller_does_not_hold_raises_the_alarm()
             purchase: Some(Purchase { agreement: d, line }),
             previous: None,
         });
-        let x = w.everyday_act(fan, mips().money, 3, c.to_map(), None, None);
+        let x = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, None);
         w.add(&x)
     };
     // 3B, signed by both from Ben's device, never reached Ana's relays.
@@ -8668,7 +8668,7 @@ fn f189_7_money_owed_back_from_the_stretch_is_a_debt_before_closing() {
         batch: None,
         purchase: Some(Purchase { agreement: f, line: k1 }),
     });
-    let a = lab.w.everyday_act(&mut lab.c[0], mips().money, 2, r.to_map(), None, None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     lab.w.add(&a);
     assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
     // The rollback; then every member closes.
@@ -8701,7 +8701,7 @@ fn f189_8_a_declaration_counts_only_if_public_or_addressed_to_the_member() {
     let d = AbsenceDeclaration { agreement: f, clause: f, party: ids[CY], outcomes: vec![outcomes::VOICE_REMOVED] };
     // Sealed to Ana and Ben only.
     let mut a = lab.authority.clone();
-    let hidden = lab.w.private_act(&mut a, mips().agreements, agreements::types::DECLARATION, d.to_map(), obj(f), vec![ids[ANA], ids[BEN]]);
+    let hidden = lab.w.private_act(&mut a, mirs().agreements, agreements::types::DECLARATION, d.to_map(), obj(f), vec![ids[ANA], ids[BEN]]);
     lab.authority = a;
     assert!(lab.view().declaration(&hidden).unwrap().is_err(), "kept from the member it names, it counts for nothing");
     lab.record(0, None, &[], vec![hidden], f);
@@ -8709,7 +8709,7 @@ fn f189_8_a_declaration_counts_only_if_public_or_addressed_to_the_member() {
     assert!(n.voices.contains(&ids[CY]), "no line registers it");
     // Sealed to Cy too: it counts.
     let mut a = lab.authority.clone();
-    let shown = lab.w.private_act(&mut a, mips().agreements, agreements::types::DECLARATION, d.to_map(), obj(f), vec![ids[ANA], ids[CY]]);
+    let shown = lab.w.private_act(&mut a, mirs().agreements, agreements::types::DECLARATION, d.to_map(), obj(f), vec![ids[ANA], ids[CY]]);
     lab.authority = a;
     assert!(lab.view().declaration(&shown).unwrap().is_ok());
     lab.record(0, None, &[], vec![shown], f);
@@ -8728,7 +8728,7 @@ fn bq1_after_a_rollback_a_grantees_act_counts_once_it_cites_the_rollback() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let col = lab.c[0].id;
-    let env = mips().envelopes;
+    let env = mirs().envelopes;
     let mut agent = lab.w.genesis("an agent", vec![own_home()], None, None);
     let grant = Grant { area: Some(1), kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]), ..plain_grant(agent.id, false) };
     let g = lab.grant(&grant);
@@ -9023,9 +9023,9 @@ fn f190_qf3_a_tangled_deal_settles_cleanly() {
     c.parent = Some(x);
     c.settles = Some(both.clone());
     c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![l.ana.id, l.ben.id]) }]);
-    assert!(c.check(&mips()).is_err(), "descending tips are refused");
+    assert!(c.check(&mirs()).is_err(), "descending tips are refused");
     c.settles = Some(vec![y, y]);
-    assert!(c.check(&mips()).is_err(), "a tip twice is refused");
+    assert!(c.check(&mirs()).is_err(), "a tip twice is refused");
 }
 
 /// QF3 with DQ5: the parties of every tip discarded sign the settlement.
@@ -9125,14 +9125,14 @@ fn f190_qf2_the_reference_names_the_judge_of_forks() {
     let mut t = deal_terms(spec("p"), spec("q"));
     t.arbitrators = Some(vec![spec("an arbitrator")]);
     t.fork_judge = Some(spec("someone else"));
-    assert!(t.check(&mips()).is_err(), "the judge of forks is one of the deal's arbitrators or verifiers");
+    assert!(t.check(&mirs()).is_err(), "the judge of forks is one of the deal's arbitrators or verifiers");
     t.fork_judge = Some(spec("an arbitrator"));
-    assert!(t.check(&mips()).is_ok());
+    assert!(t.check(&mirs()).is_ok());
     let c = label_terms(&[spec("p"), spec("q"), spec("r")], spec("an authority"), spec("a keeper"), &|t| {
         t.arbitrators = Some(vec![spec("an arbitrator")]);
         t.fork_judge = Some(spec("an arbitrator"));
     });
-    assert!(c.check(&mips()).is_err(), "a collective's forks are settled by its records");
+    assert!(c.check(&mirs()).is_err(), "a collective's forks are settled by its records");
 }
 
 /// QF4, decided by Nobody, allegedly, 9 October 2026 ("Yes"; F190): a
@@ -9200,7 +9200,7 @@ fn f190_qf5_money_owed_back_is_repaid_by_a_payment_naming_it() {
         batch: None,
         purchase: Some(Purchase { agreement: f, line: k1 }),
     });
-    let a = lab.w.everyday_act(&mut lab.c[0], mips().money, 2, r.to_map(), None, None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let owed = lab.w.add(&a);
     assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
     let node = pointer_of(&mut lab.w, &mut patron, 1, None, &[b"the patron's node"]);
@@ -9309,7 +9309,7 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
     // The song's publication, its media locked under one locked hash.
     let locked = spec("the song's locked bytes");
     let song = {
-        let x = lab.w.everyday_act(&mut lab.c[0], mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
+        let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
         lab.w.add(&x)
     };
     let proof = b"the fan's payment".to_vec();
@@ -9328,7 +9328,7 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
             batch: None,
             purchase: Some(Purchase { agreement: k1, line: k1 }),
         });
-        let a = lab.w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut st, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     let record = |lab: &mut Lab, relay: &mut Person, object: Hash, nonce: u8| {
@@ -9351,7 +9351,7 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
             agreements::Payout { receiver: relay_id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(evidence), fee_module: None, rail_fee: None, ..Default::default() },
         ];
         let s = agreements::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None, ..Default::default() };
-        let x = lab.w.private_act(svc, mips().agreements, agreements::types::SPLIT, s.to_map(), None, everyone.clone());
+        let x = lab.w.private_act(svc, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, everyone.clone());
         let mut v = lab.view();
         v.delivery_records.insert(transport);
         v.split(&x).unwrap().unevidenced
@@ -9373,13 +9373,13 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
         previous: None,
     })
     .to_map();
-    let a = lab.w.everyday_act(&mut relay, mips().money, 3, claim.clone(), None, Some(vec![served]));
+    let a = lab.w.everyday_act(&mut relay, mirs().money, 3, claim.clone(), None, Some(vec![served]));
     lab.w.add(&a);
     assert_eq!(read(&mut lab, &mut svc, served), vec![relay_id], "only the payer's claim acknowledges a delivery");
     // The fan's claim, acknowledging the record of the object it paid for;
     // the rail answers that it carries the payment's commitment, the fan
     // as payer (F193).
-    let a = lab.w.everyday_act(&mut fan, mips().money, 3, claim, None, Some(sorted(vec![served, other, served2])));
+    let a = lab.w.everyday_act(&mut fan, mirs().money, 3, claim, None, Some(sorted(vec![served, other, served2])));
     let a = lab.w.add(&a);
     lab.rail_valid.push((a, mor_core::money::PaidAt::Flow(ptr)));
     assert!(read(&mut lab, &mut svc, served).is_empty(), "acknowledged by the payer's claim: it counts");
@@ -9512,7 +9512,7 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
     lab.sign(BEN, &ptr);
     let locked = spec("the song's locked bytes");
     let song = {
-        let x = lab.w.everyday_act(&mut lab.c[0], mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
+        let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
         lab.w.add(&x)
     };
     // A real, anonymous buyer paid on the rail and published nothing. The
@@ -9533,7 +9533,7 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
             batch: None,
             purchase: Some(Purchase { agreement: k1, line: k1 }),
         });
-        let a = lab.w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut st, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     // The service's relay signs a record of the song; nobody fetched it.
@@ -9556,7 +9556,7 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
         purchase: Some(Purchase { agreement: k1, line: k1 }),
         previous: None,
     });
-    let a = lab.w.everyday_act(&mut puppet, mips().money, 3, claim.to_map(), None, Some(vec![served]));
+    let a = lab.w.everyday_act(&mut puppet, mirs().money, 3, claim.to_map(), None, Some(vec![served]));
     lab.w.add(&a);
     let stake = lab.view().terms(&k1).unwrap().own_stake().unwrap().0 as u64;
     let payouts = vec![
@@ -9566,7 +9566,7 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
         agreements::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None, ..Default::default() },
     ];
     let s = agreements::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None, ..Default::default() };
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, s.to_map(), None, ids.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, ids.clone());
     let mut v = lab.view();
     v.delivery_records.insert(transport);
     assert_eq!(v.split(&x).unwrap().unevidenced, vec![relay.id], "the puppet's claim carries no commitment of the payment: the relay's share is unevidenced");
@@ -9574,7 +9574,7 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
     // payer, and its acknowledgement would count: the commitment decides.
     let mut v = lab.view();
     v.delivery_records.insert(transport);
-    let puppet_claim = lab.w.v.signed_by(&puppet.id).find(|h| h.inside.spec == mips().money).unwrap().id;
+    let puppet_claim = lab.w.v.signed_by(&puppet.id).find(|h| h.inside.spec == mirs().money).unwrap().id;
     v.rail_valid.insert(puppet_claim, mor_core::money::PaidAt::Flow(ptr));
     assert!(v.split(&x).unwrap().unevidenced.is_empty());
 }
@@ -9667,7 +9667,7 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_offer_that_s
     lab.sign(BEN, &ptr);
     let locked = spec("the song's locked bytes");
     let song = {
-        let x = lab.w.everyday_act(&mut lab.c[0], mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
+        let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
         lab.w.add(&x)
     };
     // The collective's standing offer for the song, in its format (step 12b).
@@ -9682,7 +9682,7 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_offer_that_s
             time: None,
             refund: None,
         };
-        let x = lab.w.everyday_act(&mut lab.c[0], mips().agreements, agreements::types::STANDING_OFFER, o.to_map(), obj(k1), None);
+        let x = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::STANDING_OFFER, o.to_map(), obj(k1), None);
         lab.w.add(&x)
     };
     let proof = b"the fan's payment under the offer".to_vec();
@@ -9701,7 +9701,7 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_offer_that_s
             batch: None,
             purchase: Some(Purchase { agreement: k1, line: k1 }),
         });
-        let a = lab.w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+        let a = lab.w.everyday_act(&mut st, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
     let served = {
@@ -9724,7 +9724,7 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_offer_that_s
         purchase: Some(Purchase { agreement: k1, line: k1 }),
         previous: None,
     });
-    let a = lab.w.everyday_act(&mut fan, mips().money, 3, claim.to_map(), None, Some(vec![served]));
+    let a = lab.w.everyday_act(&mut fan, mirs().money, 3, claim.to_map(), None, Some(vec![served]));
     let a = lab.w.add(&a);
     // The fan is the payer the payment committed to (F193).
     lab.rail_valid.push((a, mor_core::money::PaidAt::Flow(ptr)));
@@ -9736,7 +9736,7 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_offer_that_s
         agreements::Payout { receiver: relay.id, amount: 100, stake: None, role: Some("relay".into()), evidence: Some(served), fee_module: None, rail_fee: None, ..Default::default() },
     ];
     let s = agreements::Split { receipt: incoming, payouts, cmip: spec("a split cMIP"), agreement: k1, tally: None, number: None, ..Default::default() };
-    let x = lab.w.private_act(&mut svc, mips().agreements, agreements::types::SPLIT, s.to_map(), None, ids.clone());
+    let x = lab.w.private_act(&mut svc, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, ids.clone());
     let mut v = lab.view();
     v.delivery_records.insert(transport);
     assert!(v.split(&x).unwrap().unevidenced.is_empty(), "acknowledged by the payer, for the song the offer sells: the relay's role is filled");
@@ -9849,7 +9849,7 @@ fn f192_a_late_version_on_a_dropped_branch_reopens_nothing() {
 /// A verifier holding everything `w` holds but the acts in `skip` and
 /// their signature acts: a verifier that has not been given them yet.
 fn held_without(w: &World, skip: &[Hash]) -> mor_core::chain::Verifier {
-    let mut v = mor_core::chain::Verifier::with_mips(common::identity_spec(), common::money_spec(), agreements_spec());
+    let mut v = mor_core::chain::Verifier::with_mirs(common::identity_spec(), common::money_spec(), agreements_spec());
     for (a, key) in &w.log {
         let id = a.id();
         let cites = w.v.get(&id).is_some_and(|h| {
@@ -9875,7 +9875,7 @@ fn f192_a_version_held_back_and_published_late_reopens_nothing() {
     let b2 = l.version(b1, "B: a small change, signed by both, kept back.", None);
     let s = l.version(a1, "Settled for A, naming B's tip as everyone could see it.", Some(b1));
     let before = held_without(&l.w, &[b2]);
-    assert_eq!(AgreementsView::new(&before, mips()).version_in_force(&d).unwrap(), s, "before Ana publishes it: settled");
+    assert_eq!(AgreementsView::new(&before, mirs()).version_in_force(&d).unwrap(), s, "before Ana publishes it: settled");
     assert_eq!(view(&l.w).agreement(&b2).unwrap().exists, Some(true));
     assert_eq!(l.in_force().unwrap(), s, "published late, it reopens nothing");
 }
@@ -10015,7 +10015,7 @@ fn f196_once_held_the_settlement_counts() {
     let b1 = l.version(b0, "B grows.", None);
     let s = l.version(a1, "Settled: A, naming B's tip.", Some(b1));
     let partial = held_without(&l.w, &[b1]);
-    let v = AgreementsView::new(&partial, mips());
+    let v = AgreementsView::new(&partial, mirs());
     assert_eq!(v.version_in_force(&d).unwrap(), d, "B's tip not held: the settlement is a plain version, the deal forked");
     assert!(v.deal_fork(&d).unwrap().is_some_and(|f| f.branches.iter().any(|b| b.contains(&s))));
     assert_eq!(l.in_force().unwrap(), s, "held: the settlement counts");
@@ -10101,7 +10101,7 @@ impl RoleLab {
         let ptr = lab.pointer(0, 1, None, &[rail]);
         lab.sign(BEN, &ptr);
         let song = {
-            let x = lab.w.everyday_act(&mut lab.c[0], mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(spec("the song's locked bytes").to_vec()))], None, None);
+            let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(spec("the song's locked bytes").to_vec()))], None, None);
             lab.w.add(&x)
         };
         let proof = b"a payment for the song".to_vec();
@@ -10120,7 +10120,7 @@ impl RoleLab {
                 batch: None,
                 purchase: Some(Purchase { agreement: k1, line: k1 }),
             });
-            let a = lab.w.everyday_act(&mut st, mips().money, 2, r.to_map(), None, None);
+            let a = lab.w.everyday_act(&mut st, mirs().money, 2, r.to_map(), None, None);
             lab.w.add(&a)
         };
         // The service's receipt carries the rail's valid answer.
@@ -10152,7 +10152,7 @@ impl RoleLab {
             Some(p) => p,
             None => &mut self.fan,
         };
-        let a = self.lab.w.everyday_act(who, mips().money, 3, c.to_map(), None, Some(sorted(acks)));
+        let a = self.lab.w.everyday_act(who, mirs().money, 3, c.to_map(), None, Some(sorted(acks)));
         let id = self.lab.w.add(&a);
         if valid {
             self.lab.rail_valid.push((id, mor_core::money::PaidAt::Flow(self.ptr)));
@@ -10172,7 +10172,7 @@ impl RoleLab {
             agreements::Payout { receiver: to, amount: 100, stake: None, role: Some("a helper".into()), evidence: Some(evidence), fee_module: None, rail_fee: None, ..Default::default() },
         ];
         let s = agreements::Split { receipt: self.incoming, payouts, cmip: spec("a split cMIP"), agreement: self.k1, tally: None, number: None, ..Default::default() };
-        let x = self.lab.w.private_act(&mut self.svc, mips().agreements, agreements::types::SPLIT, s.to_map(), None, ids);
+        let x = self.lab.w.private_act(&mut self.svc, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, ids);
         let mut v = self.lab.view();
         v.delivery_records.extend(told);
         v.split(&x).unwrap().unevidenced
@@ -10312,7 +10312,7 @@ fn owed_back_lab_terms(f: &dyn Fn(&mut Terms), make: impl FnOnce(&mut Lab) -> (O
         batch: None,
         purchase: Some(Purchase { agreement: f, line: k1 }),
     });
-    let a = lab.w.everyday_act(&mut lab.c[0], mips().money, 2, r.to_map(), None, None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let owed = lab.w.add(&a);
     assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
     (lab, label, owed, k1, rot1, person)
@@ -10341,7 +10341,7 @@ fn payers_claim_on(lab: &mut Lab, payer: &mut Person, label: Hash, owed_proof: &
         purchase: Some(Purchase { agreement: lab.founding, line: k1 }),
         previous: None,
     });
-    let a = lab.w.everyday_act(payer, mips().money, 3, c.to_map(), cites, None);
+    let a = lab.w.everyday_act(payer, mirs().money, 3, c.to_map(), cites, None);
     lab.w.add(&a)
 }
 
@@ -10386,7 +10386,7 @@ fn f255_the_vault_limit_protects_a_refund_to_the_refund_rail() {
     for (limit, rail_repays) in [(5u64, false), (10, true)] {
         let with_vault = |lab: &mut Lab| {
             let v = VaultEntry { unit: spec("a unit"), rail_module: spec("a rail Module"), source: b"the patron's vault".to_vec(), limit };
-            let p = lab.w.genesis_with("a patron with a vault", vec![own_home()], None, None, Some(vec![vault_declaration(&mips().money, &[v])]), 3);
+            let p = lab.w.genesis_with("a patron with a vault", vec![own_home()], None, None, Some(vec![vault_declaration(&mirs().money, &[v])]), 3);
             (Some(mor_core::money::Payer::Identity(p.id)), Some(p))
         };
         let (mut lab, label, owed, k1, _, patron) = owed_back_lab_with(with_vault, b"gift");
@@ -10459,7 +10459,7 @@ fn qg1_a_refund_to_a_bare_key_is_repaid_by_the_collectives_claim() {
         previous: None,
     };
     c.anonymous = Some(Anonymous { key: bare, sig: key.sign(&c.anonymous_message(&Citations::default()), &[0; 32]).sig });
-    let a = lab.w.everyday_act(&mut once, mips().money, 3, Fin::Claim(c).to_map(), None, None);
+    let a = lab.w.everyday_act(&mut once, mirs().money, 3, Fin::Claim(c).to_map(), None, None);
     let kc = lab.w.add(&a);
     assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
     // The collective's claim, naming the payment owed back, the rail's
@@ -10529,7 +10529,7 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
         let to: Vec<Hash> = to.into_iter().chain(lab.ids()).collect();
         let n = agreements::Notice { payment: owed, deadline: (spec("a block height reference"), Value::Uint(900_000)) };
         let mut dev = lab.c[0].clone();
-        let x = lab.w.private_act(&mut dev, mips().agreements, agreements::types::NOTICE, n.to_map(), obj(owed), to);
+        let x = lab.w.private_act(&mut dev, mirs().agreements, agreements::types::NOTICE, n.to_map(), obj(owed), to);
         lab.c[0] = dev;
         x
     };
@@ -10586,7 +10586,7 @@ fn review_fdb_1_today_a_hidden_sibling_revealed_after_a_settlement_reopens_nothi
     let s = l.version(a1, "Repaired for A, naming B, the only other branch anyone could see.", Some(b1));
     let s2 = l.version(s, "Life goes on under the repair: Ben delivers.", None);
     let before = held_without(&l.w, &[c1]);
-    assert_eq!(AgreementsView::new(&before, mips()).version_in_force(&d).unwrap(), s2, "before C surfaces: the repaired line is in force");
+    assert_eq!(AgreementsView::new(&before, mirs()).version_in_force(&d).unwrap(), s2, "before C surfaces: the repaired line is in force");
     // Ana publishes C.
     assert_eq!(l.in_force().unwrap(), s2, "today, under F192: C reopens nothing, Ben's raise stands");
     assert!(view(&l.w).deal_fork(&d).unwrap().is_none(), "today: not forked, not broken");
@@ -10611,7 +10611,7 @@ fn review_fdb_2_today_a_hidden_child_and_a_hidden_sibling_lose_alike() {
     let c1 = l.version(d, "C: hidden sibling at the reference.", None);
     let s = l.version(a1, "Repaired for A, naming B1.", Some(b1));
     let before = held_without(&l.w, &[b2, c1]);
-    assert_eq!(AgreementsView::new(&before, mips()).version_in_force(&d).unwrap(), s);
+    assert_eq!(AgreementsView::new(&before, mirs()).version_in_force(&d).unwrap(), s);
     // Both surface.
     assert_eq!(l.in_force().unwrap(), s, "today: the hidden child and the hidden sibling lose alike (F192)");
     assert!(view(&l.w).deal_fork(&d).unwrap().is_none());
@@ -10637,7 +10637,7 @@ fn review_fdb_3_before_any_settlement_a_hidden_sibling_already_sends_the_deal_to
     let a3 = l.version(a2, "A3: Ben's share raised for more work.", None);
     let c1 = l.version(d, "C1: a sibling of A1, from a device out of step at the time.", None);
     let before = held_without(&l.w, &[c1]);
-    assert_eq!(AgreementsView::new(&before, mips()).version_in_force(&d).unwrap(), a3, "a deal that never visibly forked: A3 in force");
+    assert_eq!(AgreementsView::new(&before, mirs()).version_in_force(&d).unwrap(), a3, "a deal that never visibly forked: A3 in force");
     // C1 surfaces, however late.
     assert_eq!(l.in_force().unwrap(), d, "today: forked at d, the reference in force (A1 beside A4)");
     let f = view(&l.w).deal_fork(&d).unwrap().expect("forked");
@@ -10705,7 +10705,7 @@ fn f208_a_one_time_key_is_noticed_and_never_blocks_a_closing_for_good() {
     let public_notice = |lab: &mut Lab, owed: Hash| {
         let n = agreements::Notice { payment: owed, deadline: (spec("a block height reference"), Value::Uint(900_000)) };
         let mut dev = lab.c[0].clone();
-        let a = lab.w.everyday_act(&mut dev, mips().agreements, agreements::types::NOTICE, n.to_map(), obj(owed), None);
+        let a = lab.w.everyday_act(&mut dev, mirs().agreements, agreements::types::NOTICE, n.to_map(), obj(owed), None);
         let x = lab.w.add(&a);
         lab.c[0] = dev;
         x
@@ -10818,7 +10818,7 @@ fn review_2_6_a_settlement_request_counts_only_where_it_reaches_the_judge() {
         assert_eq!(l.in_force().unwrap(), d);
         let r = agreements::SettlementRequest { reference: d };
         let to = if reaches { vec![l.ben.id, judges[0].id] } else { vec![l.ben.id] };
-        let rq = l.w.private_act(&mut l.ben, mips().agreements, agreements::types::SETTLEMENT_REQUEST, r.to_map(), obj(d), to);
+        let rq = l.w.private_act(&mut l.ben, mirs().agreements, agreements::types::SETTLEMENT_REQUEST, r.to_map(), obj(d), to);
         judge_settles(&mut l, &mut judges[0], rq, a1, vec![b1], vec![]);
         if reaches {
             assert_eq!(l.in_force().unwrap(), a1, "sealed to the judge: the settlement counts");
@@ -10875,7 +10875,7 @@ impl ServiceDeal {
         sign(&mut w, &mut ana, &deal);
         sign(&mut w, &mut ben, &deal);
         let song = {
-            let x = w.everyday_act(&mut ana, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
+            let x = w.everyday_act(&mut ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
             w.add(&x)
         };
         let strand = |p: &Person, g: Hash, k: &SchnorrKey| {
@@ -10924,7 +10924,7 @@ impl ServiceDeal {
             batch: None,
             purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
         });
-        let a = w.everyday_act(by, mips().money, 2, r.to_map(), None, None);
+        let a = w.everyday_act(by, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     }
 }
@@ -10979,7 +10979,7 @@ fn review_2_1_to_2_3_the_offers_field_3_and_every_partys_signature() {
     sign(&mut l.w, &mut dan, &y);
     assert!(view(&l.w).offer(&y).unwrap().counts, "Dan accepted it");
     let o = agreements::Offer { under: None, sold: vec![agreements::Sold::Publication(l.song)], price: mor_core::money::Amount { unit: spec("a unit"), value: 1 }, paid: None, words: None, until: None, time: None, refund: None };
-    let sealed = l.w.private_act(&mut l.ben, mips().agreements, agreements::types::STANDING_OFFER, o.to_map(), None, vec![l.fan.id]);
+    let sealed = l.w.private_act(&mut l.ben, mirs().agreements, agreements::types::STANDING_OFFER, o.to_map(), None, vec![l.fan.id]);
     assert!(!view(&l.w).offer(&sealed).unwrap().counts, "an offer is always public (F215)");
 }
 
@@ -11081,7 +11081,7 @@ fn t1_a_purchase_under_either_agreement_holding_a_stake_in_the_work() {
     let own = agreements_act(&mut w, &mut ana, agreements::types::TERMS, own.to_map(), None);
     sign(&mut w, &mut ana, &own);
     let publication = {
-        let x = w.everyday_act(&mut ana, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked").to_vec()))], None, None);
+        let x = w.everyday_act(&mut ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked").to_vec()))], None, None);
         w.add(&x)
     };
     let aid = ana.id;
@@ -11122,14 +11122,14 @@ impl ServiceDeal {
             purchase: Some(Purchase { agreement: deal, line: deal }),
             previous: None,
         });
-        let a = self.w.everyday_act(&mut self.fan, mips().money, 3, c.to_map(), None, (!acks.is_empty()).then_some(acks));
+        let a = self.w.everyday_act(&mut self.fan, mirs().money, 3, c.to_map(), None, (!acks.is_empty()).then_some(acks));
         (r, self.w.add(&a))
     }
 
     fn split(&mut self, receipt: Hash, payouts: Vec<agreements::Payout>, metrics: Vec<Hash>) -> Hash {
         let s = agreements::Split { receipt, payouts, cmip: spec("a split cMIP"), agreement: self.deal, tally: None, number: Some(1), modules: vec![], metric_records: metrics, transfers: vec![] };
         let all = vec![self.ana.id, self.ben.id];
-        self.w.private_act(&mut self.svc, mips().agreements, agreements::types::SPLIT, s.to_map(), None, all)
+        self.w.private_act(&mut self.svc, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, all)
     }
 
     fn stake_payouts(&self) -> Vec<agreements::Payout> {
@@ -11365,7 +11365,7 @@ fn f218_the_default_holder_is_the_creator_who_opened_the_claim() {
     assert!(!o.contested);
     // A sealed claim, addressed to Ana only, counts for nothing (OF16 a).
     let sealed = agreements::WorkClaim { work, creators: sorted(vec![ben.id, stranger.id]), commitment: None };
-    w.private_act(&mut stranger, mips().agreements, agreements::types::WORK_CLAIM, sealed.to_map(), None, vec![ana.id]);
+    w.private_act(&mut stranger, mirs().agreements, agreements::types::WORK_CLAIM, sealed.to_map(), None, vec![ana.id]);
     assert!(!view(&w).work_owners(&work).unwrap().contested);
     // A stranger's public claim: contested, shown as recorded.
     let theirs = agreements::WorkClaim { work, creators: vec![stranger.id], commitment: None };
@@ -11413,7 +11413,7 @@ fn f217_a_stakes_sale_takes_effect_on_the_sellers_own_line() {
     let split = l.split(receipt, l.stake_payouts(), vec![]);
     let payout_receipt = |w: &mut World, ben: &mut Person, proof: &[u8]| {
         let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("the service"))), payee: bid, amount: Amount { unit: spec("a unit"), value: 320 }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
-        let a = w.everyday_act(ben, mips().money, 2, r.to_map(), None, None);
+        let a = w.everyday_act(ben, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
     let mut ben = l.ben.clone();
@@ -11466,7 +11466,7 @@ fn f216_a_publication_carries_two_agreements() {
     sign(&mut w, &mut ana, &we);
     sign(&mut w, &mut ben, &we);
     let publication = {
-        let x = w.everyday_act(&mut label, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F216").to_vec()))], None, None);
+        let x = w.everyday_act(&mut label, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F216").to_vec()))], None, None);
         w.add(&x)
     };
     let mut pe = deal_terms(we, label.id);
@@ -11787,17 +11787,17 @@ fn of24_of23_a_request_reaches_its_judge_and_presence_is_shown() {
     let (aid, bid) = (ana.id, ben.id);
     let milestone = spec("a milestone in dispute");
     let r = agreements::JudgeRequest { agreement: d, judge: agreements::Judge::Identity(arb.id), question: milestone };
-    let kept = w.private_act(&mut ana, mips().agreements, agreements::new_types::JUDGE_REQUEST, r.to_map(), obj(d), vec![aid]);
+    let kept = w.private_act(&mut ana, mirs().agreements, agreements::new_types::JUDGE_REQUEST, r.to_map(), obj(d), vec![aid]);
     assert!(view(&w).judge_request(&kept).unwrap().is_err(), "kept to herself: no judge was asked");
-    let sent = w.private_act(&mut ana, mips().agreements, agreements::new_types::JUDGE_REQUEST, r.to_map(), obj(d), vec![aid, arb.id]);
+    let sent = w.private_act(&mut ana, mirs().agreements, agreements::new_types::JUDGE_REQUEST, r.to_map(), obj(d), vec![aid, arb.id]);
     assert_eq!(view(&w).judge_request(&sent).unwrap(), Ok(vec![arb.id]));
     let other = agreements::JudgeRequest { judge: agreements::Judge::Identity(spec("someone the terms never name")), ..r.clone() };
     let x = agreements_act(&mut w, &mut ana, agreements::new_types::JUDGE_REQUEST, other.to_map(), obj(d));
     assert!(view(&w).judge_request(&x).unwrap().is_err(), "a judge the terms name");
     let l = agreements::Liveness { agreement: d };
-    let quiet = w.private_act(&mut ben, mips().agreements, agreements::new_types::LIVENESS, l.to_map(), obj(d), vec![bid]);
+    let quiet = w.private_act(&mut ben, mirs().agreements, agreements::new_types::LIVENESS, l.to_map(), obj(d), vec![bid]);
     assert!(!view(&w).liveness(&quiet).unwrap());
-    let shown = w.private_act(&mut ben, mips().agreements, agreements::new_types::LIVENESS, l.to_map(), obj(d), vec![aid, bid]);
+    let shown = w.private_act(&mut ben, mirs().agreements, agreements::new_types::LIVENESS, l.to_map(), obj(d), vec![aid, bid]);
     assert!(view(&w).liveness(&shown).unwrap());
 }
 
@@ -12017,7 +12017,7 @@ fn f246_a_settlement_outside_its_links_active_window_counts_for_nothing() {
 fn numbered_split(l: &mut ServiceDeal, receipt: Hash, payouts: Vec<agreements::Payout>, number: u64, transfers: Vec<(u64, Hash)>) -> Hash {
     let s = agreements::Split { receipt, payouts, cmip: spec("a split cMIP"), agreement: l.deal, tally: None, number: Some(number), modules: vec![], metric_records: vec![], transfers };
     let all = vec![l.ana.id, l.ben.id];
-    l.w.private_act(&mut l.svc, mips().agreements, agreements::types::SPLIT, s.to_map(), None, all)
+    l.w.private_act(&mut l.svc, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, all)
 }
 
 /// Ben's stake transfer of `share` of stake 0 to `to`, completed by the
@@ -12052,7 +12052,7 @@ fn f223_from_the_services_first_split_citing_the_transfer_the_buyer_is_owed() {
     assert!(view(&l.w).transfer(&x).unwrap().effective);
     let receipt_for = |w: &mut World, ben: &mut Person, split: Hash, proof: &[u8]| {
         let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("the service"))), payee: bid, amount: Amount { unit: spec("a unit"), value: 320 }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
-        let a = w.everyday_act(ben, mips().money, 2, r.to_map(), None, None);
+        let a = w.everyday_act(ben, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
     // The window: split 1 does not cite the transfer; Ben receipts it,
@@ -12126,7 +12126,7 @@ fn f224_a_stake_sold_twice_is_settled_on_the_sellers_own_line() {
     // back by Ben; Carla's is a purchase.
     let pays = |w: &mut World, buyer: &mut Person, t: Hash, proof: &[u8]| {
         let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: proof.to_vec(), payee: bid, amount: Amount { unit: spec("a unit"), value: 5000 }, fulfils: t, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
-        let a = w.everyday_act(buyer, mips().money, 3, c.to_map(), None, None);
+        let a = w.everyday_act(buyer, mirs().money, 3, c.to_map(), None, None);
         w.add(&a)
     };
     let pe = pays(&mut l.w, &mut eve, to_eve, b"eve pays");
@@ -12208,7 +12208,7 @@ impl Layers {
         sign(&mut w, &mut ana, &we);
         sign(&mut w, &mut ben, &we);
         let publication = {
-            let x = w.everyday_act(&mut label, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F235").to_vec()))], None, None);
+            let x = w.everyday_act(&mut label, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F235").to_vec()))], None, None);
             w.add(&x)
         };
         let mut pe = deal_terms(we, label.id);
@@ -12260,7 +12260,7 @@ impl Layers {
         };
         let to_all = vec![label, self.ana.id, self.ben.id, self.svc_w.id];
         let _ = svc_p;
-        self.w.private_act(&mut self.svc_p, mips().agreements, agreements::types::SPLIT, s.to_map(), None, to_all)
+        self.w.private_act(&mut self.svc_p, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, to_all)
     }
 
     /// The work's service's split, under the work's agreement, of `incoming`.
@@ -12277,7 +12277,7 @@ impl Layers {
             transfers: vec![],
         };
         let to_all = vec![self.ana.id, self.ben.id];
-        self.w.private_act(&mut self.svc_w, mips().agreements, agreements::types::SPLIT, s.to_map(), None, to_all)
+        self.w.private_act(&mut self.svc_w, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, to_all)
     }
 }
 
@@ -12321,7 +12321,7 @@ fn layer_receipt(w: &mut World, by: &mut Person, payee: Hash, payer: Hash, value
         batch: None,
         purchase: purchase.map(agreements_purchase),
     });
-    let a = w.everyday_act(by, mips().money, 2, r.to_map(), None, None);
+    let a = w.everyday_act(by, mirs().money, 2, r.to_map(), None, None);
     w.add(&a)
 }
 
@@ -12446,7 +12446,7 @@ fn f235_three_layers_a_pool_a_publication_and_a_work() {
         metric_records: vec![],
         transfers: vec![],
     };
-    let pool_split = l.w.private_act(&mut svc_pool, mips().agreements, agreements::types::SPLIT, s.to_map(), None, vec![music.id, svc_p, label]);
+    let pool_split = l.w.private_act(&mut svc_pool, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, vec![music.id, svc_p, label]);
     let e = view(&l.w).split(&pool_split).unwrap();
     assert!(e.mismatched.is_empty(), "the pool's split names the publication's split service: {:?}", e.mismatched);
     // The publication's service receipts in its own name and splits under
@@ -12464,7 +12464,7 @@ fn f235_three_layers_a_pool_a_publication_and_a_work() {
         metric_records: vec![],
         transfers: vec![],
     };
-    let ps = l.w.private_act(&mut l.svc_p, mips().agreements, agreements::types::SPLIT, s.to_map(), None, vec![label, l.ana.id, l.ben.id, svc_w]);
+    let ps = l.w.private_act(&mut l.svc_p, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, vec![label, l.ana.id, l.ben.id, svc_w]);
     let e = view(&l.w).split(&ps).unwrap();
     assert!(e.problems.is_empty() && e.mismatched.is_empty(), "{:?} {:?}", e.problems, e.mismatched);
     assert!(view(&l.w).service_account(&svc_p).unwrap().unsplit.iter().all(|u| u.payment != in_p), "split: nothing unsplit");
@@ -12493,7 +12493,7 @@ impl F244Lab {
         let (gl, sl) = layer_grant(&mut w, &mut label, &mut svc_p, "the label, F244");
         let work = spec("a song, F244");
         let publication = {
-            let x = w.everyday_act(&mut label, mips().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F244").to_vec()))], None, None);
+            let x = w.everyday_act(&mut label, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F244").to_vec()))], None, None);
             w.add(&x)
         };
         let mut pe = deal_terms(we, label.id);
@@ -12536,7 +12536,7 @@ impl F244Lab {
         to_all.extend(self.owners.iter().copied());
         to_all.sort();
         to_all.dedup();
-        let ps = self.w.private_act(&mut self.svc_p, mips().agreements, agreements::types::SPLIT, s.to_map(), None, to_all);
+        let ps = self.w.private_act(&mut self.svc_p, mirs().agreements, agreements::types::SPLIT, s.to_map(), None, to_all);
         let mut v = view(&self.w);
         v.attempts_failed = failed.iter().map(|f| (ps, *f)).collect();
         let e = v.split(&ps).unwrap();
@@ -12645,7 +12645,7 @@ fn f248_the_work_agreement_designates_one_pointer_and_the_layer_pays_it() {
     we.cmips.sort();
     we.backups = Some(agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(vec![gat, gbt])], failure: None });
     we.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(spec("a song, F244")), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
-    assert_eq!(we.check(&mips()), Ok(()));
+    assert_eq!(we.check(&mirs()), Ok(()));
     let we = agreements_act(&mut w, &mut ana, agreements::types::TERMS, we.to_map(), None);
     sign(&mut w, &mut ana, &we);
     sign(&mut w, &mut ben, &we);

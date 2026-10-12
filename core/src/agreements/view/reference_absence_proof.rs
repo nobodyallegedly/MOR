@@ -7,7 +7,7 @@
 //! that answer from its caller ([`AgreementsView::absence_accepted`]). This file
 //! keeps the time checks the core used before F172 (F136, F148, F158, F162
 //! items 3 and 5) as one such module, so a caller can compute an answer
-//! with it. It is a reference, not a specification: no MIP defines it,
+//! with it. It is a reference, not a specification: no MIR defines it,
 //! its spec hash and parameters are this file's own, and nothing in the
 //! core path calls it.
 //!
@@ -35,7 +35,7 @@ use crate::agreements::formats::{decode_signature, types, R};
 use std::collections::BTreeMap;
 
 /// This reference module's spec hash, as a clause names it in key 3.
-/// Its own, experimental: no MIP defines it.
+/// Its own, experimental: no MIR defines it.
 pub fn spec() -> Hash {
     sha256(b"MOR reference absence-proof module, experimental (F172)")
 }

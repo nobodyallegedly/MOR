@@ -5,7 +5,7 @@ import { sha256 } from '../../genesis/src/core.ts';
 
 export const DESK_SPECS = {
   /**
-   * The Money MIP (`MONEY`), by the same test value the other MIPs use
+   * The Money MIR (`MONEY`), by the same test value the other MIRs use
    * until the freeze. No client makes Money acts yet (roadmap step 12):
    * the desk only recognises one as a payment received.
    */

@@ -66,7 +66,7 @@ use std::rc::Rc;
 /// Read Agreements from what a verifier holds.
 pub struct AgreementsView<'a> {
     pub v: &'a Verifier,
-    pub mips: Mips,
+    pub mirs: Mirs,
     /// The layers each extension declares in its specification (Development,
     /// field 10), as the caller read them from the specifications it holds.
     pub ext_layers: BTreeMap<Hash, Vec<u64>>,
@@ -530,10 +530,10 @@ struct InForce {
 }
 
 impl<'a> AgreementsView<'a> {
-    pub fn new(v: &'a Verifier, mips: Mips) -> Self {
+    pub fn new(v: &'a Verifier, mirs: Mirs) -> Self {
         AgreementsView {
             v,
-            mips,
+            mirs,
             ext_layers: BTreeMap::new(),
             keeper_logs: BTreeMap::new(),
             push_rails: BTreeSet::new(),
@@ -593,7 +593,7 @@ impl<'a> AgreementsView<'a> {
     fn sibling<'b>(&self, v: &'b Verifier, trust_own_attempts: bool) -> AgreementsView<'b> {
         AgreementsView {
             v,
-            mips: self.mips.clone(),
+            mirs: self.mirs.clone(),
             ext_layers: self.ext_layers.clone(),
             keeper_logs: self.keeper_logs.clone(),
             push_rails: self.push_rails.clone(),
@@ -660,7 +660,7 @@ impl<'a> AgreementsView<'a> {
     }
 
     fn agreements(&self) -> Hash {
-        self.mips.agreements
+        self.mirs.agreements
     }
 
     fn is_agreements(&self, h: &Held, t: u64) -> bool {
@@ -776,7 +776,7 @@ impl<'a> AgreementsView<'a> {
         }
         let t = Terms::decode(&h.inside.payload)?;
         check_terms_inside(&h.inside, &t)?;
-        t.check(&self.mips)?;
+        t.check(&self.mirs)?;
         Ok(t)
     }
 
@@ -869,7 +869,7 @@ impl<'a> AgreementsView<'a> {
         let needs = if rollback {
             rollback_powers(parent, clone)
         } else {
-            powers_needed(parent, clone, &self.mips, &self.ext())?
+            powers_needed(parent, clone, &self.mirs, &self.ext())?
         };
         let named: Vec<Power> = mark.iter().map(|e| e.power.clone()).collect();
         if named != needs {
@@ -1147,7 +1147,7 @@ impl<'a> AgreementsView<'a> {
     /// The powers a clone needs (rule 44c).
     pub fn powers_needed(&self, clone: &Terms) -> R<Vec<Power>> {
         let p = clone.parent.ok_or(AgreementsError::Check("not a clone"))?;
-        powers_needed(&self.terms(&p)?, clone, &self.mips, &self.ext())
+        powers_needed(&self.terms(&p)?, clone, &self.mirs, &self.ext())
     }
 
     // ------------------------------------------------------------ the collective
@@ -2011,8 +2011,8 @@ impl<'a> AgreementsView<'a> {
     /// One of Identity's own everyday acts of the collective (a witness
     /// act, routes, an encryption key): an Identity act that is no link of
     /// the collective's identity chain. On neither chain (rule 35b).
-    fn identity_everyday(col: &Col, h: &Held, mips: &Mips) -> bool {
-        h.inside.spec == mips.identity && col.res.position_of(&h.id).is_none()
+    fn identity_everyday(col: &Col, h: &Held, mirs: &Mirs) -> bool {
+        h.inside.spec == mirs.identity && col.res.position_of(&h.id).is_none()
     }
 
     fn is_decision(&self, col: &Col, h: &Held) -> bool {
@@ -2101,7 +2101,7 @@ impl<'a> AgreementsView<'a> {
         // key) carry no objects: Identity governs them, and they are on no
         // chain of Agreements' (reading, F127); they count for nothing in Agreements
         // ([`Consent::Identity`], F156), which `consent` answers first.
-        if x.inside.spec == self.mips.identity {
+        if x.inside.spec == self.mirs.identity {
             return Ok(None);
         }
         let mut decision = false;
@@ -2267,7 +2267,7 @@ impl<'a> AgreementsView<'a> {
             if let Some(a) = self.v.get(&signed) {
                 if Self::own_key(col, a)
                     && self.status(&a.id) == Status::Valid
-                    && !Self::identity_everyday(col, a, &self.mips)
+                    && !Self::identity_everyday(col, a, &self.mirs)
                 {
                     out.push((Line::Record(a), self.is_agreements(a, types::RECORD)));
                 }
@@ -2315,7 +2315,7 @@ impl<'a> AgreementsView<'a> {
         if self.is_decision(col, a) {
             return true;
         }
-        if Self::identity_everyday(col, a, &self.mips) || self.is_agreements(a, types::NEGOTIATION) {
+        if Self::identity_everyday(col, a, &self.mirs) || self.is_agreements(a, types::NEGOTIATION) {
             return false;
         }
         matches!(self.uncited(col, a, col.pos(a)), Ok(None))
@@ -2476,7 +2476,7 @@ impl<'a> AgreementsView<'a> {
                 e.registers.push(Departure { act: *x, party: p, kind });
                 continue;
             }
-            if a.inside.spec == self.mips.identity && a.inside.type_ == 1 {
+            if a.inside.spec == self.mirs.identity && a.inside.type_ == 1 {
                 let res = self.v.resolve(&p);
                 if res.position_of(x).is_none() || self.refuses(x) {
                     return no(e, "it registers a rotation that does not count");
@@ -2654,7 +2654,7 @@ impl<'a> AgreementsView<'a> {
         for a in self.v.signed_by(&col.id) {
             // F142: a citation is an action on the chain; Identity's own
             // everyday acts are on neither chain.
-            if a.id == x.id || a.id == l.id || !Self::own_key(col, a) || a.inside.spec == self.mips.identity || self.is_agreements(a, types::RECORD) || self.citing.borrow().contains(&a.id) {
+            if a.id == x.id || a.id == l.id || !Self::own_key(col, a) || a.inside.spec == self.mirs.identity || self.is_agreements(a, types::RECORD) || self.citing.borrow().contains(&a.id) {
                 continue;
             }
             if !self.before_struct(col, x, Line::Record(a)) || self.before_struct(col, l, Line::Record(a)) {
@@ -3612,7 +3612,7 @@ impl<'a> AgreementsView<'a> {
     /// the collective ever accepted the rail Module.*
     fn rail_not_accepted(&self, col: &Col, c: &Hash, x: &Held, b: usize) -> R<Option<Hash>> {
         use crate::money::{self as fin, Payload as Fin};
-        let money = self.mips.money;
+        let money = self.mirs.money;
         if x.inside.spec != money {
             return Ok(None);
         }
@@ -3730,7 +3730,7 @@ impl<'a> AgreementsView<'a> {
         // F156 (rule 35b): Identity's own everyday acts, a witness act of the
         // collective included, are on neither chain and count for nothing in
         // Agreements.
-        if Self::identity_everyday(&col, x, &self.mips) {
+        if Self::identity_everyday(&col, x, &self.mirs) {
             return Ok(Consent::Identity);
         }
         // F127: an action cites, on the collective's chain, the decision it
@@ -3744,7 +3744,7 @@ impl<'a> AgreementsView<'a> {
         }
         // Step 12b: retired types (7, 11, 15, 21) are never reused; an act
         // of one is invalid. An offer not in its format is invalid.
-        if x.inside.spec == self.mips.agreements && super::open_formats::RETIRED_TYPES.contains(&x.inside.type_) {
+        if x.inside.spec == self.mirs.agreements && super::open_formats::RETIRED_TYPES.contains(&x.inside.type_) {
             return Ok(Consent::Invalid { agreement: ag, reason: format!("Agreements type {} is retired, never reused (step 12b)", x.inside.type_) });
         }
         if self.is_agreements(x, types::STANDING_OFFER) {
@@ -3801,7 +3801,7 @@ impl<'a> AgreementsView<'a> {
                 for k in g.kinds.iter().flatten() {
                     if t.areas()
                         .iter()
-                        .any(|a| a.kinds.iter().flatten().any(|ak| t.kinds_overlap(&self.mips, ak, k)))
+                        .any(|a| a.kinds.iter().flatten().any(|ak| t.kinds_overlap(&self.mirs, ak, k)))
                     {
                         return Ok(Consent::Invalid {
                             agreement: ag,
@@ -3820,13 +3820,13 @@ impl<'a> AgreementsView<'a> {
                     a.kinds
                         .iter()
                         .flatten()
-                        .any(|k| t.kind_reaches(&self.mips, k, spec, ty))
+                        .any(|k| t.kind_reaches(&self.mirs, k, spec, ty))
                 })
                 .collect();
             if reaching.is_empty()
                 && !t.areas().is_empty()
-                && !self.mips.is_mip(spec)
-                && t.spec_layers(&self.mips, spec).is_empty()
+                && !self.mirs.is_mir(spec)
+                && t.spec_layers(&self.mirs, spec).is_empty()
             {
                 return Ok(Consent::Unadopted { agreement: ag });
             }
@@ -3928,7 +3928,7 @@ impl<'a> AgreementsView<'a> {
         let reaching: Vec<&Area> = t
             .areas()
             .iter()
-            .filter(|a| a.kinds.iter().flatten().any(|k| t.kind_reaches(&self.mips, k, &x.inside.spec, x.inside.type_)))
+            .filter(|a| a.kinds.iter().flatten().any(|k| t.kind_reaches(&self.mirs, k, &x.inside.spec, x.inside.type_)))
             .collect();
         if reaching.is_empty() {
             return Ok(Consent::NoArea { agreement: ag });
@@ -3966,7 +3966,7 @@ impl<'a> AgreementsView<'a> {
                     .kinds
                     .iter()
                     .flatten()
-                    .any(|ak| t.kind_reaches(&self.mips, ak, spec, *type_)),
+                    .any(|ak| t.kind_reaches(&self.mirs, ak, spec, *type_)),
             };
             if !within {
                 return Ok(Some(
@@ -4186,7 +4186,7 @@ impl<'a> AgreementsView<'a> {
     /// apply, before this.
     fn split_key_problem(&self, y: &Held, grantor: &Hash, grantee: &Hash, own: &[Hash], services: &[Hash]) -> Option<String> {
         use crate::money::{self as fin, Payer, Payload as Fin};
-        if y.inside.spec != self.mips.money || y.inside.type_ != fin::types::RECEIPT {
+        if y.inside.spec != self.mirs.money || y.inside.type_ != fin::types::RECEIPT {
             return Some("a split service's grant key signs only receipts for money coming in under its grantor's own claims and offers (F129, H5; F130, H7)".into());
         }
         let Ok(Fin::Receipt(r)) = Fin::decode(y.inside.type_, &y.inside.payload) else {
@@ -4325,12 +4325,12 @@ impl<'a> AgreementsView<'a> {
             // Reach: the act's kind lies within the grant's (rule 44).
             let t = self.terms(&ag)?;
             let within = match &g.kinds {
-                Some(k) => k.iter().any(|k| t.kind_reaches(&self.mips, k, spec, ty)),
+                Some(k) => k.iter().any(|k| t.kind_reaches(&self.mirs, k, spec, ty)),
                 None => !t.areas().iter().any(|a| {
                     a.kinds
                         .iter()
                         .flatten()
-                        .any(|k| t.kind_reaches(&self.mips, k, spec, ty))
+                        .any(|k| t.kind_reaches(&self.mirs, k, spec, ty))
                 }),
             };
             if !within {
@@ -4360,12 +4360,12 @@ impl<'a> AgreementsView<'a> {
                 return not(&w);
             }
         } else {
-            // A person's grant: its reach is the kinds it names (a MIP's
+            // A person's grant: its reach is the kinds it names (a MIR's
             // layer, or a type of a specification); naming none, every act
             // but a decision (reading).
             let within = match &g.kinds {
                 Some(k) => k.iter().any(|k| match k {
-                    Kind::Layer(l) => self.mips.layer(spec) == Some(*l),
+                    Kind::Layer(l) => self.mirs.layer(spec) == Some(*l),
                     Kind::Type { spec: s2, type_ } => s2 == spec && *type_ == ty,
                 }),
                 None => true,
@@ -4393,7 +4393,7 @@ impl<'a> AgreementsView<'a> {
         // F142 (rule 42): an adopter is an action of the grantor's own key
         // that counts, done and on its chain; an Identity witness act, on
         // neither chain, adopts nothing.
-        let on_chain = |a: &Held| a.inside.spec != self.mips.identity;
+        let on_chain = |a: &Held| a.inside.spec != self.mirs.identity;
         let citing: Vec<&Held> = if collective {
             self.v
                 .signed_by(&c)
@@ -4565,7 +4565,7 @@ impl<'a> AgreementsView<'a> {
         if names(y) {
             return Ok(true);
         }
-        if y.inside.spec == self.mips.money {
+        if y.inside.spec == self.mirs.money {
             return Ok(match Fin::decode(y.inside.type_, &y.inside.payload) {
                 Ok(Fin::Obligation(o)) => o.agreement.is_some_and(|a| set.contains(&a)),
                 Ok(Fin::Receipt(r)) => set.contains(&r.fulfils) || r.purchase.is_some_and(|p| set.contains(&p.agreement)),
@@ -4906,7 +4906,7 @@ pub enum Role {
 }
 
 impl<'a> AgreementsView<'a> {
-    /// A held negotiation message of this verifier's Agreements MIP, valid under
+    /// A held negotiation message of this verifier's Agreements MIR, valid under
     /// Identity, with its decoded payload.
     fn negotiation_message(&self, id: &Hash) -> Option<(&'a Held, NegotiationMessage)> {
         let h = self.v.get(id)?;
@@ -5014,7 +5014,7 @@ impl<'a> AgreementsView<'a> {
     /// payment cMIP reads.*
     pub fn accepts_rail(&self, payee: &Hash, rail: &Hash) -> R<bool> {
         use crate::money::{self as fin, Payload as Fin};
-        let money = self.mips.money;
+        let money = self.mirs.money;
         let res = self.v.resolve(payee);
         for (l, state) in res.links.iter().zip(&res.states) {
             if self.refuses(&l.act) {
@@ -5078,7 +5078,7 @@ impl<'a> AgreementsView<'a> {
     fn payer_acknowledged(&self, evidence: &Hash, payment: &Hash) -> bool {
         use crate::money::Payload as Fin;
         let Some(p) = self.v.get(payment) else { return false };
-        if p.inside.spec != self.mips.money {
+        if p.inside.spec != self.mirs.money {
             return false;
         }
         let fulfils = match Fin::decode(p.inside.type_, &p.inside.payload) {
@@ -5105,7 +5105,7 @@ impl<'a> AgreementsView<'a> {
         claims.extend(self.same_payment(payment).into_iter().filter_map(|(x, _)| self.v.get(&x)));
         let acknowledging = |c: &Held| -> Option<Vec<u8>> {
             let Ok(Fin::Claim(cl)) = Fin::decode(c.inside.type_, &c.inside.payload) else { return None };
-            (c.inside.spec == self.mips.money
+            (c.inside.spec == self.mirs.money
                 && self.payers_claim(c)
                 && self.rail_valid.contains_key(&c.id)
                 && !self.rail_invalid.contains(&c.id)
@@ -5149,7 +5149,7 @@ impl<'a> AgreementsView<'a> {
                 Ok(s.is_some() && s.as_ref() != Some(service) && s.as_ref() != Some(payee))
             }
             Role::RailModule(module) => {
-                if x.inside.spec != self.mips.money {
+                if x.inside.spec != self.mirs.money {
                     return Ok(false);
                 }
                 let rail = match Fin::decode(x.inside.type_, &x.inside.payload) {
@@ -5884,7 +5884,7 @@ impl<'a> AgreementsView<'a> {
     pub fn obligation_binds(&self, id: &Hash) -> R<Option<bool>> {
         use crate::money::Payload as Fin;
         let x = self.held(id)?;
-        if x.inside.spec != self.mips.money {
+        if x.inside.spec != self.mirs.money {
             return Ok(None);
         }
         let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else {
@@ -5963,7 +5963,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::Payload as Fin;
         let mut out = vec![];
         for x in self.v.signed_by(&col.id) {
-            if x.inside.spec != self.mips.money || !self.valid(&x.id) {
+            if x.inside.spec != self.mirs.money || !self.valid(&x.id) {
                 continue;
             }
             let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else { continue };
@@ -6552,7 +6552,7 @@ impl<'a> AgreementsView<'a> {
         let endings: BTreeSet<Hash> = self.ending_acts(collective).into_iter().collect();
         let mut raw: BTreeMap<(Hash, Hash), (Hash, u64)> = BTreeMap::new();
         for x in self.v.held_acts() {
-            if x.inside.spec != self.mips.identity || x.inside.type_ != crate::identity::types::CHAIN_SIGNATURE {
+            if x.inside.spec != self.mirs.identity || x.inside.type_ != crate::identity::types::CHAIN_SIGNATURE {
                 continue;
             }
             let (Some(Ok(Payload::ChainSignature(c))), Some(signer)) = (&x.identity, x.act.outside.signer) else {
@@ -6688,7 +6688,7 @@ impl<'a> AgreementsView<'a> {
     pub fn debtors(&self, obligation: &Hash) -> R<Option<Vec<Hash>>> {
         use crate::money::Payload as Fin;
         let x = self.held(obligation)?;
-        if x.inside.spec != self.mips.money {
+        if x.inside.spec != self.mirs.money {
             return Ok(None);
         }
         let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else {
@@ -6754,7 +6754,7 @@ impl<'a> AgreementsView<'a> {
     pub fn paid_toward(&self, obligation: &Hash) -> u64 {
         use crate::money::Payload as Fin;
         let o = match self.v.get(obligation).map(|o| (o, Fin::decode(o.inside.type_, &o.inside.payload))) {
-            Some((x, Ok(Fin::Obligation(o)))) if x.inside.spec == self.mips.money => o,
+            Some((x, Ok(Fin::Obligation(o)))) if x.inside.spec == self.mirs.money => o,
             _ => return 0,
         };
         let creditor = o.creditor;
@@ -6768,7 +6768,7 @@ impl<'a> AgreementsView<'a> {
         let mut receipts: Vec<(Vec<u8>, u64)> = vec![];
         let mut claims: BTreeMap<Vec<u8>, u64> = BTreeMap::new();
         for r in self.v.held_acts() {
-            if r.inside.spec != self.mips.money {
+            if r.inside.spec != self.mirs.money {
                 continue;
             }
             match Fin::decode(r.inside.type_, &r.inside.payload) {
@@ -6906,7 +6906,7 @@ impl<'a> AgreementsView<'a> {
                     return false;
                 }
                 // A tip: the payee pointer it follows, the payee's own act.
-                let tip = self.v.get(fulfils).filter(|x| x.inside.spec == self.mips.money).and_then(|x| match Fin::decode(x.inside.type_, &x.inside.payload) {
+                let tip = self.v.get(fulfils).filter(|x| x.inside.spec == self.mirs.money).and_then(|x| match Fin::decode(x.inside.type_, &x.inside.payload) {
                     Ok(Fin::PayeePointer(t)) if &t.payee == payee && x.act.outside.signer.as_ref() == Some(payee) => Some(t),
                     _ => None,
                 });
@@ -6916,7 +6916,7 @@ impl<'a> AgreementsView<'a> {
                 let refund = self
                     .v
                     .get(fulfils)
-                    .is_some_and(|x| x.inside.spec == self.mips.money && matches!(x.inside.type_, fin::types::RECEIPT | fin::types::CLAIM));
+                    .is_some_and(|x| x.inside.spec == self.mirs.money && matches!(x.inside.type_, fin::types::RECEIPT | fin::types::CLAIM));
                 let r14 = match tip {
                     Some(t) => self.stood_at(fulfils, &res, j) && fin::counts_toward(t.version, fin::PaidInto::Flow(q.version)),
                     None => match self.pointer_holding_at(fulfils, payee, Some(j)) {
@@ -6935,7 +6935,7 @@ impl<'a> AgreementsView<'a> {
                 // chain declaring a vault; otherwise the vault entry is the
                 // rail answer's, as before any lock change.
                 let Some(k) = res.position_of(d) else { return true };
-                let Ok(Some(Some(declared))) = fin::vault_in(&self.mips.money, &res.states[k].declarations) else { return true };
+                let Ok(Some(Some(declared))) = fin::vault_in(&self.mirs.money, &res.states[k].declarations) else { return true };
                 if k > j {
                     return false;
                 }
@@ -6971,7 +6971,7 @@ impl<'a> AgreementsView<'a> {
         let res = self.v.resolve(payee);
         let mut out = vec![];
         for h in self.v.signed_by(payee) {
-            if h.inside.spec != self.mips.money || h.inside.type_ != fin::types::PAYEE_POINTER {
+            if h.inside.spec != self.mirs.money || h.inside.type_ != fin::types::PAYEE_POINTER {
                 continue;
             }
             let Ok(Fin::PayeePointer(q)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
@@ -7020,7 +7020,7 @@ impl<'a> AgreementsView<'a> {
         };
         let x = self.v.get(fulfils)?;
         let mut complete = true;
-        let acts: Vec<Hash> = if x.inside.spec == self.mips.money {
+        let acts: Vec<Hash> = if x.inside.spec == self.mirs.money {
             let o = match Fin::decode(x.inside.type_, &x.inside.payload) {
                 Ok(Fin::Obligation(o)) => o,
                 // QG2 (decided 9 October 2026): money owed back on a
@@ -7036,7 +7036,7 @@ impl<'a> AgreementsView<'a> {
                         .signed_by(payee)
                         .filter(|h| {
                             ok(&h.id)
-                                && ((of.contains(&h.id) && h.inside.spec == self.mips.money && h.inside.type_ == fin::types::CLAIM)
+                                && ((of.contains(&h.id) && h.inside.spec == self.mirs.money && h.inside.type_ == fin::types::CLAIM)
                                     || h.inside.acks.iter().flatten().any(|a| of.contains(a)))
                         })
                         .map(|h| h.id)
@@ -7048,7 +7048,7 @@ impl<'a> AgreementsView<'a> {
                         complete &= held.complete;
                         for p in held.acts {
                             let Some(y) = self.v.get(&p) else { continue };
-                            if y.inside.spec == self.mips.money
+                            if y.inside.spec == self.mirs.money
                                 && y.inside.type_ == fin::types::PAYEE_POINTER
                                 && y.act.outside.signer.as_ref() == Some(payee)
                                 && !pointers.contains(&p)
@@ -7097,7 +7097,7 @@ impl<'a> AgreementsView<'a> {
             complete &= held.complete;
             for p in held.acts {
                 let Some(y) = self.v.get(&p) else { continue };
-                if y.inside.spec == self.mips.money
+                if y.inside.spec == self.mirs.money
                     && y.inside.type_ == fin::types::PAYEE_POINTER
                     && y.act.outside.signer.as_ref() == Some(payee)
                     && matches!(Fin::decode(y.inside.type_, &y.inside.payload), Ok(Fin::PayeePointer(q)) if &q.payee == payee)
@@ -7143,7 +7143,7 @@ impl<'a> AgreementsView<'a> {
             if self.refuses(&l.act) {
                 break;
             }
-            match crate::money::clock_in(&self.mips.money, &st.declarations) {
+            match crate::money::clock_in(&self.mirs.money, &st.declarations) {
                 Ok(Some(c)) => out = c,
                 _ => {}
             }
@@ -7193,7 +7193,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::Payload as Fin;
         self.v
             .held_acts()
-            .filter(|h| h.inside.spec == self.mips.money && answered(&h.id) && self.payers_claim(h))
+            .filter(|h| h.inside.spec == self.mirs.money && answered(&h.id) && self.payers_claim(h))
             .filter(|h| matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::Claim(c)) if self.same_payment_of(&c.proof, proof)))
             .map(|h| h.id)
             .collect()
@@ -7202,7 +7202,7 @@ impl<'a> AgreementsView<'a> {
     /// The rail Module a held receipt or claim carrying `proof` names.
     fn rail_of_proof(&self, proof: &[u8]) -> Option<Hash> {
         use crate::money::Payload as Fin;
-        self.v.held_acts().filter(|h| h.inside.spec == self.mips.money).find_map(|h| match Fin::decode(h.inside.type_, &h.inside.payload) {
+        self.v.held_acts().filter(|h| h.inside.spec == self.mirs.money).find_map(|h| match Fin::decode(h.inside.type_, &h.inside.payload) {
             Ok(Fin::Receipt(r)) if r.proof == proof => Some(r.rail),
             Ok(Fin::Claim(c)) if c.proof == proof => Some(c.rail),
             _ => None,
@@ -7215,7 +7215,7 @@ impl<'a> AgreementsView<'a> {
     fn payers_claim(&self, h: &Held) -> bool {
         use crate::money::{self as fin, Payload as Fin};
         let Ok(p @ Fin::Claim(_)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
-        h.inside.spec == self.mips.money
+        h.inside.spec == self.mirs.money
             && self.valid(&h.id)
             && h.act.outside.signer.is_some_and(|s| fin::check_signer(&p, &s, &fin::Citations::of(&h.inside)).is_ok())
     }
@@ -7226,7 +7226,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::{self as fin, Payload as Fin};
         self.v
             .held_acts()
-            .filter(|r| r.inside.spec == self.mips.money)
+            .filter(|r| r.inside.spec == self.mirs.money)
             .filter_map(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
                 Ok(p @ Fin::Receipt(_))
                     if self.valid(&r.id)
@@ -7269,7 +7269,7 @@ impl<'a> AgreementsView<'a> {
     fn receipt_overruled(&self, rc: &crate::money::Receipt) -> bool {
         use crate::money::Payload as Fin;
         self.v.held_acts().any(|h| {
-            h.inside.spec == self.mips.money
+            h.inside.spec == self.mirs.money
                 && self.rail_valid.contains_key(&h.id)
                 && matches!(Fin::decode(h.inside.type_, &h.inside.payload),
                     Ok(Fin::Claim(c)) if self.same_payment_of(&c.proof, &rc.proof) && (c.payee != rc.payee || c.fulfils != rc.fulfils))
@@ -7289,7 +7289,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::Payload as Fin;
         let mut out = vec![];
         for h in self.v.held_acts() {
-            if h.inside.spec != self.mips.money || !self.rail_valid.contains_key(&h.id) || !self.payers_claim(h) {
+            if h.inside.spec != self.mirs.money || !self.rail_valid.contains_key(&h.id) || !self.payers_claim(h) {
                 continue;
             }
             let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
@@ -7327,7 +7327,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::{self as fin, Payload as Fin};
         let h = self.held(id)?;
         let r = match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Release(r)) if h.inside.spec == self.mips.money && h.inside.type_ == fin::types::RELEASE => r,
+            Ok(Fin::Release(r)) if h.inside.spec == self.mirs.money && h.inside.type_ == fin::types::RELEASE => r,
             _ => return Err(AgreementsError::Check("not a creditor's release")),
         };
         let mut e = DebtReleaseEval { id: *id, release: r.clone(), counts: false, why: None };
@@ -7342,7 +7342,7 @@ impl<'a> AgreementsView<'a> {
             return fail(e, "the obligation it names is not held");
         };
         let o = match Fin::decode(x.inside.type_, &x.inside.payload) {
-            Ok(Fin::Obligation(o)) if x.inside.spec == self.mips.money => o,
+            Ok(Fin::Obligation(o)) if x.inside.spec == self.mirs.money => o,
             _ => return fail(e, "it names an act that is not an obligation"),
         };
         if h.act.outside.signer != Some(o.creditor) {
@@ -7359,7 +7359,7 @@ impl<'a> AgreementsView<'a> {
     pub fn debt_released(&self, obligation: &Hash) -> R<Option<Hash>> {
         use crate::money::{self as fin, Payload as Fin};
         for x in self.v.held_acts() {
-            if x.inside.spec != self.mips.money || x.inside.type_ != fin::types::RELEASE {
+            if x.inside.spec != self.mirs.money || x.inside.type_ != fin::types::RELEASE {
                 continue;
             }
             if !matches!(Fin::decode(x.inside.type_, &x.inside.payload), Ok(Fin::Release(r)) if &r.obligation == obligation) {
@@ -7398,7 +7398,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::Payload as Fin;
         let mut out = vec![];
         for x in self.v.held_acts() {
-            if x.inside.spec != self.mips.money {
+            if x.inside.spec != self.mirs.money {
                 continue;
             }
             let Ok(Fin::Obligation(o)) = Fin::decode(x.inside.type_, &x.inside.payload) else { continue };
@@ -7443,7 +7443,7 @@ impl<'a> AgreementsView<'a> {
             return Some(w);
         }
         let x = self.v.get(fulfils)?;
-        if x.inside.spec != self.mips.envelopes || x.inside.type_ != 0 {
+        if x.inside.spec != self.mirs.envelopes || x.inside.type_ != 0 {
             return None;
         }
         x.inside.payload.iter().find_map(|(k, v)| match (k, v) {
@@ -7943,7 +7943,7 @@ impl<'a> AgreementsView<'a> {
     pub fn fork_alarm(&self, payment: &Hash, held: &Hash) -> R<Option<ForkAlarm>> {
         use crate::money::Payload as Fin;
         let x = self.held(payment)?;
-        if x.inside.spec != self.mips.money {
+        if x.inside.spec != self.mirs.money {
             return Ok(None);
         }
         let named = match Fin::decode(x.inside.type_, &x.inside.payload) {
@@ -8031,7 +8031,7 @@ impl<'a> AgreementsView<'a> {
     pub fn purchase(&self, id: &Hash) -> R<Option<PurchaseEval>> {
         use crate::money::{self as fin, Payer, Payload as Fin};
         let x = self.held(id)?;
-        if x.inside.spec != self.mips.money {
+        if x.inside.spec != self.mirs.money {
             return Ok(None);
         }
         let (purchase, fulfils, refund_to, rail) = match Fin::decode(x.inside.type_, &x.inside.payload) {
@@ -8309,14 +8309,14 @@ impl<'a> AgreementsView<'a> {
             return Ok(None);
         }
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.money => Some((r.rail, self.payment_of(&r.proof))),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.money => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
             _ => None,
         };
         let mine = self.v.get(id).and_then(proof);
         let mut anew = false;
         for h in self.v.signed_by(c) {
-            if h.inside.spec != self.mips.money
+            if h.inside.spec != self.mirs.money
                 || h.inside.type_ != crate::money::types::RECEIPT
                 || !self.valid(&h.id)
                 || self.rail_invalid.contains(&h.id)
@@ -8367,7 +8367,7 @@ impl<'a> AgreementsView<'a> {
         let still_broken = self.broken(collective)?.is_some();
         let mut out = vec![];
         let mut seen: Vec<(Hash, Vec<u8>)> = vec![];
-        let held: Vec<&Held> = self.v.held_acts().filter(|h| h.inside.spec == self.mips.money).collect();
+        let held: Vec<&Held> = self.v.held_acts().filter(|h| h.inside.spec == self.mirs.money).collect();
         for h in held {
             let (payee, amount, key) = match Fin::decode(h.inside.type_, &h.inside.payload) {
                 Ok(Fin::Receipt(r)) => (r.payee, r.amount, (r.rail, self.payment_of(&r.proof))),
@@ -8507,7 +8507,7 @@ impl<'a> AgreementsView<'a> {
         let mut receipts: Vec<(Vec<u8>, u64)> = vec![];
         let mut claims: BTreeMap<Vec<u8>, u64> = BTreeMap::new();
         for r in self.v.held_acts() {
-            if r.inside.spec != self.mips.money || !self.rail_valid.contains_key(&r.id) {
+            if r.inside.spec != self.mirs.money || !self.rail_valid.contains_key(&r.id) {
                 continue;
             }
             match Fin::decode(r.inside.type_, &r.inside.payload) {
@@ -8548,8 +8548,8 @@ impl<'a> AgreementsView<'a> {
     fn same_payment(&self, id: &Hash) -> Vec<(Hash, Option<crate::money::Purchase>)> {
         use crate::money::Payload as Fin;
         let of = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.money => Some(((r.rail, self.payment_of(&r.proof)), r.purchase)),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.money => Some(((r.rail, self.payment_of(&r.proof)), r.purchase)),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some(((r.rail, self.payment_of(&r.proof)), r.purchase)),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some(((r.rail, self.payment_of(&r.proof)), r.purchase)),
             _ => None,
         };
         let Some(Some((mine, _))) = self.v.get(id).map(of) else { return vec![] };
@@ -8611,8 +8611,8 @@ impl<'a> AgreementsView<'a> {
     fn holder_receipts(&self, id: &Hash, holder: &Hash) -> Vec<&'a Held> {
         use crate::money::Payload as Fin;
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.money => Some((r.rail, self.payment_of(&r.proof))),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.money => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
             _ => None,
         };
         let Some(x) = self.v.get(id) else { return vec![] };
@@ -8620,7 +8620,7 @@ impl<'a> AgreementsView<'a> {
         self.v
             .signed_by(holder)
             .filter(|h| {
-                h.inside.spec == self.mips.money
+                h.inside.spec == self.mirs.money
                     && h.inside.type_ == crate::money::types::RECEIPT
                     && self.valid(&h.id)
                     && !self.rail_invalid.contains(&h.id)
@@ -8751,8 +8751,8 @@ impl<'a> AgreementsView<'a> {
         use crate::money::Payload as Fin;
         let x = self.held(id)?;
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mips.money => Some((r.rail, self.payment_of(&r.proof))),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mips.money => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
             _ => None,
         };
         let mine = proof(x);
@@ -8764,7 +8764,7 @@ impl<'a> AgreementsView<'a> {
         // by the Agreements invariants (`docs/law-invariants.md`, IC4).
         for h in self.v.held_acts() {
             if h.id != *id
-                && h.inside.spec == self.mips.money
+                && h.inside.spec == self.mirs.money
                 && h.inside.type_ == crate::money::types::RECEIPT
                 && mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m))
             {
@@ -8841,7 +8841,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::{self as fin, Payload as Fin};
         let mut held = vec![];
         for h in self.v.signed_by(who) {
-            if h.inside.spec != self.mips.money || h.inside.type_ != fin::types::PAYEE_POINTER {
+            if h.inside.spec != self.mirs.money || h.inside.type_ != fin::types::PAYEE_POINTER {
                 continue;
             }
             let Ok(Fin::PayeePointer(p)) = Fin::decode(h.inside.type_, &h.inside.payload) else {
@@ -8870,7 +8870,7 @@ impl<'a> AgreementsView<'a> {
             if self.refuses(&l.act) {
                 break;
             }
-            match crate::money::vault_in(&self.mips.money, &st.declarations) {
+            match crate::money::vault_in(&self.mirs.money, &st.declarations) {
                 Ok(Some(Some(e))) => out = e,
                 Ok(Some(None)) => out = vec![],
                 _ => {}
@@ -9148,7 +9148,7 @@ impl<'a> AgreementsView<'a> {
             if p.role.is_some() {
                 let holds = match (p.evidence, payee, h.act.outside.signer) {
                     (Some(ev), Some(payee), Some(service)) => {
-                        let role = match self.v.get(&ev).map(|x| (x.inside.spec == self.mips.money, Fin::decode(x.inside.type_, &x.inside.payload))) {
+                        let role = match self.v.get(&ev).map(|x| (x.inside.spec == self.mirs.money, Fin::decode(x.inside.type_, &x.inside.payload))) {
                             Some((true, Ok(Fin::Receipt(x)))) => Role::RailModule(x.rail),
                             Some((true, Ok(Fin::Claim(x)))) => Role::RailModule(x.rail),
                             _ => Role::Other,
@@ -9311,7 +9311,7 @@ impl<'a> AgreementsView<'a> {
                 Some(ids) => {
                     let pot64 = u64::try_from(pot).unwrap_or(u64::MAX);
                     let rounded = round_stake(pot64, ids);
-                    let by_receipt = self.v.get(&s.receipt).is_some_and(|r| r.inside.spec == self.mips.money && r.inside.type_ == crate::money::types::RECEIPT);
+                    let by_receipt = self.v.get(&s.receipt).is_some_and(|r| r.inside.spec == self.mirs.money && r.inside.type_ == crate::money::types::RECEIPT);
                     // The tally chain (rule 15a, F171): the previous split
                     // act for the stake, the count it carries, and this
                     // split's place after it.
@@ -9759,7 +9759,7 @@ impl<'a> AgreementsView<'a> {
     /// agreement. `None` otherwise.
     fn layer_share(&self, y: &Held, service: &Hash) -> Option<Hash> {
         use crate::money::Payload as Fin;
-        if y.inside.spec != self.mips.money {
+        if y.inside.spec != self.mirs.money {
             return None;
         }
         let Ok(Fin::Receipt(r)) = Fin::decode(y.inside.type_, &y.inside.payload) else { return None };
@@ -9806,7 +9806,7 @@ impl<'a> AgreementsView<'a> {
         let mut unsplit = vec![];
         // Receipts the service signed with a grant key, backed.
         for h in self.v.held_acts() {
-            if h.inside.spec != self.mips.money {
+            if h.inside.spec != self.mirs.money {
                 continue;
             }
             let Ok(Fin::Receipt(r)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
@@ -9839,7 +9839,7 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             let Ok(Fin::Receipt(r)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
-            if h.inside.spec != self.mips.money || &r.payee != service {
+            if h.inside.spec != self.mirs.money || &r.payee != service {
                 continue;
             }
             let Some(agreement) = self.layer_share(h, service) else { continue };
@@ -9850,7 +9850,7 @@ impl<'a> AgreementsView<'a> {
         // Payers' claims showing money arrived for a grantor without a receipt.
         let grantors = self.grantors_of(service)?;
         for h in self.v.held_acts() {
-            if h.inside.spec != self.mips.money || !self.rail_valid.contains_key(&h.id) || !self.payers_claim(h) {
+            if h.inside.spec != self.mirs.money || !self.rail_valid.contains_key(&h.id) || !self.payers_claim(h) {
                 continue;
             }
             let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
@@ -9876,7 +9876,7 @@ impl<'a> AgreementsView<'a> {
         let on_behalf: Vec<(Hash, &Held)> = self
             .v
             .held_acts()
-            .filter(|r| r.inside.spec == self.mips.money && r.inside.type_ == crate::money::types::RECEIPT)
+            .filter(|r| r.inside.spec == self.mirs.money && r.inside.type_ == crate::money::types::RECEIPT)
             .filter_map(|r| self.key_grant(r).map(|(_, g)| (g.grantee, r)))
             .collect();
         // Each payout, discharged by the receiver's own receipts naming the split.
@@ -9888,7 +9888,7 @@ impl<'a> AgreementsView<'a> {
                 let behalf = on_behalf.iter().filter(|(g, _)| g == &p.receiver).map(|(_, r)| *r);
                 for r in self.v.signed_by(&p.receiver).chain(behalf) {
                     let own = r.act.outside.signer == Some(p.receiver);
-                    if r.inside.spec != self.mips.money || (own && self.key_grant(r).is_some()) || !self.valid(&r.id) {
+                    if r.inside.spec != self.mirs.money || (own && self.key_grant(r).is_some()) || !self.valid(&r.id) {
                         continue;
                     }
                     let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
@@ -9975,7 +9975,7 @@ impl<'a> AgreementsView<'a> {
         if depth >= NESTING_BOUND || !seen.insert(*payment) {
             return Ok(());
         }
-        let Some(ph) = self.v.get(payment).filter(|h| h.inside.spec == self.mips.money) else {
+        let Some(ph) = self.v.get(payment).filter(|h| h.inside.spec == self.mirs.money) else {
             out.stops.push("the payment is not held, or is not a Money receipt or claim".into());
             return Ok(());
         };
@@ -10038,7 +10038,7 @@ impl<'a> AgreementsView<'a> {
                 let next: Vec<Hash> = self
                     .v
                     .signed_by(&p.receiver)
-                    .filter(|r| r.inside.spec == self.mips.money && self.key_grant(r).is_none() && self.valid(&r.id))
+                    .filter(|r| r.inside.spec == self.mirs.money && self.key_grant(r).is_none() && self.valid(&r.id))
                     .filter(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
                         Ok(Fin::Receipt(x)) => x.payee == p.receiver && (x.fulfils == sh.id || r.inside.objects.iter().flatten().any(|o| o.chain == sh.id || o.predecessor == sh.id)),
                         _ => false,
@@ -10073,7 +10073,7 @@ impl<'a> AgreementsView<'a> {
             PaidAt::VaultEntry(d, i) => {
                 let res = self.v.resolve(me);
                 let Some(k) = res.position_of(d) else { return false };
-                let Ok(Some(Some(declared))) = fin::vault_in(&self.mips.money, &res.states[k].declarations) else { return false };
+                let Ok(Some(Some(declared))) = fin::vault_in(&self.mirs.money, &res.states[k].declarations) else { return false };
                 declared.get(*i as usize).is_some_and(|e| vault.iter().any(|x| x.unit == e.unit && x.rail_module == e.rail_module && x.source == e.source))
             }
         }
@@ -10096,7 +10096,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::Payload as Fin;
         let mut got: u64 = 0;
         for r in self.v.signed_by(me) {
-            if r.inside.spec != self.mips.money || self.key_grant(r).is_some() || !self.valid(&r.id) || out.receipts.contains(&r.id) || out.elsewhere.contains(&r.id) {
+            if r.inside.spec != self.mirs.money || self.key_grant(r).is_some() || !self.valid(&r.id) || out.receipts.contains(&r.id) || out.elsewhere.contains(&r.id) {
                 continue;
             }
             let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };

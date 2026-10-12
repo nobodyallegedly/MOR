@@ -1,6 +1,6 @@
 # cMIP: Split
 
-*Draft 1, 11 October 2026 (roadmap step 13, the split Module; F249, F250). **Experimental**: an instrument for testing the Agreements MIP, its costs stated, never for real money (decided by Nobody, allegedly, 2 October 2026). Not approved. Written against Agreements draft 10 as revised in place for F249 and F250 (rules 16, 18a, 18b, 21, 23, 30; terms fields 8, 14 and 29; Tasks), Money draft 6 and the payment cMIP draft 2. Code: `split/` (crate `mor-split`).*
+*Draft 1, 11 October 2026 (roadmap step 13, the split Module; F249, F250). **Experimental**: an instrument for testing the Agreements MIR, its costs stated, never for real money (decided by Nobody, allegedly, 2 October 2026). Not approved. Written against Agreements draft 10 as revised in place for F249 and F250 (rules 16, 18a, 18b, 21, 23, 30; terms fields 8, 14 and 29; Tasks), Money draft 6 and the payment cMIP draft 2. Code: `split/` (crate `mor-split`).*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 
@@ -14,7 +14,7 @@
 
 ## Purpose
 
-This cMIP fills the Agreements MIP's split task (task 8; Development, task table; Agreements, "Tasks", rule 18a). It defines:
+This cMIP fills the Agreements MIR's split task (task 8; Development, task table; Agreements, "Tasks", rule 18a). It defines:
 
 - **the receiver for a payment**: given the agreement and the attempts made for a payment, which of the services the signed terms name receives it;
 - **what counts as a failed attempt**, by its parameters, which the agreement carries in terms field 29, key 1, signed with the terms;

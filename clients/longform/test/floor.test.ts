@@ -1,5 +1,5 @@
 // The floor under every format's declaration (F167, F174 items 10 and 11,
-// F175, F178 items 16 and 17; Text MIP draft 6, the Text format task).
+// F175, F178 items 16 and 17; Text MIR draft 6, the Text format task).
 // Whatever a format's markup declaration says, it never hides:
 //   - a letter, a digit or a combining mark (L, N, M);
 //   - a currency sign (Sc);
@@ -148,7 +148,7 @@ test('the floor, character by character (F167, F174, F175, F178, F182)', () => {
   for (const [why, s, want] of PROTECTED) assert.equal(floorOf(s), want, `${why}: ${JSON.stringify(s)}`);
 });
 
-// What the floor, as the Text MIP writes it, does not cover: each of these
+// What the floor, as the Text MIR writes it, does not cover: each of these
 // can still be hidden by a hostile declaration. Recorded as they are, for
 // Nobody, allegedly, to decide; a change to the floor changes this list on
 // purpose.
@@ -163,7 +163,7 @@ const NOT_COVERED: [string, string, string][] = [
   ['a right-to-left mark', '‏5', '.F'],
 ];
 
-test('what the floor, as the Text MIP writes it, does not cover (reported)', () => {
+test('what the floor, as the Text MIR writes it, does not cover (reported)', () => {
   for (const [why, s, want] of NOT_COVERED) assert.equal(floorOf(s), want, `${why}: ${JSON.stringify(s)}`);
 });
 
@@ -459,7 +459,7 @@ test('the floor leaves the long-form markup hideable where the format puts it (F
 
 /**
  * The long-form markup the floor forbids hiding, shown as text rather than
- * the document refused (Text MIP, the Text format task; F182 items 9 and
+ * the document refused (Text MIR, the Text format task; F182 items 9 and
  * 11): emphasis or code markup between two digits; a quote's > directly
  * before a digit, the line then no quote; a link's < directly after a
  * digit, the address still the link. Each: the text, what it shows, and the

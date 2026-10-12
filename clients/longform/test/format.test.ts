@@ -1,4 +1,4 @@
-// The format, construct by construct, and the Text MIP's bound (task 4,
+// The format, construct by construct, and the Text MIR's bound (task 4,
 // with F102) on every rendering: on the cases below, on the vectors, and on
 // thousands of generated canonical texts.
 

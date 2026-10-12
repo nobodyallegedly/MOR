@@ -5,7 +5,7 @@
 // the core library alone judges them afterwards.
 
 import {
-  MIPS,
+  MIRS,
   SPECS,
   Verifier,
   cborDecode,
@@ -49,10 +49,10 @@ export interface MarkEntry {
 /** The release area's id: permanent, never reused (Agreements draft 7, Q32). */
 export const RELEASE_AREA = 1;
 
-/** The spec hashes the core library's Agreements calls take: the six MIPs, and the
+/** The spec hashes the core library's Agreements calls take: the six MIRs, and the
  * layers each extension the collective names declares (the release manifest
  * cMIP declares none beyond Development). */
-export const AGREEMENTS_SPECS = { ...MIPS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] as number[] } };
+export const AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] as number[] } };
 
 /** A founding agreement for a collective, or a clone of one (Agreements draft 7). */
 export interface CollectiveTerms {
@@ -142,7 +142,7 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
     [0, 'Releases'],
     [1, t.releases.holders.map(unhex)],
     [2, t.releases.threshold],
-    [3, [[1, unhex(MIPS.envelopes), 0]]],
+    [3, [[1, unhex(MIRS.envelopes), 0]]],
     [5, RELEASE_AREA],
   ]);
   // A mark's signers are ascending by hash (Agreements draft 8, B8): lowercase
@@ -443,7 +443,7 @@ export async function proposePayload(by: TestIdentity, payload: Uint8Array, pare
  * the last before it (rule 12). Null where none is found.
  */
 export async function latestPointer(by: TestIdentity, relays: string[]): Promise<string | null> {
-  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   for (const a of by.chainActs()) v.add(a);
   const found = new Map<string, { version: number; previous: string | null }>();
   for (const h of relays) {
@@ -455,7 +455,7 @@ export async function latestPointer(by: TestIdentity, relays: string[]): Promise
           if (it.kind !== 'act') continue;
           try {
             const d = describeAct(it.item) as { id: string; spec?: string; type?: number; payload?: Uint8Array };
-            if (d.spec !== MIPS.money || d.type !== MONEY_POINTER || !d.payload) continue;
+            if (d.spec !== MIRS.money || d.type !== MONEY_POINTER || !d.payload) continue;
             const m = cborDecode(d.payload) as Map<number, unknown>;
             const payee = m.get(0);
             if (!(payee instanceof Uint8Array) || hex(payee) !== by.id) continue;

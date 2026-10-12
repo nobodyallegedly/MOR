@@ -1,4 +1,4 @@
-//! The Identity MIP's act formats, and the checks that need no other act
+//! The Identity MIR's act formats, and the checks that need no other act
 //! (Identity, "Act formats"; "Verification procedures": genesis checks 1 to
 //! 5, rotation checks 1, 4 and 5).
 //!
@@ -15,7 +15,7 @@ use crate::cbor::Value;
 use crate::hash::Hash;
 use std::fmt;
 
-/// The types this MIP defines (Identity, "Types defined by this MIP").
+/// The types this MIR defines (Identity, "Types defined by this MIR").
 pub mod types {
     pub const GENESIS: u64 = 0;
     pub const ROTATION: u64 = 1;
@@ -44,7 +44,7 @@ pub mod types {
 pub enum IdError {
     /// The payload is not in the type's shape. Names the field.
     Shape(&'static str),
-    /// A type number this MIP does not define (11 is retired).
+    /// A type number this MIR does not define (11 is retired).
     UnknownType(u64),
     /// A check of the verification procedures failed. Names it.
     Check(&'static str),
@@ -54,7 +54,7 @@ impl fmt::Display for IdError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             IdError::Shape(w) => write!(f, "payload not in the type's shape: {w}"),
-            IdError::UnknownType(t) => write!(f, "type {t} is not defined by the Identity MIP"),
+            IdError::UnknownType(t) => write!(f, "type {t} is not defined by the Identity MIR"),
             IdError::Check(w) => write!(f, "{w}"),
         }
     }
@@ -176,7 +176,7 @@ pub struct ChainSignature {
     pub prev: Hash,
     pub position: u64,
     pub chain_key: ChainKeyCommit,
-    /// The act it signs; what the signature means is the signed act's MIP's.
+    /// The act it signs; what the signature means is the signed act's MIR's.
     pub signs: Hash,
 }
 

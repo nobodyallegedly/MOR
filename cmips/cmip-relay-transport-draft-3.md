@@ -2,7 +2,7 @@
 
 *Draft 3, 9 October 2026. **Not yet approved.** Draft 3 is draft 2 (approved by Nobody, allegedly, 30 September 2026) with one addition, decided by Nobody, allegedly, 9 October 2026 (F184): **the delivery record**, a relay's signed act saying it served a media object for a client's request, which counts as evidence for a relay's role share (Agreements rules 19 and 22) only when the payer's claim acknowledges it. Nothing else changes. Draft 2's own history follows.*
 
-*Draft 2, 29 September 2026, approved by Nobody, allegedly, 30 September 2026. Draft 1 with F101 written in (roadmap step 7, the identity gauntlet): inclusion proofs travel. A home keeps and serves carried inclusion proofs for the identities it serves, with the acts they rest on (identity record parts 9 and 10, `POST {base}/proofs`); a bundle can carry them (key 2); and an owner's client keeps the proofs of its own audited receipts and hands them to its new homes. Draft 1 was approved by Nobody, allegedly, 28 September 2026 (roadmap step 1); its hash stays a draft hash until its creator is named at step 17. Written against core v12, the Identity MIP draft 7, the Envelopes MIP draft 4, the Text MIP draft 5, the Development MIP draft 4, freeze test suite v11 and findings F1 to F83; merged against freeze test suite v12 and findings to F85, whose scenarios are unchanged. Not core: a founding cMIP, frozen at publication and competing with any other transport. It answers two open parameters of the drafts: how a home is queried (Identity), and how a client finds the key deliveries and sealed containers addressed to it (Envelopes).*
+*Draft 2, 29 September 2026, approved by Nobody, allegedly, 30 September 2026. Draft 1 with F101 written in (roadmap step 7, the identity gauntlet): inclusion proofs travel. A home keeps and serves carried inclusion proofs for the identities it serves, with the acts they rest on (identity record parts 9 and 10, `POST {base}/proofs`); a bundle can carry them (key 2); and an owner's client keeps the proofs of its own audited receipts and hands them to its new homes. Draft 1 was approved by Nobody, allegedly, 28 September 2026 (roadmap step 1); its hash stays a draft hash until its creator is named at step 17. Written against core v12, the Identity MIR draft 7, the Envelopes MIR draft 4, the Text MIR draft 5, the Development MIR draft 4, freeze test suite v11 and findings F1 to F83; merged against freeze test suite v12 and findings to F85, whose scenarios are unchanged. Not core: a founding cMIP, frozen at publication and competing with any other transport. It answers two open parameters of the drafts: how a home is queried (Identity), and how a client finds the key deliveries and sealed containers addressed to it (Envelopes).*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples. Decisions taken with Nobody, allegedly are marked "(Nobody, allegedly, Q1)" and so on; the questions and their answers are listed at the end.*
 
@@ -31,7 +31,7 @@ It defines one act type, the delivery record ("Delivery records"), fills no task
 
 ## Dependencies
 
-Identity, Envelopes and Text. It relies on the act format, act ids, sealed containers, routes (including the inbox kind), receipts, log summaries and their RFC 9162 Merkle tree exactly as those MIPs define them.
+Identity, Envelopes and Text. It relies on the act format, act ids, sealed containers, routes (including the inbox kind), receipts, log summaries and their RFC 9162 Merkle tree exactly as those MIRs define them.
 
 ## Definitions
 
@@ -46,9 +46,9 @@ Identity, Envelopes and Text. It relies on the act format, act ids, sealed conta
 
 ## Encoding
 
-1. Every request and response body is deterministic CBOR (RFC 8949, section 4.2.1), sent with the media type `application/cbor`, except media bytes, which are sent as `application/octet-stream`. Maps use small integer keys, as in the MIPs.
+1. Every request and response body is deterministic CBOR (RFC 8949, section 4.2.1), sent with the media type `application/cbor`, except media bytes, which are sent as `application/octet-stream`. Maps use small integer keys, as in the MICS.
 2. The formats are closed: a message with a key this cMIP does not define is malformed. *A later transport is a new cMIP with a new hash, never an extension of this one.*
-3. Every `tstr` is canonical text (Text MIP).
+3. Every `tstr` is canonical text (Text MIR).
 4. An act, a sealed container and media bytes travel as `bstr`, exactly as received. A relay MUST serve each item byte for byte as it was stored. *Identity rule 8a requires the exact same rotation bytes at every home; a relay that re-encodes anything could break that, and would break every act id.*
 5. In a URL path or query, a hash is written as 64 lowercase hexadecimal characters, and a number in decimal.
 
@@ -56,7 +56,7 @@ Identity, Envelopes and Text. It relies on the act format, act ids, sealed conta
 
 An address hint in a home entry or a route is, under this cMIP, a base address. A client that meets a hint whose scheme is not `https` does not use it under this cMIP; another transport may. An onion address (`http://….onion`) is also a base address: the Tor network encrypts and authenticates it. *Plain `http` to any other address is allowed only for local testing and is never written into a published act. Onion addresses let an operator stay reachable from behind a censor's firewall.*
 
-**Where an operator says its home is.** A home entry names an operator and a hint. If the hint no longer answers, a client reads the operator's latest routes act (from the operator's own homes) and uses the hints of its outbox route whose scope is the Identity MIP's spec hash, `IDENTITY`: *an operator's Identity acts are its receipts and log summaries, so where they are found is where its home is.* This is how a home moves servers without any owner rotating (Identity). An operator that runs several homes lists them all there; a client tries each, and trusts only the signed acts it gets back (Nobody, allegedly, Q3).
+**Where an operator says its home is.** A home entry names an operator and a hint. If the hint no longer answers, a client reads the operator's latest routes act (from the operator's own homes) and uses the hints of its outbox route whose scope is the Identity MIR's spec hash, `IDENTITY`: *an operator's Identity acts are its receipts and log summaries, so where they are found is where its home is.* This is how a home moves servers without any owner rotating (Identity). An operator that runs several homes lists them all there; a client tries each, and trusts only the signed acts it gets back (Nobody, allegedly, Q3).
 
 ## Discovery
 
@@ -167,7 +167,7 @@ A feed with no filter returns everything the relay holds that its policy lets it
 
 ### Commitments
 
-`GET {base}/commitment` returns the relay's latest commitment act (Envelopes type 2), if it publishes one. Its Merkle construction is the Envelopes MIP's, still open there.
+`GET {base}/commitment` returns the relay's latest commitment act (Envelopes type 2), if it publishes one. Its Merkle construction is the Envelopes MIR's, still open there.
 
 ## Delivering to an inbox
 
@@ -297,7 +297,7 @@ The homeless procedure lets a verifier that requires no audit treat a home as go
 
 An objection is a signed act. It proves the home was alive after the homeless rotation was made, wherever it comes from.
 
-1. **Evidence from anywhere.** A verifier that holds a valid objection by an old home naming the homeless rotation treats that home as reached, however the objection reached it: from the home, from any relay, from a probe (below), or from a bundle (below). It then applies the homeless procedure's step 3 as the MIP says.
+1. **Evidence from anywhere.** A verifier that holds a valid objection by an old home naming the homeless rotation treats that home as reached, however the objection reached it: from the home, from any relay, from a probe (below), or from a bundle (below). It then applies the homeless procedure's step 3 as the MIR says.
 2. **Relays carry it.** A relay that is given a homeless rotation SHOULD submit it to the old homes it can reach, and SHOULD store and serve any objection it gets back. A home SHOULD serve its objections to anyone (identity record, part 7).
 
 ### Trying to reach the home
@@ -381,7 +381,7 @@ error = {
 
 ## Clients
 
-1. A client MUST verify every act it receives as the MIPs require before relying on it, and MUST treat every unsigned answer as a hint.
+1. A client MUST verify every act it receives as the MICS requires before relying on it, and MUST treat every unsigned answer as a hint.
 2. A client SHOULD fetch an identity's chain from more than one of its homes where several are declared, and MUST judge which rotation counts from receipts, never from which home answered.
 3. A client never signs anything for the transport. *Every signature in MOR signs an act id (Identity). A relay decides whether to keep an act by its signer, which the act already proves; a login would add a second kind of signature and a way to trick a key into signing something that is not an act.*
 4. Relays MUST answer every request with the header `Access-Control-Allow-Origin: *`, so that a client running in a web browser, such as the web reader, can reach any relay directly.
@@ -404,7 +404,7 @@ error = {
 
 1. **Found in Identity (a flaw; resolved as F86).** Receipt check 3 says a receipt counts only from a home "declared in the home set in effect for that chain position: the homes set by the identity-chain act at the position before". The homeless procedure, step 5, counts receipts "from the new homes", which are declared by the homeless rotation itself, at that same position. Read literally, check 3 rejects every receipt step 5 needs, so no homeless rotation could ever count. The intent is clear; the text contradicts it. *Decided (Nobody, allegedly, F86):* check 3 gains "or, for a homeless rotation, a home in the new set it declares (homeless procedure, step 5)", at the next Identity draft.
 2. **A gap in Identity, filled here.** Identity rule 13 asks a home to store the latest routes act; Identity's "Routes" rule needs the chain from version 1 to detect forks. This cMIP requires homes to serve the whole chain, and does the same for the encryption key, which Envelopes define "in spirit" as an Identity act but which rule 13 does not list. A stronger rule, not a relaxation.
-3. **Open parameters answered.** Identity: "how a home is queried" (the identity record, log requests). Envelopes: "how a client finds the key deliveries and sealed containers addressed to it" (the feed by `to`, by pickup tag, or by scanning unaddressed containers). F83 listed the first as a condition of the freeze; under F84 it is a prerequisite of the freeze of all six MIPs.
+3. **Open parameters answered.** Identity: "how a home is queried" (the identity record, log requests). Envelopes: "how a client finds the key deliveries and sealed containers addressed to it" (the feed by `to`, by pickup tag, or by scanning unaddressed containers). F83 listed the first as a condition of the freeze; under F84 it is a prerequisite of the freeze of the MICS.
 4. **No clock.** Arrival numbers and feed waits are local and never enter an act or a validity decision.
 5. **Untrusted relays** (Envelopes). Every answer is a signed act, a hint, or a proof checked against a signed summary.
 6. **An act counts only where it is held; delivery is the signer's interest** (core, Envelopes). Relays are never required to propagate; clients deliver.
@@ -433,7 +433,7 @@ error = {
 | 5.7c (F101) | Inclusion proofs of a vanished home, carried by the owner's client to the new home and served there. |
 | 4 | Sealed ballots published, mirrored through the unfiltered feed, compared with a commitment. |
 | 2.5 | An act of an unknown specification carried by a relay that cannot read it. |
-| 8.1 | The MIPs fetched as publications by a read-only client. |
+| 8.1 | The MIRs fetched as publications by a read-only client. |
 | 2 (F184) | A relay's delivery record acknowledged in the payer's claim fills a relay's role share; one no claim acknowledges evidences nothing; two relays acknowledged in one claim share the role. |
 
 ## Open questions for Nobody, allegedly
@@ -442,7 +442,7 @@ Asked one at a time; each suggestion is Claude's, not yet decided.
 
 - **Q1.** The Identity flaw in receipt check 3. **Decided (Nobody, allegedly): the one-line fix, recorded as F86.**
 - **Q2.** How a recipient finds a sealed container sent to a bare key. **Decided (Nobody, allegedly): both.** The pickup tag for the simple path, scanning always possible for the private path, a fresh bare key per delivery as a client rule, a shortened tag left to a later cMIP. *A design decision of this cMIP, not a commitment of the core.*
-- **Q3.** Where an operator announces its home's current address. **Decided (Nobody, allegedly):** the operator's outbox route whose scope is the Identity MIP's hash. *A thief holding the operator's signing key can list false addresses there; that only sends clients to a server that cannot produce valid receipts, and the operator corrects it with new routes, or by rotating.*
+- **Q3.** Where an operator announces its home's current address. **Decided (Nobody, allegedly):** the operator's outbox route whose scope is the Identity MIR's hash. *A thief holding the operator's signing key can list false addresses there; that only sends clients to a server that cannot produce valid receipts, and the operator corrects it with new routes, or by rotating.*
 - **Q4.** What counts as "tried and failed to reach" a home. Explored through the censorship scenario, which exposed F87 (decided). **Decided (Nobody, allegedly):** every known address, probes through two relays, an objection from anywhere counts as life, bundles, onion addresses, the isolation rule, and the client rule while re-homed without audit.
 - **Q5.** Following new acts by requests that wait, with no live connection in V1. **Decided (Nobody, allegedly):** yes; a live connection later, as its own cMIP.
 - **Q6.** Who is named as creator of this cMIP, and when its hash is fixed. The hash covers the creator's identity, and the author's real identity is born only at the first acts (roadmap step 17), so until then the hash is a draft hash. **Deferred (Nobody, allegedly) to step 17,** decided together with the build brief's open point 3: which identity signs MOR's founding record.

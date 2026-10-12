@@ -5,7 +5,7 @@
 //   data, not instructions. A post or an agreement can be written to talk to
 //   a machine that reads it; the connector's words come only from this code.
 // - Invisible characters that can make text display in another order than
-//   its bytes (Text MIP, rule 5) are shown as escapes, U+202E and so on, as
+//   its bytes (Text MIR, rule 5) are shown as escapes, U+202E and so on, as
 //   rule 5a asks before terms are signed. The connector always shows them.
 
 import type { Line, Section } from '../../collective/src/explain.ts';

@@ -27,7 +27,7 @@ Claude prepares acts of the Text and Envelopes layers only: posts, publications,
 | --- | --- |
 | `src/desk.ts` | Everything the desk does: identities (genesis, routes with an inbox, an encryption key), linking, the drafts waiting and their readings (the connector's `readDraft`, from the bytes), approve, decline, send back, send again; gathering and reading what an identity received; sorting. |
 | `src/store.ts` | The program's folder (default `~/mor-desk`, owner-only): `book.json` (names, linked), `settings.json` (homes, relays, other addresses, the drafts folder), `identities/` (the genesis client's format), `signed/` (each act signed from a draft, to send again), `received/` (what each identity received, and its sorting), `history.jsonl`, `access.json`. |
-| `src/specs.ts` | The Money MIP's test spec hash, to recognise a payment. |
+| `src/specs.ts` | The Money MIR's test spec hash, to recognise a payment. |
 | `src/server.ts` | The program: `127.0.0.1` only, the page built at start, not minified, under a content security policy; requests signed by a paired browser (the collective client's `access.ts`, with the desk's own domain line `MOR desk, version 1`). The server itself is `src/local.ts`, shared with MOR Post (`clients/poster`). |
 | `src/cli.ts` | `open` (start the program if needed, open the page with a one-time pairing link), `run`, `stop`. Port 8471. A program left running from an older version of the code is stopped and started again by `open`. The launcher itself is `src/launch.ts`, shared with MOR Post. |
 | `src/version.ts` | The program's version: a fingerprint of every source file it runs (here and in the clients it uses), its page and the core library's WebAssembly, given by `/hello` and in `run.json`. |
@@ -52,7 +52,7 @@ Where the texts are silent, the desk takes these readings. *To be confirmed by N
 
 ## Flaw found while building
 
-**F1. A publication's size: Envelopes and the JPEG Module disagree.** The Envelopes MIP's media map says field 3 is the "size of those bytes", right after field 2, the hash of the media "as stored", that is, locked. The JPEG Module says "the work hash, the locked hash and the size in the publication are those of the stripped file", and a reader "checks the plaintext against the work hash and the size"; the barebone client and the reader, deployed, use the size of the unlocked picture. The desk and connector follow the Module and the deployed code, so their pictures show in the reader; the conflict is not resolved here. Options: (a) Envelopes say field 3 is the size of the plaintext (the locked size is already fixed by the locked hash); (b) the Module and the two clients change to the locked size. *Lean: (a), a wording change in Envelopes' next draft.*
+**F1. A publication's size: Envelopes and the JPEG Module disagree.** The Envelopes MIR's media map says field 3 is the "size of those bytes", right after field 2, the hash of the media "as stored", that is, locked. The JPEG Module says "the work hash, the locked hash and the size in the publication are those of the stripped file", and a reader "checks the plaintext against the work hash and the size"; the barebone client and the reader, deployed, use the size of the unlocked picture. The desk and connector follow the Module and the deployed code, so their pictures show in the reader; the conflict is not resolved here. Options: (a) Envelopes say field 3 is the size of the plaintext (the locked size is already fixed by the locked hash); (b) the Module and the two clients change to the locked size. *Lean: (a), a wording change in Envelopes' next draft.*
 
 ## Questions for Nobody, allegedly
 
@@ -61,7 +61,7 @@ Where the texts are silent, the desk takes these readings. *To be confirmed by N
 3. **Marking "answered" by itself** when the owner approves a reply that names a received item. Options: (a) manual only, as now; (b) automatic; (c) suggested, with one click. *Lean: (c).*
 4. **Replies and acknowledgements not delivered to the inbox are not found.** A reply published on the replier's own relays, naming the identity's post, cannot be asked for: relays filter by signer and recipient, not by what an act refers to or acknowledges. Options: (a) a client delivers every reply and acknowledgement to the inbox of the identity it concerns (Envelopes' "should reach that counterparty"); (b) a `refs`/`acks` filter in the relay transport's next draft, beside the one raised for later agreements. *Lean: both; (a) is already what the desk expects.*
 5. **A post with a picture is two approvals** (the picture, then the post naming it). Options: (a) keep; (b) one draft holding several acts, signed in order. *Lean: (a).*
-6. **Money's test spec hash** is taken as `sha256("FINANCE, test value until the freeze")`, after the other MIPs. *Lean: confirm; step 12 uses the same.*
+6. **Money's test spec hash** is taken as `sha256("FINANCE, test value until the freeze")`, after the other MIRs. *Lean: confirm; step 12 uses the same.*
 
 ## Tests
 

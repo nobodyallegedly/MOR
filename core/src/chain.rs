@@ -55,7 +55,7 @@ pub struct Held {
     pub inside: Inside,
     /// The signature over the act id, checked once when the act is added.
     pub verdict: Verdict,
-    /// For an act of the Identity MIP: its payload, if it decoded and passed
+    /// For an act of the Identity MIR: its payload, if it decoded and passed
     /// the checks that need no other act; the reason otherwise.
     pub identity: Option<Result<Payload, IdError>>,
 }
@@ -225,8 +225,8 @@ pub enum Status {
     /// Signed under a scheme, or of a type, this client does not implement.
     Unknown,
     /// Signed with a scoped key (F128): its binding names an act of a higher
-    /// MIP that installs a key of this identity, such as an Agreements grant's grant
-    /// key. Identity checks only that the signature is valid; that MIP
+    /// MIR that installs a key of this identity, such as an Agreements grant's grant
+    /// key. Identity checks only that the signature is valid; that MIR
     /// judges whether the key is the identity's and the act within its
     /// scope. A client that does not implement it shows the act as unknown.
     Scoped,
@@ -251,9 +251,9 @@ fn closure_at(v: &Verifier, res: &Resolution) -> Option<usize> {
 /// Everything a verifier holds, and the answers it gives.
 #[derive(Debug)]
 pub struct Verifier {
-    /// The spec hash of the Identity MIP (`IDENTITY`), fixed at the freeze.
+    /// The spec hash of the Identity MIR (`IDENTITY`), fixed at the freeze.
     identity_spec: Hash,
-    /// The spec hashes of the Money and Agreements MIPs, whose act types may
+    /// The spec hashes of the Money and Agreements MIRs, whose act types may
     /// carry acknowledgements beside Identity's (Envelopes rule 4a, F110).
     /// Unset: this verifier cannot tell, and an act of another specification
     /// carrying `acks` is unknown to it, never valid.
@@ -335,7 +335,7 @@ impl StepOut {
 }
 
 impl Verifier {
-    /// A verifier for acts naming `identity_spec` as the Identity MIP.
+    /// A verifier for acts naming `identity_spec` as the Identity MIR.
     pub fn new(identity_spec: Hash) -> Self {
         Verifier {
             identity_spec,
@@ -353,9 +353,9 @@ impl Verifier {
         }
     }
 
-    /// A verifier that also knows the Money and Agreements MIPs' spec hashes, so
+    /// A verifier that also knows the Money and Agreements MIRs' spec hashes, so
     /// it can tell which acts may carry acknowledgements (F110).
-    pub fn with_mips(identity_spec: Hash, money: Hash, agreements: Hash) -> Self {
+    pub fn with_mirs(identity_spec: Hash, money: Hash, agreements: Hash) -> Self {
         let mut v = Verifier::new(identity_spec);
         v.ack_specs = Some((money, agreements));
         v
@@ -1573,7 +1573,7 @@ impl Verifier {
             if res.waiting().contains(binding) {
                 return Status::Pending;
             }
-            // F128: a scoped key, installed by an act of a higher MIP. A
+            // F128: a scoped key, installed by an act of a higher MIR. A
             // scoped key never signs an Identity act (rule 1a): a private
             // link act signed by one is invalid (F168, B4).
             return match self.acts.get(binding) {

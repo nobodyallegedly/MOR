@@ -2,7 +2,7 @@
 //! them, and signs absence statements for a home it cannot find (Identity,
 //! "Log summaries and audits", homeless procedure step 4).
 //!
-//! It follows the MIP's MUSTs: before cosigning a home's new summary it
+//! It follows the MIR's MUSTs: before cosigning a home's new summary it
 //! checks a consistency proof from the last summary of that home it
 //! cosigned, and it never cosigns two summaries of one home of which
 //! neither extends the other; once it sees such a pair it stops cosigning

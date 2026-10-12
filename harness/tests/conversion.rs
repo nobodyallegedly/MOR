@@ -45,7 +45,7 @@ use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
 use mor_conversion::route::{self, Route};
 use mor_conversion::{Checker, Hop, Judgment, Offer, Order, Owed, Payment, Rate, Terms};
 use mor_core::act::{Act, Object};
-use mor_core::agreements::{self, AgreementsView, Mips, ProofChecker, ProofVerdict};
+use mor_core::agreements::{self, AgreementsView, Mirs, ProofChecker, ProofVerdict};
 use mor_core::chain::Status;
 use mor_core::hash::{sha256, Hash};
 use mor_core::money::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
@@ -70,8 +70,8 @@ fn money_spec() -> Hash {
     sha256(b"FINANCE, test value until the freeze")
 }
 
-fn mips() -> Mips {
-    Mips {
+fn mirs() -> Mirs {
+    Mirs {
         identity: sha256(b"IDENTITY, test value until the freeze"),
         envelopes: sha256(b"ENVELOPE, test value until the freeze"),
         text: sha256(b"a text specification"),
@@ -370,7 +370,7 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
     // ------------------------------------------------ its standing offer: a rail swap, a proven offer
     let terms = Terms { out_rail: mor_onchain::spec(), out_unit: mor_onchain::unit(Network::Regtest), rate: Rate::Fixed { num: 1, den: 1 }, fee: 500, blocks: 6 };
     let standing = terms.standing_offer(sat(100_000), &clock::reference(Network::Regtest), Some("Lightning in, Bitcoin regtest out, 1:1, a fee of 500, paid on within 6 blocks of the order. Regtest only.".into()));
-    let offer_act = svc.act(mips().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None);
+    let offer_act = svc.act(mirs().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None);
     put(&site, &offer_act).await;
     let under_offer = Some(vec![Object { chain: offer_act.id(), predecessor: offer_act.id() }]);
     eprintln!("the conversion service publishes its pointer (Lightning) and its standing offer (Agreements type 6, a lone seller's): Lightning in, regtest coins out, 1:1, a fee of 500, within 6 blocks");
@@ -384,7 +384,7 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
         // The payer reads the offer from the home; the core says it counts,
         // and that it is a proven offer, by its form.
         let rd = read(&site, &[svc.id]).await;
-        assert!(AgreementsView::new(&rd.v, mips()).offer(&offer_act.id()).unwrap().counts, "the standing offer counts");
+        assert!(AgreementsView::new(&rd.v, mirs()).offer(&offer_act.id()).unwrap().counts, "the standing offer counts");
         let lo = agreements::Offer::decode(&rd.v.get(&offer_act.id()).unwrap().inside).expect("an offer in Agreements' format").offer;
         assert!(matches!(lo.sold[0].class(), agreements::OfferClass::Proven { cmip, .. } if cmip == mor_conversion::spec()), "a proven offer, the access form");
         let o = Offer::read(offer_act.id(), svc.id, &lo).expect("a conversion offer");
@@ -478,11 +478,11 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
         let clock = BitcoinClock { chain };
         let checker = Checker { offers: vec![offer.clone()], orders: orders.clone(), payments: payments.clone(), hops: receipts.clone(), clock: &clock, held: &held };
         let checkers: [(Hash, &dyn ProofChecker); 1] = [(mor_conversion::spec(), &checker)];
-        AgreementsView::new(&eve.v, mips()).proven_delivery(&offer_act.id(), &mor_conversion::delivery_proof(order, onward), &checkers).unwrap()
+        AgreementsView::new(&eve.v, mirs()).proven_delivery(&offer_act.id(), &mor_conversion::delivery_proof(order, onward), &checkers).unwrap()
     };
     assert_eq!(verdict(&chain, Some(&onward_act.id()), &ana.order_act.id()), ProofVerdict::Proven);
     {
-        let mut v = AgreementsView::new(&eve.v, mips());
+        let mut v = AgreementsView::new(&eve.v, mirs());
         v.rail_valid = rail_valid.clone();
         for b in &bought {
             assert_eq!(v.purchase(&b.claim.id()).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "{}: a purchase accepted under the offer's terms (F215)", b.name);

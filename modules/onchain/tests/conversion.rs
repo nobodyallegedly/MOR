@@ -27,7 +27,7 @@ use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
 use mor_conversion::route::{self, Route};
 use mor_conversion::{acceptable, delivery_proof, judge, ordered, Checker, Hop, Judgment, Offer, Order, Owed, Payment, Rate, Terms};
 use mor_core::act::{Object, Ref};
-use mor_core::agreements::{self, AgreementsView, Mips, ProofChecker, ProofVerdict};
+use mor_core::agreements::{self, AgreementsView, Mirs, ProofChecker, ProofVerdict};
 use mor_core::hash::Hash;
 use mor_core::money::{self as fin, Amount, Citations, Claim, Forward, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
 use mor_lightning::bolt11::Network as LnNetwork;
@@ -39,8 +39,8 @@ use mor_payment::{verify, Answer, Commitment, Held, Modules, PaidTo, Proof, Reco
 use std::time::Duration;
 use support::*;
 
-fn mips() -> Mips {
-    Mips {
+fn mirs() -> Mirs {
+    Mirs {
         identity: common::identity_spec(),
         text: h("a text specification"),
         envelopes: h("the envelope specification"),
@@ -147,15 +147,15 @@ impl Story {
         let owners_keys = Keys::new("the owners' split service's on-chain coins");
         let sp = PayeePointer { payee: service.id, version: 1, previous: None, rails: vec![ln_rail(&node)] };
         let op = PayeePointer { payee: owners.id, version: 1, previous: None, rails: vec![Rail { module: mor_onchain::spec(), address: owners_keys.address(Network::Regtest).encode() }] };
-        let a = w.everyday_act(&mut service, mips().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(sp.clone()).to_map(), None, None);
+        let a = w.everyday_act(&mut service, mirs().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(sp.clone()).to_map(), None, None);
         let service_pointer = w.add(&a);
-        let a = w.everyday_act(&mut owners, mips().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(op.clone()).to_map(), None, None);
+        let a = w.everyday_act(&mut owners, mirs().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(op.clone()).to_map(), None, None);
         let owners_pointer = w.add(&a);
         // The service's standing offer: public, citing its latest pointer
         // (Money rule 17's client conformance for an act that can pay its
         // signer).
         let standing = terms.standing_offer(sat(100_000), &clock::reference(Network::Regtest), Some("Lightning in, Bitcoin regtest out, 1:1, a fee of 100, within 6 blocks.".into()));
-        let a = w.everyday_act_refs(&mut service, mips().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
+        let a = w.everyday_act_refs(&mut service, mirs().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
         let offer_id = w.add(&a);
         let lo = agreements::Offer::decode(&w.v.get(&offer_id).unwrap().inside).expect("an offer in Agreements' format").offer;
         let offer = Offer::read(offer_id, service.id, &lo).expect("a conversion offer");
@@ -257,7 +257,7 @@ impl Story {
         let clock = BitcoinClock { chain: &self.chain };
         let checker = Checker { offers: vec![self.offer.clone()], orders: vec![(h("the order"), order.clone())], payments: vec![paid.clone()], hops, clock: &clock, held: &self.pointers };
         let held: Vec<(Hash, &dyn ProofChecker)> = if with_checker { vec![(mor_conversion::spec(), &checker)] } else { vec![] };
-        AgreementsView::new(&self.w.v, mips()).proven_delivery(&self.offer.id, &delivery_proof(&h("the order"), onward), &held).unwrap()
+        AgreementsView::new(&self.w.v, mirs()).proven_delivery(&self.offer.id, &delivery_proof(&h("the order"), onward), &held).unwrap()
     }
 }
 

@@ -11,7 +11,7 @@
 //!
 //! ```cddl
 //! spec = {
-//!   0 => uint,      ; kind: 0 cMIP, 1 Module, 2 unit, 3 media type, 4 MIP, 5 signature scheme
+//!   0 => uint,      ; kind: 0 cMIP, 1 Module, 2 unit, 3 media type, 4 MIR, 5 signature scheme
 //!   ...
 //!   ? 12 => true    ; a cMIP that checks proofs of delivery (F268)
 //! }

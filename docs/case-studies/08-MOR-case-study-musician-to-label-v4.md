@@ -99,7 +99,7 @@ Lea's journey only works if a whole network of people builds and runs the pieces
 
 ## 5. What MOR provides, and what it needs
 
-**From the core, nothing new.** Everything above uses what the MIPs already define: identities and homes, text, envelopes and locked media, payments, payee pointers and the payer's own record, work claims, stakes, agreements and clones, agreements as parties of agreements, the one pointer each agreement designates, vows and the state of each sale, splits and role shares with third-party evidence, keepers, grants and the publication's "for", collectives with a way to rotate, abandonment, contests and the negotiation record.
+**From the core, nothing new.** Everything above uses what the MICS already defines: identities and homes, text, envelopes and locked media, payments, payee pointers and the payer's own record, work claims, stakes, agreements and clones, agreements as parties of agreements, the one pointer each agreement designates, vows and the state of each sale, splits and role shares with third-party evidence, keepers, grants and the publication's "for", collectives with a way to rotate, abandonment, contests and the negotiation record.
 
 **Open for others to build (cMIPs and Modules):**
 

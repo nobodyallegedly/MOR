@@ -42,7 +42,7 @@ Three things make a successor certain:
 
 ## 2. What MOR1 already provides for the crossing
 
-Everything below is already in the MIPs. Nothing needs to be added for migration to work.
+Everything below is already in the MICS. Nothing needs to be added for migration to work.
 
 - **Identities are hashes, not keys.** An identity survives any number of key changes, and can declare a successor.
 - **Succession rides on rotation.** A rotation, signed by the offline chain key, can name the identity that succeeds this one, in MOR or in another protocol. A thief holding only the signing key can never redirect an identity's followers, agreements or money.

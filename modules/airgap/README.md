@@ -10,7 +10,7 @@ Every MOR identity has two keys. The signing key lives on your phone and signs y
 
 - **The device checks, then signs.** Your phone prepares a rotation and hands it over, by USB stick or as a stream of QR codes on screen. The offline device never believes the phone: it reads what it is about to sign, builds its own summary, and puts the dangerous parts (new homes, a new vault, a successor, closing a home, giving up old acts) at the top, in capitals. It signs only if you type SIGN.
 - **It chooses its own next key.** The next chain key is committed by the offline device, never by the phone. A phone that tries to slip one in is ignored, and you are told.
-- **It remembers.** It signs one rotation per chain key. Asked again for the same one, it gives the same answer; asked for a different one, it refuses, except in the two cases the Identity MIP allows once each, which you must confirm.
+- **It remembers.** It signs one rotation per chain key. Asked again for the same one, it gives the same answer; asked for a different one, it refuses, except in the two cases the Identity MIR allows once each, which you must confirm.
 - **Your backup.** The chain-key seed is written on paper, either as 24 words or as 72 characters: two competing seed Modules, both supported, so V1 shows several Modules living side by side. A device restored from paper finds its place in your chain by itself.
 - **Collectives.** A collective's chain key can be split among its members, any three of four, say. The device rebuilds it from shares, signs, and deals the next key as new shares that every member can check alone. What no check can do is prove a device forgot a key it held: that is said plainly (finding F97).
 - **A clean start.** If you fear your phone is compromised, the offline device can make your new signing key itself, for a clean phone.
@@ -21,7 +21,7 @@ Every MOR identity has two keys. The signing key lives on your phone and signs y
 | --- | --- | --- |
 | `seed` | The two seed Modules: 256-bit seeds written as 24 BIP-39 words (encoding only, not BIP-39's wallet derivation) or 72 hex characters with a tagged-hash checksum; chain keys derived as FIPS 205 key-generation seeds from `tagged_hash(module tag, seed ‖ scheme ‖ index ‖ 0/1)`. Seeds are overwritten when dropped. | Seed Modules, draft 1 |
 | `msg` | The four messages (commitment export, pending rotation, signed rotation, share), strict: deterministic CBOR, closed maps, canonical text, 256 KiB at most, one kind at a time. | Module 2, 3.6 |
-| `device` | The signer. `review` checks the previous act (3.2), refuses anything but a rotation of the Identity MIP with spec, type and payload only (3.5), finds its key by commitment, applies the memory (3.4), inserts its own next commitment (3.3), optionally generates the signing key (section 4), builds the whole act, and summarises the exact bytes (3.1). `sign` signs (hedged SLH-DSA) and records. `review_collective` does the same from shares and deals the next key. State as CBOR. | Module 2 to 5 |
+| `device` | The signer. `review` checks the previous act (3.2), refuses anything but a rotation of the Identity MIR with spec, type and payload only (3.5), finds its key by commitment, applies the memory (3.4), inserts its own next commitment (3.3), optionally generates the signing key (section 4), builds the whole act, and summarises the exact bytes (3.1). `sign` signs (hedged SLH-DSA) and records. `review_collective` does the same from shares and deals the next key. State as CBOR. | Module 2 to 5 |
 | `summary` | The summary, prominent lines first; the key fingerprint (first 16 bytes of a tagged hash, 8 groups of 4). | Module 3.1 |
 | `shares` | Shamir over the secp256k1 order with Pedersen commitments; share check; rebuild; the rebuild check against the dealing's SLH-DSA commitment. | Module 5; Agreements 36 (F97) |
 | `online` | The phone's side: a genesis from a commitment export; a pending rotation; the check of a signed rotation before publishing (3.9). | Module 2, 3.9 |
@@ -29,7 +29,7 @@ Every MOR identity has two keys. The signing key lives on your phone and signs y
 
 `mor-signer` is the command-line signer for a laptop that never connects (`cargo run -p mor-airgap --bin mor-signer -- help`). The library builds to WebAssembly without it (`cargo build -p mor-airgap --lib --no-default-features --target wasm32-unknown-unknown`), for the genesis client.
 
-The Identity and Money MIPs' spec hashes are fixed at the freeze; until then the device takes them as a `Config` and the tests and `mor-signer` use test values. The seed Modules' spec hashes are test values until they are published.
+The Identity and Money MIRs' spec hashes are fixed at the freeze; until then the device takes them as a `Config` and the tests and `mor-signer` use test values. The seed Modules' spec hashes are test values until they are published.
 
 ## Tests
 
@@ -78,7 +78,7 @@ Where the Module was silent, the library takes the reading below; each is writte
 4. **The exceptions** are recognised from the last rotation the key signed: homeless then normal (after a voided homeless rotation), or normal then homeless with an escape announced. Each once, confirmed on the device, naming the earlier rotation.
 5. **Clean-device mode** is chosen on the offline device, not requested by the phone, and the device does not keep the key: a re-export does not carry it.
 6. **Fingerprint:** first 16 bytes of `tagged_hash("MOR/module/airgap/fingerprint", scheme ‖ key)`, 8 groups of 4 hex characters.
-7. **The vault** is read with the Money MIP's spec hash; a unit removed is named when the previous act declared the vault, otherwise the device says every unlisted unit is undeliverable (fail closed).
+7. **The vault** is read with the Money MIR's spec hash; a unit removed is named when the previous act declared the vault, otherwise the device says every unlisted unit is undeliverable (fail closed).
 8. **The online device checks what comes back** (3.9) before publishing: that is what catches a swapped file.
 9. **Transport:** the UR types `mor-commitment-export`, `mor-pending-rotation`, `mor-signed-rotation`, `mor-share`; 120-byte fragments; files at most 256 KiB.
 10. **Memory after a restore** starts empty: rule 3.4 holds per device (cost stated in 3.4).

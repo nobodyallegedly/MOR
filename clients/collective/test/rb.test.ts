@@ -7,7 +7,7 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MIPS } from '../../genesis/src/core.ts';
+import { MIRS } from '../../genesis/src/core.ts';
 import { receiptPayload } from '../../repo/src/agreements.ts';
 import { MONEY_TYPES, TEST_RAIL } from '../../repo/src/specs.ts';
 import type { Governance } from '../../repo/src/collective.ts';
@@ -74,7 +74,7 @@ test('RB2 with BQ2: a payment under an offer of the broken stretch is shown as o
     assert.notEqual(ofStretch, founding);
     // The collective's own receipts, signed in the stretch, for payments naming each.
     const pay = (line: string, value: number) =>
-      col.id.publish(MIPS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer: patron, purchase: [founding, line] }), { public: true, relays: col.f.relays });
+      col.id.publish(MIRS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer: patron, purchase: [founding, line] }), { public: true, relays: col.f.relays });
     await pay(founding, 5);
     await pay(ofStretch, 12);
     store.saveCollective(col);
@@ -99,7 +99,7 @@ test('QG1 and F197: a closing names money owed back to nobody; a payer with no a
     const founding = col.f.agreements[0];
     const ofStretch = col.f.agreement;
     const pay = (value: number, payer?: string) =>
-      col.id.publish(MIPS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer, purchase: [founding, ofStretch] }), { public: true, relays: col.f.relays });
+      col.id.publish(MIRS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer, purchase: [founding, ofStretch] }), { public: true, relays: col.f.relays });
     await pay(3);
     await pay(9, patron);
     store.saveCollective(col);

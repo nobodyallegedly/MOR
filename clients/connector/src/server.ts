@@ -218,7 +218,7 @@ export function makeServer(c: Config = fromEnv()): McpServer {
           c.via,
         );
         const r = await readDraft(draft, places(c, to), c.via);
-        return handOver(c, draft, r, changes.length ? [`## Composed (Text MIP, rule 6)\n${changes.map((x) => `- ${x}`).join('\n')}`] : []);
+        return handOver(c, draft, r, changes.length ? [`## Composed (Text MIR, rule 6)\n${changes.map((x) => `- ${x}`).join('\n')}`] : []);
       }),
   );
 
@@ -246,7 +246,7 @@ export function makeServer(c: Config = fromEnv()): McpServer {
           c.via,
         );
         const r = await readDraft(draft, hints, c.via);
-        return handOver(c, draft, r, changes.length ? [`## Composed (Text MIP, rule 6)\n${changes.map((x) => `- ${x}`).join('\n')}`] : []);
+        return handOver(c, draft, r, changes.length ? [`## Composed (Text MIR, rule 6)\n${changes.map((x) => `- ${x}`).join('\n')}`] : []);
       }),
   );
 

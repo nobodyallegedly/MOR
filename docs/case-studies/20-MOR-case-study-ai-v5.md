@@ -46,7 +46,7 @@ This case study has two parts.
 
 **Terms are machine-readable.** Standing offers, agreements and splits on MOR are structured data, not prose buried in a web page. An agent reads them exactly.
 
-**Rules are executable.** Where an agreement uses a rule (a split, a condition, a price formula), the rule is code with a fixed result, as the Development MIP defines. The agent runs it before signing and knows exactly what it is agreeing to. For humans, "signing what you see" means a client shows what a rule computes; for agents, it means running the rule itself.
+**Rules are executable.** Where an agreement uses a rule (a split, a condition, a price formula), the rule is code with a fixed result, as the Development MIR defines. The agent runs it before signing and knows exactly what it is agreeing to. For humans, "signing what you see" means a client shows what a rule computes; for agents, it means running the rule itself.
 
 **Above its limits, the agent asks.** When an act exceeds the grant, the agent prepares it and asks Lena to sign, showing her the computed result in plain language.
 
@@ -70,7 +70,7 @@ This case study has two parts.
 
 **An order comes from abroad.** A client in another country commissions a dining table. Lena's agent hires another agent that specialises in customs and export paperwork, under its own grant, within its own budget. That agent in turn buys the current tariff rates from a third.
 
-**Each hop is a receipt.** The chain is visible, as payment routes are in the Money MIP: who hired whom, for how much, under which grant. When something goes wrong, the signed chain shows where.
+**Each hop is a receipt.** The chain is visible, as payment routes are in the Money MIR: who hired whom, for how much, under which grant. When something goes wrong, the signed chain shows where.
 
 **Who answers for a failure is a question for an agent liability cMIP**, for example: the agent the grant names, the human or company whose grant it acted under, or insurance named in each agreement.
 

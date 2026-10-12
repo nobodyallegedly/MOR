@@ -23,7 +23,7 @@ use mor_onchain::chain::HeaderChain;
 use mor_core::money::{self as fin, Amount, Citations, Claim, Clock, Holding, LockPoint, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
 use mor_core::hash::{tagged_hash, Hash};
 use mor_core::identity::Payload as Id;
-use mor_core::agreements::{self, AgreementsView, Mips};
+use mor_core::agreements::{self, AgreementsView, Mirs};
 use mor_core::sig::{self, SchnorrKey, Verdict};
 use mor_onchain::{block, unit, Block, Network, Onchain, OnchainAddress, OnchainProof, Paid};
 use mor_payment::{paid_at, verify, Answer, Commitment, Held, Modules, PaidTo, Proof, RailInput, Record};
@@ -289,8 +289,8 @@ fn the_payee_alone_holds_a_valid_receipt_naming_any_payer() {
 
 // ================================================================ 2. The three questions, in Money
 
-fn mips() -> Mips {
-    Mips {
+fn mirs() -> Mirs {
+    Mirs {
         identity: common::identity_spec(),
         text: h("a text specification"),
         envelopes: h("the envelope specification"),
@@ -346,7 +346,7 @@ struct AgreementsHeld<'a> {
 impl AgreementsHeld<'_> {
     fn fin(&self, id: &Hash) -> Option<(Payload, Hash)> {
         let x = self.view.v.get(id)?;
-        if x.inside.spec != mips().money {
+        if x.inside.spec != mirs().money {
             return None;
         }
         Some((Payload::decode(x.inside.type_, &x.inside.payload).ok()?, x.act.outside.signer?))
@@ -367,7 +367,7 @@ impl Held for AgreementsHeld<'_> {
             Id::Rotation(r) => (x.act.outside.signer?, r.declarations.clone()?),
             _ => return None,
         };
-        Some((who, fin::vault_in(&mips().money, &decls).ok()??.unwrap_or_default()))
+        Some((who, fin::vault_in(&mirs().money, &decls).ok()??.unwrap_or_default()))
     }
     fn obligation(&self, id: &Hash) -> Option<Obligation> {
         match self.fin(id)? {
@@ -394,7 +394,7 @@ impl Held for AgreementsHeld<'_> {
         let res = self.view.v.resolve(payee);
         let mut out = None;
         for st in &res.states {
-            if let Ok(Some(v)) = fin::vault_in(&mips().money, &st.declarations) {
+            if let Ok(Some(v)) = fin::vault_in(&mirs().money, &st.declarations) {
                 out = v;
             }
         }
@@ -421,7 +421,7 @@ struct Story {
 
 impl Story {
     fn view(&self) -> AgreementsView<'_> {
-        let mut v = AgreementsView::new(&self.w.v, mips());
+        let mut v = AgreementsView::new(&self.w.v, mirs());
         v.rail_valid = self.rail_valid.clone();
         v.rail_pending = self.rail_pending.clone();
         v.payments = self.payments.clone();
@@ -464,13 +464,13 @@ impl Story {
 
     fn debt(&mut self, debtor: &mut Person, deal: Hash, value: u64, named: Hash) -> Hash {
         let o = Payload::Obligation(Obligation { debtor: debtor.id, creditor: self.payee, amount: sat(value), pointer: named, agreement: Some(deal) });
-        self.act(debtor, mips().money, fin::types::OBLIGATION, o.to_map(), None, None)
+        self.act(debtor, mirs().money, fin::types::OBLIGATION, o.to_map(), None, None)
     }
 
     fn claim(&mut self, payer: &mut Person, debt: Hash, paid_to: PaidTo, salt: [u8; 16], amount: Amount, rail_proof: &OnchainProof) -> (Hash, Answer) {
         let proof = Proof { paid_to, salt, rail: rail_proof.encode() }.encode();
         let claim = Claim { rail: mor_onchain::spec(), proof, payee: self.payee, amount, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
-        let id = self.act(payer, mips().money, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
+        let id = self.act(payer, mirs().money, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
         let rec = Record::Claim(&claim, payer.id, &Citations::default());
         let answer = {
             let onchain = Onchain::on(&self.chain);
@@ -484,7 +484,7 @@ impl Story {
     fn receipt(&mut self, payee: &mut Person, payer: Hash, debt: Hash, paid_to: PaidTo, salt: [u8; 16], amount: Amount, rail_proof: &OnchainProof) -> (Hash, Answer) {
         let proof = Proof { paid_to, salt, rail: rail_proof.encode() }.encode();
         let r = Receipt { rail: mor_onchain::spec(), proof, payer: Some(Payer::Identity(payer)), payee: self.payee, amount, fulfils: debt, previous: None, forward: None, batch: None, purchase: None };
-        let id = self.act(payee, mips().money, fin::types::RECEIPT, Payload::Receipt(r.clone()).to_map(), None, None);
+        let id = self.act(payee, mirs().money, fin::types::RECEIPT, Payload::Receipt(r.clone()).to_map(), None, None);
         let rec = Record::Receipt(&r);
         let answer = {
             let onchain = Onchain::on(&self.chain);
@@ -503,16 +503,16 @@ fn deal(name: &str, flow: &Keys, with_clock: bool) -> (Story, Person, Person, Pe
     let mut w = World::new();
     let op = w.operator(&format!("{name}'s home"));
     let main = Clockwork::new("the public chain");
-    let decls = with_clock.then(|| vec![fin::clock_declaration(&mips().money, &Clock { main: main.reference(), backup: None })]);
+    let decls = with_clock.then(|| vec![fin::clock_declaration(&mirs().money, &Clock { main: main.reference(), backup: None })]);
     let mut payee = w.genesis_with(name, vec![home(&op)], None, None, decls, 3);
     let pid = payee.id;
     let mut s = Story { w, anchors: Anchors::new(), rail_valid: BTreeMap::new(), rail_pending: BTreeSet::new(), payments: BTreeMap::new(), chain: support::chain(&[mine(h("the chain so far"), &[h("a block")], REGTEST_BITS, 1)]), main, payee: pid };
     let mut label = s.w.genesis("the label", vec![common::own_home()], None, None);
-    let v1 = s.act(&mut payee, mips().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: pid, version: 1, previous: None, rails: vec![Rail { module: mor_onchain::spec(), address: flow.address(Network::Regtest).encode() }] }).to_map(), None, None);
-    let deal = s.act(&mut label, mips().agreements, agreements::types::TERMS, vec![], None, None);
+    let v1 = s.act(&mut payee, mirs().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: pid, version: 1, previous: None, rails: vec![Rail { module: mor_onchain::spec(), address: flow.address(Network::Regtest).encode() }] }).to_map(), None, None);
+    let deal = s.act(&mut label, mirs().agreements, agreements::types::TERMS, vec![], None, None);
     let on = |t: Hash| Some(vec![Object { chain: t, predecessor: t }]);
-    s.act(&mut label, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), None);
-    s.act(&mut payee, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v1)]));
+    s.act(&mut label, mirs().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), None);
+    s.act(&mut payee, mirs().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v1)]));
     (s, payee, label, op, v1, deal)
 }
 
@@ -599,9 +599,9 @@ fn on_a_clock_that_is_not_bitcoin_a_pending_claim_counts_only_for_its_own_transa
     // The thief re-points the flow and the deal.
     let thief_keys = Keys::new("the thief's wallet");
     let mut thief = ana.clone();
-    let v2 = s.act(&mut thief, mips().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: aid, version: 2, previous: Some(v1), rails: vec![Rail { module: mor_onchain::spec(), address: thief_keys.address(Network::Regtest).encode() }] }).to_map(), None, None);
+    let v2 = s.act(&mut thief, mirs().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(PayeePointer { payee: aid, version: 2, previous: Some(v1), rails: vec![Rail { module: mor_onchain::spec(), address: thief_keys.address(Network::Regtest).encode() }] }).to_map(), None, None);
     let on = |t: Hash| Some(vec![Object { chain: t, predecessor: t }]);
-    let resigned = s.act(&mut thief, mips().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v2)]));
+    let resigned = s.act(&mut thief, mirs().agreements, agreements::types::SIGNATURE, agreements::signature_payload(&deal), on(deal), Some(vec![Ref::Act(v2)]));
     let to_thief = PaidTo::Flow { pointer: v2, rail: 0 };
     let d1 = s.debt(&mut label, deal, 20_000, v2);
     let d2 = s.debt(&mut label, deal, 20_000, v2);

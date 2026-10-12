@@ -1,15 +1,15 @@
-// A long-form document as a MOR act: a public text act (Text MIP, type 0)
+// A long-form document as a MOR act: a public text act (Text MIR, type 0)
 // whose format field names this cMIP. Publishing and reading go through the
 // genesis client's identity and transport, and every judgement through the
 // core library.
 
-import { MIPS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, openWithKey, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, openWithKey, unhex } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { LONGFORM_SPECS, TEXT_ACT } from './specs.ts';
 
-/** A text act's payload (Text MIP, "Act format"): the text and, optionally, its format. */
+/** A text act's payload (Text MIR, "Act format"): the text and, optionally, its format. */
 export function textPayload(text: string, format: string | null = LONGFORM_SPECS.longform): Uint8Array {
   const m = new Map<number, unknown>([[0, text]]);
   if (format) m.set(1, unhex(format));
@@ -43,7 +43,7 @@ export interface Read {
   text: string;
   /** The format the act names, if any. */
   format: string | null;
-  /** Whether this client implements that format; if not, the text is shown plain (Text MIP, rule 4). */
+  /** Whether this client implements that format; if not, the text is shown plain (Text MIR, rule 4). */
   formatted: boolean;
 }
 
@@ -89,7 +89,7 @@ export async function readDocument(id: string, hints: string[], via: Via = {}): 
   const f = p.get(1);
   const format = f instanceof Uint8Array ? hex(f) : null;
 
-  const v = new Verifier(SPECS.identity, MIPS.money, MIPS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   await lookUp(d.signer, hints, via, v);
   v.add(act);
   return {

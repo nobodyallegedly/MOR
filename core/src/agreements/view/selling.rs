@@ -283,7 +283,7 @@ impl<'a> AgreementsView<'a> {
     /// where `p` is a held publication (Envelopes type 0).
     pub(super) fn publication_field(&self, p: &Hash, k: u64) -> Option<Hash> {
         let x = self.v.get(p)?;
-        if x.inside.spec != self.mips.envelopes || x.inside.type_ != 0 {
+        if x.inside.spec != self.mirs.envelopes || x.inside.type_ != 0 {
             return None;
         }
         x.inside.payload.iter().find_map(|(kk, v)| match (kk, v) {

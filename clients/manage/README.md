@@ -15,7 +15,7 @@ Until now, whoever ran a relay or a home typed commands on the machine it runs o
 - rotate the operator, close the home for good, or hand it a rotation the operator made elsewhere;
 - pair another device, or unpair one.
 
-**Who may use the page** (decided by Nobody, allegedly, 30 September 2026). The first time, the browser makes a key of its own for that address, kept so that even the page cannot read it out. The operator pairs it once, with a one-time code the relay prints (at `init`, or with `mor-relay pair`). From then on every request the page sends is signed with that key, and the relay answers only keys it has paired. The key is not an identity: the operator's identity keys play no part, and nothing here is a MOR act. How an operator runs a relay is outside the protocol, the program's own business, so no MIP is involved.
+**Who may use the page** (decided by Nobody, allegedly, 30 September 2026). The first time, the browser makes a key of its own for that address, kept so that even the page cannot read it out. The operator pairs it once, with a one-time code the relay prints (at `init`, or with `mor-relay pair`). From then on every request the page sends is signed with that key, and the relay answers only keys it has paired. The key is not an identity: the operator's identity keys play no part, and nothing here is a MOR act. How an operator runs a relay is outside the protocol, the program's own business, so no MIR is involved.
 
 Setting a relay up and starting it stay one-time steps on its machine (`mor-relay init`, then a service or login agent), as does the first pairing code of a relay already running. Everything done day to day happens on the page.
 
@@ -49,7 +49,7 @@ Where the texts are silent (here, where nothing is specified: running a relay is
 8. **Settings made at `init` stay there:** the relay's addresses, its policy (open or listed identities) and its size limits. Changing them changes what the relay announces and is rare; the page shows them.
 9. **A key per address:** a browser pairs separately with home1, home2 and the onion home. Clearing the site's data forgets the key, and that browser pairs again.
 
-No flaw in a MIP found: nothing here touches the protocol.
+No flaw in a MIR found: nothing here touches the protocol.
 
 ## Tests
 

@@ -292,7 +292,7 @@ pub struct Limits {
 
 impl Default for Limits {
     /// A rotation under scheme 3 is over 17 KB; 256 KiB leaves room for
-    /// any act the MIPs define today.
+    /// any act the MICS defines today.
     fn default() -> Self {
         Limits {
             act: 256 * 1024,

@@ -1,10 +1,10 @@
 # Spec Note: Pending Rotation and Air-Gapped Chain keys
 
-*Draft 4, 28 September 2026. Companion to the Identity MIP draft 9. Not core: a founding Module (confirmed by Nobody, allegedly), so that any signing device can support MOR chain keys. Draft 4 is draft 3 as built (roadmap step 6, `modules/airgap/`): seeds are defined by seed Modules, two of them founding (words and hex); the key index is the key's number in the identity's life; a key fingerprint both screens show alike; what "the same rotation" means for rule 3.4; clean-device mode chosen on the device; the share message and Pedersen dealing for collectives, with the promise of section 5 corrected (F97); the transports' exact types and limits; the tests marked run or not run. Draft 3 folded in the review notes N1 to N5 of draft 2 and applied review round 2.*
+*Draft 4, 28 September 2026. Companion to the Identity MIR draft 9. Not core: a founding Module (confirmed by Nobody, allegedly), so that any signing device can support MOR chain keys. Draft 4 is draft 3 as built (roadmap step 6, `modules/airgap/`): seeds are defined by seed Modules, two of them founding (words and hex); the key index is the key's number in the identity's life; a key fingerprint both screens show alike; what "the same rotation" means for rule 3.4; clean-device mode chosen on the device; the share message and Pedersen dealing for collectives, with the promise of section 5 corrected (F97); the transports' exact types and limits; the tests marked run or not run. Draft 3 folded in the review notes N1 to N5 of draft 2 and applied review round 2.*
 
 ## 1. Purpose
 
-The Identity MIP keeps the chain key offline and uses it only to sign rotations. In practice that means two devices:
+The Identity MIR keeps the chain key offline and uses it only to sign rotations. In practice that means two devices:
 
 - an **online device** (everyday phone or computer), holding the signing key, publishing and talking to homes;
 - an **offline device** (an old phone kept in flight mode, a laptop never connected, or later a dedicated hardware signer), holding the chain-key seed and nothing else.
@@ -24,7 +24,7 @@ The offline device derives the first chain key from its seed and exports only it
 ```cddl
 commitment-export = {
   0 => 0,              ; message kind
-  1 => chain-key-commit,  ; [scheme, commit], as in the Identity MIP; scheme a founding number or a specification hash
+  1 => chain-key-commit,  ; [scheme, commit], as in the Identity MIR; scheme a founding number or a specification hash
   2 => uint            ; key index: 0 at genesis
 }
 ```
@@ -103,7 +103,7 @@ Consequential fields (succession, homeless flag, closure, vault changes, home an
 
 **Nothing unseen.** The device signs a rotation whose inside holds only spec, type and payload; it refuses any other inside field, since it could not show it. *A rotation has no use for acknowledgements, references or a hint; a field the owner cannot see is a field a compromised online device could use.*
 
-**3.2 Check the chain, and say what was not checked (N2).** The device verifies that the previous identity-chain act is a genesis or a rotation of the Identity MIP, public, in its shape, with a valid signature (for a genesis, by the key it declares), that the pending rotation names it and follows its position, and that the chain key it is about to use matches the commitment in that act. It refuses otherwise. After a genesis it holds the whole chain state, so it also runs rotation check 5 (F94). It cannot know, offline, whether that act counts under the home rule, since receipts live at the homes; that check stays with the online device, and the device's summary says so, with whatever else it did not check, so nobody believes the offline device verified more than it did.
+**3.2 Check the chain, and say what was not checked (N2).** The device verifies that the previous identity-chain act is a genesis or a rotation of the Identity MIR, public, in its shape, with a valid signature (for a genesis, by the key it declares), that the pending rotation names it and follows its position, and that the chain key it is about to use matches the commitment in that act. It refuses otherwise. After a genesis it holds the whole chain state, so it also runs rotation check 5 (F94). It cannot know, offline, whether that act counts under the home rule, since receipts live at the homes; that check stays with the online device, and the device's summary says so, with whatever else it did not check, so nobody believes the offline device verified more than it did.
 
 **3.3 Supply the next commitment itself.** The device derives the next chain key, index n + 1 after key n, from its current seed, or from a fresh seed if the current one may be exposed, and then shows the user that the new seed must be backed up. It inserts the next commitment into the rotation before signing. The online device never chooses it: a next commitment the online device sends anyway is dropped, replaced by the device's own, and the summary warns that the online device misbehaved. Otherwise a compromised online device could slip in an attacker's commitment and take over the identity at the next rotation. The next commitment may name a different scheme than the current key, by specification hash: this is how a chain-key scheme is replaced one day.
 
@@ -111,9 +111,9 @@ Consequential fields (succession, homeless flag, closure, vault changes, home an
 
 - Asked again for the same request, it re-exports the same signed bytes, whatever the user chooses this time. This includes the same homeless rotation, asked again with an escape endorsement announced: the endorsement is a separate act, so the rotation needs no new signature. A clean-device signing key is not kept, so a re-export does not carry it.
 - Asked to sign a different rotation with the same key, it refuses.
-- The exceptions are the two allowed by the Identity MIP, each once: one normal rotation after a homeless rotation voided by an objection, and one endorsed homeless rotation (an escape) after a normal rotation the homes refused. The device recognises each from what it signed last with that key, names the earlier rotation (the escape endorsement must list it as abandoned), and must confirm either explicitly with the user.
+- The exceptions are the two allowed by the Identity MIR, each once: one normal rotation after a homeless rotation voided by an objection, and one endorsed homeless rotation (an escape) after a normal rotation the homes refused. The device recognises each from what it signed last with that key, names the earlier rotation (the escape endorsement must list it as abandoned), and must confirm either explicitly with the user.
 
-This enforces rule 8a of the Identity MIP in the device itself; the MIP calls 8a a client and Module rule for exactly this reason. *SLH-DSA is stateless and is not weakened by a few signatures; the point is that an owner never has two competing rotations in play.* *Cost, stated: a device restored from its seed backup starts with no memory, so rule 3.4 holds per device, not across a loss. A backup of the memory would close the gap and is left to devices.*
+This enforces rule 8a of the Identity MIR in the device itself; the MIR calls 8a a client and Module rule for exactly this reason. *SLH-DSA is stateless and is not weakened by a few signatures; the point is that an owner never has two competing rotations in play.* *Cost, stated: a device restored from its seed backup starts with no memory, so rule 3.4 holds per device, not across a loss. A backup of the memory would close the gap and is left to devices.*
 
 **3.5 Sign only rotations.** The chain key signs nothing else. The device refuses any other kind of act, of any specification.
 

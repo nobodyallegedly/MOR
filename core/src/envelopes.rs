@@ -1,4 +1,4 @@
-//! The Envelopes MIP's encryption keys, key deliveries and sealed containers
+//! The Envelopes MIR's encryption keys, key deliveries and sealed containers
 //! (Envelopes draft 6, "Encryption keys and key delivery", "Sealed
 //! containers"; F98, F99).
 //!
@@ -30,7 +30,7 @@ use std::fmt;
 pub mod anchoring;
 pub mod vow;
 
-/// The types this MIP defines (Envelopes, "Types defined by this MIP").
+/// The types this MIR defines (Envelopes, "Types defined by this MIR").
 pub mod types {
     pub const PUBLICATION: u64 = 0;
     pub const KEY_DELIVERY: u64 = 1;

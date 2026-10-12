@@ -1,4 +1,4 @@
-//! Hand-made identity chains, and the answers the Identity MIP requires
+//! Hand-made identity chains, and the answers the Identity MIR requires
 //! (draft 11, "Verification procedures" and "Validity rules"). Freeze
 //! scenario numbers are given where a test follows one.
 
@@ -544,7 +544,7 @@ fn only_identity_money_and_agreements_acts_acknowledge_f110() {
 }
 
 /// A witness act's shape (Identity rule 18b): it acknowledges at least one
-/// act and belongs to no chain; a verifier that cannot tell an act's MIP
+/// act and belongs to no chain; a verifier that cannot tell an act's MIR
 /// shows a non-Identity act carrying `acks` as unknown, never valid.
 #[test]
 fn a_witness_act_names_what_it_witnesses() {
@@ -574,7 +574,7 @@ fn a_witness_act_names_what_it_witnesses() {
     );
     let said = w.add(&said);
     assert_eq!(w.v.status(&said), Status::Invalid, "its payload is empty");
-    // A verifier told only the Identity MIP's hash.
+    // A verifier told only the Identity MIR's hash.
     let mut blind = mor_core::chain::Verifier::new(identity_spec());
     let agreements_act = w.everyday_act(&mut r, agreements_spec(), 17, vec![], None, Some(vec![x]));
     let genesis = w.v.resolve(&r.id).links[0].act;
