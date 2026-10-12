@@ -1,6 +1,6 @@
 # MIP: Agreements
 
-*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in three parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. **The third part writes in the answers to the questions the second part raised** (Q1 to Q6 in `docs/agreements-draft-11.md`): F261, F259 as revised, F262 and F263, each marked "new in draft 11 (Fxxx)", and the readings of Q2 and Q3, each marked "reading (Q2)" or "reading (Q3)"; Q6 leaves Money draft 6 as it is. Then the answers to the two questions that pass raised, Q7 and Q8: F264 and F265, each marked "new in draft 11 (Fxxx)", F265 correcting F262's wording. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`): the proven offers' paragraph points to the field Development draft 7 adds for a proof-of-delivery checker (F268), and F255's paragraph points to Money draft 7, rule 17, now that Money draft 7 is approved; each marked "new in draft 11" with its finding where it stands, written against the six current drafts (Identity 12, Envelopes 8, Text 7, Money 7, Development 7). No rule changes. **Then a second pass** (12 October 2026, evening, for Nobody, allegedly, to approve; `docs/core-v22.md`, "Second pass") writes in two findings decided on the deal assessment tool's questions, each marked "new in draft 11 (Fxxx)": F270 in rule 48 (was 46), with rules 28, 45, 66 and 68 pointing to it, to build: what a stake is paid is not lowered without the signature of a holder with no voice in the power making the change; and F271 in rule 25 (was 24a): the split plan may state a maximum fee per payout, none meaning no cap, flagged before signing. It also corrects four slips the tool noticed, marked "text only, no rule changed": field 28 in the terms format and the tier table; field 10's withdrawal in the tier table, the glossary and rule 67; task 14 as judicial in the tier table and rule 67; the fee entry's comment citing rule 28. Two points it leaves open are marked "Open (core v22, Qn)". Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 6, Development MIP draft 6 and findings F1 to F265. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in three parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. **The third part writes in the answers to the questions the second part raised** (Q1 to Q6 in `docs/agreements-draft-11.md`): F261, F259 as revised, F262 and F263, each marked "new in draft 11 (Fxxx)", and the readings of Q2 and Q3, each marked "reading (Q2)" or "reading (Q3)"; Q6 leaves Money draft 6 as it is. Then the answers to the two questions that pass raised, Q7 and Q8: F264 and F265, each marked "new in draft 11 (Fxxx)", F265 correcting F262's wording. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`): the proven offers' paragraph points to the field Development draft 7 adds for a proof-of-delivery checker (F268), and F255's paragraph points to Money draft 7, rule 17, now that Money draft 7 is approved; each marked "new in draft 11" with its finding where it stands, written against the six current drafts (Identity 12, Envelopes 8, Text 7, Money 7, Development 7). No rule changes. **Then a second pass** (12 October 2026, evening, for Nobody, allegedly, to approve; `docs/core-v22.md`, "Second pass") writes in two findings decided on the deal assessment tool's questions, each marked "new in draft 11 (Fxxx)": F270 in rule 48 (was 46), with rules 28, 45, 66 and 68 pointing to it, to build: what a stake is paid is not lowered without the signature of a holder with no voice in the power making the change; and F271 in rule 25 (was 24a): the split plan may state a maximum fee per payout, none meaning no cap, flagged before signing. It also corrects four slips the tool noticed, marked "text only, no rule changed": field 28 in the terms format and the tier table; field 10's withdrawal in the tier table, the glossary and rule 67, and so in rules 6 and 72, the reasoning and two freeze lines, which still read it as live; task 14 as judicial in the tier table and rule 67; the fee entry's comment citing rule 28. Two points it leaves open on F270 are marked "Open (core v22, Q7)" and "(Q8)". Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 6, Development MIP draft 6 and findings F1 to F265. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -193,7 +193,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   - The fork act closes the original collective in Agreements and passes its ownership to the successors.
   - Each successor names the original in "forked from", a back-link only.
 
-  Not to be confused with a fork of records or of an agreement chain (rules 6, 72, 90), which the concurrency rule settles.
+  Not to be confused with a fork of records or of an agreement chain (rules 6, 72, 90), which rule 90 settles.
 - **Closing.** The end of a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor. It is a closing act, signed under the constitutional change rule. After its line, the collective's keys count for nothing in Agreements (type 20, rule 91, F124 N9, F125 D5). **New in draft 11 (F262):** the selling and releasing are ordinary acts before the closing. **New in draft 11 (F265):** an absentee's money share follows the collective's own rules, and stays visible as an open obligation wherever they sent it; the closing names nothing for it.
 - **A deal's end (new in draft 11, F263).** A deal has no closing act. It ends, or winds down, by a clone every party signs, stating its new conditions: where its stakes went, what is still owed, and to whom its outer agreement now pays (rules 15, 47).
 - **Creditor's release.** An act by which a creditor ends an obligation owed to it without full payment, for instance against stakes or a partial payment. Only the creditor signs it (rule 92, F125). It is a Money act (Money type 4; Agreements type 21 retired) (F126). A collective creditor signs it by its Money lane alone. A release traded for future terms is also an Agreements agreement, signed by the collective's Agreements lane, which the release names. *MOR has no court and cannot force a creditor to let go: a debt ends by payment or by its creditor's word.*
@@ -244,7 +244,7 @@ Two acts naming the same predecessor are a fork. The exception: signatures namin
 
 A fork is settled this way:
 
-- where the agreement lets parties act independently, its concurrency rule settles it;
+- where the agreement lets parties act independently, rule 90 settles it (the concurrency rule, field 10, is withdrawn: text only, no rule changed);
 - otherwise the status quo stands;
 - save that two complete versions of one deal follow rule 47 (F186), as below.
 
@@ -904,7 +904,7 @@ It MUST NOT change the plan: only the owners can, by cloning their agreement.
 
 *Step 12b (F211, F213, F214):* a Module states its fee in its own specification (Development field 7), machine-readable and informative. **Only a fee entry of the agreement (terms field 28) makes a fee owed**, and nothing is forced (F42).
 
-Fees are their own field (F213), so a constitution can place them in an area apart from the split plan, or leave them to the clone rule. The bearers (every stake, fees coming off the top) consent by the power the field falls under, save a holder with no voice in it, whose signature a version adding or raising a fee its stake bears needs (rule 48; new in draft 11, F270; to build).
+Fees are their own field (F213), so a constitution can place them in an area apart from the split plan, or leave them to the clone rule. The bearers (every stake, fees coming off the top) consent by the power the field falls under, save a holder with no voice in it, a deal's holder who is no party or a collective's departed holder: a version adding or raising a fee its stake bears needs that holder's signature (rule 48; new in draft 11, F270; to build).
 
 A fee entry says when it applies: every payment, payments for a named publication, or payments by a named rail. **A split leaving out a fee its entry makes owed is a wrong split, and the fee is the service's open obligation** (F214). The split's list of Modules (key 6) is the service's statement, never what decides.
 
@@ -1086,7 +1086,7 @@ A clone is a draft until all of these hold:
 - every party its mark names has a valid signature act naming it;
 - every party it adds, and every party it makes a holder of an area it did not hold, has one too;
 - every holder whose share of a stake it drops or lowers has one too, member or not (rule 48, F124 N5);
-- every holder it pays less, by lowering the stake's part of the split plan or adding or raising a fee the stake bears, who has no voice in the power making that change, has one too (rule 48; new in draft 11, F270; to build);
+- every holder it pays less, by lowering the stake's part of the split plan or adding or raising a fee the stake bears, who has no voice in the power making that change (a deal's holder who is no party, a collective's departed holder), has one too (rule 48; new in draft 11, F270; to build);
 - every departed holder whose own stake plan it changes has one too (M1, F125);
 - where it changes the release rule, every holder of every stake the parent defines has one too (N8);
 - the parent exists.
@@ -1249,9 +1249,9 @@ A clone can never reduce a stake without its holder's signature, unless the agre
 
 **Nor is what a stake is paid lowered without its holder, where that holder has no voice in the power making the change** (new in draft 11, F270; to build). A version that lowers a stake's part of the split plan (field 8), or adds or raises a fee the stake bears (field 28), needs the signature of every holder of that stake it pays less who has no voice in the power making that change:
 - in a deal, a holder who is no party (every party signs every version of a deal, rule 47, F107);
-- in a collective, a departed holder (rule 68), and any other holder who is no member.
+- in a collective, a departed holder (rule 68).
 
-A member, who holds the power or chose it by signing the constitution, is left to the collective's own rules (rules 64, 65). *Open (core v22, Q1): whether the first paragraph's "unless the agreement pre-authorised it" reaches this one.* *Open (core v22, Q2): which changes of the split plan "lower a stake's part".*
+A member, who holds the power or chose it by signing the constitution, is left to the collective's own rules (rules 64, 65). *Open (core v22, Q7): whether the first paragraph's "unless the agreement pre-authorised it" reaches this one.* *Open (core v22, Q8): which changes of the split plan "lower a stake's part".*
 
 *"If this can happen in a simple joint venture agreement it is a problem"; "One stone two birds, agreed" (Nobody, allegedly). The voices chose the power over fields 8 and 28; those without one did not, and what a stake is paid is what no choice of theirs may break.*
 
@@ -1669,7 +1669,7 @@ When no voice remains, nothing meets the rule. An area left without a holder, or
 #### Rule 66 (was 44e). Protections still hold
 
 Protections still hold. Whatever power brings a clone into force, it cannot:
-- reduce a stake without its holder's signature (rule 48), a departed holder's included (rule 68), nor lower what it pays a holder with no voice in the power making that change (rule 48; new in draft 11, F270);
+- reduce a stake without its holder's signature (rule 48), a departed holder's included (rule 68), nor lower what it pays a departed holder without that holder's signature (rule 48; new in draft 11, F270);
 - nor change the judicial tier without every member, a version changing the constitution included (rules 64.1, 67; F122).
 
 *Stated cost (F103): by default a member who is present but unwanted cannot be removed; the others can leave, each alone (rule 70), or use the abandonment clause where it applies. A group that wants expulsion writes a constitutional change rule below everyone at founding, where every founder signs it; even then, removal takes the voice, never the stake (Q6). A member who dies or vanishes never freezes the constitution: the abandonment clause every collective carries can remove their voice (rule 61, F105).*
@@ -1710,7 +1710,7 @@ In a deal no clone completes without everyone, so the question never arises (F10
 
 Collectives only (F121). A collective's departed members entry (terms field 22) records only who left, without voice. Their stake is in the collective's stakes (field 7), which decide what every holder is paid (F124, N5).
 
-**A departed holder has no control and no veto:** it is counted in no change rule and no area, and the collective's current rules and judges apply to it.
+**A departed holder has no control and no veto:** it is counted in no change rule and no area, and the collective's current rules and judges apply to it. Its one signature is on what lowers its own stake or its pay (rule 48), never on anything else.
 
 Its stake never shrinks without its signature (rule 48). A clone that lowers its share in field 7, or drops it, is a draft until that holder signs it (rule 45), as for every holder. **Nor is what its stake is paid lowered without it:** a clone that lowers its stake's part of the split plan, or adds or raises a fee its stake bears, is a draft until it signs (rule 48; new in draft 11, F270; to build). *This protects what it is paid; it gives it no say in anything else.*
 
@@ -1881,12 +1881,9 @@ For an act the collective's key signs, the agreement in force is the one the cha
 - for a record itself, only the records before it (B2);
 - for an action, the records under an earlier binding carried forward, and, under its own, the records its history holds and those before them (F127, rule 58). A record it never cites decides nothing for it, a concurrent one included, save by the tie rule ("Made before, made after", 7).
 
-**Records on concurrent lines are a fork of the agreement chain, settled by the agreement's own concurrency rule** (A4, Q38). Where two valid records of different clones of the same parent, neither before the other, both count for an act (a record after both, or an action whose history holds both):
+**Records on concurrent lines are a fork of the agreement chain, settled as rule 90 says** (A4, Q38). Where two valid records of different clones of the same parent, neither before the other, both count for an act (a record after both, or an action whose history holds both), it is judged under the parent itself, the earlier version staying in force, until a clone of either branch, recorded after both lines, resolves it, as rule 90 says (B11). *The concurrency rule (field 10), which once selected a clone here, is withdrawn (step 12b, OF20 c): text only, no rule changed.*
 
-- the act is judged under the clone that the parent's concurrency rule (field 10) selects;
-- where the parent has no concurrency rule, it is judged under the parent itself, the earlier version staying in force, until a clone of either branch, recorded after both lines, resolves it, as rule 90 says (B11).
-
-*The concurrency rule is a judicial clause every member signed (rule 67, F121); where the collective's records were drawn concurrently, which of them its key holders drew first does not overrule it. Records drawn one after the other are no fork: the second names a parent no longer in force, and puts nothing in force.*
+*Where the collective's records were drawn concurrently, which of them its key holders drew first does not decide. Records drawn one after the other are no fork: the second names a parent no longer in force, and puts nothing in force.*
 
 A record of a clone counts only if:
 
@@ -3623,7 +3620,7 @@ These are decided in text only, and not written in code by build step 12b, the s
 - **Stakes and seats can go to different people.** *A stake is property: passing it changes only who is paid. A seat is trust: the other members chose to share control with that person. A plan can give the stake to an heir and the seat to someone trusted for the job, paid through a position.*
 - **Collectives are identities.** *A collective that receives money must sign receipts and rotate like anyone else. Giving it its own keys, held as its members choose, keeps one Identity MIP for everyone. The price is that a threshold signature looks like one signature; where individual consent matters, an area can require visible member signatures. And every grammar leaves a way through that survives the loss of any one key holder. So a dead member never freezes the key, not even a sole holder, whose successor holds an escrowed share: the rule is about the exit, not the number (F96). A collective's member signatures are judged under the rules its own chain declared when the key signed. So leaving is final: a former member's signature never again counts on what the collective signs after its line registering the departure (F100, F109), though it can still complete what the collective signed before it (C1).*
 - **Keepers stamp sealed envelopes, and only real ones.** *Proving an act existed before a rotation needs its id and signer, not its content. Keepers that never read keep private deals private; judging content is left to arbitrators and verifiers the parties choose and deliver keys to. A record counts only alongside the act it names, so a bought record of nothing changes nothing.*
-- **Protected clauses, one version for everyone** (F121). *A stake cannot be reduced without its holder's signature. But the clause that decides absence, the keeper who judges it, the concurrency rule and the split service could move the stake in two steps; and an arbitrator, a condition cMIP or an anchoring cMIP chosen after the fact could decide who wins. So in a collective they change only with every member's signature. Keeping, for each party, the version that party signed (F71) would leave two members with no judge they both signed. One version, signed by all, gives every dispute one judge; a holdout makes a standoff, which talking or a fork of the collective settles.*
+- **Protected clauses, one version for everyone** (F121). *A stake cannot be reduced without its holder's signature. But the clause that decides absence, the keeper who judges it and the split service could move the stake in two steps; and an arbitrator, a condition cMIP or an anchoring cMIP chosen after the fact could decide who wins. So in a collective they change only with every member's signature. Keeping, for each party, the version that party signed (F71) would leave two members with no judge they both signed. One version, signed by all, gives every dispute one judge; a holdout makes a standoff, which talking or a fork of the collective settles.*
 - **A chain of judgment** (F121). *Unanimity could trap a collective whose judge disappears. Naming in advance who takes over, signed by everyone, replaces a failing judge with no new signature.*
 - **A departed holder is paid, never consulted** (F121). *A stake is a share of income, not a say. Whoever keeps a stake after leaving accepts the collective's decisions, and is protected by what company law protects: the stake never shrinks without them, and no term treats it worse than a member's. Keeping their old judges (F71) would leave a split service keeping two sets of terms for one payment.*
 - **A fork closes the original, under the constitutional rule, each side founding its successor first** (F121, F124 N1, N4). *When a collective splits, no side keeps its identity, so a lone holdout cannot keep the name, history and pointers while everyone else leaves; every side starts anew, and what was made together still pays everyone who made it. A fork is a constitutional decision: where the founders allowed less than everyone, a member who signs no side keeps their money, as a departed holder of each successor, and loses only the seat. The members sign with their own identities, so no key holder can block the fork by refusing to rotate; the fork act names the successors, so none has to claim descent.*
@@ -3727,7 +3724,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 
 #### Changing an agreement
 
-- Clone drafts; a deal's clone signed by two of three stays a draft (F107); concurrency rule; status quo default; the judicial tier changed only by every member, one version for everyone (F121): 1, 3.
+- Clone drafts; a deal's clone signed by two of three stays a draft (F107); the concurrency rule withdrawn (step 12b); status quo default; the judicial tier changed only by every member, one version for everyone (F121): 1, 3.
 - A clone changing the arbitrator, signed by two of three, stays a draft; signed by all three, it judges everyone (Q3, F121): 3.
 
 #### Public domain
@@ -3813,7 +3810,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 #### Forks of records
 
 - Two registrations of one departure drawn concurrently: an act after one of them only counts as made after the departure; two sibling clones recorded concurrently leave their parent in force (A4): 3.
-- Two sibling clones recorded on concurrent lines: the concurrency rule (ranking) selects one; with no concurrency rule, the parent stays in force (Q38, A4): 3.
+- Two sibling clones recorded on concurrent lines: the concurrency rule being withdrawn (step 12b), the parent stays in force until a clone recorded after both resolves it (Q38, A4): 3.
 - A clone of one branch of a fork, recorded after both lines, resolves it; one recorded after only one line does not (B11): 3.
 
 #### How a collective ends
@@ -3863,7 +3860,7 @@ Every question and reading draft 10 lists as open ("Open in this draft", with dr
 **New in draft 11.** Writing in F252 to F260 raised six questions (Q1 to Q6 in `docs/agreements-draft-11.md`); all six are answered and written in (F261, F259 revised, the readings of Q2 and Q3, F262, F263, and Q6). Writing the answers raised two more, Q7 and Q8, both answered and written in: F264 (rule 11, a live stream's class follows what is sold) and F265 ("Closing (type 20)", an absentee's share follows the collective's own rules).
 
 
-**The second pass of core v22** (`docs/core-v22.md`, "Second pass") writes in F270 and F271 and leaves two points open on F270, marked in rule 48: whether "unless the agreement pre-authorised it" reaches the new paragraph (Q1), and which changes of the split plan lower a stake's part (Q2).
+**The second pass of core v22** (`docs/core-v22.md`, "Second pass") writes in F270 and F271 and leaves two points open on F270, marked in rule 48: whether "unless the agreement pre-authorised it" reaches the new paragraph (Q7), and which changes of the split plan lower a stake's part (Q8).
 
 ## Old numbers to new
 

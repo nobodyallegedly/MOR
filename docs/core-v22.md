@@ -279,3 +279,79 @@ In one place: what the reports carried, unchanged, plus what this pass noticed. 
 *How it ran:* this container had no `wasm-bindgen`, so I installed the version the script names (`cargo install wasm-bindgen-cli --version 0.2.129 --locked`), outside the repository, first. The site's browser test used the container's Chromium (`MOR_CHROMIUM`). The run used a separate checkout of `04f743a`, so the working tree was untouched during it; the texts were written in a scratch folder meanwhile, and entered the tree only after the run passed. *An error of mine, caught before it mattered:* this clone's local `main` pointed at an old commit (6 October); a first run started there was stopped within minutes, before any result, and everything above ran on `04f743a`, the remote's `main`.
 
 **The branch, after the texts** (`a803f66`, the marked pass and core v22, same options, a separate checkout): **all tests passed**, with the same counts as on main: Rust 647 passed, 0 failed, 1 ignored; TypeScript 249 passed, 0 failed. The working tree was untouched during the run. The commit after it (the second reader's wording points and this report) changes only Markdown files under `spec/` and `docs/`, as `git diff --stat` shows, so the run covers the branch's code as it stands. No code or test changed.
+
+## Second pass
+
+*12 October 2026, evening. The same branch, main merged in first. Texts only.*
+
+### In plain words
+
+You confirmed this pass's six questions as leaned, and decided two questions from the deal assessment tool (F270, F271). This pass writes all eight in, and fixes four slips the tool noticed.
+
+- **The six readings** now stand in the texts as rules, each marked "reading, confirmed"; no "Open" or "to confirm" mark is left for them.
+- **F270:** a holder who has no say in the power that sets the split plan or the fees (an investor in a deal who is not one of its parties, or a member who has left a collective) can no longer be paid less without signing.
+- **F271:** a split plan *may* cap the fee a payout loses. With no cap there is no limit, and a client must warn before signing.
+- **Four slips**, each fixed in the text only (**no rule changed**): what the text said lagged what was already decided, and the code already does it.
+
+### What changed
+
+**Development draft 7 (Q1 to Q3).**
+- "Task": a hand-off an agreement *may* name by its number. Tasks 1 to 5 stay tasks; the proof checker is not one.
+- Field 12 serves discovery only. A verifier asks the checker of whatever cMIP the offer names, and the proof decides. The proof-checker paragraph, the field's section, the freeze scenario and suite step 8.6 say so.
+- "Extension": a cMIP an agreement names in terms field 15. A proven offer's checker is not one.
+
+**Money draft 7 (Q4 to Q6).**
+- Rule 12, with rule 24's second paragraph: under a named batch, one payment may carry several forwards in parts, for claims as for receipts.
+- Rule 11's two lists add "the previous hop's receipt", and rule 24 points to rule 11: the payment's commitment decides; where it binds no previous hop, the payer's claim decides, and the receiver's contrary receipt shows as a dispute. Rule 27 reads the hops "as rule 24 reads them".
+- Rule 26: "each hop's receipt, or the claim that shows it".
+- Rule 21 points to F271. The freeze scenarios are extended.
+
+**Agreements draft 11.**
+- **Rule 48 (was 46), F270, to build.** A version that lowers a stake's part of the split plan, or adds or raises a fee it bears, needs the signature of every holder it pays less who has no voice in the power making that change: in a deal, a holder who is no party; in a collective, a departed holder. Members are left to the collective's own rules.
+- Rules 28, 45 (the clone's list of signatures, the code's `must_sign`), 66 and 68 point to rule 48. Rule 68 now says a departed holder's one signature is on its own stake and pay, never on anything else.
+- A freeze scenario is added.
+- **Rule 25 (was 24a), F271.** The plan "may state" a maximum fee per payout; with none stated, there is no cap. *Client conformance:* the client flags the absence before signing. The plan's key 6 comment and the glossary say so.
+
+**The four slips (text only, no rule changed):**
+1. Field 28 (fees, F213) is added to the terms format and to the tier table (operational). The area references now name field 28.
+2. Field 10 (the concurrency rule) is shown as withdrawn (step 12b) in the tier table, the glossary (two entries) and rule 67. So that the draft does not contradict itself, the same was done in rules 6 and 72, the reasoning and two freeze lines, which still read the field as live.
+3. Task 14 (absence proof) is judicial in the tier table, in the area references and in rule 67.
+4. The fee entry's comment cites rule 28, not rule 27.
+
+**Core v22 and suite v22.**
+- Core v22: the header (F270, F271, the confirmed readings), "Tasks", routes, stakes, the protected clauses (concurrency rule out, absence proof in), fees, departed holders, "Tasks are the contract", the proof checker, the forks of records, "Open before freeze", and the glossary (Task, Extension, Concurrency rule).
+- Suite v22: the header; the route, fees, departed holders and clone lines; steps 2.4g (Q4 to Q6), 3.3 (the concurrency rule withdrawn) and 8.6 (Q2). The new lines for F270 and F271 are marked "*(scenario: to write)*".
+- `spec/README.md`: each draft's line, and the findings range F1 to F271.
+
+**A second reader** checked the pass against the decisions. Points fixed after the review:
+- the concurrency rule was still treated as live in rule 72;
+- "no veto" in rule 68;
+- the short forms of F270 read too widely;
+- a wider class I had added in rule 48 ("any other holder who is no member") is dropped, since F270 names departed holders only;
+- the question labels;
+- the suite's "invalid" for field 10 (the text says "withdrawn, never reused"; the code refuses it);
+- three wording slips.
+
+*Noticed, not changed:* rule 90 still says a collective "must define how forks are settled", with no field left to do so. This is for the freeze-ready draft (carried point 33). Money rule 26 now names the next payee as well as the final creditor for the claim, as Q6's words read.
+
+### Questions for Nobody, allegedly
+
+Both questions are about F270, in Agreements rule 48, marked "Open (core v22, Q7)" and "(Q8)". Both were checked against the working rule (F265). Each asks what F270 protects, which no participant's choice may break, so each is put.
+
+**Q7. Does "unless the agreement pre-authorised it" reach F270?** *(area: Agreements, stakes; rule 48)*
+
+*In plain words:* rule 48 lets a share be cut without the holder's signature where the agreement allowed it in advance, for example through the abandonment clause. Does that exception also apply to cutting a holder's pay?
+- **(a) No, for a deal's non-party holder; yes, for a departed holder** (*my lean*). The non-party never signed the agreement, so the parties' advance permission would reopen exactly the case F270 closes. The departed holder signed it as a member. It is also the way out when a departed holder disappears: without it, one silent departed holder blocks every new fee for the whole collective, since fees fall alike on every stake (rule 68).
+- **(b) Yes, for both.** Simplest, but in a deal the parties could write in permission to cut an investor's pay.
+- **(c) No, for both.** Strictest. Stated cost: a vanished departed holder freezes the collective's fees.
+
+**Q8. Which changes "lower a stake's part of the split plan"?** *(area: Agreements, splits; rule 48, to build)*
+
+*In plain words:* a stake can be paid less without its own number changing. Examples: another share is raised or added; a role share is added; unfilled roles are sent elsewhere; the rail fee is moved onto receivers; the maximum fee is raised or removed; the split cMIP or its parameters change.
+- **(a) A computable list** (*my lean*): any change to the plan's shares that lowers the stake's portion of a payment, and any change to who bears the rail fee, to the maximum fee, to unfilled roles, or to the split cMIP and its parameters. What a cMIP pays cannot be read from the plan alone, so changing it counts as lowering.
+- **(b) Shares only:** the stake's own part lowered, or another's raised or added. Stated cost: the other changes escape.
+- **(c) The stake's own number only.** Narrowest.
+
+### Tests
+
+The texts were written while the tests ran on a separate checkout of the branch after the merge (`a8b2225`), using `scripts/test-all.sh` without `--reproducible` or regtest. The working tree was untouched during the run. Only Markdown under `spec/` and `docs/` changed after that commit. Results: see below.
