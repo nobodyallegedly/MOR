@@ -78,7 +78,16 @@ For Nobody, allegedly, to confirm or change.
 3. **A post that cannot be verified** (its signer's identity chain found nowhere): shown as not verified with the reason, its words nowhere on the screen, the bar counting "1 not verified"; a malformed `mor-author` and the feed's other content dropped.
 4. A feed naming no identity says so and fetches nothing.
 
-`scripts/test-all.sh`, this branch against main: see the pull request.
+`scripts/test-all.sh`, this branch against main (`6598322`), 12 October 2026:
+
+| | main | this branch |
+| --- | --- | --- |
+| Rust workspace | 653 passed | 653 passed |
+| `clients/site` | 58 | **62** (the 4 above), all pass |
+| Every other TypeScript package and module (barebone, genesis, reader and the rest) | 230 | 230, all pass |
+| Total | 941 | **945**, all pass |
+
+On main, the first full run stopped at one site test timing out (the film pop-up, `films.test.ts`) while a build ran beside it. Run again alone, it passed, 8 of 8. The three modules the script had not reached then pass on main too (jpeg 14, video 6, carry 6). The barebone client's 9 tests pass with its small change.
 
 ### Not done here
 
