@@ -12,7 +12,7 @@
 
 use crate::net::Http;
 use crate::person::naming;
-use mor_core::act::{Act, Scheme, Signature};
+use mor_core::act::{self, Act, Ref, Scheme, Signature};
 use mor_core::chain::{Resolution, Status, Verifier};
 use mor_core::hash::Hash;
 use mor_core::identity::{types, Payload};
@@ -176,6 +176,46 @@ impl Reader {
             }
         }
         answered
+    }
+
+    /// Follow a reference to the act it names (Envelopes draft 9, rule 20,
+    /// F272): first at the places this reader already asks; not there, and
+    /// the reference names a signer, by that signer: its identity (followed
+    /// from those same places to every home its chain names), then where the
+    /// core library says to look, its outbox routes and the homes in force.
+    /// The act found is checked by the core library: the act named, and,
+    /// where a signer is named, signed by it. Returns the act and where it
+    /// was found.
+    pub async fn follow_ref(&mut self, r: &Ref, start: &[String]) -> Result<(Act, String), String> {
+        let id = r.act().ok_or("a web reference names no act")?;
+        let fetch = |this: &Self, addr: String| {
+            let c = this.client(&addr);
+            async move {
+                let c = c?;
+                let bytes = c.get_act(&id).await.ok()?;
+                Some((Act::decode(&bytes).ok()?, addr))
+            }
+        };
+        for addr in start {
+            if let Some((a, at)) = fetch(self, addr.trim_end_matches('/').to_string()).await {
+                act::followed(r, &a).map_err(|e| e.to_string())?;
+                return Ok((a, at));
+            }
+        }
+        let signer = r.signer().ok_or("not found where this reader asks, and the reference names no signer")?;
+        self.follow(&signer, start).await;
+        let places = self.v.places(&signer);
+        if places.is_empty() {
+            return Err(format!("the signer {} could not be looked up", mor_relay::wire::hex(&signer)));
+        }
+        for addr in places {
+            if let Some((a, at)) = fetch(self, addr).await {
+                act::followed(r, &a).map_err(|e| e.to_string())?;
+                self.add(&a.encode());
+                return Ok((a, at));
+            }
+        }
+        Err("not found at the signer's routes and homes".into())
     }
 
     /// Every home address named by an identity-chain act held for `id`.
