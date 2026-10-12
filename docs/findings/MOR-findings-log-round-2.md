@@ -2716,6 +2716,12 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 *Also noted:* pull request 23 (Identity draft 12, texts only) failed once in the Rust workspace on GitHub and passed on a rerun: another flaky test, its name unseen (the logs cannot be read from here). To find in the next seed or load sweep.
 
+## Core v22's six questions: the leans taken (12 October 2026, afternoon)
+
+**From** `docs/core-v22.md`, Q1 to Q6 (area: core business, the details of F267 and F268). **Decided by Nobody, allegedly: "All six sound good from here."** (Q1) a task is a hand-off an agreement *may* name by number; tasks 1 to 5 stay tasks; the proof checker is not one. (Q2) Development's field 12 serves discovery only; a verifier asks the named cMIP's checker and the proof decides (F261). (Q3) the cMIP a proven offer names is not an extension; an extension is what an agreement names in terms field 15. (Q4) under F267, rule 12 as written: a named batch lets one payment carry several forwards in parts, for claims as for receipts, never counting twice. (Q5) a receipt and a claim of one hop naming different previous receipts: the payment's commitment decides where it binds the previous hop, otherwise the payer's claim, the receiver's contrary receipt shown as a dispute (rule 11's pattern). (Q6) rule 26 reads "each hop's receipt, or the claim that shows it": a service relying on its claim discloses it to the final creditor. *Suggested by the session; laid out by the project lead.*
+
+**Core changes:** Development draft 7 (the task's definition, field 12, the extension's definition), Money draft 7 (rules 12, 24, 26, 27 and 11's list), already marked "Reading, to confirm" or "Open" on pull request 26; to be confirmed there before merge.
+
 ## F271. A split plan's maximum fee per payout is optional; its absence is flagged (deal tool Q1, 12 October 2026, afternoon)
 
 **From** `docs/deal-assessment-tool.md`, Q1 (area: core business, Agreements splits; rule 25, Money rule 21): rule 25 says the plan states a maximum fee per payout, the format makes it optional, and no rule said what its absence means. *Options:* (a) optional, absent means no cap, flagged; (b) required; (c) absent means zero. **Decided by Nobody, allegedly: "Flag the risk."** (a): rule 25 reads "may state"; a plan without it has no cap; the deal tool and conforming clients flag the absence before signing. *Suggested by the session and the project lead.*
