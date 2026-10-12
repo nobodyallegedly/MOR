@@ -32,3 +32,12 @@ code,.fp{font-family:ui-monospace,Menlo,monospace;font-size:.92em;overflow-wrap:
 .mor-player>button{position:relative;font:600 16px system-ui,sans-serif;padding:12px 20px;border:0;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;cursor:pointer}
 .mor-player>.mor-film-note{position:relative;max-width:90%;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.65);text-align:center}
 .mor-player.played>.mor-film-note{display:none}
+.mor-film-open{position:absolute;margin:0;padding:0;border:0;border-radius:999px;background:transparent;color:transparent;font:inherit;cursor:pointer;overflow:hidden;white-space:nowrap}
+.mor-film-open:hover{background:rgba(127,127,127,.18)}
+.mor-film-open:focus-visible{outline:3px solid Highlight;outline-offset:2px}
+.mor-popup{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.8)}
+.mor-popup-panel{display:flex;flex-direction:column;gap:8px;width:min(100%,64em);max-height:100%}
+.mor-popup-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff;font:600 16px/1.3 system-ui,sans-serif}
+.mor-popup-title{overflow-wrap:anywhere}
+.mor-popup-close{flex:none;min-height:44px;padding:8px 16px;border:2px solid #fff;border-radius:999px;background:#000;color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}
+.mor-popup .mor-player{position:relative;align-self:center;width:min(100%,calc((100vh - 96px) * var(--shape,1.7778)));width:min(100%,calc((100dvh - 96px) * var(--shape,1.7778)));aspect-ratio:var(--shape,16/9)}

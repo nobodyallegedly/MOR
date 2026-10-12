@@ -3374,9 +3374,9 @@ var Parser = class {
           continue;
         }
         flush(p);
-        const open = p + n < l.to && !isSpace(s, p + n);
+        const open2 = p + n < l.to && !isSpace(s, p + n);
         const close = p > l.from && !isSpace(s, p - 1);
-        toks.push({ k: "delim", span: { from: p, to: p + n }, n, open, close });
+        toks.push({ k: "delim", span: { from: p, to: p + n }, n, open: open2, close });
         p += n;
         continue;
       }
@@ -3619,19 +3619,19 @@ function inAmount(c) {
   const cp = c.codePointAt(0);
   return DIGIT.test(c) || CURRENCY.test(c) || SIGNS.has(cp) || STOPS.has(cp) || PERCENT_SIGNS.has(cp) || APOSTROPHES.has(cp) || SPACES.has(cp);
 }
-function aroundAmount(s, from, to, open) {
+function aroundAmount(s, from, to, open2) {
   let digits = 0;
   let edge = null;
-  let x = open ? charAt(s, to) : charBefore(s, from);
+  let x = open2 ? charAt(s, to) : charBefore(s, from);
   const first = x;
   while (x && inAmount(x.c)) {
     if (DIGIT.test(x.c)) digits++;
     edge = x;
-    x = open ? charAt(s, x.to) : charBefore(s, x.from);
+    x = open2 ? charAt(s, x.to) : charBefore(s, x.from);
   }
   if (!x || !digits || !first || !edge) return false;
   if (SPACES.has(first.c.codePointAt(0)) || SPACES.has(edge.c.codePointAt(0))) return false;
-  return open ? CLOSE_BRACKET.test(x.c) : OPEN_BRACKET.test(x.c);
+  return open2 ? CLOSE_BRACKET.test(x.c) : OPEN_BRACKET.test(x.c);
 }
 var FLOOR = [
   ["a letter, a digit or a combining mark", (h) => ALWAYS.test(h.c)],
@@ -4838,7 +4838,8 @@ function read2(bytes) {
 var ANY_H264 = 'video/mp4; codecs="avc1.42E01E"';
 var megabytes = (n) => n < 1e6 ? `${Math.max(1, Math.round(n / 1e3))} kB` : `${(n / 1e6).toFixed(n < 1e7 ? 1 : 0)} MB`;
 function filmPlayer(entry, poster, get, line, changed, posterLoaded = () => {
-}) {
+}, options = {}) {
+  const signal = options.signal;
   const box = document.createElement("div");
   box.className = "mor-player";
   box.dataset.film = entry.path;
@@ -4873,7 +4874,23 @@ function filmPlayer(entry, poster, get, line, changed, posterLoaded = () => {
   button.textContent = "\u25B6 Play the film";
   box.replaceChildren(...parts(posterImg(), button, note(`${megabytes(entry.size)}, checked against what was signed before it plays.`)));
   box.dataset.state = "waiting";
-  button.addEventListener("click", async () => {
+  let video = null;
+  let filmUrl = "";
+  signal?.addEventListener(
+    "abort",
+    () => {
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      }
+      if (filmUrl) URL.revokeObjectURL(filmUrl);
+      if (line.state === "checking") set("waiting");
+    },
+    { once: true }
+  );
+  const go = async () => {
+    if (signal?.aborted) return;
     const probe = document.createElement("video");
     if (!probe.canPlayType(ANY_H264)) {
       stop("cannot", "this browser plays no H.264 film", "This browser does not play H.264 films, so the film was not fetched. The rest of the page is as signed.");
@@ -4884,11 +4901,13 @@ function filmPlayer(entry, poster, get, line, changed, posterLoaded = () => {
     set("checking");
     let bytes;
     try {
-      bytes = await get(entry);
+      bytes = await get(entry, signal);
     } catch (err) {
+      if (signal?.aborted) return;
       stop("failing", `not fetched (${err instanceof Error ? err.message : String(err)})`, "The film could not be fetched from this gateway. Not played.");
       return;
     }
+    if (signal?.aborted) return;
     if (!bytes) {
       stop("failing", "what this gateway served is not what was signed", "What this gateway served for the film is not what was signed. Not played.");
       return;
@@ -4905,7 +4924,7 @@ function filmPlayer(entry, poster, get, line, changed, posterLoaded = () => {
       stop("cannot", `this browser cannot play ${type}`, "The film is as signed, but this browser cannot play its kind. Not played.");
       return;
     }
-    const video = document.createElement("video");
+    video = document.createElement("video");
     video.controls = true;
     video.playsInline = true;
     video.setAttribute("playsinline", "");
@@ -4914,15 +4933,21 @@ function filmPlayer(entry, poster, get, line, changed, posterLoaded = () => {
     if (posterUrl) video.poster = posterUrl;
     video.addEventListener(
       "error",
-      () => stop("cannot", `this browser stopped playing it (error ${video.error?.code ?? "?"})`, "This browser could not play the film. The film is as signed."),
+      () => {
+        if (signal?.aborted) return;
+        stop("cannot", `this browser stopped playing it (error ${video?.error?.code ?? "?"})`, "This browser could not play the film. The film is as signed.");
+      },
       { once: true }
     );
-    video.src = URL.createObjectURL(new Blob([bytes], { type: "video/mp4" }));
+    filmUrl = URL.createObjectURL(new Blob([bytes], { type: "video/mp4" }));
+    video.src = filmUrl;
     box.classList.add("played");
     box.replaceChildren(video, note("Checked: exactly what was signed. Press play."));
     set("verified");
     video.play().catch(() => box.classList.remove("played"));
-  });
+  };
+  button.addEventListener("click", () => void go());
+  if (options.now) void go();
   return box;
 }
 function layOver(frame2, players) {
@@ -4971,6 +4996,7 @@ function standingWords2(s) {
 // src/shell/view.ts
 var FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-film{display:block;width:100%;aspect-ratio:16/9;background:#000}
+.mor-film-link{display:inline-block;padding:.4em 1em;border:1px solid currentColor;border-radius:999px;font:600 14px/1.3 system-ui,sans-serif;white-space:nowrap}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 var ACT_STYLE = `${STYLE2}
@@ -4992,7 +5018,7 @@ function filmItem(f) {
     failing: '<span class="bad-word">failing</span>: not played',
     cannot: '<span class="bad-word">not played</span> in this browser'
   }[f.state];
-  return `<li><code>${escapeHtml(f.path)}</code>: ${words}${f.why ? `, ${escapeHtml(f.why)}` : ""}</li>`;
+  return `<li><code>${escapeHtml(f.path)}</code>${f.label ? ` (\u201C${escapeHtml(f.label)}\u201D)` : ""}: ${words}${f.why ? `, ${escapeHtml(f.why)}` : ""}</li>`;
 }
 function bar(s) {
   const set = s.settings;
@@ -5021,12 +5047,12 @@ function bar(s) {
   rows.push(
     `<dt>Checked by</dt><dd>This gateway's display client${set?.release ? `, release <code>${escapeHtml(set.release)}</code>` : ""}, running in this browser with MOR's core library. It is served by the gateway, so it is as honest as the gateway: to check without trusting it, verify the version from a relay with your own copy of MOR (<code>mor-site verify</code>), or compare what this gateway serves with the release (<code>mor-site check</code>).</dd>`
   );
-  const open = s.phase === "bad" ? " open" : "";
+  const open2 = s.phase === "bad" ? " open" : "";
   const newer = s.newer && newerWords(s.newer);
   const brief = s.brief ? `<div class="standing brief" id="mor-brief">${escapeHtml(s.brief)}</div>` : "";
   return `${brief}<div class="standing" id="mor-standing">${escapeHtml(s.words)}</div>${newer ? `
 <div class="newer" id="mor-newer">${newer}</div>` : ""}
-<details${open}><summary>Who signed it, and how to check</summary><dl>${rows.join("")}</dl></details>`;
+<details${open2}><summary>Who signed it, and how to check</summary><dl>${rows.join("")}</dl></details>`;
 }
 function newerWords(n) {
   const fork = n.fork.length ? `Later versions split: ${n.fork.length} versions, each signed by the same identity, name the same version before them (${n.fork.map((f) => `<code>${escapeHtml(f)}</code>`).join(", ")}). The owner's key may be in someone else's hands; none of them is shown here.` : "";
@@ -5072,7 +5098,7 @@ function inertCss(css) {
 async function preparePage(bytes, path, manifest, getFile) {
   const doc = new DOMParser().parseFromString(new TextDecoder("utf-8", { fatal: true }).decode(bytes), "text/html");
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out = { html: "", title: null, acts: [], films: [], icon: null, problems: [], dropped: 0 };
+  const out = { html: "", title: null, acts: [], films: [], listed: [], icon: null, problems: [], dropped: 0 };
   const drop = (el) => {
     el.remove();
     out.dropped++;
@@ -5082,22 +5108,31 @@ async function preparePage(bytes, path, manifest, getFile) {
     if (!b) out.problems.push(`${entry.path}, which this page uses, does not match what was signed`);
     return b;
   };
-  for (const el of [...doc.querySelectorAll("[data-film]")]) el.removeAttribute("data-film");
-  for (const video of [...doc.querySelectorAll("video")]) {
-    const p = resolveRef(path, video.getAttribute("src") ?? "");
+  const posterOf = async (el) => {
+    const ref = el.getAttribute("poster");
+    if (ref === null) return null;
+    const pp = resolveRef(path, ref);
+    const pe = pp ? byPath.get(pp) : void 0;
+    if (pe && kindOf(pe.path) === "picture") return checked(pe);
+    out.dropped++;
+    return null;
+  };
+  const filmOf = (el) => {
+    const p = resolveRef(path, el.getAttribute("src") ?? "");
     const entry = p ? byPath.get(p) : void 0;
-    if (!entry || kindOf(entry.path) !== "film") {
+    return entry && kindOf(entry.path) === "film" ? entry : void 0;
+  };
+  for (const el of [...doc.querySelectorAll("[data-film], [data-film-listed]")]) {
+    el.removeAttribute("data-film");
+    el.removeAttribute("data-film-listed");
+  }
+  for (const video of [...doc.querySelectorAll("video")]) {
+    const entry = filmOf(video);
+    if (!entry) {
       drop(video);
       continue;
     }
-    let poster = null;
-    const posterRef = video.getAttribute("poster");
-    if (posterRef !== null) {
-      const pp = resolveRef(path, posterRef);
-      const pe = pp ? byPath.get(pp) : void 0;
-      if (pe && kindOf(pe.path) === "picture") poster = await checked(pe);
-      else out.dropped++;
-    }
+    const poster = await posterOf(video);
     const place = doc.createElement("div");
     place.className = ["mor-film", video.getAttribute("class") ?? ""].join(" ").trim();
     if (video.id) place.id = video.id;
@@ -5106,6 +5141,23 @@ async function preparePage(bytes, path, manifest, getFile) {
     place.setAttribute("data-film", String(out.films.length));
     out.films.push({ entry, poster });
     video.replaceWith(place);
+  }
+  for (const el of [...doc.querySelectorAll("mor-film")]) {
+    const entry = filmOf(el);
+    if (!entry) {
+      drop(el);
+      continue;
+    }
+    const poster = await posterOf(el);
+    const label = (el.textContent ?? "").replace(/\s+/g, " ").trim() || entry.path;
+    const place = doc.createElement("span");
+    place.className = ["mor-film-link", el.getAttribute("class") ?? ""].join(" ").trim();
+    if (el.id) place.id = el.id;
+    place.textContent = label;
+    place.setAttribute("aria-hidden", "true");
+    place.setAttribute("data-film-listed", String(out.listed.length));
+    out.listed.push({ entry, poster, label });
+    el.replaceWith(place);
   }
   for (const sel of DROP) for (const el of [...doc.querySelectorAll(sel)]) drop(el);
   for (const el of [...doc.querySelectorAll("*")]) {
@@ -5216,6 +5268,83 @@ ${doc.documentElement.outerHTML}`;
   return out;
 }
 
+// src/shell/popup.ts
+var open = null;
+function closePopup() {
+  open?.close();
+}
+function openPopup(film, get, line, changed, opener) {
+  closePopup();
+  for (const v of document.querySelectorAll("video")) v.pause();
+  const stop = new AbortController();
+  const shade = document.createElement("div");
+  shade.className = "mor-popup";
+  shade.dataset.film = film.entry.path;
+  shade.setAttribute("role", "dialog");
+  shade.setAttribute("aria-modal", "true");
+  shade.setAttribute("aria-label", film.label);
+  const panel = document.createElement("div");
+  panel.className = "mor-popup-panel";
+  const head = document.createElement("div");
+  head.className = "mor-popup-head";
+  const title2 = document.createElement("span");
+  title2.className = "mor-popup-title";
+  title2.textContent = film.label;
+  const closer = document.createElement("button");
+  closer.type = "button";
+  closer.className = "mor-popup-close";
+  closer.textContent = "\u2715 Close";
+  closer.setAttribute("aria-label", `Close ${film.label}`);
+  head.append(title2, closer);
+  const player = filmPlayer(
+    film.entry,
+    film.poster,
+    get,
+    line,
+    changed,
+    (w, h) => {
+      if (w && h) player.style.setProperty("--shape", String(w / h));
+    },
+    { now: true, signal: stop.signal }
+  );
+  panel.append(head, player);
+  shade.append(panel);
+  const root = document.documentElement;
+  const overflow = root.style.overflow;
+  const close = () => {
+    if (open !== handle) return;
+    open = null;
+    stop.abort();
+    shade.remove();
+    root.style.overflow = overflow;
+    document.removeEventListener("keydown", onKey, true);
+    document.removeEventListener("focusin", onFocus, true);
+    changed();
+    opener?.focus({ preventScroll: true });
+  };
+  const handle = { close };
+  const onKey = (ev) => {
+    if (ev.key === "Escape") {
+      ev.preventDefault();
+      close();
+    }
+  };
+  const onFocus = (ev) => {
+    if (!shade.contains(ev.target)) closer.focus({ preventScroll: true });
+  };
+  closer.addEventListener("click", close);
+  shade.addEventListener("click", (ev) => {
+    if (ev.target === shade) close();
+  });
+  document.addEventListener("keydown", onKey, true);
+  document.addEventListener("focusin", onFocus, true);
+  root.style.overflow = "hidden";
+  document.body.append(shade);
+  open = handle;
+  closer.focus({ preventScroll: true });
+  return shade;
+}
+
 // src/shell/app.ts
 var barEl = document.getElementById("mor-bar");
 var view = document.getElementById("mor-view");
@@ -5245,8 +5374,8 @@ function fail(what, reasons = []) {
   view.innerHTML = "";
   paint();
 }
-async function gatewayFile(entry) {
-  const r = await fetch(`/_mor/file/${entry.path}`, { cache: "no-store" });
+async function gatewayFile(entry, signal) {
+  const r = await fetch(`/_mor/file/${entry.path}`, { cache: "no-store", signal });
   if (!r.ok) return null;
   const b = new Uint8Array(await r.arrayBuffer());
   return matches(entry, b) ? b : null;
@@ -5300,10 +5429,10 @@ function showIcon(bytes) {
   link.type = "image/jpeg";
   link.href = `data:image/jpeg;base64,${btoa(s)}`;
 }
-function showFilms(frame2, films) {
+function showFilms(frame2, films, listed) {
   const doc = frame2.contentDocument;
-  if (!doc || !films.length) return;
-  const players = /* @__PURE__ */ new Map();
+  if (!doc || !films.length && !listed.length) return;
+  const over = /* @__PURE__ */ new Map();
   for (const spot of [...doc.querySelectorAll(".mor-film[data-film]")]) {
     const film = films[Number(spot.dataset.film)];
     if (!film) continue;
@@ -5312,10 +5441,26 @@ function showFilms(frame2, films) {
     const shape = (w, h) => {
       if (w && h) spot.style.aspectRatio = `${w} / ${h}`;
     };
-    players.set(spot, filmPlayer(film.entry, film.poster, gatewayFile, line, paint, shape));
+    over.set(spot, filmPlayer(film.entry, film.poster, gatewayFile, line, paint, shape));
   }
-  view.append(...players.values());
-  layOver(frame2, players);
+  for (const spot of [...doc.querySelectorAll(".mor-film-link[data-film-listed]")]) {
+    const film = listed[Number(spot.dataset.filmListed)];
+    if (!film) continue;
+    const line = { path: film.entry.path, state: "waiting", why: null, label: film.label };
+    state.films.push(line);
+    let kept = null;
+    const get = async (entry, signal) => kept ??= await gatewayFile(entry, signal);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "mor-film-open";
+    button.dataset.film = film.entry.path;
+    button.textContent = film.label;
+    button.setAttribute("aria-haspopup", "dialog");
+    button.addEventListener("click", () => openPopup(film, get, line, paint, button));
+    over.set(spot, button);
+  }
+  view.append(...over.values());
+  layOver(frame2, over);
   paint();
 }
 async function lookForLater(version2) {
@@ -5396,7 +5541,7 @@ async function main() {
       "load",
       () => {
         fitFrame(frame2);
-        showFilms(frame2, prepared.films);
+        showFilms(frame2, prepared.films, prepared.listed);
         void showActs(frame2, settings);
       },
       { once: true }
