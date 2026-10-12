@@ -1,0 +1,26 @@
+{
+  "name": "mor-assess",
+  "version": "0.1.0",
+  "description": "The MOR deal-assessment tool: explains an agreement in plain words and flags its obvious risks, each resting on the rule or stated cost it names. Shared by mor-assess, the desk and the collective client. A client feature; the core decides every fact. Test identities only.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-assess": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "typescript": "^5"
+  }
+}

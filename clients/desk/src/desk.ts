@@ -31,6 +31,7 @@ import {
   type DraftReading,
 } from '../../connector/src/draft.ts';
 import { escapeControls } from '../../connector/src/words.ts';
+import { beforeSigning } from '../../assess/src/assess.ts';
 import { DESK_SPECS } from './specs.ts';
 import type { Item, Kind, Received, SignedRecord, Sorted, Store } from './store.ts';
 
@@ -606,6 +607,12 @@ export class Desk {
       }
     }
     if (d.spec === REPO_SPECS.agreements) item.problem = 'An Agreements act: read it in the collective client.';
+    if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.terms) {
+      // The deal-assessment tool (roadmap step 14), offered before signing: the
+      // shares and fees, and the risks, read by the core from the terms' bytes.
+      item.problem = 'Agreements terms: assessed below. They are signed in the collective client, never here.';
+      item.assessment = beforeSigning(d.payload, this.store.names());
+    }
     if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.split && d.signer) {
       // F188 (DQ6): a split's number, read for the holder's alarm.
       try {
