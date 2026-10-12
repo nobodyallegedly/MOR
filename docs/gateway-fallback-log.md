@@ -24,4 +24,4 @@ On later looks the second line repeats, as before. The first line does not repea
 ## Tests
 
 - On `main`, before writing: `scripts/test-all.sh` passed: the Rust workspace and every TypeScript package, 57 tests in the site package. The first attempt stopped before any TypeScript test because `wasm-bindgen` 0.2.129, which the script lists as needed, wasn't installed in the machine. It was installed outside the repository and the second run passed. The tree was unchanged.
-- With the change: see the pull request.
+- With the change: `scripts/test-all.sh` passed: the Rust workspace and every TypeScript package, 58 tests in the site package (the one new). The tree was unchanged by the run.
