@@ -1,6 +1,6 @@
 # MIP: Development
 
-*Draft 7, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for F250 at the split Module build) written for plain reading, in Agreements draft 11's and Money draft 7's style. **It changes no rule**: how cMIPs and Modules are made, used and paid most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. The tasks table is brought up to date with what Agreements draft 11 already decided, each such item marked "carried from Agreements draft 11": the split task choosing the receiver for a payment (F250, a table line, already written into draft 6 in place at the split Module build, to approve again, and now marked), and the proof checker of a proven offer (F261, a paragraph under the table). Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 7, Agreements MIP draft 11 and the findings F1 to F266. The record of how each rule came about (the revision notes of drafts 4 to 6, "Decided in this draft", and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 7, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 6 (approved 5 October 2026, revised in place since, last for F250 at the split Module build) written for plain reading, in Agreements draft 11's and Money draft 7's style. **The rewrite changes no rule**: how cMIPs and Modules are made, used and paid most of the time comes first and the mechanics of rare cases after, and the rules are numbered afresh in reading order, each with its old number beside it. The tasks table is brought up to date with what Agreements draft 11 already decided, each such item marked "carried from Agreements draft 11": the split task choosing the receiver for a payment (F250, a table line, already written into draft 6 in place at the split Module build, to approve again, and now marked), and the proof checker of a proven offer (F261, a paragraph under the table). Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 7, Agreements MIP draft 11 and the findings F1 to F266. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`) **writes in F268**, the answer to this draft's question: a proof checker of a proven offer is not a task, a task being a hand-off an agreement names by number (terms field 2), and a specification that checks proofs of delivery declares so by one field, field 12; marked "new in draft 7 (F268)" where it stands, the field "to build". The record of how each rule came about (the revision notes of drafts 4 to 6, "Decided in this draft", and the dates and words of each decision) stays in draft 6 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -13,6 +13,7 @@ Some marks recur, and each matters to the next review:
 - *Client conformance:* a duty of clients. The protocol cannot check it from acts alone, so it is stated for builders.
 - **[for technical review at freeze]:** a parameter the freeze's technical review settles.
 - **Carried from Agreements draft 11 (Fxxx):** an item of the tasks table that states what Agreements draft 11 already decided. It is not new in this draft.
+- **New in draft 7 (Fxxx):** a statement the marked pass adds, from a decided finding. *To build:* the code does not do it yet. *Reading, to confirm (Qn):* a reading the marked pass took where the decided words left a point open, put to Nobody, allegedly, as a question (`docs/core-v22.md`). *Open (Qn):* a point the marked pass leaves open, put the same way.
 
 The MIP has four parts. Part one is cMIPs and Modules as they run most of the time: naming a specification, freezing it, the tasks, adopting and leaving, signing what a rule computes, earning, and discovery. Part two is the rare cases and the mechanics: extensions, the machine verification rules run on, predecessors, and the trust root and successors. Part three is the specification format, for reference. Part four is the reasoning, the open parameters and the freeze scenarios.
 
@@ -45,7 +46,7 @@ Identity, Envelopes, Text, Money and Agreements. Fees and usage rewards are defi
 
 ### Tasks and extensions
 
-- **Task.** A point where a MIP hands work to a cMIP. Tasks exist only where the MIPs define them.
+- **Task.** A point where a MIP hands work to a cMIP that an agreement names by the task's number (Agreements, terms field 2; new in draft 7, F268). Tasks exist only where the MIPs define them. A hand-off no agreement names by a task number, such as the proof checker of a proven offer, is not a task (F268). *Reading, to confirm (Q1): "names" is read as "may name"; tasks 1 to 5, whose cMIP a text act, a publication or a client usually chooses, stay tasks, an agreement able to name a cMIP for any of them by its number.*
 - **Extension.** A cMIP an agreement names outside the listed tasks, for work nobody foresaw. An extension may add rules, never relax the core's.
 
 ### Creators and users
@@ -120,7 +121,9 @@ Several Modules may operate at once under the one cMIP an agreement names for a 
 | 13 | Agreements | Work claims | a work hash and a claim | a claim, optionally with a pre-publication commitment |
 | 14 | Agreements | Absence proof (F172, F178) | an abandonment declaration, the clause's parameters, and the acts the record's history holds | accepted, refused or unknown |
 
-**Besides the numbered tasks: the proof checker of a proven offer** (carried from Agreements draft 11, F261; Agreements rule 11 and "A service sold under a cMIP's terms"). A proven offer sells a delivery that leaves a proof any verifier can check from data alone, no one's word trusted. It uses the access form, `[ 2, [ cMIP, params ] ]`, under that cMIP's terms. A cMIP may produce the proof; the verifier checks the proof itself, never the cMIP's say-so. A delivery the verifier cannot check from data it holds is not proven, whatever the cMIP signs. *The build's reading (`docs/agreements-draft-11-build.md`): a verifier asks the checker of the cMIP the offer names, among those it holds, for the proof's verdict; with none held, the delivery is not proven for it. Agreements draft 11 gives this checker no task number.*
+**Not a task: the proof checker of a proven offer** (carried from Agreements draft 11, F261; Agreements rule 11 and "A service sold under a cMIP's terms"; new in draft 7, F268). A proven offer sells a delivery that leaves a proof any verifier can check from data alone, no one's word trusted. It uses the access form, `[ 2, [ cMIP, params ] ]`, under that cMIP's terms. A cMIP may produce the proof; the verifier checks the proof itself, never the cMIP's say-so. A delivery the verifier cannot check from data it holds is not proven, whatever the cMIP signs. *The build's reading (`docs/agreements-draft-11-build.md`): a verifier asks the checker of the cMIP the offer names, among those it holds, for the proof's verdict; with none held, the delivery is not proven for it.*
+
+**The checker is not a task** (new in draft 7, F268). Each proven offer names its checker: the cMIP in its access form. No agreement names a checker by a task number (terms field 2), so a collective sets no checker for all its offers; each offer chooses the one that suits what it sells. **A cMIP that checks proofs of delivery declares so in its specification, by field 12** (Part three; new in draft 7, F268; to build), as a rail Module declares its kind in field 11, so checkers can be found. *Open (Q2): whether a verifier asks only the checker of a cMIP that declares field 12, or of any cMIP an offer names, the field serving discovery alone.* *"Checkers will evolve, locking a whole collective on one makes little sense. Especially when different checkers truly benefit different actions" (Nobody, allegedly).*
 
 ### 4. Adopting and leaving
 
@@ -272,8 +275,10 @@ spec = {
   ? 8 => hash,                ; predecessor: an earlier specification this one replaces for its users
   9 => tstr,                  ; the specification itself, as canonical text
   ? 10 => [+ uint],           ; layers: for an extension, the layers it acts on beyond Development (Q18)
-  ? 11 => uint                ; a rail Module's kind (OF26 a): 0 a request rail, binding payee and purpose; 1 a push rail binding
+  ? 11 => uint,               ; a rail Module's kind (OF26 a): 0 a request rail, binding payee and purpose; 1 a push rail binding
                               ;   the commitment where the Module says; 2 a push rail binding nothing (Money rules 11, 18)
+  ? 12 => true                ; a proof-of-delivery checker: this cMIP checks the proofs of delivery of proven offers
+                              ;   that name it (Agreements rule 11; new in draft 7, F268; to build)
 }
 
 fee = [ rate, ? paid: hash ]   ; who is paid: absent, the creator (F211)
@@ -294,6 +299,12 @@ An extension's own acts belong to Development (F106, Q18). Field 10 lists, ascen
 The field is read only where an agreement names the specification as an extension (Agreements, terms field 15); a specification without it declares nothing beyond Development.
 
 *The declaration tells a collective's client whose approval adopting or dropping the extension needs (Agreements, rule 63). It is not trusted for enforcement: in a collective, an extension's rules bind only the layers whose holders approved it, so an extension that under-declares binds nothing beyond them (Agreements, rule 60).*
+
+### A proof-of-delivery checker (field 12)
+
+*In short: a cMIP that checks the proofs of delivery of proven offers says so in one field, so anyone looking for a checker can find it.*
+
+A cMIP whose verification rules check the proofs of delivery of proven offers declares so by field 12 (new in draft 7, F268; to build). A proven offer names such a cMIP in its access form, `[ 2, [ cMIP, params ] ]` (Agreements rule 11); the verifier checks the proof itself, never the cMIP's say-so (F261). A specification without field 12 declares nothing. *Open (Q2): whether a verifier asks only a checker so declared.*
 
 ### The spec hash covers the content
 
@@ -340,6 +351,7 @@ A MIP's hash is computed over its content alone; the act that publishes it is si
 - Exit by cloning onto another cMIP: 1.
 - Unknown act carried, shown, then adopted by opt-in: 2.
 - A split plan shown with its computed payouts before signing: 2.
+- A cMIP declaring itself a proof-of-delivery checker (field 12), found by it, and named by a proven offer whose proof it checks (new in draft 7, F268; to build): 8.
 - A role share paid to the modules a payment ran through, evidenced by a party: the receipt or claim naming a rail Module, or a use record signed by the identity running a service and acknowledged by the payer the payment commits to; the use record alone pays nothing (F116, F194): 2.
 
 #### Part two

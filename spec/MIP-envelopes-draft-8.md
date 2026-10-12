@@ -1,6 +1,6 @@
 # MIP: Envelopes
 
-*Draft 8, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 7 (approved 5 October 2026, revised in place since, last for F237) written for plain reading, in Agreements draft 11's and Money draft 7's style. **It changes no rule.** How an act runs most of the time comes first and the mechanics of rare cases after; the rules are numbered afresh in reading order, each with its old number beside it; and "vow" replaces "announcement" (F241), the type number (5) and the wire format unchanged. Written against core v21, Identity MIP draft 11, Text MIP draft 6, Money MIP draft 7, Agreements MIP draft 11, Development MIP draft 6 and the findings F1 to F266 (F252, which this draft does not write in, is put as a question in `docs/envelopes-text-drafts.md`). The record of how each rule came about (the revision notes of drafts 4 to 7, "Decided for this pass", and the dates and words of each decision) stays in draft 7 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 8, 12 October 2026: a transition draft, for Nobody, allegedly, to review and approve (F251). It is draft 7 (approved 5 October 2026, revised in place since, last for F237) written for plain reading, in Agreements draft 11's and Money draft 7's style. **The rewrite changes no rule.** How an act runs most of the time comes first and the mechanics of rare cases after; the rules are numbered afresh in reading order, each with its old number beside it; and "vow" replaces "announcement" (F241), the type number (5) and the wire format unchanged. Written against core v21, Identity MIP draft 11, Text MIP draft 6, Money MIP draft 7, Agreements MIP draft 11, Development MIP draft 6 and the findings F1 to F266. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`) writes in F252, the one decided finding draft 8 had left out: a vow covers anything MOR cannot hash, existing or to come, marked "new in draft 8 (F252)" where it stands (section 9, and the vow's format). The record of how each rule came about (the revision notes of drafts 4 to 7, "Decided for this pass", and the dates and words of each decision) stays in draft 7 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -10,7 +10,10 @@ Draft 7 numbered three lists separately: the rules under "Chains, acknowledgemen
 
 The numbered steps of "How it fits together" (1 to 3) and of the sealed container (1 to 5) are steps of a format, not rules, and keep their numbers.
 
-One mark recurs: *Mechanic, the vow grammar build:* a mechanical choice taken under Nobody, allegedly's delegation of mechanics, not a decision of principle.
+Two marks recur:
+
+- *Mechanic, the vow grammar build:* a mechanical choice taken under Nobody, allegedly's delegation of mechanics, not a decision of principle.
+- **New in draft 8 (Fxxx):** a statement the marked pass adds, from a decided finding.
 
 The MIP has four parts. Part one is an act as it runs most of the time: its shape, public and private acts, private delivery, sequences, chains, acknowledgements and references, how acts reach people, media, vows, withdrawal, relays, and what a client does with what it does not understand. Part two is the rare case: theft of the signing key. Part three is the act formats, for reference. Part four is the tasks, the reasoning, the open parameters and the freeze scenarios.
 
@@ -228,7 +231,7 @@ Payment for a publication goes to the payee pointer of the identity named in `fo
 
 *"Vow" replaces "announcement" (F238, F239, F241); the act, type 5, and its format are unchanged, and the code already says "vow". "we must separate the claim and confirmation grammar from what will be claimed and confirmed … the core only wants to know whether it is confirmed, pending, or already contested" (Nobody, allegedly; F237).*
 
-A vow is an act of type 5 of this MIP, naming in words something to come: something MOR cannot hash, or cannot hash yet. **It is its own chain** (Nobody, allegedly: "it's a fingerprint for the announcement, since it will have its own chain it has a genesis"): its first act is its **genesis**, **whose id is its name for good**; a later version (a new date, a changed description) is signed again on that chain by the genesis's signer, naming the genesis and the version it follows, as an offer's and an agreement's versions do. The name is the vow's fingerprint, never a work hash.
+A vow is an act of type 5 of this MIP, naming in words **something MOR cannot hash, existing or to come** (new in draft 8, F252): a good in stock or to be made, a service, an hourly rate, storage, a seat, a work not yet made. **It is its own chain** (Nobody, allegedly: "it's a fingerprint for the announcement, since it will have its own chain it has a genesis"): its first act is its **genesis**, **whose id is its name for good**; a later version (a new date, a changed description) is signed again on that chain by the genesis's signer, naming the genesis and the version it follows, as an offer's and an agreement's versions do. The name is the vow's fingerprint, never a work hash.
 
 *Its payload's format is in Part three ("Vow").*
 
@@ -409,7 +412,7 @@ media = {
 
 ```cddl
 vow = {
-  0 => tstr,          ; its words: what is to come, canonical text
+  0 => tstr,          ; its words: what is vowed, existing or to come (F252), canonical text
   ? 1 => [hash, any]  ; a cMIP and its parameters: what it is in that cMIP's terms (its kind, its terms)
 }
 ```
