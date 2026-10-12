@@ -2707,6 +2707,14 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **From** `docs/reviews/case-studies-vs-vows.md` (Q-G1): can a vow sell something that already exists but has no bytes (a bowl in stock, an hourly rate, storage)? *Laid beside it, his words:* "MOR truly needed a structured way of selling something that has no bytes, or no bytes yet"; "IOU of services that need to come at a later date". *Options:* (a) yes; (b) only what does not exist yet, the rest sold through the access form with no sale state; (c) the cMIPs decide. **Decided by Nobody, allegedly: "Yes, a. I think my quote settles it."** A vow is any act naming something MOR cannot hash, existing or to come; every sale of a physical good or a service names one, and gets pending, confirmed or contested. One form for one task (Fable's finding 7). *Suggested by the project lead.* *Noted for the texts' redraft:* what the access form `[ 2, [cMIP, params] ]` still serves once vows cover goods and services (access to bytes, such as a subscription's keys) is to be said there.
 
+## F274. A stake is "paid less" by any change that lowers what it receives or can expect from a payment (core v22 Q8, on F270; 12 October 2026, night)
+
+**Area: core business, Agreements splits (rule 48).** **From** `docs/core-v22.md`, Q8: which changes "lower a stake's part of the split plan"? A stake can be paid less with its own number unchanged: another share added or raised, a role share added, unfilled roles sent elsewhere, the rail fee moved onto receivers, the maximum fee raised or removed, the split cMIP or its parameters changed.
+
+*Options:* (a) a computable list: any change to the plan's shares that lowers the stake's portion of a payment, and any change to who bears the rail fee, to the maximum fee, to unfilled roles, or to the split cMIP and its parameters (what a cMIP pays cannot be read from the plan alone, so changing it counts as lowering); (b) shares only (the rest escapes); (c) the stake's own number only. **Nobody, allegedly: "What money sees and money expects is what matters."** *Read by the project lead as (a)*, judged by effect: what reaches the stake from a payment, and what it can expect from the plan as written; a change whose effect cannot be read from the plan (the split cMIP or its parameters) counts as lowering. *Suggested by the session and the project lead.*
+
+**Core changes:** Agreements rule 48's "(Q8)" settled; the clone's signatures (`must_sign`) compute it. *To write in the next pass and build with F270 and F273.*
+
 ## F273. Advance permission reaches a departed holder's pay, never a non-party holder's (core v22 Q7, on F270; 12 October 2026, night)
 
 **Area: core business, Agreements stakes (rule 48).** **From** `docs/core-v22.md`, Q7: rule 48 lets a share be cut without the holder's signature where the agreement pre-authorised it (the abandonment clause, for example); does that exception reach F270, a holder's pay?
