@@ -1,6 +1,6 @@
 # MIP: Agreements
 
-*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in three parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. **The third part writes in the answers to the questions the second part raised** (Q1 to Q6 in `docs/agreements-draft-11.md`): F261, F259 as revised, F262 and F263, each marked "new in draft 11 (Fxxx)", and the readings of Q2 and Q3, each marked "reading (Q2)" or "reading (Q3)"; Q6 leaves Money draft 6 as it is. Then the answers to the two questions that pass raised, Q7 and Q8: F264 and F265, each marked "new in draft 11 (Fxxx)", F265 correcting F262's wording. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`): the proven offers' paragraph points to the field Development draft 7 adds for a proof-of-delivery checker (F268), and F255's paragraph points to Money draft 7, rule 17, now that Money draft 7 is approved; each marked "new in draft 11" with its finding where it stands, written against the six current drafts (Identity 12, Envelopes 8, Text 7, Money 7, Development 7). No rule changes. Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 6, Development MIP draft 6 and findings F1 to F265. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
+*Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in three parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. **The third part writes in the answers to the questions the second part raised** (Q1 to Q6 in `docs/agreements-draft-11.md`): F261, F259 as revised, F262 and F263, each marked "new in draft 11 (Fxxx)", and the readings of Q2 and Q3, each marked "reading (Q2)" or "reading (Q3)"; Q6 leaves Money draft 6 as it is. Then the answers to the two questions that pass raised, Q7 and Q8: F264 and F265, each marked "new in draft 11 (Fxxx)", F265 correcting F262's wording. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`): the proven offers' paragraph points to the field Development draft 7 adds for a proof-of-delivery checker (F268), and F255's paragraph points to Money draft 7, rule 17, now that Money draft 7 is approved; each marked "new in draft 11" with its finding where it stands, written against the six current drafts (Identity 12, Envelopes 8, Text 7, Money 7, Development 7). No rule changes. **Then a second pass** (12 October 2026, evening, for Nobody, allegedly, to approve; `docs/core-v22.md`, "Second pass") writes in two findings decided on the deal assessment tool's questions, each marked "new in draft 11 (Fxxx)": F270 in rule 48 (was 46), with rules 28, 45, 66 and 68 pointing to it, to build: what a stake is paid is not lowered without the signature of a holder with no voice in the power making the change; and F271 in rule 25 (was 24a): the split plan may state a maximum fee per payout, none meaning no cap, flagged before signing. It also corrects four slips the tool noticed, marked "text only, no rule changed": field 28 in the terms format and the tier table; field 10's withdrawal in the tier table, the glossary and rule 67; task 14 as judicial in the tier table and rule 67; the fee entry's comment citing rule 28. Two points it leaves open are marked "Open (core v22, Qn)". Written against core v21, Identity MIP draft 11, Envelopes MIP draft 7, Text MIP draft 6, Money MIP draft 6, Development MIP draft 6 and findings F1 to F265. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
 
@@ -15,6 +15,8 @@ Some marks recur, and each matters to the next review:
 - *Reading, to confirm:* a reading taken where the text was silent, still to be confirmed by Nobody, allegedly.
 - *Mechanic, the build's* (or the project lead's): a mechanical choice taken under Nobody, allegedly's delegation of mechanics, not a decision of principle.
 - **New in draft 11 (Fxxx):** a statement this draft adds, from a decided finding. **Reading (Qn):** a reading taken on one of the questions this draft's second part raised (`docs/agreements-draft-11.md`), recorded in the findings log. *To build:* the code does not do it yet; until it does, the code does what draft 10 says.
+- *Open (core v22, Qn):* a point the second pass of core v22 leaves open, put to Nobody, allegedly, as a question (`docs/core-v22.md`, "Second pass").
+- *Text only, no rule changed:* a slip in the text corrected to match what was already decided.
 
 *Working rule (F265):* where the core gives participants the means to choose, the choice is theirs; the core keeps only what no choice may break.
 
@@ -75,7 +77,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 
 ### Money and splits
 
-- **Split plan.** The part of an agreement that says how incoming payments are divided: fixed shares on stakes, role shares, fees, a maximum fee per payout, and what happens to unfilled roles.
+- **Split plan.** The part of an agreement that says how incoming payments are divided: fixed shares on stakes, role shares, a maximum fee per payout where it states one (F271), and what happens to unfilled roles. Fees are their own terms field, 28, beside it (F213).
 - **Split service.** An identity that receives payments on behalf of a work's owners, divides each one according to their agreement, and pays every party out. It can be a company, a collective, a friend running software, or the owners themselves; a sole creator is simply their own split service.
   Where an agreement names one, the payee pointer of the identity its publications are made for counts, for Agreements, only if both hold (rule 16, F121, F123, F124 P2):
   - every address in it also appears in that service's own signed pointer in force;
@@ -95,7 +97,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 - **Judge.** Either a specification named for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring), or an identity named to judge or testify: a keeper's operator, an arbitrator or verifier, the abandonment authority. *The split service is not a judge (F249, F250): its backups are attempts per payment (rule 17).*
 - **Chain of judgment.** For a judge the terms name: the ones that take over from it, in order, when it answers "unknown" or does not act within its period. The chain is named in the terms and signed by everyone, so that it passes with no new signature. Each link names its period, measured on the agreement's time reference (terms field 21, rule 35, F121, Q7).
 - **Time reference.** A source of time an agreement names, such as a block height. For that agreement, only it decides whether an act is before or after a point on its reference, and whether something is past its terms (Q35). *Before and after among acts done in a collective's name are judged on the collective's own sequence ("Made before, made after", F109); the time reference judges deadlines and absence.*
-- **Concurrency rule.** Terms field 10: how an agreement settles changes made concurrently, that is, a fork of records (rule 90).
+- **Concurrency rule.** Terms field 10, **withdrawn** (step 12b, OF20 c; never reused): a fork of records is settled by rule 90's default, the parent staying in force until a clone recorded after both lines resolves it. *Text only, no rule changed.*
 - **Contest.** A signed objection to another act, by a party with standing. It changes nothing about any act's validity, status or selection; it makes disagreement visible. *"Dispute" is a different word: it is reserved for the status Identity gives an act after a rotation (F69).*
 - **Standing.** Who may contest an act: a party to its agreement, a holder of a stake it affects, or a keeper, arbitrator or verifier the agreement names.
 
@@ -110,7 +112,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   - Operational: everything else.
 
   Deals have no tiers (F103, scope; F107).
-- **Protected clause.** In a collective, a clause that can move a party's stake or voice, or decide who wins a dispute. The protected clauses are: the abandonment clause, the succession plan, the concurrency rule, the keepers, the split service and its backups (field 29, F250), the time reference, the arbitrators or verifiers, the condition and anchoring cMIPs (Q3), and the chain of judgment (F121).
+- **Protected clause.** In a collective, a clause that can move a party's stake or voice, or decide who wins a dispute. The protected clauses are: the abandonment clause, the succession plan, the keepers, the split service and its backups (field 29, F250), the time reference, the arbitrators or verifiers, the condition and anchoring cMIPs (Q3), and the chain of judgment (F121).
   Together they are the judicial tier, which changes only with every member's signature, one version for everyone (rule 67, F121). The split service and its backups are operational in kind, and protected as a stated exception, since they can move money. A deal needs no protected clauses: no clone of it completes without every party (F107).
 - **Change rules.** The rules a collective's clone must meet, each covering part of the terms:
   - the **constitutional change rule** (terms field 18; every party when none was agreed);
@@ -431,7 +433,7 @@ Paid access to a live stream, which has no work hash until it ends, is sold by a
 - **A promised offer** names a vow (`[ 3, vow ]`, rule 13). Each sale is confirmed or contested by those who signed onto the vow (F240). A service's signed word alone (counts, checks, quality) and anything ongoing (hosting over time) are promised.
 - **A cMIP may produce the proof; the verifier checks the proof itself, never the cMIP's say-so.** A delivery the verifier cannot check from data it holds is not proven, whatever the cMIP signs.
 - **The pooled anchoring service is a proven offer** and is unchanged (anchoring cMIP draft 3): the hash is in the batch or it is not.
-- **Each proven offer names its checker**: the cMIP in its access form. The checker is not a task (Development draft 7, "Not a task: the proof checker of a proven offer", F268): no agreement names one by a task number, so a collective sets no checker for all its offers. A cMIP that checks proofs of delivery declares so in its specification, by Development's field 12 (new in draft 11, F268, the marked pass; to build).
+- **Each proven offer names its checker**: the cMIP in its access form. The checker is not a task (Development draft 7, "Not a task: the proof checker of a proven offer", F268): no agreement names one by a task number, so a collective sets no checker for all its offers. A cMIP that checks proofs of delivery declares so in its specification, by Development's field 12 (new in draft 11, F268, the marked pass; to build), for discovery only: a verifier asks the checker of whatever cMIP the offer names (Development draft 7, reading confirmed, Q2).
 
 *"Technically, it is not a work, and therefore becomes a vow. It is simply that the cMIP behind this vow can deliver its own confirmation. Core does not care how confirmation is delivered, it simply looks for one" (Nobody, allegedly); then: "I'm fine with this being a different class of offers." A proven offer needs no one's confirmation, since its proof is the confirmation; a promised one needs its signer's.*
 
@@ -874,9 +876,13 @@ The service keeps what it cannot deliver as open obligations, visible until paid
 
 #### Rule 25 (was 24a). Payout fees
 
-The split plan says who bears each payout's rail fee: each receiver by default, or the split service as part of its cut. It states a maximum fee per payout.
+The split plan says who bears each payout's rail fee: each receiver by default, or the split service as part of its cut. **It may state a maximum fee per payout** (plan key 6); **where it states none, there is no cap** (new in draft 11, F271).
 
-A payout is discharged when its receipt shows the amount minus a fee no greater than that maximum (Money rule 18a). A shortfall beyond it is an open obligation of the service (F64; stated here, not in Money: F242, M8).
+A payout is discharged when its receipt shows the amount minus a fee no greater than that maximum, where the plan states one (Money rule 18a, Money draft 7 rule 21). A shortfall beyond it is an open obligation of the service (F64; stated here, not in Money: F242, M8).
+
+*Client conformance* (F271): **before a party signs terms whose split plan states no maximum fee per payout, its client MUST flag the absence**: where a receiver bears its payout's rail fee, any fee may then come off its payout, and no shortfall is the service's obligation.
+
+*"Flag the risk" (Nobody, allegedly). Whether to cap the fee is the parties' choice; the core keeps only that the choice is seen before signing (F265).*
 
 #### Rule 26 (was 25). Batching
 
@@ -898,7 +904,7 @@ It MUST NOT change the plan: only the owners can, by cloning their agreement.
 
 *Step 12b (F211, F213, F214):* a Module states its fee in its own specification (Development field 7), machine-readable and informative. **Only a fee entry of the agreement (terms field 28) makes a fee owed**, and nothing is forced (F42).
 
-Fees are their own field (F213), so a constitution can place them in an area apart from the split plan, or leave them to the clone rule. The bearers (every stake, fees coming off the top) consent by the power the field falls under.
+Fees are their own field (F213), so a constitution can place them in an area apart from the split plan, or leave them to the clone rule. The bearers (every stake, fees coming off the top) consent by the power the field falls under, save a holder with no voice in it, whose signature a version adding or raising a fee its stake bears needs (rule 48; new in draft 11, F270; to build).
 
 A fee entry says when it applies: every payment, payments for a named publication, or payments by a named rail. **A split leaving out a fee its entry makes owed is a wrong split, and the fee is the service's open obligation** (F214). The split's list of Modules (key 6) is the service's statement, never what decides.
 
@@ -1080,6 +1086,7 @@ A clone is a draft until all of these hold:
 - every party its mark names has a valid signature act naming it;
 - every party it adds, and every party it makes a holder of an area it did not hold, has one too;
 - every holder whose share of a stake it drops or lowers has one too, member or not (rule 48, F124 N5);
+- every holder it pays less, by lowering the stake's part of the split plan or adding or raising a fee the stake bears, who has no voice in the power making that change, has one too (rule 48; new in draft 11, F270; to build);
 - every departed holder whose own stake plan it changes has one too (M1, F125);
 - where it changes the release rule, every holder of every stake the parent defines has one too (N8);
 - the parent exists.
@@ -1239,6 +1246,14 @@ What the request shows (DQ8, restated by the project lead under the delegation):
 #### Rule 48 (was 46). No stake reduced without its holder
 
 A clone can never reduce a stake without its holder's signature, unless the agreement pre-authorised it.
+
+**Nor is what a stake is paid lowered without its holder, where that holder has no voice in the power making the change** (new in draft 11, F270; to build). A version that lowers a stake's part of the split plan (field 8), or adds or raises a fee the stake bears (field 28), needs the signature of every holder of that stake it pays less who has no voice in the power making that change:
+- in a deal, a holder who is no party (every party signs every version of a deal, rule 47, F107);
+- in a collective, a departed holder (rule 68), and any other holder who is no member.
+
+A member, who holds the power or chose it by signing the constitution, is left to the collective's own rules (rules 64, 65). *Open (core v22, Q1): whether the first paragraph's "unless the agreement pre-authorised it" reaches this one.* *Open (core v22, Q2): which changes of the split plan "lower a stake's part".*
+
+*"If this can happen in a simple joint venture agreement it is a problem"; "One stone two birds, agreed" (Nobody, allegedly). The voices chose the power over fields 8 and 28; those without one did not, and what a stake is paid is what no choice of theirs may break.*
 
 #### Rule 49 (was 48). Exit
 
@@ -1537,7 +1552,7 @@ Every field belongs to one tier.
 | --- | --- | --- |
 | 0 | Parties | Constitutional (membership) |
 | 1 | The words: the constitution's and general words | Constitutional (Q2) |
-| 2 | cMIPs, per task | Tasks 9 (condition evaluation), 10 (time reference) and 11 (anchoring): judicial, outside the Agreements lane (Q3, Q15). Every other task: operational, in the lane of the task's layer where an area holds it (F106), and of each other layer the same specification serves (R4). A specification named for a judicial task, or in field 6, is named for no other task and as no extension (Q20, Q25) |
+| 2 | cMIPs, per task | Tasks 9 (condition evaluation), 10 (time reference), 11 (anchoring) and 14 (absence proof, F178; its cMIP named in the abandonment clause's key 3): judicial, outside the Agreements lane (Q3, Q15). Every other task: operational, in the lane of the task's layer where an area holds it (F106), and of each other layer the same specification serves (R4). A specification named for a judicial task, or in field 6, is named for no other task and as no extension (Q20, Q25) |
 | 3 | Keepers | Judicial |
 | 4 | Signing rule, or a clone's mark | None: each version states its own (Q9) |
 | 5 | Clone rule | Constitutional |
@@ -1545,7 +1560,7 @@ Every field belongs to one tier.
 | 7 | Stakes | Operational |
 | 8 | Split plan | Operational |
 | 9 | Abandonment clause | Judicial |
-| 10 | Concurrency rule | Judicial |
+| 10 | *Withdrawn* (step 12b, OF20 c): once the concurrency rule; rule 90's default stands; never reused | — |
 | 11 | Parent | None: every clone names its own |
 | 12 | Key grammar | Constitutional |
 | 13 | Arbitrators or verifiers | Judicial (Q3) |
@@ -1561,9 +1576,12 @@ Every field belongs to one tier.
 | 23 | Forked from | None: founding terms only (F121) |
 | 24 | Release rule | Operational, in no area: the clone rule, and every owner's signature (F124 N8) |
 | 25 | *Withdrawn* (F128): once the relays (F126); never reused | — |
+| 28 | Fees (F213) | Operational: an area may reach it apart from field 8 (`field-ref` `[0, 28]`); otherwise the clone rule |
 | 29 | The split service's backups, and what counts as a failed attempt (F249, F250) | Judicial, as field 14: able to move money (reading, the build's: they sat in field 21, judicial, before F250) |
 
-An area's field references (area key 4) name only operational fields and tasks: fields 7, 8 and 17, and tasks of field 2 other than 9, 10 and 11 (field 25 is withdrawn, F128).
+An area's field references (area key 4) name only operational fields and tasks: fields 7, 8, 17 and 28, and tasks of field 2 other than 9, 10, 11 and 14 (fields 10 and 25 are withdrawn).
+
+*Text only, no rule changed: field 28 (F213), field 10's withdrawal (step 12b) and task 14's judicial standing (F178) were decided before this draft; the table now says so.*
 
 *Field 4 belongs to no tier (Q9): in a clone it is a mark of fact, written fresh each time; founding terms are signed by everyone (Q11), and the tiers govern only later changes. Who signs what for the collective is its areas, which are constitutional. Each area carries its own words, changed by its holders with it, so the words never go stale and no area's holder rewrites the constitution's (Q2).*
 
@@ -1651,7 +1669,7 @@ When no voice remains, nothing meets the rule. An area left without a holder, or
 #### Rule 66 (was 44e). Protections still hold
 
 Protections still hold. Whatever power brings a clone into force, it cannot:
-- reduce a stake without its holder's signature (rule 48), a departed holder's included (rule 68);
+- reduce a stake without its holder's signature (rule 48), a departed holder's included (rule 68), nor lower what it pays a holder with no voice in the power making that change (rule 48; new in draft 11, F270);
 - nor change the judicial tier without every member, a version changing the constitution included (rules 64.1, 67; F122).
 
 *Stated cost (F103): by default a member who is present but unwanted cannot be removed; the others can leave, each alone (rule 70), or use the abandonment clause where it applies. A group that wants expulsion writes a constitutional change rule below everyone at founding, where every founder signs it; even then, removal takes the voice, never the stake (Q6). A member who dies or vanishes never freezes the constitution: the abandonment clause every collective carries can remove their voice (rule 61, F105).*
@@ -1663,13 +1681,14 @@ Protections still hold. Whatever power brings a clone into force, it cannot:
 Collectives only (F121). **The judicial tier changes only with the signature of every member whose voice remains, and there is one version of it for everyone.** The judicial tier is:
 - the abandonment clause;
 - the succession plans;
-- the concurrency rule;
 - the keepers;
 - the split service and its backups (fields 14 and 29, F250);
 - the time reference;
 - the arbitrators or verifiers (field 13);
-- the condition, time reference and anchoring cMIPs (field 2, tasks 9, 10 and 11) (Q3, Q15);
+- the condition, time reference and anchoring cMIPs (field 2, tasks 9, 10 and 11) (Q3, Q15), and the absence-proof cMIP (task 14, named in the abandonment clause's key 3; F172, F178);
 - the chain of judgment (field 21).
+
+*The concurrency rule (field 10) is withdrawn (step 12b, OF20 c): rule 90's default stands. Task 14 is judicial in its own entry ("Tasks", F178). Text only, no rule changed.*
 
 A clone changing any of them names the judicial tier's rule, `[4]`, in its mark, with every party of the parent whose voice remains, counted as rule 65 says. A version that also changes the constitution names the constitutional change rule beside it, and needs both (rule 64.1, F122).
 
@@ -1693,7 +1712,7 @@ Collectives only (F121). A collective's departed members entry (terms field 22) 
 
 **A departed holder has no control and no veto:** it is counted in no change rule and no area, and the collective's current rules and judges apply to it.
 
-Its stake never shrinks without its signature (rule 48). A clone that lowers its share in field 7, or drops it, is a draft until that holder signs it (rule 45), as for every holder.
+Its stake never shrinks without its signature (rule 48). A clone that lowers its share in field 7, or drops it, is a draft until that holder signs it (rule 45), as for every holder. **Nor is what its stake is paid lowered without it:** a clone that lowers its stake's part of the split plan, or adds or raises a fee its stake bears, is a draft until it signs (rule 48; new in draft 11, F270; to build). *This protects what it is paid; it gives it no say in anything else.*
 
 The stake is a share of all the collective's income, not only of what was made while it was a member.
 
@@ -2553,6 +2572,8 @@ terms-payload = {
                             ;   specification as field 2's task 10 where both are present (Q31)
   ? 7 => stakes,            ; stakes defined, in works, publications, or the collective itself (Q8), written null (S1)
   ? 8 => split-plan,        ; how incoming payments are divided ("The open formats", step 12b)
+  ? 28 => fees,             ; fees, each entry borne by every stake, off the top: their own field (rule 28, F213);
+                            ;   the form is under "Split plan and split" (text only: the field was missing here)
   ? 9 => abandonment,       ; the abandonment clause
   ; 10, the concurrency rule, is withdrawn (step 12b, OF20 c): rule 90's default stands; never reused
   ? 11 => hash,             ; parent: the agreement this one clones (with its latest act in objects)
@@ -2913,7 +2934,8 @@ split-plan = {                ; terms field 8
   ? 3 => unfilled,          ; what happens to a role share nobody fills; absent: [ 0 ], to the stakes (F218)
   ? 4 => [+ uint],          ; indexes of shares taken off the top, before the rest is divided
   ? 5 => uint,              ; who bears payout rail fees: 0 each receiver (default), 1 the split service
-  ? 6 => amount / uint,     ; maximum fee per payout the service may deduct: absolute, or in millionths of the payout
+  ? 6 => amount / uint,     ; maximum fee per payout the service may deduct: absolute, or in millionths of the payout;
+                            ;   absent: no cap, flagged before signing (rule 25, F271)
   ? 7 => any,               ; the split cMIP's parameters (a waterfall's thresholds)
   ? 8 => [+ metric]         ; the metrics the plan divides by (rule 29)
 }
@@ -2924,7 +2946,7 @@ share-rule = [ 0, stake: uint, part: uint ]         ; a stake, by its index in f
 metric     = [ module: hash, measurer: hash, ? params: any ]   ; the measurer named in advance (rule 29)
 unfilled   = [ 0 ] / [ 1 ] / [ 2, party: hash ]     ; to the stakes pro rata / held open / to a named party
 fees       = [+ fee]                                ; terms field 28 (F213)
-fee        = [ module: hash, part: uint, ? scope ]  ; borne by every stake, off the top (rule 27)
+fee        = [ module: hash, part: uint, ? scope ]  ; borne by every stake, off the top (rule 28)
 scope      = [ 0, publication: hash ]               ; payments for this publication; absent: every payment (F214)
            / [ 1, rail: hash ]                      ; payments by this rail Module
 
@@ -3677,7 +3699,8 @@ The scenario numbers after each colon are those of the freeze test suite.
 
 #### Splits
 
-- Conservation and remainder rule; module fees and an omitted fee visible; maximum fee per payout; split by an attention metric evidenced by a record the identity running the service signs, never by a Module (F116): 1, 2, 7.
+- A deal's version raising a fee, signed by every party, stays a draft until a holder who is no party, paid less by it, signs; a collective's clone lowering a stake's part of the plan, met by its area, stays a draft until each departed holder of that stake signs; a member outside the area is not asked (new in draft 11, F270; to build): 1, 3.
+- Conservation and remainder rule; module fees and an omitted fee visible; maximum fee per payout, and a plan stating none flagged before signing (new in draft 11, F271); split by an attention metric evidenced by a record the identity running the service signs, never by a Module (F116): 1, 2, 7.
 - A role share filled by a reposter, with the payer's signed referral; a referral named by the service alone earning nothing; an unfilled role share following the chosen option: 2. A relay's delivery record counting for its role share only when the payer's claim acknowledges it, and only for the object paid for; a claim the relay signs itself confirming nothing (F184): 2.
 - A rail Module's role share evidenced by the split service's own receipt naming a rail Module the owners' pointer names; a receipt naming a rail Module the owners' pointer and vault never named evidences nothing (F119): 2.
 - A relay's delivery record and a service's use record: each counts only acknowledged by the payer the payment's commitment names, never the payer a receipt names; a verifier not told the relay transport cMIP gives the same answer (F193, F194, QG3): 3.
@@ -3839,6 +3862,8 @@ Every question and reading draft 10 lists as open ("Open in this draft", with dr
 
 **New in draft 11.** Writing in F252 to F260 raised six questions (Q1 to Q6 in `docs/agreements-draft-11.md`); all six are answered and written in (F261, F259 revised, the readings of Q2 and Q3, F262, F263, and Q6). Writing the answers raised two more, Q7 and Q8, both answered and written in: F264 (rule 11, a live stream's class follows what is sold) and F265 ("Closing (type 20)", an absentee's share follows the collective's own rules).
 
+
+**The second pass of core v22** (`docs/core-v22.md`, "Second pass") writes in F270 and F271 and leaves two points open on F270, marked in rule 48: whether "unless the agreement pre-authorised it" reaches the new paragraph (Q1), and which changes of the split plan lower a stake's part (Q2).
 
 ## Old numbers to new
 
