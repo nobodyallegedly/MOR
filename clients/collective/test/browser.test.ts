@@ -114,7 +114,7 @@ test('the author, without a terminal, from the page alone', async () => {
 
   const card = page.locator('.card', { hasText: 'Makers' });
   const change = async (check: string, which: 'join' | 'leave') => {
-    await card.locator('details.change summary').click();
+    await card.locator('details.change > summary').click();
     await card.locator(`form.change label.check:has(input[name=${which}])`, { hasText: check }).locator('input').check();
     await card.locator('form.change button[type=submit]').click();
   };
@@ -154,7 +154,7 @@ test('the author, without a terminal, from the page alone', async () => {
   assert.match((await card.locator('dt:text-is("Members") + dd').textContent())!, /Ada \(you\).*left/);
 
   // The refit: remove the member who left, with numbers that fit the two who stay (F96).
-  await card.locator('details.change summary').click();
+  await card.locator('details.change > summary').click();
   await card.locator('form.change label.check:has(input[name=leave])', { hasText: 'Ada' }).locator('input').check();
   await card.locator('form.change input[name=safety]').fill('1');
   await card.locator('form.change input[name=others]').fill('1');
