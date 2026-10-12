@@ -29,6 +29,7 @@ REASONS = [
     (r'^docs/(?!(README|roadmap-v1|build-brief-v1|07-MOR-in-one-page-v11|adversarial-test-plan-v4|project-lead-prompt-v3|mir-rename-pass)\.md$)[^/]+\.md$', None,
      'record: a dated report, or an earlier version of a document'),
     (r'^docs/mir-rename-pass\.md$', None, "this pass's own report, which names the old word"),
+    (r'^scripts/mip-remaining\.py$', None, 'this script, which names the word it looks for'),
     # Superseded drafts keep their text under the new names (F269, rule 5).
     (r'^spec/(MIR-(identity-draft-11|text-draft-6|envelopes-draft-7|money-draft-6|agreements-draft-10|development-draft-6)|02-MOR-MICS-v21|03-MOR-freeze-test-suite-v21)\.md$', None,
      'superseded draft, its text kept as approved'),
