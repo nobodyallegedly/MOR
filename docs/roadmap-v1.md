@@ -212,7 +212,7 @@ Sessions launched by Nobody, allegedly, each reporting for the project lead: (a)
 
 ### The next wave: launched 12 October 2026, afternoon
 
-(g) The marked pass and core v22: F252 in Envelopes 8, F267 in Money 7, F268 in Development 7 and Agreements 11; core v22 and freeze suite v22 naming the six current drafts, with every quoted sentence the reports listed. (h) The build: F267, F268's declared field, rule 17 in the clients (the toolkit reporting `prev`; unreadable lines asked for). (i) Step 14, the deal-assessment tool. (j) The flaky test hunt. **Then (F269, decided 12 October 2026): the rename pass, MIPs become MIRs (MOR Inscribed Rules); cMIPs keep their name; MIP is reserved for MOR 2's proposals.**
+(g) The marked pass and core v22: F252 in Envelopes 8, F267 in Money 7, F268 in Development 7 and Agreements 11; core v22 and freeze suite v22 naming the six current drafts, with every quoted sentence the reports listed. (h) The build: F267, F268's declared field, rule 17 in the clients (the toolkit reporting `prev`; unreadable lines asked for). (i) Step 14, the deal-assessment tool. (j) The flaky test hunt. **Then (F269, decided 12 October 2026): the rename pass: one core text a MIR (MOR Inscribed Rule), the six together the MICS (MOR Inscribed Core Spec); cMIPs keep their name; MIP is reserved for MOR 2's proposals.**
 
 ### Documents awaiting the author's own redraft
 
