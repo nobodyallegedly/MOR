@@ -150,4 +150,13 @@ For Nobody, allegedly, to confirm or change.
 3. **A visitor writes publicly**: the inbox holds the act unsealed, addressed to the identity chosen; the feed does not show it unanswered.
 4. **Notes shown only beside a reply that names them, above it**: "Picked by Nobody, allegedly", Machine's reply under its name alone; "Picked by Machine, allegedly" under a nudge; "Answered by Nobody, allegedly" on his own reply; an unanswered note nowhere; nothing fetched beyond the gateway, the homes and the relays.
 
-`scripts/test-all.sh`, this branch against main (`c044b20`): COUNTS.
+`scripts/test-all.sh`, this branch against main (`c044b20`), 13 October 2026:
+
+| | main | this branch |
+| --- | --- | --- |
+| Rust workspace | 653 | 653 |
+| `clients/site` | 62 | **66** (the 4 above), all pass |
+| Every other TypeScript package and module | 230 | 230, all pass |
+| Total | 945 | **949**, all pass |
+
+The first full run found two existing site tests that list dubsar.org's files exactly; each now counts `feed.html`, and the site's tests then pass, 66 of 66 (the full run stops at its first failing package, so the three modules were run after it, and pass: jpeg 14, video 6, carry 6). Main's code is unchanged since pull request 33's run, which counted 945.
