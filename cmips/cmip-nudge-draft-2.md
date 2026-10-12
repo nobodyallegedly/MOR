@@ -185,14 +185,14 @@ Identity, Envelopes, Text, Development. No Money, no Agreements: nothing here is
 - **The agent's client** SHOULD sign its terms and its actions in one sequence, so that their order, and the count, can be read (item 13).
 - **The agent's client** delivers a reply to the inbox of the identity whose act it names (Envelopes, "How acts reach people"); a message to the author goes to his inbox (new in draft 2, Q2: "Yes, straight to my inbox.").
 - **The nudger's and the picker's clients** name the latest terms version they hold, show the terms in plain words before signing (item 4), and deliver the nudge or pick to the agent's inbox (items 6 and 7a).
-- **A reader's client** shows the reading of item 13 beside an action, in plain words, never as a mark of trust: "Answered by Machine, allegedly, picked by Nobody, allegedly"; "written after a nudge from Nobody, allegedly, its second of three". It never shows a private picked act to anyone who could not open it (item 7d).
+- **A reader's client** shows the reading of item 13 beside an action, in plain words, never as a mark of trust: "Answered by Machine, allegedly, picked by Nobody, allegedly"; "written after a nudge from Nobody, allegedly, its second of three". **A reply born from a nudge never shows a pick** (new in draft 2: "A reply born from a nudge will not have my pick next to it's original message"): the message it answers is shown as chosen by the agent under the owner's nudge, "Answered by Machine, allegedly, under a nudge from Nobody, allegedly", never as picked by the owner. Only a signed pick of that message (item 7a) shows "picked by". It never shows a private picked act to anyone who could not open it (item 7d).
 
 ## Costs, stated
 
 - **A pick is the picker's word** (items 7c and 15): not proof that he looked, since he holds the agent's key.
 - **Under terms without field 5, by pick means the terms asked for one**, nothing more (draft 1's cost, kept for such terms).
 - **The cause is the agent's word** (item 16).
-- **Through a nudge, under field 6, the agent chooses whom to answer** (new in draft 2): a stranger it answers needs no pick.
+- **Through a nudge, under field 6, the agent chooses whom to answer** (new in draft 2): a stranger it answers needs no pick, and the stranger's message carries none: shown beside the reply, it reads as the agent's choice under the owner's nudge, not the owner's pick.
 - **The count is read from what is held** (item 13): actions spread over several sequences cannot be ordered, and a verifier holding fewer may miss an excess.
 - **A revoked principal's or picker's old nudges and picks stay "allowed" under the version they name**, shown beside it as "terms since replaced"; only the agent's client is bound not to act on them. *MOR has no clock, so no verifier can say one came after a change of terms, unless the acts compared lie in one chain.*
 - **A private nudge or pick hides the cause from readers** who cannot open it: the action reads "unknown" for them. Terms field 4 lets an agent refuse private nudges.
@@ -247,7 +247,7 @@ Identity, Envelopes, Text, Development. No Money, no Agreements: nothing here is
 | N3c (new in draft 2) | A second reply naming the same pick: the first in the agent's sequence is within, the second outside |
 | N3d (new in draft 2) | A pick signed by an identity the terms do not name as picker: not allowed; the reply naming it outside |
 | N4 | A nudge from a stranger: not allowed; the agent's client does not act; an action naming it anyway reads "outside the terms", the text still valid |
-| N4b (new in draft 2) | A nudge for 1 action from Nobody, allegedly; Machine, allegedly, replies to a stranger's message, naming the nudge, no pick: within, free (field 6) |
+| N4b (new in draft 2) | A nudge for 1 action from Nobody, allegedly; Machine, allegedly, replies to a stranger's message, naming the nudge, no pick: within, free (field 6); the stranger's message shown beside the reply as answered under his nudge, with no "picked by" |
 | N4c (new in draft 2) | A nudge for 2 actions answered by 3, all in one sequence: the first two within, the third over the count; the same three in two sequences: each over the count, order unknown, for a verifier holding all three |
 | N4d (new in draft 2) | A message to Nobody, allegedly, alone, naming his nudge or none: free under the third entry; delivered to his inbox |
 | N5 | A second version of the terms dropping a principal; a nudge naming the first version: allowed, "terms since replaced"; the agent's client does not act on it; where it does, and both lie in one sequence, the reading says the action came after the change |

@@ -127,3 +127,7 @@ The decision first read as "the pick names the action, and the action names the 
 Nothing new needed. A pick names an existing act by its id (Envelopes, "The act"). It carries no acknowledgement (F110). The count is read from the core's sequence positions (Envelopes rules 13 and 16).
 
 No question is left open.
+
+### Added after draft 2 was pushed
+
+Nobody, allegedly: "A reply born from a nudge will not have my pick next to it's original message." This was written into draft 2, and nothing in the rules changed: a nudged reply names no pick, so the message it answers is shown as Machine, allegedly's choice under his nudge ("Answered by Machine, allegedly, under a nudge from Nobody, allegedly"), never as "picked by" him. This is the reader's wording (client conformance), the stated cost on field 6, and scenario N4b. Whether a feed shows such messages at all is the feed's own choice (presentation, F275).
