@@ -7,6 +7,7 @@ import { STYLE as POST_STYLE } from '../../../barebone/src/html.ts';
 import { fingerprint, standingWords } from '../../../reader/src/read.ts';
 import type { SiteSettings } from '../settings.ts';
 import type { Version } from '../verify.ts';
+import type { Author, AuthorLine } from '../feed.ts';
 
 /**
  * The display client's own page: the bar on top, the file below. The page's
@@ -64,6 +65,8 @@ export const FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-film{display:block;width:100%;aspect-ratio:16/9;background:#000}
 .mor-film-link{display:inline-block;padding:.4em 1em;border:1px solid currentColor;border-radius:999px;font:600 14px/1.3 system-ui,sans-serif;white-space:nowrap}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
+.mor-feed{display:block;margin:1em 0}
+.mor-feed>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 
 /** Inside an act's own frame: the post as the reader shows it, its picture scaled to the frame's width, whole. */
@@ -98,6 +101,16 @@ export interface FilmLine {
   label?: string;
 }
 
+/** A feed a page shows (draft 6, rule 13a): the identities it names, and what was found for each. */
+export interface FeedLine {
+  authors: Author[];
+  /** Null while fetching and checking. */
+  found: AuthorLine[] | null;
+  /** Posts shown, and of those, how many verified. */
+  shown: number;
+  verified: number;
+}
+
 export interface BarState {
   phase: 'checking' | 'ok' | 'bad';
   /** The sentence on top, in plain words. */
@@ -110,6 +123,7 @@ export interface BarState {
   work: string | null;
   acts: ActLine[];
   films: FilmLine[];
+  feeds: FeedLine[];
   reasons: string[];
   /** Null while looking for later versions, or before. */
   newer: Newer | null;
@@ -120,6 +134,20 @@ function actItem(a: ActLine): string {
   if (!a.standing) return `<li><code>${e(a.id)}</code>: checking…</li>`;
   const w = standingWords(a.standing);
   return `<li><code>${e(a.id)}</code>: <span class="${w.ok ? 'ok-word' : 'bad-word'}">${w.ok ? 'verified' : e(a.standing)}</span>, signed by <span class="fp">${fingerprint(a.signer!)}</span></li>`;
+}
+
+function feedItem(f: FeedLine): string {
+  const who = (a: Author) => `${a.name ? `${e(a.name)}, ` : ''}<span class="fp">${fingerprint(a.identity)}</span>`;
+  if (!f.found) return `<li>checking the posts of ${f.authors.map(who).join('; ')}…</li>`;
+  const lines = f.found.map((a) => {
+    const where = a.problem
+      ? `<span class="bad-word">not looked up</span>, ${e(a.problem)}`
+      : `${a.found} ${a.found === 1 ? 'post' : 'posts'} found, ${a.verified} shown verified; asked: ${a.asked.map((h) => `<code>${e(h)}</code>`).join(', ')}`;
+    const away = a.unreachable.length ? `; not reachable from a browser, not asked: ${a.unreachable.map((h) => `<code>${e(h)}</code>`).join(', ')}` : '';
+    return `<li>${who(a)}: ${where}${away}</li>`;
+  });
+  const bad = f.shown - f.verified;
+  return `<li>${f.shown} ${f.shown === 1 ? 'post' : 'posts'} shown, ${f.verified} verified${bad ? `, <span class="bad-word">${bad} not verified</span>` : ''}. The names are this page's; the identities are what was checked.<ul>${lines.join('')}</ul></li>`;
 }
 
 function filmItem(f: FilmLine): string {
@@ -162,6 +190,7 @@ export function bar(s: BarState): string {
   }
   if (s.path) rows.push(`<dt>This file</dt><dd><code>${e(s.path)}</code>${s.work ? `, work hash <code>${e(s.work)}</code>` : ''}</dd>`);
   if (s.films.length) rows.push(`<dt>Films</dt><dd><ul id="mor-films">${s.films.map(filmItem).join('')}</ul></dd>`);
+  if (s.feeds.length) rows.push(`<dt>Feeds</dt><dd><ul id="mor-feeds">${s.feeds.map(feedItem).join('')}</ul></dd>`);
   if (s.acts.length) rows.push(`<dt>Acts shown</dt><dd><ul id="mor-acts">${s.acts.map(actItem).join('')}</ul></dd>`);
   if (s.reasons.length) rows.push(`<dt>Why</dt><dd><ul id="mor-reasons">${s.reasons.map((r) => `<li>${e(r)}</li>`).join('')}</ul></dd>`);
   rows.push(

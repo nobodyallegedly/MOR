@@ -7,7 +7,9 @@
 // verified. A file that does not match is not shown. A film is fetched and
 // checked only when the visitor presses play (draft 4, rule 12a; film.ts);
 // a film the page lists, when its button is pressed, over the page (draft 5,
-// rule 12b; popup.ts).
+// rule 12b; popup.ts). A feed the page names is filled with the public
+// posts of its identities, each checked on its own (draft 6, rule 13a;
+// feed.ts).
 
 import { releaseLoad } from './hold.ts';
 import { readPost } from '../../../barebone/src/post.ts';
@@ -16,6 +18,8 @@ import { kindOf, pathFor, type FileEntry } from '../manifest.ts';
 import { parseSiteSettings, type SiteSettings } from '../settings.ts';
 import { findLater } from '../latest.ts';
 import { matches, openVersion, type Version } from '../verify.ts';
+import { readFeed, type Author } from '../feed.ts';
+import { FEED_STYLE, feedHtml } from './feed-view.ts';
 import { filmPlayer, layOver } from './film.ts';
 import { preparePage } from './page.ts';
 import { openPopup, type Listed } from './popup.ts';
@@ -35,6 +39,7 @@ const state: BarState = {
   work: null,
   acts: [],
   films: [],
+  feeds: [],
   reasons: [],
   newer: null,
 };
@@ -94,6 +99,48 @@ async function showActs(frame: HTMLIFrameElement, settings: SiteSettings): Promi
       note.textContent = `Act ${id} not shown: ${message(err)}.`;
       box.replaceChildren(note);
     }
+    paint();
+  }
+}
+
+/**
+ * Fill each feed's box (draft 6, rule 13a): the public posts of the
+ * identities it names, found through their homes and outbox routes and the
+ * gateway's relays, each judged on its own, in a frame of its own apart from
+ * the page's styles. Feeds are filled one after another, after the acts.
+ */
+async function showFeeds(frame: HTMLIFrameElement, settings: SiteSettings, feeds: Author[][]): Promise<void> {
+  const doc = frame.contentDocument;
+  if (!doc || !feeds.length) return;
+  const style = URL.createObjectURL(new Blob([FEED_STYLE], { type: 'text/css' }));
+  for (const box of [...doc.querySelectorAll<HTMLElement>('.mor-feed[data-feed]')]) {
+    const i = Number(box.dataset.feed);
+    const authors = feeds[i];
+    const line = state.feeds[i];
+    if (!authors || !line) continue;
+    try {
+      const feed = await readFeed(authors, settings.relays);
+      line.found = feed.authors;
+      line.shown = feed.posts.length;
+      line.verified = feed.posts.filter((p) => !p.problem).length;
+      const inner = doc.createElement('iframe');
+      inner.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+      inner.setAttribute('title', 'Public posts');
+      const html = feedHtml(feed, authors, style).replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
+      box.replaceChildren(inner);
+      const d = inner.contentDocument!;
+      d.open();
+      d.write(html);
+      d.close();
+      fitFrame(inner);
+    } catch (err) {
+      line.found = [];
+      const note = doc.createElement('div');
+      note.className = 'mor-act-note';
+      note.textContent = `The feed could not be read: ${message(err)}.`;
+      box.replaceChildren(note);
+    }
+    box.dataset.done = '';
     paint();
   }
 }
@@ -244,6 +291,7 @@ async function main(): Promise<void> {
     }
     document.title = `${prepared.title ?? entry.path} · ${version.manifest!.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
+    state.feeds = prepared.feeds.map((authors) => ({ authors, found: null, shown: 0, verified: 0 }));
     state.phase = 'ok';
     state.words = verifiedWords(settings, 'page');
     state.brief = briefWords(settings);
@@ -258,7 +306,7 @@ async function main(): Promise<void> {
       () => {
         fitFrame(frame);
         showFilms(frame, prepared.films, prepared.listed);
-        void showActs(frame, settings);
+        void showActs(frame, settings).then(() => showFeeds(frame, settings, prepared.feeds));
       },
       { once: true },
     );
