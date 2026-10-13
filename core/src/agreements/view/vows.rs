@@ -162,23 +162,6 @@ impl<'a> AgreementsView<'a> {
         Ok(None)
     }
 
-    /// Agreements draft 13, rule 14 (new in draft 13, F284; reading, to
-    /// confirm: `docs/f282-f284-build.md`, Q1): an offer made under an
-    /// agreement and naming a vow counts only where the version it is made
-    /// under writes a stake in that vow, unless the vow is the collective's
-    /// own (its income going to the collective's own stakes). What keeps
-    /// the offer `offer`, under the agreement `under` whose terms are `t`,
-    /// from that, for the vow `name` held.
-    pub(super) fn offer_vow_stake_problem(&self, name: &Hash, under: &Hash, t: &Terms) -> R<Option<String>> {
-        let Some(owner) = self.vow_owner(name, under, t)? else { return Ok(None) };
-        if owner == Who::This || t.stake_on(&Who::Id(*name)).is_some() {
-            return Ok(None);
-        }
-        Ok(Some(
-            "it sells a vow the agreement it is made under writes no stake in: a deal made on a vow writes a stake in it, held by the vow's signer, what is left after the overhead being the owner's (Agreements draft 13, rule 14; F284; reading, to confirm)".into(),
-        ))
-    }
-
     /// A vow, read (F237, F240): its chain, the offers naming it, and each
     /// sale with its state.
     pub fn vow(&self, name: &Hash) -> R<VowEval> {

@@ -149,6 +149,7 @@ test('no owner: a plan or fees with no stake leave nothing for an owner (F280), 
     plan: { shares: [{ receiver: P.ana, part: 900_000 }, { receiver: P.ben, part: 100_000 }], cmip: P.split, top: [0, 1], max: 10_000 },
     ...grants,
   };
+  // F285: the core lets an offer under such a deal sell her vow; the tool warns before signing.
   const f = one(job, 'no-owner');
   assert.equal(f.family, 'listed');
   assert.match(f.text, /off the top/);
