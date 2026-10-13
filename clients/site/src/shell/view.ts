@@ -8,6 +8,7 @@ import { fingerprint, standingWords } from '../../../reader/src/read.ts';
 import type { SiteSettings } from '../settings.ts';
 import type { Version } from '../verify.ts';
 import type { Author, AuthorLine, ClockLine } from '../feed.ts';
+import type { ListedRelay, RelayLine } from '../listing.ts';
 
 /**
  * The display client's own page: the bar on top, the file below. The page's
@@ -82,6 +83,8 @@ export const FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-feed{display:block;margin:1em 0}
 .mor-write{display:block;margin:1em 0;min-height:4em}
+.mor-listing{display:block;margin:1em 0}
+.mor-listing>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-feed>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 
@@ -133,6 +136,16 @@ export interface FeedLine {
   verified: number;
 }
 
+/** A listing a page shows (draft 9, rule 13c): the relays it names, and what was read at each. */
+export interface ListingLine {
+  relays: ListedRelay[];
+  /** Null while reading and checking. */
+  read: RelayLine[] | null;
+  /** Specifications shown (verified, by spec hash), and publications that could not be verified. */
+  verified: number;
+  unverified: number;
+}
+
 export interface BarState {
   phase: 'checking' | 'ok' | 'bad';
   /** The sentence on top, in plain words. */
@@ -146,6 +159,8 @@ export interface BarState {
   acts: ActLine[];
   films: FilmLine[];
   feeds: FeedLine[];
+  /** The listings the page shows (draft 9, rule 13c). */
+  listings: ListingLine[];
   /** The writing boxes the page shows (draft 7, rule 13b): the identities each writes to. */
   writes: Author[][];
   reasons: string[];
@@ -186,6 +201,18 @@ function clockItem(f: FeedLine): string {
       ? `The posts are ordered by its stamps: its operator's word for when it held each one, nothing more.`
       : `No post found carries its stamps: the posts are in signed order.`;
   return `<div id="mor-clock">The clock this page names, ${who}: ${c.found} ${c.found === 1 ? 'stamp' : 'stamps'} found, ${c.verified} verified, placing ${c.placed} ${c.placed === 1 ? 'post' : 'posts'}; asked: ${c.asked.map((h) => `<code>${e(h)}</code>`).join(', ')}${away}. ${order} A stamp signed by any other identity is not asked for.</div>`;
+}
+
+/** A listing (draft 9, rule 13c): the relays read, what each held, and what was verified. */
+function listingItem(l: ListingLine): string {
+  if (!l.read) return `<li>reading the specifications published on ${l.relays.map((r) => `<code>${e(r.address)}</code>`).join(', ')}…</li>`;
+  const lines = l.read.map((r) => {
+    const name = r.name ? `${e(r.name)}, ` : '';
+    if (!r.asked) return `<li>${name}<code>${e(r.address)}</code>: <span class="bad-word">not reachable from a browser</span>, not asked</li>`;
+    if (r.problem) return `<li>${name}<code>${e(r.address)}</code>: <span class="bad-word">could not be read</span>, ${e(r.problem)}${r.read ? ` (after ${r.read} acts)` : ''}</li>`;
+    return `<li>${name}<code>${e(r.address)}</code>: ${r.read} ${r.read === 1 ? 'act' : 'acts'} read, ${r.specs} ${r.specs === 1 ? 'publication' : 'publications'} of specifications${r.stopped ? `; <span class="bad-word">stopped</span> after ${r.read} acts, the most this listing reads of one relay` : ''}</li>`;
+  });
+  return `<li>${l.verified} ${l.verified === 1 ? 'specification' : 'specifications'} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? 'publication' : 'publications'} not verified</span>` : ''}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join('')}</ul></li>`;
 }
 
 function filmItem(f: FilmLine): string {
@@ -229,6 +256,7 @@ export function bar(s: BarState): string {
   if (s.path) rows.push(`<dt>This file</dt><dd><code>${e(s.path)}</code>${s.work ? `, work hash <code>${e(s.work)}</code>` : ''}</dd>`);
   if (s.films.length) rows.push(`<dt>Films</dt><dd><ul id="mor-films">${s.films.map(filmItem).join('')}</ul></dd>`);
   if (s.feeds.length) rows.push(`<dt>Feeds</dt><dd><ul id="mor-feeds">${s.feeds.map(feedItem).join('')}</ul></dd>`);
+  if (s.listings.length) rows.push(`<dt>Listings</dt><dd><ul id="mor-listings">${s.listings.map(listingItem).join('')}</ul></dd>`);
   if (s.writes.length) {
     const to = (as: Author[]) => as.map((a) => `${a.name ? `${e(a.name)}, ` : ''}<span class="fp">${fingerprint(a.identity)}</span>`).join('; ');
     rows.push(

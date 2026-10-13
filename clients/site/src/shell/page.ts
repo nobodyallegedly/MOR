@@ -11,6 +11,7 @@
 
 import { addressOf, kindOf, resolveRef, type FileEntry, type SiteManifest } from '../manifest.ts';
 import type { Author } from '../feed.ts';
+import type { ListedRelay } from '../listing.ts';
 import { FRAME_STYLE } from './view.ts';
 
 export interface Prepared {
@@ -27,6 +28,8 @@ export interface Prepared {
   feeds: Author[][];
   /** For each feed, in the same order, the clock it names (draft 8, `mor-clock`), or null. */
   clocks: (Author | null)[];
+  /** The listings the page shows (draft 9, rule 13c), in order: the relays each names. Their boxes carry `data-listing`, the index here. */
+  listings: ListedRelay[][];
   /** The writing boxes the page shows (draft 7, rule 13b), in order: the identities each lets a visitor write to. Their places carry `data-write`, the index here. */
   writes: Author[][];
   /** The checked bytes of the picture the page names as its icon, for the browser tab (rule 16a). */
@@ -59,7 +62,7 @@ export async function preparePage(
 ): Promise<Prepared> {
   const doc = new DOMParser().parseFromString(new TextDecoder('utf-8', { fatal: true }).decode(bytes), 'text/html');
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out: Prepared = { html: '', title: null, acts: [], films: [], listed: [], feeds: [], clocks: [], writes: [], icon: null, problems: [], dropped: 0 };
+  const out: Prepared = { html: '', title: null, acts: [], films: [], listed: [], feeds: [], clocks: [], listings: [], writes: [], icon: null, problems: [], dropped: 0 };
   const drop = (el: Element) => {
     el.remove();
     out.dropped++;
@@ -95,7 +98,8 @@ export async function preparePage(
   // until the visitor asks to play it. Its other attributes (autoplay, loop,
   // muted, sources, tracks) are not the page's to set. Any other `video` goes.
   // Only the places made here carry `data-film`: one a page wrote itself goes.
-  for (const el of [...doc.querySelectorAll('[data-film], [data-film-listed], [data-feed], [data-write]')]) {
+  for (const el of [...doc.querySelectorAll('[data-film], [data-film-listed], [data-feed], [data-write], [data-listing]')]) {
+    el.removeAttribute('data-listing');
     el.removeAttribute('data-write');
     el.removeAttribute('data-film');
     el.removeAttribute('data-film-listed');
@@ -315,6 +319,42 @@ export async function preparePage(
       out.clocks.push(clock);
     } else {
       box.innerHTML = `<div class="mor-act-note">A feed naming no identity: nothing to show.</div>`;
+    }
+    el.replaceWith(box);
+  }
+
+  // Listings (draft 9, rule 13c): a box each, filled by the display client
+  // with the specifications published on the relays each `mor-listing`
+  // names, every one checked on its own. Of what it holds, only its
+  // `mor-relay` elements count: each a relay's address, and its text, the
+  // page's name for it.
+  for (const el of [...doc.querySelectorAll('mor-listing')]) {
+    const relays: ListedRelay[] = [];
+    for (const r of [...el.querySelectorAll('mor-relay')]) {
+      const address = (r.getAttribute('address') ?? '').trim().replace(/\/$/, '');
+      let ok = false;
+      try {
+        const u = new URL(address);
+        ok = (u.protocol === 'https:' || u.protocol === 'http:') && !u.username && !u.password && !u.search && !u.hash;
+      } catch {
+        ok = false;
+      }
+      if (!ok || relays.some((x) => x.address === address)) {
+        out.dropped++;
+        continue;
+      }
+      const name = (r.textContent ?? '').replace(/\s+/g, ' ').trim();
+      relays.push({ address, name: name || null });
+    }
+    const box = doc.createElement('div');
+    box.className = ['mor-listing', el.getAttribute('class') ?? ''].join(' ').trim();
+    if (el.id) box.id = el.id;
+    if (relays.length) {
+      box.setAttribute('data-listing', String(out.listings.length));
+      box.innerHTML = `<div class="mor-act-note">Reading and checking the specifications published on ${relays.length === 1 ? 'one relay' : `${relays.length} relays`}…</div>`;
+      out.listings.push(relays);
+    } else {
+      box.innerHTML = `<div class="mor-act-note">A listing naming no relay: nothing to read.</div>`;
     }
     el.replaceWith(box);
   }
