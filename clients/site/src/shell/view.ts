@@ -7,7 +7,7 @@ import { STYLE as POST_STYLE } from '../../../barebone/src/html.ts';
 import { fingerprint, standingWords } from '../../../reader/src/read.ts';
 import type { SiteSettings } from '../settings.ts';
 import type { Version } from '../verify.ts';
-import type { Author, AuthorLine } from '../feed.ts';
+import type { Author, AuthorLine, ClockLine } from '../feed.ts';
 
 /**
  * The display client's own page: the bar on top, the file below. The page's
@@ -120,8 +120,14 @@ export interface FilmLine {
 /** A feed a page shows (draft 6, rule 13a): the identities it names, and what was found for each. */
 export interface FeedLine {
   authors: Author[];
+  /** The clock the page names for it (draft 8), or null. */
+  clock: Author | null;
   /** Null while fetching and checking. */
   found: AuthorLine[] | null;
+  /** What was read of the clock, once read. */
+  clockFound: ClockLine | null;
+  /** How its posts are ordered, once read. */
+  order: 'clock' | 'signed' | null;
   /** Posts shown, and of those, how many verified. */
   shown: number;
   verified: number;
@@ -165,7 +171,21 @@ function feedItem(f: FeedLine): string {
     return `<li>${who(a)}: ${where}${away}</li>`;
   });
   const bad = f.shown - f.verified;
-  return `<li>${f.shown} ${f.shown === 1 ? 'post' : 'posts'} shown, ${f.verified} verified${bad ? `, <span class="bad-word">${bad} not verified</span>` : ''}. The names are this page's; the identities are what was checked.<ul>${lines.join('')}</ul></li>`;
+  return `<li>${f.shown} ${f.shown === 1 ? 'post' : 'posts'} shown, ${f.verified} verified${bad ? `, <span class="bad-word">${bad} not verified</span>` : ''}. The names are this page's; the identities are what was checked.<ul>${lines.join('')}</ul>${clockItem(f)}</li>`;
+}
+
+/** The clock a feed names (draft 8): who it is, what was found of its stamps, and whose order the feed is in. */
+function clockItem(f: FeedLine): string {
+  const c = f.clockFound;
+  if (!f.clock || !c) return '';
+  const who = `${c.name ? `${e(c.name)}, ` : ''}<span class="fp">${fingerprint(c.identity)}</span>`;
+  if (c.problem) return `<div id="mor-clock">The clock this page names, ${who}: <span class="bad-word">not looked up</span>, ${e(c.problem)}. Its stamps order nothing: the posts are in signed order.</div>`;
+  const away = c.unreachable.length ? `; not reachable from a browser, not asked: ${c.unreachable.map((h) => `<code>${e(h)}</code>`).join(', ')}` : '';
+  const order =
+    f.order === 'clock'
+      ? `The posts are ordered by its stamps: its operator's word for when it held each one, nothing more.`
+      : `No post found carries its stamps: the posts are in signed order.`;
+  return `<div id="mor-clock">The clock this page names, ${who}: ${c.found} ${c.found === 1 ? 'stamp' : 'stamps'} found, ${c.verified} verified, placing ${c.placed} ${c.placed === 1 ? 'post' : 'posts'}; asked: ${c.asked.map((h) => `<code>${e(h)}</code>`).join(', ')}${away}. ${order} A stamp signed by any other identity is not asked for.</div>`;
 }
 
 function filmItem(f: FilmLine): string {

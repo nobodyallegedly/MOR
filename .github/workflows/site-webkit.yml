@@ -16,6 +16,7 @@ on:
       - clients/genesis/**
       - modules/jpeg/**
       - modules/video/**
+      - modules/timestamp/**
       - docs/dubsar.org/**
       - .github/workflows/site-webkit.yml
   pull_request:
@@ -27,6 +28,7 @@ on:
       - clients/genesis/**
       - modules/jpeg/**
       - modules/video/**
+      - modules/timestamp/**
       - docs/dubsar.org/**
       - .github/workflows/site-webkit.yml
   workflow_dispatch:
