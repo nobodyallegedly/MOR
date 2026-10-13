@@ -1,0 +1,34 @@
+{
+  "name": "mor-dub",
+  "version": "0.1.0",
+  "description": "Dub: write a text, add a picture, post, and see it published, verified. One identity, made here or brought here by its words (the identity carry Module). On the Mac, a program and its page; on the web (dub.dubsar.org), the same page running in the browser, for testing only (F281). Test identities only, until MOR is frozen.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-dub": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "build": "node --import tsx scripts/build-web.ts",
+    "release": "node --import tsx scripts/build-web.ts --release",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:build": "node --import tsx --test test/build/*.test.ts",
+    "start": "node --import tsx src/cli.ts open"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "esbuild": "^0.25",
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "jpeg-js": "^0.4.4",
+    "playwright-core": "1.56",
+    "typescript": "^5"
+  }
+}

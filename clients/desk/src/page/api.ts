@@ -52,7 +52,7 @@ export class Client {
     private readonly domain: string,
   ) {}
 
-  /** `domain`: the domain line of the program this page talks to (MOR Post gives its own). */
+  /** `domain`: the domain line of the program this page talks to (Dub gives its own). */
   static async open(keys: CryptoKeyPair, base = '', domain = DOMAIN): Promise<Client> {
     const raw = new Uint8Array(await crypto.subtle.exportKey('raw', keys.publicKey));
     const c = new Client(keys, toHex(raw), base.replace(/\/$/, ''), domain);
@@ -180,5 +180,7 @@ export interface MachineState {
   /** Where the API key was found (never the key), or why there is none. */
   key: { found: boolean; from: string; warning?: string };
   notified: { key: string; act: string | null; from: string | null; fromName: string | null; private: boolean; kind: string; standing: string; text?: string }[];
+  /** Picks signed that wait to be answered (the cap): their acts leave the Notified pile. */
+  waiting: { pick: string; act: string; fromName: string | null; private: boolean }[];
   notAnswered: { act: string; kind: string; note: string }[];
 }

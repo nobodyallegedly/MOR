@@ -18,7 +18,7 @@ export const version = (): Promise<string> => fingerprint(pkg, ['src/cli.ts', 's
 /**
  * The fingerprint of a program in the folder `pkg`: every file its
  * `entries` bundle, its `static/index.html` and the core library's
- * WebAssembly. Shared with MOR Post (`clients/poster`).
+ * WebAssembly. Shared with Dub (`clients/dub`, called MOR Post until 13 October 2026).
  */
 export async function fingerprint(pkg: string, entries: string[]): Promise<string> {
   const out = await build({

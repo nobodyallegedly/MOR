@@ -1,7 +1,7 @@
 // A program on this machine only (127.0.0.1) serving one page, built at
 // start and not minified, under a content security policy, with every
 // request from the page signed by a paired browser (the collective client's
-// `access.ts`). The desk's, shared with MOR Post (`clients/poster`): each
+// `access.ts`). The desk's, shared with Dub (`clients/dub`, called MOR Post until 13 October 2026): each
 // program gives its own page, its own operations and its own domain line.
 
 import { randomBytes } from 'node:crypto';

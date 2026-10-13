@@ -9,6 +9,9 @@
 // what that leaves: a case study saying nothing of an abandonment clause
 // gets none, and is flagged for it.
 //
+// Agreements draft 13 (F284): a deal made on a vow writes a stake in it, held
+// by the vow's signer; the renovation job (case study 12, draft 7) is so.
+//
 // Agreements draft 12 (F280): a share paying anyone but a stake is taken off
 // the top, as overhead, in millionths of the payment (as the split cMIP draft
 // 1 reads key 4). Five plans that put a role or a named receiver in the rest
@@ -266,18 +269,19 @@ const studies: TestDeal[] = [
   }),
   deal({
     name: 'A renovation job, its judges a chain',
-    source: 'Case study 12, draft 5, sections 2 and 4 (the worker, the client and the platform that matched them; an arbitrator, then a jury, then the platform, each stage with a deadline)',
+    source: 'Case study 12, draft 7, sections 2 and 4 (the worker, the client and the platform that matched them; an arbitrator, then a jury, then the platform, each stage with a deadline; the job made on the worker’s vow, her stake, the platform’s fee off the top, F284)',
     terms: {
       parties: [worker, client, platform],
-      text: 'Renovate the bathroom in three milestones. The platform takes its matching fee.',
+      text: 'Renovate the bathroom in three milestones, as the handyman’s vow says. The platform takes its matching fee off the top; what is left is the handyman’s.',
       cmips: { 8: P.split, 9: P.cond },
       time: P.clock,
       arbitrators: [P.arb],
       chain: [[{ identity: P.arb }, [[jury, 14], [platform, 14]]]],
-      plan: { shares: [{ receiver: worker, part: 900_000 }, { receiver: platform, part: 100_000 }], cmip: P.split, top: [0, 1], max: 10_000 },
+      stakes: [[named('the handyman’s vow: a bathroom renovated'), [[worker, 1_000_000]]]],
+      plan: { shares: [{ stake: 0, part: 1 }, { receiver: platform, part: 100_000 }], cmip: P.split, top: [1], max: 10_000 },
       payeeGrants: [named('grant: the handyman'), named('grant: the client'), named('grant: the platform')],
     },
-    flags: ['no-exit', 'no-fork-judge', 'judge-is-party'],
+    flags: ['no-exit', 'no-fork-judge', 'judge-is-party', 'split-service-window'],
   }),
   deal({
     name: "The club's live rights",
@@ -325,7 +329,9 @@ const studies: TestDeal[] = [
       plan: { shares: [{ receiver: noor, part: 850_000 }, { receiver: university, part: 150_000 }], cmip: P.split, top: [0, 1] },
       payeeGrants: [named('grant: the university'), named('grant: Noor'), named('grant: the foundation')],
     },
-    flags: ['no-exit', 'no-fork-judge', 'uncapped-fee'],
+    // No stake: Noor is paid as overhead, nothing left for an owner (F284;
+    // case study 21 is left for a later pass, docs/f282-f284-build.md).
+    flags: ['no-exit', 'no-fork-judge', 'uncapped-fee', 'no-owner'],
   }),
   deal({
     name: 'A game on the PC store',

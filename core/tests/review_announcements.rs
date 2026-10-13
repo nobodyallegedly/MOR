@@ -176,6 +176,13 @@ fn payers_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: Hash, p
 }
 
 /// The smallest deal between two parties, writing one stake in `object`.
+/// `t` with its one stake held wholly by `owner` (F284: a stake in a vow
+/// is held by the vow's signer).
+fn owned_by(mut t: Terms, owner: Hash) -> Terms {
+    t.stakes.as_mut().unwrap()[0].holders = vec![(Who::Id(owner), 1_000_000)];
+    t
+}
+
 fn deal_on(parties: [Hash; 2], object: Hash) -> Terms {
     Terms {
         parties: parties.to_vec(),
@@ -346,7 +353,8 @@ fn what_a_vow_became_is_the_cmips_and_the_core_reads_only_its_chain() {
 
 /// Review attack 2 and finding 10 (a second agreement's offer on the same
 /// vow). Dario and the club write a stake in the vow in one deal; Dario and
-/// a sponsor in another; the sponsor's deal sells it. **Before:** the
+/// a sponsor in another; the sponsor's deal sells it. Each stake is held by
+/// Dario, the vow's signer (F284, Agreements draft 13, rule 14). **Before:** the
 /// access form; nothing marked the offer outside the club's deal; the
 /// purchase named the sponsor's deal. **Until F247:** the offer named the
 /// vow and nothing marked it outside the club's deal (QV1, put to Nobody,
@@ -363,11 +371,13 @@ fn an_offer_naming_a_vow_under_a_second_agreement_is_shown_outside_the_first() {
     let mut sponsor = w.genesis("a sponsor", vec![own_home()], None, None);
     let mut fan = w.genesis("a fan", vec![own_home()], None, None);
     let stream = vow(&mut w, &mut dario, "The cup final, from the stands");
-    let t1 = deal_on([dario.id, club.id], stream).to_map();
+    // F284 (Agreements draft 13, rule 14): a stake in a vow is held by the
+    // vow's signer, Dario, in each deal made on it.
+    let t1 = owned_by(deal_on([dario.id, club.id], stream), dario.id).to_map();
     let with_club = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t1, None);
     sign(&mut w, &mut dario, &with_club);
     sign(&mut w, &mut club, &with_club);
-    let t2 = deal_on([dario.id, sponsor.id], stream).to_map();
+    let t2 = owned_by(deal_on([dario.id, sponsor.id], stream), dario.id).to_map();
     let with_sponsor = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t2, None);
     sign(&mut w, &mut dario, &with_sponsor);
     sign(&mut w, &mut sponsor, &with_sponsor);

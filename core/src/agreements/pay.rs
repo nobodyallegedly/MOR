@@ -132,8 +132,9 @@ pub fn pay_signers(parent: &Terms, clone: &Terms) -> Vec<Hash> {
             }
             // In a deal, a holder who is no party; in a collective, a holder
             // who is no member: a departed holder, a stake successor (F279),
-            // anyone who bought part of a stake (reading, to confirm:
-            // `docs/f270-build.md`, Q2). Every party of a deal signs every
+            // anyone who bought part of a stake (Agreements draft 13, rule
+            // 48: F282, decided by Nobody, allegedly, 13 October 2026, "Q2
+            // also answers itself"). Every party of a deal signs every
             // version (rule 47); a member holds the power or chose it.
             if !parent.parties.contains(&h) {
                 out.push(h);

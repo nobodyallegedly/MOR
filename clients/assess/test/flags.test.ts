@@ -142,6 +142,29 @@ test('stated costs a clause brings: absence on the authority’s word, payer-sid
   none(clean.terms, 'split-service-window');
 });
 
+test('no owner: a plan or fees with no stake leave nothing for an owner (F280), where a deal made on a vow writes its signer’s stake (F284)', () => {
+  const job: Terms = {
+    parties: [P.ana, P.ben],
+    text: 'Ana cleans; Ben’s platform matched her and takes its fee.',
+    plan: { shares: [{ receiver: P.ana, part: 900_000 }, { receiver: P.ben, part: 100_000 }], cmip: P.split, top: [0, 1], max: 10_000 },
+    ...grants,
+  };
+  const f = one(job, 'no-owner');
+  assert.equal(f.family, 'listed');
+  assert.match(f.text, /off the top/);
+  assert.match(f.text, /vow/);
+  assert.match(f.rests, /F284/);
+  assert.match(f.rests, /rule 14/);
+  assert.deepEqual(f.cites.map((c) => c.rule), [14, 22, 48]);
+  // A fee entry alone, with no stake, is the same.
+  one({ parties: [P.ana, P.ben], text: 'A fee and nothing else.', fees: [[P.module, 1_000]] }, 'no-owner');
+  // The same job, written on Ana's vow: her stake takes what is left.
+  none({ ...job, stakes: [[id('Ana’s vow: cleaning, two hours'), [[P.ana, 1_000_000]]]], plan: { shares: [{ stake: 0, part: 1 }, { receiver: P.ben, part: 100_000 }], cmip: P.split, top: [1], max: 10_000 } }, 'no-owner');
+  // Terms dividing no money carry no such risk.
+  none(clean.terms, 'no-owner');
+  none(base, 'no-owner');
+});
+
 test('terms Agreements refuse are explained with the core’s objection, and judged no further', () => {
   const a = assess(encode({ ...base, abandonment: { others: 1, outcomes: [0] } }), names);
   assert.match(a.problem ?? '', /B19/);

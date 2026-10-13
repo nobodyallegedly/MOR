@@ -247,6 +247,113 @@ test('a nudge for 2 produces at most 2 actions; a nudged reply to a stranger nam
   assert.equal(api.seen.length, calls2);
 });
 
+test('several notified acts picked in one approval: shown together first, one pick act signed for each, each answered naming its own pick', async () => {
+  const sent = [
+    await app.desk.signAndSend(STRANGER, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text('First of three: what is a pick?'), public: true, to: [MA], refs: [] }),
+    await app.desk.signAndSend(STRANGER, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text('Second of three, privately.'), public: false, to: [MA], refs: [] }),
+    await app.desk.signAndSend(STRANGER, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text('Third of three: and a nudge?'), public: true, to: [MA], refs: [] }),
+  ];
+  await look();
+  let s = await state();
+  const keys = sent.map((m) => s.machine.notified.find((x: any) => x.act === m.id).key);
+  const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
+
+  // Shown together, in plain words, with each act's fingerprint; nothing signed by looking.
+  const ownBefore = app.store.identity(NA).f.sequence.length;
+  const shown = await c.ask<{ lines: string[]; digest: string; acts: string[] }>('machine picks', { keys });
+  const words = shown.lines.join('\n');
+  assert.match(words, /Signed by Nobody, allegedly, public, delivered to Machine, allegedly: 3 picks, one for each act below\. Each pick names that act alone/);
+  for (const m of sent) assert.ok(words.includes(`act ${short(m.id)}`), 'each act’s fingerprint shown');
+  assert.match(words, /A private message from A stranger, act .*“Second of three, privately\.”/);
+  assert.match(words, /The cap allows it/);
+  assert.deepEqual(new Set(shown.acts), new Set(sent.map((m) => m.id)));
+  assert.equal(app.store.identity(NA).f.sequence.length, ownBefore, 'nothing signed by showing');
+  await assert.rejects(c.ask('machine pick many', { keys, digest: '00'.repeat(32) }), /not the picks shown/);
+  await assert.rejects(c.ask('machine pick many', { keys: [keys[0], keys[0]], digest: shown.digest }), /selected twice/);
+  assert.equal(app.store.identity(NA).f.sequence.length, ownBefore, 'nothing signed by a refused approval');
+
+  // One approval: three pick acts, three answers, each naming its own pick and its own act.
+  api.reply = answering({ text: 'An answer to one picked act.', notClaimed: [] });
+  const calls = api.seen.length;
+  const d = await c.ask<Done>('machine pick many', { keys, digest: shown.digest });
+  assert.equal(d.title, 'Picked 3 acts');
+  assert.equal(api.seen.length, calls + 3, 'one call for each');
+  assert.equal(app.store.identity(NA).f.sequence.length, ownBefore + 3, 'three pick acts signed');
+  assert.match(d.lines.map((l) => l.text).join('\n'), /Answered \(3\):/);
+  const r = reading();
+  const picks = d.acts.filter((id) => r.held(id)?.signer === NA);
+  const answers = d.acts.filter((id) => r.held(id)?.signer === MA);
+  assert.equal(picks.length, 3);
+  assert.equal(answers.length, 3);
+  const pickedBy = new Map<string, string>();
+  for (const id of picks) {
+    const p = describeAct((await relayAt(relay.base).getAct(id))!) as { type: number; payload: Uint8Array; public: boolean; to: string[] };
+    assert.deepEqual([p.type, p.public, p.to], [NUDGE_TYPES.pick, true, [MA]], 'each pick public, addressed to Machine, allegedly');
+    pickedBy.set(id, decodePick(p.payload).picked);
+  }
+  assert.deepEqual(new Set(pickedBy.values()), new Set(sent.map((m) => m.id)), 'one pick for each act, each naming one act');
+  for (const a of answers) {
+    const h = r.held(a)!;
+    assert.equal(h.refs.length, 2);
+    const [pickId, act] = h.refs;
+    assert.equal(pickedBy.get(pickId), act, 'the answer names its own pick and the act that pick names');
+    assert.deepEqual(h.to, [STRANGER]);
+    const read = r.readAction(a)!;
+    assert.equal(read.verdict, 'within, by pick');
+    assert.equal(read.words, 'Answered by Machine, allegedly, picked by Nobody, allegedly. Within its terms (by pick).');
+  }
+  assert.equal(new Set(answers.map((a) => r.held(a)!.refs[0])).size, 3, 'no pick answered twice');
+  const priv = answers.find((a) => r.held(a)!.refs[1] === sent[1].id)!;
+  assert.equal(r.held(priv)!.public, false, 'the private message answered privately');
+  s = await state();
+  for (const m of sent) assert.ok(!s.machine.notified.some((x: any) => x.act === m.id), 'no longer notified');
+  // Looking again answers nothing twice.
+  const n = api.seen.length;
+  assert.equal((await look()).answered, 0);
+  assert.equal(api.seen.length, n);
+});
+
+test('the cap stopping a batch part-way: the desk says which were answered and which wait; those are answered once the cap allows', async () => {
+  const sent = [] as { id: string }[];
+  for (const t of ['Batch at the cap, one.', 'Batch at the cap, two.', 'Batch at the cap, three.']) sent.push(await app.desk.signAndSend(STRANGER, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text(t), public: true, to: [MA], refs: [] }));
+  await look();
+  let s = await state();
+  const keys = sent.map((m) => s.machine.notified.find((x: any) => x.act === m.id).key);
+  await c.ask('machine cap', { callsPerDay: s.machine.callsToday + 1, maxChars: 1500 });
+  const shown = await c.ask<{ lines: string[]; digest: string; acts: string[] }>('machine picks', { keys });
+  assert.match(shown.lines.join('\n'), /The cap allows 1 more call today, of \d+: the first 1 answered now; the other picks are signed all the same, and wait/);
+  api.reply = answering({ text: 'Answered within the cap.', notClaimed: [] });
+  const calls = api.seen.length;
+  const d = await c.ask<Done>('machine pick many', { keys, digest: shown.digest });
+  assert.equal(api.seen.length, calls + 1, 'one call, then the stop');
+  const said = d.lines.map((l) => l.text).join('\n');
+  const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
+  assert.match(said, /^3 picks signed and delivered, of 3 selected\./);
+  // In the order shown: the first was answered; the other two wait.
+  const order = shown.acts.map((id) => ({ id }));
+  assert.match(said, new RegExp(`Answered \\(1\\): A stranger’s act ${short(order[0].id)}\\.`));
+  assert.match(said, new RegExp(`Waiting \\(2\\): A stranger’s act ${short(order[1].id)}; A stranger’s act ${short(order[2].id)}\\. The cap was reached`));
+  assert.ok(d.lines.some((l) => l.tone === 'warn' && l.text.startsWith(`Waiting: A stranger’s act ${short(order[2].id)}`)));
+  s = await state();
+  assert.match(s.machine.stopped, /The cap was reached/);
+  assert.deepEqual(new Set(s.machine.waiting.map((w: any) => w.act)), new Set([order[1].id, order[2].id]), 'listed as picked and waiting');
+  assert.ok(!s.machine.notified.some((x: any) => sent.some((m) => m.id === x.act)), 'none can be picked twice meanwhile');
+  await assert.rejects(c.ask('machine picks', { keys: [keys[0]] }), /no longer in the Notified pile/);
+  // The cap raised: what waited is answered, each naming its own pick.
+  await c.ask('machine cap', { callsPerDay: 50, maxChars: 1500 });
+  assert.equal((await look()).answered, 2);
+  assert.equal(api.seen.length, calls + 3);
+  s = await state();
+  assert.deepEqual(s.machine.waiting, []);
+  const r = reading();
+  for (const m of order.slice(1)) {
+    const h = s.history.find((x: any) => x.verdict === 'answered' && r.held(x.act)?.refs[1] === m.id) as any;
+    assert.ok(h, 'answered');
+    const pickId = r.held(h.act)!.refs[0];
+    assert.equal(decodePick((describeAct((await relayAt(relay.base).getAct(pickId))!) as { payload: Uint8Array }).payload).picked, m.id);
+  }
+});
+
 test('an API error is said plainly, without the key, and nothing is sent', async () => {
   api.reply = failing(401, 'authentication_error', `invalid x-api-key: ${KEY}`);
   const dm = await app.desk.signAndSend(NA, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text('Will this fail?'), public: false, to: [MA], refs: [] });

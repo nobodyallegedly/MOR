@@ -78,6 +78,10 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
         return machine.tick();
       case 'machine pick':
         return machine.pick(text(a.key));
+      case 'machine picks':
+        return machine.previewPicks(a.keys);
+      case 'machine pick many':
+        return machine.pickMany(a.keys, text(a.digest));
       case 'machine nudge':
         return machine.nudge(num(a.count), text(a.context));
       case 'machine retry':
