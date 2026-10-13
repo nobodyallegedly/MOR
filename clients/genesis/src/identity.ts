@@ -11,6 +11,7 @@ import { randomBytes } from 'node:crypto';
 import {
   ACK_SPECS,
   MIRS,
+  base64,
   SPECS,
   ENVELOPES_TYPES,
   IDENTITY_TYPES,
@@ -168,8 +169,9 @@ export interface IdentityFile {
 /** Agreements' record (type 17): a decision, which cites by its kept tips (F127). */
 const AGREEMENTS_RECORD = 17;
 
-const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
-const unb64 = (s: string) => Uint8Array.from(Buffer.from(s, 'base64'));
+// No Buffer: Dub's web client runs this file in a browser (clients/dub/src/web).
+const b64 = (b: Uint8Array) => base64(b);
+const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 /** What one home answered to one act. */
 export interface Submitted {
@@ -211,10 +213,18 @@ export class TestIdentity {
    * software and committed by hash, and a genesis naming its homes. Nothing
    * is sent yet: save the file first, then `publishGenesis`.
    */
-  static create(opts: { homes: Home[]; rule?: number[]; scheme?: 2 | 3; via?: Via; clock?: Clock }): TestIdentity {
+  static create(opts: {
+    homes: Home[];
+    rule?: number[];
+    scheme?: 2 | 3;
+    via?: Via;
+    clock?: Clock;
+    /** A chain key made elsewhere (Dub's web client derives it from a seed it shows once as words, then drops). */
+    chainKey?: { scheme: number; seeds: Uint8Array; commit: string };
+  }): TestIdentity {
     if (!opts.homes.length) throw new Error('a genesis declares at least one home');
     const signingSecret = newSigningSecret();
-    const chainKey = newTestChainKey(opts.scheme ?? 2);
+    const chainKey = opts.chainKey ?? (newTestChainKey(opts.scheme ?? 2) as { scheme: number; seeds: Uint8Array; commit: string });
     const genesis = makeGenesis({
       identitySpec: SPECS.identity,
       signingSecret,

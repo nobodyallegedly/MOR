@@ -1,6 +1,6 @@
 // Starting a program on this machine and opening its page, paired by a
 // one-time link: what the app's double-click runs, so nothing is typed. The
-// desk's, shared with MOR Post (`clients/poster`).
+// desk's, shared with Dub (`clients/dub`, called MOR Post until 13 October 2026).
 
 import { spawn, execFile } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';

@@ -1,0 +1,19 @@
+Dub’s web client, as published in the release (F281; served at dub.dubsar.org).
+Rebuild: cd clients/genesis && npm run wasm; cd ../dub && npm run release.
+The same tools give the same bytes (test/web-build.test.ts):
+
+rustc: rustc 1.97.0 (2d8144b78 2026-07-07)
+wasm-bindgen: wasm-bindgen 0.2.129
+esbuild: 0.25.12
+
+Work hash of each file (as the display client lists them):
+44f84786a9a1e6b6673f277f29d0080832a48b19369a44e31a9021285e3edd2f  index.html
+c16c084aed09f45dd1a37fd7ff95ef1a839ad70b271de9b415c75a74f831efbb  dub.js
+82e4873e536703f54d9b7aca75eaa5c39e745e0eb1057a38cf2785c93be35ac5  dub.css
+1f8fc7b2669dc5ac9d27a8814d4a45408a6043b517b92ffb7402010382c31e93  mor_wasm_bg.wasm
+
+SHA-256 of each file (as sha256sum prints it):
+4fe778f7dfaadd3a2849b6b0064b4bbd6138502627a933ff3ad556ef8c2a5282  index.html
+35aa2b8fddebe42221b841909fa43a3a590b457103e74d41bf3d35abc9989eb2  dub.js
+f51744a35d4a6b8b8fd52ce437b1f99157d180b14acfec3a3f62227f0a7daabc  dub.css
+51e64e16b62cbc552262d65c436a90432af1255a596ac2b71c9cdfb13b50c403  mor_wasm_bg.wasm

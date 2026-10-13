@@ -52,7 +52,7 @@ export class Client {
     private readonly domain: string,
   ) {}
 
-  /** `domain`: the domain line of the program this page talks to (MOR Post gives its own). */
+  /** `domain`: the domain line of the program this page talks to (Dub gives its own). */
   static async open(keys: CryptoKeyPair, base = '', domain = DOMAIN): Promise<Client> {
     const raw = new Uint8Array(await crypto.subtle.exportKey('raw', keys.publicKey));
     const c = new Client(keys, toHex(raw), base.replace(/\/$/, ''), domain);
