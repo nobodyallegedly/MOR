@@ -1,6 +1,6 @@
 //! # mor-split
 //!
-//! The split cMIP, draft 1 (`cmips/cmip-split-draft-1.md`), filling the
+//! The split cMIP, draft 2 (`cmips/cmip-split-draft-2.md`), filling the
 //! Agreements MIR's split task (task 8; F249, F250, roadmap step 13). It
 //! does two things, and signs nothing:
 //!
@@ -14,6 +14,10 @@
 //! - **The amounts** ([`divide`]): an amount received, divided by the split
 //!   plan, summing exactly, every leftover unit where rule 15a sends it,
 //!   with the running count of leftover units the split carries (F171).
+//!   Draft 2 writes in F280: the overhead off the top, each top share a
+//!   fraction of the payment in millionths; what is left to the stakes
+//!   alone, by their parts, and within each by ownership. A plan paying
+//!   anyone but a stake in the rest is refused, never divided.
 //!
 //! *Experimental, an instrument for testing the core, never for real money
 //! (decided by Nobody, allegedly, 2 October 2026).*
@@ -26,7 +30,7 @@ use mor_core::hash::{sha256, Hash};
 /// 17. An agreement names it for task 8 (field 2), or as its split plan's
 /// key 1.
 pub fn spec() -> Hash {
-    sha256(b"split cMIP, draft 1, test value until publication")
+    sha256(b"split cMIP, draft 2, test value until publication")
 }
 
 // ---------------------------------------------------------------- failure
@@ -154,28 +158,52 @@ pub struct Divided {
     pub tally: Vec<(u64, Vec<(Hash, u64)>)>,
 }
 
-/// `amount` smallest units received, divided by the plan of `terms`:
+/// `amount` smallest units received, divided by the plan of `terms`
+/// (draft 2, F280: "Shared ownership means shared fruits"):
 ///
-/// 1. each share the plan takes off the top (its key 4) gets its part in
-///    millionths of the amount, rounded down;
-/// 2. the rest is divided among the other shares in proportion to their
-///    parts, every share its exact part rounded down, leftover units one
-///    each to the shares with the largest remainders, and where remainders
+/// 1. **the overhead, off the top**: each share the plan takes off the top
+///    (its key 4) gets its part, in this cMIP's units, a fraction of the
+///    payment in millionths, rounded down; the top's parts together at most
+///    1,000,000 (the whole payment);
+/// 2. **what is left, to the stakes alone**: every share not on the top is a
+///    stake's (a share paying anyone else in the rest is refused, F280);
+///    what is left is divided among those stakes in proportion to their
+///    parts, every stake its exact part rounded down, leftover units one
+///    each to the stakes with the largest remainders, and where remainders
 ///    are equal, to the share listed first in the plan (the plan's order,
 ///    signed with the terms; holders' order plays no part, rule 21);
-/// 3. a stake's pot goes to its current holders by rule 15a, ties by turns
-///    (`before`: the running count the service's previous split for that
-///    stake carried, empty for the first, F165, F171); a named receiver's
+/// 3. **within each stake, by ownership**: a stake's pot goes to its current
+///    holders by their shares, rule 15a, ties by turns (`before`: the
+///    running count the service's previous split for that stake carried,
+///    empty for the first, F165, F171); a top share naming a receiver, its
 ///    pot to it.
 ///
+/// Where no stake is left in the rest (F283: a deal with no owners, or a
+/// pool paid wholly off the top), the top's parts must make the whole
+/// payment, 1,000,000, and the units its rounding leaves go one each to the
+/// top shares with the largest remainders, ties to the share listed first
+/// (mechanic, draft 2's); a plan whose top makes less, with no stake to
+/// take what is left, is refused.
+///
 /// `collective`: the collective whose terms these are, for holders written
-/// null (S1). Draft 1 computes stakes and named receivers only: a plan with
-/// roles or metrics, or terms with fees (field 28), are refused, never
-/// guessed.
+/// null (S1). Draft 2, as draft 1, computes stakes and named receivers only:
+/// a plan with roles or metrics, or terms with fees (field 28), are refused,
+/// never guessed.
 pub fn divide(amount: u64, terms: &Terms, collective: Option<&Hash>, before: &dyn Fn(u64) -> Vec<(Hash, u64)>) -> Result<Divided, String> {
     let plan: &SplitPlan = terms.plan.as_ref().ok_or("the terms carry no split plan")?;
     if terms.fees.is_some() {
-        return Err("draft 1 does not compute fees (terms field 28)".into());
+        return Err("draft 2 does not compute fees (terms field 28)".into());
+    }
+    let on_top = |i: usize| plan.top.contains(&(i as u64));
+    // F280: whatever is not taken off the top goes to the stakes alone.
+    if let Some(i) = (0..plan.shares.len()).find(|i| !on_top(*i) && !matches!(plan.shares[*i], ShareRule::Stake { .. })) {
+        return Err(format!(
+            "share {i} pays someone other than a stake in the rest: a share paying anyone but a stake is paid off the top only; what is left goes to the stakes alone (F280)"
+        ));
+    }
+    let top_parts: u128 = plan.top.iter().map(|i| part_of(&plan.shares[*i as usize]) as u128).sum();
+    if top_parts > 1_000_000 {
+        return Err("the shares off the top take more than the whole payment: their parts are millionths of it, 1,000,000 at most".into());
     }
     let mut taken: u64 = 0;
     let mut pots: Vec<u64> = vec![0; plan.shares.len()];
@@ -186,23 +214,36 @@ pub fn divide(amount: u64, terms: &Terms, collective: Option<&Hash>, before: &dy
         taken = taken.checked_add(x).ok_or("shares off the top above the amount")?;
     }
     let rest = amount.checked_sub(taken).ok_or("shares off the top above the amount")?;
-    let others: Vec<usize> = (0..plan.shares.len()).filter(|i| !plan.top.contains(&(*i as u64))).collect();
-    let weights: Vec<u128> = others.iter().map(|i| part_of(&plan.shares[*i]) as u128).collect();
+    let stakes: Vec<usize> = (0..plan.shares.len()).filter(|i| !on_top(*i)).collect();
+    let weights: Vec<u128> = stakes.iter().map(|i| part_of(&plan.shares[*i]) as u128).collect();
     let sum: u128 = weights.iter().sum();
     if sum == 0 && rest > 0 {
-        return Err("the shares left after the top have no parts".into());
+        if stakes.is_empty() && top_parts == 1_000_000 {
+            // No stake to take the rest (F283): the units the top's rounding leaves, by largest remainder.
+            let top: Vec<usize> = plan.top.iter().map(|i| *i as usize).collect();
+            let rem = |i: usize| (amount as u128 * part_of(&plan.shares[i]) as u128) % 1_000_000;
+            let mut order: Vec<usize> = (0..top.len()).collect();
+            order.sort_by(|a, b| rem(top[*b]).cmp(&rem(top[*a])).then(top[*a].cmp(&top[*b])));
+            for k in order.into_iter().take(rest as usize) {
+                pots[top[k]] += 1;
+            }
+        } else if stakes.is_empty() {
+            return Err("no stake is left to take what the top leaves: with no stake in the rest, the shares off the top make the whole payment, 1,000,000".into());
+        } else {
+            return Err("the stakes left after the top have no parts".into());
+        }
     }
     if sum > 0 {
         let exact: Vec<u128> = weights.iter().map(|w| rest as u128 * w).collect();
         let mut parts: Vec<u64> = exact.iter().map(|e| (e / sum) as u64).collect();
         let left = rest - parts.iter().sum::<u64>();
-        let mut order: Vec<usize> = (0..others.len()).collect();
+        let mut order: Vec<usize> = (0..stakes.len()).collect();
         // Largest remainder first; equal remainders, the earlier share.
         order.sort_by(|a, b| (exact[*b] % sum).cmp(&(exact[*a] % sum)).then(a.cmp(b)));
         for k in order.into_iter().take(left as usize) {
             parts[k] += 1;
         }
-        for (k, i) in others.iter().enumerate() {
+        for (k, i) in stakes.iter().enumerate() {
             pots[*i] = parts[k];
         }
     }
@@ -236,7 +277,7 @@ pub fn divide(amount: u64, terms: &Terms, collective: Option<&Hash>, before: &dy
                     payouts.push(Payout { receiver: *receiver, amount: pots[i], ..Default::default() });
                 }
             }
-            _ => return Err("draft 1 computes stakes and named receivers only: roles and metrics are refused, never guessed".into()),
+            _ => return Err("draft 2 computes stakes and named receivers only: roles and metrics are refused, never guessed".into()),
         }
     }
     debug_assert_eq!(payouts.iter().map(|p| p.amount as u128).sum::<u128>(), amount as u128);

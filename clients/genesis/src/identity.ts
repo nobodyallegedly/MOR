@@ -46,7 +46,7 @@ import { record } from './kex.ts';
 import { lookUp, type Home, type Lookup, type Reference, type RouteIn } from './lookup.ts';
 import { actsBy, checkWarned, linesOf, planLines, type Card, type FoundLine, type LinePlan, type Specs } from './lines.ts';
 
-export { lookUp, followRef, referTo, referenceTo, refAct, refSigner, cannotReach, type Followed, type Home, type Lookup, type NotTried, type Reference, type Resolution, type RouteIn } from './lookup.ts';
+export { lookUp, followRef, referTo, referenceTo, carryChains, chainOf, type Carried, refAct, refSigner, cannotReach, type Followed, type Home, type Lookup, type NotTried, type Reference, type Resolution, type RouteIn } from './lookup.ts';
 
 export const TEST_LABEL =
   'MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.';

@@ -332,7 +332,8 @@ test('a reply names the signer of the post it answers, and leaves a copy sealed 
   // Approved: published at the relay, and a copy sealed to the other identity left in its inbox.
   const ok = await w.client.ask<Done>('approve', { digest });
   const reply = ok.acts[0];
-  assert.ok(ok.lines.some((l) => l.text === `${w.relay.base}: accepted`), JSON.stringify(ok.lines));
+  // The other identity's chain, which it had carried to the relay itself, is carried again, the same acts.
+  assert.ok(ok.lines.some((l) => l.text.startsWith(`${w.relay.base}: accepted; the identity chain of ${other.id.slice(0, 12)}…, whose act it names, carried`)), JSON.stringify(ok.lines));
   assert.ok(ok.lines.some((l) => /inbox .*: a copy sealed to/.test(l.text)), JSON.stringify(ok.lines));
   const got = await other.readInbox({ inbox: [w.relay.base], senderHints: [w.relay.base, ...w.homes.map((h) => h.base)] });
   const copy = got.find((x) => x.act === reply);
@@ -363,6 +364,25 @@ test('a reply names the signer of the post it answers, and leaves a copy sealed 
   assert.ok(wv.blocking.some((b) => /but that act was signed by/.test(b)), JSON.stringify(wv.blocking));
   await w.client.ask('decline', { digest: bd, note: '' });
   await w.client.ask('decline', { digest: wd, note: '' });
+});
+
+test('a reply carries the identity chain of the signer it names to the relays where it is published (relay transport cMIP draft 4, "Clients", 7)', async () => {
+  // Someone outside the desk keeps its genesis at the homes only, and its post at one home: the relay holds nothing of it.
+  const other = TestIdentity.create({ homes: w.homes.map((h) => h.home), scheme: 3 });
+  await other.publishGenesis();
+  await other.publishRoutes([{ scope: null, hints: [w.homes[0].base] }]);
+  const theirs = await other.publish(POST_SPECS.text, 0, textPayload('Kept at a home.'), { public: true, relays: [w.homes[0].base] });
+  assert.equal(await relayAt(w.relay.base).getAct(other.id), null);
+
+  const r = await ask('mor_prepare_post', { signer: machine, text: 'An answer, published at the relay.', refs: [theirs.id] });
+  assert.equal(r.isError, false, r.text);
+  const digest = handed(r.text);
+  const ok = await w.client.ask<Done>('approve', { digest });
+  // Published at the relay with the signer's chain beside it: its genesis, so a reader knowing only the relay can look it up.
+  assert.ok(ok.lines.some((l) => l.text === `${w.relay.base}: accepted; the identity chain of ${other.id.slice(0, 12)}…, whose act it names, carried: 1 act kept`), JSON.stringify(ok.lines));
+  assert.ok(await relayAt(w.relay.base).getAct(other.id), 'the genesis is at the relay where the reply is published');
+  // It has no inbox, so no copy is left; said, and the reply published all the same.
+  assert.ok(ok.lines.some((l) => /no copy left/.test(l.text)), JSON.stringify(ok.lines));
 });
 
 test('unlinking an identity at the desk stops Claude preparing for it, and the desk refuses its drafts', async () => {

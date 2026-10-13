@@ -328,12 +328,105 @@ export function referenceTo(act: Uint8Array): Reference {
  * name its signer). The act is fetched from the hints side by side, its id
  * checked; not found, no reference is written: the writer must hold what
  * it points at.
+ *
+ * For a public act, the referenced signer's identity chain (its genesis
+ * and rotations, all public) is fetched too, for the writer to carry to the
+ * relays where it publishes (`carryChains`; relay transport cMIP draft 4,
+ * "Clients", 7, a SHOULD), so the signer named can always be looked up. A
+ * chain that cannot be fetched leaves the reference as good as before:
+ * `chain` is empty, and `chainProblem` says why.
  */
-export async function referTo(id: string, hints: string[], via: Via = {}): Promise<{ ref: Reference; act: Uint8Array; public: boolean; signer: string }> {
+export async function referTo(
+  id: string,
+  hints: string[],
+  via: Via = {},
+): Promise<{ ref: Reference; act: Uint8Array; public: boolean; signer: string; chain: Uint8Array[]; chainProblem?: string }> {
   const act = await firstOf(hints.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getAct(id));
   if (!act) throw new Error(`the act ${id} was not found at ${hints.join(', ')}: a reference is written only to an act this client holds`);
   const d = describeAct(act) as Opened;
-  return { ref: referenceTo(act), act, public: d.public, signer: d.signer ?? d.id };
+  const signer = d.signer ?? d.id;
+  const out = { ref: referenceTo(act), act, public: d.public, signer, chain: [] as Uint8Array[] };
+  if (!d.public) return out;
+  try {
+    return { ...out, chain: await chainOf(signer, hints, via) };
+  } catch (e) {
+    return { ...out, chainProblem: `the identity chain of ${signer} was not found: ${e instanceof Error ? e.message : e}` };
+  }
+}
+
+/**
+ * An identity's chain acts, public, as its homes serve them: its genesis,
+ * then its rotations, in order (relay transport cMIP, "Querying an
+ * identity", part 1). The identity is looked up first, so the homes asked
+ * are those in force at its latest position that counts, side by side; the
+ * first that serves a chain beginning with the genesis is taken. For a
+ * client to carry (relay transport cMIP draft 4, "Clients", 7).
+ */
+export async function chainOf(identity: string, hints: string[], via: Via = {}): Promise<Uint8Array[]> {
+  const l = await lookUp(identity, hints, via);
+  const r = l.resolution;
+  const homes = [...new Set([...(r.homesAt?.length ? r.homesAt[r.homesAt.length - 1] : r.homes), ...r.homes].map((h) => h.hint))].filter((h) => !cannotReach(h, via));
+  const chain = await firstOf(homes, async (h) => {
+    const rec = await relayAt(h, via).identity(identity);
+    return rec.chain.length && actId(rec.chain[0]) === identity ? rec.chain : null;
+  });
+  if (!chain) throw new Error(`no home of ${identity} served its identity chain (${homes.join(', ') || 'none reachable'})`);
+  return chain;
+}
+
+/** What carrying identity chains to relays did, relay by relay. */
+export interface Carried {
+  /** The identities whose chains were carried. */
+  signers: string[];
+  /** Per relay: how many chain acts it took, and why any were refused. */
+  relays: { hint: string; kept: number; refused: string[] }[];
+  /** Signers whose chain could not be found, each with why. */
+  notFound: { signer: string; why: string }[];
+}
+
+/**
+ * Carry to each relay the identity chains of the signers an act's public
+ * references name, other than its own signer's (relay transport cMIP draft
+ * 4, "Clients", 7: a client writing a reference to a public act SHOULD
+ * carry the referenced signer's identity chain, public, to the relays where
+ * it publishes, so the signer named can always be looked up; taken by the
+ * project lead under the delegation, `docs/f272-build.md`, Question 2).
+ * Each chain is looked up from `hints` (`chainOf`: genesis and rotations as
+ * its homes serve them) unless given in `known`, and sent to every relay; a relay's
+ * refusal (its policy) is said, never a failure of the act. A private act's
+ * references are not read: its relays see only its outside.
+ */
+export async function carryChains(act: Uint8Array, relays: string[], hints: string[], via: Via = {}, known: Map<string, Uint8Array[]> = new Map()): Promise<Carried> {
+  const d = describeAct(act) as Opened & { refSigners?: (string | null | undefined)[] };
+  const own = d.signer ?? d.id;
+  const signers = d.public ? [...new Set((d.refSigners ?? []).filter((x): x is string => !!x && x !== own))] : [];
+  const out: Carried = { signers: [], relays: relays.map((hint) => ({ hint, kept: 0, refused: [] })), notFound: [] };
+  for (const signer of signers) {
+    let chain = known.get(signer);
+    if (!chain?.length) {
+      try {
+        chain = await chainOf(signer, [...new Set([...hints, ...relays])], via);
+      } catch (e) {
+        out.notFound.push({ signer, why: e instanceof Error ? e.message : String(e) });
+        continue;
+      }
+    }
+    out.signers.push(signer);
+    await Promise.all(
+      out.relays.map(async (r) => {
+        if (cannotReach(r.hint, via)) return;
+        for (const c of chain!) {
+          try {
+            await relayAt(r.hint, via).putAct(c);
+            r.kept++;
+          } catch (e) {
+            r.refused.push(e instanceof Error ? e.message : String(e));
+          }
+        }
+      }),
+    );
+  }
+  return out;
 }
 
 export interface Followed {

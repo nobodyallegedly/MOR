@@ -1,5 +1,7 @@
-// The nudge cMIP's scenarios (cmips/cmip-nudge-draft-2.md, "Scenarios to test
-// when it is built"): N1 to N13 and the draft 2 additions, each act signed by
+// The nudge cMIP's scenarios (cmips/cmip-nudge-draft-3.md, "Scenarios to test
+// when it is built"): N1 to N13, the draft 2 additions, and draft 3's (N3b
+// rewritten, N3e, N3f: every text act of an agent read against its terms, and
+// the agent's client refusing to sign what needs a cause it lacks), each act signed by
 // a test identity through the core library, each reading made from the acts
 // a verifier holds. Delivery to inboxes is the desk's, tested there
 // (clients/desk/test/machine.test.ts).
@@ -113,19 +115,30 @@ test('N3: a visitor writes from a one-time identity; his signed pick; the reply 
   assert.equal(read.words, 'Answered by Machine, allegedly, picked by Nobody, allegedly. Within its terms (by pick).');
 });
 
-test('N3b: under terms setting field 5, a reply to a stranger naming no allowed pick of what it answers is outside; under terms without field 5, by pick, no pick shown', () => {
+test('N3b (draft 3): a reply to a stranger with no pick and no nudge, under field 5, is outside the terms, and the agent’s client refuses to sign it; naming a pick of another act, outside; without field 5, by pick, no pick shown', () => {
   const visitor = who();
   const msg = say(visitor, 'Hello again.', { to: [MA.id] });
-  const other = say(visitor, 'Another message.', { to: [MA.id] });
+  // Naming no cause at all (Q2, "it should not exist without a nudge", the pick his other cause): read against the terms, outside.
+  const bare = say(MA, 'Hi, unprompted.', { to: [visitor.id], refs: [pub(msg)] });
+  const r0 = holding(T, msg, bare);
+  const read0 = r0.readAction(bare.id)!;
+  assert.equal(read0.verdict, 'outside');
+  assert.equal(read0.uncaused, true);
+  assert.equal(read0.terms, T.id);
+  assert.equal(read0.words, 'Machine, allegedly wrote this outside its terms: it names no nudge or pick, and the terms let a reply to a stranger go out only with a signed pick, or under a nudge.');
+  assert.doesNotMatch(read0.words, /picked by/);
+  // Client conformance: the agent's client, asking first, does not sign it.
+  const may = holding(T, msg).maySign({ signer: MA.id, public: true, to: [visitor.id], refs: [msg.id] });
+  assert.equal(may.ok, false);
+  assert.match(may.why, /outside its terms/);
+
   // The pick names another act: the reply answers an act no pick selected.
+  const other = say(visitor, 'Another message.', { to: [MA.id] });
   const p = pick(NA, MA.id, T.id, other.id);
   const reply = say(MA, 'Hi.', { to: [visitor.id], refs: [pub(p), pub(msg)] });
   const read = holding(T, msg, other, p, reply).readAction(reply.id)!;
   assert.equal(read.verdict, 'outside');
   assert.match(read.words, /does not answer the act its pick selected/);
-  // The same reply naming nothing of this cMIP is no action of it (items 13 and 16): nothing is said.
-  const bare = say(MA, 'Hi, unprompted.', { to: [visitor.id], refs: [pub(msg)] });
-  assert.equal(holding(T, msg, bare).readAction(bare.id), null);
 
   // Terms without field 5 or 6: a nudged reply to a stranger follows the by-pick entry, and no pick is shown.
   const noPickers = first();
@@ -138,6 +151,104 @@ test('N3b: under terms setting field 5, a reply to a stranger naming no allowed 
   assert.equal(read2.verdict, 'within, by pick');
   assert.match(read2.words, /its terms asked for a pick, and no one’s pick is shown/);
   assert.doesNotMatch(read2.words, /picked by/);
+  // The same reply naming no cause, under terms without field 5: by pick, no pick shown (draft 1's cost, kept).
+  const r3 = say(MA, 'Hi, no cause.', { to: [visitor.id], refs: [pub(msg)] });
+  const read3 = holding(T2, msg, r3).readAction(r3.id)!;
+  assert.equal(read3.verdict, 'within, by pick');
+  assert.equal(read3.words, 'Answered by Machine, allegedly, naming no nudge or pick; its terms asked for a pick, and no one’s pick is shown. Within its terms (by pick).');
+});
+
+test('N3e (draft 3): what the terms let go out freely needs no cause; anything else naming none reads outside; an act signed before the agent’s first terms, or of an identity with no terms held, is read under none', () => {
+  const agent = who();
+  const before = say(agent, 'Before any terms.');
+  const Ta = terms(agent, first());
+  const stranger = who();
+  const theirs = say(stranger, 'A stranger’s post.');
+  const his = say(NA, 'A post of his.');
+  const post = say(agent, 'A post of its own.');
+  const toHim = say(agent, 'A reply to him.', { to: [NA.id], refs: [pub(his)] });
+  const dm = say(agent, 'For him alone.', { public: false, to: [NA.id] });
+  const toStranger = say(agent, 'A reply to a stranger.', { to: [stranger.id], refs: [pub(theirs)] });
+  const dmStranger = say(agent, 'A message to a stranger.', { public: false, to: [stranger.id] });
+  const note = say(agent, 'A private note to no one.', { public: false });
+  const r = holding(before, Ta, theirs, his, post, toHim, dm, toStranger, dmStranger, note);
+  const v = (x: Made) => r.readAction(x.id)?.verdict ?? null;
+  assert.equal(v(post), 'within, free');
+  assert.equal(r.readAction(post.id)!.words, `Written by a stranger, naming no nudge or pick. Within its terms (free).`);
+  assert.equal(v(toHim), 'within, free');
+  assert.equal(v(dm), 'within, free');
+  assert.equal(v(toStranger), 'outside');
+  assert.equal(v(dmStranger), 'outside');
+  // A private act addressed to no one reaches no one: nothing is said.
+  assert.equal(v(note), null);
+  // Signed before its first terms, in its own sequence: the identity was not yet an agent for it.
+  assert.equal(v(before), null);
+  // A verifier holding none of the agent's terms says nothing.
+  assert.equal(holding(theirs, toStranger).readAction(toStranger.id), null);
+  // An act it names not held: unknown, saying what is missing.
+  const blind = holding(Ta, toStranger).readAction(toStranger.id)!;
+  assert.equal(blind.verdict, 'unknown');
+  assert.match(blind.words, /is not held, so whom it addresses cannot be known/);
+});
+
+test('N3f (draft 3): an uncaused act is read under the latest terms before it in the agent’s sequence; terms that cannot be followed leave it unknown', () => {
+  const agent = who();
+  const stranger = who();
+  const theirs = say(stranger, 'Hello.');
+  const v1 = terms(agent, { ...first(), allowed: [{ kind: 1, whom: null, free: true }] });
+  const early = say(agent, 'Free under the first version.', { to: [stranger.id], refs: [pub(theirs)] });
+  const v2 = terms(agent, { ...first(), previous: v1.id });
+  const late = say(agent, 'Needs a pick under the second.', { to: [stranger.id], refs: [pub(theirs)] });
+  const r = holding(theirs, v1, early, v2, late);
+  assert.equal(r.readAction(early.id)!.terms, v1.id);
+  assert.equal(r.readAction(early.id)!.verdict, 'within, free');
+  assert.equal(r.readAction(late.id)!.terms, v2.id);
+  assert.equal(r.readAction(late.id)!.verdict, 'outside');
+  // Two versions naming one previous: following stops, the act unknown.
+  const fork = terms(agent, { ...first(), previous: v1.id, publicOnly: undefined });
+  const after = say(agent, 'After a fork.', { to: [stranger.id], refs: [pub(theirs)] });
+  const rf = holding(theirs, v1, v2, fork, after);
+  assert.equal(rf.readAction(after.id)!.verdict, 'unknown');
+  assert.match(rf.readAction(after.id)!.words, /stopped at a fork/);
+  // The first version not held: its later versions cannot be followed.
+  const rn = holding(theirs, v2, late);
+  assert.equal(rn.readAction(late.id)!.verdict, 'unknown');
+  assert.match(rn.readAction(late.id)!.words, /first version of its terms is not held/);
+});
+
+test('maySign (draft 3, client conformance): the agent’s client signs a free act, or one an allowed nudge or pick allows, and nothing else', () => {
+  const visitor = who();
+  const msg = say(visitor, 'Hi, machine.', { to: [MA.id] });
+  const his = say(NA, 'His post.');
+  // Free, naming no cause: a post, a reply to him.
+  assert.equal(holding(T).maySign({ signer: MA.id, public: true, to: [], refs: [] }).ok, true);
+  assert.equal(holding(T, his).maySign({ signer: MA.id, public: true, to: [NA.id], refs: [his.id] }).ok, true);
+  // A reply to the visitor: only with his pick of that message, or his nudge.
+  assert.equal(holding(T, msg).maySign({ signer: MA.id, public: true, to: [visitor.id], refs: [msg.id] }).ok, false);
+  const p = pick(NA, MA.id, T.id, msg.id);
+  assert.equal(holding(T, msg, p).maySign({ signer: MA.id, public: true, to: [visitor.id], refs: [p.id, msg.id] }).ok, true);
+  const n = nudge(NA, MA.id, T.id, 1);
+  assert.equal(holding(T, msg, n).maySign({ signer: MA.id, public: true, to: [visitor.id], refs: [n.id, msg.id] }).ok, true);
+  // A second answer to the same pick, after the first in its sequence: refused.
+  const one = say(MA, 'First answer.', { to: [visitor.id], refs: [pub(p), pub(msg)] });
+  const second = holding(T, msg, p, one).maySign({ signer: MA.id, public: true, to: [visitor.id], refs: [p.id, msg.id], prev: one.id });
+  assert.equal(second.ok, false);
+  assert.match(second.why, /a pick allows one action/);
+  // Past a nudge's count: refused.
+  const used = say(MA, 'The one action.', { refs: [pub(n)] });
+  assert.equal(holding(T, n, used).maySign({ signer: MA.id, public: true, to: [], refs: [n.id], prev: used.id }).ok, false);
+  // A nudge under terms since replaced: allowed as read, but not acted on.
+  const agent = who();
+  const v1 = terms(agent, first());
+  const v2 = terms(agent, { ...first(), previous: v1.id });
+  const old = nudge(NA, agent.id, v1.id, 1);
+  const stale = holding(v1, v2, old, msg).maySign({ signer: agent.id, public: true, to: [visitor.id], refs: [old.id, msg.id], prev: v2.id });
+  assert.equal(stale.ok, false);
+  assert.match(stale.why, /may not be acted on: it names an earlier version of the terms/);
+  // An identity with no terms held is no agent for this check; nothing held is added by asking.
+  const r = holding(msg);
+  assert.equal(r.maySign({ signer: visitor.id, public: true, to: [MA.id], refs: [msg.id] }).ok, true);
+  assert.equal(r.all().length, 1);
 });
 
 test('N3c: a second reply naming the same pick: the first in the agent’s sequence is within, the second outside', () => {
@@ -223,8 +334,11 @@ test('N4d: a message to him alone, naming his nudge: free; naming none: no actio
   const read = holding(T, n, m).readAction(m.id)!;
   assert.equal(read.kind, 'message');
   assert.equal(read.verdict, 'within, free');
+  // Naming none (draft 3): read against the terms all the same, free under the third entry.
   const plain = say(MA, 'Unprompted, just for you.', { public: false, to: [NA.id] });
-  assert.equal(holding(T, plain).readAction(plain.id), null);
+  const readPlain = holding(T, plain).readAction(plain.id)!;
+  assert.equal(readPlain.verdict, 'within, free');
+  assert.equal(readPlain.uncaused, true);
   const no6 = first();
   delete no6.nudgedFree;
   const T6 = terms(MA, no6);
@@ -268,11 +382,15 @@ test('N6: two versions naming one previous: following stops there, both named', 
   assert.equal(r.mayAct(n.id).ok, false);
 });
 
-test('N7: a post mentioning a stranger’s act, naming no nudge: no action of this cMIP; naming his nudge: free', () => {
+test('N7 (draft 3): a post mentioning a stranger’s act, naming no nudge, reads as a reply to the stranger with no cause: outside; naming his nudge: free', () => {
   const stranger = who();
   const theirs = say(stranger, 'A stranger’s post.');
   const post = say(MA, 'About that post.', { refs: [pub(theirs)] });
-  assert.equal(holding(T, theirs, post).readAction(post.id), null);
+  const mention = holding(T, theirs, post).readAction(post.id)!;
+  assert.equal(mention.kind, 'reply');
+  assert.equal(mention.verdict, 'outside');
+  // Held without the agent's terms, nothing is said.
+  assert.equal(holding(theirs, post).readAction(post.id), null);
   const n = nudge(NA, MA.id, T.id, 1);
   const nudged = say(MA, 'About that post, nudged.', { to: [stranger.id], refs: [pub(n), pub(theirs)] });
   const read = holding(T, theirs, n, nudged).readAction(nudged.id)!;
@@ -367,9 +485,12 @@ test('N11: a nudge or a pick carrying acks: invalid (Envelopes rule 18); a nudge
   const z = sign(NA, NUDGE_SPECS.nudge, NUDGE_TYPES.nudge, zero, { to: [MA.id] });
   const c = holding(T, z).readCause(z.id)!;
   assert.equal(c.verdict, 'invalid');
-  // An action naming an invalid nudge names no nudge of this cMIP.
+  // An action naming an invalid nudge names no nudge of this cMIP: it is read as naming no cause
+  // (draft 3), and the invalid act's signer, Nobody, allegedly, is whom it addresses: a reply to him, free.
   const post = say(MA, 'Naming a nudge for nothing.', { refs: [pub(z)] });
-  assert.equal(holding(T, z, post).readAction(post.id), null);
+  const read = holding(T, z, post).readAction(post.id)!;
+  assert.equal(read.uncaused, true);
+  assert.equal(read.verdict, 'within, free');
 });
 
 test('N12: an action naming an act the verifier does not hold: unknown, saying what is missing', () => {

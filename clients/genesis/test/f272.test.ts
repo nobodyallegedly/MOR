@@ -4,7 +4,9 @@
 // asks the homes in force at each position (B2), does not try an address it
 // cannot reach (B3) and asks side by side (B4); and the transport's client
 // rule, a body larger than the relay's stated limits never sent (relay
-// transport cMIP draft 3, "Clients", 6).
+// transport cMIP draft 3, "Clients", 6); and the signer's identity chain
+// carried to the relays where a reference to its public act is published
+// (relay transport cMIP draft 4, "Clients", 7; the F272 build's Question 2).
 //
 // Real homes and a relay on local ports, from the relay program.
 
@@ -12,7 +14,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
 import { start, type Running } from './world.ts';
-import { TestIdentity, followRef, lookUp, referTo, referenceTo, cannotReach } from '../src/identity.ts';
+import { TestIdentity, carryChains, followRef, lookUp, referTo, referenceTo, cannotReach } from '../src/identity.ts';
 import { SPECS, cborEncode, describeAct } from '../src/core.ts';
 import { CODE, RelayError, relayAt } from '../src/transport.ts';
 
@@ -91,6 +93,55 @@ test('a reference is followed by the signer it names to an act no relay asked ho
   // A wrong signer: followed, the act shows its own, and the reference is said to be wrong.
   const carla = await person();
   await assert.rejects(followRef([post.id, carla.id], [homes[2].base]), /the reference is wrong/);
+});
+
+test('a reference to a public act carries its signer’s identity chain to the relays where it is published, so a stranger knowing only those relays can look the signer up (relay transport cMIP draft 4, "Clients", 7)', async () => {
+  const plain = await start('relay');
+  try {
+    // Ana keeps her post at homes[2]; she has rotated once, so her chain is a genesis and a rotation.
+    const ana = await person(homes, [homes[2].base]);
+    await ana.prepareRotation({ homes: homes.map((h) => h.home) });
+    await ana.submitRotation();
+    assert.ok((await ana.settleRotation()).counts);
+    const post = await ana.publish(SPECS.text, 0, text('kept at home 3'), { public: true, relays: [homes[2].base] });
+    // Writing the reference fetches the act and the signer's chain, public: genesis first, then the rotation.
+    const r = await referTo(post.id, [homes[0].base, homes[2].base]);
+    assert.deepEqual(r.ref, [post.id, ana.id]);
+    assert.deepEqual(r.chain.map((a) => describeAct(a).id), ana.chainActs().map((a) => describeAct(a).id));
+    // A private act's reference names no signer, and no chain is fetched for it.
+    const secret = await ana.publish(SPECS.text, 0, text('private'), { public: false, relays: [homes[0].base] });
+    assert.deepEqual((await referTo(secret.id, [homes[0].base])).chain, []);
+
+    // Ben replies, publishing only at a plain relay, which holds nothing of Ana's.
+    const ben = await person();
+    for (const a of ben.chainActs()) await relayAt(plain.base).putAct(a);
+    const reply = await ben.publish(SPECS.text, 0, text('a reply'), { public: true, relays: [plain.base], refs: [r.ref] });
+    assert.equal(await relayAt(plain.base).getAct(ana.id), null);
+    // Not carried: a stranger knowing only the plain relay cannot look Ana up there.
+    await assert.rejects(followRef(r.ref, [plain.base]), /could not be looked up there/);
+
+    // Carried, as the writer SHOULD: Ana's chain now sits beside the reply, Ben's own left alone.
+    const c = await carryChains(reply.act, [plain.base], [homes[0].base]);
+    assert.deepEqual(c.signers, [ana.id]);
+    assert.deepEqual(c.notFound, []);
+    assert.equal(c.relays[0].kept, 2);
+    assert.ok(await relayAt(plain.base).getAct(ana.id));
+    // The stranger follows the reply's reference from the plain relay alone: Ana's genesis there, her homes from it, the post at her outbox.
+    const f = await followRef(r.ref, [plain.base]);
+    assert.equal(f.how, 'signer');
+    assert.equal(f.at, homes[2].base);
+    assert.equal(describeAct(f.act).id, post.id);
+    const l = await lookUp(ana.id, [plain.base]);
+    assert.equal(l.resolution.links.length, 2, 'the rotation counts for the stranger too');
+
+    // A private act's references are not read; an act naming only its own signer carries nothing.
+    const own = await ben.publish(SPECS.text, 0, text('about my own post'), { public: true, relays: [plain.base], refs: [referenceTo(reply.act)] });
+    assert.deepEqual((await carryChains(own.act, [plain.base], [homes[0].base])).signers, []);
+    const sealed = await ben.publish(SPECS.text, 0, text('private, naming Ana'), { public: false, relays: [plain.base], refs: [r.ref] });
+    assert.deepEqual((await carryChains(sealed.act, [plain.base], [homes[0].base])).signers, []);
+  } finally {
+    await plain.stop();
+  }
 });
 
 test('B2: a lookup asks the homes in force at each position, never a home only a rotation that does not count names', async () => {
