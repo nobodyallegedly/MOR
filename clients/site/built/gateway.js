@@ -4492,6 +4492,103 @@ async function findLater(from, via = {}) {
   }
 }
 
+// ../../modules/timestamp/src/stamp.ts
+var TIMESTAMP_SPEC = sha2562("timestamp clock Module, draft 1, test value until publication");
+var STAMP_TYPE = 1;
+var MOST_PER_STAMP = 256;
+var NotAStamp = class extends Error {
+};
+function decodeStamp(payload) {
+  let m;
+  try {
+    m = cborDecode(payload);
+  } catch (e) {
+    throw new NotAStamp(`not CBOR (${e instanceof Error ? e.message : e})`);
+  }
+  if (!(m instanceof Map)) throw new NotAStamp("not a map");
+  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new NotAStamp(`${String(k)} is not one of its fields`);
+  const time = m.get(0);
+  if (typeof time !== "number" || !Number.isSafeInteger(time) || time < 0) throw new NotAStamp("its time (field 0) is not a whole number of seconds");
+  const list = m.get(1);
+  if (!Array.isArray(list) || !list.length) throw new NotAStamp("its acts (field 1) are not a list of at least one");
+  if (list.length > MOST_PER_STAMP) throw new NotAStamp(`it names more than ${MOST_PER_STAMP} acts`);
+  const acts = list.map((x, i) => {
+    if (!(x instanceof Uint8Array) || x.length !== 32) throw new NotAStamp(`its act ${i + 1} is not an act id`);
+    return hex(x);
+  });
+  if (new Set(acts).size !== acts.length) throw new NotAStamp("it names an act twice");
+  return { time, acts };
+}
+
+// ../../modules/timestamp/src/read.ts
+function asStamp(d, clock) {
+  if (!d.public || d.signer !== clock || d.spec !== TIMESTAMP_SPEC || d.type !== STAMP_TYPE || !d.payload) return null;
+  try {
+    const s = decodeStamp(d.payload);
+    return { stamp: d.id, time: s.time, acts: s.acts };
+  } catch (e) {
+    if (e instanceof NotAStamp) return null;
+    throw e;
+  }
+}
+function earliest(stamps) {
+  const out = /* @__PURE__ */ new Map();
+  for (const s of stamps) for (const a of s.acts) if (!out.has(a) || s.time < out.get(a)) out.set(a, s.time);
+  return out;
+}
+function earliestByNames(acts, own) {
+  const ids = new Set(acts.map((a) => a.id));
+  const links = new Map(acts.map((a) => [a.id, a.links.filter((l) => ids.has(l) && l !== a.id)]));
+  const out = /* @__PURE__ */ new Map();
+  for (const [a, t] of own) if (ids.has(a)) out.set(a, t);
+  const work = [...out.keys()];
+  while (work.length) {
+    const a = work.pop();
+    const t = out.get(a);
+    for (const n of links.get(a) ?? []) {
+      if (!out.has(n) || t < out.get(n)) {
+        out.set(n, t);
+        work.push(n);
+      }
+    }
+  }
+  return out;
+}
+async function readStamps(clock, places, judge, via = {}) {
+  const seen = /* @__PURE__ */ new Map();
+  for (const h of places) {
+    let after;
+    for (; ; ) {
+      let page;
+      try {
+        page = await relayAt(h, via).feed({ signer: clock, after });
+      } catch {
+        break;
+      }
+      for (const it of page.items) {
+        if (it.kind !== "act") continue;
+        let s = null;
+        try {
+          s = asStamp(describeAct(it.item), clock);
+        } catch {
+          continue;
+        }
+        if (s && !seen.has(s.stamp)) seen.set(s.stamp, { s, act: it.item });
+      }
+      if (!page.items.length || page.next === after) break;
+      after = page.next;
+    }
+  }
+  const verified = [];
+  for (const { s, act } of seen.values()) {
+    try {
+      if (await judge.standing(act, s.stamp, clock) === "valid") verified.push(s);
+    } catch {
+    }
+  }
+  return { found: seen.size, verified, earliest: earliest(verified) };
+}
+
 // src/feed.ts
 var FEED_LIMIT = 30;
 var isPost = (d) => d.public && d.spec === POST_SPECS.text && d.type === TEXT_ACT;
@@ -4516,9 +4613,9 @@ var FeedJudge = class {
     return this.v.status(id);
   }
 };
-function placesFor(l, relays) {
+function placesFor(l, relays, scope = POST_SPECS.text) {
   const outbox = (l?.routes.routes ?? []).filter((r) => (r.kind ?? 0) === 0);
-  const route = outbox.find((r) => r.scope === POST_SPECS.text) ?? outbox.find((r) => r.scope === null);
+  const route = outbox.find((r) => r.scope === scope) ?? outbox.find((r) => r.scope === null);
   const asked = [];
   const unreachable = [];
   for (const h of route?.hints ?? []) {
@@ -4562,15 +4659,21 @@ var linksOf = (d) => [
   ...(d.objects ?? []).flatMap(([chain, pred]) => [chain, pred]),
   ...d.acks ?? []
 ];
-function signedOrder(acts, rank) {
+function signedOrder(acts, rank, times) {
   const ids = new Set(acts.map((d) => d.id));
   const byId = new Map(acts.map((d) => [d.id, d]));
   const waiting = new Map(acts.map((d) => [d.id, 0]));
   for (const d of acts) for (const n of new Set(linksOf(d))) if (ids.has(n) && n !== d.id) waiting.set(n, waiting.get(n) + 1);
   const key = (d) => [rank(d.signer), -(d.position ?? 0), d.id];
+  const byTime = (a, b) => {
+    if (!times) return 0;
+    const [x, y] = [times.get(a.id), times.get(b.id)];
+    if (x === void 0 || y === void 0) return x === y ? 0 : x === void 0 ? -1 : 1;
+    return y - x;
+  };
   const before = (a, b) => {
     const [x, y] = [key(a), key(b)];
-    return x[0] - y[0] || x[1] - y[1] || (x[2] < y[2] ? -1 : 1);
+    return byTime(a, b) || x[0] - y[0] || x[1] - y[1] || (x[2] < y[2] ? -1 : 1);
   };
   const free = acts.filter((d) => waiting.get(d.id) === 0);
   const out = [];
@@ -4637,7 +4740,7 @@ async function causeOf(id, agent, named, places, via, judge, found) {
   return { type: d.type, signer: d.signer, picked };
 }
 var message = (err) => err instanceof Error ? err.message : String(err);
-async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT) {
+async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT, clock = null) {
   const judge = new FeedJudge(relays, via);
   const lines = [];
   const found = /* @__PURE__ */ new Map();
@@ -4660,13 +4763,38 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT) {
   );
   lines.sort((x, y) => authors.findIndex((a) => a.identity === x.identity) - authors.findIndex((a) => a.identity === y.identity));
   for (const a of authors) await actsBy(a.identity, placesOf.get(a.identity), via, found);
+  let clockLine = null;
+  let times;
+  if (clock) {
+    let l = null;
+    let problem = null;
+    try {
+      l = await judge.lookUp(clock.identity);
+    } catch (err) {
+      problem = message(err);
+    }
+    const { asked, unreachable } = placesFor(l, relays, TIMESTAMP_SPEC);
+    clockLine = { ...clock, asked, unreachable, problem, found: 0, verified: 0, placed: 0 };
+    if (!problem) {
+      const read3 = await readStamps(clock.identity, asked, judge, via);
+      clockLine.found = read3.found;
+      clockLine.verified = read3.verified.length;
+      times = earliestByNames([...found.values()].map((x) => ({ id: x.d.id, links: linksOf(x.d) })), read3.earliest);
+    }
+  }
   const rank = (s) => authors.findIndex((a) => a.identity === s);
-  const order = signedOrder([...found.values()].map((x) => x.d), rank);
+  const all = [...found.values()].map((x) => x.d);
+  const placed = times ? all.filter((d) => isPost(d) && times.has(d.id)).length : 0;
+  if (clockLine) clockLine.placed = placed;
+  const byClock = placed > 0;
+  const order = signedOrder(all, rank, byClock ? times : void 0);
   const shown = order.slice(0, limit);
   const posts = await Promise.all(
-    shown.map((id) => {
+    shown.map(async (id) => {
       const { d } = found.get(id);
-      return readOne(id, d.signer, d.position ?? null, placesOf.get(d.signer), via, judge, problems.get(d.signer) ?? null);
+      const p = await readOne(id, d.signer, d.position ?? null, placesOf.get(d.signer), via, judge, problems.get(d.signer) ?? null);
+      if (byClock) p.time = times.get(id) ?? null;
+      return p;
     })
   );
   const answered2 = /* @__PURE__ */ new Map();
@@ -4737,7 +4865,7 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT) {
     line.found = order.filter((id) => found.get(id).d.signer === line.identity).length;
     line.verified = mine.filter((p) => !p.problem).length;
   }
-  return { authors: lines, posts, more: order.length - shown.length, answered: answered2 };
+  return { authors: lines, posts, more: order.length - shown.length, answered: answered2, clock: clockLine, order: byClock ? "clock" : "signed" };
 }
 
 // ../reader/src/read.ts
@@ -4791,8 +4919,20 @@ body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-
 .f-visitor{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,CanvasText 4%,Canvas)}
 .f-visitor .f-text{font-size:16px}
 .f-label{font-size:13px;font-weight:600;color:var(--soft)}
-.f-visitor .f-fp{display:block;margin-top:4px;font-size:11px;color:var(--soft)}`;
+.f-visitor .f-fp{display:block;margin-top:4px;font-size:11px;color:var(--soft)}
+.f-time{font-size:13px;color:var(--soft)}`;
 var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+var two = (n) => String(n).padStart(2, "0");
+function timeWords(t) {
+  const d = new Date(t * 1e3);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${two(d.getUTCHours())}:${two(d.getUTCMinutes())} UTC`;
+}
+var clockName = (feed) => feed.clock ? feed.clock.name ?? `the clock ${short2(feed.clock.identity)}` : "";
+function when(feed, p) {
+  if (feed.order !== "clock") return "";
+  return p.time != null ? `<span class="f-time" data-time="${p.time}">${escapeHtml(timeWords(p.time))}</span>` : `<span class="f-time" data-time="">not stamped by ${escapeHtml(clockName(feed))}</span>`;
+}
 function nameOf(authors, identity) {
   return authors.find((a) => a.identity === identity)?.name ?? `Identity ${short2(identity)}`;
 }
@@ -4833,19 +4973,22 @@ function postHtml(feed, p, authors) {
   const name = escapeHtml(nameOf(authors, p.signer));
   if (!p.post || p.problem) {
     return `<article class="f-post f-bad" data-post="${p.id}" data-verified="no">
-<div class="f-head"><span class="f-name">${name}?</span><span class="f-no">Not verified</span></div>
+<div class="f-head"><span class="f-name">${name}?</span><span class="f-no">Not verified</span>${when(feed, p)}</div>
 <div class="f-why">A post naming this identity as its signer that could not be verified in this browser: ${escapeHtml(p.problem ?? "unknown")}. Its words are not shown.</div>
 ${who(p)}</article>`;
   }
   const pictures = p.post.refs.filter((r) => r.kind === "picture").map(picture2).join("");
   const answeredBy = [...p.picked?.values() ?? []].some((by) => by === null) ? `<span class="f-label" data-answered="${p.signer}">Answered by ${name}</span>` : "";
   return `<article class="f-post" data-post="${p.id}" data-verified="yes">
-${p.answers.map((id) => answered(feed, id, authors, p)).join("")}<div class="f-head"><span class="f-name">${name}</span><span class="f-ok">Verified</span>${answeredBy}</div>
+${p.answers.map((id) => answered(feed, id, authors, p)).join("")}<div class="f-head"><span class="f-name">${name}</span><span class="f-ok">Verified</span>${answeredBy}${when(feed, p)}</div>
 ${text(p.post)}${pictures}
 ${who(p)}</article>`;
 }
 function feedHtml(feed, authors, style) {
-  const note2 = `<p class="f-note">Public posts of ${authors.map((a) => escapeHtml(a.name ?? short2(a.identity))).join(", ")}, each checked in this browser. Newest first, as their signatures order them: a reply after what it answers, each identity's posts in the order it signed them. MOR has no clock: between posts nothing signed links, the order is not a time. A visitor's public note is shown only beside an answer to it.</p>`;
+  const who2 = `Public posts of ${authors.map((a) => escapeHtml(a.name ?? short2(a.identity))).join(", ")}, each checked in this browser.`;
+  const clock = escapeHtml(clockName(feed));
+  const order = feed.order === "clock" ? `Newest first, <span id="f-order">ordered by ${clock}'s stamps</span>: when ${clock} says it held each post, its word only. A reply still comes after what it answers; a post ${clock} has not stamped is shown above the rest, in the order it was signed.` : `Newest first, as their signatures order them: a reply after what it answers, each identity's posts in the order it signed them. MOR has no clock: between posts nothing signed links, the order is not a time.`;
+  const note2 = `<p class="f-note" data-order="${feed.order}">${who2} ${order} A visitor's public note is shown only beside an answer to it.</p>`;
   const body = feed.posts.length ? feed.posts.map((p) => postHtml(feed, p, authors)).join("\n") : '<p class="f-more">No public post found at the places asked.</p>';
   const more = feed.more ? `<p class="f-more" id="f-more">${feed.more} older ${feed.more === 1 ? "post" : "posts"} found, not shown here.</p>` : "";
   return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${note2}${body}${more}</body></html>`;
@@ -5819,7 +5962,16 @@ function feedItem(f) {
     return `<li>${who2(a)}: ${where}${away}</li>`;
   });
   const bad = f.shown - f.verified;
-  return `<li>${f.shown} ${f.shown === 1 ? "post" : "posts"} shown, ${f.verified} verified${bad ? `, <span class="bad-word">${bad} not verified</span>` : ""}. The names are this page's; the identities are what was checked.<ul>${lines.join("")}</ul></li>`;
+  return `<li>${f.shown} ${f.shown === 1 ? "post" : "posts"} shown, ${f.verified} verified${bad ? `, <span class="bad-word">${bad} not verified</span>` : ""}. The names are this page's; the identities are what was checked.<ul>${lines.join("")}</ul>${clockItem(f)}</li>`;
+}
+function clockItem(f) {
+  const c = f.clockFound;
+  if (!f.clock || !c) return "";
+  const who2 = `${c.name ? `${escapeHtml(c.name)}, ` : ""}<span class="fp">${fingerprint(c.identity)}</span>`;
+  if (c.problem) return `<div id="mor-clock">The clock this page names, ${who2}: <span class="bad-word">not looked up</span>, ${escapeHtml(c.problem)}. Its stamps order nothing: the posts are in signed order.</div>`;
+  const away = c.unreachable.length ? `; not reachable from a browser, not asked: ${c.unreachable.map((h) => `<code>${escapeHtml(h)}</code>`).join(", ")}` : "";
+  const order = f.order === "clock" ? `The posts are ordered by its stamps: its operator's word for when it held each one, nothing more.` : `No post found carries its stamps: the posts are in signed order.`;
+  return `<div id="mor-clock">The clock this page names, ${who2}: ${c.found} ${c.found === 1 ? "stamp" : "stamps"} found, ${c.verified} verified, placing ${c.placed} ${c.placed === 1 ? "post" : "posts"}; asked: ${c.asked.map((h) => `<code>${escapeHtml(h)}</code>`).join(", ")}${away}. ${order} A stamp signed by any other identity is not asked for.</div>`;
 }
 function filmItem(f) {
   const words = {
@@ -5916,7 +6068,7 @@ function inertCss(css) {
 async function preparePage(bytes, path, manifest, getFile) {
   const doc = new DOMParser().parseFromString(new TextDecoder("utf-8", { fatal: true }).decode(bytes), "text/html");
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out = { html: "", title: null, acts: [], films: [], listed: [], feeds: [], writes: [], icon: null, problems: [], dropped: 0 };
+  const out = { html: "", title: null, acts: [], films: [], listed: [], feeds: [], clocks: [], writes: [], icon: null, problems: [], dropped: 0 };
   const drop = (el) => {
     el.remove();
     out.dropped++;
@@ -6104,8 +6256,22 @@ async function preparePage(bytes, path, manifest, getFile) {
     }
     el.replaceWith(place);
   }
+  const clockOf = (el) => {
+    let clock = null;
+    for (const c of [...el.querySelectorAll("mor-clock")]) {
+      const identity = (c.getAttribute("identity") ?? "").trim();
+      if (clock || !ACT.test(identity)) {
+        out.dropped++;
+        continue;
+      }
+      const name = (c.textContent ?? "").replace(/\s+/g, " ").trim();
+      clock = { identity, name: name || null };
+    }
+    return clock;
+  };
   for (const el of [...doc.querySelectorAll("mor-feed")]) {
     const authors = authorsOf(el);
+    const clock = clockOf(el);
     const box = doc.createElement("div");
     box.className = ["mor-feed", el.getAttribute("class") ?? ""].join(" ").trim();
     if (el.id) box.id = el.id;
@@ -6113,6 +6279,7 @@ async function preparePage(bytes, path, manifest, getFile) {
       box.setAttribute("data-feed", String(out.feeds.length));
       box.innerHTML = `<div class="mor-act-note">Fetching and checking the public posts of ${authors.length === 1 ? "one identity" : `${authors.length} identities`}\u2026</div>`;
       out.feeds.push(authors);
+      out.clocks.push(clock);
     } else {
       box.innerHTML = `<div class="mor-act-note">A feed naming no identity: nothing to show.</div>`;
     }
@@ -6273,7 +6440,7 @@ async function showActs(frame2, settings) {
     paint();
   }
 }
-async function showFeeds(frame2, settings, feeds) {
+async function showFeeds(frame2, settings, feeds, clocks) {
   const doc = frame2.contentDocument;
   if (!doc || !feeds.length) return;
   const style = URL.createObjectURL(new Blob([FEED_STYLE], { type: "text/css" }));
@@ -6283,8 +6450,10 @@ async function showFeeds(frame2, settings, feeds) {
     const line = state.feeds[i];
     if (!authors || !line) continue;
     try {
-      const feed = await readFeed(authors, settings.relays);
+      const feed = await readFeed(authors, settings.relays, {}, void 0, clocks[i] ?? null);
       line.found = feed.authors;
+      line.clockFound = feed.clock;
+      line.order = feed.order;
       line.shown = feed.posts.length;
       line.verified = feed.posts.filter((p) => !p.problem).length;
       const inner = doc.createElement("iframe");
@@ -6451,7 +6620,7 @@ async function main() {
     document.title = `${prepared.title ?? entry.path} \xB7 ${version2.manifest.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
     state.writes = prepared.writes;
-    state.feeds = prepared.feeds.map((authors) => ({ authors, found: null, shown: 0, verified: 0 }));
+    state.feeds = prepared.feeds.map((authors, i) => ({ authors, clock: prepared.clocks[i] ?? null, found: null, clockFound: null, order: null, shown: 0, verified: 0 }));
     state.phase = "ok";
     state.words = verifiedWords(settings, "page");
     state.brief = briefWords(settings);
@@ -6466,7 +6635,7 @@ async function main() {
         fitFrame(frame2);
         showFilms(frame2, prepared.films, prepared.listed);
         showWrites(frame2, settings, prepared.writes);
-        void showActs(frame2, settings).then(() => showFeeds(frame2, settings, prepared.feeds));
+        void showActs(frame2, settings).then(() => showFeeds(frame2, settings, prepared.feeds, prepared.clocks));
       },
       { once: true }
     );
