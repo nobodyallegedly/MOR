@@ -196,11 +196,18 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
-        // F237: `[3, vow]` names a vow by its name, its genesis id.
+        // F237: `[3, vow]` names a vow by its name, its genesis id. F284
+        // (reading, to confirm): under an agreement, the version it is made
+        // under writes a stake in the vow, unless it is the collective's own.
+        let under_terms = offer.under.as_ref().and_then(|u| self.terms(u).ok().map(|t| (*u, t)));
         for s in &offer.sold {
             if let Sold::Vow(v) = s {
                 if let Some(p) = self.vow_name_problem(v) {
                     problems.push(p);
+                } else if let Some((u, t)) = &under_terms {
+                    if let Some(p) = self.offer_vow_stake_problem(v, u, t)? {
+                        problems.push(p);
+                    }
                 }
             }
         }
