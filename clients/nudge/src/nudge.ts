@@ -1,8 +1,10 @@
-// The nudge cMIP, draft 2 (cmips/cmip-nudge-draft-2.md): the agency terms
+// The nudge cMIP, draft 3 (cmips/cmip-nudge-draft-3.md): the agency terms
 // (type 0), the nudge (type 1) and the pick (type 2), made and read; and the
-// readings a verifier shows beside them (items 11 to 14). An action is an
-// ordinary text act naming a nudge or a pick: nothing here makes one, only
-// reads it.
+// readings a verifier shows beside them (items 8a, 11 to 14). An action is
+// an ordinary text act of an agent, naming a nudge or a pick, or naming
+// neither (new in draft 3: every text act of an agent whose terms are held is
+// read against them). Nothing here makes one, only reads it; `maySign` is the
+// agent's client asking first (client conformance, new in draft 3).
 //
 // These are readings for display, never validity: an act passed in is one
 // its caller already holds as valid under the MIRs (through its signer's
@@ -298,6 +300,10 @@ export interface ActionReading {
   place?: { n: number | null; of: number; overCount: boolean; orderUnknown: boolean };
   /** The later terms version this action came after, where both lie in the agent's one sequence (scenario N5). */
   afterChange?: string;
+  /** It names no nudge or pick: read against the agent's terms all the same (item 8a, new in draft 3). */
+  uncaused?: boolean;
+  /** For an action naming no cause: the terms act it is read under (item 8a). */
+  terms?: string;
   words: string;
 }
 
@@ -493,7 +499,12 @@ export class Reading {
     return { kind, addressees: list, missing };
   }
 
-  /** An action (item 13). Null for a text act that names no nudge or pick of its signer's: no action of this cMIP. */
+  /**
+   * An action (item 13). A text act naming no nudge or pick of its signer's
+   * is read against its signer's terms all the same, where they are held
+   * (item 8a, new in draft 3); null where none are held: no action of this
+   * cMIP.
+   */
   readAction(id: string): ActionReading | null {
     const a = this.acts.get(id);
     if (!a || !a.opened || a.spec !== NUDGE_SPECS.text || a.type !== TEXT_ACT) return null;
@@ -502,7 +513,7 @@ export class Reading {
     const picks = causes.filter((c) => c.kind === 'pick');
     // A private nudge or pick not opened is read as unknown; one naming another agent is not this agent's.
     const unopened = a.refs.filter((r) => this.acts.get(r) && !this.acts.get(r)!.opened);
-    if (!causes.length && !unopened.length) return null;
+    if (!causes.length && !unopened.length) return this.readUncaused(a);
     const r: ActionReading = { id, verdict: 'unknown', why: [], agent: a.signer, kind: null, addressees: [], words: '' };
     const done = (verdict: ActionVerdict, why: string[]) => {
       r.verdict = verdict;
@@ -564,6 +575,98 @@ export class Reading {
     return done('within, by pick', [`picked by ${this.names(p.signer)}`]);
   }
 
+  /**
+   * The terms a text act of `agent` naming no cause is read under (item 8a,
+   * new in draft 3; mechanic, this draft's): the agent's valid terms acts
+   * held, followed from its one first version (no field 2) from successor
+   * to successor (item 3); of the versions on that path, the latest that
+   * does not lie after the act in the agent's one sequence. Null where the
+   * verifier holds no terms of the agent, or every version lies after the
+   * act (it was signed before the agent had terms); a problem where the
+   * terms cannot be followed (no first version held, two of them, or a fork).
+   */
+  termsFor(agent: string, actId: string): { id: string; terms: Terms } | { problem: string } | null {
+    const versions = this.all().filter((h) => h.signer === agent && h.spec === NUDGE_SPECS.nudge && h.type === NUDGE_TYPES.terms && 'terms' in (this.termsAct(h.id) ?? {}));
+    if (!versions.length) return null;
+    const firsts = versions.filter((h) => (this.termsAct(h.id) as { terms: Terms }).terms.previous === undefined);
+    if (firsts.length !== 1) {
+      return {
+        problem: firsts.length
+          ? `its terms have ${number(firsts.length)} first versions held (${firsts.map((h) => fpOf(h.id)).join(', ')}), so which it is read under cannot be told`
+          : 'the first version of its terms is not held, so its later versions cannot be followed',
+      };
+    }
+    const f = this.follow(firsts[0].id);
+    if (f.fork) return { problem: `following its terms stopped at a fork, between ${f.fork.map(fpOf).join(' and ')}, so which it is read under cannot be told` };
+    const before = f.path.filter((v) => !this.before(actId, v));
+    if (!before.length) return null;
+    const id = before[before.length - 1];
+    return { id, terms: (this.termsAct(id) as { terms: Terms }).terms };
+  }
+
+  /**
+   * A text act of an agent naming no nudge or pick (item 8a, new in draft 3,
+   * Q2: "it should not exist without a nudge", read with the pick as the
+   * other cause): read against the agent's terms all the same. What the
+   * terms let go out freely needs no cause; anything else needs an allowed
+   * nudge or pick, so, naming none, reads "outside the terms" (under terms
+   * without field 5, "by pick, no pick shown", draft 1's cost). Null for no
+   * act of an agent whose terms are held, and for a private act addressed to
+   * no one, which reaches no one (mechanic, this draft's).
+   */
+  private readUncaused(a: Held): ActionReading | null {
+    const t = this.termsFor(a.signer, a.id);
+    if (!t) return null;
+    const r: ActionReading = { id: a.id, verdict: 'unknown', why: [], agent: a.signer, kind: null, addressees: [], uncaused: true, words: '' };
+    const done = (verdict: ActionVerdict, why: string[]) => {
+      r.verdict = verdict;
+      r.why = why;
+      r.words = this.actionWords(r);
+      return r;
+    };
+    if ('problem' in t) return done('unknown', [t.problem]);
+    r.terms = t.id;
+    const k = this.kindOf(a, []);
+    if (!k.kind) return null;
+    r.kind = k.kind;
+    r.addressees = k.addressees;
+    if (k.missing.length) return done('unknown', k.missing.map((m) => `the act ${fpOf(m)} it names is not held, so whom it addresses cannot be known`));
+    const kind = KIND[k.kind];
+    const to = r.addressees.length ? ` to ${listOf(r.addressees.map(this.names))}` : '';
+    const entry = entryFor(t.terms, kind, r.addressees);
+    if (!entry) return done('outside', [`it names no nudge or pick, and no entry of the terms allows ${KIND_NAMES[kind]}${to}`]);
+    if (entry.free) return done('within, free', [`the terms let ${KIND_NAMES[entry.kind]}${entry.whom ? ` to ${listOf(entry.whom.map(this.names))}` : ''} go out freely, with no cause`]);
+    if (!t.terms.pickers) return done('within, by pick', ['the terms ask for a pick, and name no pickers: no one’s pick is shown']);
+    return done('outside', [`it names no nudge or pick, and the terms let ${KIND_NAMES[kind]}${to} go out only with a signed pick, or under a nudge`]);
+  }
+
+  /**
+   * Whether the agent's client may sign a text act (client conformance, new
+   * in draft 3, Q2): it MUST NOT sign one its terms do not let go out freely
+   * without an allowed nudge or pick that allows it. The act is read as it
+   * would be once signed, as the next of the agent's sequence (`prev`, its
+   * latest act), against what this reading holds; anything but "within"
+   * refuses, and so does a cause the client may not act on (`mayAct`). An
+   * identity whose terms are not held here is no agent for this check.
+   */
+  maySign(a: { signer: string; public: boolean; to: string[]; refs: string[]; prev?: string }): { ok: boolean; why: string; reading: ActionReading | null } {
+    const id = `to be signed by ${a.signer}`;
+    this.acts.set(id, { id, signer: a.signer, public: a.public, to: a.to, opened: true, spec: NUDGE_SPECS.text, type: TEXT_ACT, prev: a.prev, refs: a.refs, acks: [], payload: undefined });
+    try {
+      const read = this.readAction(id);
+      if (!read) return { ok: true, why: 'it is read under no terms of this cMIP: no terms of its signer held, or it reaches no one', reading: null };
+      if (read.verdict !== 'within, free' && read.verdict !== 'within, by pick') return { ok: false, why: read.words, reading: read };
+      for (const c of [read.nudge, read.pick]) {
+        if (!c) continue;
+        const may = this.mayAct(c.id);
+        if (!may.ok) return { ok: false, why: `its ${c.kind} may not be acted on: ${may.why}`, reading: read };
+      }
+      return { ok: true, why: read.words, reading: read };
+    } finally {
+      this.acts.delete(id);
+    }
+  }
+
   /** The reading in plain words (client conformance: never a mark of trust). */
   private actionWords(r: ActionReading): string {
     const agent = this.names(r.agent);
@@ -573,6 +676,14 @@ export class Reading {
     const replaced =
       ((n ? this.replacedWords(n) : '') || (p ? this.replacedWords(p) : '')) +
       (r.afterChange ? ` It was signed after the agent replaced those terms (${fpOf(r.afterChange)}), in its own sequence.` : '');
+    if (r.uncaused) {
+      // Naming no cause (item 8a): its terms read all the same, and "picked" never shown.
+      const head = `${r.kind === 'reply' ? 'Answered' : 'Written'} by ${agent}, naming no nudge or pick`;
+      if (r.verdict === 'within, free') return `${head}. Within its terms (free).`;
+      if (r.verdict === 'within, by pick') return `${head}; its terms asked for a pick, and no one’s pick is shown. Within its terms (by pick).`;
+      if (r.verdict === 'outside') return `${agent} wrote this outside its terms: ${r.why.join('; ')}.`;
+      return `Unknown: ${r.why.join('; ')}.`;
+    }
     switch (r.verdict) {
       case 'within, free':
       case 'within, by pick': {

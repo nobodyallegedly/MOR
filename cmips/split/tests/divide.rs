@@ -1,6 +1,7 @@
-//! The split cMIP draft 1's amounts and routing, without acts: every split
+//! The split cMIP draft 2's amounts and routing, without acts: every split
 //! sums exactly, leftovers follow rule 15a, the plan's order decides only
-//! between shares, and the receiver is always one of the services given.
+//! between shares, the overhead comes off the top and the rest goes to the
+//! stakes alone (F280), and the receiver is always one of the services given.
 
 use mor_core::agreements::{Field4, Rule, ShareRule, SplitPlan, Stake, Terms, Unfilled, Who};
 use mor_core::cbor::Value;
@@ -87,11 +88,22 @@ fn leftovers_follow_rule_15a_and_take_turns() {
 
 #[test]
 fn the_plans_order_decides_only_between_shares() {
-    // Two equal named receivers, one unit left: the share listed first.
-    let t = terms(vec![ShareRule::Receiver { receiver: h("x"), part: 1 }, ShareRule::Receiver { receiver: h("y"), part: 1 }], vec![], vec![thirds()]);
+    // Two equal stakes, one unit left: the stake listed first (draft 2: only stakes share the rest).
+    let t = terms(
+        vec![ShareRule::Stake { stake: 0, part: 1 }, ShareRule::Stake { stake: 1, part: 1 }],
+        vec![],
+        vec![vec![(h("x"), 1)], vec![(h("y"), 1)]],
+    );
     let d = divide(1, &t, None, &|_| vec![]).unwrap();
     assert_eq!(d.payouts.len(), 1);
     assert_eq!(d.payouts[0].receiver, h("x"));
+    // Listed the other way round, the other.
+    let t = terms(
+        vec![ShareRule::Stake { stake: 1, part: 1 }, ShareRule::Stake { stake: 0, part: 1 }],
+        vec![],
+        vec![vec![(h("x"), 1)], vec![(h("y"), 1)]],
+    );
+    assert_eq!(divide(1, &t, None, &|_| vec![]).unwrap().payouts[0].receiver, h("y"));
     // Holders' order decides nothing (rule 21, F150).
     let a = terms(vec![ShareRule::Stake { stake: 0, part: 1 }], vec![], vec![thirds()]);
     let mut rev = thirds();
@@ -107,9 +119,48 @@ fn the_plans_order_decides_only_between_shares() {
 }
 
 #[test]
-fn draft_1_refuses_what_it_does_not_compute() {
-    let t = terms(vec![ShareRule::Role { role: "relay".into(), part: 1 }, ShareRule::Stake { stake: 0, part: 1 }], vec![], vec![thirds()]);
-    assert!(divide(10, &t, None, &|_| vec![]).is_err());
+fn draft_2_pays_non_owners_off_the_top_only() {
+    // F280: a named receiver, a role or a metric in the rest is refused, never divided.
+    for other in [
+        ShareRule::Receiver { receiver: h("a host"), part: 1 },
+        ShareRule::Role { role: "relay".into(), part: 1 },
+    ] {
+        let t = terms(vec![other, ShareRule::Stake { stake: 0, part: 1 }], vec![], vec![thirds()]);
+        let e = divide(10, &t, None, &|_| vec![]).unwrap_err();
+        assert!(e.contains("F280"), "{e}");
+    }
+    // The top's parts are millionths of the payment, the whole at most.
+    let t = terms(
+        vec![ShareRule::Receiver { receiver: h("x"), part: 600_000 }, ShareRule::Receiver { receiver: h("y"), part: 400_001 }, ShareRule::Stake { stake: 0, part: 1 }],
+        vec![0, 1],
+        vec![thirds()],
+    );
+    assert!(divide(1, &t, None, &|_| vec![]).unwrap_err().contains("more than the whole payment"));
+    // No stake in the rest (F283: a deal with no owners): the top makes the whole, its rounding's units by largest remainder.
+    let t = terms(
+        vec![ShareRule::Receiver { receiver: h("worker"), part: 700_000 }, ShareRule::Receiver { receiver: h("platform"), part: 300_000 }],
+        vec![0, 1],
+        vec![thirds()],
+    );
+    for amount in [0u64, 1, 2, 3, 7, 9, 10, 999, 1001, 123_457] {
+        let d = divide(amount, &t, None, &|_| vec![]).unwrap();
+        let paid = |w: &str| d.payouts.iter().filter(|p| p.receiver == h(w)).map(|p| p.amount).sum::<u64>();
+        assert_eq!(paid("worker") + paid("platform"), amount, "exact, of {amount}");
+        assert!((paid("worker") as u128).abs_diff(amount as u128 * 7 / 10) <= 1, "the worker's seven tenths, of {amount}");
+    }
+    // 3 units: 2.1 and 0.9; the unit the rounding leaves goes to the larger remainder, the platform's.
+    let d = divide(3, &t, None, &|_| vec![]).unwrap();
+    assert_eq!(d.payouts.iter().find(|p| p.receiver == h("platform")).unwrap().amount, 1);
+    // With no stake in the rest, a top making less than the whole leaves money to no one: refused.
+    let t = terms(vec![ShareRule::Receiver { receiver: h("worker"), part: 700_000 }], vec![0], vec![thirds()]);
+    assert!(divide(10, &t, None, &|_| vec![]).unwrap_err().contains("no stake is left"));
+}
+
+#[test]
+fn draft_2_refuses_what_it_does_not_compute() {
+    // A role off the top: draft 2, as draft 1, does not compute roles.
+    let t = terms(vec![ShareRule::Role { role: "relay".into(), part: 1 }, ShareRule::Stake { stake: 0, part: 1 }], vec![0], vec![thirds()]);
+    assert!(divide(10, &t, None, &|_| vec![]).unwrap_err().contains("roles and metrics are refused"));
     let mut t = terms(vec![ShareRule::Stake { stake: 0, part: 1 }], vec![], vec![thirds()]);
     t.fees = Some(vec![]);
     assert!(divide(10, &t, None, &|_| vec![]).is_err());

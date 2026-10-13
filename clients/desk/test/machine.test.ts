@@ -307,6 +307,25 @@ test('answering off: nothing is looked at or called', async () => {
   assert.equal(api.seen.length, calls);
 });
 
+test('nudge cMIP draft 3: the desk does not sign for Machine, allegedly, a reply to a stranger naming no nudge or pick; what its terms let go out freely it signs (client conformance)', async () => {
+  const theirs = await app.desk.signAndSend(STRANGER, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text('A stranger’s post.'), public: true, to: [], refs: [] });
+  const before = app.store.identity(MA).f.sequence.length;
+  await assert.rejects(
+    app.desk.signAndSend(MA, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text('Unprompted.'), public: true, to: [STRANGER], refs: [[theirs.id, STRANGER]] }),
+    /agency terms do not let it be signed .*names no nudge or pick.*Nothing was signed/,
+  );
+  // A private message to the stranger, the same.
+  await assert.rejects(app.desk.signAndSend(MA, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text('Unprompted, privately.'), public: false, to: [STRANGER], refs: [] }), /agency terms do not let it be signed/);
+  assert.equal(app.store.identity(MA).f.sequence.length, before, 'nothing signed');
+  // A public post of its own, naming no cause: free under its terms, signed; read so.
+  const post = await app.desk.signAndSend(MA, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text('A post of its own.'), public: true, to: [], refs: [] });
+  const read = reading().readAction(post.id)!;
+  assert.equal(read.verdict, 'within, free');
+  assert.equal(read.uncaused, true);
+  // Another identity at the desk is no agent: the check does not touch it.
+  await app.desk.signAndSend(NA, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: text('His reply.'), public: true, to: [STRANGER], refs: [[theirs.id, STRANGER]] });
+});
+
 test('the call to Claude stays in the program: the page’s code, as served, carries neither the SDK nor the asking code', async () => {
   const page = await pageScript(fileURLToPath(new URL('../src/page/app.ts', import.meta.url)));
   assert.doesNotMatch(page, /@anthropic-ai|api\.anthropic\.com|x-api-key|messages\.create|MOR_ANTHROPIC_KEY_FILE|You write as "Machine, allegedly"/i);

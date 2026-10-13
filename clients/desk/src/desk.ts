@@ -10,7 +10,7 @@
 
 import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts } from '../../genesis/src/core.ts';
 import { TestIdentity, sealFor, type Home, type Reference } from '../../genesis/src/identity.ts';
-import { lookUp } from '../../genesis/src/lookup.ts';
+import { carryChains, lookUp, refAct } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
 import { record as recordKex } from '../../genesis/src/kex.ts';
 import { ownLine } from '../../genesis/src/lines.ts';
@@ -34,7 +34,8 @@ import {
 import { escapeControls } from '../../connector/src/words.ts';
 import { beforeSigning } from '../../assess/src/assess.ts';
 import { DESK_SPECS } from './specs.ts';
-import { NUDGE_SPECS, NUDGE_TYPES } from '../../nudge/src/specs.ts';
+import { NUDGE_SPECS, NUDGE_TYPES, TEXT_ACT } from '../../nudge/src/specs.ts';
+import { Reading } from '../../nudge/src/nudge.ts';
 import type { Item, Kind, Received, SignedRecord, Sorted, Store } from './store.ts';
 
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
@@ -191,6 +192,33 @@ export class Desk {
 
   // ------------------------------------------------------------ drafts
 
+  /** The identity this desk answers as Machine, allegedly, once its terms are signed here; else null. */
+  private agent(): string | null {
+    const m = this.store.machine(() => ({ agent: null as string | null, terms: null as string | null }));
+    return m.agent && m.terms ? m.agent : null;
+  }
+
+  /**
+   * The nudge cMIP draft 3's client conformance (Q2, decided by Nobody,
+   * allegedly: "it should not exist without a nudge", read with the pick
+   * as the other cause): the agent's client MUST NOT sign a text act its
+   * terms do not let go out freely without an allowed nudge or pick that
+   * allows it. Under Machine, allegedly's terms, that is no reply or
+   * message to anyone but its owner without his nudge or pick. The act is
+   * read as it would be once signed, as the next of the agent's sequence,
+   * against every act this desk holds for the answering. Null where it may
+   * be signed; else why not.
+   */
+  private agency(signer: string, a: { spec: string; type: number; public: boolean; to: string[]; refs: Reference[] }): string | null {
+    if (signer !== this.agent() || a.spec !== NUDGE_SPECS.text || a.type !== TEXT_ACT) return null;
+    const r = new Reading(this.store.names());
+    for (const k of this.store.keptActs()) r.add(k.act, k.key);
+    for (const it of this.store.received(signer).items) if (it.raw) r.add(unb64(it.raw.act), it.raw.key ? unb64(it.raw.key) : undefined);
+    const seq = this.store.identity(signer).f.sequence;
+    const may = r.maySign({ signer, public: a.public, to: a.to, refs: a.refs.map(refAct), prev: seq[seq.length - 1] });
+    return may.ok ? null : `Its agency terms do not let it be signed (nudge cMIP draft 3, client conformance): ${may.why}`;
+  }
+
   /** Reasons the desk itself refuses a draft, beyond its reading. */
   private refusals(d: Draft): string[] {
     const out: string[] = [];
@@ -199,6 +227,8 @@ export class Desk {
     else {
       if (!entry.linked) out.push(`“${entry.name}” is not linked to Claude: link it first if Claude may prepare its acts.`);
       if (this.store.identity(d.signer).f.pending) out.push('A rotation of this identity is waiting to count: nothing is signed with it until it does.');
+      const agency = this.agency(d.signer, d);
+      if (agency) out.push(agency);
     }
     return out;
   }
@@ -339,6 +369,8 @@ export class Desk {
       });
       // The sequence is saved before anything leaves, so no later act can fork from this one.
       this.store.saveIdentity(me);
+      // The agent's acts are kept for the readings, so its picks and nudges are counted (item 13).
+      if (d.signer === this.agent()) this.store.keepAct(made.id, made.act, d.public ? undefined : made.key);
       const rec = await this.record(digest, made, d.public, d.to, d.relays, recipient);
       if (d.media.length) rec.media = d.media.map(b64);
       this.store.saveSigned(rec);
@@ -400,6 +432,8 @@ export class Desk {
       if (!this.store.holds(signer)) throw new Error(`This desk does not hold the identity ${signer}.`);
       const me = this.store.identity(signer);
       if (me.f.pending) throw new Error('A rotation of this identity is waiting to count: nothing is signed with it until it does.');
+      const agency = this.agency(signer, a);
+      if (agency) throw new Error(`${agency} Nothing was signed.`);
       const recipient = a.public ? null : await recipientOf(a.to[0], this.hints(), this.via);
       const made = me.sign(a.spec, a.type, a.payload, { public: a.public, to: a.to.length ? a.to : undefined, refs: a.refs.length ? a.refs : undefined });
       // The sequence is saved before anything leaves, so no later act can fork from this one.
@@ -463,11 +497,22 @@ export class Desk {
       }
       return out;
     }
+    // The identity chains of the signers its public references name, carried to
+    // the relays where it is published, so each can be looked up there (relay
+    // transport cMIP draft 4, "Clients", 7, a SHOULD; F272 build, Question 2).
+    const chains = rec.relays.length ? await carryChains(act, rec.relays, this.hints(), via) : null;
+    const chainWords = (hint: string): string => {
+      const r = chains?.relays.find((x) => x.hint === hint);
+      if (!chains?.signers.length || !r) return '';
+      const whose = chains.signers.map((x) => `${x.slice(0, 12)}…`).join(', ');
+      return `; the identity chain of ${whose}, whose act it names, carried: ${r.kept} ${r.kept === 1 ? 'act' : 'acts'} kept${r.refused.length ? `, ${r.refused.length} refused (${r.refused[0]})` : ''}`;
+    };
+    for (const n of chains?.notFound ?? []) out.push({ to: `the identity ${n.signer.slice(0, 12)}…`, accepted: false, answer: `its identity chain was not found, so not carried: ${n.why}` });
     for (const hint of rec.relays) {
       await carry(hint);
       try {
         const got = await relayAt(hint, via).putAct(act);
-        let answer = got.id === rec.act ? 'accepted' : `answered with another id, ${got.id}`;
+        let answer = (got.id === rec.act ? 'accepted' : `answered with another id, ${got.id}`) + chainWords(hint);
         for (const m of rec.media ?? []) {
           try {
             await relayAt(hint, via).putMedia(unb64(m));

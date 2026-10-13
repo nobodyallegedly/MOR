@@ -1,4 +1,5 @@
-// The spec hash the nudge cMIP's acts name (cmips/cmip-nudge-draft-2.md). A
+// The spec hash the nudge cMIP's acts name (cmips/cmip-nudge-draft-2.md; draft 3
+// changes no act or format, so its acts keep draft 2's test value). A
 // test value: the Text MIR's hash is fixed at the freeze, and this cMIP's once
 // its creator is named at the first acts (step 17).
 

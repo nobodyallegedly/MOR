@@ -1,7 +1,7 @@
 //! Agreements draft 12 (F280, decided by Nobody, allegedly: "Shared
-//! ownership means shared fruits"), run on the split cMIP draft 1's
-//! division as it stands (this file adds a test; the cMIP's text and code
-//! are unchanged, listed for a later pass in `docs/f270-build.md`): a plan
+//! ownership means shared fruits"), run on the split cMIP's division (added
+//! with draft 1's code; draft 2 writes F280 into the cMIP, and its own
+//! refusal of a non-owner in the rest is tested in `divide.rs`): a plan
 //! paying a non-owner in the rest is refused by the core; the same share
 //! off the top is accepted, and what is left goes to the stakes alone, by
 //! their parts, and within each stake by its holders' shares, to the
@@ -68,8 +68,9 @@ fn terms(top: Vec<u64>) -> Terms {
 
 #[test]
 fn f280_the_overhead_off_the_top_and_the_rest_to_the_stakes_by_ownership() {
-    // The mastering service in the rest, beside the owners: refused.
+    // The mastering service in the rest, beside the owners: refused by the core, and by the cMIP (draft 2).
     let rest = terms(vec![]);
+    assert!(divide(1_000, &rest, None, &|_| vec![]).is_err_and(|e| e.contains("F280")));
     assert!(rest.check(&mor_core::agreements::Mirs { identity: h("i"), envelopes: h("e"), text: h("t"), money: h("m"), agreements: h("a"), development: h("d") }).is_err_and(|e| e.to_string().contains("F280")));
     // Off the top: accepted, and divided so.
     let t = terms(vec![2]);
