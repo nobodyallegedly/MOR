@@ -124,14 +124,14 @@
 
 ## Tests
 
-`scripts/test-all.sh`'s every step, on main at `177229c` and on this branch, run to the end each (the script stops at the first failure; neither failed). `wasm-bindgen` 0.2.129 was installed outside the repository; the site's browser tests used the container's Chromium.
+`scripts/test-all.sh`'s every step, on main at `177229c` and on this branch, run to the end each (the script stops at the first failure; neither failed). The display client's reproducible build (`clients/site`, `npm run test:build`) also passes on this branch: it is unchanged byte for byte. `wasm-bindgen` 0.2.129 was installed outside the repository; the site's browser tests used the container's Chromium.
 
 | | main `177229c` | this branch |
 | --- | --- | --- |
-| Rust workspace: passed (ignored) | 671 (1) | BRANCH_RUST |
-| TypeScript, every package: passed | 358 of 358 | BRANCH_TS |
-| Failed | 0 | BRANCH_FAILED |
+| Rust workspace: passed (ignored) | 671 (1) | 672 (1) |
+| TypeScript, every package: passed | 358 of 358 | 364 of 364 |
+| Failed | 0 | 0 |
 
-Per package, TypeScript (main → branch): BRANCH_PACKAGES. Rust: +1 in `cmips/split` (`draft_2_pays_non_owners_off_the_top_only`; `draft_1_refuses_what_it_does_not_compute` renamed `draft_2_…`). The ignored test is the Lightning regtest.
+Per package, TypeScript (main → branch): desk 26 → 28, genesis 26 → 27, nudge 22 → 25; every other package as main (assess 50, barebone 10, collective 42, connector 13, longform 26, manage 7, poster 7, reader 18, repo 19, site 66, jpeg 14, video 6, carry 6). Rust: +1 in `cmips/split` (`draft_2_pays_non_owners_off_the_top_only`; `draft_1_refuses_what_it_does_not_compute` renamed `draft_2_…`). The ignored test is the Lightning regtest.
 
 New tests: nudge N3e, N3f and `maySign` (N3g); N3b, N4d, N7 and N11 rewritten to draft 3; genesis, the chain carried for a stranger at a plain relay; desk, a reply carrying the signer's chain, and Machine, allegedly refused a causeless reply to a stranger; split, non-owners off the top only.
