@@ -4,7 +4,7 @@
 
 ## Do the tests pass?
 
-**Yes.** RESULTS
+**Yes.** `scripts/test-all.sh` on this branch: **All tests passed**, 1,072 tests, none failing: 676 in the Rust workspace (1 ignored, the Lightning test on regtest, as on main), 396 in the TypeScript packages. That is main's 1,060 and the 12 new listing tests. Main itself was not green when first run here: 19 of the site's tests failed on a race in the tests, now fixed on this branch (below, "Counts against main").
 
 ## In plain words
 
@@ -92,7 +92,15 @@ No change to `core/`, `spec/`, `clients/desk`. The released copy of the display 
 
 ### Counts against main
 
-COUNTS
+| | main (`bdff75e`'s code, run here) | this branch |
+| --- | --- | --- |
+| Rust workspace | 676 passed, 1 ignored | 676 passed, 1 ignored |
+| clients/assess, barebone, collective, connector, desk, dub, genesis, longform, manage, nudge, reader, repo | 284 | 284 |
+| clients/site | 69 | **81** (the 12 of `listing.test.ts`) |
+| modules/jpeg, video, carry, timestamp | 31 | 31 |
+| **Total** | **1,060** | **1,072**, none failing |
+
+**A race in main's site tests, fixed here.** On main's first full run here, 19 of the site's 69 tests failed (all of `browser.test.ts`), and the script stopped there. Each browser test file rebuilds the display client into `dist/` before it starts, and the files run at once: one build removed `dist/` while another was writing into it. Run alone, the site's 69 pass on main (the 69 above, and the modules' 31, are from that second run). On this branch's first run the same race hit `feed-page.test.ts` instead (4 tests), since one more test file now builds. Fixed in `clients/site/scripts/build.ts`: the folder is never removed, and each file is written under a temporary name and renamed over the old one, so a test sees the old file or the new one, never a missing or half-written one. The bytes are the same as before (`gateway.js` checked: the same hash before and after). Also on this branch: `site.test.ts` counts dubsar.org's new page, `listing.html` (25 files).
 
 ## Readings, for Nobody, allegedly, to confirm or change
 
