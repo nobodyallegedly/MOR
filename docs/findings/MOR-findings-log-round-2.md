@@ -24,6 +24,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## Working practice: development-layer mechanics are not put to the author (Nobody, allegedly, 13 October 2026)
+
+On a question about how a cMIP field links code to its specification: "Don't really need to run these by me." Where a question is the development layer's (how a cMIP or Module does its job, its fields and formats) and the decided rules already bound it, the project lead takes it under the delegation, records it as his, and reports it; it is put to the author only where it touches the core, a stated cost, client conformance or presentation choices he owns.
+
 ## Working practice: every question names its area (Nobody, allegedly, 12 October 2026)
 
 "From now on when asking questions or debating inform me of the area: core business, development layer business (modules and cMIP), presentation (site, companion documents…)." Each question put to Nobody, allegedly, opens with its area.
@@ -2720,6 +2724,8 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 ## F290. A specification's publication names the Development MIR as its format (the listing's reading 1; 13 October 2026, afternoon)
 
 **Area: core business, wording (Development, Part three).** Found by building the listing (F288): a specification is published as a public act whose media is its text, but Development never says what that publication names as its media spec (field 0), which every publishing tool and listing must agree on. Options: (a) the Development MIR's spec hash; (b) a hash of its own; (c) each kind decides. **Decided by Nobody, allegedly: "I agree with a and don't really understand why the question exists."** *Why it existed (the project lead):* every publication names the format of its content so a reader knows how to read it; Development defines the format of specifications but never wrote the one sentence naming itself as that format, so two tools could have labelled specifications differently and missed each other's. A silence, not a dilemma. *For Development's next draft.*
+
+*The listing's reading 2, "code released":* the release manifest cMIP's next draft gains a field, "implements", naming the specifications a release implements, signed by whoever releases it; until then, the listing's built reading (a release whose publication refers to a specification). Development layer. **Nobody, allegedly: "All good then. Don't really need to run these by me."**
 
 ## F289. The path to MOR 2: the MICS and MIRs published, cloned as MIPs, drafted by forks; a collective of those who prove work becomes the vehicle for decisions (13 October 2026, afternoon)
 
