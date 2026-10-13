@@ -33,3 +33,8 @@ export const WITHDRAWAL = 3;
 export const NUDGE = test('nudge cMIP, draft 2, test value until publication');
 /** Its act types: the agency terms, a nudge, a pick. */
 export const NUDGE_TYPES = { terms: 0, nudge: 1, pick: 2 } as const;
+
+/** The release manifest cMIP (cmips/cmip-release-manifest-draft-1.md): only to
+ * tell that code is released for a specification a listing shows (website cMIP
+ * draft 9, rule 13c). The same test value as the repo client's, until publication. */
+export const RELEASE_MANIFEST = test('release manifest cMIP, draft 1, test value until publication');
