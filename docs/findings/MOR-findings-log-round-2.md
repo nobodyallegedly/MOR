@@ -2709,7 +2709,7 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 ## F270 with F279 to F283: merged and approved (13 October 2026, late morning)
 
-**Pull request 38 merged** after main was merged into it (tests passing save the pre-release build steps); the display client released after it. Agreements draft 12, the MICS v24 and the freeze suite v24 carry F270, F274, F279, F280 and F282 (F273's mechanism superseded). **Approved by Nobody, allegedly: "I'm approving them, my reading will come a bit later after some more adversial."** His own reading follows an adversarial pass; anything it finds is a new finding.
+**Pull request 38 merged** after main was merged into it (tests passing save the pre-release build steps); the display client released after it. Agreements draft 12, the MICS v24 and the freeze suite v24 carry F270, F274, F279, F280 and F282 (F273's mechanism superseded). **Approved by Nobody, allegedly: "I'm approving them, my reading will come a bit later after some more adversial."** His own reading follows an adversarial pass; anything it finds is a new finding. *Then:* "Let's do adversarial later, once there is more to probe."
 
 ## F283. Pools by use stay possible, in their own envelope: F280 as written (F270 build, revision Q3; 13 October 2026)
 
