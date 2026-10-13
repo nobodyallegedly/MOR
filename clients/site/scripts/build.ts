@@ -17,7 +17,7 @@
 
 import { build, type Plugin } from 'esbuild';
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STYLE } from '../src/shell/view.ts';
@@ -55,11 +55,22 @@ const ownPackages: Plugin = {
   },
 };
 
-rmSync(out, { recursive: true, force: true });
+// Each file is written whole under a temporary name, then renamed over the old one, and the folder is never
+// removed: test files run at once each build into dist/ while others serve from it, and every build gives the
+// same bytes, so a reader sees the old file or the new one, never a missing or half-written one (main's tests
+// failed on this race, 13 October 2026).
 mkdirSync(out, { recursive: true });
-await build({
+const put = (name: string, bytes: Uint8Array | string) => {
+  const tmp = `${out}/.${name}.${process.pid}.tmp`;
+  writeFileSync(tmp, bytes);
+  renameSync(tmp, `${out}/${name}`);
+};
+const keep = new Set(['gateway.js', 'gateway.css', 'index.html', 'mor_wasm_bg.wasm', 'BUILT-WITH.txt']);
+for (const f of readdirSync(out)) if (!keep.has(f) && !f.endsWith('.tmp')) rmSync(`${out}/${f}`, { recursive: true, force: true });
+const bundled = await build({
   entryPoints: [here('src/shell/app.ts')],
   outfile: `${out}/gateway.js`,
+  write: false,
   // Paths in the bundle's comments are relative to this folder, whatever the machine.
   absWorkingDir: here(''),
   bundle: true,
@@ -71,9 +82,11 @@ await build({
   legalComments: 'inline',
   logLevel: 'warning',
 });
-writeFileSync(`${out}/gateway.css`, STYLE + '\n');
-copyFileSync(here('static/index.html'), `${out}/index.html`);
-copyFileSync(here('../genesis/wasm/mor_wasm_bg.wasm'), `${out}/mor_wasm_bg.wasm`);
+if (bundled.outputFiles.length !== 1) throw new Error('the bundle is not one file');
+put('gateway.js', bundled.outputFiles[0].contents);
+put('gateway.css', STYLE + '\n');
+put('index.html', readFileSync(here('static/index.html')));
+put('mor_wasm_bg.wasm', readFileSync(here('../genesis/wasm/mor_wasm_bg.wasm')));
 
 if (release) {
   // What made these bytes, so that anyone can rebuild them from source.
@@ -92,6 +105,8 @@ if (release) {
     'Work hash of each file:',
     ...DISPLAY_FILES.map((f) => `${workHash(new Uint8Array(readFileSync(`${out}/${f}`)))}  ${f}`),
   ];
-  writeFileSync(`${out}/BUILT-WITH.txt`, lines.join('\n') + '\n');
+  put('BUILT-WITH.txt', lines.join('\n') + '\n');
+} else {
+  rmSync(`${out}/BUILT-WITH.txt`, { force: true });
 }
 console.log(`built ${out}`);
