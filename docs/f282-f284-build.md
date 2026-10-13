@@ -254,3 +254,83 @@ Checked against the working rule (F265) first. Participants already choose wheth
   - the collective's own vow held by Ana: invalid.
 
 **Changed:** `review_announcements.rs`, F247's test, as above. **`clients/assess`:** a new flag test, and the two deals above. 51 tests (50 before).
+
+---
+
+# F285: the offer counts
+
+*13 October 2026, afternoon. Q1 answered (findings log, F285). Nobody, allegedly: "A platform sells somebody else's vow… sounds like cMIP to me." Taken as option (b).*
+
+## Do the tests pass
+
+Yes. Every step of `scripts/test-all.sh` was run on this branch, each to the end:
+
+| | Rust | TypeScript |
+| --- | --- | --- |
+| this branch | 676 passed, 0 failed, 1 ignored (the Lightning regtest) | 373 of 373, in 17 packages |
+
+- In the full run, four of `clients/site`'s browser tests (the feed page's) failed. They then passed on their own twice in a row, 69 of 69.
+- Nothing in `clients/site` changed. On main's run earlier the same day, a different site test failed once.
+- So these tests are timing-dependent, and the failures are not this branch's.
+
+**Seen failing first:** the changed test fails against the F284 build's code (the offer did not count) and passes with this change.
+
+## In plain words
+
+A platform's deal can now sell a cleaner's vow without writing her stake, and its offer counts. The core does not refuse it. Her protection lies elsewhere:
+
+- **her own signature:** a deal she signs with no stake in her vow is her choice;
+- **what her app shows before she signs:** the deal tool's "No owner" warning;
+- **what the core already shows:** a sale outside the agreement that claims her vow (F72, F247).
+
+How a marketplace sells others' vows is a cMIP's business. Everything else F284 does stands:
+
+- a stake in a vow is held by whoever signed the vow;
+- the platform's fee comes off the top, and what is left is hers;
+- raising the fee needs her signature.
+
+## Precisely
+
+**The code:**
+
+- **`core/src/agreements/view/selling.rs`:** the offer's check of the vow's stake is removed. Only F237's check, that the offer names a vow by its genesis, remains.
+- **`core/src/agreements/view/vows.rs`:** `offer_vow_stake_problem` is removed.
+- **`core/tests/agreements_collective.rs`:** the test is renamed `f285_an_offer_under_a_deal_selling_a_vow_counts_with_or_without_its_stake`. Under the deal writing no stake in her vow, the offer counts, with no problem found; under the deal writing her stake, it counts too.
+- **`clients/assess/test/flags.test.ts`:** a comment on the "No owner" test. That test already shows the tool flags the same terms (a job paying the cleaner and the platform as overhead, with no stake) before signing.
+
+**The texts**, each change marked "F285":
+
+1. **Agreements draft 13, header.**
+   - **Before:** "Two readings taken writing F284 in are marked "reading, to confirm" (…): the stake held wholly by the signer in the version first writing it, and how the core reads a deal selling a vow it writes no stake in (its Q1)."
+   - **Now:** "One reading taken writing F284 in is marked "reading, to confirm" (…): the stake held wholly by the signer in the version first writing it. *Corrected for F285* (decided by Nobody, allegedly: "A platform sells somebody else's vow… sounds like cMIP to me"): a deal selling a vow it writes no stake in is no core business; the build's rule that its offer did not count (its Q1) is withdrawn, marked "F285" in rule 14 and its freeze line."
+2. **Agreements draft 13, rule 14.** The reading "*a deal silent on the vow it sells.* **An offer made under an agreement and naming a vow counts only where the version it is made under writes a stake in that vow**; …" is replaced by:
+   - "**A deal selling a vow it writes no stake in** (F285, on the build's Q1; replacing that reading). An offer made under an agreement and naming a vow counts whether or not that version writes a stake in the vow: how a platform or a marketplace sells others' vows is a cMIP's.
+   - The core only shows such a sale where another agreement claims the vow (above, F247); the owner's protection is her own signature on the deal, and what her client shows before she signs (the deal tool flags terms dividing money with no stake: "No owner").
+   - *"A platform sells somebody else's vow… sounds like cMIP to me" (Nobody, allegedly).*"
+3. **Agreements draft 13, rule 14's mechanic.**
+   - **Before:** "…and judges neither check…"
+   - **Now:** "…and judges nothing (F285: one check is left)…"
+4. **Agreements draft 13, freeze line.**
+   - **Before:** "…an offer under a deal writing no stake in the vow it sells not counting (reading, to confirm)…"
+   - **Now:** "…counting all the same (F285)…"
+5. **Agreements draft 13, "Open in this draft".**
+   - **Before:** "Two readings taken writing F284 in are to confirm, marked in rule 14; the second is put as Q1."
+   - **Now:** "Two readings taken writing F284 in were marked in rule 14; the second, put as Q1, is answered by F285 (the offer counts; a cMIP's business), and the first is still to confirm."
+6. **MICS v26, header.** After "F284 is built (…)." it adds: "*Corrected for F285* (decided by Nobody, allegedly: "A platform sells somebody else's vow… sounds like cMIP to me"): a deal selling a vow it writes no stake in is a cMIP's business, its offer counting; marked "F285"."
+7. **MICS v26, Stakes, F284's bullet.** After "Terms writing a stake in a vow held by anyone else are invalid." it adds: "A deal that sells someone's vow without writing her stake is not refused: how a marketplace sells others' vows is a cMIP's, the core only showing a sale outside the agreement claiming a vow, and her client flagging terms with no owner before she signs (F285)."
+8. **MICS v26, "Open before freeze".**
+   - **Before:** "…two readings taken writing it in are to confirm, the second put as its Q1."
+   - **Now:** "…of the two readings taken writing it in, the first is to confirm; the second, put as its Q1, is answered by F285: an offer under a deal selling a vow counts whether or not the deal writes a stake in it, how a marketplace sells others' vows being a cMIP's (F285)."
+9. **Freeze suite v26, header.** It adds: "*Corrected for F285* (…): an offer under a deal selling a vow it writes no stake in counts, the line and step 1.9f saying so, marked "F285"."
+10. **Freeze suite v26, F284's line.**
+    - **Before:** "…not counting (reading, to confirm) (1)"
+    - **Now:** "…counting all the same, the deal tool flagging such terms "No owner" before signing (F285) (1)"
+11. **Freeze suite v26, step 1.9f.**
+    - **Before:** "An offer under a deal writing no stake in her vow, selling it, does not count; under the deal writing her stake, it counts (reading, to confirm: `docs/f282-f284-build.md`, Q1)."
+    - **Now:** "An offer under a deal writing no stake in her vow, selling it, counts, as one under the deal writing her stake does; the deal tool flags the first deal's terms "No owner" before signing (F285: how a marketplace sells others' vows is a cMIP's)."
+    - Its "Run:" list names the renamed test.
+12. **`spec/README.md`, Agreements draft 13's line.** It adds that Q1 was answered by F285 and corrected.
+
+**Not changed:** the earlier sections of this report keep their wording, as records do. Q1 there is now answered by F285.
+
+**The branch.** Pull request 43 (F282, F284) was not in main when this branch began, so this branch merges it in first. Merging this pull request merges both.
