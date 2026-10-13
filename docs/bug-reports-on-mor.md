@@ -1,10 +1,10 @@
 # Bugs and attacks reported on MOR, mirrored on GitHub (F287)
 
-*GitHub session, 13 October 2026. Branch `claude/bug-reports-on-mor`, not merged. F287, decided by Nobody, allegedly, the same day: "Ideally A." Client work and one page: `core/`, `spec/`, `cmips/` and `clients/site`'s code unchanged. Test identities only.*
+*GitHub session, 13 October 2026. Branch `claude/bug-reports-on-mor`, not merged. F287, decided by Nobody, allegedly, the same day: "Ideally A." Client work and one page: `core/`, `spec/`, `cmips/` and `clients/site`'s code unchanged (two expectations in its tests updated for the new page). Test identities only.*
 
 ## Do the tests pass?
 
-TESTS-LINE
+**Yes.** `scripts/test-all.sh` passes on this branch: **1,068 tests, none failing** (676 in the Rust workspace, 392 in the TypeScript packages and Modules), against **1,060 on main** at `a718f91`. The 8 more are the new mirror's tests; every other count is the same as main's.
 
 ## In plain words
 
@@ -33,6 +33,7 @@ The other way: an issue opened on GitHub by anyone else, still open and not answ
 | `clients/reports/` | `mor-reports`: `src/read.ts` (what MOR holds), `src/mirror.ts` (the plan, and carrying it out), `src/github.ts` (the token, GitHub's API), `src/cli.ts`; README. |
 | `clients/reports/test/` | `mirror.test.ts` and `fake-github.ts`, below. |
 | `clients/README.md` | Its line. |
+| `clients/site/test/site.test.ts` | The folder's expected file list and count, with `report.html` (tests only). |
 
 ## Tests
 
@@ -50,7 +51,20 @@ The other way: an issue opened on GitHub by anyone else, still open and not answ
 
 Not tested here: the page in a browser through a gateway. The box, the feed and the notes beside answers are the display client's, already tested in `clients/site` (`feed-page.test.ts`), and `clients/site`'s own tests publish and serve the whole `docs/dubsar.org` folder, this page included.
 
-COUNTS-SECTION
+### Counts against main
+
+| | main (`a718f91`) | this branch |
+| --- | --- | --- |
+| Rust workspace | 676 | 676 |
+| `clients/assess`, `barebone`, `collective`, `connector`, `desk`, `dub`, `genesis`, `longform`, `manage`, `nudge`, `reader`, `repo` | 51, 10, 42, 13, 30, 16, 27, 26, 7, 25, 18, 19 | the same |
+| `clients/reports` (new) | — | 8 |
+| `clients/site` | 69 | 69 |
+| `modules/jpeg`, `video`, `carry`, `timestamp` | 14, 6, 6, 5 | the same |
+| **Total** | **1,060** | **1,068** |
+
+**One change to `clients/site`'s tests, not its code.** Two of its tests list the exact files of the `docs/dubsar.org` folder (and their number); adding `report.html` broke both, as expected. Their expected list now names `report.html`, and the count is one higher. Nothing else in `clients/site` is changed.
+
+**Intermittent, and also on main.** On a fresh copy of main, one site browser test failed once because it ran before another test had built the display client ("the display client is not built"); run again, all 69 passed. On this branch, a different site browser test (the department doors) failed once and passed on every run after. Neither involves the new page. Both are older than this step and are not fixed here.
 
 ## Readings taken
 
