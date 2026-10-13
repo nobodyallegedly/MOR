@@ -56,11 +56,11 @@ Where the brief and the texts leave a choice. *To be confirmed by Nobody, allege
 
 ## Tests
 
-`scripts/test-all.sh` on main (`177229c`), before anything was changed: **all passed.** Rust workspace 671 passed (1 ignored); TypeScript 338: assess 50, barebone 10, collective 42, connector 13, desk 26, genesis 26, longform 26, manage 7, nudge 22, poster 7, reader 18, repo 19, site 66, jpeg 14, video 6, carry 6.
+`scripts/test-all.sh` on main (`177229c`), before anything was changed: **all passed.** Rust workspace 671 passed (1 ignored); TypeScript 358: assess 50, barebone 10, collective 42, connector 13, desk 26, genesis 26, longform 26, manage 7, nudge 22, poster 7, reader 18, repo 19, site 66, jpeg 14, video 6, carry 6.
 
-On this branch: see the next section.
+On this branch, the same script: **all passed.** Rust workspace 671 passed (1 ignored), unchanged; TypeScript 367: the same as main in every package, save `clients/poster` 7 now `clients/dub` 16 (and `npm run test:build`, 1 more, run apart, passed).
 
-New, in `clients/dub` (7 tests before, now 17):
+New, in `clients/dub` (7 tests before, now 16, and 1 in `npm run test:build`):
 
 - **The web client in headless Chromium,** a fresh profile, the built page served with its headers, real homes and a relay (`test/web.test.ts`). The banner and both risks are checked on every screen. The flow: make an identity; the chain-key words shown once; **nothing of the chain key in storage** (the words, the seed, the key's own seeds, in hex and in base64), checked across IndexedDB, local and session storage, caches and cookies, before the words are typed back and after, and nowhere on the page either; the genesis commits the key the words give; a wrong word refused; post; **reload; post again, the second post following the first in the same line**; export the carry words, which are the signing key, not the chain key; **bring the identity into Dub on the Mac**, which starts its own line at position 1 while the web client's goes on from its own last act; all four posts valid; both lines listed in each app; forgetting it leaves no key in storage; no console error; the content security policy refused nothing. Then an identity made by Dub on the Mac is brought into the web client, after wrong words are refused.
 - **The seed Module's vectors** (`test/chainwords.test.ts`): the words, key seeds, public keys and commitments match.
