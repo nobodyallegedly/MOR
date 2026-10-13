@@ -40,7 +40,7 @@ test(`no risk: ${clean.name}`, () => check(clean));
 
 test('every listed risk is carried by some test deal, and flagged there', () => {
   const carried = new Set([...FREEZE, ...STUDIES].flatMap((d) => d.flags));
-  for (const code of ['no-exit', 'uncapped-fee', 'judge-is-party', 'no-fork-judge', 'dilutable-stake'] as const) assert.ok(carried.has(code), code);
+  for (const code of ['no-exit', 'uncapped-fee', 'judge-is-party', 'no-fork-judge', 'dilutable-stake', 'no-owner'] as const) assert.ok(carried.has(code), code);
 });
 
 test('the shares, fees and judges are said in plain words, from the core’s reading', () => {

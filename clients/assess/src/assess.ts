@@ -5,7 +5,7 @@
 // or, from the relays, its verdicts (`gather.ts`); nothing here re-decides
 // a rule. Each flag names the rule or stated cost it rests on.
 //
-// Rules are cited by their numbers in Agreements draft 12, with the number
+// Rules are cited by their numbers in Agreements draft 13, with the number
 // the code and the findings use where it differs ("was").
 
 import { agreementsClonePlan, cborDecode, cborEncode, sha256, unhex } from '../../genesis/src/core.ts';
@@ -32,6 +32,7 @@ export type FlagCode =
   | 'judge-is-party'
   | 'no-fork-judge'
   | 'dilutable-stake'
+  | 'no-owner'
   | 'absence-on-word'
   | 'payer-side-split'
   | 'split-service-window';
@@ -125,7 +126,7 @@ export function assess(payload: Uint8Array, names: Names, found?: Found | null):
         ? [{ text: `Not judged further: ${problem}`, tone: 'bad' }]
         : flags.length
           ? flags.map((f) => ({ text: `${cap(f.text)} Rests on: ${f.rests}.`, tone: 'warn' as const }))
-          : [{ text: 'None of the risks this tool looks for: a party with no exit, an uncapped fee, a judge who is also a party, no judge of forks, a stake diluted without its holder, or a stated cost one of its clauses brings.', tone: 'ok' }],
+          : [{ text: 'None of the risks this tool looks for: a party with no exit, an uncapped fee, a judge who is also a party, no judge of forks, a stake diluted without its holder, money divided with no owner, or a stated cost one of its clauses brings.', tone: 'ok' }],
     },
   ];
 
@@ -526,6 +527,21 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
       cites.push(...A(45, 48, 62, 63, 64, 65, 47));
     }
     if (why.length) out.push({ code: 'dilutable-stake', family: 'listed', who: owners.filter((h) => hit.has(h)), text: `A stake can be diluted without its holder: ${why.join('; and ')}.`, rests: rests.join('; '), cites: unique(cites) });
+  }
+
+  // No owner (F280, F284): money divided, and no stake for what is left.
+  // Every share is then overhead, off the top, and nobody's pay has an
+  // owner's protection; a deal made on a vow writes a stake in it, held by
+  // the vow's signer. Which object is a vow, the terms alone cannot say:
+  // the core judges the holder where it holds the vow (`found.invalid`).
+  if (!(t.stakes ?? []).length && (t.plan || (t.fees ?? []).length)) {
+    out.push({
+      code: 'no-owner',
+      family: 'listed',
+      text: 'No owner: it divides money but writes no stake, so every share is overhead, taken off the top, and nothing is left for an owner. Nobody is paid as an owner is, protected against a fee raised or a share added without their signature. A deal made on a vow writes a stake in the vow, held by whoever signed it, and what is left after the overhead is theirs.',
+      rests: 'Agreements rule 14, new in draft 13 (F284): “a deal made on a vow has an owner: the vow’s signer, who holds the stake”; rule 22 (F280): every share paying anyone but a stake is paid off the top, what is left going to the stakes alone; rule 48 (F270): a stake is not paid less without its holder',
+      cites: A(14, 22, 48),
+    });
   }
 
   // Stated costs the terms' own clauses bring.

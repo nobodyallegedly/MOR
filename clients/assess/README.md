@@ -11,6 +11,7 @@ Give it an agreement and it tells you, in plain words, what you would be signing
 - **a judge who is also a party**: an arbitrator, the judge of forks, a keeper, the absence authority or a later judge in the chain who is one of the parties;
 - **no judge of forks**: if two complete versions of the deal ever stand side by side, nothing but every party's signature settles them;
 - **a stake that can be diluted without its holder**: a clause allowing an absent party's stake to be shared or transferred, a release rule that lets some holders end a stake without the others, or a split plan that can be changed without a holder;
+- **money divided with no owner**: a split plan or fees and no stake, so everything is overhead and nobody is paid as an owner; a deal made on a vow writes a stake in it, held by the vow's signer (F284);
 - **a stated cost one of its clauses brings**: absence judged on someone's word alone, a payer dividing its own payment, a split service holding the money in between.
 
 A flag is something to read before signing, not a verdict. A deal carrying none of these shows none.
@@ -76,7 +77,7 @@ Every fact is the core library's: the terms are read from their exact bytes by `
 | `src/gather.ts` | `gather(id, hints)`: fetches the terms, their earlier versions, every act their parties published (signatures, later versions) and, for a deal, the split service named by the payees' grants (`readGrant`); hands them to the core's verifier and asks it. "As far as the relays asked show." |
 | `src/cli.ts` | The command. Words signed by others are fenced as data, as the connector does. |
 
-The flags and what each rests on (Agreements draft 12's numbers, the same as draft 11's; the code and findings use the older ones, given as "was"):
+The flags and what each rests on (Agreements draft 13's numbers, the same as drafts 11 and 12's; the code and findings use the older ones, given as "was"):
 
 | Flag | When | Rests on |
 | --- | --- | --- |
@@ -85,6 +86,7 @@ The flags and what each rests on (Agreements draft 12's numbers, the same as dra
 | `judge-is-party` | A party among field 13, field 27, the keepers' operators, a named absence authority, or a later link of field 21 | Rule 35 (was 34a); Q20 binds specifications only; rule 85 |
 | `no-fork-judge` | A deal of two or more parties without field 27 | Rule 47, field 27, and its stated cost |
 | `dilutable-stake` | Abandonment outcome 1 or 2, for each holder who can be declared absent and names no stake successor (F279); a release rule short of every holder; a holder whom neither the power over field 8 nor rule 48 needs (F270, F274: the core's `paySigners`) | Rule 89 (was 53), rule 48; rule 55, field 24; rules 45, 48, 62 to 65 |
+| `no-owner` | A split plan or a fee and no stake (field 7 empty): every share off the top, nothing left for an owner (F280); a deal made on a vow writes a stake in it, held by the vow's signer (F284). Which object is a vow, the terms alone cannot say: where the relays hold the vow, the core judges its holder, and refuses terms writing it held by anyone else | Rule 14 (F284), rule 22 (F280), rule 48 |
 | (refused terms) | A plan putting a role, a named receiver or a metric share in the rest: Agreements refuse the terms, and the tool says so before signing, in the core's words (F280) | Rule 22, F280 |
 | `absence-on-word` | An abandonment clause with no absence-proof cMIP | Rule 87 (was 51), stated cost; rule 85, client conformance |
 | `payer-side-split` | Stakes and no split service | Rule 16 (was 18), stated cost; rule 9, stated cost |
