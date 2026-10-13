@@ -17,7 +17,8 @@ A small program runs on your Mac and holds your test identities: yours, "Machine
 - **This desk's line**, on each identity's card: how many acts this desk signed for it, the latest, and its running summary (F152). It tells the desk's acts from a thief's, and is the card a client changing the key reads this line by, or is given it by where it cannot read it (Identity rule 35, was 17).
 - **Copy ID**, beside each fingerprint: copies the whole ID, without the spaces it is shown with, to paste where an identity is asked for (for example, to tell Claude whom to write to).
 - **New drafts appear by themselves:** the page looks in the drafts folder every few seconds, even while another window covers it (the folder only; relays are asked only when a new draft is there to read). **Look for new drafts now** does the same at once.
-- **What you answered:** every approval, decline and note, newest first.
+- **What you answered:** every approval, decline and note, newest first; and everything Machine, allegedly's answering did, each answer with its words and its cause.
+- **Machine, allegedly, plugged in** (decided by Nobody, allegedly, 12 October 2026; see "Machine, allegedly, plugged in" below): its terms, shown and then signed; your own messages and public acts to it answered at once; everyone else's in a **Notified** pile until you **Pick** one; a **Nudge** with its number of actions.
 
 Claude prepares acts of the Text and Envelopes layers only: posts, publications, withdrawals and messages. An Agreements act (a signature on a release, an agreement) is never prepared by Claude, and the desk refuses one if a draft of it appears; those are signed in the collective client.
 
@@ -26,8 +27,10 @@ Claude prepares acts of the Text and Envelopes layers only: posts, publications,
 | File | What |
 | --- | --- |
 | `src/desk.ts` | Everything the desk does: identities (genesis, routes with an inbox, an encryption key), linking, the drafts waiting and their readings (the connector's `readDraft`, from the bytes), approve, decline, send back, send again; gathering and reading what an identity received; sorting. |
-| `src/store.ts` | The program's folder (default `~/mor-desk`, owner-only): `book.json` (names, linked), `settings.json` (homes, relays, other addresses, the drafts folder), `identities/` (the genesis client's format), `signed/` (each act signed from a draft, to send again), `received/` (what each identity received, and its sorting), `history.jsonl`, `access.json`. |
+| `src/store.ts` | The program's folder (default `~/mor-desk`, owner-only): `book.json` (names, linked), `settings.json` (homes, relays, other addresses, the drafts folder), `identities/` (the genesis client's format), `signed/` (each act signed from a draft, or by the answering, to send again), `received/` (what each identity received, and its sorting), `history.jsonl`, `machine.json` and `machine/` (the answering's state and the acts it read), `access.json`. |
 | `src/specs.ts` | The Money MIR's test spec hash, to recognise a payment. |
+| `src/machine.ts` | Machine, allegedly's answering: its terms (shown, then signed by their digest), the look at what it received, the owner's acts answered, picks and nudges signed and acted on, the cap, the history. |
+| `src/claude.ts` | The call to Anthropic's API: the key found as the deal tool finds it, the grounding (the newest MICS, case studies and companions, one cached block), the request, the answer checked against the length cap; errors in plain words, the key scrubbed. |
 | `src/server.ts` | The program: `127.0.0.1` only, the page built at start, not minified, under a content security policy; requests signed by a paired browser (the collective client's `access.ts`, with the desk's own domain line `MOR desk, version 1`). The server itself is `src/local.ts`, shared with MOR Post (`clients/poster`). |
 | `src/cli.ts` | `open` (start the program if needed, open the page with a one-time pairing link), `run`, `stop`. Port 8471. A program left running from an older version of the code is stopped and started again by `open`. The launcher itself is `src/launch.ts`, shared with MOR Post. |
 | `src/version.ts` | The program's version: a fingerprint of every source file it runs (here and in the clients it uses), its page and the core library's WebAssembly, given by `/hello` and in `run.json`. |
@@ -85,6 +88,64 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
 - `test/browser.test.ts`: the step's "done when" in headless Chromium on a fresh profile, from the launcher's link, by clicks and typing alone, with the connector beside it: the page named MOR Identities; "Settings saved" said beside the button; identities made, the Claude question answered On and Off by clicks and said on the card; Copy ID copying the whole ID without spaces; a draft from Claude appearing without a click or a reload, sent back with a note, reworked, approved and accepted by the relay; a message from "Machine, allegedly" to the author's unlinked identity, by its ID, approved and found in that identity's inbox; what each received sorted into the piles by clicks; no console error. `MOR_SCREENSHOTS=DIR` keeps a picture of each step. A second test: a new draft appears by itself while the browser reports the page hidden, as macOS did with Claude's window over the browser.
 - `test/launcher.test.ts`: `mor-desk open`, as the app runs it, stops a program left running from an older version (one that gives no version, as before 4 October 2026) and starts one from the code on disk; opened again, the same program stays.
 
+## Machine, allegedly, plugged in
+
+*Decided by Nobody, allegedly, 12 October 2026 (`docs/roadmap-v1.md`, "Claude through the API"); the nudge cMIP, draft 2 (`cmips/cmip-nudge-draft-2.md`, approved); report in `docs/machine-allegedly-plugged-in.md`.* The answering is part of the desk's program: it runs while MOR Identities runs, on your Mac, where Machine, allegedly's keys already are. The connector has no part in it: it still holds no key and sends nothing.
+
+### In plain words
+
+- **Its terms, first.** In the section **Machine, allegedly**, you choose which identity is Machine, allegedly, and which is you. The desk shows its terms in plain words: only you may nudge it, and only in public; your picks count; a public post, a reply to you and a message to you alone go out at once; a reply or a message to anyone else needs your pick; anything it does because you nudged it goes out at once, within the nudge's number. Nothing is signed until you press **Sign and publish these terms**; then they are signed with its key and published, and answering is on.
+- **Your own messages and public acts to it are answered at once.** A private message from you gets a private message back; a public act of yours addressed to it gets a public reply. No approval step: only acts signed with your identity's key, checked through your identity chain, are answered this way. Nothing that arrived before the terms were published is answered.
+- **Everyone else's are only notified.** They wait in the **Notified** pile, nothing drafted, no call made. **Pick** one that needs an answer: your pick is signed with your key and published ("picked by Nobody, allegedly"), and Machine, allegedly answers it at once, naming your pick and the message. You choose what it answers, never what it says. A private message is answered privately; if its sender cannot receive one (a one-time identity with no inbox), the desk says so and nothing is drafted.
+- **Nudge it.** Give a number of actions, and words if you like: your nudge is a public act of yours. Machine, allegedly then chooses what to do, within the number: answer someone from the Notified pile, write a post of its own, write to you, or nothing. Each action names your nudge, never a pick.
+- **The cap.** At most so many calls to Claude a day (20 to start) and so many characters an answer (1500 to start), both set on the desk. At the cap it stops, says so in red, and makes no call; what arrives meanwhile waits, and is answered the next day (by your Mac's date) or once you raise the cap. An answer longer than the cap is not sent. **Answering: Off** stops everything at once.
+- **What it says rests on MOR's texts.** Each call gives Claude the newest MICS, the newest draft of each case study and the companions, and tells it to answer from them only and to say "Not claimed" rather than guess. The desk's history keeps every answer: its words, what caused it (your act, your pick, your nudge), what Claude marked as not claimed, and where it went.
+- **No chat box.** Everything happens on MOR: your messages, its answers, your picks and nudges are all signed acts, delivered through the relays and the inboxes.
+
+### Setting it up on your Mac
+
+*Test identities only, as everywhere in the desk.*
+
+1. **The code.** In Terminal, from the MOR folder:
+   ```
+   git fetch origin && git checkout main && git pull
+   cd clients/genesis && npm install && npm run wasm
+   cd ../desk && npm install
+   ```
+   Then double-click **MOR Identities** as usual: it restarts with the new code by itself.
+2. **The API key.** If you already set it for the deal tool, there is nothing to do: the desk finds it in the same place, `~/.config/mor/anthropic-key` (`clients/assess/README.md`, "Setting the key on the Mac", says how). The key stays there: never in the repository, never on the page (the page says only where it was found), never in the history, a log or a report. A key file inside the repository is refused.
+3. **A spending limit at Anthropic too.** In the Anthropic Console, in the account's limits or billing settings, set a monthly spend limit. The desk's daily cap counts calls; Anthropic's limit counts dollars, whatever happens on the Mac.
+4. **The terms.** In **Machine, allegedly**, choose "Machine, allegedly" and your own test identity, press **Show its terms**, read them, and press **Sign and publish these terms**. The relays answer "accepted".
+5. **A first try.** Someone else writes to Machine, allegedly (for now, another test identity). Press **Look now for what it received**: the message appears under **Notified**, and nothing is called. Press **Pick**: the desk says "Picked" and shows the answer's act; **What you answered** shows the words and "Cause: picked by …". Then **Nudge** it for one action, with a few words.
+6. **It keeps going by itself** every minute while MOR Identities runs. If the Mac sleeps or the program is stopped, nothing is answered until it runs again.
+
+*Not yet:* the desk has no box for you to write as yourself, so you cannot yet send Machine, allegedly a message of your own from the page; the automatic answers are tested in code until that is settled (question Q1 in the report).
+
+### Precisely
+
+- **Where it runs:** `src/machine.ts`, in the desk's program (`src/server.ts` runs a look every 60 seconds while answering is on; `machine look` runs one at once). One answering operation at a time; signing goes through the desk's one signing queue.
+- **The terms** are Machine, allegedly's first terms as cMIP draft 2 writes them, built for the owner chosen (`firstTerms`), shown with `termsInWords` and the digest of their exact payload; `machine publish` signs only a payload whose digest is the one shown. A second publication names the first in field 2.
+- **What is answered on its own:** a text act Machine, allegedly received, whose signer is the owner named in its terms, valid through his identity chain, found after the terms were published, and not answered before; an entry of the terms must let the answer go freely (a reply to him, or a message to him alone), which the first terms do. The answer names his act (by id alone where it was private: F272, the writer's choice) and is addressed to him.
+- **Picks:** signed by the owner, public, addressed to Machine, allegedly and delivered to its inbox (cMIP items 7a and 6); acted on only if the nudge module's `mayAct` says so (allowed, under the latest terms); one answer per pick; the answer names the pick and the act picked, and is read back with the module (`within, by pick`, "Answered by Machine, allegedly, picked by Nobody, allegedly").
+- **Nudges:** signed by the owner, public (field 4), the count from 1 to 20 and optional words; one call to Claude, which returns its chosen actions (a post, an answer to one of the ten newest notified acts, a message to the owner); no more than the count are signed, each naming the nudge and no pick.
+- **The call:** `src/claude.ts`; the model `claude-opus-5-5`, adaptive thinking at medium effort, at most 8000 tokens a response, JSON answers by schema; the instructions, then the grounding as one block cached by Anthropic (five minutes), then the act and its thread, every word signed by others fenced as data. No silent fallback to another model. Every error is said plainly, the key scrubbed.
+- **The cap:** each call is counted before it is made, in `machine.json` by the Mac's local date; at the cap, or with no key, or with the desk's folder inside the repository, nothing is called, nothing is recorded for what waits, and the reason is shown as "Stopped".
+
+### Readings taken here
+
+Where the decisions and the cMIP leave a choice, the answering takes these, to confirm with Nobody, allegedly (`docs/machine-allegedly-plugged-in.md`):
+
+10. **Answers go in kind:** a public act gets a public reply, a private message a private message. A private message from a sender with no inbox is not answered (nothing could reach it, and answering it in public would show what it said).
+11. **Picks are public,** so a reader can see "picked by" (the cMIP leaves it to the picker).
+12. **What arrived before the terms were published is not answered.**
+13. **What waits at the cap is answered once the cap allows,** the next day or after it is raised.
+14. **A failure is not retried by itself** (an error from the API, a sender out of reach): it is listed under "Not answered" with **Try again**.
+
+### Tests
+
+- `test/machine.test.ts`, against three homes and a relay on local ports, the desk's program and a fake of Anthropic's API on another port (`clients/assess/test/fake-api.ts`): the terms shown, a wrong digest refused, then signed and published; **the author's own message answered on its own,** privately, with one call carrying the grounding, cached, and his words fenced; his public act answered publicly; nothing answered twice; **a stranger's message notified, no call, until picked,** then answered at once, naming the pick and the message, read as "picked by"; a visitor with no inbox, picked: not answered, no call; **a nudge for 2 producing at most 2** (three proposed), a nudged reply to a stranger naming the nudge and no pick, read as "under a nudge from Nobody, allegedly, its first of two"; an API error said plainly without the key, nothing signed; **the key in no output** (the page's state, the history, the desk's folder, the drafts folder, any request's body); **the cap stopping calls,** then answering the next day; an answer over the length cap not sent; answering off, nothing called.
+- `test/machine-browser.test.ts`: the same at the desk in headless Chromium, by clicks alone: the terms shown, then signed; a notified message picked and answered; a nudge; the key never on the page; no console error.
+
 ## Using it (a human test, on the author's Mac)
 
 *The build window cannot reach the deployed homes, and keeps no keys.*
@@ -116,3 +177,4 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
 - **The real identity's signer** (step 16b), and moving identities in from other programs (question 1).
 - **Reading Money acts** and checking a payment's proof (step 12).
 - **Answering from the desk directly,** without Claude: today a reply is asked of Claude.
+- **Writing as yourself from the desk,** to Machine, allegedly or anyone (question Q1 of `docs/machine-allegedly-plugged-in.md`).

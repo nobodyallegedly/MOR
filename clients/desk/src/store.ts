@@ -6,7 +6,11 @@
 //   identities/ID.json    test identity files (the genesis client's format)
 //   signed/DIGEST.json    each act signed from a draft, and what was sent, to send again
 //   received/ID.json      what each identity received, and how the owner sorted it
-//   history.jsonl         every answer given to a draft: approved, declined, sent back
+//   history.jsonl         every answer given to a draft: approved, declined, sent back;
+//                         and Machine, allegedly's terms, picks, nudges and answers, each with its cause
+//   machine.json          Machine, allegedly's answering: its identity, its owner, its terms,
+//                         the cap on calls and what each cause led to (src/machine.ts)
+//   machine/ACT.mor       the acts the answering signed or read, to read them again (the nudge cMIP's readings)
 //   access.json           the browsers paired with this program
 //
 // The drafts folder (DRAFTS.md in clients/connector) is elsewhere, shared
@@ -14,7 +18,7 @@
 //
 // TEST IDENTITIES ONLY: every key is in these files, in software.
 
-import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { TestIdentity, type Home } from '../../genesis/src/identity.ts';
 import type { Via } from '../../genesis/src/transport.ts';
@@ -45,7 +49,7 @@ export interface Settings {
 }
 
 export type Sorted = 'new' | 'to answer' | 'answered' | 'ignored';
-export type Kind = 'message' | 'reply' | 'acknowledgement' | 'payment' | 'split' | 'key delivery' | 'other';
+export type Kind = 'message' | 'reply' | 'acknowledgement' | 'payment' | 'split' | 'key delivery' | 'nudge' | 'pick' | 'terms' | 'other';
 
 /** One interaction an identity received, as read and judged when it arrived. */
 export interface Item {
@@ -78,6 +82,10 @@ export interface Item {
   assessment?: { heading: string; lines: { text: string; tone?: 'warn' | 'bad' | 'ok' }[] }[];
   /** A split received (Agreements type 8): its service, the deal version it pays under, and its number (F188, DQ6). */
   split?: { service: string; agreement: string; number: number | null };
+  /** The act's bytes, base64, and its content key where it was private: kept for a text act or an act of the nudge cMIP, so Machine, allegedly's answering can read it again. */
+  raw?: { act: string; key?: string };
+  /** An act of the nudge cMIP (a nudge, a pick or terms): its reading in plain words. */
+  reading?: string;
   /** When this desk first found it (this machine's clock: a hint, never part of any act). */
   found: number;
   sorted: Sorted;
@@ -92,12 +100,19 @@ export interface Received {
 /** What the desk answered to a draft. */
 export interface Answered {
   time: number;
+  /** The draft answered; empty for what Machine, allegedly's answering did. */
   draft: string;
-  verdict: 'approved' | 'declined' | 'sent back';
+  verdict: 'approved' | 'declined' | 'sent back' | 'terms published' | 'picked' | 'nudged' | 'answered' | 'not answered';
   signer: string;
   title: string;
   note: string;
   act?: string;
+  /** What caused it, in plain words (Machine, allegedly's answering): whose act, which pick, which nudge. */
+  cause?: string;
+  /** The act that caused it. */
+  causeAct?: string;
+  /** Machine, allegedly's words, as signed. */
+  text?: string;
 }
 
 /** An act signed from a draft, kept to send again if a relay or inbox was away. */
@@ -134,7 +149,7 @@ const HEX64 = /^[0-9a-f]{64}$/;
 
 export class Store {
   constructor(readonly dir: string) {
-    for (const d of ['identities', 'signed', 'received']) mkdirSync(join(dir, d), { recursive: true, mode: 0o700 });
+    for (const d of ['identities', 'signed', 'received', 'machine']) mkdirSync(join(dir, d), { recursive: true, mode: 0o700 });
     chmodSync(dir, 0o700);
     if (!existsSync(this.path('book.json'))) writeJson(this.path('book.json'), { label: BOOK_LABEL, identities: [], names: {} } satisfies Book);
     if (!existsSync(this.path('settings.json'))) writeJson(this.path('settings.json'), { homes: [], relays: [], via: {}, drafts: DEFAULT_DRAFTS } satisfies Settings);
@@ -218,6 +233,34 @@ export class Store {
   saveSigned(s: SignedRecord): void {
     if (!HEX64.test(s.draft)) throw new Error('not a draft');
     writeJson(this.path('signed', `${s.draft}.json`), s);
+  }
+
+  // ------------------------------------------------------------ Machine, allegedly's answering
+
+  machine<T>(fresh: () => T): T {
+    const p = this.path('machine.json');
+    return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')) as T) : fresh();
+  }
+
+  saveMachine(m: unknown): void {
+    writeJson(this.path('machine.json'), m);
+  }
+
+  /** An act kept for the answering's readings, with its content key where private. */
+  keepAct(id: string, act: Uint8Array, key?: Uint8Array): void {
+    if (!HEX64.test(id)) throw new Error('not an act');
+    writeJson(this.path('machine', `${id}.json`), { act: Buffer.from(act).toString('base64'), key: key ? Buffer.from(key).toString('base64') : undefined });
+  }
+
+  keptActs(): { act: Uint8Array; key?: Uint8Array }[] {
+    const dir = this.path('machine');
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir)
+      .filter((f) => /^[0-9a-f]{64}\.json$/.test(f))
+      .map((f) => {
+        const j = JSON.parse(readFileSync(join(dir, f), 'utf8')) as { act: string; key?: string };
+        return { act: Uint8Array.from(Buffer.from(j.act, 'base64')), key: j.key ? Uint8Array.from(Buffer.from(j.key, 'base64')) : undefined };
+      });
   }
 
   // ------------------------------------------------------------ history
