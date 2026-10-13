@@ -180,5 +180,7 @@ export interface MachineState {
   /** Where the API key was found (never the key), or why there is none. */
   key: { found: boolean; from: string; warning?: string };
   notified: { key: string; act: string | null; from: string | null; fromName: string | null; private: boolean; kind: string; standing: string; text?: string }[];
+  /** Picks signed that wait to be answered (the cap): their acts leave the Notified pile. */
+  waiting: { pick: string; act: string; fromName: string | null; private: boolean }[];
   notAnswered: { act: string; kind: string; note: string }[];
 }

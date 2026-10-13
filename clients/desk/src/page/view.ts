@@ -275,7 +275,14 @@ function notifiedItem(x: MachineState['notified'][number]): string {
     x.standing === 'valid' ? ' <span class="tag ok">verified</span>' : ` <span class="tag warn">${e(x.standing)}</span>`
   }${x.act ? `, act ${fp(x.act)}` : ''}</span>
 ${x.text !== undefined ? `<div class="plain">${plainHtml(x.text)}</div>` : ''}
-<div class="row"><button data-action="machine-pick" data-key="${e(x.key)}">Pick: Machine, allegedly answers it now</button></div></div>`;
+<div class="row"><label class="check"><input type="checkbox" name="pick-select" value="${e(x.key)}"> Select, to pick several in one approval</label><button data-action="machine-pick" data-key="${e(x.key)}">Pick: Machine, allegedly answers it now</button></div></div>`;
+}
+
+/** Several picks, shown together before anything is signed, with the one button that signs exactly those. */
+export function machinePicksShown(keys: string[], t: { lines: string[]; digest: string }): string {
+  return `<div class="draft"><h3>${keys.length === 1 ? 'One pick' : `${keys.length} picks`}, to be signed together</h3>${lines(t.lines.map((text) => ({ text })))}
+<p class="small">Digest of exactly what is signed: <span class="digest">${e(t.digest.match(/.{1,4}/g)!.join(' '))}</span></p>
+<div class="row"><button data-action="machine-pick-many" data-keys="${e(JSON.stringify(keys))}" data-digest="${e(t.digest)}">Sign these picks; Machine, allegedly answers each</button><button class="quiet" data-action="machine-picks-cancel">Cancel</button></div></div>`;
 }
 
 export function machine(s: State): string {
@@ -297,8 +304,17 @@ ${m.stopped ? note('error', `<strong>Stopped:</strong> ${e(m.stopped)}`) : ''}
 <div class="row"><button class="quiet" data-action="machine-look">Look now for what it received</button></div>
 <div class="here" id="machine-here" role="status" aria-live="polite"></div>
 <h4 class="pile">Notified: other people’s interactions with it (${m.notified.length})</h4>
-<p class="small">Nothing is drafted for these. Pick the ones that need an answer: your pick is signed and published, and Machine, allegedly answers at once, naming it. What it says is its own.</p>
+<p class="small">Nothing is drafted for these. Pick the ones that need an answer, one at a time or several selected together: each pick is signed and published, one for each act, and Machine, allegedly answers each at once, naming its pick. What it says is its own.</p>
 ${m.notified.map(notifiedItem).join('') || '<p class="small">None.</p>'}
+${m.notified.length > 1 ? '<div class="row"><button class="quiet" data-action="machine-picks">Pick the selected: show them together first</button></div>' : ''}
+<div id="machine-picks-shown"></div>
+${
+  m.waiting.length
+    ? `<h4 class="pile">Picked, waiting for the cap (${m.waiting.length})</h4><p class="small">Your picks are signed; Machine, allegedly answers each once the cap allows, the next day or once it is raised.</p>${m.waiting
+        .map((x) => `<div class="item"><strong>${x.private ? 'A private message' : 'A public act'}</strong> <span class="small">from ${e(x.fromName ?? 'an unknown sender')}, act ${fp(x.act)}, picked by ${fp(x.pick)}</span></div>`)
+        .join('')}`
+    : ''
+}
 <h4 class="pile">Nudge it</h4>
 <form id="machine-nudge"><p class="small">A public act of yours naming it, with a number of actions: it may then answer anyone, post, or write to you, up to that number, each naming your nudge. It chooses.</p>
 <div class="row"><label>Actions <input name="count" type="number" min="1" max="20" value="1" required></label></div>

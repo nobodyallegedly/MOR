@@ -229,6 +229,23 @@ app.addEventListener('click', async (ev) => {
     case 'machine-pick':
       await after(await busy('Signing your pick; Machine, allegedly is answering…', () => c.ask<Done>('machine pick', { key: d.key })));
       break;
+    case 'machine-picks': {
+      // Nothing is signed by this click: the picks are shown together first.
+      const keys = [...app.querySelectorAll<HTMLInputElement>('#machine input[name=pick-select]:checked')].map((x) => x.value);
+      if (!keys.length) {
+        fill('machine-picks-shown', v.note('warn', 'Select the acts to pick first.'));
+        break;
+      }
+      const t = await busy('Reading the picks…', () => c.ask<{ lines: string[]; digest: string }>('machine picks', { keys }), $('machine-picks-shown'));
+      if (t) fill('machine-picks-shown', v.machinePicksShown(keys, t));
+      break;
+    }
+    case 'machine-picks-cancel':
+      fill('machine-picks-shown', '');
+      break;
+    case 'machine-pick-many':
+      await after(await busy('Signing your picks; Machine, allegedly is answering each…', () => c.ask<Done>('machine pick many', { keys: JSON.parse(d.keys!), digest: d.digest })));
+      break;
     case 'machine-retry':
       await busy('Trying again…', () => c.ask('machine retry', { act: d.act }));
       await refresh();
