@@ -654,6 +654,23 @@ impl SplitPlan {
         })
     }
 
+    /// Agreements draft 12 (F280, decided by Nobody, allegedly: "Shared
+    /// ownership means shared fruits"): a share paying anyone but a stake (a
+    /// role, a named receiver, a metric share) is paid off the top only, as
+    /// overhead; what is left goes to the stakes alone, and within each by
+    /// its holders' shares. A plan putting a non-owner in the rest is
+    /// invalid.
+    /// A validity rule, checked with the terms (`Terms::check`), so a
+    /// client can still read and explain a plan it refuses.
+    pub fn check_overhead(&self) -> R<()> {
+        if self.shares.iter().enumerate().any(|(i, s)| !matches!(s, ShareRule::Stake { .. }) && !self.top.contains(&(i as u64))) {
+            return Err(AgreementsError::Check(
+                "split plan: a share paying anyone but a stake is paid off the top only; what is left goes to the stakes alone (F280)",
+            ));
+        }
+        Ok(())
+    }
+
     /// The roles the plan names.
     pub fn roles(&self) -> Vec<&str> {
         self.shares

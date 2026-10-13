@@ -2258,9 +2258,8 @@ struct ClonePlanOut {
     /// The holders it pays less who have no voice in the power making the
     /// change, each of whom signs it besides its mark (Agreements draft 12,
     /// rule 48: F270, as F274 reads it): a deal's holders who are no party,
-    /// a collective's departed holders. In a collective, F273's advance
-    /// permission may reach a departed holder's pay instead, which acts
-    /// decide, not these terms.
+    /// a collective's holders who are no member. No advance permission
+    /// replaces their signature (F279).
     pay_signers: Vec<String>,
 }
 

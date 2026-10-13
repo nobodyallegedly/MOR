@@ -11091,8 +11091,11 @@ fn t1_a_purchase_under_either_agreement_holding_a_stake_in_the_work() {
     assert_eq!(view(&w).purchase(&paid).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
 }
 
+/// A plan with these shares, every share paying anyone but a stake taken
+/// off the top, as overhead (Agreements draft 12, F280).
 fn plan_of(shares: Vec<agreements::ShareRule>, metrics: Vec<agreements::Metric>) -> agreements::SplitPlan {
-    agreements::SplitPlan { shares, cmip: spec("a split cMIP"), unfilled: agreements::Unfilled::Stakes, top: vec![], service_bears_rail_fees: false, max_rail_fee: None, params: None, metrics }
+    let top = shares.iter().enumerate().filter(|(_, s)| !matches!(s, agreements::ShareRule::Stake { .. })).map(|(i, _)| i as u64).collect();
+    agreements::SplitPlan { shares, cmip: spec("a split cMIP"), unfilled: agreements::Unfilled::Stakes, top, service_bears_rail_fees: false, max_rail_fee: None, params: None, metrics }
 }
 
 fn payout(receiver: Hash, amount: u64) -> agreements::Payout {
@@ -12758,24 +12761,39 @@ fn f222_a_newcomers_client_looks_for_another_successor_and_warns() {
     assert!(view(&l.w).joining_warnings(&next).unwrap().is_empty());
 }
 
-// ---------------------------------------------------------------- Agreements draft 12, rule 48: F270, F273, F274
+// ---------------------------------------------------------------- Agreements draft 12, rules 48 and 89: F270, F274, F279, F280
 
-/// The plan the F270 tests start from: the stake (index 0) takes 800,000,
-/// a mastering service named in advance 200,000, by the split cMIP; each
-/// receiver bears its payout's rail fee, at most 10,000 millionths of it.
+/// The plan the F270 tests start from (F280: non-owners off the top only):
+/// the main stake (index 0) takes 800,000 and a second stake (index 1)
+/// 200,000 of what is left; a mastering service named in advance takes
+/// 100,000 off the top, as overhead; each receiver bears its payout's rail
+/// fee, at most 10,000 millionths of it.
 fn f270_plan() -> agreements::SplitPlan {
     agreements::SplitPlan {
         shares: vec![
             agreements::ShareRule::Stake { stake: 0, part: 800_000 },
-            agreements::ShareRule::Receiver { receiver: spec("a mastering service"), part: 200_000 },
+            agreements::ShareRule::Stake { stake: 1, part: 200_000 },
+            agreements::ShareRule::Receiver { receiver: spec("a mastering service"), part: 100_000 },
         ],
         cmip: spec("a split cMIP"),
         unfilled: agreements::Unfilled::Stakes,
-        top: vec![],
+        top: vec![2],
         service_bears_rail_fees: false,
         max_rail_fee: Some(Value::Uint(10_000)),
         params: None,
         metrics: vec![],
+    }
+}
+
+/// Every share paying anyone but a stake taken off the top (F280).
+fn f270_retop(p: &mut agreements::SplitPlan) {
+    p.top = p.shares.iter().enumerate().filter(|(_, s)| !matches!(s, agreements::ShareRule::Stake { .. })).map(|(i, _)| i as u64).collect();
+}
+
+/// The part of the plan's `i`th share, a stake's, set to `part`.
+fn f270_part(p: &mut agreements::SplitPlan, i: usize, part: u64) {
+    if let agreements::ShareRule::Stake { part: x, .. } = &mut p.shares[i] {
+        *x = part;
     }
 }
 
@@ -12784,24 +12802,29 @@ fn f270_fee(part: u64) -> Option<Vec<agreements::Fee>> {
 }
 
 fn f270_role(plan: &mut agreements::SplitPlan, part: u64) {
-    plan.shares.insert(1, agreements::ShareRule::Role { role: "a reposter".into(), part });
+    plan.shares.insert(2, agreements::ShareRule::Role { role: "a reposter".into(), part });
+    f270_retop(plan);
 }
 
 type F270Change = Box<dyn Fn(&mut Terms)>;
 
-/// F274's list, each change with the parent it applies to and the reason
-/// the core gives: what money sees and money expects.
+/// F274's list, as F280 leaves it, each change with the parent it applies
+/// to and the reason the core gives: what money sees and money expects.
 fn f274_list() -> Vec<(&'static str, F270Change, F270Change, agreements::PaidLess)> {
     use agreements::PaidLess::*;
     let none = || -> F270Change { Box::new(|_: &mut Terms| {}) };
     let plan = |f: fn(&mut agreements::SplitPlan)| -> F270Change { Box::new(move |t: &mut Terms| f(t.plan.as_mut().unwrap())) };
     vec![
-        ("another share raised", none(), plan(|p| p.shares[1] = agreements::ShareRule::Receiver { receiver: spec("a mastering service"), part: 300_000 }), Shares),
-        ("another share added", none(), plan(|p| p.shares.push(agreements::ShareRule::Receiver { receiver: spec("a second service"), part: 100_000 })), Shares),
+        ("the overhead raised", none(), plan(|p| p.shares[2] = agreements::ShareRule::Receiver { receiver: spec("a mastering service"), part: 150_000 }), Shares),
+        ("another overhead added", none(), plan(|p| {
+            p.shares.push(agreements::ShareRule::Receiver { receiver: spec("a second service"), part: 50_000 });
+            f270_retop(p);
+        }), Shares),
         ("a role share added", none(), plan(|p| f270_role(p, 100_000)), Shares),
-        ("a role share raised", plan(|p| f270_role(p, 100_000)), plan(|p| p.shares[1] = agreements::ShareRule::Role { role: "a reposter".into(), part: 150_000 }), Shares),
-        ("its own part lowered", none(), plan(|p| p.shares[0] = agreements::ShareRule::Stake { stake: 0, part: 700_000 }), Shares),
-        ("another share moved onto the top", none(), plan(|p| p.top = vec![1]), Shares),
+        ("a role share raised", plan(|p| f270_role(p, 100_000)), plan(|p| p.shares[2] = agreements::ShareRule::Role { role: "a reposter".into(), part: 150_000 }), Shares),
+        ("its own part lowered", none(), plan(|p| f270_part(p, 0, 700_000)), Shares),
+        ("another stake's part raised", none(), plan(|p| f270_part(p, 1, 300_000)), Shares),
+        ("another stake taken off the top", none(), plan(|p| p.top = vec![1, 2]), Shares),
         ("unfilled roles sent elsewhere", plan(|p| f270_role(p, 100_000)), plan(|p| p.unfilled = agreements::Unfilled::To(spec("a charity"))), Unfilled),
         ("unfilled roles held open", plan(|p| f270_role(p, 100_000)), plan(|p| p.unfilled = agreements::Unfilled::HeldOpen), Unfilled),
         ("the rail fee moved onto receivers", plan(|p| p.service_bears_rail_fees = true), plan(|p| p.service_bears_rail_fees = false), RailFee),
@@ -12821,14 +12844,9 @@ fn f274_no_lower() -> Vec<(&'static str, F270Change, F270Change)> {
     let plan = |f: fn(&mut agreements::SplitPlan)| -> F270Change { Box::new(move |t: &mut Terms| f(t.plan.as_mut().unwrap())) };
     vec![
         ("the words changed", none(), Box::new(|t: &mut Terms| t.text = "New words, the same money.".into())),
-        ("another share lowered", none(), plan(|p| p.shares[1] = agreements::ShareRule::Receiver { receiver: spec("a mastering service"), part: 100_000 })),
-        ("its own part raised", none(), plan(|p| p.shares[0] = agreements::ShareRule::Stake { stake: 0, part: 900_000 })),
-        // Judged by effect: filled, 1,200,000 of 1,500,000 is the 800,000 of
-        // 1,000,000 it had; unfilled, the role comes to the stake.
-        ("a role share added, its own part raised to match", none(), plan(|p| {
-            p.shares[0] = agreements::ShareRule::Stake { stake: 0, part: 1_200_000 };
-            f270_role(p, 100_000);
-        })),
+        ("the overhead lowered", none(), plan(|p| p.shares[2] = agreements::ShareRule::Receiver { receiver: spec("a mastering service"), part: 50_000 })),
+        ("its own part raised", none(), plan(|p| f270_part(p, 0, 900_000))),
+        ("another stake's part lowered", none(), plan(|p| f270_part(p, 1, 100_000))),
         ("unfilled roles brought to the stakes", plan(|p| { f270_role(p, 100_000); p.unfilled = agreements::Unfilled::HeldOpen; }), plan(|p| p.unfilled = agreements::Unfilled::Stakes)),
         ("the rail fee moved onto the service", none(), plan(|p| p.service_bears_rail_fees = true)),
         ("the maximum fee lowered", none(), plan(|p| p.max_rail_fee = Some(Value::Uint(5_000)))),
@@ -12839,18 +12857,20 @@ fn f274_no_lower() -> Vec<(&'static str, F270Change, F270Change)> {
     ]
 }
 
-/// A deal of p1 and p2 over a work, a third of whose stake an investor
-/// holds who is no party.
-fn f270_deal(w: &mut World, parties: &[Hash], investor: Hash) -> Terms {
+/// A deal of p1 and p2 over a film, a third of whose stake an investor
+/// holds who is no party, and its soundtrack, which p1 holds alone.
+fn f270_deal(parties: &[Hash], investor: Hash) -> Terms {
     let mut t = deal_terms(parties[0], parties[1]);
     t.parties = parties.to_vec();
     t.keepers = None;
-    t.stakes = Some(vec![agreements::Stake {
-        object: Who::Id(spec("the film")),
-        holders: vec![(Who::Id(parties[0]), 400_000), (Who::Id(parties[1]), 300_000), (Who::Id(investor), 300_000)],
-    }]);
+    t.stakes = Some(vec![
+        agreements::Stake {
+            object: Who::Id(spec("the film")),
+            holders: vec![(Who::Id(parties[0]), 400_000), (Who::Id(parties[1]), 300_000), (Who::Id(investor), 300_000)],
+        },
+        agreements::Stake { object: Who::Id(spec("the soundtrack")), holders: vec![(Who::Id(parties[0]), 1_000_000)] },
+    ]);
     t.plan = Some(f270_plan());
-    let _ = w;
     t
 }
 
@@ -12863,10 +12883,11 @@ fn f270_version(t: &Terms, parent: Hash, voices: &[Hash], f: &dyn Fn(&mut Terms)
 }
 
 /// Freeze suite v24, 1.9d (Agreements draft 12, rule 48: F270, as F274
-/// reads it): in a deal, every change of F274's list that pays the stake
-/// less is a draft, signed by every party, until the holder who is no party
-/// signs it; changes that pay it no less need only the parties. A party
-/// holding the same stake is asked nothing more (rule 47 asks it already).
+/// reads it and F280 leaves it): in a deal, every change of F274's list
+/// that pays the stake less is a draft, signed by every party, until the
+/// holder who is no party signs it; changes that pay it no less need only
+/// the parties. A party holding the same stake is asked nothing more (rule
+/// 47 asks it already).
 #[test]
 fn f270_f274_a_deals_non_party_holder_signs_what_pays_it_less() {
     let mut wrong = vec![];
@@ -12875,7 +12896,7 @@ fn f270_f274_a_deals_non_party_holder_signs_what_pays_it_less() {
         let mut m: Vec<Person> = ["p1", "p2"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
         let mut x = w.genesis("an investor", vec![own_home()], None, None);
         let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
-        let mut t = f270_deal(&mut w, &ids, x.id);
+        let mut t = f270_deal(&ids, x.id);
         before(&mut t);
         assert_eq!(t.check(&mirs()), Ok(()), "{name}");
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
@@ -12886,8 +12907,7 @@ fn f270_f274_a_deals_non_party_holder_signs_what_pays_it_less() {
         let c = f270_version(&t, d, &ids, &*change);
         assert_eq!(c.check(&mirs()), Ok(()), "{name}");
         let paid = agreements::stakes_paid_less(&t, &c);
-        assert_eq!(paid.len(), 1, "{name}: {paid:?}");
-        assert!(paid[0].1.contains(&why), "{name}: {paid:?}");
+        assert!(paid.iter().any(|(o, why_)| *o == Who::Id(spec("the film")) && why_.contains(&why)), "{name}: {paid:?}");
         assert_eq!(agreements::pay_signers(&t, &c), vec![x.id], "{name}: the parties are asked nothing more");
         let k = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, c.to_map(), obj(d));
         for p in m.iter_mut() {
@@ -12907,7 +12927,7 @@ fn f270_f274_a_deals_non_party_holder_signs_what_pays_it_less() {
         let mut m: Vec<Person> = ["p1", "p2"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
         let x = w.genesis("an investor", vec![own_home()], None, None);
         let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
-        let mut t = f270_deal(&mut w, &ids, x.id);
+        let mut t = f270_deal(&ids, x.id);
         before(&mut t);
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
         for p in m.iter_mut() {
@@ -12915,7 +12935,9 @@ fn f270_f274_a_deals_non_party_holder_signs_what_pays_it_less() {
         }
         let c = f270_version(&t, d, &ids, &*change);
         assert_eq!(c.check(&mirs()), Ok(()), "{name}");
-        assert!(agreements::stakes_paid_less(&t, &c).is_empty(), "{name}");
+        let film = agreements::stakes_paid_less(&t, &c).into_iter().filter(|(o, _)| *o == Who::Id(spec("the film"))).count();
+        assert_eq!(film, 0, "{name}");
+        assert!(agreements::pay_signers(&t, &c).is_empty(), "{name}");
         let k = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, c.to_map(), obj(d));
         for p in m.iter_mut() {
             sign(&mut w, p, &k);
@@ -12924,20 +12946,22 @@ fn f270_f274_a_deals_non_party_holder_signs_what_pays_it_less() {
     }
 }
 
-/// Freeze suite v24, 1.9e (Agreements draft 12, rule 48: F273): the deal's
-/// advance permission never reaches a non-party holder's pay. The investor
-/// was a party and left, keeping its stake; the deal's clause lets the
-/// authority redistribute an absent party's stake, and the authority
-/// declares it absent under the version it signed. A version adding a fee,
-/// signed by both parties, is still a draft until the investor signs.
+/// Freeze suite v24, 1.9e (Agreements draft 12, rule 48: F273's "never",
+/// standing under F279): no advance permission reaches a deal's non-party
+/// holder's pay. The investor was a party and left, keeping its stake; the
+/// deal's clause lets the authority share out an absent party's stake, and
+/// the authority declares it absent under the version it signed. A version
+/// adding a fee, signed by both parties, is still a draft until the
+/// investor signs: abandonment moves a stake, never lowers its pay while it
+/// stays (F279).
 #[test]
-fn f273_a_deals_advance_permission_never_reaches_a_non_party_holders_pay() {
+fn f279_no_advance_permission_reaches_a_deals_non_party_holders_pay() {
     let mut w = World::new();
     let mut m: Vec<Person> = ["p1", "p2"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
     let mut x = w.genesis("an investor", vec![own_home()], None, None);
     let mut authority = w.genesis("authority", vec![own_home()], None, None);
     let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
-    let mut t = f270_deal(&mut w, &ids, x.id);
+    let mut t = f270_deal(&ids, x.id);
     t.parties = vec![ids[0], ids[1], x.id];
     t.abandonment = Some(Abandonment {
         authority: Authority::Named(authority.id),
@@ -12959,24 +12983,25 @@ fn f273_a_deals_advance_permission_never_reaches_a_non_party_holders_pay() {
     sign(&mut w, &mut x, &v1);
     assert_eq!(view(&w).agreement(&v1).unwrap().exists, Some(true));
     // The authority declares it absent, under the version it signed as a
-    // party, its stake to be redistributed: a valid declaration.
+    // party, its stake to be shared out: a valid declaration.
     let decl = AbsenceDeclaration { agreement: d, clause: d, party: x.id, outcomes: vec![outcomes::STAKE_REDISTRIBUTED] };
     let dx = agreements_act(&mut w, &mut authority, agreements::types::DECLARATION, decl.to_map(), obj(d));
     assert!(view(&w).declaration(&dx).unwrap().is_ok());
-    // A fee added: the parties sign, and it is still a draft.
+    // A fee added while the stake stays with it: still a draft.
     let t2 = f270_version(&t1, v1, &ids, &|c| c.fees = f270_fee(10_000));
     let v2 = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, t2.to_map(), obj(v1));
     for p in m.iter_mut() {
         sign(&mut w, p, &v2);
     }
-    assert_eq!(view(&w).agreement(&v2).unwrap().exists, Some(false), "no advance permission reaches its pay (F273)");
+    assert_eq!(view(&w).agreement(&v2).unwrap().exists, Some(false), "no advance permission reaches its pay (F279)");
     sign(&mut w, &mut x, &v2);
     assert_eq!(view(&w).agreement(&v2).unwrap().exists, Some(true));
 }
 
 /// The label for the F270 tests: Ana, Ben and Cy hold its own stake, which
-/// the plan pays; the clause lets the authority remove a voice or
-/// redistribute a stake. Cy leaves, keeping 300,000 of the stake.
+/// the plan pays with Ana's back catalogue; the clause lets the authority
+/// remove a voice or share out a stake. Cy leaves, keeping 300,000 of the
+/// label's own stake, and any succession plan for it (M1).
 fn f270_label() -> (Lab, Hash) {
     f270_label_with(&|_| {})
 }
@@ -12984,8 +13009,18 @@ fn f270_label() -> (Lab, Hash) {
 fn f270_label_with(g: &dyn Fn(&mut Terms)) -> (Lab, Hash) {
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
-        t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
-        t.plan = Some(f270_plan());
+        t.stakes = stakes(vec![
+            own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)]),
+            agreements::Stake { object: Who::Id(spec("Ana's back catalogue")), holders: vec![(Who::Id(p[ANA]), 1_000_000)] },
+        ]);
+        // The plan's main stake is the label's own (field 7 is in the
+        // order of its objects' encodings).
+        let mut plan = f270_plan();
+        if t.own_stake().unwrap().0 == 1 {
+            plan.shares[0] = agreements::ShareRule::Stake { stake: 1, part: 800_000 };
+            plan.shares[1] = agreements::ShareRule::Stake { stake: 0, part: 200_000 };
+        }
+        t.plan = Some(plan);
         t.abandonment.as_mut().unwrap().outcomes = vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED];
         g(t);
     });
@@ -13001,52 +13036,69 @@ fn f270_label_with(g: &dyn Fn(&mut Terms)) -> (Lab, Hash) {
         let n = if g.recovery.is_some() { 2 } else { 1 };
         g.chain_key = Holding::Shares { threshold: n, members: keep.clone() };
         t.departed = Some(vec![cy]);
-        // Two members left: one of the other is all a threshold can ask.
+        // Two members left: one of the others is all a threshold can ask.
         if let Some(a) = t.abandonment.as_mut() {
             if let Authority::Others(n) = a.authority {
                 a.authority = Authority::Others(n.min(1));
             }
         }
+        // M1: a departed holder's plan keeps its stake part alone.
+        if let Some(plans) = t.succession.as_mut() {
+            for s in plans.iter_mut().filter(|s| s.party == cy) {
+                s.seats = None;
+                s.entry = None;
+            }
+        }
     };
-    let probe = lab.clone_terms(&f, vec![], &leave);
-    let mark = lab.view().powers_needed(&probe).unwrap().into_iter().map(|p| (p, vec![ANA, BEN, CY])).collect();
-    let t = lab.clone_terms(&f, mark, &leave);
-    let k = lab.propose(ANA, &t);
-    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k)).collect();
-    lab.rotate(Some((k, s)), &[0]);
-    let p = lab.publish(0);
-    lab.sign(ANA, &p);
-    assert_eq!(lab.in_force(&p), k);
+    let k = f270_in_force(&mut lab, &f, &[ANA, BEN, CY], &leave, &[]);
     (lab, k)
 }
 
-/// Freeze suite v24, 3.7x (Agreements draft 12, rule 48: F270, F274): in a
-/// collective, every change of F274's list that pays the stake less, met
-/// by the members, is a draft until the departed holder signs it, or an
-/// advance permission reaches its pay (F273); the members, who chose the
-/// power, are asked nothing more.
+/// A clone of `parent` changed by `f`, its mark the powers the core says it
+/// needs, met by `who`, signed by them and by `also`, put in force: by a
+/// rotation where it changes the constitution, else by a record.
+fn f270_in_force(lab: &mut Lab, parent: &Hash, who: &[usize], f: &dyn Fn(&mut Terms), also: &[usize]) -> Hash {
+    let probe = lab.clone_terms(parent, vec![], f);
+    let powers = lab.view().powers_needed(&probe).unwrap();
+    let mark = powers.iter().map(|p| (p.clone(), who.to_vec())).collect();
+    let t = lab.clone_terms(parent, mark, f);
+    let k = lab.propose(who[0], &t);
+    let s: Vec<Hash> = who.iter().chain(also).map(|i| lab.sign(*i, &k)).collect();
+    if powers.contains(&Power::Constitutional) {
+        lab.rotate(Some((k, s)), &[0]);
+        let p = lab.publish(0);
+        lab.sign(ANA, &p);
+        assert_eq!(lab.in_force(&p), k);
+    } else {
+        let r = lab.record(0, Some((k, s)), &[], vec![], k);
+        assert_eq!(puts(lab, &r), Some(k), "{:?}", lab.view().agreement(&k).unwrap());
+    }
+    k
+}
+
+/// Freeze suite v24, 3.7x (Agreements draft 12, rule 48: F270, F274, F280):
+/// in a collective, every change of F274's list that pays the stake less,
+/// met by the members, is a draft until the departed holder signs it; the
+/// members, who chose the power, are asked nothing more.
 #[test]
 fn f270_f274_a_departed_holder_signs_what_pays_it_less() {
     let mut wrong = vec![];
     for (name, before, change, why) in f274_list() {
         let (mut lab, k) = f270_label();
         let cy = lab.ids()[CY];
-        // The plan the test starts from, put in force by the members.
-        let t0 = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &*before);
-        let k0 = if t0.plan == lab.view().terms(&k).unwrap().plan && t0.fees.is_none() {
+        // The plan the test starts from, put in force by the members (and
+        // Cy, where it pays Cy less).
+        let t0 = lab.clone_terms(&k, vec![], &*before);
+        let k0 = if before_is_none(&lab, &k, &t0) {
             k
         } else {
-            let k0 = lab.propose(ANA, &t0);
-            let s: Vec<Hash> = [ANA, BEN].iter().map(|i| lab.sign(*i, &k0)).collect();
-            let s = if agreements::pay_signers(&lab.view().terms(&k).unwrap(), &t0).is_empty() { s } else { [s, vec![lab.sign(CY, &k0)]].concat() };
-            let r = lab.record(0, Some((k0, s)), &[], vec![], k0);
-            assert_eq!(puts(&lab, &r), Some(k0), "{name}: the start");
-            k0
+            let also: Vec<usize> = if agreements::pay_signers(&lab.view().terms(&k).unwrap(), &t0).is_empty() { vec![] } else { vec![CY] };
+            f270_in_force(&mut lab, &k, &[ANA, BEN], &*before, &also)
         };
         let parent = lab.view().terms(&k0).unwrap();
         let t = lab.clone_terms(&k0, vec![(Power::Clone, vec![ANA, BEN])], &*change);
         let paid = agreements::stakes_paid_less(&parent, &t);
-        assert!(paid.len() == 1 && paid[0].1.contains(&why), "{name}: {paid:?}");
+        assert!(paid.iter().any(|(o, w)| *o == Who::This && w.contains(&why)), "{name}: {paid:?}");
         assert_eq!(agreements::pay_signers(&parent, &t), vec![cy], "{name}: the members are left to their own rules");
         let k2 = lab.propose(ANA, &t);
         let s1 = lab.sign(ANA, &k2);
@@ -13072,10 +13124,9 @@ fn f270_f274_a_departed_holder_signs_what_pays_it_less() {
         }
         let (mut lab, k) = f270_label();
         let t0 = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &*before);
-        let parent = t0.clone();
         let mut t = t0.clone();
         change(&mut t);
-        assert!(agreements::stakes_paid_less(&parent, &t).is_empty(), "{name}");
+        assert!(agreements::stakes_paid_less(&t0, &t).iter().all(|(o, _)| *o != Who::This), "{name}");
         // From the label's own plan, the change alone: no signature of Cy's.
         if before_is_none(&lab, &k, &t0) {
             let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &*change);
@@ -13094,65 +13145,172 @@ fn before_is_none(lab: &Lab, k: &Hash, t0: &Terms) -> bool {
     t0.plan == t.plan && t0.fees == t.fees
 }
 
-/// Freeze suite v24, 3.7y (Agreements draft 12, rule 48: F273, reading,
-/// to confirm, `docs/f270-build.md` Q1): an advance permission reaches a
-/// collective's departed holder's pay. The authority the label's clause
-/// names declares Cy absent under the version Cy signed as a member, its
-/// stake to be redistributed: a fee is then added by the members alone. A
-/// declaration that takes no stake (outcome 0 alone) is no such
-/// permission: Cy's signature is still needed.
-#[test]
-fn f273_an_advance_permission_reaches_a_departed_holders_pay() {
-    for (outs, reaches) in [(vec![outcomes::STAKE_REDISTRIBUTED], true), (vec![outcomes::VOICE_REMOVED], false)] {
-        let (mut lab, k) = f270_label();
-        let f = lab.founding;
-        let dx = lab.declare(None, f, f, CY, outs.clone());
-        assert!(lab.view().declaration(&dx).unwrap().is_ok(), "{outs:?}");
-        let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.fees = f270_fee(10_000));
-        let k2 = lab.propose(ANA, &t);
-        let s1 = lab.sign(ANA, &k2);
-        let s2 = lab.sign(BEN, &k2);
-        assert_eq!(lab.view().agreement(&k2).unwrap().ready, reaches, "{outs:?}");
-        let r = lab.record(0, Some((k2, vec![s1, s2])), &[], vec![], k2);
-        assert_eq!(puts(&lab, &r), reaches.then_some(k2), "{outs:?}");
-    }
-    // The permission is read here for pay only: lowering Cy's share is
-    // still Cy's to sign, as the code reads rule 48's first paragraph
-    // today (its "unless the agreement pre-authorised it" is not built for
-    // shares: noticed, `docs/f270-build.md`).
-    let (mut lab, k) = f270_label();
-    let f = lab.founding;
+/// Cy's stake in the label passing whole to `to`, or shared out among Ana
+/// and Ben in proportion to their shares; Cy no longer departed, holding
+/// nothing, and Cy's plan dropped as executed.
+fn f279_moved(lab: &Lab, to: Option<Hash>) -> impl Fn(&mut Terms) {
     let ids = lab.ids();
-    lab.declare(None, f, f, CY, vec![outcomes::STAKE_REDISTRIBUTED]);
-    let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &|t| {
-        t.stakes = stakes(vec![own(vec![(ids[ANA], 500_000), (ids[BEN], 300_000), (ids[CY], 200_000)])]);
-    });
-    let k2 = lab.propose(ANA, &t);
-    lab.sign(ANA, &k2);
-    lab.sign(BEN, &k2);
-    assert!(!lab.view().agreement(&k2).unwrap().ready);
+    move |t: &mut Terms| {
+        let i = t.own_stake().unwrap().0;
+        let st = &mut t.stakes.as_mut().unwrap()[i];
+        st.holders = match to {
+            // 400,000 + 300,000 × 4/7 = 571,428.57…; 300,000 + 300,000 × 3/7 = 428,571.43…
+            None => vec![(Who::Id(ids[ANA]), 571_429), (Who::Id(ids[BEN]), 428_571)],
+            Some(h) => vec![(Who::Id(ids[ANA]), 400_000), (Who::Id(ids[BEN]), 300_000), (Who::Id(h), 300_000)],
+        };
+        t.departed = None;
+        t.succession = None;
+    }
 }
 
-/// Freeze suite v24, 3.7y (F273, the reading of Q1): where the clause's
-/// authority is two of the other members, the declaration that reaches the
-/// departed holder's pay counts once two have signed it, placed at the line
-/// where the clone is judged (rule 85, Q37): Ana's declaration alone does
-/// not; with Ben's signature act on it, which the record acknowledges, it
-/// does. The declaration names the version Cy signed as a member, whose
-/// clause asks two (rule 87, reading 7 as built).
+/// Freeze suite v24, 3.7y (Agreements draft 12, rules 48 and 89: F279,
+/// decided by Nobody, allegedly: "What abandonment can trigger in that
+/// regard is succession. Where the stake and associated pay go to the
+/// successor."). Cy, departed, names a stake successor. Declared absent,
+/// Cy's stake passes whole to the successor by a clone the members sign
+/// alone; the successor, who holds it with no voice, must then sign a fee
+/// raise. A declaration stating outcome 1 against Cy is refused: the stake
+/// goes by succession. Never does a declaration let the members pay Cy less
+/// while the stake stays with Cy.
 #[test]
-fn f273_a_threshold_authority_reaches_a_departed_holders_pay_at_the_line() {
+fn f279_a_declaration_passes_the_stake_to_the_successor() {
+    let heir = spec("Cy's heir");
+    let (mut lab, k) = f270_label_with(&move |t| {
+        let cy = t.parties[CY];
+        t.succession = Some(vec![SuccessionPlan { party: cy, stakes: Some(vec![(heir, 1_000_000)]), seats: None, entry: None }]);
+    });
+    let f = lab.founding;
+    // Outcome 1 against a holder whose plan names a stake successor: refused.
+    let d1 = lab.declare(None, f, f, CY, vec![outcomes::STAKE_REDISTRIBUTED]);
+    let w = lab.view().declaration(&d1).unwrap().unwrap_err();
+    assert!(w.contains("F279"), "{w}");
+    // Outcome 0 alone: valid, and the plan executes.
+    let d0 = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    assert!(lab.view().declaration(&d0).unwrap().is_ok());
+    // While the stake stays with Cy, a fee raise still needs Cy (F279).
+    let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.fees = f270_fee(10_000));
+    let x = lab.propose(ANA, &t);
+    lab.sign(ANA, &x);
+    lab.sign(BEN, &x);
+    assert!(!lab.view().agreement(&x).unwrap().ready, "the stake stays with Cy: Cy signs");
+    // Shared out instead of passed to the heir: not the plan, Cy signs.
+    let t = lab.clone_terms(&k, vec![], &f279_moved(&lab, None));
+    let powers = lab.view().powers_needed(&t).unwrap();
+    let t = lab.clone_terms(&k, powers.iter().map(|p| (p.clone(), vec![ANA, BEN])).collect(), &f279_moved(&lab, None));
+    let y = lab.propose(ANA, &t);
+    lab.sign(ANA, &y);
+    lab.sign(BEN, &y);
+    assert!(!lab.view().agreement(&y).unwrap().ready, "the plan names the heir");
+    // The stake passes whole to the heir: the members alone.
+    let to_heir = f279_moved(&lab, Some(heir));
+    let k2 = f270_in_force(&mut lab, &k, &[ANA, BEN], &to_heir, &[]);
+    let t2 = lab.view().terms(&k2).unwrap();
+    assert_eq!(t2.own_stake().unwrap().1.share_of(&Who::Id(heir)), 300_000);
+    // The heir holds it with no voice: a fee raise needs the heir.
+    let t = lab.clone_terms(&k2, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.fees = f270_fee(10_000));
+    assert_eq!(agreements::pay_signers(&t2, &t), vec![heir]);
+    let z = lab.propose(ANA, &t);
+    let s1 = lab.sign(ANA, &z);
+    let s2 = lab.sign(BEN, &z);
+    assert!(!lab.view().agreement(&z).unwrap().ready, "the heir has not signed");
+    let r = lab.record(0, Some((z, vec![s1, s2])), &[], vec![], z);
+    assert_eq!(puts(&lab, &r), None);
+}
+
+/// Freeze suite v24, 3.7y (F279): Cy, departed, names no stake successor.
+/// Declared absent with outcome 1, Cy's stake is shared out among Ana and
+/// Ben in proportion to their shares, by a clone the members sign alone; a
+/// fee raise then needs no departed holder's signature, since Cy holds
+/// nothing. A clone lowering Cy's share but leaving Cy part of it, or
+/// sharing it out otherwise than in proportion, still needs Cy; and with a
+/// declaration that only removes a voice, nothing moves without Cy.
+#[test]
+fn f279_with_no_successor_outcome_1_shares_the_stake_out() {
+    for outs in [vec![outcomes::STAKE_REDISTRIBUTED], vec![outcomes::VOICE_REMOVED]] {
+        let (mut lab, k) = f270_label();
+        let f = lab.founding;
+        let ids = lab.ids();
+        lab.declare(None, f, f, CY, outs.clone());
+        let shared = outs.contains(&outcomes::STAKE_REDISTRIBUTED);
+        // While the stake stays with Cy, no declaration lets the members pay
+        // Cy less: a fee raise needs Cy (F279; draft 12's first build read
+        // an outcome 1 declaration as that permission).
+        let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.fees = f270_fee(10_000));
+        let x = lab.propose(ANA, &t);
+        lab.sign(ANA, &x);
+        lab.sign(BEN, &x);
+        assert!(!lab.view().agreement(&x).unwrap().ready, "{outs:?}: the stake stays with Cy");
+        let moved = f279_moved(&lab, None);
+        let probe = lab.clone_terms(&k, vec![], &moved);
+        let mark: Vec<(Power, Vec<usize>)> = lab.view().powers_needed(&probe).unwrap().into_iter().map(|p| (p, vec![ANA, BEN])).collect();
+        // Not in proportion, or Cy keeping part: Cy signs, whatever the outcome.
+        for (bad, holders) in [
+            ("out of proportion", vec![(Who::Id(ids[ANA]), 700_000), (Who::Id(ids[BEN]), 300_000)]),
+            ("Cy keeps part", vec![(Who::Id(ids[ANA]), 450_000), (Who::Id(ids[BEN]), 350_000), (Who::Id(ids[CY]), 200_000)]),
+        ] {
+            let t = lab.clone_terms(&k, mark.clone(), &|t| {
+                moved(t);
+                let i = t.own_stake().unwrap().0;
+                t.stakes.as_mut().unwrap()[i].holders = holders.clone();
+                if holders.iter().any(|(w, _)| *w == Who::Id(ids[CY])) {
+                    t.departed = Some(vec![ids[CY]]);
+                }
+            });
+            let x = lab.propose(ANA, &t);
+            lab.sign(ANA, &x);
+            lab.sign(BEN, &x);
+            assert!(!lab.view().agreement(&x).unwrap().ready, "{outs:?}, {bad}");
+        }
+        let t = lab.clone_terms(&k, mark.clone(), &moved);
+        let x = lab.propose(ANA, &t);
+        lab.sign(ANA, &x);
+        lab.sign(BEN, &x);
+        assert_eq!(lab.view().agreement(&x).unwrap().ready, shared, "{outs:?}");
+        if !shared {
+            continue;
+        }
+        let k2 = f270_in_force(&mut lab, &k, &[ANA, BEN], &moved, &[]);
+        // Cy holds nothing: a fee raise needs the members alone.
+        let t2 = lab.view().terms(&k2).unwrap();
+        let t = lab.clone_terms(&k2, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.fees = f270_fee(10_000));
+        assert!(agreements::pay_signers(&t2, &t).is_empty());
+        f270_in_force(&mut lab, &k2, &[ANA, BEN], &|t| t.fees = f270_fee(10_000), &[]);
+    }
+}
+
+/// Freeze suite v24, 3.7y (F279): where the clause's authority is two of
+/// the other members, the declaration that moves a departed holder's stake
+/// counts once two have signed it, placed at the line where the clone is
+/// judged (rule 85, Q37): Ana's declaration alone does not; with Ben's
+/// signature act on it, which the label acknowledged before the rotation,
+/// it does. Taking Cy out of the departed members entry is constitutional,
+/// so the clone comes into force by a rotation. The declaration names the
+/// version Cy signed as a member, whose clause asks two (rule 87, reading 7
+/// as built).
+#[test]
+fn f279_a_threshold_authority_moves_the_stake_at_the_line() {
     for cosigned in [false, true] {
         let (mut lab, k) = f270_label_with(&others_judge_absence);
         let f = lab.founding;
         let d = lab.declare(Some(ANA), f, f, CY, vec![outcomes::STAKE_REDISTRIBUTED]);
-        let acks = cosigned.then(|| vec![lab.sign(BEN, &d)]);
-        let t = lab.clone_terms(&k, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.fees = f270_fee(10_000));
+        if cosigned {
+            let sb = lab.sign(BEN, &d);
+            lab.acknowledge(0, sb);
+        }
+        let moved = f279_moved(&lab, None);
+        let probe = lab.clone_terms(&k, vec![], &moved);
+        let powers = lab.view().powers_needed(&probe).unwrap();
+        assert_eq!(powers, vec![Power::Constitutional]);
+        let t = lab.clone_terms(&k, vec![(Power::Constitutional, vec![ANA, BEN])], &moved);
         let k2 = lab.propose(ANA, &t);
         let s1 = lab.sign(ANA, &k2);
         let s2 = lab.sign(BEN, &k2);
         assert_eq!(lab.view().agreement(&k2).unwrap().ready, cosigned, "cosigned: {cosigned}");
-        let r = lab.record_acking(0, Some((k2, vec![s1, s2])), &[], vec![], k2, acks);
-        assert_eq!(puts(&lab, &r), cosigned.then_some(k2), "cosigned: {cosigned}");
+        if cosigned {
+            lab.rotate(Some((k2, vec![s1, s2])), &[0]);
+            let p = lab.publish(0);
+            lab.sign(ANA, &p);
+            assert_eq!(lab.in_force(&p), k2, "the stake shared out at the rotation");
+        }
     }
 }

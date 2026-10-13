@@ -100,6 +100,8 @@ Checked against the working rule (F265) first: participants choose their abandon
 
 **Q1. Which advance permission reaches a departed member's pay?** *(area: core business, Agreements stakes; rule 48, F273)*
 
+*Answered on 13 October 2026 by F279, differently from all three options: no advance permission reaches anyone's pay; abandonment moves a stake by succession. See "Revision: F279 and F280" below. The build of this first pass (`pay_permitted`) is removed.*
+
 *In plain words:* you decided that what a collective allowed in advance reaches a departed member's pay, which is also the way out when one vanishes. The only advance permission the core can check is the abandonment clause: someone it names declares a person absent, with outcomes the clause lists (0 their voice removed, 1 their stake shared among the others, 2 their stake given to named people, 3 their obligations redirected or held, 4 the agreement closed). Which declaration should let the members pay a departed member less without their signature?
 
 - **(a) A declaration against them stating outcome 1 or 2** *(built, my lean)*. These are the outcomes that may already take the stake itself (rule 48's first paragraph, "unless the agreement pre-authorised it"); paying it less is less than taking it. A clause allowing only outcome 0 gives no such permission.
@@ -138,3 +140,203 @@ How it works today, under (a): the declaration must name a version of the agreem
 | this branch | 668 passed, 0 failed, 1 ignored (662, plus 5 in `agreements_collective.rs` and 1 in `pay.rs`) | 319 of 319, the same counts in every package (`clients/assess` 49, its tests changed, none added) |
 
 `scripts/test-all.sh` itself, run on the branch's final code: **"All tests passed"**. The ignored test is the Lightning regtest, skipped unless `MOR_LN_REGTEST` is set. `wasm-bindgen` 0.2.129 was installed outside the repository first; the site's browser test used the container's Chromium. Main was run the same way, every step to the end, in a separate checkout.
+
+---
+
+# Revision: F279 and F280
+
+*13 October 2026, morning. The same branch, main merged in first (F278 to F280, Machine, allegedly, plugged in). Before merge, at Nobody, allegedly's decision: F279 answers Q1 differently from its three options, and F280 was decided the same morning. Agreements draft 12 is not yet approved, so it is revised in place, each change marked "new in draft 12 (F279)" or "(F280)", with the MICS v24 and the freeze suite v24.*
+
+## In plain words
+
+**F279: abandonment passes a stake on; it never cuts pay.** When someone is declared absent (they died, or vanished), their stake now goes to the person their succession plan names, with all its pay. Only if they named nobody may the clause share their stake out among the others (outcome 1) or hand it to someone named (outcome 2). While the stake stays with them, nobody can pay them less without their signature, whatever the agreement allowed in advance. So the first pass's "advance permission" is gone: a departed member who vanishes no longer blocks the collective because their stake moves on, and whoever holds it next is asked, or is already a member.
+
+Until now the core could not pass a stake on at all: the text said "a stake passes by succession as planned", but any clone lowering a share needed its holder's signature, which a dead person cannot give. That is now built.
+
+**F280: non-owners are paid off the top only.** A plan can still pay a service, a referrer, a relay or an app, but only as overhead taken first. Whatever is left goes to the owners alone, divided as they own it. A plan that puts a non-owner beside the owners in the remainder is now refused. This also makes F274's checks simpler: inside the remainder there are only owners, so the core only has to compare the overhead and the owners' own parts.
+
+**One question for you (Q2)**, and one after it (Q3), below. The second one matters more widely: several case studies split a pool among creators by plays or viewing, or have no owners at all (a worker and a platform), and F280 changes what they can write.
+
+## Precisely
+
+### The texts
+
+**Agreements draft 12** (`spec/MIR-agreements-draft-12.md`), each change marked:
+
+- **Header:** a paragraph saying what this revision adds, that the first pass's reading of F273 and its Q1 are withdrawn, and that nothing else changes.
+- **Rule 48:**
+  - After the first paragraph: "**A stake moved by succession is not a reduction, and the only advance permissions that move a stake without its holder are rule 89's** (new in draft 12, F279): a declaration of absence passes the stake to the stake successors the holder's succession plan names, or, where it names none, outcome 1 or 2 redistributes or transfers it."
+  - On the list of who has no voice: "in a collective, a departed holder (rule 68)" now carries a reading, to confirm (Q2): every holder who is no member, a stake successor or a buyer included.
+  - F273's paragraph and its reading are replaced by: "**No advance permission reaches what a stake is paid** (new in draft 12, F279; F273's mechanism superseded by F279). Abandonment never lowers what a stake is paid while the stake stays with its holder. A departed holder who vanishes does not block the collective's fees, because its stake moves: declared absent, to its stake successor, or, with none named, by outcome 1 or 2 (rule 89); whoever then holds it signs, or already holds the say. F273's 'never' for a deal's holder who is no party stands (new in draft 12, F273)." Then his words.
+  - After F274's paragraph: "**Since a plan pays non-owners off the top only, every share in the rest is a stake's** (new in draft 12, F280): a stake is paid less by anything taken off the top added or raised (a role share, a named receiver, a metric share), by a role nobody fills sent away from the stakes, or by its part lowered against the other stakes' parts; never by a non-owner's share in the rest, which no valid plan has."
+- **Rule 87:** a fourth check: "that, where the party's succession plan names a stake successor, it states neither outcome 1 nor outcome 2 (rule 89; new in draft 12, F279)."
+- **Rule 89:** before the list: "**A declaration moves a stake only by succession** (new in draft 12, F279): the stake, and its pay with it, goes to the stake successors the holder's succession plan names, in the plan's shares (rules 81 to 83). A clone carrying exactly that, put in force under the declaration, needs no signature of the absent holder. Abandonment never lowers what a stake is paid while the stake stays with its holder (rule 48)." Outcomes 1 and 2 each gain "**only where the holder's succession plan names no stake successor**". After the list: "Outcomes 0, 3 and 4 are unchanged. A declaration stating outcome 1 or 2 against a holder whose succession plan names a stake successor is refused." The closing comment now reads "Removing a voice never takes the stake; that takes the party's succession plan or, where it names no stake successor, outcome 1 or 2, which the party also signed."
+- **Rule 22:** a first paragraph: "**Every share paying anyone but a stake, a role share, a named receiver or a metric share, is paid off the top only, as overhead; what is left goes to the stakes alone, and within each stake by its holders' shares. A plan putting a non-owner in the rest is invalid** (new in draft 12, F280)." Then his words, and "Weights between several stakes stay a business choice."
+- **Rule 29:** "**A metric share is paid off the top only, as overhead, like every share paying anyone but a stake** (rule 22; new in draft 12, F280)."
+- **The split plan's format:** the comments on keys 0 and 4 say every share but a stake's is named in key 4, and the rest goes to the stakes alone.
+- **Glossary**, "Split plan": "**Every share paying anyone but a stake is paid off the top, as overhead; what is left goes to the stakes alone** (new in draft 12, F280)."
+- **Freeze lines:** two added, one for F279 and one for F280.
+- **Rule 25** needed no change. It says who bears a payout's rail fee and its cap, and places no share.
+
+**The MICS v24**, the sentences changed in this revision:
+
+1. The header gains: "*Revised 13 October 2026 (morning), before its approval:* Agreements draft 12, revised in the same way, writes in **F279** (…) and **F280** (…)."
+2. "Changing an agreement": "The agreement's advance permission reaches a collective's departed holder's pay, never a deal's non-party holder's (F273)." is replaced by "No advance permission reaches what a stake is paid: abandonment moves a stake only by succession, and never lowers its pay while it stays with its holder (F279)."
+3. "Departed holders": "…nor is what it is paid lowered without it (F270), save where an advance permission they signed as a member reaches it (F273), and is a share of all the collective's income." now reads "…nor is what it is paid lowered without it (F270), and is a share of all the collective's income. Declared absent, a departed holder's stake passes to its stake successor, or, with none named, is redistributed or transferred as the clause allows (F279)."
+4. "Open before freeze": "…one reading taken building them, what advance permission the core can read, is to confirm (its Q1)." now reads "…F273's mechanism is superseded by F279; one reading taken building them, who has no voice in a collective, is to confirm (its Q2)."
+5. "Split service" gains a line: "A share paying anyone but a stake (a role, a named receiver, a metric) is paid off the top only, as overhead; what is left goes to the stakes alone, and within each stake by its holders' shares. A plan putting a non-owner in the rest is invalid (F280)."
+6. "Abandonment" gains a line: "A declaration moves a stake only by succession: the stake, and its pay with it, goes to the stake successor the holder's plan names. Redistributing or transferring a stake applies only where the plan names no stake successor. Abandonment never lowers what a stake is paid while it stays with its holder (F279)."
+
+**The freeze suite v24**, the sentences changed in this revision:
+
+1. The header gains: "*Revised 13 October 2026 (morning), before its approval:* **F279** and **F280** …", saying what is tested where.
+2. The departed holders line: "save where an advance permission it signed as a member reaches its pay (F273) (3.7x, 3.7y);" now reads "abandonment moving its stake only by succession and never lowering its pay while it stays (F279) (3.7x, 3.7y);".
+3. The clone drafts line: "…the deal's advance permission never reaching its pay (F270, F273, F274) (1.9d, 1.9e);" now reads "…no advance permission reaching its pay (F270, F274, F279) (1.9d, 1.9e);".
+4. Two new lines after "Succession plan": one for F279 (the stake moved only by succession; outcomes 1 and 2 only with no successor named; no declaration lowering pay) and one for F280 (non-owners off the top; the rest to the stakes alone, by parts and ownership, to the smallest unit).
+5. Step 1.9: "…redistributing their stake as the clause defined: one identity (Flaw B19)." now reads "…redistributing their stake as the clause defined, the party having named no stake successor (F279): one identity (Flaw B19)."
+6. Step 1.9d is rewritten. Its plan pays a mastering service 100,000 off the top, and the film's and the soundtrack's stakes 800,000 and 200,000 of what is left. F274's list is as F280 leaves it: "another share moved onto the top" and "a role share added with the stake's part raised to match" are gone (see below), and another stake's part and a stake taken off the top come in.
+7. Step 1.9e is re-headed "**No advance permission reaches it**" (F273, F279); it adds that the investor names no stake successor, and that the stake stays with it.
+8. Step 3.7y is replaced by F279's: "**A departed holder's stake moves by succession, its pay never cut.**" It covers the successor named, outcome 1 refused, the stake passing to the successor, and the successor then signing a fee raise; with none named, outcome 1 sharing the stake out; and the threshold authority.
+9. Scenario 3's "Passes if": "…save under an advance permission it signed as a member (3.7x, 3.7y)," now reads "…its stake moving only by succession, or, with no successor named, as the clause allows (3.7x, 3.7y),".
+
+**`spec/README.md`**: draft 12's line says what the revision adds; the findings range runs to F280.
+
+### The code
+
+**F279** (`core/src/agreements/view.rs`):
+
+- **`pay_permitted` is removed.** F270's signature is needed from every holder paid less who has no voice, with no exception.
+- **A declaration's own check refuses outcome 1 or 2** against a party whose succession plan, in the version the declaration names, names a stake successor. Reason given: "outcome 1 or 2 against a party whose succession plan names a stake successor: its stake goes to that successor by succession (rule 89, F279)".
+  - *Item 6, the choice: refused, not read as the plan.* A declaration's outcomes are the authority's signed words, and the core refuses what it cannot take as written rather than rewriting it ("refused, never guessed", as everywhere in the build). Reading outcome 1 as "the plan" would make the same signed act mean two things depending on a field the authority may not have looked at. The authority can sign a new declaration at once.
+  - *Its cost:* a declaration combining outcome 0 with 1 against such a party is refused whole, voice removal included, until re-signed.
+- **The stake succession is built** (`moved_by_abandonment`). A clone needs no signature from a holder whose share it lowers when all of these hold:
+  - a declaration of absence against that holder counts as the clone uses it. That is the existing checks: its authority, a threshold counted at the line, and any absence-proof cMIP's acceptance;
+  - the clone takes the holder's whole share of every stake it held;
+  - each gain matches either:
+    - the holder's plan in the parent: each stake successor gains its share of what the holder held; or
+    - where that plan names no stake successor and the declaration states outcome 1: the stake's other holders gain in proportion to their shares.
+  - Each gain may be off by less than one millionth, the total exact (mechanic, the build's).
+  - The holder's plan may be dropped in the same clone.
+  - The release rule must be unchanged.
+  - This holds in deals and collectives alike, at the line and in the `ready` preview.
+- **Outcome 2 is not built.** It transfers the stake "to parties named or defined by role", named in the clause's words, which the core cannot read; a clone doing it still needs the holder's signature (noticed, below).
+- In a collective, taking a departed holder off field 22 is constitutional (the departed members entry). So a departed holder's stake moving puts the clone in force by a rotation, as for any constitutional clone.
+
+**F280** (`core/src/agreements/open_formats.rs`, `formats.rs`):
+
+- `SplitPlan::check_overhead`, called by `Terms::check`, refuses a plan where any share but a stake's is not named in key 4: "split plan: a share paying anyone but a stake is paid off the top only; what is left goes to the stakes alone (F280)".
+- It is a validity rule, not a format rule. Such terms still decode, so a client reads them and explains the refusal (the deal tool does), and every agreement the core holds is checked (`AgreementsView::terms`).
+- Stakes may still be weighted in the rest, or one taken off the top: weights between stakes are a business choice (F280's words).
+
+**F274's reading, simplified by F280** (`core/src/agreements/pay.rs`). The rest now holds stakes only, so:
+
+- **Gone, impossible now:** a non-owner's share in the rest raised or added; a non-owner moved onto the top (it must already be there); and comparing a stake's portion against role shares in the rest for every way the roles may be filled. That was a 2ⁿ enumeration; roles now come off the top, and filled or not they change only what the top takes.
+- **Gone too: compensation.** A role share added with the stake's own part raised to match no longer pays no less. An overhead added always lowers what is left; a stake's part counts only against the other stakes'.
+- **Kept:**
+  - anything taken off the top added or raised;
+  - unfilled roles sent away from the stakes;
+  - a stake's part lowered against the other stakes', compared exactly;
+  - a stake moved on or off the top (counts: units unread);
+  - a stake on the top in both versions, its own part;
+  - the rail fee, the maximum fee, a fee, the split cMIP and its parameters, as before.
+- **Who has no voice:** `pay_signers` now asks every holder who is no party of the parent, in a deal as before and in a collective too. That covers a departed holder, a stake successor and a buyer of part of a stake (reading, to confirm: Q2).
+
+**WebAssembly:** `paySigners`' description follows.
+
+**The deal tool (`clients/assess`):**
+
+- The F273 flag is gone. In its place, under `dilutable-stake`: a clause allowing outcome 1 or 2 is flagged before signing for each holder who can be declared absent and names no stake successor, a departed one included. One who names a successor is not flagged. It quotes rule 89's "only where the holder's succession plan names no stake successor".
+- A plan F280 makes invalid is refused before signing. The tool shows "Agreements refuse these terms" with the core's words naming F280, and judges no further.
+- Its probe version (a plan written where the terms had none) now names a stake share, not a receiver in the rest.
+
+### The sweep (item 11)
+
+**Freeze steps.** Only 1.9d, this branch's own, stated a non-owner in the rest; it is rewritten. The role-share steps (2.4, 2.4d, 2.4e, 2.4f, 3.8's "position paying for the job") and the subscription scenario (7) do not say top or rest, so F280 reads them off the top; none needed rewriting.
+
+**Test fixtures, rewritten:**
+
+- `core/tests/agreements.rs`, the f12b plan (a role and a named receiver now off the top).
+- `core/tests/agreements_collective.rs`, `plan_of` (every non-stake share off the top: the role, metric and receiver tests run unchanged on it), and this branch's own F270 fixtures.
+- `clients/assess/test/deals.ts`, five of its 19 deals: the song before its publishers, the band's song (case study 08), the renovation job (12), the club's live rights (17), and the award (21). Each overhead now comes off the top, in millionths, and a note at the file's head says so.
+- `cmips/split/tests` had a plan with two receivers in the rest. Its `divide` never checks terms, so it passes; it is left for the cMIP's pass.
+
+**Case studies and cMIPs, for a later pass (not edited here):**
+
+- **`cmips/cmip-split-draft-1.md`**, "The amounts", step 2: "The rest is divided among the other shares in proportion to their parts", a named receiver among them. `cmips/split/README.md` says the same. It should say the rest goes to the stakes.
+- **`cmips/cmip-relay-transport-draft-3.md`**, delivery records, rule 3: "several relays can fill a role share … as the split plan divides it". Compatible; it should say the share is off the top.
+- **08** (musician to label): the members' shares, a reposter share, a "tools used" share and the service's cut as peers (the 90/5/5 case).
+- **09** (cat video): ad revenue "55% to the team, 45% to the platform" as two peer parts. Subscription money divided among works "by total viewing" or "by each subscriber's own viewing" (by a metric, among owners).
+- **11** (journalism): "Sara's share, the resident's price, the verifier's fee" as peers. Subscriptions split "by what that reader actually read" (by a metric).
+- **12** (gig economy): every plan pays named receivers only, with no stake (worker and platform; restaurant, courier and platform; the holiday flat; the mutual pool).
+- **13** (gaming): the level maker and the studio; the seller, the item's maker, the studio and the marketplace; "tools used" and streamer shares, all as peers.
+- **14** (learning and work): the raters' pool as a named receiver; tutors, locations and equipment as named shares; a recruiter's share.
+- **15** (advertising): "10% of any sale you lead to", a role share, compatible off the top; an attention deal paid by metric.
+- **16** (commerce): courier, warehouse, insurer and storefront role shares, compatible off the top.
+- **17** (live sports): Dario's share, the club's and a relay's as peers; feeds and a raid referral share.
+- **18** (adult content): the platform divides subscription revenue among creators by what subscribers follow (by a metric).
+- **19** (software): a dependency pool divided by how often each library is used (by a metric).
+- **20** (AI): Tarek, the compute lenders' stakes, a dataset share and the base model's makers in one split; evaluators paid beside researchers.
+- **21** (academic publishing): helpers paid by a named share; compatible off the top.
+- **04** (augmented democracy): a budget split among projects by the vote's result, named receivers only.
+- **`docs/companions/05-MOR-the-unwritten-layer-v3.md`**: the client and maintainers' shares "come out of the owners' split"; a pool split by minutes.
+- **`docs/companions/05-MOR-who-can-earn-v6.md`**: "Services can still split money by attention, as streaming does today": in tension with F280 for pools (Q3).
+
+## Readings taken
+
+- **Q2's reading, to confirm:** in a collective, every holder who is no member has no voice and signs what pays it less. That covers a departed holder, a stake successor and a buyer. Put as Q2.
+- *The stake successors' shares* apply to every stake the holder held, as rule 81 writes it ("a share of the party's stakes"). *Mechanic, the build's.*
+- *The clone executing a succession* is marked by the powers its changes need, like any clone, not by `[3, party]`, which names a seat's automatic entry (rule 83). A departed holder's stake moving takes them off field 22, so it is constitutional. *Mechanic, the build's.*
+- *Each heir's or holder's gain* within one millionth of the exact share, the total exact. *Mechanic, the build's.*
+
+## Questions for Nobody, allegedly
+
+Both were checked against the working rule (F265) first. Each asks what F270 or F280 protects, which no participant's choice may break, so each is put. They are numbered after this branch's Q1, which F279 answered.
+
+**Q2. In a collective, who signs what pays them less: departed members only, or every holder who is no member?** *(area: core business, Agreements stakes; rule 48, F270 with F279)* *(asked now)*
+
+*In plain words:* F270 named two kinds of holder without a say: an investor in a deal, and a member who left a collective. F279 creates a third. A successor who inherits a departed member's stake holds part of the collective's income, but is neither a member nor someone who left. A fourth already existed: someone who bought part of a collective's stake. F279's own consequence says whoever then holds the stake "can be asked to sign".
+
+- **(a) Every holder who is no member** *(built, my lean)*. That covers departed members, successors and buyers. It is F270's own principle ("no voice in the power making that change"), and the core can compute it from the terms: anyone holding a stake who is not a party.
+  - It changes one of the deal tool's test collectives, case study 19's maintainers: the past contributors who hold 10% are now protected, and no longer flagged.
+- **(b) Departed members and successors only.** Buyers stay unprotected, as the second pass of core v22 left them. Stated cost: the terms do not record who is a successor, so a successor would have to be written into the departed members entry, changing what that entry means ("who left").
+- **(c) Departed members only**, as F270's words list them. Stated cost: a successor can then be paid less without signing, which F279's consequence rules out.
+
+**Q3 (next, once Q2 is answered). Can a pool still divide its money among owners by plays or viewing?** *(area: core business, Agreements splits; rules 22 and 29, F280)*
+
+*In plain words:* F280 puts metric shares off the top, as overhead. But in several case studies (09, 11, 18, 19, and a companion), a subscription service or a pool divides its income among creators by what was played or read. They are owners being paid by use, not non-owners. And some deals have no owners at all: a worker and a platform (case study 12). Under F280 as written, both can still be expressed: the metric share or the named receivers take everything off the top, leaving nothing for stakes. But then "overhead" is the whole income, which is not what F280 meant.
+
+The options I would put: (a) as written: pools and no-stake deals take everything off the top, a stated cost; (b) a metric may divide the rest among stakes only, weighting stakes by use, since weights between stakes are a business choice; (c) a plan with no stakes is exempt from F280. *Not built either way; the code applies F280 as written.*
+
+## Noticed, not changed
+
+- **Outcome 2 (transfer) is not built.** Its recipients are "parties named or defined by role" in the clause's words, which the core cannot read. Until a format names them, a clone transferring an absent holder's stake still needs that holder's signature.
+- **Rule 48's first paragraph is now built** for succession and outcome 1. That closes the first pass's note that pre-authorised share cuts were not built.
+- **Which clause judges a departed member** (first pass, noticed): unchanged. A declaration against a departed member still names a version where they were a party, and is judged by that version's clause and plan.
+- **The nesting walk** (`walk_signed`, an agreement as a party of another) still asks a stake's absent holder to sign a succession clone. It fails closed: a nested agreement may read such a version of a deal as unsigned until the walk learns succession.
+- **Units off the top.** F280 makes every overhead a top share, whose units are the split cMIP's (millionths in draft 1). Several case studies write overhead as a percentage beside owners' parts; the cMIP pass should settle that a top share is a fraction of the payment.
+- **A test failing on main, not this branch's:** `clients/assess/test/ask.test.ts`, "asking stays in the local process". It finds `clients/desk/src/claude.ts`, which pull request 37 (Machine, allegedly, plugged in) added on main, importing Anthropic's SDK. Whether the desk may (it runs on the author's Mac, like the deal tool's command) is that pull request's to settle; this branch leaves it.
+
+## Tests
+
+**New or replaced**, each seen failing without its change (by switching the change off and running; each switched back after):
+
+- `core/tests/agreements.rs`, `f280_a_non_owner_is_paid_off_the_top_only`: a named receiver, a role or a metric share in the rest refused by the check (still decoded); the same off the top accepted; stakes weighted, or one off the top, accepted. *Fails with the F280 check off.*
+- `cmips/split/tests/f280.rs` (new file; the cMIP's code and text unchanged): the overhead off the top, rounded down; everything left to the stakes, three parts to one; within the album, by ownership, each within one unit; exact to the unit, for four amounts.
+- `core/tests/agreements_collective.rs`:
+  - `f270_f274_a_deals_non_party_holder_signs_what_pays_it_less` and `f270_f274_a_departed_holder_signs_what_pays_it_less` (1.9d, 3.7x): F274's list as F280 leaves it, 17 changes, and 11 that pay no less, on the new plans.
+  - `f279_no_advance_permission_reaches_a_deals_non_party_holders_pay` (1.9e).
+  - `f279_a_declaration_passes_the_stake_to_the_successor` (3.7y): outcome 1 refused; a fee raise and a sharing-out both need Cy while the stake stays; the stake passes to the heir with the members alone; the heir must then sign a fee raise. *Fails with the stake succession off, with the refusal off, and with "no voice" read as departed holders only.*
+  - `f279_with_no_successor_outcome_1_shares_the_stake_out` (3.7y): a fee raise needs Cy while the stake stays, even under outcome 1, which the first pass would have let through; out-of-proportion and partial moves need Cy; the proportional move goes ahead with the members alone, and a fee raise then needs nobody else; under outcome 0 alone, nothing moves without Cy. *Fails with the stake succession off.*
+  - `f279_a_threshold_authority_moves_the_stake_at_the_line` (3.7y): one signature on the declaration is not enough; with the second placed before the rotation, the stake moves. *Fails with the stake succession off.*
+- **Removed:** the three F273 tests of the first pass.
+- **`clients/assess`:** the F279 flag (a holder with no stake successor flagged, one with a successor not, a departed holder included); a plan F280 refuses explained before signing, the same off the top read; five deals rewritten; the maintainers' collective's expected flags under Q2's reading. 50 tests (49 before; one added).
+
+**The whole suite:**
+
+| | Rust | TypeScript |
+| --- | --- | --- |
+| main (`92deee3`) | 662 passed, 0 failed, 1 ignored | 352 of 353, in 16 packages; the one failure `clients/assess`, "asking stays in the local process" (noticed above) |
+| this branch | 671 passed, 0 failed, 1 ignored (662, plus 6 in `agreements_collective.rs`, 1 in `agreements.rs`, 1 in `pay.rs`, 1 in `cmips/split/tests/f280.rs`) | 353 of 354: every package as main, `clients/assess` 49 of 50 (one test added), the same one failure |
+
+Every step of `scripts/test-all.sh` was run on both, to the end, not stopping at a failure. The script itself stops at `clients/assess` on main and on the branch alike, because of main's failing test. The ignored test is the Lightning regtest. `wasm-bindgen` 0.2.129 is installed outside the repository; the site's browser test used the container's Chromium.
+

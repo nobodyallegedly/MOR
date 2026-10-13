@@ -17,7 +17,7 @@
 pub mod formats;
 pub mod open_formats;
 /// What a version pays a stake less (Agreements draft 12, rule 48: F270,
-/// F273, F274).
+/// F274, F279, F280).
 pub mod pay;
 /// Two classes of offers and the proof checker (Agreements draft 11, F261).
 pub mod proofs;

@@ -384,7 +384,7 @@ function signersFor(payload: Uint8Array, t: TermsRead, field: 8 | 28): Set<strin
   if (field === 8) {
     const plan = m.get(8);
     if (plan instanceof Map) m.set(8, new Map([...plan, [7, 'a changed parameter']]));
-    else m.set(8, new Map<number, unknown>([[0, [[2, unhex(t.parties[0]), 1]]], [1, mark('a split cMIP')]]));
+    else m.set(8, new Map<number, unknown>([[0, [[0, 0, 1]]], [1, mark('a split cMIP')]]));
   } else {
     m.set(28, [[mark('a fee Module'), 1]]);
   }
@@ -492,22 +492,19 @@ function flagsOf(t: TermsRead, payload: Uint8Array, names: Names): Flag[] {
     const why: string[] = [];
     const rests: string[] = [];
     const cites: Cite[] = [];
+    // F279: a declaration moves a stake by succession; outcomes 1 and 2
+    // reach only a holder whose succession plan names no stake successor.
     const lose = (a?.outcomes ?? []).filter((o) => o === 1 || o === 2);
     if (a && lose.length) {
-      const declared = a.authority === 'named' ? owners.filter((h) => t.parties.includes(h) && h !== a.identity) : owners.filter((h) => t.parties.includes(h));
-      for (const h of declared) hit.add(h);
-      why.push(`a party declared absent may have its stake ${list(lose.map((o) => (o === 1 ? 'shared among the remaining holders' : 'transferred to parties named or defined by role')))}, without signing`);
-      rests.push('Agreements rule 48 (was 46): no stake reduced without its holder’s signature “unless the agreement pre-authorised it”; rule 89, outcomes 1 and 2');
-      cites.push(...A(48, 89));
-    }
-    // F273: in a collective, the clause's power to take a departed holder's
-    // stake reaches its pay too (reading, to confirm: `docs/f270-build.md`).
-    const gone = deal ? [] : owners.filter((h) => (t.departed ?? []).includes(h));
-    if (a && lose.length && gone.length) {
-      for (const h of gone) hit.add(h);
-      why.push(`${who(gone)}, departed, may be declared absent under the clause signed as a member, and then be paid less (a fee added, the plan changed) without signing`);
-      rests.push('Agreements rule 48 (was 46), new in draft 12 (F273): the agreement’s advance permission “reaches a collective’s departed holder’s pay”; rule 89, outcomes 1 and 2');
-      cites.push(...A(48, 89));
+      const heir = (h: string) => (t.succession ?? []).some((s) => s.party === h && (s.stakes ?? []).length > 0);
+      const declarable = (h: string) => (t.parties.includes(h) || (t.departed ?? []).includes(h)) && !(a.authority === 'named' && h === a.identity);
+      const declared = owners.filter((h) => declarable(h) && !heir(h));
+      if (declared.length) {
+        for (const h of declared) hit.add(h);
+        why.push(`${who(declared)}, naming no stake successor, may be declared absent and have ${declared.length === 1 ? 'that stake' : 'those stakes'} ${list(lose.map((o) => (o === 1 ? 'shared among the remaining holders' : 'transferred to parties named or defined by role')))}, without signing; naming a successor sends the stake to the successor instead`);
+        rests.push('Agreements rule 89 (was 53), new in draft 12 (F279): outcomes 1 and 2 apply to a stake “only where the holder’s succession plan names no stake successor”; rule 48');
+        cites.push(...A(48, 89));
+      }
     }
     const r = t.releaseRule;
     if (r && r.form !== 'all') {

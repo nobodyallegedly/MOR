@@ -2,6 +2,8 @@
 
 *Draft 12, 12 October 2026 (night), for Nobody, allegedly, to approve: draft 11 (approved 12 October 2026), with one rule changed, rule 48 (was 46). It writes in the two answers to core v22's second pass's questions, where draft 11 marked them "Open (core v22, Q7)" and "(Q8)": **F273** (Q7, decided by Nobody, allegedly: "A) agreed"), the agreement's advance permission reaches a collective's departed holder's pay and never a deal's non-party holder's; and **F274** (Q8, decided by Nobody, allegedly: "What money sees and money expects is what matters"), which changes pay a stake less. Each is marked "new in draft 12 (F273)" or "new in draft 12 (F274)"; one reading the build took on F273, what advance permission the core can read, is marked "reading, to confirm" (`docs/f270-build.md`, Q1). F270 is now built (`docs/f270-build.md`), so its "to build" marks are removed in rules 28, 45, 48 and 68 and in its freeze line. **Nothing else changes**: every other rule, format, mark and freeze line is draft 11's, word for word, and draft 11's header follows unchanged. Findings F1 to F274.*
 
+*Draft 12, revised 13 October 2026 (morning), before its approval, for Nobody, allegedly, to approve (`docs/f270-build.md`, "Revision: F279 and F280"). Two decisions taken that morning are written in, each change marked "new in draft 12 (F279)" or "new in draft 12 (F280)": **F279** (on the build's Q1; decided by Nobody, allegedly: "It feels right this way, it matches how things run out here"), abandonment moves a stake only by succession and never lowers its pay, outcomes 1 and 2 only where no stake successor is named, which supersedes F273's mechanism (rules 48, 87 and 89); and **F280** (decided by Nobody, allegedly: "Shared ownership means shared fruits"), a share paying anyone but a stake is paid off the top only, what is left going to the stakes alone (rules 22 and 29, rule 48's reading of F274, the split plan's format and the glossary). One reading taken building them, who has no voice in a collective, is marked "reading, to confirm" (`docs/f270-build.md`, Q2). Two freeze lines are added. The first pass's reading of F273 and its question (Q1) are withdrawn, answered by F279. Nothing else changes.*
+
 *Draft 11, 11 October 2026: a transition draft, for Nobody, allegedly, to review and approve again (F251). It is draft 10 (approved 5 October 2026, revised in place since, last for F249 and F250) written for plain reading, in three parts. **The first part changes no rule**: the rules are numbered afresh in reading order, each with its old number beside it, how things run most of the time comes first and the mechanics of rare cases after, and "vow" replaces "announcement" throughout (F241), the type number and the wire format unchanged. **The second part writes in the findings decided since draft 10's last revision, F252 to F260**, each marked where it stands "new in draft 11 (Fxxx)", and "to build" where the code does not do it yet; F242 to F250 were checked to be stated already. **The third part writes in the answers to the questions the second part raised** (Q1 to Q6 in `docs/agreements-draft-11.md`): F261, F259 as revised, F262 and F263, each marked "new in draft 11 (Fxxx)", and the readings of Q2 and Q3, each marked "reading (Q2)" or "reading (Q3)"; Q6 leaves Money draft 6 as it is. Then the answers to the two questions that pass raised, Q7 and Q8: F264 and F265, each marked "new in draft 11 (Fxxx)", F265 correcting F262's wording. **Then a marked pass** (12 October 2026, after the draft's approval, for Nobody, allegedly, to approve; `docs/core-v22.md`): the proven offers' paragraph points to the field Development draft 7 adds for a proof-of-delivery checker (F268), and F255's paragraph points to Money draft 7, rule 17, now that Money draft 7 is approved; each marked "new in draft 11" with its finding where it stands, written against the six current drafts (Identity 12, Envelopes 8, Text 7, Money 7, Development 7). No rule changes. **Then a second pass** (12 October 2026, evening, for Nobody, allegedly, to approve; `docs/core-v22.md`, "Second pass") writes in two findings decided on the deal assessment tool's questions, each marked "new in draft 11 (Fxxx)": F270 in rule 48 (was 46), with rules 28, 45, 66 and 68 pointing to it, to build: what a stake is paid is not lowered without the signature of a holder with no voice in the power making the change; and F271 in rule 25 (was 24a): the split plan may state a maximum fee per payout, none meaning no cap, flagged before signing. It also corrects four slips the tool noticed, marked "text only, no rule changed": field 28 in the terms format and the tier table; field 10's withdrawal in the tier table, the glossary and rule 67, and so in rules 6 and 72, the reasoning and two freeze lines, which still read it as live; task 14 as judicial in the tier table and rule 67; the fee entry's comment citing rule 28. Two points it leaves open on F270 are marked "Open (core v22, Q7)" and "(Q8)". Written against core v21, Identity MIR draft 11, Envelopes MIR draft 7, Text MIR draft 6, Money MIR draft 6, Development MIR draft 6 and findings F1 to F265. The record of how each rule came about (the revision notes of drafts 1 to 10, "Decided in this draft", and the questions and readings found writing each pass) stays in draft 10 and in the findings log; this draft does not repeat it. The freeze-ready draft that follows drops the old numbers.*
 
 ## How to read this draft
@@ -79,7 +81,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 
 ### Money and splits
 
-- **Split plan.** The part of an agreement that says how incoming payments are divided: fixed shares on stakes, role shares, a maximum fee per payout where it states one (F271), and what happens to unfilled roles. Fees are their own terms field, 28, beside it (F213).
+- **Split plan.** The part of an agreement that says how incoming payments are divided: fixed shares on stakes, role shares, a maximum fee per payout where it states one (F271), and what happens to unfilled roles. Fees are their own terms field, 28, beside it (F213). **Every share paying anyone but a stake is paid off the top, as overhead; what is left goes to the stakes alone** (new in draft 12, F280).
 - **Split service.** An identity that receives payments on behalf of a work's owners, divides each one according to their agreement, and pays every party out. It can be a company, a collective, a friend running software, or the owners themselves; a sole creator is simply their own split service.
   Where an agreement names one, the payee pointer of the identity its publications are made for counts, for Agreements, only if both hold (rule 16, F121, F123, F124 P2):
   - every address in it also appears in that service's own signed pointer in force;
@@ -803,6 +805,8 @@ The split cMIP declares its remainder rule; where it declares none, leftovers fo
 
 #### Rule 22 (was 22). Role shares with evidence
 
+**Every share paying anyone but a stake, a role share, a named receiver or a metric share, is paid off the top only, as overhead; what is left goes to the stakes alone, and within each stake by its holders' shares. A plan putting a non-owner in the rest is invalid** (new in draft 12, F280). *"I think subtle ways to dilute should be stopped. Shared ownership means shared fruits" (Nobody, allegedly). Weights between several stakes stay a business choice.*
+
 *In short: a role share pays a helper known only at payment time, and, save a rail Module's, it counts only when the payer's own claim vouches for the helper.*
 
 *How it runs most of the time:* the owners name in advance the helpers they pay (a host, a mastering service), by a named share in the plan, and no evidence is needed. A role share pays for help known only at payment time, and **its evidence counts only when the payer the payment commits to acknowledges it**, in its claim for the payment: the payer chose the helper, and the payer's own signature says so.
@@ -915,6 +919,8 @@ A fee entry says when it applies: every payment, payments for a named publicatio
 #### Rule 29 (was 28). Attention
 
 A split may follow plays, views or any metric a module reports.
+
+**A metric share is paid off the top only, as overhead, like every share paying anyone but a stake** (rule 22; new in draft 12, F280).
 
 The metric, its module and the resulting payouts are named (the metric and its share in the plan, the records in split key 7: "The open formats", step 12b), so it is legible like any other.
 
@@ -1249,19 +1255,23 @@ What the request shows (DQ8, restated by the project lead under the delegation):
 
 A clone can never reduce a stake without its holder's signature, unless the agreement pre-authorised it.
 
+**A stake moved by succession is not a reduction, and the only advance permissions that move a stake without its holder are rule 89's** (new in draft 12, F279): a declaration of absence passes the stake to the stake successors the holder's succession plan names, or, where it names none, outcome 1 or 2 redistributes or transfers it.
+
 **Nor is what a stake is paid lowered without its holder, where that holder has no voice in the power making the change** (new in draft 11, F270). A version that lowers a stake's part of the split plan (field 8), or adds or raises a fee the stake bears (field 28), needs the signature of every holder of that stake it pays less who has no voice in the power making that change:
 - in a deal, a holder who is no party (every party signs every version of a deal, rule 47, F107);
-- in a collective, a departed holder (rule 68).
+- in a collective, a departed holder (rule 68). *Reading, to confirm (`docs/f270-build.md`, Q2; new in draft 12, F279): in a collective, every holder who is no member, as a departed holder: a stake successor who received a stake by succession (rule 83), and a holder who bought part of a stake (rule 10).*
 
 A member, who holds the power or chose it by signing the constitution, is left to the collective's own rules (rules 64, 65).
 
-**The agreement's advance permission reaches a collective's departed holder's pay, and never a deal's non-party holder's** (new in draft 12, F273). The first paragraph's "unless the agreement pre-authorised it", the abandonment clause among such permissions, reaches what a departed holder is paid, who signed the constitution as a member; it never reaches what a deal's holder who is no party is paid, who never signed the agreement. *Reading, to confirm (`docs/f270-build.md`, Q1): the advance permission the core can read is an abandonment outcome (rule 8): a declaration of absence against the departed holder, under the clause of a version it signed as a member, valid as rule 87 checks it and stating an outcome that takes its stake (1, redistributed; 2, transferred), reaches its pay.*
+**No advance permission reaches what a stake is paid** (new in draft 12, F279; F273's mechanism superseded by F279). Abandonment never lowers what a stake is paid while the stake stays with its holder. A departed holder who vanishes does not block the collective's fees, because its stake moves: declared absent, to its stake successor, or, with none named, by outcome 1 or 2 (rule 89); whoever then holds it signs, or already holds the say. F273's "never" for a deal's holder who is no party stands (new in draft 12, F273).
 
-*"A) agreed" (Nobody, allegedly). The parties' advance permission would reopen, for a holder who never signed, exactly what this rule closes; a departed holder signed it, and it is the way out when a departed holder vanishes, who would otherwise block every new fee for the whole collective, fees falling alike on every stake (rule 68).*
+*"Abandonment is meant to protect operational flow. It is not meant to change stakes or even pay. What abandonment can trigger in that regard is succession. Where the stake and associated pay go to the successor" (Nobody, allegedly).*
 
 **A stake is paid less by any change that lowers what it receives from a payment or can expect from the plan as written** (new in draft 12, F274): another share added or raised, a role share added, unfilled roles sent elsewhere, the rail fee moved onto receivers, the maximum fee raised or removed, the split cMIP or its parameters changed, as well as a fee added or raised. **What a cMIP pays cannot be read from the plan alone, so changing the split cMIP or its parameters counts.**
 
 *"What money sees and money expects is what matters" (Nobody, allegedly). Judged by effect: what reaches the stake from a payment, and what it can expect from the plan as written.*
+
+**Since a plan pays non-owners off the top only, every share in the rest is a stake's** (new in draft 12, F280): a stake is paid less by anything taken off the top added or raised (a role share, a named receiver, a metric share), by a role nobody fills sent away from the stakes, or by its part lowered against the other stakes' parts; never by a non-owner's share in the rest, which no valid plan has.
 
 *"If this can happen in a simple joint venture agreement it is a problem"; "One stone two birds, agreed" (Nobody, allegedly). The voices chose the power over fields 8 and 28; those without one did not, and what a stake is paid is what no choice of theirs may break.*
 
@@ -2121,7 +2131,8 @@ A declaration is a signed act by the authority the clause names, stating the agr
 The core checks:
 - that it is signed by that authority (for a threshold of the other parties, by one of them, completed by the others' signature acts until the number is met, B15);
 - that the outcome is one the clause allows;
-- that field 1 names the version the party declared absent signed last ("Abandonment declaration").
+- that field 1 names the version the party declared absent signed last ("Abandonment declaration");
+- that, where the party's succession plan names a stake successor, it states neither outcome 1 nor outcome 2 (rule 89; new in draft 12, F279).
 
 **Otherwise the declaration is the authority's judgment, a stated cost the party accepted by signing the clause, and a contest shows it** (F172).
 
@@ -2141,12 +2152,18 @@ A party who believes they were wrongly declared absent contests it with a contes
 
 #### Rule 89 (was 53). Outcomes
 
+**A declaration moves a stake only by succession** (new in draft 12, F279): the stake, and its pay with it, goes to the stake successors the holder's succession plan names, in the plan's shares (rules 81 to 83). A clone carrying exactly that, put in force under the declaration, needs no signature of the absent holder. Abandonment never lowers what a stake is paid while the stake stays with its holder (rule 48).
+
+*"Abandonment is meant to protect operational flow. It is not meant to change stakes or even pay. What abandonment can trigger in that regard is succession. Where the stake and associated pay go to the successor"; "It feels right this way, it matches how things run out here" (Nobody, allegedly).*
+
 The outcomes of a declaration may be combined:
 - **voice removed** (F105), described below;
-- stake redistributed among remaining holders in proportion;
-- stake transferred to parties named or defined by role;
+- stake redistributed among remaining holders in proportion, **only where the holder's succession plan names no stake successor** (new in draft 12, F279);
+- stake transferred to parties named or defined by role, **only where the holder's succession plan names no stake successor** (new in draft 12, F279);
 - obligations redirected or held;
 - agreement closed.
+
+Outcomes 0, 3 and 4 are unchanged. A declaration stating outcome 1 or 2 against a holder whose succession plan names a stake successor is refused (rule 87; new in draft 12, F279).
 
 Voice removed: the party is no longer counted in any change rule or area of the agreement, or of any agreement descending from it (rule 65). This holds:
 - in a collective, from the collective's line registering the declaration, or from the recovery rotation where the declared party is the one who would draw that line, the rotation that removes them (C7, B16);
@@ -2156,7 +2173,7 @@ A clone put in force before then is never undone, whatever version of the clause
 
 When the voice is removed in a collective, the remaining members rotate its keys and clone it without the party (rule 69), the recovery path standing in for a share that is gone.
 
-*A declaration is not a clone: it needs no change rule, only the authority the party signed. Removing a voice never takes the stake; that takes outcome 1 or 2, which the party also signed.*
+*A declaration is not a clone: it needs no change rule, only the authority the party signed. Removing a voice never takes the stake; that takes the party's succession plan or, where it names no stake successor, outcome 1 or 2, which the party also signed (new in draft 12, F279).*
 
 ## Part three: rare cases
 
@@ -2935,11 +2952,13 @@ Across versions, a stake is followed by its object (FR7). A payment for it fulfi
 
 ```cddl
 split-plan = {                ; terms field 8
-  0 => [+ share-rule],      ; stakes, then roles, then named receivers, then metric shares
+  0 => [+ share-rule],      ; stakes, then roles, then named receivers, then metric shares; every share but a
+                            ;   stake's is named in key 4, off the top (new in draft 12, F280)
   1 => hash,                ; split cMIP, which declares the remainder rule and computes the amounts (OF8 b)
   ; 2 is not used: fees are terms field 28, their own field (F213)
   ? 3 => unfilled,          ; what happens to a role share nobody fills; absent: [ 0 ], to the stakes (F218)
-  ? 4 => [+ uint],          ; indexes of shares taken off the top, before the rest is divided
+  ? 4 => [+ uint],          ; indexes of shares taken off the top, before the rest is divided; the rest goes to
+                            ;   the stakes alone, by their parts (new in draft 12, F280)
   ? 5 => uint,              ; who bears payout rail fees: 0 each receiver (default), 1 the split service
   ? 6 => amount / uint,     ; maximum fee per payout the service may deduct: absolute, or in millionths of the payout;
                             ;   absent: no cap, flagged before signing (rule 25, F271)
@@ -3707,6 +3726,8 @@ The scenario numbers after each colon are those of the freeze test suite.
 #### Splits
 
 - A deal's version raising a fee, signed by every party, stays a draft until a holder who is no party, paid less by it, signs; a collective's clone lowering a stake's part of the plan, met by its area, stays a draft until each departed holder of that stake signs; a member outside the area is not asked (new in draft 11, F270): 1, 3.
+- A plan putting a role share, a named receiver or a metric share in the rest is invalid; the same off the top is valid, and what is left goes to the stakes alone, by their parts and within each by ownership (new in draft 12, F280): 1, 2, 3.
+- A declaration of absence passes a holder's stake to its stake successor, by a clone the holder does not sign; one stating outcome 1 or 2 against a holder naming a stake successor is refused; with none named, outcome 1 shares the stake out; no declaration lets a version pay less a holder whose stake stays (new in draft 12, F279): 1, 3.
 - Conservation and remainder rule; module fees and an omitted fee visible; maximum fee per payout, and a plan stating none flagged before signing (new in draft 11, F271); split by an attention metric evidenced by a record the identity running the service signs, never by a Module (F116): 1, 2, 7.
 - A role share filled by a reposter, with the payer's signed referral; a referral named by the service alone earning nothing; an unfilled role share following the chosen option: 2. A relay's delivery record counting for its role share only when the payer's claim acknowledges it, and only for the object paid for; a claim the relay signs itself confirming nothing (F184): 2.
 - A rail Module's role share evidenced by the split service's own receipt naming a rail Module the owners' pointer names; a receipt naming a rail Module the owners' pointer and vault never named evidences nothing (F119): 2.

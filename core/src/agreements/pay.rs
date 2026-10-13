@@ -1,5 +1,5 @@
 //! What a version pays a stake less (Agreements draft 12, rule 48: F270, as
-//! F273 and F274 read it).
+//! F274 reads it, with F279 and F280).
 //!
 //! F274 (decided by Nobody, allegedly: "What money sees and money expects is
 //! what matters"): a stake is paid less by any change that lowers what it
@@ -14,11 +14,13 @@
 //!
 //! F270: every holder a version pays less who has no voice in the power
 //! making the change signs it: in a deal, a holder who is no party of the
-//! parent; in a collective, a holder the parent's departed members entry
-//! (field 22) names. Members are left to the collective's own rules. F273's
-//! advance permission, which reaches a departed holder's pay and never a
-//! deal's non-party holder's, is the view's to read: it rests on acts, not
-//! on the terms ([`super::view::AgreementsView`]).
+//! parent; in a collective, a holder who is no member of it. Members are
+//! left to the collective's own rules. No advance permission reaches any
+//! holder's pay (F279, superseding F273's mechanism): abandonment moves a
+//! stake by succession, never lowers its pay while it stays.
+//!
+//! F280: the plan pays non-owners off the top only, so what is left goes to
+//! the stakes alone; the comparison of shares is read so.
 
 use super::formats::{Terms, Who};
 use super::open_formats::{Fee, Metric, ShareRule, SplitPlan, Unfilled};
@@ -115,10 +117,11 @@ pub fn stakes_paid_less(parent: &Terms, clone: &Terms) -> Vec<(Who, Vec<PaidLess
 
 /// The holders whose signature F270 asks of `clone`: every identified holder
 /// of a stake it pays less ([`stakes_paid_less`]) who has no voice in the
-/// power making the change. In a deal, a holder who is no party of the
-/// parent (every party signs every version of a deal, rule 47, F107); in a
-/// collective, a holder the parent's departed members entry names (rule 68).
-/// Without F273's advance permission, which only the view reads.
+/// power making the change, that is, who is no party of the parent: in a
+/// deal, a holder who is no party (every party signs every version of a
+/// deal, rule 47, F107); in a collective, a holder who is no member, a
+/// departed holder (rule 68) among them. No advance permission reaches
+/// their pay (Agreements draft 12, F279): nothing replaces the signature.
 pub fn pay_signers(parent: &Terms, clone: &Terms) -> Vec<Hash> {
     let mut out: Vec<Hash> = vec![];
     for (o, _) in stakes_paid_less(parent, clone) {
@@ -127,12 +130,12 @@ pub fn pay_signers(parent: &Terms, clone: &Terms) -> Vec<Hash> {
             if n == 0 || out.contains(&h) {
                 continue;
             }
-            let voiceless = if parent.is_collective() {
-                parent.departed.iter().flatten().any(|d| d == &h)
-            } else {
-                !parent.parties.contains(&h)
-            };
-            if voiceless {
+            // In a deal, a holder who is no party; in a collective, a holder
+            // who is no member: a departed holder, a stake successor (F279),
+            // anyone who bought part of a stake (reading, to confirm:
+            // `docs/f270-build.md`, Q2). Every party of a deal signs every
+            // version (rule 47); a member holds the power or chose it.
+            if !parent.parties.contains(&h) {
                 out.push(h);
             }
         }
@@ -151,6 +154,7 @@ enum Key {
     Metric(Metric),
 }
 
+#[derive(PartialEq)]
 struct Entry {
     key: Key,
     part: u128,
@@ -184,15 +188,17 @@ fn find<'e>(es: &'e [Entry], k: &Key) -> Option<&'e Entry> {
 }
 
 /// Whether the clone's shares pay the stake `o` less than the parent's, by
-/// the plan's own division: shares off the top first (key 4), each by its
-/// own part; the rest in proportion to their parts; a role share nobody
-/// fills to the stakes in proportion to their parts, where the plan sends it
-/// there (rule 22, F218). Judged for every way the roles can be filled or
-/// not, since the plan as written lets a stake expect each. What comes off
-/// the top is in the split cMIP's units (OF8 b), so it is compared only
-/// share by share: anything taken off the top growing, a share moving onto
-/// or off it, or a role nobody fills where a stake or role sits on the top,
-/// cannot be read, and counts.
+/// the plan's own division as Agreements draft 12 has it (F280): every
+/// share paying anyone but a stake comes off the top, as overhead, in the
+/// split cMIP's units (OF8 b); what is left goes to the stakes alone, in
+/// proportion to their parts; a role nobody fills comes back to the stakes
+/// where the plan sends it there (rule 22, F218). So, for a stake in the
+/// rest: anything taken off the top added or raised, a role nobody fills
+/// sent away from the stakes, or its part lowered against the other stakes'
+/// pays it less; a stake moving onto or off the top cannot be read without
+/// the cMIP's units, and counts. A stake on the top in both is paid less
+/// only if its own part is lowered. A plan with a non-owner in the rest is
+/// invalid (F280) and cannot be read: it counts.
 fn shares_pay_less(p: &[Entry], pu: &Unfilled, c: &[Entry], cu: &Unfilled, o: &Who) -> bool {
     let ko = Key::Stake(*o);
     let Some(po) = find(p, &ko) else { return false };
@@ -203,68 +209,42 @@ fn shares_pay_less(p: &[Entry], pu: &Unfilled, c: &[Entry], cu: &Unfilled, o: &W
     if po.top {
         return co.part < po.part;
     }
+    let owners_only = |es: &[Entry]| es.iter().all(|e| e.top || matches!(e.key, Key::Stake(_)));
+    if !owners_only(p) || !owners_only(c) {
+        return true;
+    }
+    // Overhead: what comes off the top, added or raised, leaves less.
     for e in c.iter().filter(|e| e.top) {
         match find(p, &e.key) {
             Some(x) if x.top && x.part >= e.part => {}
             _ => return true,
         }
     }
+    // A stake moved off the top into the rest changes the weights.
     if p.iter().filter(|e| e.top).any(|e| find(c, &e.key).is_some_and(|x| !x.top)) {
         return true;
     }
-    let unread = |es: &[Entry], u: &Unfilled| {
-        *u == Unfilled::Stakes
-            && es.iter().any(|e| matches!(e.key, Key::Role(_)))
-            && es.iter().any(|e| e.top && matches!(e.key, Key::Stake(_) | Key::Role(_)))
+    // A role nobody fills no longer comes back to the stakes.
+    let roles = c.iter().any(|e| matches!(e.key, Key::Role(_)));
+    if roles && *pu == Unfilled::Stakes && *cu != Unfilled::Stakes {
+        return true;
+    }
+    // A role nobody fills is shared by the stakes in proportion to their
+    // parts; where a stake is also taken off the top, that division is the
+    // cMIP's, and a change cannot be read.
+    let mixed = |es: &[Entry], u: &Unfilled| {
+        *u == Unfilled::Stakes && es.iter().any(|e| matches!(e.key, Key::Role(_))) && es.iter().any(|e| e.top && matches!(e.key, Key::Stake(_)))
     };
-    if unread(p, pu) || unread(c, cu) {
+    if (mixed(p, pu) || mixed(c, cu)) && (p != c || pu != cu) {
         return true;
     }
-    let mut roles: Vec<&str> = vec![];
-    for e in p.iter().chain(c.iter()) {
-        if let Key::Role(r) = &e.key {
-            if !roles.contains(&r.as_str()) {
-                roles.push(r);
-            }
-        }
-    }
-    if roles.len() > 12 {
+    // Among the stakes, by their parts: part / sum of the stakes' parts.
+    let sum = |es: &[Entry]| es.iter().filter(|e| !e.top).map(|e| e.part).sum::<u128>();
+    let (ps, cs) = (sum(p), sum(c));
+    if cs == 0 || co.part == 0 {
         return true;
     }
-    for mask in 0u32..(1 << roles.len()) {
-        let filled = |r: &str| roles.iter().position(|x| *x == r).is_some_and(|i| mask & (1 << i) != 0);
-        let (pn, pd) = portion(p, pu, &ko, &filled);
-        let (cn, cd) = portion(c, cu, &ko, &filled);
-        if Big::product(&[cn.clone(), pd.clone()]).lt(&Big::product(&[pn, cd])) {
-            return true;
-        }
-    }
-    false
-}
-
-/// The stake's portion of what is left after the top, as a fraction, with
-/// the roles `filled` filled and every other role unfilled.
-fn portion(es: &[Entry], u: &Unfilled, ko: &Key, filled: &dyn Fn(&str) -> bool) -> (Big, Big) {
-    let rest: u128 = es.iter().filter(|e| !e.top).map(|e| e.part).sum();
-    let part = find(es, ko).map(|e| e.part).unwrap_or(0);
-    if rest == 0 || part == 0 {
-        return (Big::from(0), Big::from(1));
-    }
-    if *u == Unfilled::Stakes {
-        let stakes: u128 = es.iter().filter(|e| !e.top && matches!(e.key, Key::Stake(_))).map(|e| e.part).sum();
-        let open: u128 = es
-            .iter()
-            .filter(|e| !e.top && matches!(&e.key, Key::Role(r) if !filled(r)))
-            .map(|e| e.part)
-            .sum();
-        // part × (stakes + open) / (rest × stakes): its own part, and its
-        // share of the roles nobody fills.
-        return (
-            Big::product(&[Big::from(part), Big::from(stakes).add(&Big::from(open))]),
-            Big::product(&[Big::from(rest), Big::from(stakes)]),
-        );
-    }
-    (Big::from(part), Big::from(rest))
+    Big::from(co.part).mul(&Big::from(ps)).lt(&Big::from(po.part).mul(&Big::from(cs)))
 }
 
 /// Whether the clone adds a fee entry, widens one's scope, or raises one's
@@ -306,19 +286,6 @@ impl Big {
         self
     }
 
-    fn add(&self, o: &Big) -> Big {
-        let n = self.0.len().max(o.0.len());
-        let mut out = Vec::with_capacity(n + 1);
-        let mut carry = 0u128;
-        for i in 0..n {
-            let s = *self.0.get(i).unwrap_or(&0) as u128 + *o.0.get(i).unwrap_or(&0) as u128 + carry;
-            out.push(s as u64);
-            carry = s >> 64;
-        }
-        out.push(carry as u64);
-        Big(out).trim()
-    }
-
     fn mul(&self, o: &Big) -> Big {
         let mut out = vec![0u64; self.0.len() + o.0.len() + 1];
         for (i, a) in self.0.iter().enumerate() {
@@ -337,10 +304,6 @@ impl Big {
             }
         }
         Big(out).trim()
-    }
-
-    fn product(xs: &[Big]) -> Big {
-        xs.iter().fold(Big::from(1), |a, x| a.mul(x))
     }
 
     fn lt(&self, o: &Big) -> bool {
@@ -363,12 +326,12 @@ mod tests {
     #[test]
     fn big_numbers_compare_exactly() {
         let m = Big::from(u128::MAX);
-        let a = Big::product(&[m.clone(), m.clone(), m.clone()]);
-        let b = Big::product(&[m.clone(), m.clone(), m.add(&Big::from(1))]);
-        assert!(a.lt(&b));
-        assert!(!b.lt(&a));
+        let a = m.mul(&m).mul(&m);
+        let b = m.mul(&m).mul(&Big::from(u128::MAX - 1));
+        assert!(b.lt(&a));
+        assert!(!a.lt(&b));
         assert!(!a.lt(&a));
-        assert_eq!(Big::from(6), Big::product(&[Big::from(2), Big::from(3)]));
+        assert_eq!(Big::from(6), Big::from(2).mul(&Big::from(3)));
         assert!(Big::from(0).lt(&Big::from(1)));
     }
 }

@@ -97,6 +97,9 @@ test('a stake diluted without its holder: pre-authorised outcomes (rule 48), a r
   for (const outcome of [1, 2]) {
     const f = one({ ...base, abandonment: { ...clause, outcomes: [0, outcome] } }, 'dilutable-stake');
     assert.match(f.rests, /rule 48/);
+    // Both parties naming a stake successor: their stakes go by succession (F279).
+    const plans = [P.ana, P.ben].map((p) => ({ party: p, stakes: [[id(`${p}'s heir`), 1_000_000]] as [string, number][] }));
+    none({ ...base, abandonment: { ...clause, outcomes: [0, outcome] }, succession: plans }, 'dilutable-stake');
   }
   none({ ...base, abandonment: clause }, 'dilutable-stake');
   // A release rule short of every holder: two may release Cy's stake to the public domain.
@@ -107,12 +110,15 @@ test('a stake diluted without its holder: pre-authorised outcomes (rule 48), a r
   none({ ...base, ...grants, plan: plan(1), stakes: [[work, [[P.ana, 400_000], [P.ben, 400_000], [P.cy, 200_000]]]] }, 'dilutable-stake');
   // A collective's departed holder too (F270), whatever area reaches the plan; Ben, a member outside it, is still flagged.
   assert.deepEqual(one(departed({ areas: [{ id: 1, name: 'Money', holders: [P.ana], threshold: 1, fields: [8] }] }), 'dilutable-stake').who, [P.ben]);
-  // Unless the clause may take its stake: that permission reaches its pay (F273).
+  // F279: a clause allowing outcome 1 or 2 is flagged for each holder who names no stake successor, a departed one included;
+  // one who names a successor is not: the stake would go to the successor.
   const g = one(departed({ abandonment: { others: 1, outcomes: [0, 1], proof: P.proof } }), 'dilutable-stake');
-  assert.ok(g.who?.includes(P.cy), JSON.stringify(g.who));
-  assert.match(g.text, /departed, may be declared absent/);
-  assert.match(g.rests, /F273/);
-  assert.match(g.rests, /rule 48/);
+  assert.deepEqual([...(g.who ?? [])].sort(), [P.ana, P.ben, P.cy].sort());
+  assert.match(g.text, /naming no stake successor/);
+  assert.match(g.rests, /F279/);
+  assert.match(g.rests, /rule 89/);
+  const s = one(departed({ abandonment: { others: 1, outcomes: [0, 1], proof: P.proof }, succession: [{ party: P.cy, stakes: [[id('Cy’s heir'), 1_000_000]] }] }), 'dilutable-stake');
+  assert.deepEqual([...(s.who ?? [])].sort(), [P.ana, P.ben].sort());
   // A collective whose split plan one member's area reaches.
   const c = one(collective({ areas: [{ id: 1, name: 'Money', holders: [P.ana], threshold: 1, fields: [8] }] }), 'dilutable-stake');
   assert.deepEqual([...(c.who ?? [])].sort(), [P.ben, P.cy].sort());
@@ -140,6 +146,17 @@ test('terms Agreements refuse are explained with the core’s objection, and jud
   const a = assess(encode({ ...base, abandonment: { others: 1, outcomes: [0] } }), names);
   assert.match(a.problem ?? '', /B19/);
   assert.deepEqual(a.flags, []);
+});
+
+test('a plan paying a non-owner beside the stakes is refused before signing (F280); the same off the top is read', () => {
+  for (const extra of [{ receiver: id('a service'), part: 100_000 }, { role: 'referral', part: 100_000 }]) {
+    const rest = assess(encode({ ...base, ...grants, plan: { shares: [{ stake: 0, part: 1 }, extra], cmip: P.split, max: 10_000 } }), names);
+    assert.match(rest.problem ?? '', /F280/);
+    assert.match(rest.problem ?? '', /off the top only/);
+    assert.deepEqual(rest.flags, []);
+    const top = assess(encode({ ...base, ...grants, plan: { shares: [{ stake: 0, part: 1 }, extra], cmip: P.split, top: [1], max: 10_000 } }), names);
+    assert.equal(top.problem, null);
+  }
 });
 
 /** A collective of three holding all its income 40/30/30, every change by every member, unless `over` says otherwise. */
