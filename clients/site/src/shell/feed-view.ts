@@ -1,7 +1,8 @@
 // A feed as the display client shows it (website cMIP draft 6, rule 13a): in
 // a frame of its own, apart from the page's styles, newest first in signed
-// order; each post under its author's name, verified or saying why not; a
-// reply with the post it answers. Phones first: one column, the text at
+// order, or by the stamps of the clock the page names (draft 8), each post
+// with the time it gives; each post under its author's name, verified or
+// saying why not; a reply with the post it answers. Phones first: one column, the text at
 // reading size, nothing wider than the screen. Everything that comes from an
 // act or the page is escaped.
 
@@ -40,9 +41,30 @@ body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-
 .f-visitor{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,CanvasText 4%,Canvas)}
 .f-visitor .f-text{font-size:16px}
 .f-label{font-size:13px;font-weight:600;color:var(--soft)}
-.f-visitor .f-fp{display:block;margin-top:4px;font-size:11px;color:var(--soft)}`;
+.f-visitor .f-fp{display:block;margin-top:4px;font-size:11px;color:var(--soft)}
+.f-time{font-size:13px;color:var(--soft)}`;
 
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const two = (n: number) => String(n).padStart(2, '0');
+
+/** A clock's time (seconds since 1970) in plain words, in UTC: the same on every visitor's device. */
+export function timeWords(t: number): string {
+  const d = new Date(t * 1000);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${two(d.getUTCHours())}:${two(d.getUTCMinutes())} UTC`;
+}
+
+/** The page's name for its clock, or the start of its fingerprint. */
+const clockName = (feed: Feed) => (feed.clock ? (feed.clock.name ?? `the clock ${short(feed.clock.identity)}`) : '');
+
+/** Where the feed is ordered by a clock (draft 8): the time it gives a post, or that it gives none. */
+function when(feed: Feed, p: FeedPost): string {
+  if (feed.order !== 'clock') return '';
+  return p.time != null
+    ? `<span class="f-time" data-time="${p.time}">${e(timeWords(p.time))}</span>`
+    : `<span class="f-time" data-time="">not stamped by ${e(clockName(feed))}</span>`;
+}
 
 /** The page's name for an identity, or the start of its fingerprint when the page gives none. */
 function nameOf(authors: Author[], identity: string): string {
@@ -95,7 +117,7 @@ function postHtml(feed: Feed, p: FeedPost, authors: Author[]): string {
   const name = e(nameOf(authors, p.signer));
   if (!p.post || p.problem) {
     return `<article class="f-post f-bad" data-post="${p.id}" data-verified="no">
-<div class="f-head"><span class="f-name">${name}?</span><span class="f-no">Not verified</span></div>
+<div class="f-head"><span class="f-name">${name}?</span><span class="f-no">Not verified</span>${when(feed, p)}</div>
 <div class="f-why">A post naming this identity as its signer that could not be verified in this browser: ${e(p.problem ?? 'unknown')}. Its words are not shown.</div>
 ${who(p)}</article>`;
   }
@@ -105,14 +127,20 @@ ${who(p)}</article>`;
     ? `<span class="f-label" data-answered="${p.signer}">Answered by ${name}</span>`
     : '';
   return `<article class="f-post" data-post="${p.id}" data-verified="yes">
-${p.answers.map((id) => answered(feed, id, authors, p)).join('')}<div class="f-head"><span class="f-name">${name}</span><span class="f-ok">Verified</span>${answeredBy}</div>
+${p.answers.map((id) => answered(feed, id, authors, p)).join('')}<div class="f-head"><span class="f-name">${name}</span><span class="f-ok">Verified</span>${answeredBy}${when(feed, p)}</div>
 ${text(p.post)}${pictures}
 ${who(p)}</article>`;
 }
 
 /** The feed's frame document. */
 export function feedHtml(feed: Feed, authors: Author[], style: string): string {
-  const note = `<p class="f-note">Public posts of ${authors.map((a) => e(a.name ?? short(a.identity))).join(', ')}, each checked in this browser. Newest first, as their signatures order them: a reply after what it answers, each identity's posts in the order it signed them. MOR has no clock: between posts nothing signed links, the order is not a time. A visitor's public note is shown only beside an answer to it.</p>`;
+  const who = `Public posts of ${authors.map((a) => e(a.name ?? short(a.identity))).join(', ')}, each checked in this browser.`;
+  const clock = e(clockName(feed));
+  const order =
+    feed.order === 'clock'
+      ? `Newest first, <span id="f-order">ordered by ${clock}'s stamps</span>: when ${clock} says it held each post, its word only. A reply still comes after what it answers; a post ${clock} has not stamped is shown above the rest, in the order it was signed.`
+      : `Newest first, as their signatures order them: a reply after what it answers, each identity's posts in the order it signed them. MOR has no clock: between posts nothing signed links, the order is not a time.`;
+  const note = `<p class="f-note" data-order="${feed.order}">${who} ${order} A visitor's public note is shown only beside an answer to it.</p>`;
   const body = feed.posts.length
     ? feed.posts.map((p) => postHtml(feed, p, authors)).join('\n')
     : '<p class="f-more">No public post found at the places asked.</p>';

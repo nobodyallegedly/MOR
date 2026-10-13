@@ -1,0 +1,23 @@
+{
+  "name": "mor-timestamp",
+  "version": "0.1.0",
+  "description": "The timestamp clock Module (draft 1): a clock that is an ordinary identity signing \"I held these acts at this time\"; the stamp's format, reading a clock's stamps, and the clock service (mor-clock). Its operator's word only. Test identities only.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-clock": "src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

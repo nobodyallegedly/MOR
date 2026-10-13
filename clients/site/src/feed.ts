@@ -15,6 +15,15 @@
 // never reversed. Between posts no signed link orders, the order is the
 // page's order of identities, then the position in the signer's sequence,
 // then the act id: an order of finding, which the feed says is not a time.
+//
+// A clock (website cMIP draft 8): a page may name a timestamp clock, an
+// identity whose stamps say "I held this act at this time" (the timestamp
+// clock Module). Where posts carry its stamps, they are ordered by them
+// across identities: each act at the earliest stamp of itself or of any act
+// naming it, never before what it names; a post it has not stamped above
+// the rest, in signed order. Its stamps are its operator's word, and the
+// feed says whose order it is. A stamp from any other identity is never
+// asked for, so it orders nothing.
 
 import { MIRS, SPECS, Verifier, cborDecode, describeAct, hex } from '../../genesis/src/core.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
@@ -23,6 +32,8 @@ import { readPost, type Judging, type ShownPost } from '../../barebone/src/post.
 import { POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { relayAddress } from './settings.ts';
 import { NUDGE, NUDGE_TYPES } from './specs.ts';
+import { readStamps, earliestByNames } from '../../../modules/timestamp/src/read.ts';
+import { TIMESTAMP_SPEC } from '../../../modules/timestamp/src/stamp.ts';
 
 /** An identity a feed names, with the page's word for it. */
 export interface Author {
@@ -68,6 +79,26 @@ export interface FeedPost {
    * under it. Else null.
    */
   picked?: Map<string, string | null>;
+  /**
+   * Where the page names a clock (draft 8): the time it places this post at,
+   * in seconds since 1970 (UTC), the earliest of its stamps and of the
+   * stamps of every act found naming it; null where it has none.
+   */
+  time?: number | null;
+}
+
+/** What was read of the clock a feed names (draft 8). */
+export interface ClockLine extends Author {
+  /** Where its stamps were asked for: its outbox routes a browser can reach, then the gateway's relays. */
+  asked: string[];
+  unreachable: string[];
+  /** Why it could not be looked up, if so: its stamps then order nothing. */
+  problem: string | null;
+  /** Its stamps found at the places asked, and those valid for its chain. */
+  found: number;
+  verified: number;
+  /** Posts of the feed it places (found, shown or not). */
+  placed: number;
 }
 
 export interface Feed {
@@ -78,6 +109,10 @@ export interface Feed {
   more: number;
   /** Posts that are answered, by id: those of the feed, and those found elsewhere by a named identity. */
   answered: Map<string, FeedPost>;
+  /** The clock the page names, and what was read of it; null where it names none (draft 8). */
+  clock: ClockLine | null;
+  /** How the posts are ordered: by the clock's stamps where any post found carries one, else in signed order. */
+  order: 'clock' | 'signed';
 }
 
 interface Described {
@@ -130,12 +165,14 @@ class FeedJudge implements Judging {
 /**
  * Where an identity's posts are asked for: its outbox routes for the Text
  * MIR (or, failing one, its routes for everything else), those a browser can
- * reach, then the gateway's relays. An address a browser cannot reach (an
- * onion address, plain http) is not tried, and is said.
+ * reach, then the gateway's relays; a clock's stamps (draft 8), by its
+ * routes for the timestamp clock Module, or for everything else. An address
+ * a browser cannot reach (an onion address, plain http) is not tried, and is
+ * said.
  */
-export function placesFor(l: Lookup | null, relays: string[]): { asked: string[]; unreachable: string[] } {
+export function placesFor(l: Lookup | null, relays: string[], scope: string = POST_SPECS.text): { asked: string[]; unreachable: string[] } {
   const outbox = (l?.routes.routes ?? []).filter((r) => (r.kind ?? 0) === 0);
-  const route = outbox.find((r) => r.scope === POST_SPECS.text) ?? outbox.find((r) => r.scope === null);
+  const route = outbox.find((r) => r.scope === scope) ?? outbox.find((r) => r.scope === null);
   const asked: string[] = [];
   const unreachable: string[] = [];
   for (const h of route?.hints ?? []) {
@@ -191,17 +228,29 @@ const linksOf = (d: Described): string[] => [
  * signer's sequence, then the act id. Acts that are not posts carry the order
  * between posts (an identity's line runs through its pictures and routes too)
  * and are then left out.
+ *
+ * With a clock's times (draft 8; each act's earliest time, as
+ * `earliestByNames` gives it, so an act is never later than one naming it):
+ * among those free to come next, an act with no time first (the clock has
+ * not stamped it, nor anything naming it: shown as newest, in signed order),
+ * then the latest time, then as above. Signed order still holds throughout.
  */
-export function signedOrder(acts: Described[], rank: (signer: string) => number): string[] {
+export function signedOrder(acts: Described[], rank: (signer: string) => number, times?: Map<string, number>): string[] {
   const ids = new Set(acts.map((d) => d.id));
   const byId = new Map(acts.map((d) => [d.id, d]));
   // How many acts found name each act: it waits for all of them.
   const waiting = new Map<string, number>(acts.map((d) => [d.id, 0]));
   for (const d of acts) for (const n of new Set(linksOf(d))) if (ids.has(n) && n !== d.id) waiting.set(n, waiting.get(n)! + 1);
   const key = (d: Described) => [rank(d.signer!), -(d.position ?? 0), d.id] as const;
+  const byTime = (a: Described, b: Described) => {
+    if (!times) return 0;
+    const [x, y] = [times.get(a.id), times.get(b.id)];
+    if (x === undefined || y === undefined) return x === y ? 0 : x === undefined ? -1 : 1;
+    return y - x;
+  };
   const before = (a: Described, b: Described) => {
     const [x, y] = [key(a), key(b)];
-    return x[0] - y[0] || x[1] - y[1] || (x[2] < y[2] ? -1 : 1);
+    return byTime(a, b) || x[0] - y[0] || x[1] - y[1] || (x[2] < y[2] ? -1 : 1);
   };
   const free = acts.filter((d) => waiting.get(d.id) === 0);
   const out: string[] = [];
@@ -296,7 +345,7 @@ const message = (err: unknown) => (err instanceof Error ? err.message : String(e
  * identity's own routes. Never throws: what could not be found or verified
  * is said, post by post and identity by identity.
  */
-export async function readFeed(authors: Author[], relays: string[], via: Via = {}, limit = FEED_LIMIT): Promise<Feed> {
+export async function readFeed(authors: Author[], relays: string[], via: Via = {}, limit = FEED_LIMIT, clock: Author | null = null): Promise<Feed> {
   const judge = new FeedJudge(relays, via);
   const lines: AuthorLine[] = [];
   const found = new Map<string, { d: Described; act: Uint8Array }>();
@@ -320,13 +369,42 @@ export async function readFeed(authors: Author[], relays: string[], via: Via = {
   lines.sort((x, y) => authors.findIndex((a) => a.identity === x.identity) - authors.findIndex((a) => a.identity === y.identity));
   for (const a of authors) await actsBy(a.identity, placesOf.get(a.identity)!, via, found);
 
+  // The clock the page names (draft 8): its stamps, by signer, at its own
+  // outbox and the gateway's relays, each judged through its chain; each act
+  // found placed at the earliest stamp of itself or of any act naming it.
+  let clockLine: ClockLine | null = null;
+  let times: Map<string, number> | undefined;
+  if (clock) {
+    let l: Lookup | null = null;
+    let problem: string | null = null;
+    try {
+      l = await judge.lookUp(clock.identity);
+    } catch (err) {
+      problem = message(err);
+    }
+    const { asked, unreachable } = placesFor(l, relays, TIMESTAMP_SPEC);
+    clockLine = { ...clock, asked, unreachable, problem, found: 0, verified: 0, placed: 0 };
+    if (!problem) {
+      const read = await readStamps(clock.identity, asked, judge, via);
+      clockLine.found = read.found;
+      clockLine.verified = read.verified.length;
+      times = earliestByNames([...found.values()].map((x) => ({ id: x.d.id, links: linksOf(x.d) })), read.earliest);
+    }
+  }
+
   const rank = (s: string) => authors.findIndex((a) => a.identity === s);
-  const order = signedOrder([...found.values()].map((x) => x.d), rank);
+  const all = [...found.values()].map((x) => x.d);
+  const placed = times ? all.filter((d) => isPost(d) && times!.has(d.id)).length : 0;
+  if (clockLine) clockLine.placed = placed;
+  const byClock = placed > 0;
+  const order = signedOrder(all, rank, byClock ? times : undefined);
   const shown = order.slice(0, limit);
   const posts = await Promise.all(
-    shown.map((id) => {
+    shown.map(async (id) => {
       const { d } = found.get(id)!;
-      return readOne(id, d.signer!, d.position ?? null, placesOf.get(d.signer!)!, via, judge, problems.get(d.signer!) ?? null);
+      const p = await readOne(id, d.signer!, d.position ?? null, placesOf.get(d.signer!)!, via, judge, problems.get(d.signer!) ?? null);
+      if (byClock) p.time = times!.get(id) ?? null;
+      return p;
     }),
   );
   // The posts answered (a text act a verified post names, Text MIR): from the
@@ -407,5 +485,5 @@ export async function readFeed(authors: Author[], relays: string[], via: Via = {
     line.found = order.filter((id) => found.get(id)!.d.signer === line.identity).length;
     line.verified = mine.filter((p) => !p.problem).length;
   }
-  return { authors: lines, posts, more: order.length - shown.length, answered };
+  return { authors: lines, posts, more: order.length - shown.length, answered, clock: clockLine, order: byClock ? 'clock' : 'signed' };
 }

@@ -28,12 +28,32 @@
   <mor-author identity="02a6585ffa967e3c8b7a4bf0b8dadda4890a03ee814b7f9200e2da5c789bc0e3">Machine, allegedly</mor-author>
 </mor-write>
 
-<!-- The feed (website cMIP draft 6, rule 13a; F275 in draft 7): the two identities only, newest first in signed
-     order; a visitor's public note shown only beside a reply of either that names it. -->
+<!-- Beside the one-way box, where to take part for real (Nobody, allegedly, 13 October 2026: "What the page can
+     point towards if someone truly wish to interact are the clients and the link to home relays."). Dub has no
+     download yet, so its line has no link; the homes show no page of their own at their addresses, so they are
+     written out, to be given to a client, not linked. -->
+<h2>Take part</h2>
+<p class="line" id="take-part">The box above goes one way: no answer can reach you. To post, and be answered, make an identity of your own, with a client and a home.</p>
+<ul class="items" id="clients">
+<li>Dub: write, post and answer as your own identity, from your own computer. To download once it is released.</li>
+<li>Dub on the web, <a href="https://dub.dubsar.org/">https://dub.dubsar.org/</a>: the same in your browser, <strong>for testing only</strong>: its keys are kept in your browser, which can lose them, and whoever serves its code could copy them.</li>
+<li>MOR Identities: the desk Nobody, allegedly, and Machine, allegedly, are run from, on the author’s own computer.</li>
+</ul>
+<ul class="items" id="homes">
+<li><code>https://home1.dubsar.org</code>: a home where an identity can be made. Give its address to Dub.</li>
+<li><code>https://home2.dubsar.org</code>: a second home, on another server. An identity may have both.</li>
+</ul>
+
+<!-- The feed (website cMIP draft 6, rule 13a; F275 in draft 7): the two identities only, newest first, a visitor's
+     public note shown only beside a reply of either that names it. Draft 8: ordered by the stamps of the clock named
+     here, where posts carry them; otherwise in signed order. CLOCK-IDENTITY is a placeholder: replace it with the
+     clock's identity hash (64 hex digits) once the clock runs. Until then it names no identity, is dropped, and the
+     feed is in signed order. -->
 <h2>Posts</h2>
 <mor-feed>
   <mor-author identity="1fc19135ea25e19bcd213e7bc610091f8248cef76a4683d582b8d4a69b6ec144">Nobody, allegedly</mor-author>
   <mor-author identity="02a6585ffa967e3c8b7a4bf0b8dadda4890a03ee814b7f9200e2da5c789bc0e3">Machine, allegedly</mor-author>
+  <mor-clock identity="CLOCK-IDENTITY">the dubsar.org clock</mor-clock>
 </mor-feed>
 </main>
 <footer>

@@ -160,3 +160,79 @@ For Nobody, allegedly, to confirm or change.
 | Total | 945 | **949**, all pass |
 
 The first full run found two existing site tests that list dubsar.org's files exactly; each now counts `feed.html`, and the site's tests then pass, 66 of 66 (the full run stops at its first failing package, so the three modules were run after it, and pass: jpeg 14, video 6, carry 6). Main's code is unchanged since pull request 33's run, which counted 945.
+
+## Ordered by a clock (13 October 2026)
+
+*Built from Nobody, allegedly's decisions of 13 October 2026 (area: presentation): "A feed like the public feed could easily rely on a dumb anchoring." / "Anchoring precision and probability only matter when there is something to protect." And, for the page: "What the page can point towards if someone truly wish to interact are the clients and the link to home relays." Website cMIP draft 8, new for him to approve; draft 7 stays, approved. The timestamp clock Module draft 1, experimental. Test identities only; nothing published, nothing released.*
+
+### In plain words
+
+**The clock.** A clock is now the simplest thing it can be: an ordinary MOR identity that signs one kind of act, a *stamp*, saying "I held these posts at this time". Its time is its own computer's. A stamp proves one thing: that the clock's identity signed it. It does not prove the time is true; it is its operator's word. For a feed that is enough, since nothing is at stake (your words: precision only matters when there is something to protect). For money, the Bitcoin clock stays.
+
+A small program, `mor-clock`, runs such a clock: it stamps the posts it is given, and the posts it finds at the relays you name, each once, never its own stamps, and never earlier than its last stamp even if its computer's clock is set back. It puts its stamps on its own relay.
+
+**The feed.** A page names the clock it listens to, inside the feed, as it names the identities:
+
+```html
+<mor-clock identity="…the clock's identity hash…">the dubsar.org clock</mor-clock>
+```
+
+Where the posts carry that clock's stamps, the feed is ordered by them, across identities, which signed order cannot do: Nobody's post and Machine's post that do not name each other now come in the order the clock held them. At the top the feed says "Newest first, **ordered by the dubsar.org clock's stamps**: when the dubsar.org clock says it held each post, its word only." Each post shows its time (in UTC, so every visitor sees the same: "13 October 2026, 09:05 UTC"). Two things still hold whatever the clock says: a reply never comes before what it answers, and a post the clock has not stamped yet is shown at the top, marked "not stamped by the dubsar.org clock". A stamp signed by any other identity is never even fetched, so it orders nothing. Without a clock named, or if the clock has stamped none of the posts, the feed is in signed order and says it is not a time, exactly as before.
+
+The page on a phone, ordered by a test clock across three identities, the newest post not yet stamped: `docs/public-feed/feed-clock-phone-chromium.png`.
+
+**The pointers.** Under the writing box, the feed page now has a short section, "Take part": the box goes one way, so to post and be answered, make an identity of your own, with a client and a home. Then one plain line each: Dub; Dub on the web at `dub.dubsar.org`, **for testing only**, with both risks you accepted (F281) in a few words; MOR Identities, the desk the two identities are run from, on your own computer; and the two homes, `home1.dubsar.org` and `home2.dubsar.org`, "give its address to Dub". The real page names its clock by a placeholder, `CLOCK-IDENTITY`, until a clock runs: until then the feed stays in signed order.
+
+### Precisely
+
+- **The timestamp clock Module, draft 1** (`modules/module-clock-timestamp-draft-1.md`), under the anchoring cMIP draft 4 (item 4: parameters, points, proofs and rule, depth). Reference `[ the Module, the clock's identity ]`; point: seconds since 1970, UTC; a stamp is a public everyday act of the clock, type 1, `{ 0: time, 1: [+ act id] }`, at most 256, closed; proof: the stamp, valid for the clock's chain by the core library, naming the act; an act at its earliest stamp (anchoring cMIP item 2); depth: none. What it proves and does not, and its costs, stated. A client conformance for readers: an act placed at the earliest stamp of itself or of any act naming it.
+- **Its code** (`modules/timestamp`, `mor-timestamp`, TypeScript): `src/stamp.ts` (the format, the test spec hash `sha256("timestamp clock Module, draft 1, test value until publication")`), `src/read.ts` (reading and judging a clock's stamps; the earliest stamp; the earliest by names), `src/service.ts` and `src/cli.ts` (`mor-clock run`, `mor-clock stamp`; `POST /stamp`). Added to `scripts/test-all.sh` and the CI workflow.
+- **Website cMIP draft 8** (`cmips/cmip-website-draft-8.md`): rule 13a gains "Ordered by a clock" (`mor-clock`, its stamps, each post's time, the order, what is said); the signed-order bullet and "said beside it" point to it; plain words, purpose and dependencies (the anchoring cMIP and the Module) updated; five stated costs added. Draft 7 unchanged in its own file; draft 7's note in draft 8 records his approval.
+- **The display client** (`clients/site`): `src/feed.ts` (`readFeed` takes the clock; its stamps read with the Module's `readStamps`, through the feed's one verifier; `earliestByNames` over every act found; `signedOrder` takes the times; each post's `time`; the feed's `clock` and `order`); `src/shell/page.ts` (`mor-clock`, the first naming an identity hash); `src/shell/feed-view.ts` (the label, each post's time, `timeWords`); `src/shell/view.ts` (the bar's clock line); `src/shell/app.ts`.
+- **The page** (`docs/dubsar.org/feed.html`): "Take part" (the clients and the homes) and the `mor-clock` placeholder.
+- `clients/poster`, `clients/dub`, `clients/nudge`, `clients/genesis`, `clients/reader` and `spec/` are not changed.
+
+### Readings taken where the decisions are silent
+
+For Nobody, allegedly, to confirm or change.
+
+1. **The clock's code is TypeScript**, not Rust. A clock is an identity that signs acts, as Machine's desk is, and the feed reads its stamps in the visitor's browser with the same code; the repository's rule gives Rust to the core, relays and homes, and TypeScript to clients. Its stamps are judged by the core library (Rust, through WebAssembly), as every act is.
+2. **The point is seconds since 1970, UTC**, and a feed shows it in UTC, the same for every visitor, as "13 October 2026, 09:05 UTC".
+3. **A stamp names up to 256 acts at one time**, type 1 of the Module; one stamp per moment the clock holds new acts.
+4. **A post the clock has not stamped comes first** (newest), in signed order, marked "not stamped by" the clock. The common case is a post written since the clock last looked. The cost: a post the clock never stamps (an identity it does not follow) stays at the top.
+5. **An act existed by the earliest stamp of any act naming it** (a client conformance in the Module), so a reply the clock stamped before the post it answers does not make the post look newer.
+6. **A feed is ordered by its clock once any post found carries a stamp**; otherwise in signed order, said as before.
+7. **One clock per feed**: the first `mor-clock` naming an identity hash; any other is dropped.
+8. **Where stamps are looked for**: the clock's outbox route for the Module, or for everything else, then the gateway's relays, as for the identities' posts.
+9. **The service takes act ids, not acts** (an id is a hash: it learns nothing more), stamps everything it finds at the relays named (or only the signers named), never its own acts, and counts an act stamped once its stamp is published (one that did not reach its relays is stamped again later; the earliest counts).
+10. **The pointers**: the heading "Take part"; Dub with no link, since it has no download yet ("to download once it is released"); the web client linked and marked "for testing only", with the two risks of F281 in a few words; MOR Identities described as the desk both identities are run from, on the author's own computer; the homes written out, not linked, since a home shows no page at its address, with "give its address to Dub".
+11. **The real page's clock is a placeholder**, `CLOCK-IDENTITY`, named "the dubsar.org clock": dropped until replaced, so the feed stays in signed order.
+
+### For the gateway on dubsar.org, when the clock comes
+
+- A clock identity made with the genesis client, its outbox route naming where its stamps go, and `mor-clock run` following the relays where the two identities post (`--watch`, `--signer`).
+- Its identity hash in place of `CLOCK-IDENTITY` in `feed.html`, then a new version of the site.
+- The gateway's `relays` must include a place holding the clock's genesis, as for the identities.
+- The gateway must run a display client released with draft 8; one released with draft 7 ignores the clock.
+- `dub.dubsar.org`'s DNS record, the author's to add, before the link leads anywhere.
+
+### Stated costs
+
+- The clock's order is its operator's word: a clock that lies or runs wrong orders the feed wrongly, and the feed cannot tell. Signed order still holds.
+- A post is placed when the clock held it, not when it was signed; one found late shows as newer.
+- The clock learns every act at the relays it follows; its stamps are public.
+- Every visit looks the clock up and fetches its stamps: one more lookup, and slower as the clock stamps more.
+
+### Tests
+
+`modules/timestamp/test/clock.test.ts`, 5 tests: the format and every refusal; only the named clock's public stamps of this Module place anything; the earliest stamp, and the earliest of any act naming one; the service on a real home and relays (what it finds, never its own stamps, each act once, never back in time when its computer's clock is set back, the open form); a reader judging the clock's stamps through its chain while a stamp by another identity, earlier, places nothing.
+
+`clients/site/test/feed-clock.test.ts`, 3 tests, real homes and relays, headless Chromium, a phone's screen:
+
+1. The order with times: across identities, never before what an act names, an unstamped act first; a reply stamped before what it answers.
+2. **Three identities on two homes, five posts stamped one minute apart across identities, the newest unstamped; a second clock, which the page names second (dropped), stamping the same posts in the reverse order at the same relay:** the feed in the named clock's order, not signed order; "ordered by The test clock's stamps"; each post's time from the named clock, never the other's; the unstamped post first, "not stamped by The test clock"; the reply with the post it answers; the bar naming the clock by its whole fingerprint, "5 stamps found, 5 verified, placing 5 posts", and not the second clock; nothing fetched elsewhere; nothing scrolling sideways.
+3. **A page naming no clock, one naming a clock that stamped nothing, and one whose clock is no identity hash:** signed order, "the order is not a time", no time shown; the quiet clock in the bar, "No post found carries its stamps".
+
+`clients/site/test/feed-page.test.ts`: its first test also checks the pointers (the clients' lines, the web client's link and "for testing only", the two homes).
+
+COUNTS-HERE
