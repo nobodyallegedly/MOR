@@ -25,6 +25,8 @@ export interface Prepared {
   listed: { entry: FileEntry; poster: Uint8Array | null; label: string }[];
   /** The feeds the page shows (draft 6, rule 13a), in order: the identities each names. Their boxes carry `data-feed`, the index here. */
   feeds: Author[][];
+  /** The writing boxes the page shows (draft 7, rule 13b), in order: the identities each lets a visitor write to. Their places carry `data-write`, the index here. */
+  writes: Author[][];
   /** The checked bytes of the picture the page names as its icon, for the browser tab (rule 16a). */
   icon: Uint8Array | null;
   /** Files the page uses whose bytes did not match: the page is then not shown. */
@@ -55,7 +57,7 @@ export async function preparePage(
 ): Promise<Prepared> {
   const doc = new DOMParser().parseFromString(new TextDecoder('utf-8', { fatal: true }).decode(bytes), 'text/html');
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out: Prepared = { html: '', title: null, acts: [], films: [], listed: [], feeds: [], icon: null, problems: [], dropped: 0 };
+  const out: Prepared = { html: '', title: null, acts: [], films: [], listed: [], feeds: [], writes: [], icon: null, problems: [], dropped: 0 };
   const drop = (el: Element) => {
     el.remove();
     out.dropped++;
@@ -91,7 +93,8 @@ export async function preparePage(
   // until the visitor asks to play it. Its other attributes (autoplay, loop,
   // muted, sources, tracks) are not the page's to set. Any other `video` goes.
   // Only the places made here carry `data-film`: one a page wrote itself goes.
-  for (const el of [...doc.querySelectorAll('[data-film], [data-film-listed], [data-feed]')]) {
+  for (const el of [...doc.querySelectorAll('[data-film], [data-film-listed], [data-feed], [data-write]')]) {
+    el.removeAttribute('data-write');
     el.removeAttribute('data-film');
     el.removeAttribute('data-film-listed');
     el.removeAttribute('data-feed');
@@ -253,7 +256,7 @@ export async function preparePage(
   // the public posts of the identities each `mor-feed` names, every one
   // checked on its own. Of what it holds, only its `mor-author` elements
   // count: each an identity hash, and its text, the page's name for it.
-  for (const el of [...doc.querySelectorAll('mor-feed')]) {
+  const authorsOf = (el: Element): Author[] => {
     const authors: Author[] = [];
     for (const a of [...el.querySelectorAll('mor-author')]) {
       const identity = (a.getAttribute('identity') ?? '').trim();
@@ -264,6 +267,26 @@ export async function preparePage(
       const name = (a.textContent ?? '').replace(/\s+/g, ' ').trim();
       authors.push({ identity, name: name || null });
     }
+    return authors;
+  };
+  // Writing boxes (draft 7, rule 13b): a place each, over which the display
+  // client lays its own box, outside the page, where its code runs. The page
+  // names the identities a visitor may write to; nothing else it holds counts.
+  for (const el of [...doc.querySelectorAll('mor-write')]) {
+    const authors = authorsOf(el);
+    const place = doc.createElement('div');
+    place.className = ['mor-write', el.getAttribute('class') ?? ''].join(' ').trim();
+    if (el.id) place.id = el.id;
+    if (authors.length) {
+      place.setAttribute('data-write', String(out.writes.length));
+      out.writes.push(authors);
+    } else {
+      place.innerHTML = `<div class="mor-act-note">A writing box naming no identity: nothing to write to.</div>`;
+    }
+    el.replaceWith(place);
+  }
+  for (const el of [...doc.querySelectorAll('mor-feed')]) {
+    const authors = authorsOf(el);
     const box = doc.createElement('div');
     box.className = ['mor-feed', el.getAttribute('class') ?? ''].join(' ').trim();
     if (el.id) box.id = el.id;

@@ -28,6 +28,8 @@ export interface SiteSettings {
   release: string | null;
   /** How the gateway chose the version served. */
   serve: Serve;
+  /** Homes that take the genesis of a visitor's one-time identity, for a page's writing box (draft 7, rule 13b); empty: the box takes no message. */
+  messageHomes: string[];
 }
 
 /** One site in the gateway's file. */
@@ -40,6 +42,7 @@ export interface SiteEntry {
   /** Pinned: the version served. Latest: the version followed from. */
   version: string;
   serve: Serve;
+  messageHomes: string[];
 }
 
 export interface GatewaySettings {
@@ -87,7 +90,9 @@ function common(o: Record<string, unknown>, where: string) {
   if (!relays.length || relays.some((r) => r === null)) throw new Error(`${where}: "relays" must list https addresses`);
   const serve = o.serve ?? 'latest';
   if (serve !== 'latest' && serve !== 'pinned') throw new Error(`${where}: "serve" is "latest" or "pinned"`);
-  return { version: o.version, identity: o.identity, name, relays: relays as string[], serve: serve as Serve };
+  const messageHomes = (Array.isArray(o.messageHomes) ? o.messageHomes : []).map(relayAddress);
+  if (messageHomes.some((r) => r === null)) throw new Error(`${where}: "messageHomes" must list https addresses`);
+  return { version: o.version, identity: o.identity, name, relays: relays as string[], serve: serve as Serve, messageHomes: messageHomes as string[] };
 }
 
 function release(v: unknown, where: string): string | null {
@@ -130,5 +135,5 @@ export function parseGatewaySettings(raw: unknown): GatewaySettings {
 
 /** What the gateway hands its display client for one site: the version it serves, and nothing about other sites. */
 export function forBrowser(s: SiteEntry, version: string, releaseId: string | null): SiteSettings {
-  return { version, identity: s.identity, name: s.name, relays: s.relays, release: releaseId, serve: s.serve };
+  return { version, identity: s.identity, name: s.name, relays: s.relays, release: releaseId, serve: s.serve, messageHomes: s.messageHomes };
 }

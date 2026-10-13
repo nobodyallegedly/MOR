@@ -9,7 +9,8 @@
       "name": "Nobody, allegedly",
       "relays": ["https://relay1.example.org", "https://relay2.example.org"],
       "version": "REPLACE WITH A VERSION'S ACT ID (64 hex digits), as mor-site publish prints it",
-      "serve": "latest"
+      "serve": "latest",
+      "messageHomes": ["https://home1.example.org"]
     }
   ]
 }

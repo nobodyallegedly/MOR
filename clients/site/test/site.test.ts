@@ -142,7 +142,7 @@ test('the dubsar.org site is published as a version of its owner, and every file
   assert.equal(v.manifest!.previous, null);
   const paths = v.manifest!.files.map((f) => f.path);
   // The main door's pages and files, and each department's door, a folder of its own (9 October 2026).
-  const main = ['build.html', 'icon.jpg', 'index.html', 'read.html', 'run.html', 'site.css', 'tablet-dark.jpg', 'tablet-light.jpg', 'use.html'];
+  const main = ['build.html', 'feed.html', 'icon.jpg', 'index.html', 'read.html', 'run.html', 'site.css', 'tablet-dark.jpg', 'tablet-light.jpg', 'use.html'];
   const doors = DOORS.map(([folder]) => `${folder}/index.html`);
   assert.deepEqual(paths, [...main, ...doors].sort());
   for (const f of v.manifest!.files) {
@@ -225,7 +225,7 @@ test('the gateway checks before it serves, serves its display client at every ad
     assert.equal(missing.status, 404);
     assert.equal(await missing.text(), shell, 'the display client says what is missing');
     const s = await (await fetch(base + '/_mor/site.json')).json();
-    assert.deepEqual(s, { version: w.site.id, identity: w.owner.id, name: 'Nobody, allegedly', relays: [w.relay.base], release: null, serve: 'pinned' });
+    assert.deepEqual(s, { version: w.site.id, identity: w.owner.id, name: 'Nobody, allegedly', relays: [w.relay.base], release: null, serve: 'pinned', messageHomes: [] });
     const f = await fetch(base + '/_mor/file/run.html');
     assert.equal(f.headers.get('content-type'), 'application/octet-stream');
     assert.equal(f.headers.get('content-disposition'), 'attachment');
@@ -267,6 +267,7 @@ test('the settings are checked, never guessed', () => {
   assert.throws(() => parseSiteSettings({ ...good, relays: ['http://relay.example.org'] }), /relays/, 'plain http only on this machine');
   assert.throws(() => parseSiteSettings({ ...good, release: 'x' }), /release/);
   assert.throws(() => parseSiteSettings({ ...good, serve: 'newest' }), /serve/);
+  assert.throws(() => parseSiteSettings({ ...good, messageHomes: ['http://home.example.org'] }), /messageHomes/, 'the writing box: https homes only');
   const site = { ...good, hosts: ['dubsar.org', 'abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrstuvwx.onion'] };
   const g = parseGatewaySettings({ sites: [site] });
   assert.equal(g.listen, '127.0.0.1:8090');
@@ -446,7 +447,7 @@ test('the display client a gateway serves by default is the copy published in th
 test('from the command line, with no gateway: verify a version and write its files out', async () => {
   const out = mkdtempSync(join(tmpdir(), 'mor-site-out-'));
   const r = await run('node', ['--import', 'tsx', 'src/cli.ts', 'verify', w.site.id, '--identity', w.owner.id, '--at', w.relay.base, '--out', out], { cwd: here });
-  assert.match(r.stdout, new RegExp(`VERIFIED: the site "dubsar.org", ${9 + DOORS.length} files`));
+  assert.match(r.stdout, new RegExp(`VERIFIED: the site "dubsar.org", ${10 + DOORS.length} files`));
   for (const p of ['index.html', 'run.html', 'site.css', 'law/index.html']) assert.deepEqual(readFileSync(join(out, p)), readFileSync(join(w.dir, p)));
   await assert.rejects(
     run('node', ['--import', 'tsx', 'src/cli.ts', 'verify', w.site.id, '--identity', 'ab'.repeat(32), '--at', w.relay.base], { cwd: here }),

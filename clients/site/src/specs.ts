@@ -26,3 +26,10 @@ export const SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreement
 /** Envelopes types: a publication and a withdrawal. */
 export const PUBLICATION = 0;
 export const WITHDRAWAL = 3;
+
+/** The nudge cMIP (cmips/cmip-nudge-draft-2.md): only to read who picked a
+ * visitor's note the feed shows (website cMIP draft 7). A test value until
+ * publication; the agent's and the owner's clients must use the same. */
+export const NUDGE = test('nudge cMIP, draft 2, test value until publication');
+/** Its act types: the agency terms, a nudge, a pick. */
+export const NUDGE_TYPES = { terms: 0, nudge: 1, pick: 2 } as const;
