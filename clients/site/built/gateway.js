@@ -722,10 +722,10 @@ var Verifier = class {
    * @param {string} record
    * @returns {any}
    */
-  agreementsRecord(specs, collective, record) {
+  agreementsRecord(specs, collective, record2) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(record, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(record2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsRecord(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
@@ -1236,6 +1236,35 @@ function describeAct(bytes) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
+function makeEveryday(input) {
+  const ret = wasm.makeEveryday(input);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function makeGenesis(input) {
+  const ret = wasm.makeGenesis(input);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function newSigningSecret() {
+  const ret = wasm.newSigningSecret();
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function newTestChainKey(scheme) {
+  const ret = wasm.newTestChainKey(scheme);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
 function openMedia(locked, key, nonce) {
   const ptr0 = passArray8ToWasm0(locked, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
@@ -1257,6 +1286,30 @@ function openWithKey(act, key) {
   const ptr1 = passArray8ToWasm0(key, wasm.__wbindgen_malloc);
   const len1 = WASM_VECTOR_LEN;
   const ret = wasm.openWithKey(ptr0, len0, ptr1, len1);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function randomBytes(n) {
+  const ret = wasm.randomBytes(n);
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function seal(input) {
+  const ret = wasm.seal(input);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function sealedParts(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.sealedParts(ptr0, len0);
   if (ret[2]) {
     throw takeFromExternrefTable0(ret[1]);
   }
@@ -2579,7 +2632,7 @@ async function lookUp(identity, hints, via = {}, into) {
     const r2 = v.resolve(identity);
     return r2.homesAt?.length ? r2.homesAt[r2.homesAt.length - 1] : genesisHomes();
   };
-  const record = async (h) => {
+  const record2 = async (h) => {
     const rec = await relayAt(h.hint, via).identity(identity);
     keep([...rec.chain, ...rec.receipts, ...rec.routes, ...rec.encryptionKeys, ...rec.evidence, ...rec.otherReceipts]);
     for (const a of rec.links) {
@@ -2617,7 +2670,7 @@ async function lookUp(identity, hints, via = {}, into) {
     const fresh = homes.filter((h) => !asked.has(h.hint));
     if (!fresh.length) break;
     for (const h of fresh) asked.add(h.hint);
-    await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record(h).catch(() => failed(h.hint))));
+    await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record2(h).catch(() => failed(h.hint))));
     const ops = [...new Set(homes.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
     await Promise.all(ops.map((op) => operatorChain(op, homes.filter((h) => h.operator === op).map((h) => h.hint))));
   }
@@ -3000,6 +3053,11 @@ var PUBLICATION = 0;
 var WITHDRAWAL = 3;
 
 // ../barebone/src/post.ts
+function textPayload(text2, format = null) {
+  const m = /* @__PURE__ */ new Map([[0, text2]]);
+  if (format) m.set(1, unhex(format));
+  return cborEncode(m);
+}
 async function fetchAct(id, hints, via) {
   return firstOf(hints.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getAct(id));
 }
@@ -4195,7 +4253,9 @@ function common(o, where) {
   if (!relays.length || relays.some((r) => r === null)) throw new Error(`${where}: "relays" must list https addresses`);
   const serve = o.serve ?? "latest";
   if (serve !== "latest" && serve !== "pinned") throw new Error(`${where}: "serve" is "latest" or "pinned"`);
-  return { version: o.version, identity: o.identity, name, relays, serve };
+  const messageHomes = (Array.isArray(o.messageHomes) ? o.messageHomes : []).map(relayAddress);
+  if (messageHomes.some((r) => r === null)) throw new Error(`${where}: "messageHomes" must list https addresses`);
+  return { version: o.version, identity: o.identity, name, relays, serve, messageHomes };
 }
 function release(v, where) {
   if (v === void 0 || v === null) return null;
@@ -4225,6 +4285,8 @@ var SITE_SPECS = {
 var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements };
 var PUBLICATION2 = 0;
 var WITHDRAWAL2 = 3;
+var NUDGE = test3("nudge cMIP, draft 2, test value until publication");
+var NUDGE_TYPES = { terms: 0, nudge: 1, pick: 2 };
 
 // src/verify.ts
 async function fetchAct2(id, hints, via) {
@@ -4540,6 +4602,40 @@ async function readOne(id, signer, position, places, via, judge, lookupProblem) 
   }
   return p;
 }
+async function causeOf(id, agent, named, places, via, judge, found) {
+  let act = found.get(id)?.act ?? null;
+  for (const h of act ? [] : places) {
+    try {
+      act = await relayAt(h, via).getAct(id);
+      if (act) break;
+    } catch {
+    }
+  }
+  if (!act) return null;
+  let d;
+  try {
+    d = describeAct(act);
+  } catch {
+    return null;
+  }
+  if (d.id !== id || !d.public || !d.payload || !d.signer || d.spec !== NUDGE) return null;
+  if (d.type !== NUDGE_TYPES.pick && d.type !== NUDGE_TYPES.nudge) return null;
+  if (!named.has(d.signer)) return null;
+  let m;
+  try {
+    m = cborDecode(d.payload);
+  } catch {
+    return null;
+  }
+  const f0 = m.get(0);
+  if (!(f0 instanceof Uint8Array) || hex(f0) !== agent) return null;
+  const f2 = m.get(2);
+  const picked = d.type === NUDGE_TYPES.pick ? f2 instanceof Uint8Array ? hex(f2) : null : null;
+  if (d.type === NUDGE_TYPES.pick && !picked) return null;
+  if (d.type === NUDGE_TYPES.nudge && !(typeof f2 === "number" && f2 >= 1)) return null;
+  if (await judge.standing(act, id, d.signer) !== "valid") return null;
+  return { type: d.type, signer: d.signer, picked };
+}
 var message = (err) => err instanceof Error ? err.message : String(err);
 async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT) {
   const judge = new FeedJudge(relays, via);
@@ -4609,12 +4705,31 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT) {
         answered2.set(r, { id: r, signer: "", position: null, post: null, problem: "not found at the places asked", answers: [] });
       } else if (!isPost(d) || !d.signer) {
         continue;
+      } else if (!named.has(d.signer) && (d.to ?? []).some((t) => named.has(t))) {
+        const n = await readOne(r, d.signer, d.position ?? null, everywhere, via, judge, null);
+        n.note = true;
+        answered2.set(r, n);
       } else if (!named.has(d.signer)) {
         answered2.set(r, { id: r, signer: d.signer, position: d.position ?? null, post: null, problem: null, answers: [] });
       } else {
         answered2.set(r, await readOne(r, d.signer, d.position ?? null, everywhere, via, judge, problems.get(d.signer) ?? null));
       }
       p.answers.push(r);
+    }
+  }
+  for (const p of posts) {
+    const notes = p.answers.filter((r) => answered2.get(r)?.note);
+    if (!notes.length) continue;
+    p.picked = new Map(notes.map((r) => [r, null]));
+    const causes = p.post.refs.flatMap((x) => x.kind === "act" && !answered2.has(x.id) ? [x.id] : []);
+    let nudged = false;
+    for (const c of causes) {
+      const cause = await causeOf(c, p.signer, named, everywhere, via, judge, found);
+      if (cause?.type === NUDGE_TYPES.pick && p.picked.has(cause.picked)) p.picked.set(cause.picked, cause.signer);
+      if (cause?.type === NUDGE_TYPES.nudge) nudged = true;
+    }
+    if (nudged) {
+      for (const [r, by] of p.picked) if (by === null) p.picked.set(r, p.signer);
     }
   }
   for (const line of lines) {
@@ -4672,7 +4787,11 @@ body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-
 .f-post details{margin-top:8px;font-size:12px;color:var(--soft)}
 .f-post summary{cursor:pointer;min-height:24px}
 .f-post code,.f-fp{font-family:ui-monospace,Menlo,monospace;font-size:12px}
-.f-more{font-size:13px;color:var(--soft)}`;
+.f-more{font-size:13px;color:var(--soft)}
+.f-visitor{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,CanvasText 4%,Canvas)}
+.f-visitor .f-text{font-size:16px}
+.f-label{font-size:13px;font-weight:600;color:var(--soft)}
+.f-visitor .f-fp{display:block;margin-top:4px;font-size:11px;color:var(--soft)}`;
 var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 function nameOf(authors, identity) {
   return authors.find((a) => a.identity === identity)?.name ?? `Identity ${short2(identity)}`;
@@ -4685,9 +4804,17 @@ function picture2(p) {
 function text(post) {
   return post.format === POST_SPECS.longform ? `<div class="f-text f-lf">${renderHtml(parse(post.text))}</div>` : `<div class="f-text" dir="auto">${escapeHtml(post.text)}</div>`;
 }
-function answered(feed, id, authors) {
+function note(a, picked, authors) {
+  const label = picked ? ` <span class="f-label" data-picked="${picked}">Picked by ${escapeHtml(nameOf(authors, picked))}</span>` : "";
+  if (!a.post || a.problem) {
+    return `<div class="f-visitor" data-note="${a.id}" data-verified="no"><div><span class="f-name">A visitor</span> <span class="f-no">not verified</span>${label}</div><div class="f-why">${escapeHtml(a.problem ?? "unknown")}. Its words are not shown.</div></div>`;
+  }
+  return `<div class="f-visitor" data-note="${a.id}" data-verified="yes"><div><span class="f-name">A visitor</span> <span class="f-ok">verified</span>${label}</div>${text(a.post)}<span class="f-fp">Signed by a one-time identity, ${fingerprint(a.signer)}</span></div>`;
+}
+function answered(feed, id, authors, p) {
   const a = feed.answered.get(id);
   if (!a) return "";
+  if (a.note) return note(a, p.picked?.get(id) ?? null, authors);
   if (!a.signer) return `<div class="f-answers">Answers a post not found at the places asked: <code>${short2(id)}</code>.</div>`;
   if (!authors.some((x) => x.identity === a.signer)) {
     return `<div class="f-answers">Answers a post by another identity, not shown in this feed: <span class="f-fp">${fingerprint(a.signer)}</span>.</div>`;
@@ -4711,16 +4838,290 @@ function postHtml(feed, p, authors) {
 ${who(p)}</article>`;
   }
   const pictures = p.post.refs.filter((r) => r.kind === "picture").map(picture2).join("");
+  const answeredBy = [...p.picked?.values() ?? []].some((by) => by === null) ? `<span class="f-label" data-answered="${p.signer}">Answered by ${name}</span>` : "";
   return `<article class="f-post" data-post="${p.id}" data-verified="yes">
-<div class="f-head"><span class="f-name">${name}</span><span class="f-ok">Verified</span></div>
-${p.answers.map((id) => answered(feed, id, authors)).join("")}${text(p.post)}${pictures}
+${p.answers.map((id) => answered(feed, id, authors, p)).join("")}<div class="f-head"><span class="f-name">${name}</span><span class="f-ok">Verified</span>${answeredBy}</div>
+${text(p.post)}${pictures}
 ${who(p)}</article>`;
 }
 function feedHtml(feed, authors, style) {
-  const note = `<p class="f-note">Public posts of ${authors.map((a) => escapeHtml(a.name ?? short2(a.identity))).join(", ")}, each checked in this browser. Newest first, as their signatures order them: a reply after what it answers, each identity's posts in the order it signed them. MOR has no clock: between posts nothing signed links, the order is not a time.</p>`;
+  const note2 = `<p class="f-note">Public posts of ${authors.map((a) => escapeHtml(a.name ?? short2(a.identity))).join(", ")}, each checked in this browser. Newest first, as their signatures order them: a reply after what it answers, each identity's posts in the order it signed them. MOR has no clock: between posts nothing signed links, the order is not a time. A visitor's public note is shown only beside an answer to it.</p>`;
   const body = feed.posts.length ? feed.posts.map((p) => postHtml(feed, p, authors)).join("\n") : '<p class="f-more">No public post found at the places asked.</p>';
   const more = feed.more ? `<p class="f-more" id="f-more">${feed.more} older ${feed.more === 1 ? "post" : "posts"} found, not shown here.</p>` : "";
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${note}${body}${more}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${note2}${body}${more}</body></html>`;
+}
+
+// ../longform/src/text.ts
+var SPACE = "[ \xA0\u1680\u2000-\u200A\u202F\u205F\u3000]";
+var TRAILING = new RegExp(`${SPACE}+$`, "gmu");
+var TRAILING_END = new RegExp(`(?:${SPACE}|
+)+$`, "u");
+var CONTROL = /[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/gu;
+var NONCHAR = /[\uFDD0-\uFDEF\uFFFE\uFFFF\u{1FFFE}\u{1FFFF}\u{2FFFE}\u{2FFFF}\u{3FFFE}\u{3FFFF}\u{4FFFE}\u{4FFFF}\u{5FFFE}\u{5FFFF}\u{6FFFE}\u{6FFFF}\u{7FFFE}\u{7FFFF}\u{8FFFE}\u{8FFFF}\u{9FFFE}\u{9FFFF}\u{AFFFE}\u{AFFFF}\u{BFFFE}\u{BFFFF}\u{CFFFE}\u{CFFFF}\u{DFFFE}\u{DFFFF}\u{EFFFE}\u{EFFFF}\u{FFFFE}\u{FFFFF}\u{10FFFE}\u{10FFFF}]/gu;
+function compose(raw) {
+  const changes = [];
+  let t = raw;
+  const step = (next, what) => {
+    if (next !== t) changes.push(what);
+    t = next;
+  };
+  step(t.replace(/\r\n?|[\u2028\u2029]/g, "\n"), "line breaks converted to LF");
+  step(t.replace(/\uFEFF/g, ""), "byte order marks removed");
+  step(t.replace(/\t/g, "    "), "tabs replaced with four spaces");
+  step(t.replace(CONTROL, ""), "control characters removed");
+  step(t.replace(NONCHAR, ""), "noncharacters removed");
+  step(t.normalize("NFC"), "normalized to NFC");
+  step(t.replace(TRAILING, ""), "trailing spaces removed");
+  step(t.replace(TRAILING_END, ""), "final line breaks removed");
+  return { text: t, changes };
+}
+
+// ../genesis/src/kex.ts
+var kexLog = { recording: false, entries: [] };
+function record(e) {
+  if (kexLog.recording) kexLog.entries.push(e);
+}
+
+// ../reader/src/message.ts
+var MAX_MESSAGE = 1e4;
+async function recipient(identity, hints, via = {}) {
+  const l = await lookUp(identity, hints, via);
+  if (!l.encryptionKey) throw new Error("this identity has published no encryption key that counts, so it cannot receive messages");
+  const inbox = l.inbox(SPECS.text);
+  if (!inbox?.length) throw new Error("this identity declares no inbox, so it cannot receive messages");
+  const last = l.resolution.links.at(-1);
+  const warning = last?.how === "re-homed without audit" ? "This identity was re-homed without audit: it moved to new homes because its old homes could not be reached from here. That may be a thief. The message may go to whoever moved it." : null;
+  return { identity, inbox, key: l.encryptionKey, warning };
+}
+async function homeAt(hint, via) {
+  const info = await relayAt(hint, via).info();
+  const op = info.get(0);
+  if (!(op instanceof Uint8Array)) throw new Error(`${hint} declares no operator: not a home`);
+  return { operator: hex(op), hint };
+}
+async function sendMessage(o) {
+  const via = o.via ?? {};
+  const { text: text2 } = compose(o.text);
+  if (!text2) throw new Error("the message is empty");
+  if (text2.length > MAX_MESSAGE) throw new Error(`the message is longer than ${MAX_MESSAGE} characters`);
+  checkText(text2);
+  const homes = [];
+  for (const h of o.homes) {
+    try {
+      homes.push(await homeAt(h, via));
+    } catch {
+    }
+  }
+  if (!homes.length) throw new Error("no home could be reached to give the message a signer");
+  const signingSecret = newSigningSecret();
+  const chainKey = newTestChainKey(2);
+  chainKey.seeds.fill(0);
+  const genesis = makeGenesis({
+    identitySpec: SPECS.identity,
+    signingSecret,
+    chainKeyScheme: chainKey.scheme,
+    chainKeyCommit: chainKey.commit,
+    homes
+  });
+  const sender = actId(genesis);
+  let receipted = 0;
+  for (const h of homes) {
+    try {
+      if ((await relayAt(h.hint, via).putAct(genesis)).receipt) receipted++;
+    } catch {
+    }
+  }
+  if (!receipted) throw new Error("no home signed a receipt for the one-time identity");
+  for (const r of o.to.inbox) {
+    try {
+      await relayAt(r, via).putAct(genesis);
+    } catch {
+    }
+  }
+  const made = makeEveryday({
+    signingSecret,
+    signer: sender,
+    binding: sender,
+    spec: SPECS.text,
+    type: 0,
+    payload: textPayload(text2, null),
+    sequence: [],
+    public: false,
+    to: [o.to.identity]
+  });
+  const eseed = randomBytes(64);
+  const sealed = seal({
+    act: made.act,
+    key: made.key,
+    recipients: [{ id: o.to.identity, key: o.to.key }],
+    random: { containerKey: randomBytes(32), nonce: randomBytes(24), eseeds: [eseed], oneTimeSecret: newSigningSecret() }
+  });
+  record({ kind: "encapsulate", publicKey: o.to.key, eseed, ct: sealedParts(sealed).capsules[0] });
+  signingSecret.fill(0);
+  const out = { message: made.id, sender, sealed: sealedId(sealed), delivered: [], failed: [] };
+  for (const r of o.to.inbox) {
+    try {
+      await relayAt(r, via).putSealed(sealed);
+      out.delivered.push(r);
+    } catch (e) {
+      out.failed.push({ relay: r, reason: e instanceof RelayError ? e.reason : "not reachable" });
+    }
+  }
+  return out;
+}
+
+// src/write.ts
+async function homeAt2(hint, via) {
+  const info = await relayAt(hint, via).info();
+  const op = info.get(0);
+  if (!(op instanceof Uint8Array)) throw new Error(`${hint} declares no operator: not a home`);
+  return { operator: hex(op), hint };
+}
+async function oneTime(homes, inbox, via) {
+  const reached = [];
+  for (const h of homes) {
+    try {
+      reached.push(await homeAt2(h, via));
+    } catch {
+    }
+  }
+  if (!reached.length) throw new Error("no home could be reached to give the note a signer");
+  const signingSecret = newSigningSecret();
+  const chainKey = newTestChainKey(2);
+  chainKey.seeds.fill(0);
+  const genesis = makeGenesis({ identitySpec: SPECS.identity, signingSecret, chainKeyScheme: chainKey.scheme, chainKeyCommit: chainKey.commit, homes: reached });
+  let receipted = 0;
+  for (const h of reached) {
+    try {
+      if ((await relayAt(h.hint, via).putAct(genesis)).receipt) receipted++;
+    } catch {
+    }
+  }
+  if (!receipted) {
+    signingSecret.fill(0);
+    throw new Error("no home signed a receipt for the one-time identity");
+  }
+  for (const r of inbox) {
+    try {
+      await relayAt(r, via).putAct(genesis);
+    } catch {
+    }
+  }
+  return { id: actId(genesis), signingSecret };
+}
+async function inboxOf(identity, places, via) {
+  const l = await lookUp(identity, places, via);
+  const inbox = l.inbox(SPECS.text);
+  if (!inbox?.length) throw new Error("this identity declares no inbox, so it cannot receive notes");
+  return inbox;
+}
+async function writeNote(o) {
+  const via = o.via ?? {};
+  if (!o.public) {
+    const r = await recipient(o.to, o.places, via);
+    if (r.warning) throw new Error(r.warning);
+    const sent = await sendMessage({ text: o.text, to: r, homes: o.homes, via });
+    return { note: sent.message, sender: sent.sender, public: false, delivered: sent.delivered, failed: sent.failed };
+  }
+  const { text: text2 } = compose(o.text);
+  if (!text2) throw new Error("the note is empty");
+  if (text2.length > MAX_MESSAGE) throw new Error(`the note is longer than ${MAX_MESSAGE} characters`);
+  checkText(text2);
+  const inbox = await inboxOf(o.to, o.places, via);
+  const who2 = await oneTime(o.homes, inbox, via);
+  const made = makeEveryday({
+    signingSecret: who2.signingSecret,
+    signer: who2.id,
+    binding: who2.id,
+    spec: SPECS.text,
+    type: 0,
+    payload: textPayload(text2, null),
+    sequence: [],
+    public: true,
+    to: [o.to]
+  });
+  who2.signingSecret.fill(0);
+  const out = { note: made.id, sender: who2.id, public: true, delivered: [], failed: [] };
+  for (const r of inbox) {
+    try {
+      await relayAt(r, via).putAct(made.act);
+      out.delivered.push(r);
+    } catch (e) {
+      out.failed.push({ relay: r, reason: e instanceof RelayError ? e.reason : "not reachable" });
+    }
+  }
+  if (!out.delivered.length) throw new Error(`no inbox relay took the note: ${out.failed.map((f) => `${f.relay} (${f.reason})`).join(", ")}`);
+  return out;
+}
+
+// src/shell/write-box.ts
+var short3 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var nameOf2 = (a) => a.name ?? `Identity ${short3(a.identity)}`;
+var either = (as) => {
+  const n = as.map(nameOf2);
+  return n.length < 2 ? n.join("") : `${n.slice(0, -1).join(", ")} or ${n.at(-1)}`;
+};
+function meaning(to, isPublic, authors) {
+  const name = nameOf2(to);
+  return isPublic ? `Public: left unsealed in ${name}'s inbox, readable by anyone who holds it. It appears on this page only if ${either(authors)} answers it.` : `Private: sealed in this browser so that only ${name} can open it, then left in ${name}'s inbox. It is never shown on this page.`;
+}
+var ALWAYS2 = "Either way it is signed by a one-time identity made in this browser, whose keys are forgotten once it is sent: no reply can reach you, so write how to be reached if you want one. Nothing is kept in this browser.";
+function writeBox(authors, places, homes) {
+  let to = authors[0];
+  let isPublic = false;
+  let sending = false;
+  const box = document.createElement("section");
+  box.className = "mor-write-box";
+  box.setAttribute("aria-label", "Write a note");
+  const switches = authors.map((a, i) => `<button type="button" class="mw-opt" data-to="${i}" aria-pressed="${i === 0}">${escapeHtml(nameOf2(a))}</button>`).join("");
+  box.innerHTML = `<div class="mw-inner"><div class="mw-row" role="group" aria-label="To"><span class="mw-lab">To</span>${switches}</div>
+<div class="mw-row" role="group" aria-label="Who can read it"><span class="mw-lab">As</span><button type="button" class="mw-opt" data-public="0" aria-pressed="true">Private</button><button type="button" class="mw-opt" data-public="1" aria-pressed="false">Public</button></div>
+<p class="mw-means" id="mw-means"></p>
+<textarea class="mw-text" rows="4" maxlength="${MAX_MESSAGE}" aria-describedby="mw-means mw-always" placeholder="Your note"></textarea>
+<div class="mw-send-row"><button type="button" class="mw-send">Send</button><span class="mw-status" role="status"></span></div>
+<p class="mw-always" id="mw-always">${escapeHtml(ALWAYS2)}</p></div>`;
+  const means = box.querySelector(".mw-means");
+  const text2 = box.querySelector(".mw-text");
+  const send = box.querySelector(".mw-send");
+  const status = box.querySelector(".mw-status");
+  const show = () => {
+    means.textContent = meaning(to, isPublic, authors);
+    for (const b of box.querySelectorAll("[data-to]")) b.setAttribute("aria-pressed", String(authors[Number(b.dataset.to)] === to));
+    for (const b of box.querySelectorAll("[data-public]")) b.setAttribute("aria-pressed", String(b.dataset.public === "1" === isPublic));
+    box.dataset.to = to.identity;
+    box.dataset.public = isPublic ? "1" : "0";
+  };
+  for (const b of box.querySelectorAll("[data-to]")) b.addEventListener("click", () => (to = authors[Number(b.dataset.to)], show()));
+  for (const b of box.querySelectorAll("[data-public]")) b.addEventListener("click", () => (isPublic = b.dataset.public === "1", show()));
+  if (!homes.length) {
+    text2.disabled = true;
+    send.disabled = true;
+    status.textContent = "This gateway takes no notes: its operator names no home for a visitor's one-time identity.";
+  }
+  send.addEventListener("click", async () => {
+    if (sending || !text2.value.trim()) return;
+    sending = true;
+    send.disabled = true;
+    box.dataset.sent = "";
+    status.className = "mw-status";
+    status.textContent = "Signing and sending from this browser\u2026";
+    try {
+      const w = await writeNote({ text: text2.value, to: to.identity, public: isPublic, places, homes });
+      text2.value = "";
+      status.className = "mw-status mw-ok";
+      status.textContent = `Sent: note ${short3(w.note)}, ${w.public ? "unsealed" : "sealed"}, is in ${nameOf2(to)}'s inbox. Its one-time identity's keys are forgotten.`;
+      box.dataset.sent = w.note;
+    } catch (err) {
+      status.className = "mw-status mw-bad";
+      status.textContent = `Not sent: ${err instanceof Error ? err.message : String(err)}.`;
+      box.dataset.sent = "failed";
+    } finally {
+      sending = false;
+      send.disabled = false;
+    }
+  });
+  show();
+  return box;
 }
 
 // ../../modules/video/src/video.ts
@@ -5211,8 +5612,8 @@ function parse2(bytes) {
   const turned = v.rotation === 90 || v.rotation === 270;
   const vv = v.video;
   const long = Math.max(vv.width, vv.height);
-  const short3 = Math.min(vv.width, vv.height);
-  if (long > MAX_LONG_SIDE || short3 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
+  const short4 = Math.min(vv.width, vv.height);
+  if (long > MAX_LONG_SIDE || short4 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
   if (vv.level > MAX_LEVEL) throw new NotFilm("limits", `H.264 level ${vv.level / 10}, above ${MAX_LEVEL / 10}`);
   const seconds = Math.max(mDur / mScale, ...tracks.map((t) => t.mediaDuration / t.timescale));
   if (seconds > MAX_SECONDS) throw new NotFilm("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS}`);
@@ -5272,7 +5673,7 @@ function filmPlayer(entry, poster, get, line, changed, posterLoaded = () => {
     return img;
   };
   const parts = (...xs) => xs.filter((x) => x !== null);
-  const note = (words) => {
+  const note2 = (words) => {
     const n = document.createElement("div");
     n.className = "mor-film-note";
     n.textContent = words;
@@ -5285,13 +5686,13 @@ function filmPlayer(entry, poster, get, line, changed, posterLoaded = () => {
     changed();
   };
   const stop = (state2, why, words) => {
-    box.replaceChildren(...parts(posterImg(), note(words)));
+    box.replaceChildren(...parts(posterImg(), note2(words)));
     set(state2, why);
   };
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = "\u25B6 Play the film";
-  box.replaceChildren(...parts(posterImg(), button, note(`${megabytes(entry.size)}, checked against what was signed before it plays.`)));
+  box.replaceChildren(...parts(posterImg(), button, note2(`${megabytes(entry.size)}, checked against what was signed before it plays.`)));
   box.dataset.state = "waiting";
   let video = null;
   let filmUrl = "";
@@ -5361,7 +5762,7 @@ function filmPlayer(entry, poster, get, line, changed, posterLoaded = () => {
     filmUrl = URL.createObjectURL(new Blob([bytes], { type: "video/mp4" }));
     video.src = filmUrl;
     box.classList.add("played");
-    box.replaceChildren(video, note("Checked: exactly what was signed. Press play."));
+    box.replaceChildren(video, note2("Checked: exactly what was signed. Press play."));
     set("verified");
     video.play().catch(() => box.classList.remove("played"));
   };
@@ -5395,6 +5796,7 @@ var FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-film-link{display:inline-block;padding:.4em 1em;border:1px solid currentColor;border-radius:999px;font:600 14px/1.3 system-ui,sans-serif;white-space:nowrap}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-feed{display:block;margin:1em 0}
+.mor-write{display:block;margin:1em 0;min-height:4em}
 .mor-feed>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 var ACT_STYLE = `${STYLE2}
@@ -5452,6 +5854,12 @@ function bar(s) {
   if (s.path) rows.push(`<dt>This file</dt><dd><code>${escapeHtml(s.path)}</code>${s.work ? `, work hash <code>${escapeHtml(s.work)}</code>` : ""}</dd>`);
   if (s.films.length) rows.push(`<dt>Films</dt><dd><ul id="mor-films">${s.films.map(filmItem).join("")}</ul></dd>`);
   if (s.feeds.length) rows.push(`<dt>Feeds</dt><dd><ul id="mor-feeds">${s.feeds.map(feedItem).join("")}</ul></dd>`);
+  if (s.writes.length) {
+    const to = (as) => as.map((a) => `${a.name ? `${escapeHtml(a.name)}, ` : ""}<span class="fp">${fingerprint(a.identity)}</span>`).join("; ");
+    rows.push(
+      `<dt>Writing</dt><dd id="mor-writes">${s.writes.map((w) => `<div>A box to write to ${to(w)}. A note is signed in this browser by a one-time identity and sent to the inbox the identity's routes name; nothing is kept here. The names are this page's; the identities are what the note is addressed to.</div>`).join("")}</dd>`
+    );
+  }
   if (s.acts.length) rows.push(`<dt>Acts shown</dt><dd><ul id="mor-acts">${s.acts.map(actItem).join("")}</ul></dd>`);
   if (s.reasons.length) rows.push(`<dt>Why</dt><dd><ul id="mor-reasons">${s.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul></dd>`);
   rows.push(
@@ -5508,7 +5916,7 @@ function inertCss(css) {
 async function preparePage(bytes, path, manifest, getFile) {
   const doc = new DOMParser().parseFromString(new TextDecoder("utf-8", { fatal: true }).decode(bytes), "text/html");
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out = { html: "", title: null, acts: [], films: [], listed: [], feeds: [], icon: null, problems: [], dropped: 0 };
+  const out = { html: "", title: null, acts: [], films: [], listed: [], feeds: [], writes: [], icon: null, problems: [], dropped: 0 };
   const drop = (el) => {
     el.remove();
     out.dropped++;
@@ -5532,7 +5940,8 @@ async function preparePage(bytes, path, manifest, getFile) {
     const entry = p ? byPath.get(p) : void 0;
     return entry && kindOf(entry.path) === "film" ? entry : void 0;
   };
-  for (const el of [...doc.querySelectorAll("[data-film], [data-film-listed], [data-feed]")]) {
+  for (const el of [...doc.querySelectorAll("[data-film], [data-film-listed], [data-feed], [data-write]")]) {
+    el.removeAttribute("data-write");
     el.removeAttribute("data-film");
     el.removeAttribute("data-film-listed");
     el.removeAttribute("data-feed");
@@ -5669,7 +6078,7 @@ async function preparePage(bytes, path, manifest, getFile) {
     }
     el.replaceWith(box);
   }
-  for (const el of [...doc.querySelectorAll("mor-feed")]) {
+  const authorsOf = (el) => {
     const authors = [];
     for (const a of [...el.querySelectorAll("mor-author")]) {
       const identity = (a.getAttribute("identity") ?? "").trim();
@@ -5680,6 +6089,23 @@ async function preparePage(bytes, path, manifest, getFile) {
       const name = (a.textContent ?? "").replace(/\s+/g, " ").trim();
       authors.push({ identity, name: name || null });
     }
+    return authors;
+  };
+  for (const el of [...doc.querySelectorAll("mor-write")]) {
+    const authors = authorsOf(el);
+    const place = doc.createElement("div");
+    place.className = ["mor-write", el.getAttribute("class") ?? ""].join(" ").trim();
+    if (el.id) place.id = el.id;
+    if (authors.length) {
+      place.setAttribute("data-write", String(out.writes.length));
+      out.writes.push(authors);
+    } else {
+      place.innerHTML = `<div class="mor-act-note">A writing box naming no identity: nothing to write to.</div>`;
+    }
+    el.replaceWith(place);
+  }
+  for (const el of [...doc.querySelectorAll("mor-feed")]) {
+    const authors = authorsOf(el);
     const box = doc.createElement("div");
     box.className = ["mor-feed", el.getAttribute("class") ?? ""].join(" ").trim();
     if (el.id) box.id = el.id;
@@ -5794,6 +6220,7 @@ var state = {
   acts: [],
   films: [],
   feeds: [],
+  writes: [],
   reasons: [],
   newer: null
 };
@@ -5838,10 +6265,10 @@ async function showActs(frame2, settings) {
       fitFrame(inner);
     } catch (err) {
       line.problem = message2(err);
-      const note = doc.createElement("div");
-      note.className = "mor-act-note";
-      note.textContent = `Act ${id} not shown: ${message2(err)}.`;
-      box.replaceChildren(note);
+      const note2 = doc.createElement("div");
+      note2.className = "mor-act-note";
+      note2.textContent = `Act ${id} not shown: ${message2(err)}.`;
+      box.replaceChildren(note2);
     }
     paint();
   }
@@ -5872,14 +6299,38 @@ async function showFeeds(frame2, settings, feeds) {
       fitFrame(inner);
     } catch (err) {
       line.found = [];
-      const note = doc.createElement("div");
-      note.className = "mor-act-note";
-      note.textContent = `The feed could not be read: ${message2(err)}.`;
-      box.replaceChildren(note);
+      const note2 = doc.createElement("div");
+      note2.className = "mor-act-note";
+      note2.textContent = `The feed could not be read: ${message2(err)}.`;
+      box.replaceChildren(note2);
     }
     box.dataset.done = "";
     paint();
   }
+}
+function showWrites(frame2, settings, writes) {
+  const doc = frame2.contentDocument;
+  if (!doc || !writes.length) return;
+  const over = /* @__PURE__ */ new Map();
+  for (const spot of [...doc.querySelectorAll(".mor-write[data-write]")]) {
+    const authors = writes[Number(spot.dataset.write)];
+    if (!authors) continue;
+    const box = writeBox(authors, settings.relays, settings.messageHomes);
+    box.style.visibility = "hidden";
+    view.append(box);
+    const fit = () => {
+      box.style.width = `${spot.getBoundingClientRect().width}px`;
+      const h = box.scrollHeight;
+      if (Math.abs(spot.offsetHeight - h) > 1) spot.style.height = `${h}px`;
+    };
+    fit();
+    const watch = new ResizeObserver(fit);
+    watch.observe(spot);
+    watch.observe(box.firstElementChild);
+    box.style.visibility = "";
+    over.set(spot, box);
+  }
+  layOver(frame2, over);
 }
 function fitFrame(frame2) {
   const doc = frame2.contentDocument;
@@ -5999,6 +6450,7 @@ async function main() {
     }
     document.title = `${prepared.title ?? entry.path} \xB7 ${version2.manifest.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
+    state.writes = prepared.writes;
     state.feeds = prepared.feeds.map((authors) => ({ authors, found: null, shown: 0, verified: 0 }));
     state.phase = "ok";
     state.words = verifiedWords(settings, "page");
@@ -6013,6 +6465,7 @@ async function main() {
       () => {
         fitFrame(frame2);
         showFilms(frame2, prepared.films, prepared.listed);
+        showWrites(frame2, settings, prepared.writes);
         void showActs(frame2, settings).then(() => showFeeds(frame2, settings, prepared.feeds));
       },
       { once: true }
