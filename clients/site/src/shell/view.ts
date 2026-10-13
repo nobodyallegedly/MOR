@@ -58,7 +58,22 @@ code,.fp{font-family:ui-monospace,Menlo,monospace;font-size:.92em;overflow-wrap:
 .mor-popup-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff;font:600 16px/1.3 system-ui,sans-serif}
 .mor-popup-title{overflow-wrap:anywhere}
 .mor-popup-close{flex:none;min-height:44px;padding:8px 16px;border:2px solid #fff;border-radius:999px;background:#000;color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}
-.mor-popup .mor-player{position:relative;align-self:center;width:min(100%,calc((100vh - 96px) * var(--shape,1.7778)));width:min(100%,calc((100dvh - 96px) * var(--shape,1.7778)));aspect-ratio:var(--shape,16/9)}`;
+.mor-popup .mor-player{position:relative;align-self:center;width:min(100%,calc((100vh - 96px) * var(--shape,1.7778)));width:min(100%,calc((100dvh - 96px) * var(--shape,1.7778)));aspect-ratio:var(--shape,16/9)}
+.mor-write-box{position:absolute;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:Canvas;color:CanvasText;font:16px/1.45 system-ui,-apple-system,sans-serif;overflow:hidden}
+.mw-inner{display:flex;flex-direction:column;gap:8px}
+.mw-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.mw-lab{min-width:2.2em;font-size:14px;color:var(--soft)}
+.mw-opt{min-height:40px;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:Canvas;color:CanvasText;font:600 15px system-ui,sans-serif;cursor:pointer}
+.mw-opt[aria-pressed=true]{background:CanvasText;color:Canvas;border-color:CanvasText}
+.mw-means,.mw-always{margin:0;font-size:14px}
+.mw-always{color:var(--soft);font-size:13px}
+.mw-text{width:100%;min-height:6em;padding:8px;border:1px solid var(--line);border-radius:8px;background:Canvas;color:CanvasText;font:16px/1.4 system-ui,sans-serif;resize:vertical}
+.mw-send-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.mw-send{min-height:44px;padding:8px 22px;border:0;border-radius:999px;background:var(--ok);color:#fff;font:600 16px system-ui,sans-serif;cursor:pointer}
+.mw-send:disabled{opacity:.5;cursor:default}
+.mw-status{font-size:14px}
+.mw-ok{color:var(--ok)}
+.mw-bad{color:var(--bad)}`;
 
 /** Put first in every page's frame: the boxes where acts are shown, the places films are played, and links that leave the site. */
 export const FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
@@ -66,6 +81,7 @@ export const FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-film-link{display:inline-block;padding:.4em 1em;border:1px solid currentColor;border-radius:999px;font:600 14px/1.3 system-ui,sans-serif;white-space:nowrap}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-feed{display:block;margin:1em 0}
+.mor-write{display:block;margin:1em 0;min-height:4em}
 .mor-feed>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 
@@ -124,6 +140,8 @@ export interface BarState {
   acts: ActLine[];
   films: FilmLine[];
   feeds: FeedLine[];
+  /** The writing boxes the page shows (draft 7, rule 13b): the identities each writes to. */
+  writes: Author[][];
   reasons: string[];
   /** Null while looking for later versions, or before. */
   newer: Newer | null;
@@ -191,6 +209,12 @@ export function bar(s: BarState): string {
   if (s.path) rows.push(`<dt>This file</dt><dd><code>${e(s.path)}</code>${s.work ? `, work hash <code>${e(s.work)}</code>` : ''}</dd>`);
   if (s.films.length) rows.push(`<dt>Films</dt><dd><ul id="mor-films">${s.films.map(filmItem).join('')}</ul></dd>`);
   if (s.feeds.length) rows.push(`<dt>Feeds</dt><dd><ul id="mor-feeds">${s.feeds.map(feedItem).join('')}</ul></dd>`);
+  if (s.writes.length) {
+    const to = (as: Author[]) => as.map((a) => `${a.name ? `${e(a.name)}, ` : ''}<span class="fp">${fingerprint(a.identity)}</span>`).join('; ');
+    rows.push(
+      `<dt>Writing</dt><dd id="mor-writes">${s.writes.map((w) => `<div>A box to write to ${to(w)}. A note is signed in this browser by a one-time identity and sent to the inbox the identity's routes name; nothing is kept here. The names are this page's; the identities are what the note is addressed to.</div>`).join('')}</dd>`,
+    );
+  }
   if (s.acts.length) rows.push(`<dt>Acts shown</dt><dd><ul id="mor-acts">${s.acts.map(actItem).join('')}</ul></dd>`);
   if (s.reasons.length) rows.push(`<dt>Why</dt><dd><ul id="mor-reasons">${s.reasons.map((r) => `<li>${e(r)}</li>`).join('')}</ul></dd>`);
   rows.push(

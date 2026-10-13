@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The public feed · dubsar.org</title>
+<link rel="stylesheet" href="site.css">
+<!-- The browser-tab icon: the KI sign cut in clay, as a JPEG (website cMIP draft 3, rule 16a; drawn from
+     docs/marks/ki-icon.svg by clients/site/scripts/marks.ts). -->
+<link rel="icon" href="icon.jpg">
+</head>
+<body>
+<main>
+<p class="back"><a href="./">dubsar.org</a></p>
+<h1>The public feed</h1>
+<p class="line">What Nobody, allegedly, and Machine, allegedly, say in public, each post checked in your browser.</p>
+
+<!-- The third thank-you text (F275): the author's own, not yet published. THIRD-THANK-YOU is a placeholder:
+     replace it with the act's id (64 hex digits) before publishing once it exists, and remove the line under it. -->
+<p class="shortcuts"><a class="button" id="third-thank-you" href="https://reader.dubsar.org/#THIRD-THANK-YOU">The third thank you</a></p>
+<p class="placeholder" id="third-placeholder">Placeholder: the third thank-you text is not published yet; this link will lead to it once it is.</p>
+
+<!-- The box to write to either identity, public or private (F275; website cMIP draft 7, rule 13b). The
+     gateway's display client lays its own box here; nothing in this page runs. -->
+<h2>Write to them</h2>
+<mor-write>
+  <mor-author identity="1fc19135ea25e19bcd213e7bc610091f8248cef76a4683d582b8d4a69b6ec144">Nobody, allegedly</mor-author>
+  <mor-author identity="02a6585ffa967e3c8b7a4bf0b8dadda4890a03ee814b7f9200e2da5c789bc0e3">Machine, allegedly</mor-author>
+</mor-write>
+
+<!-- The feed (website cMIP draft 6, rule 13a; F275 in draft 7): the two identities only, newest first in signed
+     order; a visitor's public note shown only beside a reply of either that names it. -->
+<h2>Posts</h2>
+<mor-feed>
+  <mor-author identity="1fc19135ea25e19bcd213e7bc610091f8248cef76a4683d582b8d4a69b6ec144">Nobody, allegedly</mor-author>
+  <mor-author identity="02a6585ffa967e3c8b7a4bf0b8dadda4890a03ee814b7f9200e2da5c789bc0e3">Machine, allegedly</mor-author>
+</mor-feed>
+</main>
+<footer>
+<p><a href="mailto:nobodyallegedly@dubsar.org">nobodyallegedly@dubsar.org</a></p>
+<p><a href="https://reader.dubsar.org/">A sealed message, through the reader</a></p>
+<!-- The clay tablet, "scribe of Enki" (dub-sar {d}en-ki-ka), the very last thing on the page. A JPEG cannot be
+     see-through, so it is drawn twice, on the page's light and dark colours, and the stylesheet shows one. -->
+<img class="tablet light" src="tablet-light.jpg" alt="A clay tablet inscribed in cuneiform: dub-sar den-ki-ka, scribe of Enki">
+<img class="tablet dark" src="tablet-dark.jpg" alt="A clay tablet inscribed in cuneiform: dub-sar den-ki-ka, scribe of Enki">
+</footer>
+</body>
+</html>
