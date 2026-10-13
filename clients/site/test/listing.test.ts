@@ -7,7 +7,11 @@
 // acts on, a copy published by someone else, one naming a creator that never
 // published it, releases naming two of them; and two that cannot be
 // verified, one whose signer's home is gone, one whose content is no
-// specification. The listing read on its own, then dubsar.org's page in a
+// specification. And agreements naming extensions (F288, the listing's
+// first purpose): three deals signed by every party naming the xtype (one
+// with a second version, a clone, naming it again), one also naming the
+// checker and one a cMIP published nowhere; a proposal one party never
+// signed; and a private agreement, which cannot be read. The listing read on its own, then dubsar.org's page in a
 // real browser on a phone's screen, with the two test relays in place of
 // home1 and home2. Real homes and relays on local ports; test identities only.
 
@@ -19,7 +23,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit, type Browser, type Frame } from 'playwright-core';
-import { MIRS, SPECS, cborEncode, lockMedia, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, cborEncode, lockMedia, signaturePayload, unhex } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
@@ -52,6 +56,35 @@ let gone: TestIdentity;
 const hash: Record<string, string> = {};
 const pub: Record<string, string> = {};
 let listing: Listing;
+/** Agreements' terms, by name. */
+const deal: Record<string, string> = {};
+
+/** A deal's terms (Agreements type 0): its parties, its words, the extensions it names; a clone names its parent. */
+function dealTerms(parties: TestIdentity[], text: string, extensions: string[], parent?: string): Uint8Array {
+  const ids = parties.map((p) => p.id);
+  const m = new Map<number, unknown>([
+    [0, ids.map(unhex)],
+    [1, text],
+    [2, new Map()],
+    [4, parent ? [[[1], [...ids].sort().map(unhex)]] : [0]],
+    [5, [0]],
+  ]);
+  if (parent) m.set(11, unhex(parent));
+  if (extensions.length) m.set(15, extensions.map(unhex));
+  return cborEncode(m);
+}
+
+/** Propose terms, public or private, and have the parties named sign them. */
+async function agree(by: TestIdentity, payload: Uint8Array, signers: TestIdentity[], relays: string[], o: { private?: TestIdentity[]; parent?: string } = {}): Promise<string> {
+  const objects: [string, string][] | undefined = o.parent ? [[o.parent, o.parent]] : undefined;
+  const made = o.private
+    ? await by.publish(MIRS.agreements, 0, payload, { public: false, to: o.private.map((x) => x.id), relays, objects })
+    : await by.publish(MIRS.agreements, 0, payload, { public: true, relays, objects });
+  for (const who of signers) {
+    await who.publish(MIRS.agreements, 1, signaturePayload(made.id), { public: !o.private, to: o.private?.map((x) => x.id), relays, objects: [[made.id, made.id]] });
+  }
+  return made.id;
+}
 
 /** A specification's content: Development's `spec` map, canonical CBOR. */
 function content(fields: [number, unknown][]): Uint8Array {
@@ -147,6 +180,17 @@ before(async () => {
   pub.gone = (await publishSpec(gone, content([[0, 0], [1, id(gone)], [9, '# cMIP: Words that must not be shown unverified']]), [relayA])).id;
   pub.garbage = (await publishSpec(carol, cborEncode(new Map<number, unknown>([[0, 0], [99, 'what']])), [relayB])).id;
 
+  // Agreements naming extensions. The xtype "Test notes" is named by three deals (one of them in two versions),
+  // the checker by one, a cMIP published nowhere by one; a proposal Carol never signed, and a private deal, count for nothing.
+  const NOWHERE = 'e'.repeat(64);
+  deal.ab = await agree(alice, dealTerms([alice, bob], 'Alice and Bob keep notes.', [hash.notes, hash.checker]), [alice, bob], [relayA]);
+  deal.bc = await agree(bob, dealTerms([bob, carol], 'Bob and Carol keep notes.', [hash.notes]), [bob, carol], [relayB]);
+  deal.bc2 = await agree(bob, dealTerms([bob, carol], 'Bob and Carol keep notes, again.', [hash.notes], deal.bc), [bob, carol], [relayB], { parent: deal.bc });
+  deal.ac = await agree(alice, dealTerms([alice, carol], 'Alice and Carol keep notes elsewhere.', [hash.notes, NOWHERE]), [alice, carol], [relayA]);
+  deal.proposal = await agree(alice, dealTerms([alice, carol], 'A proposal Carol never signs.', [hash.checker]), [alice], [relayA]);
+  deal.private = await agree(alice, dealTerms([alice, bob], 'A private deal.', [hash.checker, hash.rail]), [alice, bob], [relayA], { private: [alice, bob] });
+  hash.nowhere = NOWHERE;
+
   listing = await readListing(
     [
       { address: relayA, name: 'the first relay' },
@@ -161,6 +205,7 @@ before(async () => {
   cpSync(SITE_DIR, dir, { recursive: true });
   const page = join(dir, 'listing.html');
   writeFileSync(page, readFileSync(page, 'utf8').replace('https://home1.dubsar.org', relayA).replace('https://home2.dubsar.org', relayB));
+  assert.match(readFileSync(page, 'utf8'), /<mor-listing reader="https:\/\/reader\.dubsar\.org\/">/);
   const v = await publishSite(alice, { name: 'dubsar.org', files: readFolder(dir), relays: [site.base] });
   gateway = new Gateway(
     parseGatewaySettings({
@@ -330,6 +375,41 @@ test('lines of drafts: a fork named, a predecessor not found said', () => {
   assert.equal(lone.drafts[0].afterMissing, 'z');
 });
 
+test('the extensions agreements name, most named first; versions of one agreement counted once', () => {
+  assert.deepEqual(
+    listing.extensions.map((x) => [x.hash, x.agreements.length]),
+    [
+      [hash.notes, 3],
+      [hash.checker, 1],
+      [hash.nowhere, 1],
+    ],
+  );
+  const notes = listing.extensions[0];
+  assert.equal(notes.listed?.name, 'cMIP: Test notes');
+  assert.deepEqual(notes.layers, ['Development'], 'an xtype declaring no layer: its work touches Development');
+  assert.deepEqual(
+    notes.agreements.find((a) => a.agreement === deal.bc)!.terms.sort(),
+    [deal.bc, deal.bc2].sort(),
+    'a clone is a version of the same agreement: both its public terms, one agreement',
+  );
+  assert.deepEqual(listing.extensions[1].layers, ['Development', 'Money', 'Agreements'], 'the layers its field 10 declares');
+  assert.equal(listing.extensions[2].listed, null);
+  assert.equal(listing.extensions[2].layers, null, 'not said where its specification is not found');
+});
+
+test('only agreements signed by every party count; private ones are not counted, and said', () => {
+  const a = listing.agreements;
+  assert.equal(a.counted, 3, 'Alice and Bob, Bob and Carol (two versions, one agreement), Alice and Carol');
+  assert.equal(a.terms, 5, 'five public terms, each valid for its signer');
+  assert.equal(a.proposed, 1, 'the proposal Carol never signed');
+  assert.deepEqual(a.notCounted, []);
+  assert.ok(a.private >= 3, `the private terms and their two signatures found, not opened (${a.private})`);
+  // The private deal named the checker and the rail Module: neither is counted from it.
+  for (const x of listing.extensions) assert.ok(!x.agreements.some((g) => g.terms.includes(deal.private)));
+  assert.ok(!listing.extensions.some((x) => x.hash === hash.rail));
+  assert.equal(listing.extensions.find((x) => x.hash === hash.checker)!.agreements.length, 1);
+});
+
 async function open(path: string) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: !WEBKIT, hasTouch: true });
   const page = await ctx.newPage();
@@ -368,7 +448,39 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   assert.equal(first, 'l-any');
   assert.match((await f.textContent('#l-any'))!, /^One listing among any; anyone can run another\.\s*It decides nothing and refuses nothing/);
 
-  const cards = await f.$$eval('.l-line[data-verified="yes"]', (els) =>
+  // The listing's first purpose: the extensions agreements name, most named first, before the cMIPs and Modules.
+  const order = await f.$$eval('section', (els) => els.map((e) => e.id));
+  assert.deepEqual(order, ['l-extensions', 'l-specs']);
+  assert.equal((await f.textContent('#l-mor2'))!.trim(), 'Each extension marks work the core did not foresee: the raw material of MOR 2.');
+  assert.match((await f.textContent('#l-counted'))!, /From 3 agreements counted.*Private agreements are not counted: their terms cannot be read \(\d+ private acts found, not opened\)\. 1 public proposal not yet signed by every party, not counted\./);
+  const exts = await f.$$eval('[data-extension]', (els) =>
+    els.map((e) => ({
+      hash: (e as HTMLElement).dataset.extension,
+      count: (e as HTMLElement).dataset.count,
+      text: e.textContent ?? '',
+      links: [...e.querySelectorAll('a')].map((a) => [a.getAttribute('href'), a.getAttribute('target')]),
+    })),
+  );
+  assert.deepEqual(
+    exts.map((x) => [x.hash, x.count]),
+    [
+      [hash.notes, '3'],
+      [hash.checker, '1'],
+      [hash.nowhere, '1'],
+    ],
+  );
+  assert.match(exts[0].text, /“cMIP: Test notes”\s*named by 3 agreements; the work touches Development\./);
+  assert.match(exts[1].text, /the work touches Development, Money, Agreements/);
+  assert.match(exts[2].text, /a cMIP not found at the relays read\s*named by 1 agreement; which layers the work touches is not said/);
+  assert.deepEqual(
+    exts[0].links.map(([href]) => href!.split('#')[1]).sort(),
+    [deal.ab, deal.bc, deal.bc2, deal.ac].sort(),
+    'links to those agreements’ public terms',
+  );
+  assert.ok(exts.flatMap((x) => x.links).every(([href, target]) => href!.startsWith('https://reader.dubsar.org/#') && target === '_blank'));
+  assert.ok(!exts.flatMap((x) => x.links).some(([href]) => href!.includes(deal.private) || href!.includes(deal.proposal)));
+
+  const cards = await f.$$eval('#l-specs .l-line[data-verified="yes"]', (els) =>
     els.map((e) => ({
       spec: (e as HTMLElement).dataset.spec!,
       name: e.querySelector('.l-name')!.textContent,
@@ -404,7 +516,7 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   assert.equal(card(hash.unclaimed).code, 'none');
 
   // The two that could not be verified: shown as such, their words nowhere.
-  const bad = await f.$$eval('.l-line[data-verified="no"]', (els) => els.map((e) => ({ id: (e as HTMLElement).dataset.pub, text: e.textContent ?? '' })));
+  const bad = await f.$$eval('#l-specs .l-line[data-verified="no"]', (els) => els.map((e) => ({ id: (e as HTMLElement).dataset.pub, text: e.textContent ?? '' })));
   assert.deepEqual(bad.map((b) => b.id).sort(), [pub.gone, pub.garbage].sort());
   assert.ok(bad.every((b) => /Not verified/.test(b.text) && /What it says is not shown/.test(b.text)));
   assert.ok(!(await page.evaluate(() => document.body.innerText)).includes('must not be shown'));
@@ -418,9 +530,9 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   // The bar names the relays read, the one not asked, and the counts.
   await page.click('#mor-bar summary');
   const listed = (await page.textContent('#mor-listings'))!;
-  assert.match(listed, /7 specifications verified, 2 publications not verified/);
-  assert.match(listed, /home1\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, 5 publications of specifications/);
-  assert.match(listed, /home2\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, 5 publications of specifications/);
+  assert.match(listed, /3 extensions named by 3 agreements counted, from 5 public terms verified \(1 not yet signed by every party\); private agreements are not counted\. 7 specifications verified, 2 publications not verified/);
+  assert.match(listed, /home1\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 5 publications of specifications/);
+  assert.match(listed, /home2\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 5 publications of specifications/);
   if (shots) await page.screenshot({ path: join(shots, 'listing-phone.png'), fullPage: true });
   assert.deepEqual(elsewhere, [], 'nothing fetched from anywhere but the gateway, the homes and the relays');
   assert.deepEqual(problems, []);

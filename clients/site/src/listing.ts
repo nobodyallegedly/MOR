@@ -14,6 +14,20 @@
 // `spec`; its spec hash computed. One that fails any of these is shown as
 // not verified, with the reason, and nothing it says is shown.
 //
+// Its first purpose (F288, Nobody, allegedly: "What really matters for MOR2
+// is the tracking of extensions, cMIPs and modules are a nice side
+// effect"): the extensions agreements name. An extension is a cMIP an
+// agreement names in its terms, field 15, for work the core did not foresee
+// (Development rule 19). From the same relays: every public terms act
+// (Agreements type 0) and every public signature act (type 1), each judged
+// through its signer's chain; an agreement counts once the core library says
+// it exists (every party signed, a deal or founding terms) or, a
+// collective's clone, is ready; its versions (field 11) count once. For each
+// cMIP named, how many agreements name it, the layers the work touches (its
+// specification's field 10, beside Development, where the specification is
+// listed), and those agreements' public terms. Private agreements cannot be
+// read, so they are not counted, and the listing says so.
+//
 // What it shows of each, from the specification's own fields only: its name
 // (the first line of its text), its kind, the layer and task it fills
 // (field 2, by the MIR the task names), an xtype (field 3, act types,
@@ -35,6 +49,10 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { relayAddress } from './settings.ts';
 import { PUBLICATION, RELEASE_MANIFEST } from './specs.ts';
 
+/** Agreements act types a listing reads: terms and signatures. */
+const AGREEMENTS_TERMS = 0;
+const AGREEMENTS_SIGNATURE = 1;
+
 /** A relay a listing reads, with the page's word for it. */
 export interface ListedRelay {
   address: string;
@@ -53,6 +71,10 @@ export interface RelayLine extends ListedRelay {
   specs: number;
   /** Set when it holds more than a listing reads of one relay. */
   stopped: boolean;
+  /** Private acts and sealed containers read there, which a listing cannot open: private agreements among them are not counted. */
+  private: number;
+  /** Public terms (Agreements type 0) read there. */
+  terms: number;
 }
 
 /** Development's specification kinds (Part three, field 0). */
@@ -174,8 +196,44 @@ export interface Draft {
   siblings: string[];
 }
 
+/** An agreement naming extensions: its public terms found, by version. */
+export interface NamingAgreement {
+  /** Its first version found: the terms its versions clone, back as far as found. */
+  agreement: string;
+  /** Its versions found that count and name the extension, by act id. */
+  terms: string[];
+}
+
+/** A cMIP agreements name as an extension (Agreements terms field 15; Development rule 19). */
+export interface Extension {
+  hash: string;
+  /** Its specification, where listed here; null otherwise. */
+  listed: Listed | null;
+  /** The agreements naming it, counted. */
+  agreements: NamingAgreement[];
+  /** The layers the work touches, from its field 10 beside Development; null where its specification is not listed. */
+  layers: string[] | null;
+}
+
+/** What was read of agreements. */
+export interface AgreementsRead {
+  /** Public terms found, valid for their signers' chains. */
+  terms: number;
+  /** Agreements counted: they exist (every party signed), or a collective's clone is ready. */
+  counted: number;
+  /** Public terms not yet signed by every party: proposals, not counted. */
+  proposed: number;
+  /** Public terms that could not be verified, or that the core library finds invalid: not counted. */
+  notCounted: { id: string; why: string }[];
+  /** Private acts and sealed containers read, which cannot be opened: private agreements are not counted. */
+  private: number;
+}
+
 export interface Listing {
   relays: RelayLine[];
+  /** The extensions agreements name, most named first: the listing's first purpose (F288). */
+  extensions: Extension[];
+  agreements: AgreementsRead;
   lines: Line[];
   /** Publications of specifications that could not be verified. */
   unverified: Found[];
@@ -294,6 +352,7 @@ export function nameOf(text: string): string {
 interface Described {
   id: string;
   signer?: string;
+  objects?: [string, string][];
   public: boolean;
   spec?: string;
   type?: number;
@@ -390,18 +449,23 @@ async function readRelay(line: RelayLine, via: Via, into: Map<string, { d: Descr
     for (;;) {
       const page = await relayAt(line.address, via).feed({ after });
       for (const it of page.items) {
-        if (it.kind !== 'act') continue;
         if (line.read >= LISTING_READ) {
           line.stopped = true;
           return;
         }
         line.read++;
+        if (it.kind !== 'act') {
+          line.private++;
+          continue;
+        }
         let d: Described;
         try {
           d = describeAct(it.item) as Described;
         } catch {
           continue;
         }
+        if (!d.public) line.private++;
+        else if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TERMS) line.terms++;
         if (!into.has(d.id)) into.set(d.id, { d, act: it.item });
       }
       if (!page.items.length || page.next === after) break;
@@ -418,7 +482,7 @@ async function readRelay(line: RelayLine, via: Via, into: Map<string, { d: Descr
  * read or verified is said, relay by relay and publication by publication.
  */
 export async function readListing(relays: ListedRelay[], gatewayRelays: string[], via: Via = {}): Promise<Listing> {
-  const lines: RelayLine[] = relays.map((r) => ({ ...r, asked: relayAddress(r.address) !== null, problem: null, read: 0, specs: 0, stopped: false }));
+  const lines: RelayLine[] = relays.map((r) => ({ ...r, asked: relayAddress(r.address) !== null, problem: null, read: 0, specs: 0, stopped: false, private: 0, terms: 0 }));
   const asked = lines.filter((l) => l.asked).map((l) => relayAddress(l.address)!);
   for (const l of lines) if (l.asked) l.address = relayAddress(l.address)!;
   const found = new Map<string, { d: Described; act: Uint8Array }>();
@@ -505,7 +569,8 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
   );
   for (const l of byHash.values()) l.releases.sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.id < b.id ? -1 : 1));
 
-  return { relays: lines, lines: linesOf([...byHash.values()]), unverified: pubs.filter((p) => p.problem).sort((a, b) => (a.id < b.id ? -1 : 1)) };
+  const { extensions, agreements } = await readExtensions(found, byHash, judge, lines.reduce((n, l) => n + l.private, 0));
+  return { relays: lines, extensions, agreements, lines: linesOf([...byHash.values()]), unverified: pubs.filter((p) => p.problem).sort((a, b) => (a.id < b.id ? -1 : 1)) };
 }
 
 /**
@@ -590,4 +655,107 @@ export function roleWords(l: Listed, all: Map<string, Listed>): { kind: string; 
   // An xtype's or an extension's own acts belong to Development (F106).
   if (!layers.size && (s.types.length || s.layers || (s.kind === 0 && !s.tasks.length))) layers.add('Development');
   return { kind, layer: [...layers].join(', ') || 'not said', role };
+}
+
+/**
+ * The extensions agreements name (F288): from the public terms and
+ * signatures found, each agreement judged by the core library with every
+ * party's chain looked up; counted once it exists, or, a collective's
+ * clone, is ready; its versions (field 11) one agreement. Most named first.
+ */
+async function readExtensions(
+  found: Map<string, { d: Described; act: Uint8Array }>,
+  byHash: Map<string, Listed>,
+  judge: Judge,
+  privateActs: number,
+): Promise<{ extensions: Extension[]; agreements: AgreementsRead }> {
+  const read: AgreementsRead = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
+  const terms = new Map<string, { act: Uint8Array; signer: string; fields: Map<number, unknown> }>();
+  const signatures: { act: Uint8Array; d: Described }[] = [];
+  for (const { d, act } of found.values()) {
+    if (!d.public || d.spec !== MIRS.agreements || !d.payload || !d.signer) continue;
+    if (d.type === AGREEMENTS_SIGNATURE) signatures.push({ act, d });
+    if (d.type !== AGREEMENTS_TERMS) continue;
+    try {
+      const fields = cborDecode(d.payload) as Map<number, unknown>;
+      if (fields instanceof Map) terms.set(d.id, { act, signer: d.signer, fields });
+    } catch {
+      read.notCounted.push({ id: d.id, why: 'its terms do not decode' });
+    }
+  }
+  // Every party's chain, and the signer's, then the terms and the signatures, in one verifier.
+  const parties = new Set<string>();
+  for (const t of terms.values()) {
+    parties.add(t.signer);
+    for (const p of Array.isArray(t.fields.get(0)) ? (t.fields.get(0) as unknown[]) : []) if (bytes32(p)) parties.add(hex(p));
+  }
+  for (const s of signatures) parties.add(s.d.signer!);
+  await Promise.all([...parties].map((p) => judge.lookUp(p).catch(() => null)));
+  const valid = new Set<string>();
+  for (const [id, t] of terms) {
+    const bad = await judge.problem(t.act, id, t.signer);
+    if (bad) read.notCounted.push({ id, why: bad });
+    else valid.add(id);
+  }
+  for (const s of signatures) {
+    try {
+      judge.v.add(s.act);
+    } catch {
+      // not one the core library takes: it signs nothing here
+    }
+  }
+  read.terms = valid.size;
+  const named = (t: Map<number, unknown>): string[] => (Array.isArray(t.get(15)) ? (t.get(15) as unknown[]).filter(bytes32).map((h) => hex(h)) : []);
+  const extLayers: Record<string, number[]> = {};
+  for (const id of valid) for (const h of named(terms.get(id)!.fields)) extLayers[h] = byHash.get(h)?.spec.layers ?? [];
+  const specs = { ...MIRS, extLayers };
+
+  const counts = new Set<string>();
+  for (const id of valid) {
+    try {
+      const a = judge.v.agreementsAgreement(specs, id) as { exists: boolean | null; ready: boolean; invalid: string | null };
+      if (a.invalid) read.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
+      else if (a.exists === true || (a.exists === null && a.ready)) counts.add(id);
+      else read.proposed++;
+    } catch (e) {
+      read.notCounted.push({ id, why: `the core library could not judge it: ${message(e)}` });
+    }
+  }
+  // One agreement, its versions: back through field 11 as far as found.
+  const first = (id: string): string => {
+    const seen = new Set<string>();
+    let x = id;
+    for (;;) {
+      seen.add(x);
+      const p = terms.get(x)?.fields.get(11);
+      const ph = bytes32(p) ? hex(p) : null;
+      if (!ph || !terms.has(ph) || seen.has(ph)) return x;
+      x = ph;
+    }
+  };
+  const byExt = new Map<string, Map<string, string[]>>();
+  const agreementsCounted = new Set<string>();
+  for (const id of [...counts].sort()) {
+    const ag = first(id);
+    agreementsCounted.add(ag);
+    for (const h of new Set(named(terms.get(id)!.fields))) {
+      const m = byExt.get(h) ?? new Map<string, string[]>();
+      m.set(ag, [...(m.get(ag) ?? []), id]);
+      byExt.set(h, m);
+    }
+  }
+  read.counted = agreementsCounted.size;
+  read.notCounted.sort((a, b) => (a.id < b.id ? -1 : 1));
+  const extensions: Extension[] = [...byExt].map(([hash, m]) => {
+    const listed = byHash.get(hash) ?? null;
+    return {
+      hash,
+      listed,
+      agreements: [...m].map(([agreement, ids]) => ({ agreement, terms: ids })).sort((a, b) => (a.agreement < b.agreement ? -1 : 1)),
+      layers: listed ? ['Development', ...(listed.spec.layers ?? []).map((n) => EXTENSION_LAYERS[n])] : null,
+    };
+  });
+  const name = (x: Extension) => x.listed?.name ?? `~${x.hash}`;
+  extensions.sort((a, b) => b.agreements.length - a.agreements.length || (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0));
+  return { extensions, agreements: read };
 }

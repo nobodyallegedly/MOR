@@ -23,7 +23,8 @@ import { matches, openVersion, type Version } from '../verify.ts';
 import { readFeed, type Author } from '../feed.ts';
 import { FEED_STYLE, feedHtml } from './feed-view.ts';
 import { writeBox } from './write-box.ts';
-import { readListing, type ListedRelay } from '../listing.ts';
+import { readListing } from '../listing.ts';
+import type { ListingAsked } from './page.ts';
 import { LISTING_STYLE, listingHtml } from './listing-view.ts';
 import { filmPlayer, layOver } from './film.ts';
 import { preparePage } from './page.ts';
@@ -160,27 +161,29 @@ async function showFeeds(frame: HTMLIFrameElement, settings: SiteSettings, feeds
  * apart from the page's styles. Listings are filled one after another,
  * after the feeds.
  */
-async function showListings(frame: HTMLIFrameElement, settings: SiteSettings, listings: ListedRelay[][]): Promise<void> {
+async function showListings(frame: HTMLIFrameElement, settings: SiteSettings, listings: ListingAsked[]): Promise<void> {
   const doc = frame.contentDocument;
   if (!doc || !listings.length) return;
   const style = URL.createObjectURL(new Blob([LISTING_STYLE], { type: 'text/css' }));
   for (const box of [...doc.querySelectorAll<HTMLElement>('.mor-listing[data-listing]')]) {
     const i = Number(box.dataset.listing);
-    const relays = listings[i];
+    const asked = listings[i];
     const line = state.listings[i];
-    if (!relays || !line) continue;
+    if (!asked || !line) continue;
     try {
-      const listing = await readListing(relays, settings.relays);
+      const listing = await readListing(asked.relays, settings.relays);
       line.read = listing.relays;
       line.verified = listing.lines.reduce((n, l) => n + l.drafts.length, 0);
       line.unverified = listing.unverified.length;
+      line.agreements = listing.agreements;
+      line.extensions = listing.extensions.length;
       const inner = doc.createElement('iframe');
       inner.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
       inner.setAttribute('title', 'Specifications');
       box.replaceChildren(inner);
       const d = inner.contentDocument!;
       d.open();
-      d.write(listingHtml(listing, style));
+      d.write(listingHtml(listing, style, asked.reader).replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" '));
       d.close();
       fitFrame(inner);
     } catch (err) {
@@ -373,7 +376,7 @@ async function main(): Promise<void> {
     document.title = `${prepared.title ?? entry.path} · ${version.manifest!.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
     state.writes = prepared.writes;
-    state.listings = prepared.listings.map((relays) => ({ relays, read: null, verified: 0, unverified: 0 }));
+    state.listings = prepared.listings.map((l) => ({ relays: l.relays, read: null, verified: 0, unverified: 0, agreements: null, extensions: 0 }));
     state.feeds = prepared.feeds.map((authors, i) => ({ authors, clock: prepared.clocks[i] ?? null, found: null, clockFound: null, order: null, shown: 0, verified: 0 }));
     state.phase = 'ok';
     state.words = verifiedWords(settings, 'page');

@@ -8,7 +8,7 @@ import { fingerprint, standingWords } from '../../../reader/src/read.ts';
 import type { SiteSettings } from '../settings.ts';
 import type { Version } from '../verify.ts';
 import type { Author, AuthorLine, ClockLine } from '../feed.ts';
-import type { ListedRelay, RelayLine } from '../listing.ts';
+import type { AgreementsRead, ListedRelay, RelayLine } from '../listing.ts';
 
 /**
  * The display client's own page: the bar on top, the file below. The page's
@@ -144,6 +144,10 @@ export interface ListingLine {
   /** Specifications shown (verified, by spec hash), and publications that could not be verified. */
   verified: number;
   unverified: number;
+  /** What was read of agreements, once read (F288). */
+  agreements: AgreementsRead | null;
+  /** Extensions named by the agreements counted. */
+  extensions: number;
 }
 
 export interface BarState {
@@ -210,9 +214,13 @@ function listingItem(l: ListingLine): string {
     const name = r.name ? `${e(r.name)}, ` : '';
     if (!r.asked) return `<li>${name}<code>${e(r.address)}</code>: <span class="bad-word">not reachable from a browser</span>, not asked</li>`;
     if (r.problem) return `<li>${name}<code>${e(r.address)}</code>: <span class="bad-word">could not be read</span>, ${e(r.problem)}${r.read ? ` (after ${r.read} acts)` : ''}</li>`;
-    return `<li>${name}<code>${e(r.address)}</code>: ${r.read} ${r.read === 1 ? 'act' : 'acts'} read, ${r.specs} ${r.specs === 1 ? 'publication' : 'publications'} of specifications${r.stopped ? `; <span class="bad-word">stopped</span> after ${r.read} acts, the most this listing reads of one relay` : ''}</li>`;
+    return `<li>${name}<code>${e(r.address)}</code>: ${r.read} ${r.read === 1 ? 'act' : 'acts'} read, ${r.terms} public terms, ${r.private} private, not opened, ${r.specs} ${r.specs === 1 ? 'publication' : 'publications'} of specifications${r.stopped ? `; <span class="bad-word">stopped</span> after ${r.read} acts, the most this listing reads of one relay` : ''}</li>`;
   });
-  return `<li>${l.verified} ${l.verified === 1 ? 'specification' : 'specifications'} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? 'publication' : 'publications'} not verified</span>` : ''}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join('')}</ul></li>`;
+  const a = l.agreements;
+  const ag = a
+    ? `${l.extensions} ${l.extensions === 1 ? 'extension' : 'extensions'} named by ${a.counted} ${a.counted === 1 ? 'agreement' : 'agreements'} counted, from ${a.terms} public terms verified (${a.proposed} not yet signed by every party${a.notCounted.length ? `, <span class="bad-word">${a.notCounted.length} not counted</span>` : ''}); private agreements are not counted. `
+    : '';
+  return `<li>${ag}${l.verified} ${l.verified === 1 ? 'specification' : 'specifications'} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? 'publication' : 'publications'} not verified</span>` : ''}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join('')}</ul></li>`;
 }
 
 function filmItem(f: FilmLine): string {
