@@ -224,7 +224,7 @@ Sessions launched by Nobody, allegedly, each reporting for the project lead: (a)
 
 ### A web client, for testing only (F281, decided by Nobody, allegedly, 13 October 2026)
 
-"With risks stated, for testing purpose only." A web client that makes identities and posts: the chain key shown once as words and never kept; the signing key in the browser, with the identity carry words as the way out; served as a signed, checkable release; every page saying it is for testing only and stating both risks (whoever serves the code at creation could copy the keys; a browser's storage can be lost or read). The feed page points to it, beside the homes. To build after the current sessions.
+"With risks stated, for testing purpose only." A web client that makes identities and posts: the chain key shown once as words and never kept; the signing key in the browser, with the identity carry words as the way out; served as a signed, checkable release; every page saying it is for testing only and stating both risks (whoever serves the code at creation could copy the keys; a browser's storage can be lost or read). The feed page points to it, beside the homes. To build after the current sessions. **Named Dub** ("Dub.dubsar.org works", 13 October 2026): MOR Post and the web client are Dub, the web client at `dub.dubsar.org`.
 
 ### The public feed, and two identities on two homes (decided by Nobody, allegedly, 12 October 2026)
 
