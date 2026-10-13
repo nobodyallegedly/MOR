@@ -1148,7 +1148,11 @@ impl<'a> AgreementsView<'a> {
         let terms = lineage[0].1.clone();
         let signed = self.signers(id, &terms.parties);
         // Draft 11, rule 15 (F254): named by line, no loops, the bound.
-        let refused = self.party_problem(id, &terms);
+        // Draft 13, rule 14 (F284): a stake in a vow, held by its signer.
+        let refused = match self.party_problem(id, &terms) {
+            Some(r) => Some(r),
+            None => self.vow_stake_problem(id, &terms, lineage.get(1).map(|(_, t)| t))?,
+        };
         let Some(pid) = terms.parent else {
             let exists = refused.is_none() && terms.parties.iter().all(|p| signed.contains(p));
             return Ok(Agreement {

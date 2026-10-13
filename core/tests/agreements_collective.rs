@@ -13314,3 +13314,252 @@ fn f279_a_threshold_authority_moves_the_stake_at_the_line() {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// F284 (decided by Nobody, allegedly, 13 October 2026: "The deal in
+// question is based on a vow. Somebody owns the vow."): a deal made on a
+// vow has an owner, the vow's signer, who holds the stake; the overhead
+// comes off the top, and what is left is hers. Agreements draft 13, rule 14;
+// `docs/f282-f284-build.md`. Test identities only.
+// ---------------------------------------------------------------------------
+
+/// A vow (Envelopes type 5, F237) signed by `p`: its genesis id is its name.
+fn f284_vow(w: &mut World, p: &mut Person, words: &str) -> Hash {
+    let v = mor_core::envelopes::vow::Vow { words: words.into(), cmip: None };
+    let a = w.everyday_act(p, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None);
+    w.add(&a)
+}
+
+/// A job's deal among `parties`, writing a stake in the vow `vow` held as
+/// `holders` says; the platform's fee, `fee` millionths, taken off the top
+/// (F280), and what is left to the stake.
+fn f284_job(parties: &[Hash], vow: Hash, holders: Vec<(Hash, u64)>, platform: Hash, fee: u64) -> Terms {
+    let mut t = deal_terms(parties[0], parties[1]);
+    t.parties = parties.to_vec();
+    t.keepers = None;
+    t.stakes = Some(vec![agreements::Stake { object: Who::Id(vow), holders: holders.into_iter().map(|(h, n)| (Who::Id(h), n)).collect() }]);
+    t.plan = Some(agreements::SplitPlan {
+        shares: vec![
+            agreements::ShareRule::Stake { stake: 0, part: 1 },
+            agreements::ShareRule::Receiver { receiver: platform, part: fee },
+        ],
+        cmip: spec("a split cMIP"),
+        unfilled: agreements::Unfilled::Stakes,
+        top: vec![1],
+        service_bears_rail_fees: false,
+        max_rail_fee: Some(Value::Uint(10_000)),
+        params: None,
+        metrics: vec![],
+    });
+    t
+}
+
+/// The platform's fee, raised to `fee` millionths, in a version of `t`.
+fn f284_fee(t: &Terms, parent: Hash, voices: &[Hash], fee: u64) -> Terms {
+    f270_version(t, parent, voices, &move |c: &mut Terms| {
+        if let Some(agreements::ShareRule::Receiver { part, .. }) = c.plan.as_mut().unwrap().shares.get_mut(1) {
+            *part = fee;
+        }
+    })
+}
+
+/// Freeze suite v26, 1.9f (Agreements draft 13, rule 14; F284 with F270
+/// and F280): a cleaner's vow; the job's deal with a platform writes a
+/// stake in it, held by the cleaner, her vow's signer; the platform's fee
+/// comes off the top, the rest is hers; the platform raising its fee needs
+/// her signature. A deal writing the stake in her vow held by anyone else,
+/// wholly or in part, is invalid where the verifier holds the vow.
+#[test]
+fn f284_a_deal_on_a_vow_names_its_signer_as_the_stakes_holder() {
+    let mut w = World::new();
+    let mut cleaner = w.genesis("a cleaner", vec![own_home()], None, None);
+    let mut platform = w.genesis("a platform", vec![own_home()], None, None);
+    let vow = f284_vow(&mut w, &mut cleaner, "Cleaning, two hours, at your home");
+    let ids = vec![cleaner.id, platform.id];
+
+    // Hers: the deal exists once both sign.
+    let t = f284_job(&ids, vow, vec![(cleaner.id, 1_000_000)], platform.id, 100_000);
+    assert_eq!(t.check(&mirs()), Ok(()));
+    let d = agreements_act(&mut w, &mut cleaner, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut cleaner, &d);
+    sign(&mut w, &mut platform, &d);
+    let a = view(&w).agreement(&d).unwrap();
+    assert_eq!((a.invalid.clone(), a.exists), (None, Some(true)), "the cleaner holds the stake in her own vow");
+
+    // The platform beside her in the rest, or alone: invalid, signed by both or not.
+    for (name, holders) in [
+        ("the platform holding part of it", vec![(cleaner.id, 900_000), (platform.id, 100_000)]),
+        ("the platform holding it", vec![(platform.id, 1_000_000)]),
+    ] {
+        let mut t2 = f284_job(&ids, vow, holders, platform.id, 100_000);
+        t2.text = name.into();
+        assert_eq!(t2.check(&mirs()), Ok(()), "{name}: the terms alone cannot tell the object is a vow");
+        let x = agreements_act(&mut w, &mut platform, agreements::types::TERMS, t2.to_map(), None);
+        sign(&mut w, &mut cleaner, &x);
+        sign(&mut w, &mut platform, &x);
+        let a = view(&w).agreement(&x).unwrap();
+        assert!(a.invalid.as_deref().is_some_and(|r| r.contains("F284")), "{name}: {:?}", a.invalid);
+        assert_eq!(a.exists, Some(false), "{name}");
+    }
+
+    // The platform raises its fee: the stake is paid less (F274, F280), and
+    // the version exists only with her signature.
+    let c = f284_fee(&t, d, &ids, 150_000);
+    assert!(agreements::stakes_paid_less(&t, &c).iter().any(|(o, _)| *o == Who::Id(vow)), "a fee off the top raised pays her stake less");
+    let k = agreements_act(&mut w, &mut platform, agreements::types::TERMS, c.to_map(), obj(d));
+    sign(&mut w, &mut platform, &k);
+    assert_eq!(view(&w).agreement(&k).unwrap().exists, Some(false), "the platform alone raises nothing (rule 47)");
+    sign(&mut w, &mut cleaner, &k);
+    let a = view(&w).agreement(&k).unwrap();
+    assert_eq!((a.invalid, a.exists), (None, Some(true)), "with her signature");
+
+    // Once written, the stake moves as any stake moves: a later version she
+    // signs may share it (rule 48); the vow's signer is asked at the
+    // version first writing it.
+    let shared = f270_version(&c, k, &ids, &|x: &mut Terms| {
+        x.stakes.as_mut().unwrap()[0].holders = vec![(Who::Id(ids[0]), 900_000), (Who::Id(ids[1]), 100_000)];
+    });
+    let k2 = agreements_act(&mut w, &mut platform, agreements::types::TERMS, shared.to_map(), obj(k));
+    sign(&mut w, &mut platform, &k2);
+    sign(&mut w, &mut cleaner, &k2);
+    let a = view(&w).agreement(&k2).unwrap();
+    assert_eq!((a.invalid, a.exists), (None, Some(true)), "a share of her stake, given with her signature");
+
+    // A version first writing a stake in the vow, held by the platform: invalid.
+    let mut bare = f284_job(&ids, vow, vec![(cleaner.id, 1_000_000)], platform.id, 100_000);
+    bare.stakes = Some(vec![agreements::Stake { object: Who::Id(spec("the job's photos")), holders: vec![(Who::Id(platform.id), 1_000_000)] }]);
+    bare.text = "Photos first.".into();
+    let b = agreements_act(&mut w, &mut platform, agreements::types::TERMS, bare.to_map(), None);
+    sign(&mut w, &mut cleaner, &b);
+    sign(&mut w, &mut platform, &b);
+    assert_eq!(view(&w).agreement(&b).unwrap().exists, Some(true));
+    let added = f270_version(&bare, b, &ids, &|x: &mut Terms| {
+        x.stakes.as_mut().unwrap().push(agreements::Stake { object: Who::Id(vow), holders: vec![(Who::Id(ids[1]), 1_000_000)] });
+        x.stakes.as_mut().unwrap().sort_by_key(|s| s.object.encoding());
+    });
+    let ka = agreements_act(&mut w, &mut platform, agreements::types::TERMS, added.to_map(), obj(b));
+    sign(&mut w, &mut platform, &ka);
+    sign(&mut w, &mut cleaner, &ka);
+    let a = view(&w).agreement(&ka).unwrap();
+    assert!(a.invalid.as_deref().is_some_and(|r| r.contains("F284")), "a clone first writing it: {:?}", a.invalid);
+}
+
+/// F284 with F270: the job's deal is the platform's and the client's; the
+/// cleaner, whose vow it is made on, holds the stake without being a party.
+/// The platform raising its fee, signed by both parties, is a draft until
+/// she signs.
+#[test]
+fn f284_the_vows_owner_who_is_no_party_signs_what_pays_her_less() {
+    let mut w = World::new();
+    let mut cleaner = w.genesis("a cleaner", vec![own_home()], None, None);
+    let mut platform = w.genesis("a platform", vec![own_home()], None, None);
+    let mut client = w.genesis("a client", vec![own_home()], None, None);
+    let vow = f284_vow(&mut w, &mut cleaner, "Cleaning, two hours, at your home");
+    let ids = vec![platform.id, client.id];
+    let t = f284_job(&ids, vow, vec![(cleaner.id, 1_000_000)], platform.id, 100_000);
+    let d = agreements_act(&mut w, &mut platform, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut platform, &d);
+    sign(&mut w, &mut client, &d);
+    assert_eq!(view(&w).agreement(&d).unwrap().exists, Some(true));
+    let c = f284_fee(&t, d, &ids, 150_000);
+    assert_eq!(agreements::pay_signers(&t, &c), vec![cleaner.id]);
+    let k = agreements_act(&mut w, &mut platform, agreements::types::TERMS, c.to_map(), obj(d));
+    sign(&mut w, &mut platform, &k);
+    sign(&mut w, &mut client, &k);
+    assert_eq!(view(&w).agreement(&k).unwrap().exists, Some(false), "a draft until the cleaner signs (rule 48, F270)");
+    sign(&mut w, &mut cleaner, &k);
+    assert_eq!(view(&w).agreement(&k).unwrap().exists, Some(true));
+}
+
+/// F284, how the core reads a deal silent on the vow (reading, to confirm:
+/// `docs/f282-f284-build.md`, Q1): an offer made under a deal, naming a vow
+/// the deal writes no stake in, does not count; once a version writes the
+/// stake, held by the vow's signer, an offer under it counts.
+#[test]
+fn f284_an_offer_under_a_deal_selling_a_vow_needs_the_vows_stake() {
+    let mut w = World::new();
+    let mut cleaner = w.genesis("a cleaner", vec![own_home()], None, None);
+    let mut platform = w.genesis("a platform", vec![own_home()], None, None);
+    let vow = f284_vow(&mut w, &mut cleaner, "Cleaning, two hours, at your home");
+    let ids = vec![cleaner.id, platform.id];
+    let mut silent = f284_job(&ids, vow, vec![(cleaner.id, 1_000_000)], platform.id, 100_000);
+    silent.stakes = None;
+    silent.plan = Some(agreements::SplitPlan {
+        shares: vec![
+            agreements::ShareRule::Receiver { receiver: cleaner.id, part: 900_000 },
+            agreements::ShareRule::Receiver { receiver: platform.id, part: 100_000 },
+        ],
+        cmip: spec("a split cMIP"),
+        unfilled: agreements::Unfilled::Stakes,
+        top: vec![0, 1],
+        service_bears_rail_fees: false,
+        max_rail_fee: Some(Value::Uint(10_000)),
+        params: None,
+        metrics: vec![],
+    });
+    let owned = f284_job(&ids, vow, vec![(cleaner.id, 1_000_000)], platform.id, 100_000);
+    for (t, counts) in [(silent, false), (owned, true)] {
+        let d = agreements_act(&mut w, &mut platform, agreements::types::TERMS, t.to_map(), None);
+        sign(&mut w, &mut cleaner, &d);
+        sign(&mut w, &mut platform, &d);
+        assert_eq!(view(&w).agreement(&d).unwrap().exists, Some(true), "the terms themselves stand either way");
+        let o = agreements::Offer {
+            under: Some(d),
+            sold: vec![agreements::Sold::Vow(vow)],
+            price: mor_core::money::Amount { unit: spec("a unit"), value: 60 },
+            paid: Some(agreements::Paid::ByStakes),
+            words: Some("Two hours of cleaning, booked through the platform.".into()),
+            until: None,
+            time: None,
+            refund: None,
+        };
+        let offer = agreements_act(&mut w, &mut platform, agreements::types::STANDING_OFFER, o.to_map(), obj(d));
+        sign(&mut w, &mut cleaner, &offer);
+        let e = view(&w).offer(&offer).unwrap();
+        assert_eq!(e.counts, counts, "{:?}", e.problems);
+        if !counts {
+            assert!(e.problems.iter().any(|p| p.contains("F284")), "{:?}", e.problems);
+        }
+    }
+}
+
+/// F284 in a collective: a member's vow, written in the collective's terms,
+/// is held by that member; the collective's own vow, by the collective
+/// (written null, S1). Held otherwise, the version is invalid.
+#[test]
+fn f284_in_a_collective_the_vows_signer_holds_its_stake() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let ids = lab.ids();
+    let anas = f284_vow(&mut lab.w, &mut lab.m[ANA], "Ana's lessons, an hour a week");
+    let v = mor_core::envelopes::vow::Vow { words: "The label's summer concert".into(), cmip: None };
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None);
+    let labels = lab.w.add(&a);
+    for (name, object, holder, ok) in [
+        ("Ana's vow, held by Ana", anas, Who::Id(ids[ANA]), true),
+        ("Ana's vow, held by Ben", anas, Who::Id(ids[BEN]), false),
+        ("Ana's vow, held by the collective", anas, Who::This, false),
+        ("the collective's vow, held by it", labels, Who::This, true),
+        ("the collective's vow, held by Ana", labels, Who::Id(ids[ANA]), false),
+    ] {
+        let write = move |t: &mut Terms| {
+            let mut s = t.stakes.clone().unwrap_or_default();
+            s.push(agreements::Stake { object: Who::Id(object), holders: vec![(holder.clone(), 1_000_000)] });
+            s.sort_by_key(|x| x.object.encoding());
+            t.stakes = Some(s);
+        };
+        let probe = lab.clone_terms(&f, vec![], &write);
+        let powers = lab.view().powers_needed(&probe).unwrap();
+        let t = lab.clone_terms(&f, powers.into_iter().map(|p| (p, vec![ANA, BEN, CY])).collect(), &write);
+        let k = lab.propose(ANA, &t);
+        for m in [ANA, BEN, CY] {
+            lab.sign(m, &k);
+        }
+        let a = lab.view().agreement(&k).unwrap();
+        if ok {
+            assert_eq!((a.invalid.clone(), a.ready), (None, true), "{name}");
+        } else {
+            assert!(a.invalid.as_deref().is_some_and(|r| r.contains("F284")), "{name}: {:?}", a.invalid);
+        }
+    }
+}

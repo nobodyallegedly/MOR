@@ -119,6 +119,66 @@ impl<'a> AgreementsView<'a> {
         }
     }
 
+    /// The owner of a vow, where the verifier holds it as a vow's name (its
+    /// genesis): its signer (F284, decided by Nobody, allegedly, 13 October
+    /// 2026: "Somebody owns the vow"). Written as a holder of the terms of
+    /// agreement `agreement`: null where the signer is the collective those
+    /// terms found (S1), its identity otherwise. `None` where the verifier
+    /// holds no vow by that name: an object it cannot tell is a vow is not
+    /// judged, as for an offer's `[3, vow]`.
+    pub(super) fn vow_owner(&self, name: &Hash, agreement: &Hash, t: &Terms) -> R<Option<Who>> {
+        let Some((g, v)) = self.vow_held(name) else { return Ok(None) };
+        if v.follows.is_some() {
+            return Ok(None);
+        }
+        let Some(signer) = g.act.outside.signer else { return Ok(None) };
+        if t.is_collective() && self.collective_of(agreement)? == Some(signer) {
+            return Ok(Some(Who::This));
+        }
+        Ok(Some(Who::Id(signer)))
+    }
+
+    /// Agreements draft 13, rule 14 (new in draft 13, F284): a stake whose
+    /// object is a vow is held by the vow's signer, wholly, in the version
+    /// that first writes it: the founding terms, or a clone whose parent
+    /// writes no stake in that vow. After that the stake moves as any stake
+    /// does, by its holder's transfer, by succession, or by a version its
+    /// holder signs (rules 10, 48, 89). What keeps terms `t` (agreement
+    /// `id`, whose parent's terms are `parent`) from that, where the
+    /// verifier holds the vow.
+    pub(super) fn vow_stake_problem(&self, id: &Hash, t: &Terms, parent: Option<&Terms>) -> R<Option<String>> {
+        for s in t.stakes.iter().flatten() {
+            let Who::Id(name) = &s.object else { continue };
+            if parent.is_some_and(|p| p.stake_on(&s.object).is_some()) {
+                continue;
+            }
+            let Some(owner) = self.vow_owner(name, id, t)? else { continue };
+            if s.holders != [(owner, crate::agreements::formats::MILLION)] {
+                return Ok(Some(
+                    "a stake in a vow is held by the vow's signer, wholly, in the version that first writes it: a deal made on a vow has an owner, and what is left after the overhead is the owner's (Agreements draft 13, rule 14; F284)".into(),
+                ));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Agreements draft 13, rule 14 (new in draft 13, F284; reading, to
+    /// confirm: `docs/f282-f284-build.md`, Q1): an offer made under an
+    /// agreement and naming a vow counts only where the version it is made
+    /// under writes a stake in that vow, unless the vow is the collective's
+    /// own (its income going to the collective's own stakes). What keeps
+    /// the offer `offer`, under the agreement `under` whose terms are `t`,
+    /// from that, for the vow `name` held.
+    pub(super) fn offer_vow_stake_problem(&self, name: &Hash, under: &Hash, t: &Terms) -> R<Option<String>> {
+        let Some(owner) = self.vow_owner(name, under, t)? else { return Ok(None) };
+        if owner == Who::This || t.stake_on(&Who::Id(*name)).is_some() {
+            return Ok(None);
+        }
+        Ok(Some(
+            "it sells a vow the agreement it is made under writes no stake in: a deal made on a vow writes a stake in it, held by the vow's signer, what is left after the overhead being the owner's (Agreements draft 13, rule 14; F284; reading, to confirm)".into(),
+        ))
+    }
+
     /// A vow, read (F237, F240): its chain, the offers naming it, and each
     /// sale with its state.
     pub fn vow(&self, name: &Hash) -> R<VowEval> {
