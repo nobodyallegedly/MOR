@@ -2717,6 +2717,10 @@ A reading noted, not a failure: where several acts took the same debt on, the co
 
 **Approved by Nobody, allegedly, 13 October 2026: "Ok, all approved."** The relay transport cMIP draft 4 (with draft 3's delivery record), the website cMIP draft 8, the timestamp clock Module draft 1 and Development draft 8. *His way of judging the technical texts, stated:* "This is how I view these documents: were the tests and implementations successful? That is what I look at to judge the document." And on the clocks: "we have a server clock for dumb stuff and a bitcoin clock for what truly matters, good start."  Other texts of this pass await his reading: he reads now only "the documents that are not waiting further implementations or tests"; Agreements draft 12, the MICS, the suite and the case studies wait for F282 and F284 to be written in.
 
+## F288. A listing of cMIPs and Modules on dubsar.org, one among any (13 October 2026, afternoon)
+
+**Area: development layer (Development rule 19, "No core registry"; field 12, discovery).** Options: (a) a listing on dubsar.org reading the cMIPs and Modules published on the relays it follows (name, layer, task or xtype, drafts, code), saying "one listing among any; anyone can run another"; (b) a listing cMIP, a format for listings that read each other, later on top of (a); (c) none from us. **Decided by Nobody, allegedly: "A) let's show discoverability in action."** *Suggested by the project lead.* To build with the path to MOR 2, before the first wave.
+
 ## F287. Bugs are reported on MOR, GitHub mirrored (13 October 2026, afternoon)
 
 **Area: presentation (the repository, the site).** For the path to MOR 2 and the first wave: (a) on MOR, a public reporting identity with an inbox, each report a signed act kept and answered in the open, GitHub issues open as a mirror for those not on MOR yet (as F277 for the repository); (b) GitHub only; (c) MOR only. **Decided by Nobody, allegedly: "Ideally A."** *Suggested by the project lead.*
