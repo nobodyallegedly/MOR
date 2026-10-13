@@ -1,4 +1,4 @@
-// A client for the relay transport cMIP (cmips/cmip-relay-transport-draft-2.md).
+// A client for the relay transport cMIP (cmips/cmip-relay-transport-draft-3.md).
 // Everything a relay says unsigned is a hint: the client recomputes the id of
 // everything it fetches, and judges acts only with the core library.
 
@@ -69,6 +69,15 @@ export const sealedId = (bytes: Uint8Array): string => {
   return sha256(all);
 };
 
+/** A relay's stated limits (cMIP, "Discovery"): `limits.0` for an act or a sealed container, `limits.1` for media. */
+export interface Limits {
+  act: number;
+  media: number;
+}
+
+/** What each relay said of its limits, by the address it is reached at; read once. */
+const stated = new Map<string, Promise<Limits | null>>();
+
 /**
  * One relay, at one base address. `via` lets a client reach an address
  * another way (for example the onion home through its local port on the
@@ -108,8 +117,41 @@ export class Relay {
     return cborDecode(await this.call('/info')) as M;
   }
 
+  /** The relay's stated limits, read from `GET /info` once; null when it does not say, and then the relay judges what it is sent. */
+  limits(): Promise<Limits | null> {
+    let l = stated.get(this.via);
+    if (!l) {
+      l = this.info().then(
+        (m) => {
+          const x = m.get(3) as Map<number, unknown> | undefined;
+          const act = x?.get(0);
+          const media = x?.get(1);
+          return typeof act === 'number' && typeof media === 'number' ? { act, media } : null;
+        },
+        () => null,
+      );
+      stated.set(this.via, l);
+      // Unreachable now is no statement: ask again next time.
+      void l.then((v) => v ?? stated.delete(this.via));
+    }
+    return l;
+  }
+
+  /**
+   * cMIP draft 3, "Clients", 6: a client SHOULD NOT send a body larger than
+   * the relay's stated limits. Refused here, before anything is sent, with
+   * the relay's own code for "too large".
+   */
+  private async fits(size: number, media: boolean): Promise<void> {
+    const l = await this.limits();
+    if (!l) return;
+    const limit = media ? l.media : l.act;
+    if (size > limit) throw new RelayError(CODE.tooLarge, `not sent: ${size} bytes is over this relay's stated limit of ${limit}`);
+  }
+
   /** `POST /acts`. The act id in the answer is checked against the act sent. */
   async putAct(act: Uint8Array): Promise<PutResult> {
+    await this.fits(act.length, false);
     const m = cborDecode(await this.post('/acts', act)) as M;
     const id = hex(m.get(0) as Uint8Array);
     if (id !== actId(act)) throw new RelayError(-1, 'the relay answered for another act');
@@ -123,6 +165,7 @@ export class Relay {
 
   /** `POST /sealed`, with pickup tags for a container sent to a bare key. */
   async putSealed(sealed: Uint8Array, pickup: string[] = []): Promise<PutResult> {
+    await this.fits(sealed.length, false);
     const req = new Map<number, unknown>([[0, sealed]]);
     if (pickup.length) req.set(1, pickup.map(unhex));
     const m = cborDecode(await this.post('/sealed', cborEncode(req))) as M;
@@ -144,6 +187,7 @@ export class Relay {
 
   /** `POST /media`: the relay's answer is checked against the bytes sent. */
   async putMedia(locked: Uint8Array): Promise<{ lockedHash: string; size: number }> {
+    await this.fits(locked.length, true);
     const m = cborDecode(await this.post('/media', locked, 'application/octet-stream')) as unknown[];
     const lockedHash = hex(m[0] as Uint8Array);
     if (lockedHash !== sha256(locked) || m[1] !== locked.length) {

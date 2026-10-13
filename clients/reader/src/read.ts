@@ -8,6 +8,7 @@ import { parse, title } from '../../longform/src/format.ts';
 import { listPosts, readPost, type ShownPost } from '../../barebone/src/post.ts';
 import { POST_SPECS } from '../../barebone/src/specs.ts';
 import type { Via } from '../../genesis/src/transport.ts';
+import { cannotReach } from '../../genesis/src/lookup.ts';
 
 export interface Shown {
   post: ShownPost;
@@ -33,18 +34,20 @@ export async function show(id: string, relays: string[], owner: string, via: Via
 }
 
 /**
- * The owner's text acts, newest first: every relay's feed of the owner, in
- * turn, merged. A relay may hold only some; silence proves nothing.
+ * The owner's text acts, newest first: every relay's feed of the owner,
+ * asked side by side, merged. A relay may hold only some; silence proves nothing.
  */
 export async function documents(owner: string, relays: string[], via: Via = {}): Promise<string[]> {
+  // Every relay side by side (reading B4), merged in the relays' order.
+  const lists = await Promise.all(
+    relays.map((r) =>
+      cannotReach(r, via)
+        ? Promise.resolve([] as string[])
+        : listPosts(owner, r, via).catch(() => [] as string[]), // that relay is away: the others may hold them
+    ),
+  );
   const seen: string[] = [];
-  for (const r of relays) {
-    try {
-      for (const id of await listPosts(owner, r, via)) if (!seen.includes(id)) seen.push(id);
-    } catch {
-      // that relay is away: the others may hold them
-    }
-  }
+  for (const l of lists) for (const id of l) if (!seen.includes(id)) seen.push(id);
   return seen.reverse();
 }
 

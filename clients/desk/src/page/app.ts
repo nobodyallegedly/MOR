@@ -42,6 +42,7 @@ const fill = (id: string, html: string) => {
 
 async function refresh() {
   state = await c.ask<State>('state');
+  fill('machine', v.machine(state));
   fill('identities', v.identities(state));
   fill('history', v.history(state));
   fill('settings', v.settings(state));
@@ -206,6 +207,32 @@ app.addEventListener('click', async (ev) => {
         fail(err);
       }
       break;
+    case 'machine-publish':
+      await after(await busy('Signing and publishing the terms…', () => c.ask<Done>('machine publish', { agent: d.agent, owner: d.owner, digest: d.digest })));
+      break;
+    case 'machine-on':
+      try {
+        await c.ask('machine on', { on: d.on === 'true' });
+        await refresh();
+      } catch (err) {
+        fail(err);
+      }
+      break;
+    case 'machine-look': {
+      const r = await busy('Looking at what Machine, allegedly received…', () => c.ask<{ answered: number; stopped: string | null; problems: string[] }>('machine look'), $('machine-here'));
+      if (r) {
+        await refresh();
+        say(r.stopped || r.problems.length ? 'warn' : 'done', `${r.answered === 1 ? 'One answer sent' : `${r.answered} answers sent`}.${[r.stopped ?? '', ...r.problems].filter(Boolean).map((p) => `<br>${v.e(p)}`).join('')}`, $('machine-here'));
+      }
+      break;
+    }
+    case 'machine-pick':
+      await after(await busy('Signing your pick; Machine, allegedly is answering…', () => c.ask<Done>('machine pick', { key: d.key })));
+      break;
+    case 'machine-retry':
+      await busy('Trying again…', () => c.ask('machine retry', { act: d.act }));
+      await refresh();
+      break;
     case 'code': {
       const r = await busy('Making a code…', () => c.ask<{ code: string }>('code'));
       if (r) {
@@ -250,6 +277,21 @@ app.addEventListener('submit', async (ev) => {
   }
   if (form.classList.contains('send-back')) {
     return after(await busy('Sending it back to Claude…', () => c.ask<Done>('send back', { digest: form.dataset.digest, note: words(d.get('note')) })));
+  }
+  if (form.id === 'machine-terms') {
+    const agent = words(d.get('agent'));
+    const owner = words(d.get('owner'));
+    const t = await busy('Reading the terms…', () => c.ask<{ lines: string[]; digest: string }>('machine terms', { agent, owner }), $('machine-shown'));
+    if (t) fill('machine-shown', v.machineTermsShown(agent, owner, t));
+    return;
+  }
+  if (form.id === 'machine-cap') {
+    const r = await busy('Saving the cap…', () => c.ask('machine cap', { callsPerDay: Number(words(d.get('callsPerDay'))), maxChars: Number(words(d.get('maxChars'))) }));
+    if (r) await refresh();
+    return;
+  }
+  if (form.id === 'machine-nudge') {
+    return after(await busy('Signing your nudge; Machine, allegedly is choosing…', () => c.ask<Done>('machine nudge', { count: Number(words(d.get('count'))), context: words(d.get('context')) })));
   }
   if (form.id === 'new-identity') {
     const r = await busy('Making the identity at its homes…', () => c.ask<Done>('identity', { name: words(d.get('name')), linked: d.get('linked') === 'on' }));

@@ -30,10 +30,10 @@ draft = {
   3 => uint,              ; type of the act
   4 => bstr,              ; payload, as CBOR bytes, exactly as it will be inside
   5 => bool,              ; public: true, the act carries its key
-  ? 6 => [+ hash],        ; refs
+  ? 6 => [+ ref],         ; refs: hash, or [act: hash, signer: hash] (Envelopes draft 9, F272)
   ? 7 => [+ [hash, hash]],; objects: [chain, predecessor]
   8 => [* tstr],          ; relays a public act is sent to once signed (empty for a message)
-  ? 9 => [hash],          ; a message: its one recipient
+  ? 9 => [+ hash],        ; a message: its one recipient; a public reply: the identities it answers
   ? 10 => [+ bstr],       ; media: locked bytes put on the relays after a publication
   ? 11 => tstr,           ; Claude's note to the owner: never signed, never part of the act
   ? 12 => hash,           ; the digest of the draft this one reworks
@@ -42,12 +42,14 @@ draft = {
 
 Deterministic CBOR as the core defines it; a draft that does not re-encode to its own bytes, has another field, or another label, is not a draft. A draft is never an act: the desk makes the act from it as the next in the identity's own sequence (position, previous act, running summary, binding, salt and lock are the desk's), so no program elsewhere can fork that sequence by guessing a position.
 
+*The label stays version 2 since F272 (12 October 2026): every earlier draft reads as before; a desk older than F272 refuses a draft carrying `[act, signer]`, failing closed, until it is updated.*
+
 **What a draft may be** (decided by Nobody, allegedly, 1 October 2026: acts of the Text and Envelopes layers only):
 
 | Kind | Spec, type | Shape |
 | --- | --- | --- |
-| A post | Text, 0 | public; payload `{0: text, ? 1: long-form format}`; refs allowed; no objects, recipient or media |
-| A message | Text, 0 | private; one recipient (field 9), who has an encryption key and an inbox; refs allowed; sealed to the recipient at the desk and left in its inbox |
+| A post | Text, 0 | public; payload `{0: text, ? 1: long-form format}`; refs allowed, each to an act the connector and the desk hold, a public act named with its signer (`[act, signer]`, F272), a private one by its id alone; recipients (field 9) exactly the signers of the public acts it answers other than its own signer, each given a copy sealed to it in its inbox at approval (reading B1, `docs/f272-build.md`); no objects or media |
+| A message | Text, 0 | private; one recipient (field 9), who has an encryption key and an inbox; refs allowed, as for a post (a public act named with its signer); sealed to the recipient at the desk and left in its inbox |
 | A picture | Envelopes, 0 | public; a JPEG publication with its key (fields 0 to 6 of the media map, no price, no `for`); its locked bytes in field 10; the JPEG stripped to the picture alone |
 | A withdrawal | Envelopes, 3 | public; empty payload; objects `[[publication, publication]]`, a publication its signer made or that was made for it |
 

@@ -72,6 +72,8 @@ Keep `~/mor-test/*.json` secret: each holds every key of its test identity.
 
 Added for the repo client (step 5a): `publish` takes `objects` (the chains an act belongs to); `lookUp` can add what it fetches to a verifier it is given, so several identities are judged together; the transport publishes and fetches media (`putMedia`, `getMedia`, checked by their SHA-256); the bindings make genesis and rotations with declarations, check Agreements terms and member signatures, lock media, and deal, check and rebuild split chain keys.
 
+Added for F272 and its readings (`docs/f272-build.md`): `src/lookup.ts` asks, position by position, the homes in force at the latest position that counts (the core library's resolution gives `homesAt`), never a home only an uncounted rotation names (B2); does not try an onion address it has no way in to, and lists it in `notTried` with why (B3); asks side by side (B4: a lookup through homes 50 ms away, 589 ms before, 195 ms after, `scripts/measure-lookup.ts`). References: `referTo` holds an act and writes its reference, `[act, signer]` for a public act, the id alone for a private one; `referenceTo` does the same from bytes held; `followRef` follows a reference where the reader looks, then by its signer's outbox routes, then its homes, and says when the named signer is wrong. `sign` and `publish` take `refs` in either form. The transport does not send a body over the relay's stated limits (relay transport cMIP draft 3, "Clients", 6). Tests: `test/f272.test.ts`.
+
 ## Readings, confirmed by Nobody, allegedly (29 September 2026)
 
 Where the texts are silent, the program takes the reading below.

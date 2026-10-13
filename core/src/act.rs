@@ -127,11 +127,87 @@ pub struct Object {
     pub predecessor: Hash,
 }
 
-/// A reference: another act by its id, or a web resource.
+/// A reference: another act by its id, another act by its id beside its
+/// signer's identity hash (Envelopes draft 9, F272), or a web resource.
+///
+/// ```cddl
+/// ref = hash                              ; another act, by its id
+///     / [ act: hash, signer: hash ]       ; another act, and the identity that signed it (F272)
+///     / [ address: tstr, ? hash ]         ; a web resource, and optionally the hash of what was there
+/// ```
+///
+/// The two array forms are told apart by their first element: a byte
+/// string names an act, a text string a web address. The signer is a hint
+/// of where to look (identity, home, routes, act), never checked for
+/// validity: a wrong one shows only when the reference is followed, since
+/// the act fetched shows its own signer ([`followed`]).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Ref {
     Act(Hash),
+    Signed { act: Hash, signer: Hash },
     Web { address: String, hash: Option<Hash> },
+}
+
+impl Ref {
+    /// The act named, whichever form names it; `None` for a web resource.
+    pub fn act(&self) -> Option<Hash> {
+        match self {
+            Ref::Act(h) | Ref::Signed { act: h, .. } => Some(*h),
+            Ref::Web { .. } => None,
+        }
+    }
+
+    /// The signer the reference names beside the act, if it names one.
+    pub fn signer(&self) -> Option<Hash> {
+        match self {
+            Ref::Signed { signer, .. } => Some(*signer),
+            _ => None,
+        }
+    }
+}
+
+/// Why an act fetched by following a reference is not the act it names.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FollowError {
+    /// A web reference names no act.
+    NotAnAct,
+    /// The act fetched has another id.
+    OtherAct,
+    /// The act is the one named, but its signer is not the one the
+    /// reference names (F272: the reference is wrong, the act stands).
+    OtherSigner { named: Hash, actual: Hash },
+}
+
+impl fmt::Display for FollowError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FollowError::NotAnAct => write!(f, "a web reference names no act"),
+            FollowError::OtherAct => write!(f, "the act fetched is not the act named"),
+            FollowError::OtherSigner { .. } => {
+                write!(f, "the act named was signed by another identity than the reference names")
+            }
+        }
+    }
+}
+
+/// Check an act fetched by following a reference (Envelopes draft 9, rule
+/// 20, F272): it is the act named, and, where the reference names a signer,
+/// that is who signed it (a genesis is signed by the identity it makes,
+/// whose hash is its own id). A wrong signer says only that the reference
+/// is wrong: it makes neither act invalid.
+pub fn followed(r: &Ref, fetched: &Act) -> Result<(), FollowError> {
+    let id = r.act().ok_or(FollowError::NotAnAct)?;
+    let got = fetched.id();
+    if got != id {
+        return Err(FollowError::OtherAct);
+    }
+    if let Some(named) = r.signer() {
+        let actual = fetched.outside.signer.unwrap_or(got);
+        if actual != named {
+            return Err(FollowError::OtherSigner { named, actual });
+        }
+    }
+    Ok(())
 }
 
 /// A signature scheme: a founding number (1, 2, 3) or a specification hash.
@@ -231,6 +307,7 @@ pub fn refs_value(refs: &[Ref]) -> Value {
         refs.iter()
             .map(|r| match r {
                 Ref::Act(h) => hash_v(h),
+                Ref::Signed { act, signer } => Value::Array(vec![hash_v(act), hash_v(signer)]),
                 Ref::Web { address, hash } => {
                     let mut v = vec![Value::Text(address.clone())];
                     if let Some(h) = hash {
@@ -434,6 +511,14 @@ impl Inside {
                     .iter()
                     .map(|r| match r {
                         Value::Bytes(_) => Ok(Ref::Act(as_hash(r, "inside 8: ref")?)),
+                        // F272: an act beside its signer, told from a web
+                        // reference by its first element, a byte string.
+                        Value::Array(a) if a.len() == 2 && matches!(a[0], Value::Bytes(_)) => {
+                            Ok(Ref::Signed {
+                                act: as_hash(&a[0], "inside 8: signed ref act")?,
+                                signer: as_hash(&a[1], "inside 8: signed ref signer")?,
+                            })
+                        }
                         Value::Array(a) if a.len() == 1 || a.len() == 2 => {
                             let Value::Text(address) = &a[0] else {
                                 return Err(ActError::Shape("inside 8: web ref address"));

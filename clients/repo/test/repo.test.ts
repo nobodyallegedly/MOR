@@ -365,6 +365,10 @@ test("a deal signed on the phone cites the wallet published from the laptop (F16
   const deal = await terms('the film deal');
   const signed = await sign(phone, deal.id, relays);
   assert.deepEqual(holding(deal.id, [deal.act, signed.act]).pointers.sort(), [v1.id, v2.id].sort());
+  // F272: the pointer is a public act the client held, so its reference names its signer.
+  const sd = describeAct(signed.act) as { refs?: string[]; refSigners?: (string | undefined)[] };
+  assert.deepEqual(sd.refs, [v2.id]);
+  assert.deepEqual(sd.refSigners, [laptop.id]);
   // Signing what cannot pay its signer cites nothing.
   const other = await label.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(deal.id), { public: true, relays, objects: [[deal.id, deal.id]] });
   const d = describeAct((await sign(phone, other.id, relays)).act) as { refs?: string[] | null };

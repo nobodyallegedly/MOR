@@ -9,7 +9,7 @@
 // again, and signs only if nothing blocks it. What you sign is what you saw.
 
 import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts } from '../../genesis/src/core.ts';
-import { TestIdentity, sealFor, type Home } from '../../genesis/src/identity.ts';
+import { TestIdentity, sealFor, type Home, type Reference } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
 import { record as recordKex } from '../../genesis/src/kex.ts';
@@ -34,6 +34,7 @@ import {
 import { escapeControls } from '../../connector/src/words.ts';
 import { beforeSigning } from '../../assess/src/assess.ts';
 import { DESK_SPECS } from './specs.ts';
+import { NUDGE_SPECS, NUDGE_TYPES } from '../../nudge/src/specs.ts';
 import type { Item, Kind, Received, SignedRecord, Sorted, Store } from './store.ts';
 
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
@@ -338,13 +339,8 @@ export class Desk {
       });
       // The sequence is saved before anything leaves, so no later act can fork from this one.
       this.store.saveIdentity(me);
-      const rec: SignedRecord = { draft: digest, act: made.id, bytes: b64(made.act), relays: d.relays };
+      const rec = await this.record(digest, made, d.public, d.to, d.relays, recipient);
       if (d.media.length) rec.media = d.media.map(b64);
-      if (recipient) {
-        rec.sealed = b64(sealFor(made.act, made.key, [{ id: d.to[0], key: recipient.key }]));
-        rec.key = b64(made.key);
-        rec.inbox = recipient.inbox;
-      }
       this.store.saveSigned(rec);
       const sent = await this.send(rec, me);
       this.answer({ draft: digest, verdict: 'approved', note: '', act: made.id, sent }, d, r.title);
@@ -352,6 +348,73 @@ export class Desk {
       if (!sent.some((s) => s.accepted)) lines.push({ text: 'Nothing accepted it: it is signed, but not delivered. Send it again when the relays are back.', tone: 'bad' });
       return { title: `Approved and signed: ${r.title.replace(/, to be \w+$/, '').toLowerCase()}`, lines, acts: [made.id] };
     });
+  }
+
+  /**
+   * What is sent of an act just signed: a message sealed to its recipient;
+   * a public act to the relays, and, where it names recipients (a reply,
+   * a nudge, a pick), a copy sealed to each in its inbox.
+   */
+  private async record(
+    key: string,
+    made: { act: Uint8Array; id: string; key: Uint8Array },
+    pub: boolean,
+    to: string[],
+    relays: string[],
+    recipient: Awaited<ReturnType<typeof recipientOf>> | null,
+  ): Promise<SignedRecord> {
+    const rec: SignedRecord = { draft: key, act: made.id, bytes: b64(made.act), relays };
+    if (recipient) {
+      rec.sealed = b64(sealFor(made.act, made.key, [{ id: to[0], key: recipient.key }]));
+      rec.key = b64(made.key);
+      rec.inbox = recipient.inbox;
+    } else if (pub && to.length) {
+      // Reading B1 (docs/f272-build.md; Envelopes, "How acts reach people"):
+      // a reply concerns the identity whose act it answers, so a copy goes
+      // to its inbox, sealed to it (a public act: no key in the container).
+      rec.copies = [];
+      rec.noCopy = [];
+      for (const t of to) {
+        try {
+          const r = await recipientOf(t, this.hints(), this.via);
+          rec.copies.push({ to: t, sealed: b64(sealFor(made.act, undefined, [{ id: t, key: r.key }])), inbox: r.inbox });
+        } catch (e) {
+          rec.noCopy.push({ to: t, why: err(e) });
+        }
+      }
+    }
+    return rec;
+  }
+
+  /**
+   * Sign an act with an identity this desk holds and send it at once, with
+   * no draft: for Machine, allegedly's terms and answers, and the owner's
+   * nudges and picks (src/machine.ts). The caller has shown or decided what
+   * it signs; this only signs, keeps and delivers, as an approved draft is.
+   */
+  async signAndSend(
+    signer: string,
+    a: { spec: string; type: number; payload: Uint8Array; public: boolean; to: string[]; refs: Reference[] },
+  ): Promise<{ id: string; act: Uint8Array; key: Uint8Array; sent: NonNullable<Answer['sent']> }> {
+    return this.serial(async () => {
+      if (!this.store.holds(signer)) throw new Error(`This desk does not hold the identity ${signer}.`);
+      const me = this.store.identity(signer);
+      if (me.f.pending) throw new Error('A rotation of this identity is waiting to count: nothing is signed with it until it does.');
+      const recipient = a.public ? null : await recipientOf(a.to[0], this.hints(), this.via);
+      const made = me.sign(a.spec, a.type, a.payload, { public: a.public, to: a.to.length ? a.to : undefined, refs: a.refs.length ? a.refs : undefined });
+      // The sequence is saved before anything leaves, so no later act can fork from this one.
+      this.store.saveIdentity(me);
+      this.store.keepAct(made.id, made.act, a.public ? undefined : made.key);
+      const rec = await this.record(made.id, made, a.public, a.to, a.public ? this.store.settings().relays : [], recipient);
+      this.store.saveSigned(rec);
+      const sent = await this.send(rec, me);
+      return { id: made.id, act: made.act, key: made.key, sent };
+    });
+  }
+
+  /** Where acts are looked for: the relays, then the homes. */
+  get places(): { hints: string[]; via: Via } {
+    return { hints: this.hints(), via: this.via };
   }
 
   /** Send again an act signed from a draft: the same bytes, the same sealed container. */
@@ -418,6 +481,19 @@ export class Desk {
         out.push({ to: hint, accepted: false, answer: `refused: ${e instanceof RelayError ? e.reason : err(e)}` });
       }
     }
+    // A reply's copies, each sealed to the identity it answers, in its inbox.
+    for (const c of rec.copies ?? []) {
+      for (const hint of c.inbox) {
+        await carry(hint);
+        try {
+          await relayAt(hint, via).putSealed(unb64(c.sealed));
+          out.push({ to: `inbox ${hint}`, accepted: true, answer: `a copy sealed to ${c.to.slice(0, 12)}…, whose act it answers` });
+        } catch (e) {
+          out.push({ to: `inbox ${hint}`, accepted: false, answer: `the copy for ${c.to.slice(0, 12)}… refused: ${e instanceof RelayError ? e.reason : err(e)}` });
+        }
+      }
+    }
+    for (const n of rec.noCopy ?? []) out.push({ to: `inbox of ${n.to.slice(0, 12)}…`, accepted: false, answer: `no copy left: ${n.why}` });
     return out;
   }
 
@@ -592,6 +668,11 @@ export class Desk {
     else if (d.spec === DESK_SPECS.money) item.kind = 'payment';
     else if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery) item.kind = 'key delivery';
     if (d.spec === SPECS.identity && d.type === IDENTITY_TYPES.witness) item.witness = true;
+    // The nudge cMIP's acts (cmips/cmip-nudge-draft-2.md): read by Machine, allegedly's answering (src/machine.ts).
+    if (d.spec === NUDGE_SPECS.nudge) {
+      item.kind = d.type === NUDGE_TYPES.nudge ? 'nudge' : d.type === NUDGE_TYPES.pick ? 'pick' : d.type === NUDGE_TYPES.terms ? 'terms' : 'other';
+    }
+    if (isText || d.spec === NUDGE_SPECS.nudge) item.raw = { act: b64(act), key: key ? b64(key) : undefined };
     if (!acksAllowed && d.acks?.length) item.problem = 'It carries acknowledgements, which only Identity, Money and Agreements acts may carry (Envelopes rule 4a, F110): it is invalid, and acknowledges nothing.';
     if (item.kind === 'payment') {
       item.problem = 'A Money act (a payment claim, a receipt or an obligation): this desk does not read Money yet, nor check a rail’s proof (Lightning module, roadmap step 12). It is shown as received, not as paid. It does check the version of a deal a payment names.';

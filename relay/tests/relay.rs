@@ -8,7 +8,7 @@ use common::*;
 use mor_core::cbor::{self, Value};
 use mor_core::hash::sha256;
 use mor_core::sig;
-use mor_relay::client::{ClientError, FeedQuery};
+use mor_relay::client::{Client, ClientError, FeedQuery};
 use mor_relay::store::Filter;
 use mor_relay::wire::{self, code, Limits, Sealed};
 use mor_relay::{Policy, Role};
@@ -182,6 +182,9 @@ async fn too_large() {
         wait: 2,
     };
     let r = Running::start_with(Role::Relay, Policy::Open, limits).await;
+    // The relay's own answer is what is tested: this client sends past the
+    // stated limits, which a client should not (cMIP draft 3, "Clients", 6).
+    let client = r.client.clone().without_limit_check();
     let (_, mut alice) = genesis(
         "alice",
         vec![Home {
@@ -201,23 +204,52 @@ async fn too_large() {
         true,
     );
     assert_eq!(
-        code_of(r.client.put_act(&big.encode()).await),
+        code_of(client.put_act(&big.encode()).await),
         code::TOO_LARGE
     );
     assert_eq!(
-        code_of(r.client.put_media(&[1; 101]).await),
+        code_of(client.put_media(&[1; 101]).await),
         code::TOO_LARGE
     );
     // Too large even to read: still an answer of the cMIP.
     assert_eq!(
-        code_of(r.client.put_media(&vec![1; 200_000]).await),
+        code_of(client.put_media(&vec![1; 200_000]).await),
         code::TOO_LARGE
     );
     assert_eq!(
-        code_of(r.client.put_act(&vec![1; 200_000]).await),
+        code_of(client.put_act(&vec![1; 200_000]).await),
         code::TOO_LARGE
     );
     assert_eq!(r.client.info().await.unwrap().limits, limits);
+}
+
+/// A client does not send a body larger than the relay's stated limits,
+/// read from `GET /info` (cMIP draft 3, "Clients", 6): it refuses before
+/// sending, so nothing reaches the relay, and a body within them is sent.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_client_does_not_send_past_the_stated_limits() {
+    let limits = Limits {
+        act: 2000,
+        media: 100,
+        feed: 10,
+        wait: 2,
+    };
+    let r = Running::start_with(Role::Relay, Policy::Open, limits).await;
+    let too_big = |e: Result<_, ClientError>| matches!(e, Err(ClientError::TooLarge { .. }));
+    assert!(too_big(r.client.put_act(&vec![1; 2001]).await.map(|_| ())));
+    assert!(too_big(r.client.put_sealed(&vec![1; 2001], &[]).await.map(|_| ())));
+    assert!(too_big(r.client.put_media(&[1; 101]).await.map(|_| ())));
+    match r.client.put_media(&[1; 101]).await {
+        Err(e @ ClientError::TooLarge { size: 101, limit: 100 }) => assert!(!e.answered()),
+        other => panic!("{other:?}"),
+    }
+    // Within the limit: sent, and the relay answers.
+    assert!(r.client.put_media(&[1; 100]).await.is_ok());
+    // An act within the limit but malformed reaches the relay, which judges it.
+    assert!(matches!(r.client.put_act(&[1; 10]).await, Err(ClientError::Wire(_))));
+    // A clone shares what it read; a new client reads the limits again.
+    let fresh = Client::new(&r.base);
+    assert!(too_big(fresh.put_act(&vec![1; 2001]).await.map(|_| ())));
 }
 
 /// The answer to a body too large to read says the connection is closed,

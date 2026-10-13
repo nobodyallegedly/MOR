@@ -6,7 +6,7 @@
 //! chain key) and no two runs share keys. Test identities only: the safety
 //! key is held in software.
 
-use mor_core::act::{self, Act, Addressing, Inside, Object};
+use mor_core::act::{self, Act, Addressing, Inside, Object, Ref};
 use mor_core::cbor::Value;
 use mor_core::envelopes::{DecKey, EncKey, EncryptionKey, Route, Routes, Version};
 use mor_core::hash::{sha256, Hash, ZERO_HASH};
@@ -353,6 +353,52 @@ impl Person {
             None,
             None,
         )
+    }
+
+    /// A public text act naming other acts in `refs`: a reply naming the
+    /// post it answers, in either form (an act id, or the act beside its
+    /// signer, Envelopes draft 9, F272).
+    pub fn reply(&mut self, text: &str, refs: Vec<Ref>) -> Act {
+        let mut i = inside(sha256(b"a text specification"), 0, vec![(Value::Uint(0), Value::Text(text.into()))]);
+        i.refs = Some(refs);
+        i.prev = Some(self.seq.last().map(|x| vec![*x]).unwrap_or_default());
+        i.position = Some(self.seq.len() as u64 + 1);
+        i.summary = Some(if self.seq.is_empty() {
+            ZERO_HASH
+        } else {
+            Mmr::from_ids(&self.seq).root()
+        });
+        let key = random::<32>();
+        let sign = self.sign.clone();
+        let a = seal(&i, Some(self.id), Some(self.binding), None, &key, |id| {
+            sign.sign(id, &random::<32>())
+        });
+        self.seq.push(a.id());
+        self.keys.insert(a.id(), key);
+        a
+    }
+
+    /// A routes act with one outbox route for everything (where its content
+    /// is kept) and, optionally, an inbox route.
+    pub fn outbox_routes(&mut self, version: u64, previous: Option<Hash>, outbox: &str, inbox: Option<&str>) -> Act {
+        let mut routes = vec![Route {
+            scope: None,
+            hints: vec![outbox.to_string()],
+            kind: 0,
+        }];
+        if let Some(i) = inbox {
+            routes.push(Route {
+                scope: None,
+                hints: vec![i.to_string()],
+                kind: 1,
+            });
+        }
+        let r = Routes {
+            version: Version { version, previous },
+            routes,
+        };
+        let spec = self.specs.identity;
+        self.act(spec, 3, r.to_map(), None, None)
     }
 
     /// A routes act with one inbox route for everything.

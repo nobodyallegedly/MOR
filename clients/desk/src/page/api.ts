@@ -122,7 +122,7 @@ export type Sorted = 'new' | 'to answer' | 'answered' | 'ignored';
 
 export interface Item {
   key: string;
-  kind: 'message' | 'reply' | 'acknowledgement' | 'payment' | 'split' | 'key delivery' | 'other';
+  kind: 'message' | 'reply' | 'acknowledgement' | 'payment' | 'split' | 'key delivery' | 'nudge' | 'pick' | 'terms' | 'other';
   from: string | null;
   fromName: string | null;
   act: string | null;
@@ -159,6 +159,26 @@ export interface State {
     line: { acts: number; latest: string | null; summary: string | null };
     received: Item[];
   }[];
-  history: { time: number; draft: string; verdict: string; signer: string; signerName: string; title: string; note: string; act?: string; resend: boolean }[];
+  history: { time: number; draft: string; verdict: string; signer: string; signerName: string; title: string; note: string; act?: string; cause?: string; causeAct?: string; text?: string; resend: boolean }[];
+  machine: MachineState;
   paired: { key: string; label: string; added: number; you: boolean }[];
+}
+
+/** Machine, allegedly's answering, as the program reports it (src/machine.ts). */
+export interface MachineState {
+  agent: string | null;
+  agentName: string | null;
+  owner: string | null;
+  ownerName: string | null;
+  /** Its terms, read from the act signed, in plain words. */
+  terms: { act: string; words: string[] } | null;
+  on: boolean;
+  callsPerDay: number;
+  maxChars: number;
+  callsToday: number;
+  stopped: string | null;
+  /** Where the API key was found (never the key), or why there is none. */
+  key: { found: boolean; from: string; warning?: string };
+  notified: { key: string; act: string | null; from: string | null; fromName: string | null; private: boolean; kind: string; standing: string; text?: string }[];
+  notAnswered: { act: string; kind: string; note: string }[];
 }

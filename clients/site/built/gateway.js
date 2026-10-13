@@ -1095,6 +1095,24 @@ var Verifier = class {
     return this;
   }
   /**
+   * Where to look for an act a reference names beside this signer
+   * (Envelopes draft 9, rule 20, F272): its outbox routes that count,
+   * then the homes in force at its latest position. Hints, each once.
+   * @param {string} signer
+   * @returns {string[]}
+   */
+  places(signer) {
+    const ptr0 = passStringToWasm0(signer, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_places(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
    * The home quorum of a counting rotation (Money rule 15, F180): the
    * receipts the home rule in effect before it requires, each passing
    * the receipt checks, per home operator, and how many operators are
@@ -1912,10 +1930,10 @@ function abytes(value, length, title2 = "") {
   const bytes = isBytes(value);
   const ofLen = length !== void 0 ? ` of length ${length}` : "";
   const got = bytes ? `length=${value.length}` : `type=${typeof value}`;
-  const message2 = atitle(title2) + "expected Uint8Array" + ofLen + ", got " + got;
+  const message3 = atitle(title2) + "expected Uint8Array" + ofLen + ", got " + got;
   if (!bytes)
-    throw new TypeError(message2);
-  throw new RangeError(message2);
+    throw new TypeError(message3);
+  throw new RangeError(message3);
 }
 var aobject = (value, label) => {
   if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -2335,6 +2353,7 @@ var sealedId = (bytes) => {
   all.set(bytes, 64);
   return sha2562(all);
 };
+var stated = /* @__PURE__ */ new Map();
 var Relay = class {
   constructor(base, via = base) {
     this.base = base;
@@ -2364,8 +2383,38 @@ var Relay = class {
   async info() {
     return cborDecode(await this.call("/info"));
   }
+  /** The relay's stated limits, read from `GET /info` once; null when it does not say, and then the relay judges what it is sent. */
+  limits() {
+    let l = stated.get(this.via);
+    if (!l) {
+      l = this.info().then(
+        (m) => {
+          const x = m.get(3);
+          const act = x?.get(0);
+          const media = x?.get(1);
+          return typeof act === "number" && typeof media === "number" ? { act, media } : null;
+        },
+        () => null
+      );
+      stated.set(this.via, l);
+      void l.then((v) => v ?? stated.delete(this.via));
+    }
+    return l;
+  }
+  /**
+   * cMIP draft 3, "Clients", 6: a client SHOULD NOT send a body larger than
+   * the relay's stated limits. Refused here, before anything is sent, with
+   * the relay's own code for "too large".
+   */
+  async fits(size, media) {
+    const l = await this.limits();
+    if (!l) return;
+    const limit = media ? l.media : l.act;
+    if (size > limit) throw new RelayError(CODE.tooLarge, `not sent: ${size} bytes is over this relay's stated limit of ${limit}`);
+  }
   /** `POST /acts`. The act id in the answer is checked against the act sent. */
   async putAct(act) {
+    await this.fits(act.length, false);
     const m = cborDecode(await this.post("/acts", act));
     const id = hex(m.get(0));
     if (id !== actId(act)) throw new RelayError(-1, "the relay answered for another act");
@@ -2378,6 +2427,7 @@ var Relay = class {
   }
   /** `POST /sealed`, with pickup tags for a container sent to a bare key. */
   async putSealed(sealed, pickup = []) {
+    await this.fits(sealed.length, false);
     const req = /* @__PURE__ */ new Map([[0, sealed]]);
     if (pickup.length) req.set(1, pickup.map(unhex));
     const m = cborDecode(await this.post("/sealed", cborEncode(req)));
@@ -2397,6 +2447,7 @@ var Relay = class {
   }
   /** `POST /media`: the relay's answer is checked against the bytes sent. */
   async putMedia(locked) {
+    await this.fits(locked.length, true);
     const m = cborDecode(await this.post("/media", locked, "application/octet-stream"));
     const lockedHash = hex(m[0]);
     if (lockedHash !== sha2562(locked) || m[1] !== locked.length) {
@@ -2449,103 +2500,126 @@ var Relay = class {
 var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
 
 // ../genesis/src/lookup.ts
+var inBrowser = () => typeof globalThis.window !== "undefined" && typeof globalThis.process === "undefined";
+function cannotReach(hint, via = {}) {
+  if (via[hint]) return null;
+  let host;
+  try {
+    host = new URL(hint).hostname;
+  } catch {
+    return "not an address";
+  }
+  if (host.endsWith(".onion")) {
+    return inBrowser() ? "an onion address, which a web browser cannot reach: it is reached only through Tor" : "an onion address, reached only through Tor, and this client has no way in to it";
+  }
+  return null;
+}
+async function firstOf(items, ask, failed) {
+  if (!items.length) return null;
+  return new Promise((resolve) => {
+    let left = items.length;
+    let done = false;
+    for (const x of items) {
+      ask(x).then(
+        (r) => {
+          left--;
+          if (r !== null && r !== void 0 && !done) {
+            done = true;
+            resolve(r);
+          } else if (!left && !done) resolve(null);
+        },
+        () => {
+          failed?.(x);
+          left--;
+          if (!left && !done) resolve(null);
+        }
+      );
+    }
+  });
+}
 async function lookUp(identity, hints, via = {}, into) {
   const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
-  const tried = /* @__PURE__ */ new Set();
+  const asked = /* @__PURE__ */ new Set();
   const unreachable = [];
+  const notTried = [];
   const operatorActs = /* @__PURE__ */ new Map();
-  const add = (acts) => {
+  const heldBytes = /* @__PURE__ */ new Map();
+  const keep = (acts) => {
     for (const a of acts) {
       try {
+        heldBytes.set(actId(a), a);
         v.add(a);
       } catch {
       }
     }
   };
-  let genesis = null;
-  for (const h of hints) {
-    try {
-      genesis = await relayAt(h, via).getAct(identity);
-    } catch {
-      unreachable.push(h);
-    }
-    if (genesis) break;
-  }
+  const tryable = (hint) => {
+    const why = cannotReach(hint, via);
+    if (!why) return true;
+    if (!notTried.some((n) => n.hint === hint)) notTried.push({ hint, why });
+    return false;
+  };
+  const failed = (hint) => {
+    if (!unreachable.includes(hint)) unreachable.push(hint);
+  };
+  const genesis = await firstOf(hints.filter(tryable), (h) => relayAt(h, via).getAct(identity), failed);
   if (!genesis) throw new Error(`the genesis of ${identity} was not found at ${hints.join(", ")}`);
-  add([genesis]);
-  const homesNamed = () => {
-    const out = [];
-    for (const id of v.held()) {
-      let d;
-      try {
-        d = describeAct(heldBytes.get(id));
-      } catch {
-        continue;
-      }
-      if (d.spec !== SPECS.identity || !d.payload) continue;
-      if (d.type !== IDENTITY_TYPES.genesis && d.type !== IDENTITY_TYPES.rotation) continue;
-      if ((d.signer ?? d.id) !== identity) continue;
+  keep([genesis]);
+  const genesisHomes = () => {
+    try {
+      const d = describeAct(genesis);
+      if (d.spec !== SPECS.identity || d.type !== IDENTITY_TYPES.genesis || !d.payload) return [];
       const p = cborDecode(d.payload);
-      const homes = p.get(d.type === 0 ? 2 : 6);
-      for (const [op, hint] of homes ?? []) out.push({ operator: op ? hex(op) : null, hint });
+      return (p.get(2) ?? []).map(([op, hint]) => ({ operator: op ? hex(op) : null, hint }));
+    } catch {
+      return [];
     }
-    return out;
   };
-  const heldBytes = /* @__PURE__ */ new Map([[actId(genesis), genesis]]);
-  const keep = (acts) => {
-    for (const a of acts) {
+  const inForce = () => {
+    const r2 = v.resolve(identity);
+    return r2.homesAt?.length ? r2.homesAt[r2.homesAt.length - 1] : genesisHomes();
+  };
+  const record = async (h) => {
+    const rec = await relayAt(h.hint, via).identity(identity);
+    keep([...rec.chain, ...rec.receipts, ...rec.routes, ...rec.encryptionKeys, ...rec.evidence, ...rec.otherReceipts]);
+    for (const a of rec.links) {
       try {
-        heldBytes.set(actId(a), a);
+        const d = describeAct(a);
+        if (!d.public && d.signer === identity) v.foundAtHome(d.id, h.operator ?? identity);
       } catch {
       }
     }
-    add(acts);
   };
-  for (let round = 0; round < 4; round++) {
-    const fresh = homesNamed().filter((h) => !tried.has(h.hint));
-    if (!fresh.length) break;
-    for (const h of fresh) {
-      tried.add(h.hint);
-      const r2 = relayAt(h.hint, via);
-      try {
-        const rec = await r2.identity(identity);
-        keep([...rec.chain, ...rec.receipts, ...rec.routes, ...rec.encryptionKeys, ...rec.evidence, ...rec.otherReceipts]);
-        for (const a of rec.links) {
-          try {
-            const d = describeAct(a);
-            if (!d.public && d.signer === identity) v.foundAtHome(d.id, h.operator ?? identity);
-          } catch {
-          }
-        }
-      } catch {
-        unreachable.push(h.hint);
-        continue;
-      }
-    }
-  }
-  const operators = new Set(homesNamed().map((h) => h.operator ?? identity));
-  operators.delete(identity);
-  const answered = [...tried].filter((h) => !unreachable.includes(h));
-  for (const op of operators) {
-    const own = homesNamed().filter((h) => h.operator === op).map((h) => h.hint);
-    for (const hint of [...own.filter((h) => answered.includes(h)), ...answered.filter((h) => !own.includes(h))]) {
+  const answered2 = () => [...asked].filter((h) => !unreachable.includes(h) && !notTried.some((n) => n.hint === h));
+  const operatorChain = async (op, own) => {
+    const from = async (hint) => {
       const r2 = relayAt(hint, via);
-      try {
-        const g = await r2.getAct(op);
-        if (!g) continue;
-        keep([g]);
-        operatorActs.set(op, [g]);
-        const page = await r2.feed({ signer: op });
-        const chain = page.items.filter((i) => i.kind === "act").map((i) => i.item).filter((a) => {
+      const [g, page] = await Promise.all([r2.getAct(op), r2.feed({ signer: op })]);
+      if (!g) return null;
+      const chain = page.items.filter((i) => i.kind === "act").map((i) => i.item).filter((a) => {
+        try {
           const d = describeAct(a);
           return d.spec === SPECS.identity && d.type === IDENTITY_TYPES.rotation;
-        });
-        keep(chain);
-        operatorActs.get(op).push(...chain);
-        break;
-      } catch {
-      }
-    }
+        } catch {
+          return false;
+        }
+      });
+      return [g, ...chain];
+    };
+    const ownAnswered = own.filter((h) => answered2().includes(h));
+    const got = await firstOf(ownAnswered, from) ?? await firstOf(answered2().filter((h) => !own.includes(h)), from);
+    if (!got) return;
+    keep(got);
+    operatorActs.set(op, got);
+  };
+  for (let round = 0; round < 8; round++) {
+    const homes = inForce();
+    const fresh = homes.filter((h) => !asked.has(h.hint));
+    if (!fresh.length) break;
+    for (const h of fresh) asked.add(h.hint);
+    await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record(h).catch(() => failed(h.hint))));
+    const ops = [...new Set(homes.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
+    await Promise.all(ops.map((op) => operatorChain(op, homes.filter((h) => h.operator === op).map((h) => h.hint))));
   }
   const resolution = v.resolve(identity);
   const r = v.latest(identity, SPECS.identity, IDENTITY_TYPES.routes);
@@ -2580,6 +2654,7 @@ async function lookUp(identity, hints, via = {}, into) {
     receipts,
     operatorChains: [...operatorActs.values()].flat(),
     unreachable,
+    notTried,
     routes: { act: r.act ?? null, contested: r.contested, routes },
     encryptionKeyAct: e.act ?? null,
     encryptionKey,
@@ -2589,6 +2664,49 @@ async function lookUp(identity, hints, via = {}, into) {
       return hit ? hit.hints : null;
     }
   };
+}
+var refAct = (r) => typeof r === "string" ? r : r[0];
+var refSigner = (r) => typeof r === "string" ? null : r[1];
+async function followRef(r, hints, via = {}) {
+  const id = refAct(r);
+  const named = refSigner(r);
+  const notTried = [];
+  const check = (act) => {
+    const d = describeAct(act);
+    if (d.id !== id) throw new Error(`the act fetched is ${d.id}, not ${id}`);
+    const actual = d.signer ?? d.id;
+    if (named && actual !== named) throw new Error(`the reference names ${named} as the signer of ${id}, but the act shows ${actual}: the reference is wrong`);
+    return act;
+  };
+  const tryable = (hint) => {
+    const why = cannotReach(hint, via);
+    if (why && !notTried.some((n) => n.hint === hint)) notTried.push({ hint, why });
+    return !why;
+  };
+  const fetchFrom = async (places2) => {
+    let at = "";
+    const act = await firstOf(places2.filter(tryable), async (h) => {
+      const a = await relayAt(h, via).getAct(id);
+      if (a && !at) at = h;
+      return a;
+    });
+    return act ? { act: check(act), at } : null;
+  };
+  const here = await fetchFrom(hints);
+  if (here) return { ...here, how: "asked", notTried };
+  if (!named) throw new Error(`the act ${id} was not found at ${hints.join(", ")}, and the reference names no signer to look by`);
+  let l;
+  try {
+    l = await lookUp(named, hints, via);
+  } catch (e) {
+    throw new Error(`the act ${id} was not found at ${hints.join(", ")}, and its signer ${named} could not be looked up there: ${e instanceof Error ? e.message : e}`);
+  }
+  for (const n of l.notTried) if (!notTried.some((x) => x.hint === n.hint)) notTried.push(n);
+  const places = l.verifier.places(named).filter((p) => !hints.includes(p));
+  const outbox = new Set(l.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints.map((h) => h.replace(/\/$/, ""))));
+  const there = await fetchFrom(places.filter((p) => outbox.has(p))) ?? await fetchFrom(places.filter((p) => !outbox.has(p)));
+  if (there) return { ...there, how: "signer", notTried };
+  throw new Error(`the act ${id} was not found at ${hints.join(", ")}, nor at its signer's routes and homes (${places.join(", ") || "none found"})`);
 }
 
 // ../../modules/jpeg/src/jpeg.ts
@@ -2883,14 +3001,7 @@ var WITHDRAWAL = 3;
 
 // ../barebone/src/post.ts
 async function fetchAct(id, hints, via) {
-  for (const h of hints) {
-    try {
-      const a = await relayAt(h, via).getAct(id);
-      if (a) return a;
-    } catch {
-    }
-  }
-  return null;
+  return firstOf(hints.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getAct(id));
 }
 function describeChecked(act, id) {
   const d = describeAct(act);
@@ -2908,17 +3019,23 @@ var Judge = class {
     this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
   }
   v;
-  looked = /* @__PURE__ */ new Set();
+  /** Addresses not tried by any lookup, each with why. */
+  notTried = [];
+  looked = /* @__PURE__ */ new Map();
   async standing(act, id, signer) {
-    if (!this.looked.has(signer)) {
-      await lookUp(signer, this.hints, this.via, this.v);
-      this.looked.add(signer);
+    let l = this.looked.get(signer);
+    if (!l) {
+      l = lookUp(signer, this.hints, this.via, this.v).then((x) => {
+        for (const n of x.notTried) if (!this.notTried.some((y) => y.hint === n.hint)) this.notTried.push(n);
+      });
+      this.looked.set(signer, l);
     }
+    await l;
     this.v.add(act);
     return this.v.status(id);
   }
 };
-async function readPost(id, hints, via = {}) {
+async function readPost(id, hints, via = {}, judging) {
   const act = await fetchAct(id, hints, via);
   if (!act) throw new Error(`the act ${id} was not found at ${hints.join(", ")}`);
   const d = describeChecked(act, id);
@@ -2926,27 +3043,39 @@ async function readPost(id, hints, via = {}) {
   if (d.spec !== POST_SPECS.text || d.type !== TEXT_ACT) throw new Error("the act is not a text act");
   if (!d.signer) throw new Error("the act has no signer");
   const p = cborDecode(d.payload);
-  const text = p.get(0);
-  if (typeof text !== "string") throw new Error("the text act has no text");
+  const text2 = p.get(0);
+  if (typeof text2 !== "string") throw new Error("the text act has no text");
   const f = p.get(1);
-  const judge = new Judge(hints, via);
+  const judge = judging ?? new Judge(hints, via);
   const standing = await judge.standing(act, id, d.signer);
-  const refs = [];
-  for (const r of d.refs ?? []) refs.push(await readRef(r, hints, via, judge));
-  return { id, signer: d.signer, standing, text, format: f instanceof Uint8Array ? hex(f) : null, refs };
+  const named = (d.refs ?? []).map((r, i) => d.refSigners?.[i] ? [r, d.refSigners[i]] : r);
+  const refs = await Promise.all(named.map((r) => readRef(r, hints, via, judge)));
+  return { id, signer: d.signer, standing, text: text2, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge.notTried ?? [] };
 }
-async function readRef(id, hints, via, judge) {
-  const act = await fetchAct(id, hints, via);
-  if (!act) return { kind: "act", id, what: "not found at the relays asked" };
+async function readRef(r, hints, via, judge) {
+  const id = typeof r === "string" ? r : r[0];
+  const signer = typeof r === "string" ? void 0 : r[1];
+  let act = null;
+  try {
+    const f = await followRef(r, hints, via);
+    act = f.act;
+    if (judge.notTried) {
+      for (const n of f.notTried) if (!judge.notTried.some((x) => x.hint === n.hint)) judge.notTried.push(n);
+    }
+  } catch (e) {
+    const why = e instanceof Error ? e.message : String(e);
+    if (/the reference is wrong/.test(why)) return { kind: "act", id, signer, what: why };
+  }
+  if (!act) return { kind: "act", id, signer, what: signer ? "not found at the relays asked, nor at its signer's routes and homes" : "not found at the relays asked" };
   let d;
   try {
     d = describeChecked(act, id);
   } catch (e) {
-    return { kind: "act", id, what: `not a valid act: ${e instanceof Error ? e.message : e}` };
+    return { kind: "act", id, signer, what: `not a valid act: ${e instanceof Error ? e.message : e}` };
   }
-  if (!d.public) return { kind: "act", id, what: "a private act" };
-  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, what: "a text act" };
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, what: "an act of a specification this client does not implement" };
+  if (!d.public) return { kind: "act", id, signer, what: "a private act" };
+  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, signer, what: "a text act" };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement" };
   return readPicture(act, d, hints, via, judge);
 }
 async function readPicture(act, d, hints, via, judge) {
@@ -2979,14 +3108,8 @@ async function readPicture(act, d, hints, via, judge) {
   out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
   if (out.withdrawn) return no("withdrawn by its signer");
   const named = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
-  let locked = null;
-  for (const h of [...hints, ...named.filter((n) => !hints.includes(n))]) {
-    try {
-      locked = await relayAt(h, via).getMedia(hex(lockedHash));
-      if (locked) break;
-    } catch {
-    }
-  }
+  const media = (places) => firstOf(places.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getMedia(hex(lockedHash)));
+  const locked = await media(hints) ?? await media(named.filter((n) => !hints.includes(n)));
   if (!locked) return no("its bytes were not found");
   let plain;
   try {
@@ -3005,36 +3128,35 @@ async function readPicture(act, d, hints, via, judge) {
   return out;
 }
 async function findWithdrawal(publication, signer, forId, hints, via, judge) {
-  const who = [signer];
-  if (forId instanceof Uint8Array) who.push(hex(forId));
-  for (const h of hints) {
-    for (const s of who) {
-      let after;
-      for (; ; ) {
-        let page;
-        try {
-          page = await relayAt(h, via).feed({ signer: s, after });
-        } catch {
-          break;
-        }
-        for (const it of page.items) {
-          if (it.kind !== "act") continue;
-          let d;
-          try {
-            d = describeAct(it.item);
-          } catch {
-            continue;
-          }
-          if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
-          if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
-          if (await judge.standing(it.item, d.id, d.signer) === "valid") return d.id;
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
+  const who2 = [signer];
+  if (forId instanceof Uint8Array) who2.push(hex(forId));
+  const search = async (h, s) => {
+    let after;
+    for (; ; ) {
+      let page;
+      try {
+        page = await relayAt(h, via).feed({ signer: s, after });
+      } catch {
+        return null;
       }
+      for (const it of page.items) {
+        if (it.kind !== "act") continue;
+        let d;
+        try {
+          d = describeAct(it.item);
+        } catch {
+          continue;
+        }
+        if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
+        if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
+        if (await judge.standing(it.item, d.id, d.signer) === "valid") return d.id;
+      }
+      if (!page.items.length || page.next === after) return null;
+      after = page.next;
     }
-  }
-  return null;
+  };
+  const pairs = hints.filter((h) => !cannotReach(h, via)).flatMap((h) => who2.map((s) => [h, s]));
+  return firstOf(pairs, ([h, s]) => search(h, s));
 }
 
 // ../longform/src/format.ts
@@ -3770,14 +3892,14 @@ function checkBound(doc, declared = DECLARED, endsBlock = ENDS_BLOCK) {
       if (!declared[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
       state2[i] = 2;
     }
-    const text = s.slice(from, to);
-    const fail2 = (why) => `hides ${JSON.stringify(text)} at ${from}, not in a declared position: ${why}`;
+    const text2 = s.slice(from, to);
+    const fail2 = (why) => `hides ${JSON.stringify(text2)} at ${from}, not in a declared position: ${why}`;
     switch (m.rule) {
       case "heading":
-        if (!/^#{1,6} $/.test(text) || !opensLine(from) || to >= lineEnd(from)) return fail2("one to six # and a space, opening a line, before some text");
+        if (!/^#{1,6} $/.test(text2) || !opensLine(from) || to >= lineEnd(from)) return fail2("one to six # and a space, opening a line, before some text");
         break;
       case "rule":
-        if (!opensLine(from) || to !== lineEnd(from) || !/^(?:-{3,}|\*{3,})$/.test(text)) return fail2("a whole line of three or more - or *");
+        if (!opensLine(from) || to !== lineEnd(from) || !/^(?:-{3,}|\*{3,})$/.test(text2)) return fail2("a whole line of three or more - or *");
         break;
       case "fence-open":
         if (!opensLine(from) || to - from < 3 || !wholeRun(m, "`") || s.slice(to, lineEnd(from)).includes("`")) return fail2("three or more backticks opening a line, nothing after them a backtick");
@@ -3792,7 +3914,7 @@ function checkBound(doc, declared = DECLARED, endsBlock = ENDS_BLOCK) {
         if (from === 0 || !markers[from - 1] || to - from !== 1) return fail2("the one space after a list marker");
         break;
       case "indent":
-        if (!opensLine(from) || !/^ +$/.test(text)) return fail2("spaces opening an item's later line");
+        if (!opensLine(from) || !/^ +$/.test(text2)) return fail2("spaces opening an item's later line");
         break;
       case "escape":
         if (to - from !== 1 || to >= lineEnd(from) || !ESCAPABLE.has(s[to]) || state2[to] !== 1) return fail2("a backslash before a character it escapes");
@@ -3875,11 +3997,11 @@ function renderHtml(doc) {
     return `<div class="mor-lf"><p class="mor-lf-refused">Shown plain: the long-form rendering would break the Text MIR's bound (${escapeHtml(breach)}).</p>${plainHtml(doc.source, { showControls: true })}</div>`;
   }
   const s = doc.source;
-  const text = (x) => escapeHtml(s.slice(x.from, x.to));
+  const text2 = (x) => escapeHtml(s.slice(x.from, x.to));
   const inl = (ns) => ns.map((n) => {
     switch (n.t) {
       case "text":
-        return text(n.span);
+        return text2(n.span);
       case "break":
         return "<br>";
       case "em":
@@ -3887,9 +4009,9 @@ function renderHtml(doc) {
       case "strong":
         return `<strong>${inl(n.children)}</strong>`;
       case "code":
-        return `<code>${text(n.span)}</code>`;
+        return `<code>${text2(n.span)}</code>`;
       case "link":
-        return `<a href="${escapeHtml(n.href)}" rel="nofollow noopener noreferrer">${text(n.span)}</a>`;
+        return `<a href="${escapeHtml(n.href)}" rel="nofollow noopener noreferrer">${text2(n.span)}</a>`;
     }
   }).join("");
   const blk = (bs) => bs.map((b) => {
@@ -3902,12 +4024,12 @@ function renderHtml(doc) {
         return `<blockquote>${blk(b.children)}</blockquote>`;
       case "list": {
         const tag = b.ordered ? "ol" : "ul";
-        const items = b.items.map((it) => `<li><span class="mor-lf-marker">${text(it.marker)}</span><div>${blk(it.children)}</div></li>`).join("");
+        const items = b.items.map((it) => `<li><span class="mor-lf-marker">${text2(it.marker)}</span><div>${blk(it.children)}</div></li>`).join("");
         return `<${tag}>${items}</${tag}>`;
       }
       case "code": {
-        const label = b.label ? `<span class="mor-lf-label">${text(b.label)}</span>` : "";
-        return `<pre dir="auto">${label}<code>${b.lines.map(text).join("\n")}</code></pre>`;
+        const label = b.label ? `<span class="mor-lf-label">${text2(b.label)}</span>` : "";
+        return `<pre dir="auto">${label}<code>${b.lines.map(text2).join("\n")}</code></pre>`;
       }
       case "rule":
         return "<hr>";
@@ -3955,13 +4077,17 @@ function picture(p, poster) {
 <figcaption>JPEG, ${p.picture.shownWidth} \xD7 ${p.picture.shownHeight}, publication <code>${short(p.publication)}</code>, ${standingWords(p.standing)}.${by}${still}</figcaption></figure>`;
 }
 function renderPost(p) {
-  const text = p.format === POST_SPECS.longform ? renderHtml(parse(p.text)) : `<div class="mor-post-text" dir="auto">${escapeHtml(p.text)}</div>`;
-  const others = p.refs.filter((r) => r.kind === "act").map((r) => `<div class="mor-post-by">Refers to <code>${short(r.id)}</code>: ${escapeHtml(r.kind === "act" ? r.what : "")}.</div>`).join("");
+  const text2 = p.format === POST_SPECS.longform ? renderHtml(parse(p.text)) : `<div class="mor-post-text" dir="auto">${escapeHtml(p.text)}</div>`;
+  const others = p.refs.filter((r) => r.kind === "act").map((r) => {
+    const by = r.kind === "act" && r.signer ? `, signed by <code title="${r.signer}">${short(r.signer)}</code> as the reference says` : "";
+    return `<div class="mor-post-by">Refers to <code>${short(r.id)}</code>${by}: ${escapeHtml(r.kind === "act" ? r.what : "")}.</div>`;
+  }).join("");
   const pictures = p.refs.filter((r) => r.kind === "picture").map((r) => picture(r, p.signer)).join("");
+  const notTried = (p.notTried ?? []).map((n) => `<div class="mor-post-by">Not tried: <code>${escapeHtml(n.hint)}</code>, ${escapeHtml(n.why)}. What it holds was not asked for; silence proves nothing.</div>`).join("");
   const bad = p.standing === "valid" ? "" : " mor-post-bad";
   return `<article class="mor-post">
 <div class="mor-post-by${bad}">By <code title="${p.signer}">${short(p.signer)}</code>, ${standingWords(p.standing)}. Post <code title="${p.id}">${short(p.id)}</code>.</div>
-${text}${pictures}${others}
+${text2}${pictures}${others}${notTried}
 <details><summary>Plain text</summary>${plainHtml(p.text, { showControls: true })}</details>
 </article>`;
 }
@@ -4304,10 +4430,303 @@ async function findLater(from, via = {}) {
   }
 }
 
+// src/feed.ts
+var FEED_LIMIT = 30;
+var isPost = (d) => d.public && d.spec === POST_SPECS.text && d.type === TEXT_ACT;
+var FeedJudge = class {
+  constructor(places, via) {
+    this.places = places;
+    this.via = via;
+  }
+  v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  looked = /* @__PURE__ */ new Map();
+  lookUp(identity, places = this.places) {
+    let l = this.looked.get(identity);
+    if (!l) {
+      l = lookUp(identity, places, this.via, this.v);
+      this.looked.set(identity, l);
+    }
+    return l;
+  }
+  async standing(act, id, signer) {
+    await this.lookUp(signer);
+    this.v.add(act);
+    return this.v.status(id);
+  }
+};
+function placesFor(l, relays) {
+  const outbox = (l?.routes.routes ?? []).filter((r) => (r.kind ?? 0) === 0);
+  const route = outbox.find((r) => r.scope === POST_SPECS.text) ?? outbox.find((r) => r.scope === null);
+  const asked = [];
+  const unreachable = [];
+  for (const h of route?.hints ?? []) {
+    const a = relayAddress(h);
+    if (a) {
+      if (!asked.includes(a)) asked.push(a);
+    } else if (!unreachable.includes(h)) unreachable.push(h);
+  }
+  for (const r of relays) if (!asked.includes(r)) asked.push(r);
+  return { asked, unreachable };
+}
+async function actsBy(signer, places, via, into) {
+  for (const h of places) {
+    let after;
+    for (; ; ) {
+      let page;
+      try {
+        page = await relayAt(h, via).feed({ signer, after });
+      } catch {
+        break;
+      }
+      for (const it of page.items) {
+        if (it.kind !== "act") continue;
+        let d;
+        try {
+          d = describeAct(it.item);
+        } catch {
+          continue;
+        }
+        if (d.signer !== signer || into.has(d.id)) continue;
+        into.set(d.id, { d, act: it.item });
+      }
+      if (!page.items.length || page.next === after) break;
+      after = page.next;
+    }
+  }
+}
+var linksOf = (d) => [
+  ...d.prev ? [d.prev] : [],
+  ...d.refs ?? [],
+  ...(d.objects ?? []).flatMap(([chain, pred]) => [chain, pred]),
+  ...d.acks ?? []
+];
+function signedOrder(acts, rank) {
+  const ids = new Set(acts.map((d) => d.id));
+  const byId = new Map(acts.map((d) => [d.id, d]));
+  const waiting = new Map(acts.map((d) => [d.id, 0]));
+  for (const d of acts) for (const n of new Set(linksOf(d))) if (ids.has(n) && n !== d.id) waiting.set(n, waiting.get(n) + 1);
+  const key = (d) => [rank(d.signer), -(d.position ?? 0), d.id];
+  const before = (a, b) => {
+    const [x, y] = [key(a), key(b)];
+    return x[0] - y[0] || x[1] - y[1] || (x[2] < y[2] ? -1 : 1);
+  };
+  const free = acts.filter((d) => waiting.get(d.id) === 0);
+  const out = [];
+  while (free.length) {
+    free.sort(before);
+    const d = free.shift();
+    out.push(d.id);
+    for (const n of new Set(linksOf(d))) {
+      if (!ids.has(n) || n === d.id) continue;
+      const left = waiting.get(n) - 1;
+      waiting.set(n, left);
+      if (left === 0) free.push(byId.get(n));
+    }
+  }
+  for (const d of acts.filter((x) => !out.includes(x.id)).sort(before)) out.push(d.id);
+  return out.filter((id) => isPost(byId.get(id)));
+}
+async function readOne(id, signer, position, places, via, judge, lookupProblem) {
+  const p = { id, signer, position, post: null, problem: null, answers: [] };
+  if (lookupProblem) {
+    p.problem = `its signer's identity chain could not be looked up: ${lookupProblem}`;
+    return p;
+  }
+  try {
+    p.post = await readPost(id, places, via, judge);
+    if (p.post.standing !== "valid") p.problem = `its standing is \u201C${p.post.standing}\u201D, not valid`;
+  } catch (err) {
+    p.problem = err instanceof Error ? err.message : String(err);
+  }
+  return p;
+}
+var message = (err) => err instanceof Error ? err.message : String(err);
+async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT) {
+  const judge = new FeedJudge(relays, via);
+  const lines = [];
+  const found = /* @__PURE__ */ new Map();
+  const placesOf = /* @__PURE__ */ new Map();
+  const problems = /* @__PURE__ */ new Map();
+  await Promise.all(
+    authors.map(async (a) => {
+      let l = null;
+      let problem = null;
+      try {
+        l = await judge.lookUp(a.identity);
+      } catch (err) {
+        problem = message(err);
+      }
+      const { asked, unreachable } = placesFor(l, relays);
+      lines.push({ ...a, asked, unreachable, problem, found: 0, verified: 0 });
+      placesOf.set(a.identity, asked);
+      if (problem) problems.set(a.identity, problem);
+    })
+  );
+  lines.sort((x, y) => authors.findIndex((a) => a.identity === x.identity) - authors.findIndex((a) => a.identity === y.identity));
+  for (const a of authors) await actsBy(a.identity, placesOf.get(a.identity), via, found);
+  const rank = (s) => authors.findIndex((a) => a.identity === s);
+  const order = signedOrder([...found.values()].map((x) => x.d), rank);
+  const shown = order.slice(0, limit);
+  const posts = await Promise.all(
+    shown.map((id) => {
+      const { d } = found.get(id);
+      return readOne(id, d.signer, d.position ?? null, placesOf.get(d.signer), via, judge, problems.get(d.signer) ?? null);
+    })
+  );
+  const answered2 = /* @__PURE__ */ new Map();
+  const byId = new Map(posts.map((p) => [p.id, p]));
+  const everywhere = [...new Set([...placesOf.values()].flat())];
+  const named = new Set(authors.map((a) => a.identity));
+  for (const p of posts) {
+    if (!p.post || p.problem) continue;
+    for (const ref of p.post.refs) {
+      if (ref.kind !== "act") continue;
+      const r = ref.id;
+      if (answered2.has(r)) {
+        p.answers.push(r);
+        continue;
+      }
+      const inFeed = byId.get(r);
+      if (inFeed) {
+        answered2.set(r, inFeed);
+        p.answers.push(r);
+        continue;
+      }
+      let d = found.get(r)?.d ?? null;
+      for (const h of d ? [] : everywhere) {
+        try {
+          const act = await relayAt(h, via).getAct(r);
+          if (act) {
+            d = describeAct(act);
+            if (d.id !== r) d = null;
+            if (d) break;
+          }
+        } catch {
+        }
+      }
+      if (!d) {
+        if (ref.what !== "not found at the relays asked") continue;
+        answered2.set(r, { id: r, signer: "", position: null, post: null, problem: "not found at the places asked", answers: [] });
+      } else if (!isPost(d) || !d.signer) {
+        continue;
+      } else if (!named.has(d.signer)) {
+        answered2.set(r, { id: r, signer: d.signer, position: d.position ?? null, post: null, problem: null, answers: [] });
+      } else {
+        answered2.set(r, await readOne(r, d.signer, d.position ?? null, everywhere, via, judge, problems.get(d.signer) ?? null));
+      }
+      p.answers.push(r);
+    }
+  }
+  for (const line of lines) {
+    const mine = posts.filter((p) => p.signer === line.identity);
+    line.found = order.filter((id) => found.get(id).d.signer === line.identity).length;
+    line.verified = mine.filter((p) => !p.problem).length;
+  }
+  return { authors: lines, posts, more: order.length - shown.length, answered: answered2 };
+}
+
+// ../reader/src/read.ts
+function fingerprint(identity) {
+  return identity.match(/.{1,4}/g).join(" ");
+}
+function standingWords2(s) {
+  switch (s) {
+    case "valid":
+      return { ok: true, words: "Verified: signed by this identity with a key its identity chain counts, checked in this browser." };
+    case "pending":
+      return { ok: false, words: "Not verified yet: the identity chain it rests on is waiting for its homes to confirm it." };
+    case "disputed":
+      return { ok: false, words: "Disputed: signed with a key the identity has since replaced; its owner did not keep it, but another identity acknowledged it or a keeper recorded it." };
+    case "void":
+      return { ok: false, words: "Void: signed with a key the identity has since replaced, and its owner did not keep it." };
+    case "invalid":
+      return { ok: false, words: "Invalid: the signature or the act does not check." };
+    case "scoped":
+      return { ok: false, words: "Signed with a grant key: a key of a collective scoped to one of its grants (Agreements, F128). Whether the grant backs it is Agreements' to say, and this reader does not judge Agreements." };
+    default:
+      return { ok: false, words: `Not verified (${s}): this browser could not establish who signed it.` };
+  }
+}
+
+// src/shell/feed-view.ts
+var FEED_STYLE = `${STYLE}
+:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 18%,transparent);--soft:color-mix(in srgb,CanvasText 66%,Canvas);--ok:#1a7f37;--bad:#b3261e}
+@media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
+.f-note{margin:0 0 12px;font-size:13px;color:var(--soft)}
+.f-post{margin:0 0 12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
+.f-post.f-bad{border-color:var(--bad);border-style:dashed}
+.f-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin-bottom:6px}
+.f-name{font-weight:700}
+.f-ok{color:var(--ok);font-size:13px;font-weight:600}
+.f-no{color:var(--bad);font-size:13px;font-weight:600}
+.f-text{white-space:pre-wrap}
+.f-text p:first-child,.f-text h1:first-child,.f-text h2:first-child{margin-top:0}
+.f-answers{margin:0 0 8px;padding:6px 10px;border-left:3px solid var(--line);font-size:15px;color:var(--soft)}
+.f-answers .f-text{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+.f-why{font-size:14px}
+.f-post figure{margin:8px 0 0}
+.f-post img{display:block;width:100%;height:auto;border-radius:8px;image-orientation:from-image}
+.f-post figcaption,.f-missing{font-size:12px;color:var(--soft)}
+.f-post details{margin-top:8px;font-size:12px;color:var(--soft)}
+.f-post summary{cursor:pointer;min-height:24px}
+.f-post code,.f-fp{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.f-more{font-size:13px;color:var(--soft)}`;
+var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+function nameOf(authors, identity) {
+  return authors.find((a) => a.identity === identity)?.name ?? `Identity ${short2(identity)}`;
+}
+function picture2(p) {
+  if (!p.bytes || !p.picture) return `<div class="f-missing">A picture, not shown: ${escapeHtml(p.problem ?? "unknown")}.</div>`;
+  return `<figure><img src="data:image/jpeg;base64,${base64(p.bytes)}" width="${p.picture.shownWidth}" height="${p.picture.shownHeight}" alt="">
+<figcaption>JPEG, ${p.picture.shownWidth} \xD7 ${p.picture.shownHeight}, checked against its publication.</figcaption></figure>`;
+}
+function text(post) {
+  return post.format === POST_SPECS.longform ? `<div class="f-text f-lf">${renderHtml(parse(post.text))}</div>` : `<div class="f-text" dir="auto">${escapeHtml(post.text)}</div>`;
+}
+function answered(feed, id, authors) {
+  const a = feed.answered.get(id);
+  if (!a) return "";
+  if (!a.signer) return `<div class="f-answers">Answers a post not found at the places asked: <code>${short2(id)}</code>.</div>`;
+  if (!authors.some((x) => x.identity === a.signer)) {
+    return `<div class="f-answers">Answers a post by another identity, not shown in this feed: <span class="f-fp">${fingerprint(a.signer)}</span>.</div>`;
+  }
+  if (!a.post || a.problem) {
+    return `<div class="f-answers">Answers a post by ${escapeHtml(nameOf(authors, a.signer))} that could not be verified: ${escapeHtml(a.problem ?? "unknown")}.</div>`;
+  }
+  return `<div class="f-answers" data-answers="${id}"><div><span class="f-name">${escapeHtml(nameOf(authors, a.signer))}</span> <span class="f-ok">verified</span></div>${text(a.post)}</div>`;
+}
+function who(p) {
+  return `<details><summary>Who signed it</summary>
+<div>Signed by <span class="f-fp">${fingerprint(p.signer)}</span></div>
+<div>Post <code>${escapeHtml(p.id)}</code>${p.position !== null ? `, number ${p.position} in its signer's sequence` : ""}</div></details>`;
+}
+function postHtml(feed, p, authors) {
+  const name = escapeHtml(nameOf(authors, p.signer));
+  if (!p.post || p.problem) {
+    return `<article class="f-post f-bad" data-post="${p.id}" data-verified="no">
+<div class="f-head"><span class="f-name">${name}?</span><span class="f-no">Not verified</span></div>
+<div class="f-why">A post naming this identity as its signer that could not be verified in this browser: ${escapeHtml(p.problem ?? "unknown")}. Its words are not shown.</div>
+${who(p)}</article>`;
+  }
+  const pictures = p.post.refs.filter((r) => r.kind === "picture").map(picture2).join("");
+  return `<article class="f-post" data-post="${p.id}" data-verified="yes">
+<div class="f-head"><span class="f-name">${name}</span><span class="f-ok">Verified</span></div>
+${p.answers.map((id) => answered(feed, id, authors)).join("")}${text(p.post)}${pictures}
+${who(p)}</article>`;
+}
+function feedHtml(feed, authors, style) {
+  const note = `<p class="f-note">Public posts of ${authors.map((a) => escapeHtml(a.name ?? short2(a.identity))).join(", ")}, each checked in this browser. Newest first, as their signatures order them: a reply after what it answers, each identity's posts in the order it signed them. MOR has no clock: between posts nothing signed links, the order is not a time.</p>`;
+  const body = feed.posts.length ? feed.posts.map((p) => postHtml(feed, p, authors)).join("\n") : '<p class="f-more">No public post found at the places asked.</p>';
+  const more = feed.more ? `<p class="f-more" id="f-more">${feed.more} older ${feed.more === 1 ? "post" : "posts"} found, not shown here.</p>` : "";
+  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${note}${body}${more}</body></html>`;
+}
+
 // ../../modules/video/src/video.ts
 var NotFilm = class extends Error {
-  constructor(kind, message2) {
-    super(message2);
+  constructor(kind, message3) {
+    super(message3);
     this.kind = kind;
     this.name = "NotFilm";
   }
@@ -4792,8 +5211,8 @@ function parse2(bytes) {
   const turned = v.rotation === 90 || v.rotation === 270;
   const vv = v.video;
   const long = Math.max(vv.width, vv.height);
-  const short2 = Math.min(vv.width, vv.height);
-  if (long > MAX_LONG_SIDE || short2 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
+  const short3 = Math.min(vv.width, vv.height);
+  if (long > MAX_LONG_SIDE || short3 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
   if (vv.level > MAX_LEVEL) throw new NotFilm("limits", `H.264 level ${vv.level / 10}, above ${MAX_LEVEL / 10}`);
   const seconds = Math.max(mDur / mScale, ...tracks.map((t) => t.mediaDuration / t.timescale));
   if (seconds > MAX_SECONDS) throw new NotFilm("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS}`);
@@ -4970,34 +5389,13 @@ function layOver(frame2, players) {
   window.addEventListener("resize", place);
 }
 
-// ../reader/src/read.ts
-function fingerprint(identity) {
-  return identity.match(/.{1,4}/g).join(" ");
-}
-function standingWords2(s) {
-  switch (s) {
-    case "valid":
-      return { ok: true, words: "Verified: signed by this identity with a key its identity chain counts, checked in this browser." };
-    case "pending":
-      return { ok: false, words: "Not verified yet: the identity chain it rests on is waiting for its homes to confirm it." };
-    case "disputed":
-      return { ok: false, words: "Disputed: signed with a key the identity has since replaced; its owner did not keep it, but another identity acknowledged it or a keeper recorded it." };
-    case "void":
-      return { ok: false, words: "Void: signed with a key the identity has since replaced, and its owner did not keep it." };
-    case "invalid":
-      return { ok: false, words: "Invalid: the signature or the act does not check." };
-    case "scoped":
-      return { ok: false, words: "Signed with a grant key: a key of a collective scoped to one of its grants (Agreements, F128). Whether the grant backs it is Agreements' to say, and this reader does not judge Agreements." };
-    default:
-      return { ok: false, words: `Not verified (${s}): this browser could not establish who signed it.` };
-  }
-}
-
 // src/shell/view.ts
 var FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-film{display:block;width:100%;aspect-ratio:16/9;background:#000}
 .mor-film-link{display:inline-block;padding:.4em 1em;border:1px solid currentColor;border-radius:999px;font:600 14px/1.3 system-ui,sans-serif;white-space:nowrap}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
+.mor-feed{display:block;margin:1em 0}
+.mor-feed>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 var ACT_STYLE = `${STYLE2}
 :root{color-scheme:light dark}
@@ -5009,6 +5407,17 @@ function actItem(a) {
   if (!a.standing) return `<li><code>${escapeHtml(a.id)}</code>: checking\u2026</li>`;
   const w = standingWords2(a.standing);
   return `<li><code>${escapeHtml(a.id)}</code>: <span class="${w.ok ? "ok-word" : "bad-word"}">${w.ok ? "verified" : escapeHtml(a.standing)}</span>, signed by <span class="fp">${fingerprint(a.signer)}</span></li>`;
+}
+function feedItem(f) {
+  const who2 = (a) => `${a.name ? `${escapeHtml(a.name)}, ` : ""}<span class="fp">${fingerprint(a.identity)}</span>`;
+  if (!f.found) return `<li>checking the posts of ${f.authors.map(who2).join("; ")}\u2026</li>`;
+  const lines = f.found.map((a) => {
+    const where = a.problem ? `<span class="bad-word">not looked up</span>, ${escapeHtml(a.problem)}` : `${a.found} ${a.found === 1 ? "post" : "posts"} found, ${a.verified} shown verified; asked: ${a.asked.map((h) => `<code>${escapeHtml(h)}</code>`).join(", ")}`;
+    const away = a.unreachable.length ? `; not reachable from a browser, not asked: ${a.unreachable.map((h) => `<code>${escapeHtml(h)}</code>`).join(", ")}` : "";
+    return `<li>${who2(a)}: ${where}${away}</li>`;
+  });
+  const bad = f.shown - f.verified;
+  return `<li>${f.shown} ${f.shown === 1 ? "post" : "posts"} shown, ${f.verified} verified${bad ? `, <span class="bad-word">${bad} not verified</span>` : ""}. The names are this page's; the identities are what was checked.<ul>${lines.join("")}</ul></li>`;
 }
 function filmItem(f) {
   const words = {
@@ -5042,6 +5451,7 @@ function bar(s) {
   }
   if (s.path) rows.push(`<dt>This file</dt><dd><code>${escapeHtml(s.path)}</code>${s.work ? `, work hash <code>${escapeHtml(s.work)}</code>` : ""}</dd>`);
   if (s.films.length) rows.push(`<dt>Films</dt><dd><ul id="mor-films">${s.films.map(filmItem).join("")}</ul></dd>`);
+  if (s.feeds.length) rows.push(`<dt>Feeds</dt><dd><ul id="mor-feeds">${s.feeds.map(feedItem).join("")}</ul></dd>`);
   if (s.acts.length) rows.push(`<dt>Acts shown</dt><dd><ul id="mor-acts">${s.acts.map(actItem).join("")}</ul></dd>`);
   if (s.reasons.length) rows.push(`<dt>Why</dt><dd><ul id="mor-reasons">${s.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul></dd>`);
   rows.push(
@@ -5098,7 +5508,7 @@ function inertCss(css) {
 async function preparePage(bytes, path, manifest, getFile) {
   const doc = new DOMParser().parseFromString(new TextDecoder("utf-8", { fatal: true }).decode(bytes), "text/html");
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out = { html: "", title: null, acts: [], films: [], listed: [], icon: null, problems: [], dropped: 0 };
+  const out = { html: "", title: null, acts: [], films: [], listed: [], feeds: [], icon: null, problems: [], dropped: 0 };
   const drop = (el) => {
     el.remove();
     out.dropped++;
@@ -5122,9 +5532,10 @@ async function preparePage(bytes, path, manifest, getFile) {
     const entry = p ? byPath.get(p) : void 0;
     return entry && kindOf(entry.path) === "film" ? entry : void 0;
   };
-  for (const el of [...doc.querySelectorAll("[data-film], [data-film-listed]")]) {
+  for (const el of [...doc.querySelectorAll("[data-film], [data-film-listed], [data-feed]")]) {
     el.removeAttribute("data-film");
     el.removeAttribute("data-film-listed");
+    el.removeAttribute("data-feed");
   }
   for (const video of [...doc.querySelectorAll("video")]) {
     const entry = filmOf(video);
@@ -5258,6 +5669,29 @@ async function preparePage(bytes, path, manifest, getFile) {
     }
     el.replaceWith(box);
   }
+  for (const el of [...doc.querySelectorAll("mor-feed")]) {
+    const authors = [];
+    for (const a of [...el.querySelectorAll("mor-author")]) {
+      const identity = (a.getAttribute("identity") ?? "").trim();
+      if (!ACT.test(identity) || authors.some((x) => x.identity === identity)) {
+        out.dropped++;
+        continue;
+      }
+      const name = (a.textContent ?? "").replace(/\s+/g, " ").trim();
+      authors.push({ identity, name: name || null });
+    }
+    const box = doc.createElement("div");
+    box.className = ["mor-feed", el.getAttribute("class") ?? ""].join(" ").trim();
+    if (el.id) box.id = el.id;
+    if (authors.length) {
+      box.setAttribute("data-feed", String(out.feeds.length));
+      box.innerHTML = `<div class="mor-act-note">Fetching and checking the public posts of ${authors.length === 1 ? "one identity" : `${authors.length} identities`}\u2026</div>`;
+      out.feeds.push(authors);
+    } else {
+      box.innerHTML = `<div class="mor-act-note">A feed naming no identity: nothing to show.</div>`;
+    }
+    el.replaceWith(box);
+  }
   out.title = doc.querySelector("title")?.textContent?.trim() || null;
   const frameStyle = doc.createElement("link");
   frameStyle.rel = "stylesheet";
@@ -5348,7 +5782,7 @@ function openPopup(film, get, line, changed, opener) {
 // src/shell/app.ts
 var barEl = document.getElementById("mor-bar");
 var view = document.getElementById("mor-view");
-var message = (err) => err instanceof Error ? err.message : String(err);
+var message2 = (err) => err instanceof Error ? err.message : String(err);
 var state = {
   phase: "checking",
   words: "Checking this page against what its owner signed\u2026",
@@ -5359,6 +5793,7 @@ var state = {
   work: null,
   acts: [],
   films: [],
+  feeds: [],
   reasons: [],
   newer: null
 };
@@ -5402,12 +5837,47 @@ async function showActs(frame2, settings) {
       d.close();
       fitFrame(inner);
     } catch (err) {
-      line.problem = message(err);
+      line.problem = message2(err);
       const note = doc.createElement("div");
       note.className = "mor-act-note";
-      note.textContent = `Act ${id} not shown: ${message(err)}.`;
+      note.textContent = `Act ${id} not shown: ${message2(err)}.`;
       box.replaceChildren(note);
     }
+    paint();
+  }
+}
+async function showFeeds(frame2, settings, feeds) {
+  const doc = frame2.contentDocument;
+  if (!doc || !feeds.length) return;
+  const style = URL.createObjectURL(new Blob([FEED_STYLE], { type: "text/css" }));
+  for (const box of [...doc.querySelectorAll(".mor-feed[data-feed]")]) {
+    const i = Number(box.dataset.feed);
+    const authors = feeds[i];
+    const line = state.feeds[i];
+    if (!authors || !line) continue;
+    try {
+      const feed = await readFeed(authors, settings.relays);
+      line.found = feed.authors;
+      line.shown = feed.posts.length;
+      line.verified = feed.posts.filter((p) => !p.problem).length;
+      const inner = doc.createElement("iframe");
+      inner.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
+      inner.setAttribute("title", "Public posts");
+      const html = feedHtml(feed, authors, style).replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
+      box.replaceChildren(inner);
+      const d = inner.contentDocument;
+      d.open();
+      d.write(html);
+      d.close();
+      fitFrame(inner);
+    } catch (err) {
+      line.found = [];
+      const note = doc.createElement("div");
+      note.className = "mor-act-note";
+      note.textContent = `The feed could not be read: ${message2(err)}.`;
+      box.replaceChildren(note);
+    }
+    box.dataset.done = "";
     paint();
   }
 }
@@ -5477,7 +5947,7 @@ async function main() {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     settings = parseSiteSettings(await r.json());
   } catch (err) {
-    fail(`this gateway's settings could not be read (${message(err)}).`);
+    fail(`this gateway's settings could not be read (${message2(err)}).`);
     return;
   }
   state.settings = settings;
@@ -5505,7 +5975,7 @@ async function main() {
   try {
     bytes = await gatewayFile(entry);
   } catch (err) {
-    fail(`this page could not be fetched from the gateway (${message(err)}).`);
+    fail(`this page could not be fetched from the gateway (${message2(err)}).`);
     return;
   }
   if (!bytes) {
@@ -5520,7 +5990,7 @@ async function main() {
     try {
       prepared = await preparePage(bytes, entry.path, version2.manifest, gatewayFile);
     } catch (err) {
-      fail(`this page could not be read (${message(err)}).`);
+      fail(`this page could not be read (${message2(err)}).`);
       return;
     }
     if (prepared.problems.length) {
@@ -5529,6 +5999,7 @@ async function main() {
     }
     document.title = `${prepared.title ?? entry.path} \xB7 ${version2.manifest.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
+    state.feeds = prepared.feeds.map((authors) => ({ authors, found: null, shown: 0, verified: 0 }));
     state.phase = "ok";
     state.words = verifiedWords(settings, "page");
     state.brief = briefWords(settings);
@@ -5542,7 +6013,7 @@ async function main() {
       () => {
         fitFrame(frame2);
         showFilms(frame2, prepared.films, prepared.listed);
-        void showActs(frame2, settings);
+        void showActs(frame2, settings).then(() => showFeeds(frame2, settings, prepared.feeds));
       },
       { once: true }
     );

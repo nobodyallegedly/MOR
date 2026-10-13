@@ -43,10 +43,10 @@ import {
 import { WITNESS_EXPLANATION } from './witness.ts';
 import { CODE, Relay, RelayError, type PutResult, type Via, relayAt, sealedId } from './transport.ts';
 import { record } from './kex.ts';
-import { lookUp, type Home, type Lookup, type RouteIn } from './lookup.ts';
+import { lookUp, type Home, type Lookup, type Reference, type RouteIn } from './lookup.ts';
 import { actsBy, checkWarned, linesOf, planLines, type Card, type FoundLine, type LinePlan, type Specs } from './lines.ts';
 
-export { lookUp, type Home, type Lookup, type Resolution, type RouteIn } from './lookup.ts';
+export { lookUp, followRef, referTo, referenceTo, refAct, refSigner, cannotReach, type Followed, type Home, type Lookup, type NotTried, type Reference, type Resolution, type RouteIn } from './lookup.ts';
 
 export const TEST_LABEL =
   'MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.';
@@ -294,7 +294,7 @@ export class TestIdentity {
     spec: string,
     type: number,
     payload: Uint8Array,
-    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: string[]; acks?: string[] },
+    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
   ) {
     // F110: only Identity, Money and Agreements act types carry acknowledgements;
     // a text act, a publication or a cMIP's act carrying them is invalid.
@@ -714,7 +714,7 @@ export class TestIdentity {
     spec: string,
     type: number,
     payload: Uint8Array,
-    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: string[]; acks?: string[] },
+    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
   ): { act: Uint8Array; id: string; key: Uint8Array } {
     return this.everyday(spec, type, payload, opts);
   }
@@ -727,7 +727,7 @@ export class TestIdentity {
     spec: string,
     type: number,
     payload: Uint8Array,
-    opts: { public: boolean; relays: string[]; to?: string[]; objects?: [string, string][]; refs?: string[]; acks?: string[] },
+    opts: { public: boolean; relays: string[]; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
   ) {
     const made = this.everyday(spec, type, payload, {
       public: opts.public,
