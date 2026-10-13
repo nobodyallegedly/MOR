@@ -235,4 +235,14 @@ For Nobody, allegedly, to confirm or change.
 
 `clients/site/test/feed-page.test.ts`: its first test also checks the pointers (the clients' lines, the web client's link and "for testing only", the two homes).
 
-COUNTS-HERE
+`scripts/test-all.sh`, this branch against main (`177229c`), 13 October 2026, each run whole:
+
+| | main | this branch |
+| --- | --- | --- |
+| Rust workspace | 671 passed | 671 passed |
+| `clients/site` | 66 | **69** (the 3 above; the pointers checked inside an existing test), all pass |
+| `modules/timestamp` | (none) | **5**, all pass |
+| Every other TypeScript package and module | 292 | 292, all pass |
+| Total | 1,029 | **1,037**, all pass |
+
+The script now runs `modules/timestamp` too. The display client's committed release files (`clients/site/built`) are not rebuilt here, so the CI step comparing them with a fresh build will differ until the release, as on the earlier feed branches.
