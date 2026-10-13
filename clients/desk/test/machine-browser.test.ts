@@ -1,6 +1,7 @@
 // Machine, allegedly, plugged in, at the desk in a real browser (headless
 // Chromium, a fresh profile), by clicks and typing alone: its terms shown,
-// then signed; a stranger's message notified and picked; a nudge. Real homes
+// then signed; a stranger's message notified and picked; a nudge; three
+// acts picked in one approval. Real homes
 // and a relay; Anthropic's API faked (no network, no key).
 
 import { after, before, test } from 'node:test';
@@ -48,7 +49,7 @@ after(async () => {
 
 const done = (page: Page, words: string | RegExp) => page.locator('#status .note.done', { hasText: words }).waitFor({ timeout: 60_000 });
 
-test('at the desk: the terms shown, then signed; a stranger’s message notified, picked and answered; a nudge', async () => {
+test('at the desk: the terms shown, then signed; a stranger’s message notified, picked and answered; a nudge; three picked in one approval', async () => {
   const page = await (await browser.newContext()).newPage();
   page.on('console', (m) => {
     if (m.type() === 'error' && !/status of 4\d\d/.test(m.text())) problems.push(m.text());
@@ -102,6 +103,28 @@ test('at the desk: the terms shown, then signed; a stranger’s message notified
   await done(page, 'Nudged');
   await page.locator('#status', { hasText: 'Machine, allegedly took one action' }).waitFor();
   await page.locator('#history', { hasText: 'A post of my own choosing.' }).waitFor();
+  assert.ok(!(await page.content()).includes(KEY));
+
+  // Three acts selected and picked in one approval: shown together first, then one pick each, each answered.
+  for (const t of ['Batch one.', 'Batch two.', 'Batch three.']) {
+    await app.desk.signAndSend(id('A stranger'), { spec: NUDGE_SPECS.text, type: 0, payload: cborEncode(new Map([[0, t]])) as Uint8Array, public: true, to: [id('Machine, allegedly')], refs: [] });
+  }
+  await page.click('[data-action=machine-look]');
+  await page.locator('#machine [data-notified]', { hasText: 'Batch three.' }).waitFor({ timeout: 60_000 });
+  await page.locator('#machine [data-notified]', { hasText: 'Batch one.' }).waitFor({ timeout: 60_000 });
+  const calls = api.seen.length;
+  for (const box of await page.locator('#machine input[name=pick-select]').all()) await box.check();
+  api.reply = answering({ text: 'One of three, answered.', notClaimed: [] });
+  await page.click('[data-action=machine-picks]');
+  await page.locator('#machine-picks-shown', { hasText: '3 picks, one for each act below' }).waitFor({ timeout: 30_000 });
+  await page.locator('#machine-picks-shown', { hasText: '“Batch two.”' }).waitFor();
+  assert.equal(api.seen.length, calls, 'nothing signed or called by showing');
+  if (process.env.MOR_SCREENSHOTS) await page.locator('#machine').screenshot({ path: join(process.env.MOR_SCREENSHOTS, 'machine-picks-shown.png') });
+  await page.click('[data-action=machine-pick-many]');
+  await done(page, 'Picked 3 acts');
+  await page.locator('#status', { hasText: 'Answered (3):' }).waitFor();
+  assert.equal(api.seen.length, calls + 3);
+  assert.equal(await page.locator('#machine [data-notified]').count(), 0);
   assert.ok(!(await page.content()).includes(KEY));
   // MOR_SCREENSHOTS=DIR keeps a picture of the section, for a person to look at.
   if (process.env.MOR_SCREENSHOTS) await page.locator('#machine').screenshot({ path: join(process.env.MOR_SCREENSHOTS, 'machine-allegedly.png') });

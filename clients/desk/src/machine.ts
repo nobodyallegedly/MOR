@@ -253,10 +253,24 @@ export class Machine {
   private notified(m: MachineFile): Item[] {
     if (!m.agent) return [];
     const answered = new Set(Object.values(m.causes).flatMap((c) => c.answered));
+    const waiting = new Set(this.waiting(m).map((w) => w.picked));
     return this.store
       .received(m.agent)
-      .items.filter((it) => it.act && it.from && it.from !== m.owner && it.from !== m.agent && (it.kind === 'message' || it.kind === 'reply') && !answered.has(it.act))
+      .items.filter((it) => it.act && it.from && it.from !== m.owner && it.from !== m.agent && (it.kind === 'message' || it.kind === 'reply') && !answered.has(it.act) && !waiting.has(it.act))
       .sort((a, b) => b.found - a.found);
+  }
+
+  /**
+   * Picks signed here that wait to be answered (the cap, or no key): nothing
+   * was recorded for them yet. The acts they name leave the Notified pile, so
+   * that no act is picked twice; each is answered once the cap allows.
+   */
+  private waiting(m: MachineFile): { pick: string; picked: string; time: number }[] {
+    if (!m.owner) return [];
+    return this.store
+      .history()
+      .filter((h) => h.verdict === 'picked' && h.signer === m.owner && h.act && h.causeAct && !m.causes[h.act])
+      .map((h) => ({ pick: h.act!, picked: h.causeAct!, time: h.time }));
   }
 
   // ------------------------------------------------------------ the cap and the key
@@ -418,6 +432,109 @@ export class Machine {
       else if (c) lines.push({ text: `Not answered: ${c.note}`, tone: 'bad' });
       else if (r === null) lines.push({ text: `Waiting: ${this.file().stopped}`, tone: 'bad' });
       return { title: 'Picked', lines, acts: [s.id, ...(c?.actions ?? [])] };
+    });
+  }
+
+  /**
+   * Several notified acts, picked in one approval (decided by Nobody,
+   * allegedly, 13 October 2026: "document states that at most one pick per
+   * action. As long as the app allows me to batch them it's fine."). The cMIP
+   * is unchanged: one pick act for each act selected, each naming that act
+   * alone; one answer for each pick. The selection, in the Notified pile's
+   * order, with the pick payloads that would be signed.
+   */
+  private batch(m: MachineFile, keys: unknown): { items: Item[]; payloads: Uint8Array[] } {
+    if (!m.agent || !m.owner || !m.terms) throw new Error('Publish Machine, allegedly’s terms first.');
+    if (!Array.isArray(keys) || !keys.length || keys.some((k) => typeof k !== 'string')) throw new Error('Select at least one act in the Notified pile.');
+    if (new Set(keys).size !== keys.length) throw new Error('An act was selected twice.');
+    const pile = this.notified(m);
+    const missing = keys.filter((k) => !pile.some((x) => x.key === k));
+    if (missing.length) throw new Error(`${missing.length === 1 ? 'An act selected is' : `${missing.length} acts selected are`} no longer in the Notified pile: answered already, or picked and waiting. Nothing was signed.`);
+    const items = pile.filter((x) => keys.includes(x.key));
+    return { items, payloads: items.map((it) => encodePick({ agent: m.agent!, terms: m.terms!, picked: it.act! })) };
+  }
+
+  /** The digest of exactly what a batch signs: its pick payloads, one after another, in order. */
+  private static batchDigest(payloads: Uint8Array[]): string {
+    return sha256(Buffer.concat(payloads.map((p) => Buffer.from(p))));
+  }
+
+  /** The picks a batch would sign, shown together in plain words, with the acts' fingerprints, before anything is signed. */
+  previewPicks(keys: unknown): { lines: string[]; digest: string; acts: string[] } {
+    const m = this.file();
+    const { items, payloads } = this.batch(m, keys);
+    const names = this.nameOf();
+    const n = items.length;
+    const day = (this.opts.today ?? localDay)();
+    const left = Math.max(0, m.callsPerDay - (m.usage.day === day ? m.usage.calls : 0));
+    const excerpt = (t: string | undefined) => (t === undefined ? '(its words are not readable here)' : `“${escapeControls(t.length > 140 ? `${t.slice(0, 140)}…` : t)}”`);
+    return {
+      lines: [
+        `Signed by ${names(m.owner!)}, public, delivered to ${names(m.agent!)}: ${n === 1 ? 'one pick' : `${n} picks`}, one for each act below. Each pick names that act alone, and lets ${names(m.agent!)} answer it once.`,
+        ...items.map((it, i) => `${i + 1}. ${it.private ? 'A private message' : it.kind === 'reply' ? 'A public reply' : 'A public message'} from ${names(it.from!)}, act ${short(it.act!)}: ${excerpt(it.text)}`),
+        `Then ${names(m.agent!)} answers them in this order, one call to Claude each, in kind (a private message privately). What it says is its own.`,
+        left >= n
+          ? `The cap allows it: ${left} call${left === 1 ? '' : 's'} left today, of ${m.callsPerDay}.`
+          : `The cap allows ${left} more call${left === 1 ? '' : 's'} today, of ${m.callsPerDay}: ${left === 0 ? 'none' : `the first ${left}`} answered now; the other picks are signed all the same, and wait, answered the next day or once the cap is raised.`,
+      ],
+      digest: Machine.batchDigest(payloads),
+      acts: items.map((it) => it.act!),
+    };
+  }
+
+  /** Sign the picks shown, by their digest, one for each act; then answer each in turn, within the cap. */
+  async pickMany(keys: unknown, digest: string): Promise<Done> {
+    return this.alone(async () => {
+      const m = this.file();
+      const { items, payloads } = this.batch(m, keys);
+      if (Machine.batchDigest(payloads) !== digest) throw new Error('These are not the picks shown: look at them again. Nothing was signed.');
+      const names = this.nameOf();
+      const what = (it: Item) => `${names(it.from!)}’s ${it.private ? 'message' : 'act'} ${short(it.act!)}`;
+      const lines: Done['lines'] = [];
+      const picks: { it: Item; id: string }[] = [];
+      // The approval: one pick act for each act selected.
+      for (const [i, it] of items.entries()) {
+        try {
+          const s = await this.desk.signAndSend(m.owner!, { spec: NUDGE_SPECS.nudge, type: NUDGE_TYPES.pick, payload: payloads[i], public: true, to: [m.agent!], refs: [] });
+          this.store.record({ time: now(), draft: '', verdict: 'picked', signer: m.owner!, title: `${names(m.owner!)} picked ${what(it)}`, note: `One of ${items.length} picked together.`, act: s.id, causeAct: it.act! });
+          picks.push({ it, id: s.id });
+        } catch (e) {
+          lines.push({ text: `Not picked: ${what(it)}. The pick was not signed: ${err(e)}`, tone: 'bad' });
+        }
+      }
+      // Then each answered as a single pick is, in order; at the cap, the rest wait.
+      const answered: string[] = [];
+      const waiting: string[] = [];
+      const failed: string[] = [];
+      const acts: string[] = [];
+      let stopped = false;
+      for (const p of picks) {
+        if (!stopped) {
+          try {
+            await this.answerPick(p.id);
+          } catch (e) {
+            if (!(e instanceof Stopped)) throw e;
+            stopped = true;
+          }
+        }
+        const c = this.file().causes[p.id];
+        acts.push(p.id, ...(c?.actions ?? []));
+        if (c?.status === 'answered') {
+          answered.push(what(p.it));
+          lines.push({ text: `Answered: ${what(p.it)}, under the pick ${short(p.id)}, by ${short(c.actions[0])}. ${c.note}`, tone: 'ok' });
+        } else if (c) {
+          failed.push(what(p.it));
+          lines.push({ text: `Not answered: ${what(p.it)}, under the pick ${short(p.id)}. ${c.note}`, tone: 'bad' });
+        } else {
+          waiting.push(what(p.it));
+          lines.push({ text: `Waiting: ${what(p.it)}, under the pick ${short(p.id)}, signed; answered once the cap allows.`, tone: 'warn' });
+        }
+      }
+      const summary: Done['lines'] = [{ text: `${picks.length === 1 ? 'One pick' : `${picks.length} picks`} signed and delivered, of ${items.length} selected.`, tone: picks.length === items.length ? 'ok' : 'bad' }];
+      summary.push({ text: `Answered (${answered.length}): ${answered.join('; ') || 'none'}.`, tone: answered.length ? 'ok' : 'warn' });
+      if (waiting.length) summary.push({ text: `Waiting (${waiting.length}): ${waiting.join('; ')}. ${this.file().stopped ?? ''}`.trim(), tone: 'bad' });
+      if (failed.length) summary.push({ text: `Not answered (${failed.length}): ${failed.join('; ')}. Listed under “Not answered”, with Try again.`, tone: 'bad' });
+      return { title: `Picked ${picks.length === 1 ? 'one act' : `${picks.length} acts`}`, lines: [...summary, ...lines], acts };
     });
   }
 
@@ -648,6 +765,10 @@ export class Machine {
       stopped: m.stopped,
       key,
       notified: this.notified(m).map((it) => ({ key: it.key, act: it.act, from: it.from, fromName: it.from ? names(it.from) : null, private: it.private, kind: it.kind, standing: it.standing, text: it.text === undefined ? undefined : escapeControls(it.text) })),
+      waiting: this.waiting(m).map((w) => {
+        const it = m.agent ? this.store.received(m.agent).items.find((x) => x.act === w.picked) : undefined;
+        return { pick: w.pick, act: w.picked, fromName: it?.from ? names(it.from) : null, private: it?.private ?? false };
+      }),
       notAnswered: Object.values(m.causes)
         .filter((c) => c.status === 'not answered')
         .map((c) => ({ act: c.act, kind: c.kind, note: c.note })),

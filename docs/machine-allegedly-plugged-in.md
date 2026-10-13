@@ -100,3 +100,34 @@ Mechanics the decisions and the cMIP left open, taken under the delegation of me
 **Options.** (a) As built: such a message is not answered. (b) Answer it in public, naming the message by its ID only (its words stay sealed, though the answer may reveal them). (c) The reader keeps the one-time identity in the visitor's browser with an inbox, so it can receive an answer (the feed page's follow-up).
 
 **The session's lean:** (a) now, and (c) with the feed page.
+
+## Picks in one approval (13 October 2026)
+
+**The tests pass.** `scripts/test-all.sh` on this branch: Rust 672 passed, 1 ignored; TypeScript 374 of 374 (`clients/desk` 30). On main (`dc7cec1`), the same window: Rust 672 passed, 1 ignored; TypeScript 372 of 372 (`clients/desk` 28). The two more are the desk's two new tests; the desk's browser test gained a batch of its own. A first run on this branch timed out once loading a page in `clients/site`'s browser test (a package this step does not touch); the second run passed whole, as main did.
+
+*Decided by Nobody, allegedly, 13 October 2026, on reading the nudge cMIP draft 3 (presentation): **"document states that at most one pick per action. As long as the app allows me to batch them it's fine."** Findings log, "Machine, allegedly, plugged in: merged". The cMIP is unchanged: a pick names one act, one action answers it (items 7a, 7b and 10). Nothing in `spec/`, `clients/poster`, `clients/dub` or `core/src/agreements` was changed.*
+
+### In plain words
+
+In the **Notified** pile, each act now has a **Select** box beside its **Pick** button. Tick several and press **Pick the selected**. Nothing is signed yet: the desk shows them together, in plain words, numbered in the order they will be answered, each with its sender, whether it is private, its fingerprint and its words; it says what the cap allows today, and gives the digest of exactly what will be signed. Press **Sign these picks**: the desk signs one pick for each act, all with your key, public, and Machine, allegedly answers each in turn, exactly as it answers a single pick. Each answer names its own pick and the act that pick names, and reads "Answered by Machine, allegedly, picked by Nobody, allegedly".
+
+If the cap is reached part-way, the desk says, by name and fingerprint, which were answered and which wait. The waiting ones are listed under **Picked, waiting for the cap**; they leave the Notified pile, so they cannot be picked twice; each is answered the next day, or as soon as you raise the cap. The one-click **Pick** stays as it was.
+
+### Precisely
+
+- **`machine picks`** (`Machine.previewPicks`): the keys selected, refused if empty, repeated, or no longer in the pile; the selection in the pile's order; the lines in plain words, with fingerprints; the digest, `sha256` of the pick payloads one after another, so it binds the agent, the terms and each act picked, in order.
+- **`machine pick many`** (`Machine.pickMany`): signs only a selection whose digest is the one shown ("These are not the picks shown… Nothing was signed"). One pick act per act, each recorded in the history ("One of 3 picked together"). Then each is answered by `answerPick`, unchanged, in order. At the first stop (the cap, no key) the rest are not tried, and wait. The answer says, first: how many picks were signed of how many selected; "Answered (n): …"; "Waiting (n): …" with the reason; "Not answered (n): …" for a failure (a sender out of reach, an API error), listed under Not answered with Try again. A line for each pick follows.
+- **Waiting picks** (`Machine.waiting`): a pick signed here with nothing yet recorded for it. Its act leaves the Notified pile, for a single pick at the cap as well, and is no longer offered to a nudge, so nothing is picked or answered twice while it waits. The look answers it once the cap allows, as before (reading 5). Shown on the page under **Picked, waiting for the cap**.
+- **The page:** the Select boxes, **Pick the selected** (shows, signs nothing), the shown picks with **Sign these picks** and **Cancel**, and the waiting list.
+
+### Readings taken, to confirm
+
+8. **At the cap, every pick selected is still signed;** what the cap leaves is answered later. This is how a single pick at the cap already behaves, and the screen says so before you sign ("the other picks are signed all the same, and wait"). The other way, signing only as many picks as the cap allows today, would keep a pick from being public before its answer; it is one line to change if you prefer it.
+9. **The order is the Notified pile's** (newest found first), shown numbered before signing.
+10. **No limit on how many are selected** beyond the daily cap of calls.
+11. **A pick that fails to be signed** (the relays away) does not stop the others; it is said as "Not picked", and its act stays in the pile.
+
+### Tests
+
+- `clients/desk/test/machine.test.ts`, two new: **three notified acts picked in one approval** (two public, one private): shown together first with each fingerprint, nothing signed by showing, a wrong digest and a repeated act refused with nothing signed; then three pick acts signed (public, addressed to Machine, allegedly, each naming one act), three calls, three answers, each naming its own pick and the act that pick names, each read "within, by pick", the private one answered privately; nothing answered twice on the next look. **The cap stopping a batch part-way:** the preview says the cap allows one; one call; "Answered (1)" names the first, "Waiting (2)" names the other two with the cap's reason; both listed as waiting and not pickable again; the cap raised, the next look answers both, each under its own pick.
+- `clients/desk/test/machine-browser.test.ts`, extended: three acts selected by clicks, shown together (nothing signed or called), signed in one approval, "Picked 3 acts" and "Answered (3)" on the page, the pile empty, the key never on the page, no console error.
