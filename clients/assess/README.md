@@ -76,15 +76,16 @@ Every fact is the core library's: the terms are read from their exact bytes by `
 | `src/gather.ts` | `gather(id, hints)`: fetches the terms, their earlier versions, every act their parties published (signatures, later versions) and, for a deal, the split service named by the payees' grants (`readGrant`); hands them to the core's verifier and asks it. "As far as the relays asked show." |
 | `src/cli.ts` | The command. Words signed by others are fenced as data, as the connector does. |
 
-The flags and what each rests on (Agreements draft 11's numbers; the code and findings use the older ones, given as "was"):
+The flags and what each rests on (Agreements draft 12's numbers, the same as draft 11's; the code and findings use the older ones, given as "was"):
 
 | Flag | When | Rests on |
 | --- | --- | --- |
 | `no-exit` | In a deal of two or more parties, a party the abandonment clause cannot remove: no clause, a clause without outcome 0, or the party is the authority itself | Rule 47 (was 45b), stated cost: one silent party blocks every change; rule 89 |
-| `uncapped-fee` | A split plan without key 6; or a stake holder whom the power over field 28 does not need | Rule 25 (was 24a), Money rule 21; rule 28 (was 27) |
+| `uncapped-fee` | A split plan without key 6 (F271: the plan may state one; none, no cap); or a stake holder whom neither the power over field 28 nor rule 48 needs, a member outside that power (a deal's non-party holder and a collective's holder who is no member sign a version adding a fee, F270) | Rule 25 (was 24a), Money rule 21; rule 28 (was 27), rule 48 |
 | `judge-is-party` | A party among field 13, field 27, the keepers' operators, a named absence authority, or a later link of field 21 | Rule 35 (was 34a); Q20 binds specifications only; rule 85 |
 | `no-fork-judge` | A deal of two or more parties without field 27 | Rule 47, field 27, and its stated cost |
-| `dilutable-stake` | Abandonment outcome 1 or 2; a release rule short of every holder; a holder whom the power over field 8 does not need | Rule 48 (was 46), rule 89; rule 55, field 24; rules 45, 48, 62 to 65 |
+| `dilutable-stake` | Abandonment outcome 1 or 2, for each holder who can be declared absent and names no stake successor (F279); a release rule short of every holder; a holder whom neither the power over field 8 nor rule 48 needs (F270, F274: the core's `paySigners`) | Rule 89 (was 53), rule 48; rule 55, field 24; rules 45, 48, 62 to 65 |
+| (refused terms) | A plan putting a role, a named receiver or a metric share in the rest: Agreements refuse the terms, and the tool says so before signing, in the core's words (F280) | Rule 22, F280 |
 | `absence-on-word` | An abandonment clause with no absence-proof cMIP | Rule 87 (was 51), stated cost; rule 85, client conformance |
 | `payer-side-split` | Stakes and no split service | Rule 16 (was 18), stated cost; rule 9, stated cost |
 | `split-service-window` | Stakes and a split service | Rule 10 (was 14), stated cost; rule 32 |

@@ -8,6 +8,12 @@
 // source leaves a term unsaid, the terms leave it out, and the tool says
 // what that leaves: a case study saying nothing of an abandonment clause
 // gets none, and is flagged for it.
+//
+// Agreements draft 12 (F280): a share paying anyone but a stake is taken off
+// the top, as overhead, in millionths of the payment (as the split cMIP draft
+// 1 reads key 4). Five plans that put a role or a named receiver in the rest
+// are written so; the case studies they come from (02's song, 08, 12, 17, 21)
+// are listed in docs/f270-build.md for a later pass.
 
 import { encode, id, type Terms } from './terms.ts';
 import type { FlagCode } from '../src/assess.ts';
@@ -109,7 +115,7 @@ const freeze: TestDeal[] = [
       text: 'Our song. Half each. A referrer who led to a sale is paid five percent.',
       cmips: { 6: P.pay, 8: P.split },
       stakes: [[named('the song'), [[P.ana, 500_000], [P.ben, 500_000]]]],
-      plan: { shares: [{ stake: 0, part: 95 }, { role: 'referral', part: 5 }], cmip: P.split, max: 10_000 },
+      plan: { shares: [{ stake: 0, part: 1 }, { role: 'referral', part: 50_000 }], cmip: P.split, top: [1], max: 10_000 },
       payeeGrants: [named('grant: Ana to the song service'), named('grant: Ben to the song service')],
     },
     flags: ['no-exit', 'no-fork-judge', 'split-service-window'],
@@ -159,7 +165,10 @@ const freeze: TestDeal[] = [
       stakes: [[named('the released work'), [[P.ana, 500_000], [P.ben, 400_000], [P.cy, 100_000]]]],
       releaseRule: { named: [P.ana, P.ben] },
     },
-    flags: ['no-exit', 'no-fork-judge', 'dilutable-stake', 'uncapped-fee', 'payer-side-split'],
+    // No uncapped fee: Cy, who is no party, signs a version adding a fee
+    // (Agreements draft 12, rule 48, F270), which the core now refuses
+    // without Cy.
+    flags: ['no-exit', 'no-fork-judge', 'dilutable-stake', 'payer-side-split'],
   }),
   deal({
     name: 'Two musicians, half each',
@@ -218,7 +227,7 @@ const studies: TestDeal[] = [
       text: 'Our song: 40% to each writer, 20% to the drummer.',
       cmips: { 8: P.split },
       stakes: [[named('the band’s song'), [[lea, 400_000], [max, 400_000], [tom, 200_000]]]],
-      plan: { shares: [{ stake: 0, part: 90 }, { role: 'referral', part: 5 }, { receiver: named('the preset maker'), part: 5 }], cmip: P.split, max: 10_000 },
+      plan: { shares: [{ stake: 0, part: 1 }, { role: 'referral', part: 50_000 }, { receiver: named('the preset maker'), part: 50_000 }], cmip: P.split, top: [1, 2], max: 10_000 },
       fees: [[P.module, 1]],
       payeeGrants: [named('grant: writer 1'), named('grant: writer 2'), named('grant: drummer')],
       backups: [[named('backup: writer 1'), named('backup: writer 2'), named('backup: drummer')]],
@@ -265,7 +274,7 @@ const studies: TestDeal[] = [
       time: P.clock,
       arbitrators: [P.arb],
       chain: [[{ identity: P.arb }, [[jury, 14], [platform, 14]]]],
-      plan: { shares: [{ receiver: worker, part: 90 }, { receiver: platform, part: 10 }], cmip: P.split, max: 10_000 },
+      plan: { shares: [{ receiver: worker, part: 900_000 }, { receiver: platform, part: 100_000 }], cmip: P.split, top: [0, 1], max: 10_000 },
       payeeGrants: [named('grant: the handyman'), named('grant: the client'), named('grant: the platform')],
     },
     flags: ['no-exit', 'no-fork-judge', 'judge-is-party'],
@@ -278,7 +287,7 @@ const studies: TestDeal[] = [
       text: 'Dario may stream the club’s matches. The club takes 20% of whatever he earns.',
       cmips: { 8: P.split },
       stakes: [[named("Dario's stream"), [[dario, 800_000], [club, 200_000]]]],
-      plan: { shares: [{ stake: 0, part: 95 }, { role: 'relay', part: 5 }], cmip: P.split, max: 10_000 },
+      plan: { shares: [{ stake: 0, part: 1 }, { role: 'relay', part: 50_000 }], cmip: P.split, top: [1], max: 10_000 },
       payeeGrants: [named('grant: the club'), named('grant: Dario')],
     },
     flags: ['no-exit', 'no-fork-judge', 'split-service-window'],
@@ -298,7 +307,11 @@ const studies: TestDeal[] = [
       areas: [{ id: 1, name: 'Releases', holders: [priya, m2, m3, m4], threshold: 2, layers: [4] }],
       stakes: [[null, [[priya, 300_000], [m2, 200_000], [m3, 200_000], [m4, 200_000], [past1, 50_000], [past2, 50_000]]]],
     },
-    flags: ['dilutable-stake', 'uncapped-fee', 'absence-on-word', 'payer-side-split'],
+    // The past contributors are no members: a version paying them less
+    // needs their signature (F270, read for every holder who is no member:
+    // reading, to confirm, docs/f270-build.md Q2), so neither the plan nor
+    // the fees are flagged for them.
+    flags: ['absence-on-word', 'payer-side-split'],
   }),
   deal({
     name: 'The award',
@@ -309,7 +322,7 @@ const studies: TestDeal[] = [
       cmips: { 8: P.split, 9: P.cond },
       time: P.clock,
       keepers: { operators: [P.keeperC], rule: { all: true } },
-      plan: { shares: [{ receiver: noor, part: 85 }, { receiver: university, part: 15 }], cmip: P.split },
+      plan: { shares: [{ receiver: noor, part: 850_000 }, { receiver: university, part: 150_000 }], cmip: P.split, top: [0, 1] },
       payeeGrants: [named('grant: the university'), named('grant: Noor'), named('grant: the foundation')],
     },
     flags: ['no-exit', 'no-fork-judge', 'uncapped-fee'],

@@ -1456,12 +1456,14 @@ impl Terms {
     /// Step 12b's checks that need no other act: refund terms are a point
     /// on the agreement's time reference (rule 33; F219), so terms carrying
     /// field 17 name one (field 6, or the time reference task's cMIP); every
-    /// stake share of the plan names a stake of field 7.
+    /// stake share of the plan names a stake of field 7; and the plan pays
+    /// non-owners off the top only (Agreements draft 12, F280).
     fn check_open_formats(&self) -> R<()> {
         if self.refund.is_some() && self.time.is_none() && self.cmip(TIME_REFERENCE_TASK).is_none() {
             return Err(AgreementsError::Check("refund terms are a point on the agreement's time reference: terms carrying field 17 name one (rule 33; F219)"));
         }
         if let Some(p) = &self.plan {
+            p.check_overhead()?;
             let n = self.stakes.as_ref().map_or(0, |s| s.len()) as u64;
             for s in &p.shares {
                 if let super::open_formats::ShareRule::Stake { stake, .. } = s {

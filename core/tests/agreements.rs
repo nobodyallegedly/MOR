@@ -912,6 +912,8 @@ fn f12b_the_split_plan_round_trips_roles_by_name_unfilled_to_the_stakes() {
         agreements::ShareRule::Role { role: "relay".into(), part: 50_000 },
         agreements::ShareRule::Receiver { receiver: h(81), part: 70_000 },
     ]));
+    // F280: the role and the named receiver are overhead, off the top.
+    t.plan.as_mut().unwrap().top = vec![1, 2];
     assert_eq!(roundtrip(&t), t);
     check(&t).unwrap();
     // Absent field 3 reads as [0], to the stakes (F218).
@@ -996,4 +998,42 @@ fn f219_refund_terms_are_a_point_on_the_time_reference() {
         }
     }
     assert!(Terms::decode(&m).is_err());
+}
+
+/// Agreements draft 12 (F280, decided by Nobody, allegedly: "Shared
+/// ownership means shared fruits"): a share paying anyone but a stake (a
+/// named receiver, a role, a metric share) is paid off the top only, as
+/// overhead; what is left goes to the stakes alone. A plan putting a
+/// non-owner in the rest is refused by the terms' check (it still decodes,
+/// so a client can explain the refusal);
+/// the same share off the top is accepted. Freeze suite v24, the split
+/// plan's line.
+#[test]
+fn f280_a_non_owner_is_paid_off_the_top_only() {
+    let metric = agreements::Metric { module: h(85), measurer: h(86), params: None };
+    let cases: Vec<(&str, agreements::ShareRule)> = vec![
+        ("a named receiver", agreements::ShareRule::Receiver { receiver: h(81), part: 100_000 }),
+        ("a role", agreements::ShareRule::Role { role: "relay".into(), part: 100_000 }),
+        ("a metric share", agreements::ShareRule::Metric { metric: 0, part: 100_000 }),
+    ];
+    for (name, share) in cases {
+        let mut t = label_with_stake();
+        let mut plan = plan_with(vec![agreements::ShareRule::Stake { stake: 0, part: 900_000 }, share]);
+        plan.metrics = vec![metric.clone()];
+        t.plan = Some(plan);
+        // Read, so a client can explain it; refused by the check.
+        assert_eq!(roundtrip(&t), t, "{name} in the rest is still read");
+        assert!(matches!(check(&t), Err(AgreementsError::Check(w)) if w.contains("F280")), "{name} in the rest is refused");
+        t.plan.as_mut().unwrap().top = vec![1];
+        assert_eq!(roundtrip(&t), t, "{name} off the top");
+        check(&t).unwrap();
+    }
+    // Stakes may be weighted against one another in the rest, or one taken
+    // off the top: weights between stakes are a business choice (F280).
+    let mut t = label_with_stake();
+    t.stakes.as_mut().unwrap().push(Stake { object: Who::Id(h(41)), holders: vec![(Who::Id(h(1)), 1_000_000)] });
+    t.plan = Some(plan_with(vec![agreements::ShareRule::Stake { stake: 0, part: 3 }, agreements::ShareRule::Stake { stake: 1, part: 1 }]));
+    check(&t).unwrap();
+    t.plan.as_mut().unwrap().top = vec![1];
+    check(&t).unwrap();
 }
