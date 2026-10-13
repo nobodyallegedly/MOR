@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report a bug or an attack · dubsar.org</title>
+<link rel="stylesheet" href="site.css">
+<!-- The browser-tab icon: the KI sign cut in clay, as a JPEG (website cMIP draft 3, rule 16a; drawn from
+     docs/marks/ki-icon.svg by clients/site/scripts/marks.ts). -->
+<link rel="icon" href="icon.jpg">
+</head>
+<body>
+<main>
+<p class="back"><a href="./">dubsar.org</a></p>
+<h1>Report a bug or an attack</h1>
+<p class="line">Bugs and attacks are reported on MOR, to a public reporting identity. Each report is a signed act, kept and answered in the open.</p>
+
+<!-- F287 (Nobody, allegedly, 13 October 2026: "Ideally A"). REPORTS-IDENTITY is a placeholder: replace it, in the box
+     and in the feed below, with the reporting identity's hash (64 hex digits) once it is made, at step 17, and remove
+     the line under this comment. Until then it names no identity: the display client shows the box and the feed as
+     naming none, and nothing can be sent from this page. -->
+<p class="placeholder" id="reports-placeholder">Placeholder: the reporting identity is made at step 17; until then nothing can be sent from this page. GitHub issues, below, are open now.</p>
+
+<h2>Public or private</h2>
+<p class="line"><strong>Public</strong> is for almost every report: a report is meant to be seen. It is left unsealed in the reporting identity’s inbox, anyone can read it, it is copied to GitHub as an issue with its words exactly as you wrote them, and the answer is given in the open. The box starts on Private: press <strong>Public</strong> for a report anyone may see.</p>
+<p class="line"><strong>Private</strong> is for an attack that is not yet safe to show: one that could hurt someone if others learned of it before it is fixed. It is sealed in your browser so that only the reporting identity can open it. It is never shown here nor copied to GitHub.</p>
+
+<!-- The box (website cMIP draft 8, rule 13b), to the reporting identity only. The gateway's display client lays its
+     own box here; nothing in this page runs. -->
+<h2>Write a report</h2>
+<mor-write>
+  <mor-author identity="REPORTS-IDENTITY">the reporting identity</mor-author>
+</mor-write>
+
+<h2>What a good report contains</h2>
+<ul class="items" id="good-report">
+<li>What you did, step by step, so that someone else can do it again.</li>
+<li>What you expected, and what happened instead, in the words shown on the screen if there were any.</li>
+<li>Where: the page’s address, or the client and its version, and your browser or computer.</li>
+<li>The acts involved, by their IDs (64 characters), if there are any.</li>
+<li>For an attack: what it lets someone do, to whom, and what they need to do it.</li>
+<li>How to reach you, if you want more than the public answer. Your report is signed by an identity made for it alone, which no answer can reach.</li>
+<li>Never a key, nor the words of a chain key or a carry: no one needs them to look into a report.</li>
+</ul>
+
+<h2>Not on MOR yet?</h2>
+<p class="line" id="github-mirror">GitHub issues are open as a mirror: <a href="https://github.com/nobodyallegedly/MOR/issues">https://github.com/nobodyallegedly/MOR/issues</a>. Every public report made here is copied there, and every answer to it. An issue opened there is answered on MOR by the reporting identity, and the answer is copied back to the issue.</p>
+
+<!-- The reporting identity's answers, each with the public report it answers beside it (website cMIP draft 8, rule
+     13a, "Visitors' notes"). REPORTS-IDENTITY as above. -->
+<h2>Answered</h2>
+<mor-feed>
+  <mor-author identity="REPORTS-IDENTITY">the reporting identity</mor-author>
+</mor-feed>
+</main>
+<footer>
+<p><a href="mailto:nobodyallegedly@dubsar.org">nobodyallegedly@dubsar.org</a></p>
+<p><a href="https://reader.dubsar.org/">A sealed message, through the reader</a></p>
+<!-- The clay tablet, "scribe of Enki" (dub-sar {d}en-ki-ka), the very last thing on the page. A JPEG cannot be
+     see-through, so it is drawn twice, on the page's light and dark colours, and the stylesheet shows one. -->
+<img class="tablet light" src="tablet-light.jpg" alt="A clay tablet inscribed in cuneiform: dub-sar den-ki-ka, scribe of Enki">
+<img class="tablet dark" src="tablet-dark.jpg" alt="A clay tablet inscribed in cuneiform: dub-sar den-ki-ka, scribe of Enki">
+</footer>
+</body>
+</html>

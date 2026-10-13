@@ -1,0 +1,27 @@
+{
+  "name": "mor-reports",
+  "version": "0.1.0",
+  "description": "Bug and attack reports on MOR, mirrored on GitHub (F287): reads the reporting identity's public reports and its answers, verifies each, and opens or updates a GitHub issue for each; lists the GitHub issues not yet answered on MOR. Never signs. Test identities only.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-reports": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "mirror": "node --import tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "typescript": "^5"
+  }
+}
