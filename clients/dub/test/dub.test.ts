@@ -1,4 +1,4 @@
-// MOR Post against real homes and a relay on local ports (the relay program
+// Dub against real homes and a relay on local ports (the relay program
 // of step 4), its program on another, and a client that signs its requests
 // exactly as the page does (the desk's `src/page/api.ts`, run here in Node).
 // Nothing is mocked. Test identities only, generated here.
@@ -18,7 +18,7 @@ import { Client, newKey } from '../../desk/src/page/api.ts';
 import { read as readJpeg } from '../../../modules/jpeg/src/jpeg.ts';
 import { toWords } from '../../../modules/carry/src/carry.ts';
 import { DOMAIN, serve, type Running } from '../src/server.ts';
-import { TEST_ONLY } from '../src/poster.ts';
+import { TEST_ONLY } from '../src/dub.ts';
 import { TEST_ONLY as SHOWN_TEST_ONLY } from '../src/page/view.ts';
 import type { State, Shown } from '../src/page/view.ts';
 
@@ -38,9 +38,9 @@ after(async () => {
   for (const r of [...(homes ?? []), relay]) await r?.stop();
 });
 
-/** A fresh MOR Post, in its own folder, and a paired client. */
-async function poster(): Promise<{ app: Running; c: Client }> {
-  const app = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-poster-')), port: 0 });
+/** A fresh Dub, in its own folder, and a paired client. */
+async function dub(): Promise<{ app: Running; c: Client }> {
+  const app = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-')), port: 0 });
   apps.push(app);
   const c = await Client.open(await newKey(), app.base, DOMAIN);
   await c.ask('pair', { code: app.access.newCode(), label: 'test' });
@@ -63,7 +63,7 @@ test('the first screen says it, word for word', () => {
 });
 
 test('a new identity: the words shown once, three typed back before anything is published; then posts, a picture stripped, a withdrawal', async () => {
-  const { app, c } = await poster();
+  const { app, c } = await dub();
   assert.equal((await c.ask<State>('state')).stage, 'doors');
   // Settings live in the app's folder, owner-only.
   assert.equal(statSync(app.store.dir).mode & 0o777, 0o700);
@@ -97,13 +97,13 @@ test('a new identity: the words shown once, three typed back before anything is 
   assert.equal(statSync(app.store.path('identity.json')).mode & 0o777, 0o600);
 
   // A post without a picture: shown as published, read back verified.
-  const p1 = await c.ask<{ post: Shown }>('post', { text: 'Hello from MOR Post.' });
+  const p1 = await c.ask<{ post: Shown }>('post', { text: 'Hello from Dub.' });
   assert.match(p1.post.html, /verified/);
-  assert.match(p1.post.html, /Hello from MOR Post\./);
+  assert.match(p1.post.html, /Hello from Dub\./);
   const r1 = await reader(p1.post.id);
   assert.equal(r1.standing, 'valid');
   assert.equal(r1.signer, id);
-  assert.equal(r1.text, 'Hello from MOR Post.');
+  assert.equal(r1.text, 'Hello from Dub.');
 
   // With a phone photo: stripped (the JPEG Module), read back verified.
   assert.ok(readJpeg(PHONE).carries.includes('location'));
@@ -143,7 +143,7 @@ test('a new identity: the words shown once, three typed back before anything is 
   await refused(c.ask('withdraw', { publication: theirs.picture!.id }), /another identity/);
 
   // Starting again before confirming forgets an identity never published.
-  const { c: c2 } = await poster();
+  const { c: c2 } = await dub();
   await c2.ask('begin', { homes: [homes[0].base], relays: [] });
   await c2.ask('abandon');
   assert.equal((await c2.ask<State>('state')).stage, 'doors');
@@ -157,7 +157,7 @@ test('an identity made by the genesis client, brought in by its words; a wrong s
   const gp = await barebonePost(g, { text: 'From the genesis client.', relays: [relay.base] });
   const words = toWords(unhex(g.f.signingSecret));
 
-  const { app, c } = await poster();
+  const { app, c } = await dub();
   // Wrong sets: another identity's words; a word changed; a word off the list; too few.
   const stranger = TestIdentity.create({ homes: [homes[0].home] });
   await refused(
@@ -183,40 +183,40 @@ test('an identity made by the genesis client, brought in by its words; a wrong s
   assert.equal(held.safety.seeds, '', 'no chain key here: it never travels');
 
   // Two apps, one identity: each keeps its own line, both valid.
-  const bp = await c.ask<{ post: Shown }>('post', { text: 'From MOR Post.' });
+  const bp = await c.ask<{ post: Shown }>('post', { text: 'From Dub.' });
   const gp2 = await barebonePost(g, { text: 'From the genesis client again.', relays: [relay.base] });
-  const bp2 = await c.ask<{ post: Shown }>('post', { text: 'From MOR Post again.' });
+  const bp2 = await c.ask<{ post: Shown }>('post', { text: 'From Dub again.' });
   for (const id of [gp.id, bp.post.id, gp2.id, bp2.post.id]) assert.equal((await reader(id)).standing, 'valid', id);
   // An act's position in its line: a new line starts again at 1.
   const position = async (id: string) => (describeAct((await relayAt(relay.base).getAct(id))!) as { position?: number }).position;
   assert.equal(await position(gp.id), 2, 'the genesis client’s line: its routes, then its post');
-  assert.equal(await position(bp.post.id), 1, 'MOR Post starts its own line');
+  assert.equal(await position(bp.post.id), 1, 'Dub starts its own line');
   assert.equal(await position(bp2.post.id), 2);
   assert.equal(await position(gp2.id), 3, 'the genesis client’s line goes on');
   const listed = (await c.ask<Shown[]>('posts')).map((p) => p.id);
   for (const id of [gp.id, bp.post.id, gp2.id, bp2.post.id]) assert.ok(listed.includes(id));
   assert.equal(listed[0], bp2.post.id);
 
-  // A second MOR Post, brought by the same words: a third line, also valid.
-  const { c: c3 } = await poster();
+  // A second Dub, brought by the same words: a third line, also valid.
+  const { c: c3 } = await dub();
   await c3.ask('bring', { id: g.id, words: words.join(' '), address: homes[0].base });
-  const cp = await c3.ask<{ post: Shown }>('post', { text: 'From a second MOR Post.' });
+  const cp = await c3.ask<{ post: Shown }>('post', { text: 'From a second Dub.' });
   assert.equal((await reader(cp.post.id)).standing, 'valid');
   assert.equal(await position(cp.post.id), 1);
 
   // Identity rule 35 (was 17): the genesis client rotates. It reads every
   // line from the homes and the relays the routes name first, and keeps
-  // them all: its own, and both MOR Posts'. (Before this build it kept only
-  // its own line, and MOR Post's posts became void.) MOR Post then refuses
+  // them all: its own, and both Dubs'. (Before this build it kept only
+  // its own line, and Dub's posts became void.) Dub then refuses
   // to sign with the spent key.
   const shown = await c.ask<State>('state');
   const lines = await g.lines();
   assert.equal(lines.length, 3, 'three apps, three lines');
-  const posterLine = lines.find((l) => l.tip === bp2.post.id)!;
+  const dubLine = lines.find((l) => l.tip === bp2.post.id)!;
   assert.deepEqual(
-    { act: posterLine.card!.act, position: posterLine.card!.position, summary: posterLine.card!.summary },
+    { act: dubLine.card!.act, position: dubLine.card!.position, summary: dubLine.card!.summary },
     { act: shown.identity!.line.latest, position: shown.identity!.line.acts, summary: shown.identity!.line.summary },
-    'the line the rotating client reads is the one MOR Post shows on its card (F152)',
+    'the line the rotating client reads is the one Dub shows on its card (F152)',
   );
   await g.prepareRotation();
   await g.submitRotation();
@@ -226,7 +226,7 @@ test('an identity made by the genesis client, brought in by its words; a wrong s
 });
 
 test('requests from an unpaired browser are refused', async () => {
-  const { app } = await poster();
+  const { app } = await dub();
   const stranger = await Client.open(await newKey(), app.base, DOMAIN);
   await refused(stranger.ask('state'), /not paired/);
   await refused(stranger.ask('begin', { homes: [homes[0].base] }), /not paired/);
@@ -244,7 +244,7 @@ test('requests from an unpaired browser are refused', async () => {
 });
 
 test('nothing listens beyond 127.0.0.1', async () => {
-  const { app } = await poster();
+  const { app } = await dub();
   const a = app.server.address();
   assert.ok(a && typeof a === 'object');
   assert.equal(a.address, '127.0.0.1');

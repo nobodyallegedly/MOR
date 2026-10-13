@@ -3,7 +3,7 @@
 // the owner has started, on any device, and warn before a rotation that
 // omits one"; client conformance). Shared by every client that rotates
 // (the genesis client, the collective client) and every client that shows
-// its own line (MOR Post, the desk, the genesis client; F152).
+// its own line (Dub, the desk, the genesis client; F152).
 //
 // In plain words: an identity's everyday acts form lines. Each act names
 // the act before it in its line (`prev`); each app or device keeps its own

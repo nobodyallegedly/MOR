@@ -1,4 +1,4 @@
-// MOR Post in a real browser (headless Chromium, a fresh profile), as a
+// Dub in a real browser (headless Chromium, a fresh profile), as a
 // person uses it: open the app's link, then only clicks and typing. Real
 // homes and a relay. `MOR_SCREENSHOTS=DIR` keeps a picture of each step.
 
@@ -12,6 +12,9 @@ import { chromium, type Browser, type Page } from 'playwright-core';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { readPost, type ShownPicture } from '../../barebone/src/post.ts';
 import { serve, type Running } from '../src/server.ts';
+import { TestIdentity } from '../../genesis/src/identity.ts';
+import { unhex } from '../../genesis/src/core.ts';
+import { groupId, toWords } from '../../../modules/carry/src/carry.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const PHONE = fileURLToPath(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
@@ -31,7 +34,7 @@ const problems: string[] = [];
 before(async () => {
   homes = [await start('home'), await start('home')];
   relay = await start('relay');
-  app = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-poster-browser-')), port: 0 });
+  app = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-browser-')), port: 0 });
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
@@ -54,7 +57,7 @@ test('a person, without a terminal: a new identity, its words written and three 
 
   // The app's link, as the launcher opens it.
   await page.goto(`${app.base}/#pair=${app.access.newCode()}`);
-  await page.getByRole('heading', { name: 'MOR Post' }).waitFor();
+  await page.getByRole('heading', { name: 'Dub' }).waitFor();
   assert.match(await page.locator('#test-only').innerText(), /^Test identities only, until MOR is frozen\./);
   await page.getByRole('heading', { name: 'Make a new identity' }).waitFor();
   await page.getByRole('heading', { name: 'Bring an identity you have' }).waitFor();
@@ -121,4 +124,29 @@ test('a person, without a terminal: a new identity, its words written and three 
 
   assert.deepEqual(problems, []);
   await context.close();
+});
+
+test('the second door by clicks: an identity made elsewhere, brought in by its ID and words (the form never submitted before 13 October 2026)', async () => {
+  const other = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-browser-')), port: 0 });
+  try {
+    const made = TestIdentity.create({ homes: [homes[0].home] });
+    await made.publishGenesis();
+    await made.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }]);
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    page.on('pageerror', (e) => problems.push(e.message));
+    await page.goto(`${other.base}/#pair=${other.access.newCode()}`);
+    const bring = page.locator('form#bring');
+    await bring.waitFor({ timeout: 60_000 });
+    await bring.locator('input[name=id]').fill(groupId(made.id));
+    await bring.locator('textarea[name=words]').fill(toWords(unhex(made.f.signingSecret)).join(' '));
+    await bring.locator('input[name=address]').fill(homes[0].base);
+    await bring.getByRole('button', { name: 'Bring it' }).click();
+    await done(page, 'The identity is here');
+    assert.match(await page.locator('#identity').innerText(), /Elsewhere, and brought here by its words/);
+    assert.deepEqual(problems, []);
+    await context.close();
+  } finally {
+    await other.close();
+  }
 });

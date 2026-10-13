@@ -1,4 +1,4 @@
-// `mor-poster open`, as the app's double-click runs it: it starts the
+// `mor-dub open`, as the app's double-click runs it: it starts the
 // program, detached, on 127.0.0.1, and prints the one-time pairing link it
 // opens in the browser; opened again, the same program stays; `stop` stops it.
 
@@ -15,7 +15,7 @@ const cli = (...args: string[]) =>
   execFileSync(process.execPath, ['--import', 'tsx', 'src/cli.ts', ...args], { cwd: pkg, env: { ...process.env, MOR_NO_BROWSER: '1' }, encoding: 'utf8' });
 
 test('open starts the program and prints a pairing link; open again keeps it; stop stops it', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'mor-poster-launch-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mor-dub-launch-'));
   const out = cli('open', '--dir', dir, '--port', '0');
   const m = /http:\/\/127\.0\.0\.1:(\d+)\/#pair=[0-9A-Z-]{23}/.exec(out);
   assert.ok(m, out);

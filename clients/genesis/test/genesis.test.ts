@@ -399,7 +399,7 @@ async function withLines(): Promise<TestIdentity> {
   return t;
 }
 
-/** Another app holding the same identity's signing key, keeping its own line (as MOR Post does). It holds no chain key. */
+/** Another app holding the same identity's signing key, keeping its own line (as Dub does). It holds no chain key. */
 function otherApp(t: TestIdentity): TestIdentity {
   const f = structuredClone(t.f);
   return new TestIdentity({ ...f, sequence: [], routes: null, encryption: [], pending: null, safety: { scheme: 0, seeds: '' } });
