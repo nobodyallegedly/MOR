@@ -25,6 +25,8 @@ export interface Prepared {
   listed: { entry: FileEntry; poster: Uint8Array | null; label: string }[];
   /** The feeds the page shows (draft 6, rule 13a), in order: the identities each names. Their boxes carry `data-feed`, the index here. */
   feeds: Author[][];
+  /** For each feed, in the same order, the clock it names (draft 8, `mor-clock`), or null. */
+  clocks: (Author | null)[];
   /** The writing boxes the page shows (draft 7, rule 13b), in order: the identities each lets a visitor write to. Their places carry `data-write`, the index here. */
   writes: Author[][];
   /** The checked bytes of the picture the page names as its icon, for the browser tab (rule 16a). */
@@ -57,7 +59,7 @@ export async function preparePage(
 ): Promise<Prepared> {
   const doc = new DOMParser().parseFromString(new TextDecoder('utf-8', { fatal: true }).decode(bytes), 'text/html');
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out: Prepared = { html: '', title: null, acts: [], films: [], listed: [], feeds: [], writes: [], icon: null, problems: [], dropped: 0 };
+  const out: Prepared = { html: '', title: null, acts: [], films: [], listed: [], feeds: [], clocks: [], writes: [], icon: null, problems: [], dropped: 0 };
   const drop = (el: Element) => {
     el.remove();
     out.dropped++;
@@ -285,8 +287,24 @@ export async function preparePage(
     }
     el.replaceWith(place);
   }
+  // A feed's clock (draft 8): the first `mor-clock` naming an identity hash,
+  // its text the page's name for it; any other is dropped.
+  const clockOf = (el: Element): Author | null => {
+    let clock: Author | null = null;
+    for (const c of [...el.querySelectorAll('mor-clock')]) {
+      const identity = (c.getAttribute('identity') ?? '').trim();
+      if (clock || !ACT.test(identity)) {
+        out.dropped++;
+        continue;
+      }
+      const name = (c.textContent ?? '').replace(/\s+/g, ' ').trim();
+      clock = { identity, name: name || null };
+    }
+    return clock;
+  };
   for (const el of [...doc.querySelectorAll('mor-feed')]) {
     const authors = authorsOf(el);
+    const clock = clockOf(el);
     const box = doc.createElement('div');
     box.className = ['mor-feed', el.getAttribute('class') ?? ''].join(' ').trim();
     if (el.id) box.id = el.id;
@@ -294,6 +312,7 @@ export async function preparePage(
       box.setAttribute('data-feed', String(out.feeds.length));
       box.innerHTML = `<div class="mor-act-note">Fetching and checking the public posts of ${authors.length === 1 ? 'one identity' : `${authors.length} identities`}…</div>`;
       out.feeds.push(authors);
+      out.clocks.push(clock);
     } else {
       box.innerHTML = `<div class="mor-act-note">A feed naming no identity: nothing to show.</div>`;
     }

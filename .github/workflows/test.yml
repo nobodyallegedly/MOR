@@ -85,6 +85,9 @@ jobs:
       - name: modules/carry
         if: success() || failure()
         run: cd modules/carry && npm ci --no-audit --no-fund && npm test
+      - name: modules/timestamp
+        if: success() || failure()
+        run: cd modules/timestamp && npm ci --no-audit --no-fund && npm test
       - name: Reproducible build of the display client
         if: success() || failure()
         shell: bash

@@ -111,7 +111,7 @@ async function showActs(frame: HTMLIFrameElement, settings: SiteSettings): Promi
  * gateway's relays, each judged on its own, in a frame of its own apart from
  * the page's styles. Feeds are filled one after another, after the acts.
  */
-async function showFeeds(frame: HTMLIFrameElement, settings: SiteSettings, feeds: Author[][]): Promise<void> {
+async function showFeeds(frame: HTMLIFrameElement, settings: SiteSettings, feeds: Author[][], clocks: (Author | null)[]): Promise<void> {
   const doc = frame.contentDocument;
   if (!doc || !feeds.length) return;
   const style = URL.createObjectURL(new Blob([FEED_STYLE], { type: 'text/css' }));
@@ -121,8 +121,10 @@ async function showFeeds(frame: HTMLIFrameElement, settings: SiteSettings, feeds
     const line = state.feeds[i];
     if (!authors || !line) continue;
     try {
-      const feed = await readFeed(authors, settings.relays);
+      const feed = await readFeed(authors, settings.relays, {}, undefined, clocks[i] ?? null);
       line.found = feed.authors;
+      line.clockFound = feed.clock;
+      line.order = feed.order;
       line.shown = feed.posts.length;
       line.verified = feed.posts.filter((p) => !p.problem).length;
       const inner = doc.createElement('iframe');
@@ -325,7 +327,7 @@ async function main(): Promise<void> {
     document.title = `${prepared.title ?? entry.path} · ${version.manifest!.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
     state.writes = prepared.writes;
-    state.feeds = prepared.feeds.map((authors) => ({ authors, found: null, shown: 0, verified: 0 }));
+    state.feeds = prepared.feeds.map((authors, i) => ({ authors, clock: prepared.clocks[i] ?? null, found: null, clockFound: null, order: null, shown: 0, verified: 0 }));
     state.phase = 'ok';
     state.words = verifiedWords(settings, 'page');
     state.brief = briefWords(settings);
@@ -341,7 +343,7 @@ async function main(): Promise<void> {
         fitFrame(frame);
         showFilms(frame, prepared.films, prepared.listed);
         showWrites(frame, settings, prepared.writes);
-        void showActs(frame, settings).then(() => showFeeds(frame, settings, prepared.feeds));
+        void showActs(frame, settings).then(() => showFeeds(frame, settings, prepared.feeds, prepared.clocks));
       },
       { once: true },
     );
