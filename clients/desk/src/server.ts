@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Access, Refusal } from '../../collective/src/access.ts';
 import { Desk } from './desk.ts';
+import { Machine, type MachineOptions } from './machine.ts';
 import { Store } from './store.ts';
 import { STYLE } from './page/view.ts';
 import { version } from './version.ts';
@@ -29,18 +30,29 @@ export interface Running {
   store: Store;
   access: Access;
   desk: Desk;
+  machine: Machine;
   close(): Promise<void>;
 }
 
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : []);
 const text = (v: unknown): string => (typeof v === 'string' ? v : '');
 
-/** Start the program on 127.0.0.1 at `port` (0: any free port), with its folder at `dir`. */
-export async function serve(opts: { dir: string; port: number; drafts?: string }): Promise<Running> {
+/** How often Machine, allegedly's answering looks for what it received, while it is on. */
+export const MACHINE_EVERY = 60_000;
+
+/**
+ * Start the program on 127.0.0.1 at `port` (0: any free port), with its
+ * folder at `dir`. `machineEvery`: how often Machine, allegedly's answering
+ * looks (milliseconds; 0, never by itself); `machine`: where its API and key
+ * are, for the tests.
+ */
+export async function serve(opts: { dir: string; port: number; drafts?: string; machineEvery?: number; machine?: MachineOptions }): Promise<Running> {
   const store = new Store(opts.dir);
   if (opts.drafts) store.saveSettings({ ...store.settings(), drafts: opts.drafts });
   const access = new Access(opts.dir, { domain: DOMAIN, label: CODE_LABEL });
   const desk = new Desk(store);
+  const machine = new Machine(desk, store, opts.machine);
+  const num = (v: unknown): number => (typeof v === 'number' ? v : Number(text(v)));
   const script = await pageScript(here('src/page/app.ts'));
   const index = readFileSync(here('static/index.html'), 'utf8');
   const built = await version();
@@ -51,7 +63,25 @@ export async function serve(opts: { dir: string; port: number; drafts?: string }
         access.pair(key, text(a.code), text(a.label));
         return {};
       case 'state':
-        return { ...desk.state(), paired: access.paired().map((p) => ({ ...p, you: p.key === key })) };
+        return { ...desk.state(), machine: machine.state(), paired: access.paired().map((p) => ({ ...p, you: p.key === key })) };
+      case 'machine terms':
+        return machine.previewTerms(text(a.agent), text(a.owner));
+      case 'machine publish':
+        return machine.publishTerms(text(a.agent), text(a.owner), text(a.digest));
+      case 'machine on':
+        machine.setOn(a.on === true);
+        return {};
+      case 'machine cap':
+        machine.setCap({ callsPerDay: num(a.callsPerDay), maxChars: num(a.maxChars) });
+        return {};
+      case 'machine look':
+        return machine.tick();
+      case 'machine pick':
+        return machine.pick(text(a.key));
+      case 'machine nudge':
+        return machine.nudge(num(a.count), text(a.context));
+      case 'machine retry':
+        return machine.retry(text(a.act));
       case 'settings': {
         const via: Record<string, string> = {};
         for (const line of list(a.via)) {
@@ -100,5 +130,21 @@ export async function serve(opts: { dir: string; port: number; drafts?: string }
   };
 
   const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api });
-  return { server: local.server, port: local.port, base: local.base, store, access, desk, close: local.close };
+  // Machine, allegedly's answering looks by itself while the program runs; a failure is kept for the desk to show, never thrown away silently.
+  const every = opts.machineEvery ?? MACHINE_EVERY;
+  const timer = every > 0 ? setInterval(() => void machine.tick().catch((e) => machine.failed(e)), every) : null;
+  timer?.unref();
+  return {
+    server: local.server,
+    port: local.port,
+    base: local.base,
+    store,
+    access,
+    desk,
+    machine,
+    async close() {
+      if (timer) clearInterval(timer);
+      await local.close();
+    },
+  };
 }

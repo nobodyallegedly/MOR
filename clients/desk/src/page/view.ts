@@ -5,7 +5,7 @@
 
 import { STYLE as BASE, e } from '../../../manage/src/view.ts';
 import { STYLE as TEXT, plainHtml } from '../../../longform/src/html.ts';
-import type { Done, DraftView, Item, Line, Sorted, State } from './api.ts';
+import type { Done, DraftView, Item, Line, MachineState, Sorted, State } from './api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 
 export { e };
@@ -72,6 +72,7 @@ export function pairing(): string {
 export function frame(): string {
   return `${top()}
 <div id="status"></div>
+<section><h2>Machine, allegedly</h2><div id="machine"></div></section>
 <section><h2>Drafts waiting for you</h2><div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button>
 <span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div><div id="drafts"></div></section>
 <section><h2>Identities, and what they received</h2><div id="identities"></div></section>
@@ -140,6 +141,9 @@ const KIND: Record<Item['kind'], string> = {
   payment: 'A payment',
   split: 'A split of money received',
   'key delivery': 'A key delivery',
+  nudge: 'A nudge',
+  pick: 'A pick',
+  terms: 'Agency terms',
   other: 'Something else',
 };
 
@@ -231,7 +235,9 @@ export function history(s: State): string {
   return `<ul class="plain">${s.history
     .map(
       (h) =>
-        `<li>${e(new Date(h.time * 1000).toLocaleString())}: <strong>${e(h.verdict)}</strong>, ${e(h.title.toLowerCase())}, for ${e(h.signerName)}${h.act ? `: act ${fp(h.act)}` : ''}${h.note ? `<div class="yours">${e(h.note)}</div>` : ''}${
+        `<li>${e(new Date(h.time * 1000).toLocaleString())}: <strong>${e(h.verdict)}</strong>, ${e(h.draft ? h.title.toLowerCase() : h.title)}, for ${e(h.signerName)}${h.act ? `: act ${fp(h.act)}` : ''}${
+          h.cause ? `<div class="small">Cause: ${e(h.cause)}${h.causeAct ? `, act ${fp(h.causeAct)}` : ''}</div>` : ''
+        }${h.text ? `<div class="plain">${plainHtml(h.text)}</div>` : ''}${h.note ? `<div class="yours">${e(h.note)}</div>` : ''}${
           h.resend ? ` <button class="quiet" data-action="resend" data-digest="${e(h.draft)}">Send again</button>` : ''
         }</li>`,
     )
@@ -242,4 +248,68 @@ export function browsers(s: State): string {
   return `<ul class="plain">${s.paired
     .map((p) => `<li>${e(p.label)}${p.you ? ' <span class="tag ok">this browser</span>' : ''} <button class="quiet" data-action="unpair" data-key="${e(p.key)}" data-you="${p.you}">Unpair</button></li>`)
     .join('')}</ul><div class="row"><button class="quiet" data-action="code">A code for another browser on this machine</button></div><div id="code"></div>`;
+}
+
+// ---------------------------------------------------------------- Machine, allegedly
+
+/** Choosing its identity and its owner, then its terms in plain words before anything is signed. */
+function machineSetup(s: State): string {
+  const options = (selected: string | null) => s.identities.map((i) => `<option value="${e(i.id)}"${i.id === selected ? ' selected' : ''}>${e(i.name)}</option>`).join('');
+  const guess = (n: RegExp) => s.identities.find((i) => n.test(i.name))?.id ?? null;
+  return `<p>Machine, allegedly answers by itself: your own messages and public acts at once; anyone else’s only once you pick them; and what it chooses when you nudge it. First its agency terms are shown, then signed with its key and published (the nudge cMIP, draft 2).</p>
+<form id="machine-terms" class="row"><label>Machine, allegedly <select name="agent">${options(guess(/machine/i))}</select></label>
+<label>Its owner, whose acts it answers and whose picks and nudges count <select name="owner">${options(guess(/nobody/i))}</select></label>
+<button type="submit">Show its terms</button></form>
+<div id="machine-shown"></div>`;
+}
+
+/** The terms, as they will be signed, with the one button that signs exactly those. */
+export function machineTermsShown(agent: string, owner: string, t: { lines: string[]; digest: string }): string {
+  return `<div class="draft"><h3>Machine, allegedly’s agency terms, to be signed</h3>${lines(t.lines.map((text) => ({ text })))}
+<p class="small">Digest of exactly what is signed: <span class="digest">${e(t.digest.match(/.{1,4}/g)!.join(' '))}</span></p>
+<div class="row"><button data-action="machine-publish" data-agent="${e(agent)}" data-owner="${e(owner)}" data-digest="${e(t.digest)}">Sign and publish these terms</button></div></div>`;
+}
+
+function notifiedItem(x: MachineState['notified'][number]): string {
+  return `<div class="item" data-notified="${e(x.key)}"><strong>${x.private ? 'A private message' : x.kind === 'reply' ? 'A public reply' : 'A public message'}</strong> <span class="small">from ${e(x.fromName ?? 'an unknown sender')}${
+    x.standing === 'valid' ? ' <span class="tag ok">verified</span>' : ` <span class="tag warn">${e(x.standing)}</span>`
+  }${x.act ? `, act ${fp(x.act)}` : ''}</span>
+${x.text !== undefined ? `<div class="plain">${plainHtml(x.text)}</div>` : ''}
+<div class="row"><button data-action="machine-pick" data-key="${e(x.key)}">Pick: Machine, allegedly answers it now</button></div></div>`;
+}
+
+export function machine(s: State): string {
+  const m = s.machine;
+  if (!m.terms || !m.agent) return machineSetup(s);
+  const switchB = (value: boolean, words: string) => `<button type="button" class="quiet" data-action="machine-on" data-on="${value}" aria-pressed="${m.on === value}">${words}</button>`;
+  const key = m.key.found
+    ? `The API key is found (${e(m.key.from === 'ANTHROPIC_API_KEY' ? 'the environment variable ANTHROPIC_API_KEY' : m.key.from)}); it is never shown here.${m.key.warning ? ` ${e(m.key.warning)}` : ''}`
+    : e(m.key.from);
+  return `<div class="card"><h3>${e(m.agentName ?? '')}</h3>
+<h4>Its terms, signed and published (act ${fp(m.terms.act)})</h4>${lines(m.terms.words.map((text) => ({ text })))}
+<div class="switch" role="group" aria-label="Answering"><span>Answering:</span> ${switchB(true, 'On')}${switchB(false, 'Off')}</div>
+<p class="small">${m.on ? `On: ${e(m.ownerName ?? '')}’s own messages and public acts to it are answered at once; others wait below until you pick them.` : 'Off: nothing is answered and no call is made.'}</p>
+<p class="small">${key}</p>
+<form id="machine-cap" class="row"><label>Calls to Claude a day <input name="callsPerDay" type="number" min="0" max="1000" value="${m.callsPerDay}"></label>
+<label>Each answer at most <input name="maxChars" type="number" min="50" max="20000" value="${m.maxChars}"> characters</label><button type="submit" class="quiet">Save the cap</button></form>
+<p class="small">Calls today: ${m.callsToday} of ${m.callsPerDay}.</p>
+${m.stopped ? note('error', `<strong>Stopped:</strong> ${e(m.stopped)}`) : ''}
+<div class="row"><button class="quiet" data-action="machine-look">Look now for what it received</button></div>
+<div class="here" id="machine-here" role="status" aria-live="polite"></div>
+<h4 class="pile">Notified: other people’s interactions with it (${m.notified.length})</h4>
+<p class="small">Nothing is drafted for these. Pick the ones that need an answer: your pick is signed and published, and Machine, allegedly answers at once, naming it. What it says is its own.</p>
+${m.notified.map(notifiedItem).join('') || '<p class="small">None.</p>'}
+<h4 class="pile">Nudge it</h4>
+<form id="machine-nudge"><p class="small">A public act of yours naming it, with a number of actions: it may then answer anyone, post, or write to you, up to that number, each naming your nudge. It chooses.</p>
+<div class="row"><label>Actions <input name="count" type="number" min="1" max="20" value="1" required></label></div>
+<label>Your words with the nudge (optional, public)</label><textarea name="context"></textarea>
+<div class="row"><button type="submit">Nudge</button></div></form>
+${
+  m.notAnswered.length
+    ? `<h4 class="pile">Not answered (${m.notAnswered.length})</h4>${m.notAnswered
+        .map((x) => `<div class="item"><strong>${e(x.kind === 'owner' ? 'Your act' : x.kind === 'pick' ? 'A pick' : 'A nudge')}</strong> ${fp(x.act)} <span class="small">${e(x.note)}</span> <button class="quiet" data-action="machine-retry" data-act="${e(x.act)}">Try again</button></div>`)
+        .join('')}`
+    : ''
+}
+</div>`;
 }
