@@ -44,6 +44,7 @@ Each records what a session built, what it found, and what it left open. They ar
 | [adversarial-test-plan-v2.md](adversarial-test-plan-v2.md), [v3](adversarial-test-plan-v3.md) | Earlier versions of the test plan. |
 | [project-lead-prompt-v3.md](project-lead-prompt-v3.md) | The brief the AI project lead works from (version 3; earlier versions kept beside it). |
 | [reviews/collections-in-the-core-2026-10-11.md](reviews/collections-in-the-core-2026-10-11.md) | A debate, written as a report: should the core track collections (bundles of works and vows)? Both sides at their strongest, each claimed guarantee tested against what the core already gives, three readings to confirm. No specification changed. |
+| [reviews/fable-step-15-envelopes.md](reviews/fable-step-15-envelopes.md) | Step 15, the machine review, Envelopes segment: what was tried, what held, what broke; eleven findings (one code fix, the rest text or instruments), the verdict vocabulary checked, three questions for Nobody, allegedly. |
 | [rename-pass.md](rename-pass.md) | The rename pass: the layers (Envelopes, Money, Agreements, Development) and the keys (chain key, signing key), wording only; what was left and why, the wire proof, and Money read against F225. |
 
 ## The paper and its reviews
