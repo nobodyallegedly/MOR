@@ -32,6 +32,11 @@ carry = []
 name = "carry_vectors"
 required-features = ["carry"]
 
+# The online side by file, for the rehearsal of step 17 (scripts/rehearse-step-17.sh).
+[[example]]
+name = "online_side"
+required-features = ["cli"]
+
 [[bin]]
 name = "mor-signer"
 path = "src/bin/mor-signer.rs"

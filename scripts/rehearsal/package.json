@@ -1,0 +1,6 @@
+{
+  "name": "mor-rehearsal",
+  "private": true,
+  "type": "module",
+  "description": "The rehearsal of roadmap step 17 on throwaway homes and relays: scripts/rehearse-step-17.sh"
+}

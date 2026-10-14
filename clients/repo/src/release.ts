@@ -20,7 +20,7 @@ import {
   unhex,
   workHash,
 } from '../../genesis/src/core.ts';
-import { lookUp, type TestIdentity } from '../../genesis/src/identity.ts';
+import { lookUp, type Reference, type TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import type { TestCollective } from './collective.ts';
 import { AGREEMENTS_SPECS, carryChain, sign } from './agreements.ts';
@@ -245,6 +245,12 @@ export interface Prepared {
   upload: Uint8Array[];
   /** The previous release's manifest, if any (to show what changed). */
   before: Manifest | null;
+  /**
+   * The publication's references: the specifications' publications this
+   * release implements, until the manifest cMIP's next draft gives it an
+   * "implements" field (F290, the listing's reading 2). Signed with it.
+   */
+  refs?: Reference[];
 }
 
 /**
@@ -254,7 +260,7 @@ export interface Prepared {
  */
 export function prepareRelease(
   p: Publisher,
-  opts: { name: string; version: string; files: FileIn[]; source?: string },
+  opts: { name: string; version: string; files: FileIn[]; source?: string; refs?: Reference[] },
 ): Prepared {
   const last = p.releases.at(-1);
   const beforeManifest = last ? decodeManifest(unb64(last.manifest)) : null;
@@ -298,7 +304,7 @@ export function prepareRelease(
       [6, p.relays],
     ]),
   );
-  return { manifest, encoded, payload, lockedManifest: lm.locked, upload, before: beforeManifest };
+  return { manifest, encoded, payload, lockedManifest: lm.locked, upload, before: beforeManifest, refs: opts.refs };
 }
 
 /**
@@ -312,7 +318,7 @@ export async function publishPrepared(p: Publisher, r: Prepared, via: Via = {}):
   if ((last?.id ?? null) !== r.manifest.previous) throw new Error('another release was published since this one was made: make it again');
   await carryChain(p.id, p.relays);
   // The publication first: a relay that keeps media only for publications it holds then takes the manifest.
-  const made = await p.id.publish(SPECS.envelopes, 0, r.payload, { public: true, relays: p.relays });
+  const made = await p.id.publish(SPECS.envelopes, 0, r.payload, { public: true, relays: p.relays, refs: r.refs });
   const refused = await toRelays(p.relays, via, (x) => x.putMedia(r.lockedManifest));
   for (const u of r.upload) refused.push(...(await toRelays(p.relays, via, (x) => x.putMedia(u))));
   p.releases.push({ id: made.id, version: r.manifest.version, manifest: b64(r.encoded) });

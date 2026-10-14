@@ -25,6 +25,8 @@ import {
   decodeManifest,
   encodeManifest,
   gitFiles,
+  prepareRelease,
+  publishPrepared,
   publishRelease,
   signRelease,
   verifyRelease,
@@ -249,6 +251,21 @@ test('the MOR repository itself, published and verified file by file', async () 
   assert.ok(v.manifest!.dependencies.some((d) => d.registry === 'crates.io' && d.name === 'fips205'));
   assert.ok(v.manifest!.dependencies.some((d) => d.registry === 'npm' && d.name === '@noble/post-quantum'));
   assert.deepEqual(compareWithTree(v.manifest!, root).differ, []);
+});
+
+test('a release under its own name names the specifications it implements among its references, as signed', async () => {
+  // Step 17's releases, until the manifest cMIP's "implements" field (F290, the listing's reading 2).
+  const spec = await m[3].publish(SPECS.text, 0, cborEncode(new Map<number, unknown>([[0, 'a specification, standing in']])), { public: true, relays: [relay.base] });
+  const p = { id: m[3], relays: [relay.base], releases: [] };
+  const prepared = prepareRelease(p, { name: 'MOR', version: '17.0', files: small, refs: [[spec.id, m[3].id]] });
+  assert.deepEqual(prepared.refs, [[spec.id, m[3].id]], 'shown before signing');
+  const r = await publishPrepared(p, prepared);
+  const d = describeAct((await relayAt(relay.base).getAct(r.id))!) as { refs?: string[]; refSigners?: (string | null)[] };
+  assert.deepEqual(d.refs, [spec.id]);
+  assert.deepEqual(d.refSigners, [m[3].id]);
+  const v = await verifyRelease(r.id, [relay.base]);
+  assert.ok(v.ok, v.problems.join('; '));
+  assert.match(v.rule ?? '', /its signer's own signature/);
 });
 
 test('manifests are strict', () => {
