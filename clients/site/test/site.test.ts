@@ -142,7 +142,7 @@ test('the dubsar.org site is published as a version of its owner, and every file
   assert.equal(v.manifest!.previous, null);
   const paths = v.manifest!.files.map((f) => f.path);
   // The main door's pages and files, and each department's door, a folder of its own (9 October 2026).
-  const main = ['build.html', 'feed.html', 'icon.jpg', 'index.html', 'listing.html', 'read.html', 'run.html', 'site.css', 'tablet-dark.jpg', 'tablet-light.jpg', 'use.html'];
+  const main = ['build.html', 'feed.html', 'icon.jpg', 'index.html', 'listing.html', 'read.html', 'report.html', 'run.html', 'site.css', 'tablet-dark.jpg', 'tablet-light.jpg', 'use.html'];
   const doors = DOORS.map(([folder]) => `${folder}/index.html`);
   assert.deepEqual(paths, [...main, ...doors].sort());
   for (const f of v.manifest!.files) {
@@ -447,7 +447,7 @@ test('the display client a gateway serves by default is the copy published in th
 test('from the command line, with no gateway: verify a version and write its files out', async () => {
   const out = mkdtempSync(join(tmpdir(), 'mor-site-out-'));
   const r = await run('node', ['--import', 'tsx', 'src/cli.ts', 'verify', w.site.id, '--identity', w.owner.id, '--at', w.relay.base, '--out', out], { cwd: here });
-  assert.match(r.stdout, new RegExp(`VERIFIED: the site "dubsar.org", ${11 + DOORS.length} files`));
+  assert.match(r.stdout, new RegExp(`VERIFIED: the site "dubsar.org", ${12 + DOORS.length} files`));
   for (const p of ['index.html', 'run.html', 'site.css', 'law/index.html']) assert.deepEqual(readFileSync(join(out, p)), readFileSync(join(w.dir, p)));
   await assert.rejects(
     run('node', ['--import', 'tsx', 'src/cli.ts', 'verify', w.site.id, '--identity', 'ab'.repeat(32), '--at', w.relay.base], { cwd: here }),

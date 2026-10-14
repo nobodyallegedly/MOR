@@ -2,6 +2,14 @@
 
 *GitHub session, 13 October 2026. Branch `claude/bug-reports-on-mor`, not merged. F287, decided by Nobody, allegedly, the same day: "Ideally A." Client work and one page: `core/`, `spec/`, `cmips/` and `clients/site`'s code unchanged (two expectations in its tests updated for the new page). Test identities only.*
 
+## The five branches together: clients/site's tests
+
+*14 October 2026.* **Yes, they pass now.** The cause was the two new pages on dubsar.org. The listing branch added `listing.html`, and this branch added `report.html`. Each branch updated the site test that counts dubsar.org's files, but only for its own page. Both changed the same line in the same way, from 10 + the doors to 11 + the doors. So Git merged the two edits as one, and the list of pages kept `listing.html` but not `report.html`. The combined site has 12 pages and files besides the doors, and the test expected 11, so two tests failed in `clients/site/test/site.test.ts`: the publication of dubsar.org, and the command line's `verify`. The fix is in that test only. It now lists `report.html` too and counts 12 + the doors. Nothing else changed.
+
+Checked here: `clients/site`'s tests 5 times in a row, **81 of 81 each time**. Then `scripts/test-all.sh` once, all passing: **1,080 tests** (676 in the Rust workspace, 404 in the TypeScript packages and Modules).
+
+Not touched: the GitHub step "Reproducible build of the display client" also failed. It compares the released copy in `clients/site/built/` with a fresh build, and on any branch with new display-client code these differ until the next release. Main has since made that step a notice on pull requests (`7eff11f`), and this branch does not have that commit yet. It is a separate step from `clients/site`, and only a merge of main or a new release changes it.
+
 ## Do the tests pass?
 
 **Yes.** `scripts/test-all.sh` passes on this branch: **1,068 tests, none failing** (676 in the Rust workspace, 392 in the TypeScript packages and Modules), against **1,060 on main** at `a718f91`. The 8 more are the new mirror's tests; every other count is the same as main's.
