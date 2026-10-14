@@ -12,6 +12,8 @@
 | [roadmap-v1.md](roadmap-v1.md) | Every step, its status and its decisions, with the open work at the end. |
 | [findings/](findings/) | Why each rule exists: F1 to F52, then F53 to F132. |
 | [adversarial-test-plan-v4.md](adversarial-test-plan-v4.md) | How the core is to be attacked before the freeze (working shape). |
+| [collectives/shapes-map-draft-1.md](collectives/shapes-map-draft-1.md) | The shapes of collectives (F306): a band, a cooperative, a company and an investor-backed venture, each sketched as a cMIP above Agreements draft 13; the collective the core keeps on its own with no cMIP, checked against every addition; Fable's notes and the four hooks tested; the common language they need the core to speak (counting by share of a stake, a holders' rule per stake, issuance, the owners' matters); eight questions for Nobody, allegedly, and one side finding. Sketches only, no rule changed. |
+| [collectives/shapes-map-report-for-the-lead.md](collectives/shapes-map-report-for-the-lead.md) | The shapes map's questions in one report, each with its lean, for the lead window. |
 | [outreach/first-wave-candidates-draft-1.md](outreach/first-wave-candidates-draft-1.md) | Candidate doors for the universities' first wave, from public information; awaiting the author's approval, nothing sent. |
 
 ## For readers outside the project
