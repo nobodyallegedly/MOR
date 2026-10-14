@@ -290,6 +290,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *14 October 2026, afternoon: the follow-up pass merged (pull request 50): the report page from the reporter's own identity and Dub's "To an identity"; the GitHub mirror both ways; the release manifest's "implements"; the listing's xtype counts; Development draft 9 (F290), MICS v27, freeze suite v27. Display client and Dub's web client released after. For step 17: the desk gains a second switch for the GitHub mirror, and notes headed by who prepared them.*
 
+*14 October 2026, evening (F306, decided by Nobody, allegedly): before the freeze-ready drafts, **the shapes of collectives are mapped**: a band, a cooperative, a company, an investor-backed venture, each sketched as a cMIP above Agreements draft 13, to find "the common language that the various cMIPs need to speak". The core need not implement them all. The step 15 review's Agreements Q7 and Q8 wait on it; F270 to F282 are read again in its light.*
+
 ## Decisions due along the way
 
 | Decision | Before |

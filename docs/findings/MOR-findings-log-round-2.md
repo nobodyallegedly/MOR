@@ -24,6 +24,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F306. Collectives are thought through before the freeze: the shapes mapped, the common language found (14 October 2026, evening)
+
+*Following the open thread below.* The author: "I think it shows that collective need a serious dose of thinking." Options laid out by the project lead: think it through before the freeze, or freeze MOR 1 with collectives as cooperatives and the cost stated, companies waiting for MOR 2. **Nobody, allegedly: "Think it through before the freeze. Map the shapes people actually use (a band, a cooperative, a company, an investor-backed venture) against the core, and find the smallest thing the core must allow so each can be built as a cMIP above it. The Company cMIP sketch is the first of those maps. This is the right approach. The core does not need to implement them all, it needs to find the common language that the various cMIPs need to speak."** A new piece of work before the freeze-ready drafts: the shapes of collectives mapped as cMIP sketches against Agreements draft 13, and the core's common language drawn from what they share. Agreements Q7 and Q8 (A10, A11) are answered by it, not before; F270, F274, F279, F280 and F282 are read again in its light, not undone in advance.
+
 ## Open, not decided: owners without a voice, and a Company cMIP (14 October 2026, evening; Agreements Q7 and Q8 parked)
 
 *From Fable's Agreements review, A10 (a fork's successor plan dilutes a departed holder unchecked) and A11 (a sale or release of works pays departed holders less, unseen). The author: "Dilutions is a tough subject. Let's slow down…" Then the thread, in his words and the project lead's laying out.*
