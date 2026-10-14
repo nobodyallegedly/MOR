@@ -292,6 +292,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *14 October 2026, evening (F306, decided by Nobody, allegedly): before the freeze-ready drafts, **the shapes of collectives are mapped**: a band, a cooperative, a company, an investor-backed venture, each sketched as a cMIP above Agreements draft 13, to find "the common language that the various cMIPs need to speak". The core need not implement them all. The step 15 review's Agreements Q7 and Q8 wait on it; F270 to F282 are read again in its light.* *The order (Nobody, allegedly, 14 October 2026, evening): the shapes map first; then Fable reviews Agreements again, in the map's light; then the Development segment.*
 
+*14 October 2026, evening, drawn for later (Nobody, allegedly: "Not now but eventually"): **the first wave's emails, automated.** Signed "Machine, allegedly, on behalf of Nobody, allegedly": "So it goes out as a pair." The shape laid out by the project lead: a small program run on the author's Mac, as the bug-report mirror is; a sending address of its own (on dubsar.org), the domain set up against spam flags (SPF, DKIM, DMARC), its password on the Mac only; the approved list and the approved message, a line or two specific to each door; a dry run of every email before any is sent; a handful a day; one email per door, never a follow-up, no tracking. A check of the rules on unsolicited email before the wave. After the freeze, as before.*
+
 ## Decisions due along the way
 
 | Decision | Before |
