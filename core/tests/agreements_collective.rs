@@ -13471,12 +13471,15 @@ fn f284_the_vows_owner_who_is_no_party_signs_what_pays_her_less() {
     assert_eq!(view(&w).agreement(&k).unwrap().exists, Some(true));
 }
 
-/// F284, how the core reads a deal silent on the vow (reading, to confirm:
-/// `docs/f282-f284-build.md`, Q1): an offer made under a deal, naming a vow
-/// the deal writes no stake in, does not count; once a version writes the
-/// stake, held by the vow's signer, an offer under it counts.
+/// F285 (decided by Nobody, allegedly, 13 October 2026: "A platform sells
+/// somebody else's vow… sounds like cMIP to me"), on the F282/F284 build's
+/// Q1: an offer made under a deal, naming a vow the deal writes no stake
+/// in, counts, as one under a deal writing the vow's owner's stake does. The
+/// core only shows such a sale (F72, F247); the deal tool flags the terms
+/// "No owner" before signing (`clients/assess/test/flags.test.ts`); how a
+/// marketplace sells others' vows is a cMIP's.
 #[test]
-fn f284_an_offer_under_a_deal_selling_a_vow_needs_the_vows_stake() {
+fn f285_an_offer_under_a_deal_selling_a_vow_counts_with_or_without_its_stake() {
     let mut w = World::new();
     let mut cleaner = w.genesis("a cleaner", vec![own_home()], None, None);
     let mut platform = w.genesis("a platform", vec![own_home()], None, None);
@@ -13498,7 +13501,7 @@ fn f284_an_offer_under_a_deal_selling_a_vow_needs_the_vows_stake() {
         metrics: vec![],
     });
     let owned = f284_job(&ids, vow, vec![(cleaner.id, 1_000_000)], platform.id, 100_000);
-    for (t, counts) in [(silent, false), (owned, true)] {
+    for (t, counts) in [(silent, true), (owned, true)] {
         let d = agreements_act(&mut w, &mut platform, agreements::types::TERMS, t.to_map(), None);
         sign(&mut w, &mut cleaner, &d);
         sign(&mut w, &mut platform, &d);
@@ -13517,9 +13520,7 @@ fn f284_an_offer_under_a_deal_selling_a_vow_needs_the_vows_stake() {
         sign(&mut w, &mut cleaner, &offer);
         let e = view(&w).offer(&offer).unwrap();
         assert_eq!(e.counts, counts, "{:?}", e.problems);
-        if !counts {
-            assert!(e.problems.iter().any(|p| p.contains("F284")), "{:?}", e.problems);
-        }
+        assert!(e.problems.is_empty(), "nothing keeps it from counting (F285): {:?}", e.problems);
     }
 }
 

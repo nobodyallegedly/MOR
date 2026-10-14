@@ -12,6 +12,7 @@
 | [roadmap-v1.md](roadmap-v1.md) | Every step, its status and its decisions, with the open work at the end. |
 | [findings/](findings/) | Why each rule exists: F1 to F52, then F53 to F132. |
 | [adversarial-test-plan-v4.md](adversarial-test-plan-v4.md) | How the core is to be attacked before the freeze (working shape). |
+| [outreach/first-wave-candidates-draft-1.md](outreach/first-wave-candidates-draft-1.md) | Candidate doors for the universities' first wave, from public information; awaiting the author's approval, nothing sent. |
 
 ## For readers outside the project
 
