@@ -1,13 +1,15 @@
 // What the reporting identity holds on MOR (F287): the public reports left in
-// its inbox, and its own public answers. A report is a text act addressed to
-// it (`to`), left unsealed in its inbox, as the writing box on dubsar.org's
-// report page leaves a public note (website cMIP draft 8, rule 13b). A
-// private report is sealed: this tool holds no key, so it can neither open
-// one nor tell what it says, and never mirrors it. An answer is a public text
-// act signed by the reporting identity: one naming a report in `refs`
-// answers that report; one whose words carry a GitHub issue's address
-// answers that issue. Every act is checked through its signer's identity
-// chain by the core library; anything not valid is said, never mirrored.
+// its inbox, and its own public acts. A report is a public text act addressed
+// to it (`to`), left unsealed in its inbox, signed by its reporter's own
+// identity ("Bug reports come from people truly on MOR, their own ID",
+// Nobody, allegedly): sent from Dub (its "To an identity") or any client.
+// A sealed message is private: this tool holds no key, so it can neither
+// open one nor tell what it says, and never mirrors it. The reporting
+// identity's own public text acts are its answers (one naming a report in
+// `refs` answers that report; one whose words carry a GitHub issue's address
+// answers that issue) and its re-publications of GitHub issues (`mirror.ts`,
+// `republishes`). Every act is checked through its signer's identity chain
+// by the core library; anything not valid is said, never mirrored.
 
 import { MIRS, SPECS, Verifier, describeAct } from '../../genesis/src/core.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
@@ -34,6 +36,8 @@ export interface Held {
   problems: string[];
   /** Sealed items in the inbox: private reports (or anything else private), never opened here. */
   sealed: number;
+  /** Where the reporting identity's public acts go (its route for text, else for everything, else the places given): where a re-publication of a GitHub issue is sent once signed. */
+  publishAt: string[];
 }
 
 interface Described {
@@ -116,6 +120,7 @@ export async function readHeld(identity: string, places: string[], via: Via = {}
   const outbox = l.routes.routes.filter((r) => (r.kind ?? 0) === 0);
   const route = outbox.find((r) => r.scope === POST_SPECS.text) ?? outbox.find((r) => r.scope === null);
   const answerPlaces = [...new Set([...(route?.hints ?? []), ...places])];
+  const publishAt = route?.hints.length ? [...route.hints] : [...places];
   const readPlaces = [...new Set([...inbox, ...answerPlaces])];
 
   // The reports: unsealed public text acts addressed to it, in its inbox.
@@ -182,5 +187,5 @@ export async function readHeld(identity: string, places: string[], via: Via = {}
     const a = await readChecked(id, readPlaces, via, judge, problems, 'The answer');
     if (a) answers.push(a);
   }
-  return { reports, answers, problems, sealed: sealed.size };
+  return { reports, answers, problems, sealed: sealed.size, publishAt };
 }

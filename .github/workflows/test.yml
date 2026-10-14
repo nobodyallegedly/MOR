@@ -66,6 +66,9 @@ jobs:
       - name: clients/repo
         if: success() || failure()
         run: cd clients/repo && npm ci --no-audit --no-fund && npm test
+      - name: clients/reports
+        if: success() || failure()
+        run: for p in barebone connector desk reader site; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/reports && npm ci --no-audit --no-fund && npm test
       - name: clients/site
         if: success() || failure()
         shell: bash

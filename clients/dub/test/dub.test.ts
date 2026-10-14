@@ -149,6 +149,53 @@ test('a new identity: the words shown once, three typed back before anything is 
   assert.equal((await c2.ask<State>('state')).stage, 'doors');
 });
 
+test('a public message: a post addressed to an identity, left unsealed in its inbox (a bug report, F287); an ID that is no identity, or one with no inbox, refused before anything is signed', async () => {
+  const { c } = await dub();
+  const b = await c.ask<{ words: string[]; positions: number[] }>('begin', { homes: [homes[0].base], relays: [relay.base] });
+  await c.ask('confirm', { typed: b.positions.map((p) => b.words[p - 1]) });
+  const me = (await c.ask<State>('state')).identity!.id;
+
+  // The recipient, as the reporting identity is made: an inbox at a relay of its own.
+  const box = await start('relay');
+  try {
+    const reporting = TestIdentity.create({ homes: [homes[1].home] });
+    await reporting.publishGenesis();
+    await reporting.publishRoutes([
+      { scope: null, hints: [relay.base], kind: 0 },
+      { scope: null, hints: [box.base], kind: 1 },
+    ]);
+    for (const a of reporting.chainActs()) await relayAt(relay.base).putAct(a);
+
+    // Grouped as people write an ID: spaces do not matter.
+    const grouped = reporting.id.match(/.{1,4}/g)!.join(' ');
+    const r = await c.ask<{ post: Shown; lines: { text: string; tone?: string }[] }>('post', { text: 'The page shows nothing on a phone.', to: grouped });
+    assert.ok(r.lines.some((l) => l.tone === 'ok' && l.text.includes(`left in its inbox at ${box.base}, unsealed`)), JSON.stringify(r.lines));
+    const feed = await relayAt(box.base).feed({ to: reporting.id });
+    const acts = feed.items.filter((i) => i.kind === 'act').map((i) => describeAct(i.item) as { id: string; signer: string; public: boolean; to?: string[] });
+    const left = acts.find((a) => a.id === r.post.id)!;
+    assert.ok(left, 'the post is in the recipient inbox');
+    assert.equal(left.public, true);
+    assert.equal(left.signer, me);
+    assert.deepEqual(left.to, [reporting.id]);
+    // Read from the inbox alone: its signer's chain was carried there.
+    const read = await readPost(r.post.id, [box.base]);
+    assert.equal(read.standing, 'valid');
+    assert.equal(read.text, 'The page shows nothing on a phone.');
+
+    const before = (await c.ask<Shown[]>('posts')).length;
+    await refused(c.ask('post', { text: 'x', to: 'REPORTS-IDENTITY' }), /To: an ID is 64 characters.*Nothing was posted/);
+    await refused(c.ask('post', { text: 'x', to: me }), /this identity itself\. Nothing was posted/);
+    const noInbox = TestIdentity.create({ homes: [homes[2].home] });
+    await noInbox.publishGenesis();
+    await refused(c.ask('post', { text: 'x', to: noInbox.id }), /was not found.*Nothing was posted/);
+    for (const a of noInbox.chainActs()) await relayAt(relay.base).putAct(a);
+    await refused(c.ask('post', { text: 'x', to: noInbox.id }), /declares no inbox.*Nothing was posted/);
+    assert.equal((await c.ask<Shown[]>('posts')).length, before, 'nothing was signed');
+  } finally {
+    await box.stop();
+  }
+});
+
 test('an identity made by the genesis client, brought in by its words; a wrong set refused; two apps, two lines, both valid; a rotation elsewhere keeps every line, and stops this app signing', async () => {
   // Made by the genesis client, with routes naming the relay.
   const g = TestIdentity.create({ homes: homes.map((h) => h.home) });

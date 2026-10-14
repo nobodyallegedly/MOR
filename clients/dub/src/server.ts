@@ -75,7 +75,7 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
         return dub.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list(a.relays), via: via(a.via) });
       case 'post': {
         const jpeg = text(a.jpeg) ? new Uint8Array(Buffer.from(text(a.jpeg), 'base64')) : undefined;
-        return dub.post({ text: text(a.text), jpeg });
+        return dub.post({ text: text(a.text), jpeg, to: text(a.to) });
       }
       case 'posts':
         return dub.posts();

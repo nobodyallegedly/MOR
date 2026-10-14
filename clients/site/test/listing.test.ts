@@ -110,9 +110,15 @@ async function publishSpec(by: TestIdentity, bytes: Uint8Array, relays: string[]
   return { id: made.id, hash: specHash(bytes) };
 }
 
-/** A release (release manifest cMIP) naming a specification's publication among its references. */
-async function publishRelease(by: TestIdentity, name: string, version: string, names: string, relays: string[]): Promise<string> {
-  const manifest = cborEncode(new Map<number, unknown>([[0, name], [1, version], [2, null], [3, []], [4, []]]));
+/**
+ * A release (release manifest cMIP): before draft 3, naming a specification's
+ * publication among its publication's references; from draft 3, in its
+ * manifest's "implements" (field 6), with or without references.
+ */
+async function publishRelease(by: TestIdentity, name: string, version: string, names: string | null, relays: string[], implementsIds?: string[]): Promise<string> {
+  const fields: [number, unknown][] = [[0, name], [1, version], [2, null], [3, []], [4, []]];
+  if (implementsIds) fields.push([6, [...implementsIds].sort().map(unhex)]);
+  const manifest = cborEncode(new Map<number, unknown>(fields));
   const lm = lockMedia(manifest) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
   const payload = cborEncode(
     new Map<number, unknown>([
@@ -125,8 +131,14 @@ async function publishRelease(by: TestIdentity, name: string, version: string, n
       [6, relays],
     ]),
   );
-  const made = await by.publish(SPECS.envelopes, PUBLICATION, payload, { public: true, relays, refs: [names] });
+  const made = await by.publish(SPECS.envelopes, PUBLICATION, payload, { public: true, relays, refs: names ? [names] : undefined });
   for (const r of relays) await relayAt(r, by.via).putMedia(lm.locked);
+  return made.id;
+}
+
+/** An act of an xtype's type (Development rule 2: named by the type within the specification that defines it). */
+async function useXtype(by: TestIdentity, spec: string, type: number, relays: string[], o: { private?: TestIdentity[] } = {}): Promise<string> {
+  const made = await by.publish(spec, type, cborEncode(new Map<number, unknown>([[0, 'a test note']])), { public: !o.private, to: o.private?.map((x) => x.id), relays });
   return made.id;
 }
 
@@ -169,6 +181,18 @@ before(async () => {
   // A proof-of-delivery checker (field 12), declaring the layers it acts on as an extension (field 10).
   const checker = content([[0, 0], [1, id(carol)], [9, '# cMIP: Test checker\n\nChecks proofs of delivery.'], [10, [2, 3]], [12, true]]);
   ({ id: pub.checker, hash: hash.checker } = await publishSpec(carol, checker, [relayB]));
+  // F290: a specification's content published under another media spec is no publication of a specification.
+  pub.otherMedia = (await publishSpec(carol, content([[0, 0], [1, id(carol)], [9, '# cMIP: Under another media spec']]), [relayB], 'f'.repeat(64))).id;
+  // Release manifest cMIP draft 3: a release naming the checker in its manifest's "implements", and referring to the
+  // rail Module from its publication: "implements" is read first, so it is the checker's code, not the rail's.
+  pub.checkerRelease = await publishRelease(carol, 'test-checker', '3.0', pub.rail, [relayB], [pub.checker]);
+
+  // The use of the two xtypes: public acts of their types, on both relays; a private one, an undefined type and an
+  // act no chain counts are not counted.
+  for (const [by, type, relay] of [[alice, 0, relayA], [bob, 0, relayB], [carol, 1, relayA]] as [TestIdentity, number, string][]) await useXtype(by, hash.notes, type, [relay]);
+  await useXtype(carol, hash.notes2, 0, [relayB]);
+  await useXtype(alice, hash.notes, 0, [relayA], { private: [bob] });
+  await useXtype(alice, hash.notes, 7, [relayA]);
 
   // One naming Alice as its creator, published only by Carol: unclaimed by Alice (Development rule 3).
   const unclaimed = content([[0, 0], [1, id(alice)], [2, [[unhex(MIRS.agreements), 8]]], [9, '# cMIP: Test split, said to be Alice’s\n\nA split.']]);
@@ -178,6 +202,7 @@ before(async () => {
   gone = TestIdentity.create({ homes: [home3.home] });
   await home3.stop();
   pub.gone = (await publishSpec(gone, content([[0, 0], [1, id(gone)], [9, '# cMIP: Words that must not be shown unverified']]), [relayA])).id;
+  await useXtype(gone, hash.notes, 1, [relayA]);
   pub.garbage = (await publishSpec(carol, cborEncode(new Map<number, unknown>([[0, 0], [99, 'what']])), [relayB])).id;
 
   // Agreements naming extensions. The xtype "Test notes" is named by three deals (one of them in two versions),
@@ -285,8 +310,9 @@ test('a cMIP filling a task, its second draft, and the code released for it', ()
   assert.ok(line.newest.claimed, 'published by its creator');
   assert.equal(line.drafts[1].otherCreator, false);
   assert.deepEqual(
-    line.newest.releases.map((r) => [r.id, r.signer, r.name, r.version, r.problem]),
-    [[pub.release, alice.id, 'test-payment', '0.2', null]],
+    line.newest.releases.map((r) => [r.id, r.signer, r.name, r.version, r.problem, r.by]),
+    [[pub.release, alice.id, 'test-payment', '0.2', null, 'reference']],
+    'a release before draft 3: its publication refers to it',
   );
   // The first draft, published twice: one specification, its creator's publication first.
   const first = listed(hash.pay1);
@@ -330,6 +356,40 @@ test('field 12, the discovery field, and the layers an extension declares', () =
   ]);
 });
 
+test('code released: a release’s manifest “implements” read first, its publication’s references only where it has none (release manifest cMIP draft 3)', () => {
+  assert.deepEqual(
+    listed(hash.checker).releases.map((r) => [r.id, r.signer, r.name, r.version, r.problem, r.by]),
+    [[pub.checkerRelease, carol.id, 'test-checker', '3.0', null, 'implements']],
+  );
+  assert.deepEqual(listed(hash.rail).releases, [], 'its publication refers to the rail, but its manifest says what it implements');
+  assert.equal(listed(hash.notes).releases[0].by, 'reference');
+});
+
+test('the use of each xtype: the public acts of its types found, counted by type; private acts are not counted', () => {
+  assert.deepEqual(
+    listing.xtypes.map((l) => [l.hash, l.use!.acts]),
+    [
+      [hash.notes, 3],
+      [hash.notes2, 1],
+    ],
+    'most used first; each draft its own specification',
+  );
+  const notes = listed(hash.notes).use!;
+  assert.deepEqual(notes.byType, [
+    { type: 0, name: 'note', acts: 2 },
+    { type: 1, name: 'answer', acts: 1 },
+  ]);
+  assert.equal(notes.notValid, 1, 'an act whose signer’s chain cannot be found: not counted');
+  assert.equal(listed(hash.pay2).use, null, 'a cMIP filling a task is no xtype');
+  assert.equal(listed(hash.checker).use, null);
+});
+
+test('F290: only a publication naming the Development MIR as its media spec is a specification', () => {
+  assert.ok(![...all().values()].some((l) => l.publications.some((p) => p.id === pub.otherMedia)));
+  assert.ok(!listing.unverified.some((p) => p.id === pub.otherMedia), 'not even shown as an unverified specification');
+  assert.ok(![...all().values()].some((l) => l.name === 'cMIP: Under another media spec'));
+});
+
 test('a specification naming a creator who never published it is shown as unclaimed', () => {
   const u = listed(hash.unclaimed);
   assert.equal(u.spec.creator, alice.id);
@@ -360,6 +420,7 @@ test('lines of drafts: a fork named, a predecessor not found said', () => {
     publications: [],
     claimed: true,
     releases: [],
+    use: null,
   });
   const lines = linesOf([mk('a', null), mk('b', 'a'), mk('c', 'a'), mk('d', 'z')]);
   const first = lines.find((l) => l.drafts[0].listed.hash === 'a')!;
@@ -450,7 +511,18 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
 
   // The listing's first purpose: the extensions agreements name, most named first, before the cMIPs and Modules.
   const order = await f.$$eval('section', (els) => els.map((e) => e.id));
-  assert.deepEqual(order, ['l-extensions', 'l-specs']);
+  assert.deepEqual(order, ['l-extensions', 'l-xtypes', 'l-specs']);
+  // The xtypes by use, said plainly that private acts are not counted.
+  assert.match((await f.textContent('#l-use'))!, /Private acts are not counted: which specification a private act belongs to cannot be read\./);
+  const uses = await f.$$eval('[data-xtype]', (els) => els.map((e) => [(e as HTMLElement).dataset.xtype, (e as HTMLElement).dataset.use, e.textContent ?? '']));
+  assert.deepEqual(
+    uses.map(([h, n]) => [h, n]),
+    [
+      [hash.notes, '3'],
+      [hash.notes2, '1'],
+    ],
+  );
+  assert.match(uses[0][2]!, /“cMIP: Test notes”.*3 public acts of its types found \(note 2, answer 1\); 1 not valid for its signer, not counted/);
   assert.equal((await f.textContent('#l-mor2'))!.trim(), 'Each extension marks work the core did not foresee: the raw material of MOR 2.');
   assert.match((await f.textContent('#l-counted'))!, /From 3 agreements counted.*Private agreements are not counted: their terms cannot be read \(\d+ private acts found, not opened\)\. 1 public proposal not yet signed by every party, not counted\./);
   const exts = await f.$$eval('[data-extension]', (els) =>
@@ -502,7 +574,9 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   assert.equal(pay.layer, 'Money');
   assert.match(pay.role!, /fills task 6, Payment/);
   assert.equal(pay.code, 'released');
-  assert.match(pay.text, /released by its creator: “test-payment” 0\.2/);
+  assert.match(pay.text, /released by its creator: “test-payment” 0\.2 \(its publication refers to it\)/);
+  assert.match(card(hash.checker).text, /released by its creator: “test-checker” 3\.0 \(its manifest names it among what it implements\)/);
+  assert.match(card(hash.notes2).text, /Use: 1 public act of its types found \(note 1\)\./);
   assert.equal(pay.claimed, 'yes');
   assert.deepEqual(pay.drafts, [hash.pay1, hash.pay2], 'its drafts, in order');
   assert.match(pay.text, new RegExp(`Creator ${alice.id.match(/.{4}/g)!.join(' ')}`), 'its creator by the whole fingerprint');
@@ -514,6 +588,7 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   assert.equal(card(hash.unclaimed).claimed, 'no');
   assert.match(card(hash.unclaimed).text, /Unclaimed by its named creator/);
   assert.equal(card(hash.unclaimed).code, 'none');
+  assert.equal(card(hash.rail).code, 'none', 'a release referring to it, its manifest implementing another, is not its code');
 
   // The two that could not be verified: shown as such, their words nowhere.
   const bad = await f.$$eval('#l-specs .l-line[data-verified="no"]', (els) => els.map((e) => ({ id: (e as HTMLElement).dataset.pub, text: e.textContent ?? '' })));
@@ -530,7 +605,7 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   // The bar names the relays read, the one not asked, and the counts.
   await page.click('#mor-bar summary');
   const listed = (await page.textContent('#mor-listings'))!;
-  assert.match(listed, /3 extensions named by 3 agreements counted, from 5 public terms verified \(1 not yet signed by every party\); private agreements are not counted\. 7 specifications verified, 2 publications not verified/);
+  assert.match(listed, /3 extensions named by 3 agreements counted, from 5 public terms verified \(1 not yet signed by every party\); private agreements are not counted\. 2 xtypes listed, 4 public acts of their types counted; private acts are not counted\. 7 specifications verified, 2 publications not verified/);
   assert.match(listed, /home1\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 5 publications of specifications/);
   assert.match(listed, /home2\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 5 publications of specifications/);
   if (shots) await page.screenshot({ path: join(shots, 'listing-phone.png'), fullPage: true });
