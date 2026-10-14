@@ -24,6 +24,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## Working principle: where MOR is the law, and where it only keeps the record (Nobody, allegedly, 14 October 2026, night)
+
+"MOR isn't the law, it only keeps the record on these matters." And, refining it: "Some promises it can check, but simple ones. 'This is the file that was signed' for example is the law, on MOR." What bytes can prove (a signature, a hash, an order on a chain, a stake paid as written, an offer that reached every holder) the core decides, and every verifier agrees. What bytes cannot prove (a fair price, an intention, whether a promise was kept in the world) the core records, signed and placed, and leaves to the people, their courts and their reputation. The rule behind tonight's answers: check what can be checked, state the rest honestly.
+
 ## F320. Grants against the world's dials (14 October 2026, night; a first poke, before Agreements draft 14)
 
 *The author asked what kinds of granting exist in the world, then: "Do we have all the dials?" The project lead read the grant (type 9) against them: present are scope (fields 1, 6), limits by a cMIP (fields 3, 4), revocation with the tie rule, the grantee's acceptance and own key (F128), traceability, and rule 74 (nobody grants beyond their power). Missing: expiry, proxies, sub-granting, exclusivity, conditions; licences, leases and trusts live in offers, stakes and deals, not grants.* **Nobody, allegedly**, point by point:
