@@ -3,8 +3,9 @@
 // plain words, that it is one listing among any and decides nothing; then
 // its first purpose, the extensions agreements name, most named first, each
 // with the layers the work touches and links to those agreements' public
-// terms, saying that private agreements are not counted; then, below, a
-// card for each line of drafts, newest draft first in its card, with what
+// terms, saying that private agreements are not counted; then the xtypes by
+// use, the public acts of their types counted, saying that private acts are
+// not counted; then, below, a card for each line of drafts, newest draft first in its card, with what
 // the specification's own fields say it is, its creator, the code released
 // for it, and its drafts in order; then the publications that could not be
 // verified, saying why, nothing they say shown. Phones first: one column,
@@ -13,7 +14,7 @@
 
 import { escapeHtml as e } from '../../../longform/src/html.ts';
 import { fingerprint } from '../../../reader/src/read.ts';
-import { roleWords, type Draft, type Extension, type Line, type Listed, type Listing, type Release } from '../listing.ts';
+import { roleWords, type Draft, type Extension, type Line, type Listed, type Listing, type Release, type Use } from '../listing.ts';
 
 export const LISTING_STYLE = `:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 18%,transparent);--soft:color-mix(in srgb,CanvasText 66%,Canvas);--ok:#1a7f37;--bad:#b3261e}
 @media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
@@ -51,8 +52,15 @@ const fp = (identity: string) => `<span class="l-fp">${fingerprint(identity)}</s
 
 function releaseWords(r: Release, creator: string | null): string {
   const by = r.signer === creator ? 'by its creator' : `by another identity, <span class="l-fp">${short(r.signer)}</span>`;
-  if (r.problem) return `<li data-release="${r.id}" data-verified="no">a release ${by}, <span class="l-no">not verified</span>: ${e(r.problem)}</li>`;
-  return `<li data-release="${r.id}" data-verified="yes"><span class="l-ok">released</span> ${by}: “${e(r.name ?? '')}” ${e(r.version ?? '')}</li>`;
+  const how = r.by === 'implements' ? 'its manifest names it among what it implements' : 'its publication refers to it';
+  if (r.problem) return `<li data-release="${r.id}" data-by="${r.by}" data-verified="no">a release ${by}, <span class="l-no">not verified</span>: ${e(r.problem)}</li>`;
+  return `<li data-release="${r.id}" data-by="${r.by}" data-verified="yes"><span class="l-ok">released</span> ${by}: “${e(r.name ?? '')}” ${e(r.version ?? '')} (${how})</li>`;
+}
+
+/** An xtype's use, in a line: its public acts found, by type. */
+function useWords(u: Use): string {
+  const types = u.byType.map((t) => `${e(t.name)} ${t.acts}`).join(', ');
+  return `<span class="l-count">${u.acts} public ${u.acts === 1 ? 'act' : 'acts'}</span> of its types found (${types})${u.notValid ? `; ${u.notValid} not valid for ${u.notValid === 1 ? 'its signer' : 'their signers'}, not counted` : ''}`;
 }
 
 function code(l: Listed): string {
@@ -90,7 +98,7 @@ function lineHtml(line: Line, all: Map<string, Listed>): string {
 <div class="l-head"><h3 class="l-name">${e(l.name)}</h3><span class="l-ok">Verified</span></div>
 <div class="l-facts"><b data-kind="">${e(w.kind)}</b> · layer: <span data-layer="">${e(w.layer)}</span>${line.drafts.length > 1 ? ` · draft ${draft.number}` : ''}</div>
 <ul class="l-role" data-role="">${w.role.map((r) => `<li>${e(r)}</li>`).join('')}</ul>
-${creator(l)}
+${l.use ? `<div class="l-row" data-use="${l.use.acts}">Use: ${useWords(l.use)}.</div>\n` : ''}${creator(l)}
 ${code(l)}
 ${drafts}
 <details><summary>How it was checked</summary>
@@ -131,6 +139,15 @@ function extensionsHtml(listing: Listing, reader: string | null): string {
 ${body}</section>`;
 }
 
+function xtypesHtml(listing: Listing): string {
+  const body = listing.xtypes.length
+    ? `<ul class="l-terms">${listing.xtypes.map((l) => `<li data-xtype="${l.hash}" data-use="${l.use!.acts}">“${e(l.name)}”, <code>${short(l.hash)}</code>: ${useWords(l.use!)}</li>`).join('')}</ul>`
+    : '<p class="l-none">No xtype listed here.</p>';
+  return `<section id="l-xtypes"><h2 class="l-h">Xtypes, by use</h2>
+<p class="l-note" id="l-use">An xtype defines act types and fills no task. Counted: the public acts of its types found on these relays, each checked in this browser; each draft is its own specification, counted on its own. <strong>Private acts are not counted</strong>: which specification a private act belongs to cannot be read. Most used first.</p>
+${body}</section>`;
+}
+
 function unverifiedHtml(listing: Listing): string {
   if (!listing.unverified.length) return '';
   const items = listing.unverified.map(
@@ -149,10 +166,10 @@ export function listingHtml(listing: Listing, style: string, reader: string | nu
   const relays = listing.relays.map((r) => e(r.name ?? r.address)).join(', ');
   const top = `<div class="l-any" id="l-any"><strong>One listing among any; anyone can run another.</strong>
 It decides nothing and refuses nothing: a specification is named by its own hash, not by being listed here, and is used by whoever adopts it.</div>
-<p class="l-note">Read from ${relays || 'no relay'}: first the extensions the agreements there name, then the cMIPs, Modules and other specifications published there, each checked in this browser: who signed it, and that it is what they signed. What each specification is comes from its own fields; a name is the first line of its text.</p>`;
+<p class="l-note">Read from ${relays || 'no relay'}: first the extensions the agreements there name, then the xtypes by use, then the cMIPs, Modules and other specifications published there, each checked in this browser: who signed it, and that it is what they signed. What each specification is comes from its own fields; a name is the first line of its text.</p>`;
   const body = listing.lines.length
     ? listing.lines.map((l) => lineHtml(l, all)).join('\n')
     : '<p class="l-none">No verified specification found at the relays read.</p>';
   const specs = `<section id="l-specs"><h2 class="l-h">cMIPs and Modules</h2>${body}${unverifiedHtml(listing)}</section>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${specs}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${xtypesHtml(listing)}${specs}</body></html>`;
 }

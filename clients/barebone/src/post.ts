@@ -87,6 +87,8 @@ export function textPayload(text: string, format: string | null = null): Uint8Ar
 export interface Posted {
   /** The post: the text act's id. */
   id: string;
+  /** The post itself, as signed: to leave in a recipient's inbox too. */
+  act: Uint8Array;
   picture: PublishedPicture | null;
 }
 
@@ -95,11 +97,13 @@ export interface Posted {
  * first, then the text act naming it in `refs`, with its signer (a public
  * act, held: Envelopes draft 9, rule 20, F272). The text must already be
  * canonical (compose it first); the core library refuses it otherwise.
- * Save the identity file after: its sequence has grown.
+ * `to`: the identities it is addressed to, named on the act (a public
+ * message; the caller leaves it in their inboxes). Save the identity file
+ * after: its sequence has grown.
  */
 export async function post(
   by: TestIdentity,
-  opts: { text: string; jpeg?: Uint8Array; format?: string | null; relays: string[] },
+  opts: { text: string; jpeg?: Uint8Array; format?: string | null; relays: string[]; to?: string[] },
 ): Promise<Posted> {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   await carryChain(by, opts.relays);
@@ -107,8 +111,30 @@ export async function post(
     public: true,
     relays: opts.relays,
     refs: picture ? [referenceTo(picture.act)] : undefined,
+    to: opts.to?.length ? opts.to : undefined,
   });
-  return { id: made.id, picture };
+  return { id: made.id, act: made.act, picture };
+}
+
+/**
+ * Leave a public act in a recipient's inbox as well, unsealed, with the
+ * signer's identity chain so it can be checked there: a public message, as
+ * a bug report to the reporting identity is (F287). Each inbox relay's
+ * answer is said; none throws.
+ */
+export async function leaveInInbox(by: TestIdentity, act: Uint8Array, inbox: string[]): Promise<{ left: string[]; failed: { relay: string; reason: string }[] }> {
+  const out = { left: [] as string[], failed: [] as { relay: string; reason: string }[] };
+  for (const hint of inbox) {
+    try {
+      const r = relayAt(hint, by.via);
+      for (const c of by.chainActs()) await r.putAct(c).catch(() => undefined);
+      await r.putAct(act);
+      out.left.push(hint);
+    } catch (e) {
+      out.failed.push({ relay: hint, reason: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  return out;
 }
 
 /**

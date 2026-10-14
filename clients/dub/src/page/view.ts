@@ -171,6 +171,8 @@ export function ready(s: State, web = false): string {
 <form id="post"><textarea class="write" name="text" required placeholder="What do you want to say?"></textarea>
 <label>A picture (optional, JPEG)</label><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg">
 <p class="small">Before it leaves, the picture is stripped to the picture alone: no location, camera data or previews.</p>
+<label>To an identity (optional): its ID</label><input name="to" autocomplete="off" spellcheck="false" placeholder="64 characters; spaces do not matter">
+<p class="small">A public message: the post names that identity and is also left in its inbox, unsealed, so anyone may read it. To report a bug or an attack on MOR, write to the reporting identity named on dubsar.org’s report page.</p>
 <div class="row"><button type="submit">Post</button></div></form></section>
 <section><h2>Published</h2><div id="published"><p class="small">Your post appears here, read back from the relays and verified.</p></div></section>
 <section><h2>Your posts, newest first</h2><div class="row"><button class="quiet" data-action="posts">Look again</button></div><div id="posts"></div></section>
