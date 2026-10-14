@@ -45,6 +45,7 @@ Each records what a session built, what it found, and what it left open. They ar
 | [project-lead-prompt-v3.md](project-lead-prompt-v3.md) | The brief the AI project lead works from (version 3; earlier versions kept beside it). |
 | [reviews/collections-in-the-core-2026-10-11.md](reviews/collections-in-the-core-2026-10-11.md) | A debate, written as a report: should the core track collections (bundles of works and vows)? Both sides at their strongest, each claimed guarantee tested against what the core already gives, three readings to confirm. No specification changed. |
 | [reviews/fable-step-15-envelopes.md](reviews/fable-step-15-envelopes.md) | Step 15, the machine review, Envelopes segment: what was tried, what held, what broke; eleven findings (one code fix, the rest text or instruments), the verdict vocabulary checked, three questions for Nobody, allegedly. |
+| [reviews/fable-step-15-text.md](reviews/fable-step-15-text.md) | Step 15, the machine review, Text segment: what held (canonical text against Unicode's conformance file, the pinned tables, F276 against F293), one gap (a text act outside its format is valid to the core verifier), five smaller findings, two questions for Nobody, allegedly. |
 | [rename-pass.md](rename-pass.md) | The rename pass: the layers (Envelopes, Money, Agreements, Development) and the keys (chain key, signing key), wording only; what was left and why, the wire proof, and Money read against F225. |
 
 ## The paper and its reviews
