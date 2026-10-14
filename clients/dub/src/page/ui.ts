@@ -223,7 +223,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State, sugg
       case 'post': {
         const file = (form.elements.namedItem('picture') as HTMLInputElement).files?.[0];
         const r = await busy(file ? 'Stripping the picture, publishing, and reading it back…' : 'Publishing, and reading it back…', async () =>
-          b.ask<{ post: v.Shown; lines: v.Line[] }>('post', { text: String(d.get('text') ?? ''), jpeg: file ? await base64(file) : '' }),
+          b.ask<{ post: v.Shown; lines: v.Line[] }>('post', { text: String(d.get('text') ?? ''), jpeg: file ? await base64(file) : '', to: String(d.get('to') ?? '') }),
         );
         if (r) {
           form.reset();

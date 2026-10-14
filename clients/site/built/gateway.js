@@ -5389,6 +5389,7 @@ function decodeSpec(content) {
     checker: checker === true
   };
 }
+var isXtype = (s) => s.types.length > 0 && s.tasks.length === 0;
 function nameOf3(text2) {
   const line = text2.split("\n").map((l) => l.replace(/^#+\s*/, "").trim()).find((l) => /\p{L}/u.test(l)) ?? "(no name)";
   return line.length > 100 ? `${line.slice(0, 99)}\u2026` : line;
@@ -5509,7 +5510,7 @@ async function readListing(relays, gatewayRelays, via = {}) {
     const m = mediaOf(d);
     if (!m) continue;
     if (m.spec === RELEASE_MANIFEST) {
-      if ((d.refs ?? []).length) releases.push({ d, act, m });
+      releases.push({ d, act, m });
       continue;
     }
     if (m.spec !== MIRS.development) continue;
@@ -5539,7 +5540,7 @@ async function readListing(relays, gatewayRelays, via = {}) {
   for (const p of pubs.filter((x) => !x.problem)) {
     let l = byHash.get(p.hash);
     if (!l) {
-      l = { hash: p.hash, spec: p.spec, name: nameOf3(p.spec.text), publications: [], claimed: false, releases: [] };
+      l = { hash: p.hash, spec: p.spec, name: nameOf3(p.spec.text), publications: [], claimed: false, releases: [], use: null };
       byHash.set(p.hash, l);
     }
     l.publications.push(p);
@@ -5550,29 +5551,56 @@ async function readListing(relays, gatewayRelays, via = {}) {
   }
   const pubOf = /* @__PURE__ */ new Map();
   for (const l of byHash.values()) for (const p of l.publications) pubOf.set(p.id, l);
+  const listedBy = (ids) => [...new Set(ids.map((r) => pubOf.get(r)).filter((x) => !!x))];
   await Promise.all(
     releases.map(async ({ d, act, m }) => {
-      const named = [...new Set((d.refs ?? []).map((r2) => pubOf.get(r2)).filter((x) => !!x))];
-      if (!named.length || !d.signer) return;
-      const r = { id: d.id, signer: d.signer, name: null, version: null, problem: await judge.problem(act, d.id, d.signer) };
+      if (!d.signer) return;
+      const fallback = listedBy(d.refs ?? []);
+      if (!pubOf.size) return;
+      const bad = await judge.problem(act, d.id, d.signer);
+      const plain = bad ? null : await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
+      let man = null;
+      try {
+        const x = plain ? cborDecode(plain) : null;
+        man = x instanceof Map && typeof x.get(0) === "string" && typeof x.get(1) === "string" ? x : null;
+      } catch {
+        man = null;
+      }
+      const impl = man?.get(6);
+      const implemented = Array.isArray(impl) && impl.length && impl.every(bytes32) ? impl.map((h) => hex(h)) : null;
+      const named = implemented ? listedBy(implemented) : fallback;
+      if (!named.length) return;
+      const r = { id: d.id, signer: d.signer, name: null, version: null, problem: bad, by: implemented ? "implements" : "reference" };
       if (!r.problem) {
-        const plain = await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
-        try {
-          const man = plain ? cborDecode(plain) : null;
-          if (man instanceof Map && typeof man.get(0) === "string" && typeof man.get(1) === "string") {
-            r.name = man.get(0);
-            r.version = man.get(1);
-          } else r.problem = "its manifest was not found, or does not read as one";
-        } catch {
-          r.problem = "its manifest does not read as one";
-        }
+        if (man) {
+          r.name = man.get(0);
+          r.version = man.get(1);
+        } else r.problem = plain ? "its manifest does not read as one" : "its manifest was not found, or does not read as one";
       }
       for (const l of named) l.releases.push(r);
     })
   );
   for (const l of byHash.values()) l.releases.sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.id < b.id ? -1 : 1));
   const { extensions, agreements } = await readExtensions(found, byHash, judge, lines.reduce((n, l) => n + l.private, 0));
-  return { relays: lines, extensions, agreements, lines: linesOf([...byHash.values()]), unverified: pubs.filter((p) => p.problem).sort((a, b) => a.id < b.id ? -1 : 1) };
+  const xtypes = await countUse(found, byHash, judge);
+  return { relays: lines, extensions, agreements, lines: linesOf([...byHash.values()]), unverified: pubs.filter((p) => p.problem).sort((a, b) => a.id < b.id ? -1 : 1), xtypes };
+}
+async function countUse(found, byHash, judge) {
+  const xtypes = [...byHash.values()].filter((l) => isXtype(l.spec));
+  for (const l of xtypes) l.use = { acts: 0, byType: l.spec.types.map((t) => ({ type: t.type, name: t.name, acts: 0 })), notValid: 0 };
+  const of = new Map(xtypes.map((l) => [l.hash, l]));
+  for (const { d, act } of found.values()) {
+    const l = d.public && d.spec ? of.get(d.spec) : void 0;
+    const t = l?.use.byType.find((x) => x.type === d.type);
+    if (!l || !t) continue;
+    if (!d.signer || await judge.problem(act, d.id, d.signer)) {
+      l.use.notValid++;
+      continue;
+    }
+    t.acts++;
+    l.use.acts++;
+  }
+  return xtypes.sort((a, b) => b.use.acts - a.use.acts || (a.name < b.name ? -1 : a.name > b.name ? 1 : a.hash < b.hash ? -1 : 1));
 }
 function linesOf(all) {
   const byHash = new Map(all.map((l) => [l.hash, l]));
@@ -5770,8 +5798,13 @@ var short4 = (h) => `${h.slice(0, 8)}\u2026${h.slice(-4)}`;
 var fp = (identity) => `<span class="l-fp">${fingerprint(identity)}</span>`;
 function releaseWords(r, creator2) {
   const by = r.signer === creator2 ? "by its creator" : `by another identity, <span class="l-fp">${short4(r.signer)}</span>`;
-  if (r.problem) return `<li data-release="${r.id}" data-verified="no">a release ${by}, <span class="l-no">not verified</span>: ${escapeHtml(r.problem)}</li>`;
-  return `<li data-release="${r.id}" data-verified="yes"><span class="l-ok">released</span> ${by}: \u201C${escapeHtml(r.name ?? "")}\u201D ${escapeHtml(r.version ?? "")}</li>`;
+  const how = r.by === "implements" ? "its manifest names it among what it implements" : "its publication refers to it";
+  if (r.problem) return `<li data-release="${r.id}" data-by="${r.by}" data-verified="no">a release ${by}, <span class="l-no">not verified</span>: ${escapeHtml(r.problem)}</li>`;
+  return `<li data-release="${r.id}" data-by="${r.by}" data-verified="yes"><span class="l-ok">released</span> ${by}: \u201C${escapeHtml(r.name ?? "")}\u201D ${escapeHtml(r.version ?? "")} (${how})</li>`;
+}
+function useWords(u) {
+  const types = u.byType.map((t) => `${escapeHtml(t.name)} ${t.acts}`).join(", ");
+  return `<span class="l-count">${u.acts} public ${u.acts === 1 ? "act" : "acts"}</span> of its types found (${types})${u.notValid ? `; ${u.notValid} not valid for ${u.notValid === 1 ? "its signer" : "their signers"}, not counted` : ""}`;
 }
 function code(l) {
   if (!l.releases.length) return `<div class="l-row" data-code="none">Code: no release naming it found at the relays read.</div>`;
@@ -5802,7 +5835,8 @@ function lineHtml(line, all) {
 <div class="l-head"><h3 class="l-name">${escapeHtml(l.name)}</h3><span class="l-ok">Verified</span></div>
 <div class="l-facts"><b data-kind="">${escapeHtml(w.kind)}</b> \xB7 layer: <span data-layer="">${escapeHtml(w.layer)}</span>${line.drafts.length > 1 ? ` \xB7 draft ${draft.number}` : ""}</div>
 <ul class="l-role" data-role="">${w.role.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>
-${creator(l)}
+${l.use ? `<div class="l-row" data-use="${l.use.acts}">Use: ${useWords(l.use)}.</div>
+` : ""}${creator(l)}
 ${code(l)}
 ${drafts}
 <details><summary>How it was checked</summary>
@@ -5834,6 +5868,12 @@ function extensionsHtml(listing, reader) {
 <p class="l-note" id="l-counted">${counted} ${not} Most named first.</p>
 ${body}</section>`;
 }
+function xtypesHtml(listing) {
+  const body = listing.xtypes.length ? `<ul class="l-terms">${listing.xtypes.map((l) => `<li data-xtype="${l.hash}" data-use="${l.use.acts}">\u201C${escapeHtml(l.name)}\u201D, <code>${short4(l.hash)}</code>: ${useWords(l.use)}</li>`).join("")}</ul>` : '<p class="l-none">No xtype listed here.</p>';
+  return `<section id="l-xtypes"><h2 class="l-h">Xtypes, by use</h2>
+<p class="l-note" id="l-use">An xtype defines act types and fills no task. Counted: the public acts of its types found on these relays, each checked in this browser; each draft is its own specification, counted on its own. <strong>Private acts are not counted</strong>: which specification a private act belongs to cannot be read. Most used first.</p>
+${body}</section>`;
+}
 function unverifiedHtml(listing) {
   if (!listing.unverified.length) return "";
   const items = listing.unverified.map(
@@ -5850,10 +5890,10 @@ function listingHtml(listing, style, reader = null) {
   const relays = listing.relays.map((r) => escapeHtml(r.name ?? r.address)).join(", ");
   const top = `<div class="l-any" id="l-any"><strong>One listing among any; anyone can run another.</strong>
 It decides nothing and refuses nothing: a specification is named by its own hash, not by being listed here, and is used by whoever adopts it.</div>
-<p class="l-note">Read from ${relays || "no relay"}: first the extensions the agreements there name, then the cMIPs, Modules and other specifications published there, each checked in this browser: who signed it, and that it is what they signed. What each specification is comes from its own fields; a name is the first line of its text.</p>`;
+<p class="l-note">Read from ${relays || "no relay"}: first the extensions the agreements there name, then the xtypes by use, then the cMIPs, Modules and other specifications published there, each checked in this browser: who signed it, and that it is what they signed. What each specification is comes from its own fields; a name is the first line of its text.</p>`;
   const body = listing.lines.length ? listing.lines.map((l) => lineHtml(l, all)).join("\n") : '<p class="l-none">No verified specification found at the relays read.</p>';
   const specs = `<section id="l-specs"><h2 class="l-h">cMIPs and Modules</h2>${body}${unverifiedHtml(listing)}</section>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${specs}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${xtypesHtml(listing)}${specs}</body></html>`;
 }
 
 // ../../modules/video/src/video.ts
@@ -6574,7 +6614,8 @@ function listingItem(l) {
   });
   const a = l.agreements;
   const ag = a ? `${l.extensions} ${l.extensions === 1 ? "extension" : "extensions"} named by ${a.counted} ${a.counted === 1 ? "agreement" : "agreements"} counted, from ${a.terms} public terms verified (${a.proposed} not yet signed by every party${a.notCounted.length ? `, <span class="bad-word">${a.notCounted.length} not counted</span>` : ""}); private agreements are not counted. ` : "";
-  return `<li>${ag}${l.verified} ${l.verified === 1 ? "specification" : "specifications"} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? "publication" : "publications"} not verified</span>` : ""}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join("")}</ul></li>`;
+  const xt = l.xtypes ? `${l.xtypes.listed} ${l.xtypes.listed === 1 ? "xtype" : "xtypes"} listed, ${l.xtypes.acts} public ${l.xtypes.acts === 1 ? "act" : "acts"} of their types counted; private acts are not counted. ` : "";
+  return `<li>${ag}${xt}${l.verified} ${l.verified === 1 ? "specification" : "specifications"} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? "publication" : "publications"} not verified</span>` : ""}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join("")}</ul></li>`;
 }
 function filmItem(f) {
   const words = {
@@ -7136,6 +7177,7 @@ async function showListings(frame2, settings, listings) {
       line.unverified = listing.unverified.length;
       line.agreements = listing.agreements;
       line.extensions = listing.extensions.length;
+      line.xtypes = { listed: listing.xtypes.length, acts: listing.xtypes.reduce((n, l) => n + (l.use?.acts ?? 0), 0) };
       const inner = doc.createElement("iframe");
       inner.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
       inner.setAttribute("title", "Specifications");
@@ -7299,7 +7341,7 @@ async function main() {
     document.title = `${prepared.title ?? entry.path} \xB7 ${version2.manifest.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
     state.writes = prepared.writes;
-    state.listings = prepared.listings.map((l) => ({ relays: l.relays, read: null, verified: 0, unverified: 0, agreements: null, extensions: 0 }));
+    state.listings = prepared.listings.map((l) => ({ relays: l.relays, read: null, verified: 0, unverified: 0, agreements: null, extensions: 0, xtypes: null }));
     state.feeds = prepared.feeds.map((authors, i) => ({ authors, clock: prepared.clocks[i] ?? null, found: null, clockFound: null, order: null, shown: 0, verified: 0 }));
     state.phase = "ok";
     state.words = verifiedWords(settings, "page");

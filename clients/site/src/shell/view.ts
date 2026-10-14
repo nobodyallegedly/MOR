@@ -148,6 +148,8 @@ export interface ListingLine {
   agreements: AgreementsRead | null;
   /** Extensions named by the agreements counted. */
   extensions: number;
+  /** Xtypes listed, and the public acts of their types counted; null until read. */
+  xtypes: { listed: number; acts: number } | null;
 }
 
 export interface BarState {
@@ -220,7 +222,8 @@ function listingItem(l: ListingLine): string {
   const ag = a
     ? `${l.extensions} ${l.extensions === 1 ? 'extension' : 'extensions'} named by ${a.counted} ${a.counted === 1 ? 'agreement' : 'agreements'} counted, from ${a.terms} public terms verified (${a.proposed} not yet signed by every party${a.notCounted.length ? `, <span class="bad-word">${a.notCounted.length} not counted</span>` : ''}); private agreements are not counted. `
     : '';
-  return `<li>${ag}${l.verified} ${l.verified === 1 ? 'specification' : 'specifications'} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? 'publication' : 'publications'} not verified</span>` : ''}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join('')}</ul></li>`;
+  const xt = l.xtypes ? `${l.xtypes.listed} ${l.xtypes.listed === 1 ? 'xtype' : 'xtypes'} listed, ${l.xtypes.acts} public ${l.xtypes.acts === 1 ? 'act' : 'acts'} of their types counted; private acts are not counted. ` : '';
+  return `<li>${ag}${xt}${l.verified} ${l.verified === 1 ? 'specification' : 'specifications'} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? 'publication' : 'publications'} not verified</span>` : ''}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join('')}</ul></li>`;
 }
 
 function filmItem(f: FilmLine): string {

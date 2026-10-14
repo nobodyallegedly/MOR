@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, rebuildChainKey, signaturePayload, verifyShare } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, lockMedia, rebuildChainKey, signaturePayload, unhex, verifyShare } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestIdentity, lookUp } from '../../genesis/src/identity.ts';
 import { actsBy } from '../../genesis/src/lines.ts';
@@ -21,6 +21,7 @@ import { TestCollective, type Governance } from '../src/collective.ts';
 import { AGREEMENTS_SPECS, dealGrantPayload, latestPointer, pointerPayload, sign } from '../src/agreements.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../src/specs.ts';
 import {
+  checkImplements,
   compareWithTree,
   decodeManifest,
   encodeManifest,
@@ -251,6 +252,38 @@ test('the MOR repository itself, published and verified file by file', async () 
   assert.deepEqual(compareWithTree(v.manifest!, root).differ, []);
 });
 
+test('a release names the specifications it implements, by their publications, signed with it (release manifest cMIP draft 3)', async () => {
+  // Two specifications, published as Development's Part three says (F290: the media spec is the Development MIR's).
+  const publishSpec = async (by: TestIdentity, words: string, media = MIRS.development) => {
+    const content = cborEncode(new Map<number, unknown>([[0, 0], [1, unhex(by.id)], [9, words]]));
+    const l = lockMedia(content) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
+    const payload = cborEncode(new Map<number, unknown>([[0, unhex(media)], [1, unhex(l.workHash)], [2, unhex(l.lockedHash)], [3, content.length], [4, l.nonce], [5, l.key], [6, [relay.base]]]));
+    const made = await by.publish(SPECS.envelopes, 0, payload, { public: true, relays: [relay.base] });
+    await relayAt(relay.base).putMedia(l.locked);
+    return made.id;
+  };
+  const a = await publishSpec(m[0], '# A test cMIP\n');
+  const b = await publishSpec(m[1], '# Another test cMIP\n');
+  // Checked first: a specification's publication passes; anything else is said.
+  assert.deepEqual(await checkImplements([a, b], [relay.base]), []);
+  const otherMedia = await publishSpec(m[0], '# Under another media spec\n', 'f'.repeat(64));
+  const notSpec = await checkImplements([second, '00'.repeat(32), otherMedia], [relay.base]);
+  assert.match(notSpec[0], /not the publication of a specification/);
+  assert.match(notSpec[1], /not found/);
+  assert.match(notSpec[2], /not the publication of a specification/, 'F290: another media spec is no specification');
+
+  const p = await publishRelease(c, { name: 'MOR test tree', version: '4', files: small, implements: [b, a, b] });
+  assert.deepEqual(p.manifest.implements, [a, b].sort(), 'sorted, each once');
+  await signRelease(m[0], p.id, c.f.relays);
+  await signRelease(m[3], p.id, c.f.relays);
+  const v = await verifyRelease(p.id, [relay.base]);
+  assert.ok(v.ok, v.problems.join('; '));
+  assert.deepEqual(v.manifest!.implements, [a, b].sort(), 'read back from the signed manifest');
+  // A release naming nothing has no field 6, as every release before draft 3.
+  const v2 = await verifyRelease(second, [relay.base]);
+  assert.equal(v2.manifest!.implements, undefined);
+});
+
 test('manifests are strict', () => {
   const m0 = decodeManifest(encodeManifest({
     name: 'x',
@@ -268,6 +301,18 @@ test('manifests are strict', () => {
   assert.throws(bad([{ path: 'a' }, { path: 'a' }]), /sorted/);
   assert.throws(bad([]), /no files/);
   assert.throws(() => decodeManifest(cborEncode(new Map<number, unknown>([[9, 1]]))), /unknown field/);
+  // Field 6, implements (draft 3): at least one, sorted, each once, each a hash.
+  const withImpl = (x: unknown) => () => {
+    const raw = cborDecode(encodeManifest(m0)) as Map<number, unknown>;
+    raw.set(6, x);
+    return decodeManifest(cborEncode(raw));
+  };
+  const [lo, hi] = [new Uint8Array(32).fill(1), new Uint8Array(32).fill(2)];
+  assert.deepEqual(withImpl([lo, hi])().implements, [hex(lo), hex(hi)]);
+  assert.throws(withImpl([]), /at least one/);
+  assert.throws(withImpl([hi, lo]), /sorted and unique/);
+  assert.throws(withImpl([lo, lo]), /sorted and unique/);
+  assert.throws(withImpl([new Uint8Array(31)]), /implemented specification/);
 });
 
 test('a key grammar that one lost holder would freeze is refused (F96)', () => {

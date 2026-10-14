@@ -1,5 +1,6 @@
 // A listing of the specifications published on the relays a page names, as
-// its `mor-listing` names them (website cMIP draft 9, rule 13c; F288). One
+// its `mor-listing` names them (website cMIP draft 9, rule 13c; F288; draft
+// 10: the use of xtypes, and code released read from "implements"). One
 // listing among any: it reads, checks and shows; it decides nothing and
 // refuses nothing (Development rule 17, "No core registry").
 //
@@ -7,7 +8,8 @@
 // transport cMIP, "Following: the feed", with no filter). A specification
 // is a public publication (Envelopes type 0) whose media spec is the
 // Development MIR's (Development, Part three: "a public act ... whose media
-// is the specification's content"). Each one found is checked in full: its
+// is the specification's content"; draft 9, F290: "Its publication names
+// the Development MIR's spec hash as its media spec"). Each one found is checked in full: its
 // signer's identity chain looked up from its homes and the publication
 // judged through it by the core library; its content fetched, opened and
 // matched against its work hash and size; decoded strictly as Development's
@@ -39,8 +41,17 @@
 // order, by the predecessor each names (field 8), saying where a successor's
 // creator differs from its predecessor's (rule 25) and where two name the
 // same one; and code released for it: a release (release manifest cMIP)
-// whose publication names the specification's publication among its
-// references, checked through its signer's chain.
+// whose manifest names the specification's publication in "implements"
+// (draft 3, field 6), read first; for a release whose manifest has no such
+// field (every release before draft 3), one whose publication names the
+// specification's publication among its references; checked through its
+// signer's chain either way.
+//
+// And the use of each xtype listed (a cMIP defining act types and filling no
+// task, Development rule 18): the public acts of its types found on the
+// relays read, each judged through its signer's chain, counted by type.
+// Private acts are not counted: which specification a private act belongs
+// to cannot be read from outside, and the listing says so.
 
 import { MIRS, SPECS, Verifier, cborDecode, cborEncode, checkText, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
@@ -147,6 +158,18 @@ export interface Release {
   version: string | null;
   /** Set when it is not shown as verified, saying why. */
   problem: string | null;
+  /** How it names the specification: its manifest's "implements" (release manifest cMIP draft 3), or, for a release without one, a reference from its publication. */
+  by: 'implements' | 'reference';
+}
+
+/** The use of an xtype: the public acts of its types found on the relays read. */
+export interface Use {
+  /** Public acts of its types, valid for their signers' chains. */
+  acts: number;
+  /** The same, by act type, in the order its specification defines them. */
+  byType: { type: number; name: string; acts: number }[];
+  /** Public acts of its types found that are not valid for their signers' chains: not counted. */
+  notValid: number;
 }
 
 /** One publication of a specification found at the relays read. */
@@ -174,6 +197,8 @@ export interface Listed {
   claimed: boolean;
   /** Releases naming one of its publications. */
   releases: Release[];
+  /** For an xtype (act types, no task): its use, counted; null for anything else. */
+  use: Use | null;
 }
 
 /** A line of drafts: a specification and every one naming it as predecessor, and on. */
@@ -237,6 +262,8 @@ export interface Listing {
   lines: Line[];
   /** Publications of specifications that could not be verified. */
   unverified: Found[];
+  /** The xtypes listed, most used first (each a line's draft: every draft is its own specification, counted on its own). */
+  xtypes: Listed[];
 }
 
 /** The most acts a listing reads of one relay (a reading, website cMIP draft 9, rule 13c). */
@@ -342,6 +369,9 @@ export function decodeSpec(content: Uint8Array): Spec {
     checker: checker === true,
   };
 }
+
+/** An xtype, as the listing names one (Development rule 18): it defines act types and fills no task. */
+export const isXtype = (s: Spec): boolean => s.types.length > 0 && s.tasks.length === 0;
 
 /** A specification's name: the first line of its text that holds a letter, its leading "#" and spaces removed. */
 export function nameOf(text: string): string {
@@ -502,7 +532,7 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
     const m = mediaOf(d);
     if (!m) continue;
     if (m.spec === RELEASE_MANIFEST) {
-      if ((d.refs ?? []).length) releases.push({ d, act, m });
+      releases.push({ d, act, m });
       continue;
     }
     if (m.spec !== MIRS.development) continue;
@@ -534,7 +564,7 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
   for (const p of pubs.filter((x) => !x.problem)) {
     let l = byHash.get(p.hash!);
     if (!l) {
-      l = { hash: p.hash!, spec: p.spec!, name: nameOf(p.spec!.text), publications: [], claimed: false, releases: [] };
+      l = { hash: p.hash!, spec: p.spec!, name: nameOf(p.spec!.text), publications: [], claimed: false, releases: [], use: null };
       byHash.set(p.hash!, l);
     }
     l.publications.push(p);
@@ -545,24 +575,34 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
   }
 
   // Code released: a release naming one of a specification's publications, checked through its signer's chain.
+  // Its manifest's "implements" first (release manifest cMIP draft 3); without one, its publication's references.
   const pubOf = new Map<string, Listed>();
   for (const l of byHash.values()) for (const p of l.publications) pubOf.set(p.id, l);
+  const listedBy = (ids: string[]) => [...new Set(ids.map((r) => pubOf.get(r)).filter((x): x is Listed => !!x))];
   await Promise.all(
     releases.map(async ({ d, act, m }) => {
-      const named = [...new Set((d.refs ?? []).map((r) => pubOf.get(r)).filter((x): x is Listed => !!x))];
-      if (!named.length || !d.signer) return;
-      const r: Release = { id: d.id, signer: d.signer, name: null, version: null, problem: await judge.problem(act, d.id, d.signer) };
+      if (!d.signer) return;
+      const fallback = listedBy(d.refs ?? []);
+      if (!pubOf.size) return;
+      const bad = await judge.problem(act, d.id, d.signer);
+      const plain = bad ? null : await openAt(m, [...places, ...m.places.map(relayAddress).filter((x): x is string => !!x)], via);
+      let man: Map<number, unknown> | null = null;
+      try {
+        const x = plain ? cborDecode(plain) : null;
+        man = x instanceof Map && typeof x.get(0) === 'string' && typeof x.get(1) === 'string' ? (x as Map<number, unknown>) : null;
+      } catch {
+        man = null;
+      }
+      const impl = man?.get(6);
+      const implemented = Array.isArray(impl) && impl.length && impl.every(bytes32) ? (impl as Uint8Array[]).map((h) => hex(h)) : null;
+      const named = implemented ? listedBy(implemented) : fallback;
+      if (!named.length) return;
+      const r: Release = { id: d.id, signer: d.signer, name: null, version: null, problem: bad, by: implemented ? 'implements' : 'reference' };
       if (!r.problem) {
-        const plain = await openAt(m, [...places, ...m.places.map(relayAddress).filter((x): x is string => !!x)], via);
-        try {
-          const man = plain ? (cborDecode(plain) as Map<number, unknown>) : null;
-          if (man instanceof Map && typeof man.get(0) === 'string' && typeof man.get(1) === 'string') {
-            r.name = man.get(0) as string;
-            r.version = man.get(1) as string;
-          } else r.problem = 'its manifest was not found, or does not read as one';
-        } catch {
-          r.problem = 'its manifest does not read as one';
-        }
+        if (man) {
+          r.name = man.get(0) as string;
+          r.version = man.get(1) as string;
+        } else r.problem = plain ? 'its manifest does not read as one' : 'its manifest was not found, or does not read as one';
       }
       for (const l of named) l.releases.push(r);
     }),
@@ -570,7 +610,33 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
   for (const l of byHash.values()) l.releases.sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.id < b.id ? -1 : 1));
 
   const { extensions, agreements } = await readExtensions(found, byHash, judge, lines.reduce((n, l) => n + l.private, 0));
-  return { relays: lines, extensions, agreements, lines: linesOf([...byHash.values()]), unverified: pubs.filter((p) => p.problem).sort((a, b) => (a.id < b.id ? -1 : 1)) };
+  const xtypes = await countUse(found, byHash, judge);
+  return { relays: lines, extensions, agreements, lines: linesOf([...byHash.values()]), unverified: pubs.filter((p) => p.problem).sort((a, b) => (a.id < b.id ? -1 : 1)), xtypes };
+}
+
+/**
+ * The use of each xtype listed: the public acts naming its spec hash and one
+ * of its act types (Development rule 2: every act names its type within the
+ * specification that defines it), found on the relays read, each judged
+ * through its signer's chain. Private acts are not counted: their
+ * specification cannot be read. Most used first.
+ */
+async function countUse(found: Map<string, { d: Described; act: Uint8Array }>, byHash: Map<string, Listed>, judge: Judge): Promise<Listed[]> {
+  const xtypes = [...byHash.values()].filter((l) => isXtype(l.spec));
+  for (const l of xtypes) l.use = { acts: 0, byType: l.spec.types.map((t) => ({ type: t.type, name: t.name, acts: 0 })), notValid: 0 };
+  const of = new Map(xtypes.map((l) => [l.hash, l]));
+  for (const { d, act } of found.values()) {
+    const l = d.public && d.spec ? of.get(d.spec) : undefined;
+    const t = l?.use!.byType.find((x) => x.type === d.type);
+    if (!l || !t) continue;
+    if (!d.signer || (await judge.problem(act, d.id, d.signer))) {
+      l.use!.notValid++;
+      continue;
+    }
+    t.acts++;
+    l.use!.acts++;
+  }
+  return xtypes.sort((a, b) => b.use!.acts - a.use!.acts || (a.name < b.name ? -1 : a.name > b.name ? 1 : a.hash < b.hash ? -1 : 1));
 }
 
 /**
