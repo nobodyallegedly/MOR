@@ -1807,9 +1807,9 @@ function passStringToWasm0(arg, malloc, realloc) {
   const mem = getUint8ArrayMemory0();
   let offset = 0;
   for (; offset < len; offset++) {
-    const code = arg.charCodeAt(offset);
-    if (code > 127) break;
-    mem[ptr + offset] = code;
+    const code2 = arg.charCodeAt(offset);
+    if (code2 > 127) break;
+    mem[ptr + offset] = code2;
   }
   if (offset !== len) {
     if (offset !== 0) {
@@ -1983,10 +1983,10 @@ function abytes(value, length, title2 = "") {
   const bytes = isBytes(value);
   const ofLen = length !== void 0 ? ` of length ${length}` : "";
   const got = bytes ? `length=${value.length}` : `type=${typeof value}`;
-  const message3 = atitle(title2) + "expected Uint8Array" + ofLen + ", got " + got;
+  const message4 = atitle(title2) + "expected Uint8Array" + ofLen + ", got " + got;
   if (!bytes)
-    throw new TypeError(message3);
-  throw new RangeError(message3);
+    throw new TypeError(message4);
+  throw new RangeError(message4);
 }
 var aobject = (value, label) => {
   if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -2376,9 +2376,9 @@ try {
 
 // ../genesis/src/transport.ts
 var RelayError = class extends Error {
-  constructor(code, reason, acts = [], status = 0) {
-    super(`relay error ${code}: ${reason}`);
-    this.code = code;
+  constructor(code2, reason, acts = [], status = 0) {
+    super(`relay error ${code2}: ${reason}`);
+    this.code = code2;
     this.reason = reason;
     this.acts = acts;
     this.status = status;
@@ -2416,17 +2416,17 @@ var Relay = class {
     const r = await fetch(this.via.replace(/\/$/, "") + path, init);
     const body = new Uint8Array(await r.arrayBuffer());
     if (!r.ok) {
-      let code = -1;
+      let code2 = -1;
       let reason = `HTTP ${r.status}`;
       let acts = [];
       try {
         const e = cborDecode(body);
-        code = e.get(0);
+        code2 = e.get(0);
         reason = e.get(1) ?? reason;
         acts = bytesList(e.get(2));
       } catch {
       }
-      throw new RelayError(code, reason, acts, r.status);
+      throw new RelayError(code2, reason, acts, r.status);
     }
     return body;
   }
@@ -3940,7 +3940,7 @@ function checkBound(doc, declared = DECLARED, endsBlock = ENDS_BLOCK) {
   const sameLine = (a, b) => lineEnd(a.span.from) === lineEnd(b.span.from);
   const closeShown = (i) => linkCloseShown(s, i);
   const stack = [];
-  let code = null;
+  let code2 = null;
   let link = null;
   for (const m of doc.marks) {
     const { from, to } = m.span;
@@ -3978,12 +3978,12 @@ function checkBound(doc, declared = DECLARED, endsBlock = ENDS_BLOCK) {
         if (to - from !== 1 || to >= lineEnd(from) || !ESCAPABLE.has(s[to]) || state2[to] !== 1) return fail2("a backslash before a character it escapes");
         break;
       case "code-open":
-        if (code || !wholeRun(m, "`")) return fail2("a whole run of backticks opening a code span");
-        code = m;
+        if (code2 || !wholeRun(m, "`")) return fail2("a whole run of backticks opening a code span");
+        code2 = m;
         break;
       case "code-close":
-        if (!code || !sameLine(code, m) || !wholeRun(m, "`") || to - from !== code.span.to - code.span.from) return fail2("a run of as many backticks closing a code span on its line");
-        code = null;
+        if (!code2 || !sameLine(code2, m) || !wholeRun(m, "`") || to - from !== code2.span.to - code2.span.from) return fail2("a run of as many backticks closing a code span on its line");
+        code2 = null;
         break;
       case "link-open": {
         const a = AUTOLINK.exec(s.slice(from, lineEnd(from)));
@@ -4015,7 +4015,7 @@ function checkBound(doc, declared = DECLARED, endsBlock = ENDS_BLOCK) {
       }
     }
   }
-  if (stack.length || code || link) return "an opening sign is never closed on its line";
+  if (stack.length || code2 || link) return "an opening sign is never closed on its line";
   let prev = -1;
   const next = new Int32Array(n + 1).fill(-1);
   for (let i = n - 1; i >= 0; i--) next[i] = state2[i] === 1 ? i : next[i + 1];
@@ -4287,6 +4287,7 @@ var PUBLICATION2 = 0;
 var WITHDRAWAL2 = 3;
 var NUDGE = test3("nudge cMIP, draft 2, test value until publication");
 var NUDGE_TYPES = { terms: 0, nudge: 1, pick: 2 };
+var RELEASE_MANIFEST = test3("release manifest cMIP, draft 1, test value until publication");
 
 // src/verify.ts
 async function fetchAct2(id, hints, via) {
@@ -5267,10 +5268,598 @@ function writeBox(authors, places, homes) {
   return box;
 }
 
+// src/listing.ts
+var AGREEMENTS_TERMS = 0;
+var AGREEMENTS_SIGNATURE = 1;
+var KINDS2 = ["cMIP", "Module", "unit", "media type", "MIR", "signature scheme"];
+var LAYERS = {
+  [MIRS.identity]: "Identity",
+  [MIRS.text]: "Text",
+  [MIRS.envelopes]: "Envelopes",
+  [MIRS.money]: "Money",
+  [MIRS.agreements]: "Agreements",
+  [MIRS.development]: "Development"
+};
+var EXTENSION_LAYERS = ["Identity", "Envelopes and Text", "Money", "Agreements"];
+var TASKS = {
+  1: ["Identity", "Identity proofs and credentials"],
+  2: ["Identity", "Naming"],
+  3: ["Identity", "Outside link proofs"],
+  4: ["Text", "Text format"],
+  5: ["Envelopes", "Media interpretation"],
+  6: ["Money", "Payment"],
+  7: ["Money", "Conversion"],
+  8: ["Agreements", "Split"],
+  9: ["Agreements", "Condition evaluation"],
+  10: ["Agreements", "Time reference"],
+  11: ["Envelopes", "Anchoring"],
+  12: ["Agreements", "Grant limits"],
+  13: ["Agreements", "Work claims"],
+  14: ["Agreements", "Absence proof"]
+};
+var RAIL_KINDS = ["a request rail", "a push rail binding the commitment", "a push rail binding nothing"];
+var LISTING_READ = 5e3;
+var message2 = (err) => err instanceof Error ? err.message : String(err);
+var bytes32 = (x) => x instanceof Uint8Array && x.length === 32;
+function concat(...parts) {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0;
+  for (const p of parts) {
+    out.set(p, at);
+    at += p.length;
+  }
+  return out;
+}
+function specHash(content) {
+  const tag = sha256(new TextEncoder().encode("MOR/spec"));
+  return hex(sha256(concat(tag, tag, content)));
+}
+function decodeSpec(content) {
+  let m;
+  try {
+    m = cborDecode(content);
+  } catch (e) {
+    throw new Error(`its content is not CBOR: ${message2(e)}`);
+  }
+  if (!(m instanceof Map)) throw new Error("its content is not a map");
+  for (const k of m.keys()) if (typeof k !== "number" || !Number.isInteger(k) || k < 0 || k > 12) throw new Error(`its content has a key Development does not define (${String(k)})`);
+  const kind = m.get(0);
+  if (typeof kind !== "number" || !Number.isInteger(kind) || kind < 0 || kind >= KINDS2.length) throw new Error("its kind (field 0) is not one Development defines");
+  const creator2 = m.get(1);
+  if (creator2 !== void 0 && !bytes32(creator2)) throw new Error("its creator (field 1) is not an identity hash");
+  if (kind !== 4 && creator2 === void 0) throw new Error("it names no creator (field 1), which every kind but a MIR must");
+  const list = (k) => {
+    const v = m.get(k);
+    if (v === void 0) return [];
+    if (!Array.isArray(v) || !v.length) throw new Error(`field ${k} is not a list of at least one`);
+    return v;
+  };
+  const tasks = list(2).map((t) => {
+    if (!Array.isArray(t) || t.length !== 2 || !bytes32(t[0]) || typeof t[1] !== "number") throw new Error("a task (field 2) is not [MIR, number]");
+    return [hex(t[0]), t[1]];
+  });
+  const types = list(3).map((t) => {
+    if (!Array.isArray(t) || t.length !== 3 || typeof t[0] !== "number" || typeof t[1] !== "string" || typeof t[2] !== "string") throw new Error("an act type (field 3) is not [type, name, schema]");
+    return { type: t[0], name: t[1] };
+  });
+  const dependencies = list(4).map((d) => {
+    if (!bytes32(d)) throw new Error("a dependency (field 4) is not a hash");
+    return hex(d);
+  });
+  const impl = m.get(5);
+  if (impl !== void 0 && !bytes32(impl)) throw new Error("field 5 (implements) is not a hash");
+  const rules = list(6).length;
+  const fee = m.get(7);
+  if (fee !== void 0 && !Array.isArray(fee)) throw new Error("its fee (field 7) is not a list");
+  const pred = m.get(8);
+  if (pred !== void 0 && !bytes32(pred)) throw new Error("its predecessor (field 8) is not a hash");
+  const text2 = m.get(9);
+  if (typeof text2 !== "string") throw new Error("it holds no text (field 9)");
+  try {
+    checkText(text2);
+  } catch (e) {
+    throw new Error(`its text is not canonical text: ${message2(e)}`);
+  }
+  let layers = null;
+  if (m.has(10)) {
+    const l = list(10);
+    if (!l.every((x, i) => typeof x === "number" && Number.isInteger(x) && x >= 0 && x <= 3 && (i === 0 || x > l[i - 1]))) {
+      throw new Error("its layers (field 10) are not ascending, from 0 to 3");
+    }
+    layers = l;
+  }
+  const rail = m.get(11);
+  if (rail !== void 0 && (typeof rail !== "number" || !Number.isInteger(rail) || rail < 0 || rail > 2)) throw new Error("its rail kind (field 11) is not 0, 1 or 2");
+  const checker = m.get(12);
+  if (checker !== void 0 && checker !== true) throw new Error("field 12 is not true");
+  if (hex(cborEncode(m)) !== hex(content)) throw new Error("its content is not in canonical encoding");
+  return {
+    kind,
+    creator: creator2 ? hex(creator2) : null,
+    tasks,
+    types,
+    dependencies,
+    implements: impl ? hex(impl) : null,
+    rules,
+    fee: fee !== void 0,
+    predecessor: pred ? hex(pred) : null,
+    text: text2,
+    layers,
+    rail: rail ?? null,
+    checker: checker === true
+  };
+}
+function nameOf3(text2) {
+  const line = text2.split("\n").map((l) => l.replace(/^#+\s*/, "").trim()).find((l) => /\p{L}/u.test(l)) ?? "(no name)";
+  return line.length > 100 ? `${line.slice(0, 99)}\u2026` : line;
+}
+function mediaOf(d) {
+  if (!d.public || !d.payload || d.type !== PUBLICATION2 || d.spec !== SPECS.envelopes) return null;
+  let m;
+  try {
+    m = cborDecode(d.payload);
+  } catch {
+    return null;
+  }
+  if (!(m instanceof Map)) return null;
+  const [spec, work, locked, size, nonce, key, places] = [0, 1, 2, 3, 4, 5, 6].map((k) => m.get(k));
+  if (!bytes32(spec) || !(work instanceof Uint8Array) || !(locked instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) return null;
+  return {
+    spec: hex(spec),
+    work,
+    locked,
+    size,
+    nonce,
+    key: key instanceof Uint8Array ? key : null,
+    places: Array.isArray(places) ? places.filter((p) => typeof p === "string") : []
+  };
+}
+var Judge2 = class {
+  constructor(places, via) {
+    this.places = places;
+    this.via = via;
+  }
+  v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  looked = /* @__PURE__ */ new Map();
+  lookUp(identity) {
+    let l = this.looked.get(identity);
+    if (!l) {
+      l = lookUp(identity, this.places, this.via, this.v);
+      this.looked.set(identity, l);
+    }
+    return l;
+  }
+  /** Why the act is not valid for its signer's chain, or null when it is. */
+  async problem(act, id, signer) {
+    try {
+      await this.lookUp(signer);
+    } catch (e) {
+      return `its signer's identity chain could not be looked up: ${message2(e)}`;
+    }
+    try {
+      this.v.add(act);
+    } catch (e) {
+      return `the act is not valid: ${message2(e)}`;
+    }
+    const s = this.v.status(id);
+    return s === "valid" ? null : `its standing is \u201C${s}\u201D, not valid, for its signer's identity chain`;
+  }
+};
+async function openAt(m, places, via) {
+  if (!m.key) return null;
+  for (const h of places) {
+    try {
+      const locked = await relayAt(h, via).getMedia(hex(m.locked));
+      if (!locked) continue;
+      const plain = openMedia(locked, m.key, m.nonce);
+      if (plain.length === m.size && workHash(plain) === hex(m.work)) return plain;
+    } catch {
+    }
+  }
+  return null;
+}
+async function readRelay(line, via, into) {
+  let after;
+  try {
+    for (; ; ) {
+      const page = await relayAt(line.address, via).feed({ after });
+      for (const it of page.items) {
+        if (line.read >= LISTING_READ) {
+          line.stopped = true;
+          return;
+        }
+        line.read++;
+        if (it.kind !== "act") {
+          line.private++;
+          continue;
+        }
+        let d;
+        try {
+          d = describeAct(it.item);
+        } catch {
+          continue;
+        }
+        if (!d.public) line.private++;
+        else if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TERMS) line.terms++;
+        if (!into.has(d.id)) into.set(d.id, { d, act: it.item });
+      }
+      if (!page.items.length || page.next === after) break;
+      after = page.next;
+    }
+  } catch (e) {
+    line.problem = message2(e);
+  }
+}
+async function readListing(relays, gatewayRelays, via = {}) {
+  const lines = relays.map((r) => ({ ...r, asked: relayAddress(r.address) !== null, problem: null, read: 0, specs: 0, stopped: false, private: 0, terms: 0 }));
+  const asked = lines.filter((l) => l.asked).map((l) => relayAddress(l.address));
+  for (const l of lines) if (l.asked) l.address = relayAddress(l.address);
+  const found = /* @__PURE__ */ new Map();
+  const at = /* @__PURE__ */ new Map();
+  for (const l of lines.filter((x) => x.asked)) {
+    const before = new Set(found.keys());
+    await readRelay(l, via, found);
+    for (const id of found.keys()) if (!before.has(id)) at.set(id, l.address);
+  }
+  const places = [.../* @__PURE__ */ new Set([...asked, ...gatewayRelays])];
+  const judge = new Judge2(places, via);
+  const pubs = [];
+  const releases = [];
+  for (const { d, act } of found.values()) {
+    const m = mediaOf(d);
+    if (!m) continue;
+    if (m.spec === RELEASE_MANIFEST) {
+      if ((d.refs ?? []).length) releases.push({ d, act, m });
+      continue;
+    }
+    if (m.spec !== MIRS.development) continue;
+    const l = lines.find((x) => x.address === at.get(d.id));
+    if (l) l.specs++;
+    pubs.push({ id: d.id, signer: d.signer ?? "", problem: null, hash: null, spec: null });
+  }
+  await Promise.all(
+    pubs.map(async (p) => {
+      const { d, act } = found.get(p.id);
+      const m = mediaOf(d);
+      if (!d.signer) return void (p.problem = "it names no signer");
+      const bad = await judge.problem(act, d.id, d.signer);
+      if (bad) return void (p.problem = bad);
+      if (!m.key) return void (p.problem = "its content is locked: its key is not public");
+      const content = await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
+      if (!content) return void (p.problem = "its content was not found, or does not match its work hash and size");
+      try {
+        p.spec = decodeSpec(content);
+      } catch (e) {
+        return void (p.problem = `not a specification as Development defines one: ${message2(e)}`);
+      }
+      p.hash = specHash(content);
+    })
+  );
+  const byHash = /* @__PURE__ */ new Map();
+  for (const p of pubs.filter((x) => !x.problem)) {
+    let l = byHash.get(p.hash);
+    if (!l) {
+      l = { hash: p.hash, spec: p.spec, name: nameOf3(p.spec.text), publications: [], claimed: false, releases: [] };
+      byHash.set(p.hash, l);
+    }
+    l.publications.push(p);
+  }
+  for (const l of byHash.values()) {
+    l.claimed = l.spec.creator !== null && l.publications.some((p) => p.signer === l.spec.creator);
+    l.publications.sort((a, b) => Number(b.signer === l.spec.creator) - Number(a.signer === l.spec.creator) || (a.id < b.id ? -1 : 1));
+  }
+  const pubOf = /* @__PURE__ */ new Map();
+  for (const l of byHash.values()) for (const p of l.publications) pubOf.set(p.id, l);
+  await Promise.all(
+    releases.map(async ({ d, act, m }) => {
+      const named = [...new Set((d.refs ?? []).map((r2) => pubOf.get(r2)).filter((x) => !!x))];
+      if (!named.length || !d.signer) return;
+      const r = { id: d.id, signer: d.signer, name: null, version: null, problem: await judge.problem(act, d.id, d.signer) };
+      if (!r.problem) {
+        const plain = await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
+        try {
+          const man = plain ? cborDecode(plain) : null;
+          if (man instanceof Map && typeof man.get(0) === "string" && typeof man.get(1) === "string") {
+            r.name = man.get(0);
+            r.version = man.get(1);
+          } else r.problem = "its manifest was not found, or does not read as one";
+        } catch {
+          r.problem = "its manifest does not read as one";
+        }
+      }
+      for (const l of named) l.releases.push(r);
+    })
+  );
+  for (const l of byHash.values()) l.releases.sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.id < b.id ? -1 : 1));
+  const { extensions, agreements } = await readExtensions(found, byHash, judge, lines.reduce((n, l) => n + l.private, 0));
+  return { relays: lines, extensions, agreements, lines: linesOf([...byHash.values()]), unverified: pubs.filter((p) => p.problem).sort((a, b) => a.id < b.id ? -1 : 1) };
+}
+function linesOf(all) {
+  const byHash = new Map(all.map((l) => [l.hash, l]));
+  const after = (l) => l.spec.predecessor && l.spec.predecessor !== l.hash ? byHash.get(l.spec.predecessor) ?? null : null;
+  const children2 = /* @__PURE__ */ new Map();
+  for (const l of all) {
+    const p = after(l);
+    if (p) children2.set(p.hash, [...children2.get(p.hash) ?? [], l]);
+  }
+  const order = (a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : a.hash < b.hash ? -1 : 1;
+  for (const c of children2.values()) c.sort(order);
+  const placed = /* @__PURE__ */ new Set();
+  const out = [];
+  const walk = (l, n, drafts) => {
+    if (placed.has(l.hash)) return;
+    placed.add(l.hash);
+    const p = after(l);
+    const siblings = p ? (children2.get(p.hash) ?? []).filter((x) => x !== l).map((x) => x.hash) : [];
+    drafts.push({
+      listed: l,
+      number: n,
+      after: p,
+      afterMissing: !p && l.spec.predecessor ? l.spec.predecessor : null,
+      otherCreator: !!p && p.spec.creator !== l.spec.creator,
+      siblings
+    });
+    for (const c of children2.get(l.hash) ?? []) walk(c, n + 1, drafts);
+  };
+  const roots = all.filter((l) => !after(l)).sort(order);
+  for (const r of roots) {
+    const drafts = [];
+    walk(r, 1, drafts);
+    out.push({ drafts, newest: drafts[drafts.length - 1].listed });
+  }
+  for (const l of all.filter((x) => !placed.has(x.hash)).sort(order)) {
+    const drafts = [];
+    walk(l, 1, drafts);
+    out.push({ drafts, newest: drafts[drafts.length - 1].listed });
+  }
+  return out.sort((a, b) => order(a.newest, b.newest));
+}
+function roleWords(l, all) {
+  const s = l.spec;
+  const kind = KINDS2[s.kind];
+  const role = [];
+  const layers = /* @__PURE__ */ new Set();
+  for (const [mir, n] of s.tasks) {
+    const layer = LAYERS[mir];
+    const known = TASKS[n];
+    if (layer) layers.add(layer);
+    if (known && layer === known[0]) role.push(`fills task ${n}, ${known[1]}`);
+    else role.push(`fills task ${n}${layer ? ` of ${layer}` : ", of a MIR this listing does not know"}`);
+  }
+  if (s.implements) {
+    const under = all.get(s.implements);
+    if (under) {
+      role.push(`works under the cMIP \u201C${under.name}\u201D`);
+      if (!s.tasks.length) {
+        for (const [mir] of under.spec.tasks) if (LAYERS[mir]) layers.add(LAYERS[mir]);
+      }
+    } else role.push(`works under a cMIP not found here (${s.implements.slice(0, 12)}\u2026)`);
+  }
+  if (s.types.length) {
+    role.push(
+      !s.tasks.length ? `an xtype: defines ${s.types.length === 1 ? "an act type" : `${s.types.length} act types`} (${s.types.map((t) => t.name).join(", ")}), filling no task` : `defines ${s.types.length === 1 ? "an act type" : `${s.types.length} act types`} (${s.types.map((t) => t.name).join(", ")})`
+    );
+  }
+  if (s.layers) role.push(`declares, for use as an extension, the layers it acts on beyond Development: ${s.layers.map((n) => EXTENSION_LAYERS[n]).join(", ")}`);
+  if (s.rail !== null) role.push(`a rail Module: ${RAIL_KINDS[s.rail]}`);
+  if (s.checker) role.push("checks proofs of delivery of proven offers (field 12)");
+  if (!role.length) role.push(s.kind === 0 ? "names no task, defines no act type" : "declares nothing more");
+  if (!layers.size && (s.types.length || s.layers || s.kind === 0 && !s.tasks.length)) layers.add("Development");
+  return { kind, layer: [...layers].join(", ") || "not said", role };
+}
+async function readExtensions(found, byHash, judge, privateActs) {
+  const read3 = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
+  const terms = /* @__PURE__ */ new Map();
+  const signatures = [];
+  for (const { d, act } of found.values()) {
+    if (!d.public || d.spec !== MIRS.agreements || !d.payload || !d.signer) continue;
+    if (d.type === AGREEMENTS_SIGNATURE) signatures.push({ act, d });
+    if (d.type !== AGREEMENTS_TERMS) continue;
+    try {
+      const fields = cborDecode(d.payload);
+      if (fields instanceof Map) terms.set(d.id, { act, signer: d.signer, fields });
+    } catch {
+      read3.notCounted.push({ id: d.id, why: "its terms do not decode" });
+    }
+  }
+  const parties = /* @__PURE__ */ new Set();
+  for (const t of terms.values()) {
+    parties.add(t.signer);
+    for (const p of Array.isArray(t.fields.get(0)) ? t.fields.get(0) : []) if (bytes32(p)) parties.add(hex(p));
+  }
+  for (const s of signatures) parties.add(s.d.signer);
+  await Promise.all([...parties].map((p) => judge.lookUp(p).catch(() => null)));
+  const valid = /* @__PURE__ */ new Set();
+  for (const [id, t] of terms) {
+    const bad = await judge.problem(t.act, id, t.signer);
+    if (bad) read3.notCounted.push({ id, why: bad });
+    else valid.add(id);
+  }
+  for (const s of signatures) {
+    try {
+      judge.v.add(s.act);
+    } catch {
+    }
+  }
+  read3.terms = valid.size;
+  const named = (t) => Array.isArray(t.get(15)) ? t.get(15).filter(bytes32).map((h) => hex(h)) : [];
+  const extLayers = {};
+  for (const id of valid) for (const h of named(terms.get(id).fields)) extLayers[h] = byHash.get(h)?.spec.layers ?? [];
+  const specs = { ...MIRS, extLayers };
+  const counts = /* @__PURE__ */ new Set();
+  for (const id of valid) {
+    try {
+      const a = judge.v.agreementsAgreement(specs, id);
+      if (a.invalid) read3.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
+      else if (a.exists === true || a.exists === null && a.ready) counts.add(id);
+      else read3.proposed++;
+    } catch (e) {
+      read3.notCounted.push({ id, why: `the core library could not judge it: ${message2(e)}` });
+    }
+  }
+  const first = (id) => {
+    const seen = /* @__PURE__ */ new Set();
+    let x = id;
+    for (; ; ) {
+      seen.add(x);
+      const p = terms.get(x)?.fields.get(11);
+      const ph = bytes32(p) ? hex(p) : null;
+      if (!ph || !terms.has(ph) || seen.has(ph)) return x;
+      x = ph;
+    }
+  };
+  const byExt = /* @__PURE__ */ new Map();
+  const agreementsCounted = /* @__PURE__ */ new Set();
+  for (const id of [...counts].sort()) {
+    const ag = first(id);
+    agreementsCounted.add(ag);
+    for (const h of new Set(named(terms.get(id).fields))) {
+      const m = byExt.get(h) ?? /* @__PURE__ */ new Map();
+      m.set(ag, [...m.get(ag) ?? [], id]);
+      byExt.set(h, m);
+    }
+  }
+  read3.counted = agreementsCounted.size;
+  read3.notCounted.sort((a, b) => a.id < b.id ? -1 : 1);
+  const extensions = [...byExt].map(([hash, m]) => {
+    const listed = byHash.get(hash) ?? null;
+    return {
+      hash,
+      listed,
+      agreements: [...m].map(([agreement, ids]) => ({ agreement, terms: ids })).sort((a, b) => a.agreement < b.agreement ? -1 : 1),
+      layers: listed ? ["Development", ...(listed.spec.layers ?? []).map((n) => EXTENSION_LAYERS[n])] : null
+    };
+  });
+  const name = (x) => x.listed?.name ?? `~${x.hash}`;
+  extensions.sort((a, b) => b.agreements.length - a.agreements.length || (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0));
+  return { extensions, agreements: read3 };
+}
+
+// src/shell/listing-view.ts
+var LISTING_STYLE = `:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 18%,transparent);--soft:color-mix(in srgb,CanvasText 66%,Canvas);--ok:#1a7f37;--bad:#b3261e}
+@media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
+.l-any{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:15px}
+.l-any strong{display:block;font-size:17px}
+.l-note{margin:0 0 12px;font-size:13px;color:var(--soft)}
+.l-line{margin:0 0 12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
+.l-line.l-bad{border-color:var(--bad);border-style:dashed}
+.l-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:0 0 4px}
+.l-name{margin:0;font-size:18px;line-height:1.3;font-weight:700}
+.l-ok{color:var(--ok);font-size:13px;font-weight:600}
+.l-no{color:var(--bad);font-size:13px;font-weight:600}
+.l-facts{font-size:14px;color:var(--soft)}
+.l-facts b{color:CanvasText;font-weight:600}
+.l-role{margin:6px 0;padding-left:1.2em;font-size:15px}
+.l-row{margin:4px 0;font-size:14px}
+.l-warn{color:var(--bad)}
+.l-drafts{margin:8px 0 0;padding-left:1.4em;font-size:14px}
+.l-drafts li{margin:2px 0}
+.l-line details{margin-top:8px;font-size:12px;color:var(--soft)}
+.l-line summary{cursor:pointer;min-height:24px}
+code,.l-fp{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.l-section{margin:16px 0 8px;font-size:15px}
+.l-none{font-size:14px;color:var(--soft)}
+.l-h{margin:18px 0 6px;font-size:19px}
+.l-mor2{margin:0 0 8px;font-size:16px;font-weight:600}
+.l-count{font-size:15px;font-weight:700}
+.l-terms{margin:4px 0 0;padding-left:1.2em;font-size:14px}
+.l-terms a{display:inline-block;min-height:24px}`;
+var short4 = (h) => `${h.slice(0, 8)}\u2026${h.slice(-4)}`;
+var fp = (identity) => `<span class="l-fp">${fingerprint(identity)}</span>`;
+function releaseWords(r, creator2) {
+  const by = r.signer === creator2 ? "by its creator" : `by another identity, <span class="l-fp">${short4(r.signer)}</span>`;
+  if (r.problem) return `<li data-release="${r.id}" data-verified="no">a release ${by}, <span class="l-no">not verified</span>: ${escapeHtml(r.problem)}</li>`;
+  return `<li data-release="${r.id}" data-verified="yes"><span class="l-ok">released</span> ${by}: \u201C${escapeHtml(r.name ?? "")}\u201D ${escapeHtml(r.version ?? "")}</li>`;
+}
+function code(l) {
+  if (!l.releases.length) return `<div class="l-row" data-code="none">Code: no release naming it found at the relays read.</div>`;
+  return `<div class="l-row" data-code="${l.releases.some((r) => !r.problem) ? "released" : "unverified"}">Code:<ul class="l-role">${l.releases.map((r) => releaseWords(r, l.spec.creator)).join("")}</ul></div>`;
+}
+function creator(l) {
+  const c = l.spec.creator;
+  if (!c) return `<div class="l-row">No creator: a MIR is the protocol itself.</div>`;
+  if (l.claimed) return `<div class="l-row" data-claimed="yes">Creator ${fp(c)}, who published it.</div>`;
+  const by = [...new Set(l.publications.map((p) => p.signer))].map(fp).join("; ");
+  return `<div class="l-row l-warn" data-claimed="no">Unclaimed by its named creator ${fp(c)}: that identity's publication of it was not found. Published by ${by}.</div>`;
+}
+function draftItem(d) {
+  const l = d.listed;
+  const notes = [];
+  if (d.afterMissing) notes.push(`names a predecessor not found here, <code>${short4(d.afterMissing)}</code>`);
+  if (d.otherCreator) notes.push(`<span class="l-warn" data-other-creator="">by another creator than the draft it follows</span>`);
+  if (d.siblings.length) notes.push(`<span class="l-warn" data-fork="">${d.siblings.length === 1 ? "another specification names" : `${d.siblings.length} others name`} the same predecessor</span>`);
+  if (l.releases.some((r) => !r.problem)) notes.push("code released");
+  return `<li data-draft="${l.hash}" data-number="${d.number}">Draft ${d.number}: \u201C${escapeHtml(l.name)}\u201D, <code>${short4(l.hash)}</code>${l.spec.creator ? `, by <span class="l-fp">${short4(l.spec.creator)}</span>` : ""}${notes.length ? `; ${notes.join("; ")}` : ""}</li>`;
+}
+function lineHtml(line, all) {
+  const l = line.newest;
+  const w = roleWords(l, all);
+  const draft = line.drafts.find((d) => d.listed === l);
+  const drafts = line.drafts.length > 1 || draft.afterMissing ? `<div class="l-row">Drafts, in order:</div><ol class="l-drafts">${line.drafts.map(draftItem).join("")}</ol>` : "";
+  return `<article class="l-line" data-spec="${l.hash}" data-verified="yes">
+<div class="l-head"><h3 class="l-name">${escapeHtml(l.name)}</h3><span class="l-ok">Verified</span></div>
+<div class="l-facts"><b data-kind="">${escapeHtml(w.kind)}</b> \xB7 layer: <span data-layer="">${escapeHtml(w.layer)}</span>${line.drafts.length > 1 ? ` \xB7 draft ${draft.number}` : ""}</div>
+<ul class="l-role" data-role="">${w.role.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>
+${creator(l)}
+${code(l)}
+${drafts}
+<details><summary>How it was checked</summary>
+<div>Spec hash <code>${escapeHtml(l.hash)}</code></div>
+${l.publications.map((p) => `<div>Published in act <code>${escapeHtml(p.id)}</code>, signed by ${fp(p.signer)}, verified through its identity chain in this browser; its content matches its work hash.</div>`).join("")}
+</details></article>`;
+}
+function actLink(id, reader) {
+  return reader ? `<a href="${escapeHtml(reader)}#${id}">terms <code>${short4(id)}</code></a>` : `terms <code>${short4(id)}</code>`;
+}
+function extensionHtml(x, reader) {
+  const n = x.agreements.length;
+  const name = x.listed ? `\u201C${escapeHtml(x.listed.name)}\u201D` : `a cMIP not found at the relays read`;
+  const layers = x.layers ? `the work touches ${escapeHtml(x.layers.join(", "))}` : "which layers the work touches is not said: its specification is not found here";
+  const terms = x.agreements.map((a) => `<li data-agreement="${a.agreement}">${a.terms.map((t) => actLink(t, reader)).join(", ")}</li>`).join("");
+  return `<article class="l-line" data-extension="${x.hash}" data-count="${n}">
+<div class="l-head"><span class="l-name">${name}</span></div>
+<div class="l-row"><span class="l-count">named by ${n} ${n === 1 ? "agreement" : "agreements"}</span>; <span data-layers="">${layers}</span>.</div>
+<div class="l-row">Their public terms:</div><ul class="l-terms">${terms}</ul>
+<details><summary>Which cMIP</summary><div>Spec hash <code>${escapeHtml(x.hash)}</code></div></details></article>`;
+}
+function extensionsHtml(listing, reader) {
+  const a = listing.agreements;
+  const counted = `From ${a.counted} ${a.counted === 1 ? "agreement" : "agreements"} counted on these relays: public terms, signed by every party, each checked in this browser.`;
+  const not = `<strong>Private agreements are not counted</strong>: their terms cannot be read${a.private ? ` (${a.private} private ${a.private === 1 ? "act" : "acts"} found, not opened)` : ""}.${a.proposed ? ` ${a.proposed} public ${a.proposed === 1 ? "proposal" : "proposals"} not yet signed by every party, not counted.` : ""}${a.notCounted.length ? ` ${a.notCounted.length} public terms could not be verified, not counted.` : ""}`;
+  const body = listing.extensions.length ? listing.extensions.map((x) => extensionHtml(x, reader)).join("\n") : '<p class="l-none">No agreement counted here names an extension.</p>';
+  return `<section id="l-extensions"><h2 class="l-h">Extensions agreements name</h2>
+<p class="l-mor2" id="l-mor2">Each extension marks work the core did not foresee: the raw material of MOR 2.</p>
+<p class="l-note" id="l-counted">${counted} ${not} Most named first.</p>
+${body}</section>`;
+}
+function unverifiedHtml(listing) {
+  if (!listing.unverified.length) return "";
+  const items = listing.unverified.map(
+    (p) => `<article class="l-line l-bad" data-pub="${p.id}" data-verified="no">
+<div class="l-head"><span class="l-name">A specification?</span><span class="l-no">Not verified</span></div>
+<div class="l-row">A publication that could not be verified in this browser: ${escapeHtml(p.problem ?? "unknown")}. What it says is not shown.</div>
+<details><summary>Which act</summary><div>Act <code>${escapeHtml(p.id)}</code>${p.signer ? `, naming as its signer ${fp(p.signer)}` : ""}</div></details></article>`
+  );
+  return `<h3 class="l-section" id="l-unverified">Could not be verified (${listing.unverified.length})</h3>${items.join("\n")}`;
+}
+function listingHtml(listing, style, reader = null) {
+  const all = /* @__PURE__ */ new Map();
+  for (const line of listing.lines) for (const d of line.drafts) all.set(d.listed.hash, d.listed);
+  const relays = listing.relays.map((r) => escapeHtml(r.name ?? r.address)).join(", ");
+  const top = `<div class="l-any" id="l-any"><strong>One listing among any; anyone can run another.</strong>
+It decides nothing and refuses nothing: a specification is named by its own hash, not by being listed here, and is used by whoever adopts it.</div>
+<p class="l-note">Read from ${relays || "no relay"}: first the extensions the agreements there name, then the cMIPs, Modules and other specifications published there, each checked in this browser: who signed it, and that it is what they signed. What each specification is comes from its own fields; a name is the first line of its text.</p>`;
+  const body = listing.lines.length ? listing.lines.map((l) => lineHtml(l, all)).join("\n") : '<p class="l-none">No verified specification found at the relays read.</p>';
+  const specs = `<section id="l-specs"><h2 class="l-h">cMIPs and Modules</h2>${body}${unverifiedHtml(listing)}</section>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${specs}</body></html>`;
+}
+
 // ../../modules/video/src/video.ts
 var NotFilm = class extends Error {
-  constructor(kind, message3) {
-    super(message3);
+  constructor(kind, message4) {
+    super(message4);
     this.kind = kind;
     this.name = "NotFilm";
   }
@@ -5755,8 +6344,8 @@ function parse2(bytes) {
   const turned = v.rotation === 90 || v.rotation === 270;
   const vv = v.video;
   const long = Math.max(vv.width, vv.height);
-  const short4 = Math.min(vv.width, vv.height);
-  if (long > MAX_LONG_SIDE || short4 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
+  const short5 = Math.min(vv.width, vv.height);
+  if (long > MAX_LONG_SIDE || short5 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
   if (vv.level > MAX_LEVEL) throw new NotFilm("limits", `H.264 level ${vv.level / 10}, above ${MAX_LEVEL / 10}`);
   const seconds = Math.max(mDur / mScale, ...tracks.map((t) => t.mediaDuration / t.timescale));
   if (seconds > MAX_SECONDS) throw new NotFilm("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS}`);
@@ -5940,6 +6529,8 @@ var FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-act>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-feed{display:block;margin:1em 0}
 .mor-write{display:block;margin:1em 0;min-height:4em}
+.mor-listing{display:block;margin:1em 0}
+.mor-listing>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-feed>iframe{display:block;width:1px;min-width:100%;border:0;min-height:4em}
 .mor-act-note{font:13px system-ui,sans-serif;padding:8px;border:1px dashed currentColor;border-radius:4px}`;
 var ACT_STYLE = `${STYLE2}
@@ -5972,6 +6563,18 @@ function clockItem(f) {
   const away = c.unreachable.length ? `; not reachable from a browser, not asked: ${c.unreachable.map((h) => `<code>${escapeHtml(h)}</code>`).join(", ")}` : "";
   const order = f.order === "clock" ? `The posts are ordered by its stamps: its operator's word for when it held each one, nothing more.` : `No post found carries its stamps: the posts are in signed order.`;
   return `<div id="mor-clock">The clock this page names, ${who2}: ${c.found} ${c.found === 1 ? "stamp" : "stamps"} found, ${c.verified} verified, placing ${c.placed} ${c.placed === 1 ? "post" : "posts"}; asked: ${c.asked.map((h) => `<code>${escapeHtml(h)}</code>`).join(", ")}${away}. ${order} A stamp signed by any other identity is not asked for.</div>`;
+}
+function listingItem(l) {
+  if (!l.read) return `<li>reading the specifications published on ${l.relays.map((r) => `<code>${escapeHtml(r.address)}</code>`).join(", ")}\u2026</li>`;
+  const lines = l.read.map((r) => {
+    const name = r.name ? `${escapeHtml(r.name)}, ` : "";
+    if (!r.asked) return `<li>${name}<code>${escapeHtml(r.address)}</code>: <span class="bad-word">not reachable from a browser</span>, not asked</li>`;
+    if (r.problem) return `<li>${name}<code>${escapeHtml(r.address)}</code>: <span class="bad-word">could not be read</span>, ${escapeHtml(r.problem)}${r.read ? ` (after ${r.read} acts)` : ""}</li>`;
+    return `<li>${name}<code>${escapeHtml(r.address)}</code>: ${r.read} ${r.read === 1 ? "act" : "acts"} read, ${r.terms} public terms, ${r.private} private, not opened, ${r.specs} ${r.specs === 1 ? "publication" : "publications"} of specifications${r.stopped ? `; <span class="bad-word">stopped</span> after ${r.read} acts, the most this listing reads of one relay` : ""}</li>`;
+  });
+  const a = l.agreements;
+  const ag = a ? `${l.extensions} ${l.extensions === 1 ? "extension" : "extensions"} named by ${a.counted} ${a.counted === 1 ? "agreement" : "agreements"} counted, from ${a.terms} public terms verified (${a.proposed} not yet signed by every party${a.notCounted.length ? `, <span class="bad-word">${a.notCounted.length} not counted</span>` : ""}); private agreements are not counted. ` : "";
+  return `<li>${ag}${l.verified} ${l.verified === 1 ? "specification" : "specifications"} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? "publication" : "publications"} not verified</span>` : ""}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join("")}</ul></li>`;
 }
 function filmItem(f) {
   const words = {
@@ -6006,6 +6609,7 @@ function bar(s) {
   if (s.path) rows.push(`<dt>This file</dt><dd><code>${escapeHtml(s.path)}</code>${s.work ? `, work hash <code>${escapeHtml(s.work)}</code>` : ""}</dd>`);
   if (s.films.length) rows.push(`<dt>Films</dt><dd><ul id="mor-films">${s.films.map(filmItem).join("")}</ul></dd>`);
   if (s.feeds.length) rows.push(`<dt>Feeds</dt><dd><ul id="mor-feeds">${s.feeds.map(feedItem).join("")}</ul></dd>`);
+  if (s.listings.length) rows.push(`<dt>Listings</dt><dd><ul id="mor-listings">${s.listings.map(listingItem).join("")}</ul></dd>`);
   if (s.writes.length) {
     const to = (as) => as.map((a) => `${a.name ? `${escapeHtml(a.name)}, ` : ""}<span class="fp">${fingerprint(a.identity)}</span>`).join("; ");
     rows.push(
@@ -6068,7 +6672,7 @@ function inertCss(css) {
 async function preparePage(bytes, path, manifest, getFile) {
   const doc = new DOMParser().parseFromString(new TextDecoder("utf-8", { fatal: true }).decode(bytes), "text/html");
   const byPath = new Map(manifest.files.map((f) => [f.path, f]));
-  const out = { html: "", title: null, acts: [], films: [], listed: [], feeds: [], clocks: [], writes: [], icon: null, problems: [], dropped: 0 };
+  const out = { html: "", title: null, acts: [], films: [], listed: [], feeds: [], clocks: [], listings: [], writes: [], icon: null, problems: [], dropped: 0 };
   const drop = (el) => {
     el.remove();
     out.dropped++;
@@ -6092,7 +6696,8 @@ async function preparePage(bytes, path, manifest, getFile) {
     const entry = p ? byPath.get(p) : void 0;
     return entry && kindOf(entry.path) === "film" ? entry : void 0;
   };
-  for (const el of [...doc.querySelectorAll("[data-film], [data-film-listed], [data-feed], [data-write]")]) {
+  for (const el of [...doc.querySelectorAll("[data-film], [data-film-listed], [data-feed], [data-write], [data-listing]")]) {
+    el.removeAttribute("data-listing");
     el.removeAttribute("data-write");
     el.removeAttribute("data-film");
     el.removeAttribute("data-film-listed");
@@ -6285,6 +6890,43 @@ async function preparePage(bytes, path, manifest, getFile) {
     }
     el.replaceWith(box);
   }
+  for (const el of [...doc.querySelectorAll("mor-listing")]) {
+    const relays = [];
+    for (const r of [...el.querySelectorAll("mor-relay")]) {
+      const address = (r.getAttribute("address") ?? "").trim().replace(/\/$/, "");
+      let ok = false;
+      try {
+        const u = new URL(address);
+        ok = (u.protocol === "https:" || u.protocol === "http:") && !u.username && !u.password && !u.search && !u.hash;
+      } catch {
+        ok = false;
+      }
+      if (!ok || relays.some((x) => x.address === address)) {
+        out.dropped++;
+        continue;
+      }
+      const name = (r.textContent ?? "").replace(/\s+/g, " ").trim();
+      relays.push({ address, name: name || null });
+    }
+    const box = doc.createElement("div");
+    box.className = ["mor-listing", el.getAttribute("class") ?? ""].join(" ").trim();
+    if (el.id) box.id = el.id;
+    if (relays.length) {
+      box.setAttribute("data-listing", String(out.listings.length));
+      box.innerHTML = `<div class="mor-act-note">Reading and checking the specifications published on ${relays.length === 1 ? "one relay" : `${relays.length} relays`}\u2026</div>`;
+      let reader = null;
+      try {
+        const u = new URL((el.getAttribute("reader") ?? "").trim());
+        if (u.protocol === "https:" && !u.username && !u.password && !u.search && !u.hash) reader = u.href;
+      } catch {
+        reader = null;
+      }
+      out.listings.push({ relays, reader });
+    } else {
+      box.innerHTML = `<div class="mor-act-note">A listing naming no relay: nothing to read.</div>`;
+    }
+    el.replaceWith(box);
+  }
   out.title = doc.querySelector("title")?.textContent?.trim() || null;
   const frameStyle = doc.createElement("link");
   frameStyle.rel = "stylesheet";
@@ -6375,7 +7017,7 @@ function openPopup(film, get, line, changed, opener) {
 // src/shell/app.ts
 var barEl = document.getElementById("mor-bar");
 var view = document.getElementById("mor-view");
-var message2 = (err) => err instanceof Error ? err.message : String(err);
+var message3 = (err) => err instanceof Error ? err.message : String(err);
 var state = {
   phase: "checking",
   words: "Checking this page against what its owner signed\u2026",
@@ -6387,6 +7029,7 @@ var state = {
   acts: [],
   films: [],
   feeds: [],
+  listings: [],
   writes: [],
   reasons: [],
   newer: null
@@ -6431,10 +7074,10 @@ async function showActs(frame2, settings) {
       d.close();
       fitFrame(inner);
     } catch (err) {
-      line.problem = message2(err);
+      line.problem = message3(err);
       const note2 = doc.createElement("div");
       note2.className = "mor-act-note";
-      note2.textContent = `Act ${id} not shown: ${message2(err)}.`;
+      note2.textContent = `Act ${id} not shown: ${message3(err)}.`;
       box.replaceChildren(note2);
     }
     paint();
@@ -6470,7 +7113,43 @@ async function showFeeds(frame2, settings, feeds, clocks) {
       line.found = [];
       const note2 = doc.createElement("div");
       note2.className = "mor-act-note";
-      note2.textContent = `The feed could not be read: ${message2(err)}.`;
+      note2.textContent = `The feed could not be read: ${message3(err)}.`;
+      box.replaceChildren(note2);
+    }
+    box.dataset.done = "";
+    paint();
+  }
+}
+async function showListings(frame2, settings, listings) {
+  const doc = frame2.contentDocument;
+  if (!doc || !listings.length) return;
+  const style = URL.createObjectURL(new Blob([LISTING_STYLE], { type: "text/css" }));
+  for (const box of [...doc.querySelectorAll(".mor-listing[data-listing]")]) {
+    const i = Number(box.dataset.listing);
+    const asked = listings[i];
+    const line = state.listings[i];
+    if (!asked || !line) continue;
+    try {
+      const listing = await readListing(asked.relays, settings.relays);
+      line.read = listing.relays;
+      line.verified = listing.lines.reduce((n, l) => n + l.drafts.length, 0);
+      line.unverified = listing.unverified.length;
+      line.agreements = listing.agreements;
+      line.extensions = listing.extensions.length;
+      const inner = doc.createElement("iframe");
+      inner.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
+      inner.setAttribute("title", "Specifications");
+      box.replaceChildren(inner);
+      const d = inner.contentDocument;
+      d.open();
+      d.write(listingHtml(listing, style, asked.reader).replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" '));
+      d.close();
+      fitFrame(inner);
+    } catch (err) {
+      line.read = [];
+      const note2 = doc.createElement("div");
+      note2.className = "mor-act-note";
+      note2.textContent = `The listing could not be read: ${message3(err)}.`;
       box.replaceChildren(note2);
     }
     box.dataset.done = "";
@@ -6567,7 +7246,7 @@ async function main() {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     settings = parseSiteSettings(await r.json());
   } catch (err) {
-    fail(`this gateway's settings could not be read (${message2(err)}).`);
+    fail(`this gateway's settings could not be read (${message3(err)}).`);
     return;
   }
   state.settings = settings;
@@ -6595,7 +7274,7 @@ async function main() {
   try {
     bytes = await gatewayFile(entry);
   } catch (err) {
-    fail(`this page could not be fetched from the gateway (${message2(err)}).`);
+    fail(`this page could not be fetched from the gateway (${message3(err)}).`);
     return;
   }
   if (!bytes) {
@@ -6610,7 +7289,7 @@ async function main() {
     try {
       prepared = await preparePage(bytes, entry.path, version2.manifest, gatewayFile);
     } catch (err) {
-      fail(`this page could not be read (${message2(err)}).`);
+      fail(`this page could not be read (${message3(err)}).`);
       return;
     }
     if (prepared.problems.length) {
@@ -6620,6 +7299,7 @@ async function main() {
     document.title = `${prepared.title ?? entry.path} \xB7 ${version2.manifest.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
     state.writes = prepared.writes;
+    state.listings = prepared.listings.map((l) => ({ relays: l.relays, read: null, verified: 0, unverified: 0, agreements: null, extensions: 0 }));
     state.feeds = prepared.feeds.map((authors, i) => ({ authors, clock: prepared.clocks[i] ?? null, found: null, clockFound: null, order: null, shown: 0, verified: 0 }));
     state.phase = "ok";
     state.words = verifiedWords(settings, "page");
@@ -6635,7 +7315,7 @@ async function main() {
         fitFrame(frame2);
         showFilms(frame2, prepared.films, prepared.listed);
         showWrites(frame2, settings, prepared.writes);
-        void showActs(frame2, settings).then(() => showFeeds(frame2, settings, prepared.feeds, prepared.clocks));
+        void showActs(frame2, settings).then(() => showFeeds(frame2, settings, prepared.feeds, prepared.clocks)).then(() => showListings(frame2, settings, prepared.listings));
       },
       { once: true }
     );
