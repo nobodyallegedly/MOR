@@ -24,6 +24,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## Working principle: make the fair route easy (Nobody, allegedly, 14 October 2026)
+
+On how the author of a relay program is found and paid (asked by Nobody, allegedly; laid out by the project lead: found through a release that states what it implements; paid as a work, as overhead in the operator's envelope, or through a dependency pool, case study 19; never forced): **"Cracked software has always existed. As long as MOR makes the fair route easy."** MOR does not police use; it makes paying the people a thing stands on the easiest, most visible route.
+
 ## Working practice: development-layer mechanics are not put to the author (Nobody, allegedly, 13 October 2026)
 
 On a question about how a cMIP field links code to its specification: "Don't really need to run these by me." Where a question is the development layer's (how a cMIP or Module does its job, its fields and formats) and the decided rules already bound it, the project lead takes it under the delegation, records it as his, and reports it; it is put to the author only where it touches the core, a stated cost, client conformance or presentation choices he owns.
