@@ -61,7 +61,7 @@ The toolbox, in one place, so the sketches can point to it.
 
 *The author's condition: "some form of collective is possible at the core without cMIPs." The shapes sit above it as cMIPs, never in place of it.*
 
-**Reading of "without cMIPs", to confirm.** Every identity on MOR uses a few founding specifications just to exist and be paid: the relay transport cMIP to publish, the payment cMIP and a rail Module to move money, and, for a shared chain key, a key-sharing Module (rule 59). A collective uses them as any person does. The reading taken here: the condition is that **no cMIP is needed for the collective's shape**, meaning its founding, its members and voices, its areas and grants, its money among its owners, and its departures, succession, absence, forks and closing. If the author means more than that (no payment cMIP either, for instance), the reading should be corrected before anything is written.
+**Reading of "without cMIPs", confirmed by Nobody, allegedly: "Correct. Only for the collective shape."** Every identity on MOR uses a few founding specifications just to exist and be paid: the relay transport cMIP to publish, the payment cMIP and a rail Module to move money, and, for a shared chain key, a key-sharing Module (rule 59). A collective uses them as any person does. The reading taken here: the condition is that **no cMIP is needed for the collective's shape**, meaning its founding, its members and voices, its areas and grants, its money among its owners, and its departures, succession, absence, forks and closing. 
 
 **The form the core provides: the members' collective.** It is Fable's "cooperative", and the closest real shape is a small cooperative, a band or a partnership.
 
@@ -453,7 +453,7 @@ Everything else (votes on budgets, patronage, preferences, vesting, options, dra
 
 Each names its area. The first decides whether the rest are light or heavy. Every option recommended keeps the members' collective possible with no cMIP (the author's condition; "Every addition against the members' collective").
 
-**Before Q1, a reading to confirm** (core business, a reading of the author's condition): "without cMIPs" is read as *no cMIP for the collective's shape*; the transport and payment cMIPs and the rail and key Modules every identity uses are not counted ("The collective the core keeps on its own"). If the author meant more, the check in the synthesis is to redo.
+**Before Q1, the reading of the author's condition: confirmed.** "Without cMIPs" means *no cMIP for the collective's shape*; the transport and payment cMIPs and the rail and key Modules every identity uses are not counted. *Nobody, allegedly: "Correct. Only for the collective shape."*
 
 ### Q1. A holders' rule: may owners without a voice consent together? (core business: Agreements, stakes; reopens F279's sentence, F282, F270)
 
