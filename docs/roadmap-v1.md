@@ -294,6 +294,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *14 October 2026, evening, drawn for later (Nobody, allegedly: "Not now but eventually"): **the first wave's emails, automated.** Signed "Machine, allegedly, on behalf of Nobody, allegedly": "So it goes out as a pair." The shape laid out by the project lead: a small program run on the author's Mac, as the bug-report mirror is; a sending address of its own (on dubsar.org), the domain set up against spam flags (SPF, DKIM, DMARC), its password on the Mac only; the approved list and the approved message, a line or two specific to each door; a dry run of every email before any is sent; a handful a day; one email per door, never a follow-up, no tracking. A check of the rules on unsolicited email before the wave. After the freeze, as before.*
 
+*14 October 2026, night (F307 to F319, decided by Nobody, allegedly): the common language for collectives goes into MOR 1: a holders' rule per stake, counting by share, issuance with pre-emption, the owners' matters, owner-chosen operators (binding through the keys), the collective's own reserve, owners' sight of the money acts, and the way out for a vanished holder who is no party (F313). Next, in order: Agreements draft 14 carrying F282 to F319; the code for F297 to F318; tests and freeze scenarios; Fable's attack on draft 14; then the Development segment. The author wants to examine grants ("something I want to go poke when we can").*
+
 ## Decisions due along the way
 
 | Decision | Before |
