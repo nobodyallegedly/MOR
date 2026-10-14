@@ -10,6 +10,8 @@ Checked here: `clients/site`'s tests 5 times in a row, **81 of 81 each time**. T
 
 Not touched: the GitHub step "Reproducible build of the display client" also failed. It compares the released copy in `clients/site/built/` with a fresh build, and on any branch with new display-client code these differ until the next release. Main has since made that step a notice on pull requests (`7eff11f`), and this branch does not have that commit yet. It is a separate step from `clients/site`, and only a merge of main or a new release changes it.
 
+*Checked again, 14 October 2026, at `312f695`.* **Still passing.** The two failed GitHub runs (run 678, both attempts, at `de5218c`) failed in `clients/site` on exactly these two tests: the list was missing `report.html`, and the count expected 25 files. GitHub's next "tests" run, 682 at `312f695`, passed every step. Here, `clients/site`'s tests ran 5 more times in a row, **81 of 81 each time**, and `scripts/test-all.sh` once, **1,080 tests, none failing** (676 Rust, 404 TypeScript). No code changed in this check.
+
 ## Do the tests pass?
 
 **Yes.** `scripts/test-all.sh` passes on this branch: **1,068 tests, none failing** (676 in the Rust workspace, 392 in the TypeScript packages and Modules), against **1,060 on main** at `a718f91`. The 8 more are the new mirror's tests; every other count is the same as main's.
