@@ -585,6 +585,56 @@ fn a_witness_act_names_what_it_witnesses() {
     assert_eq!(w.v.status(&id), Status::Valid);
 }
 
+/// Step 15 review, Envelopes, E5 (Envelopes rules 18 and 19, F110): a text
+/// act, or an Envelopes act, carrying `acks` is invalid in every client,
+/// since every client implements Envelopes and Text and so holds those two
+/// hashes. A verifier told only the Identity hash answered "unknown" for
+/// them, as it rightly does for an act of a specification it cannot place;
+/// told the Envelopes and Text hashes, it answers "invalid", and still
+/// "unknown" for a specification it cannot place.
+#[test]
+fn a_text_or_envelopes_act_carrying_acks_is_invalid_without_the_money_and_agreements_hashes() {
+    let mut w = World::new();
+    let mut r = w.operator("reader");
+    let x = sha256(b"some act");
+    let text = sha256(b"TEXT, test value until the freeze");
+    let envelopes = sha256(b"ENVELOPE, test value until the freeze");
+    let text_act = w.everyday_act(
+        &mut r,
+        text,
+        0,
+        vec![(Value::Uint(0), Value::Text("a reply".into()))],
+        None,
+        Some(vec![x]),
+    );
+    let publication = w.everyday_act(&mut r, envelopes, 0, vec![], None, Some(vec![x]));
+    let other = w.everyday_act(&mut r, sha256(b"a reaction cMIP"), 0, vec![], None, Some(vec![x]));
+    let genesis = w.v.resolve(&r.id).links[0].act;
+    // Told the Identity hash alone: unknown, as before.
+    let mut blind = mor_core::chain::Verifier::new(identity_spec());
+    blind.add(w.v.get(&genesis).unwrap().act.clone()).unwrap();
+    let id = blind.add(text_act.clone()).unwrap();
+    assert_eq!(blind.status(&id), Status::Unknown);
+    // Told the Envelopes and Text hashes too, and still not Money's and
+    // Agreements': invalid for those two, unknown for a specification it
+    // cannot place.
+    let mut core = mor_core::chain::Verifier::new(identity_spec()).knowing_envelopes_and_text(envelopes, text);
+    core.add(w.v.get(&genesis).unwrap().act.clone()).unwrap();
+    let t = core.add(text_act.clone()).unwrap();
+    let p = core.add(publication.clone()).unwrap();
+    let o = core.add(other.clone()).unwrap();
+    assert_eq!(core.status(&t), Status::Invalid, "a text act carrying acks");
+    assert_eq!(core.status(&p), Status::Invalid, "an Envelopes act carrying acks");
+    assert_eq!(core.status(&o), Status::Unknown, "a specification it cannot place");
+    // The full verifier agrees on all three, the cMIP's act now placed.
+    let t = w.add(&text_act);
+    let p = w.add(&publication);
+    let o = w.add(&other);
+    assert_eq!(w.v.status(&t), Status::Invalid);
+    assert_eq!(w.v.status(&p), Status::Invalid);
+    assert_eq!(w.v.status(&o), Status::Invalid);
+}
+
 // ---------------------------------------------------------------- competing rotations (5.7)
 
 #[test]
