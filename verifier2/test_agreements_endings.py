@@ -205,6 +205,23 @@ class Endings(unittest.TestCase):
             ])
             self.assertEqual(verify(s)["closed_by"], expect)
 
+    def test_a_closing_whose_history_names_an_unheld_act(self):
+        """Reading 13, for a closing (Fable's step-15 review of Agreements, A3): a
+        verifier that does not hold every act the closing's history names cannot tell
+        what the collective owes before its line: the closing is not complete for it,
+        as a fork is not (`test_an_unheld_act_in_the_history`). The reference library
+        checked this for forks only until that review."""
+        s = story("closing-unheld", ["ana", "ben"], [
+            genesis(),
+            act("p0", "publication", cites=["genesis"], held=False),
+            act("p1", "publication", prev="p0"),
+            closing("K1", "ana", ["p1"], holds_nothing=True),
+            sig("ana", "K1", 1), sig("ben", "K1", 1),
+        ])
+        v = verify(s)
+        self.assertEqual(v["endings"]["K1"]["status"], "incomplete")
+        self.assertIsNone(v["closed_by"])
+
     def test_fork_under_a_threshold_with_a_member_on_no_side(self):
         """3.9d (N1): under two of three, two members fork without the third."""
         s = story("threshold-fork", ["ana", "ben", "cy"], [

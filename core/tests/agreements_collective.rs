@@ -6474,6 +6474,33 @@ fn a_closing_must_be_done() {
     assert!(e.complete, "{:?}", e.why);
 }
 
+/// Fable's step-15 review of Agreements, A3 (F127, F298): a closing's "owes
+/// nothing" is judged on the history its line cites, as a fork's hand-out
+/// is. While an act that history names is not held, this verifier cannot
+/// tell what the collective owes before the line: the closing is not
+/// complete for it, as the fork is not (`a_fork_hands_out_its_whole_history`,
+/// its last part), never complete on partial knowledge.
+#[test]
+fn a_closing_whose_history_names_an_act_not_held_is_not_complete() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let mut o = lab.chain(&[]);
+    o.push(Object { chain: label, predecessor: spec("an act this verifier does not hold") });
+    let a = lab.w.everyday_act(&mut lab.c[0], spec("a note cMIP"), 0, vec![], Some(o), None);
+    lab.w.add(&a);
+    let c = agreements::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
+    let eo = ending_obj(&lab, f, c.collective);
+    let k = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::CLOSING, c.to_map(), eo);
+    lab.end(ANA, &k);
+    lab.end(BEN, &k);
+    lab.end(CY, &k);
+    let e = lab.view().closing(&k).unwrap();
+    assert!(!e.complete, "a closing whose history names an act not held is not complete for this verifier");
+    assert!(e.why.as_deref().is_some_and(|w| w.contains("not held")), "{:?}", e.why);
+    assert_eq!(lab.view().closed_by(&label).unwrap(), None);
+}
+
 /// F128, extended to every identity (Nobody, allegedly, 4 October 2026):
 /// a person grants a key too. The grant and its revocation are everyday
 /// acts signed with the person's own signing key, public: no rotation, no
