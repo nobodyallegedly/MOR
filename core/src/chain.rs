@@ -40,6 +40,7 @@ use crate::identity::{
 use crate::lock::ContentKey;
 use crate::merkle;
 use crate::mmr;
+use crate::money;
 use crate::sig::{self, Verdict};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -58,6 +59,11 @@ pub struct Held {
     /// For an act of the Identity MIR: its payload, if it decoded and passed
     /// the checks that need no other act; the reason otherwise.
     pub identity: Option<Result<Payload, IdError>>,
+    /// For an act of the Money MIR, where this verifier knows Money's hash
+    /// (`with_mirs`): whether its payload is in Money's format for its type
+    /// and signed by whom Money says (F295; Money rules 7 and 16, F46,
+    /// F66, F113); the reason otherwise. Step 15 review, Money, M1.
+    pub money: Option<Result<(), money::FinError>>,
 }
 
 impl Held {
@@ -437,12 +443,29 @@ impl Verifier {
             }
             Ok(p)
         });
+        // F295: a Money act outside its type's format, of a type Money does
+        // not define, or signed by someone other than Money names (a pointer
+        // not by its payee, an obligation not by its debtor, a receipt not
+        // by its payee, an anonymous claim whose key 8 does not verify) is
+        // invalid, for a verifier that knows which specification Money is.
+        let money = self
+            .ack_specs
+            .filter(|(m, _)| inside.spec == *m)
+            .map(|_| -> Result<(), money::FinError> {
+                let signer = act
+                    .outside
+                    .signer
+                    .ok_or(money::FinError::Check("a Money act names its signer"))?;
+                let p = money::Payload::decode(inside.type_, &inside.payload)?;
+                money::check_signer(&p, &signer, &money::Citations::of(&inside))
+            });
         let held = Held {
             id,
             act,
             inside,
             verdict,
             identity,
+            money,
         };
         if let Some(old) = self.acts.get_mut(&id) {
             // The same act again, from another home or relay. Its outside,
@@ -1618,6 +1641,9 @@ impl Verifier {
             Some(false) => return Status::Invalid,
             None => return Status::Unknown,
             Some(true) => {}
+        }
+        if matches!(x.money, Some(Err(_))) {
+            return Status::Invalid;
         }
         match &x.identity {
             Some(Err(_)) => return Status::Invalid,
