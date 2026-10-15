@@ -2669,7 +2669,25 @@ impl DealWorld {
                 None => true,
                 Some(p) => lv.agreement(p).map(|a| a.exists == Some(true)).unwrap_or(false),
             };
-            let valid_signer = |i: usize| self.sigs[k].iter().any(|(j, s, _)| *j == i && v.status(s) == Status::Valid);
+            // F314 (Agreements draft 14, rule 47): a version a later act
+            // relies on (a later version cloning it, a split under it, a
+            // purchase naming it) keeps its completeness, a disowned
+            // signature on it shown as a dispute.
+            let relied = self.versions.iter().any(|(x, p, _)| p.as_ref() == Some(k) && v.status(x) == Status::Valid)
+                || self.splits.iter().any(|(x, ..)| {
+                    v.status(x) == Status::Valid && agreements::Split::decode(&v.get(x).unwrap().inside.payload).is_ok_and(|s| &s.agreement == k)
+                })
+                || v.held_acts().any(|x| {
+                    x.inside.spec == mirs().money
+                        && v.status(&x.id) == Status::Valid
+                        && match mor_core::money::Payload::decode(x.inside.type_, &x.inside.payload) {
+                            Ok(mor_core::money::Payload::Receipt(r)) => r.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
+                            Ok(mor_core::money::Payload::Claim(c)) => c.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
+                            _ => false,
+                        }
+                });
+            let standing = |s: &Hash| v.status(s) == Status::Valid || (relied && matches!(v.status(s), Status::Void | Status::Disputed));
+            let valid_signer = |i: usize| self.sigs[k].iter().any(|(j, s, _)| *j == i && standing(s));
             let all = (0..ids.len()).all(valid_signer);
             if a.exists == Some(true) && !all {
                 bad.push(format!("DEAL-EVERY-PARTY: version {k:?} exists without every party's valid signature: {:?}", self.sigs[k].iter().map(|(j, s, t)| (j, *t, v.status(s))).collect::<Vec<_>>()));
