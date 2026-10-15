@@ -1805,7 +1805,10 @@ fn a_members_own_rotation_is_registered_on_the_line() {
     let (rot, ben2) = lab.w.rotate(&lab.m[BEN], Rot::default());
     lab.m[BEN] = ben2;
     assert_eq!(lab.w.v.status(&sk), Status::Void);
-    assert!(!lab.counts(&x), "Identity takes the tablet's signature back");
+    // Agreements draft 14 ("Record (type 17)", F302): a signature the label
+    // placed counts for it until a line registers the rotation that voided
+    // it after the placement; before any such line, it stays.
+    assert!(lab.counts(&x), "placed by the label, and no line registers the rotation yet");
     // The label registers the rotation on its line.
     lab.record(0, None, &[], vec![rot], k);
     assert!(lab.counts(&x), "placed before the line: kept for the label (C5)");
@@ -13727,12 +13730,11 @@ fn a_hole_in_the_history_voids_nothing_3_7aa() {
 
 /// Freeze suite v28, 3.7z (F302; Fable's Agreements review, A1): a member
 /// resigns, the label's line registers it and lives on under it; the member
-/// rotates and disowns the resignation. A member's rotation takes effect for
-/// the label at the line registering it (C5, "take `sig_counts`'s test"):
-/// once the label registers it, the first line stands, as does every record
-/// after it, the resignation shown disputed under Identity; before, the
-/// resignation is judged by Identity alone (a reading,
-/// `docs/code-after-step-15-part-3.md`). A declaration of absence by an
+/// rotates and disowns the resignation: the line stands, as does every record
+/// after it, before and after the label registers the rotation (C5, "placed
+/// by this line before any line of the collective registering the rotation
+/// that voided it"), the resignation shown disputed under Identity. A
+/// declaration of absence by an
 /// authority who is no party, registered by a line, stays registered when
 /// the authority rotates and disowns it: no line of the label registers that
 /// rotation, and the declaration is kept wherever the line placed it.
@@ -13759,8 +13761,9 @@ fn what_the_line_placed_stays_placed_3_7z() {
     let (rot, ben2) = lab.w.rotate(&lab.m[BEN], Rot::default());
     lab.m[BEN] = ben2;
     assert!(matches!(lab.w.v.status(&res), Status::Void | Status::Disputed));
-    // Before the label registers the rotation: Identity alone.
-    assert!(!lab.view().record(&label, &line).unwrap().line, "the window before the label's line registers the rotation");
+    // The line stands at once: no line of the label registers the rotation
+    // before it (Agreements draft 14, "Record (type 17)").
+    assert!(lab.view().record(&label, &line).unwrap().line, "the line stands");
     // The label registers it (C5): what its line placed stays placed.
     let r2 = lab.record(0, None, &[], vec![rot], k);
     assert!(lab.view().record(&label, &r2).unwrap().line);

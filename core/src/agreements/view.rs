@@ -1643,7 +1643,7 @@ impl<'a> AgreementsView<'a> {
             // rotation disowned; a rollback still to be made places nothing
             // yet, so Identity's verdict alone.
             let kept = match at {
-                Some(r) => self.kept_at(col, a, Line::Rotation(r), &t.parties)?,
+                Some(r) => self.kept_at(col, a, Line::Rotation(r))?,
                 None => self.valid(x),
             };
             if !kept {
@@ -1688,7 +1688,7 @@ impl<'a> AgreementsView<'a> {
             let sh = self.held(s)?;
             let named = decode_signature(&sh.inside).ok();
             let kept = match at {
-                Some(r) => self.kept_at(col, sh, Line::Rotation(r), &t.parties)?,
+                Some(r) => self.kept_at(col, sh, Line::Rotation(r))?,
                 None => self.valid(s),
             };
             if !kept || !named.is_some_and(|n| declarations.iter().any(|(d, _)| *d == n)) {
@@ -2706,7 +2706,7 @@ impl<'a> AgreementsView<'a> {
             if self.is_agreements(a, types::RESIGNATION) {
                 // F302: as this line places it, whatever its signer's later
                 // rotation disowned.
-                if !self.kept_at(col, a, Line::Record(h), &at_terms.parties)? {
+                if !self.kept_at(col, a, Line::Record(h))? {
                     return no(e, "it registers a resignation that is not valid");
                 }
                 let r = match Resignation::decode(&a.inside) {
@@ -3149,39 +3149,33 @@ impl<'a> AgreementsView<'a> {
 
     /// Whether an act of another identity that line `at` names, registers
     /// or relies on keeps, for the collective, the effect that line gives it
-    /// ("Made before, made after", 4; new in draft 14, F302, C5 extended):
-    /// valid under Identity, or voided or disputed by its signer's rotation
-    /// where, for a party of `parties` (the agreement in force there, whose
-    /// rotations the collective's line registers, record field 3), `at` is
-    /// before the collective's line registering that rotation, C5's test
-    /// (F302: "take `sig_counts`'s test for registered acts"); and, for any
-    /// other signer, whose rotation no line of the collective registers (an
-    /// authority who is no party, a holder who is no member, a grantee, a
-    /// buyer, a creditor), wherever the line placed it ("kept there whatever
-    /// its signer's later rotation disowns": draft 14, "Abandonment
-    /// declaration", rule 94, "Stake transfer", "Grant", "Closing"). Its
-    /// status under Identity is unchanged; a client shows the dispute on the
-    /// line.
-    fn kept_at(&self, col: &Col, a: &Held, at: Line, parties: &[Hash]) -> R<bool> {
+    /// (new in draft 14, F302, C5 extended; "Record (type 17)": "valid under
+    /// Identity, or placed by this line before any line of the collective
+    /// registering the rotation that voided it"): valid, or voided or
+    /// disputed by its signer's next rotation where every line of the
+    /// collective registering that rotation comes after `at`. A rotation no
+    /// line registers (an authority who is no party, a holder who is no
+    /// member, a grantee, a buyer, a creditor: none is registered) never
+    /// unplaces it. Its status under Identity is unchanged; a client shows
+    /// the dispute on the line.
+    fn kept_at(&self, col: &Col, a: &Held, at: Line) -> R<bool> {
         match self.status(&a.id) {
             Status::Valid => return Ok(true),
             Status::Void | Status::Disputed => {}
             _ => return Ok(false),
         }
-        let Some(p) = a.act.outside.signer else {
+        let Some(next) = self.voiding_rotation(a) else {
             return Ok(false);
         };
+        Ok(self.rotation_lines(col, &next).into_iter().all(|l| self.line_before(col, at, Line::Record(l))))
+    }
+
+    /// The rotation of `a`'s signer that replaced the key `a` is bound to.
+    fn voiding_rotation(&self, a: &Held) -> Option<Hash> {
+        let p = a.act.outside.signer?;
         let res = self.v.resolve(&p);
-        let Some(kb) = a.act.outside.binding.and_then(|b| res.position_of(&b)) else {
-            return Ok(false);
-        };
-        let Some(next) = res.links.get(kb + 1) else {
-            return Ok(false);
-        };
-        if !parties.contains(&p) {
-            return Ok(true);
-        }
-        Ok(self.rotation_lines(col, &next.act).into_iter().any(|l| self.line_before(col, at, Line::Record(l))))
+        let kb = a.act.outside.binding.and_then(|b| res.position_of(&b))?;
+        res.links.get(kb + 1).map(|l| l.act)
     }
 
     /// Whether a member's signature act counts for the collective: valid
@@ -3193,22 +3187,22 @@ impl<'a> AgreementsView<'a> {
             Status::Void | Status::Disputed => {}
             _ => return Ok(false),
         }
-        let Some(p) = s.act.outside.signer else {
+        let Some(next) = self.voiding_rotation(s) else {
             return Ok(false);
         };
-        let res = self.v.resolve(&p);
-        let Some(kb) = s.act.outside.binding.and_then(|b| res.position_of(&b)) else {
-            return Ok(false);
-        };
-        let Some(next) = res.links.get(kb + 1) else {
-            return Ok(false);
-        };
-        for l in self.rotation_lines(col, &next.act) {
-            if self.sig_before(col, s, Line::Record(l))? {
-                return Ok(true);
+        // Placed by the collective, before every line registering that
+        // rotation (C5; Agreements draft 14, "Record (type 17)", F302): with
+        // none yet, wherever it is placed.
+        let lines = self.rotation_lines(col, &next);
+        if lines.is_empty() {
+            return Ok(!self.placements(col, s).is_empty());
+        }
+        for l in lines {
+            if !self.sig_before(col, s, Line::Record(l))? {
+                return Ok(false);
             }
         }
-        Ok(false)
+        Ok(true)
     }
 
     /// A clone at a record or rotation, judged with the signature acts it
@@ -3500,7 +3494,7 @@ impl<'a> AgreementsView<'a> {
                     let h = self.held(s)?;
                     self.placed_at(col, h, l, ag)
                 },
-                &|h| self.kept_at(col, h, l, &self.terms(ag)?.parties),
+                &|h| self.kept_at(col, h, l),
             )?,
         };
         let (d, clause) = match got {
@@ -3693,7 +3687,7 @@ impl<'a> AgreementsView<'a> {
         for s in absence {
             let h = self.held(s)?;
             // F302: as this recovery rotation places it.
-            let on = if self.is_agreements(h, types::SIGNATURE) && self.kept_at(col, h, Line::Rotation(j), &t.parties)? {
+            let on = if self.is_agreements(h, types::SIGNATURE) && self.kept_at(col, h, Line::Rotation(j))? {
                 decode_signature(&h.inside).ok()
             } else {
                 None
