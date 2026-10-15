@@ -457,6 +457,66 @@ fn invalid_acts() -> J {
     })
 }
 
+/// A sealed container in Envelopes draft 10's format (F293): `[to,
+/// locked-act]`, no one-time key and no signature. Every input fixed: the
+/// recipient's X-Wing secret, the inner act (private, addressed to the
+/// recipient, signed with a fixed Schnorr key), the container key, the
+/// nonce and the X-Wing `eseed`.
+fn sealed_container() -> J {
+    use mor_core::envelopes::{self, DecKey, Recipient, SealRandom};
+    let spec = fixed("mor-core vector: stand-in for the TEXT spec hash, fixed at freeze");
+    let recipient = fixed("mor-core vector: stand-in recipient identity");
+    let dk = DecKey::from_secret(fixed("mor-core vector: recipient X-Wing secret"));
+    let signer_key = mor_core::sig::SchnorrKey::from_secret(&fixed("mor-core vector: stand-in signing secret")).unwrap();
+    let inside = Inside {
+        spec,
+        type_: 0,
+        prev: Some(vec![]),
+        objects: None,
+        payload: vec![(Value::Uint(0), Value::Text("A private reply.".into()))],
+        position: Some(1),
+        summary: Some([0; 32]),
+        acks: None,
+        refs: None,
+        hint: None,
+        salt: fixed_n("mor-core vector: sealed salt"),
+    };
+    let content_key: [u8; 32] = fixed("mor-core vector: sealed content key");
+    let inner = act::make(
+        &inside,
+        &content_key,
+        &fixed_n("mor-core vector: sealed inner nonce"),
+        &Addressing {
+            signer: Some(fixed("mor-core vector: stand-in signer identity")),
+            binding: Some(fixed("mor-core vector: stand-in binding")),
+            public: false,
+            to: Some(vec![recipient]),
+        },
+        |id| signer_key.sign(id, &[0; 32]),
+    );
+    let rnd = SealRandom {
+        container_key: fixed("mor-core vector: container key"),
+        nonce: fixed_n("mor-core vector: container nonce"),
+        eseeds: vec![[fixed("mor-core vector: eseed, first half"), fixed("mor-core vector: eseed, second half")].concat().try_into().unwrap()],
+    };
+    let sealed = envelopes::seal(&inner, Some(&content_key), &[Recipient::Identity { id: recipient, key: dk.public.clone() }], &rnd).unwrap();
+    let opened = envelopes::open(&sealed, Some(&recipient), &dk).unwrap();
+    assert_eq!(opened.act, inner);
+    json!({
+        "description": "A sealed container in Envelopes draft 10's format (F293): sealed = [to, locked-act], no one-time key and no signature, its outside unauthenticated by design. locked-act = [capsules, nonce, locked], one capsule [ct, wrapped] per recipient: ct the X-Wing ciphertext of encapsulating to the recipient's key with eseed, wrapped the container key locked under tagged_hash(\"MOR/sealed/wrap\", shared secret) with a zero nonce; locked opens with the container key and nonce to contents = [act, key], the inner act and its content key. The recipient's public key is X-Wing's from the secret given. Every input is fixed; the spec, signer and binding are stand-ins.",
+        "recipient": hx(&recipient),
+        "recipient_xwing_secret": hx(&fixed("mor-core vector: recipient X-Wing secret")),
+        "recipient_xwing_public": hx(&dk.public.key),
+        "inner_act": hx(&inner.encode()),
+        "inner_act_id": hx(&inner.id()),
+        "content_key": hx(&content_key),
+        "container_key": hx(&rnd.container_key),
+        "nonce": hx(&rnd.nonce),
+        "eseed": hx(&rnd.eseeds[0]),
+        "sealed": hx(&sealed.encode()),
+    })
+}
+
 fn main() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("vectors");
     std::fs::create_dir_all(&dir).unwrap();
@@ -467,4 +527,5 @@ fn main() {
     write(&dir, "running-summary.json", &summary_vectors());
     write(&dir, "sequence-three-acts.json", &three_acts());
     write(&dir, "open-act.json", &invalid_acts());
+    write(&dir, "sealed.json", &sealed_container());
 }

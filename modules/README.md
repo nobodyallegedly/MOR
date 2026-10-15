@@ -4,7 +4,7 @@ Specifications above the core that MOR V1 builds on. Not core: they compete like
 
 | File | What it is |
 | --- | --- |
-| `module-airgap-chain-key-signer-draft-4.md` | How an online device and an offline signer exchange chain-key commitments and rotations, and how a collective's split chain key is dealt. The genesis client implements it. |
+| `module-airgap-chain-key-signer-draft-5.md` | How an online device and an offline signer exchange chain-key commitments and rotations, and how a collective's split chain key is dealt. Draft 5 (code after step 15, part 1) adds rule 29's escape out of a contested self-hosted position and the second signature after an invalid rotation, each on bytes the device checks itself. Draft 4 is kept beside it. The genesis client implements it. |
 | `module-chain-key-seed-words-draft-1.md` | A seed Module: the chain-key seed written as 24 words, and how its keys are derived. |
 | `module-chain-key-seed-hex-draft-1.md` | A seed Module: the chain-key seed written as 72 hexadecimal characters, and how its keys are derived. |
 | `module-lightning-rail-draft-2.md` | A rail Module under the payment cMIP: a BOLT 11 invoice signed by the node the payee declared, committing to the payment, and its preimage, as the proof of a Lightning payment (roadmap step 12). Draft 2: **experimental**, its costs stated (F117), an instrument for testing Money, never for real money. Not approved. |

@@ -1,6 +1,6 @@
 //! # mor-airgap
 //!
-//! The air-gapped chain key Module (`modules/module-airgap-chain-key-signer-draft-4.md`)
+//! The air-gapped chain key Module (`modules/module-airgap-chain-key-signer-draft-5.md`)
 //! and the two seed Modules it supports
 //! (`modules/module-chain-key-seed-words-draft-1.md`, `modules/module-chain-key-seed-hex-draft-1.md`).
 //!

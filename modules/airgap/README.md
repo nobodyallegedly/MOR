@@ -1,6 +1,6 @@
 # mor-airgap
 
-The air-gapped chain key Module (`modules/module-airgap-chain-key-signer-draft-4.md`) and its two seed Modules (`modules/module-chain-key-seed-words-draft-1.md`, `modules/module-chain-key-seed-hex-draft-1.md`), in Rust. Roadmap step 6.
+The air-gapped chain key Module (`modules/module-airgap-chain-key-signer-draft-5.md`) and its two seed Modules (`modules/module-chain-key-seed-words-draft-1.md`, `modules/module-chain-key-seed-hex-draft-1.md`), in Rust. Roadmap step 6.
 
 **A prototype, for test identities.** The real identity is created with it only at step 17, after review.
 

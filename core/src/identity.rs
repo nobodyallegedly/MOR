@@ -535,7 +535,34 @@ impl Payload {
                 empty("witness: the payload is empty")?;
                 Payload::Witness
             }
-            ROUTES | NAME | NAME_WITHDRAWAL | LINK_CLAIM | LINK_CONFIRMATION | LINK_TERMINATION => {
+            // Routes, names and links, decoded strictly too: an act outside
+            // its type's format is invalid (F295; Identity draft 13, part
+            // three). Their meaning is read by their own checks.
+            ROUTES => {
+                crate::envelopes::Routes::decode(p).map_err(|_| IdError::Shape("routes: not in the routes act's format"))?;
+                Payload::Other(type_)
+            }
+            NAME => {
+                let f = fields(p, 2, "name: unknown key")?;
+                match req(&f, 0, "name 0: the name")? {
+                    Value::Text(_) => {}
+                    _ => return Err(IdError::Shape("name 0: the name is text")),
+                }
+                hash(req(&f, 1, "name 1: the naming cMIP")?, "name 1")?;
+                Payload::Other(type_)
+            }
+            LINK_CLAIM => {
+                let f = fields(p, 2, "link claim: unknown key")?;
+                successor(req(&f, 0, "link claim 0: the other side")?)?;
+                if let Some(v) = get(&f, 1) {
+                    if !matches!(v, Value::Bytes(_)) {
+                        return Err(IdError::Shape("link claim 1: a proof is a byte string"));
+                    }
+                }
+                Payload::Other(type_)
+            }
+            NAME_WITHDRAWAL | LINK_CONFIRMATION | LINK_TERMINATION => {
+                empty("a name withdrawal, link confirmation or termination has an empty payload")?;
                 Payload::Other(type_)
             }
             t => return Err(IdError::UnknownType(t)),

@@ -174,3 +174,31 @@ fn open_act_vectors() {
         assert_eq!(got, v["result"].as_str().unwrap(), "{}", v["why"]);
     }
 }
+
+/// `sealed.json`: a sealed container in Envelopes draft 10's format (F293),
+/// `[to, locked-act]`: rebuilt from its fixed inputs to the same bytes, two
+/// parts on the outside, and opened by its recipient to the inner act.
+#[test]
+fn sealed_container_vector() {
+    use mor_core::envelopes::{self, DecKey, Recipient, SealRandom, Sealed};
+    let f = load("sealed.json");
+    let secret: [u8; 32] = b(&f["recipient_xwing_secret"]).try_into().unwrap();
+    let dk = DecKey::from_secret(secret);
+    assert_eq!(dk.public.key, b(&f["recipient_xwing_public"]));
+    let recipient = h(&f["recipient"]);
+    let inner = mor_core::Act::decode(&b(&f["inner_act"])).unwrap();
+    assert_eq!(inner.id(), h(&f["inner_act_id"]));
+    let rnd = SealRandom {
+        container_key: h(&f["container_key"]),
+        nonce: b(&f["nonce"]).try_into().unwrap(),
+        eseeds: vec![b(&f["eseed"]).try_into().unwrap()],
+    };
+    let key = h(&f["content_key"]);
+    let sealed = envelopes::seal(&inner, Some(&key), &[Recipient::Identity { id: recipient, key: dk.public.clone() }], &rnd).unwrap();
+    assert_eq!(sealed.encode(), b(&f["sealed"]));
+    let cbor::Value::Array(parts) = mor_core::cbor::decode(&b(&f["sealed"])).unwrap() else { panic!() };
+    assert_eq!(parts.len(), 2, "[to, locked-act]: no one-time key, no signature");
+    let opened = envelopes::open(&Sealed::decode(&b(&f["sealed"])).unwrap(), Some(&recipient), &dk).unwrap();
+    assert_eq!(opened.act, inner);
+    assert_eq!(opened.key, Some(key));
+}

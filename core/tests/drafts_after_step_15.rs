@@ -521,3 +521,71 @@ fn a_succession_is_followed_only_once_confirmed_5_8b() {
     assert_eq!(w.v.succession(&third.id), SuccessionSeen::Declared { rotation: tr, successor: heir.id });
     let _ = (&mut journalist, &mut third);
 }
+
+/// F295 for Identity's own everyday types: a routes act, a name, a name
+/// withdrawal, a link claim, confirmation or termination outside its
+/// format is invalid (Identity draft 13, part three); found by the build:
+/// the library had decoded these six types as "other", unchecked.
+#[test]
+fn identity_routes_names_and_links_outside_their_format_are_invalid_f295() {
+    use mor_core::identity::types::*;
+    let mut w = World::new();
+    let mut p = w.operator("someone");
+    let other = w.operator("someone else");
+    let mor = |id: &Hash| Value::Array(vec![Value::Text("mor".into()), Value::Bytes(id.to_vec())]);
+    let good: Vec<(u64, Vec<(Value, Value)>)> = vec![
+        (NAME, vec![(Value::Uint(0), Value::Text("a name".into())), (Value::Uint(1), Value::Bytes(sha256(b"a naming cMIP").to_vec()))]),
+        (LINK_CLAIM, vec![(Value::Uint(0), mor(&other.id))]),
+        (LINK_CONFIRMATION, vec![]),
+        (ROUTES, vec![(Value::Uint(0), Value::Uint(1)), (Value::Uint(2), Value::Array(vec![]))]),
+    ];
+    for (t, payload) in good {
+        let a = next(&mut p, identity_spec(), t, payload, None, None, &format!("good {t}"));
+        let id = w.add(&a);
+        assert_eq!(w.v.status(&id), Status::Valid, "type {t}");
+    }
+    let bad: Vec<(u64, Vec<(Value, Value)>)> = vec![
+        (NAME, vec![(Value::Uint(0), Value::Bytes(b"a name".to_vec())), (Value::Uint(1), Value::Bytes(sha256(b"a naming cMIP").to_vec()))]),
+        (NAME, vec![(Value::Uint(0), Value::Text("a name".into()))]),
+        (NAME_WITHDRAWAL, vec![(Value::Uint(0), Value::Uint(1))]),
+        (LINK_CLAIM, vec![(Value::Uint(0), Value::Text("mor".into()))]),
+        (LINK_CLAIM, vec![(Value::Uint(0), mor(&other.id)), (Value::Uint(1), Value::Uint(1))]),
+        (LINK_CONFIRMATION, vec![(Value::Uint(0), Value::Uint(1))]),
+        (LINK_TERMINATION, vec![(Value::Uint(3), Value::Uint(1))]),
+        (ROUTES, vec![(Value::Uint(0), Value::Text("one".into()))]),
+    ];
+    for (t, payload) in bad {
+        let a = next(&mut p, identity_spec(), t, payload, None, None, &format!("bad {t}"));
+        let id = w.add(&a);
+        assert_eq!(w.v.status(&id), Status::Invalid, "type {t}");
+    }
+}
+
+/// Envelopes rule 24: a withdrawal is valid only if signed by the
+/// publication's signer or by the identity its `for` names; while the
+/// publication is not held, unknown (F298).
+#[test]
+fn a_withdrawal_counts_only_by_the_publications_signer_or_for() {
+    let mut w = World::new();
+    let mut publisher = w.operator("publisher");
+    let mut creator = w.operator("creator");
+    let mut stranger = w.operator("stranger");
+    let env = envelopes_spec();
+    let mut payload = publication(vec![]);
+    payload.push((Value::Uint(8), Value::Bytes(creator.id.to_vec())));
+    payload.sort_by(|a, b| mor_core::cbor::encode(&a.0).cmp(&mor_core::cbor::encode(&b.0)));
+    let pubn = next(&mut publisher, env, 0, payload, None, None, "for the creator");
+    let pid = pubn.id();
+    let naming = || Some(vec![Object { chain: pid, predecessor: pid }]);
+    let by_stranger = next(&mut stranger, env, 3, vec![], naming(), None, "stranger's");
+    let by_creator = next(&mut creator, env, 3, vec![], naming(), None, "creator's");
+    let by_publisher = next(&mut publisher, env, 3, vec![], naming(), None, "publisher's");
+    let ids: Vec<Hash> = [&by_stranger, &by_creator, &by_publisher].iter().map(|a| w.add(a)).collect();
+    for id in &ids {
+        assert_eq!(w.v.status(id), Status::Unknown, "the publication not held");
+    }
+    w.add(&pubn);
+    assert_eq!(w.v.status(&ids[0]), Status::Invalid);
+    assert_eq!(w.v.status(&ids[1]), Status::Valid, "by the identity its for names");
+    assert_eq!(w.v.status(&ids[2]), Status::Valid, "by its signer");
+}
