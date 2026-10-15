@@ -24,6 +24,28 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F328. The drafts after step 15: sixteen questions answered (15 October 2026, morning)
+
+*From the session writing the next drafts (`docs/drafts-after-step-15.md`, pull request 62; the drafts in pull requests 60, 61, 62), put one at a time.*
+
+- **Q1 (Envelopes rule 13), an everyday act with two entries in `prev`:** (a) invalid act by act, a shape rule like a missing `prev`. **"Agreed."**
+- **Q2 (Identity rule 49), an objection signed with a stolen operator key:** (a) stated as a cost: until the operator rotates, the objection voids the homeless rotation; an owner holding both keys leaves at once by the escape. **"Agreed."**
+- **Q3 (Identity rule 29, the air-gapped Module; Fable's I5), taken by the project lead under the working practice:** (b) the Module accepts only bytes as showing a rotation it signed was invalid: the identity chain from genesis to the rotation's predecessor, checked offline by the Module itself; round 2's standard (the online side's word alone opens no exception).
+- **Q4 (Money rule 11 with Development field 13), a proof binding part of the set:** (a) element by element: for payee, purpose and previous hop, the proof decides where field 13 holds it, the payer's claim where it does not, a contrary receipt shown as a dispute; where the payee is unbound, the payment address (rule 4) decides whose payment it is. **"Agreed."**
+- **Q5 (Money rule 18), a request rail not binding the purpose:** (a) Development's format requires field 13 to hold payee and purpose wherever field 11 is 0 (request), or it is no specification (FR11). **"Agreed."**
+- **Q6 (Development, F322), a Module with no cMIP:** (a) field 5 may name a MIR. **"A is correct."**
+- **Q7 (Development rule 22's format):** (a) `rule-ref` gains the profile's spec hash, before the freeze. **"Agreed."**
+- **Q8 (Development, the profile's kind):** (a) a Module whose field 5 names the Development MIR. **"Yes."**
+- **Q9 (Development rule 3 with Identity rule 34), a disowned publication someone relied on:** (a) unclaimed whether relied on or not, the publication shown as disputed; authorship is the creator's own claim, withdrawn by the rotation. **"Agreed."**
+- **Q10 (Development kind 8), a MIP proposing a new layer:** (b) the predecessor always required; a new-layer MIP names the MICS document. **"B feels right."**
+- **Q11 (Agreements rules 61, 85), a vanished owner who votes on membership (F311):** (a) where a collective counts membership among a stake's holders, its abandonment clause must allow moving a vanished holder's stake (outcome 1 or 2), or the terms are invalid, as rule 61 for parties (F105 carried to owners). **"A) better do it upstream."**
+- **Q12 (Agreements, a fork's finality), kept owners' consent (F310 with F303):** (a) it counts where an act of the original in the fork's history acknowledges it. **"Agreed, chain key is too much here."**
+- **Q13 (Agreements), sealing to an owner that is an agreement (F315, F318):** (a) sealed to every party of its version in force; for a collective holder, to the collective. **"Agreed."**
+- **Q14 (Agreements, issuance), a standing waiver of pre-emption (F309):** (b) also a standing waiver in the stake's holders' rule, set or removed only by every holder, a buyer accepting it by buying. **"B."** With it, the author: **"Agreements can be used to form simple partnerships, more complex structures require collectives."**
+- **Q15 (Agreements rule 81, plan key 2), a seat successor's "voting weight":** (a) dropped from the format. Traced at the author's question: added with succession plans (rule 48a, late September), never read by any rule, restricted to one by B14 (1 October); under F308 a successor weighs what it holds, the stake split being the real lever; in a head-counting collective one seat becomes two only with every remaining voice's consent (rule 83) or the members' approval. **"Sounds safe."**
+- **Q16 (Agreements, areas), counting by share for an area's threshold:** (a) areas keep counting heads in MOR 1; a cMIP may put a by-share decision behind an area's single holder. **"A) this is not ownership, this is splitting operations."**
+- **The reading on field 24, taken by the project lead:** the release rule's old head-count form (`[1, k]`) is invalid in draft 14, not re-read as a share; no terms exist on MOR before the freeze, so no signed agreement changes meaning.
+
 ## F327. Proxies, designed one question at a time (15 October 2026, morning; from F320)
 
 *F320: "Proxies need a core solution." A grant key signs no decision, deliberately, so a proxy is an act of its own.*
