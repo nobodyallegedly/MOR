@@ -13932,6 +13932,11 @@ fn owned_label(dana_share: u64) -> (Lab, Person, Hash) {
 /// [`owned_label`], with or without the holders' rule, and with Eve, a
 /// holder who signs nothing, where `eve` gives her share.
 fn owned_label_with(dana_share: u64, rule: bool, eve: Option<(&str, u64)>) -> (Lab, Person, Hash) {
+    owned_label_full(dana_share, rule, eve, None)
+}
+
+/// [`owned_label_with`], the label also holding the whole of `work` (stake 1).
+fn owned_label_full(dana_share: u64, rule: bool, eve: Option<(&str, u64)>, work: Option<Hash>) -> (Lab, Person, Hash) {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let ids = lab.ids();
@@ -13946,7 +13951,11 @@ fn owned_label_with(dana_share: u64, rule: bool, eve: Option<(&str, u64)>) -> (L
         if let Some(e) = eve_id {
             holders.push((Who::Id(e), eve_share));
         }
-        t.stakes = Some(vec![agreements::Stake { object: Who::This, holders }]);
+        let mut st = vec![agreements::Stake { object: Who::This, holders }];
+        if let Some(w) = work {
+            st.push(agreements::Stake { object: Who::Id(w), holders: vec![(Who::This, 1_000_000)] });
+        }
+        t.stakes = Some(st);
         if rule {
             t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Share(600_000), waived: false }]);
         }
@@ -14140,4 +14149,51 @@ fn counting_by_share_3_7ah() {
     let mut lab = Lab::new(&owned(Rule::AllOf(vec![Rule::Threshold(2), by_share.clone()])));
     assert_eq!(attempt(&mut lab, &[ANA, CY]), CloneState::Complete, "two members, holding 70% of the voices' part");
     assert!(matches!(attempt(&mut lab, &[BEN, CY]), CloneState::Invalid(_)), "two members, holding 50%: the share is not met");
+}
+
+/// Freeze suite v28, 3.9ah (F310; Fable's Agreements review, A11): a sale
+/// or release of a work is an owners' matter. The label, with Dana a holder
+/// of its stake in itself who is no member and no holders' rule, releases
+/// its work: the release waits for her signature, placed by the label's
+/// line; the same for a transfer of its stake in the work. Under a holders'
+/// rule she accepted, holders meeting it carry it.
+#[test]
+fn a_sale_of_works_is_an_owners_matter_3_9ah() {
+    let work = spec("the label's work");
+    let release = |lab: &mut Lab, k: Hash| {
+        let rel = agreements::Release { work, stakes: vec![(k, 1)], claims: vec![], keys: vec![(spec("its publication"), vec![9; 32])], timed: None };
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::RELEASE, rel.to_map(), obj(k), None);
+        let r = lab.w.add(&a);
+        lab.sign(BEN, &r);
+        r
+    };
+    let (mut lab, mut dana, k) = owned_label_full(100_000, false, None, Some(work));
+    let r = release(&mut lab, k);
+    assert!(!lab.view().release(&r).unwrap().complete, "Dana has not consented");
+    // Her signature act naming the release, an act of the label, is placed
+    // at it ("Made before, made after", 2, C1).
+    sign(&mut lab.w, &mut dana, &r);
+    let e = lab.view().release(&r).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    // A transfer of the label's stake in the work: the same.
+    let (mut lab, mut dana, k) = owned_label_full(100_000, false, None, Some(work));
+    let mut buyer = lab.w.genesis("the members' new collective", vec![own_home()], None, None);
+    let tr = agreements::StakeTransfer { agreement: k, stake: 1, to: buyer.id, share: 1_000_000, record: vec![] };
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(k), None);
+    let t = lab.w.add(&a);
+    let (_, c0) = lab.w.chain_sign(&lab.c[0], t);
+    lab.c[0] = c0;
+    sign(&mut lab.w, &mut buyer, &t);
+    let e = lab.view().transfer(&t).unwrap();
+    assert!(!e.effective && e.problems.iter().any(|p| p.contains("F310")), "{:?}", e.problems);
+    sign(&mut lab.w, &mut dana, &t);
+    let e = lab.view().transfer(&t).unwrap();
+    assert!(!e.problems.iter().any(|p| p.contains("F310")), "{:?}", e.problems);
+    // Under a 60% holders' rule she signed: holders meeting it carry it.
+    let (mut lab, _dana, k) = owned_label_full(100_000, true, None, Some(work));
+    let r = release(&mut lab, k);
+    assert!(!lab.view().release(&r).unwrap().complete, "Ben alone holds 30%");
+    lab.sign(ANA, &r);
+    let e = lab.view().release(&r).unwrap();
+    assert!(e.complete, "Ana and Ben hold 60%, Dana's no aside: {:?}", e.why);
 }

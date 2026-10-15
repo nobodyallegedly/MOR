@@ -10813,7 +10813,10 @@ impl<'a> AgreementsView<'a> {
             }
             let mut signed = vec![];
             for x in &holders {
-                if self.signed_act(h, x)? {
+                // A collective holder's release of its stake in a work is an
+                // owners' matter of its own stake in itself (rule 95; new in
+                // draft 14, F310): it signs only once its owners consented.
+                if self.signed_act(h, x)? && self.owners_consent(x, id)?.is_ok() {
                     signed.push(*x);
                 }
             }

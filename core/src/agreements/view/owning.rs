@@ -138,6 +138,14 @@ impl<'a> AgreementsView<'a> {
         if self.signers(id, &[transfer.to]).is_empty() {
             problems.push("the buyer has not completed it by a signature act (rule 14)".into());
         }
+        // A collective's transfer of a stake it holds in a work: an owners'
+        // matter of its stake in itself (rule 95; new in draft 14, F310).
+        let in_work = self.terms(&transfer.agreement).ok().and_then(|t| t.stakes.as_ref()?.get(transfer.stake as usize).map(|s| s.object)).is_some_and(|o| o != Who::This);
+        if in_work {
+            if let Err(w) = self.owners_consent(&seller, id)? {
+                problems.push(w);
+            }
+        }
         let effective = problems.is_empty();
         let mut wrong_receipts = vec![];
         let mut splits_paying_seller = vec![];
@@ -555,5 +563,65 @@ impl<'a> AgreementsView<'a> {
         }
         out.retain(|(_, n)| *n > 0);
         Ok(out)
+    }
+}
+
+impl<'a> AgreementsView<'a> {
+    /// The owners' consent to a collective's act that is an owners' matter
+    /// of its stake in itself (Agreements draft 14, rule 95, item 3; F310;
+    /// Fable's Agreements review, A11): a transfer (type 4) or release
+    /// (type 5) of a stake the collective holds in a work counts only once
+    /// the owners of the collective's stake in itself who have no say
+    /// consent: holders meeting its holders' rule, or, where it is every
+    /// holder, each holder who is no member, by a signature act naming the
+    /// act, placed by the collective's line (an act of the collective on its
+    /// chain acknowledging it) and kept there whatever its signer's later
+    /// rotation disowns (F302). The holders are those field 7 of the
+    /// agreement in force names (a reading of the build: the act has no line
+    /// of its own to read a roster at). `Ok(Ok(()))` where nothing is asked
+    /// (no stake in itself, or no holder without a say under every holder).
+    pub fn owners_consent(&self, collective: &Hash, act: &Hash) -> R<Result<(), String>> {
+        let Some(cur) = self.current(collective)? else {
+            return Ok(Ok(()));
+        };
+        let t = self.terms(&cur.agreement)?;
+        let Some((i, st)) = t.own_stake() else {
+            return Ok(Ok(()));
+        };
+        let col = self.col(collective);
+        let placed = |h: &Hash| -> R<bool> {
+            for s in self.v.signed_by(h) {
+                if self.is_agreements(s, types::SIGNATURE) && decode_signature(&s.inside).ok() == Some(*act) && self.sig_counts(&col, s)? && !self.placements(&col, s).is_empty() {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        };
+        let holders = st.identified();
+        match t.holders_rule(i as u64).0 {
+            HoldersRule::Every => {
+                for (h, _) in holders.iter().filter(|(h, _)| !t.parties.contains(h)) {
+                    if !placed(h)? {
+                        return Ok(Err(
+                            "a holder of the collective's stake in itself who has no say has not consented, by a signature act naming it that the collective's line placed (rule 95; new in draft 14, F310)".into(),
+                        ));
+                    }
+                }
+            }
+            HoldersRule::Share(need) => {
+                let mut got = 0u64;
+                for (h, n) in &holders {
+                    if placed(h)? {
+                        got += n;
+                    }
+                }
+                if got < need {
+                    return Ok(Err(
+                        "the holders of the collective's stake in itself who consented, placed by its line, do not meet its holders' rule (rules 94, 95; F307, F310)".into(),
+                    ));
+                }
+            }
+        }
+        Ok(Ok(()))
     }
 }
