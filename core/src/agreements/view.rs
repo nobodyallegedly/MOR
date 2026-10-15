@@ -796,17 +796,56 @@ impl<'a> AgreementsView<'a> {
     /// The signature acts naming `act` with a valid standing under
     /// Identity, by signer, among `among`.
     fn valid_sigs(&self, act: &Hash, among: &[Hash]) -> Vec<(Hash, Hash)> {
+        // F314: a deal's version someone relied on keeps its completeness for
+        // everyone, a disowned signature on it shown as a dispute.
+        let relied = std::cell::OnceCell::new();
         let mut out = vec![];
         for who in among {
             if let Some(h) = self.v.signed_by(who).find(|h| {
                 self.is_agreements(h, types::SIGNATURE)
                     && decode_signature(&h.inside).ok() == Some(*act)
-                    && self.valid(&h.id)
+                    && (self.valid(&h.id)
+                        || (matches!(self.status(&h.id), Status::Void | Status::Disputed) && *relied.get_or_init(|| self.deal_version_relied(act))))
             }) {
                 out.push((*who, h.id));
             }
         }
         out
+    }
+
+    /// Whether `act` is a deal's version a later act relies on (Agreements
+    /// draft 14, rule 47, F314): a purchase naming it (rule 12), a split
+    /// under it (rule 20), a keeper's record of it (rule 37, the keepers'
+    /// logs a verifier states), or a later version cloning it (rule 45),
+    /// each valid under Identity. "What others relied on stands."
+    fn deal_version_relied(&self, act: &Hash) -> bool {
+        use crate::money::Payload as Fin;
+        let Some(h) = self.v.get(act) else { return false };
+        if !self.is_agreements(h, types::TERMS) || Terms::decode(&h.inside.payload).map_or(true, |t| t.is_collective()) {
+            return false;
+        }
+        if self.keeper_logs.values().any(|log| log.contains(act)) {
+            return true;
+        }
+        self.v.held_acts().any(|x| {
+            if !self.valid(&x.id) || x.id == *act {
+                return false;
+            }
+            if self.is_agreements(x, types::TERMS) {
+                return Terms::decode(&x.inside.payload).is_ok_and(|t| t.parent == Some(*act));
+            }
+            if self.is_agreements(x, types::SPLIT) {
+                return Split::decode(&x.inside.payload).is_ok_and(|s| s.agreement == *act);
+            }
+            if x.inside.spec == self.mirs.money {
+                return match Fin::decode(x.inside.type_, &x.inside.payload) {
+                    Ok(Fin::Receipt(r)) => r.purchase.is_some_and(|p| p.agreement == *act || p.line == *act),
+                    Ok(Fin::Claim(c)) => c.purchase.is_some_and(|p| p.agreement == *act || p.line == *act),
+                    _ => false,
+                };
+            }
+            false
+        })
     }
 
     /// The distinct identities with a valid signature act naming `act`, in
@@ -969,6 +1008,32 @@ impl<'a> AgreementsView<'a> {
         for h in pay {
             if !out.contains(&h) {
                 out.push(h);
+            }
+        }
+        out
+    }
+
+    /// A stake's holders as a version counts them (Agreements draft 14, rule
+    /// 94, F316): the parent's field 7, each effective transfer of `counted`
+    /// on that stake (an agreement of the parent's lineage, its index)
+    /// moving its share from its seller to its buyer.
+    fn roster_with(&self, index: usize, st: &Stake, counted: &[Hash]) -> Vec<(Hash, u64)> {
+        let mut out = st.identified();
+        for t in counted {
+            let Ok(e) = self.transfer(t) else { continue };
+            if !e.effective || e.transfer.stake != index as u64 {
+                continue;
+            }
+            let same = self.terms(&e.transfer.agreement).ok().and_then(|tt| tt.stakes.as_ref()?.get(index).map(|s| s.object)) == Some(st.object);
+            if !same {
+                continue;
+            }
+            if let Some(x) = out.iter_mut().find(|(h, _)| *h == e.seller) {
+                x.1 = x.1.saturating_sub(e.transfer.share);
+            }
+            match out.iter_mut().find(|(h, _)| *h == e.transfer.to) {
+                Some(x) => x.1 += e.transfer.share,
+                None => out.push((e.transfer.to, e.transfer.share)),
             }
         }
         out
@@ -1183,7 +1248,17 @@ impl<'a> AgreementsView<'a> {
                 }
             }
             let mut holders_signed = true;
-            for h in Self::must_sign(parent, &terms) {
+            let (mut asked, _) = Self::must_sign_parts(parent, &terms);
+            // F316: in a deal, the version carrying an owners' matter names
+            // the transfers it counts (field 31); a transfer it does not
+            // name counts nothing toward it, and its seller holds for it.
+            let counted = terms.transfers_counted.clone().unwrap_or_default();
+            for h in super::pay::pay_signers_by(parent, &terms, &|i, st| self.roster_with(i, st, &counted)) {
+                if !asked.contains(&h) {
+                    asked.push(h);
+                }
+            }
+            for h in asked {
                 if self.signers(id, &[h]).is_empty() && !self.moved_by_abandonment(&h, parent, &terms, id, &lineage[1..], None, &[])? {
                     holders_signed = false;
                 }

@@ -13816,3 +13816,104 @@ fn an_endings_finality_rests_on_chain_keys_and_the_collectives_chain_3_9ae() {
     let e = lab.view().closing(&c).unwrap();
     assert!(e.complete, "the closing stays complete: {:?}", e.why);
 }
+
+/// Freeze suite v28, 1.9g (F314; Agreements draft 14, rule 47): a deal's
+/// version relied on stays complete for everyone. Ana and Ben sign a deal
+/// from their phones, Ben from a laptop; a later version clones it. Ben then
+/// rotates and forgets the laptop, disowning his signature: the version
+/// stays complete, the signature shown as a dispute under Identity, the
+/// clone its place. A version nothing relied on is judged by its signatures
+/// as Identity judges them. (Terms of a deal carrying a holders' rule are
+/// invalid: `a_holders_rule_is_a_collectives_only_1_9g_3_7aj`.)
+#[test]
+fn a_version_relied_on_stays_complete_1_9g() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut ben_laptop = device(&ben);
+    let deal = |w: &mut World, ana: &mut Person, laptop: &mut Person, words: &str| {
+        let mut t = deal_terms(ana.id, laptop.id);
+        t.text = words.into();
+        let d = agreements_act(w, ana, agreements::types::TERMS, t.to_map(), None);
+        sign(w, ana, &d);
+        sign(w, laptop, &d);
+        (d, t)
+    };
+    let (relied, t) = deal(&mut w, &mut ana, &mut ben_laptop, "The film's deal.");
+    let (alone, _) = deal(&mut w, &mut ana, &mut ben_laptop, "Another deal, nothing relies on.");
+    assert_eq!(view(&w).agreement(&relied).unwrap().exists, Some(true));
+    assert_eq!(view(&w).agreement(&alone).unwrap().exists, Some(true));
+    // A later version clones the first, signed from Ben's phone.
+    let mut c = t.clone();
+    c.parent = Some(relied);
+    c.text = "The film's deal, a later version.".into();
+    c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
+    let k = agreements_act(&mut w, &mut ana, agreements::types::TERMS, c.to_map(), obj(relied));
+    sign(&mut w, &mut ana, &k);
+    let mut ben_phone = ben.clone();
+    sign(&mut w, &mut ben_phone, &k);
+    // Ben rotates, keeping his phone's sequence, forgetting the laptop's.
+    let (_, ben2) = w.rotate(&ben_phone, Rot::default());
+    let _ = ben2;
+    let s = w.v.signed_by(&ben.id).find(|h| agreements::decode_signature(&h.inside).ok() == Some(relied)).unwrap().id;
+    assert!(matches!(w.v.status(&s), Status::Void | Status::Disputed), "disowned under Identity");
+    assert_eq!(view(&w).agreement(&relied).unwrap().exists, Some(true), "relied on: it stays complete");
+    assert_eq!(view(&w).agreement(&alone).unwrap().exists, Some(false), "nothing relied on it: judged as Identity judges");
+}
+
+/// Freeze suite v28, 1.9h (F316; Agreements draft 14, rule 94): in a deal,
+/// a version carrying an owners' matter names the transfers it counts
+/// (field 31). An investor holding part of the film's stake, no party,
+/// sells it to Carla by a transfer on its own line; a version paying the
+/// stake less (a fee added) that names the transfer asks Carla's signature,
+/// not the investor's; one not naming it asks the investor's, who holds for
+/// it, not Carla's.
+#[test]
+fn a_sold_stake_is_asked_through_the_version_1_9h() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut ivy = w.genesis("ivy, the investor", vec![own_home()], None, None);
+    let mut carla = w.genesis("carla, who buys", vec![own_home()], None, None);
+    let film = spec("the film");
+    let mut t = deal_terms(ana.id, ben.id);
+    t.stakes = Some(vec![agreements::Stake {
+        object: Who::Id(film),
+        holders: vec![(Who::Id(ana.id), 400_000), (Who::Id(ben.id), 400_000), (Who::Id(ivy.id), 200_000)],
+    }]);
+    let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    for p in [&mut ana, &mut ben, &mut ivy] {
+        sign(&mut w, p, &d);
+    }
+    assert_eq!(view(&w).agreement(&d).unwrap().exists, Some(true));
+    // Ivy sells her part to Carla, on her own line.
+    let tr = agreements::StakeTransfer { agreement: d, stake: 0, to: carla.id, share: 200_000, record: vec![] };
+    let x = agreements_act(&mut w, &mut ivy, agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(d));
+    let (_, ivy2) = w.chain_sign(&ivy, x);
+    ivy = ivy2;
+    sign(&mut w, &mut carla, &x);
+    assert!(view(&w).transfer(&x).unwrap().effective);
+    // Versions adding a fee every stake bears: paid less.
+    let version = |w: &mut World, ana: &mut Person, ben: &mut Person, counted: Option<Vec<Hash>>, words: &str| {
+        let mut c = t.clone();
+        c.parent = Some(d);
+        c.text = words.into();
+        c.fees = Some(vec![agreements::Fee { module: spec("a fee Module"), part: 50_000, scope: agreements::FeeScope::Every }]);
+        c.transfers_counted = counted;
+        c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
+        let k = agreements_act(w, ana, agreements::types::TERMS, c.to_map(), obj(d));
+        sign(w, ana, &k);
+        sign(w, ben, &k);
+        k
+    };
+    let named = version(&mut w, &mut ana, &mut ben, Some(vec![x]), "With the fee, counting the sale to Carla.");
+    let unnamed = version(&mut w, &mut ana, &mut ben, None, "With the fee, counting no sale.");
+    assert_eq!(view(&w).agreement(&named).unwrap().exists, Some(false), "Carla, counted, has not signed");
+    assert_eq!(view(&w).agreement(&unnamed).unwrap().exists, Some(false), "Ivy holds for it, and has not signed");
+    sign(&mut w, &mut carla, &named);
+    sign(&mut w, &mut carla, &unnamed);
+    assert_eq!(view(&w).agreement(&named).unwrap().exists, Some(true), "the buyer's signature, not the seller's");
+    assert_eq!(view(&w).agreement(&unnamed).unwrap().exists, Some(false), "the buyer counts nothing toward it");
+    sign(&mut w, &mut ivy, &unnamed);
+    assert_eq!(view(&w).agreement(&unnamed).unwrap().exists, Some(true), "the seller's signature");
+}

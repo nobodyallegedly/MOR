@@ -22,7 +22,7 @@
 //! F280: the plan pays non-owners off the top only, so what is left goes to
 //! the stakes alone; the comparison of shares is read so.
 
-use super::formats::{Terms, Who};
+use super::formats::{Stake, Terms, Who};
 use super::open_formats::{Fee, Metric, ShareRule, SplitPlan, Unfilled};
 use crate::cbor::Value;
 use crate::hash::Hash;
@@ -123,10 +123,19 @@ pub fn stakes_paid_less(parent: &Terms, clone: &Terms) -> Vec<(Who, Vec<PaidLess
 /// departed holder (rule 68) among them. No advance permission reaches
 /// their pay (Agreements draft 12, F279): nothing replaces the signature.
 pub fn pay_signers(parent: &Terms, clone: &Terms) -> Vec<Hash> {
+    pay_signers_by(parent, clone, &|_, st| st.identified())
+}
+
+/// [`pay_signers`], each stake's holders read by `roster` (its index in the
+/// parent's field 7, and the stake): who holds what at the version, the
+/// transfers it counts moving a share from seller to buyer (Agreements
+/// draft 14, rule 94, F316: in a deal, the transfers its field 31 names; in
+/// a collective, those its line placed).
+pub fn pay_signers_by(parent: &Terms, clone: &Terms, roster: &dyn Fn(usize, &Stake) -> Vec<(Hash, u64)>) -> Vec<Hash> {
     let mut out: Vec<Hash> = vec![];
     for (o, _) in stakes_paid_less(parent, clone) {
-        let Some((_, st)) = parent.stake_on(&o) else { continue };
-        for (h, n) in st.identified() {
+        let Some((i, st)) = parent.stake_on(&o) else { continue };
+        for (h, n) in roster(i, st) {
             if n == 0 || out.contains(&h) {
                 continue;
             }
