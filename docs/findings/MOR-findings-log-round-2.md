@@ -24,6 +24,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F321. The MICS opens with the test: law where bytes can prove it, record where they cannot (15 October 2026, morning)
+
+*From the working principle of 14 October and Fable's two additions to it.* **Nobody, allegedly: "I think it's a good statement to lead with."** The MICS's freeze-ready draft opens, before the rules, with two sentences in this sense: MOR is the law where bytes can prove it, and keeps the record where they cannot ("not 'nobody can take unfairly' but 'nobody can take unseen'": the record is what lets the core stay small and right); and a collective's own chain (more generally, the chain that places an act) is where bytes get their order, the one move behind F109, F302 and F316. The exact wording is for the author's reading of the freeze-ready draft.
+
 ## Development Q6 and Q7, taken by the project lead under the working practice (development layer; 15 October 2026, morning)
 
 *From Fable's Development review (`docs/reviews/fable-step-15-development.md`).* Q6 (D5): F301 is written as field 11, the rail's kind alone (0 request, 1 push), and a new field 13, the set its proof binds (ascending, from 0 payee, 1 purpose, 2 previous hop); both required on a Module whose field 5 names the payment cMIP, the specification invalid without them; task 6's table line reworded to "reads each rail Module's kind and binding from its specification (F301)". Q7 (D8): the release manifest's "implements" (field 6) names spec hashes, a publication id beside each as a hint only, never as the name.
