@@ -403,6 +403,14 @@ pub fn check_text(s: &str) -> R<()> {
     mor_core::text::check(s).map_err(|e| err(format!("not canonical text: {e}")))
 }
 
+/// A string in NFC under the pinned Unicode tables (Text, rule 6), as the
+/// core checks it: a client composes with the same tables it is checked
+/// with, never its system's (Fable's T5).
+#[wasm_bindgen(js_name = nfc)]
+pub fn nfc(s: &str) -> String {
+    mor_core::text::nfc(s)
+}
+
 #[wasm_bindgen(js_name = actId)]
 pub fn act_id(bytes: &[u8]) -> R<String> {
     Ok(hx(&Act::decode(bytes).map_err(err)?.id()))
@@ -1062,8 +1070,6 @@ struct RandomIn {
     #[serde(with = "serde_bytes")]
     nonce: Vec<u8>,
     eseeds: Vec<serde_bytes::ByteBuf>,
-    #[serde(with = "serde_bytes")]
-    one_time_secret: Vec<u8>,
 }
 
 #[derive(Deserialize)]
@@ -1111,15 +1117,11 @@ pub fn seal(input: JsValue) -> R<Vec<u8>> {
                 .iter()
                 .map(|e| arr::<64>(e, "an eseed"))
                 .collect::<R<Vec<_>>>()?,
-            one_time_secret: arr::<32>(&r.one_time_secret, "a one-time secret")?,
-            aux: random::<32>(),
         },
         None => SealRandom {
             container_key: random::<32>(),
             nonce: random::<24>(),
             eseeds: recipients.iter().map(|_| random::<64>()).collect(),
-            one_time_secret: schnorr_secret(),
-            aux: random::<32>(),
         },
     };
     Ok(envelopes::seal(&a, key.as_ref(), &recipients, &rnd)
@@ -1139,7 +1141,6 @@ struct SealedParts {
 #[wasm_bindgen(js_name = sealedParts)]
 pub fn sealed_parts(bytes: &[u8]) -> R<JsValue> {
     let s = Sealed::decode(bytes).map_err(err)?;
-    s.check_signature().map_err(err)?;
     let (capsules, _, _) = s.parts().map_err(err)?;
     to_js(&SealedParts {
         to: s.to.iter().map(hx).collect(),
@@ -1257,14 +1258,30 @@ impl Verifier {
     /// A verifier for the given Identity spec hash (`IDENTITY`; a test value
     /// until the freeze). Given the Money and Agreements spec hashes too, it can
     /// tell which acts may carry acknowledgements (F110); without them, an
-    /// act of another specification carrying `acks` is unknown to it.
+    /// act of another specification carrying `acks` is unknown to it. Given
+    /// the Envelopes and Text spec hashes, which every client holds (MICS,
+    /// "Client conformance"), it decodes their acts strictly (Envelopes
+    /// draft 10, rule 30; Text draft 8, rule 14; F295, F296) and shows a text
+    /// or Envelopes act carrying `acks` as invalid without the Money and
+    /// Agreements hashes (Fable's E5, the clients' half).
     #[wasm_bindgen(constructor)]
-    pub fn new(identity_spec: &str, money_spec: Option<String>, agreements_spec: Option<String>) -> R<Verifier> {
+    pub fn new(
+        identity_spec: &str,
+        money_spec: Option<String>,
+        agreements_spec: Option<String>,
+        envelopes_spec: Option<String>,
+        text_spec: Option<String>,
+    ) -> R<Verifier> {
         let identity = unhex(identity_spec)?;
-        let inner = match (money_spec, agreements_spec) {
+        let mut inner = match (money_spec, agreements_spec) {
             (Some(f), Some(l)) => chain::Verifier::with_mirs(identity, unhex(&f)?, unhex(&l)?),
             (None, None) => chain::Verifier::new(identity),
             _ => return Err(JsError::new("give both the Money and the Agreements spec hashes, or neither")),
+        };
+        inner = match (envelopes_spec, text_spec) {
+            (Some(e), Some(t)) => inner.knowing_envelopes_and_text(unhex(&e)?, unhex(&t)?),
+            (None, None) => inner,
+            _ => return Err(JsError::new("give both the Envelopes and the Text spec hashes, or neither")),
         };
         Ok(Verifier { inner, held: vec![] })
     }
@@ -1332,6 +1349,7 @@ impl Verifier {
             Stop::End => ("end", vec![]),
             Stop::Pending(w) => ("pending", w.clone()),
             Stop::Contested(w) => ("contested", w.clone()),
+            Stop::CannotTell(w) => ("unknown", w.clone()),
         };
         let latest = res.latest().map(|(_, s)| s.clone());
         to_js(&ResolutionOut {
@@ -1406,6 +1424,30 @@ impl Verifier {
             Status::Scoped => "scoped",
         }
         .into())
+    }
+
+    /// An identity's succession (Identity draft 13, section 8, F300):
+    /// `{ state, rotation, successor, confirmation }`, `state` one of
+    /// "none", "declared" (shown as declared, never followed), "confirmed"
+    /// (followed), "unknown" (a confirmation held whose status cannot be
+    /// told), "elsewhere" (another protocol's, confirmed as its link cMIP
+    /// says).
+    pub fn succession(&self, identity: &str) -> R<JsValue> {
+        #[derive(Serialize)]
+        struct Out {
+            state: &'static str,
+            rotation: Option<String>,
+            successor: Option<String>,
+            confirmation: Option<String>,
+        }
+        let o = match self.inner.succession(&unhex(identity)?) {
+            chain::SuccessionSeen::None => Out { state: "none", rotation: None, successor: None, confirmation: None },
+            chain::SuccessionSeen::Declared { rotation, successor } => Out { state: "declared", rotation: Some(hx(&rotation)), successor: Some(hx(&successor)), confirmation: None },
+            chain::SuccessionSeen::Confirmed { rotation, successor, confirmation } => Out { state: "confirmed", rotation: Some(hx(&rotation)), successor: Some(hx(&successor)), confirmation: Some(hx(&confirmation)) },
+            chain::SuccessionSeen::Unknown { rotation, successor } => Out { state: "unknown", rotation: Some(hx(&rotation)), successor: Some(hx(&successor)), confirmation: None },
+            chain::SuccessionSeen::Elsewhere { rotation, successor } => Out { state: "elsewhere", rotation: Some(hx(&rotation)), successor: Some(format!("{}:{}", successor.protocol, hex::encode(&successor.identifier))), confirmation: None },
+        };
+        to_js(&o)
     }
 
     /// The standing of an act for everything binding (keeper records,

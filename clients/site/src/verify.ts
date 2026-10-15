@@ -3,7 +3,7 @@
 // runs on the gateway's server, on the command line, and in the visitor's
 // browser, where the build gives it the browser's core library.
 
-import { Verifier, cborDecode, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
+import { SPECS, Verifier, cborDecode, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { decodeSite, type FileEntry, type SiteManifest } from './manifest.ts';
@@ -86,7 +86,8 @@ export async function openVersion(version: string, expected: string, hints: stri
   r.places = [...hints, ...named.filter((n) => !hints.includes(n))];
 
   // 2. The signer's chain, the publication's standing, and who the signer is.
-  const v = new Verifier(SITE_SPECS.identity);
+  // Every client holds the Envelopes and Text hashes, and decodes their acts strictly (F295, Fable's E5).
+  const v = new Verifier(SITE_SPECS.identity, undefined, undefined, SPECS.envelopes, SPECS.text);
   try {
     await lookUp(d.signer, r.places, via, v);
   } catch (e) {

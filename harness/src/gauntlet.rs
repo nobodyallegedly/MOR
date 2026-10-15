@@ -1,5 +1,6 @@
 //! The identity gauntlet: freeze test suite, scenario 5, steps 6 to 7d,
-//! against real homes (roadmap step 7).
+//! against real homes (roadmap step 7), and the steps the decisions of
+//! step 15 added (5.5c, 5.7e to 5.7g, 5.8b; `after_step_15`).
 //!
 //! Two test identities live on the three homes named as real: **A**, homed
 //! at all three under the majority rule, and **B**, self-hosted with two
@@ -34,6 +35,7 @@ use mor_relay::wire::{code, hex, Bundle, PutResult};
 use mor_relay::{Node, Policy, Role, Specs};
 use std::path::PathBuf;
 
+mod after_step_15;
 mod steps;
 
 type Put = Result<PutResult, ClientError>;
@@ -161,6 +163,12 @@ impl Gauntlet {
         self.step7c_redirected_inbox().await;
         self.step7d_contested_until_the_operator_rotates().await;
         self.step7d_settled_by_audit().await;
+        // The Identity decisions of step 15 (Identity draft 13).
+        self.step5c_reader_without_the_line().await;
+        self.step7e_evidence_disowned().await;
+        self.step7f_contested_self_hosted().await;
+        self.step7g_a_rotation_that_never_counted().await;
+        self.step8b_succession_confirmed().await;
         self.slh_summary();
         self.report
     }

@@ -425,7 +425,7 @@ function mediaOf(d: Described): Media | null {
 
 /** One verifier for the whole listing: each signer looked up once, every act judged with everything found. */
 class Judge {
-  readonly v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  readonly v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   private looked = new Map<string, Promise<Lookup>>();
   constructor(
     private places: string[],

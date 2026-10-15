@@ -141,7 +141,7 @@ const isPost = (d: Described) => d.public && d.spec === POST_SPECS.text && d.typ
  * identity"), so every post is judged with everything found.
  */
 class FeedJudge implements Judging {
-  readonly v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  readonly v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   private looked = new Map<string, Promise<Lookup>>();
   constructor(
     private places: string[],

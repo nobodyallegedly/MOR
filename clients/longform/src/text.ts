@@ -1,7 +1,12 @@
 // Composing canonical text (Text MIR, rule 6): what a client does to the
 // user's text before it goes into an act, so no one meets a rejection for
 // invisible reasons. The verifier's check is the core library's, with the
-// pinned Unicode tables; this uses the system's, which is enough to compose.
+// pinned Unicode tables, and so is the normalization here (`nfc`, through
+// the WebAssembly): a client composing with its system's tables could
+// compose a character assigned after them one way and the core refuse it
+// (Fable's Text review, T5).
+
+import { nfc } from '../../genesis/src/core.ts';
 
 const SPACE = '[ \u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]';
 const TRAILING = new RegExp(`${SPACE}+$`, 'gmu');
@@ -23,7 +28,7 @@ export function compose(raw: string): { text: string; changes: string[] } {
   step(t.replace(/\t/g, '    '), 'tabs replaced with four spaces');
   step(t.replace(CONTROL, ''), 'control characters removed');
   step(t.replace(NONCHAR, ''), 'noncharacters removed');
-  step(t.normalize('NFC'), 'normalized to NFC');
+  step(nfc(t), 'normalized to NFC');
   step(t.replace(TRAILING, ''), 'trailing spaces removed');
   step(t.replace(TRAILING_END, ''), 'final line breaks removed');
   return { text: t, changes };

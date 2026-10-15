@@ -450,7 +450,7 @@ export async function latestPointer(by: TestIdentity, relays: string[]): Promise
 /** The latest payee pointer, as `latestPointer` finds it, with the act itself: held, to refer to (F272). */
 export async function latestPointerAct(by: TestIdentity, relays: string[]): Promise<{ id: string; act: Uint8Array } | null> {
   const acts = new Map<string, Uint8Array>();
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   for (const a of by.chainActs()) v.add(a);
   const found = new Map<string, { version: number; previous: string | null }>();
   for (const h of relays) {

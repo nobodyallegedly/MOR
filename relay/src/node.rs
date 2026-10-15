@@ -902,6 +902,20 @@ impl Node {
             if k != kind::ACT {
                 return wire(code::MALFORMED, "that id names an item that is not an act");
             }
+            // Envelopes draft 10, rule 27 (Fable's E4): the signature is not
+            // part of the act id, so two copies of one act can differ in it.
+            // A copy held whose signature this relay could not verify (a
+            // scheme it does not implement) is replaced by one it can, so
+            // whoever saw an act's outside first cannot lodge it under a
+            // signature nobody checks and have the genuine act refused.
+            if sig::verify(&act.signature, &id) == Verdict::Valid {
+                if let Some(held) = self.store.item(&id, kind::ACT)? {
+                    let held_verdict = Act::decode(&held).map(|h| sig::verify(&h.signature, &id));
+                    if held_verdict != Ok(Verdict::Valid) {
+                        self.store.replace_act_bytes(&id, bytes)?;
+                    }
+                }
+            }
             // Publishing is idempotent: the same answer again.
             return Ok(Put {
                 result: self.result_for(id, arrival)?,

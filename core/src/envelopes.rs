@@ -52,11 +52,9 @@ pub mod types {
 pub const XWING: Scheme = Scheme::Founding(4);
 
 pub mod tag {
-    /// No longer used by the core (Envelopes draft 10, F293): the container
-    /// carries no signature. Kept as the name a relay hashes a container's
-    /// bytes under (the relay transport cMIP's), now the only object under
-    /// this tag (Fable's E10).
-    pub const SEALED: &str = "MOR/sealed";
+    // Envelopes draft 10 (F293): the container carries no signature, so
+    // nothing is hashed under `MOR/sealed` any longer; a relay names a
+    // container under its cMIP's own tag, `MOR/transport/sealed`.
     /// The key that locks a container key to one recipient: over the X-Wing shared secret.
     pub const WRAP: &str = "MOR/sealed/wrap";
 }

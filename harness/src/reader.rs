@@ -67,7 +67,9 @@ pub struct Reader {
 impl Reader {
     pub fn new(http: Http) -> Self {
         Reader {
-            v: Verifier::new(Specs::test().identity),
+            // Every client holds the Envelopes and Text hashes (Fable's E5).
+            v: Verifier::new(Specs::test().identity)
+                .knowing_envelopes_and_text(Specs::test().envelopes, mor_core::hash::sha256(b"TEXT, test value until the freeze")),
             http,
             blocked: BTreeSet::new(),
             held: BTreeSet::new(),
@@ -483,14 +485,18 @@ impl Reader {
         }
     }
 
-    /// Whether the reader holds an objection by `op` naming the rotation.
+    /// Whether the reader holds an objection by `op` naming the rotation,
+    /// one that counts: only while its signer's chain keeps it valid (Identity
+    /// draft 13, F297); a disowned objection proves no life.
     fn objected(&self, op: &Hash, identity: &Hash, rotation: &[u8]) -> bool {
         let Ok(r) = Act::decode(rotation) else {
             return false;
         };
         let want = naming(identity, &r.id());
         self.v.signed_by(op).any(|h| {
-            matches!(&h.identity, Some(Ok(Payload::Objection(_)))) && h.inside.objects == want
+            matches!(&h.identity, Some(Ok(Payload::Objection(_))))
+                && h.inside.objects == want
+                && self.v.status(&h.id) == mor_core::chain::Status::Valid
         })
     }
 

@@ -396,7 +396,7 @@ test("a deal signed on the phone cites the wallet published from the laptop (F16
   assert.equal(await latestPointer(phone, relays), v2.id, 'the latest, published from the other device');
   const terms = (n: string) => label.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.terms, cborEncode(new Map([[0, n]])), { public: true, relays });
   const holding = (deal: string, acts: Uint8Array[]) => {
-    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
     for (const a of [...laptop.chainActs(), ...label.chainActs(), v1.act, v2.act, ...acts]) v.add(a);
     return v.agreementsPointerHolding(AGREEMENTS_SPECS, deal, laptop.id) as { pointers: string[]; complete: boolean };
   };

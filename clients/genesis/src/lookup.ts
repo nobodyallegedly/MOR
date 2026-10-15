@@ -139,7 +139,7 @@ export async function firstOf<T, R>(items: T[], ask: (x: T) => Promise<R | null>
  * together.
  */
 export async function lookUp(identity: string, hints: string[], via: Via = {}, into?: Verifier): Promise<Lookup> {
-  const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const asked = new Set<string>();
   const unreachable: string[] = [];
   const notTried: NotTried[] = [];

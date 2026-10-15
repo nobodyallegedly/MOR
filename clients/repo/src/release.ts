@@ -499,7 +499,7 @@ export async function verifyRelease(
   }
 
   // 2. The signer's chain, and the publication's standing.
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   let homes: string[];
   try {
     const l = await lookUp(d.signer, hints, via, v);

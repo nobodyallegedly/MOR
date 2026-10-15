@@ -236,7 +236,7 @@ class Judge implements Judging {
     private hints: string[],
     private via: Via,
   ) {
-    this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+    this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   }
   async standing(act: Uint8Array, id: string, signer: string): Promise<string> {
     // One lookup per signer, shared by everything read side by side.

@@ -2620,7 +2620,7 @@ export class Actions {
    * (F128, withdrawing N13's public outside).
    */
   private async agreementsVerifier(c: TestCollective, ids: string[]): Promise<{ v: Verifier; specs: typeof AGREEMENTS_SPECS }> {
-    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
     const hints = this.hintsOf(c);
     // The relays are where this program looks first (client conformance);
     // where it found an act is never a condition of its validity (F128).

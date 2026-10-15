@@ -896,7 +896,6 @@ export function sealFor(act: Uint8Array, key: Uint8Array | undefined, recipients
       containerKey: new Uint8Array(randomBytes(32)),
       nonce: new Uint8Array(randomBytes(24)),
       eseeds,
-      oneTimeSecret: newSigningSecret(),
     },
   });
   const parts = sealedParts(sealed) as { capsules: Uint8Array[] };

@@ -78,7 +78,7 @@ export async function gather(id: string, hints: string[], via: Via = {}, names: 
   if (!d.payload) throw new Error(`Act ${id} is private: its terms cannot be read here.`);
   const payload = d.payload;
 
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const add = (a: Uint8Array) => {
     try {
       v.add(a);

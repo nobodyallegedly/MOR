@@ -216,6 +216,13 @@ mod tests {
     }
 }
 
+/// A string normalized to NFC with the pinned tables (Text, rule 6): what
+/// a composing client normalizes with, so that it composes exactly as the
+/// core checks (Fable's T5).
+pub fn nfc(s: &str) -> String {
+    s.nfc().collect()
+}
+
 /// The text act's type (Text, "Act format"): the only type the Text MIR defines.
 pub const TEXT_ACT: u64 = 0;
 

@@ -87,6 +87,17 @@ pub struct PendingRotation {
     pub context: Option<Vec<Vec<u8>>>,
     /// Whether the online device has prepared an escape endorsement.
     pub escape: Option<bool>,
+    /// 6: the competing rotation served at this position of a self-hosted
+    /// identity (Identity draft 13, rule 29, F299; Agreements round 2, Q7):
+    /// the bytes the device checks before signing the escape out of a
+    /// contested position. The online side's word alone opens nothing.
+    pub competing: Option<Vec<u8>>,
+    /// 7: the identity chain from genesis to the rotation's predecessor, in
+    /// order, as bytes (Identity draft 13, rule 29, Fable's I5; F328, Q3):
+    /// the device rebuilds the state from it and runs the rotation checks
+    /// on the rotation it signed before, itself, to sign again only if that
+    /// rotation was invalid.
+    pub chain: Option<Vec<Vec<u8>>>,
 }
 
 /// 2.3, offline to online (kind 2).
@@ -187,6 +198,12 @@ impl Message {
                 if let Some(e) = p.escape {
                     m.push((u(5), Value::Bool(e)));
                 }
+                if let Some(c) = &p.competing {
+                    m.push((u(6), Value::Bytes(c.clone())));
+                }
+                if let Some(c) = &p.chain {
+                    m.push((u(7), Value::Array(c.iter().cloned().map(Value::Bytes).collect())));
+                }
             }
             Message::SignedRotation(s) => {
                 m.push((u(1), Value::Bytes(s.act.clone())));
@@ -218,7 +235,7 @@ impl Message {
         let k = uint(req(&f, 0, "0: kind")?, "0: kind")?;
         let allowed: &[u64] = match k {
             kind::COMMITMENT_EXPORT => &[0, 1, 2],
-            kind::PENDING_ROTATION => &[0, 1, 2, 3, 4, 5],
+            kind::PENDING_ROTATION => &[0, 1, 2, 3, 4, 5, 6, 7],
             kind::SIGNED_ROTATION => &[0, 1, 2],
             kind::SHARE => &[0, 1, 2, 3, 4],
             _ => return Err(MsgError::Shape("0: an unknown kind")),
@@ -247,6 +264,15 @@ impl Message {
                     .map(|v| match v {
                         Value::Bool(b) => Ok(*b),
                         _ => Err(MsgError::Shape("5: escape")),
+                    })
+                    .transpose()?,
+                competing: get(&f, 6).map(|v| bytes_of(v, "6: competing rotation")).transpose()?,
+                chain: get(&f, 7)
+                    .map(|v| {
+                        nonempty(v, "7: chain")?
+                            .iter()
+                            .map(|x| bytes_of(x, "7: chain"))
+                            .collect()
                     })
                     .transpose()?,
             }),

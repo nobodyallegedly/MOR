@@ -137,7 +137,22 @@ pub fn pending(
         index: r.position - 1,
         context: context.map(|c| c.into_iter().map(String::into_bytes).collect()),
         escape: escape.then_some(true),
+        competing: None,
+        chain: None,
     })
+}
+
+/// A pending rotation carrying, for rule 29's exceptions, the bytes the
+/// device checks itself: the competing rotation served at a self-hosted
+/// identity's position (F299), and the identity chain from genesis to the
+/// rotation's predecessor (Fable's I5, F328 Q3).
+pub fn with_evidence(m: Message, competing: Option<&Act>, chain: Option<&[Act]>) -> Message {
+    let Message::PendingRotation(mut p) = m else {
+        return m;
+    };
+    p.competing = competing.map(Act::encode);
+    p.chain = chain.map(|c| c.iter().map(Act::encode).collect());
+    Message::PendingRotation(p)
 }
 
 /// A signed rotation, checked against the pending rotation it answers.

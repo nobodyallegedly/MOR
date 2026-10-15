@@ -142,7 +142,7 @@ export async function sendMessage(o: { text: string; to: Recipient; homes: strin
     act: made.act,
     key: made.key,
     recipients: [{ id: o.to.identity, key: o.to.key }],
-    random: { containerKey: randomBytes(32), nonce: randomBytes(24), eseeds: [eseed], oneTimeSecret: newSigningSecret() },
+    random: { containerKey: randomBytes(32), nonce: randomBytes(24), eseeds: [eseed] },
   });
   record({ kind: 'encapsulate', publicKey: o.to.key, eseed, ct: (sealedParts(sealed) as { capsules: Uint8Array[] }).capsules[0] });
   signingSecret.fill(0);
