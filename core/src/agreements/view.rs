@@ -344,6 +344,9 @@ pub struct RecordEval {
     pub resolves: bool,
     /// What it registers.
     pub registers: Vec<Departure>,
+    /// The stake transfers, proxies and revocations of proxies it places
+    /// (field 3; new in draft 14, F316, F327).
+    pub places: Vec<Hash>,
 }
 
 /// Agreements' answer for an act of a collective.
@@ -924,10 +927,23 @@ impl<'a> AgreementsView<'a> {
             return Ok(Ok(needs));
         }
         for e in mark {
+            // A stake's holders' rule, `[5, stake]` (rule 64.4; F307): its
+            // signers are that stake's holders at the line, counted there.
+            if let Power::Holders(stake) = e.power {
+                if !matches!(parent.holders_rule(stake).0, HoldersRule::Share(_)) {
+                    return Ok(Err("the mark names a stake's holders' rule, and that stake's holders' rule is every holder (rule 64.4, F307)".into()));
+                }
+                continue;
+            }
             let base = power_base(parent, &e.power);
-            let Some((base, _)) = base else {
+            let Some((base, rule)) = base else {
                 return Ok(Err("the mark names an area the parent does not have".into()));
             };
+            // A rule counted among a stake's holders (F311): its holders who
+            // are no parties sign too, checked at the line.
+            if rule.holders_stake().is_some() {
+                continue;
+            }
             if !e.signers.iter().all(|s| base.contains(s)) {
                 return Ok(Err(
                     "the mark names a signer that power is not counted among (rule 45a)".into(),
@@ -1037,6 +1053,38 @@ impl<'a> AgreementsView<'a> {
             }
         }
         out
+    }
+
+    /// The holders a collective's clone pays less who have no voice in the
+    /// power making the change (rule 48, F270, F282), read on the roster at
+    /// line `at` (new in draft 14, F316); save, where the stake's holders'
+    /// rule is by share and the mark names `[5, stake]`, the holders that
+    /// rule binds: those who accepted it, by signing a version of the
+    /// lineage carrying it, or by buying under it (rule 94, F307).
+    fn collective_pay_signers(&self, col: &Col, at: Line<'a>, pid: &Hash, parent: &Terms, clone: &Terms, mark: &[MarkEntry]) -> R<Vec<Hash>> {
+        let mut out: Vec<Hash> = vec![];
+        let lineage = self.lineage(pid)?;
+        for (o, _) in super::pay::stakes_paid_less(parent, clone) {
+            let Some((i, st)) = parent.stake_on(&o) else { continue };
+            let (rule, _) = parent.holders_rule(i as u64);
+            let by_rule = matches!(rule, HoldersRule::Share(_)) && mark.iter().any(|e| e.power == Power::Holders(i as u64));
+            for (h, n) in self.roster_at(col, at, pid, i as u64)? {
+                if n == 0 || parent.parties.contains(&h) || out.contains(&h) {
+                    continue;
+                }
+                if by_rule {
+                    let bought = !st.identified().iter().any(|(x, _)| *x == h);
+                    let signed = lineage.iter().any(|(v, vt)| {
+                        vt.holders_rule(i as u64).0 == rule && vt.holders_rules.is_some() && !self.valid_sigs(v, &[h]).is_empty()
+                    });
+                    if bought || signed {
+                        continue;
+                    }
+                }
+                out.push(h);
+            }
+        }
+        Ok(out)
     }
 
     /// [`Self::must_sign`] in two: those asked for their share, their stake
@@ -2644,6 +2692,7 @@ impl<'a> AgreementsView<'a> {
             puts: None,
             resolves: false,
             registers: vec![],
+            places: vec![],
         };
         let no = |mut e: RecordEval, w: &str| {
             e.not_a_line = Some(w.into());
@@ -2698,6 +2747,20 @@ impl<'a> AgreementsView<'a> {
                 // Signed by the authority, judged once the record's other
                 // registrations are known.
                 declarations.push((*x, p));
+                continue;
+            }
+            // A stake transfer of a stake the agreement in force defines, a
+            // proxy or its revocation by a holder of such a stake: placed by
+            // this line for the owners' matters (rules 94, 97; new in draft
+            // 14, F316, F327), each judged where the owners' matters read it.
+            if self.is_agreements(a, crate::agreements::open_formats::new_types::STAKE_TRANSFER)
+                || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY)
+                || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY_REVOCATION)
+            {
+                if !self.kept_at(col, a, Line::Record(h))? {
+                    return no(e, "it registers a transfer, proxy or revocation that is not valid");
+                }
+                e.places.push(*x);
                 continue;
             }
             if !at_terms.parties.contains(&p) {
@@ -3205,6 +3268,71 @@ impl<'a> AgreementsView<'a> {
         Ok(true)
     }
 
+    /// Whether a mark's signers meet a rule by share or "all of" at line
+    /// `at` (rule 65; new in draft 14, F308, F311): each rule in it counted
+    /// as it would be alone, flaw C included. Among the parties (`[3, stake,
+    /// share]`), each party whose voice remains counts by what it holds of
+    /// the stake at the line, the share asked for being of what those
+    /// voices hold together; where they hold nothing, every voice that
+    /// remains together meets it. Among a stake's holders (`[5, stake,
+    /// share]`), every holder at the line counts by its share of the whole
+    /// stake. A rule by head counts as it always has.
+    #[allow(clippy::too_many_arguments)]
+    fn share_rule_met(
+        &self,
+        col: &Col,
+        at: Line<'a>,
+        pid: &Hash,
+        parent: &Terms,
+        rule: &Rule,
+        signers: &[Hash],
+        any: &BTreeMap<Hash, Vec<Hash>>,
+        own: &[Departure],
+    ) -> R<Result<(), String>> {
+        let mut counted: Vec<Hash> = vec![];
+        for part in rule.parts() {
+            match part {
+                Rule::Holders { stake, share } => {
+                    let roster = self.roster_at(col, at, pid, *stake)?;
+                    counted.extend(roster.iter().map(|(h, _)| *h));
+                    let s: Vec<Hash> = signers.iter().filter(|x| roster.iter().any(|(h, _)| h == *x)).copied().collect();
+                    if let Err(w) = holders_met(&roster, &s, *share) {
+                        return Ok(Err(w));
+                    }
+                }
+                Rule::ByShare { stake, share } => {
+                    let (voices, _) = self.voices(col, Point::Line(at), pid, &parent.parties, None, any, own)?;
+                    counted.extend(voices.iter().copied());
+                    let roster = self.roster_at(col, at, pid, *stake)?;
+                    let held = |x: &Hash| roster.iter().find(|(h, _)| h == x).map_or(0, |(_, n)| *n) as u128;
+                    let total: u128 = voices.iter().map(held).sum();
+                    let s: Vec<Hash> = signers.iter().filter(|x| voices.contains(x)).copied().collect();
+                    let got: u128 = s.iter().map(held).sum();
+                    let met = if total == 0 { voices.iter().all(|v| s.contains(v)) && !voices.is_empty() } else { got * MILLION as u128 >= *share as u128 * total };
+                    if !met {
+                        return Ok(Err("the mark names too few parties to meet the rule, counted by share of what the voices that remain hold (rule 65, F308)".into()));
+                    }
+                }
+                head => {
+                    let among = head.counted_among(&parent.parties);
+                    let (voices, _) = self.voices(col, Point::Line(at), pid, &among, None, any, own)?;
+                    counted.extend(voices.iter().copied());
+                    let s = signers.iter().filter(|x| voices.contains(x)).count();
+                    let Some(need) = head.needed(voices.len()) else {
+                        return Ok(Err("no voice remains to meet a power it names".into()));
+                    };
+                    if s < need {
+                        return Ok(Err("the mark names too few signers to meet the power (rule 45a)".into()));
+                    }
+                }
+            }
+        }
+        if !signers.iter().all(|x| counted.contains(x)) {
+            return Ok(Err("the mark names a signer that power is not counted among, or whose voice no longer counts there (rules 45a, 65)".into()));
+        }
+        Ok(Ok(()))
+    }
+
     /// A clone at a record or rotation, judged with the signature acts it
     /// names, and only those (A2, Flaw M), each power counted at that line
     /// (rule 44d).
@@ -3284,7 +3412,28 @@ impl<'a> AgreementsView<'a> {
         }
         let mut missing = false;
         for e in mark {
+            // Agreements draft 14 (rules 65, 94; F307, F308, F311): a stake's
+            // holders' rule, and the rules by share or "all of", counted with
+            // the roster at this line.
+            if let Power::Holders(stake) = e.power {
+                let HoldersRule::Share(need) = parent.holders_rule(stake).0 else {
+                    return Ok(CloneState::Invalid("the mark names a stake's holders' rule, and that rule is every holder (rule 64.4)".into()));
+                };
+                let roster = self.roster_at(col, at, &pid, stake)?;
+                if let Err(w) = holders_met(&roster, &e.signers, need) {
+                    return Ok(CloneState::Invalid(w));
+                }
+                missing |= !e.signers.iter().all(|s| by.contains_key(s));
+                continue;
+            }
             let (base, rule) = power_base(parent, &e.power).expect("checked by clone_static");
+            if !rule.by_head() {
+                if let Err(w) = self.share_rule_met(col, at, &pid, parent, &rule, &e.signers, &any, own)? {
+                    return Ok(CloneState::Invalid(w));
+                }
+                missing |= !e.signers.iter().all(|s| by.contains_key(s));
+                continue;
+            }
             let area = match e.power {
                 Power::Area(a) => Some(a),
                 _ => None,
@@ -3315,7 +3464,25 @@ impl<'a> AgreementsView<'a> {
                 "a party it adds, or makes a holder, has not signed it (Q11)".into(),
             ));
         }
-        let (losing, pay) = Self::must_sign_parts(parent, clone);
+        let (losing, _) = Self::must_sign_parts(parent, clone);
+        // Agreements draft 14 (rules 48, 94; F307, F316): who is paid less is
+        // read on the roster at this line; a holder the stake's holders'
+        // rule binds, where the mark meets that rule, does not sign for itself.
+        let pay = self.collective_pay_signers(col, at, &pid, parent, clone, mark)?;
+        // Rule 45: a change of a stake's holders' rule (field 30, its
+        // standing waiver included, F328) needs every holder of that stake,
+        // as the roster at the line counts them.
+        for (i, _) in parent.stakes.iter().flatten().enumerate() {
+            if parent.holders_rule(i as u64) != clone.holders_rule(i as u64) {
+                for (h, _) in self.roster_at(col, at, &pid, i as u64)? {
+                    if !by.contains_key(&h) {
+                        return Ok(CloneState::Draft(
+                            "it changes a stake's holders' rule, and a holder of that stake has not signed it: it is changed only by every holder (rules 45, 94; F307, F328)".into(),
+                        ));
+                    }
+                }
+            }
+        }
         for h in &losing {
             if !by.contains_key(h) && !self.moved_by_abandonment(h, parent, clone, k, &lineage[1..], Some((col, at, &pid)), own)? {
                 return Ok(CloneState::Draft(
@@ -5113,6 +5280,20 @@ fn needed_to_sign(h: &Holding, p: &Hash) -> bool {
             members.contains(p) && ((members.len() - 1) as u64) < *threshold
         }
     }
+}
+
+/// Whether `signers`, holders of a stake at the line (`roster`), hold
+/// together at least `need` millionths of the whole stake (rules 65, 94;
+/// F307, F308, F311): a holder's share counts once, whoever signs.
+fn holders_met(roster: &[(Hash, u64)], signers: &[Hash], need: u64) -> Result<(), String> {
+    if signers.iter().any(|x| !roster.iter().any(|(h, _)| h == x)) {
+        return Err("the mark names a signer who holds none of that stake at the line (rule 46, F307)".into());
+    }
+    let got: u64 = roster.iter().filter(|(h, _)| signers.contains(h)).map(|(_, n)| *n).sum();
+    if got < need {
+        return Err("the mark names too few holders to meet the rule, counted by share (rule 46, F308)".into());
+    }
+    Ok(())
 }
 
 /// The parties a power is counted among in the parent, and its rule.

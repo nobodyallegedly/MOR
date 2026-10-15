@@ -260,6 +260,7 @@ pub fn powers_needed(
         if ch.iter().any(|c| c.tier() == Tier::Judicial) {
             out.push(Power::Judicial);
         }
+        out.extend(owners_powers(parent, clone));
         out.sort_by_key(|p| p.encoding());
         return Ok(out);
     }
@@ -287,8 +288,28 @@ pub fn powers_needed(
     if judicial {
         out.push(Power::Judicial);
     }
+    out.extend(owners_powers(parent, clone));
     out.sort_by_key(|p| p.encoding());
     Ok(out)
+}
+
+/// The stakes' holders' rules a clone needs beside the members' powers
+/// (rule 64.4; new in draft 14, F307): where the change is an owners'
+/// matter of a stake (rule 95: what it is paid, or an issuance in it) whose
+/// holders' rule is by share, `[5, stake]`.
+pub fn owners_powers(parent: &Terms, clone: &Terms) -> Vec<Power> {
+    let mut out = vec![];
+    let paid_less: Vec<super::formats::Who> = super::pay::stakes_paid_less(parent, clone).into_iter().map(|(o, _)| o).collect();
+    for (i, st) in parent.stakes.iter().flatten().enumerate() {
+        if !matches!(parent.holders_rule(i as u64).0, super::formats::HoldersRule::Share(_)) {
+            continue;
+        }
+        let issued = clone.issues_under.is_some() && clone.stakes.as_ref().and_then(|s| s.get(i)) != Some(st);
+        if paid_less.contains(&st.object) || issued {
+            out.push(Power::Holders(i as u64));
+        }
+    }
+    out
 }
 
 /// The judicial changes a clone makes, for showing which protected clauses

@@ -13920,3 +13920,123 @@ fn a_sold_stake_is_asked_through_the_version_1_9h() {
     sign(&mut w, &mut ivy, &unnamed);
     assert_eq!(view(&w).agreement(&unnamed).unwrap().exists, Some(true), "the seller's signature");
 }
+
+/// The label, with a stake in itself held by its three members and Dana, an
+/// owner who is no member, under a 60% holders' rule every holder signed
+/// (Agreements draft 14, rule 94, F307): put in force by a record. Returns
+/// the lab, Dana, and the version in force.
+fn owned_label(dana_share: u64) -> (Lab, Person, Hash) {
+    owned_label_with(dana_share, true, None)
+}
+
+/// [`owned_label`], with or without the holders' rule, and with Eve, a
+/// holder who signs nothing, where `eve` gives her share.
+fn owned_label_with(dana_share: u64, rule: bool, eve: Option<(&str, u64)>) -> (Lab, Person, Hash) {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let ids = lab.ids();
+    let mut dana = lab.w.genesis("dana", vec![own_home()], None, None);
+    let eve_share = eve.map_or(0, |(_, n)| n);
+    let eve_id = eve.map(|(name, _)| lab.w.genesis(name, vec![own_home()], None, None).id);
+    let each = (1_000_000 - dana_share - eve_share) / 3;
+    let first = 1_000_000 - dana_share - eve_share - 2 * each;
+    let did = dana.id;
+    let t0 = lab.clone_terms(&f, vec![], &|t| {
+        let mut holders = vec![(Who::Id(ids[ANA]), first), (Who::Id(ids[BEN]), each), (Who::Id(ids[CY]), each), (Who::Id(did), dana_share)];
+        if let Some(e) = eve_id {
+            holders.push((Who::Id(e), eve_share));
+        }
+        t.stakes = Some(vec![agreements::Stake { object: Who::This, holders }]);
+        if rule {
+            t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Share(600_000), waived: false }]);
+        }
+    });
+    let needs = lab.view().powers_needed(&t0).unwrap();
+    let t = lab.clone_terms(&f, needs.iter().map(|p| (p.clone(), vec![ANA, BEN, CY])).collect(), &|t| {
+        t.stakes = t0.stakes.clone();
+        t.holders_rules = t0.holders_rules.clone();
+    });
+    let k = lab.propose(ANA, &t);
+    let mut s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &k)).collect();
+    s.push(sign(&mut lab.w, &mut dana, &k));
+    let r = lab.record(0, Some((k, s)), &[], vec![], k);
+    assert_eq!(puts(&lab, &r), Some(k), "{:?}", clone_state(&lab, &r));
+    (lab, dana, k)
+}
+
+/// A clone of `parent` adding a fee every stake bears (rule 48: paying the
+/// stakes less, an owners' matter, rule 95), its mark naming the powers it
+/// needs: the members' (all three) and, where asked, the stake's holders'
+/// rule with `holders`.
+fn fee_clone(lab: &mut Lab, parent: &Hash, part: u64, holders: &[Hash]) -> (Hash, Vec<Power>) {
+    let ids = lab.ids();
+    let f = |t: &mut Terms| t.fees = Some(vec![agreements::Fee { module: spec("a studio"), part, scope: agreements::FeeScope::Every }]);
+    let probe = lab.clone_terms(parent, vec![], &f);
+    let needs = lab.view().powers_needed(&probe).unwrap();
+    let mut t = lab.clone_terms(parent, vec![], &f);
+    t.field4 = Field4::Mark(
+        needs
+            .iter()
+            .map(|p| MarkEntry { power: p.clone(), signers: sorted(if matches!(p, Power::Holders(_)) { holders.to_vec() } else { ids.clone() }) })
+            .collect(),
+    );
+    (lab.propose(ANA, &t), needs)
+}
+
+/// Freeze suite v28, 3.7aj (F307; Agreements draft 14, rule 94): Dana holds
+/// 10% of the label's stake in itself under a 60% holders' rule she signed;
+/// owners holding 70% take 5% off the top for a studio, the clone's mark
+/// naming `[5, stake]` with them; she votes no, and the clone comes into
+/// force, every holder paid alike less. A clone adding a holders' rule, or
+/// changing it, signed by every holder but one stays a draft. *Stated cost
+/// (F307): she loses the personal veto.*
+#[test]
+fn a_holders_rule_3_7aj() {
+    let (mut lab, mut dana, k) = owned_label(100_000);
+    let ids = lab.ids();
+    // Owners holding 30% name themselves: too few for the rule, the mark is false.
+    let (few, _) = fee_clone(&mut lab, &k, 50_000, &[ids[ANA]]);
+    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &few)).collect();
+    let r0 = lab.record(0, Some((few, s)), &[], vec![], few);
+    assert!(matches!(clone_state(&lab, &r0), CloneState::Invalid(w) if w.contains("too few holders")), "{:?}", clone_state(&lab, &r0));
+    let (x, needs) = fee_clone(&mut lab, &k, 50_000, &[ids[ANA], ids[BEN], ids[CY]]);
+    assert!(needs.contains(&Power::Holders(0)), "an owners' matter of a stake with a holders' rule by share: {needs:?}");
+    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &x)).collect();
+    let r = lab.record(0, Some((x, s.clone())), &[], vec![], x);
+    assert_eq!(puts(&lab, &r), Some(x), "owners holding 90% carried it, Dana's no aside: {:?}", clone_state(&lab, &r));
+    // A clone changing the holders' rule: every holder of the stake, Dana too.
+    let mut t = lab.clone_terms(&x, vec![], &|t| {
+        t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Share(500_000), waived: false }]);
+    });
+    let needs = lab.view().powers_needed(&t).unwrap();
+    t.field4 = Field4::Mark(needs.iter().map(|p| MarkEntry { power: p.clone(), signers: sorted(ids.clone()) }).collect());
+    let y = lab.propose(ANA, &t);
+    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &y)).collect();
+    let r2 = lab.record(0, Some((y, s.clone())), &[], vec![], y);
+    assert!(matches!(clone_state(&lab, &r2), CloneState::Draft(w) if w.contains("holders' rule")), "{:?}", clone_state(&lab, &r2));
+    let sd = sign(&mut lab.w, &mut dana, &y);
+    let mut s2 = s;
+    s2.push(sd);
+    let r3 = lab.record(0, Some((y, s2)), &[], vec![], y);
+    assert_eq!(puts(&lab, &r3), Some(y), "{:?}", clone_state(&lab, &r3));
+
+    // Without a holders' rule, Dana, no member, is asked for her pay (rule 48).
+    let (mut lab, mut dana, k) = owned_label_with(100_000, false, None);
+    let (x, needs) = fee_clone(&mut lab, &k, 50_000, &[]);
+    assert!(!needs.contains(&Power::Holders(0)));
+    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &x)).collect();
+    let r = lab.record(0, Some((x, s.clone())), &[], vec![], x);
+    assert!(matches!(clone_state(&lab, &r), CloneState::Draft(_)), "Dana's no blocks it: {:?}", clone_state(&lab, &r));
+    let mut s = s;
+    s.push(sign(&mut lab.w, &mut dana, &x));
+    let r = lab.record(0, Some((x, s)), &[], vec![], x);
+    assert_eq!(puts(&lab, &r), Some(x));
+
+    // Eve holds part of the stake and never accepted the rule: still asked.
+    let (mut lab, _dana, k) = owned_label_with(100_000, true, Some(("eve", 50_000)));
+    let ids = lab.ids();
+    let (x, _) = fee_clone(&mut lab, &k, 50_000, &[ids[ANA], ids[BEN], ids[CY]]);
+    let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &x)).collect();
+    let r = lab.record(0, Some((x, s)), &[], vec![], x);
+    assert!(matches!(clone_state(&lab, &r), CloneState::Draft(_)), "a holder the rule does not bind signs for itself: {:?}", clone_state(&lab, &r));
+}

@@ -464,3 +464,84 @@ impl<'a> AgreementsView<'a> {
         Ok(self.valid(id) && t.parties.contains(&signer) && reaches)
     }
 }
+
+impl<'a> AgreementsView<'a> {
+    /// Who holds what of stake `stake` of agreement `ag` at line `at` of
+    /// collective `col`, for the owners' matters (Agreements draft 14, rule
+    /// 94, F316): the holders field 7 names, and the stake transfers the
+    /// collective's line placed before `at` (an act of the collective on its
+    /// chain acknowledging the transfer, or a record naming it in field 3),
+    /// each effective, naming a version of `ag`'s lineage whose field 7 for
+    /// that stake is `ag`'s (mechanic of the build: a later version that
+    /// wrote the sale into field 7 is not counted twice). A seller and its
+    /// buyer never both count: the line moves the share once. An act the
+    /// line acknowledges that this verifier does not hold leaves the roster
+    /// unknown (F298, F304), never silently short.
+    pub(crate) fn roster_at(&self, col: &Col, at: Line<'a>, ag: &Hash, stake: u64) -> R<Vec<(Hash, u64)>> {
+        let t = self.terms(ag)?;
+        let Some(st) = t.stakes.as_ref().and_then(|s| s.get(stake as usize)).cloned() else {
+            return Ok(vec![]);
+        };
+        let mut out: Vec<(Hash, u64)> = st.identified();
+        let lineage: Vec<Hash> = self
+            .lineage(ag)?
+            .into_iter()
+            .filter(|(_, x)| x.stakes.as_ref().and_then(|s| s.get(stake as usize)) == Some(&st))
+            .map(|(i, _)| i)
+            .collect();
+        let mut placed: Vec<Hash> = vec![];
+        for x in self.v.signed_by(&col.id) {
+            if !Self::own_key(col, x) || self.status(&x.id) != Status::Valid {
+                continue;
+            }
+            let is_record = self.is_agreements(x, types::RECORD);
+            let before = if is_record { self.line_before(col, Line::Record(x), at) } else { self.on_chain(col, x) && self.before(col, x, at)? };
+            if !before {
+                continue;
+            }
+            if is_record {
+                let e = self.record_eval(col, x)?;
+                if e.line {
+                    placed.extend(e.places.iter().copied());
+                }
+            }
+            for y in x.inside.acks.iter().flatten() {
+                if self.v.get(y).is_none() {
+                    return Err(AgreementsError::Missing(*y));
+                }
+                placed.push(*y);
+            }
+        }
+        placed.sort();
+        placed.dedup();
+        let mut pending: Vec<(Hash, Hash, u64)> = vec![];
+        for y in placed {
+            let Some(h) = self.v.get(&y) else { continue };
+            if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) {
+                continue;
+            }
+            let e = self.transfer(&y)?;
+            if e.effective && e.transfer.stake == stake && lineage.contains(&e.transfer.agreement) {
+                pending.push((e.seller, e.transfer.to, e.transfer.share));
+            }
+        }
+        // A buyer selling on: apply each sale once its seller holds enough.
+        loop {
+            let before = pending.len();
+            pending.retain(|(seller, to, share)| {
+                let Some(i) = out.iter().position(|(h, n)| h == seller && n >= share) else { return true };
+                out[i].1 -= share;
+                match out.iter_mut().find(|(h, _)| h == to) {
+                    Some(b) => b.1 += share,
+                    None => out.push((*to, *share)),
+                }
+                false
+            });
+            if pending.len() == before {
+                break;
+            }
+        }
+        out.retain(|(_, n)| *n > 0);
+        Ok(out)
+    }
+}
