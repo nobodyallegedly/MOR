@@ -17,7 +17,7 @@
 
 | | Before (part 3's branch) | After (this branch) |
 | --- | --- | --- |
-| Rust workspace | 736 passed, 0 failed, 1 ignored | 738 passed, 0 failed, 1 ignored (two new, for F330, below) |
+| Rust workspace | 736 passed, 0 failed, 1 ignored | 739 passed, 0 failed, 1 ignored (three new, for F330 and F331, below) |
 | TypeScript, 18 packages | 419 passed, 0 failed | 421 passed, 0 failed |
 
 The new tests:
@@ -110,13 +110,14 @@ Nobody, allegedly, answered the three questions of parts 2 and 3 (F330 in `docs/
   - **The count** (`ending_rule_met`, `core/src/agreements/view.rs`), for a fork and a closing alike. Each rule the constitution lists is counted as it would be alone (rule 65):
     - by head, among the members whose voice remains, as before;
     - by share among the parties, each member by what it holds at the line;
-    - among a stake's holders, by share of the whole stake, a member by its chain signature on the ending.
+    - among a stake's holders, by share of the whole stake, each by its chain signature on the ending: a member's, and, since F331, that of an owner who is no member.
   - **Tests** (`core/tests/agreements_collective.rs`):
     - `an_ending_is_counted_by_share_at_its_line_f330`: a closing signed by holders of seven tenths completes, one by half does not, and a transfer placed in the closing's history changes the count.
     - `a_fork_is_counted_by_share_at_its_line_f330`: the same for a fork.
-    - Both cases that complete would have failed before, when every member had to sign.
-  - **Drafts:** the fork's paragraph and the dissolution path in Agreements draft 14 say it; new suite step 3.9ai.
-  - **Not built:** an owner who is no member consenting to an ending (question 1, below). Until it is settled, only members' chain signatures count toward a rule among a stake's holders at an ending, so an ending never passes with less consent than the decision asks.
+    - `an_owner_who_is_no_member_signs_an_ending_by_chain_signature_f331`: under a constitution among the holders of the stake, the members alone (half) do not close it; Dana's signature act on the closing changes nothing; her chain signature closes it. Checked both ways: with owners' chain signatures not read, the last step fails.
+    - Both cases that complete by share would have failed before, when every member had to sign.
+  - **Drafts:** the fork's paragraph, the dissolution path and the type table's rows 19 and 20 in Agreements draft 14 say it; new suite step 3.9ai.
+  - **An owner who is no member consents by chain signature** (F331, below), read by `ending_rule_met` through the same ending signatures as members' (`ending_signed`, F132's and U4's rules included).
 
 The second verifier counts endings only under rules by head (every member, a threshold), and its random histories use only those; it is unchanged.
 
@@ -134,18 +135,10 @@ The fix keeps the assertion and what it checks:
 - **Checked both ways.** With no random stories at all, the fixed ones carry the assertion. Marked by one member instead (a fifth of the stake), they fail it, as they should.
 - **An issuance that issues nothing is not made.**
 
+## Question 1, answered (F331)
+
+**What does an owner who is no member sign to consent to a fork or closing?** F330 named a signature act the original acknowledges in the ending's history. But the ending act names that history, by the collective's last chain act and kept tips, so nothing in it can acknowledge a signature on the ending itself: each would have to name the other. Nobody, allegedly, took **(a)**: such an owner signs as a member does, by a chain signature with its own chain key naming the ending ("Agreed."). The other cases were a signature on the line the ending would be drawn at, acknowledged before it, and an acknowledgement after the ending act; both were set aside. Built, tested and written in (above, and F331 in the findings log).
+
 ## Questions for Nobody, allegedly
 
-**Question 1 (Agreements, rules 47a and 69, with F330): what does an owner who is no member sign to consent to a fork or closing?**
-
-*In plain words.* F330 says owners who are no members consent to an ending by a signature act that the collective acknowledges in the ending's history, as kept owners already consent to a fork's plans. But that history is fixed by the ending act itself: the act names it, by the collective's last chain act and kept tips. So an acknowledgement of a signature on the ending act would have to be an act the ending act already names. Each would name the other, which no hash allows. Kept owners never meet this, because what they sign, a successor's founding terms, exists before the fork.
-
-*The fair cases:*
-
-- **(a) A chain signature, as members sign.** An owner who is no member signs the ending by a chain signature with its own chain key (Identity type 16), as members have since F132. The ending reads it directly, no acknowledgement needed; no later rotation voids it. It is one way for everyone who signs an ending, and an owner's identity can make chain signatures already.
-- **(b) A signature act on what the ending is drawn on, acknowledged in its history.** The owner signs the collective's chain act and kept tips the ending will name, or, for a fork, each successor's founding terms (as Q12). An act of the original acknowledges it, and the ending is drawn after that. It works, but the owner consents to "an ending drawn at this line", not to this fork or closing.
-- **(c) Acknowledged after the ending act, before it completes.** An act of the original placed after the ending act but before its last member's chain signature counts. That changes what "the ending's history" means, for this one purpose.
-
-*Recommendation: (a).* It keeps "die by share" with one way to sign an ending, whoever signs, and needs no new act or reading.
-
-The earlier parts' questions (part 2's question 1, part 3's questions 1 and 2) are answered by F330, above.
+None open from this part. The earlier parts' questions are answered by F330, and this part's by F331.

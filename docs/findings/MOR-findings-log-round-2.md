@@ -24,6 +24,12 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F331. An owner who is no member signs an ending by chain signature (15 October 2026, afternoon)
+
+*From the build of F330 (`docs/code-after-step-15-part-4.md`, question 1).* F330's consent of owners who are no members, "a signature act the original acknowledges in the ending's history", cannot be met: the ending names its history by its chain act and kept tips, so nothing in that history can acknowledge a signature on the ending itself.
+
+- **(a) taken:** an owner who is no member consents to a fork or closing as a member does, by a chain signature (Identity type 16) with its own chain key naming the ending, judged as every ending signature is (F132, U4), counting at its position in its chain, no later rotation voiding it. One way to sign an ending, whoever signs. **"Agreed."** (Nobody, allegedly.)
+
 ## F330. The build's three questions answered (15 October 2026, afternoon)
 
 *From the code after step 15 (`docs/code-after-step-15-part-2.md`, question 1; `docs/code-after-step-15-part-3.md`, questions 1 and 2), put by the build.*
@@ -32,7 +38,7 @@ Before any question is put: "Is this core business? Or has core defined how the 
 - **Part 3, Q1 (rule 85; F313), a vanished owner who is no party, with a stake successor:** (a) the declaration states outcome 0 alone, which removes no voice, and the stake passes by succession, as against a member with a plan (rule 89); one sentence in rule 85. **Decided by Nobody, allegedly.**
 - **Part 3, Q2 (rules 47a, 69; F308, F311), an ending under a constitutional rule by share:** (a) endings are counted by share at the ending's line, field 7 of the agreement in force there with the transfers placed in the ending's history; owners who are no members consent by a signature act that the original acknowledges in the ending's history. "Operate by share, die by share." **Decided by Nobody, allegedly.**
 
-Writing Q2 in exposed a point left open: a signature act naming the ending act cannot be acknowledged in that ending's own history, which the ending names by its chain act and kept tips, so what such an owner signs is to be settled (`docs/code-after-step-15-part-4.md`, question 1). Until then only members' chain signatures count toward a rule among a stake's holders at an ending, the strict side.
+Writing Q2 in exposed a point left open: a signature act naming the ending act cannot be acknowledged in that ending's own history, which the ending names by its chain act and kept tips. Settled by F331: such an owner signs by chain signature, as a member does.
 
 ## F329. The aggregated review's questions answered (15 October 2026, morning)
 

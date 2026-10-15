@@ -14216,6 +14216,50 @@ fn an_ending_is_counted_by_share_at_its_line_f330() {
     assert!(e.complete, "Ben and Cy now hold six tenths at the closing's line: {:?}", e.why);
 }
 
+/// F331 (F330's open point, case a): an owner who is no member consents to
+/// an ending as a member does, by a chain signature with its own chain key.
+/// Under a constitution counted among the holders of the label's stake in
+/// itself, sixty per cent, Dana, no member, holding half: the members alone
+/// (half) do not close it; with Dana's chain signature on the closing, they
+/// do. Her signature act on it, which nothing can acknowledge in the
+/// closing's own history, counts for nothing.
+#[test]
+fn an_owner_who_is_no_member_signs_an_ending_by_chain_signature_f331() {
+    let (mut lab, others) = Lab::with_others(
+        &["dana"],
+        &|t, o| {
+            let p = t.parties.clone();
+            t.stakes = Some(vec![own(vec![(p[ANA], 200_000), (p[BEN], 150_000), (p[CY], 150_000), (o[0], 500_000)])]);
+            t.constitutional = Some(Rule::Holders { stake: 0, share: 600_000 });
+            // F328 Q11: membership counted among holders, the clause can move
+            // a vanished holder's stake.
+            if let Some(a) = t.abandonment.as_mut() {
+                a.outcomes = vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED];
+            }
+        },
+        true,
+    );
+    let mut dana = others[0].clone();
+    let f = lab.founding;
+    sign(&mut lab.w, &mut dana, &f);
+    let label = lab.c[0].id;
+    lab.publish(0);
+    let c = agreements::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
+    let eo = ending_obj(&lab, f, label);
+    let x = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::CLOSING, c.to_map(), eo);
+    for m in [ANA, BEN, CY] {
+        lab.end(m, &x);
+    }
+    let e = lab.view().closing(&x).unwrap();
+    assert!(!e.complete && e.why.as_deref().is_some_and(|w| w.contains("F330")), "the members hold half: {:?}", e.why);
+    sign(&mut lab.w, &mut dana, &x);
+    assert!(!lab.view().closing(&x).unwrap().complete, "a signature act on the closing is no consent to it");
+    let (_, dana2) = lab.w.chain_sign(&dana, x);
+    let _ = dana2;
+    let e = lab.view().closing(&x).unwrap();
+    assert!(e.complete, "with Dana's chain signature, holders of the whole stake: {:?}", e.why);
+}
+
 /// F330, for a fork: under the same rule by share, a fork whose sides are
 /// Ana and Cy, Ben leaving (kept at his three tenths), is signed by
 /// members holding seven tenths, and completes; one whose sides are Ben

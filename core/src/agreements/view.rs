@@ -6482,12 +6482,12 @@ impl<'a> AgreementsView<'a> {
     /// those voices hold together; where they hold nothing, every voice
     /// that remains together meets it (rule 65). Among a stake's holders
     /// (`[5, stake, share]`), every holder at the line counts by its share
-    /// of the whole stake: a member by its chain signature on the ending.
-    /// *A holder who is no member signs no ending act yet: how its consent
-    /// is placed is open (F330, put to Nobody, allegedly); until then only
-    /// members' signatures count, the strict side.*
+    /// of the whole stake, each by its chain signature on the ending (Identity
+    /// type 16): a member's, and that of a holder who is no member, as a
+    /// member signs (F331), judged as every
+    /// ending signature is (F132, U4).
     #[allow(clippy::too_many_arguments)]
-    fn ending_rule_met(&self, col: &Col, ag: &Hash, t: &Terms, voices: &[Hash], signed: &[Hash], chain_act: &Hash, tips: &[KeptTip]) -> R<bool> {
+    fn ending_rule_met(&self, col: &Col, ending: &Hash, ag: &Hash, t: &Terms, voices: &[Hash], signed: &[Hash], chain_act: &Hash, tips: &[KeptTip]) -> R<bool> {
         let rule = t.constitutional_rule();
         for part in rule.parts() {
             let met = match part {
@@ -6500,7 +6500,9 @@ impl<'a> AgreementsView<'a> {
                 }
                 Rule::Holders { stake, share } => {
                     let roster = self.roster_at_ending(col, ag, *stake, chain_act, tips)?;
-                    let s: Vec<Hash> = signed.iter().filter(|x| voices.contains(x) && roster.iter().any(|(h, _)| h == *x)).copied().collect();
+                    let others: Vec<Hash> = roster.iter().map(|(h, _)| *h).filter(|h| !voices.contains(h)).collect();
+                    let mut s: Vec<Hash> = signed.iter().filter(|x| voices.contains(x) && roster.iter().any(|(h, _)| h == *x)).copied().collect();
+                    s.extend(self.ending_signed(&col.id, ending, &others));
                     holders_met(&roster, &s, *share).is_ok()
                 }
                 head => head_met(head, t, voices, signed),
@@ -6923,7 +6925,7 @@ impl<'a> AgreementsView<'a> {
                 "every member on a side signs the fork, with their own identity (F121), by a chain signature with their chain key (F132); a signature placed after the signer's own signature on an ending naming this one counts for nothing (U4)",
             );
         }
-        if !self.ending_rule_met(&col, &f.agreement, &t, &voices, &e.signed, &f.chain_act, &f.tips)? {
+        if !self.ending_rule_met(&col, id, &f.agreement, &t, &voices, &e.signed, &f.chain_act, &f.tips)? {
             return fail(e, "the fork follows the constitutional change rule, every member by default (N1), a rule by share counted at the fork's line (F330)");
         }
         if let Some(i) = e.successors.iter().position(|s| s.is_none()) {
@@ -7154,7 +7156,7 @@ impl<'a> AgreementsView<'a> {
         if !e.signed.contains(&signer) {
             return fail(e, "the closing's signer signs it too, by a chain signature with their chain key (F132)");
         }
-        if !self.ending_rule_met(&col, &c.agreement, &t, &voices, &e.signed, &c.chain_act, &c.tips)? {
+        if !self.ending_rule_met(&col, id, &c.agreement, &t, &voices, &e.signed, &c.chain_act, &c.tips)? {
             return fail(e, "a closing follows the constitutional change rule, every member by default (N9), a rule by share counted at the closing's line (F330), each signing by a chain signature with their chain key (F132)");
         }
         if !e.holds.is_empty() {
