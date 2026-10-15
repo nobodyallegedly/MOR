@@ -525,14 +525,22 @@ fn only_identity_money_and_agreements_acts_acknowledge_f110() {
     let wit = w.ack(&mut fan, witnessed);
     assert_eq!(w.v.status(&wit), Status::Valid);
     // A buyer's claim acknowledging the publication it paid for.
-    let claim = w.everyday_act(
-        &mut buyer,
-        money_spec(),
-        3,
-        vec![(Value::Uint(0), Value::Text("a claim".into()))],
-        None,
-        Some(vec![sold]),
-    );
+    // A claim in Money's format: one outside it is invalid (F295), and an
+    // invalid act acknowledges nothing (F297).
+    let claim_payload = mor_core::money::Payload::Claim(mor_core::money::Claim {
+        rail: sha256(b"a rail"),
+        proof: b"a payment".to_vec(),
+        payee: j.id,
+        amount: mor_core::money::Amount { unit: sha256(b"a unit"), value: 1000 },
+        fulfils: sold,
+        disagrees: None,
+        referral: None,
+        refund: None,
+        anonymous: None,
+        purchase: None,
+        previous: None,
+    });
+    let claim = w.everyday_act(&mut buyer, money_spec(), 3, claim_payload.to_map(), None, Some(vec![sold]));
     w.add(&claim);
     // The journalist's rotation leaves the side line out.
     let (r, _) = w.rotate(&j, Rot::default());

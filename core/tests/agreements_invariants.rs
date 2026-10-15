@@ -23,7 +23,7 @@
 
 mod common;
 
-use common::{own_home, schnorr, signing_key, Person, World};
+use common::{own_home, publication, schnorr, signing_key, Person, World};
 use mor_core::act::{Act, Object};
 use mor_core::cbor::Value;
 use mor_core::chain::{Status, Verifier};
@@ -852,7 +852,7 @@ impl ColWorld {
         });
         let x = self.act_on(Who2::Dev(0), mirs().money, 0, ptr.to_map(), vec![], &[], true, Seal::Public, None, &[]);
         self.lane_sign(&x);
-        let p = self.act_on(Who2::Dev(0), mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(self.work.to_vec()))], vec![], &[], true, Seal::Public, None, &[]);
+        let p = self.act_on(Who2::Dev(0), mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(self.work.to_vec()))]), vec![], &[], true, Seal::Public, None, &[]);
         self.note(p, Seal::Public, true, None, K::Publication);
         self.publication = Some(p);
     }
@@ -978,7 +978,7 @@ impl ColWorld {
         match *op {
             Op::Publish { dev, seal } => {
                 let d = dev as usize % devs;
-                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, vec![(Value::Uint(0), Value::Text("a publication".into()))], vec![], &[], true, seal, None, &[]);
+                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, publication(vec![]), vec![], &[], true, seal, None, &[]);
                 self.note(x, seal, true, None, K::Publication);
             }
             Op::Debt { dev, seal, cited, creditor, amount, lane_sign } => {
@@ -1000,7 +1000,7 @@ impl ColWorld {
                 }
                 let d = dev as usize % devs;
                 let h = heads[other as usize % heads.len()];
-                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, vec![(Value::Uint(0), Value::Text("a joining publication".into()))], vec![], &[h], true, Seal::Public, None, &[]);
+                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, publication(vec![]), vec![], &[h], true, Seal::Public, None, &[]);
                 self.note(x, Seal::Public, true, None, K::Publication);
                 if self.info.contains_key(&h) {
                     let lv = self.view();
@@ -1037,7 +1037,7 @@ impl ColWorld {
                         (x, K::Debt { creditor: cr, amount: 25 })
                     }
                     AgentWhat::InScope | AgentWhat::OutOfScope => {
-                        let x = self.act_on(Who2::Strand(gi, s), mirs().envelopes, 0, vec![(Value::Uint(0), Value::Text("an agent's publication".into()))], vec![], &[], true, seal, None, &[]);
+                        let x = self.act_on(Who2::Strand(gi, s), mirs().envelopes, 0, publication(vec![]), vec![], &[], true, seal, None, &[]);
                         (x, K::Publication)
                     }
                     AgentWhat::Record => {
@@ -2338,7 +2338,7 @@ impl DealWorld {
         }
         t.parent = None;
         let publication = {
-            let a = w.everyday_act(&mut p[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+            let a = w.everyday_act(&mut p[0], mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None);
             w.add(&a)
         };
         let strand = |x: &Person, g: &(Hash, SchnorrKey)| {

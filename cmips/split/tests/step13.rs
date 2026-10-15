@@ -14,7 +14,7 @@
 #[path = "../../../core/tests/common/mod.rs"]
 mod common;
 
-use common::{own_home, schnorr, signing_key, Person, World};
+use common::{own_home, publication, schnorr, signing_key, Person, World};
 use mor_core::act::Object;
 use mor_core::agreements::{
     self, AgreementsView, Backups, Field4, Grant, Mirs, Rule, ServiceGrants, ShareRule, Split, SplitPlan, Stake, Terms,
@@ -221,7 +221,7 @@ fn a_payment_is_split_exactly_each_cut_reaching_its_flow_address_through_a_backu
     // The publication's agreement: the work's agreement 85%, the label 15%,
     // split by P.
     let publication = {
-        let x = w.everyday_act(&mut label, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, step 13").to_vec()))], None, None);
+        let x = w.everyday_act(&mut label, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, step 13").to_vec()))]), None, None);
         w.add(&x)
     };
     let (gl, mut sl) = grant(&mut w, &mut label, &mut svc_p, "the label to P");

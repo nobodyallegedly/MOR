@@ -12,7 +12,7 @@
 
 mod common;
 
-use common::{agreements_spec, own_home, schnorr, signing_key, Person, Rot, World};
+use common::{agreements_spec, own_home, publication, schnorr, signing_key, Person, Rot, World};
 use mor_core::sig::SchnorrKey;
 use mor_core::act::Object;
 use mor_core::cbor::Value;
@@ -1033,7 +1033,7 @@ fn a_rotation_declares_the_membership_clone_with_its_signatures() {
         // The old key signs after the rotation: void (F100).
         let mut old = old;
         old.seq = lab.c[0].seq.clone();
-        let late = lab.w.everyday_act(&mut old, mirs().envelopes, 0, vec![], None, None);
+        let late = lab.w.everyday_act(&mut old, mirs().envelopes, 0, publication(vec![]), None, None);
         let late = lab.w.add(&late);
         assert_eq!(lab.w.v.status(&late), Status::Void);
     }
@@ -1234,14 +1234,14 @@ fn an_emptied_area_ends_its_grants() {
     let loose = {
         let mut st = lab.strand(g1, &key_of(publisher.id));
         st.cite = None;
-        let a = lab.w.everyday_act(&mut st, env, 0, vec![], None, None);
+        let a = lab.w.everyday_act(&mut st, env, 0, publication(vec![]), None, None);
         lab.w.add(&a)
     };
     assert!(matches!(lab.view().backing(&loose).unwrap(), Backing::NotBacked { reason, .. } if reason.contains("F128")));
     // Signed with another key than the grant's: not the label's act.
     let forged = {
         let mut st = lab.strand(g1, &key_of(agent.id));
-        let a = lab.w.everyday_act(&mut st, env, 0, vec![], None, None);
+        let a = lab.w.everyday_act(&mut st, env, 0, publication(vec![]), None, None);
         lab.w.add(&a)
     };
     assert_eq!(lab.view().backing(&forged).unwrap(), Backing::NotUnderGrant);
@@ -1364,7 +1364,7 @@ fn a_revocation_ends_the_grant_key() {
     let mut s1 = lab.strand(g, &key_of(agent.id));
     let mut s2 = s1.clone();
     let act = |lab: &mut Lab, st: &mut Person| -> Hash {
-        let a = lab.w.everyday_act(st, env, 0, vec![], None, None);
+        let a = lab.w.everyday_act(st, env, 0, publication(vec![]), None, None);
         lab.w.add(&a)
     };
     let cited = act(&mut lab, &mut s1);
@@ -1408,7 +1408,7 @@ fn a_revocation_ends_the_grant_key() {
     // Managing it: her act names it (rule 38, scope 1; audit, October
     // 2026, gap 9). One naming nothing of it is beyond her scope.
     let managed = {
-        let a = lab.w.everyday_act(&mut s3, env, 0, vec![], obj(racing), None);
+        let a = lab.w.everyday_act(&mut s3, env, 0, publication(vec![]), obj(racing), None);
         lab.w.add(&a)
     };
     assert_eq!(lab.view().backing(&managed).unwrap(), Backing::Backed { grant: gs });
@@ -1541,7 +1541,7 @@ fn a_grant_reaches_only_its_scope_and_its_limits_answer_unknown() {
     sign(&mut lab.w, &mut capped, &gc);
     let mut sc = lab.strand(gc, &kc);
     let within = {
-        let a = lab.w.everyday_act(&mut sc, env, 0, vec![], None, None);
+        let a = lab.w.everyday_act(&mut sc, env, 0, publication(vec![]), None, None);
         lab.w.add(&a)
     };
     assert!(matches!(lab.view().backing(&within).unwrap(), Backing::Unknown { grant, ref reason } if grant == gc && reason.contains("18d")), "{:?}", lab.view().backing(&within));
@@ -6074,7 +6074,7 @@ fn a_collective_keeps_two_chains() {
     // Citing only an act that is not on the chain: still uncited.
     let mut friend = lab.w.genesis("a friend", vec![own_home()], None, None);
     let post = lab.w.post(&mut friend, "hello");
-    let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![], Some(vec![Object { chain: label, predecessor: post }]), None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, publication(vec![]), Some(vec![Object { chain: label, predecessor: post }]), None);
     let odd = lab.w.add(&a);
     lab.sign(ANA, &odd);
     assert!(matches!(lab.consent(&odd), Consent::Uncited { reason } if reason.contains("not on it")));
@@ -6084,7 +6084,7 @@ fn a_collective_keeps_two_chains() {
     let other = lab.publish(1);
     lab.sign(ANA, &other);
     let o = lab.chain(&[other]);
-    let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![], Some(o), None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, publication(vec![]), Some(o), None);
     let join = lab.w.add(&a);
     lab.sign(ANA, &join);
     assert!(lab.counts(&join));
@@ -6098,7 +6098,7 @@ fn a_collective_keeps_two_chains() {
     let rot = lab.c[0].binding;
     let mut stale = old;
     stale.cite = Some((label, vec![rot]));
-    let a = lab.w.everyday_act(&mut stale, mirs().envelopes, 0, vec![], None, None);
+    let a = lab.w.everyday_act(&mut stale, mirs().envelopes, 0, publication(vec![]), None, None);
     let y = lab.w.add(&a);
     assert!(matches!(lab.view().consent(&y), Ok(Consent::Uncited { .. }) | Err(_)));
     // An Agreements act of the label (its signature on terms of a deal, as a
@@ -6238,7 +6238,7 @@ fn a_sale_is_recorded_on_the_actions_chain() {
     let ptr = lab.pointer(0, 1, None, &[rail]);
     lab.sign(BEN, &ptr);
     let publication = {
-        let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None);
         lab.w.add(&a)
     };
     lab.sign(ANA, &publication);
@@ -6347,7 +6347,7 @@ fn a_superseded_claim_settles_on_each_holders_chain() {
     sign(&mut w, &mut ana, &deal);
     sign(&mut w, &mut ben, &deal);
     let publication = {
-        let a = w.everyday_act(&mut ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None);
         w.add(&a)
     };
     let (request, push) = (spec("an invoice rail"), spec("a push rail"));
@@ -6526,7 +6526,7 @@ fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
     s1.cite = Some((singer.id, vec![g]));
     let mut s2 = s1.clone();
     let post = |w: &mut World, st: &mut Person| {
-        let a = w.everyday_act(st, env, 0, vec![], None, None);
+        let a = w.everyday_act(st, env, 0, publication(vec![]), None, None);
         w.add(&a)
     };
     let cited = post(&mut w, &mut s1);
@@ -6697,7 +6697,7 @@ fn a_deals_payees_grant_its_split_service_in_its_terms() {
     let not_hers = add(&mut w, &mut sa, rc(bid, fid, deal, Some(deal), None));
     assert!(reason(&w, &not_hers).contains("received"));
     let post = {
-        let a = w.everyday_act(&mut sa, mirs().envelopes, 0, vec![], None, None);
+        let a = w.everyday_act(&mut sa, mirs().envelopes, 0, publication(vec![]), None, None);
         w.add(&a)
     };
     assert!(reason(&w, &post).contains("only receipts"));
@@ -7906,14 +7906,14 @@ fn rb1_a_grant_is_quarantined_during_the_broken_stretch() {
     sign(&mut lab.w, &mut agent, &g);
     let mut st = lab.strand(g, &key_of(agent.id));
     let act = |lab: &mut Lab, st: &mut Person| -> Hash {
-        let a = lab.w.everyday_act(st, env, 0, vec![], None, None);
+        let a = lab.w.everyday_act(st, env, 0, publication(vec![]), None, None);
         lab.w.add(&a)
     };
     // Made before the break, and held by its history: the label's next act cites it.
     let early = act(&mut lab, &mut st);
     let seen = {
         let o = lab.chain(&[early]);
-        let a = lab.w.everyday_act(&mut lab.c[0], env, 0, vec![], Some(o), None);
+        let a = lab.w.everyday_act(&mut lab.c[0], env, 0, publication(vec![]), Some(o), None);
         lab.w.add(&a)
     };
     lab.sign(ANA, &seen);
@@ -7975,7 +7975,7 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
     let ptr = lab.pointer(0, 1, None, &[rail]);
     lab.sign(BEN, &ptr);
     let publication = {
-        let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None);
         lab.w.add(&a)
     };
     lab.sign(ANA, &publication);
@@ -8113,7 +8113,7 @@ fn a_purchase_following_either_branch_counts() {
     sign(&mut w, &mut ana, &deal);
     sign(&mut w, &mut ben, &deal);
     let publication = {
-        let a = w.everyday_act(&mut ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None);
         w.add(&a)
     };
     let mut branch = |w: &mut World, ana: &mut Person, ben: &mut Person, a: u64| {
@@ -8537,7 +8537,7 @@ fn f188_a_buyer_under_a_tangled_version_stays_protected() {
     sign(&mut l.w, &mut l.ben, &d);
     l.d = d;
     let publication = {
-        let x = l.w.everyday_act(&mut l.ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+        let x = l.w.everyday_act(&mut l.ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None);
         l.w.add(&x)
     };
     let mut tangled = vec![];
@@ -8763,7 +8763,7 @@ fn bq1_after_a_rollback_a_grantees_act_counts_once_it_cites_the_rollback() {
     sign(&mut lab.w, &mut agent, &g);
     let mut st = lab.strand(g, &key_of(agent.id));
     let act = |lab: &mut Lab, st: &mut Person| -> Hash {
-        let a = lab.w.everyday_act(st, env, 0, vec![], None, None);
+        let a = lab.w.everyday_act(st, env, 0, publication(vec![]), None, None);
         lab.w.add(&a)
     };
     // Made just before the break; no act of the collective takes it in.
@@ -9336,7 +9336,7 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
     // The song's publication, its media locked under one locked hash.
     let locked = spec("the song's locked bytes");
     let song = {
-        let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
+        let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))]), None, None);
         lab.w.add(&x)
     };
     let proof = b"the fan's payment".to_vec();
@@ -9539,7 +9539,7 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
     lab.sign(BEN, &ptr);
     let locked = spec("the song's locked bytes");
     let song = {
-        let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
+        let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))]), None, None);
         lab.w.add(&x)
     };
     // A real, anonymous buyer paid on the rail and published nothing. The
@@ -9694,7 +9694,7 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_offer_that_s
     lab.sign(BEN, &ptr);
     let locked = spec("the song's locked bytes");
     let song = {
-        let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
+        let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))]), None, None);
         lab.w.add(&x)
     };
     // The collective's standing offer for the song, in its format (step 12b).
@@ -10128,7 +10128,7 @@ impl RoleLab {
         let ptr = lab.pointer(0, 1, None, &[rail]);
         lab.sign(BEN, &ptr);
         let song = {
-            let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(spec("the song's locked bytes").to_vec()))], None, None);
+            let x = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(spec("the song").to_vec())), (Value::Uint(2), Value::Bytes(spec("the song's locked bytes").to_vec()))]), None, None);
             lab.w.add(&x)
         };
         let proof = b"a payment for the song".to_vec();
@@ -10902,7 +10902,7 @@ impl ServiceDeal {
         sign(&mut w, &mut ana, &deal);
         sign(&mut w, &mut ben, &deal);
         let song = {
-            let x = w.everyday_act(&mut ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))], None, None);
+            let x = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(locked.to_vec()))]), None, None);
             w.add(&x)
         };
         let strand = |p: &Person, g: Hash, k: &SchnorrKey| {
@@ -11108,7 +11108,7 @@ fn t1_a_purchase_under_either_agreement_holding_a_stake_in_the_work() {
     let own = agreements_act(&mut w, &mut ana, agreements::types::TERMS, own.to_map(), None);
     sign(&mut w, &mut ana, &own);
     let publication = {
-        let x = w.everyday_act(&mut ana, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked").to_vec()))], None, None);
+        let x = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked").to_vec()))]), None, None);
         w.add(&x)
     };
     let aid = ana.id;
@@ -11496,7 +11496,7 @@ fn f216_a_publication_carries_two_agreements() {
     sign(&mut w, &mut ana, &we);
     sign(&mut w, &mut ben, &we);
     let publication = {
-        let x = w.everyday_act(&mut label, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F216").to_vec()))], None, None);
+        let x = w.everyday_act(&mut label, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F216").to_vec()))]), None, None);
         w.add(&x)
     };
     let mut pe = deal_terms(we, label.id);
@@ -12238,7 +12238,7 @@ impl Layers {
         sign(&mut w, &mut ana, &we);
         sign(&mut w, &mut ben, &we);
         let publication = {
-            let x = w.everyday_act(&mut label, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F235").to_vec()))], None, None);
+            let x = w.everyday_act(&mut label, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F235").to_vec()))]), None, None);
             w.add(&x)
         };
         let mut pe = deal_terms(we, label.id);
@@ -12523,7 +12523,7 @@ impl F244Lab {
         let (gl, sl) = layer_grant(&mut w, &mut label, &mut svc_p, "the label, F244");
         let work = spec("a song, F244");
         let publication = {
-            let x = w.everyday_act(&mut label, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F244").to_vec()))], None, None);
+            let x = w.everyday_act(&mut label, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked, F244").to_vec()))]), None, None);
             w.add(&x)
         };
         let mut pe = deal_terms(we, label.id);
