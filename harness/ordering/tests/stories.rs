@@ -730,3 +730,33 @@ fn b11_sweep_of_worlds_starting_from_a_fork() {
     assert!(resolved > 100 && unresolved > 100, "both kinds of world: {resolved} / {unresolved}");
     assert!(t.fork_resolutions > 0);
 }
+
+/// Agreements draft 14, F302 (C5 extended to resignations): the treasurer
+/// resigns from the tablet; the label's line registers it; the treasurer then
+/// rotates, forgetting the tablet, so Identity voids the resignation, and a
+/// later line registers the rotation. The resignation stays placed: a
+/// receipt the treasurer signs afterwards, with the new key, counts for
+/// nothing. Where the rotation's line comes first and only then a line
+/// registers the resignation, the voided resignation takes no voice, and the
+/// receipt counts.
+#[test]
+fn f302_a_registered_resignation_stays_placed() {
+    for rotation_first in [false, true] {
+        let mut b = label();
+        b.col(Kind::AreaAct, 0);
+        let res = b.leave(0, 2, Kind::Resign, None);
+        if !rotation_first {
+            b.line(Kind::Register { departures: vec![res] }, 0, Tips::Complete, None);
+        }
+        let rot = b.rotate_member(0, Some(2));
+        b.line(Kind::Register { departures: vec![rot] }, 0, Tips::Complete, None);
+        if rotation_first {
+            b.line(Kind::Register { departures: vec![res] }, 0, Tips::Complete, None);
+        }
+        let z = b.col(Kind::AreaAct, 0);
+        b.member(0, 0, Kind::Sig { on: On::Act(z) });
+        let w = b.finish();
+        let v = verdict(&w, WRITTEN, Clock::Structure);
+        assert_eq!(v.area_of(z), rotation_first, "rotation first: {rotation_first}");
+    }
+}

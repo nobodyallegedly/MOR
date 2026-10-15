@@ -84,7 +84,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 - **Owners' matters** (new in draft 14, F310). What a stake's owners consent to by their holders' rule, or each signing: what the stake is paid, an issuance in it, a collective's sale or release of a work, and a fork's successors' founding terms paying a kept holder less (rule 95).
 - **Issuance** (new in draft 14, F309). A version adding new holders to a stake, every existing share scaled by the same factor, decided by the holders' rule and pre-emptive: each existing holder first offered its proportion on the same terms by an issuance offer (type 26), waived only by every holder (rule 96).
 - **Proxy** (new in draft 14, F327). A holder's act handing its vote on the owners' matters of one stake to another identity, for one version or until revoked; never its money or property, nor anything needing every holder (rule 97, type 27).
-- **Purchase.** A payment for a work under an Agreements claim, naming the claim it pays under: the claiming agreement, and the line at which the payer's client read it current (Money receipt and claim field 9, rule 11, F126).
+- **Purchase.** A payment for a work under an Agreements claim, naming the claim it pays under: the claiming agreement, and the line at which the payer's client read it current (Money receipt and claim field 9, Money draft 8 rule 18, F126; the citation corrected in draft 14, Fable's aggregated review, G8).
   - On a request rail, the claim it names is the one the seller's request committed to.
   - On a push rail, each holder the claim names settles it on its own chain (rule 12, F128, W4).
 

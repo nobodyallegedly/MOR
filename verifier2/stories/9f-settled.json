@@ -37,32 +37,6 @@
    "amount": 20
   },
   {
-   "id": "C1",
-   "type": "closing",
-   "signer": "ana",
-   "tips": [
-    "D2"
-   ],
-   "objects": [],
-   "public": true
-  },
-  {
-   "id": "sig/ana/C1",
-   "type": "chain_sig",
-   "signer": "ana",
-   "ending": "C1",
-   "position": 1,
-   "counts": true
-  },
-  {
-   "id": "sig/ben/C1",
-   "type": "chain_sig",
-   "signer": "ben",
-   "ending": "C1",
-   "position": 1,
-   "counts": true
-  },
-  {
    "id": "pay1a",
    "type": "payment",
    "signer": "eve",
@@ -88,6 +62,47 @@
    "type": "release",
    "signer": "fay",
    "obligation": "D2"
+  },
+  {
+   "id": "A",
+   "type": "publication",
+   "signer": "C/d0",
+   "prev": "D2",
+   "cites": [
+    "genesis"
+   ],
+   "acks": [
+    "pay1a",
+    "pay1b",
+    "pay2",
+    "rel2"
+   ]
+  },
+  {
+   "id": "C1",
+   "type": "closing",
+   "signer": "ana",
+   "tips": [
+    "A"
+   ],
+   "objects": [],
+   "public": true
+  },
+  {
+   "id": "sig/ana/C1",
+   "type": "chain_sig",
+   "signer": "ana",
+   "ending": "C1",
+   "position": 1,
+   "counts": true
+  },
+  {
+   "id": "sig/ben/C1",
+   "type": "chain_sig",
+   "signer": "ben",
+   "ending": "C1",
+   "position": 1,
+   "counts": true
   }
  ]
 }

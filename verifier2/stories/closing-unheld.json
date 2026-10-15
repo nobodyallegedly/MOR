@@ -1,0 +1,62 @@
+{
+ "collective": "C",
+ "members": [
+  "ana",
+  "ben"
+ ],
+ "rule": {
+  "kind": "every"
+ },
+ "areas": {},
+ "acts": [
+  {
+   "id": "genesis",
+   "type": "genesis",
+   "signer": "C"
+  },
+  {
+   "id": "p0",
+   "type": "publication",
+   "signer": "C/d0",
+   "prev": null,
+   "cites": [
+    "genesis"
+   ],
+   "held": false
+  },
+  {
+   "id": "p1",
+   "type": "publication",
+   "signer": "C/d0",
+   "prev": "p0",
+   "cites": []
+  },
+  {
+   "id": "K1",
+   "type": "closing",
+   "signer": "ana",
+   "tips": [
+    "p1"
+   ],
+   "objects": [],
+   "public": true,
+   "holds_nothing": true
+  },
+  {
+   "id": "sig/ana/K1",
+   "type": "chain_sig",
+   "signer": "ana",
+   "ending": "K1",
+   "position": 1,
+   "counts": true
+  },
+  {
+   "id": "sig/ben/K1",
+   "type": "chain_sig",
+   "signer": "ben",
+   "ending": "K1",
+   "position": 1,
+   "counts": true
+  }
+ ]
+}

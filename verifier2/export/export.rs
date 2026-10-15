@@ -173,8 +173,14 @@ fn story_json(cw: &ColWorld) -> J {
                 m.insert("assigned".into(), json!(f.debts.iter().map(|(d, s)| json!({"obligation": hx(d), "sides": s})).collect::<Vec<_>>()));
                 m.insert("objects".into(), json!(objects));
                 let mut ss = Map::new();
+                // Agreements draft 14, F303: a successor signs the fork by a chain
+                // signature with its own chain key, counting in its identity chain.
                 for s in &f.sides {
-                    ss.insert(hx(&s.successor), json!(sigs_on.get(&id).is_some_and(|v| v.contains(&s.successor))));
+                    let chain_signed = v.signed_by(&s.successor).any(|x| {
+                        matches!(&x.identity, Some(Ok(mor_core::identity::Payload::ChainSignature(c))) if c.signs == id)
+                            && v.resolve(&s.successor).position_of(&x.id).is_some()
+                    });
+                    ss.insert(hx(&s.successor), json!(chain_signed));
                 }
                 m.insert("successor_signed".into(), J::Object(ss));
                 m.insert("agreement".into(), json!(hx(&f.agreement)));
@@ -345,12 +351,12 @@ fn ref_json(cw: &ColWorld, story: &J) -> J {
     let es = lv.ending_sigs(&col);
     let mut endings = Map::new();
     for e in &cw.endings {
-        let (complete, why) = if e.fork {
-            lv.fork(&e.id).map(|f| (f.complete, f.why)).unwrap_or((false, Some("error".into())))
-        } else {
-            lv.closing(&e.id).map(|c| (c.complete, c.why)).unwrap_or((false, Some("error".into())))
-        };
-        let status = if es.no_ending.contains_key(&e.id) { "no-ending" } else if complete { "complete" } else { "incomplete" };
+        // Agreements draft 14, F304: a history naming an act not held makes the
+        // ending unknown, never "incomplete".
+        let judged = if e.fork { lv.fork(&e.id).map(|f| (f.complete, f.why)) } else { lv.closing(&e.id).map(|c| (c.complete, c.why)) };
+        let unknown = matches!(judged, Err(agreements::AgreementsError::Missing(_)));
+        let (complete, why) = judged.unwrap_or((false, Some("error".into())));
+        let status = if es.no_ending.contains_key(&e.id) { "no-ending" } else if unknown { "unknown" } else if complete { "complete" } else { "incomplete" };
         let mut sigs = Map::new();
         for m in cw.ids() {
             if es.counting.contains_key(&(e.id, m)) {
