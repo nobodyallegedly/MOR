@@ -24,6 +24,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F330. The code after step 15: three questions answered (15 October 2026, evening)
+
+*From the four parts of the code for F292 to F329 (`docs/code-after-step-15-part-1.md` to `-part-4.md`, pull requests 64 to 67): every part built, every test passing (Rust 736, TypeScript 421), the rehearsal of step 17 at 16 of 17 checks, the one failing being the test values the clients carry until step 17 makes the real hashes.*
+
+- **Q1 (part 2; Money and Development, the rails), what a rail's proof must bind for its payer to count as the buyer:** (a) a proof binding the purpose binds the payer the commitment names, both being one fingerprint; one sentence in Development's field 13. Explained to the author as one sealed slip ("Dana pays the label 10 francs, for this album"): the rail seals the whole slip, so vouching for the purpose vouches for the payer. **"Agreed, so logical my mind does not see the problem…"**
+- **Q2 (part 3; Agreements rule 85, F313), the outcome against a vanished owner who is no member and whose plan names a stake successor:** (a) the declaration states outcome 0 alone, which removes no voice (the owner has none), and the stake passes by succession; one sentence in rule 85. **"Agreed, it's still succession."**
+- **Q3 (part 3; Agreements rules 47a and 69, F308, F311), forks and closings under a constitutional rule by share:** (a) by share, at the ending's line: the holdings of field 7 of the agreement in force there plus the transfers placed in the ending's history (F316); owners who are no members consent by a signature act that an act of the original in the ending's history acknowledges, as kept owners do (F328 Q12). **"Agreed, operate by share, die by share."**
+
 ## F329. The aggregated review's questions answered (15 October 2026, morning)
 
 *From Fable's aggregated review (`docs/reviews/fable-step-15-aggregated.md`): the six drafts hold together as one protocol; the verdict vocabulary reduced, not grown; draft 14's language adds no verdict; the way out checked, one trap stated (F317).*
