@@ -5,6 +5,7 @@
 
 import { MIRS, SPECS, ENVELOPES_TYPES, IDENTITY_TYPES, Verifier, actId, cborDecode, describeAct, hex } from './core.ts';
 import { relayAt, type Via } from './transport.ts';
+import { actsBy } from './lines.ts';
 
 interface Described {
   id: string;
@@ -490,4 +491,30 @@ export async function followRef(r: Reference, hints: string[], via: Via = {}): P
   const there = (await fetchFrom(places.filter((p) => outbox.has(p)))) ?? (await fetchFrom(places.filter((p) => !outbox.has(p))));
   if (there) return { ...there, how: 'signer', notTried };
   throw new Error(`the act ${id} was not found at ${hints.join(', ')}, nor at its signer's routes and homes (${places.join(', ') || 'none found'})`);
+}
+
+
+/**
+ * Hold the signer's sequence before judging one of its acts (Identity draft
+ * 13, "Every verifier gives the same answer", F298): two verifiers give the
+ * same answer only holding the same acts of the signer's sequences up to
+ * the kept tips. After a rotation, whether an everyday act is kept is read
+ * on the line leading to a kept tip, so a verifier holding the act alone
+ * answers unknown where another, holding the line, answers valid or void.
+ * Every act the signer has at its homes in force and at `places` is added
+ * to `v`, which `l` resolved the signer into. With no rotation, an act's
+ * standing rests on the chain alone (Envelopes draft 10, F292: position and
+ * summary are judged only when a line is rebuilt), and nothing is fetched.
+ */
+export async function holdSequence(v: Verifier, signer: string, l: Lookup, places: string[], via: Via = {}): Promise<void> {
+  if (l.resolution.links.length < 2) return;
+  const homes = (l.resolution.homes ?? []).map((h) => h.hint);
+  const hints = [...new Set([...homes, ...places])].filter((h) => !cannotReach(h, via));
+  for (const a of await actsBy(signer, hints, via)) {
+    try {
+      v.add(a);
+    } catch {
+      // an act that does not decode proves nothing
+    }
+  }
 }

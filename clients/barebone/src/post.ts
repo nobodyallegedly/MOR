@@ -19,7 +19,7 @@ import {
   workHash,
 } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
-import { cannotReach, firstOf, followRef, lookUp, referenceTo, type NotTried, type Reference } from '../../genesis/src/lookup.ts';
+import { cannotReach, firstOf, followRef, holdSequence, lookUp, referenceTo, type NotTried, type Reference } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { NotJpeg, read, strip, type Carried, type Picture } from '../../../modules/jpeg/src/jpeg.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from './specs.ts';
@@ -242,8 +242,11 @@ class Judge implements Judging {
     // One lookup per signer, shared by everything read side by side.
     let l = this.looked.get(signer);
     if (!l) {
-      l = lookUp(signer, this.hints, this.via, this.v).then((x) => {
+      // F298: the signer's sequence too, so the answer does not rest on
+      // which of its acts this reader happened to fetch.
+      l = lookUp(signer, this.hints, this.via, this.v).then(async (x) => {
         for (const n of x.notTried) if (!this.notTried.some((y) => y.hint === n.hint)) this.notTried.push(n);
+        await holdSequence(this.v, signer, x, this.hints, this.via);
       });
       this.looked.set(signer, l);
     }

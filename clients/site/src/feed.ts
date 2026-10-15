@@ -26,7 +26,7 @@
 // asked for, so it orders nothing.
 
 import { MIRS, SPECS, Verifier, cborDecode, describeAct, hex } from '../../genesis/src/core.ts';
-import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
+import { holdSequence, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { readPost, type Judging, type ShownPost } from '../../barebone/src/post.ts';
 import { POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
@@ -147,6 +147,16 @@ class FeedJudge implements Judging {
     private places: string[],
     private via: Via,
   ) {}
+  private held = new Map<string, Promise<void>>();
+  /** The signer's chain and its sequence, held before one of its acts is judged (F298). */
+  sequence(identity: string): Promise<void> {
+    let h = this.held.get(identity);
+    if (!h) {
+      h = this.lookUp(identity).then((l) => holdSequence(this.v, identity, l, this.places, this.via));
+      this.held.set(identity, h);
+    }
+    return h;
+  }
   lookUp(identity: string, places = this.places): Promise<Lookup> {
     let l = this.looked.get(identity);
     if (!l) {
@@ -156,7 +166,7 @@ class FeedJudge implements Judging {
     return l;
   }
   async standing(act: Uint8Array, id: string, signer: string): Promise<string> {
-    await this.lookUp(signer);
+    await this.sequence(signer);
     this.v.add(act);
     return this.v.status(id);
   }

@@ -60,7 +60,7 @@
 // to cannot be read from outside, and the listing says so.
 
 import { MIRS, SPECS, Verifier, cborDecode, cborEncode, decodeSpec as coreDecodeSpec, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
-import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
+import { holdSequence, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { relayAddress } from './settings.ts';
@@ -470,7 +470,8 @@ class Judge {
   /** Why the act is not valid for its signer's chain, or null when it is. */
   async problem(act: Uint8Array, id: string, signer: string): Promise<string | null> {
     try {
-      await this.lookUp(signer);
+      // F298: the signer's sequence too, before judging one of its acts.
+      await holdSequence(this.v, signer, await this.lookUp(signer), this.places, this.via);
     } catch (e) {
       return `its signer's identity chain could not be looked up: ${message(e)}`;
     }
