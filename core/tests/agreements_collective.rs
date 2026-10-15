@@ -14163,6 +14163,102 @@ fn who_holds_what_at_the_vote_3_7ad() {
     assert_eq!(lab.view().record(&lab.c[0].id, &r4).map(|e| e.puts), Err(AgreementsError::Missing(unheld)), "unknown, never silently short");
 }
 
+/// F330 (Agreements draft 14, rules 47a, 69; "operate by share, die by
+/// share"): a closing under a constitutional change rule by share, sixty
+/// per cent of the label's stake in itself (Ana half, Ben three tenths, Cy
+/// a fifth), is counted by share at the closing's line, each member by its
+/// chain signature: Ana and Cy (seven tenths) close it, Ben and Cy (half) do
+/// not. A transfer placed in the closing's history counts there: once Ana's
+/// tenth to Ben is placed, Ben and Cy hold six tenths, and close it.
+#[test]
+fn an_ending_is_counted_by_share_at_its_line_f330() {
+    let owned = |t: &mut Terms| {
+        let p = t.parties.clone();
+        t.stakes = Some(vec![own(vec![(p[ANA], 500_000), (p[BEN], 300_000), (p[CY], 200_000)])]);
+        t.constitutional = Some(Rule::ByShare { stake: 0, share: 600_000 });
+    };
+    let close = |lab: &mut Lab, who: &[usize]| -> agreements::ClosingEval {
+        // An act of the label, so that its line has a tip to name.
+        if lab.c[0].seq.is_empty() {
+            lab.publish(0);
+        }
+        let f = lab.founding;
+        let label = lab.c[0].id;
+        let c = agreements::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
+        let eo = ending_obj(lab, f, c.collective);
+        let x = agreements_act(&mut lab.w, &mut lab.m[who[0]], agreements::types::CLOSING, c.to_map(), eo);
+        for i in who {
+            lab.end(*i, &x);
+        }
+        lab.view().closing(&x).unwrap()
+    };
+    let mut lab = Lab::new(&owned);
+    let e = close(&mut lab, &[ANA, CY]);
+    assert!(e.complete, "seven tenths of the stake close it: {:?}", e.why);
+    let mut lab = Lab::new(&owned);
+    let e = close(&mut lab, &[BEN, CY]);
+    assert!(!e.complete && e.why.as_deref().is_some_and(|w| w.contains("F330")), "half does not: {:?}", e.why);
+    // Ana sells a tenth to Ben, placed by the label's line before the closing's.
+    let mut lab = Lab::new(&owned);
+    let f = lab.founding;
+    let ben = lab.m[BEN].id;
+    let tr = agreements::StakeTransfer { agreement: f, stake: 0, to: ben, share: 100_000, record: vec![] };
+    let mut ana = lab.m[ANA].clone();
+    let t = agreements_act(&mut lab.w, &mut ana, agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(f));
+    let (_, ana2) = lab.w.chain_sign(&ana, t);
+    lab.m[ANA] = ana2;
+    let mut b = lab.m[BEN].clone();
+    sign(&mut lab.w, &mut b, &t);
+    lab.m[BEN] = b;
+    assert!(lab.view().transfer(&t).unwrap().effective);
+    lab.record(0, None, &[], vec![t], f);
+    let e = close(&mut lab, &[BEN, CY]);
+    assert!(e.complete, "Ben and Cy now hold six tenths at the closing's line: {:?}", e.why);
+}
+
+/// F330, for a fork: under the same rule by share, a fork whose sides are
+/// Ana and Cy, Ben leaving (kept at his three tenths), is signed by
+/// members holding seven tenths, and completes; one whose sides are Ben
+/// and Cy, Ana leaving, by members holding half, and does not. Before
+/// F330, both needed every member.
+#[test]
+fn a_fork_is_counted_by_share_at_its_line_f330() {
+    let owned = |t: &mut Terms| {
+        let p = t.parties.clone();
+        t.stakes = Some(vec![own(vec![(p[ANA], 500_000), (p[BEN], 300_000), (p[CY], 200_000)])]);
+        t.constitutional = Some(Rule::ByShare { stake: 0, share: 600_000 });
+    };
+    let attempt = |sides: [usize; 2], leaving: usize, share: u64| -> agreements::ForkEval {
+        let mut lab = Lab::new(&owned);
+        let f = lab.founding;
+        let label = lab.c[0].id;
+        let ids = lab.ids();
+        let kept = vec![(ids[leaving], share)];
+        let (sa, _) = found_successor(&mut lab, "side A", &[sides[0]], &kept, label);
+        let (sb, _) = found_successor(&mut lab, "side B", &[sides[1]], &kept, label);
+        lab.cmip_act(0, pay());
+        let x = agreements::Fork {
+            agreement: f,
+            collective: label,
+            chain_act: lab.c[0].binding,
+            tips: vec![tip(&lab.c[0])],
+            sides: vec![agreements::Side { successor: sa.id, members: vec![ids[sides[0]]] }, agreements::Side { successor: sb.id, members: vec![ids[sides[1]]] }],
+            shares: vec![],
+            debts: vec![],
+        };
+        let eo = ending_obj(&lab, f, label);
+        let k = agreements_act(&mut lab.w, &mut lab.m[sides[0]], agreements::types::FORK, x.to_map(), eo);
+        for m in sides {
+            lab.end(m, &k);
+        }
+        lab.view().fork(&k).unwrap()
+    };
+    let e = attempt([ANA, CY], BEN, 300_000);
+    assert!(e.complete, "seven tenths of the stake fork it: {:?}", e.why);
+    let e = attempt([BEN, CY], ANA, 500_000);
+    assert!(!e.complete && e.why.as_deref().is_some_and(|w| w.contains("F330")), "half does not: {:?}", e.why);
+}
+
 /// Freeze suite v28, 3.7ah (F308; A2-7), counted: a clone rule by share,
 /// sixty per cent of the label's stake in itself, a departed holder (Dee)
 /// holding half of it. The members' sixty per cent is of what the voices
@@ -15234,7 +15330,7 @@ fn owners_verdicts_do_not_depend_on_order() {
     // Stories whose votes moved the label off its founding terms: the
     // property is about something only if some do.
     let moved = std::sync::atomic::AtomicUsize::new(0);
-    let r = runner.run(&(prop::collection::vec(owner_op(), 1..9), any::<u64>()), |(ops, seed)| {
+    let check = |(ops, seed): (Vec<OwnerOp>, u64)| -> Result<(), proptest::test_runner::TestCaseError> {
         let lab = owners_story(&ops);
         let label = lab.c[0].id;
         let first = owners_verdicts(&lab.w.v, &label);
@@ -15260,7 +15356,24 @@ fn owners_verdicts_do_not_depend_on_order() {
             prop_assert_eq!(a.as_str(), b, "act {:?} judged differently in another order, story {:?}", k, ops);
         }
         Ok(())
-    });
+    };
+    // Stories that put an owners' matter in force whatever the seed: a fee
+    // clone the members mark (three fifths of the stake, its holders' rule),
+    // alone, and after a placed sale and a proxy; each shuffled too.
+    let fixed = [
+        vec![OwnerOp::Vote { mark: 0b0000111, sign: 0, proxies: false }],
+        vec![
+            OwnerOp::Sell { seller: 3, buyer: 5, part: 1, placed: true },
+            OwnerOp::Proxy { holder: 4, proxy: 6, scoped: true, placed: true },
+            OwnerOp::Vote { mark: 0b0000111, sign: 0b1111000, proxies: true },
+        ],
+    ];
+    for (i, ops) in fixed.into_iter().enumerate() {
+        if let Err(e) = check((ops, i as u64 + 1)) {
+            panic!("{e}");
+        }
+    }
+    let r = runner.run(&(prop::collection::vec(owner_op(), 1..9), any::<u64>()), check);
     if let Err(e) = r {
         panic!("{e}");
     }

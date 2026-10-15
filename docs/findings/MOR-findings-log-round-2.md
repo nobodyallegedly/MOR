@@ -24,6 +24,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F330. The build's three questions answered (15 October 2026, afternoon)
+
+*From the code after step 15 (`docs/code-after-step-15-part-2.md`, question 1; `docs/code-after-step-15-part-3.md`, questions 1 and 2), put by the build.*
+
+- **Part 2, Q1 (Development field 13; Agreements rule 22, F193), what a rail binds for its payer to be the buyer:** (a) a proof binding the purpose binds the payer the payment commits to, both carried in one commitment; one sentence in Development's field 13. **Decided by Nobody, allegedly.**
+- **Part 3, Q1 (rule 85; F313), a vanished owner who is no party, with a stake successor:** (a) the declaration states outcome 0 alone, which removes no voice, and the stake passes by succession, as against a member with a plan (rule 89); one sentence in rule 85. **Decided by Nobody, allegedly.**
+- **Part 3, Q2 (rules 47a, 69; F308, F311), an ending under a constitutional rule by share:** (a) endings are counted by share at the ending's line, field 7 of the agreement in force there with the transfers placed in the ending's history; owners who are no members consent by a signature act that the original acknowledges in the ending's history. "Operate by share, die by share." **Decided by Nobody, allegedly.**
+
+Writing Q2 in exposed a point left open: a signature act naming the ending act cannot be acknowledged in that ending's own history, which the ending names by its chain act and kept tips, so what such an owner signs is to be settled (`docs/code-after-step-15-part-4.md`, question 1). Until then only members' chain signatures count toward a rule among a stake's holders at an ending, the strict side.
+
 ## F329. The aggregated review's questions answered (15 October 2026, morning)
 
 *From Fable's aggregated review (`docs/reviews/fable-step-15-aggregated.md`): the six drafts hold together as one protocol; the verdict vocabulary reduced, not grown; draft 14's language adds no verdict; the way out checked, one trap stated (F317).*

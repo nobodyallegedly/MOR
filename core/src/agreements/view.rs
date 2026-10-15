@@ -3721,8 +3721,7 @@ impl<'a> AgreementsView<'a> {
     /// stake successor; where it names one, the stake goes by succession
     /// (rule 89), and the declaration states outcome 0 alone, which removes
     /// no voice (the holder has none) and moves the stake to the successor
-    /// (a reading of the build, put to Nobody, allegedly: the text names no
-    /// outcome for succession against a holder). Never 3 or 4.
+    /// (F330). Never 3 or 4; outcome 0 against no other holder.
     fn holder_declaration(&self, h: &Held, d: AbsenceDeclaration, lineage: &[(Hash, Terms)]) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let t = &lineage[0].1;
         let holds = t.is_collective() && t.own_stake().is_some_and(|(_, st)| st.identified().iter().any(|(x, n)| *x == d.party && *n > 0));
@@ -3742,7 +3741,7 @@ impl<'a> AgreementsView<'a> {
         let allowed: &[u64] = if heirs { &[outcomes::VOICE_REMOVED] } else { &[outcomes::STAKE_REDISTRIBUTED, outcomes::STAKE_TRANSFERRED] };
         if !d.outcomes.iter().all(|o| allowed.contains(o)) {
             return Ok(Err(
-                "against a holder who is no party, only the stake-moving outcomes: succession where its plan names a stake successor, else outcome 1 or 2; never 3 or 4 (rule 85; new in draft 14, F313)".into(),
+                "against a holder who is no party, only the stake-moving outcomes: outcome 0 alone, the stake passing by succession, where its plan names a stake successor, else outcome 1 or 2; never 3 or 4 (rule 85; new in draft 14, F313, F330)".into(),
             ));
         }
         let signer = h.act.outside.signer.ok_or(AgreementsError::Check("a declaration with no signer"))?;
@@ -6407,10 +6406,9 @@ pub struct OwedBack {
     pub still_broken: bool,
 }
 
-/// The constitutional change rule, counted among the voices that remain
-/// (rule 44d), met by these signers.
-fn constitution_met(t: &Terms, voices: &[Hash], signed: &[Hash]) -> bool {
-    let rule = t.constitutional_rule();
+/// A rule by head, counted among the voices that remain (rule 44d), met
+/// by these signers.
+fn head_met(rule: &Rule, t: &Terms, voices: &[Hash], signed: &[Hash]) -> bool {
     let counted: Vec<Hash> = rule.counted_among(&t.parties).into_iter().filter(|p| voices.contains(p)).collect();
     match rule.needed(counted.len()) {
         None => false,
@@ -6472,6 +6470,46 @@ impl<'a> AgreementsView<'a> {
             return vec![];
         };
         self.history(col, bf, &[], tips).missing.iter().copied().collect()
+    }
+
+    /// Whether a fork or closing meets the constitutional change rule
+    /// (rules 47a, 69), each rule in it counted as it would be alone, at the
+    /// ending's line (new in draft 14, F330: "operate by share, die by
+    /// share"). By head, among the members whose voice remains, as before.
+    /// By share among the parties (`[3, stake, share]`), each member whose
+    /// voice remains counts by what it holds of the stake at the ending's
+    /// line ([`Self::roster_at_ending`]), the share asked for being of what
+    /// those voices hold together; where they hold nothing, every voice
+    /// that remains together meets it (rule 65). Among a stake's holders
+    /// (`[5, stake, share]`), every holder at the line counts by its share
+    /// of the whole stake: a member by its chain signature on the ending.
+    /// *A holder who is no member signs no ending act yet: how its consent
+    /// is placed is open (F330, put to Nobody, allegedly); until then only
+    /// members' signatures count, the strict side.*
+    #[allow(clippy::too_many_arguments)]
+    fn ending_rule_met(&self, col: &Col, ag: &Hash, t: &Terms, voices: &[Hash], signed: &[Hash], chain_act: &Hash, tips: &[KeptTip]) -> R<bool> {
+        let rule = t.constitutional_rule();
+        for part in rule.parts() {
+            let met = match part {
+                Rule::ByShare { stake, share } => {
+                    let roster = self.roster_at_ending(col, ag, *stake, chain_act, tips)?;
+                    let held = |x: &Hash| roster.iter().find(|(h, _)| h == x).map_or(0, |(_, n)| *n) as u128;
+                    let total: u128 = voices.iter().map(held).sum();
+                    let got: u128 = voices.iter().filter(|v| signed.contains(v)).map(held).sum();
+                    if total == 0 { !voices.is_empty() && voices.iter().all(|v| signed.contains(v)) } else { got * MILLION as u128 >= *share as u128 * total }
+                }
+                Rule::Holders { stake, share } => {
+                    let roster = self.roster_at_ending(col, ag, *stake, chain_act, tips)?;
+                    let s: Vec<Hash> = signed.iter().filter(|x| voices.contains(x) && roster.iter().any(|(h, _)| h == *x)).copied().collect();
+                    holders_met(&roster, &s, *share).is_ok()
+                }
+                head => head_met(head, t, voices, signed),
+            };
+            if !met {
+                return Ok(false);
+            }
+        }
+        Ok(true)
     }
 
     /// The agreement in force at a fork's or closing's line, and the members
@@ -6885,8 +6923,8 @@ impl<'a> AgreementsView<'a> {
                 "every member on a side signs the fork, with their own identity (F121), by a chain signature with their chain key (F132); a signature placed after the signer's own signature on an ending naming this one counts for nothing (U4)",
             );
         }
-        if !constitution_met(&t, &voices, &e.signed) {
-            return fail(e, "the fork follows the constitutional change rule, every member by default (N1)");
+        if !self.ending_rule_met(&col, &f.agreement, &t, &voices, &e.signed, &f.chain_act, &f.tips)? {
+            return fail(e, "the fork follows the constitutional change rule, every member by default (N1), a rule by share counted at the fork's line (F330)");
         }
         if let Some(i) = e.successors.iter().position(|s| s.is_none()) {
             return fail(
@@ -7116,8 +7154,8 @@ impl<'a> AgreementsView<'a> {
         if !e.signed.contains(&signer) {
             return fail(e, "the closing's signer signs it too, by a chain signature with their chain key (F132)");
         }
-        if !constitution_met(&t, &voices, &e.signed) {
-            return fail(e, "a closing follows the constitutional change rule, every member by default (N9), each signing by a chain signature with their chain key (F132)");
+        if !self.ending_rule_met(&col, &c.agreement, &t, &voices, &e.signed, &c.chain_act, &c.tips)? {
+            return fail(e, "a closing follows the constitutional change rule, every member by default (N9), a rule by share counted at the closing's line (F330), each signing by a chain signature with their chain key (F132)");
         }
         if !e.holds.is_empty() {
             return fail(e, "a closing ends only a collective that holds nothing: every work sold or released (N9)");
@@ -8042,7 +8080,7 @@ impl<'a> AgreementsView<'a> {
     /// every element (see [`Self::rails`]). *The payer is carried in the
     /// payment commitment with the purpose, so a proof binding the purpose
     /// binds the payer the commitment names (F193's "a rail binding the
-    /// payer"; a reading of the build, written into Money draft 8).*
+    /// payer"; Development draft 10, field 13, F330).*
     pub fn rail_binds(&self, rail: &Hash, b: crate::development::Bound) -> bool {
         self.rails.get(rail).is_none_or(|r| r.binds(b))
     }

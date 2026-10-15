@@ -486,6 +486,23 @@ impl<'a> AgreementsView<'a> {
     /// line acknowledges that this verifier does not hold leaves the roster
     /// unknown (F298, F304), never silently short.
     pub(super) fn roster_at(&self, col: &Col, at: Line<'a>, ag: &Hash, stake: u64) -> R<Vec<(Hash, u64)>> {
+        // Judged on the collective's own sequences (not by keepers), so the
+        // roster at a record never asks for that record's own evaluation.
+        self.roster_by(col, ag, stake, &|x, is_record| if is_record { self.line_before(col, Line::Record(x), at) } else { self.on_chain(col, x) && self.before_struct(col, x, at) })
+    }
+
+    /// Who holds what of stake `stake` of agreement `ag` at the line a fork
+    /// or closing draws (`chain_act`, `tips`), for an ending counted by share
+    /// (new in draft 14, F330: "operate by share, die by share"): the holders
+    /// field 7 names, and the stake transfers placed in the ending's history,
+    /// as [`Self::roster_at`] reads a record's line.
+    pub(super) fn roster_at_ending(&self, col: &Col, ag: &Hash, stake: u64, chain_act: &Hash, tips: &[KeptTip]) -> R<Vec<(Hash, u64)>> {
+        self.roster_by(col, ag, stake, &|x, _| self.before_line(col, x, chain_act, tips))
+    }
+
+    /// [`Self::roster_at`], with `before` saying whether an act of the
+    /// collective (a record, or another act on its chain) lies before the line.
+    fn roster_by(&self, col: &Col, ag: &Hash, stake: u64, before: &dyn Fn(&Held, bool) -> bool) -> R<Vec<(Hash, u64)>> {
         let t = self.terms(ag)?;
         let Some(st) = t.stakes.as_ref().and_then(|s| s.get(stake as usize)).cloned() else {
             return Ok(vec![]);
@@ -505,7 +522,7 @@ impl<'a> AgreementsView<'a> {
             // An act of the collective acknowledging an act this verifier
             // does not hold may place a transfer: unknown (F298, F304).
             if self.status(&x.id) != Status::Valid {
-                if self.status(&x.id) == Status::Unknown && self.on_chain(col, x) && self.before_struct(col, x, at) {
+                if self.status(&x.id) == Status::Unknown && before(x, false) {
                     if let Some(y) = x.inside.acks.iter().flatten().find(|y| self.v.get(y).is_none()) {
                         return Err(AgreementsError::Missing(*y));
                     }
@@ -513,10 +530,7 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             let is_record = self.is_agreements(x, types::RECORD);
-            // Judged on the collective's own sequences (not by keepers), so the
-            // roster at a record never asks for that record's own evaluation.
-            let before = if is_record { self.line_before(col, Line::Record(x), at) } else { self.on_chain(col, x) && self.before_struct(col, x, at) };
-            if !before {
+            if !before(x, is_record) {
                 continue;
             }
             if is_record {
