@@ -6710,6 +6710,44 @@ impl<'a> AgreementsView<'a> {
                 &format!("side {i}'s successor is not held, or its founding terms do not have that side's members as parties, keeping every departed holder and member leaving at their share (N4)"),
             );
         }
+        // Rule 95, item 4 (new in draft 14, F310; Fable's Agreements review,
+        // A10): a successor's founding terms pay no kept holder less than the
+        // original's agreement in force at the fork's line, compared as the
+        // kept holders' stake (each collective's stake in itself, written
+        // null) as rule 48 reads "paid less"; or the kept holders consent:
+        // holders of the original's stake in itself meeting its holders'
+        // rule, or, under every holder, each kept holder, by a signature act
+        // naming the successor's founding terms, which counts only where an
+        // act of the original in the fork's history acknowledges it (F328,
+        // Q12), kept there whatever its signer's later rotation disowns.
+        let kept_ids: Vec<Hash> = e.kept.iter().map(|(h, _)| *h).collect();
+        for (i, ag) in e.successors.clone().iter().enumerate() {
+            let Some(ag) = ag else { continue };
+            let st = self.terms(ag)?;
+            if !super::pay::stakes_paid_less(&t, &st).iter().any(|(o, _)| *o == Who::This) || kept_ids.is_empty() {
+                continue;
+            }
+            let consented = |x: &Hash| {
+                self.v.signed_by(x).any(|s| {
+                    self.is_agreements(s, types::SIGNATURE)
+                        && decode_signature(&s.inside).ok() == Some(*ag)
+                        && matches!(self.status(&s.id), Status::Valid | Status::Void | Status::Disputed)
+                        && self.relied_by_line(&col, &f.chain_act, &f.tips, s)
+                })
+            };
+            let met = match (t.own_stake(), t.own_stake().map(|(j, _)| t.holders_rule(j as u64).0)) {
+                (Some((_, own_st)), Some(HoldersRule::Share(need))) => {
+                    own_st.identified().iter().filter(|(x, _)| consented(x)).map(|(_, n)| *n).sum::<u64>() >= need
+                }
+                _ => kept_ids.iter().all(consented),
+            };
+            if !met {
+                return fail(
+                    e,
+                    &format!("side {i}'s successor's founding terms pay a kept holder less than the original's agreement in force at the fork's line, and the kept holders have not consented, acknowledged by an act of the original in the fork's history (rule 95; new in draft 14, F310, F328)"),
+                );
+            }
+        }
         // Debts (N13; F127, replacing F125 D1): the fork cites its history
         // (its line) and hands out everything in it, or does not take
         // effect; each successor a debt is assigned to signs for it. What is

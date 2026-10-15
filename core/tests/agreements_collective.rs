@@ -197,6 +197,12 @@ impl Lab {
     }
 
     fn with(f: &dyn Fn(&mut Terms), all_sign: bool) -> Lab {
+        Lab::with_others(&[], &|t, _| f(t), all_sign).0
+    }
+
+    /// The label, with identities who are no members made first, named to
+    /// `f` (holders of its stakes, say: Agreements draft 14's owners).
+    fn with_others(names: &[&str], f: &dyn Fn(&mut Terms, &[Hash]), all_sign: bool) -> (Lab, Vec<Person>) {
         let mut w = World::new();
         let mut m: Vec<Person> = ["ana", "ben", "cy"]
             .iter()
@@ -204,8 +210,10 @@ impl Lab {
             .collect();
         let authority = w.genesis("authority", vec![own_home()], None, None);
         let keeper = w.genesis("keeper", vec![own_home()], None, None);
+        let others: Vec<Person> = names.iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+        let other_ids: Vec<Hash> = others.iter().map(|p| p.id).collect();
         let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
-        let t = label_terms(&ids, authority.id, keeper.id, f);
+        let t = label_terms(&ids, authority.id, keeper.id, &|t| f(t, &other_ids));
         let founding = agreements_act(&mut w, &mut m[ANA], agreements::types::TERMS, t.to_map(), None);
         let n = if all_sign { 3 } else { 2 };
         for p in m.iter_mut().take(n) {
@@ -222,17 +230,20 @@ impl Lab {
         let mut c0 = c0;
         c0.cite = Some((c0.id, vec![c0.id]));
         let c = vec![c0.clone(), c0.clone(), c0];
-        Lab {
-            w,
-            m,
-            c,
-            founding,
-            authority,
-            keeper,
-            keeper_logs: vec![],
-            rail_valid: vec![],
-            accepted: vec![],
-        }
+        (
+            Lab {
+                w,
+                m,
+                c,
+                founding,
+                authority,
+                keeper,
+                keeper_logs: vec![],
+                rail_valid: vec![],
+                accepted: vec![],
+            },
+            others,
+        )
     }
 
     /// What an act on the label's chain cites (F127): the decisions its
@@ -4792,6 +4803,11 @@ fn leftovers_go_by_largest_remainder_whatever_the_order() {
 /// share of all its income, recorded departed; the members divide the
 /// rest. Its genesis declares them. Returns (identity, terms).
 fn found_successor(lab: &mut Lab, name: &str, members: &[usize], kept: &[(Hash, u64)], original: Hash) -> (Person, Hash) {
+    found_successor_with(lab, name, members, kept, original, &|_| {})
+}
+
+/// [`found_successor`], its founding terms changed by `f`.
+fn found_successor_with(lab: &mut Lab, name: &str, members: &[usize], kept: &[(Hash, u64)], original: Hash, f: &dyn Fn(&mut Terms)) -> (Person, Hash) {
     let ids = lab.ids();
     let m: Vec<Hash> = members.iter().map(|i| ids[*i]).collect();
     let rest = 1_000_000 - kept.iter().map(|(_, n)| n).sum::<u64>();
@@ -4813,6 +4829,7 @@ fn found_successor(lab: &mut Lab, name: &str, members: &[usize], kept: &[(Hash, 
             t.departed = Some(kept.iter().map(|(h, _)| *h).collect());
         }
         t.forked_from = Some(original);
+        f(t);
     });
     let x = agreements_act(&mut lab.w, &mut lab.m[members[0]], agreements::types::TERMS, t.to_map(), None);
     for i in members {
@@ -14196,4 +14213,68 @@ fn a_sale_of_works_is_an_owners_matter_3_9ah() {
     lab.sign(ANA, &r);
     let e = lab.view().release(&r).unwrap();
     assert!(e.complete, "Ana and Ben hold 60%, Dana's no aside: {:?}", e.why);
+}
+
+/// Freeze suite v28, 3.9ag (F310, F328 Q12; Fable's Agreements review,
+/// A10): in a fork, the first side's successor's founding terms take a fee
+/// the original's did not, the departed holder kept at her quarter: the
+/// fork is incomplete until she consents; her consent counts only where an
+/// act of the original in the fork's history acknowledges it; once so
+/// acknowledged, her later rotation disowning it leaves the fork complete.
+/// With the original's terms, the fork is complete at once.
+#[test]
+fn a_forks_founding_plans_3_9ag() {
+    let (mut lab, others) = Lab::with_others(
+        &["dee"],
+        &|t, o| {
+            let p = t.parties.clone();
+            t.stakes = stakes(vec![own(vec![(p[ANA], 250_000), (p[BEN], 250_000), (p[CY], 250_000), (o[0], 250_000)])]);
+            t.departed = Some(vec![o[0]]);
+        },
+        true,
+    );
+    let mut dee = others[0].clone();
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let ids = lab.ids();
+    let kept = vec![(dee.id, 250_000)];
+    let fee = |t: &mut Terms| t.fees = Some(vec![agreements::Fee { module: spec("an overhead"), part: 100_000, scope: agreements::FeeScope::Every }]);
+    let (_sa, ta) = found_successor_with(&mut lab, "side A", &[ANA], &kept, label, &fee);
+    let (_sb, _tb) = found_successor(&mut lab, "side B", &[BEN, CY], &kept, label);
+    let (sa_id, sb_id) = (_sa.id, _sb.id);
+    let fork = |lab: &mut Lab| {
+        let x = agreements::Fork {
+            agreement: f,
+            collective: label,
+            chain_act: lab.c[0].binding,
+            tips: vec![tip(&lab.c[0])],
+            sides: vec![agreements::Side { successor: sa_id, members: vec![ids[ANA]] }, agreements::Side { successor: sb_id, members: vec![ids[BEN], ids[CY]] }],
+            shares: vec![],
+            debts: vec![],
+        };
+        let eo = ending_obj(lab, f, label);
+        let k = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::FORK, x.to_map(), eo);
+        for m in [ANA, BEN, CY] {
+            lab.end(m, &k);
+        }
+        k
+    };
+    lab.cmip_act(0, pay());
+    let f1 = fork(&mut lab);
+    let e = lab.view().fork(&f1).unwrap();
+    assert!(!e.complete && e.why.as_deref().is_some_and(|w| w.contains("F310")), "{:?}", e.why);
+    // Dee consents, but nothing of the label acknowledges it in a fork's history.
+    let sd = sign(&mut lab.w, &mut dee, &ta);
+    let e = lab.view().fork(&f1).unwrap();
+    assert!(!e.complete, "her consent, acknowledged by no act of the original in the fork's history");
+    // The label acknowledges it; a fork drawn after it is complete.
+    lab.acknowledge(0, sd);
+    let f2 = fork(&mut lab);
+    let e = lab.view().fork(&f2).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    // Dee rotates, keeping nothing: the fork stays complete and final.
+    let (_, d2) = lab.w.rotate(&dee, Rot { kept: Some(vec![]), ..Default::default() });
+    let _ = d2;
+    assert!(matches!(lab.w.v.status(&sd), Status::Void | Status::Disputed));
+    assert!(lab.view().fork(&f2).unwrap().complete, "complete and final");
 }
