@@ -1568,7 +1568,7 @@ impl<'a> AgreementsView<'a> {
             // rotation disowned; a rollback still to be made places nothing
             // yet, so Identity's verdict alone.
             let kept = match at {
-                Some(r) => self.kept_at(col, a, Line::Rotation(r))?,
+                Some(r) => self.kept_at(col, a, Line::Rotation(r), &t.parties)?,
                 None => self.valid(x),
             };
             if !kept {
@@ -1613,7 +1613,7 @@ impl<'a> AgreementsView<'a> {
             let sh = self.held(s)?;
             let named = decode_signature(&sh.inside).ok();
             let kept = match at {
-                Some(r) => self.kept_at(col, sh, Line::Rotation(r))?,
+                Some(r) => self.kept_at(col, sh, Line::Rotation(r), &t.parties)?,
                 None => self.valid(s),
             };
             if !kept || !named.is_some_and(|n| declarations.iter().any(|(d, _)| *d == n)) {
@@ -2631,7 +2631,7 @@ impl<'a> AgreementsView<'a> {
             if self.is_agreements(a, types::RESIGNATION) {
                 // F302: as this line places it, whatever its signer's later
                 // rotation disowned.
-                if !self.kept_at(col, a, Line::Record(h))? {
+                if !self.kept_at(col, a, Line::Record(h), &at_terms.parties)? {
                     return no(e, "it registers a resignation that is not valid");
                 }
                 let r = match Resignation::decode(&a.inside) {
@@ -3076,11 +3076,18 @@ impl<'a> AgreementsView<'a> {
     /// or relies on keeps, for the collective, the effect that line gives it
     /// ("Made before, made after", 4; new in draft 14, F302, C5 extended):
     /// valid under Identity, or voided or disputed by its signer's rotation
-    /// where `at` is before the collective's line registering that rotation,
-    /// `sig_counts`'s test (F302: "take `sig_counts`'s test for registered
-    /// acts"). Its status under Identity is unchanged; a client shows the
-    /// dispute on the line.
-    fn kept_at(&self, col: &Col, a: &Held, at: Line) -> R<bool> {
+    /// where, for a party of `parties` (the agreement in force there, whose
+    /// rotations the collective's line registers, record field 3), `at` is
+    /// before the collective's line registering that rotation, C5's test
+    /// (F302: "take `sig_counts`'s test for registered acts"); and, for any
+    /// other signer, whose rotation no line of the collective registers (an
+    /// authority who is no party, a holder who is no member, a grantee, a
+    /// buyer, a creditor), wherever the line placed it ("kept there whatever
+    /// its signer's later rotation disowns": draft 14, "Abandonment
+    /// declaration", rule 94, "Stake transfer", "Grant", "Closing"). Its
+    /// status under Identity is unchanged; a client shows the dispute on the
+    /// line.
+    fn kept_at(&self, col: &Col, a: &Held, at: Line, parties: &[Hash]) -> R<bool> {
         match self.status(&a.id) {
             Status::Valid => return Ok(true),
             Status::Void | Status::Disputed => {}
@@ -3096,6 +3103,9 @@ impl<'a> AgreementsView<'a> {
         let Some(next) = res.links.get(kb + 1) else {
             return Ok(false);
         };
+        if !parties.contains(&p) {
+            return Ok(true);
+        }
         Ok(self.rotation_lines(col, &next.act).into_iter().any(|l| self.line_before(col, at, Line::Record(l))))
     }
 
@@ -3415,7 +3425,7 @@ impl<'a> AgreementsView<'a> {
                     let h = self.held(s)?;
                     self.placed_at(col, h, l, ag)
                 },
-                &|h| self.kept_at(col, h, l),
+                &|h| self.kept_at(col, h, l, &self.terms(ag)?.parties),
             )?,
         };
         let (d, clause) = match got {
@@ -3608,7 +3618,7 @@ impl<'a> AgreementsView<'a> {
         for s in absence {
             let h = self.held(s)?;
             // F302: as this recovery rotation places it.
-            let on = if self.is_agreements(h, types::SIGNATURE) && self.kept_at(col, h, Line::Rotation(j))? {
+            let on = if self.is_agreements(h, types::SIGNATURE) && self.kept_at(col, h, Line::Rotation(j), &t.parties)? {
                 decode_signature(&h.inside).ok()
             } else {
                 None
@@ -7026,13 +7036,16 @@ impl<'a> AgreementsView<'a> {
     /// what the payment fulfils, and the receiver's contrary receipt counts
     /// for nothing, shown as a dispute on the receiver.
     pub fn paid_toward(&self, obligation: &Hash) -> u64 {
-        self.paid_toward_if(obligation, &|_| true)
+        self.paid_toward_if(obligation, &|_| true, false)
     }
 
     /// [`Self::paid_toward`], counting only the receipts and claims `relied`
     /// accepts (a closing's: those an act of the collective in its history
-    /// acknowledges, or the collective's own; F303).
-    fn paid_toward_if(&self, obligation: &Hash, relied: &dyn Fn(&Held) -> bool) -> u64 {
+    /// acknowledges, or the collective's own; F303); with `placed`, a receipt
+    /// so relied on is kept whatever its signer's later rotation disowned
+    /// (F302), shown as a dispute.
+    fn paid_toward_if(&self, obligation: &Hash, relied: &dyn Fn(&Held) -> bool, placed: bool) -> u64 {
+        let standing = |r: &Held| self.valid(&r.id) || (placed && matches!(self.status(&r.id), Status::Void | Status::Disputed));
         use crate::money::Payload as Fin;
         let o = match self.v.get(obligation).map(|o| (o, Fin::decode(o.inside.type_, &o.inside.payload))) {
             Some((x, Ok(Fin::Obligation(o)))) if x.inside.spec == self.mirs.money => o,
@@ -7057,8 +7070,8 @@ impl<'a> AgreementsView<'a> {
                     if &rc.fulfils == obligation
                         && rc.payee == creditor
                         && r.act.outside.signer == Some(creditor)
-                        && self.valid(&r.id)
                         && relied(r)
+                        && standing(r)
                         && counts(&r.id, &rc.amount, &rc.proof)
                         && !self.receipt_overruled(&rc) =>
                 {
@@ -7627,6 +7640,14 @@ impl<'a> AgreementsView<'a> {
     /// rules: a Money act, reached by its Money lane alone (E2). Only the
     /// creditor signs it.
     pub fn debt_release(&self, id: &Hash) -> R<DebtReleaseEval> {
+        self.debt_release_as(id, false)
+    }
+
+    /// [`Self::debt_release`]; with `placed`, for a release a collective's
+    /// line placed (a closing's history acknowledging it, F303): kept there
+    /// whatever its signer's later rotation disowned (F302), its status
+    /// under Identity shown as a dispute.
+    fn debt_release_as(&self, id: &Hash, placed: bool) -> R<DebtReleaseEval> {
         use crate::money::{self as fin, Payload as Fin};
         let h = self.held(id)?;
         let r = match Fin::decode(h.inside.type_, &h.inside.payload) {
@@ -7638,7 +7659,8 @@ impl<'a> AgreementsView<'a> {
             e.why = Some(w.into());
             Ok(e)
         };
-        if !self.valid(id) {
+        let disowned = placed && matches!(self.status(id), Status::Void | Status::Disputed);
+        if !self.valid(id) && !disowned {
             return fail(e, "the creditor's release is not valid under Identity");
         }
         let Some(x) = self.v.get(&r.obligation) else {
@@ -7651,7 +7673,7 @@ impl<'a> AgreementsView<'a> {
         if h.act.outside.signer != Some(o.creditor) {
             return fail(e, "only the creditor the obligation names signs its release (F125)");
         }
-        if !self.consent(id)?.counts() {
+        if !disowned && !self.consent(id)?.counts() {
             return fail(e, "the creditor's consent does not count, by its own rules (its Money lane, F126)");
         }
         e.counts = true;
@@ -7696,14 +7718,24 @@ impl<'a> AgreementsView<'a> {
                 v.still_owed_for_closing(&col, chain_act, tips, obligation, amount)
             });
         }
-        let paid = self.paid_toward_if(obligation, &|r| self.relied_by_line(col, chain_act, tips, r));
+        let paid = self.paid_toward_if(obligation, &|r| self.relied_by_line(col, chain_act, tips, r), true);
         if paid >= amount {
             return Ok(false);
         }
-        let released = match self.debt_released(obligation)? {
-            Some(r) => self.relied_by_line(col, chain_act, tips, self.held(&r)?),
-            None => false,
-        };
+        use crate::money::{self as fin, Payload as Fin};
+        let mut released = false;
+        for x in self.v.held_acts() {
+            if x.inside.spec != self.mirs.money || x.inside.type_ != fin::types::RELEASE {
+                continue;
+            }
+            if !matches!(Fin::decode(x.inside.type_, &x.inside.payload), Ok(Fin::Release(r)) if &r.obligation == obligation) {
+                continue;
+            }
+            if self.relied_by_line(col, chain_act, tips, x) && self.debt_release_as(&x.id, true)?.counts {
+                released = true;
+                break;
+            }
+        }
         Ok(!released)
     }
 

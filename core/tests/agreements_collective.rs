@@ -13725,16 +13725,17 @@ fn a_hole_in_the_history_voids_nothing_3_7aa() {
     assert_eq!(lab.view().consent(&x), Err(AgreementsError::Missing(spec("a record this verifier does not hold"))));
 }
 
-/// Freeze suite v28, 3.7z (F302; Fable's Agreements review, A1), as F302's
-/// decision builds it ("take `sig_counts`'s test for registered acts"): a
-/// member resigns, the label's line registers it and lives on under it; the
-/// member rotates and disowns the resignation. Once the label's line
-/// registers that rotation (C5), the first line stands, as does every
-/// record after it; the resignation is shown disputed under Identity. The
-/// same for the signature a declaration's field 1 is checked against,
-/// disowned by the declared member. Before the label registers the
-/// rotation, the resignation is judged by Identity alone (the window the
-/// report names, `docs/code-after-step-15-part-3.md`, question 1).
+/// Freeze suite v28, 3.7z (F302; Fable's Agreements review, A1): a member
+/// resigns, the label's line registers it and lives on under it; the member
+/// rotates and disowns the resignation. A member's rotation takes effect for
+/// the label at the line registering it (C5, "take `sig_counts`'s test"):
+/// once the label registers it, the first line stands, as does every record
+/// after it, the resignation shown disputed under Identity; before, the
+/// resignation is judged by Identity alone (a reading,
+/// `docs/code-after-step-15-part-3.md`). A declaration of absence by an
+/// authority who is no party, registered by a line, stays registered when
+/// the authority rotates and disowns it: no line of the label registers that
+/// rotation, and the declaration is kept wherever the line placed it.
 #[test]
 fn what_the_line_placed_stays_placed_3_7z() {
     let mut lab = Lab::new(&|_| {});
@@ -13766,4 +13767,52 @@ fn what_the_line_placed_stays_placed_3_7z() {
     assert!(lab.view().record(&label, &line).unwrap().line, "the line stands");
     assert_eq!(puts(&lab, &r), Some(k), "every record after it stands");
     assert!(matches!(lab.w.v.status(&res), Status::Void | Status::Disputed), "its status under Identity is unchanged");
+
+    // A declaration by the label's authority, who is no party, registered by
+    // a line; the authority rotates, keeping nothing, and disowns it.
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
+    let line = lab.record(0, None, &[], vec![d], f);
+    assert!(lab.view().record(&label, &line).unwrap().line);
+    let (_, a2) = lab.w.rotate(&lab.authority, Rot { kept: Some(vec![]), ..Default::default() });
+    lab.authority = a2;
+    assert!(matches!(lab.w.v.status(&d), Status::Void | Status::Disputed), "disowned under Identity");
+    let e = lab.view().record(&label, &line).unwrap();
+    assert!(e.line, "the record stays a line: {:?}", e.not_a_line);
+    let n = lab.view().next_voices(&label, &Power::Constitutional, &[]).unwrap().unwrap();
+    assert!(!n.voices.contains(&lab.m[CY].id), "Cy's voice stays removed");
+}
+
+/// Freeze suite v28, 3.9ae (F303; Fable's Agreements review, A2): an
+/// ending's finality rests on chain keys and the collective's own chain. A
+/// closing relies on a creditor's release an act of the collective in its
+/// history acknowledged; the creditor rotates and disowns it: the closing
+/// stays complete, the release shown disputed. (A successor's chain
+/// signature, and a successor's signature act being no signature on a
+/// fork: `a_collective_forks`, `a_fork_hands_out_its_whole_history`.)
+#[test]
+fn an_endings_finality_rests_on_chain_keys_and_the_collectives_chain_3_9ae() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let mut printer = lab.w.genesis("the printer", vec![own_home()], None, None);
+    let d = obligation_to(&mut lab, printer.id, 80);
+    let rel = debt_release(&mut lab.w, &mut printer, d, vec![]);
+    lab.acknowledge(0, rel);
+    let x = agreements::Closing { agreement: f, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
+    let eo = ending_obj(&lab, f, x.collective);
+    let c = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::CLOSING, x.to_map(), eo);
+    for m in [ANA, BEN, CY] {
+        lab.end(m, &c);
+    }
+    let e = lab.view().closing(&c).unwrap();
+    assert!(e.complete, "{:?}", e.why);
+    // The printer rotates, keeping nothing: its release is disowned.
+    let (_, p2) = lab.w.rotate(&printer, Rot { kept: Some(vec![]), ..Default::default() });
+    let _ = p2;
+    assert!(matches!(lab.w.v.status(&rel), Status::Void | Status::Disputed));
+    let e = lab.view().closing(&c).unwrap();
+    assert!(e.complete, "the closing stays complete: {:?}", e.why);
 }
