@@ -51,7 +51,20 @@ export const count = (n: number, one: string, many = `${one}s`): string => `${n}
 
 // ---------------------------------------------------------------- terms, as the core reads them
 
-type RuleOut = { form: 'all' | 'threshold' | 'named'; threshold?: number | null; named?: string[] | null };
+/**
+ * A rule as the core decodes it. Agreements draft 14 (F308, F311): by share of a
+ * stake among the parties (`share`), among a stake's holders (`holders`), or all
+ * of several (`allOf`); the release rule (field 24) is every holder, holders by
+ * share, or named holders, never a head count.
+ */
+export type RuleOut = {
+  form: 'all' | 'threshold' | 'named' | 'share' | 'holders' | 'allOf';
+  threshold?: number | null;
+  named?: string[] | null;
+  stake?: number | null;
+  share?: number | null;
+  rules?: RuleOut[] | null;
+};
 type HoldingOut = {
   form: 'one' | 'shares' | 'custodian';
   holder?: string | null;
@@ -131,7 +144,8 @@ export interface TermsRead {
   /** Field 14 in a deal: each payee's grant to the split service (F129, H4). */
   payeeGrants?: string[] | null;
   extensions: string[] | null;
-  succession: { party: string; stakes: [string, number][] | null; seats: [string, number][] | null; entry: number | null }[] | null;
+  /** Seat successors carry no voting weight (Agreements draft 14, F328 Q15). */
+  succession: { party: string; stakes: [string, number][] | null; seats: string[] | null; entry: number | null }[] | null;
   /** Stakes (field 7): each object, and its holders' shares in millionths (F121, Q8); null is this collective (F124 S1). */
   stakes: [string | null, [string | null, number][]][];
   /** The departed members entry (field 22): who left (F121, F124 N5). */
@@ -196,7 +210,18 @@ export function ruleWords(r: RuleOut, parties: string[], names: Names): string {
       return `any ${r.threshold} of the ${parties.length} parties`;
     case 'named':
       return list((r.named ?? []).map(names));
+    case 'share':
+      return `parties holding together at least ${pct(r.share)} of what the voices that remain hold of stake ${r.stake}`;
+    case 'holders':
+      return `holders of stake ${r.stake} holding together at least ${pct(r.share)} of it, members or not`;
+    case 'allOf':
+      return `all of: ${(r.rules ?? []).map((x) => ruleWords(x, parties, names)).join('; ')}`;
   }
+}
+
+/** Millionths as a percentage. */
+export function pct(n: number | null | undefined): string {
+  return `${(n ?? 0) / 10_000}%`;
 }
 
 /** The constitutional change rule, in words (Agreements rule 44d: counted among the voices that remain). */
@@ -204,7 +229,8 @@ export function constitutionWords(t: Pick<TermsRead, 'constitutional' | 'parties
   const r = t.constitutional;
   if (!r || r.form === 'all') return 'every member whose voice remains: nobody loses their say without signing (F103)';
   if (r.form === 'threshold') return `any ${r.threshold} of the ${t.parties.length} members (all of those whose voice remains, if fewer remain)`;
-  return list((r.named ?? []).map(names));
+  if (r.form === 'named') return list((r.named ?? []).map(names));
+  return ruleWords(r, t.parties, names);
 }
 
 /** A power, in words: a change rule of the parent, an area's power, a succession plan. */
@@ -629,7 +655,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
   for (const p of t.succession ?? []) {
     const parts: string[] = [];
     if (p.stakes) parts.push(`stakes to ${list(p.stakes.map(([h, n]) => `${names(h)} (${n / 10_000}%)`))}`);
-    if (p.seats) parts.push(`the seat to ${list(p.seats.map(([h, w]) => `${names(h)} (weight ${w})`))}${p.entry === 1 ? ', with the members’ approval' : ''}`);
+    if (p.seats) parts.push(`the seat to ${list(p.seats.map(names))}${p.entry === 1 ? ', with the members’ approval' : ''}`);
     more.push({ text: `If ${names(p.party)} leaves or is declared absent: ${parts.join('; ') || 'nothing named'}. A protected clause.` });
   }
   if (more.length) sections.push({ heading: 'Also', lines: more });
